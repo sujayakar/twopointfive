@@ -73,7 +73,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         g.m.guards.unstick_legs.delete(gd);
         unstick_begin(g, gd);
     }
-    let staff = g.gd[gd].team == crate::teams::Team::Guard;
+    let staff = g.team(gd) == crate::teams::Team::Guard;
     if !staff { let c = g.gd[gd].ch; light_meter(g, c, dt); }
     let sense = crate::guards::senses::sense(g, gd, dt, staff);
     hands(g, gd, dt);
@@ -192,12 +192,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.last_sting_t = g.time;
         }
         if g.ai_enabled {
-            let by = match alert_cause(g, gd, seen) {
-                crate::guards::AlertCause::Body => crate::game::WitnessAlertedBy::Body,
-                crate::guards::AlertCause::Radio => crate::game::WitnessAlertedBy::Radio,
-                crate::guards::AlertCause::Sound => crate::game::WitnessAlertedBy::Sound,
-                crate::guards::AlertCause::Sight => crate::game::WitnessAlertedBy::Sight,
-            };
+            let by = alert_cause(g, gd, seen);
             g.gd[gd].witness.alerted_by = Some(by);
             g.gd[gd].witness.alert_t = g.time;
         }
@@ -211,7 +206,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.gd[gd].react_t = 0.5 + crate::dice::draw_of(g, "guards::alertness#2", gd) * 0.5;
         } else {
             g.gd[gd].react_t = 0.9;
-            if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
+            if !g.team(gd).ours() && !crate::attention::attention_again(g, gd) {
                 crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);
@@ -267,7 +262,7 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     collide_guard(g, gd, p0x, p0z);
     if crate::startle::startle_gun_down(g, gd) {
         upper = UpperMode::None;
-        duck = duck || hand_carry(g, gd) != crate::guards::HandCarry::Torch;
+        duck = duck || hand_carry(g, gd) != crate::guards::InHand::Torch;
     }
     let is_aim = upper == UpperMode::Aim;
     if g.gd[gd].muzzle_eval_t != g.time {

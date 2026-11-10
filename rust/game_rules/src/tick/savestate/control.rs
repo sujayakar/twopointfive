@@ -24,10 +24,6 @@ pub enum Do {
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
-fn note(g: &mut Game, what: String) {
-    g.saves.log.push(CheckpointsLogItem {  });
-    if g.saves.log.len() > 40 { g.saves.log.remove(0); }
-}
 fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
@@ -69,8 +65,8 @@ fn unsettled(g: &mut Game) -> Option<String> {
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && !crate::condition::down(g, g.gd[x].ch)) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }
     for it in g.items.items.clone() {
-        let live = matches!(crate::throwables::item_kind(g, it), crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !crate::throwables::item_fired(g, it);
-        if live || !crate::throwables::item_settled(g, it) { return Some(String::from("a thrown thing is still in the air or on its fuse")); }
+        let live = matches!(g.tab.item[it].kind, crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !g.tab.item[it].fired;
+        if live || !g.tab.item[it].settled { return Some(String::from("a thrown thing is still in the air or on its fuse")); }
     }
     for &x in g.guards.iter().chain(g.civilians.iter()) {
         let c = &g.ch[g.gd[x].ch];
@@ -92,7 +88,7 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if p.breaker_move.is_some() { return Some("at the breaker"); }
     if p.easing.is_some() { return Some("easing a door"); }
     if p.door_move.is_some() { return Some("working a door"); }
-    if crate::wallcharge::wall_charge_setting(g, seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
+    if crate::wallcharge::wall_charge_setting(seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
     if p.kick.is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
     if p.pending_throw.is_some() || p.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
     if p.launch_held.is_some() { return Some("lining up the launcher"); }
@@ -123,10 +119,9 @@ fn gate(g: &mut Game) -> Option<String> {
 /// An autosave is asked for; one already waiting keeps its clock and takes the newer words.   (Checkpoints.request)
 pub fn request(g: &mut Game, why: &str, label: &str) {
     if !g.saves.enabled { return; }
-    g.saves.stats.requests += 1.0;
     match g.saves.pending.as_mut() {
         Some(p) => { p.label = String::from(label); p.why.push('+'); p.why.push_str(why); }
-        None => { g.saves.pending = Some(CheckpointsPending { why: String::from(why), label: String::from(label), at: g.time }); note(g, format!("request: {why} ({label})")); }
+        None => { g.saves.pending = Some(CheckpointsPending { why: String::from(why), label: String::from(label), at: g.time }); }
     }
 }
 /// A tutorial's step says: a checkpoint is here.   (Checkpoints.keep)
@@ -230,12 +225,10 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
     let p = g.saves.pending.clone()?;
     if g.time - p.at > k.pending_secs {
         g.saves.pending = None;
-        g.saves.stats.dropped += 1.0;
-        note(g, format!("dropped: {} ({})", p.why, blocked.unwrap_or_else(|| String::from("gap"))));
         return None;
     }
     if g.time - p.at < k.debounce_secs || g.time - g.saves.last_save_t < k.min_gap_secs { return None; }
-    if blocked.is_some() || !may { g.saves.stats.deferred_frames += 1.0; return None; }
+    if blocked.is_some() || !may { return None; }
     g.saves.pending = None;
     write(g, SlotInfoSlot::Auto, &p.label, false)
 }
@@ -244,11 +237,10 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
 fn regret(g: &mut Game) {
     let Some(a) = g.saves.last_auto.clone() else { return };
     if g.time - a.t > g.k.ckpt.regret_secs || g.time < a.t { g.saves.last_auto = None; return; }
-    let alert = g.guards.iter().copied().find(|&x| g.gd[x].state == GuardState::Alert && crate::teams::hostile_to(g, x, crate::teams::Team::Player));
+    let alert = g.guards.iter().copied().find(|&x| g.gd[x].state == GuardState::Alert && g.team(x).theirs());
     let why = match alert { Some(x) => Some(format!("{} alert {:.0} s after", g.gd[x].callsign, g.time - a.t)), None if g.alarm.episode => Some(String::from("an alarm straight after")), None => None };
     let Some(why) = why else { return };
-    if let Some(e) = g.saves.shelf.m.get_mut(a.key.clone()) { if e.info.regret.is_none() { e.info.regret = Some(why.clone()); g.saves.stats.regretted += 1.0; } }
-    note(g, format!("regretted {}: {}", a.key, why));
+    if let Some(e) = g.saves.shelf.m.get_mut(a.key.clone()) { if e.info.regret.is_none() { e.info.regret = Some(why.clone());  } }
     g.saves.last_auto = None;
 }
 
@@ -256,7 +248,6 @@ fn regret(g: &mut Game) {
 fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Option<Do> {
     if let Some(why) = run_no(g, &crate::seats::here(g), authored) {
         g.saves.stats.refused += 1.0;
-        note(g, format!("refused: {why}"));
         return (slot == SlotInfoSlot::Manual).then(|| Do::Say(format!("not saved: {why}")));
     }
     let (mut n, mut at) = (0, f64::INFINITY);
@@ -273,7 +264,6 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     let t = g.time;
     if slot == SlotInfoSlot::Auto { g.saves.stats.autosaves += 1.0; g.saves.last_auto = Some(CheckpointsLastAuto { key: key.clone(), t }); } else { g.saves.stats.manual += 1.0; }
     g.saves.flash = Some(CheckpointsFlash { text: String::from(if slot == SlotInfoSlot::Auto { "CHECKPOINT" } else { "CHECKPOINT SAVED" }), t });
-    note(g, format!("{}: {}", key, label));
     Some(Do::Keep { key, label: String::from(label) })
 }
 
@@ -558,7 +548,6 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     let label = was.saves.shelf.m.get(String::from(key)).map(|e| e.info.label.clone()).unwrap_or_default();
     g.saves.shelf = was.saves.shelf;
     g.saves.stats = was.saves.stats;
-    g.saves.log = was.saves.log;
     g.saves.enabled = was.saves.enabled;
     g.saves.pending = None;
     g.saves.last_auto = None;
@@ -573,7 +562,6 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     g.saves.stats.loads += 1.0;
     let t = g.time;
     g.saves.flash = Some(CheckpointsFlash { text: String::from("CHECKPOINT LOADED"), t });
-    note(g, format!("loaded {key}"));
     if label.is_empty() { String::from("checkpoint loaded") } else { format!("checkpoint loaded \u{2014} {label}") }
 }
 /// This run's saves, oldest first on the mission's clock: what a card lays out.   (Checkpoints.timeline)

@@ -59,22 +59,6 @@ pub struct Interactable {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum InteractableKind {
-    #[default] Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Verb {
     Push,
@@ -178,7 +162,6 @@ pub struct Witness {
     pub saw_body: Option<crate::game::WitnessSawBody>,
     pub called_to_body: Option<crate::game::WitnessCalledToBody>,
     pub saw_held: Option<crate::game::WitnessSawHeld>,
-    pub was_held: f64,
     pub dazzled: f64,
 }
 
@@ -290,7 +273,7 @@ pub struct GameEvent {
     pub weapon: Option<crate::weapons::WeaponId>,
     pub from: Option<V3>,
     pub to: Option<V3>,
-    pub cause: Option<crate::game::GameEventCause>,
+    pub cause: Option<crate::lighting::LightEventCause>,
     pub sw_at: Option<V3>,
     pub blind: Option<bool>,
     pub lure: Option<bool>,
@@ -299,12 +282,6 @@ pub struct GameEvent {
     pub ears: Option<[V3; 2]>,
     /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
     pub serial: u32,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum GameEventCause {
-    Shot,
-    Ocp,
 }
 
 /// What a game was stood with: its own record, set once at the stand, and the one rules read
@@ -359,7 +336,7 @@ pub struct Game {
     #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
-    pub falls: crate::sim_fallshome::FallStore,
+    pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
@@ -402,11 +379,10 @@ pub struct Game {
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
-    pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
@@ -479,7 +455,6 @@ pub struct Game {
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
-    pub ticking: bool,
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub alone_own: crate::game::AsideOwn,
@@ -692,7 +667,6 @@ pub enum Temperament {
     Nervy,
     Hard,
 }
-
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
@@ -911,7 +885,7 @@ pub struct PlayerKick {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerKickTool {
-    pub kind: crate::game::PlayerKickToolKind,
+    pub kind: crate::kit::BigTool,
     pub side: f64,
     pub t: f64,
     pub lead: Option<f64>,
@@ -921,12 +895,6 @@ pub struct PlayerKickTool {
     pub done: f64,
     pub gave: Option<bool>,
     pub moves: Option<crate::game::PlayerKickToolMoves>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum PlayerKickToolKind {
-    #[default] Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1011,7 +979,6 @@ pub struct Guard {
     #[is(CharId(0))] pub ch: CharId,
     #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
-    #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
     /// the man he has in mind: a player's or an AI man. He may be a man who has left: a body stays readable, tables never shrink
     pub foe: Option<CharId>,
     pub faces: Option<f64>,
@@ -1040,7 +1007,7 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 })] pub witness: crate::game::Witness,
+    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, dazzled: 0.0 })] pub witness: crate::game::Witness,
     #[is(GameTalkId(0))] pub talk: GameTalkId,
     pub keys: JsSet<String>,
     #[is(-1.0)] pub missed_at: f64,
@@ -1152,8 +1119,6 @@ pub struct GuardHeld {
     pub by: crate::game::GuardHeldBy,
     pub since: f64,
     pub variant: crate::character::HoldVariant,
-    pub phase: crate::character::HoldPhase,
-    pub reverse: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -1255,26 +1220,6 @@ pub struct GameNewOpts {
     pub seats: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameFreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameSetBlackoutCause {
-    Shot,
-    Ocp,
-    Debug,
-    Hand,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameLightEventCause {
-    Shot,
-    Ocp,
-}
-
 pub const PLAYER_MAX_HITS: f64 = 1.0;
 
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
@@ -1287,16 +1232,6 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
-impl Guard {
-    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
-    pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
-        let mut g = Guard::blank();
-        g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
-        if let Some(t) = team { g.team = t; }
-        g.keys = keys; g.weapon = weapon; g.talk = talk;
-        g
-    }
-}
 impl Player {
     ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
@@ -1306,6 +1241,8 @@ impl Player {
     }
 }
 impl Game {
+    /// whose man he is
+    pub fn team(&self, gd: GuardId) -> crate::teams::Team { self.ch[self.gd[gd].ch].team }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }
@@ -1316,7 +1253,11 @@ impl Game {
 pub struct Tabs {
     pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
+    /// (a man's file as it was read, which nothing writes after: in no bytes)
+    #[bytes(skip)]
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
     pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
@@ -1398,9 +1339,6 @@ pub struct Mods {
     pub sim_sim: crate::sim_sim::SimSimMod,
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
-    pub sim_propshome: crate::sim_propshome::SimPropshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
     pub scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod,
     /// (counts of what was asked: in no bytes)
     #[bytes(skip)]
@@ -1414,22 +1352,13 @@ pub struct Mods {
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
     pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
-    pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub holdfire: crate::holdfire::HoldfireMod,
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_fallshome: crate::sim_fallshome::SimFallshomeMod,
     pub edge_look: crate::edge_look::EdgeLookMod,
-    pub wallbreak: crate::wallbreak::WallbreakMod,
-    pub furnblast: crate::furnblast::FurnblastMod,
     pub doorblast: crate::doorblast::DoorblastMod,
     pub fire: crate::fire::FireMod,
     pub winbars: crate::winbars::WinbarsMod,
@@ -1483,22 +1412,18 @@ pub struct Mods {
     pub squadthrow: crate::squadthrow::SquadthrowMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
-    pub cmd: crate::cmd::CmdMod,
     pub fireline: crate::fireline::FirelineMod,
     pub doorforce: crate::doorforce::DoorforceMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
     pub glass: crate::glass::GlassMod,
-    pub wallpen: crate::wallpen::WallpenMod,
     pub suppression: crate::suppression::SuppressionMod,
     pub enemysquads: crate::enemysquads::EnemysquadsMod,
     pub morale: crate::morale::MoraleMod,
     pub doortools: crate::doortools::DoortoolsMod,
-    pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
-    pub pairup: crate::pairup::PairupMod,
     pub sneak: crate::sneak::SneakMod,
     pub silent: crate::silent::SilentMod,
     pub cast: crate::cast::CastMod,
@@ -1507,9 +1432,6 @@ pub struct Mods {
     pub combat: crate::combat::CombatMod,
     pub scene_level_load: crate::scene_level_load::SceneLevelLoadMod,
     pub snow_bog: crate::snow_bog::SnowBogMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_itemshome: crate::sim_itemshome::SimItemshomeMod,
     pub frag: crate::frag::FragMod,
     pub teampace: crate::teampace::TeampaceMod,
     pub squad: crate::squad::SquadMod,
@@ -1539,106 +1461,70 @@ pub struct Mods {
 /// each module's counters: g.stats.<module>
 #[derive(Clone, Debug, Default)]
 pub struct Stats {
-    pub wand: crate::wand::WandStats,
-    pub cmdring: crate::cmdring::CmdringStats,
     pub workstow: crate::workstow::WorkstowStats,
-    pub holdfire: crate::holdfire::HoldfireStats,
     pub picture: crate::picture::PictureStats,
-    pub shards: crate::shards::ShardsStats,
     pub carlamps: crate::carlamps::CarlampsStats,
-    pub edge_look: crate::edge_look::EdgeLookStats,
-    pub wallbreak: crate::wallbreak::WallbreakStats,
-    pub furnblast: crate::furnblast::FurnblastStats,
     pub doorblast: crate::doorblast::DoorblastStats,
-    pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
-    pub break_table: crate::break_table::BreakTableStats,
-    pub wind: crate::wind::WindStats,
     pub glasspen: crate::glasspen::GlasspenStats,
-    pub gunroles: crate::gunroles::GunrolesStats,
     pub doorway: crate::doorway::DoorwayStats,
-    pub handleside: crate::handleside::HandlesideStats,
-    pub aimcost: crate::aimcost::AimcostStats,
-    pub runner: crate::runner::RunnerStats,
     pub netquiet: crate::netquiet::NetquietStats,
     pub stackroom: crate::stackroom::StackroomStats,
-    pub rearwatch: crate::rearwatch::RearwatchStats,
-    pub roomfit: crate::roomfit::RoomfitStats,
     pub gunslots: crate::gunslots::GunslotsStats,
     pub coverfire: crate::coverfire::CoverfireStats,
-    pub wallreact: crate::wallreact::WallreactStats,
     pub tactics: crate::tactics::TacticsStats,
-    pub digin: crate::digin::DiginStats,
-    pub stickycam: crate::stickycam::StickycamStats,
     pub par: crate::par::ParStats,
-    pub aimweight: crate::aimweight::AimweightStats,
-    pub calmtorch: crate::calmtorch::CalmtorchStats,
-    pub darkfoe: crate::darkfoe::DarkfoeStats,
     pub whistle: crate::whistle::WhistleStats,
     pub attention: crate::attention::AttentionStats,
-    pub doze: crate::doze::DozeStats,
-    pub needs: crate::needs::NeedsStats,
-    pub gunwall: crate::gunwall::GunwallStats,
-    pub lightswitch: crate::lightswitch::LightswitchStats,
     pub samstun: crate::samstun::SamstunStats,
-    pub stalk: crate::stalk::StalkStats,
     pub darkdoor: crate::darkdoor::DarkdoorStats,
-    pub startle: crate::startle::StartleStats,
     pub flinch: crate::flinch::FlinchStats,
     pub sprintdoor: crate::sprintdoor::SprintdoorStats,
-    pub seenwalk: crate::seenwalk::SeenwalkStats,
-    pub wet: crate::wet::WetStats,
     pub he40: crate::he40::He40Stats,
-    pub stackline: crate::stackline::StacklineStats,
     pub unseen: crate::unseen::UnseenStats,
-    pub squadsmoke: crate::squadsmoke::SquadsmokeStats,
-    pub squad40: crate::squad40::Squad40Stats,
-    pub throwplan: crate::throwplan::ThrowplanStats,
-    pub squadthrow: crate::squadthrow::SquadthrowStats,
-    pub autopilot: crate::autopilot::AutopilotStats,
     pub kitanim: crate::kitanim::KitanimStats,
-    pub peeksight: crate::peeksight::PeeksightStats,
     pub friends: crate::friends::FriendsStats,
     pub friendlyfire: crate::friendlyfire::FriendlyfireStats,
     pub cleanrestart: crate::cleanrestart::CleanrestartStats,
     pub fireline: crate::fireline::FirelineStats,
-    pub noshove: crate::noshove::NoshoveStats,
-    pub doorforce: crate::doorforce::DoorforceStats,
     pub wallpen: crate::wallpen::WallpenStats,
     pub condition: crate::condition::ConditionStats,
     pub morale: crate::morale::MoraleStats,
     pub shotgun: crate::shotgun::ShotgunStats,
     pub bigkit: crate::bigkit::BigkitStats,
-    pub close: crate::close::CloseStats,
     pub takedown: crate::takedown::TakedownStats,
     pub spotted: crate::spotted::SpottedStats,
     pub pairorders: crate::pairorders::PairordersStats,
     pub pairup: crate::pairup::PairupStats,
     pub sneak: crate::sneak::SneakStats,
     pub silent: crate::silent::SilentStats,
-    pub lesson: crate::lesson::LessonStats,
     pub rails: crate::rails::RailsStats,
     pub frag: crate::frag::FragStats,
     pub teampace: crate::teampace::TeampaceStats,
-    pub quiet: crate::quiet::QuietStats,
-    pub workthings: crate::workthings::WorkthingsStats,
-    pub lighting: crate::lighting::LightingStats,
-    pub handwork: crate::handwork::HandworkStats,
     pub wandorder: crate::wandorder::WandorderStats,
     pub civilians: crate::civilians::CiviliansStats,
     pub deathrecap: crate::deathrecap::DeathrecapStats,
-    pub planmode: crate::planmode::PlanmodeStats,
     pub doorthrow: crate::doorthrow::DoorthrowStats,
-    pub shutdoor: crate::shutdoor::ShutdoorStats,
-    pub fixture_break: crate::fixture_break::FixtureBreakStats,
-    pub moths: crate::moths::MothsStats,
-}
-impl Stats {
-    pub fn blank() -> Self { Self::default() }
 }
 
 #[cfg(test)]
 mod stands {
     #[test]
     fn a_blank_game_can_be_built() { let g = super::Game::blank(); let _ = g.k.startle.beat; let h = g.clone(); let _ = h.time; }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum InteractableKind {
+    #[default] Cam,
+    Guard,
+    Breaker,
+    Door,
+    Light,
+    Body,
+    Objective,
+    Held,
+    Wall,
+    Switch,
+    Charge,
+    Cancel,
 }

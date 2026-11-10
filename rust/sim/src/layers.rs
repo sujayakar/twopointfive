@@ -4,16 +4,16 @@
 //!
 //! A layer answers 0 = not a pose of this pool, or a role with no node (the caller stops, by name) · else RAN, with a bit for each list of nodes it ran forward on
 //! the bench (`ran_list`), whose rotations and origins the caller reads back.
-use game_types::character::{KICK_IMPACT, KICK_PLANT, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, LONG_PULL_MAX, READY_RATE, READY_REACH, THROW_DUR, THROW_RELEASE, TOE_FLOOR_Y, TOSS_AFTER, TOSS_LOW, TOSS_TOP, WALL_GAIT_REST, WALL_ROOT_OFF, BIGMOVE, BLOW, BOB, CREEP, FEET, GAZE, GAZE_EL, HAND, KNIFE_BLOW, LEAN_POSE, LIFE, LONG_PIVOT, LONG_STEADY, MV2, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, REACH, READY_AZ, READY_BARE, READY_UP, RUN_LINGER, SMOKEARM, SNEAK, SOFT_KNEE, SPRINT_WARP, STEALTH, SWIV_REF_L, SWIV_REF_R, TAKEN, TOSS_HANG, WALL_POSE, WORK};
+use game_types::character::{KICK_IMPACT, KICK_PLANT, LONG_ANCHOR_SIDE_MAX, LONG_PULL_MAX, READY_RATE, READY_REACH, THROW_DUR, THROW_RELEASE, TOE_FLOOR_Y, TOSS_AFTER, TOSS_LOW, TOSS_TOP, WALL_GAIT_REST, WALL_ROOT_OFF, BIGMOVE, BLOW, BOB, CREEP, FEET, GAZE, GAZE_EL, HAND, KNIFE_BLOW, LEAN_POSE, LIFE, LONG_PIVOT, LONG_STEADY, MV2, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, REACH, READY_AZ, READY_BARE, READY_UP, RUN_LINGER, SMOKEARM, SNEAK, SOFT_KNEE, SPRINT_WARP, STEALTH, SWIV_REF_L, SWIV_REF_R, TAKEN, TOSS_HANG, WALL_POSE, WORK};
 use game_types::rig_props::{Adj as RigAdj, SlingFrontHand, BIGRIG, RIG};
-use game_types::character::{Anim, AnimBigTool, AnimBigToolKind, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimSp, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
+use game_types::character::{Anim, AnimBigTool, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
 use game_types::gunreload::{FeedKey, FeedKeyAt, FeedKeyHow, FeedMarks};
 use game_types::knobs::Knobs;
 use crate::roles::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{NODE, ask_blend as ask_blend_how, ask_mask, ask_sample as ask_sample_how, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{NODE, ask_blend as ask_blend_how, ask_mask, ask_sample as ask_sample_how, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -276,7 +276,7 @@ pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &K
             turn(d, rig, nk, q_pitch(-chin * 0.4));
             turn(d, rig, hd, q_pitch(-chin * 0.6));
         }
-        if (tune.moves.on > 0.5) && (tune.moves.recoil > 0.5) && (rock > 1e-4 || sho > 1e-4) {
+        if rock > 1e-4 || sho > 1e-4 {
             let q = |kk: f64| q_mul(&q_yaw(-sho * DEGR * w * kk), &q_pitch(-rock * DEGR * w * kk));
             turn(d, rig, s2, q(0.4));
             turn(d, rig, s3, q(0.6));
@@ -292,7 +292,7 @@ pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &K
 
 /// The long gun, trunk half: the run's pumping of the shoulder line taken back out down the spine (about the model's upright, or by the sprint's share
 /// about the trunk's own line), the upper spine bladed toward the gun, the lean, the head set to the stock.
-pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; LC_COUNT], tune: &Knobs) -> u32 {
+pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; LC_COUNT]) -> u32 {
     let (long_steady, c_blade, c_lean, c_hy, c_hp, c_hr) = (an.long_steady, ch[LC_BLADE], ch[LC_LEAN], ch[LC_HEAD_YAW], ch[LC_HEAD_PITCH], ch[LC_HEAD_ROLL]);
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R]) {
@@ -309,7 +309,7 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
             ran |= ran_list(FK_ARMS);
             let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
             // (by the SPRINT's share of the pose: a jog is held as it always was, to the bit)
-            let lv = if (tune.moves.on > 0.5) && (tune.moves.steady > 0.5) && (tune.moves.steady_run > 0.5) { clamp(sprint, 0.0, 1.0) } else { 0.0 };
+            let lv = clamp(sprint, 0.0, 1.0);
             if lv > 0.0 {
                 // … about the TRUNK'S OWN LINE: spine1 → between the clavicle roots
                 let (ca, cb, sp1) = (fk.at(role(SHOULDER_L)), fk.at(role(SHOULDER_R)), fk.at(s1));
@@ -367,11 +367,6 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
     .unwrap_or(0)
 }
 
-/// A row of MOVES, under its master switch
-#[inline(always)]
-fn mv_on(row: f64, tune: &Knobs) -> bool {
-    tune.moves.on > 0.5 && row > 0.5
-}
 /// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry;
 /// all of it on exit)
 fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
@@ -384,12 +379,12 @@ fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
 }
 const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
 
-/// Before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's back, and the
+/// Before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), and the
 /// pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is taken
 /// out, the feet held where the cycle has them.
 pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune: &Knobs) -> u32 {
-    let (at, trained, long_gun, lg_w, aim) = (an.p_a.at as usize, an.trained, an.long_gun, an.lg.w.x, an.upper_w.aim);
-    let (dip, m, sp, o) = (an.dip, &mut an.mvs, &mut an.mv2.dip, &mut an.mv_out);
+    let (at, trained, lg_w, aim) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.upper_w.aim);
+    let (m, o) = (&mut an.mvs, &mut an.mv_out);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
             return 0;
@@ -410,39 +405,22 @@ pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune:
                 m.head *= er;
             }
         }
-        // MOVES.entry: the muzzle down past a friend's back, and up again the moment he is clear of it
-        let want = if mv_on(tune.moves.entry, tune) && long_gun { clamp(dip, 0.0, 1.0) } else { 0.0 };
-        if want > 0.0 || sp.x != 0.0 {
-            let rate = if want > sp.x { MV2.dip.rate_in } else { MV2.dip.rate_out };
-            spring_step(sp, want, rate, dt);
-            if want == 0.0 && sp.x < 0.01 {
-                sp.x = 0.0;
-                sp.v = 0.0;
-            }
-        }
-        an.mv2_shown.dip = clamp(sp.x, 0.0, 1.0);
-        an.sights_lift = 0.0;
-        o.g = 0.0;
-        o.u = 0.0;
-        o.st = 0.0;
         let mut ran = RAN;
-        if mv_on(tune.moves.gait, tune) {
-            let (lgw, tw) = (clamp(lg_w, 0.0, 1.0), smoothstep(0.5, 1.0, trained));
-            spring_step(&mut m.glide, tw * move_w * lgw, 9.0, dt);
-            o.g = clamp(m.glide.x, 0.0, 1.0);
-            o.u = (1.0 - smoothstep(0.0, 0.5, trained)) * lgw * stand_w;
-            o.st = tw * lgw * stand_w;
-            let drop = tune.mv.gait.drop * o.g + tune.mv.gait.aim_drop * o.st * aim * (1.0 - o.g);
-            if drop > 2e-4 || o.g > 0.003 {
-                fk.part(rig, d, list(FK_LEGS));
-                let hy = fk.at(role(HIPS))[1];
-                m.hip_y = if finite(m.hip_y) { m.hip_y + (hy - m.hip_y) * (1.0 - exp(-dt / 0.35)) } else { hy };
-                let flat = clamp((m.hip_y - hy) * tune.mv.gait.bob * o.g, -0.03, 0.03);
-                mv_hips(d, rig, fk, &[0.0, flat - drop, 0.0]);
-                ran |= RAN_ALL;
-            } else {
-                m.hip_y = f64::NAN;
-            }
+        let (lgw, tw) = (clamp(lg_w, 0.0, 1.0), smoothstep(0.5, 1.0, trained));
+        spring_step(&mut m.glide, tw * move_w * lgw, 9.0, dt);
+        o.g = clamp(m.glide.x, 0.0, 1.0);
+        o.u = (1.0 - smoothstep(0.0, 0.5, trained)) * lgw * stand_w;
+        o.st = tw * lgw * stand_w;
+        let drop = tune.mv.gait.drop * o.g + tune.mv.gait.aim_drop * o.st * aim * (1.0 - o.g);
+        if drop > 2e-4 || o.g > 0.003 {
+            fk.part(rig, d, list(FK_LEGS));
+            let hy = fk.at(role(HIPS))[1];
+            m.hip_y = if finite(m.hip_y) { m.hip_y + (hy - m.hip_y) * (1.0 - exp(-dt / 0.35)) } else { hy };
+            let flat = clamp((m.hip_y - hy) * tune.mv.gait.bob * o.g, -0.03, 0.03);
+            mv_hips(d, rig, fk, &[0.0, flat - drop, 0.0]);
+            ran |= RAN_ALL;
+        } else {
+            m.hip_y = f64::NAN;
         }
         o.live = o.g > 0.003 || o.u > 0.003 || o.st > 0.003 || m.rock > 1e-4 || m.sho > 1e-4;
         ran
@@ -819,9 +797,9 @@ pub fn sneak_body(g: usize, an: &Anim, dl: f64, pace: f64, soft: f64, surge: f64
 
 /// MOVES.steady: this frame's swing of the crouch cycle (its own sample, the pose at `at_c`, against its own mean) taken out by MV.steady's shares: the
 /// pelvis's roll at the hips with the chest handed the same turn back, a little of the hips' sideways travel, both ankles put back nearer his middle and
-/// the knees swung in over them; at setting 2 the pelvis ridden up by as much as both legs can pay out.
+/// the knees swung in over them.
 pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f64; 2], tune: &Knobs) -> u32 {
-    let (mean_roll, mean_x, steady_up) = (mean[0], mean[1], an.steady_up);
+    let (mean_roll, mean_x) = (mean[0], mean[1]);
     let roll_now = |fk: &Fk| -> f64 {
         let (a, b) = (fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
         atan2(a[1] - b[1], a[0] - b[0])
@@ -856,21 +834,6 @@ pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f6
         let kx = 1.0 - (1.0 - tune.mv.steady.feet) * w * base;
         fk.part(rig, d, list(FK_LEGS));
         let (al, ar) = ([fl[0] * kx, fl[1], fl[2]], [fr[0] * kx, fr[1], fr[2]]);
-        if steady_up > 0.0 {
-            let mut up = steady_up;
-            for (i, at) in [al, ar].iter().enumerate() {
-                let (hip, knee, foot) = legs[i];
-                let h = fk.at(hip);
-                let len = (dist3(&h, &fk.at(knee)) + dist3(&fk.at(knee), &fk.at(foot))) * tune.mv.steady.reach;
-                let (hx, hy, hz) = (h[0] - at[0], h[1] - at[1], h[2] - at[2]);
-                let q = len * len - hx * hx - hz * hz;
-                up = min(up, if q > 0.0 { sqrt(q) - hy } else { 0.0 });
-            }
-            if up > 1e-5 {
-                shift(d, rig, hips, &[0.0, up, 0.0]);
-                fk.part(rig, d, list(FK_LEGS));
-            }
-        }
         let (kn, ko) = (tune.mv.steady.knee * w * base, tune.mv.steady.knee_out * w * sunk);
         let (hl, hr) = (smoothstep(0.10, 0.22, yl), smoothstep(0.10, 0.22, yr));
         let (kl, kr) = (1.0 - kn * lerp(tune.mv.steady.knee_low, 1.0, hl) + ko * (1.0 - hl), 1.0 - kn * lerp(tune.mv.steady.knee_low, 1.0, hr) + ko * (1.0 - hr));
@@ -1296,7 +1259,7 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
     let tr = [-n[2], 0.0, n[0]];
     let root_off = WALL_ROOT_OFF;
     // the sidle's own step: its share of the feet, and of the pelvis on the move
-    let g_share = if tune.wallsnap.on && true { lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], cr) } else { 0.0 };
+    let g_share = lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], cr);
     let gw = g_share * (1.0 - park) * w;
     // the idles underneath, sampled here: the standing one's spine and pelvis, the crouched one's pelvis
     let Some(nodes) = with_pose(g, at, |_d, _rig, nodes, _fk| nodes) else {
@@ -1551,7 +1514,6 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
     .unwrap_or(0)
 }
 
-
 /// He gives a man room as he passes, the body's share: by how near the man is the pelvis comes lower and off his side over feet left where they were,
 /// and the trunk tips away from him with the head brought level back out of it.
 pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> u32 {
@@ -1649,7 +1611,7 @@ pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
 /// After the stances and the arms, the body's share of the reactions: the flinch, the start, the hit, the blinded hunch, the clutch's fold, a hurt man's
 /// hunch and heavy step, a shaken man's ducked head and the toss's wind-up, summed into one turn of the trunk, one of the head and one move of the
 /// pelvis over feet held where they are. The arms that follow (the start's, the blinded hand, the held gun, the toss) are the host's.
-pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, fold_on: bool, tune: &Knobs) -> u32 {
+pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> u32 {
     let (at, trained, lg_w, blind, blind_k) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.dazzle.is_some(), an.dazzle.map_or(0.0, |d| d.k));
     let (clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken) = (an.clutch, an.fold_too, an.hurt, an.hurt_side, an.upper_w.aim, an.speed, an.phase, an.shaken);
     let (m, po) = (&mut an.mvs, &mut an.mv_po);
@@ -1720,7 +1682,7 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, fold_on: bool, 
             }
         }
         // blinded: the side he turns away to is chosen once, as it goes off
-        let dz_t = if blind && mv_on(tune.moves.dazzle, tune) { clamp(blind_k, 0.0, 1.0) } else { 0.0 };
+        let dz_t = if blind { clamp(blind_k, 0.0, 1.0) } else { 0.0 };
         let rate = if dz_t > m.dz.x { tune.mv.dazzle.rate_in } else { tune.mv.dazzle.rate_out };
         spring_step(&mut m.dz, dz_t, rate, dt);
         if dz_t == 0.0 && m.dz.x < 0.02 {
@@ -1748,7 +1710,7 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, fold_on: bool, 
             m.dz_t = 0.0;
         }
         // the clutch's fold: under the blinded hunch it gives way by the hunch's own weight
-        let want = if clutch > 0.0 && fold_on { clamp(clutch, 0.0, 1.0) * (1.0 - clamp(dzw, 0.0, 1.0)) } else { 0.0 };
+        let want = if clutch > 0.0 && fold_too { clamp(clutch, 0.0, 1.0) * (1.0 - clamp(dzw, 0.0, 1.0)) } else { 0.0 };
         if want > 0.0 || m.cf.x != 0.0 {
             spring_step(&mut m.cf, want, MV2.clutch.fold.rate, dt);
             if want == 0.0 && m.cf.x < 0.01 {
@@ -2186,7 +2148,7 @@ const FIST: [f64; 3] = [72.0, 92.0, 62.0];
 const THUMB_FIST: [f64; 3] = [30.0, 25.0, 45.0];
 /// CharacterAnimator.hand — curl the four fingers (0 straight … 1 fist) and set the thumb (0 alongside … 1 folded over the fist) of one hand, from the rest
 /// (straight) hand; then the hand pass's note: a layer has set this hand, and how far its shape stands from where the locomotion left each digit.
-fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, spread: f64, tune: &Knobs) {
+fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, spread: f64) {
     let (ns, at) = (digits(side), side * HAND_DIGITS);
     for fi in 0..4 {
         for j in 0..3 {
@@ -2202,13 +2164,11 @@ fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, sp
     for j in 0..3 {
         set_unit(d, ns[j] as usize, &q_mul(&h.rest[at + j], &q_pitch(thumb * THUMB_FIST[j] * DEGR)));
     }
-    if tune.moves.on > 0.5 {
-        let b = &h.base[side * 60..side * 60 + 60];
-        for g in 0..5 {
-            let k = g * 3;
-            let far = (q_ang(d, ns[k] as usize, b, k * 4) + q_ang(d, ns[k + 1] as usize, b, k * 4 + 4) + q_ang(d, ns[k + 2] as usize, b, k * 4 + 8)) / 3.0;
-            h.note[side * 5 + g] = stored(min(h.note[side * 5 + g], far));
-        }
+    let b = &h.base[side * 60..side * 60 + 60];
+    for g in 0..5 {
+        let k = g * 3;
+        let far = (q_ang(d, ns[k] as usize, b, k * 4) + q_ang(d, ns[k + 1] as usize, b, k * 4 + 4) + q_ang(d, ns[k + 2] as usize, b, k * 4 + 8)) / 3.0;
+        h.note[side * 5 + g] = stored(min(h.note[side * 5 + g], far));
     }
 }
 /// quat.fromBasis: the rotation whose axes are x, y, z
@@ -2259,16 +2219,11 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         let nn = [sin(yaw), 0.0, cos(yaw)];
         let tr = [-nn[2], 0.0, nn[0]];
         fk_run(rig, d, fk.rot, fk.pos);
-        let mend = tune.wallsnap.on && (1.0 != 0.0);
         let hips = fk.at(role(HIPS));
-        let (hx, hy, hz) = (hips[0], hips[1] + if mend { lerp(WALL_POSE.mend.up[0], WALL_POSE.mend.up[1], w_cr) } else { lerp(WALL_POSE.hands.up, WALL_POSE.hands.up_crouch, w_cr) }, hips[2]);
-        let along0 = if mend {
-            lerp(WALL_POSE.mend.along[0], WALL_POSE.mend.along[1], w_cr) - WALL_POSE.mend.sway * cos(gait * 2.0 * PI) * (1.0 - clamp(park, 0.0, 1.0)) * lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], w_cr)
-        } else {
-            lerp(WALL_POSE.hands.along, WALL_POSE.hands.along_crouch, w_cr)
-        };
-        let (e_out, e_room, e_down) = if mend { (WALL_POSE.mend.elbow.out, WALL_POSE.mend.elbow.room, WALL_POSE.mend.elbow.down) } else { (WALL_POSE.elbow.out, WALL_POSE.elbow.room, WALL_POSE.elbow.down) };
-        let splay = if mend { WALL_POSE.mend.splay } else { WALL_POSE.hands.out };
+        let (hx, hy, hz) = (hips[0], hips[1] + lerp(WALL_POSE.mend.up[0], WALL_POSE.mend.up[1], w_cr), hips[2]);
+        let along0 = lerp(WALL_POSE.mend.along[0], WALL_POSE.mend.along[1], w_cr) - WALL_POSE.mend.sway * cos(gait * 2.0 * PI) * (1.0 - clamp(park, 0.0, 1.0)) * lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], w_cr);
+        let (e_out, e_room, e_down) = (WALL_POSE.mend.elbow.out, WALL_POSE.mend.elbow.room, WALL_POSE.mend.elbow.down);
+        let splay = WALL_POSE.mend.splay;
         for side in 0..2usize {
             // his right is +tr: the right hand goes that way, the left the other
             let sg = if side == 1 { 1.0 } else { -1.0 };
@@ -2283,13 +2238,9 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
             let pole = [tr[0] * sg * e_out + nn[0] * e_room, -e_down, tr[2] * sg * e_out + nn[2] * e_room];
             let (up, fore, hnd) = if side == 1 { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) } else { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) };
             two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hnd, &p, Some(&pole), 0.9, Some(&r), false);
-            if mend {
-                hand(d, hh, side, &[WALL_POSE.mend.curl[0], WALL_POSE.mend.curl[1], WALL_POSE.mend.curl[2], WALL_POSE.mend.curl[3]], WALL_POSE.mend.thumb, WALL_POSE.mend.fan, tune);
-                // the thumb beside the index, out of the plaster
-                turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hnd), &AY), sg * WALL_POSE.mend.thumb_in * DEGR));
-            } else {
-                hand(d, hh, side, &[0.05, 0.06, 0.08, 0.12], 0.1, 0.5, tune);
-            }
+            hand(d, hh, side, &[WALL_POSE.mend.curl[0], WALL_POSE.mend.curl[1], WALL_POSE.mend.curl[2], WALL_POSE.mend.curl[3]], WALL_POSE.mend.thumb, WALL_POSE.mend.fan);
+            // the thumb beside the index, out of the plaster
+            turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hnd), &AY), sg * WALL_POSE.mend.thumb_in * DEGR));
         }
         RAN | RAN_ALL
     })
@@ -2339,7 +2290,7 @@ pub const LC_COUNT: usize = 21;
 pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_door: bool, keep: bool, ch: &[f64; LC_COUNT], rl_at: [f64; 3], tune: &Knobs) -> u32 {
     let (at, at_b, _) = poses(an);
     let at_aim = an.p_aim.at as usize;
-    let (t, aim, aim_pitch, shoot_t, long_steady, trained, dip_w, rl_k) = (an.idle_t, an.upper_w.aim, an.aim_pitch, an.shoot_t, an.long_steady, an.trained, an.mv2_shown.dip, an.rlc.k);
+    let (t, aim, aim_pitch, long_steady, trained, rl_k) = (an.idle_t, an.upper_w.aim, an.aim_pitch, an.long_steady, an.trained, an.rlc.k);
     let (mvs_yaw, mvs_climb, mvs_back, dl, dr) = (an.mvs.yaw, an.mvs.climb, an.mvs.back, an.dp.w_l.x, an.dp.w_r.x);
     let (grip_up, fix_l, g_wrist, g_fingers, g_back) = (an.grip_up, an.hand_fix[0], an.long_grip.wrist, an.long_grip.fingers, an.long_grip.back);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R]) { Some(n) } else { None }) else {
@@ -2362,15 +2313,8 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
         let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), pr0));
         // the bore, model space
         let sway = ch[LC_SWAY];
-        let rcl = mv_on(tune.moves.recoil, tune);
-        let yaw = (ch[LC_YAW] + 0.6 * sway * sin(t * 1.1) + if rcl { mvs_yaw } else { 0.0 }) * DEGR;
-        let pitch0 = clamp((ch[LC_PITCH] + 0.8 * sway * sin(t * 1.7 + 1.1) + if rcl { mvs_climb } else { 0.0 }) * DEGR + aim_pitch * (ch[LC_AIM_K] - 0.35 * aim), -1.35, 1.35);
-        // (only ever down, and only from a gun that is about level)
-        let dip_k = if dip_w > 0.0 { dip_w * (1.0 - smoothstep(0.3, 0.6, pitch0)) } else { 0.0 };
-        let pitch = if dip_k > 0.0 { lerp(pitch0, min(pitch0, MV2.dip.pitch * DEGR), dip_k) } else { pitch0 };
-        if dip_k > 0.0 && w > 0.99 && mv_on(tune.moves.entry_eyes, tune) {
-            an.sights_lift = pitch0 - pitch;
-        }
+        let yaw = (ch[LC_YAW] + 0.6 * sway * sin(t * 1.1) + mvs_yaw) * DEGR;
+        let pitch = clamp((ch[LC_PITCH] + 0.8 * sway * sin(t * 1.7 + 1.1) + mvs_climb) * DEGR + aim_pitch * (ch[LC_AIM_K] - 0.35 * aim), -1.35, 1.35);
         let cp = cos(pitch);
         let dd = [sin(yaw) * cp, sin(pitch), cos(yaw) * cp];
         let rr = q_mul(&grip_turn(&g0, &rr0, &dd, &AY, &grip_up), &rr0);
@@ -2379,16 +2323,7 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
         yw = if len3(&yw) > 1e-4 { normalize(yw) } else { [cos(yaw), 0.0, -sin(yaw)] };
         let xw = cross3(&yw, &dd);
         let in_gun = |p: &[f64; 3]| -> [f64; 3] { [xw[0] * p[0] + yw[0] * p[1] + dd[0] * p[2], xw[1] * p[0] + yw[1] * p[1] + dd[1] * p[2], xw[2] * p[0] + yw[2] * p[1] + dd[2] * p[2]] };
-        // the trigger hand: the carriage's point off the chest joint, pumped toward the chest by a kick, pulled back along the bore by a shot
-        let kick = if shoot_t >= 0.0 {
-            if shoot_t < 0.035 {
-                shoot_t / 0.035
-            } else {
-                max(0.0, 1.0 - (shoot_t - 0.035) / 0.2)
-            }
-        } else {
-            0.0
-        };
+        // the trigger hand: the carriage's point off the chest joint, pumped toward the chest by a kick
         let pump = if kick_t >= 0.0 { 0.04 * bump(kick_t, 0.15, 0.36, 0.5, 0.85) } else { 0.0 };
         let ka = clamp(ch[LC_ANCHOR], 0.0, 1.0);
         let sh = fk.at(role(UPPER_ARM_R));
@@ -2437,28 +2372,18 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
             off[2] = -oy * sin(ph) + oz * cos(ph);
         }
         let mut pr = add3(chest, off);
-        if dip_k > 0.0 {
-            pr[1] -= MV2.dip.down * dip_k;
-            pr[2] -= MV2.dip.back * dip_k;
-        }
-        if rcl {
-            if mvs_back > 1e-5 {
-                pr = mad3(pr, dd, -mvs_back);
-            }
-        } else if kick > 0.0 {
-            pr = mad3(pr, dd, -LONG_KICK_BACK * kick);
+        if mvs_back > 1e-5 {
+            pr = mad3(pr, dd, -mvs_back);
         }
         let mut pole_r = [ch[LC_ELBOW_R], ch[LC_ELBOW_R + 1], ch[LC_ELBOW_R + 2]];
         let mut pole_l = [ch[LC_ELBOW_L], ch[LC_ELBOW_L + 1], ch[LC_ELBOW_L + 2]];
         let pw = clamp(ch[LC_POLE_W], 0.0, 1.0);
-        if mv_on(tune.moves.gait, tune) {
-            // the elbows by training, shouldered
-            let (tw, uw) = (smoothstep(0.5, 1.0, trained) * aim, (1.0 - smoothstep(0.0, 0.5, trained)) * aim);
-            pole_r[0] += tune.mv.gait.elbow_in * tw;
-            pole_l[0] -= tune.mv.gait.elbow_in * 0.8 * tw;
-            pole_r[1] += tune.mv.gait.wing * uw;
-            pole_r[0] -= 0.25 * uw;
-        }
+        // the elbows by training, shouldered
+        let (tw, uw) = (smoothstep(0.5, 1.0, trained) * aim, (1.0 - smoothstep(0.0, 0.5, trained)) * aim);
+        pole_r[0] += tune.mv.gait.elbow_in * tw;
+        pole_l[0] -= tune.mv.gait.elbow_in * 0.8 * tw;
+        pole_r[1] += tune.mv.gait.wing * uw;
+        pole_r[0] -= 0.25 * uw;
         let rl = hand_rot(&fix_l, in_gun(&g_fingers), in_gun(&g_back));
         let (up_r, fore_r, up_l, fore_l) = (role(UPPER_ARM_R), role(FOREARM_R), role(UPPER_ARM_L), role(FOREARM_L));
         // → how far the support hand fell short of its point (nought when it reached)
@@ -2492,7 +2417,7 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
             an.lg.pull[2] = pull[2];
         }
         // the support hand cupped round the handguard
-        hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.68], 0.35, 0.0, tune);
+        hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.68], 0.35, 0.0);
         RAN | RAN_ALL
     })
     .unwrap_or(0);
@@ -2619,7 +2544,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             let pole = [tune.mv.dazzle.hand_pole[0], tune.mv.dazzle.hand_pole[1], tune.mv.dazzle.hand_pole[2]];
             let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, tune.mv.dazzle.hand_tilt), mad3(gz, up, tune.mv.dazzle.hand_roll));
             two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&pole), 0.85, Some(&r), false);
-            hand(d, hh, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3, tune);
+            hand(d, hh, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
         });
         let wz = smoothstep(0.08, 0.6, dzw);
         ask_mask(&[(sh_l, wz, true)]);
@@ -2666,7 +2591,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &add3(sh, off), Some(&[0.7, -0.45, -0.55]), 0.8, Some(&r), false);
             let (open, recup) = (smoothstep(rel - 0.02, rel + 0.04, ts), smoothstep(rel + 0.35, td, ts));
             let c = |grip: f64, flat: f64, cup: f64| lerp(lerp(grip, flat, open), cup, recup);
-            hand(d, hh, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup), tune);
+            hand(d, hh, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
             // the wrist's turn eases from and back to the grip it had on the gun at the ends (the path does the same for its place)
             wrist_ease(d, rig, fk, hand_l, &rot0, bump(ts, 0.0, 0.08, td - 0.22, td - 0.04));
         });
@@ -2721,7 +2646,7 @@ pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32
         let to = [sh[0] + sx * tune.watch.arm_out, sh[1] - tune.watch.arm_down, sh[2] + sz * tune.watch.arm_out];
         let r = hand_rot(&fix, normalize([sx * 0.75, -0.55, sz * 0.75]), [-sx * 0.3, 1.0, -sz * 0.3]);
         two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hand_n, &to, Some(&[sgn * 0.5, -0.3, -0.8]), 0.6, Some(&r), false);
-        hand(d, hh, side, &[0.12, 0.15, 0.18, 0.22], 0.15, 0.35, tune);
+        hand(d, hh, side, &[0.12, 0.15, 0.18, 0.22], 0.15, 0.35);
     });
     ask_mask(&[(sh_n, w_arm, true)]);
     if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
@@ -2824,7 +2749,7 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
             }
             let r = hand_rot(&fix_l, sq(fing), sq(back));
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, sq(to)), Some(&sq(pole)), 0.8, Some(&r), false);
-            hand(d, hh, 0, &[cu + fl_l, cu + 0.05 + fl_l * 0.9, cu + 0.1 + fl_l * 0.8, cu + 0.15 + fl_l * 0.7], th + fl_l * 0.5, sp, tune);
+            hand(d, hh, 0, &[cu + fl_l, cu + 0.05 + fl_l * 0.9, cu + 0.1 + fl_l * 0.8, cu + 0.15 + fl_l * 0.7], th + fl_l * 0.5, sp);
         }
         if on_r {
             let hd = &CREEP.r;
@@ -2855,7 +2780,7 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
             }
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &to, Some(&pole), 0.8, Some(&rot), false);
             if !held {
-                hand(d, hh, 1, &[curl + fl_r, curl + 0.05 + fl_r * 0.9, curl + 0.1 + fl_r * 0.8, curl + 0.15 + fl_r * 0.7], thb + fl_r * 0.5, spr, tune);
+                hand(d, hh, 1, &[curl + fl_r, curl + 0.05 + fl_r * 0.9, curl + 0.1 + fl_r * 0.8, curl + 0.15 + fl_r * 0.7], thb + fl_r * 0.5, spr);
             }
         }
     });
@@ -2904,7 +2829,7 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         let p = mad3(mad3(mad3(fk.at(role(SPINE1)), left, MV2.clutch.at[0]), up, MV2.clutch.at[1]), fwd, MV2.clutch.at[2]);
         let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, -0.25), mad3(fwd, up, 0.2));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &p, Some(&MV2.clutch.pole), 0.7, Some(&r), false);
-        hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2, tune);
+        hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
     });
     arm_mask(false);
     if !ask_blend(g, at, at_b, w, true, at, n, tune) {
@@ -2945,8 +2870,8 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64, tune: &Knobs) -> u
             two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&tv(-0.8, 0.1, -0.6)), 0.8, Some(&r), false);
             // a loose half fist each
             let curl = [MV2.bound.back.curl[0], MV2.bound.back.curl[1], MV2.bound.back.curl[2], MV2.bound.back.curl[3]];
-            hand(d, hh, 0, &curl, MV2.bound.back.thumb, 0.0, tune);
-            hand(d, hh, 1, &curl, MV2.bound.back.thumb, 0.0, tune);
+            hand(d, hh, 0, &curl, MV2.bound.back.thumb, 0.0);
+            hand(d, hh, 1, &curl, MV2.bound.back.thumb, 0.0);
         } else {
             // fingers laced on the crown, elbows wide: in the head's own frame, up its crown and forward along its gaze
             let hr = fk.rot(role(HEAD));
@@ -2963,8 +2888,8 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64, tune: &Knobs) -> u
             two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &mad3(o, hl, -out), Some(&tv(-1.0, -0.15, elbow)), 0.9, Some(&r), false);
             // open hands, the fingers a little apart, and bent down at the knuckles onto the crown (an angle a side)
             let curl = [MV2.bound.head.curl[0], MV2.bound.head.curl[1], MV2.bound.head.curl[2], MV2.bound.head.curl[3]];
-            hand(d, hh, 0, &curl, MV2.bound.head.thumb, 0.25, tune);
-            hand(d, hh, 1, &curl, MV2.bound.head.thumb, 0.25, tune);
+            hand(d, hh, 0, &curl, MV2.bound.head.thumb, 0.25);
+            hand(d, hh, 1, &curl, MV2.bound.head.thumb, 0.25);
             for (sd, kn) in [(0, MV2.bound.head.knuckle[0]), (1, MV2.bound.head.knuckle[1])] {
                 let ns = digits(sd);
                 for fi in 0..4 {
@@ -3119,7 +3044,7 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
                 }
             }
             let c = |kk: f64| lerp(0.3, kk, gr);
-            hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, gr), 0.1 * (1.0 - gr), tune);
+            hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, gr), 0.1 * (1.0 - gr));
             wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
             return true;
         }
@@ -3189,7 +3114,7 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
         let grip = if kp >= 0.0 { max(bump(t, o - 0.12, o - 0.02, kp - 0.02, kp + 0.06), bump(t, fr, fr + 0.08, i + 0.04, i + 0.12)) } else { bump(t, o - 0.12, o - 0.02, i + 0.04, i + 0.12) };
         let hook = if bt.pull { bump(t, r - 0.14, r - 0.04, r + 0.14, r + 0.22) } else { 0.0 };
         let c = |kk: f64| lerp(0.3, kk, max(grip, hook));
-        hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1.0 - grip), tune);
+        hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1.0 - grip));
         wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
         true
     });
@@ -3270,7 +3195,7 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
         let grip = max(if kp >= 0.0 { bump(t, o - 0.08, o, kp - 0.02, kp + 0.06) } else { 0.0 }, bump(t, fr, fr + 0.08, i - 0.02, i + 0.06));
         let pinch = if bt.pull { bump(t, r - 0.1, r - 0.02, r + 0.08, r + 0.16) } else { 0.0 };
         let c = |kk: f64| lerp(0.25, kk, max(grip, pinch));
-        hand(d, hh, 0, &[c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, max(grip, pinch)), 0.1 * (1.0 - grip), tune);
+        hand(d, hh, 0, &[c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, max(grip, pinch)), 0.1 * (1.0 - grip));
         wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.1, dur - 0.22, dur - 0.05));
     });
     arm_mask(false);
@@ -3324,7 +3249,6 @@ fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
     ];
     q_turn_by(d, i, q, f);
 }
-
 
 /// The hand pass, after every other layer and on the digit joints alone: a hand the library keyed as a fist and no layer has shaped is opened to the
 /// man's relaxed hand, by how much of it is the fist, how free the hand is and how little a layer made of it; the thumb of a hand that is not the fist
@@ -3473,7 +3397,7 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand, tune: &Knobs) -> u32 {
         fk_run(rig, d, fk.rot, fk.pos);
         let r = hand_rot(&fix_l, hd.dir(&p.fingers), hd.dir(&p.back));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
-        hand(d, hh, 0, &p.curl, p.thumb, 0.0, tune);
+        hand(d, hh, 0, &p.curl, p.thumb, 0.0);
     });
     left_arm_mask(p.e, p.e, p.e);
     if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
@@ -3598,7 +3522,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64,
         }
         fk_run(rig, d, fk.rot, fk.pos);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&pole), 0.85, Some(&r), false);
-        hand(d, hh, 0, &curl, thumb, spread, tune);
+        hand(d, hh, 0, &curl, thumb, spread);
     });
     let (w_up, w_fore, w_hand) = staggered(t, 0.2, 0.26, dur);
     left_arm_mask(w_up, w_fore, w_hand);
@@ -3620,7 +3544,6 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
         return 0;
     };
     if env <= 1e-4 {
-        an.tell_shown = 0.0;
         return RAN;
     }
     let Some(mut h) = hands_of(g, an) else {
@@ -3653,7 +3576,7 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
             fk_run(rig, d, fk.rot, fk.pos);
             let r = hand_rot(&fix_l, [-1.0, 0.14, 0.12], [0.05, 0.9, -0.42]);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrist, Some(&[1.0, -0.55, 0.18]), 0.85, Some(&r), false);
-            hand(d, hh, 0, &[0.35, 0.4, 0.45, 0.5], 0.4, 0.0, tune);
+            hand(d, hh, 0, &[0.35, 0.4, 0.45, 0.5], 0.4, 0.0);
         } else {
             // the scapula comes up with the raised elbow; the hand works up and down the back of the neck
             turn(d, rig, role(SHOULDER_L), q_roll(12.0 * DEGR * env));
@@ -3663,7 +3586,7 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
             let to = [nk[0] + 0.085, nk[1] + 0.035 + rub, nk[2] - 0.075];
             let r = hand_rot(&fix_l, [-0.55, 0.35, -0.75], [0.45, 0.55, 0.55]);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&[0.75, 0.35, 0.8]), 0.9, Some(&r), false);
-            hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.65], 0.5, 0.0, tune);
+            hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.65], 0.5, 0.0);
         }
     });
     let (w_up, w_fore, w_hand) = staggered(t, tin, tout, dur);
@@ -3672,7 +3595,6 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
         return 0;
     }
     hands_to(&h, an);
-    an.tell_shown = w_up;
     RAN | RAN_ALL
 }
 
@@ -3731,7 +3653,7 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64, tune: &Knobs) -> u32
         let wrist = [sh[0] - 0.035, sh[1] - 0.115, sh[2] + 0.15];
         let r = nlerp(&rot0, &hand_rot(&fix_l, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lerp3(&live0, &wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
-        hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0, tune);
+        hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
     });
     ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
     if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n, tune) {
@@ -3787,8 +3709,8 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         let rot_l = hand_rot(&fix_l, f_l, q_rotate(&axis_angle(&f_l, roll_l), &normalize([0.35, -1.0, 0.55])));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &pick, Some(&[-0.45, -1.0, -0.45]), 0.75, Some(&rot_r), false);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrench, Some(&[0.3, -1.0, -0.45]), 0.75, Some(&rot_l), true);
-        hand(d, hh, 1, &[0.55, 0.7, 0.9, 0.95], 0.75, 0.0, tune);
-        hand(d, hh, 0, &[0.75, 0.8, 0.85, 0.85], 0.6, 0.0, tune);
+        hand(d, hh, 1, &[0.55, 0.7, 0.9, 0.95], 0.75, 0.0);
+        hand(d, hh, 0, &[0.75, 0.8, 0.85, 0.85], 0.6, 0.0);
     });
     arms_mask();
     if !ask_blend(g, at, at_b, w, true, at, n, tune) {
@@ -3845,8 +3767,8 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
         let c = clamp(grip, 0.0, 1.0);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tr, Some(&[-0.7, -0.25, -0.65]), 0.75, Some(&hand_rot(&fix_r, [0.12, -0.55, 0.83], [-0.45, 1.0, 0.5])), false);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &tl, Some(&[0.7, -0.25, -0.65]), 0.75, Some(&hand_rot(&fix_l, [-0.12, -0.55, 0.83], [0.45, 1.0, 0.5])), true);
-        hand(d, hh, 1, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0, tune);
-        hand(d, hh, 0, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0, tune);
+        hand(d, hh, 1, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0);
+        hand(d, hh, 0, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0);
     });
     if rw >= 0.999 {
         arms_mask();
@@ -3903,7 +3825,7 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         // fingers down onto it, the back of the hand out to his right; the elbow back
         let r = nlerp(&rot0, &hand_rot(&fix_r, [0.05, -1.0, 0.15], [-0.75, 0.0, 0.6]), e);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
-        hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0, tune);
+        hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
     });
     if !ask_blend(g, at, at, 1.0, false, at_sw, n, tune) {
         return 0;
@@ -4037,7 +3959,7 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
             let r = hand_rot(&fixes[side], [sg * fing[0], fing[1], fing[2]], [sg * back[0], back[1], back[2]]);
             two_bone_ik(rig, d, fk.rot, fk.pos, up_n, fo_n, ha_n, &to, Some(&[sg * (pole[0] + flare - bk), pole[1] + flare * 0.5 + bk * 0.4, pole[2] - bk]), 0.8, Some(&r), false);
             let c = STEALTH.idle.curl;
-            hand(d, hh, side, &[c, c + 0.04, c + 0.08, c + 0.12], STEALTH.idle.thumb, STEALTH.idle.spread, tune);
+            hand(d, hh, side, &[c, c + 0.04, c + 0.08, c + 0.12], STEALTH.idle.thumb, STEALTH.idle.spread);
             aw[side] = w_arm;
         }
     });
@@ -4110,7 +4032,7 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
         fk_run(rig, d, fk.rot, fk.pos);
         let gap = [0.0, 0.04, max(lock_z + 0.05, fk.at(hd)[2] + STEALTH.cable.ahead)];
         look_at(d, rig, fk, &gaze_local, gap, eh, 0.0);
-        if true && nod != 0.0 {
+        if nod != 0.0 {
             // a nod that starts with the look's head mostly in is a lift of the head off the gap and back; one the look came in over stays the
             // chin-down nod it began as, kept short of straight down. Which is settled once a nod.
             if nod_up.is_none() {
@@ -4143,8 +4065,8 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
         let (rr, rl) = (hand_rot(&fix_r, [0.05, -0.35, 0.94], [-0.3, 0.9, 0.3]), hand_rot(&fix_l, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &[STEALTH.cable.gap[0], STEALTH.cable.gap[1], lock_z - STEALTH.cable.short], Some(&[-0.6, 0.1, -0.75]), 0.8, Some(&rr), false);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &[kl[0] + STEALTH.cable.knee[0], kl[1] + STEALTH.cable.knee[1], kl[2] + STEALTH.cable.knee[2]], Some(&[0.8, 0.0, -0.6]), 0.8, Some(&rl), false);
-        hand(d, hh, 1, &[0.5, 0.6, 0.7, 0.75], 0.5, 0.0, tune);
-        hand(d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3, tune);
+        hand(d, hh, 1, &[0.5, 0.6, 0.7, 0.75], 0.5, 0.0);
+        hand(d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
     });
     arms_mask();
     if !ask_blend(g, at, at_b, e, true, at, n, tune) {
@@ -4360,9 +4282,9 @@ pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Optio
             let rot = slerp(&hand_rot(&fix_r, ka.2, ka.3), &hand_rot(&fix_r, kb.2, kb.3), ez);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&ka.1, &kb.1, ez), Some(&lerp3(&ka.4, &kb.4, ez)), 0.85, Some(&rot), false);
             if chop {
-                hand(d, hh, 1, &[BLOW.fist[0], BLOW.fist[1], BLOW.fist[2], BLOW.fist[3]], 0.6, 0.0, tune);
+                hand(d, hh, 1, &[BLOW.fist[0], BLOW.fist[1], BLOW.fist[2], BLOW.fist[3]], 0.6, 0.0);
             } else {
-                hand(d, hh, 1, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0, tune);
+                hand(d, hh, 1, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
             }
         }
         let mut w_l = 0.0;
@@ -4371,20 +4293,20 @@ pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Optio
             fk_run(rig, d, fk.rot, fk.pos);
             let rot = hand_rot(&fix_l, [0.0, 1.0, 0.2], [0.0, 0.2, -1.0]);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, t2, arm_l), Some(&[0.6, -0.7, -0.2]), 0.8, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0, tune);
+            hand(d, hh, 0, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
         } else if let (true, Some(t2)) = (mouth, t2) {
             let (c, dn) = if tail > 0.0 { (x - 0.5, x - 0.2) } else { (e - 0.18, e - 0.04) };
             w_l = bump(t, 0.03, 0.14, c, dn) * free * if tail > 0.0 && t > e { 1.0 - smoothstep(BLOW.walk[0], BLOW.walk[1], speed) } else { 1.0 };
             fk_run(rig, d, fk.rot, fk.pos);
             let rot = hand_rot(&fix_l, [-1.0, 0.0, 0.1], [0.1, 0.0, 1.0]);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, t2, arm_l), Some(&[0.8, -0.5, 0.0]), 0.8, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.cup[0], BLOW.cup[1], BLOW.cup[2], BLOW.cup[3]], 0.3, 0.0, tune);
+            hand(d, hh, 0, &[BLOW.cup[0], BLOW.cup[1], BLOW.cup[2], BLOW.cup[3]], 0.3, 0.0);
         } else if !chop && !mouth {
             w_l = bump(t, 0.4 * h, h, e - 0.2, e) * free;
             fk_run(rig, d, fk.rot, fk.pos);
             let rot = hand_rot(&fix_l, [0.15, -0.7, -0.7], [1.0, 0.2, 0.1]);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lock(sl, [0.16, -0.72, -0.68], arm_l), Some(&[0.5, 0.2, -0.8]), 0.6, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.loose[0], BLOW.loose[1], BLOW.loose[2], BLOW.loose[3]], 0.3, 0.0, tune);
+            hand(d, hh, 0, &[BLOW.loose[0], BLOW.loose[1], BLOW.loose[2], BLOW.loose[3]], 0.3, 0.0);
         }
         (tgt, right, w_l)
     }) else {
@@ -4478,7 +4400,7 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
         let (sa_, sb_) = (stop(i), stop(if i + 1 < nk + 3 { i + 1 } else { nk + 3 }));
         let ez = if i >= nk + 3 || t <= 0.0 { 0.0 } else { smoothstep(ts[i], ts[i + 1], t) };
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&sa_.0, &sb_.0, ez), Some(&lerp3(&sa_.2, &sb_.2, ez)), 0.9, Some(&slerp(&sa_.1, &sb_.1, ez)), false);
-        hand(d, hh, 1, &[REACH.curl[0], REACH.curl[1], REACH.curl[2], REACH.curl[3]], REACH.thumb, 0.0, tune);
+        hand(d, hh, 1, &[REACH.curl[0], REACH.curl[1], REACH.curl[2], REACH.curl[3]], REACH.thumb, 0.0);
     });
     let w = lerp(under, 1.0, max(kb_r0, smoothstep(0.0, if falsy(t0) { 1e-6 } else { t0 }, kb_t)) * (1.0 - smoothstep(total - KNIFE_BLOW.fade, total, kb_t)));
     ask_mask(&[(role(SHOULDER_R), w, false), (role(UPPER_ARM_R), w, false), (role(FOREARM_R), w, false), (role(HAND_R), w, true)]);
@@ -4697,14 +4619,14 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
         let rot = hand_rot(&fix_l, get3(c, L_FING), get3(c, L_BACK));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, get3(c, R_L)), Some(&get3(c, L_POLE)), 0.85, Some(&rot), false);
         let q = c[L_CURL];
-        hand(d, hh, 0, &[q, q + 0.04, q + 0.08, q + 0.12], c[L_THUMB], c[L_SPREAD], tune);
+        hand(d, hh, 0, &[q, q + 0.04, q + 0.08, q + 0.12], c[L_THUMB], c[L_SPREAD]);
         // (the right hand comes off his ribs for the last stretch only; never under a hand that is on a hilt)
         let w_rb = if u > 0.0 { 0.0 } else { c[W_R] * rd_out_r * smoothstep(READY_BARE.way.right[0], READY_BARE.way.right[1], rd_a) };
         if w_rb > 1e-3 {
             let rot = hand_rot(&fix_r, get3(c, R_FING), get3(c, R_BACK));
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &add3(sr, get3(c, R_R)), Some(&get3(c, R_POLE)), 0.85, Some(&rot), false);
             let q = c[R_CURL];
-            hand(d, hh, 1, &[q, q + 0.04, q + 0.08, q + 0.12], c[R_THUMB], 0.0, tune);
+            hand(d, hh, 1, &[q, q + 0.04, q + 0.08, q + 0.12], c[R_THUMB], 0.0);
         }
         // ---- the right hand on the knife: the fist closes on the sheathed handle; the knife stays where it is
         if u > 0.0 {
@@ -4714,9 +4636,9 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
                 // (the fist on the hilt is alive: the fingers let go a little, little finger first, and close again; the thumb shifts with them)
                 let ph = (cl_t % tune.kit.close.regrip) / tune.kit.close.regrip;
                 let gg = |dv: f64| bump(ph, 0.55 + dv, 0.66 + dv, 0.72 + dv, 0.86 + dv);
-                hand(d, hh, 1, &[REACH.curl[0] - 0.14 * gg(0.06), REACH.curl[1] - 0.2 * gg(0.04), REACH.curl[2] - 0.26 * gg(0.02), REACH.curl[3] - 0.3 * gg(0.0)], REACH.thumb - 0.25 * gg(0.03), 0.0, tune);
+                hand(d, hh, 1, &[REACH.curl[0] - 0.14 * gg(0.06), REACH.curl[1] - 0.2 * gg(0.04), REACH.curl[2] - 0.26 * gg(0.02), REACH.curl[3] - 0.3 * gg(0.0)], REACH.thumb - 0.25 * gg(0.03), 0.0);
             } else {
-                hand(d, hh, 1, &[REACH.curl[0], REACH.curl[1], REACH.curl[2], REACH.curl[3]], REACH.thumb, 0.0, tune);
+                hand(d, hh, 1, &[REACH.curl[0], REACH.curl[1], REACH.curl[2], REACH.curl[3]], REACH.thumb, 0.0);
             }
         }
         w_rb
@@ -5085,7 +5007,7 @@ pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4]
             }
         }
         let curl = [lerp(tune.kit.open[0], tune.kit.fist[0], grip), lerp(tune.kit.open[1], tune.kit.fist[1], grip), lerp(tune.kit.open[2], tune.kit.fist[2], grip), lerp(tune.kit.open[3], tune.kit.fist[3], grip)];
-        hand(d, hh, 1, &curl, lerp(0.25, 0.6, grip), 0.1 * (1.0 - grip), tune);
+        hand(d, hh, 1, &curl, lerp(0.25, 0.6, grip), 0.1 * (1.0 - grip));
         if let Some(sp) = tl {
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &sp.0, None, 0.0, Some(&sp.1), false);
         }
@@ -5254,7 +5176,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
             let rot = nlerp(&rot0, &hand_rot(&fix[side], fs, nn), e);
             two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &wrist, e), Some(&[-sg * 0.4, -1.0, -0.35]), e, Some(&rot), false);
             // open, the fingers a little apart, and the thumb up into the palm's plane
-            hand(d, hh, side, &[0.1, 0.1, 0.15, 0.2], 0.1, 0.35, tune);
+            hand(d, hh, side, &[0.1, 0.1, 0.15, 0.2], 0.1, 0.35);
             turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hd), &AY), sg * 40.0 * DEGR * e));
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
@@ -5491,7 +5413,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
                         ahead = max(ahead, sp.wrist[2] - sf[side][2]);
                     }
                 }
-                let ok = sp.body || if (if side == 1 { c.ok_r } else { c.ok_l }) { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
+                let ok = sp.body || if if side == 1 { c.ok_r } else { c.ok_l } { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
                 *(if side == 1 { &mut c.ok_r } else { &mut c.ok_l }) = ok;
                 if ok {
                     if side == 1 {
@@ -5538,7 +5460,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
             // elbow down and out
             let rot = nlerp(&rot0, &hand_rot(&fix[side], sp.f, sp.b), e);
             two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &sp.wrist, e), Some(&[-sg * 0.45, -1.0, -0.3]), e, Some(&rot), false);
-            hand(d, hh, side, &sp.curl, sp.thumb, sp.spread, tune);
+            hand(d, hh, side, &sp.curl, sp.thumb, sp.spread);
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
         if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n, tune) {
@@ -5602,7 +5524,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
     let gv = clamp(an.hd_gv.x, 0.0, 1.0);
     // the reach, 0 → 1
     let ug = if grab { clamp(t / tune.hold.secs.grab, 0.0, 1.0) } else { 1.0 };
-    let cs_on = true && no_knife;
+    let cs_on = no_knife;
     let cr = cs_on && !gun_v && grab;
     // the elbow closing
     let ck = if choke && !gun_v { smoothstep(0.0, tune.hold.secs.choke * 0.75, t) } else { 0.0 };
@@ -5627,7 +5549,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         _ => 0.0,
     };
     let hb_s = match yank {
-        Some(y) if true && cs_on => bump(y, tune.hold.hit.t[0], tune.hold.hit.t[1], tune.hold.hit.t[2], tune.hold.hit.t[3]) * (1.0 - gv) * w,
+        Some(y) if cs_on => bump(y, tune.hold.hit.t[0], tune.hold.hit.t[1], tune.hold.hit.t[2], tune.hold.hit.t[3]) * (1.0 - gv) * w,
         _ => 0.0,
     };
     let dip_w = match step {
@@ -5734,7 +5656,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         fk_run(rig, d, fk.rot, fk.pos);
         let (hl, hr) = (role(HAND_L), role(HAND_R));
         let (live_l, live_r, r_l0, r_r0) = (fk.at(hl), fk.at(hr), fk.rot(hl), fk.rot(hr));
-        let (mut tgt_l, mut tgt_r);
+        let (tgt_l, tgt_r);
         if grab {
             // round the outside of him and on: the left leads, the right follows
             let (u_l, u_r) = (smoothstep(0.0, 0.75, ug), smoothstep(0.2, 1.0, ug));
@@ -5787,7 +5709,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         // fingers close as the hands arrive
         let open = 1.0 - if grab { smoothstep(0.5, 1.0, ug) } else { 1.0 };
         let cl = |x: f64| lerp(x, 0.08, open);
-        hand(d, hh, 0, &[cl(0.5), cl(0.58), cl(0.64), cl(0.68)], lerp(0.55, 0.1, open), open * 0.4, tune);
+        hand(d, hh, 0, &[cl(0.5), cl(0.58), cl(0.64), cl(0.68)], lerp(0.55, 0.1, open), open * 0.4);
         if xg < 1.0 {
             // ---- the knife fist: the blade kept pointing ahead round the outside of him, turned across only as it comes in over the shoulder
             let (uar, far) = (role(UPPER_ARM_R), role(FOREARM_R));
@@ -5828,11 +5750,11 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
                 let cu = |x: f64| lerp(lerp(0.14, 0.7, grip), x, fist);
                 let rot = nlerp(&nlerp(&nlerp(&nlerp(&r_r0, &r_grip, u1), &r_tear, u2), &r_low, u3), &rot_r, u4);
                 two_bone_ik(rig, d, fk.rot, fk.pos, uar, far, hr, &p, Some(&lerp3(&[-0.95, -0.3, -0.2], &pole_k, u4)), lerp(0.95 * smoothstep(0.0, 0.1, s_t), 0.9 * max(e_r, 0.3), u4), Some(&rot), false);
-                hand(d, hh, 1, &[cu(0.62), cu(0.68), cu(0.72), cu(0.76)], lerp(lerp(0.15, 0.5, grip), 0.6, fist), 0.25 * (1.0 - grip) * (1.0 - fist), tune);
+                hand(d, hh, 1, &[cu(0.62), cu(0.68), cu(0.72), cu(0.76)], lerp(lerp(0.15, 0.5, grip), 0.6, fist), 0.25 * (1.0 - grip) * (1.0 - fist));
             } else {
                 // elbow out to the right and up, over the man's shoulder, for the throat; down and back once the fist is on the shoulder
                 two_bone_ik(rig, d, fk.rot, fk.pos, uar, far, hr, &base_r, Some(&pole_k), 0.9 * max(e_r, 0.3), Some(&rot_r), false);
-                hand(d, hh, 1, &[0.62, 0.68, 0.72, 0.76], 0.6, 0.0, tune);
+                hand(d, hh, 1, &[0.62, 0.68, 0.72, 0.76], 0.6, 0.0);
             }
         }
         (live_r, r_r0)
@@ -5976,11 +5898,11 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
     // going: the arch and the struggle give way, the head lolls, the hands fall
     let limp = smoothstep(0.62, 0.95, ck);
     let e_in = smoothstep(0.05, 0.6, ug);
-    let cs_on = true && bare;
+    let cs_on = bare;
     let cr = cs_on && !gun && grab;
     let jl = if cr { bump(t, tune.hold.catch.jolt.t[0], tune.hold.catch.jolt.t[1], tune.hold.catch.jolt.t[2], tune.hold.catch.jolt.t[3]) * w } else { 0.0 };
     let hb = match yank {
-        Some(y) if true && cs_on => bump(y, tune.hold.hit.t[0], tune.hold.hit.t[1], tune.hold.hit.t[2], tune.hold.hit.t[3]) * (1.0 - gv) * w,
+        Some(y) if cs_on => bump(y, tune.hold.hit.t[0], tune.hold.hit.t[1], tune.hold.hit.t[2], tune.hold.hit.t[3]) * (1.0 - gv) * w,
         _ => 0.0,
     };
     let shot = match shot_in {
@@ -6262,13 +6184,13 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hl, &tgt_l, Some(&z.pole[0]), 0.85 * e_a, Some(&rot_l), false);
         let w_r = if s_on { max(0.85 * e_a, 0.9 * smoothstep(0.0, 0.1, s_t) * (1.0 - smoothstep(tune.hold.strip.up, tune.hold.strip.home, s_t))) } else { 0.85 * e_a };
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr, &tgt_r, Some(&z.pole[1]), w_r, Some(&rot_r), false);
-        hand(d, hh, 0, &z.curl[0], z.thumb[0], z.spread[0], tune);
+        hand(d, hh, 0, &z.curl[0], z.thumb[0], z.spread[0]);
         if s_on {
             // (the fist round the gun opens as the gun leaves it, not in a frame)
             let op = smoothstep(tune.hold.strip.take, tune.hold.strip.take + 0.1, s_t);
-            hand(d, hh, 1, &[lerp(0.75, z.curl[1][0], op), lerp(0.8, z.curl[1][1], op), lerp(0.8, z.curl[1][2], op), lerp(0.8, z.curl[1][3], op)], lerp(0.6, z.thumb[1], op), z.spread[1] * op, tune);
+            hand(d, hh, 1, &[lerp(0.75, z.curl[1][0], op), lerp(0.8, z.curl[1][1], op), lerp(0.8, z.curl[1][2], op), lerp(0.8, z.curl[1][3], op)], lerp(0.6, z.thumb[1], op), z.spread[1] * op);
         } else {
-            hand(d, hh, 1, &z.curl[1], z.thumb[1], z.spread[1], tune);
+            hand(d, hh, 1, &z.curl[1], z.thumb[1], z.spread[1]);
         }
     })
     .is_none()
@@ -6392,13 +6314,11 @@ fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua
 }
 /// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is refused by name as the game loads)
 const KNIFE_KEYS: usize = 4;
-/// how many blows of a beat a call may hand over (the room on the bench: the layer is handed the two blows it reads, character.ts blowsNear)
-const BIG_BLOWS_MAX: usize = 64;
 /// The big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot straight into the pose, the
 /// head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
 pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
     let (at, at_b, _) = poses(an);
-    let (ham, t, equip, stow, end, snug, windup) = (b.kind == AnimBigToolKind::Hammer, b.t, b.equip, b.stow, b.end, b.snug.unwrap_or(false), b.windup);
+    let (ham, t, equip, stow, end, snug, windup) = (b.kind == game_types::kit::BigTool::Hammer, b.t, b.equip, b.stow, b.end, b.snug.unwrap_or(false), b.windup);
     // (the shotgun is drawn as the carbine it is: its support grip, its group's offset and its stock's rear end)
     let (lg_wrist, lg_fing, lg_back, adj, stock_l0) = (lg.wrist, lg.fingers, lg.back, RIG.carbine.adj.map_or([0.0; 3], |a| a.off), RIG.carbine.stock_top.l0);
     let (speed, clear, fix_l, fix_r, gaze_local) = (an.speed, an.big_clear, an.hand_fix[0], an.hand_fix[1], an.gaze_local);
@@ -6670,8 +6590,8 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
             let gr = smoothstep(grab - 0.15, grab, ue) * (if stowing { 1.0 - smoothstep(put, put + 0.12, us) } else { 1.0 });
             let (open, shut) = ([BIGMOVE.open[0], BIGMOVE.open[1], BIGMOVE.open[2], BIGMOVE.open[3]], [BIGMOVE.fist[0], BIGMOVE.fist[1], BIGMOVE.fist[2], BIGMOVE.fist[3]]);
             let cu = |kk: f64| [lerp(open[0], shut[0], kk), lerp(open[1], shut[1], kk), lerp(open[2], shut[2], kk), lerp(open[3], shut[3], kk)];
-            hand(d, hh, 1, &cu(gr), lerp(0.25, 0.6, gr), 0.0, tune);
-            hand(d, hh, 0, &cu(j), lerp(0.25, 0.6, j), 0.0, tune);
+            hand(d, hh, 1, &cu(gr), lerp(0.25, 0.6, gr), 0.0);
+            hand(d, hh, 0, &cu(j), lerp(0.25, 0.6, j), 0.0);
         }
     });
     if done.is_none() {
@@ -6764,7 +6684,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
     let mir = |p: [f64; 3]| -> [f64; 3] { [-p[0], p[1], p[2]] };
     // a blast that folds or blinds him mid-swing takes the swing
     let (hit, h0) = (max(clamp(an.mvs.cf.x, 0.0, 1.0), clamp(an.mvs.dz.x, 0.0, 1.0)), an.thr_hit0);
-    let give = if true && hit > h0 { 1.0 - clamp((hit - h0) / max(1.0 - h0, 0.25), 0.0, 1.0) } else { 1.0 };
+    let give = if hit > h0 { 1.0 - clamp((hit - h0) / max(1.0 - h0, 0.25), 0.0, 1.0) } else { 1.0 };
     let k_s = if low { lerp(tune.throw_by.toss_min, 1.0, thr_low) } else if full { 1.0 } else { lerp(tune.throw_by.turn_min, 1.0, thr_far) };
     let k_t = k_s * give;
     let k_a = if low { k_s } else if full { 1.0 } else { lerp(tune.throw_by.arm_min, 1.0, thr_far) };
@@ -6933,11 +6853,11 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         // fingers: closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in
         let (open, loose) = (smoothstep(rel - 0.025, rel + 0.03, t), smoothstep(0.34, 0.49, t));
         let c_r = |grip: f64, flat: f64, hng: f64| lerp(lerp(grip, flat, open), hng, loose);
-        hand(d, hh, if off { 0 } else { 1 }, &[c_r(0.5, 0.05, 0.25), c_r(0.55, 0.08, 0.3), c_r(0.62, 0.12, 0.35), c_r(0.7, 0.15, 0.42)], c_r(0.7, 0.1, 0.3), 0.0, tune);
+        hand(d, hh, if off { 0 } else { 1 }, &[c_r(0.5, 0.05, 0.25), c_r(0.55, 0.08, 0.3), c_r(0.62, 0.12, 0.35), c_r(0.7, 0.15, 0.42)], c_r(0.7, 0.1, 0.3), 0.0);
         let firm = bump(t, 0.22, 0.32, 0.5, 0.64);
         let c_l = |v: f64| lerp(v, v + 0.25, firm);
         if !low && !off {
-            hand(d, hh, 0, &[c_l(0.3), c_l(0.35), c_l(0.4), c_l(0.45)], lerp(0.3, 0.6, firm), 0.0, tune);
+            hand(d, hh, 0, &[c_l(0.3), c_l(0.35), c_l(0.4), c_l(0.45)], lerp(0.3, 0.6, firm), 0.0);
         }
         // ---- in through per-arm masks: full weight but for a short hand-over of the elbow at each end; a carried-in restart is already at weight
         let w_r = (if cin.is_some() { 1.0 - smoothstep(0.62, dur, t) } else { bump(t, 0.0, 0.06, 0.62, dur) }) * give;
@@ -6969,17 +6889,6 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
     RAN | RAN_ALL
 }
 
-// …and within a foot
-#[inline(always)]
-fn v3_of(st: &[f64], i: usize) -> [f64; 3] {
-    [st[i], st[i + 1], st[i + 2]]
-}
-#[inline(always)]
-fn v3_to(st: &mut [f64], i: usize, v: &[f64; 3]) {
-    st[i] = v[0];
-    st[i + 1] = v[1];
-    st[i + 2] = v[2];
-}
 #[inline(always)]
 fn dist_xz(a: &[f64; 3], b: &[f64; 3]) -> f64 {
     hypot2(a[0] - b[0], a[2] - b[2])

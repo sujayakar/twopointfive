@@ -34,8 +34,7 @@ fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let c = g.gd[gd].ch;
     if !g.ch[c].alive { return false; }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
         && !crate::mission::lies_in_wait(g, gd)
 }
 
@@ -59,7 +58,6 @@ pub fn dark_foe_blind(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let mut skip = move |_: &mut Game, owner: f64| owner == me;   // (TS: mine(gd))
     let mut n: i32 = 0;
     let mut lit: i32 = 0;
-    g.stats.darkfoe.asks += 1;
     for off in [0.0, -k.fan_rad, k.fan_rad] {
         let fx = m::sin(aim_yaw + off);
         let fz = m::cos(aim_yaw + off);
@@ -92,7 +90,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if crate::powerout::power_out_word(g, gd) { return true; }
     let c = g.gd[gd].ch;
     let (pos, aim_yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let eye: V3 = [pos[0], 1.5, pos[2]];
     let cos = m::cos(g.k.guard_eye.half_deg * m::PI / 180.0);
     let fx = m::sin(aim_yaw);
@@ -101,7 +99,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) { continue; }
+        if o == gd || g.team(o) != team || crate::condition::down(g, g.gd[o].ch) { continue; }
         if !g.m.darkfoe.state_of.get(o).map_or(false, |s| s.knows) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
@@ -117,7 +115,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The switch under his thumb, for the player's ears only: no event is filed.
 fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on { g.stats.darkfoe.clicks_on += 1; } else { g.stats.darkfoe.clicks_off += 1; }
+    if on {  } else {  }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
@@ -252,19 +250,19 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
                 i += 1.0;
                 if !free(g, d, threat, far, p) || !dark_foe_sees(g, p, Some(edge)) { continue; }
                 tries += 1.0;
-                if way_to(g, d, p) { return Some(crate::darkfoe::DarkFoeSpot { spot: p, mate: false }); }
+                if way_to(g, d, p) { return Some(crate::darkfoe::DarkFoeSpot { spot: p }); }
             }
             r += 1.5;
         }
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut best: Option<V3> = None;
     let mut bd = f64::INFINITY;
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
+        if o == gd || g.team(o) != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;
@@ -280,7 +278,7 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
             }
         }
     }
-    best.map(|spot| crate::darkfoe::DarkFoeSpot { spot, mate: true })
+    best.map(|spot| crate::darkfoe::DarkFoeSpot { spot })
 }
 
 /// The room fight's own 'move' leg: his script's legs, his own senses, planted where he gets to.
@@ -329,7 +327,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
             let ask = id_share(g, gd, Some(7.0)) * k.ask_secs;
             g.m.darkfoe.state_of.set(gd, FoeState {
                 knows: false,
-                word: false,
                 blind: false,
                 ask,
                 lit: false,
@@ -354,7 +351,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
             }
             let knows = g.m.darkfoe.state_of.get(gd).unwrap().knows;
             let word = !knows && has_word(g, gd);
-            g.m.darkfoe.state_of.get_mut(gd).unwrap().word = word;
             let blind = (knows || word) && dark_foe_blind(g, gd);
             g.m.darkfoe.state_of.get_mut(gd).unwrap().blind = blind;
         }
@@ -398,14 +394,11 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
         let pos = g.ch[c].pos;
         if dark_foe_sees(g, pos, None) { continue; }
         let Some(to) = dark_foe_spot(g, d) else {
-            g.stats.darkfoe.no_spot += 1;
             continue;
         };
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
         s.moves += 1.0;
         s.to = Some(v3::copy(to.spot));
-        g.stats.darkfoe.walks += 1;
-        if to.mate { g.stats.darkfoe.to_mate += 1; }
         walk(g, d, to.spot);
     }
 }

@@ -57,8 +57,6 @@ pub struct TutRoadGunFrame {
     pub k: f64,
     /// dir: a yield separates its declaration from a use
     pub dir: f64,
-    /// i: a yield separates its declaration from a use
-    pub i: f64,
     /// mode: a yield separates its declaration from a use
     pub mode: Option<String>,
 }

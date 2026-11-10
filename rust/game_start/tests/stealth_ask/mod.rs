@@ -261,7 +261,7 @@ impl StealthAsk for Play {
     }
     fn shots_heard(&self, gd: GuardId) -> f64 { self.g.gd[gd].witness.heard.shots }
     fn hand_of(&self, gd: GuardId) -> Option<game::guards::InHand> { game::guards::in_hand(&self.g, gd) }
-    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((game::throwables::item_carried(&self.g, i) == Some(true), game::throwables::item_settled(&mut self.g, i))) }
+    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((self.g.tab.item[i].carried == Some(true), self.g.tab.item[i].settled)) }
     fn response(&self) -> game::qrf::QrfState { self.g.qrf.state }
     fn response_reason(&self) -> Option<game::qrf::QrfReason> { self.g.qrf.reason }
     fn response_men(&self) -> Vec<GuardId> { self.g.qrf.men.iter().copied().collect() }
@@ -298,11 +298,10 @@ impl StealthAsk for Play {
     fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden(&self.g, gd) }
     fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
     fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
-    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [self.g.tab.props_prop[it].x, self.g.tab.props_prop[it].z] }
     fn prop_shoved(&mut self, it: game::ids::PropId, at: [f64; 2]) {
-        game::props::prop_set_x(&mut self.g, it, at[0]);
-        game::props::prop_set_z(&mut self.g, it, at[1]);
-        game::props::prop_set_dirty(&mut self.g, it, true);
+        game::props::prop_move_to(&mut self.g, it, at[0], at[1]);
+        self.g.tab.props_prop[it].dirty = true;
         game::props::prop_place(&mut self.g, it);
     }
     fn ours(&self, who: Option<f64>) -> bool { game::fogofwar::fog_of_war_ours_id(&self.g, who) }
@@ -389,7 +388,7 @@ impl StealthAsk for Play {
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
     fn throws_the_breaker(&mut self) {
         let seat = game::seats::here(&self.g);
-        let th = game::workthings::work_things_things(&self.g, &seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
+        let th = game::workthings::work_things_things(&seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
         let at = th.stand.expect("a place to stand at it");
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
@@ -511,6 +510,6 @@ impl StealthAsk for Play {
     fn pair_silent(&mut self) {
         self.g.k.silent.on = true;
         self.g.k.sneak.on = true;
-        game::silent::set_silent(&mut self.g, true, None);
+        game::silent::set_silent(&mut self.g, true);
     }
 }

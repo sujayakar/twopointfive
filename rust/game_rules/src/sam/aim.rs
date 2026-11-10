@@ -182,7 +182,7 @@ fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim
 }
 
 /// What to hand fireWeapon for this guard's round; stamps `last_shot`.
-pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Option<bool>) -> crate::combat::FireOpts {
+pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::combat::FireOpts {
     if !g.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
     }

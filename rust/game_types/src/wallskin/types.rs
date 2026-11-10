@@ -24,28 +24,16 @@ pub struct WallSkin {
     pub dirty: JsSet<crate::Num>,
     pub cand: Vec<f64>,
     pub solid: Vec<u8>,
-    pub last: f64,
     #[is(1000000000.0)] pub room: f64,
     pub was: bool,
     pub failed: bool,
     pub marked: JsSet<crate::Num>,
-    #[is(crate::wallskin::WallSkinStats { cut: 0.0, whole: 0.0, pieces: 0.0, capped: 0.0, coarse: 0.0, uncut: 0.0 })] pub stats: crate::wallskin::WallSkinStats,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallSkinLaidValueItem {
     pub r: [f64; 4],
     pub slot: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct WallSkinStats {
-    pub cut: f64,
-    pub whole: f64,
-    pub pieces: f64,
-    pub capped: f64,
-    pub coarse: f64,
-    pub uncut: f64,
 }
 
 pub const EPS: f64 = 0.0001;

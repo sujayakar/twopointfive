@@ -116,7 +116,7 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
                 let face = if b.turn { y } else if a <= K.torso * R { hy } else { hy + m::sign(o) * (a - K.torso * R) };
                 let at: Option<V3> = if b.turn { None } else { Some([p[0] + m::sin(y) * d, b.h_to, p[2] + m::cos(y) * d]) };
                 if let Some(w) = st.a.walks.iter_mut().find(|w| w.man == x) { w.watch = at; w.face = Some(face); }
-                if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), x) {
+                if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
                     let r = &mut g.tab.orders_assignment[a];
                     if r.order == "cover" {
                         r.watch = at; r.face = Some(face);
@@ -198,7 +198,7 @@ pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
         let p = g.ch[c].pos;
         let was = st.a.scans.iter().find(|s| s.key == Some(x)).map_or(false, |s| s.on);
         let o = wrap(g.ch[c].aim_yaw - hy);
-        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), x);
+        let a = crate::orders::squad_orders_of(&crate::seats::here(g), x);
         let walked = st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| !w.lane && w.k + 1 >= w.pts.len() && now >= w.at);
         let cover = a.map_or(false, |a| g.tab.orders_assignment[a].order == "cover");
         let ok = free && !(busy && (b_man == Some(x) || b_team || b_moved.contains(&x))) && walked && cover && flat(p, hp) <= K.on_slot && !st.a.swaps.iter().any(|w| w.man == x);

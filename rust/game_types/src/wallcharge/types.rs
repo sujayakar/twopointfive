@@ -36,15 +36,13 @@ pub struct WallSpot {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallCharge {
-    #[is(crate::knobs::WallchargeK { menu: crate::knobs::WallchargeKMenu::Page, pick_m: 0.06, height: 1.05, end_m: 0.75, slide: alloc::vec![0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5], set_off: 0.5, set_near: 0.9, sam_reach: 1.35, sam_shift: 0.35, sam_marker_m: 3.0, standoff: alloc::vec![2.6, 2.0], post_off: 0.55, file_gap: 0.9, back_m: alloc::vec![3.0, 3.9, 4.8], clear_m: 0.45, mate_m: 2.0, after_blow: 0.7, enter_cap: 16.0, sweep_secs: 1.5, mouth_in: 0.6, lane: 0.35, lane_watch: 3.0, pods: alloc::vec![[-1.3, 1.9], [1.3, 1.9], [-2.1, 1.0], [2.1, 1.0]], cost: 2.0, carried: None, hold_secs: 1.5, mate_line: 0.6, off_frame: 0.8, off_frame_pod: 0.5, outer_thick: 0.26, outer_min_len: 1.5, far_slack: 0.5, far_reach: 0.375, hung_m: 0.35, safe_standoff: [4.0, 6.0], safe_reach: [3.0, 5.0], safe_secs: [3.0, 1.0], safe_hide_m: 9.0, safe_walk_m: 16.0, safe_back_m: 9.0, fire_known_s: 30.0, fire_m: 30.0, fire_step: 0.5, fire_grain: 0.03, men_clear_in: 0.1, men_clear_s: 0.75, sam_secs: [2.0, 0.6], sam_sup: 0.5 })] pub knobs: crate::knobs::WallchargeK,
     pub ops: Vec<WallOpId>,
     pub done: Vec<crate::wallcharge::WallChargeDoneItem>,
     pub set: Vec<WallChargeId>,
-    #[is(crate::wallcharge::WallChargeStats { orders: 0.0, set: 0.0, by_sam: 0.0, blown: 0.0, holes: 0.0, duds: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, back: 0.0, cleared: 0.0 })] pub stats: crate::wallcharge::WallChargeStats,
+    #[is(crate::wallcharge::WallChargeStats { orders: 0.0, blown: 0.0, holes: 0.0, cleared: 0.0 })] pub stats: crate::wallcharge::WallChargeStats,
     pub away: JsMap<GuardId, crate::wallcharge::WallChargeAwayValue>,
     pub away_marks: JsMap<WallChargeId, crate::wallcharge::WallChargeAwayMarksValue>,
     pub away_none: JsMap<GuardId, f64>,
-    pub log: Vec<crate::wallcharge::WallChargeLogItem>,
     #[is(OrdersOrderDefId(0))] pub opener: OrdersOrderDefId,
     #[is(OrdersOrderDefId(0))] pub row: OrdersOrderDefId,
     pub seated: bool,
@@ -58,7 +56,7 @@ pub struct WallCharge {
     pub brought: Option<f64>,
     pub free_set: bool,
     pub walks: Option<crate::wallcharge::WallChargeWalks>,
-    #[is(crate::wallcharge::WallChargeKeep { on: true, asks: 0.0, hits: 0.0 })] pub keep: crate::wallcharge::WallChargeKeep,
+    #[is(crate::wallcharge::WallChargeKeep { on: true })] pub keep: crate::wallcharge::WallChargeKeep,
     pub pressed: bool,
     pub last_blow: Option<crate::wallcharge::WallChargeLastBlow>,
     pub marker: Option<crate::game::Interactable>,
@@ -109,25 +107,11 @@ pub struct PodHold {
     pub door: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallChargeDoneItemStageValue {
-    Lane,
-    Pod,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeStats {
     pub orders: f64,
-    pub set: f64,
-    pub by_sam: f64,
     pub blown: f64,
     pub holes: f64,
-    pub duds: f64,
-    pub knocked: f64,
-    pub stunned: f64,
-    pub backblast: f64,
-    pub entries: f64,
-    pub back: f64,
     pub cleared: f64,
 }
 
@@ -156,10 +140,6 @@ pub struct WallChargeAwayMarksValueR {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
-pub struct WallChargeLogItem {
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeSam {
     pub wall: crate::wallcharge::WallSpot,
     pub t0: f64,
@@ -176,8 +156,6 @@ pub struct WallChargeWalks {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeKeep {
     pub on: bool,
-    pub asks: f64,
-    pub hits: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -210,7 +188,7 @@ pub struct WallOp {
     pub from: JsMap<GuardId, V3>,
     pub hole: Option<crate::wallcharge::WallChargeDoneItemHole>,
     pub queue: Vec<crate::wallcharge::WallChargeDoneItemQueueItem>,
-    pub stage: JsMap<GuardId, crate::wallcharge::WallOpStageValue>,
+    pub stage: JsMap<GuardId, crate::wallcharge::WallStage>,
     pub pod: JsMap<GuardId, crate::wallcharge::Pod>,
     pub crossed: JsMap<GuardId, f64>,
     pub last: JsMap<GuardId, Option<V3>>,
@@ -223,15 +201,9 @@ pub struct WallOp {
     pub repick_kept: Option<JsMap<String, f64>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallOpStageValue {
-    Lane,
-    Pod,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeRowsRowOver {
-    pub kind: Option<crate::wallcharge::WallChargeRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -246,22 +218,6 @@ pub struct WallChargeRowsRowOver {
     pub close: Option<crate::close::CloseKind>,
     pub past: Option<bool>,
     pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum WallChargeRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 #[derive(Clone, Debug)]
@@ -403,3 +359,9 @@ pub const SKY_TOP: f64 = 12.0;
 pub fn sky_off() -> Vec<f64> { alloc::vec![0.5, 1.0, 1.6] }
 
 pub fn sky_along() -> Vec<f64> { alloc::vec![-0.5, 0.0, 0.5] }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum WallStage {
+    Lane,
+    Pod,
+}

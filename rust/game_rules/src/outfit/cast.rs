@@ -43,13 +43,13 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
     let id = g.ch[c_2].id;
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     let Some(rec) = rec else { let d = defenders(g, cast); return pick(&d, id, 0); };
-    let (team, has_unit, is_trained) = (g.gd[rec].team, g.gd[rec].unit.is_some(), g.gd[rec].trained);
+    let (team, has_unit, is_trained) = (g.team(rec), g.gd[rec].unit.is_some(), g.gd[rec].trained);
     let trained = is_trained && (team == Team::Guard || (team == Team::Hostile && crate::qrf::qrf_owns(g, rec)));
-    let place: Option<usize> = if team == Team::Operative && has_unit {
-        g.guards.iter().copied().filter(|x| g.gd[*x].unit.is_some() && g.gd[*x].team == Team::Operative).position(|x| x == rec)
+    let place: Option<usize> = if team.ours() && has_unit {
+        g.guards.iter().copied().filter(|x| g.team(*x).ours()).position(|x| x == rec)
     } else { None };
     let v = if let Some(place) = place { operator_at(g, cast, place as f64) }
-        else if team == Team::Operative { pick(&ops, id, 1) }
+        else if team.ours() { pick(&ops, id, 1) }
         else if team == Team::Civilian {
             let any = g.tab.anim_gltf_cast_info[cast].variants.iter().any(|x| g.tab.anim_gltf_cast_variant[*x].side == CastSide::Civilian);
             let list = if any { crate::anim_gltf::cast_side(g, cast, CastSide::Civilian) } else { defenders(g, cast) };
@@ -63,7 +63,6 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
 }
 /// Who is drawn in the sneaking suit this frame.
 pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
-    if !g.k.look.on { return false; }
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)

@@ -1,5 +1,4 @@
 //! WHERE A MAN GOES FOR COVER (suppression `cover_from`, asked by a man breaking off, under fire, startled or at a blown wall).
-use game::game::GuardState;
 use game::ids::GuardId;
 use game_start::play::{Opts, Play};
 
@@ -10,7 +9,7 @@ fn clinic(seed: u32, hour: &str) -> (Play, Vec<GuardId>) {
     p.g.god_mode = true;
     p.g.fog_of_war.on = false;
     p.run(0.5);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     (p, foes)
 }
 

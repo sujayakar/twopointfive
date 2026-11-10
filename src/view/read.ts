@@ -121,11 +121,11 @@ export function readThrowView(b: Uint8Array): ThrowView { const I = new In(b), r
 export interface AimView { ring: AimRing | null; dot: GunDot | null; tooClose: boolean; throw: ThrowView | null }
 function readAimViewIn(I: In): AimView { return { ring: I.bool() ? readAimRingIn(I) : null, dot: I.bool() ? readGunDotIn(I) : null, tooClose: I.bool(), throw: I.bool() ? readThrowViewIn(I) : null }; }
 export function readAimView(b: Uint8Array): AimView { const I = new In(b), r = readAimViewIn(I); if (I.p !== b.length) throw new Error(`the view: AimView is ${b.length} bytes and ${I.p} were read`); return r; }
-export type BigCarried = 'shotgun' | 'hammer';
-const BigCarriedWords: readonly BigCarried[] = ['shotgun', 'hammer'];
-function readBigCarriedIn(I: In): BigCarried { return I.word(BigCarriedWords, 'BigCarried'); }
-export interface WornView { man: number; goggles: boolean; big: BigCarried | null }
-function readWornViewIn(I: In): WornView { return { man: I.float64(), goggles: I.bool(), big: I.bool() ? readBigCarriedIn(I) : null }; }
+export type BigTool = 'shotgun' | 'hammer';
+const BigToolWords: readonly BigTool[] = ['shotgun', 'hammer'];
+function readBigToolIn(I: In): BigTool { return I.word(BigToolWords, 'BigTool'); }
+export interface WornView { man: number; goggles: boolean; big: BigTool | null }
+function readWornViewIn(I: In): WornView { return { man: I.float64(), goggles: I.bool(), big: I.bool() ? readBigToolIn(I) : null }; }
 export function readWornView(b: Uint8Array): WornView { const I = new In(b), r = readWornViewIn(I); if (I.p !== b.length) throw new Error(`the view: WornView is ${b.length} bytes and ${I.p} were read`); return r; }
 export type Pair = 'red' | 'blue';
 const PairWords: readonly Pair[] = ['red', 'blue'];
@@ -205,8 +205,8 @@ export function readThingRing(b: Uint8Array): ThingRing { const I = new In(b), r
 export interface ThingDot { kind: ThingKind; at: Vec3; man: number | null; up: number; off: boolean; hidden: boolean; ringed: boolean }
 function readThingDotIn(I: In): ThingDot { return { kind: readThingKindIn(I), at: [I.float64(), I.float64(), I.float64()], man: I.bool() ? I.float64() : null, up: I.float64(), off: I.bool(), hidden: I.bool(), ringed: I.bool() }; }
 export function readThingDot(b: Uint8Array): ThingDot { const I = new In(b), r = readThingDotIn(I); if (I.p !== b.length) throw new Error(`the view: ThingDot is ${b.length} bytes and ${I.p} were read`); return r; }
-export interface InteractView { rows: ListRow[]; lit: number; more: number; open: boolean; ring: ThingRing | null; dots: ThingDot[] }
-function readInteractViewIn(I: In): InteractView { return { rows: I.list(() => readListRowIn(I)), lit: I.float64(), more: I.float64(), open: I.bool(), ring: I.bool() ? readThingRingIn(I) : null, dots: I.list(() => readThingDotIn(I)) }; }
+export interface InteractView { rows: ListRow[]; lit: number; open: boolean; ring: ThingRing | null; dots: ThingDot[] }
+function readInteractViewIn(I: In): InteractView { return { rows: I.list(() => readListRowIn(I)), lit: I.float64(), open: I.bool(), ring: I.bool() ? readThingRingIn(I) : null, dots: I.list(() => readThingDotIn(I)) }; }
 export function readInteractView(b: Uint8Array): InteractView { const I = new In(b), r = readInteractViewIn(I); if (I.p !== b.length) throw new Error(`the view: InteractView is ${b.length} bytes and ${I.p} were read`); return r; }
 export interface AlarmView { level: number; left: number; live: boolean }
 function readAlarmViewIn(I: In): AlarmView { return { level: I.float64(), left: I.float64(), live: I.bool() }; }

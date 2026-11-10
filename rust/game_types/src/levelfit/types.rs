@@ -102,7 +102,6 @@ pub struct StoodPropsAllItem {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HandOverMost {
     pub door_men: f64,
-    pub prop_men: f64,
 }
 
 #[derive(Clone, Debug, Default)]

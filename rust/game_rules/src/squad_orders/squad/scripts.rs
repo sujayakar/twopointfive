@@ -51,7 +51,7 @@ fn advance_man(g: &mut Game, id: RoomClearId, second: bool) -> bool {
     let row = &mut g.tab.squad_room_clear[id];
     let gd = if second { row.b.unwrap() } else { row.a };
     let mut wps = core::mem::take(if second { &mut row.wp_b } else { &mut row.wp_a });
-    let planted = room_clear_advance(g, id, gd, &mut wps);
+    let planted = room_clear_advance(g, gd, &mut wps);
     let row = &mut g.tab.squad_room_clear[id];
     if second { row.wp_b = wps; } else { row.wp_a = wps; }
     planted
@@ -288,8 +288,8 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 }
 
 /// Release a scripted guard back to the AI in a sane state; a man who died under a script is only unhooked.
-pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<crate::squad::EndGuardScriptState>) {
-    let state = state.unwrap_or(EndGuardScriptState::Patrol);
+pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<crate::game::GuardState>) {
+    let state = state.unwrap_or(crate::game::GuardState::Patrol);
     g.gd[gd].script = None;
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     let c = g.gd[gd].ch;
@@ -297,16 +297,11 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
     g.gd[gd].muzzle_down = false;
     let an = &mut g.ch[c].anim;
     an.crouch_target = 0.0; an.lean = 0.0; an.reverse = false;
-    crate::mind::set_state(g, gd, match state {
-        EndGuardScriptState::Patrol => crate::game::GuardState::Patrol,
-        EndGuardScriptState::Suspicious => crate::game::GuardState::Suspicious,
-        EndGuardScriptState::Alert => crate::game::GuardState::Alert,
-        EndGuardScriptState::Search => crate::game::GuardState::Search,
-    }, "squad");
+    crate::mind::set_state(g, gd, state, "squad");
     // (`gd.path = []; gd.pathGoal = null`: guard_set_path and guard_set_path_goal, written out for the row in hand)
     g.gd[gd].path = Vec::new(); g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
     g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;
-    if state == EndGuardScriptState::Patrol {
+    if state == crate::game::GuardState::Patrol {
         crate::mind::set(g, gd, 0.0, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].body_duty = None;
     }
 }
@@ -396,7 +391,7 @@ pub(super) fn room_clear_new(g: &mut crate::game::Game, plan: &crate::scene_leve
 pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
     let row = &mut g.tab.squad_room_clear[id];
     row.phase = RoomClearPhase::Stack;
-    row.t_kick = f64::NAN; row.t_enter = f64::NAN; row.t_enter2 = f64::NAN; row.t_search = f64::NAN; row.t_resolve = f64::NAN;
+    row.t_kick = f64::NAN; row.t_enter = f64::NAN;  row.t_search = f64::NAN; row.t_resolve = f64::NAN;
     row.done.clear();
     row.flung = false; row.b_go = false; row.no_mark = false;
     row.t_set = f64::NAN; row.t_go = f64::NAN; row.t_now = 0.0;
@@ -489,7 +484,7 @@ fn room_clear_body_here(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId)
 }
 
 /// Pass intermediate waypoints on the fly, keep the last as the goal; true once planted on the last.
-fn room_clear_advance(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId, wps: &mut Vec<V3>) -> bool {
+fn room_clear_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>) -> bool {
     let c = g.gd[gd].ch;
     while wps.len() > 1 && flat(g.ch[c].pos, wps[0]) < SETTLE + 0.1 {
         wps.remove(0);
@@ -528,7 +523,7 @@ fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     let (d, fling, a) = (row.door.unwrap(), row.plan.fling, row.a);
     let c = g.gd[a].ch;
     let s = js::or(m::sign(fling), -1.0);
-    if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d, s) < 1.0 {
+    if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d) < 1.0 {
         crate::doors::door_set_latched(g, d, false);
         crate::doors::door_set_closing(g, d, false);
         let v = crate::doors::door_vel(g, d);
@@ -576,7 +571,7 @@ pub(super) fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64
     let (live, kick_from, kick_face, stack, fling, kick, phase) = {
         let row = &g.tab.squad_room_clear[id];
         let p = &row.plan;
-        (row.live, p.kick_from, p.kick_face, p.stack, p.fling, p.breach.unwrap_or(crate::scene_level::RoomClearPlanBreach::Kick) == crate::scene_level::RoomClearPlanBreach::Kick, row.phase)
+        (row.live, p.kick_from, p.kick_face, p.stack, p.fling, p.breach.unwrap_or(crate::scene_level::PlanBreach::Kick) == crate::scene_level::PlanBreach::Kick, row.phase)
     };
     let ca = g.gd[a].ch;
     let cb = b.map(|x| g.gd[x].ch);
@@ -687,7 +682,6 @@ pub(super) fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64
                 if go {
                     let row = &mut g.tab.squad_room_clear[id];
                     row.b_go = true;
-                    row.t_enter2 = t;
                     let (entry, face, aim, list) = (row.plan.entry[1].clone(), row.plan.pod_face[1], row.aim_b, row.plan.entry_aim[1].clone());
                     route_man(g, id, true, &entry, OrderPatch { speed: Some(Some(2.2)), face: Some(Some(face)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)), ..OrderPatch::default() });
                     b_in = false;
@@ -813,7 +807,7 @@ fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) ->
 
 /// Break a scripted man off into the AI with something on his mind: patrol for exactly one frame carrying this awareness and fix.
 pub(super) fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, last_known: Option<V3>) {
-    end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
+    end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "squad");
     crate::mind::raise(g, gd, awareness, "squad");

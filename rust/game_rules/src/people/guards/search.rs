@@ -136,7 +136,7 @@ fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
 /// somebody not of his side in the beam, this side of what it ends on
 fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
     g.guards.iter().any(|&x| {
-        if x == gd || crate::condition::down(g, g.gd[x].ch) || g.gd[x].team == crate::teams::Team::Operative {
+        if x == gd || crate::condition::down(g, g.gd[x].ch) || g.team(x).ours() {
             return false;
         }
         let at = g.ch[g.gd[x].ch].pos;
@@ -149,7 +149,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
 
 /// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens
 pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || crate::condition::down(g, g.gd[gd].ch) {
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) {
         return false;
     }
     let Some(held) = held else { return false };
@@ -169,7 +169,7 @@ pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>
     let near = beam_walled(g, o, &fan, reach, s_dark) && !man_in(g, gd, o, d, hl, reach);
     let since = if near { s_since } else { t };
     let dark = near && (s_dark || t - since >= g.k.lights.wall_secs - 1e-9);
-    g.m.guards.wall_seen.set(gd, GuardsModWallSeenValue { t, since, dark, out: None });
+    g.m.guards.wall_seen.set(gd, GuardsModWallSeenValue { t, since, dark });
     dark
 }
 
@@ -192,8 +192,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// is this man's weapon light this rule's to decide
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && crate::roomfight::fight_live(g)
         && crate::seats::order_of(g, gd).is_some()
 }
@@ -257,7 +256,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let t = g.time;
-    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
+    let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
     let o = crate::roomfight::room_fight_op_of(g, gd);
     let o_row = o.map(|id| &g.tab.roomfight_op[id]);
     let a_row = a.map(|id| &g.tab.orders_assignment[id]);
@@ -290,7 +289,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// is this man one of the team whose pace PACE governs right now
 pub fn team_paced(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g)
+    g.team(gd).ours() && crate::roomfight::fight_live(g)
 }
 
 /// the speed his legs may be asked for
@@ -302,7 +301,7 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg
 pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
-    match crate::teampace::team_run_legs(g, seat, gd, speed) {
+    match crate::teampace::team_run_legs(g, gd, speed) {
         Some(legs) => legs,
         None => crate::kitload::load_pace(g, g.gd[gd].ch, speed),
     }
@@ -340,7 +339,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     if unstick_first(g, gd, dt) {
         return false;
     }
-    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt, speed) {
+    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt) {
         return false;
     }
     if !g.gd[gd].fled && crate::lanes::lane_gate(g, gd) {
@@ -575,7 +574,7 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     for i in 0..g.props.props.len() {
         let id = g.props.props[i];
         let r = g.tab.props_prop[id].radius + 0.7;
-        let (px, pz) = (crate::props::prop_x(g, id), crate::props::prop_z(g, id));
+        let (px, pz) = (g.tab.props_prop[id].x, g.tab.props_prop[id].z);
         let (x0, x1, z0, z1) = (
             m::max(0.0, m::floor((px - r) / cs)),
             m::min(w - 1.0, m::floor((px + r) / cs)),
@@ -691,7 +690,6 @@ pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
             current: -1.0,
             phase: SearchPlanPhase::Sweep,
             phase_t: 0.0,
-            visits: 0.0,
             rr: 0.0,
             said: false,
         };

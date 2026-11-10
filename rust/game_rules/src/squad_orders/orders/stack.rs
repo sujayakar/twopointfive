@@ -99,14 +99,14 @@ fn spot_of(g: &mut Game, at: V3, tries: &[V3], out: &[V3]) -> V3 {
 pub fn squad_orders_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     squad_orders_own_mark_first(g, d, side, men, &mut |g: &mut Game| {
-        squad_orders_stack_seen(g, d, side, men, ignore, &mut |g: &mut Game| squad_orders_stack_posts_room(g, d, side, men, Some(ignore)))
+        squad_orders_stack_seen(g, d, side, men, &mut |g: &mut Game| squad_orders_stack_posts_room(g, d, side, men, Some(ignore)))
     })
 }
 
 /// the plain 'stack up' on a door: the marks above, dealt again out of the floor's view where the leaf stands open
 pub fn squad_orders_stack_posts_wait(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
     squad_orders_own_mark_first(g, d, side, men, &mut |g: &mut Game| {
-        squad_orders_stack_seen(g, d, side, men, &[], &mut |g: &mut Game| {
+        squad_orders_stack_seen(g, d, side, men, &mut |g: &mut Game| {
             let posts = squad_orders_stack_posts_room(g, d, side, men, Some(&[]));
             let mut taken: Vec<V3> = vec![squad_orders_sam_place(g, &crate::seats::here(g))];
             taken.extend(squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(&[])));
@@ -136,7 +136,7 @@ fn seen_sum(g: &mut Game, men: &[GuardId], posts: &[crate::orders::StackPost]) -
 }
 
 /// THE HAND OF THE DOOR NO KNOWN ENEMY SEES
-fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
+fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
     if g.orders.cast.is_some() || g.orders.file_hand != 0.0 || men.is_empty() || !crate::picture::any_idea(g, men) { return ask(g); }
     let dealt = match ask(g) { Some(x) => x, None => return None };
     let th = g.dr[d].def.closed_dir;
@@ -172,7 +172,6 @@ fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men:
     } else { Vec::new() };
     let mut best: Option<Vec<crate::orders::StackPost>> = None;
     let mut best_s = g.k.picture.stack_k * s0;
-    let mut hinge = false;
     for h in [1.0, -1.0] {
         if on.contains(&(-h)) { continue; }
         let p = match seen_trial(g, h, ask) { Some(p) => p, None => continue };
@@ -180,14 +179,9 @@ fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men:
         if if best.is_some() { s < best_s } else { s <= best_s } {
             best = Some(p);
             best_s = s;
-            hinge = h < 0.0;
         }
     }
     let best = match best { Some(b) => b, None => return Some(dealt) };
-    if !g.orders.sam_out {
-        g.stats.picture.filed += 1;
-        if hinge { g.stats.picture.filed_hinge += 1; }
-    }
     Some(best)
 }
 

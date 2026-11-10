@@ -78,10 +78,10 @@ A file also says a few things no rule of the game reads, which `levelToData` wri
 | light rows, counted at start with beacons, cameras and vehicle lamps | 256 | a start alone |
 | sheets of glass | 256 | a start alone (`PANE_CAP`) |
 
-### What a switch leaves out
+### What comes last
 
-A box in group `dressing` stands only with `k.destruction.on`. A box in a group that starts `lived.` stands only with `k.lived.on`, and so does a prop, light or
-switchable whose `id` starts `lived.`. These come last in their lists, so every other index holds without them.
+A box in group `dressing` or in a group that starts `lived.`, and a prop, light or switchable whose `id` starts `lived.`, comes last in its list, so every other
+index holds without them.
 
 ## Boxes
 
@@ -126,7 +126,7 @@ A marking is a small bitmap on one face (`markings.ts`, carried by `laid_marking
 ### Shape
 
 A shape is cut from the box and said in the box's own frame, so it moves and turns with the box. The box still walks as the plain box; a cut changes the picture and
-every ray. `shape_of` carries it and `shape_level` makes the record; `?shapes=0` stands the plain boxes. `form_faults` holds the rules.
+every ray. `shape_of` carries it and `shape_level` makes the record. `form_faults` holds the rules.
 
 - `round` 1 or 3. A twelve-sided prism about the box's x (1) or z (3). The box must be square across that axis to within 15 hundredths. No `cut` beside it.
 - `arc` record of `axis` (1 or 3) and `rise` (over 0, at most the box's height and half width). The box's top is a round about that axis. Not with `round`.

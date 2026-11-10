@@ -47,14 +47,14 @@ fn box_of(key: f64, n: f64, text_w: f64, tall: Option<bool>) -> crate::ringlone:
 }
 
 /// The place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall.
-fn pill_box(g: &crate::game::Game, key: f64, n: f64) -> crate::ringlone::BoxOf {
+fn pill_box(key: f64, n: f64) -> crate::ringlone::BoxOf {
     let l = crate::ringlone::lone();
     box_of(key, n, l.max * l.char, Some(true))
 }
 
 /// Is a point of the ring's own px (from its middle) on the place of wedge `key`'s pill.
-pub(super) fn on_pill(g: &crate::game::Game, key: f64, n: f64, x: f64, y: f64) -> bool {
-    let p = pill_box(g, key, n);
+pub(super) fn on_pill(key: f64, n: f64, x: f64, y: f64) -> bool {
+    let p = pill_box(key, n);
     x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1
 }
 

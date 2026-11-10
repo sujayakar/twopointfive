@@ -117,8 +117,9 @@ pub struct DoorEvent {
     pub level: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SlabSeen {
+/// a leaf off its hinges
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Slab {
     pub p: [f64; 3],
     pub v: [f64; 3],
     pub a: f64,
@@ -132,7 +133,8 @@ pub struct SlabSeen {
     pub t: f64,
     pub ang: f64,
     pub bits: Option<[f64; 4]>,
-    pub wedged: Option<f64>,
+    /// the clock a wedged slab is not searched for before
+    pub wedged: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -144,10 +146,9 @@ pub struct Door {
     pub thick: f64,
     pub min_auth: f64,
     pub max_auth: f64,
-    #[is(DriveColsId(0))] pub drive_cols: DriveColsId,
     #[is(BoxId(0))] pub box_: BoxId,
     pub handle_boxes: Vec<BoxId>,
-    #[is(SlabRowId(0))] pub slab_row: SlabRowId,
+    pub slab: Option<crate::doors::Slab>,
     pub leaf_h: V3,
     pub leaf_marks: Option<Vec<crate::scene_markings::MarkingDef>>,
     pub def: crate::doors::DoorDef,
@@ -168,7 +169,6 @@ pub struct DoorSwing {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Doors {
     pub list: Vec<DoorId>,
-    pub slabs: crate::sim_slabshome::SlabStore,
     pub rounds: f64,
     #[is(crate::doors::DoorsSolids { carried: 0.0, stopped: 0.0, passed: 0.0, reached: 0.0, held: 0.0, aside: 0.0 })] pub solids: crate::doors::DoorsSolids,
 }
@@ -187,27 +187,6 @@ pub struct DoorsSolids {
 pub struct SIDEKICK {
     pub past: f64,
     pub out: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum SlabRowGK {
-    T,
-    A,
-    Vx,
-    Vz,
-    By,
-    Px,
-    Py,
-    Pz,
-    Vy,
-    Spin,
-    Wedged,
-    Tip,
-    TipV,
-    Ang,
-    Bw,
-    Bl,
-    Bx,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -239,12 +218,6 @@ pub struct DoorsKickSpotSide {
 pub struct DoorsFrameCoords {
     pub along: f64,
     pub off: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorsTornCause {
-    Blast,
-    Fire,
 }
 
 pub const DOORS_PICK_SECS: f64 = 4.2;
@@ -280,7 +253,5 @@ pub const MAN_BRACED: f64 = 8.0;
 pub const MAN_CALM: f64 = 16.0;
 
 pub const MAN_HELD: f64 = 32.0;
-
-pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
 
 pub const FLOOR_Y0: f64 = 0.2;

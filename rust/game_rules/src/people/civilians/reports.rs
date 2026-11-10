@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 use crate::character::{AnimAct, Bone, HoldPhase};
 use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue, ChronicleNDataValue};
-use crate::dialogue::{Band, DialoguePick, DialoguePickWidened, IntelKind, Knowledge, StageKey};
+use crate::dialogue::{Band, DialoguePick, IntelKind, Knowledge, StageKey};
 use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, Temperament, WitnessCalledToBody, WitnessSawBody};
 use crate::guards::{body_pos, escalation_of, follow_path, go_to, point_in_view, say};
 use crate::scene_level::{CivilianDefKind, CivilianTask};
@@ -15,8 +15,6 @@ use crate::teams::Team;
 
 // ---------------------------------------------------------------- small helpers
 
-/// a cause as a template string prints it
-fn cause_text(c: Option<CivCause>) -> &'static str { match c { Some(c) => c.as_str(), None => "null" } }
 /// a bone's place, or the offset from the body's feet the TypeScript falls back to
 fn bone_or(g: &Game, c: CharId, b: Bone, up: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
@@ -84,7 +82,7 @@ pub(super) fn report(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 /// what telling a man does; once per fright
 pub(super) fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId, how: crate::civilians::DeliverReportHow) {
     let cid = g.gd[gd].civ.unwrap(); if g.cv[cid].reported { return; }
-    g.cv[cid].reported = true; g.cv[cid].report_to = Some(o); g.stats.civilians.reports += 1;
+    g.cv[cid].reported = true; g.cv[cid].report_to = Some(o); 
     let cause = g.cv[cid].cause;
     let at = g.ch[g.gd[gd].ch].pos;
     let pos = g.cv[cid].cause_pos.unwrap_or(at); let armed = g.cv[cid].armed || cause == Some(CivCause::Body);
@@ -115,12 +113,10 @@ pub(super) fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId,
     ];
     let here = g.ch[g.gd[gd].ch].pos;
     chronicle_reported(g, cause, rows, here);
-    let text = format!("told {} ({}): {}{} at ({}, {}) → he {}", g.gd[o].callsign, how.as_str(), cause_text(cause), if armed { ", armed" } else { "" }, js::to_fixed(pos[0], 1), js::to_fixed(pos[2], 1), if armed { "searches it" } else { "walks it" });
-    log(g, gd, &text);
 }
 
 /// she takes the handset off the hook
-pub(super) fn to_phone(g: &mut crate::game::Game, gd: GuardId, s: &crate::civilians::CivSpot) {
+pub(super) fn to_phone(g: &mut crate::game::Game, gd: GuardId) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     g.cv[cid].talk_t = 0.0; g.cv[cid].target = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None);
     let lines = crate::dialogue::civ_lines();
@@ -132,7 +128,6 @@ pub(super) fn to_phone(g: &mut crate::game::Game, gd: GuardId, s: &crate::civili
     g.ch[c].anim.act = Some(AnimAct { clip: String::from("Idle_Talking_Loop"), loop_: Some(true), rate: Some(1.3), in_: Some(0.3), out: Some(0.4) });
     let at = v3::add(g.ch[c].pos, [0.0, 1.2, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "click", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
-    log(g, gd, &format!("on {}", s.name));
     set_state(g, gd, CivState::Phone);
 }
 
@@ -169,7 +164,7 @@ fn phone_call(g: &mut crate::game::Game, gd: GuardId) {
         let line = own.or(lines.guide.control.get(key.clone())).or(lines.control.get(key)).cloned().unwrap_or_default();
         control(g, gd, &line);
     }
-    let sent = crate::devices::send_to_look(g, pos, "civilian");
+    let sent = crate::devices::send_to_look(g, pos);
     if armed {
         g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
         later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv: gd, o: sent, ..LaterP::default() });
@@ -182,19 +177,15 @@ fn phone_call(g: &mut crate::game::Game, gd: GuardId) {
     ];
     let at = g.ch[g.gd[gd].ch].pos;
     chronicle_reported(g, cause, rows, at);
-    let tail = if sent.is_some() { format!(" — {} sent", sent_name) } else { String::from(" — nobody free to send") };
-    let text = format!("rang it in: {}{} at ({}, {}){}", cause_text(cause), if armed { ", armed" } else { "" }, js::to_fixed(pos[0], 1), js::to_fixed(pos[2], 1), tail);
-    log(g, gd, &text);
 }
 
 /// out of the building: gone; unless evacuated, control rings the floor a little later
 pub(super) fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
-    if evac { g.stats.civilians.evacuated += 1; log(g, gd, "off the floor (evacuated)"); }
+    if evac {   }
     else if !g.cv[cid].reported {
-        g.cv[cid].reported = true; g.stats.civilians.outside_calls += 1;
-        log(g, gd, "out of the building — control will ring the floor");
+        g.cv[cid].reported = true; 
         let secs = g.k.civ.outside_call_secs;
         later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::default() });
     }
@@ -244,7 +235,6 @@ pub(super) fn to_cower(g: &mut crate::game::Game, gd: GuardId, complied: bool) {
     let cv = &mut g.cv[cid];
     cv.cower_at = Some(spot); cv.found_t = 0.0; cv.found_by = None; cv.found_line_at = -1.0; cv.found_told = false; cv.whimper_at = now + 2.0 + roll * 4.0;
     crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.ch[c].anim.act = None; g.cv[cid].target = None;
-    g.stats.civilians.cowered += 1; if complied { g.stats.civilians.complied += 1; }
     set_state(g, gd, CivState::Cower);
 }
 
@@ -313,7 +303,6 @@ pub(super) fn cower(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::c
     if !complying && !g.cv[cid].reported && g.time - g.cv[cid].state_at > g.k.civ.lone_secs && g.time - g.cv[cid].retarget_at > g.k.civ.lone_secs {
         g.cv[cid].bad_targets.clear(); g.cv[cid].retarget_at = g.time;
         if let Some(t) = pick_target(g, gd, None) {
-            log(g, gd, "nobody came — going to find someone");
             to_flee(g, gd, &t, false);
             return Cower { move_: 0.0, crouch: 1.0 };
         }
@@ -339,14 +328,12 @@ pub fn civilian_grabbed(g: &mut crate::game::Game, gd: GuardId) {
     g.cv[cid].rise_t = 0.0; g.ch[c].anim.act = None; g.ch[c].anim.crouch_target = 0.0;
     g.cv[cid].target = None; g.cv[cid].report_to = None; g.cv[cid].look_at = None;
     let at = g.ch[g.pl[g.player].ch].pos;
-    let now = g.time;
     let cv = &mut g.cv[cid];
-    cv.cause = Some(CivCause::Grabbed); cv.cause_pos = Some(at); cv.armed = true; cv.cause_at = now; cv.complied = false;
-    log(g, gd, "grabbed");
+    cv.cause = Some(CivCause::Grabbed); cv.cause_pos = Some(at); cv.armed = true;  cv.complied = false;
 }
 
 /// the fields every answer of hers shares (the TypeScript's `base`)
-fn answer_base(cell: &str, text: String, id: &str, stage: StageKey, stage_n: f64, kind: Option<IntelKind>) -> DialoguePick {
+fn answer_base(text: String, id: &str, stage_n: f64, kind: Option<IntelKind>) -> DialoguePick {
     DialoguePick {
         text, id: String::from(id), kind, stage_n,
         after: None,
@@ -360,19 +347,18 @@ pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut 
     let stage = g.tab.game_talk[t_id].stage;
     let def_kind = g.cv[cid].def.kind;
     let worker = def_kind == CivilianDefKind::Worker;
-    let cell = format!("civ:{}", def_kind.as_str());
     let lines = crate::dialogue::civ_lines();
     if stage <= 1.0 {
         let pool: Vec<String> = if worker { lines.held_fear_worker.clone() }
             else if away(g) { lines.held_fear.iter().map(|t| if t.contains("CLEAN here") { lines.own.held_fear.clone() } else { t.clone() }).collect() }
             else { lines.held_fear.clone() };
         let text = pick(g, gd, &pool);
-        return Some(answer_base(&cell, text, "civ:fear", StageKey::Num(1.0), stage, None));
+        return Some(answer_base(text, "civ:fear", stage, None));
     }
     let own = away(g);
     let mut men_n = 0usize;
     if own {
-        for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].unit.is_none() && g.gd[x].team == Team::Guard { men_n += 1; } }
+        for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].unit.is_none() && g.team(x) == Team::Guard { men_n += 1; } }
     }
     let here = g.ch[g.gd[gd].ch].pos;
     let intel_row: Option<Vec<String>> = lines.intel.get(String::from(def_kind.as_str())).cloned();
@@ -401,11 +387,11 @@ pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut 
             }
         }
         let id = format!("civ:intel:{}", g.cv[cid].intel_n);
-        return Some(answer_base(&cell, text, &id, StageKey::Num(if stage == 2.0 { 2.0 } else { 3.0 }), stage, kind));
+        return Some(answer_base(text, &id, stage, kind));
     }
     if own { g.cv[cid].intel_n = core::cmp::max(g.cv[cid].intel_n, intel_len); }
     let text = pick(g, gd, &lines.dry);
-    Some(answer_base(&cell, text, "civ:dry", StageKey::X, stage, None))
+    Some(answer_base(text, "civ:dry", stage, None))
 }
 
 /// a keypad's digits in words, capitalised
@@ -453,8 +439,6 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     let pos = g.ch[c].pos;
     let d = data_n(vec![("who", Dv::T(g.cv[cid].name.clone()))]);
     crate::chronicle::chronicle_n(g, ChronKind::CivilianComplied, ChronCountKey::CivComplied, Some(&d), Some(pos));
-    let text = format!("told to stay down — complies for {} min", js::num_str(g.k.civ.comply_min));
-    log(g, gd, &text);
     true
 }
 
@@ -474,7 +458,6 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     let (name, label) = (g.cv[cid].name.clone(), g.cv[cid].label.clone());
     if by == DownBy::Player {
         if dead {
-            g.stats.civilians.killed += 1;
             let pl = g.player;
             let weapon = match (with, crate::game::player_gun_in_hand(g, pl)) {
                 (crate::game::With::Blast(w), _) => String::from(w),
@@ -485,7 +468,6 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKilled, ChronCountKey::CivKilled, Some(&d), Some(pos));
         } else {
-            g.stats.civilians.ko += 1;
             let method = with.method(how);
             let d = data_n(vec![("who", Dv::T(name.clone())), ("label", Dv::T(label.clone())), ("method", Dv::T(String::from(method)))]);
             let pos = g.ch[c].pos;
@@ -498,7 +480,6 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             crate::squadnet::team_says(g, None, if dead { "that was a civilian." } else { "civilian's out. still breathing." });
         }
     }
-    log(g, gd, &format!("DOWN — {} by {}", how.as_str(), by.as_str()));
     let at = bone_or(g, c, Bone::Chest, 1.1);
     let body_m = g.k.civ.body_m;
     let mut i = 0;
@@ -523,7 +504,7 @@ fn civ_point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: f64) 
 
 /// living staff, free, on the shift's list
 pub(super) fn staff_calm(g: &crate::game::Game, o: GuardId) -> bool {
-    !crate::condition::down(g, g.gd[o].ch) && g.gd[o].team == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
+    !crate::condition::down(g, g.gd[o].ch) && g.team(o) == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
 }
 
 /// once a frame: the men react to a frightened woman, one in a corner, one on the floor
@@ -539,7 +520,7 @@ pub(super) fn guards_notice(g: &mut crate::game::Game, dt: f64) {
                 let mut i = 0;
                 while i < g.guards.len() {
                     let o = g.guards[i]; i += 1;
-                    if crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
+                    if crate::condition::down(g, g.gd[o].ch) || g.team(o) != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
                     if body_in_view_of(g, o, cv) { found_down(g, cv, o); break; }
                 }
             }
@@ -577,7 +558,7 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         }
         if !heard && d <= see_m { seen = point_in_view(g, o, chest, Some(see_m), Some(58.0)) && (vis > see_lit || d < 4.0); }
         if !heard && !seen { continue; }
-        g.cv[cid].told.set(o, alarm_n); g.stats.civilians.noticed += 1;
+        g.cv[cid].told.set(o, alarm_n); 
         let from = g.cv[cid].cause_pos.unwrap_or(g.ch[c].pos);
         crate::mind::raise(g, o, 0.5, "civilians");
         if g.gd[o].last_known.is_none() || g.gd[o].state == GuardState::Patrol { crate::belief::word(g, o, from); }
@@ -589,8 +570,6 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
             let text = if seen { format!("{}? — hey. HEY. what is it —", g.cv[cid].name) } else { format!("— that was {} —", g.cv[cid].name) };
             say(g, o, &text, None, None);
         }
-        let text = format!("{} {} ({} m) → looks toward ({}, {})", g.gd[o].callsign, if heard { "heard her" } else { "saw her running" }, js::to_fixed(d, 1), js::to_fixed(from[0], 1), js::to_fixed(from[2], 1));
-        log(g, cv, &text);
         // she runs to HIM if he is the nearer thing now
         let run_to = g.cv[cid].state == CivState::Flee && !g.cv[cid].pin_target && match &g.cv[cid].target { Some(t) => t.guard != Some(o), None => false };
         if run_to && tellable(g, o) {
@@ -600,10 +579,8 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
             let op = g.ch[oc].pos;
             let alt = path_metres(g, here, op).m;
             if alt < cur - 2.0 {
-                let name = g.gd[o].callsign.clone();
-                g.cv[cid].target = Some(CivTarget { kind: CivTargetKind::Guard, guard: Some(o), spot: None, pos: op, name: name.clone(), plan_pos: op });
+                g.cv[cid].target = Some(CivTarget { kind: CivTargetKind::Guard, guard: Some(o), spot: None, pos: op, plan_pos: op });
                 go_to(g, cv, op, Some(true));
-                log(g, cv, &format!("→ running to {} instead", name));
             }
         }
     }
@@ -632,13 +609,11 @@ fn notice_cowering(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         let pool = crate::dialogue::civ_lines().found;
         let t = pick(g, cv, &pool); let t = fill(g, cv, &t, Some(by));
         say(g, by, &t, None, None);
-        let text = format!("{} found her cowering", g.gd[by].callsign);
-        log(g, cv, &text);
     }
     if g.cv[cid].found_line_at >= 0.0 && !g.cv[cid].found_told && g.time - g.cv[cid].found_line_at >= 1.6 {
         g.cv[cid].found_told = true; g.cv[cid].report_to = Some(by);
         let cause = g.cv[cid].cause;
-        let pool = report_pool(g, cause.map(|c| c.as_str()));
+        let pool = report_pool(cause.map(|c| c.as_str()));
         let t = pick(g, cv, &pool);
         civ_say(g, cv, &t, None);
         later(g, 1.8, &LaterP { kind: PendKind::FoundReport, cv, o: Some(by), ..LaterP::default() });
@@ -658,7 +633,7 @@ fn body_in_view_of(g: &mut crate::game::Game, o: GuardId, cv: GuardId) -> bool {
 /// she is a body like any body: called in, the floor up
 fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let cid = g.gd[cv].civ.unwrap(); let body = body_pos(g, cv); let dead = g.gd[cv].down_kind == Some(DownKind::Shot);
-    g.gd[cv].found = true; g.stats.civilians.found_down += 1; crate::mission::tally(g, crate::mission::TallyK::Bodies);
+    g.gd[cv].found = true;  crate::mission::tally(g, crate::mission::TallyK::Bodies);
     let name = g.cv[cid].name.clone();
     let d = data_c(vec![("who", Dv::T(name.clone())), ("by", Dv::T(g.gd[o].callsign.clone())), ("breathing", Dv::B(!dead)), ("civilian", Dv::B(true))]);
     crate::chronicle::chronicle(g, ChronKind::BodyFound, Some(&d), Some(body));
@@ -679,7 +654,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let mut i = 0;
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;
-        if other == o || crate::condition::down(g, g.gd[other].ch) || g.gd[other].team != Team::Guard || g.gd[other].held.is_some() { continue; }
+        if other == o || crate::condition::down(g, g.gd[other].ch) || g.team(other) != Team::Guard || g.gd[other].held.is_some() { continue; }
         g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), breathing: !dead });
         if g.gd[other].script.is_some() { continue; }
         crate::mind::raise(g, other, 0.45, "civilians");
@@ -689,8 +664,6 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let lvl = escalation_of(g);
     later(g, 1.4, &LaterP { kind: PendKind::BodyEsc, cv, o: Some(o), dead: Some(dead), lvl: Some(lvl), ..LaterP::default() });
     if dead { later(g, 4.5, &LaterP { kind: PendKind::Outrage, cv, o: None, ..LaterP::default() }); }
-    let text = format!("found {} by {}", if dead { "DEAD" } else { "out cold" }, g.gd[o].callsign);
-    log(g, cv, &text);
 }
 
 /// her scream, to the other civilians' ears
@@ -719,7 +692,7 @@ pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
-    man.team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
+    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
 }
 
 /// passing pleasantries, one a floor at a time
@@ -747,14 +720,12 @@ pub(super) fn greetings(g: &mut crate::game::Game) {
             let (a, b) = (v3::add(g.ch[oc].pos, [0.0, 1.4, 0.0]), v3::add(g.ch[cc].pos, [0.0, 1.4, 0.0]));
             if crate::scene_collision::solid_blocked(g, a, b, None) { continue; }
             let now = g.time;
-            g.cv[cid].greet_at = now; floor_of(g).greet_at = now; g.stats.civilians.greetings += 1;
+            g.cv[cid].greet_at = now; floor_of(g).greet_at = now; 
             let wipes = g.cv[cid].def.tasks.as_ref().map_or(false, |t| t.contains(&CivilianTask::Wipe));
             let pool: Vec<String> = crate::dialogue::civ_lines().guide.greet_civ.into_iter().filter(|t| !(t.contains("wet floor") && !wipes)).collect();
             let t = pick(g, cv, &pool);
             civ_say(g, cv, &t, None);
             later(g, 1.3, &LaterP { kind: PendKind::GreetReply, cv, o: Some(o), ..LaterP::default() });
-            let text = format!("greets {}", g.gd[o].callsign);
-            log(g, cv, &text);
             return;
         }
     }
@@ -780,7 +751,6 @@ pub(super) fn evacuation_check(g: &mut crate::game::Game) {
                 None => crate::dialogue::civ_lines().now.qrf,
             };
             control(g, movable[0], &line);
-            log(g, movable[0], "control clears the floor (QRF inbound)");
         }
     }
     for cv in movable {
@@ -802,10 +772,9 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
     if g.gd[gd].held.is_some() { return format!("{} is in your arm", name); }
     let pp = g.ch[g.pl[g.player].ch].pos; let c = g.gd[gd].ch;
     if what == CivPanicWhat::Phone {
-        let now = g.time;
         {
             let cv = &mut g.cv[cid];
-            cv.cause = Some(CivCause::Panel); cv.cause_pos = Some(pp); cv.cause_at = now; cv.alarm_n += 1.0; cv.reported = false; cv.phoned = false; cv.bad_targets.clear();
+            cv.cause = Some(CivCause::Panel); cv.cause_pos = Some(pp);  cv.alarm_n += 1.0; cv.reported = false; cv.phoned = false; cv.bad_targets.clear();
         }
         end_task(g, gd); g.cv[cid].rise_t = 0.0; g.ch[c].anim.act = None;
         let mut best: Option<CivSpot> = None; let mut bm = f64::INFINITY;
@@ -815,7 +784,7 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
             if d < bm { bm = d; best = Some(s); }
         }
         let Some(best) = best else { return format!("{} cannot reach a phone from here", name); };
-        let t = CivTarget { kind: CivTargetKind::Phone, guard: None, pos: best.pos, name: best.name.clone(), plan_pos: best.pos, spot: Some(best.clone()) };
+        let t = CivTarget { kind: CivTargetKind::Phone, guard: None, pos: best.pos, plan_pos: best.pos, spot: Some(best.clone()) };
         to_flee(g, gd, &t, false); g.cv[cid].pin_target = true;
         return format!("{} runs for {}", name, best.name);
     }

@@ -20,21 +20,11 @@ pub enum ReloadKind {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NoteRow {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct KitShowV {
     pub pistol_in_hand: bool,
-    pub rifle: Option<crate::kitanim::KitShowVRifle>,
+    pub rifle: Option<crate::rig_props::RifleAt>,
     pub held: Option<crate::game::ThrowKind>,
     pub knife: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum KitShowVRifle {
-    Hand,
-    Slung,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,12 +37,9 @@ pub struct KitReload {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct KitanimStats {
-    pub swaps: i32,
     pub draws: JsMap<crate::character::KitItem, i32>,
     pub stows: JsMap<crate::character::KitItem, i32>,
     pub reloads: JsMap<crate::kitanim::ReloadKind, i32>,
-    pub close_frames: i32,
     pub nv: JsMap<bool, i32>,
-    pub owed: i32,
 }
 

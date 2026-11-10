@@ -127,7 +127,7 @@ pub struct WallHold {
     pub peek: f64,
     pub peek_dir: f64,
     pub crouched: bool,
-    pub take_t: Option<f64>,
+    pub take_t: f64,
     pub yaw0: Option<f64>,
     pub yaw_d: Option<f64>,
     pub hit_t: Option<f64>,
@@ -268,18 +268,6 @@ pub struct HeldTalk {
     pub speaking: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum StartKickTool {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SideKickSpot {
     pub pos: V3,
@@ -390,10 +378,6 @@ pub const WALL_PEEK_LOOK: f64 = 0.5235987755982988;
 
 pub const WALL_SHOVE_OFF: f64 = 0.25;
 
-pub const WALL_AWAY_SECS: f64 = 0.25;
-
-pub const WALL_SETTLE: f64 = 0.22;
-
 pub const WALL_PEEK_SECS: f64 = 0.3;
 
 pub const PROP_BODY_R: f64 = 0.3;
@@ -413,3 +397,9 @@ pub const EASE_RATE: f64 = 0.55;
 pub const EASE_MAX: f64 = 1.45;
 
 pub const EASE_OFFER: f64 = 0.62;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum FreeHeldWhy {
+    Shot,
+    Cancel,
+}

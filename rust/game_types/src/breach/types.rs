@@ -17,9 +17,7 @@ pub struct BreachDrill {
     #[is(f64::NAN)] pub t_enter: f64,
     #[is(f64::NAN)] pub t_corner: f64,
     #[is(f64::NAN)] pub t_clear: f64,
-    #[is(f64::NAN)] pub t_done: f64,
     pub beats: Vec<crate::breach::BreachDrillBeatsItem>,
-    #[is(alloc::vec![0.0, 0.0])] pub rounds: Vec<f64>,
     pub t: f64,
     pub done: JsSet<String>,
     pub aim_a: V3,
@@ -70,7 +68,6 @@ pub struct OpFlow {
     pub next: f64,
     pub in_at: f64,
     pub corner_at: f64,
-    pub hold_at: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

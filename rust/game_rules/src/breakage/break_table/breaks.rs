@@ -46,7 +46,6 @@ fn word_of_box(g: &mut Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
 }
 /// what a box is inside: what it says it is made of (inside_of)
 fn inside_of_box(g: &mut Game, b: AnyBoxId, mat: Mat) -> Inside { inside_of(seam_box(g, b).stuff, mat) }
-fn cut_len(cut: &Option<Vec<crate::scene_cut::CutPlane>>) -> i32 { cut.as_ref().map_or(0, |c| c.len() as i32) }
 /// the key of a chunk's second drawn box
 fn mate_mkey(g: &Game, c: DebrisChunkId) -> f64 {
     crate::scene_boxes::mkey().debris + (js::to_i32(g.tab.debris_chunk[c].serial + 32768.0) & 65535) as f64
@@ -60,7 +59,7 @@ fn emit_chips(g: &mut Game, at: V3, dir: V3, k: f64, speed: f64, size: f64, aspe
 }
 
 // ---------------------------------------------------------------- the dice, the pool's plain questions
-pub(in crate::breakage) fn breaks_new(g: &crate::game::Game) -> crate::break_table::Breaks { Breaks::blank() }
+pub(in crate::breakage) fn breaks_new() -> crate::break_table::Breaks { Breaks::blank() }
 
 /// The die that lays out what a cell throws.
 fn breaks_hash(g: &mut crate::game::Game) -> f64 {
@@ -180,7 +179,6 @@ pub(in crate::breakage) fn breaks_pick(g: &mut crate::game::Game, list: &[Debris
 
 /// An evicted piece gone where it lay, by its size.
 fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
-    g.stats.break_table.crumbled += 1;
     let me = meta_of(g, c_2);
     let row = break_row(me.mat);
     let b = g.tab.debris_chunk[c_2].box_;
@@ -195,7 +193,7 @@ fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let ax = v3::quat::rotate(rot, if il == 0 { [1.0, 0.0, 0.0] } else if il == 1 { [0.0, 1.0, 0.0] } else { [0.0, 0.0, 1.0] });
     let chip_tint = g.k.breaks.chip_tint;
     let inside = inside_of_box(g, b, me.mat);
-    let color = breaks_tint(g, inside, me.paint, chip_tint);
+    let color = breaks_tint(inside, me.paint, chip_tint);
     let size_k = m::max(1.0, m::min(2.2, r / 0.08));
     let st = m::max(1.0, m::min(3.0, m::round(r / 0.14)));
     let jit = m::max(0.02, m::min(0.14, mid));
@@ -212,11 +210,10 @@ fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
         }
         i += 1.0;
     }
-    g.stats.break_table.chips += n as i32;
     if row.dust > 0.0 {
         let count = m::max(1.0, m::round(row.dust * m::max(0.5, m::min(1.5, r / 0.25))));
         let pfx = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
-        let color = v3::lerp3(breaks_tint(g, inside, me.paint, 0.6), [0.8, 0.79, 0.76], 0.4);
+        let color = v3::lerp3(breaks_tint(inside, me.paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, bc, [0.0, 1.0, 0.0], count, crate::render_particles::EmitOpts {
             shape: Some(crate::render_particles::EmitShape::Puff), speed: pfx.0 * 0.6, speed_jit: Some(0.5), lift: Some(0.05), life: pfx.1, life_jit: Some(0.3), size: pfx.2, size_jit: Some(0.35), pos_jit: Some(m::max(0.08, m::min(0.3, r * 0.6))), color: Some(color), ..Default::default()
         });
@@ -231,7 +228,7 @@ pub(in crate::breakage) fn breaks_tick(g: &mut crate::game::Game) {
 }
 
 // ---------------------------------------------------------------- small and fine
-fn breaks_tint(g: &crate::game::Game, inside: crate::break_table::Inside, paint: V3, k: f64) -> V3 {
+fn breaks_tint(inside: crate::break_table::Inside, paint: V3, k: f64) -> V3 {
     v3::lerp3(paint, core_of(inside, paint), k)
 }
 
@@ -241,7 +238,7 @@ fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
     if n <= 0.0 { return; }
     let s = row.small;
     let chip_tint = g.k.breaks.chip_tint;
-    let color = breaks_tint(g, inside, paint, chip_tint);
+    let color = breaks_tint(inside, paint, chip_tint);
     let big = if n >= 4.0 && (s.aspect[1] > s.aspect[0] || s.size[1] > s.size[0]) { m::floor(n / 3.0) } else { 0.0 };
     let one = |g: &mut Game, k: f64, t: f64| {
         if k > 0.0 {
@@ -249,7 +246,6 @@ fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
         }
     };
     if js::truthy(big) { one(g, n - big, 0.25); one(g, big, 0.85); } else { one(g, n, 0.5); }
-    g.stats.break_table.chips += n as i32;
 }
 
 /// The row's dust and sparks at `at`.
@@ -257,7 +253,7 @@ fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
     let k = k.unwrap_or(1.0);
     let (dust_speed, dust_life, dust_size) = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
     if row.dust > 0.0 {
-        let color = v3::lerp3(breaks_tint(g, inside, paint, 0.6), [0.8, 0.79, 0.76], 0.4);
+        let color = v3::lerp3(breaks_tint(inside, paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, at, dir, m::round(row.dust * k), crate::render_particles::EmitOpts {
             shape: Some(crate::render_particles::EmitShape::Puff), speed: dust_speed, speed_jit: Some(0.5), lift: Some(0.05), life: dust_life, life_jit: Some(0.3), size: dust_size, size_jit: Some(0.35), pos_jit: Some(0.08), vadd: Some(v3::scale(dir, 0.45)), color: Some(color), ..Default::default()
         });
@@ -280,7 +276,6 @@ fn breaks_crumble(g: &mut crate::game::Game, c_2: DebrisChunkId, count: [f64; 2]
     let (at, who) = (seam_box(g, b).c, g.tab.debris_chunk[c_2].who);
     let inside = inside_of_box(g, b, me.mat);
     breaks_chips(g, row, inside, me.paint, at, [0.0, 1.0, 0.0], n, speed, r * 0.6, who, Some(m::max(1.0, m::min(2.2, r / 0.08))));
-    g.stats.break_table.crumbled += 1;
 }
 
 /// A piece the pool refused: a burst of chips of its material.
@@ -289,7 +284,6 @@ fn breaks_refuse(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, 
     let [r0, r1] = g.k.breaks.refuse_chips;
     let n = r0 + m::floor(breaks_phash(g) * (r1 - r0 + 1.0));
     breaks_chips(g, row, inside, paint, at, dir, n, 2.2, 0.05, who, Some(1.3));
-    g.stats.break_table.refused += 1;
 }
 
 // ---------------------------------------------------------------- level B
@@ -308,7 +302,7 @@ fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
         g.destr.debris.list.remove(i);
         let count = match again { Some(a) => [a.chips + 4.0, a.chips + 6.0], None => [8.0, 10.0] };
         breaks_crumble(g, c_2, count, 1.2);
-        if gone { g.stats.break_table.china += 1; } else { g.stats.break_table.mayhem += 1; }
+        if gone {  } else {  }
         return;
     }
     let a = again.unwrap();
@@ -359,12 +353,11 @@ fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
         let sep = 0.35 + 0.5 * r(10.0 + kf);
         let v = [cv[0] + nw[0] * sgn * sep, m::max(cv[1], 0.0) + 0.3 + 0.5 * r(12.0 + kf), cv[2] + nw[2] * sgn * sep];
         let wv = [cw[0] + (r(14.0 + kf) - 0.5) * 5.0, cw[1] + (r(16.0 + kf) - 0.5) * 3.0, cw[2] + (r(18.0 + kf) - 0.5) * 5.0];
-        let Some(got) = crate::debris::debris_spawn_raw(g, crate::debris::ChunkKind::Chunk, box_, v, wv, Some(who), None) else {
+        let Some(got) = crate::debris::debris_spawn_raw(g, crate::debris::ChunkKind::Chunk, box_, v, wv, Some(who)) else {
             breaks_refuse(g, row, inside, me.paint, box_c, v, who);
             continue;
         };
         let got_box = g.tab.debris_chunk[got].box_;
-        let planes = cut_len(&f.cut);
         let has_cut = f.cut.is_some();
         seam_box(g, got_box).cut = f.cut;
         if has_cut { seam_box(g, got_box).cut_core = face_core(inside, me.paint); }
@@ -374,7 +367,6 @@ fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
         let sfx = g.tab.debris_chunk[c_2].sfx.clone();
         let t = &mut g.tab.debris_chunk[got];
         t.sounded = true; t.age = m::max(age, 1e-3); t.sfx = sfx; t.level = level;
-        g.stats.break_table.planes += planes;
     }
     breaks_chips(g, row, inside, me.paint, bc, [0.0, 1.0, 0.0], a.chips, 1.6, m::max(h[lg], 0.04) * 0.5, who, None);
     breaks_fines(g, row, inside, me.paint, bc, [0.0, 1.0, 0.0], Some(0.5));
@@ -387,7 +379,6 @@ fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
         let pos = [bc[0], bc[1] - crate::debris::support_along(g, b, [0.0, 1.0, 0.0]) + 0.002, bc[2]];
         crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, pos, [0.0, 1.0, 0.0], Some(row.mark * (0.7 + 0.6 * r(20.0))), Some(opts));
     }
-    g.stats.break_table.again += 1;
 }
 
 // ---------------------------------------------------------------- furniture: a plain piece takes its row's outline
@@ -402,24 +393,20 @@ pub fn breaks_dress(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if h[long] < 0.04 { return; }
     if me.mat == Mat::Metal { breaks_kink(g, c_2, thin as f64, mid as f64, long as f64, None, None); return; }
     let Some(sb) = breaks_outline(g, me.mat, row, h, thin as f64, mid as f64, long as f64, &mut |g: &mut Game| breaks_phash(g)) else {
-        g.stats.break_table.plain += 1;
         return;
     };
-    let Some(cut) = sb.cut else { g.stats.break_table.plain += 1; return };
+    let Some(cut) = sb.cut else {  return };
     let rot = match seam_box(g, b).rot { Some(q) => q, None => v3::quat::yaw(seam_box(g, b).yaw) };
     let o = v3::quat::rotate(rot, sb.off);
     let bc = seam_box(g, b).c;
-    let planes = cut.len() as i32;
     seam_box(g, b).c = [bc[0] + o[0], bc[1] + o[1], bc[2] + o[2]];
     seam_box(g, b).h = sb.h;
     seam_box(g, b).cut = Some(cut);
     let inside = inside_of_box(g, b, me.mat);
     seam_box(g, b).cut_core = face_core(inside, me.paint);
     let core_tint = g.k.breaks.core_tint;
-    let tinted = breaks_tint(g, inside, me.paint, core_tint);
+    let tinted = breaks_tint(inside, me.paint, core_tint);
     seam_box(g, b).albedo = tinted;
-    g.stats.break_table.dressed += 1;
-    g.stats.break_table.planes += planes;
 }
 
 /// The outline row `m` gives a plain piece of these proportions; None = it stays whole.
@@ -461,15 +448,12 @@ pub(in crate::breakage) fn breaks_shape_loose(g: &mut crate::game::Game, b: AnyB
         low1 = m::min(low1, v3::quat::rotate(rot, v)[1] + o[1]);
     }
     let bc = seam_box(g, b).c;
-    let planes = cut.len() as i32;
     seam_box(g, b).c = [bc[0] + o[0], bc[1] + o[1] + (if low1.is_finite() { low0 - low1 } else { 0.0 }), bc[2] + o[2]];
     seam_box(g, b).h = sb.h;
     seam_box(g, b).cut = Some(cut);
     let albedo = seam_box(g, b).albedo;
     let inside = inside_of_box(g, b, mat);
     seam_box(g, b).cut_core = face_core(inside, albedo);
-    g.stats.break_table.loose += 1;
-    g.stats.break_table.planes += planes;
     true
 }
 
@@ -488,7 +472,7 @@ pub(in crate::breakage) fn breaks_sheet(g: &mut crate::game::Game, c_2: DebrisCh
     let h = seam_box(g, b).h;
     let ax = axes_by_size(h);
     let deg = g.k.breaks.steel.kink;
-    if breaks_kink(g, c_2, ax[0] as f64, ax[1] as f64, ax[2] as f64, Some(deg), Some(true)) { g.stats.break_table.sheets += 1; }
+    let _ = breaks_kink(g, c_2, ax[0] as f64, ax[1] as f64, ax[2] as f64, Some(deg), Some(true));
 }
 
 /// A steel carcass that goes over whole: dented along its edges, open on the face its door came off.
@@ -540,7 +524,6 @@ pub(in crate::breakage) fn breaks_carcass(g: &mut crate::game::Game, c_2: Debris
     let (shell, dark) = (cut_record(h, &shell_planes), cut_record(h, &inner));
     if shell.empty || dark.empty { return; }
     let (Some(shell_cut), Some(dark_cut)) = (shell.cut, dark.cut) else { return };
-    let planes = shell_cut.len() as i32 + dark_cut.len() as i32;
     seam_box(g, b).cut = Some(shell_cut);
     let p = crate::scene_boxes::MakeBoxP {
         c: seam_box(g, b).c, h, yaw: Some(seam_box(g, b).yaw), rot: seam_box(g, b).rot, albedo: Some(v3::scale(seam_box(g, b).albedo, st.inside)),
@@ -551,8 +534,6 @@ pub(in crate::breakage) fn breaks_carcass(g: &mut crate::game::Game, c_2: Debris
     seam_box(g, mate).cut = Some(dark_cut);
     seam_box(g, mate).rough = Some(1.0);
     seam_box(g, mate).metal = Some(false);
-    g.stats.break_table.carcasses += 1;
-    g.stats.break_table.planes += planes;
 }
 
 /// One half of the kinked plate: the side sg·s ≥ 0 of the fold.
@@ -597,7 +578,6 @@ fn breaks_kink(g: &mut crate::game::Game, c_2: DebrisChunkId, thin: f64, mid: f6
     let c0 = kink_half(big_h, f, t, ta, len, tc, tau, u0, 1.0);
     let c1 = kink_half(big_h, f, t, ta, len, tc, tau, u0, -1.0);
     let (Some(c0), Some(c1)) = (c0, c1) else { return false };
-    let planes = c0.len() as i32 + c1.len() as i32;
     seam_box(g, b).h = big_h;
     seam_box(g, b).cut = Some(c0);
     let word = word_of_box(g, b);
@@ -611,8 +591,6 @@ fn breaks_kink(g: &mut crate::game::Game, c_2: DebrisChunkId, thin: f64, mid: f6
     let (rough, metal) = (seam_box(g, b).rough, seam_box(g, b).metal);
     seam_box(g, mate).rough = rough;
     seam_box(g, mate).metal = metal;
-    g.stats.break_table.kinked += 1;
-    g.stats.break_table.planes += planes;
     true
 }
 
@@ -621,7 +599,7 @@ fn breaks_kink(g: &mut crate::game::Game, c_2: DebrisChunkId, thin: f64, mid: f6
 pub(in crate::breakage) fn breaks_shed_cell(g: &mut crate::game::Game, surf: crate::scene_materials::Surf, cell: BoxId, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget, as_: Option<crate::break_table::Mat>) -> crate::break_table::BreaksShedCell {
     let mat = match as_ { Some(a) => a, None => mat_of_surf(surf) };
     let row = break_row(mat);
-    let mut res = BreaksShedCell { thrown: 0.0, refused: 0.0 };
+    let mut res = BreaksShedCell {  };
     let (cell_c, cell_h, cell_yaw, paint, cell_rough, cell_metal) = (seam_box(g, cell).c, seam_box(g, cell).h, seam_box(g, cell).yaw, seam_box(g, cell).albedo, seam_box(g, cell).rough, seam_box(g, cell).metal);
     // a wall's cell is thin across the wall; a crate's is a block
     let flat: i32 = if cell_h[0] < cell_h[2] * 0.6 { 0 } else if cell_h[2] < cell_h[0] * 0.6 { 2 } else { -1 };
@@ -636,7 +614,7 @@ pub(in crate::breakage) fn breaks_shed_cell(g: &mut crate::game::Game, surf: cra
     let word = word_of_box(g, cell.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
-    let tinted = breaks_tint(g, inside, paint, core_tint);
+    let tinted = breaks_tint(inside, paint, core_tint);
     // two wedges of one cell are the two halves of one panel: (seed, thin, vert, L, S), the second replays the first's draws
     let mut twin: Option<(f64, usize, bool, f64, f64)> = None;
     for k in 0..(m::ceil(n) as usize) {
@@ -686,20 +664,17 @@ pub(in crate::breakage) fn breaks_shed_cell(g: &mut crate::game::Game, surf: cra
         budget.chunks -= 1.0;
         let Some(got) = got else {
             breaks_refuse(g, row, inside, paint, c, v, who);
-            res.refused += 1.0;
             continue;
         };
         let got_box = g.tab.debris_chunk[got].box_;
         let cut = sb.and_then(|q| q.cut);
-        let planes = cut_len(&cut);
         let has_cut = cut.is_some();
         seam_box(g, got_box).cut = cut;
         if has_cut { seam_box(g, got_box).cut_core = face_core(inside, paint); }
         seam_box(g, got_box).rough = cell_rough;
         seam_box(g, got_box).metal = cell_metal;
         breaks_tag(g, got, mat, 0.0, paint, None);
-        res.thrown += 1.0;
-        if has_cut { g.stats.break_table.shaped += 1; g.stats.break_table.planes += planes; } else { g.stats.break_table.plain += 1; }
+        if has_cut {   } else {  }
     }
     let chip_n = m::round(row.small.n);
     let up: V3 = [0.0, 1.0, 0.0];
@@ -729,7 +704,7 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
     let word = word_of_box(g, wall.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
-    let tinted = breaks_tint(g, inside, paint, core_tint);
+    let tinted = breaks_tint(inside, paint, core_tint);
     let (wall_rough, wall_metal) = (seam_box(g, wall).rough, seam_box(g, wall).metal);
     let n = m::min(breaks_share(g).heap, budget.as_deref().and_then(|b| b.heap).unwrap_or(99.0));
     for _k in 0..(m::ceil(n) as usize) {
@@ -761,12 +736,11 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
         if let Some(b) = budget.as_deref_mut() {
             if let Some(left) = b.heap { b.heap = Some(left - 1.0); }
         }
-        let Some(got) = crate::debris::debris_spawn_raw(g, crate::debris::ChunkKind::Chunk, box_, [0.0; 3], [0.0; 3], Some(who), None) else {
+        let Some(got) = crate::debris::debris_spawn_raw(g, crate::debris::ChunkKind::Chunk, box_, [0.0; 3], [0.0; 3], Some(who)) else {
             breaks_refuse(g, row, inside, paint, box_c, [0.0, 0.5, 0.0], who);
             continue;
         };
         let got_box = g.tab.debris_chunk[got].box_;
-        let planes = cut_len(&sb.cut);
         let has_cut = sb.cut.is_some();
         seam_box(g, got_box).cut = sb.cut;
         if has_cut { seam_box(g, got_box).cut_core = face_core(inside, paint); }
@@ -778,8 +752,7 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
         c.sounded = true;
         if let Some(p) = &ph { c.on = Some(p.prop); c.on_pose = m::NAN; }
         dealt += 1.0;
-        g.stats.break_table.heap += 1;
-        if has_cut { g.stats.break_table.shaped += 1; g.stats.break_table.planes += planes; } else { g.stats.break_table.plain += 1; }
+        if has_cut {   } else {  }
     }
     dealt
 }
@@ -792,7 +765,7 @@ pub(in crate::breakage) fn breaks_inside(g: &mut crate::game::Game, surf: &str, 
 }
 
 /// The colour a standing piece's ragged end shows.
-pub(in crate::breakage) fn breaks_end_core(g: &crate::game::Game, surf: &str, stuff: Option<crate::scene_stuff::BoxStuff>, paint: V3) -> Option<V3> {
+pub(in crate::breakage) fn breaks_end_core(surf: &str, stuff: Option<crate::scene_stuff::BoxStuff>, paint: V3) -> Option<V3> {
     let mat = surf_mat_of_word(surf)?;
     face_core(inside_of(stuff, mat), paint)
 }
@@ -854,7 +827,6 @@ pub(in crate::breakage) fn breaks_ragged(g: &mut crate::game::Game, b: &crate::b
         }
     }
     let cut = ragged_cut(g, row, h, &faces);
-    if cut.is_some() { g.stats.break_table.ragged += 1; }
     cut
 }
 

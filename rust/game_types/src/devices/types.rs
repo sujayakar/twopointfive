@@ -89,19 +89,12 @@ pub struct KeypadRt {
     pub n: V3,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DeviceLogRow {
-}
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Devices {
     pub cameras: Vec<CameraRtId>,
     pub lasers: Vec<LaserRtId>,
     pub keypads: Vec<crate::devices::KeypadRt>,
     pub pad_by_door: JsMap<DoorId, crate::devices::KeypadRt>,
-    pub log: Vec<crate::devices::DeviceLogRow>,
-    pub seq: f64,
-    pub radio_count: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -118,10 +111,6 @@ pub struct CONE {
 pub struct ERRAND {
     pub awareness: f64,
     pub react_t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DevicesNoteR {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

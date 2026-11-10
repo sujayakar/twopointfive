@@ -207,7 +207,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     let poly: Vec<P2> = o.iter().map(|p| if long_first { [p[0], p[1]] } else { [p[1], p[0]] }).collect();
     let pr = crate::scene_cut::cut_prism(thin, half_t, &poly);
     if pr.empty { return None; }
-    g.stats.break_table.dropped += pr.dropped as i32;
     if shape != Shape::Lump { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
     let thin = thin as usize;
     let (ua, va) = ((thin + 1) % 3, (thin + 2) % 3);
@@ -244,7 +243,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     all.extend_from_slice(&extra);
     let rr = crate::scene_cut::cut_record(pr.h, &all);
     if rr.empty { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
-    g.stats.break_table.dropped += rr.dropped as i32;
     let f = crate::scene_cut::cut_fit(pr.h, rr.cut.as_deref());
     Some(Shaped { off: [pr.off[0] + f.off[0], pr.off[1] + f.off[1], pr.off[2] + f.off[2]], h: f.h, cut: f.cut })
 }

@@ -36,21 +36,6 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
     g.guards.iter().copied().find(|&x| g.gd[x].ch == c)
 }
 
-/// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks.
-fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
-    use crate::fixtures::FixtureKind;
-    let kind = g.tab.fixture[t].kind;
-    let pos = g.tab.fixture[t].pos;
-    let rad = if kind == FixtureKind::Emissive { 0.45 } else if kind == FixtureKind::Breaker { 0.4 } else { 0.3 };
-    for s in legs {
-        let to_t = v3::sub(pos, s.o);
-        let depth = v3::dot(to_t, s.d);
-        if depth > s.end + slack { continue; }
-        if v3::len(v3::sub(to_t, v3::scale(s.d, v3::clamp(depth, 0.0, s.end)))) < rad { return true; }
-    }
-    false
-}
-
 /// A guard's own hands: the row's spread off the man he is firing at.
 fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
     let foe = match sg { Some(s) => g.gd[s].foe, None => None };
@@ -173,19 +158,19 @@ fn shield_of(g: &Game) -> Option<CharId> { g.pl[g.player].holding.as_ref().map(|
 /// him, for anybody's rounds but his; a civilian is found by a player's alone; a teammate and Sam by each other's (friendlyfire).
 fn whom_it_can_find(g: &Game, shooter: CharId, ours: bool) -> Vec<(CharId, bool)> {
     let by_player = crate::character::is_player(g, shooter);
-    let side = crate::teams::team_of_char(g, shooter);
+    let side = g.ch[shooter].team;
     let shield = shield_of(g);
     let (mut foes, mut own) = (Vec::new(), Vec::new());
     for pl in crate::seats::men(g) {
         let c = g.pl[pl].ch;
         if by_player || crate::condition::down(g, c) { continue; }
-        if crate::teams::is_hostile(g, side, crate::teams::Team::Player) { foes.push((c, false)); } else if ours { own.push((c, true)); }
+        if side.theirs() { foes.push((c, false)); } else if ours { own.push((c, true)); }
     }
     if let Some(c) = shield.filter(|&c| !by_player && c != shooter && !crate::condition::down(g, c)) { foes.push((c, false)); }
     for &gd in &g.guards {
         let c = g.gd[gd].ch;
         if Some(c) == shield || c == shooter || !g.ch[c].alive || crate::condition::down(g, c) { continue; }
-        if crate::teams::is_hostile(g, side, g.gd[gd].team) {
+        if side.foe_of(g.team(gd)) {
             if by_player || !g.gd[gd].god { foes.push((c, false)); }
         } else if ours && crate::friendlyfire::ff_body(g, gd) {
             own.push((c, true));
@@ -243,12 +228,11 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     if kind == FixtureKind::Breaker {
         crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
-        crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
+        crate::game::game_set_blackout(g, f64::INFINITY, crate::lighting::SetBlackoutCause::Shot);
         g.tab.fixture[t].broken = true;
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
         return;
     }
-    if crate::carlamps::lamp_glass(g, t) { g.stats.carlamps.shot += 1; }
     let lens = g.tab.fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
         g.tab.fixture[t].broken = true;
@@ -299,7 +283,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let pellets = def.pellets;
     let who = g.ch[shooter].id;
 
-    let ff_ours = (is_player || crate::friendlyfire::ff_side(g, sg));
+    let ff_ours = is_player || crate::friendlyfire::ff_side(g, sg) ;
     if ff_ours && !is_player && pel.is_none() {
         let wide = if steady { 0.0 } else { ai_wide(g, &crate::seats::here(g), sg, shooter, &def) };
         let cone = match &pellets { Some(p) => p.cone * 2.0, None => 0.0 };
@@ -442,7 +426,6 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     // (st, stopped there: the round's end is in that static, not a man, not the panel at the muzzle)
     let st_stop = st.filter(|s| m::abs(t_hit - s.t) < 1e-6);
     let bare_stop = hit.is_none() && !through;
-    if bare_stop { if let Some(s) = st_stop { crate::wallpen::spent_in_wall(g, s.index); } }
     if bare_stop {
         if let Some(s) = st_stop {
             if s.index < 1e6 {
@@ -593,10 +576,9 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
                 let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };
                 let tight = m::min(slack, g.k.aimcost.slack);
                 if crate::aimcost::lamp_struck(g, pos, &boxes, false, &legs, Some(bare), Some(tight)) { got = Some(t); break; }
-                if near_lamp(g, t, &legs, slack) { g.stats.aimcost.lamp_near += 1; }
             }
         }
-        if let Some(t) = got { g.stats.aimcost.lamp_hits += 1; shoot_out(g, t, muzzle); }
+        if let Some(t) = got {  shoot_out(g, t, muzzle); }
     } else if !through {
         let ix = st_stop.map(|s| s.index);
         match &pen {

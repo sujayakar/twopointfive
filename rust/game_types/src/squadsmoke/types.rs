@@ -44,11 +44,4 @@ pub struct SquadsmokeMod {
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct SquadsmokeStats {
-    pub staged: i32,
-    pub thrown: i32,
-}
-
 pub fn squadsmoke() -> crate::squadsmoke::SQUADSMOKE { crate::squadsmoke::SQUADSMOKE { order_key: String::from("KeyH"), speed: 9.0, near_m: 1.0, floor_m: 0.035, clear_h: alloc::vec![0.07, 0.3], roll_k: 0.061, hand_ahead: 0.35, hand_up: 1.3, head_drop: 0.3, again_secs: 1.2 } }

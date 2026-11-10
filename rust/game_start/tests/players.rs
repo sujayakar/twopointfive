@@ -11,7 +11,7 @@ fn man(p: &Play, seat: usize) -> PlayerId { game::cmd::seat_man(&p.g, p.g.seats[
 fn body(p: &Play, seat: usize) -> CharId { p.g.pl[man(p, seat)].ch }
 fn at(p: &Play, seat: usize) -> [f64; 3] { p.g.ch[body(p, seat)].pos }
 fn pair(p: &Play, seat: usize) -> Vec<GuardId> { game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[seat])) }
-fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
+fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
 /// a player's keys and trigger as he holds them, his view on his man, his cursor on a place of the world
 fn hands(p: &mut Play, seat: usize, keys: &[&str], on: Option<[f64; 3]>, fire: bool) {
     let s = p.g.seats[seat];
@@ -107,7 +107,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
             p.sam_unhurt();
             let theirs = p.g.tab.cmd_seat[p.g.seats[1]].cam;
             game::camera::follow_camera_rotate(&mut p.g, theirs, 1.3);
-            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
+            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.team(m) == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
             let (had, mut rows, mut rounds) = (up(&p), Vec::new(), 0.0f64);
             for k in 0..1500usize {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }
@@ -143,7 +143,7 @@ fn a_flash_of_either_player_is_the_teams() {
         let mut men = vec![(body(&p, 0), first, true, 0.0), (body(&p, 1), second, true, 0.0)];
         for m in p.mates() { men.push((p.g.gd[m].ch, first, false, 0.0)); }
         men.push((p.g.gd[foe].ch, first, false, 1.0));
-        for (c, seat, player, class) in men {
+        for (c, seat, _player, class) in men {
             let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
             let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
             game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], Some(&o)));

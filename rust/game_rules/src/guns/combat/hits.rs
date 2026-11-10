@@ -111,8 +111,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
     g.gd[gd].script = None;
     let held = crate::guards::in_hand(g, gd);
     if by == DownBy::Player {
-        let team = g.gd[gd].team;
-        if !(!crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
+        if g.team(gd).theirs() {
             crate::mission::tally(g, if how == DownKind::Shot { crate::mission::TallyK::Kills } else { crate::mission::TallyK::Knockouts });
         }
         crate::chronicle::chron_down(g, gd, how, with);
@@ -173,10 +172,10 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
     };
     let it = crate::throwables::throwables_spawn(g, item_kind, [h[0], m::max(0.25, h[1]), h[2]], [v0, v1, v2], Some(opts));
     if kind == DropFromHandKind::Rifle {
-        let rate = crate::throwables::item_tumble_rate(g, it) * 0.55;
-        crate::throwables::item_set_tumble_rate(g, it, rate);
-        let spin = crate::throwables::item_spin(g, it) * 0.5;
-        crate::throwables::item_set_spin(g, it, spin);
+        let rate = g.tab.item[it].tumble_rate * 0.55;
+        g.tab.item[it].tumble_rate = rate;
+        let spin = g.tab.item[it].spin * 0.5;
+        g.tab.item[it].spin = spin;
     }
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Dropped { kind: item_kind, quiet });
     it
@@ -190,7 +189,7 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
     if g.pl[p].hits_left == 0.0 {
         let in_hand = crate::game::player_gun_in_hand(g, p);
         if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
-        if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Shot); }
+        if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Shot); }
         let c = g.pl[p].ch;
         g.cond[g.pl[p].ch].down = true; g.pl[p].sprinting = false; g.pl[p].crouch = false;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -264,14 +263,13 @@ fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 /// What the player carries and wears, as boxes, and the fist's and the figure's words for this frame.
 fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    use crate::kitanim::KitShowVRifle as Rf;
-    use crate::rig_props::{RigOpts, RigOptsRifle};
+    use crate::rig_props::RifleAt as Rf;
+    use crate::rig_props::{RigOpts};
     let p = g.player;
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
     let kind_sel = crate::game::player_canister_sel(g, p);
     let pistol_up = crate::game::player_pistol_up(g, p);
-    let pistol_up_now = pistol_up && !busy;
     let down = crate::condition::down(g, g.pl[p].ch);
     let sprinting = g.pl[p].sprinting;
     let held_now: Option<crate::game::ThrowKind> = match kind_sel {
@@ -300,10 +298,10 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     g.ch[c].anim.grip_can = held.is_some();
     let big_s = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let big_over = rifle == Some(Rf::Slung) && !crate::kitanim::kit_sling_front(g);
-    let is_hammer = big_s == Some(crate::bigkit::BigCarried::Hammer);
+    let is_hammer = big_s == Some(crate::kit::BigTool::Hammer);
     let side = if is_hammer { hammer_side(g, c) } else { None };
     g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
-    let clear = if is_hammer && big_over { crate::rig_props::big_clear_of(g, c, crate::rig_props::BigClearOfKind::Hammer, None) } else { 0.0 };
+    let clear = if is_hammer && big_over { crate::rig_props::big_clear_of(g, c, crate::kit::BigTool::Hammer, None) } else { 0.0 };
     g.ch[c].anim.big_clear = clear;
     let in_hand = !down;
     g.ch[c].in_hand = if !in_hand { None }
@@ -327,7 +325,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         holster: Some(!(down && pistol_up)),
         held,
         knife: Some(knife),
-        rifle: rifle.map(|r| match r { Rf::Hand => RigOptsRifle::Hand, Rf::Slung => RigOptsRifle::Slung }),
+        rifle: rifle,
         rifle_black: Some(rifle_black),
         rifle_light: Some(rifle_light),
         kit,
@@ -336,19 +334,19 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         sling_front: if sling { Some(true) } else { None },
         sling_rest,
         nv_k: g.ch[c].anim.nv_shown,
-        big: big_s.map(|b| match b { crate::bigkit::BigCarried::Shotgun => crate::rig_props::RigOptsBig::Shotgun, crate::bigkit::BigCarried::Hammer => crate::rig_props::RigOptsBig::Hammer }),
+        big: big_s,
         big_k: if big_s.is_some() { Some(if down { 0.0 } else { g.ch[c].anim.big_k }) } else { None },
         big_clear: if big_s.is_some() { Some(big_over) } else { None },
         ..Default::default()
     };
-    crate::rig_props::rig_boxes(g, c, opts, out, None, None);
+    crate::rig_props::rig_boxes(g, c, opts, out, None);
     crate::handwork::work_props(g, c, out);
     crate::irlaser::sam_laser_boxes(g, out);
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.
 fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
-    let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideBindWhat::Hammer, None)?;
+    let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideWhat::Hammer, None)?;
     let rig = g.ch[c_2].rig;
     let l = crate::packside::side_local(g, rig, p)?;
     Some(HammerSide { o: l.o, z: l.z })
@@ -364,35 +362,35 @@ fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) 
         None => { guard_kit(g, gd, out, stow); hung_side(g, gd, out); return; }
     };
     let alive = !crate::condition::down(g, g.gd[gd].ch);
-    let side = if big == crate::bigkit::BigCarried::Hammer { hammer_side(g, c) } else { None };
+    let side = if big == crate::kit::BigTool::Hammer { hammer_side(g, c) } else { None };
     g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
     let hang = stow || (alive && g.ch[c].anim.big_tool.is_some() && g.ch[c].anim.hide_held_item);
     guard_kit(g, gd, out, hang);
     let slung_out = g.gd[gd].slung.as_ref().filter(|s| s.out).map(|s| s.own);
-    if let (crate::bigkit::BigCarried::Shotgun, true, Some(own)) = (big, alive, slung_out) {
+    if let (crate::kit::BigTool::Shotgun, true, Some(own)) = (big, alive, slung_out) {
         let def = g.fa[own].def;
         let weapon = match row(g, def).rig {
-            crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::HungBoxesWeapon::Carbine),
-            crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::HungBoxesWeapon::Sc20k),
+            crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
+            crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
             _ => None,
         };
         match weapon {
-            Some(w) => { let black = crate::cast::sneak_suit(g, c); crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black), None); }
+            Some(w) => { let black = crate::cast::sneak_suit(g, c); crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black)); }
             None => hung_side(g, gd, out),
         }
         return;
     }
     hung_side(g, gd, out);
     let k = if alive { g.ch[c].anim.big_k } else { 0.0 };
-    let kind = match big { crate::bigkit::BigCarried::Shotgun => crate::rig_props::BigBoxesKind::Shotgun, crate::bigkit::BigCarried::Hammer => crate::rig_props::BigBoxesKind::Hammer };
-    crate::rig_props::big_boxes(g, c, kind, k, out, None, None, None);
+    let kind = big;
+    crate::rig_props::big_boxes(g, c, kind, k, out, None, None);
 }
 
 /// A man throwing with his free hand, the long gun still in the other: the grenade in the left fist until it leaves him.
 fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     let c = g.gd[gd].ch;
     if crate::character::anim_throw_off(g, c) && crate::frag::frag_in_fist(g, gd) {
-        crate::rig_props::free_can_boxes(g, c, crate::game::ThrowKind::Frag, out, None);
+        crate::rig_props::free_can_boxes(g, c, crate::game::ThrowKind::Frag, out);
     }
 }
 
@@ -400,89 +398,87 @@ fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
 fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     if let Some(own) = crate::gunslots::side_hung(g, gd) {
         let c = g.gd[gd].ch;
-        let w = match own { crate::gunslots::SideHung::Carbine => crate::rig_props::HungBoxesWeapon::Carbine, crate::gunslots::SideHung::Sc20k => crate::rig_props::HungBoxesWeapon::Sc20k };
+        let w = own;
         let black = crate::cast::sneak_suit(g, c);
-        crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black), None);
+        crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black));
     }
 }
 
 /// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.
 fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
-    use crate::guards::RigOf;
-    use crate::handwork::{SwapHeld, SwapHeldHeld};
-    use crate::rig_props::{rig, RigOpts, RigOptsRifle, RigOptsWeapon};
+    use crate::rig_props::{rig, RigOpts};
     let c = g.gd[gd].ch;
     g.ch[c].in_hand = None;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let trained = g.gd[gd].trained;
     let ho = if crate::char_look::side_of_team(team, Some(trained)) == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
     let has_ho = js::truthy(ho);
     let hr = if has_ho { let mut h = rig().holster; h.out = h.out + ho; Some(h) } else { None };
     let holster_out = if has_ho { Some(ho) } else { None };
     let rk = crate::guards::rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
+    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
     if crate::condition::down(g, g.gd[gd].ch) {
-        if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None, None); }
+        if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None); }
         let dropped = g.gd[gd].dropped;
         let on_floor = match dropped {
-            Some(it) => { let k = crate::throwables::item_kind(g, it); k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
+            Some(it) => { let k = g.tab.item[it].kind; k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
             None => false,
         };
         if on_floor && !crate::runner::runner_bare(g, gd) {
             let r = rig();
-            if rk == RigOf::Sc20k {
-                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.pistol.slide, grip: r.pistol.grip, suppressor: Some(r.pistol.suppressor) }, None, None);
+            if rk == crate::rig_props::RigWeapon::Sc20k {
+                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.pistol.slide, grip: r.pistol.grip, suppressor: Some(r.pistol.suppressor) }, None);
             } else {
-                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, None, hr);
+                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
             }
         }
         return;
     }
     let fl = g.gd[gd].flashlight;
     let rule = crate::guards::in_hand(g, gd);
-    let rule_word = rule.map(|r| match r { crate::guards::InHand::Torch => SwapHeldHeld::Torch, crate::guards::InHand::Weapon => SwapHeldHeld::Weapon });
+    let rule_word = rule;
     let held = crate::handwork::swap_held(g, gd, rule_word);
-    let torch_held = held == Some(SwapHeld::Torch);
-    if rule.is_some() && !torch_held && rk == RigOf::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
+    let torch_held = held == Some(crate::guards::InHand::Torch);
+    if rule.is_some() && !torch_held && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == RigOf::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
+    if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == RigOf::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
+    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == crate::rig_props::RigWeapon::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
     if held.is_none() {
         let r = rig();
-        crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, None, hr);
+        crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
         return;
     }
     let def = g.fa[g.gd[gd].weapon].def;
     if hang {
-        if rk == RigOf::Sc20k {
+        if rk == crate::rig_props::RigWeapon::Sc20k {
             let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
             let black = crate::cast::sneak_suit(g, c);
-            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(RigOptsRifle::Slung), sling_front: Some(true), rifle_black: Some(black), ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None, None);
+            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Slung), sling_front: Some(true), rifle_black: Some(black), ..Default::default() };
+            crate::rig_props::rig_boxes(g, c, o, out, None);
         } else if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
             let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
             let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None, None);
+            crate::rig_props::rig_boxes(g, c, o, out, None);
         } else {
-            let o = RigOpts { goggles: false, nv: false, slot: 1.0, light_on: false, is_guard: true, weapon: Some(if carbine { RigOptsWeapon::Carbine } else { RigOptsWeapon::Pistol }), hang: Some(true), holster_out, ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None, None);
+            let o = RigOpts { goggles: false, nv: false, slot: 1.0, light_on: false, is_guard: true, weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }), hang: Some(true), holster_out, ..Default::default() };
+            crate::rig_props::rig_boxes(g, c, o, out, None);
             if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
                 let nv = crate::nvg::nvg_down(g, gd);
-                crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None, None);
+                crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
             }
         }
         return;
     }
-    if rk == RigOf::Sc20k {
-        g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Sc20k, None));
+    if rk == crate::rig_props::RigWeapon::Sc20k {
+        g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None));
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let black = crate::cast::sneak_suit(g, c);
         let light = g.tab.light[fl].enabled;
-        let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(RigOptsRifle::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
-        crate::rig_props::rig_boxes(g, c, o, out, None, None);
+        let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
+        crate::rig_props::rig_boxes(g, c, o, out, None);
         free_can(g, gd, out);
         return;
     }
@@ -491,12 +487,12 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let light_on = g.tab.light[fl].enabled;
         let o = RigOpts { goggles, nv, slot: 1.0, light_on, is_guard: false, in_hand: Some(true), fit: Some(true), ..Default::default() };
-        crate::rig_props::rig_boxes(g, c, o, out, None, None);
+        crate::rig_props::rig_boxes(g, c, o, out, None);
         return;
     }
     let ih = !carbine && !torch_held;
     let beam = g.gd[gd].beam_dir;
-    g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Carbine, None) }
+    g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None) }
         else if torch_held { crate::rig_props::torch_hold(beam, None) }
         else { crate::inhand::in_pistol() });
     let light_on = g.tab.light[fl].enabled;
@@ -504,15 +500,15 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     let o = RigOpts {
         goggles: false, nv: false, slot: 1.0, light_on, is_guard: true,
         torch: Some(torch_held), beam_dir: Some(beam), lens_color: Some(lens),
-        weapon: Some(if carbine { RigOptsWeapon::Carbine } else { RigOptsWeapon::Pistol }),
+        weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }),
         in_hand: if ih { Some(true) } else { None },
         holster_out,
         ..Default::default()
     };
-    crate::rig_props::rig_boxes(g, c, o, out, None, None);
+    crate::rig_props::rig_boxes(g, c, o, out, None);
     if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
         let nv = crate::nvg::nvg_down(g, gd);
-        crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None, None);
+        crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
     }
     if carbine { free_can(g, gd, out); }
 }
@@ -543,7 +539,6 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
     let from = v3::mad(g.ch[c_2].muzzle, dir, 0.02);
     if !dir[0].is_finite() || v3::len(dir) < 0.5 { return None; }
     let mut l = 30.0;
-    let mut on: Option<CharId> = None;
     let flags = crate::scene_boxes::box_flag();
     let skip = flags_or(flags.no_shadow, flags.glass);
     let owner = (js::to_i32(g.ch[c_2].id) & 0xff) as f64;
@@ -555,7 +550,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
         let pc = g.pl[pl].ch;
         if c_2 != pc {
             let tp = crate::character::character_ray_hit(g, pc, from, dir, l);
-            if tp >= 0.0 && tp <= l { l = tp; on = Some(pc); }
+            if tp >= 0.0 && tp <= l { l = tp; }
         }
     }
     let mut i = 0usize;
@@ -565,13 +560,13 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
         if Some(o) == self_ || crate::condition::down(g, g.gd[o].ch) || crate::fogofwar::fog_of_war_hidden(g, o) { continue; }
         let oc = g.gd[o].ch;
         let t = crate::character::character_ray_hit(g, oc, from, dir, l);
-        if t >= 0.0 && t <= l { l = t; on = Some(oc); }
+        if t >= 0.0 && t <= l { l = t; }
     }
     if civ {
         for cv in crate::civilians::civilian_bodies(g) {
             let cc = g.gd[cv].ch;
             let t = crate::character::character_ray_hit(g, cc, from, dir, l);
-            if t >= 0.0 && t <= l { l = t; on = Some(cc); }
+            if t >= 0.0 && t <= l { l = t; }
         }
     }
     if l < 0.05 { return None; }
@@ -600,7 +595,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
         flags: Some(box_flags),
         ..Default::default()
     });
-    crate::thinline::thin_note(g, line.into(), HW, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
+    crate::thinline::thin_note(g, line.into(), HW, 0.45);
     let shown = if ir { crate::irlaser::ir_note(g, line.into()) } else { line.into() };
     out.push(shown);
     if dot {
@@ -632,21 +627,21 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        let kind = t::item_kind(g, it);
+        let kind = g.tab.item[it].kind;
         if kind == ItemKind::Smoke {
-            if !t::item_fired(g, it) {
-                let f = t::item_fuse(g, it) - dt;
-                t::item_set_fuse(g, it, f);
-                if t::item_fuse(g, it) <= 0.0 { t::item_set_fired(g, it, true); start_canister(g, it); }
-            } else if t::item_emit_t(g, it) > 0.0 {
-                let e = t::item_emit_t(g, it) - dt;
-                t::item_set_emit_t(g, it, e);
+            if !g.tab.item[it].fired {
+                let f = g.tab.item[it].fuse - dt;
+                g.tab.item[it].fuse = f;
+                if g.tab.item[it].fuse <= 0.0 { g.tab.item[it].fired = true; start_canister(g, it); }
+            } else if g.tab.item[it].emit_t > 0.0 {
+                let e = g.tab.item[it].emit_t - dt;
+                g.tab.item[it].emit_t = e;
             }
-        } else if kind == ItemKind::Flash && !t::item_fired(g, it) {
-            let landed = t::item_bounces(g, it) > 0.0 || t::item_settled(g, it);
-            if landed { let f = t::item_fuse(g, it) - dt; t::item_set_fuse(g, it, f); }
-            if t::item_fuse(g, it) <= 0.0 || (!landed && t::item_age(g, it) > crate::effects::bang().max_air) {
-                t::item_set_fired(g, it, true);
+        } else if kind == ItemKind::Flash && !g.tab.item[it].fired {
+            let landed = g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled;
+            if landed { let f = g.tab.item[it].fuse - dt; g.tab.item[it].fuse = f; }
+            if g.tab.item[it].fuse <= 0.0 || (!landed && g.tab.item[it].age > crate::effects::bang().max_air) {
+                g.tab.item[it].fired = true;
                 detonate_stun(g, it, None, None);
             }
         } else if kind == ItemKind::Frag {
@@ -669,20 +664,20 @@ pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
 fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let seconds: f64;
     if crate::effects::flags().vent_canister {
-        let yaw = crate::throwables::item_heading(g, it);
-        let at = crate::effects::vent_mouth(crate::throwables::item_pos(g, it), yaw);
+        let yaw = g.tab.item[it].heading;
+        let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
         let p = can_params(g);
         seconds = p.canister_duration;
-        let pos = v3::add(crate::throwables::item_pos(g, it), [0.0, 0.1, 0.0]);
+        let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
         let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
         crate::smoke_types::smoke_system_like_emit(g, &e);
         crate::out_events::push_smoke_system_like_emit(g, &e);
     }
-    crate::throwables::item_set_emit_t(g, it, seconds);
-    let pos = crate::throwables::item_pos(g, it);
+    g.tab.item[it].emit_t = seconds;
+    let pos = g.tab.item[it].pos;
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
     crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };

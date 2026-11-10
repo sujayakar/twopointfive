@@ -46,24 +46,19 @@ pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
 }
 
 /// What the team's sight lines pass: glass and the statics marked thin.
-pub fn fog_through(g: &crate::game::Game) -> f64 {
+pub fn fog_through() -> f64 {
     let f = crate::scene_boxes::box_flag();
     (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
 }
 
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
-pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
+pub fn fog_of_war_new() -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
 }
 
 /// The switch, and somebody plays.
 pub fn fog_of_war_active(g: &crate::game::Game) -> bool {
     g.fog_of_war.on && !g.aside
-}
-
-/// Is this man on the team whose sight it is. (FogOfWar.onTeam)
-pub(super) fn fog_of_war_on_team(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
 }
 
 fn fresh_rec() -> crate::fogofwar::Rec {
@@ -105,7 +100,6 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         return;
     }
     g.fog_of_war.loaded = false;
-    g.fog_of_war.stats.frames += 1.0;
     g.fog_of_war.frame_no += 1.0;
     // ---- the eyes
     let mut eyes: Vec<crate::fogofwar::FogEye> = Vec::new();
@@ -126,7 +120,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             let gd = g.guards[i];
             i += 1;
             if eyes.len() as f64 >= cap { break; }
-            if !fog_of_war_on_team(g, gd) || crate::condition::down(g, g.gd[gd].ch) || crate::control::man::blind(g, gd) { continue; }
+            if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) || crate::control::man::blind(g, gd) { continue; }
             let e = match crate::wandorder::mate_wand_eye(g, gd) {
                 Some(e) => e,
                 None => { let c = g.gd[gd].ch; fog_of_war_eye_of(g, c) }
@@ -144,7 +138,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     }
     crate::seats::each_seat(g, &mut |g| {
         for e in crate::stickycam::sticky_eyes(g, &crate::seats::here(g)) {
-            if eyes.len() as f64 >= cap { g.stats.stickycam.blind += 1; break; }
+            if eyes.len() as f64 >= cap {  break; }
             eyes.push(e);
         }
     });
@@ -161,7 +155,6 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         }
     }
     let pic = match pic_own { Some(p) => p, None => eyes.clone() };
-    g.fog_of_war.stats.eyes = pic.len() as f64;
     g.fog_of_war.eyes = pic;
     // (the squad's own men for the doors' rule)
     g.fog_of_war.mates.clear();
@@ -169,7 +162,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !crate::condition::down(g, g.gd[gd].ch) && !crate::control::man::blind(g, gd) {
+        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && !crate::control::man::blind(g, gd) {
             let c = g.gd[gd].ch;
             g.fog_of_war.mates.push(c);
         }
@@ -186,7 +179,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         let was = g.fog_of_war.fired_n.get(key).copied();
         g.fog_of_war.fired_n.set(key, n);
         if let (Some(w), Some(t)) = (was, tgt) {
-            if n > w && fog_of_war_on_team(g, ogd) && !fog_of_war_on_team(g, t) {
+            if n > w && g.team(ogd).ours() && !g.team(t).ours() {
                 let now = g.fog_of_war.fire_clock;
                 g.fog_of_war.fired_at.set(t, now);
             }
@@ -194,20 +187,19 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     }
     // ---- everybody else: seen by any of them?
     g.fog_of_war.hidden_chars.clear();
-    g.fog_of_war.stats.tested = 0.0; g.fog_of_war.stats.seen = 0.0; g.fog_of_war.stats.hidden = 0.0; g.fog_of_war.stats.smoke_hid = 0.0; g.fog_of_war.stats.by_fire = 0.0;
     let pl = players(g);
     let held = g.pl[pl[0]].holding.as_ref().map(|h| h.g);
     let held_too = if pl.len() > 1 { g.pl[pl[1]].holding.as_ref().map(|h| h.g) } else { None };
     // (1) lines of sight
     let mut men: Vec<GuardId> = Vec::new();
     let mut i = 0;
-    while i < g.guards.len() { let gd = g.guards[i]; i += 1; if !fog_of_war_on_team(g, gd) { men.push(gd); } }
+    while i < g.guards.len() { let gd = g.guards[i]; i += 1; if !g.team(gd).ours() { men.push(gd); } }
     let mut i = 0;
     while i < g.civilians.len() {
         let cv = g.civilians[i];
         i += 1;
         let gone = match g.gd[cv].civ { Some(c) => g.cv[c].state == crate::civilians::CivState::Gone, None => false };
-        if !fog_of_war_on_team(g, cv) && !gone { men.push(cv); }
+        if !g.team(cv).ours() && !gone { men.push(cv); }
     }
     let mut lines: JsMap<GuardId, bool> = JsMap::new();
     fog_of_war_hand_eyes(g, &eyes);
@@ -241,7 +233,6 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             seen = (had..clear).any(|k| fog_of_war_clear(g, eyes[((r >> (4 * k)) & 15) as usize].pos, at));
             if seen || clear == 0 { break; }
         }
-        if clear > 0 && !seen { g.fog_of_war.stats.smoke_hid += 1.0; }
         lines.set(gd, seen);
     }
     // (3) the verdicts
@@ -249,15 +240,14 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     for eye in eyes.iter() {
         if eye.wand != Some(true) { continue; }
         for &gd in men.iter() {
-            let team = g.gd[gd].team;
-            if crate::condition::down(g, g.gd[gd].ch) || !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) || !g.team(gd).theirs() { continue; }
             match g.fog_of_war.recs.get(gd) { Some(r) if r.seen => {}, _ => continue }
             let c = g.gd[gd].ch;
             let chest = chest_of(g, c);
             if fog_of_war_eye_on_man(g, *eye, gd, chest) {
                 let now = g.time;
                 let wt = g.fog_of_war.recs.get(gd).unwrap().wand_t;
-                if match wt { None => true, Some(w) => now - w > 1.0 || now < w } { g.stats.wand.marked += 1; }
+                if match wt { None => true, Some(w) => now - w > 1.0 || now < w } {  }
                 g.fog_of_war.recs.get_mut(gd).unwrap().wand_t = Some(now);
             }
         }
@@ -301,7 +291,7 @@ fn fog_of_war_team(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) {
+        if g.team(gd).ours() {
             let id = g.ch[g.gd[gd].ch].id;
             let light = g.gd[gd].flashlight;
             g.engine.lights.fog_team.owners.add(crate::Num(id));
@@ -325,7 +315,6 @@ fn fog_of_war_lamps_known(g: &mut crate::game::Game) {
 
 /// pass()'s verdict on one man.
 fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, view: Option<&[crate::fogofwar::FogEye]>) {
-    g.fog_of_war.stats.tested += 1.0;
     let rt = g.fog_of_war.recs.get_or_insert_with(gd, fresh_rec).t;
     let dead = crate::condition::down(g, g.gd[gd].ch);
     let seen = lines.get(gd).copied() == Some(true);
@@ -349,14 +338,11 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
     if seen {
         r.t = now;
         if !dead { r.at = Some(p); }
-        g.fog_of_war.stats.seen += 1.0;
     }
     if !fog_of_war_drawn(g, gd) {
         let c = g.gd[gd].ch;
         g.fog_of_war.hidden_chars.add(c);
-        g.fog_of_war.stats.hidden += 1.0;
     } else if fired && !dead && !(since >= 0.0 && since < linger) {
-        g.fog_of_war.stats.by_fire += 1.0;
     }
 }
 
@@ -434,12 +420,6 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
     f.call_n += 1.0;
     f.last_call = now;
     f.called_t.set(h, now);
-    let log_kind = match kind {
-        FogOfWarCallWordsKind::Contact => { f.call_stats.contact += 1.0; FogOfWarCallLogItemKind::Contact }
-        FogOfWarCallWordsKind::Heard => { f.call_stats.heard += 1.0; FogOfWarCallLogItemKind::Heard }
-    };
-    f.call_log.push(FogOfWarCallLogItem {  });
-    if f.call_log.len() > 200 { f.call_log.drain(0..50); }
     crate::cues::cues_call(g, gd, &text);
 }
 
@@ -455,8 +435,7 @@ fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
         let h = g.guards[i];
         i += 1;
         if crate::condition::down(g, g.gd[h].ch) || !g.ch[g.gd[h].ch].alive { continue; }
-        let team = g.gd[h].team;
-        if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { continue; }
+        if !g.team(h).theirs() { continue; }
         let pl = players(g);
         if pl.iter().any(|&p| g.pl[p].holding.as_ref().map(|x| x.g) == Some(h)) { continue; }
         if crate::runner::runner_nobody(g, h) { continue; }
@@ -474,7 +453,7 @@ fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !crate::condition::down(g, g.gd[gd].ch) && !crate::control::man::blind(g, gd) && g.gd[gd].held.is_none() { mates.push(gd); }
+        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && !crate::control::man::blind(g, gd) && g.gd[gd].held.is_none() { mates.push(gd); }
     }
     // contact: the first teammate, in list order, with one of them in his eyes
     for &gd in mates.iter() {
@@ -521,12 +500,12 @@ pub fn fog_of_war_reset(g: &mut crate::game::Game) {
     let f = &mut g.fog_of_war;
     f.lamp_recs.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear(); f.props_loaded = false; f.loaded = false; f.our_landed.clear(); f.thing_since = -1.0;
     f.recs = JsMap::new(); f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0;
-    f.call_clock = 0.0; f.last_call = -1e9; f.called_t = JsMap::new(); f.known_t = JsMap::new(); f.told_step = JsMap::new(); f.call_n = 0.0; f.call_log = Vec::new(); f.call_stats = crate::fogofwar::FogOfWarCallStats { contact: 0.0, heard: 0.0 };
+    f.call_clock = 0.0; f.last_call = -1e9; f.called_t = JsMap::new(); f.known_t = JsMap::new(); f.told_step = JsMap::new(); f.call_n = 0.0;  
 }
 
 /// The fog's own line: anything solid between an eye and a point. (FogOfWar.sightBlocked)
 pub(super) fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    let through = fog_through(g);
+    let through = fog_through();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
@@ -570,7 +549,7 @@ fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], 
             (at, at, 0.0)
         }
     };
-    let through = fog_through(g);
+    let through = fog_through();
     crate::scene_collision::eyes_see(g, order, eyes.len() as f64, want, kind, through, a, b)
 }
 

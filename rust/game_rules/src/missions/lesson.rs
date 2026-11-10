@@ -131,15 +131,14 @@ fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.p
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none
 fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
-    let a = crate::orders::squad_orders_of(g, seat, m)?;
+    let a = crate::orders::squad_orders_of(seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
     Some(g.dr[d].def.name.clone())
 }
 
-
 /// a teammate on his feet
-fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) }
+fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
 
 /// the one partner of a quiet pair: the first operative unit on his feet
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
@@ -157,7 +156,7 @@ fn own_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player
 /// `onStack(g, m) === door`
 fn stack_is(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, door: &str) -> bool { on_stack(g, seat, m).as_deref() == Some(door) }
 /// `!!g.orders.of(m)?.arrived`
-fn arrived(g: &mut Game, m: GuardId) -> bool { crate::orders::squad_orders_of(g, &crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
+fn arrived(g: &mut Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
 /// `g.orders.men(sel)`
 fn squad_men(g: &Game, seat: &crate::seats::SeatRef, sel: crate::orders::SquadOrdersMenSel) -> Vec<GuardId> { crate::orders::squad_orders_men(g, seat, Some(sel), None) }
 /// a text cell of a chronicle row (`e.data.<key>`)
@@ -232,7 +231,7 @@ fn ok_target(g: &Game, name: &str, on: bool) -> bool {
 
 fn ok_men(g: &Game, down: Option<f64>) -> bool {
     let guards = g.guards.clone();
-    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::Team::Player) && crate::condition::down(g, g.gd[x].ch)).count();
+    let n = guards.iter().filter(|&&x| g.team(x).theirs() && crate::condition::down(g, g.gd[x].ch)).count();
     n as f64 >= down.unwrap_or(1.0)
 }
 
@@ -254,7 +253,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
 fn ok_calm(g: &Game, route: Option<&str>) -> bool {
     let guards = g.guards.clone();
     guards.iter().all(|&x| {
-        !crate::teams::hostile_to(g, x, crate::teams::Team::Player) || crate::condition::down(g, g.gd[x].ch)
+        !g.team(x).theirs() || crate::condition::down(g, g.gd[x].ch)
             || route.map_or(false, |r| g.tab.route[g.gd[x].route].name != r)
             || g.gd[x].state == crate::game::GuardState::Patrol
     })
@@ -307,10 +306,10 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
 }
 /// his own smoke can venting in `a`, on the floor no longer than `since`
 fn lying_can(g: &mut Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
-    use crate::throwables::{item_age, item_fired, item_kind, item_pos, item_who, ItemKind};
+    use crate::throwables::ItemKind;
     if k == Some("flash") || k == Some("frag") { return false; }
     let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
-    items.iter().any(|&x| item_kind(g, x) == ItemKind::Smoke && item_fired(g, x) && item_who(g, x) == me && item_age(g, x) <= since && inside(a, item_pos(g, x)))
+    items.iter().any(|&x| g.tab.item[x].kind == ItemKind::Smoke && g.tab.item[x].fired && g.tab.item[x].who == me && g.tab.item[x].age <= since && inside(a, g.tab.item[x].pos))
 }
 /// a bang of that kind in `a` this frame, not a charge's
 fn bang_in(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>) -> bool {
@@ -350,7 +349,7 @@ fn ok_taken(g: &Game, room: &str) -> bool {
 fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if !crate::orders::squad_orders_active(g, seat) { return false; }
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
-    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(g, seat, m).map_or(false, |a| crate::orders::rows::is(g, a, crate::orders::Is::Follows)))
+    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(seat, m).map_or(false, |a| crate::orders::rows::is(g, a, crate::orders::Is::Follows)))
 }
 
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
@@ -394,7 +393,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let r = r.unwrap_or(3.0);
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
     let hits = men.iter().filter(|&&m| {
-        let Some(id) = crate::orders::squad_orders_of(g, seat, m) else { return false };
+        let Some(id) = crate::orders::squad_orders_of(seat, m) else { return false };
         let row = &g.tab.orders_assignment[id];
         crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
     }).count();
@@ -402,7 +401,6 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 }
 
 // ---- the checks: what is wrong with a record on this floor. A field's type is the skeleton's now, so a check of a type alone (`typeof t.on`) has nothing to ask
-
 
 fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
     use LessonFlag as F;
@@ -423,9 +421,9 @@ fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
         F::SetupShut => flags::setup_shut(g, &crate::seats::here(g)),
         F::Dragging => flags::dragging(g),
         F::Dark => flags::dark(g),
-        F::ChargeSet => flags::charge_set(g, &crate::seats::here(g)),
+        F::ChargeSet => flags::charge_set(&crate::seats::here(g)),
         F::ChargeClear => flags::charge_clear(g),
-        F::WallBlown => flags::wall_blown(g, &crate::seats::here(g)),
+        F::WallBlown => flags::wall_blown(&crate::seats::here(g)),
         F::Holding => flags::holding(g, &crate::seats::here(g)),
         F::Picking => flags::picking(g, &crate::seats::here(g)),
         F::Coding => flags::coding(g, &crate::seats::here(g)),
@@ -470,7 +468,7 @@ pub mod flags {
     /// the mains are off
     pub fn dark(g: &mut crate::game::Game) -> bool { g.light_home.mains.active }
     /// a wall charge is on a wall, waiting on the trigger
-    pub fn charge_set(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
+    pub fn charge_set(seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
     /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
     pub fn charge_clear(g: &mut crate::game::Game) -> bool {
         let c = g.wall_charge.set.first().copied();
@@ -483,7 +481,7 @@ pub mod flags {
         (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && m::hyp2(p[0] - at[0], p[2] - at[2]) < 4.0
     }
     /// …and one has made its hole this run
-    pub fn wall_blown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
+    pub fn wall_blown(seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
     /// a man in his arm
     pub fn holding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holding.is_some() }
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
@@ -582,7 +580,7 @@ mod tests {
 }
 
 /// A new lesson: nothing done, no run yet.
-pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
+pub fn lesson_new() -> crate::lesson::Lesson {
     crate::lesson::Lesson::blank()
 }
 
@@ -617,11 +615,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     if !run_is_mission(g) {
         g.lesson.run = Some(g.mission.serial);
         g.lesson.i = 0.0;
-        g.lesson.done_at.clear();
         g.lesson.seen = None;
-        g.lesson.log.clear();
-        g.stats.lesson.started += 1;
-        lesson_note(g, &format!("lesson '{}': {} steps", l.title, l.steps.len()));
     }
     if g.lesson.i >= l.steps.len() as f64 || g.mission.stage == crate::game::MissionStage::Failed || who_down(g, &crate::seats::here(g)) {
         return;
@@ -660,28 +654,16 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     if let Some(done_t) = done_t {
         let waits = (!idle && g.time - done_t < t.settle.unwrap_or(0.0)) || crate::rails::rails_settles(g, &l, i, done_t);
         if !waits {
-            if g.time > done_t {
-                let said = format!("'{}' settled {} s", t.id, js::to_fixed(g.time - done_t, 1));
-                lesson_note(g, &said);
-            }
-            lesson_advance(g, &l, t);
+            lesson_advance(g, &l);
         }
     }
 }
 
 /// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.
-fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
-    let now = g.time;
-    g.lesson.done_at.set(t.id.clone(), now);
+fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData) {
     g.lesson.i += 1.0;
     g.lesson.seen = Some(lesson_fresh(g, &crate::seats::here(g), None));
-    g.stats.lesson.steps += 1;
     let (i, len) = (g.lesson.i, l.steps.len() as f64);
-    lesson_note(g, &format!("done {}/{} '{}'", i as usize, l.steps.len(), t.id));
-    if i >= len {
-        g.stats.lesson.finished += 1;
-        lesson_note(g, "every step done");
-    }
     if crate::rails::rails_live(g) {
         return;
     }
@@ -708,7 +690,6 @@ fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Optio
         words: JsSet::new(),
         heard: JsSet::new(),
         held: 0.0,
-        yaw0: yaw,
         dist0: dist,
         yaw_last: yaw,
         turned: 0.0,
@@ -724,7 +705,6 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
     if js::truthy(g.rails.fresh) {
         let yaw = g.tab.camera[cam].yaw;
         s.yaw_last = yaw;
-        s.yaw0 = yaw;
         s.dist0 = g.tab.camera[cam].distance;
         s.turned = 0.0;
     }
@@ -847,7 +827,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
             k += 1;
         }
     }
-    let line = line_of(g, t);
+    let line = line_of(t);
     let said = lesson_line(g, &line);
     // (each key by its code in brackets, as the big line's: the page has the player's keys, and words them)
     let text = format!("training {}/{} \u{25b8} {}", i as usize + 1, l.steps.len(), said);
@@ -861,17 +841,8 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     Some(crate::lesson::LessonObjective { text, pos })
 }
 
-/// One line of the lesson's own log, kept to its last rows.
-fn lesson_note(g: &mut crate::game::Game, s: &str) {
-    let row = format!("{} {}", js::to_fixed(g.time, 2), s);
-    g.lesson.log.push(row);
-    if g.lesson.log.len() > 80 {
-        g.lesson.log.drain(0..40);
-    }
-}
-
 /// A step's line as the keys stand.
-pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
+pub fn line_of(t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
 }

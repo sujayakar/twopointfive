@@ -44,7 +44,6 @@ pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThr
     let mut land: Option<V3> = None;
     let mut points: Vec<V3> = vec![v3::copy(pos)];
     let h = step / 2.0;
-    g.stats.throwplan.sims += 1;
     let n = m::ceil(12.0 / step);
     let mut i: i32 = 0;
     while (i as f64) < n {

@@ -49,7 +49,7 @@ pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>
     a.crouch = Some(crouch);
     crate::orders::squad_orders_assign(g, x, &a);
 }
-fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(g, &crate::seats::here(g), x) }
+fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
 fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.orders_assignment[a].order == "cover") }
 
 pub(super) fn go(g: &Game, st: &mut KitStage, x: GuardId, pts: Vec<V2>, pace: f64, delay: f64, lane: bool) {

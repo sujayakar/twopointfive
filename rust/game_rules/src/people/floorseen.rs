@@ -81,7 +81,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
 }
 
 /// How many of `cells` (nav cell indices) `gd` has seen since game time `since`.
-pub fn floor_seen_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64], since: f64) -> f64 {
+pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64], since: f64) -> f64 {
     let s = seat.door_tools.seen.as_ref().unwrap();
     let Some(a) = s.at.get(gd) else { return 0.0 };
     let mut n = 0.0;
@@ -109,9 +109,9 @@ mod tests {
         seen.at.set(gd, vec![0.1f64 as f32, 0.7f64 as f32, NEVER as f32]);
         g.door_tools.seen = Some(seen);
         // 0.1 rounds up and counts at 0.1; 0.7 rounds down and does not count at 0.7; cell 2 was never seen; cell 9 is past the array.
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.1), 2.0);
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.7), 0.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.1), 2.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.7), 0.0);
         // A man with no record has seen nothing.
-        assert_eq!(floor_seen_count(&g, &crate::seats::here(&g), GuardId(1), &[0.0], -2e9), 0.0);
+        assert_eq!(floor_seen_count(&crate::seats::here(&g), GuardId(1), &[0.0], -2e9), 0.0);
     }
 }

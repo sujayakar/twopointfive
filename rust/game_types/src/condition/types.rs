@@ -19,15 +19,6 @@ pub struct Cond {
     pub sup: crate::suppression::Sup,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Condition {
-    pub shaken: bool,
-    pub blind: bool,
-    pub folded: bool,
-    pub hurt: bool,
-    pub down: bool,
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct ConditionStats {

@@ -1,7 +1,7 @@
 //! THE PANEL'S ACTIONS: what a person does to the game from the debugger that isn't a number, as one list. The page draws a button, a box or a choice from a row and knows none by name; a press is a
 //! command (`Act`), so a tape carries it as it does a turned number.
 use alloc::{format, string::String, vec, vec::Vec};
-use game::game::{Game, GameSetBlackoutCause, GuardState};
+use game::game::{Game};
 use game::m;
 use game::teams::Team;
 
@@ -119,10 +119,10 @@ fn stand_extra(g: &mut Game, n: f64) {
     let spots = extra_spots(g, n);
     let mut stood = 0;
     let serial = g.guards.iter().filter(|&&x| g.gd[x].callsign.starts_with("Extra ")).count();
-    let (light, budget) = (g.k.nightbreach.def_lights, game::guards::MAX_SKINNED - g.civilians.len() as f64);
+    let budget = game::guards::MAX_SKINNED - g.civilians.len() as f64;
     for s in spots {
         let name = format!("Extra {}", serial + stood + 1);
-        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
+        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(false), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
         game::mission::adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) });
@@ -132,7 +132,7 @@ fn stand_extra(g: &mut Game, n: f64) {
 }
 
 pub static ACTIONS: &[Action] = &[
-    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, GameSetBlackoutCause::Debug) } },
+    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, game::lighting::SetBlackoutCause::Debug) } },
     Action { name: "smoke", label: "smoke at the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::sense::sense_tool(g, 2.0, &[a[0], a[1] + 0.12, a[2]]); } },
     Action { name: "clearsmoke", label: "clear smoke", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { game::sense::sense_tool(g, 3.0, &[]); } },
     Action { name: "teleport", label: "teleport to the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::game::game_teleport_player(g, a); } },
@@ -143,7 +143,7 @@ pub static ACTIONS: &[Action] = &[
     Action { name: "groupon", label: "a group on", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, true) },
     Action { name: "groupoff", label: "a group off", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, false) },
     Action { name: "repair", label: "repair the lights", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_repair_lights(g) },
-    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, GameSetBlackoutCause::Debug) },
+    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, game::lighting::SetBlackoutCause::Debug) },
     Action { name: "weather", label: "weather kind", section: "Weather", title: "a new page of this address in that weather", takes: Takes::Reload { word: "weather", picks: WEATHERS }, run: |_, _, _| {} },
     Action { name: "strike", label: "lightning now", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, None); } },
     Action { name: "strikeclose", label: "lightning, close (0.4 km)", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, Some(game::weather::WeatherStrikeOpts { dist_km: Some(0.4), ..Default::default() })); } },

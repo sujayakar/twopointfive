@@ -86,7 +86,6 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     s.last = JsMap::new();
     s.turns = JsMap::new();
     s.shown = None;
-    g.stats.squad40.staged += 1;
 }
 
 /// the bodies a round stops on, as far as the player can see them. (squad40.ts bodies)
@@ -96,11 +95,10 @@ fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
     for gd in g.guards.clone() {
         let c = g.gd[gd].ch;
         let up = !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive;
-        if g.gd[gd].team == crate::teams::Team::Operative {
+        if g.team(gd).ours() {
             if up { mates.push(c); }
         } else if up && !crate::fogofwar::fog_of_war_hidden(g, gd) {
-            let team = g.gd[gd].team;
-            if crate::teams::is_hostile(g, crate::teams::Team::Operative, team) && g.gd[gd].civ.is_none() && !g.staged.captives.contains(&gd) {
+            if g.team(gd).theirs() && !g.staged.captives.contains(&gd) {
                 foes.push(c);
             } else {
                 friends.push(c);
@@ -127,7 +125,7 @@ fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, at: 
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {
         if g.tab.roomfight_op[o].tgt.is_some() { return true; }
     }
-    match crate::orders::squad_orders_of(g, seat, gd) {
+    match crate::orders::squad_orders_of(seat, gd) {
         Some(a) => g.tab.orders_assignment[a].upper == crate::character::UpperMode::Aim,
         None => false,
     }
@@ -238,7 +236,7 @@ fn follow(g: &mut Game) {
 }
 
 /// the round leaves his tube; `pl` is the row of `states` it is counted on. (squad40.ts fire)
-fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V3, turned: bool) {
+fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot) {
     let gd = a.gd;
     let now = g.time;
     let s = g.m.squad40.states.get_mut(pl).unwrap();
@@ -252,9 +250,6 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V
     let callsign = g.gd[gd].callsign.clone();
     let t = g.time;
     g.m.squad40.states.get_mut(pl).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
-    g.stats.squad40.fired += 1;
-    if turned { g.stats.squad40.turned += 1; }
-    let left = squad40_left(g, &crate::seats::here(g));
     let log = &mut g.m.squad40.squad40_log;
     log.push(Squad40ModSQUAD40LOGItem { burst: a.burst });
     if log.len() > 100 { log.drain(0..50); }
@@ -264,7 +259,6 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V
 fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
         crate::game::game_say(g, gd, l, None, None);
-        g.stats.squad40.gave_up += 1;
     }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let w = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.delete(gd)).unwrap();
@@ -314,10 +308,9 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         Some(ShotOf::Shot(x)) => x,
     };
     if let Some(who) = caught(g, &shot, at) {
-        g.stats.squad40.refused += 1;
         return end_turn(g, gd, Some(&who));
     }
-    fire(g, key, &shot, at, true);
+    fire(g, key, &shot);
     if let Some(w) = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.get_mut(gd)) { w.fired_t = now; }
 }
 
@@ -325,7 +318,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
     let a = match plan(g, men, at) {
-        ShellPlan { no: Some(why), .. } => { g.stats.squad40.refused += 1; return Some(why); }
+        ShellPlan { no: Some(why), .. } => {  return Some(why); }
         ShellPlan { shot: Some(a), .. } => a,
         ShellPlan { shot: None, no: None, .. } => return None,
     };
@@ -333,7 +326,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     crate::squadthrow::squad_log_row(g, gd, SHELL_THERE, at);
-    if a.aimed { let key = crate::seats::view_key(g, &crate::seats::here(g)); fire(g, key, &a, at, false); return None; }
+    if a.aimed { let key = crate::seats::view_key(g, &crate::seats::here(g)); fire(g, key, &a); return None; }
     let to = v3::copy(a.to);
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, &crate::seats::here(g), gd, t);
@@ -349,7 +342,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
         set_line: None,
         ..Default::default()
     });
-    w.a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
+    w.a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.turns.set(gd, w);
@@ -385,7 +378,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let mut at = 0;
     while let Some(gd) = g.m.squad40.states.get(key).unwrap().turns.next_key(&mut at) {
         let (wa, t0) = { let w = g.m.squad40.states.get(key).unwrap().turns.get(gd).unwrap(); (w.a, w.t0) };
-        if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != wa {
+        if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(&crate::seats::here(g), gd) != wa {
             g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd);
         } else if g.time < t0 || g.time - t0 > g.k.squad40.aim_secs + 1.0 {
             let w = g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd).unwrap();

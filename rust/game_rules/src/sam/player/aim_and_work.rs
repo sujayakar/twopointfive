@@ -77,7 +77,7 @@ pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
 }
 
 /// Working the lock, on its own clock once begun.
-pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let d = g.pl[pl].picking.unwrap();
@@ -140,8 +140,7 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     g.pl[pl].picking = None;
     let pos = g.ch[c].pos;
     let side = crate::doors::doors_side(g, d, pos);
-    g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, t: 0.0, pan: 0.0, live: false, off: 0.0, age: 0.0 });
-    g.stats.wand.looks += 1;
+    g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, pan: 0.0, live: false, off: 0.0, age: 0.0 });
 }
 
 /// The wand pulled out: he stays on his knee.
@@ -191,11 +190,9 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         w.age += dt;
         if planted {
             w.off = 0.0;
-            w.t += dt;
             let crouch = g.ch[c].anim.crouch;
-            if !w.live && crate::wand::wand_through(g, w.t, w.age, crouch, Some(true)) {
+            if !w.live && crate::wand::wand_through(g, w.age, crouch, Some(true)) {
                 w.live = true;
-                g.stats.wand.live += 1;
                 wand_row_back(g, pl, w);
             }
         } else if w.live {
@@ -310,7 +307,7 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
 }
 
 /// Kick a door in: one committed second, updateKick runs it; with a tool the big slot's beat in the boot's place.
-pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool: Option<crate::player::StartKickTool>) {
+pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool: Option<crate::kit::BigTool>) {
     let run = run.unwrap_or(false);
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -322,7 +319,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     }
     if let Some(t) = tool {
         let (pos, door_at, frame) = (g.ch[c].pos, crate::doors::door_pos(g, d), g.dr[d].frame_centre);
-        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= crate::doors::DOORS_USE_REACH && crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)).is_none() {
+        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= crate::doors::DOORS_USE_REACH && crate::bigkit::sam_big_spot(g, d, pos, t).is_none() {
             return;
         }
     }
@@ -344,7 +341,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     g.pl[pl].door_kick_tail = false;
     let pos = g.ch[c].pos;
     let beside = match tool {
-        Some(t) => crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)),
+        Some(t) => crate::bigkit::sam_big_spot(g, d, pos, t),
         None => None,
     };
     // taken ONCE, off the leaf as it stands now
@@ -370,10 +367,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
                 crate::shotgun::lock_point(g, d, s)
             }
         };
-        let kind = match t {
-            crate::player::StartKickTool::Shotgun => crate::game::PlayerKickToolKind::Shotgun,
-            crate::player::StartKickTool::Hammer => crate::game::PlayerKickToolKind::Hammer,
-        };
+        let kind = t;
         g.pl[pl].kick = Some(crate::game::PlayerKick {
             door: d,
             spot: spot_pos,
@@ -396,13 +390,6 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     }
     g.pl[pl].kick = Some(crate::game::PlayerKick { door: d, spot: spot_pos, yaw: spot_yaw, run: if run { Some(true) } else { None }, tool: None });
     crate::character::anim_kick_door(g, c, None);
-}
-
-fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTool {
-    match t {
-        crate::player::StartKickTool::Shotgun => crate::bigkit::SamBigSpotTool::Shotgun,
-        crate::player::StartKickTool::Hammer => crate::bigkit::SamBigSpotTool::Hammer,
-    }
 }
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
@@ -604,7 +591,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     };
     g.aim_point = p;
     let (w, h) = (canvas.client_width, canvas.client_height);
-    build_interactables(g, cam, mx, my, w, h);
+    build_interactables(g);
     // A light TAKEN is KEPT while the cursor stays where it took it.
     let reach = m::min(crate::aim::SNAP_PX, g.k.aim.player.light_snap_px);
     let at = g.m.player.light_at.get(g.player).copied();

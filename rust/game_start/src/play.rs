@@ -185,7 +185,7 @@ impl Play {
         let canvas = self.host.canvas;
         seats.iter().map(|&s| {
             let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
-            game::seats::with_seat(&mut self.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
+            game::seats::with_seat(&mut self.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas))
         }).collect()
     }
     /// the game steps on every seat's command, on a machine that shows the seat `shown`
@@ -387,7 +387,7 @@ impl Play {
     /// the men of the other side who are up, nearest `at` first (a room clear's defenders are dealt to their rooms' marks by the die: a test
     /// finds the man at a mark by where he stands)
     pub fn hostiles_by(&self, at: [f64; 2]) -> Vec<GuardId> {
-        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Hostile && !game::condition::down(&self.g, self.g.gd[gd].ch)).collect();
+        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.team(gd) == game::teams::Team::Hostile && !game::condition::down(&self.g, self.g.gd[gd].ch)).collect();
         v.sort_by(|a, b| dist(self.at(*a), at).partial_cmp(&dist(self.at(*b), at)).unwrap());
         v
     }
@@ -482,14 +482,14 @@ impl Play {
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {
         for gd in self.g.guards.clone() {
-            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
+            if !self.g.team(gd).ours() && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
         }
     }
     /// Sam's teammates, in the order the game made them
-    pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Operative).collect() }
+    pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.team(gd).ours()).collect() }
     /// every man of the game's list in a line, for a failure's message
     pub fn roll(&self) -> String {
-        self.g.guards.iter().map(|&gd| { let o = &self.g.gd[gd]; let p = self.at(gd); format!("{} {:?} {:?} at ({:.1}, {:.1})", o.callsign, o.team, o.state, p[0], p[1]) }).collect::<Vec<_>>().join("; ")
+        self.g.guards.iter().map(|&gd| { let o = &self.g.gd[gd]; let p = self.at(gd); format!("{} {:?} {:?} at ({:.1}, {:.1})", o.callsign, self.g.ch[o.ch].team, o.state, p[0], p[1]) }).collect::<Vec<_>>().join("; ")
     }
 
     /// what stands on the level's floor, counted off the game (for a test of the start itself)
@@ -575,7 +575,7 @@ impl Play {
     }
 
     /// the mark his order has for him, if it has one
-    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
+    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }

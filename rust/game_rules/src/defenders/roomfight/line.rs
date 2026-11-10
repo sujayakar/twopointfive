@@ -54,16 +54,16 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
         let ch = g.pl[pl].ch;
         if line_hit(g, ch, false, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
-    let mine = g.gd[self_].team;
+    let mine = g.team(self_);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         let ch = g.gd[o].ch;
         if o == self_ || crate::condition::down(g, g.gd[o].ch) || !g.ch[ch].alive { continue; }
-        let theirs = g.gd[o].team;
-        if crate::teams::is_hostile(g, mine, theirs) { continue; }
-        let mate = theirs == crate::teams::Team::Operative && g.gd[o].unit.is_some();
+        let theirs = g.team(o);
+        if mine.foe_of(theirs) { continue; }
+        let mate = theirs.ours();
         if line_hit(g, ch, mate, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
     None
@@ -83,7 +83,7 @@ pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId
 /// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him.
 pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
-    let a = match crate::orders::squad_orders_of(g, seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
+    let a = match crate::orders::squad_orders_of(seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
         let row = &g.tab.orders_assignment[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) { return false; }

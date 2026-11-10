@@ -39,7 +39,7 @@ fn read_of(g: &mut Game, kind: SquadThrowKind) -> String {
     let mut at = |p: V3, up: bool| { s.push_str(&format!(";{},{}{}", js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)), if up { "" } else { "x" })); };
     at(g.ch[g.pl[g.player].ch].pos, !crate::condition::down(g, g.pl[g.player].ch));
     for &gd in g.guards.iter() {
-        if g.gd[gd].team == crate::teams::Team::Operative { at(g.ch[g.gd[gd].ch].pos, !crate::condition::down(g, g.gd[gd].ch)); }
+        if g.team(gd).ours() { at(g.ch[g.gd[gd].ch].pos, !crate::condition::down(g, g.gd[gd].ch)); }
     }
     s
 }
@@ -86,7 +86,7 @@ fn fresh(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> ThrowPl
 fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Option<SquadThrower>) -> ThrowPlan {
     let (mut refuse, mut warn, mut walk) = (None, None, None);
     match &thrower {
-        None => refuse = Some(String::from(if left(g, kind) > 0.0 { "no throw from here." } else { none(g, kind).as_str() })),
+        None => refuse = Some(String::from(if left(g, kind) > 0.0 { "no throw from here." } else { none(kind).as_str() })),
         Some(th) => {
             if kind == SquadThrowKind::Frag {
                 let stands = th.post.unwrap_or(g.ch[g.gd[th.gd].ch].pos);
@@ -131,7 +131,6 @@ pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[Guard
     let at = crate::orders::rows::at(t);
     let p = plan_for(g, men, at, kind);
     if let Some(why) = p.refuse {
-        g.stats.squadthrow.refused += 1;
         return Some(why);
     }
     let mut th = p.thrower.expect("a plan that is not refused has a thrower");
@@ -139,10 +138,10 @@ pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[Guard
         start_walk(g, &mut th, t, kind);
         return None;
     }
-    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
-    if !crate::doortools::door_tools_take(g, what) { return Some(String::from(none(g, kind).as_str())); }
+    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsCan::Frag } else { crate::doortools::DoorToolsCan::Bang };
+    if !crate::doortools::door_tools_take(g, what) { return Some(String::from(none(kind).as_str())); }
     let arc = Arc { from: th.from, sol: th.sol, rest: th.rest };
-    throw_it(g, th.gd, &arc, kind, at);
+    throw_it(g, th.gd, &arc, kind);
     squad_log_row(g, th.gd, row_of(kind).as_str(), at);
     None
 }

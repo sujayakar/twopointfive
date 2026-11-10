@@ -83,8 +83,6 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     // --- feet ---
     let mut move_ = 0.0;
     let far = dist > STANDOFF_MAX_M;
-    let before0 = g.ch[c].pos[0];
-    let before2 = g.ch[c].pos[2];
     g.tab.guards_standoff[s].replan_t -= dt;
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
     let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
@@ -164,7 +162,6 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         g.gd[gd].stall_ref = None;
     }
     let pos = g.ch[c].pos;
-    g.tab.guards_standoff[s].orbit_m += m::hyp2(pos[0] - before0, pos[2] - before2);
     if !jogging {
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(look_at[0] - pos[0], look_at[2] - pos[2]), 4.0 * dt);
     }
@@ -187,9 +184,8 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
         g.arms[g.gd[gd].ch].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
-        let o = crate::aim::guard_round(g, gd, mods.spread, None);
+        let o = crate::aim::guard_round(g, gd, mods.spread);
         crate::combat::fire_weapon(g, c, aim, Some(&o));
-        g.tab.guards_standoff[s].shots += 1.0;
         let w = g.gd[gd].weapon;
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
     }
@@ -390,13 +386,13 @@ fn dist_term_of(k: &crate::knobs::GuardEyeK, dist: f64) -> f64 {
 }
 
 /// What the team's own eyes pass (FOG.mates on: what the fog's lines pass).
-pub(in crate::people) fn team_through(g: &crate::game::Game) -> f64 {
-    crate::fogofwar::fog_through(g)
+pub(in crate::people) fn team_through() -> f64 {
+    crate::fogofwar::fog_through()
 }
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
 fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.gd[gd].team == crate::teams::Team::Operative { team_through(g) } else { crate::scene_boxes::box_flag().glass }
+    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag().glass }
 }
 
 /// That man's own line to a point, asked bare.
@@ -485,7 +481,7 @@ fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: crate::
 }
 
 /// Put him on the free cell centre `to` (or the nearest free one) here and now: the last resort, counted, never spoken.
-fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &str) {
+fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let p = match to {
@@ -503,7 +499,6 @@ fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, why: &st
     g.gd[gd].last_pos = v3::copy(g.ch[c].pos);
     g.gd[gd].stall_ref = None;
     g.gd[gd].stuck_t = 0.0;
-    g.m.guards.unstick.snaps += 1.0;
     g.m.guards.unstick.last_snap_t = g.time;
     g.m.guards.unstick.last_snap_who = Some(gd);
 }
@@ -534,7 +529,7 @@ pub(super) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::gu
     let to = match free_cell_near(g, pos, UNSTICK_REACH_M, crate::guards::FreeCellNearTest::Walk) {
         Some(to) => to,
         None => {
-            unstick_snap(g, gd, None, "stranded, no free cell within reach he can walk to");
+            unstick_snap(g, gd, None);
             let pos = g.ch[c].pos;
             if stranded_at(g, pos[0], pos[2]) {
                 let t = g.time + 2.0;
@@ -545,7 +540,6 @@ pub(super) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::gu
         }
     };
     g.m.guards.unstick_legs.set(gd, crate::guards::UnstickLeg { to, best: v3::dist_xz(pos, to), stall_t: 0.0 });
-    g.m.guards.unstick.legs += 1.0;
     crate::guards::UnstickBegin::Leg
 }
 
@@ -567,8 +561,7 @@ fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guard
         if let Some(row) = g.m.guards.unstick_legs.get_mut(gd) { row.stall_t = stall_t; }
         if stall_t > UNSTICK_STALL_SECS {
             if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) {
-                let why = format!("no nearer than {} m in {} s of stepping", js::to_fixed(u.best, 2), UNSTICK_STALL_SECS);
-                unstick_snap(g, gd, Some(u.to), &why);
+                unstick_snap(g, gd, Some(u.to));
             }
             return crate::guards::UnstickStep::Done;
         }

@@ -47,7 +47,7 @@ fn line_up(g: &mut Game, gd: GuardId, d: DoorId, side: f64, f: crate::handleside
         g.m.handleside.states.set(gd, crate::handleside::St { door: d, side, spot: on, phase: crate::handleside::StPhase::Thru, t: 0.0, seen: now, way: None, at: None, at_t: None });
         return true;
     }
-    if !walled(g, pos, via[0]) && bend(g, gd, d, crate::handleside::BendA { k: a_.k }, via[0], via[1]) { g.stats.handleside.bent += 1; }
+    let _ = !walled(g, pos, via[0]) && bend(g, gd, d, crate::handleside::BendA { k: a_.k }, via[0], via[1]);
     false
 }
 
@@ -209,7 +209,7 @@ fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already.
 fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
-    if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
+    if g.team(gd) == crate::teams::Team::Civilian { return false; }
     if crate::doors::door_off(g, d) { return false; }
     let latched = crate::doors::door_latched(g, d);
     if !latched {
@@ -218,7 +218,7 @@ fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, 
         if opened >= under { return false; }
     }
     if !latched && (crate::doors::door_pull_t(g, d) > 0.0 || crate::doors::door_vel(g, d) * crate::doors::door_swing(g, d) > 0.5) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative {
+    if g.team(gd).ours() {
         let p = seat.player;
         // `new Set([...keys, ...codes])` where he holds codes, else his keys: lent by copy, the stub wants `g` too
         let mut keys: JsSet<String> = g.pl[p].keys.clone();
@@ -266,12 +266,10 @@ fn release(g: &mut crate::game::Game, gd: GuardId, rest: bool) {
 }
 
 /// His hand on the leaf from the face it opens into.
-fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
+fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId) {
     let who = g.ch[g.gd[gd].ch].id;
     let quiet = crate::silent::silent_ease(g, gd);
     crate::doors::doors_pull(g, d, who, Some(quiet));
-    g.stats.handleside.pulls += 1;
-    if far { g.stats.handleside.far_pulls += 1; }
 }
 
 /// His walk through door `d` bent onto the handle half's line; made once.
@@ -351,11 +349,9 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                     g.gd[gd].speed = v;
                     g.gd[gd].last_pos = [np[0], np[1], np[2]];
                     g.gd[gd].stuck_t = 0.0;
-                    g.stats.handleside.held += 1;
                     return true;
                 }
                 halt(g, gd, dt);
-                g.stats.handleside.held += 1;
                 return true;
             }
             let wp = g.gd[gd].path[g.gd[gd].path_i];
@@ -364,7 +360,6 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
             let l = js::or(m::hyp2(dx, dz), 1.0);
             if crate::doors::door_swing_sweeps(&s, pos[0] + dx / l * 0.25, pos[2] + dz / l * 0.25, Some(pad)) {
                 halt(g, gd, dt);
-                g.stats.handleside.held += 1;
                 return true;
             }
             return false;
@@ -377,7 +372,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                 && !crate::doors::door_off(g, d)
                 && !crate::doors::door_latched(g, d)
                 && crate::doors::door_angle(g, d) * crate::doors::door_swing(g, d) < k.ajar + 0.1
-                && g.gd[gd].team != crate::teams::Team::Civilian
+                && g.team(gd) != crate::teams::Team::Civilian
                 && line_up(g, gd, d, side, f, l, a_);
             if !thru { return false; }
         } else if off_at(g, d, pos) < 0.25 {   // in the frame itself: he is through it already
@@ -388,7 +383,6 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
             let h = match f.stand {
                 Some(h) => h,
                 None => {
-                    g.stats.handleside.no_spot += 1;
                     let until = g.time + k.rest;
                     g.m.handleside.rested.set(gd, crate::handleside::HandlesideModRestedValue { door: d, until });
                     return false;
@@ -398,7 +392,6 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                 Some(w) => w,
                 None => {   // no way there, or not yet: round the corner first, and he is asked again in half a second
                     let near = walled(g, pos, h.pos);
-                    if !near { g.stats.handleside.no_spot += 1; }
                     let until = g.time + if near { 0.5 } else { k.rest };
                     g.m.handleside.rested.set(gd, crate::handleside::HandlesideModRestedValue { door: d, until });
                     return false;
@@ -435,7 +428,6 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                 path.extend(rest);
                 crate::game::guard_set_path(g, gd, path);
                 g.gd[gd].path_i = 0;
-                g.stats.handleside.lined += 1;
             }
         }
         let until = g.time + 1.5;
@@ -472,7 +464,6 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                     !walled(g, pos, r)
                 };
                 if !takes {
-                    g.stats.handleside.gave_up += 1;
                     release(g, gd,true);
                     return false;
                 }
@@ -502,7 +493,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
         if !wants_hand(g, &crate::seats::here(g), gd, d, pos) { release(g, gd,false); return false; }
         if !strafe { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, 7.0 * dt); }
         if !strafe && t < k.turn && m::abs(v3::wrap_angle(yaw - g.ch[c].body_yaw)) > 0.6 { return true; }
-        pull_open(g, gd, d, far);
+        pull_open(g, gd, d);
         let st = g.m.handleside.states.get_mut(gd).unwrap();
         st.phase = StPhase::Wait;
         st.t = 0.0;
@@ -602,27 +593,24 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, 
 
 /// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = doors.ts's own beat.
 pub fn hand_press(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
-    if g.gd[gd].team == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
+    if g.team(gd) == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
     if let Some(r) = g.m.handleside.rested.get(gd).copied() { if g.time < r.until { return None; } }
     let st = g.m.handleside.states.get(gd).cloned();
     if fresh(g, st.as_ref()) || g.gd[gd].speed < 0.3 { Some(f64::INFINITY) } else { Some(g.k.handle.press) }
 }
 
 /// A door order's lead about to open `d` by hand: the place he works it from, or None when he stays where he is.
-pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: Option<bool>, order: Option<bool>) -> Option<crate::handleside::ToolSpot> {
-    let peek = peek.unwrap_or(false);
+pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, order: Option<bool>) -> Option<crate::handleside::ToolSpot> {
     let order = order.unwrap_or(false);
     let k = g.k.handle;
     if at_handle(g, d, at, Some(k.reach - 0.07)) { return None; }
     if order && !crate::doors::doors_pull_face(g, d, at) {   // a door order's lead, whichever cast of doortools.ts gives it
         match near_stand(g, d, side, at) {
             Some(crate::handleside::NearStand::Post) => {
-                if !peek { g.stats.handleside.tool_posts += 1; }
                 return None;
             }
             Some(crate::handleside::NearStand::List(n)) => {
                 let hd = handle_at(g, d);
-                if !peek { g.stats.handleside.tool_nears += 1; }
                 return Some(crate::handleside::ToolSpot { pos: n, yaw: m::atan2(hd[0] - n[0], hd[2] - n[2]), far: false });
             }
             None => {}
@@ -641,11 +629,9 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
     let h = match h {
         Some(h) if way_to(g, at, h.pos).is_some() => h,
         _ => {   // ... or only by a way round: through another door, round a wall
-            if !peek { g.stats.handleside.tool_no_spot += 1; }
             return None;
         }
     };
-    if !peek { g.stats.handleside.tool_walks += 1; }
     Some(crate::handleside::ToolSpot { pos: h.pos, yaw: h.yaw, far: h.far.unwrap_or(false) })
 }
 

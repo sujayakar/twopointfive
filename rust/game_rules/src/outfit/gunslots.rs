@@ -73,7 +73,6 @@ pub(super) fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<cra
     let def = weapon_row(g, row).clone();
     let gun = crate::weapons::firearm_new(g, &def);
     g.gd[gd].second = Some(crate::game::GuardSecond { gun, id: row, ahead: def.muzzle_ahead, out: false, t: -100.0, lock: -100.0, shots: 0.0 });
-    g.stats.gunslots.staged += 1;
 }
 
 /// The gun in his hands and the one that is not change places; the row is dealt off his route every frame, so the route is written.
@@ -140,13 +139,13 @@ pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The long gun he let go of hangs down his front: its rig, while the sidearm is out.
-pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
+pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     let s = g.gd[gd].second?;
     if !s.out || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let def = g.fa[s.gun].def;
     match weapon_row(g, def).rig {
-        crate::weapons::WeaponDefRig::Carbine => Some(SideHung::Carbine),
-        crate::weapons::WeaponDefRig::Sc20k => Some(SideHung::Sc20k),
+        crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
         _ => None,
     }
 }
@@ -189,7 +188,7 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let lock = g.time + row.dur + g.k.gunslots.back;
     g.gd[gd].second.as_mut().unwrap().lock = lock;
     g.stats.gunslots.back += 1;
-    let f = crate::gunreload::feed_of(g, &def);
+    let f = crate::gunreload::feed_of(&def);
     let c = g.gd[gd].ch;
     let long = if def.cls == crate::weapons::WeaponClass::Pistol { None } else { Some(w) };
     crate::gunreload::feed_deal(g, c, long, Some(true));

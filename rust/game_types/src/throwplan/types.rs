@@ -22,8 +22,3 @@ pub struct ThrowTo {
     pub rest: V3,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct ThrowplanStats {
-    pub sims: i32,
-}

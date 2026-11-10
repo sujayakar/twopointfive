@@ -101,15 +101,5 @@ pub struct Squad40Mod {
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct Squad40Stats {
-    pub staged: i32,
-    pub fired: i32,
-    pub turned: i32,
-    pub refused: i32,
-    pub gave_up: i32,
-}
-
 /// (src/game/squad40.ts:148 none)
 pub const none: &str = "no 40 mm left.";

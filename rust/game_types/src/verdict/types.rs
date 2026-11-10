@@ -25,7 +25,6 @@ pub struct Verdict {
     pub fell_at: Vec<f64>,
     pub res: Option<crate::verdict::RunVerdict>,
     #[is(-1.0)] pub card_at: f64,
-    pub kept: Option<crate::verdict::KeptNote>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -105,9 +104,5 @@ pub struct RunVerdictFoes {
 pub struct RunVerdictHostages {
     pub alive: f64,
     pub of: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNote {
 }
 

@@ -12,7 +12,6 @@ pub struct Rescue {
     pub resolve: f64,
     #[is(35.0)] pub resolve_secs: f64,
     #[is(f64::NAN)] pub t0: f64,
-    pub door_orders: f64,
     pub blind_rounds: f64,
     pub result: Option<crate::rescue::RescueResult>,
     pub defs: JsMap<GuardId, crate::rescue::Def>,
@@ -81,12 +80,6 @@ pub struct RescueResult {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum RescueResultState {
-    #[default] Lost,
-    Rescued,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueResultGrade {
     #[default] Failed,
     Clean,
@@ -120,7 +113,6 @@ pub enum Role {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefMark {
-    pub pos: V3,
     pub aim_at: V3,
 }
 
@@ -161,16 +153,6 @@ pub struct RescueSearchAValue {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueState {
-    Lost,
-    Off,
-    Rescued,
-    Staged,
-    Secured,
-    Running,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueRoomPointWhich {
     Hold,
     Outside,
@@ -195,12 +177,6 @@ pub struct RescuePick {
     pub side: Vec<GuardId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueEndState {
-    Lost,
-    Rescued,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RescueObjective {
     pub text: String,
@@ -213,10 +189,14 @@ pub struct RescueMod {
     #[is({ let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 
-pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
-
 pub const SEARCH_RATE: f64 = 1.3;
 
 pub const SEARCH_HALF: f64 = 1.75;
 
 pub const CREW_SEEN: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum RescueResultState {
+    #[default] Lost,
+    Rescued,
+}

@@ -40,7 +40,7 @@ fn lit_r(r: crate::darkdoor::DarkRoom) -> crate::darkdoor::StandsLitR {
 /// one line of a kind from this man, the next of its pool by his own count: spoken, or on the net with the handset's chirp.
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind, radio: bool) {
     let (_, say, he, they) = *LINES.iter().find(|l| l.0 == kind).unwrap();
-    let extra: Pool = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &they, &he) } else { he };
+    let extra: Pool = if g.team(gd) != crate::teams::Team::Guard { crate::words::w(g, &they) } else { he };
     let mut pool: Vec<&'static str> = Vec::new();
     pool.extend_from_slice(say);
     pool.extend_from_slice(extra);
@@ -76,7 +76,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a man this file is about at all: a living defender or a man of the night staff.
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    !g.cond[x.ch].down && x.civ.is_none() && x.held.is_none() && (x.team == crate::teams::Team::Hostile || x.team == crate::teams::Team::Guard)
+    !g.cond[x.ch].down && x.held.is_none() && g.ch[x.ch].team.theirs()
 }
 
 /// he knows something is out there.
@@ -142,7 +142,7 @@ fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMut(&m
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !ours(g, o) || g.gd[o].team != g.gd[gd].team { continue; }
+        if o == gd || !ours(g, o) || g.team(o) != g.team(gd) { continue; }
         if let Some(f) = fit.as_mut() { if !f(g, o) { continue; } }
         if crate::runner::runner_nobody(g, o) { continue; }
         let d = flat(pos_of(g, o), g.ch[c].pos);
@@ -165,7 +165,7 @@ fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != gd && g.gd[o].team == g.gd[gd].team && can_come(g, o) && !tried.contains(&o) && flat(pos_of(g, o), p) <= k.mate_m { near.push(o); }
+        if o != gd && g.team(o) == g.team(gd) && can_come(g, o) && !tried.contains(&o) && flat(pos_of(g, o), p) <= k.mate_m { near.push(o); }
     }
     js::sort_by(&mut near, |a, b| flat(g.ch[g.gd[*a].ch].pos, p) - flat(g.ch[g.gd[*b].ch].pos, p));
     near.truncate(m::max(1.0, m::round(k.mate_try)) as usize);
@@ -236,7 +236,6 @@ fn dark_room(g: &mut crate::game::Game, room: f64) -> crate::darkdoor::DarkRoom 
     let share = if n > 0.0 { under / take } else { 0.0 };
     let now = crate::darkdoor::Read { t: g.time, dark: n > 0.0 && share >= k.dark_share, mean: if n > 0.0 { sum / take } else { 1.0 } };
     g.m.darkdoor.reads_of.get_or_insert_with(JsMap::new).set(crate::Num(room), now);
-    g.stats.darkdoor.asks += 1;
     crate::darkdoor::DarkRoom { dark: now.dark, mean: now.mean }
 }
 
@@ -364,7 +363,6 @@ fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     row.spot = Some(v3::copy(mp));
     row.lag = 0.0;
     fear(g, gd).other = Some(m);
-    g.stats.darkdoor.calls += 1;
     let here = pos_of(g, gd);
     crate::belief::word(g, m, here);
     crate::mind::raise(g, m, 0.42, "darkdoor");
@@ -458,13 +456,11 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
         s.t = 0.0;
         s.called = false;
         s.tried = Vec::new();
-        g.stats.darkdoor.balks += 1;
     }
     let s = fear(g, gd);
     if !again && (s.quits.iter().filter(|q| q.room == room).count() as f64) >= k.fed_up_n - 1.0 {
         s.act = DarkDoorAct::Solo;
         bark(g, gd, LineKind::Alone, false);
-        g.stats.darkdoor.solos += 1;
         return dark_door_gate(g, gd, 0.0, speed);
     }
     s.act = DarkDoorAct::Balk;
@@ -529,7 +525,6 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
             s.other = Some(mt);
             s.called = false;
             s.tried = Vec::new();
-            g.stats.darkdoor.pairs += 1;
             return Some(speed);
         }
     }
@@ -543,7 +538,6 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
         let now = g.time;
         fear(g, gd).quits.push(crate::darkdoor::FearQuitsItem { room, t: now });
         end(g, gd, None);
-        g.stats.darkdoor.quits += 1;
         let id = g.ch[c].id;
         let n = match &g.gd[gd].search_plan { Some(p) => p.spots.len(), None => 0 };
         for i in 0..n {

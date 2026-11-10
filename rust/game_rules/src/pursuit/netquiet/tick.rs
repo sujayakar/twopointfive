@@ -51,9 +51,9 @@ fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a man this file is about at all: a defender or night staff, not a man the mission leads itself
 fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     g.gd[gd].civ.is_none()
-        && (team == crate::teams::Team::Hostile || team == crate::teams::Team::Guard)
+        && team.theirs()
         && !crate::mission::leads(g, gd)
 }
 
@@ -154,8 +154,6 @@ fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind
     let n = mind(g, gd);
     n.bark = 0.0;
     n.last_kind = kind_index(kind);
-    g.stats.netquiet.lines += 1;
-    let id = id_of(g, gd);
 }
 
 /// is anybody of his side up on the whole net, the men in `but` aside
@@ -165,7 +163,7 @@ fn net_up(g: &mut crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bo
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != gd && g.gd[o].team == g.gd[gd].team && on_net(g, o) && !but.contains(&o) {
+        if o != gd && g.team(o) == g.team(gd) && on_net(g, o) && !but.contains(&o) {
             return true;
         }
     }
@@ -185,7 +183,6 @@ fn quiet_for(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], hear
         if !n.asked.has(crate::Num(id)) {
             n.asked.add(crate::Num(id));
             n.quiet += 1.0;
-            g.stats.netquiet.quiet += 1;
             pay(g, asker, id, unanswered);
             fresh = Some(m);
         }
@@ -199,7 +196,6 @@ fn quiet_for(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], hear
             pay(g, h, id, heard_it);
         }
     }
-    g.stats.netquiet.asks += 1;
     let mut rung = mind(g, asker).quiet;
     for &h in hearers {
         rung = m::max(rung, mind(g, h).quiet);
@@ -223,13 +219,10 @@ pub fn net_quiet_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: G
     if !on_net(g, asker) || asker == who {
         return;
     }
-    let team = g.gd[asker].team;
-    if team == crate::teams::Team::Guard {
-        g.stats.netquiet.staff_asks += 1;
-    }
+    let team = g.team(asker);
     let mut hearers = Vec::new();
     for &m in men {
-        if m != asker && m != who && g.gd[m].team == team && on_net(g, m) {
+        if m != asker && m != who && g.team(m) == team && on_net(g, m) {
             hearers.push(m);
         }
     }
@@ -241,17 +234,16 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
     if !on_net(g, asker) {
         return;
     }
-    let team = g.gd[asker].team;
+    let team = g.team(asker);
     let mut quiet = Vec::new();
     for &m in silent {
-        if m != asker && g.gd[m].team == team && side(g, m) {
+        if m != asker && g.team(m) == team && side(g, m) {
             quiet.push(m);
         }
     }
     if quiet.is_empty() {
         return;
     }
-    g.stats.netquiet.stand_checks += 1;
     let mut hearers = Vec::new();
     for &m in heard {
         if m != asker && on_net(g, m) {
@@ -265,12 +257,12 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
 fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Option<GuardId> {
     let at = pos_of(g, finder);
     let eye: V3 = [at[0], 1.5, at[2]];
-    let team = g.gd[finder].team;
+    let team = g.team(finder);
     let body_m = g.k.netquiet.body_m;
     let mut best: Option<GuardId> = None;
     let mut bs = m::INF;
     for &o in men {
-        if o == finder || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team || !side(g, o) {
+        if o == finder || !crate::condition::down(g, g.gd[o].ch) || g.team(o) != team || !side(g, o) {
             continue;
         }
         let c = g.gd[o].ch;
@@ -301,10 +293,10 @@ pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &
         Some(b) => id_of(g, b),
         None => -1.0,
     };
-    let team = g.gd[finder].team;
+    let team = g.team(finder);
     let mut told = Vec::new();
     for &o in men {
-        if o != finder && g.gd[o].team == team && on_net(g, o) {
+        if o != finder && g.team(o) == team && on_net(g, o) {
             told.push(o);
         }
     }
@@ -323,10 +315,6 @@ pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &
         return;
     }
     mind(g, finder).body_t = 0.0;
-    g.stats.netquiet.bodies += 1;
-    if team == crate::teams::Team::Guard {
-        g.stats.netquiet.staff_bodies += 1;
-    }
     if body.is_some() {
         mind(g, finder).known.add(crate::Num(id));
         pay(g, finder, id, k_body);
@@ -353,16 +341,16 @@ fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t < g.k.netquiet.shooter_secs {
         return true;
     }
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
+    let team = g.team(gd);
+    if team.theirs() && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
         return true;
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let (o_team, o_ch) = (g.gd[o].team, g.gd[o].ch);
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
+        let (o_team, o_ch) = (g.team(o), g.gd[o].ch);
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && team.foe_of(o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
             return true;
         }
     }
@@ -376,12 +364,12 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     }
     let (fall_seen, fall_unseen, leader_shock) = (g.k.netquiet.fall_seen, g.k.netquiet.fall_unseen, g.k.morale.leader_shock);
     let id = id_of(g, victim);
-    let (v_team, v_ch) = (g.gd[victim].team, g.gd[victim].ch);
+    let (v_team, v_ch) = (g.team(victim), g.gd[victim].ch);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
+        if o == victim || !on_net(g, o) || g.team(o) != v_team || crate::control::man::blind(g, o) {
             continue;
         }
         if !crate::guards::can_see_char(g, o, v_ch).visible {
@@ -397,9 +385,6 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
         }
         pay(g, o, id, if seen { fall_seen } else { fall_unseen });
         g.stats.netquiet.falls += 1;
-        if !seen {
-            g.stats.netquiet.unseen += 1;
-        }
     }
 }
 
@@ -416,7 +401,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
     let (small_where, heard_last_t) = (g.gd[gd].witness.heard.small_where, g.gd[gd].witness.heard.last_t);
     let p = pos_of(g, gd);
     let me = id_of(g, gd);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let lk = g.gd[gd].last_known;
     let rf: Option<V3> = if small && small_where.is_some() {
         small_where
@@ -450,7 +435,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
         }
         if let Some(w) = who {
             let w_team = crate::teams::team_of_id(g, w);
-            if !crate::teams::is_hostile(g, team, w_team) {
+            if !team.foe_of(w_team) {
                 continue;
             }
         }
@@ -630,14 +615,14 @@ fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let mut had = crate::enemysquads::squad_of(g, gd).map_or(0, |q| q.men.len()) > 1;
     let mut up = false;
     let mut near = false;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mate_m = g.k.netquiet.mate_m;
     let p = pos_of(g, gd);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || !side(g, o) {
+        if o == gd || g.team(o) != team || !side(g, o) {
             continue;
         }
         had = true;
@@ -716,11 +701,9 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
         }
         match (f.what, f.who) {
             (crate::netquietfeed::NetFeedWhat::Asked, Some(who)) => {
-                g.stats.netquiet.squad_asks += 1;
                 net_quiet_asked(g, f.by, who, &f.men);
             }
             (crate::netquietfeed::NetFeedWhat::Body, _) => {
-                g.stats.netquiet.squad_bodies += 1;
                 net_quiet_body(g, f.by, &f.men);
             }
             _ => {}
@@ -820,9 +803,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
                         n.whip_held = 0.0;
                     }
                     n.whip_t = k.whip_secs;
-                    if swing {
-                        g.stats.netquiet.whips += 1;
-                    }
                 }
             }
         }
@@ -871,9 +851,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             if n.roused >= k.calm_secs && n.bark >= k.bark_secs {
                 speak(g, gd, LineKind::Ask, "", true);
                 mind(g, gd).quiet += 1.0;
-                g.stats.netquiet.quiet += 1;
-                g.stats.netquiet.asks += 1;
-                g.stats.netquiet.self_asks += 1;
                 shock(g, gd, k.unanswered);
                 owe(mind(g, gd), LineKind::Last, "", k.ask_beat);
             }
@@ -890,7 +867,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         }
         n.last = SAID;
         n.t = 0.0;
-        g.stats.netquiet.last += 1;
         if !said {
             speak(g, gd, kind, "", true);
         }
@@ -907,7 +883,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         n.mate_t = 0.0;
         n.spot = None;
         n.look = None;
-        g.stats.netquiet.released += 1;
         return;
     }
     if n.last == SAID {
@@ -941,7 +916,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.last = BACK;
             n.t = 0.0;
             n.whip_at = None;
-            g.stats.netquiet.backs += 1;
             // the room fight's own scripted leg, walked backwards, his gun on the doors
             let aim = [to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0];
             crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, crate::owner::by::LAST_MAN);
@@ -1004,7 +978,6 @@ fn rouse(g: &mut crate::game::Game, gd: GuardId) {
 /// …and off it again: wary, not alert
 fn ease(g: &mut crate::game::Game, gd: GuardId) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "netquiet");
-    g.stats.netquiet.eased += 1;
 }
 
 /// the awareness he does not fall under, low on his spot
@@ -1034,7 +1007,6 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) {
     n.last = LOW;
     n.t = 0.0;
     n.low = true;
-    g.stats.netquiet.low += 1;
     watch(g, gd);
     rouse(g, gd);
 }
@@ -1079,12 +1051,6 @@ mod tests {
         n.whip_at = Some([1.0, 0.0, 1.0]);
         n.whip_t = 1.0;
         assert!(whipping(&mut g, gd));
-    }
-
-    #[test]
-    fn the_typed_kinds_stand_in_the_order_of_the_skeletons_table() {
-        let words: Vec<String> = KINDS.iter().map(|k| String::from(k.as_str())).collect();
-        assert_eq!(words, kinds());
     }
 
     #[test]

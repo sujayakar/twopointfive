@@ -22,9 +22,9 @@ fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
 }
 /// `ordersOf(g, gd)`'s `sams && mine(gd)`: the book on Game with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
 }
 /// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
 fn no_path(d: &mut crate::game::Guard) {
@@ -91,56 +91,6 @@ pub(super) fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
 }
 const BUBBLE_TURN: f64 = 1.0;
 
-/// Fresh guards at the start of their routes; spawned units are not stood up again.
-pub fn reset_guards(g: &mut crate::game::Game) {
-    for pl in crate::seats::men(g) {
-        g.pl[pl].dragging = None;
-        g.pl[pl].takedown = None;
-        g.pl[pl].holding = None;
-        let c = g.pl[pl].ch;
-        g.ch[c].anim.hold_pose = None;
-    }
-    let old = g.guards.clone();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { release_unit(g, gd); }
-    }
-    end_engagement(g, EndEngagementOutcome::Reset);
-    let old = g.guards.clone();
-    let mut fresh: Vec<(f64, RouteId, i32, LightId, V3)> = Vec::new();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { continue; }
-        let c = g.gd[gd].ch;
-        fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i, g.gd[gd].flashlight, g.ch[c].tint));
-    }
-    for &gd in &old {
-        let c = g.gd[gd].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
-    let mut shift: Vec<GuardId> = Vec::with_capacity(fresh.len());
-    let (men, rig) = (g.men, g.rig);
-    for (id, route, route_i, fl, tint) in fresh { shift.push(crate::game::guard_new(g, men, rig, id, route, route_i, fl, tint, None)); }
-    g.guards = shift.clone();
-    for gd in shift {
-        let c = g.gd[gd].ch;
-        crate::character::character_update(g, c, 0.0);
-    }
-    crate::opening::opening_start(g);
-    g.light_home.mains.fix_t = 0.0;
-    crate::seats::each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
-    g.escalation = 0.0;
-    g.escalation_t = -1.0;
-    g.alarm.episode = false;
-    g.alarm.placed = false;
-    g.alarm.apart_t = 0.0;
-    g.clearing = None;
-    g.cleared_at.clear();
-    let r = rollcall_state(g);
-    r.stage = RollcallStage::Idle;
-    r.next_at = -1.0;
-    r.caller = None;
-    r.missing = None;
-}
-
 // ---- alarm escalation
 
 /// The alarm level the guards act on: none while nobody plays.
@@ -164,7 +114,7 @@ fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) ->
             if off_net(g, gd)
                 || Some(gd) == except
                 || (pass == 0 && (g.gd[gd].state == GuardState::Alert || crate::doze::doze_asleep(g, gd)))
-                || g.gd[gd].team != Team::Guard
+                || g.team(gd) != Team::Guard
                 || g.gd[gd].unit.is_some()
             { continue; }
             let d = match pos { Some(p) => v3::dist(g.ch[g.gd[gd].ch].pos, p), None => 0.0 };
@@ -264,7 +214,7 @@ fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
             || g.gd[x].state == GuardState::Alert
             || g.gd[x].script.is_some()
             || matches!(&g.gd[x].body_duty, Some(b) if b.stage != GuardBodyDutyStage::Fan)
-            || g.gd[x].team != Team::Guard
+            || g.team(x) != Team::Guard
             || crate::doze::doze_asleep(g, x)
         { continue; }
         let r = if g.gd[x].state == GuardState::Patrol { 2 } else { 1 };
@@ -284,7 +234,7 @@ fn still_looking(g: &mut crate::game::Game) -> bool {
 /// calm, free of orders, errands and bodies, and of Sam's arm
 fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     let d = &g.gd[x];
-    x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && d.team == Team::Guard
+    x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
@@ -414,7 +364,7 @@ fn rollcall_idle(g: &mut Game) {
     r.next_at = next;
 }
 /// Once a frame: the radio check's clock and its short exchange.
-fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
+fn update_rollcall(g: &mut crate::game::Game) {
     if g.aside || !g.ai_enabled {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
@@ -431,7 +381,7 @@ fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
         let next = g.time + rollcall_interval(g);
         rollcall_state(g).next_at = next;
     }
-    let staff: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.gd[x].team == Team::Guard).collect();
+    let staff: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.team(x) == Team::Guard).collect();
     let living: Vec<GuardId> = staff.iter().copied().filter(|&x| !crate::condition::down(g, g.gd[x].ch)).collect();
     match rollcall_state(g).stage {
         RollcallStage::Idle => {
@@ -663,7 +613,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
         Some(a) => a,
         None => {
             let alive: Vec<GuardId> = g.guards.iter().copied()
-                .filter(|&x| !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none())
+                .filter(|&x| !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && g.team(x) == Team::Guard && g.gd[x].unit.is_none())
                 .collect();
             if alive.len() != 1 { return false; }
             alive[0]
@@ -735,7 +685,7 @@ fn step_down_escalation(g: &mut crate::game::Game) {
 
 /// Once a frame after the guards: the alarm episode, stepping down, the lockdown duties.
 pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
-    update_rollcall(g, dt);
+    update_rollcall(g);
     crate::dialogue::update_ambient(g, dt);
     tick_engagement(g);
     let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);
@@ -743,7 +693,7 @@ pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != Team::Guard { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.team(gd) != Team::Guard { continue; }
         living += 1.0;
         if g.gd[gd].state == GuardState::Alert {
             any_alert = true;
@@ -778,7 +728,7 @@ fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() { continue; }
+        if g.team(gd) != Team::Guard || g.gd[gd].unit.is_some() { continue; }
         if g.gd[gd].held.is_some() {
             if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].leader = None; g.gd[gd].post = None; }
             continue;

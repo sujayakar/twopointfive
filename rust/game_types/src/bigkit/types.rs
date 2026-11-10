@@ -17,18 +17,6 @@ pub struct SPOTSValue {
     pub shoulder: Vec<[f64; 2]>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBig {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBigSpotTool {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SamBigSpot {
     pub pos: V3,
@@ -37,55 +25,18 @@ pub struct SamBigSpot {
     pub via: Option<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum BigSpotsTool {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBigFar {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigEquipKind {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigOutByKind {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigCarriedC {
     pub id: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum BigCarried {
-    Shotgun,
-    Hammer,
 }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct BigkitStats {
     pub sam_shells: i32,
-    pub sam_shot: i32,
     pub sam_blows: i32,
-    pub sam_hammered: i32,
-    pub drawn: i32,
-    pub slung: i32,
     pub mate_blows: i32,
     pub mate_hammered: i32,
-    pub hammers_out: i32,
-    pub hammers_in: i32,
-    pub sam_walks: i32,
 }
 
 pub const TAIL: f64 = 0.3;

@@ -189,14 +189,7 @@ pub struct SneakMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct SneakStats {
-    pub waits: i32,
-    pub wait_s: f64,
-    pub crossings: i32,
-    pub shade: i32,
-    pub back_offs: i32,
-    pub asides: i32,
     pub cues: i32,
-    pub noise_walks: i32,
 }
 
 pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're stood in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for his back."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're stood in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }

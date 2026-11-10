@@ -24,7 +24,7 @@ fn without_bits(flags: f64, mask: f64) -> f64 { (js::to_i32(flags) & !js::to_i32
 /// g.col.boxes[i]: a place in the level's list, which holds the box's ID
 fn box_at(g: &Game, i: f64) -> BoxId { g.col.boxes[i as usize] }
 /// aabbOf(box), for a box named by its ID: aabb_of takes g and the row, which cannot both be lent
-fn aabb(g: &mut Game, b: BoxId) -> AABB { let row = seam_box(g, b).clone(); aabb_of(g, &row) }
+fn aabb(g: &mut Game, b: BoxId) -> AABB { let row = seam_box(g, b).clone(); aabb_of(&row) }
 /// `owner.get(j)`: the breakable a static belongs to
 fn owner_of(g: &Game, j: f64) -> Option<WallbreakBreakableId> { g.destr.walls.owner.get(crate::Num(j)).copied() }
 /// `B.nx > 1 || B.box.h[0] >= B.box.h[2]`
@@ -49,8 +49,6 @@ pub(super) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId
     let as_ = if hard == Some(true) { Some(crate::break_table::Mat::Blockwork) } else { None };
     let cell = seam_box_push(g, cell);
     let r = crate::break_table::breaks_shed_cell(g, surf, cell, dir, who, budget, as_);
-    g.stats.wallbreak.chunks += r.thrown as i32;
-    g.stats.wallbreak.chunks_demoted += r.refused as i32;
 }
 
 // ---------------------------------------------------------------- what stood on it / hung on it
@@ -296,12 +294,10 @@ fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: 
         }
         // (the charge's board goes with its wall once a column behind it is open from the floor up)
         let mine = !quiet && sill > 0.0 && match &g.destr.walls.hung_now { Some(h) => h.wall == b_id && h.set.contains(&j), None => false };
-        let mut forced = false;
-        if tot == 0.0 || gone * 2.0 < tot { if !mine { continue; } forced = true; }
-        if !wall_break_rests_on(g, j, a, None).is_empty() { if !mine { continue; } forced = true; }   // (standing on something after all)
+        if tot == 0.0 || gone * 2.0 < tot { if !mine { continue; } }
+        if !wall_break_rests_on(g, j, a, None).is_empty() { if !mine { continue; } }   // (standing on something after all)
         if wall_break_fall(g, j, a, dir, who, quiet, rects) {
             queue.push(a);
-            if forced { g.destr.walls.hung_gone.set(crate::Num(j), b_id); }
         }
     }
 }
@@ -316,7 +312,6 @@ fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
         let mut budget = crate::break_table::ShedBudget { chunks: 2.0, heap: None, from: None, per: None };
         return wall_break_open_cells(g, cid, &cells, cause, who, dir, Some(quiet), Some(&mut budget)).is_some();
     }
-    g.stats.wallbreak.falls += 1;
     if crate::destruction::destruction_item_of(g, j).is_some() {
         crate::destruction::destruction_drop_item(g, j, d, Some(who), Some(quiet));
         rects.push([a.x0, a.z0, a.x1, a.z1]);
@@ -324,7 +319,7 @@ fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
     }
     let h = seam_box(g, b).h;
     let vol = h[0] * h[1] * h[2] * 8.0;
-    if vol > g.k.walls.fall_max_vol { g.stats.wallbreak.floating += 1; return false; }   // too big to throw about: it stays
+    if vol > g.k.walls.fall_max_vol {  return false; }   // too big to throw about: it stays
     if g.destr.walls.fixture_boxes.has(crate::Num(j)) && !quiet { crate::destruction::destruction_break_fixture_box(g, j); }
     let flags = seam_box(g, b).flags;
     g.destr.walls.hidden.set(crate::Num(j), flags);
@@ -345,9 +340,7 @@ fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
         let w: V3 = [w0, w1, w2];
         let got = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Chunk, b, v, w, Some(who), None);
         if got.is_some() {
-            g.stats.wallbreak.chunks += 1;
         } else {
-            g.stats.wallbreak.chunks_demoted += 1;
             let albedo = seam_box(g, b).albedo;
             crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, c, [0.0, 1.0, 0.0], 8.0, crate::render_particles::EmitOpts { speed: 1.8, speed_jit: Some(0.7), spread: Some(1.2), life: 16.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), color: Some(albedo), owner: Some(who), ..Default::default() });
         }
@@ -364,8 +357,7 @@ pub fn wall_break_round(g: &mut crate::game::Game, who: f64, hit_p: V3, dir: V3,
     let w = k_ * chaos * 2.0;
     if index >= 1e6 { crate::doorblast::leaf_round(g, index, who, hit_p, dir, w); return; }   // a door leaf: the doors' own
     let b = match owner_of(g, index) { Some(b) => b, None => return };
-    if g.tab.wallbreak_breakable[b].hard == Some(true) { return; }   // (a hard wall scars like the structure it is)
-    g.stats.wallbreak.rounds += 1;
+    if g.tab.wallbreak_breakable[b].hard == Some(true) { return; }   
     let bx = box_at(g, index);
     let [ix, mut iy, iz] = wall_break_cell_at(g, b, v3::mad(hit_p, dir, 0.02), Some(bx));
     let c_hit = wall_break_ci(g, b, ix, iy, iz);   // (the cell the round met: the wear keys its marks by it)
@@ -574,13 +566,12 @@ pub(in crate::breakage) fn wall_break_blast(g: &mut crate::game::Game, at: V3, o
 
 /// Everything is judged against the level as it stood when it went off, then opened.
 fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
-    let mut res = BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, panes: 0.0, opened: 0.0, serial: g.destr.walls.serial };
+    let mut res = BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, opened: 0.0 };
     if !wall_break_on(g) { return res; }
     let k_ = g.k.walls.blast;
     let r = opts.radius.unwrap_or(k_.radius) * opts.power.unwrap_or(1.0);
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
     if !(r > 0.0) { return res; }
-    g.stats.wallbreak.blasts += 1;
     // HB: the wall the charge is set on, if this engine owns it
     let hb = match opts.hung { Some(h) => owner_of(g, h.wall), None => None };
     let hung: Vec<f64> = match (hb, opts.hung) { (Some(_), Some(h)) => wall_break_hung_at(g, h.wall, at, h.r), _ => Vec::new() };
@@ -640,7 +631,6 @@ fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak
             }
         }
     }
-    res.serial = g.destr.walls.serial;
     res
 }
 
@@ -665,7 +655,6 @@ pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: O
     crate::wallwear::wall_wear_reset(g);
     crate::wallskin::wall_skin_clear(g);
     g.destr.walls.hung_now = None;
-    g.destr.walls.hung_gone.clear();
     let authored = g.destr.walls.authored;
     if !g.destr.walls.dirty && g.col.boxes.len() as f64 == authored { let_go(g); return; }
     let hidden: Vec<(crate::Num, f64)> = g.destr.walls.hidden.iter().map(|(i, f)| (i, *f)).collect();

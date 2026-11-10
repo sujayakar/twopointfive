@@ -16,7 +16,7 @@ fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { 
 #[cfg(not(test))]
 fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { crate::scene_boxes::make_box(g, p) }
 #[cfg(not(test))]
-fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) { crate::thinline::thin_note(g, b.into(), hw0, k, r, g_2, bl); }
+fn noted_thin(g: &mut Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) { crate::thinline::thin_note(g, b.into(), hw0, k); }
 #[cfg(test)]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { tests::row(b) }
 #[cfg(test)]

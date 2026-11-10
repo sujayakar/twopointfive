@@ -349,7 +349,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED-IN ROOMS (lib/lived.ts: left out by the loader with the switch off) ----------------
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts) ----------------
   // A bonded customs shed. THE SHED IS GREY AND YELLOW, AND THE ONLY BRIGHT COLOURS IN IT ARE THE THINGS THAT WERE SEIZED, in three places with three jobs: the
   // bulk locked up on the cage's shelf tops, one opened carton on the hall's examining table, and a few small pieces (his cut) beside the chief's safe. Every place gets one thing only it has, the clutter of that use, a floor of its own
   // and something loose. Additions only, the TAIL of the boxes and of the props; no light, nothing lit.

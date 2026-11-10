@@ -101,7 +101,7 @@ fn clearing_cap(g: &mut crate::game::Game) -> f64 {
 /// Hand whoever of ours is still scripted back to the AI calm.
 pub fn clearing_cancel(g: &mut crate::game::Game) {
     for gd in clearing_men(g) {
-        if g.gd[gd].script.is_some() && g.guards.contains(&gd) { end_guard_script(g, gd, Some(EndGuardScriptState::Patrol)); }
+        if g.gd[gd].script.is_some() && g.guards.contains(&gd) { end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
     }
     let c = cl!(g);
     c.stage = ClearStage::Done;
@@ -135,7 +135,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             let left = if dead == a { b } else { Some(a) };
             if let Some(left) = left {
                 if !crate::condition::down(g, g.gd[left].ch) {
-                    end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
+                    end_guard_script(g, left, Some(crate::game::GuardState::Suspicious));
                     crate::mind::raise(g, left, 0.6, "squad");
                     let at = g.ch[g.gd[dead].ch].pos;
                     crate::belief::word(g, left, at);
@@ -178,7 +178,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     }
     if worst == Some(Perceive::Body) {
         for &gd in &men {
-            end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
+            end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
             crate::mind::raise(g, gd, 0.5, "squad");
             if let Some(f) = fix { crate::belief::word(g, gd, f); }
             g.gd[gd].react_t = 0.6;
@@ -191,7 +191,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         let to = fix.or(g.gd[a].last_known);
         break_off(g, a, SUSPECT + 0.05, to);
         if let Some(b) = b {
-            end_guard_script(g, b, Some(EndGuardScriptState::Suspicious));
+            end_guard_script(g, b, Some(crate::game::GuardState::Suspicious));
             crate::mind::raise(g, b, SUSPECT, "squad");
             if let Some(f) = fix { crate::belief::word(g, b, f); }
             g.gd[b].react_t = 1.2;

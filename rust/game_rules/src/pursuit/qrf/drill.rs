@@ -153,7 +153,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let planted = !shut || (man_arrived(g, lead) && flat(man_pos(g, lead), p.kick_from) < 0.15 && m::abs(v3::wrap_angle(man_yaw(g, lead) - p.kick_face)) < 0.15);
         if !((planted && g.qrf.phase_t > 0.45) || g.qrf.phase_t > 1.8) { return; }
         if let Some(d) = d {
-            if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d, s) < 1.0 {
+            if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d) < 1.0 {
                 crate::doors::door_set_latched(g, d, false);
                 crate::doors::door_set_closing(g, d, false);
                 let v = s * m::max(m::abs(crate::doors::door_vel(g, d)), m::abs(p.fling));
@@ -244,15 +244,15 @@ fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
 /// The can cooks: on their own count it goes off, with the element out of its view, and they flow.
 pub(super) fn phase_bang(g: &mut crate::game::Game, el: &[GuardId]) {
     let it = match g.qrf.can { Some(it) => it, None => { start_flow(g, el); return; } };
-    if g.qrf.can_land_t.is_nan() && (crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it)) { g.qrf.can_land_t = g.time; }
+    if g.qrf.can_land_t.is_nan() && (g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled) { g.qrf.can_land_t = g.time; }
     if (!g.qrf.can_land_t.is_nan() && g.time - g.qrf.can_land_t >= BANG_FUSE) || g.qrf.phase_t > 2.4 {
-        crate::throwables::item_set_fired(g, it, true);
+        g.tab.item[it].fired = true;
         // detonateStun's daze falls on everybody but the element; what it writes to the list of men is put back with the list
         let all = g.guards.clone();
         g.guards = all.iter().copied().filter(|x| !g.qrf.men.contains(x)).collect();
         crate::combat::detonate_stun(g, it, None, None);
         g.guards = all;
-        let at = crate::throwables::item_pos(g, it);
+        let at = g.tab.item[it].pos;
         their_bang(g, at, el[0]);
         start_flow(g, el);
     }
@@ -329,7 +329,7 @@ pub(super) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     let d = match crate::doors::doors_by_name(g, &p.door) { Some(d) => d, None => return false };
     if g.qrf.cast.is_none() {
         // (`mine: gd => Q.men.includes(gd)`: squad_orders_mine answers it from g.qrf.men, the one cast there is)
-        let team = match side_of_team(g) { SideOfTeam::Guard => crate::teams::Team::Guard, SideOfTeam::Hostile => crate::teams::Team::Hostile };
+        let team = side_of_team(g);
         let of = crate::orders::OtherCast { team, ring: crate::squadcast::every_key() };
         let c = crate::squadcast::squad_cast(g, &of);
         g.qrf.cast = Some(c);
@@ -342,7 +342,7 @@ pub(super) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     tools.frags = 0.0;
     tools.lights = Some(true);
     let inside = match g.qrf.fix { Some(fix) => p.bounds.is_some() && crate::squad::in_bounds(fix, p.bounds, None), None => false };
-    let kind = if !inside { crate::doortools::DoorToolsOrderKind::Threshold } else if g.qrf.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
+    let kind = if !inside { crate::doortools::DoorToolKind::Threshold } else if g.qrf.bangs > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::OpenClear };
     let side = crate::orders::side_of(g, d, p.stack[0]);
     let op = in_cast(g, |g| crate::doortools::door_tools_order(g, kind, el, d, side, None, None));
     let op = match op {
@@ -355,7 +355,6 @@ pub(super) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     };
     g.qrf.op = Some(op);
     g.qrf.op_beat = 0.0;
-    g.qrf.drills += 1.0;
     g.qrf.phase = Phase::Drill;
     g.qrf.phase_t = 0.0;
     g.qrf.can = None;
@@ -414,7 +413,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     }
     for &man in el.iter() {
         if g.gd[man].held.is_some() {   // (in Sam's arm: off the entry: the orders would walk him out of it)
-            in_cast(g, |g| { if crate::orders::squad_orders_has(g, &crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
+            in_cast(g, |g| { if crate::orders::squad_orders_has(&crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
         }
     }
     in_cast(g, |g| { crate::doortools::door_tools_tick(g); crate::orders::squad_orders_tick(g); });
@@ -424,7 +423,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.qrf.op_beat += 1.0;
     }
     if let Some(can) = g.tab.doortools_door_op[op].can {
-        if !crate::throwables::item_fired(g, can) { g.qrf.can = Some(can); g.qrf.can_land_t = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
+        if !g.tab.item[can].fired { g.qrf.can = Some(can); g.qrf.can_land_t = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
     }
     if g.tab.doortools_door_op[op].bang_t == g.time {
         if let Some(at) = g.tab.doortools_door_op[op].bang_at {
@@ -443,7 +442,6 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     if why != "gone" { g.qrf.spent = Some(QrfSpent { room: t.room.clone(), fix_t: g.qrf.fix_t }); }
     if why == "gone" { hold360(g, el); return; }   // (the tools started afresh under it: they re-form where they stand)
     if why == "in" {
-        g.qrf.drills_in += 1.0;
         g.qrf.phase = Phase::Called;
         g.qrf.phase_t = 0.0;
         let now = g.time;
@@ -470,7 +468,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
     let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(near_man_pos(g, seer)) };
     for &man in el {
-        if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::squad::EndGuardScriptState::Alert)); }
+        if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::game::GuardState::Alert)); }
         let is_seer = man == seer;
         crate::control::set_hold(g, man, false, "qrf");
         crate::control::set_pinned(g, man, false, "qrf");
@@ -566,7 +564,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             }));
         }
     }
-    let the = crate::words::w(g, &"", &"the ");
+    let the = crate::words::w(g, &"");
     let at = match fix_of(g) { Some(bf) => bf.pos, None => man_pos(g, lead) };
     let room = crate::dialogue::room_name(g, at);
     radio(g, Some(lead), &format!("lost him. on me — re-form, we clear toward {}{}", the, room));
@@ -607,7 +605,7 @@ pub(super) fn maybe_perimeter(g: &mut crate::game::Game) {
     let mut down = 0usize;
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.gd[x].team == crate::teams::Team::Guard && crate::condition::down(g, g.gd[x].ch) && (g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
+        if g.team(x) == crate::teams::Team::Guard && crate::condition::down(g, g.gd[x].ch) && (g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
     }
     let why = if g.qrf.lost > 0.0 {
         Some(String::from("one of ours down"))
@@ -632,7 +630,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let want = m::min(v3::clamp(m::round(g.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
     let now = g.time;
     g.qrf.perim = Some(Perimeter {
-        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), set_at: -1.0, men: Vec::new(), spawned: 0.0, peeled: 0.0,
+        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
     let lit = if g.targets.iter().any(|t| g.tab.fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
     let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);
@@ -662,7 +660,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
                 g.gd[gd].heard_up_to = g.event_seq;
                 let p = g.qrf.perim.as_mut().unwrap();
                 let post = mk.posts[p.men.len()].clone();
-                p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0, fighting: false });
+                p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0 });
                 p.spawned += 1.0;
             }
             Err(e) => {
@@ -681,14 +679,14 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let mut i = 0usize;
     while (i as f64) < n_peel {
         let gd = el[el.len() - 1 - i];   // the rear men go out
-        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Search)); }
+        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Search)); }
         crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
         g.gd[gd].standoff = None;
         g.gd[gd].pieing = None;
         g.gd[gd].search_plan = None;
         let p = g.qrf.perim.as_mut().unwrap();
         let post = mk.posts[p.men.len()].clone();
-        p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0, fighting: false });
+        p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0 });
         p.peeled += 1.0;
         i += 1;
     }
@@ -713,7 +711,6 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
 /// An outside man's walk to his post.
 fn to_post(g: &mut crate::game::Game, p: usize) {
     let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
-    row.fighting = false;
     let (gd, post) = (row.gd, row.post.clone());
     crate::control::set_pinned(g, gd, false, "qrf");
     crate::control::set_hold(g, gd, false, "qrf");
@@ -754,14 +751,13 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.qrf.fix_t = g.time;
             } else if eyes {
                 // eyes on him from the post (or at arm's length on the way): the AI fires from where he stands, the others are told where
-                crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert));
+                crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert));
                 crate::control::set_pinned(g, gd, arrived_at >= 0.0, "qrf");
                 crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "qrf");
                 crate::mind::set(g, gd, 1.0, "qrf");
                 g.gd[gd].react_t = 0.35;
                 g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
                 crate::guards::reset_chase(g, gd);
-                g.qrf.perim.as_mut().unwrap().men[idx].fighting = true;
                 g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Sight);
                 g.gd[gd].witness.alert_t = g.time;
                 say(g, gd, "CONTACT — outside!");
@@ -789,10 +785,8 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
         let (n, eta_at) = { let p = g.qrf.perim.as_ref().unwrap(); (p.men.len(), p.eta_at) };
         let all_set = n > 0 && g.qrf.perim.as_ref().unwrap().men.iter().all(|p| crate::condition::down(g, g.gd[p.gd].ch) || p.arrived_at >= 0.0);
         if all_set || g.time > eta_at + 10.0 {
-            let now = g.time;
             let p = g.qrf.perim.as_mut().unwrap();
             p.state = PerimeterState::Set;
-            p.set_at = now;
             let up: Vec<(GuardId, String)> = g.qrf.perim.as_ref().unwrap().men.iter()
                 .filter(|p| !crate::condition::down(g, g.gd[p.gd].ch) && p.arrived_at >= 0.0)
                 .map(|p| (p.gd, p.post.name.clone())).collect();

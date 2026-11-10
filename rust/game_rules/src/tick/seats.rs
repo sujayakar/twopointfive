@@ -139,10 +139,6 @@ fn set_of_game(g: &Game, s: SeatId) -> crate::seats::SeatSet {
 fn seat_at(g: &Game, i: Option<f64>) -> SeatId {
     g.seats.get(i.unwrap_or(0.0) as usize).copied().unwrap_or(g.seats[0])
 }
-/// `!!gd.unit && gd.team === 'operative'`
-fn on_team(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative
-}
 /// `gd.unit?.seat ?? 0`
 fn unit_seat(g: &Game, gd: GuardId) -> f64 {
     g.gd[gd].unit.as_ref().and_then(|u| u.seat).unwrap_or(0.0)
@@ -261,7 +257,7 @@ pub fn host_man(g: &crate::game::Game) -> PlayerId {
 }
 
 /// the man a writer with no man of its own names: the view's; bare, Game holds the first seat's set, so both arms are g.player
-pub fn man_here(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
+pub fn man_here(seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// `f` for every seat, over its view
 pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) {
@@ -388,7 +384,7 @@ pub(super) fn spot_beside(g: &mut crate::game::Game, at: V3, i: f64) -> V3 {
         let mut q = v3::copy(p);
         crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, Some(1.0));
         if m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.02
-            && !crate::scene_collision::clamp_to_world(g, &mut q, 0.3)
+            && !crate::scene_collision::clamp_to_world(&mut q, 0.3)
             && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [p[0], 0.45, p[2]], None) { return p; }
     }
     v3::copy(at)
@@ -411,7 +407,7 @@ pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut 
             let mut lead = None;
             for j in 0..g.guards.len() {
                 let gd = g.guards[j];
-                if on_team(g, gd) && g.gd[gd].unit.as_ref().and_then(|u| u.seat) == Some(index) { lead = Some(gd); break; }
+                if g.team(gd).ours() && g.gd[gd].unit.as_ref().and_then(|u| u.seat) == Some(index) { lead = Some(gd); break; }
             }
             p = match lead {
                 Some(gd) => {
@@ -499,14 +495,14 @@ pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> Se
     }
     match found {
         None => g.seats[0],
-        Some(gd) if on_team(g, gd) => seat_of(g, gd),
+        Some(gd) if g.team(gd).ours() => seat_of(g, gd),
         Some(gd) => faced_view(g, gd),
     }
 }
 
 /// the view a man of the floor is stepped over: his seat's for a teammate, the faced man's for anybody else
 pub fn view_for(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
-    if on_team(g, gd) { seat_of(g, gd) } else { faced_seat(g, gd) }
+    if g.team(gd).ours() { seat_of(g, gd) } else { faced_seat(g, gd) }
 }
 
 // ---------------------------------------------------------------- whose teammate
@@ -521,7 +517,7 @@ pub fn deal_seats(g: &mut crate::game::Game) -> bool {
     let mut has: Vec<i32> = vec![0; n];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if !on_team(g, gd) { continue; }
+        if !g.team(gd).ours() { continue; }
         roster.push(gd);
         match g.gd[gd].unit.as_ref().and_then(|u| u.seat) {
             None => fresh += 1,
@@ -579,9 +575,9 @@ pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
 
 /// the order he is under, in whichever seat's book
 pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if one_book(g) { return crate::orders::squad_orders_of(g, &crate::seats::here(g), gd); }
+    if one_book(g) { return crate::orders::squad_orders_of(&crate::seats::here(g), gd); }
     let s = seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(&crate::seats::here(g), gd))
 }
 
 /// is there a squad to order at all, any seat's
@@ -600,7 +596,7 @@ pub fn team_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Gu
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if on_team(g, gd) { out.push(gd); }
+        if g.team(gd).ours() { out.push(gd); }
     }
     out
 }
@@ -611,7 +607,7 @@ pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Guar
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if on_team(g, gd) && !crate::condition::down(g, g.gd[gd].ch) { out.push(gd); }
+        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) { out.push(gd); }
     }
     out
 }
@@ -623,7 +619,7 @@ pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
     let (mut lo, mut mine, mut all) = (0.0, 0.0, 0.0);
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if !on_team(g, gd) { continue; }
+        if !g.team(gd).ours() { continue; }
         let s = unit_seat(g, gd);
         all += 1.0;
         if s < me { lo += 1.0; } else if s == me { mine += 1.0; }

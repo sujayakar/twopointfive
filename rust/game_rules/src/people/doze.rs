@@ -18,17 +18,6 @@ fn switch(g: &mut Game, t: FixtureId, v: f64) {
     g.tab.fixture[t].on = v != 0.0;
 }
 fn is_held_seat(p: Phase) -> bool { p != Phase::No && p != Phase::Spent && p != Phase::Stir }
-fn why_word(w: WakeWhy) -> DozeWhy {
-    match w {
-        WakeWhy::Light => DozeWhy::Light,
-        WakeWhy::Alarm => DozeWhy::Alarm,
-        WakeWhy::Noise => DozeWhy::Noise,
-        WakeWhy::Taken => DozeWhy::Taken,
-        WakeWhy::Bump => DozeWhy::Bump,
-        WakeWhy::Net => DozeWhy::Net,
-    }
-}
-
 /// every 5 cm offset inside `pull_m`, nearest first
 fn build_pulls(pull_m: f64) -> Vec<[f64; 2]> {
     let mut v: Vec<[f64; 2]> = Vec::new();
@@ -59,7 +48,7 @@ fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
 fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
 /// which way a man in this chair faces
 fn chair_face(g: &crate::game::Game, p: PropId) -> f64 {
-    let y = crate::props::prop_yaw(g, p);
+    let y = g.tab.props_prop[p].yaw;
     m::atan2(-m::sin(y), -m::cos(y))
 }
 /// the mark over a man at rest ('': none): a 'z' that grows with each breath asleep; at his screen, a note until something has reached him.
@@ -80,7 +69,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
 /// a staff man on a calm patrol with nothing on his mind or in his hands
 fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
-    m.team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
+    g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
         && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
 }
 /// put his record on this game's books
@@ -146,7 +135,7 @@ fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 {
 }
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye
 fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
-    let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+    let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
     let (screen_m, pull_m, chair_m) = (g.k.doze.screen_m, g.k.doze.pull_m, g.k.doze.chair_m);
     let mut out = touch();
     let targets = g.targets.len();
@@ -198,8 +187,8 @@ fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Sea
     while pi < g.props.props.len() {
         let p = g.props.props[pi];
         pi += 1;
-        if g.tab.props_prop[p].def.kind != crate::scene_level_data::PropKindName::Chair || !crate::props::prop_asleep(g, p) { continue; }
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        if g.tab.props_prop[p].def.kind != crate::scene_level_data::PropKindName::Chair || !g.tab.props_prop[p].asleep { continue; }
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let d = flat(&wp, px, pz);
         if d >= bd && d >= sd { continue; }
         let mut taken = g.m.doze.rec.values().any(|r| r.chair == Some(p) && is_held_seat(r.phase));
@@ -262,8 +251,8 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
             d.chair = Some(c.chair);
             d.face = c.face;
             d.at = c.at;
-            d.cx = crate::props::prop_x(g, c.chair);
-            d.cz = crate::props::prop_z(g, c.chair);
+            d.cx = g.tab.props_prop[c.chair].x;
+            d.cz = g.tab.props_prop[c.chair].z;
             d.mon = c.mon;
             d.to = c.to;
             put(g, gd, d);
@@ -281,7 +270,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     flush(g, gd, d);
     if !live(g) || !calm(g, gd) || g.gd[gd].hold
         || g.gd[gd].wait < g.k.doze.rise_secs + g.k.doze.nod_secs + 4.0
-        || (!crate::props::prop_asleep(g, ch) && m::hyp2(crate::props::prop_x(g, ch) - d.cx, crate::props::prop_z(g, ch) - d.cz) > 0.15)
+        || (!g.tab.props_prop[ch].asleep && m::hyp2(g.tab.props_prop[ch].x - d.cx, g.tab.props_prop[ch].z - d.cz) > 0.15)
         || crate::guards::not_getting_anywhere(g, gd, dt, 6.0)
     {
         let wp = d.wp;
@@ -306,12 +295,11 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
         }
         d.phase = Phase::Down;
         d.t = 0.0;
-        d.cx = crate::props::prop_x(g, ch);
-        d.cz = crate::props::prop_z(g, ch);
+        d.cx = g.tab.props_prop[ch].x;
+        d.cz = g.tab.props_prop[ch].z;
         d.cyaw = m::atan2(-m::sin(d.face), -m::cos(d.face));
-        d.push = crate::props::prop_push_t(g, ch);
+        d.push = g.tab.props_prop[ch].push_t;
         flush(g, gd, d);
-        g.stats.doze.sat += 1;
     }
     g.gd[gd].wait -= dt;
     true
@@ -324,18 +312,17 @@ fn up(g: &mut crate::game::Game, gd: GuardId) {
     g.ch[c].anim.slump = 0.0;
 }
 /// woken: up from this frame and awake for the run. His row is read by `gd` and written back by it.
-fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, at: Option<&[f64]>) {
+fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::DozeWhy, at: Option<&[f64]>) {
     let Some(mut d) = g.m.doze.rec.get(gd).copied() else { return };
     left_lit(g, gd);
     up(g, gd);
-    d.why = Some(why_word(why));
+    d.why = Some(why);
     d.woke_at = g.time;
     d.phase = Phase::Spent;
     d.chair = None;
     flush(g, gd, d);
-    g.stats.doze.woke[why as usize] += 1;
-    if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
-        let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
+    if why == crate::doze::DozeWhy::Noise || why == crate::doze::DozeWhy::Light || why == crate::doze::DozeWhy::Bump {
+        let raise = if why == crate::doze::DozeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
         crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
             crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doze");
@@ -352,7 +339,7 @@ pub(super) fn doze_deaf(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let (aw, lk, st) = (g.gd[gd].awareness, g.gd[gd].fix_stamp, g.gd[gd].state);
     let hear_k = g.k.doze.hear_k;
     crate::guards::hearing_check(g, gd, Some(hear_k), Some(false), None);
-    if g.gd[gd].awareness > aw || g.gd[gd].fix_stamp != lk || g.gd[gd].state != st { wake(g, gd, WakeWhy::Noise, None); }
+    if g.gd[gd].awareness > aw || g.gd[gd].fix_stamp != lk || g.gd[gd].state != st { wake(g, gd, crate::doze::DozeWhy::Noise, None); }
     g.gd[gd].saw_player_this_frame = false;
     g.gd[gd].saw_foe_this_frame = false;
     true
@@ -389,7 +376,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
         if d.phase == Phase::Up {
             if g.time >= d.until
                 && (d.chair.is_none() || g.gd[gd].state != crate::game::GuardState::Patrol
-                    || { let ch = d.chair.unwrap(); let pos = g.ch[c].pos; let (x, z) = (crate::props::prop_x(g, ch), crate::props::prop_z(g, ch)); flat(&pos, x, z) > 0.75 }
+                    || { let ch = d.chair.unwrap(); let pos = g.ch[c].pos; let (x, z) = (g.tab.props_prop[ch].x, g.tab.props_prop[ch].z); flat(&pos, x, z) > 0.75 }
                     || g.time >= d.until + 30.0)
             { drop(g, gd); }
             continue;
@@ -404,20 +391,19 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.chair = None;
             flush(g, gd, d);
             g.ch[c].anim.slump = 0.0;
-            g.stats.doze.woke[WakeWhy::Taken as usize] += 1;
             continue;
         }
-        if crate::props::prop_push_t(g, ch) > d.push + 1e-6 {
+        if g.tab.props_prop[ch].push_t > d.push + 1e-6 {
             let who = shover_at(g, ch, c);
-            wake(g, gd, WakeWhy::Bump, Some(&who[..]));
+            wake(g, gd, crate::doze::DozeWhy::Bump, Some(&who[..]));
             continue;
         }
         if g.gd[gd].state != crate::game::GuardState::Patrol || g.gd[gd].awareness >= 0.3 {
-            wake(g, gd, WakeWhy::Net, None);
+            wake(g, gd, crate::doze::DozeWhy::Net, None);
             continue;
         }
         if !live(g) || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() || g.gd[gd].body_duty.is_some() || !crate::close::close_has_seat(g, gd) {
-            wake(g, gd, WakeWhy::Alarm, None);
+            wake(g, gd, crate::doze::DozeWhy::Alarm, None);
             continue;
         }
         if d.mon.is_some() {
@@ -426,19 +412,18 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.cz += (d.at[2] - d.cz) * k;
             flush(g, gd, d);
         }
-        crate::props::prop_set_x(g, ch, d.cx);
-        crate::props::prop_set_z(g, ch, d.cz);
-        crate::props::prop_set_w(g, ch, 0.0);
-        crate::props::prop_set_vz(g, ch, 0.0);
-        crate::props::prop_set_vx(g, ch, 0.0);
-        let yaw = crate::props::prop_yaw(g, ch);
+        crate::props::prop_move_to(g, ch, d.cx, d.cz);
+        g.tab.props_prop[ch].w = 0.0;
+        g.tab.props_prop[ch].vz = 0.0;
+        g.tab.props_prop[ch].vx = 0.0;
+        let yaw = g.tab.props_prop[ch].yaw;
         if yaw != d.cyaw {
             let mut dy = d.cyaw - yaw;
             dy = m::atan2(m::sin(dy), m::cos(dy));
             let turned = if m::abs(dy) < 0.02 { d.cyaw } else { yaw + dy * m::min(1.0, 6.0 * dt) };
-            crate::props::prop_set_yaw(g, ch, turned);
+            crate::props::prop_turn_to(g, ch, turned);
         }
-        crate::props::prop_set_dirty(g, ch, true);
+        g.tab.props_prop[ch].dirty = true;
         crate::props::prop_place(g, ch);
         if g.gd[gd].wait - dt <= g.k.doze.rise_secs {
             if d.phase == Phase::Work && !d.mon_was {
@@ -449,7 +434,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             d.phase = Phase::Up;
             d.until = g.time + 1.2;
             flush(g, gd, d);
-            g.stats.doze.rose += 1;
             continue;
         }
         g.gd[gd].wait -= dt;
@@ -471,7 +455,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                     let t = g.time;
                     d.say = t + span(g, crate::dice::Who::Man(gd), &first);
                     flush(g, gd, d);
-                    g.stats.doze.worked += 1;
                 }
             } else if d.t >= g.k.doze.nod_secs {
                 d.phase = Phase::Asleep;
@@ -479,7 +462,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 d.lit = -1.0;
                 d.ask = js::rem(g.ch[c].id, 4.0) / 4.0 * g.k.doze.ask_secs;
                 flush(g, gd, d);
-                g.stats.doze.slept += 1;
             }
             continue;
         }
@@ -488,7 +470,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             if let Some(mon) = d.mon {
                 if g.tab.fixture[mon].broken || !g.tab.fixture[mon].on || (d.t > 1.0 && g.tab.fixture[mon].factor < 0.5) {
                     let at = g.tab.fixture[mon].pos;
-                    wake(g, gd, WakeWhy::Light, Some(&at[..]));
+                    wake(g, gd, crate::doze::DozeWhy::Light, Some(&at[..]));
                     continue;
                 }
                 let at = g.tab.fixture[mon].pos;
@@ -510,7 +492,6 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
                 crate::game::game_say(g, gd, &lines[k], Some(false), Some(false));
-                g.stats.doze.lines += 1;
             }
             continue;
         }
@@ -525,7 +506,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             flush(g, gd, d);
             if d.lit >= g.k.doze.light_secs {
                 let at = lamp_on(g, gd, head);
-                wake(g, gd, WakeWhy::Light, Some(&at[..]));
+                wake(g, gd, crate::doze::DozeWhy::Light, Some(&at[..]));
                 continue;
             }
         }
@@ -533,7 +514,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
 }
 /// where the man who shoved the chair stands: a player, else a guard, else the sleeper himself
 fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
-    let who = crate::props::prop_last_who(g, ch);
+    let who = g.tab.props_prop[ch].who;
     if let Some(pl) = crate::seats::man_by_id(g, who) { return g.ch[g.pl[pl].ch].pos; }
     for &x in g.guards.iter() {
         let xc = g.gd[x].ch;
@@ -545,21 +526,20 @@ fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
 /// the light on a sleeper's face that is news to him: everything but his own side's lamps and the room's screens
 fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
-    let team = g.gd[gd].team;
-    let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
+    let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, g.team(gd)) };
     let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner
 fn own_side_owns(g: &Game, owner: f64, team: crate::teams::Team) -> bool {
-    g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.gd[x].team == team)
+    g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.team(x) == team)
 }
 /// where the light on his face comes from: the nearest carried lamp of another side through clear air, else his own spot
 fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
     let mut best: Option<V3> = None;
     let mut bd = 14.0;
     let me = g.ch[g.gd[gd].ch].id;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut i = 0usize;
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
@@ -583,7 +563,7 @@ pub fn doze_in_chair(g: &crate::game::Game, gd: GuardId) -> bool {
     if seated(d) || d.phase == Phase::Up { return true; }
     if d.phase != Phase::Going { return false; }
     let pos = g.ch[g.gd[gd].ch].pos;
-    let (x, z) = (crate::props::prop_x(g, ch), crate::props::prop_z(g, ch));
+    let (x, z) = (g.tab.props_prop[ch].x, g.tab.props_prop[ch].z);
     flat(&pos, x, z) < 1.2
 }
 /// is he asleep this frame

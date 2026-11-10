@@ -146,7 +146,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists; left out by the loader with the switch off).
+  // ---- LIVED IN (lib/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists).
   // The four rooms only: THE HALL STAYS BARE, that is the mission. Everything stands against a wall, 1.1 m and more off every door's line, off every
   // defender's mark and out of his line to his door; nothing taller than a table stands free of a wall. No light, nothing emissive.
   {

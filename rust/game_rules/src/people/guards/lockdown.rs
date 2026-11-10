@@ -18,16 +18,11 @@ fn drop_plan(d: &mut crate::game::Guard) {
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     let slot = match t {
         crate::teams::Team::Guard => &mut r.guard,
-        crate::teams::Team::Operative => &mut r.operative,
+        crate::teams::Team::Ours => &mut r.operative,
         crate::teams::Team::Hostile => &mut r.hostile,
-        crate::teams::Team::Player => &mut r.player,
         crate::teams::Team::Civilian => &mut r.civilian,
     };
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
-}
-/// The record's copy of the rounds: a side that fired none stays absent.
-fn rounds_copy(r: &crate::guards::EngagementRounds) -> crate::guards::EngageResultRounds {
-    crate::guards::EngageResultRounds {  }
 }
 
 /// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.
@@ -52,7 +47,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
     let mut alive: Vec<GuardId> = Vec::new();
     for &x in g.guards.iter() {
         let m_ = &g.gd[x];
-        if !g.cond[m_.ch].down && m_.held.is_none() && m_.team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
+        if !g.cond[m_.ch].down && m_.held.is_none() && g.ch[m_.ch].team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
     }
     if alive.len() < 2 { return; }
     let (mut a, mut b, mut bd) = (alive[0], alive[1], m::INF);
@@ -295,7 +290,6 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
 /// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
-    if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
     let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
     let eight = crate::seats::budget_with_seats(g, MAX_CHARACTERS);   // (the eight is written for one player: a seat more, a man more)
@@ -325,7 +319,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         match o.weapon {
             Some(w) => w,
             None => match o.team {
-                crate::teams::Team::Operative => crate::weapons::WeaponId::Fn2000,
+                crate::teams::Team::Ours => crate::weapons::WeaponId::Fn2000,
                 crate::teams::Team::Hostile => crate::weapons::WeaponId::Aks74u,
                 _ => crate::weapons::WeaponId::Guard9mm,
             },
@@ -370,7 +364,7 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].unit.is_none() { return false; }
     let Some(i) = g.guards.iter().position(|&x| x == gd) else { return false; };
     crate::seats::each_seat(g, &mut |g| {
-        if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Cancel); }
+        if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Cancel); }
         if g.pl[g.player].dragging == Some(gd) { crate::game::game_toggle_drag(g, None); }
         if g.pl[g.player].takedown.as_ref().map(|t| t.g) == Some(gd) { g.pl[g.player].takedown = None; }
     });
@@ -402,40 +396,9 @@ pub(in crate::people) fn engagement_of(g: &crate::game::Game) -> Option<crate::g
     g.m.guards.engagements.clone()
 }
 
-/// Name of the character with this id, for the record.
-fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
-    if let Some(pl) = crate::seats::man_by_id(g, id_2) { return crate::seats::player_name(g, pl); }
-    for &x in g.guards.iter() {
-        let c = g.gd[x].ch;
-        if g.ch[c].id == id_2 { return g.gd[x].callsign.clone(); }
-    }
-    if id_2 < 0.0 { String::from("—") } else { format!("#{}", id_2) }
-}
-
-/// A list's men still in the fight: alive, on the list, not fled.
-fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
-    let mut n = 0.0;
-    for &x in xs {
-        if !crate::condition::down(g, g.gd[x].ch) && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
-    }
-    n
-}
-
 /// Close the running engagement with `outcome`.
-pub(super) fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEngagementOutcome) {
-    let (ops, hos, t0, kills, rounds) = match g.m.guards.engagements.as_mut() {
-        None => return,
-        Some(e) if e.done => return,
-        Some(e) => {
-            e.done = true;
-            (e.operatives.clone(), e.hostiles.clone(), e.t0, e.kills.clone(), rounds_copy(&e.rounds))
-        }
-    };
-    let operatives_left = living_count(g, &ops);
-    let hostiles_left = living_count(g, &hos);
-    if let Some(e) = g.m.guards.engagements.as_mut() {
-        e.result = Some(crate::guards::EngageResult {  });
-    }
+pub(super) fn end_engagement(g: &mut crate::game::Game) {
+    if let Some(e) = g.m.guards.engagements.as_mut() { e.done = true; }
 }
 
 /// Is anybody of this list still in the fight?
@@ -458,7 +421,7 @@ pub(super) fn tick_engagement(g: &mut crate::game::Game) {
         let (time, kind, level, who) = { let e = &g.events[i]; (e.time, e.kind, e.level, e.who) };
         i += 1;
         if time == g.time && (kind == crate::director::EventKind::Shot || kind == crate::director::EventKind::GuardShot) && level.unwrap_or(0.0) >= 1.0 {
-            let t = if kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, who.unwrap_or(-1.0)) };
+            let t = if kind == crate::director::EventKind::Shot { crate::teams::Team::Ours } else { crate::teams::team_of_id(g, who.unwrap_or(-1.0)) };
             if let Some(e) = g.m.guards.engagements.as_mut() { rounds_add(&mut e.rounds, t); }
         }
     }
@@ -471,19 +434,10 @@ pub(super) fn tick_engagement(g: &mut crate::game::Game) {
         }
         if crate::condition::down(g, g.gd[x].ch) {
             if let Some(e) = g.m.guards.engagements.as_mut() { e.alive.delete(x); }
-            let (victim, team, killer, down_by) = { let m_ = &g.gd[x]; (m_.callsign.clone(), m_.team, m_.killer_id, m_.down_by) };
-            let by = if killer >= 0.0 {
-                name_of_id(g, killer)
-            } else {
-                match down_by { Some(d) => String::from(d.as_str()), None => String::from("—") }
-            };
-            if let Some(e) = g.m.guards.engagements.as_mut() {
-                e.kills.push(crate::guards::EngageResultKillsItem {  });
-            }
         }
     }
-    if gone { end_engagement(g, crate::guards::EndEngagementOutcome::Reset); }
-    else if !living_any(g, &hos) { end_engagement(g, crate::guards::EndEngagementOutcome::Cleared); }
-    else if !living_any(g, &ops) { end_engagement(g, crate::guards::EndEngagementOutcome::Wiped); }
-    else if g.time - t0 > timeout { end_engagement(g, crate::guards::EndEngagementOutcome::Timeout); }
+    if gone { end_engagement(g); }
+    else if !living_any(g, &hos) { end_engagement(g); }
+    else if !living_any(g, &ops) { end_engagement(g); }
+    else if g.time - t0 > timeout { end_engagement(g); }
 }

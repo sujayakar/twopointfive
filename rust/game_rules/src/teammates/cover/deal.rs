@@ -29,7 +29,7 @@ fn trail_back(g: &mut Game, gd: GuardId, extra: f64) -> Option<V3> {
 
 fn sam_stopped(g: &mut Game, gd: GuardId) -> bool {
     let seat = crate::seats::view_of(g, gd);
-    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(g, &crate::seats::here(g)))
+    crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(&crate::seats::here(g)))
 }
 
 /// (cover.ts:306,484 `rearPinOf(viewOf(g, gd), gd)`)
@@ -44,29 +44,8 @@ fn yes(o: Option<bool>) -> bool { o.unwrap_or(false) }
 ///  The constructor: the field initialisers, the file's one rear opening, the page's knobs.
 pub fn cover_new(g: &mut Game) -> Cover {
     let mut c = Cover::blank();
-    c.knobs = g.k.cover;
     c.rear = Some(g.tab.cover_opening.push(Opening { id: String::from("rear"), kind: OpeningKind::Rear, at: [0.0, CHEST, 0.0], n: [0.0, 1.0], half: 1.0, door: None, pass: None, far: None }));
     c
-}
-
-/// Nothing dealt, nothing known: a restart.
-pub fn cover_reset(g: &mut Game) {
-    let c = &mut g.cover;
-    c.jobs.clear();
-    c.steps.clear();
-    c.stood = JsMap::new();
-    c.no_step = JsMap::new();
-    c.door_try = JsMap::new();
-    c.rears.clear();
-    c.floors.clear();
-    c.reads = JsMap::new();
-    c.kept.clear();
-    c.outs.clear();
-    c.live = Vec::new();
-    c.men = Vec::new();
-    c.deal_at = 0.0;
-    c.stats = CoverStats::default();
-    c.log.clear();
 }
 
 /// What he was dealt.
@@ -141,7 +120,7 @@ fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
     if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
-    if crate::roomfight::room_fight_engaged(g, gd) { return None; }
+    if crate::roomfight::room_fight_engaged(g, gd) || crate::cleared::walks_in(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
         for (h, mt) in g.tab.roomfight_op[op].meters.iter() {
             if !crate::condition::down(g, g.gd[h].ch) && g.time - mt.seen_t < g.k.cover.contact_secs { return None; }
@@ -186,7 +165,6 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
     };
     let picked = pick.map(|i| w[i].clone());
     g.cover.reads.set(a, CoverReadsValue { t: now, at: [p[0], 0.0, p[2]], pick: picked.clone() });
-    if pick.is_some() && pick != was { g.cover.stats.rear_read += 1.0; }
     picked
 }
 
@@ -212,11 +190,11 @@ fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bo
 }
 
 /// His eye over a spot.
-fn cover_eye_of(g: &Game, p: V3) -> V3 { [p[0], EYE, p[2]] }
+fn cover_eye_of(p: V3) -> V3 { [p[0], EYE, p[2]] }
 
 /// The point of this opening a man stood at `p` can watch.
 pub(in crate::teammates) fn cover_sight_from(g: &mut Game, p: V3, o: CoverOpeningId) -> Option<V3> {
-    let eye = cover_eye_of(g, p);
+    let eye = cover_eye_of(p);
     cover_sight(g, eye, o)
 }
 
@@ -251,7 +229,6 @@ pub fn cover_tick(g: &mut Game) {
         if !g.cover.jobs.is_empty() || !g.cover.kept.is_empty() || !g.cover.outs.is_empty() { cover_drop_all(g); }
         g.cover.steps.clear();
         g.cover.live = Vec::new();
-        g.cover.men = Vec::new();
         return;
     }
     for gd in g.cover.jobs.keys() {
@@ -307,10 +284,10 @@ pub fn cover_watched(g: &mut Game, reach: f64) -> Vec<(CoverOpeningId, bool)> {
         let at = g.tab.cover_opening[o].at;
         if !eyes.iter().any(|&(p, _)| v3::dist_xz(p, at) <= reach) || !onto_unknown(g, o) { continue; }
         let mut near = false;
-        for &(p, _) in &eyes { if !near && v3::dist_xz(p, at) <= reach { near = cover_line(g, cover_eye_of(g, p), o); } }
+        for &(p, _) in &eyes { if !near && v3::dist_xz(p, at) <= reach { near = cover_line(g, cover_eye_of(p), o); } }
         if !near { continue; }
         let mut on = false;
-        for &(p, yaw) in &guns { if !on && m::abs(v3::wrap_angle(v3::yaw_to(p, at) - yaw)) < ON_IT { on = cover_line(g, cover_eye_of(g, p), o); } }
+        for &(p, yaw) in &guns { if !on && m::abs(v3::wrap_angle(v3::yaw_to(p, at) - yaw)) < ON_IT { on = cover_line(g, cover_eye_of(p), o); } }
         out.push((o, on));
     }
     out
@@ -391,7 +368,7 @@ fn sam_on(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
     for &sam in &cx.sams {
         let (sp, sy) = (g.ch[sam].pos, g.ch[sam].aim_yaw);
         if m::abs(v3::wrap_angle(v3::yaw_to(sp, at) - sy)) < g.k.cover.sam_deg * m::PI / 180.0 {
-            let eye = cover_eye_of(g, sp);
+            let eye = cover_eye_of(sp);
             if cover_line(g, eye, o) { return true; }
         }
     }
@@ -423,7 +400,7 @@ fn add(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, o: CoverOpeningId, ki
         if in_frame(g, o, pos_of(g, gd)) || runs(g, cx, gd, oat) { continue; }
         let a = *cx.asg_of.get(gd).unwrap();
         if cover_walk_only(g, gd, a) && !cover_walk_door(g, o, a) { continue; }
-        let eye = cover_eye_of(g, pos_of(g, gd));
+        let eye = cover_eye_of(pos_of(g, gd));
         let to = match cover_sight(g, eye, o) { Some(to) => to, None => continue };
         if !clear(g, cx, gd, o, to) { continue; }
         at.set(gd, to);
@@ -452,7 +429,7 @@ fn along(g: &mut Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3>
         let r = if far { l * s } else { m::min(l, rear_m * s) };
         if r < 1.2 { break; }
         let q: V3 = [p[0] + dx / h * r, 0.0, p[2] + dz / h * r];
-        let eye = cover_eye_of(g, p);
+        let eye = cover_eye_of(p);
         if !crate::scene_collision::segment_blocked(g, eye, [q[0], CHEST, q[2]], None, None, None) { return Some(q); }
     }
     None
@@ -492,10 +469,8 @@ fn cover_deal(g: &mut Game) {
         js::sort_by(&mut list, |a, b| key(a.1) - key(b.1));
     }
     let men: Vec<GuardId> = list.iter().map(|x| x.0).collect();
-    g.cover.men = men.clone();
     let mut asg_of: JsMap<GuardId, OrdersAssignmentId> = JsMap::new();
     for &(gd, a) in &list { asg_of.set(gd, a); }
-    g.cover.stats.deals += 1.0;
     if men.is_empty() { g.cover.live = Vec::new(); cover_prune_steps(g); return; }
     let file: Vec<GuardId> = list.iter().filter(|x| g.tab.orders_assignment[x.1].post.is_none()).map(|x| x.0).collect();
     let mut bodies: Vec<(CharId, V3)> = squad.iter().map(|&gd| (g.gd[gd].ch, pos_of(g, gd))).collect();
@@ -562,7 +537,7 @@ fn cover_deal(g: &mut Game) {
             let q = match trail_back(g, last_m, k.rear_m * s) { Some(q) => q, None => continue };
             if v3::dist_xz(q, lp) <= 1.2 { continue; }
             if let Some(w) = lway { if m::abs(v3::wrap_angle(v3::yaw_to(lp, q) - w)) < m::PI / 2.0 { continue; } }
-            let eye = cover_eye_of(g, lp);
+            let eye = cover_eye_of(lp);
             if !crate::scene_collision::segment_blocked(g, eye, [q[0], CHEST, q[2]], None, None, None) { back = Some(q); break; }
         }
         if fast(g, &cx, last_m) { back = None; }
@@ -790,14 +765,9 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
         let t = g.time;
         let a = *cx.asg_of.get(gd).unwrap();
         g.cover.jobs.set(gd, CoverJob { o, to, aim, yaw, r: rr, t0: t, aim_t: t, back: pp.map_or(false, |q| q.back), lane_t: t, off: false, pace: 0.0, a });
-        if j.is_some() { g.cover.stats.swaps += 1.0; } else { g.cover.stats.takes += 1.0; }
-        if g.tab.cover_opening[o].kind == OpeningKind::Rear { g.cover.stats.rear += 1.0; }
-        let id = g.tab.cover_opening[o].id.clone();
-        cover_note(g, gd, Some(&id));
+        if j.is_some() {  } else {  }
     }
     g.cover.live = live.iter().filter(|l| !l.can.is_empty()).cloned().collect();
-    let uncovered = g.cover.live.iter().filter(|l| l.by.is_none() && !l.sam && !l.held).count();
-    g.cover.stats.uncovered += uncovered as f64;
     let mut got_ids: JsMap<GuardId, CoverOpeningId> = JsMap::new();
     for (gd, &i) in got.iter() { got_ids.set(gd, live[i].o); }
     let bodies = &cx.bodies;
@@ -838,9 +808,6 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
         let l = got_row(got, live, gd);
         let still = *spd.get(gd).unwrap() < 0.3;
         if !still || !g.cover.stood.has(gd) { g.cover.stood.set(gd, t); }
-        if let Some(l) = l {
-            if l.edge_by == Some(gd) && g.tab.cover_opening[l.o].door.is_some() { g.cover.stats.blind += 1.0; }
-        }
         let s = g.cover.steps.get(gd).copied();
         if let Some(sv) = s {
             if !sv.done {
@@ -848,7 +815,6 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
                     let row = g.cover.steps.get_mut(gd).unwrap();
                     row.done = true;
                     row.t = t;
-                    g.cover.stats.stepped += 1.0;
                     g.cover.no_step.set(gd, t + 2.0);
                 } else if t - sv.t > k.step_secs {
                     let row = g.cover.steps.get_mut(gd).unwrap();
@@ -862,7 +828,6 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
             if let Some(l) = l {
                 if !sv.saw && l.o == sv.o && l.by == Some(gd) {
                     g.cover.steps.get_mut(gd).unwrap().saw = true;
-                    g.cover.stats.step_saw += 1.0;
                 }
             }
         }
@@ -886,7 +851,6 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
         let oat = g.tab.cover_opening[o].at;
         let reach = k.step_reach;
         let in_reach = |g: &Game, gd: GuardId| v3::dist_xz(pos_of(g, gd), oat) <= reach;
-        if seen.is_empty() && list.iter().any(|&(gd, _)| in_reach(g, gd)) { g.cover.stats.unseen += 1.0; }
         if t < g.cover.door_try.get(o).copied().unwrap_or(0.0) { continue; }
         let theirs = g.cover.steps.values().any(|s| s.o == o && (!s.done || s.saw || t - s.t < 3.0));
         if theirs { continue; }   // (one man a door)
@@ -916,7 +880,6 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
         };
         let a = *asg_of.get(pgd).unwrap();
         g.cover.steps.set(pgd, CoverStep { q, from, o, a, t, done: false, saw: false });
-        g.cover.stats.steps += 1.0;
         let i = ready.iter().position(|&x| x == pgd).unwrap();
         ready.remove(i);
     }
@@ -983,7 +946,7 @@ fn cover_step_spot(g: &mut Game, gd: GuardId, from: V3, o: CoverOpeningId, bodie
                 let mz = p[2] + (q[2] - p[2]) * f;
                 ops.iter().any(|x| m::hyp2(mx - x.0[0], mz - x.0[2]) < x.1 + 0.3)
             }) { continue; }   // (… nor does the walk there cut across one)
-            let eye = cover_eye_of(g, q);
+            let eye = cover_eye_of(q);
             if cover_sight(g, eye, o) != Some(oat) || crate::scene_collision::segment_blocked(g, eye, beyond, None, None, None) { continue; }
             if bodies.iter().any(|&(bc, b)| bc != me && in_lane(b, q, oat, k.lane)) || guns.iter().any(|&(ga, gb)| in_lane(q, ga, gb, k.lane)) { continue; }
             let len = js::or(v3::dist_xz(q, oat), 1.0);
@@ -1008,26 +971,17 @@ pub fn cover_step_halt(g: &mut Game, gd: GuardId) {
     if !s.done { s.done = true; s.t = t; g.cover.no_step.set(gd, t + 4.0); }
 }
 
-/// A change of hands, for the probes' record: the newest 400.
-fn cover_note(g: &mut Game, gd: GuardId, id_2: Option<&str>) {
-    let log = &mut g.cover.log;
-    log.push(CoverLogItem {  });
-    if log.len() > 400 { let extra = log.len() - 400; log.drain(0..extra); }
-}
-
 /// His job goes; `taken`: something else has him now and may not re-pose him.
 fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     let taken = taken.unwrap_or(false);
     let j = match g.cover.jobs.get(gd).copied() { Some(j) => j, None => return };
     g.cover.jobs.delete(gd);
-    cover_note(g, gd, None);
     if !taken && !j.off && script_aim_is(g, gd, j.aim) {
         let a = crate::seats::order_of(g, gd).unwrap_or(j.a);
         let row = &g.tab.orders_assignment[a];
         if yes(row.spare) && row.post.is_some() && row.from.is_some() {
             let t = g.time;
             g.cover.kept.set(gd, CoverKeptValue { j, t });
-            g.cover.stats.kept += 1.0;
             return;
         }
     }
@@ -1090,13 +1044,11 @@ fn cover_turn_out(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<C
     let (pos, by) = (g.ch[c].pos, g.ch[c].body_yaw);
     let t = g.time;
     let o = g.cover.outs.get_mut(gd).unwrap();
-    let first = !o.on;
     o.on = true;
     o.t = t;
     o.aim[0] = pos[0] + m::sin(by) * 3.0;
     o.aim[2] = pos[2] + m::cos(by) * 3.0;
     let aim = o.aim;
-    if first { g.cover.stats.turned += 1.0; }
     if ours { g.gd[gd].script.as_mut().unwrap().aim_at = Some(aim); }   // (the script holds that very point in the TypeScript)
     let face = cover_way_of(g, gd);
     Some(CoverTurnOut { at: aim, face: Some(face), strafe: true })

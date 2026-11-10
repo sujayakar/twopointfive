@@ -181,7 +181,7 @@ fn lit_spot(g: &mut Game, q: V3, lo: bool) -> f64 {
     let y = if lo { low_y() } else { up_y() };
     cpu_lit(g, [q[0], y[0], q[2]], [q[0], y[1], q[2]], None, None)
 }
-fn unseen_at(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool) -> bool {
+fn unseen_at(g: &mut Game, w: &Way, q: V3, lo: bool) -> bool {
     let mut l = -1.0;
     let mut lit = |g: &mut Game| {
         if l < 0.0 { l = lit_spot(g, q, lo); }
@@ -202,18 +202,18 @@ fn side_ok(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool, deep: f64) -> bo
     if g.doors.list.iter().any(|d| flat(q, g.dr[*d].frame_centre) < 1.0) { return false; }
     if flat(p, q) > 0.3 && (!straight(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
     let c = t[w.i as usize].p;
-    if flat(q, c) > 2.7 || !unseen_at(g, w, t, q, lo) { return false; }
+    if flat(q, c) > 2.7 || !unseen_at(g, w, q, lo) { return false; }
     let side_stop = g.k.sneak.side_stop;
     if side_stop > 0.0 {
         let dp = flat(p, q);
         if dp > 0.3 {
             for s in [side_stop / 2.0, side_stop] {
-                if !unseen_at(g, w, t, [q[0] + (p[0] - q[0]) * s / dp, 0.0, q[2] + (p[2] - q[2]) * s / dp], lo) { return false; }
+                if !unseen_at(g, w, [q[0] + (p[0] - q[0]) * s / dp, 0.0, q[2] + (p[2] - q[2]) * s / dp], lo) { return false; }
             }
         }
     }
     let d = flat(q, c);
-    deep <= 0.0 || d <= deep || unseen_at(g, w, t, [q[0] + (c[0] - q[0]) * deep / d, 0.0, q[2] + (c[2] - q[2]) * deep / d], lo)
+    deep <= 0.0 || d <= deep || unseen_at(g, w, [q[0] + (c[0] - q[0]) * deep / d, 0.0, q[2] + (c[2] - q[2]) * deep / d], lo)
 }
 /// A spot off the trail he can step straight to when no step on it will do. `caught`: seen where he stands, so the spot he is on is no answer.
 fn aside(g: &mut Game, w: &Way, t: &[Crumb], man: &mut Man, lo: bool, caught: bool) -> Option<V3> {
@@ -261,10 +261,10 @@ fn dark_ok(g: &mut Game, w: &mut Way, t: &mut [Crumb], k: i64, own: bool, lo: bo
     if near_other(g, w, c) { return false; }
     if in_line(g, w, t, k, lo) { return false; }
     if !strict { return true; }
-    if !unseen_at(g, w, t, c, lo) { return false; }
+    if !unseen_at(g, w, c, lo) { return false; }
     // shy: where he would be seen coming, or stop short
     let d = flat(p, c);
-    !(d > 0.4 && !unseen_at(g, w, t, [c[0] + (p[0] - c[0]) * 0.35 / d, 0.0, c[2] + (p[2] - c[2]) * 0.35 / d], lo))
+    !(d > 0.4 && !unseen_at(g, w, [c[0] + (p[0] - c[0]) * 0.35 / d, 0.0, c[2] + (p[2] - c[2]) * 0.35 / d], lo))
 }
 /// The nearest step from crumb `at` that is not exposed: on towards Sam or back the way they came, within `standM`; -1: none.
 fn dark(g: &mut Game, w: &mut Way, t: &mut [Crumb], at: i64, own: bool, lo: bool, strict: bool) -> i64 {
@@ -519,7 +519,6 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     // the words, and the tallies, on the change
     if mode != man.mode {
         if man.mode == Mode::Wait {
-            g.stats.sneak.wait_s += now - man.wait_t;
             if mode == Mode::Cross && now - man.wait_t > 1.5 { cue(g, gd, man, &lines().go, None); }
             man.wait_t = -1.0;
         }
@@ -527,26 +526,14 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
             man.why = why;
             man.wait_t = now;
             man.nagged = false;
-            g.stats.sneak.waits += 1;
-            note(g, gd, &format!("waits ({})", why.as_str()));
             let line = said_wait(g, why);
             cue(g, gd, man, &line, None);
         }
         if mode == Mode::Cross {
             man.cross_t = now;
-            g.stats.sneak.crossings += 1;
-            note(g, gd, "crosses");
-        }
-        if mode == Mode::Stand {
-            g.stats.sneak.shade += 1;
-            if side.is_some() { g.stats.sneak.asides += 1; }
-            note(g, gd, if side.is_some() { "steps aside, out of the line" } else { "stands back in the dark" });
         }
         if mode == Mode::Back {
-            g.stats.sneak.back_offs += 1;
-            if side.is_some() { g.stats.sneak.asides += 1; }
             man.back_t = now;
-            note(g, gd, if side.is_some() { "backs off, aside" } else { "backs off" });
         }
         man.mode = mode;
     } else if mode == Mode::Wait {
@@ -728,7 +715,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
 
 /// The sneaking follower's feet this frame. None: he is the build's own follower.
 pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f64, stopped: bool, speed0: f64) -> Option<crate::sneak::Feet> {
-    if !g.k.sneak.on || !mate(g, gd) { return None; }
+    if !g.k.sneak.on || !g.team(gd).ours() { return None; }
     if !sneak_tick(g) { return None; }
     let now = g.time;
     // the state and his row are out of `g` for the frame's read: nothing the read calls reads them

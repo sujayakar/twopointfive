@@ -109,7 +109,6 @@ pub(super) fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crat
     g.doors.rounds += mem(p + dp.rounds);
     g.m.sim_doorshome.doors_stepped.there += 1.0;
     g.m.sim_doorshome.doors_stepped.turned += mem(p + dp.turned);
-    g.m.sim_doorshome.doors_stepped.noises += ev;
     if ev == 0.0 {
         for i in 0..n {
             doors_follow(g, i as f64);

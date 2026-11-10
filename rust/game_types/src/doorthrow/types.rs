@@ -9,6 +9,5 @@ pub struct DoorthrowStats {
     pub startled: i32,
     pub pushed: i32,
     pub kicked: i32,
-    pub floored: i32,
     pub carried: i32,
 }

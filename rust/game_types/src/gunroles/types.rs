@@ -26,15 +26,3 @@ pub struct GunDealItem {
     pub line: f64,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct GunrolesStats {
-    pub dealt: i32,
-    pub belt: i32,
-    pub pistol: i32,
-    pub akms: i32,
-    pub first: i32,
-    pub last: i32,
-    pub posts: i32,
-}
-

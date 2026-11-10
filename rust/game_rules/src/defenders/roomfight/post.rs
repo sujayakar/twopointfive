@@ -69,7 +69,7 @@ pub fn is_loose(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mo
 
 /// OFF HIS POST, on the fight's own hunt: nothing holds him, and whatever script he was on is over. (A man the room fight has no row of is let go the same.)
 pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
     if let Some(d) = def_of(g, gd) {
         let now = g.time;
         let row = &mut g.tab.roomfight_def[d];

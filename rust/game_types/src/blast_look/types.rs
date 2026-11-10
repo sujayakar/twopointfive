@@ -15,7 +15,6 @@ pub struct State {
     pub seen: Vec<crate::blast_look::Seen>,
     pub serial: f64,
     pub first: bool,
-    pub last: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

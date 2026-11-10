@@ -81,7 +81,7 @@ fn silent_net(g: &mut crate::game::Game) -> bool {
     let (mut roster, mut on) = (0, 0);
     for i in 0..g.guards.len() {
         let x = &g.gd[g.guards[i]];
-        if x.unit.is_some() || x.team != crate::teams::Team::Guard { continue; }
+        if x.unit.is_some() || g.ch[x.ch].team != crate::teams::Team::Guard { continue; }
         roster += 1;
         if !g.cond[x.ch].down && x.held.is_none() { on += 1; }
     }
@@ -172,7 +172,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
     let own = mk.is_some();
     if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS {
         g.qrf.state = QrfState::Inbound;
-        g.qrf.answered = true;
         let n = m::min(4.0, if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) });
         let secs = m::round(g.qrf.arrive_at - g.time);
         let (n, secs) = (js::num_str(n), js::num_str(secs));
@@ -223,7 +222,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
 fn arriving(g: &mut crate::game::Game) {
     use crate::qrf::{Phase, QrfState};
     g.qrf.state = QrfState::Arriving;
-    g.qrf.said10 = true;
     re_deal(g);
     let mk = marks_of(g).unwrap();
     let want = if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) };
@@ -236,14 +234,14 @@ fn arriving(g: &mut crate::game::Game) {
         let at = match door {
             Some(d) if i == 0 => {
                 let side = crate::doors::doors_side(g, d, mk.muster[0]);
-                crate::handleside::tool_spot(g, d, side, mk.muster[0], None, None).map_or(mk.muster[0], |s| s.pos)
+                crate::handleside::tool_spot(g, d, side, mk.muster[0], None).map_or(mk.muster[0], |s| s.pos)
             }
             _ => match mk.muster.get(i) {
                 Some(&p) => p,
                 None => { let what = format!("spawn-failed:{}:no muster mark", i); note(g, &what); break; }   // (the TypeScript's spawnUnit throws on the missing mark: caught the same way)
             },
         };
-        let team = match side_of_team(g) { crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard, crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile };
+        let team = side_of_team(g);
         let budget = match budget_of(g) { crate::qrf::BudgetOf::Arm0(b) => Some(b.budget), crate::qrf::BudgetOf::Arm1(_) => None };
         let opts = crate::guards::UnitOpts {
             team, pos: at, yaw: Some(yaw), weapon: Some(crate::weapons::WeaponId::Aks74u), name: Some(format!("{}-{}", mk.tag, i + 1)), light: Some(true),
@@ -362,7 +360,6 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
     for x in all {
         let cap = g.k.trained.react_cap;
-        let t = g.time;
         if !crate::condition::is_blind(g, g.gd[x].ch) && !crate::condition::is_folded(g, g.gd[x].ch) && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
         if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
             crate::mind::set_state(g, x, GuardState::Search, "qrf");
@@ -470,7 +467,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     for i in 0..g.events.len() {
         if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); }
     }
-    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(crate::throwables::item_pos(g, c)), _ => None };
+    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(g.tab.item[c].pos), _ => None };
     let fix_before = g.gd[m].last_known;
     // his hearing runs on the events LESS the element's own; what it writes on an event (`announced`) is on the same object in the TypeScript: written back
     let all = core::mem::take(&mut g.events);
@@ -519,7 +516,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
         while i < g.guards.len() {
             let o = g.guards[i];
             i += 1;
-            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, g.gd[o].team) || crate::rails::rails_down(g, o) { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || !g.team(m).foe_of(g.team(o)) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let vo = crate::guards::can_see_char(g, m, oc);
             if !vo.visible { continue; }
@@ -565,13 +562,13 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             let mc = g.gd[m].ch;
             let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
             let bp = crate::guards::body_pos(g, o);
-            let team = g.gd[m].team;
+            let team = g.team(m);
             let mut n = 0;
             let mut i = 0;
             while i < g.guards.len() {
                 let x = g.guards[i];
                 i += 1;
-                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.gd[x].team != team { continue; }
+                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.team(x) != team { continue; }
                 let take = x == o || {
                     let xp = crate::guards::body_pos(g, x);
                     flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
@@ -583,7 +580,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
                 }
             }
             if n != 0 {
-                let the = crate::words::w(g, &"", &"the ");
+                let the = crate::words::w(g, &"");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
                 let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };

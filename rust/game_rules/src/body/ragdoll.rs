@@ -105,7 +105,7 @@ pub(super) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V
 /// (Ragdoll.point)
 pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
-pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_radius(i: f64) -> f64 { rd_radius(i) }
 /// (Ragdoll.addVelocity)
 pub(super) fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
@@ -148,7 +148,7 @@ pub fn ragdoll_floor_under(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
 }
 
 /// Collision radius of particle i.
-fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+fn rd_radius(i: f64) -> f64 {
     RADIUS[i as usize]
 }
 

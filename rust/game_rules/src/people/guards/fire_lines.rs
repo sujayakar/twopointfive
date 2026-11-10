@@ -38,8 +38,8 @@ fn no_colleague(g: &Game, gd: GuardId, p: GuardId) -> bool {
     if p == gd || crate::condition::down(g, g.gd[p].ch) { return true; }
     let c = g.gd[p].ch;
     if !g.ch[c].alive { return true; }
-    let (a, b) = (g.gd[gd].team, g.gd[p].team);
-    crate::teams::is_hostile(g, a, b)
+    let (a, b) = (g.team(gd), g.team(p));
+    a.foe_of(b)
 }
 /// `gd.path = []; gd.pathGoal = null`: a whole write of the path (its serial), and the goal is no longer the standoff's object
 fn clear_path(g: &mut Game, gd: GuardId) {
@@ -102,12 +102,12 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
 }
 
 /// What took a man over the alert line just now.
-pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
-    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::guards::AlertCause::Sound; }
-    if g.time - g.gd[gd].sight_t < 1.0 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::guards::AlertCause::Body; }
-    crate::guards::AlertCause::Radio
+pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::game::WitnessAlertedBy {
+    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::game::WitnessAlertedBy::Sound; }
+    if g.time - g.gd[gd].sight_t < 1.0 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::game::WitnessAlertedBy::Body; }
+    crate::game::WitnessAlertedBy::Radio
 }
 
 /// Floor point under a body: its pelvis once the ragdoll has it.
@@ -404,7 +404,7 @@ pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
         q[1] = 0.0;
         q[2] = p[2] + vz * s;
         let at: V3 = [q[0], 1.0, q[2]];
-        let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(g, &mut q, 0.15);
+        let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(&mut q, 0.15);
         if !stop {
             for &b in shut.iter() {
                 if crate::scene_boxes::ray_box(g, prev, rd, b.into(), sp * 0.05).is_some() { stop = true; break; }
@@ -486,7 +486,7 @@ pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Opt
     let t_max = 1.0 + MUZZLE_PAST_M / l;
     let mut best: Option<GuardId> = None;
     let mut bt = m::INF;
-    let near = g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g);
+    let near = g.team(gd).ours() && crate::roomfight::fight_live(g);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];

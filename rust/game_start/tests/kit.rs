@@ -22,7 +22,7 @@ fn tap(p: &mut Play, code: &str) { p.key_down(code); p.frame(); p.key_up(code); 
 // ---------------------------------------------------------------- a burst on a man already down: the debrief card
 
 fn defender(p: &Play, not: Option<GuardId>) -> GuardId {
-    p.g.guards.iter().copied().find(|&gd| Some(gd) != not && p.g.gd[gd].team != game::teams::Team::Operative && p.g.gd[gd].civ.is_none() && p.up(gd)).unwrap()
+    p.g.guards.iter().copied().find(|&gd| Some(gd) != not && !p.g.team(gd).ours() && p.g.gd[gd].civ.is_none() && p.up(gd)).unwrap()
 }
 /// The border crossing as two.
 fn as_two(seed: u32) -> Play {
@@ -126,7 +126,7 @@ fn a_suppressor_row_that_cannot_move_says_why() {
                 let moved = game::kit::kit_set(&mut p.g, 1.0, can, &peek.value);
                 assert!(moved, "{id} has the choice and the row would not move");
             } else {
-                let name = game::gear::gear_text(&p.g, &game::gunslots::pick_word(&p.g, &id, None));
+                let name = game::gear::gear_text(&game::gunslots::pick_word(&p.g, &id, None));
                 assert!(peek.why == format!("{name}: made with it") || peek.why == format!("{name}: none fits it"), "{id}: the row says {:?}", peek.why);
                 let flipped = match peek.value { KitValue::Bool(b) => KitValue::Bool(!b), v => panic!("{id}: a suppressor row holds {v:?}") };
                 assert!(!game::kit::kit_set(&mut p.g, 1.0, can, &flipped), "{id}: the row said no and moved");
@@ -424,7 +424,7 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let ours: Vec<_> = p.mates().into_iter().take(4).collect();
         assert_eq!(ours.len(), 4, "the staging is wrong: not four men");
         for &m in &ours { p.g.gd[m].god = false; }
-        let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).collect();
+        let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.team(gd) == game::teams::Team::Hostile && p.up(gd)).collect();
         let (thrower, rest) = theirs.split_first().unwrap();
         for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
         p.sam_put([9.0, 26.2]);

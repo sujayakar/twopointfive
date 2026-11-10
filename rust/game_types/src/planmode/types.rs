@@ -24,13 +24,4 @@ pub enum GoalMenHow {
     Split,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct PlanmodeStats {
-    pub goals: i32,
-    pub split: i32,
-    pub rings: i32,
-    pub none: i32,
-}
-
 pub const GOAL_NONE: &str = "nobody's free for that.";

@@ -372,8 +372,6 @@ fn deal(g: &Game, d: DoorId, swing: f64, why: crate::doorswing::SwingWhy, into: 
         swing,
         why,
         into: into.filter(|i| !i.is_empty()).map(String::from),
-        out: None,
-        clear: None,
     })
 }
 /// dealSwings' `toward`: the side of the leaf a rectangle's middle is on.
@@ -508,8 +506,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                 swing: if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 },
                 why: SwingWhy::Wider,
                 into: None,
-                out: None,
-                clear: None,
             },
         };
         let out = if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds {
@@ -519,9 +515,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
             None
         };
         let out_swing = out.as_ref().map_or(0.0, |o| o.swing);
-        if let Some(o) = out {
-            got.out = Some(Box::new(o));
-        }
         let mut clear: Option<crate::doorswing::SwingDeal> = None;
         if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds && got.why != SwingWhy::Plan && got.why != SwingWhy::StandsOpen
             && !js::truthy(g.dr[d].def.angle.unwrap_or(0.0)) && opens(g, d, -got.swing)
@@ -533,15 +526,10 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                     swing: -got.swing,
                     why: SwingWhy::LeafRoom,
                     into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", js::to_fixed(cut, 1))),
-                    out: None,
-                    clear: None,
                 });
             }
         }
         let clear_swing = clear.as_ref().map_or(0.0, |c| c.swing);
-        if let Some(c) = clear {
-            got.clear = Some(Box::new(c));
-        }
         crate::doors::door_set_swing(g, d, got.swing, Some(out_swing), Some(clear_swing));
         dealt.push(got);
     }

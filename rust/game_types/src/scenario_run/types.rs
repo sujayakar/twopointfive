@@ -14,4 +14,3 @@ pub struct StartFromQuery {
     pub why: Option<String>,
 }
 
-pub fn words() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("nightbreach"), String::from("night breach")); t.set(String::from("roomclear"), String::from("room clear")); t.set(String::from("rescue"), String::from("hostage rescue")); t.set(String::from("quiet"), String::from("quiet mission")); t } }

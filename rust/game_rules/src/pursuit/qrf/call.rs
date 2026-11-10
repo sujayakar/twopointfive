@@ -17,13 +17,6 @@ fn clip_line(text: &str) -> String {
     s
 }
 
-fn team_of(side: crate::qrf::SideOfTeam) -> crate::teams::Team {
-    match side {
-        crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard,
-        crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile,
-    }
-}
-
 // ---------------------------------------------------------------- the level's own team
 
 /// This level's block, if it has one.
@@ -42,8 +35,8 @@ pub(super) fn raid_over(g: &crate::game::Game) -> bool {
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.
-pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
-    if raid(g) { crate::qrf::SideOfTeam::Hostile } else { crate::qrf::SideOfTeam::Guard }
+pub(super) fn side_of_team(g: &crate::game::Game) -> crate::teams::Team {
+    if raid(g) { crate::teams::Team::Hostile } else { crate::teams::Team::Guard }
 }
 
 /// A raid: the men who can call it in.
@@ -209,7 +202,7 @@ fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     let mut br = -1;
     for &x in &g.guards {
         let m = &g.gd[x];
-        if m.unit.is_some() || m.team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
+        if m.unit.is_some() || g.ch[m.ch].team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
         let r = if m.state == crate::game::GuardState::Alert { 0 } else if m.state == crate::game::GuardState::Patrol { 2 } else { 1 };
         if r > br { br = r; best = Some(x); }
     }
@@ -259,8 +252,8 @@ pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
 
 /// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
-    let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
+    let side = side_of_team(g);
+    if g.team(x) != side || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
@@ -325,24 +318,6 @@ pub(super) fn brief(g: &crate::game::Game) -> String {
 
 // ---------------------------------------------------------------- the trigger and the telegraph
 
-/// Every man of the response, element then perimeter.
-fn all_men(g: &Game) -> Vec<GuardId> {
-    let mut men = g.qrf.men.clone();
-    if let Some(p) = &g.qrf.perim { men.extend(p.men.iter().map(|m| m.gd)); }
-    men
-}
-
-/// The response back to a fresh one; the men handed back to their ordinary heads.
-pub fn reset_qrf(g: &mut crate::game::Game) {
-    drop_drill(g);
-    for m in all_men(g) {
-        if g.gd[m].script.is_some() && g.guards.contains(&m) {
-            crate::squad::end_guard_script(g, m, Some(crate::squad::EndGuardScriptState::Patrol));
-        }
-    }
-    g.qrf = crate::qrf::Qrf::blank();
-}
-
 /// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.
 pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> bool {
     let m0 = marks_of(g);
@@ -383,9 +358,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
     g.qrf.reason = Some(reason);
     g.qrf.requested_at = g.time;
     g.qrf.arrive_at = g.time + m::max(12.0, d.eta);
-    g.qrf.answered = false;
     g.qrf.said30 = false;
-    g.qrf.said10 = false;
     let rd = raid(g);
     let sp = if rd {
         match raid_voice(g) { Some(x) => Some(x), None => callers(g).first().copied() }
@@ -421,7 +394,7 @@ pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
     if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
     }
     true
 }

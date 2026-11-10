@@ -18,11 +18,6 @@ fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     g.ch[g.pl[seat.player].ch].pos
 }
 
-/// (squadFragCatches q) a point on a quarter-metre grid
-fn quarter(p: V3) -> String {
-    format!("{},{}", js::num_str(m::round(p[0] * 4.0)), js::num_str(m::round(p[2] * 4.0)))
-}
-
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
 fn tossing_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g, seat);
@@ -107,7 +102,6 @@ fn arc_at(g: &mut Game, gd: GuardId, post: V3, straight: bool, worked: bool, at:
         let mut n = 0;
         while n < 4 && ok {
             let (ox, oz) = side(n);
-            g.stats.squadthrow.arcs += 1;
             ok = crate::squadsmoke::squad_arc_to(g, gd, at, roll_k, Some([post[0] + ox, 0.0, post[2] + oz])).is_some();
             n += 1;
         }
@@ -217,7 +211,6 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
         let pz = (z as f64 + 0.5) * c;
         let eye: V3 = [px, 1.6, pz];
         let hand: V3 = [px, 1.3, pz];
-        g.stats.squadthrow.cells += 1;
         let dist = m::hyp2(px - at[0], pz - at[2]);
         let free = d > 0
             && dist >= g.k.squadthrow.min_m
@@ -231,7 +224,6 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
         };
         if looks && !in_own(g, kind, if kind == SquadThrowKind::Frag { &frag_at } else { &stun_at }, px, pz, gd, has_lob, &mut ducks) {
             tries -= 1.0;
-            g.stats.squadthrow.arcs += 1;
             let post: V3 = [px, 0.0, pz];
             if let Some(arc) = arc_at(g, gd, post, straight, worked, at, kind, roll_k, walls, lim) {
                 let pts = if kind == SquadThrowKind::Frag { frag_pts(arc.rest, at) } else { stun_pts(arc.rest, at) };
@@ -278,11 +270,6 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
 
 // ---- the part ----
 
-/// a spot in a key
-fn key_of(at: V3) -> String {
-    format!("{},{}", js::to_fixed(at[0], 2), js::to_fixed(at[2], 2))
-}
-
 /// how many are left in the one bag
 pub(in crate::squad_orders) fn left(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
     if kind == SquadThrowKind::Frag { g.door_tools.frags } else { g.door_tools.bangs }
@@ -294,7 +281,7 @@ pub(super) fn word(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow
 }
 
 /// the row's words with none left
-pub(super) fn none(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::None {
+pub(super) fn none(kind: crate::squadthrow::SquadThrowKind) -> crate::squadthrow::None {
     if kind == SquadThrowKind::Frag { crate::squadthrow::None::NoFragsLeft } else { crate::squadthrow::None::NoBangsLeft }
 }
 
@@ -360,7 +347,6 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     let blast = crate::teampace::team_blast_pace(g, gd, run);
     let speed = crate::condition::condition_pace(g, g.gd[gd].ch, blast);
     let l = pts[0];
-    g.stats.squadthrow.ducks += 1;
     let rest: V3 = [l[0], l[1] - 0.25, l[2]];
     let time = g.time;
     let kept = match &g.m.squadthrow.duck_mates {
@@ -390,7 +376,7 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     // (… and one nobody of ours stands on or is going to: two men to one corner is one man left out in it)
     let apart_m = g.k.squadthrow.duck_apart_m;
     let near = |q: V3| v3::dist_xz(q, spot) < apart_m;
-    if g.guards.iter().any(|&o| o != gd && g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
+    if g.guards.iter().any(|&o| o != gd && g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
     if !crate::condition::down(g, g.pl[g.player].ch) && near(sam_pos(g, &crate::seats::here(g))) { return false; }
     if let Some(t) = taken {
         if t.iter().any(|q| near(*q)) { return false; }
@@ -453,8 +439,8 @@ fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bool {
 
 /// may this man be walked off to a throw: no drill, door tool, wall charge or fight has him, and his order can be handed back
 pub(in crate::squad_orders) fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let a = crate::orders::squad_orders_of(g, seat, gd);
-    if !seat.orders.owners.is_empty() && crate::mission::has(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
+    let a = crate::orders::squad_orders_of(seat, gd);
+    if crate::mission::has(g, gd) { return false; }
     if seat.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&gd)) || seat.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd)) { return false; }
     // (a room fight drives a teammate in 'patrol' with no yield stamp: the man it has a gun on is its `tgt`; a stack's or a stand-off's rear man keeps the squad's back)
     if g.gd[gd].state == crate::game::GuardState::Alert { return false; }
@@ -508,9 +494,8 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
         home.push(crate::cleared::cleared_rooms_room_at(g, p));
     }
     // (each with whose feet they are: `o !== gd.char.pos` was an identity test of the array)
-    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
+    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
     if !crate::condition::down(g, g.pl[g.player].ch) { ours.push((None, sam_pos(g, &crate::seats::here(g)))); }
-    g.stats.squadthrow.searches += 1;
     let roll_k = roll_of(g, kind);
     let walls: Vec<V3> = match lob.as_deref() { Some(l) => l.walls.clone(), None => Vec::new() };
     let mut lim = match lob.as_deref() { Some(l) => l.lim, None => LobLim { n: 0.0 } };
@@ -605,7 +590,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
     let mut mate: Option<GuardId> = None;
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative { continue; }
+        if !g.team(gd).ours() { continue; }
         let hit = if !crate::condition::down(g, g.gd[gd].ch) {
             // (duck: … and cannot be off its line before it bursts)
             let p = match moved { Some(q) if q.gd == gd => q.at, _ => pos_of(g, gd) };
@@ -663,7 +648,7 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { continue; }
+        if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
         if stun_in(g, &pts, eye, false) { out.push(g.gd[gd].callsign.clone()); }
@@ -687,15 +672,6 @@ fn sam_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, pts: &[V3]) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A spot tried is tried once, whatever height it was asked from. A failure means the search tries a spot twice, or takes two for one.
-    #[test]
-    fn a_spot_is_kept_to_the_centimetre_and_a_catch_to_the_quarter_metre() {
-        assert_eq!(key_of([1.001, 9.0, 3.0]), key_of([1.002, 0.0, 3.0]));
-        assert_ne!(key_of([1.02, 0.0, 3.0]), key_of([1.0, 0.0, 3.0]));
-        assert_eq!(quarter([-0.1, 0.0, 1.0]), "0,4");    // nought, whichever side of it
-        assert_eq!(quarter([-0.75, 0.0, 2.5]), "-3,10");
-    }
 
     #[test]
     fn a_frag_goes_off_at_two_points() {

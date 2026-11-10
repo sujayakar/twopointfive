@@ -34,10 +34,6 @@ fn lead(g: &mut Game) -> PlayerId {
     g.player
 }
 
-fn mate(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
-}
-
 /// on a wall, as the sneak counts it: his back on it `wall_secs`, where the hold keeps that clock
 fn on_wall(g: &Game, pl: PlayerId) -> bool {
     let Some(w) = &g.pl[pl].wall else { return false };
@@ -76,7 +72,7 @@ fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
         let h = g.guards[i];
         i += 1;
         let state = g.gd[h].state;
-        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && crate::teams::hostile_to(g, h, g.gd[men[0]].team) {
+        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && g.team(h).foe_of(g.team(men[0])) {
             return Some(String::from(if state == crate::game::GuardState::Alert { "a defender alert" } else { "a defender searching" }));
         }
     }
@@ -91,7 +87,6 @@ fn unseen_live(g: &mut Game) -> bool {
         return s.live;
     }
     let was = s.live;
-    let dt = now - s.t;
     s.t = now;
     if now < s.sneak_t { s.sneak_t = -1e9; }
     if now < s.cue_t { s.cue_t = -1e9; }
@@ -121,12 +116,8 @@ fn unseen_live(g: &mut Game) -> bool {
     let s = state_of(g);
     s.live = live;
     s.why = why.clone();
-    if live && was && dt > 0.0 && dt < 1.0 {
-        g.stats.unseen.seconds += dt;
-    }
     if live != was {
         if live {
-            g.stats.unseen.spells += 1;
             let k = crate::seats::view_key(g, &crate::seats::here(g));
             cue(g, k);
         } else {
@@ -160,7 +151,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
 
 /// this teammate is unseen this frame
 pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| mate(g, gd) && unseen_live(g) && !entering(g, &crate::seats::here(g), gd))
+    in_view(g, gd, &mut |g: &mut Game| g.team(gd).ours() && unseen_live(g) && !entering(g, &crate::seats::here(g), gd))
 }
 
 /// he is one of a door tool's men right now: that work is the door's own
@@ -187,7 +178,7 @@ pub fn unseen_low(g: &mut Game, gd: GuardId) -> bool {
 // ------------------------------------------------------------ the follower's seams
 
 /// A follower's legs and knee this frame; None: the file's own
-pub fn unseen_follow(g: &mut Game, gd: GuardId, sam_v: f64, d: f64, walk: f64, speed0: f64) -> Option<UnseenFollow> {
+pub fn unseen_follow(g: &mut Game, gd: GuardId, sam_v: f64, d: f64, walk: f64) -> Option<UnseenFollow> {
     in_view(g, gd, &mut |g: &mut Game| {
         if !under_unseen(g, gd) {
             return None;
@@ -209,7 +200,6 @@ pub fn unseen_wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) 
     in_view(g, gd, &mut |g: &mut Game| {
         let q = wall_slot(g, gd, back, file);
         if q.is_some() {
-            g.stats.unseen.wall_places += 1;
             let now = g.time;
             g.m.unseen.on_wall_at.set(gd, now);
             let pl = lead(g);
@@ -226,7 +216,6 @@ pub fn unseen_wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) 
 pub fn unseen_wall_lost(g: &mut Game, gd: GuardId) {
     g.m.unseen.on_wall_at.delete(gd);
     g.m.unseen.placed.delete(gd);
-    g.stats.unseen.wall_lost += 1;
 }
 
 /// the place itself: along Sam's face, on the file's side, a body's width off it
@@ -274,7 +263,6 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
         return None;
     }
     if g.m.unseen.placed.get(gd).copied() != Some(wall) && (c[0] * t[0] + c[2] * t[2] - su) * sgn < -g.k.unseen.wall_cross {
-        g.stats.unseen.wall_past += 1;
         return None;
     }
     let (wall_off, wall_out) = (g.k.unseen.wall_off, g.k.unseen.wall_out);
@@ -331,18 +319,12 @@ pub(super) fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, 
     if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search || g.gd[h].awareness >= noticed || urgent(g) {
         return false;
     }
-    g.stats.unseen.held += 1;
     true
 }
 
 /// through standing glass the hold is the silent order's own: is that rule his this frame
 pub(super) fn unseen_glass(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd))
-}
-
-/// silent.ts's glass hold held a round under this rule
-pub(super) fn unseen_glass_held(g: &mut Game) {
-    g.stats.unseen.held_glass += 1;
 }
 
 // ------------------------------------------------------------ the HUD's word, QA

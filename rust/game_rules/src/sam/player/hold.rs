@@ -438,9 +438,6 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         g.ch[hc].vel = v3::copy(cv);
         g.gd[gd].speed = speed;
         g.ch[hc].body_yaw = g.ch[c].body_yaw;
-        if let Some(h) = g.gd[gd].held.as_mut() {
-            h.reverse = backpedal;
-        }
     }
     g.pl[p].sprinting = false;
     g.pl[p].crouch = false;
@@ -537,11 +534,8 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         haul: Some(haul),
         strip: strip.map(|s| crate::character::StripPose { t: s.t, at: None }),
     });
-    if let Some(held) = g.gd[gd].held.as_mut() {
-        held.phase = h.phase;
-    }
     // where his torch points: up over Sam's arm at the ceiling, wandering with the struggle
-    let torch = crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch;
+    let torch = crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch;
     let tt = time - h.since;
     let yaw_to = g.ch[hc].body_yaw + (if torch { 0.07 * m::sin(tt * 0.9) + 0.04 * m::sin(tt * 2.3 + 1.0) } else { 0.0 });
     g.ch[hc].aim_yaw = v3::approach_angle(g.ch[hc].aim_yaw, yaw_to, 4.0 * dt);
@@ -583,10 +577,6 @@ fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     h.t = 0.0;
     h.wind_t = -1.0;
     h.fire_queued = false;
-    let gd = h.g;
-    if let Some(held) = g.gd[gd].held.as_mut() {
-        held.phase = phase;
-    }
     cancel_ask(g);
 }
 
@@ -718,7 +708,7 @@ fn place_held(g: &mut crate::game::Game) {
         let wz = g.ch[c].pos[2] + f[2] * dist;
         let mut hp: V3 = [wx, 0.0, wz];
         crate::scene_collision::collide_circle(g, &mut hp, r, 0.2, 1.5, Some(4.0));
-        crate::scene_collision::clamp_to_world(g, &mut hp, r);
+        crate::scene_collision::clamp_to_world(&mut hp, r);
         g.ch[hc].pos = hp;
         let dx = hp[0] - wx;
         let dz = hp[2] - wz;

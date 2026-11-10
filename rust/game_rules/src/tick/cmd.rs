@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.
-pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
+pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::cmd::PlayerCmd {
     if let Some(aim) = g.hand_at {
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
@@ -478,36 +478,21 @@ fn view_from_lens(v: &mut PlayerCmdView, s: &crate::camera::FollowCamera, fixed:
 }
 
 /// The whole check on a record already typed; `None` = no object.
-fn check_record(g: &mut Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64) {
+fn check_record(g: &Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64) {
     let l = g.k.cmdcheck;
     let (mut c, mut fixed, whole) = check_fields(&l, raw, near);
     if near.is_some() || !whole {
-        // (`new FollowCamera()`: the class has no constructor, its field initialisers are blank())
-        let s = match g.m.cmd.check_lens {
-            Some(s) => s,
-            None => {
-                let s = g.tab.camera.push(crate::camera::FollowCamera::blank());
-                g.m.cmd.check_lens = Some(s);
-                s
-            }
-        };
-        pose_onto_lens(l.steep, &mut c.view, &mut g.tab.camera[s], &mut fixed);
-        crate::camera::follow_camera_rebuild(g, s);
-        view_from_lens(&mut c.view, &g.tab.camera[s], &mut fixed);
+        let mut s = crate::camera::FollowCamera::blank();
+        pose_onto_lens(l.steep, &mut c.view, &mut s, &mut fixed);
+        crate::camera::rebuild(&mut s);
+        view_from_lens(&mut c.view, &s, &mut fixed);
     }
     (c, fixed)
 }
 
-/// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.
-pub(super) fn check_cmd(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
-    let r = check_cmd_in(g, raw, near);
-    CheckCmd { cmd: r.cmd, fixed: r.fixed }
-}
-
-/// The check itself, on a copy: `raw` is only lent here, so a caller always takes `cmd` from the answer.
-fn check_cmd_in(g: &mut crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmdIn {
-    let (cmd, fixed) = check_record(g, raw.cloned(), near);
-    CheckCmdIn { cmd, fixed }
+/// A record made one an honest seat could have sent. `raw` None = what was sent was no object.
+pub(super) fn check_cmd(g: &crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
+    CheckCmd { cmd: check_record(g, raw.cloned(), near).0 }
 }
 
 /// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.
@@ -520,7 +505,7 @@ fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
 }
 
 /// A record as a tick would take it, for code that must leave it as it came: the check on a copy.
-pub(super) fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
+pub(super) fn honest_copy(g: &crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
     check_cmd(g, Some(c_2), near).cmd
 }
 
@@ -652,8 +637,7 @@ mod tests {
         }
     }
     fn checked(raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64) {
-        let mut g = Game::blank();
-        check_record(&mut g, raw, near)
+        check_record(&Game::blank(), raw, near)
     }
     fn k() -> crate::knobs::CmdcheckK { crate::knobs::CmdcheckK::page() }
 

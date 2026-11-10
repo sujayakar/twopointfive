@@ -103,7 +103,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     }
     if big {
         for &gd in squad.iter() {
-            let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+            let Some(a) = crate::orders::squad_orders_of(seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
             if !crate::condition::down(g, g.gd[gd].ch) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
@@ -167,7 +167,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         // (every man of it on his place, his feet there: a gun still coming round does not put the cap out, and none taken off it by a fight)
         let set = |men: &[GuardId]| men.iter().all(|&m| {
             if crate::condition::down(g, g.gd[m].ch) { return true; }
-            let Some(a) = crate::orders::squad_orders_of(g, seat, m) else { return true };
+            let Some(a) = crate::orders::squad_orders_of(seat, m) else { return true };
             let a = &g.tab.orders_assignment[a];
             a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| flat(g.ch[g.gd[m].ch].pos, p) < 0.5))
         });
@@ -251,7 +251,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     for &gd in squad.iter() {
         let m = &g.gd[gd];
         if g.cond[m.ch].down { continue; }
-        let Some(aid) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+        let Some(aid) = crate::orders::squad_orders_of(seat, gd) else { continue };
         let a = &g.tab.orders_assignment[aid];
         let Some(post) = a.post else { continue };
         let mut age = crate::m::max(0.0, g.time - a.t0);

@@ -94,8 +94,7 @@ fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
         let d = g.fight.defs[i];
         i += 1;
         let gd = g.tab.roomfight_def[d].gd;
-        let team = g.gd[gd].team;
-        if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && g.gd[gd].unit.is_some() {
+        if g.team(gd).theirs() && g.gd[gd].unit.is_some() {
             out.push(d);
         }
     }
@@ -321,7 +320,7 @@ fn held_of(c: &crate::powerout::Calm) -> crate::roomfight::Held {
 pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powerout::Calm, wary: bool) {
     let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].script.is_some() {
-        let state = if wary { crate::squad::EndGuardScriptState::Suspicious } else { crate::squad::EndGuardScriptState::Patrol };
+        let state = if wary { crate::game::GuardState::Suspicious } else { crate::game::GuardState::Patrol };
         crate::squad::end_guard_script(g, gd, Some(state));
     }
     crate::mind::set(g, gd, if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness }, "powerout");
@@ -462,8 +461,7 @@ pub(super) fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) || !g.m.powerout.states.as_ref().map_or(false, |s| s.word) {
         return false;
     }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
 }
 
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent.
@@ -779,12 +777,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
         // (in Sam's arm, or no defender of the fight's any more: whoever has him has him)
         st(g).lost = true;
         if g.gd[gd].script.is_some() && man(g, i).phase != Phase::Wait {
-            let state = match g.gd[gd].state {
-                crate::game::GuardState::Suspicious => crate::squad::EndGuardScriptState::Suspicious,
-                crate::game::GuardState::Alert => crate::squad::EndGuardScriptState::Alert,
-                crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search,
-                _ => crate::squad::EndGuardScriptState::Patrol,
-            };
+            let state = g.gd[gd].state;
             crate::squad::end_guard_script(g, gd, Some(state));
         }
         let why = if g.gd[gd].held.is_some() { "taken while he was out for the lights: nobody is sent again this fight" } else { "no man of the fight's any more" };

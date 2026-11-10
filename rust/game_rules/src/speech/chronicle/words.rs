@@ -76,10 +76,10 @@ fn stage_words(d: &Data) -> String {
 }
 
 /// How a man was put out, in a row's words.
-fn put_out_how(g: &Game, d: &Data) -> String {
+fn put_out_how(d: &Data) -> String {
     if is(d, "method", "choke") { String::from("choked out") }
     else if is(d, "method", "whip") { String::from("pistol-whipped") }
-    else if is(d, "method", "ring") { crate::gear::gear_text(g, "a ring to the head") }
+    else if is(d, "method", "ring") { crate::gear::gear_text("a ring to the head") }
     else if is(d, "method", "charge") { String::from("the wall charge") }
     else { String::from("the takedown") }
 }
@@ -124,7 +124,7 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
         ChronKind::Radio => format!("{} (radio): “{}”", s("who"), s("text")),
         ChronKind::Shot => {
             let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
-            let weapon = crate::gear::gear_text(g, &s("weapon"));
+            let weapon = crate::gear::gear_text(&s("weapon"));
             let into = if is(d, "into", "geometry") {
                 String::from("into the scenery")
             } else if s("into").starts_with("past ") {
@@ -167,14 +167,14 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
             }
         }
         ChronKind::KeyTaken => format!("took {}'s key", s("who")),
-        ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(g, d)),
+        ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(d)),
         ChronKind::Kill => {
             if is(d, "weapon", "knife") {
                 format!("{} killed — the knife", s("who"))
             } else if on(d, "blast") {
-                format!("{} killed — {}", s("who"), crate::gear::gear_text(g, &s("weapon")))
+                format!("{} killed — {}", s("who"), crate::gear::gear_text(&s("weapon")))
             } else {
-                format!("{} shot dead ({})", s("who"), crate::gear::gear_text(g, &s("weapon")))
+                format!("{} shot dead ({})", s("who"), crate::gear::gear_text(&s("weapon")))
             }
         }
         ChronKind::BodyFound => {
@@ -226,8 +226,8 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
             }
         }
         ChronKind::CivilianComplied => format!("told {} to stay down — and let her go", s("who")),
-        ChronKind::CivilianKO => format!("{} (the {}) out cold — {} — a CIVILIAN", s("who"), s("label"), put_out_how(g, d)),
-        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), crate::gear::gear_text(g, &s("weapon"))),
+        ChronKind::CivilianKO => format!("{} (the {}) out cold — {} — a CIVILIAN", s("who"), s("label"), put_out_how(d)),
+        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), crate::gear::gear_text(&s("weapon"))),
         ChronKind::CameraSpotted => format!("camera {} called you in{}", s("n"), when("sent", format!(" — {} sent to look", s("sent")))),
         ChronKind::CameraAlarm => format!("camera {} had you long enough — the floor goes up", s("n")),
         ChronKind::LaserTripped => {

@@ -103,7 +103,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             if pressed_has(g, input, "Blur") || pressed_has(g, input, "Paused") { g.orders.cmd_press = None; return false; }
             if !crate::input::input_down(g, input, &key) {
                 g.orders.cmd_press = None;
-                g.stats.cmdring.quick += 1;
                 let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g, &crate::seats::here(g));
                 squad_orders_tap_give(g, &p.t, input, Some(goal));
                 return true;
@@ -122,7 +121,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
         pressed_delete(g, input, &key);
         let add = crate::planmode::goals_on(g, &crate::seats::here(g)) && shift_down(g, input);
         if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, &key) {
-            g.stats.cmdring.quick += 1;
             let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_tap_give(g, &t, input, Some(add));
             return true;
@@ -203,17 +201,17 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
         // a row came or went under the ring: the wedges are other rows now, none is lit until the hand lights one
         if seats_now(g, r).row != was { unlight(g, None); }
     }
-    if blur || esc { away(g); g.stats.cmdring.cancelled += 1; return true; }
+    if blur || esc { away(g);  return true; }
     if ring_more(g.orders.cmd_ring) && seats_now(g, None).over.is_empty() { unlight(g, Some(false)); }
     if rmb {
         if ring_more(g.orders.cmd_ring) { unlight(g, Some(false)); }
-        else if !squad_orders_page_back(g) { away(g); g.stats.cmdring.cancelled += 1; }
+        else if !squad_orders_page_back(g) { away(g);  }
         return true;
     }
     if lmb {
         // on a man: the orders are his, and the ring starts again for him · anywhere else the click gives the lit wedge, below
         let part = g.orders.menu.as_ref().unwrap().part.is_some();
-        let k = if squad_orders_whole(g, &crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
+        let k = if squad_orders_whole(&crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
         clicked_off(g, input, 1);
         buttons_off(g, input, 1);
         swallow_if_seat(g, input);
@@ -221,7 +219,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             click = true;
         } else {
             g.orders.who = match g.orders.who { Who::Num(w) if w == k => Who::All, _ => Who::Num(k) };
-            g.stats.cmdring.who += 1;
             let menu = g.orders.menu.as_mut().unwrap();
             if let OrderTarget::None(n) = &menu.target {
                 if n.man.is_some() {
@@ -263,7 +260,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             g.orders.cmd_ring.as_mut().unwrap().lit = 1.0;
         } else if want == seat.more {
             unlight(g, Some(true));
-            g.stats.cmdring.pages += 1;
             turned = true;
             if g.orders.menu.as_ref().unwrap().flat.unwrap_or(false) {
                 squad_orders_refresh(g);
@@ -271,7 +267,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             }
         } else if text(&opens) {
             squad_orders_turn(g, opens.as_deref(), None);
-            g.stats.cmdring.pages += 1;
             turned = true;
             if g.orders.menu.is_none() { g.orders.cmd_ring = None; return true; }
         } else if i >= 0.0 {
@@ -296,9 +291,8 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     g.orders.cmd_ring = None;
     if n.page.is_none() && !ring_more(r) && lit == 1.0 {
         g.orders.menu = None;
-        g.stats.cmdring.quick += 1;
         if n.part.is_some() {
-            squad_orders_part_give(g, &n, &mut |g: &mut Game| {
+            squad_orders_part_give(g, &mut |g: &mut Game| {
                 if crate::autopilot::quick(g, &n.target, Some(&n.men)) { None } else { Some(String::from("refused")) }
             });
         } else {
@@ -307,10 +301,8 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     } else if js::truthy(lit) && i >= 0.0 {
         squad_orders_pick(g, Some(i));
         g.orders.menu = None;
-        g.stats.cmdring.given += 1;
     } else {
         g.orders.menu = None;
-        g.stats.cmdring.cancelled += 1;
     }
     true
 }
@@ -329,16 +321,11 @@ fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
 fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
     let flat = squad_orders_flat_ring(g);
     if !squad_orders_open(g, Some(t), Some(flat), g_2.map(|p| p.men.as_slice())) { return false; }
-    if let Some(p) = g_2 {
-        g.orders.menu.as_mut().unwrap().split = Some(p.split);
-        g.stats.planmode.rings += 1;
-    }
     g.orders.menu.as_mut().unwrap().on_word = false;
     let (w, h) = (canvas.client_width, canvas.client_height);
     let r = crate::cmdring::ring_open(g, input, w, h, t0, None);
     g.orders.cmd_ring = Some(r);
     squad_orders_ring_sel(g);
-    g.stats.cmdring.opened += 1;
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
     if let Some(cam) = cam {
         let at = order_target_at(t);
@@ -359,7 +346,7 @@ fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
 
 /// `this.goalPart(t, add)` for ring_up's argument (the same object in the TypeScript, two types here): the outer None is still null
 fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<SquadOrdersRingUpG>> {
-    squad_orders_goal_part(g, t, add).map(|p| p.map(|p| SquadOrdersRingUpG { men: p.men, split: p.split }))
+    squad_orders_goal_part(g, t, add).map(|p| p.map(|p| SquadOrdersRingUpG { men: p.men }))
 }
 
 /// Shift with the key: the men a tap of it on `t` would have sent; the ring is theirs. `None` = null (nobody is free: said, no ring) ·
@@ -370,13 +357,12 @@ fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTar
         Some(men) => men,
         None => {
             crate::interact::say_why(g, None, crate::view::ThingKind::Wall, crate::planmode::GOAL_NONE, crate::planmode::GOAL_NONE.trim_end_matches('.'));
-            g.stats.planmode.none += 1;
             return None;
         }
     };
     use crate::planmode::GoalMenHow as H;
     Some(if men.how == H::Same || men.how == H::Idle || men.how == H::Split {
-        Some(SquadOrdersGoalPart { split: men.how == H::Split, men: men.men })
+        Some(SquadOrdersGoalPart { men: men.men })
     } else {
         None
     })
@@ -493,10 +479,9 @@ pub fn squad_orders_twice_on(g: &crate::game::Game) -> bool {
 fn squad_orders_all_in(g: &mut crate::game::Game) {
     let men = squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::All), None);
     let t = at_sam(g, &crate::seats::here(g));
-    g.stats.cmdring.twice += 1;
     let mut every = true;
     for &gd in &men {
-        let fell_in = match squad_orders_of(g, &crate::seats::here(g), gd) {
+        let fell_in = match squad_orders_of(&crate::seats::here(g), gd) {
             Some(a) => { let a = &g.tab.orders_assignment[a]; crate::orders::rows::id_is(&a.order, crate::orders::Is::Follows) && a.post.is_none() }
             None => false,
         };
@@ -604,7 +589,7 @@ pub(super) fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Sam is standing.
-pub fn squad_orders_sam_stopped(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub fn squad_orders_sam_stopped(seat: &crate::seats::SeatRef) -> bool {
     seat.orders.sam_v <= 0.3
 }
 

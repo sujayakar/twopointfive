@@ -52,10 +52,8 @@ fn row_at(rows: &[OrdersOrderDefId], i: f64) -> Option<OrdersOrderDefId> {
     if i >= 0.0 && i == m::floor(i) && (i as usize) < rows.len() { Some(rows[i as usize]) } else { None }
 }
 /// `v.input = input; v.cam = cam; v.canvas = canvas`
-fn set_view(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+fn set_view(g: &mut Game, input: InputId) {
     g.orders.view.input = Some(input);
-    g.orders.view.cam = Some(cam);
-    g.orders.view.canvas = Some(canvas);
 }
 /// the open menu's target as its men will work it (menuTarget, on the menu in hand)
 fn menu_target_of(m: &Menu) -> OrderTarget {
@@ -355,9 +353,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         let o = order_only(g, def, &asked, &t);
         if !o.is_empty() { asked = o; }
     }
-    g.orders.face_flip = false;
     let t = squad_orders_for_men(g, &t, &asked);
-    let flipped = g.orders.face_flip;
     let mut cant: Vec<(GuardId, String)> = Vec::new();
     let all: Vec<GuardId> = if g.tab.orders_order_def[def].row.can.is_some() {
         let mut a = Vec::with_capacity(asked.len());
@@ -399,7 +395,6 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         return Some(refused);
     }
     if men.len() > 1 { squad_orders_same_ways(g, &men); }
-    if flipped { g.cleared.stats.face += 1.0; }
     if !free {
         let target = match &t {
             OrderTarget::Door(x) => format!("door:{}", g.dr[x.door].def.name),
@@ -463,9 +458,9 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
     let r = a.post.map(|post| squad_orders_route(g, gd, post, a.shy, a.thru, None));
     let via: Vec<V3> = r.as_ref().map_or(Vec::new(), |x| x.via.clone());
     match r.as_ref().and_then(|x| x.how) {
-        Some(SquadOrdersRouteHow::Round) => g.cleared.stats.round += 1.0,
-        Some(SquadOrdersRouteHow::Through) => g.cleared.stats.through += 1.0,
-        Some(SquadOrdersRouteHow::Mouth) => g.cleared.stats.mouth += 1.0,
+        Some(SquadOrdersRouteHow::Round) => {},
+        Some(SquadOrdersRouteHow::Through) => {},
+        Some(SquadOrdersRouteHow::Mouth) => {},
         None => {}
     }
     let light = match &g.gd[gd].script {
@@ -581,7 +576,6 @@ pub fn squad_orders_escape(g: &mut crate::game::Game) -> bool {
     if g.orders.cmd_ring.is_some() {
         g.orders.menu = None;
         g.orders.cmd_ring = None;
-        g.stats.cmdring.cancelled += 1;
     } else if !squad_orders_page_back(g) {
         g.orders.menu = None;
     }
@@ -610,7 +604,6 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
         wheel_acc: 0.0,
         read_t: -1.0,
         part: part.map(|x| x.to_vec()),
-        split: None,
         page: None,
         word_row,
         on_word: false,
@@ -690,7 +683,7 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
         let opts = GiveOpts { men: Some(m.men.clone()), on_word: if on_word { Some(true) } else { None }, ack: None };
         let target = m.target.clone();
         let mut give = |g: &mut Game| squad_orders_give(g, &id, Some(&target), None, Some(&opts));
-        return squad_orders_part_give(g, &m, &mut give);
+        return squad_orders_part_give(g, &mut give);
     }
     let opts = GiveOpts { ack: None, on_word: Some(true), men: None };
     let no = squad_orders_give(g, &id, Some(&m.target), None, if on_word { Some(&opts) } else { None });
@@ -698,18 +691,13 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
 }
 
 /// An order of the ring that adds a goal, given by hand to its men alone
-pub(super) fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> {
-    let n = g.orders.group;
+pub(super) fn squad_orders_part_give(g: &mut crate::game::Game, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> {
     let no = give(g);
-    if g.orders.group != n {
-        g.stats.planmode.goals += 1;
-        if on(m.split) { g.stats.planmode.split += 1; }
-    }
     no
 }
 
 /// The open menu's target as its men will work it
-pub(super) fn squad_orders_menu_target(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::orders::OrderTarget> {
+pub(super) fn squad_orders_menu_target(seat: &crate::seats::SeatRef) -> Option<crate::orders::OrderTarget> {
     seat.orders.menu.as_ref().map(menu_target_of)
 }
 
@@ -846,8 +834,8 @@ pub fn squad_orders_step_who(g: &mut crate::game::Game, dir: f64, point: Option<
 }
 
 /// After a tick: whoever asks between ticks is answered off the live input and camera
-pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    if g.orders.view.input.is_some() { set_view(g, input, cam, canvas); }
+pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId) {
+    if g.orders.view.input.is_some() { set_view(g, input); }
 }
 
 /// Once a frame right after the aim is known: T, the press that opens or closes the menu, and the open menu's keys, each taken out of the frame's input
@@ -860,13 +848,11 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         g.orders.cmd_press = None;
         g.orders.tap_was = None;
         g.orders.view.input = None;
-        g.orders.view.cam = None;
-        g.orders.view.canvas = None;
         return;
     }
     if g.orders.tap_was.is_some() && (press_has(g, input, "Blur") || press_has(g, input, "Thawed")) { g.orders.tap_was = None; }
-    set_view(g, input, cam, canvas);
-    if squad_orders_whole(g, &crate::seats::here(g)) {
+    set_view(g, input);
+    if squad_orders_whole(&crate::seats::here(g)) {
         g.orders.who = Who::All;
     } else {
         let who_key = g.k.orders.who_key.clone();

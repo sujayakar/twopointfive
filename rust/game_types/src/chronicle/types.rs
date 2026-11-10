@@ -67,15 +67,11 @@ pub struct ChronCounts {
     pub shots_near_men: f64,
     pub lights_shot: f64,
     pub ocps: f64,
-    pub blackouts: f64,
     pub kicked: f64,
     pub picked: f64,
     pub intel: f64,
     pub thrown: f64,
     pub grabs: f64,
-    pub contacts: f64,
-    pub heard: f64,
-    pub radio: f64,
     pub civ_seen: f64,
     pub civ_reported: f64,
     pub civ_complied: f64,
@@ -93,7 +89,7 @@ pub struct ChronCounts {
 pub struct Chronicle {
     pub events: Vec<crate::chronicle::ChronEvent>,
     pub dropped: f64,
-    #[is(crate::chronicle::ChronCounts { seen_up: 0.0, esc1: 0.0, esc2: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, blackouts: 0.0, kicked: 0.0, picked: 0.0, intel: 0.0, thrown: 0.0, grabs: 0.0, contacts: 0.0, heard: 0.0, radio: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0, devices: 0.0, hits: 0.0, down: false, down_by: String::from(""), saves: 0.0, loads: 0.0 })] pub counts: crate::chronicle::ChronCounts,
+    #[is(crate::chronicle::ChronCounts { seen_up: 0.0, esc1: 0.0, esc2: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, kicked: 0.0, picked: 0.0, intel: 0.0, thrown: 0.0, grabs: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0, devices: 0.0, hits: 0.0, down: false, down_by: String::from(""), saves: 0.0, loads: 0.0 })] pub counts: crate::chronicle::ChronCounts,
     pub questioned: JsSet<String>,
     #[is(alloc::vec![0.0; 12000])] pub path: Vec<f32>,
     pub path_n: f64,
@@ -199,13 +195,6 @@ pub struct Debrief {
     pub grade: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DebriefState {
-    #[default] Down,
-    Done,
-    Sofar,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct ROOMSItem {
     pub name: String,
@@ -272,13 +261,6 @@ pub struct RatingOf {
     pub blurb: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SummaryLineState {
-    Down,
-    Done,
-    Sofar,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ChronicleMod {
@@ -315,3 +297,9 @@ pub fn need_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set
 
 pub fn intel() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("door"), String::from("the keyed door (and his key)")); t.set(String::from("code"), String::from("a door code")); t.set(String::from("routes"), String::from("a colleague's route")); t.set(String::from("rollcall"), String::from("when the radio check is due")); t.set(String::from("rollcallLive"), String::from("that a radio check is on now")); t.set(String::from("checkOn"), String::from("that a man is out looking for a colleague")); t.set(String::from("clearing"), String::from("which room the pair is clearing")); t.set(String::from("blackout"), String::from("who is on the breaker")); t.set(String::from("lockdownPosts"), String::from("where the lockdown posts are")); t.set(String::from("missing"), String::from("that a man is missed")); t.set(String::from("drive"), String::from("that the rack is being looked at")); t } }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum DebriefState {
+    #[default] Down,
+    Done,
+    Sofar,
+}

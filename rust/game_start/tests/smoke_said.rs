@@ -15,7 +15,7 @@ fn lives(p: &Play) -> f64 { sim::state::state_read(p.g.sim).smoke.st[sim::bricks
 #[test]
 fn an_open_fire_in_view_files_its_smoke_and_no_man_sees_it() {
     let mut p = Play::level("pass.json", false, &Opts::default());
-    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
+    let _t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
     let before = lives(&p);
     p.run(4.0);
     let filed = emitted(&p);
@@ -75,7 +75,7 @@ fn a_man_who_smokes_keeps_filing_his_thread_and_breathes_out() {
 #[test]
 fn a_fire_says_it_is_a_fire_so_a_preset_can_shed_it() {
     let mut p = Play::level("pass.json", false, &Opts::default());
-    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
+    let _t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
     p.run(4.0);
     let said = emitted(&p);
     assert!(!said.is_empty(), "a fire in view filed nothing");
@@ -86,7 +86,7 @@ fn a_fire_says_it_is_a_fire_so_a_preset_can_shed_it() {
 #[test]
 fn the_drawn_sections_say_it_the_same() {
     let mut p = Play::level("pass.json", false, &Opts::default());
-    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
+    let _t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
     p.run(2.0);
     let said = p.smoke.clone();
     assert!(!said.is_empty(), "a fire in view filed nothing");

@@ -8,7 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the bench
 
-
 /// a boolean as the bench holds it
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 
@@ -34,7 +33,7 @@ pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
 }
 
 /// What the gun hand visibly holds: the rule's, unless a swap is running.
-pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
+pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::guards::InHand>) -> Option<crate::guards::InHand> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
         if let (Some(r), Some(Some(cur))) = (rule, s.cur) {
@@ -52,19 +51,10 @@ pub(super) fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.sw.belt
 }
 
-/// The swap's progress (-1: none), what it goes to, and whether one waits.
-pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
-    let s = &g.ch[c].anim.sw;
-    crate::character::AnimSwapInfo {
-        a: if s.t < 0.0 { -1.0 } else { s.t / s.dur },
-        pending: s.wait >= 0.0,
-    }
-}
-
 /// The torch and sidearm swap's clock, and its arm when it shows.
 pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) {
     if taken { g.ch[c].anim.sw.t = -1.0; return; }
-    let weapon = g.ch[c].anim.sw.to == Some(AnimCarry::Weapon);
+    let weapon = g.ch[c].anim.sw.to == Some(crate::guards::InHand::Weapon);
     if g.ch[c].anim.shoot_t >= 0.0 && weapon {
         let s = &mut g.ch[c].anim.sw;
         s.t = m::max(s.t, s.dur * 0.85);
@@ -155,7 +145,7 @@ pub(super) fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
 pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let an = &mut g.ch[c].anim;
     // (undefined, null or a word: all three are told apart)
-    let carry = an.carry.map(|o| o.map(|k| match k { CarryKind2::Torch => AnimCarry::Torch, CarryKind2::Weapon => AnimCarry::Weapon }));
+    let carry = an.carry;
     if an.hold_pose.is_some() {
         an.hd_idle.upper = an.upper; an.hd_idle.long = an.long_gun; an.hd_idle.crouch = an.crouch_target;
         an.hd_idle.carry = carry;
@@ -176,7 +166,7 @@ pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
 pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character::AnimBigTool, tw_y: f64, tw_p: f64) {
     let stowing = b.end >= 0.0 && b.t >= b.end;
     let us = if stowing { v3::clamp((b.t - b.end) / m::max(1e-3, b.stow), 0.0, 1.0) } else { 0.0 };
-    let ham = b.kind == AnimBigToolKind::Hammer;
+    let ham = b.kind == crate::kit::BigTool::Hammer;
     if !(b.t >= 0.0) || us >= 1.0 { g.ch[c].anim.big_under = false; g.ch[c].anim.big_k = 0.0; return; }
     if ham && g.ch[c].anim.big_buf.is_none() {
         let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);

@@ -133,8 +133,8 @@ export class DrawGame {
   walked = false;
   private order(): void { if (this.commands.length) { const b = this.commands.take(); if (this.walked) return; this.tape?.order(b); this.command(b); } }
   private command(b: Uint8Array): void { this.handed(b, (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); }); }
-  /** what the game has come to: the rolls of its die and its block's hash, and the whole of it where that is asked (a check's: it is a frame's worth of time) */
-  mark(whole = false): TapeMark {
+  /** what the game has come to: the rolls of its die, its block's hash, and the hash of every part of it (`whole` false: without that, the dear one) */
+  mark(whole = true): TapeMark {
     const at = this.X.face_part_hashes(this.X.face_slot(this.h)) >>> 0, n = this.X.face_parts(), die = this.X.face_die_n(this.h), parts = hashOf(new Uint8Array(this.memory.buffer, at, n * 4));
     let state: number | null = null; if (whole) { this.X.face_state_words(this.h); state = hashOf(this.bytes()); }
     return { tick: this.ticks, die, parts, state };

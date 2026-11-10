@@ -92,9 +92,9 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     g.tab.orders_assignment[a].goal = match g.tab.orders_assignment[a].via.first() { Some(&q) => q, None => v3::copy(post) };
                     g.tab.orders_assignment[a].new_leg = true;   // (unguarded, like the writes on the field's list)
                     match r.how {
-                        Some(SquadOrdersRouteHow::Round) => g.cleared.stats.round += 1.0,
-                        Some(SquadOrdersRouteHow::Through) => g.cleared.stats.through += 1.0,
-                        Some(SquadOrdersRouteHow::Mouth) => g.cleared.stats.mouth += 1.0,
+                        Some(SquadOrdersRouteHow::Round) => {},
+                        Some(SquadOrdersRouteHow::Through) => {},
+                        Some(SquadOrdersRouteHow::Mouth) => {},
                         None => {}
                     }
                 }
@@ -119,7 +119,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             let p = g.ch[c].pos;
             let sam_pos = g.ch[sam].pos;
             let to_sam = flat(p, sam_pos);
-            let stopped = squad_orders_sam_stopped(g, &crate::seats::here(g));
+            let stopped = squad_orders_sam_stopped(&crate::seats::here(g));
             let follow = g.tab.orders_assignment[a].follow;
             let back_m = squad_orders_back_of(g, follow) + if stopped { squad_orders_clear_back(g, follow) } else { 0.0 };
             let mut slot = squad_orders_slot(g, back_m);
@@ -181,7 +181,6 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                         let via = squad_orders_round_rooms(g, gd, slot);
                         g.tab.orders_assignment[a].via = via;
                         g.tab.orders_assignment[a].via_for = Some([slot[0], 0.0, slot[2]]);
-                        if !g.tab.orders_assignment[a].via.is_empty() && !had { g.cleared.stats.round += 1.0; }
                         if g.tab.orders_assignment[a].via.is_empty() && on_wall.is_none() {   // (no room to go round: the doors Sam took)
                             let j = squad_orders_slot_crumb(g, &crate::seats::here(g), back_m);
                             let via = squad_orders_trail_way(g, gd, slot, on_trail, j);
@@ -219,7 +218,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 must = sn_must; speed = x.speed; low = x.crouch;
                 if let Some(q) = x.goal { s_goal = Some(q); d = flat(p, q); }
             } else {
-                let un = if aside.is_some() { None } else { crate::unseen::unseen_follow(g, gd, sam_v, d, walk, speed) };
+                let un = if aside.is_some() { None } else { crate::unseen::unseen_follow(g, gd, sam_v, d, walk) };
                 if let Some(u) = &un { speed = u.speed; low = u.crouch; }
                 else { low = crate::sneak::sneak_low(g, gd) || crate::unseen::unseen_low(g, gd); }
             }
@@ -311,7 +310,6 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     let aa = &mut g.tab.orders_assignment[a];
                     aa.back_n = Some(aa.back_n.unwrap_or(0.0) + 1.0);
                     aa.goal = v3::copy(cur); aa.moved_t = now; aa.new_leg = true;
-                    g.m.doorway.stack_own.back += 1.0;
                 } else {
                     if d >= 1.0 {
                         g.tab.orders_assignment[a].there = String::from("stopped short");
@@ -406,7 +404,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 let along = sx * fx + sz * fz;
                 along > 0.15 && along < len && m::abs(sx * fz - sz * fx) < lane
             };
-            let mut low_now = squad_orders_sams(g, &crate::seats::here(g)) && in_line(g.ch[sam].pos);
+            let mut low_now = squad_orders_sams(&crate::seats::here(g)) && in_line(g.ch[sam].pos);
             if !low_now && g.tab.orders_assignment[a].arrived && crate::orders::rows::id_is(&order_id, crate::orders::Is::KeepsLane) {
                 for &o in mates.iter() {   // (… a man of the OTHER pair, across a gun that is posted)
                     if o != gd && squad_orders_pair_of(g, o) != squad_orders_pair_of(g, gd) && in_line(g.ch[g.gd[o].ch].pos) { low_now = true; break; }
@@ -616,7 +614,6 @@ fn squad_orders_rest_clear(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
             g.tab.orders_assignment[a].goal = q;
             let r = g.orders.rest_of.get_mut(a).unwrap();
             r.hold = Some(q); r.hold_for = [trail[0], 0.0, trail[2]];
-            g.stats.doorway.rest += 1;
         }
         return;
     }
@@ -632,7 +629,6 @@ fn squad_orders_rest_clear(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
                 r.step = Some(q); r.until = t + 4.0; r.from = [trail[0], 0.0, trail[2]]; r.n = m::min(r.n + 1.0, 4.0);
             }
             g.tab.orders_assignment[a].goal = q;
-            g.stats.doorway.rest += 1;
         } else { g.orders.rest_of.get_mut(a).unwrap().t = t; }
     }
 }
@@ -686,7 +682,6 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
     let now = g.time;
     let aa = &mut g.tab.orders_assignment[a];
     aa.post = Some(q); if aa.had == Some(q) { aa.had = None; } aa.goal = v3::copy(q); aa.via.clear(); aa.mark_t = now; aa.moved_t = now; aa.new_leg = true;
-    g.stats.doorway.rest += 1;
     true
 }
 

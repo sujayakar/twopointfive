@@ -26,21 +26,6 @@ pub struct DoorIo {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct DC {
-    pub drive_who: f64,
-    pub drive_dir: f64,
-    pub drive_kind: f64,
-    pub drive_t: f64,
-    pub drive_from: f64,
-    pub drive_quiet: f64,
-    pub drive_side: f64,
-    pub drive_rate: f64,
-    pub drive_px: f64,
-    pub drive_pz: f64,
-    pub drive_hit: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DO {
     pub placed: f64,
     pub h1x: f64,
@@ -95,21 +80,16 @@ pub struct SimDoorshomeModDOORSSTEPPED {
     pub there: f64,
     pub here: f64,
     pub turned: f64,
-    pub noises: f64,
 }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct SimDoorshomeMod {
     pub io: Option<crate::sim_doorshome::DoorIo>,
-    #[is(crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0, noises: 0.0 })] pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
+    #[is(crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0 })] pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
 }
 
 pub const DOOR_CAP: f64 = 64.0;
-
-pub fn dc() -> crate::sim_doorshome::DC { crate::sim_doorshome::DC { drive_who: 34.0, drive_dir: 35.0, drive_kind: 36.0, drive_t: 37.0, drive_from: 38.0, drive_quiet: 39.0, drive_side: 40.0, drive_rate: 41.0, drive_px: 42.0, drive_pz: 43.0, drive_hit: 44.0 } }
-
-pub fn drive_kinds() -> [String; 4] { [String::from("boot"), String::from("swing"), String::from("body"), String::from("hand")] }
 
 pub fn door_sounds() -> [String; 10] { [String::from("creak"), String::from("bang"), String::from("latch"), String::from("bash"), String::from("rattle"), String::from("pick"), String::from("unlock"), String::from("kick"), String::from("clang"), String::from("thud")] }
 

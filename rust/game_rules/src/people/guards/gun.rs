@@ -265,8 +265,8 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         }
     }
     let (mut best, mut best_rate, mut cur_visible): (Option<CharId>, f64, bool) = (None, 0.05, false);
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, Team::Player) && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
+    let team = g.team(gd);
+    if team.theirs() && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
         let ch = g.pl[g.player].ch;
         consider(g, gd, ch, &mut best, &mut best_rate, &mut cur_visible);
     }
@@ -277,12 +277,11 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let och = g.gd[o].ch;
         if !g.ch[och].alive { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
+        if team.foe_of(g.team(o)) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
             consider(g, gd, och, &mut best, &mut best_rate, &mut cur_visible);
         }
     }
-    let op = team == Team::Operative;
+    let op = team.ours();
     if cur_visible { return; }
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
@@ -328,16 +327,15 @@ fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams:
         let o = g.guards[i];
         i += 1;
         if crate::condition::down(g, g.gd[o].ch) { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) { return true; }
+        if team.foe_of(g.team(o)) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[seat.player].ch)
+    team.theirs() && !crate::condition::down(g, g.pl[seat.player].ch)
 }
 
 /// One of his side said it in the last three seconds.
 fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&o| {
-        if o == gd || g.gd[o].team != team { return false; }
+        if o == gd || g.team(o) != team { return false; }
         match g.gd[o].bubble.as_ref() {
             Some(b) => g.time - b.t < 3.0 && (b.text.contains("clear.") || b.text.contains("all of them")),
             None => false,
@@ -348,44 +346,44 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 // ------------------------------------------------------------ the right hand
 
 /// Which rig is in his hands.
-pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
+pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::rig_props::RigWeapon {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
     let rig = g.m.weapons.weapons.get(def).unwrap().rig;
     if g.gd[gd].carbine || rig == WeaponDefRig::Carbine {
-        crate::guards::RigOf::Carbine
+        crate::rig_props::RigWeapon::Carbine
     } else if rig == WeaponDefRig::Sc20k {
-        crate::guards::RigOf::Sc20k
+        crate::rig_props::RigWeapon::Sc20k
     } else {
-        crate::guards::RigOf::Pistol
+        crate::rig_props::RigWeapon::Pistol
     }
 }
 
 /// Which long gun that is; None = the sidearm.
-pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
+pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     match rig_of(g, gd) {
-        crate::guards::RigOf::Pistol => None,
-        crate::guards::RigOf::Carbine => Some(crate::guards::LongRigOf::Carbine),
-        crate::guards::RigOf::Sc20k => Some(crate::guards::LongRigOf::Sc20k),
+        crate::rig_props::RigWeapon::Pistol => None,
+        crate::rig_props::RigWeapon::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::rig_props::RigWeapon::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
     }
 }
 
 /// What his state has him carry in the gun hand.
-pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
+pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::InHand {
     use crate::game::GuardState;
     let torch = crate::startle::startle_torch(g, gd)
         || ((g.gd[gd].state == GuardState::Patrol || (g.gd[gd].state == GuardState::Suspicious && crate::whistle::whistle_soft(g, gd)))
             && !g.gd[gd].drawn
-            && rig_of(g, gd) == crate::guards::RigOf::Pistol
+            && rig_of(g, gd) == crate::rig_props::RigWeapon::Pistol
             && !crate::kit::kit_pistol(g, gd));
-    if torch { crate::guards::HandCarry::Torch } else { crate::guards::HandCarry::Weapon }
+    if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon }
 }
 
 /// A living man has the gun knocked out of his hand at the grab again: off the floor and in his fist.
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     let dropped = g.gd[gd].dropped;
     if let Some(d) = dropped {
-        if crate::throwables::item_kind(g, d) != crate::throwables::ItemKind::Torch {
+        if g.tab.item[d].kind != crate::throwables::ItemKind::Torch {
             if let Some(i) = g.items.items.iter().position(|&x| x == d) {
                 g.items.items.remove(i);
                 g.gd[gd].dropped = None;
@@ -400,12 +398,8 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return None; }
-    match hand_carry(g, gd) {
-        crate::guards::HandCarry::Torch => {
-            if g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0 { None } else { Some(crate::guards::InHand::Torch) }
-        }
-        crate::guards::HandCarry::Weapon => Some(crate::guards::InHand::Weapon),
-    }
+    let carry = hand_carry(g, gd);
+    if carry == crate::guards::InHand::Torch && (g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0) { None } else { Some(carry) }
 }
 
 /// The magazine is empty: he stands there changing it, says so, and the clack plays at him.
@@ -424,7 +418,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
     let def = def_row(g, w);
-    if !crate::gunreload::feed_starts(g, &def) {
+    if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
     }
@@ -437,7 +431,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     let before = rr.dur - g.gd[gd].reload_t;
     g.gd[gd].reload_t -= dt;
     let def = def_row(g, w);
-    let drop = crate::gunreload::feed_drop(g, &def);
+    let drop = crate::gunreload::feed_drop(&def);
     let c = g.gd[gd].ch;
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
@@ -563,7 +557,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     let opts = if b.off.is_some() {
         crate::combat::FireOpts { spread: Some(0.0), steady: Some(true), ..Default::default() }
     } else {
-        crate::aim::guard_round(g, gd, grow + mods.spread, Some(b.idx == 0.0))
+        crate::aim::guard_round(g, gd, grow + mods.spread)
     };
     crate::combat::fire_weapon(g, c, aim, Some(&opts));
     if b.off.is_none() { crate::aim::note_bore(g, gd, aim); }
@@ -608,8 +602,8 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     if g.ch[c].bones.get(Bone::HandR).is_none() { return None; }
     let mut dir = g.ch[c].gun_dir;
     let rk = rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
-    let torch = hand_carry(g, gd) == HandCarry::Torch;
+    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
+    let torch = hand_carry(g, gd) == crate::guards::InHand::Torch;
     let hangs = torch && g.ch[c].alive && torch_low(g, gd);
     if torch && g.ch[c].alive {
         let low = if hangs { Some(crate::rig_props::TorchCarryDirLow { tan: g.k.torch.low_tan, rate: g.k.torch.low_rate }) } else { None };
@@ -620,14 +614,14 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     } else {
         g.gd[gd].beam_dir = v3::copy(dir);
     }
-    let lens = if rk == RigOf::Sc20k {
+    let lens = if rk == crate::rig_props::RigWeapon::Sc20k {
         crate::rig_props::sc20k_light_pose(g, c, None).pos
     } else if crate::kit::kit_pistol(g, gd) && weapon_rig_is_pistol(g, gd) {
         crate::rig_props::rig_light_pose(g, c, None).pos
     } else {
-        let want = if torch { crate::handwork::SwapHeldHeld::Torch } else { crate::handwork::SwapHeldHeld::Weapon };
-        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::handwork::SwapHeld::Torch);
-        let weapon = if carbine { crate::rig_props::RigTorchPosWeapon::Carbine } else { crate::rig_props::RigTorchPosWeapon::Pistol };
+        let want = if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon };
+        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::guards::InHand::Torch);
+        let weapon = if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol };
         crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(crate::rig_props::rig()), Some(weapon))
     };
     g.tab.light[fl].pos = lens;
@@ -640,9 +634,9 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
     if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {
-            let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
+            let (yaw, tumble) = (g.tab.item[it].yaw, g.tab.item[it].tumble);
             let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
-            let at = crate::throwables::item_pos(g, it);
+            let at = g.tab.item[it].pos;
             g.tab.light[fl].pos = v3::mad(at, hd, 0.1);
             g.tab.light[fl].dir = hd;
             held = Some(at);
@@ -678,7 +672,6 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     }
     if wall_dark(g, gd, held) && g.tab.light[fl].enabled {
         g.tab.light[fl].enabled = false;
-        if let Some(s) = g.m.guards.wall_seen.get_mut(gd) { s.out = Some(true); }
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
@@ -706,15 +699,15 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, &crate::seats::here(g), p)) { return true; }
+            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(&crate::seats::here(g), p)) { return true; }
         }
         return false;
     }
-    in_game_view(g, &crate::seats::here(g), p)
+    in_game_view(&crate::seats::here(g), p)
 }
 
 /// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+fn in_game_view(seat: &crate::seats::SeatRef, p: V3) -> bool {
     match seat.view_proj {
         None => false,
         Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),

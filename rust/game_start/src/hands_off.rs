@@ -21,7 +21,7 @@ use core::task::{Context, Waker};
 use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::dice::Die;
-use game::game::{Game, GuardState, InteractableKind, Verb};
+use game::game::{Game, InteractableKind, Verb};
 use game::ids::{DoorId, GuardId, RoomfightRoomId, SeatId};
 use game::orders::OrderTarget;
 use game::roomfight::Entry;
@@ -178,7 +178,7 @@ impl Me {
         self.wait(2.5).await;
         if !self.go(post, 60.0, || false).await { self.say(format!("(he did not reach his post: at {})", at(self.pos()))); }
         if !sent { self.quick_on(d, "stack").await; }
-        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(g, s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
+        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
         for k in 0..4 {
             if !h.held(self) || self.up().is_empty() { break; }
             if !self.enter(d, if k > 0 { "again" } else { "go in" }).await { self.wait(1.0).await; continue; }
@@ -316,7 +316,7 @@ impl Me {
 struct Held { room: RoomfightRoomId, entries: Vec<Entry>, men: Vec<GuardId> }
 impl Held { fn held(&self, me: &Me) -> bool { self.men.iter().any(|&m| !me.dead(m)) } }
 
-fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.gd[m].team == Team::Hostile && !game::condition::down(g, g.gd[m].ch)).collect() }
+fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.team(m) == Team::Hostile && !game::condition::down(g, g.gd[m].ch)).collect() }
 fn out_pt(e: &Entry, back: f64, lat: f64) -> V3 { [e.at[0] + e.out[0] * back - e.out[1] * lat, 0.0, e.at[2] + e.out[1] * back + e.out[0] * lat] }
 /// a question that costs a search of the floor, asked four times a second and not every tick
 fn slow<'a>(me: &'a Me, mut f: impl FnMut() -> bool + 'a) -> impl FnMut() -> bool + 'a {
@@ -392,7 +392,7 @@ impl HandsOff {
         let eye = [pos[0], 1.45, pos[2]];
         let mut best: Option<(f64, GuardId)> = None;
         let world = WorldAsk::of(g);
-        for h in g.guards.iter().copied().filter(|&h| g.gd[h].team == Team::Hostile) {
+        for h in g.guards.iter().copied().filter(|&h| g.team(h) == Team::Hostile) {
             if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
             let (c, d) = (chest(h), flat(pos, g.ch[g.gd[h].ch].pos));
             if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || world.line(eye, c, Line::Solid) { continue; }

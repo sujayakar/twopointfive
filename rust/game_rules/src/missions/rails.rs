@@ -51,7 +51,6 @@ mod tests {
         assert_eq!(lookout_eye(STEP_EYE_ID, LookoutEyeE { at: [0.0; 3], yaw: 0.0, fov: Some(90.0) }).fov, Some(90.0));
     }
 
-
 }
 
 /// ACTS.move.keys: the walk keys
@@ -74,7 +73,7 @@ fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empt
 /// a man of the squad is under an order whose mark is within wayM of this place
 fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
     for gd in rails_squad(g) {
-        if let Some(a) = crate::orders::squad_orders_of(g, seat, gd) {
+        if let Some(a) = crate::orders::squad_orders_of(seat, gd) {
             if let Some(p) = g.tab.orders_assignment[a].post {
                 if m::hyp2(p[0] - at[0], p[2] - at[2]) < g.k.rails.way_m { return true; }
             }
@@ -83,7 +82,7 @@ fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
     false
 }
 fn order_of(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<String> {
-    let a = crate::orders::squad_orders_of(g, seat, gd)?;
+    let a = crate::orders::squad_orders_of(seat, gd)?;
     Some(g.tab.orders_assignment[a].order.clone())
 }
 
@@ -96,7 +95,7 @@ fn rails_fight(g: &mut crate::game::Game) -> f64 {
         n += 1;
         if !(time > g.rails.act_t) { continue; }
         let hit = kind == K::Kick || kind == K::Bang || (kind == K::Prop && loud)
-            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Operative));
+            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Ours));
         if hit { g.rails.act_t = time; }
     }
     for k in 0..g.guards.len() {
@@ -106,7 +105,7 @@ fn rails_fight(g: &mut crate::game::Game) -> f64 {
     g.rails.act_t
 }
 
-pub fn rails_new(g: &crate::game::Game) -> crate::rails::Rails { crate::rails::Rails::blank() }
+pub fn rails_new() -> crate::rails::Rails { crate::rails::Rails::blank() }
 
 /// the rails record in force
 fn rails_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::RailsData> {
@@ -183,7 +182,6 @@ pub(super) fn rails_settles(g: &mut crate::game::Game, l: &crate::scene_scenario
 pub fn rails_tap_off(g: &mut crate::game::Game) -> bool {
     if !rails_teaches_hold(g) { return false; }
     g.rails.tap_t = g.time;
-    g.stats.rails.dropped += 1;
     true
 }
 /// the step that is up teaches the hold
@@ -213,7 +211,7 @@ fn rails_note_given(g: &mut crate::game::Game, o: &str) {
 }
 /// this man runs the leg he is on
 pub fn rails_runs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if !g.rails.running || g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.rails.running || !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     match order_of(g, seat, gd) { Some(o) => !crate::orders::rows::id_is(&o, crate::orders::Is::Follows) && !crate::orders::rows::id_is(&o, crate::orders::Is::Holds), None => false }
 }
 /// is a man of the squad under an order to the step's mark
@@ -281,9 +279,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
         i.keys.has(ik.clone()) && (down_t >= 0.0 || (i.pressed.has(ik) && !f_held))
     } && crate::interact::running_verb(g, &crate::seats::here(g)).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.nearby));
     let c = GateOk { a: &a, keys, rows, menu_up, hand_up, hand_key, enter };
-    let mut dropped = 0;
     let i = &mut g.tab.input[input];
-    for k in i.pressed.keys() { if !gate_ok(&c, &k) { i.pressed.delete(k); dropped += 1; } }
+    for k in i.pressed.keys() { if !gate_ok(&c, &k) { i.pressed.delete(k); } }
     for k in i.keys.keys() { if !gate_ok(&c, &k) { i.keys.delete(k); } }
     // the command key held is the ring: its own action over `order`
     if has(&c.keys, "KeyB") {
@@ -298,12 +295,10 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
         if !has(&a, "ring") && !(has(&a, "ringPart") && shift) && !i.pressed.has(kb()) { i.keys.delete(kb()); }
     }
     let clicked = js::to_i32(i.clicked);
-    if clicked & !buttons != 0 { dropped += 1; }
     i.buttons = (js::to_i32(i.buttons) & buttons) as f64;
     i.clicked = (clicked & buttons) as f64;
     if !wheel && !menu_up && !hand_up { i.wheel = 0.0; }
     let word = i.pressed.has(String::from("KeyF"));
-    g.stats.rails.dropped += dropped;
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));
@@ -337,7 +332,7 @@ pub fn rails_step_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogE
     g.rails.step_look.map(|l| l.eye)
 }
 /// once a tick: the run's start, the step that came up answered, the spared men stood up
-pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
+pub fn rails_tick(g: &mut crate::game::Game) {
     let s = rails_lesson(g);
     g.rails.running = s.as_ref().map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.on_way.as_ref()).map_or(false, |w| w.run.unwrap_or(false)))
         && rails_on_way(g, &crate::seats::here(g), s.as_ref().map(at_of).as_ref());
@@ -349,7 +344,6 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
         g.rails.run = Some(g.mission.serial);
         g.rails.answered = -1.0; g.rails.spared.clear();
         g.rails.fresh = 3.0;
-        g.rails.log.clear();
         g.rails.orders_seen = g.orders.log.len() as f64;
         rails_clean(g);
         rails_start_program(g);
@@ -362,14 +356,14 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     while g.rails.orders_seen < g.orders.log.len() as f64 {
         let o = g.orders.log[g.rails.orders_seen as usize].order.clone();
         rails_note_given(g, &o);
-        crate::director::director_signal(g, &alloc::format!("order:{}", o), None);
+        crate::director::director_signal(g, &alloc::format!("order:{}", o));
         g.rails.orders_seen += 1.0;
     }
     // (while a man is still on his way, the step's `after` line stays)
     if js::truthy(g.rails.gave) && g.rails.gave_step == s.i {
         let mut walking = false;
         for gd in rails_squad(g) {
-            if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
+            if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
                 let r = &g.tab.orders_assignment[a];
                 if !crate::orders::rows::id_is(&r.order, crate::orders::Is::Holds) && !crate::orders::rows::id_is(&r.order, crate::orders::Is::Follows) && !r.arrived { walking = true; break; }
             }
@@ -380,19 +374,12 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     if step_at(&s.l, s.i).and_then(|t| t.on_way.as_ref()).map_or(false, |w| w.nv == Some(false)) && g.rails.way_nv != s.i && rails_on_way(g, &crate::seats::here(g), Some(&at_of(&s))) {
         g.rails.way_nv = s.i;
         let p = g.player;
-        if g.pl[p].nv { g.pl[p].nv = false; rails_note(g, "on the way out: night vision up"); }
+        if g.pl[p].nv { g.pl[p].nv = false;  }
     }
     let spared: Vec<(crate::Num, f64)> = g.rails.spared.iter().map(|(k, v)| (k, *v)).collect();
     for (id, t) in spared {
         if g.time >= t {
             g.rails.spared.delete(id);
-            let gd = g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == id.0);
-            if let Some(gd) = gd {
-                if !crate::condition::down(g, g.gd[gd].ch) {
-                    let line = alloc::format!("{} is up again", g.gd[gd].callsign);
-                    rails_note(g, &line);
-                }
-            }
         }
     }
 }
@@ -408,31 +395,22 @@ fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsLesson) {
     if let Some(f) = fog {
         if g.fog_of_war.on != f {
             g.fog_of_war.on = f;
-            rails_note(g, if f { "fog on" } else { "fog off" });
         }
     }
     let t = match step_at(&s.l, s.i) { Some(t) => t, None => return };
     if let Some(cue) = t.cue.as_ref().filter(|c| !c.is_empty()) {
-        crate::director::director_signal(g, &alloc::format!("lesson:{}", cue), None);
+        crate::director::director_signal(g, &alloc::format!("lesson:{}", cue));
         g.stats.rails.cues += 1;
-        rails_note(g, &alloc::format!("cue '{}'", cue));
     }
     if let Some(cp) = t.checkpoint.as_ref().filter(|c| !c.is_empty()) {
         crate::savestate::checkpoints_keep(g, cp);
-        g.stats.rails.kept += 1;
-        rails_note(g, &alloc::format!("checkpoint asked: {}", cp));
     }
 }
 fn rails_start_program(g: &mut crate::game::Game) {
     if !crate::director::director_programs(g).iter().any(|x| x == "tutorial") { return; }
-    if g.director.run.map_or(false, |r| !g.tab.director_run[r].ended) { crate::director::director_stop(g, Some(false)); }
-    let no = crate::director::director_start(g, "tutorial", None);
+    if g.director.run.map_or(false, |r| !g.tab.director_run[r].ended) { crate::director::director_stop(g); }
+    crate::director::director_start(g, "tutorial", None);
     g.stats.rails.starts += 1;
-    let line = match no.filter(|n| !n.is_empty()) {
-        Some(n) => alloc::format!("the level's program did not start: {}", n),
-        None => String::from("the level's program started"),
-    };
-    rails_note(g, &line);
 }
 /// has the level's program said this beat has played out
 pub(super) fn rails_cued(g: &crate::game::Game, name: &str) -> bool { crate::director::director_signalled(g, &alloc::format!("done:{}", name)) }
@@ -445,7 +423,7 @@ pub(super) fn rails_ends_now(g: &crate::game::Game) -> bool { rails_at(g).map_or
 fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let d = match rails_data(g) { Some(d) => d, None => return false };
     let respawn = match d.respawn { Some(r) => r, None => return false };
-    if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     let id = crate::Num(g.ch[g.gd[gd].ch].id);
     if let Some(until) = g.rails.spared.get(id) { if g.time < *until { return true; } }
     let t = g.time + if respawn > 0.0 { respawn } else { g.k.rails.spare_secs };
@@ -453,9 +431,6 @@ fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     crate::condition::fold_to(g, c, t);
     g.gd[gd].door_down_until = m::max(g.gd[gd].door_down_until, t);
-    g.stats.rails.spared += 1;
-    let line = alloc::format!("{} spared a down: up at {}", g.gd[gd].callsign, js::to_fixed(t, 1));
-    rails_note(g, &line);
     true
 }
 /// is this man on his knee right now, spared
@@ -469,7 +444,7 @@ fn rails_squad(g: &crate::game::Game) -> Vec<GuardId> {
     for k in 0..g.guards.len() {
         let x = g.guards[k];
         let r = &g.gd[x];
-        if r.unit.is_some() && r.team == crate::teams::Team::Operative && !g.cond[r.ch].down { out.push(x); }
+        if g.ch[r.ch].team.ours() && !g.cond[r.ch].down { out.push(x); }
     }
     out
 }
@@ -492,7 +467,7 @@ fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) {
     crate::orders::squad_orders_assign(g, gd, &a);
 }
 /// is the squad still waiting where the mission stood it
-fn rails_waiting(g: &crate::game::Game, s: &crate::rails::RailsLesson) -> bool {
+fn rails_waiting(s: &crate::rails::RailsLesson) -> bool {
     let r = s.l.rails.as_ref().unwrap();
     if r.waits.is_none() || r.allow.iter().any(|x| x == "order") { return false; }
     let mut k = 0;
@@ -504,7 +479,7 @@ fn rails_waiting(g: &crate::game::Game, s: &crate::rails::RailsLesson) -> bool {
 }
 /// a waiting man on 'fall in' holds his place
 fn rails_hold_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsLesson) {
-    if !rails_waiting(g, s) { return; }
+    if !rails_waiting(s) { return; }
     let low = s.l.rails.as_ref().unwrap().waits.as_ref().unwrap().low.unwrap_or(false);
     for gd in rails_squad(g) {
         if order_of(g, &crate::seats::here(g), gd).map_or(false, |o| crate::orders::rows::id_is(&o, crate::orders::Is::Follows)) { rails_hold_here(g, gd, Some(low)); }
@@ -524,7 +499,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let up = (s.i as usize) < of;
     let i = m::min(s.i, of as f64 - 1.0) as usize;
     let t = &s.l.steps[i];
-    let step_line = || lesson_line(g, &line_of(g, t));
+    let step_line = || lesson_line(g, &line_of(t));
     let cue = matches!(t.done, crate::lesson::LessonTest::Cue { .. });
     let said_now = |a: &crate::scene_scenarios::LessonStepAfter| said(a, g.rails.gave).filter(|l| !l.is_empty());
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
@@ -582,12 +557,6 @@ pub(super) fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s:
         teaches_hold: t.map_or(false, |t| word_of(&t.no_tap)),
         no_lasers: rd.lasers == Some(false),
     })
-}
-/// the frame's own log
-fn rails_note(g: &mut crate::game::Game, s: &str) {
-    let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
-    g.rails.log.push(line);
-    if g.rails.log.len() > 80 { g.rails.log.drain(0..40); }
 }
 pub fn rails_spare_2(g: &mut crate::game::Game, gd: GuardId) -> bool { rails_spare(g, gd) }
 /// is this man down as far as an enemy's eye goes

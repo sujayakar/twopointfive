@@ -255,7 +255,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 33.5, 10.0, 'street_lamp_east', [-1, 0, 0]);     // off the east wall: it lights the stack on the staff room's east door, in front of that door's sidelight
   K.moon(k);
 
-  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A district land office, and its things are the surveyor's: red and white ranging rods, tripods, maps rolled and unrolled, pegs. Each room by what only it has —
   // the front office is the PUBLIC's (the claims ledge, ink, forms: clean), records the PLAN BOOKS (open on a lectern at each end of the island, plan chests under the
   // window), the strong room the DEED VAULT (the steel safe; black deed tins with buff lids), the staff room the FIELD's (the drawing board, the theodolite

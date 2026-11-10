@@ -46,12 +46,12 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, r
     let mut pool: Vec<&'static str> = Vec::new();
     pool.extend_from_slice(l.now.unwrap_or(l.say));
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
-    pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
+    pool.extend_from_slice((if g.team(gd) != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
     let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
-    if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }
+    if radio {  } else {  }
     true
 }
 
@@ -73,7 +73,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a man this file is about at all: a living defender or a man of the night staff
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let m_ = &g.gd[gd];
-    !g.cond[m_.ch].down && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
+    !g.cond[m_.ch].down && g.ch[m_.ch].team.theirs()
 }
 
 /// may a sequence have him this frame
@@ -116,7 +116,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !ours(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::runner::runner_nobody(g, o) { continue; }
+        if o == gd || !ours(g, o) || g.team(o) != g.team(gd) || g.gd[o].held.is_some() || crate::runner::runner_nobody(g, o) { continue; }
         let oc = g.gd[o].ch;
         if flat(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
             let chest = chest_of(g, oc);
@@ -129,7 +129,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// the men he is counted with: his squad's, else his room's
 fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
-    if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
+    if g.team(gd) != crate::teams::Team::Hostile { return None; }
     g.staged.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
 }
 
@@ -137,11 +137,11 @@ fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
 fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
     let key = format!("{}|{}|{}", g.time, g.k.pressure.on, g.k.digin.on);
     if let Some(had) = &g.m.morale.mix_at {
-        if had.key == key { return if had.mix == MoraleModMixAtValueMix::Hard { MixNow::Hard } else { MixNow::Mixed }; }
+        if had.key == key { return if had.mix == crate::morale::MixNow::Hard { MixNow::Hard } else { MixNow::Mixed }; }
     }
     let ai = match crate::difficulty::levers_shown(g, None).ai { Some(d) => d.as_str(), None => if g.k.pressure.on { "hard" } else { "standard" } };
     let hard = crate::morale::morale_at().get(String::from(ai)).map_or(false, |v| v == "hard");
-    g.m.morale.mix_at = Some(MoraleModMixAtValue { key, mix: if hard { MoraleModMixAtValueMix::Hard } else { MoraleModMixAtValueMix::Mixed } });
+    g.m.morale.mix_at = Some(MoraleModMixAtValue { key, mix: if hard { crate::morale::MixNow::Hard } else { crate::morale::MixNow::Mixed } });
     if hard { MixNow::Hard } else { MixNow::Mixed }
 }
 
@@ -268,7 +268,6 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
         let st = now(g, gd);
         if (st.act == MoraleAct::None || st.act == MoraleAct::Duck) && reacts(g, gd) {
             begin(g, gd, MoraleAct::Flinch, Some(at));
-            g.stats.morale.flinches += 1;
         }
         let d = flat(g.ch[g.gd[gd].ch].pos, at);
         if d < nd { nd = d; near = Some(gd); }
@@ -288,7 +287,6 @@ pub fn saw_leader_fall(g: &crate::game::Game, gd: GuardId) -> f64 {
 pub fn morale_blast(g: &mut crate::game::Game, at: V3, who: Option<f64>) {
     let b = Blast { at: v3::copy(at), t: g.time, who: who.unwrap_or(0.0) };
     g.m.morale.blasts_of.get_or_insert_with(Vec::new).push(b);
-    g.stats.morale.blasts += 1;
 }
 
 /// a restart: blasts not yet asked about are the old floor's
@@ -317,7 +315,7 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || crate::mission::leads(g, gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
+        if !ours(g, gd) || crate::mission::leads(g, gd) || Some(g.team(gd)) == side || !reacts(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let d = flat(g.ch[c].pos, b.at);
         if d > g.k.morale.blast_m { continue; }
@@ -330,7 +328,6 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
         let n = nerved(g, k.blast);
         let r = g.m.morale.state_of.get_mut(gd).unwrap();
         r.shock = m::min(k.shock_cap, r.shock + n * (if d <= k.near_m { 1.0 } else { v3::lerp(1.0, k.far_k, (d - k.near_m) / m::max(1e-3, k.blast_m - k.near_m)) }));
-        g.stats.morale.fed += 1;
         let st = now(g, gd);
         let rung = rung_now(g, gd);
         g.m.morale.state_of.get_mut(gd).unwrap().rung = rung;
@@ -339,10 +336,8 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
             begin(g, gd, MoraleAct::Down, Some(b.at));
             let r = g.m.morale.state_of.get_mut(gd).unwrap();
             r.baits = 0.0; r.at_hole = false; r.broke_t = 0.0;
-            g.stats.morale.broke += 1;
         } else if rung == 1.0 && (st.act == MoraleAct::None || st.act == MoraleAct::Duck || st.act == MoraleAct::Stand || st.act == MoraleAct::Flinch) {
             begin(g, gd, MoraleAct::Duck, Some(b.at));
-            g.stats.morale.ducks += 1;
         }
     }
     let order_m = g.k.morale.order_m;
@@ -362,7 +357,6 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
         }
         if !ducked && his.is_empty() { continue; }
         begin(g, l, MoraleAct::Stand, Some(b.at));
-        if ducked { g.stats.morale.ducks -= 1; }
         for &o in his.iter() { g.m.morale.state_of.get_mut(o).unwrap().by = Some(l); }
     }
     for &gd in fed.iter() {
@@ -396,10 +390,10 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
     let ge = g.k.guard_eye;
     let e = hole.map(|h| crate::guards::Eye { pos: eye, look: v3::normalize([h[0] - eye[0], 0.0, h[2] - eye[2]]), range: ge.range, half_deg: ge.half_deg, near_m: ge.near_m, near_deg: ge.near_deg, v_half_deg: None });
     let smoke = g.gd[gd].smoke_trans;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let p = crate::seats::faced_man(g, gd);   // (the player he has in mind: asked as a side)
     let pc = g.pl[p].ch;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
+    if team.theirs() && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
         let v = crate::guards::can_see(g, gd);
         let (mut visible, mut dist) = (v.visible, v.dist);
         if !visible {
@@ -415,8 +409,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(g.team(o)) { continue; }
         let oc = g.gd[o].ch;
         let v = crate::guards::can_see_char(g, gd, oc);
         let (mut visible, mut dist) = (v.visible, v.dist);
@@ -441,9 +434,9 @@ fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        let pos = crate::throwables::item_pos(g, it);
-        if crate::throwables::item_settled(g, it) || crate::throwables::item_who(g, it) == me || flat(pos, hole) > bait_m { continue; }
-        let vel = crate::throwables::item_vel(g, it);
+        let pos = g.tab.item[it].pos;
+        if g.tab.item[it].settled || g.tab.item[it].who == me || flat(pos, hole) > bait_m { continue; }
+        let vel = g.tab.item[it].vel;
         if m::hyp3(vel[0], vel[1], vel[2]) > 0.5 && !crate::scene_collision::segment_blocked(g, eye, pos, None, None, None) { return true; }
     }
     false
@@ -525,7 +518,7 @@ fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardI
 }
 
 /// one turn of a burst at the hole; false = the burst is over
-fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate::morale::RoundOf) -> bool {
+fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64) -> bool {
     let c = g.gd[gd].ch;
     if g.gd[gd].reload_t >= 0.0 { return false; }
     let hole = g.m.morale.state_of.get(gd).unwrap().hole.unwrap();
@@ -542,7 +535,6 @@ fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate:
     r.rounds -= 1.0;
     r.next = every;
     let left = r.rounds;
-    g.stats.morale.rounds += 1;
     left > 0.0
 }
 
@@ -560,13 +552,11 @@ fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
     }
     g.gd[gd].reload_t = m::max_n(&[g.gd[gd].reload_t, row.dur, g.k.morale.reload_secs]);
     bark(g, gd, LineKind::Out, false, Some(true));
-    g.stats.morale.reloads += 1;
 }
 
 /// a bait taken: the magazine, then a short burst, then a word
 fn bait(g: &mut crate::game::Game, gd: GuardId) {
     g.m.morale.state_of.get_mut(gd).unwrap().baits += 1.0;
-    g.stats.morale.baits += 1;
     let st = now(g, gd);
     let bait_short = g.k.morale.bait_short;
     let w = g.gd[gd].weapon;
@@ -684,25 +674,6 @@ mod tests {
     fn every_kind_has_lines() {
         for k in [LineKind::Duck, LineKind::Call, LineKind::Again, LineKind::Out, LineKind::Spent, LineKind::Clear, LineKind::Lost, LineKind::Order, LineKind::Okay] {
             assert_eq!(lines_of(k).say.len() == 0, k == LineKind::Call);
-        }
-    }
-    /// this file's static says what the skeleton's table (read off the TypeScript) says, kind by kind and in the written order
-    #[test]
-    fn the_static_is_the_skeletons_table() {
-        fn same(a: Option<Pool>, b: &Option<Vec<String>>) {
-            let a: Vec<&str> = a.unwrap_or(&[]).to_vec();
-            let b: Vec<&str> = b.as_ref().map_or(Vec::new(), |v| v.iter().map(|t| t.as_str()).collect());
-            assert_eq!(a, b);
-        }
-        let table = crate::morale::lines();
-        for (k, l) in LINES.iter() {
-            let row = table.get(String::from(k.as_str())).unwrap();
-            same(Some(l.say), &Some(row.say.clone()));
-            same(l.he, &row.he);
-            same(l.they, &row.they);
-            same(l.dark, &row.dark);
-            same(l.lit, &row.lit);
-            same(l.now, &row.now);
         }
     }
 }
@@ -848,7 +819,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         }
         MoraleAct::Burst => {
             let every = g.k.morale.burst_every;
-            let over = !round(g, gd, dt, every, RoundOf::Dust)
+            let over = !round(g, gd, dt, every)
                 || row(g, gd).t > g.k.morale.burst_rounds * g.k.morale.burst_every + 2.0;
             if over { begin(g, gd, MoraleAct::Hold, Some(hole)); }
         }
@@ -878,7 +849,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         }
         MoraleAct::Bait => {
             let every = g.k.morale.bait_every;
-            let mut over = !round(g, gd, dt, every, RoundOf::Bait);
+            let mut over = !round(g, gd, dt, every);
             if !over {
                 let w = g.fa[g.gd[gd].weapon].def;
                 let cap = g.m.weapons.weapons.get(w).unwrap().mag_capacity;

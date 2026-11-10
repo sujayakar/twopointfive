@@ -276,7 +276,7 @@ export function build() {
 
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE GROUND OUTSIDE THE WALL. The yard was furnished as it was built; the plain round it was one sheet of dust but for the two checkpoints, and the mission
   // opens beside the track gate with about a quarter of its picture on that sheet, in the last light. The track gate gets what the other two gates have, a
   // checkpoint, here one the post has stopped manning: whitewashed stones down both sides of the way in, its two barriers dragged off the track to let

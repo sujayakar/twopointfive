@@ -104,7 +104,7 @@ pub fn row_stackable(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardI
     }
 }
 /// `canThresholdThen(what, t, men)` as a row's `valid` answers it
-pub fn row_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_can_then(g: &mut Game, what: crate::doortools::ThresholdThen, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match crate::doortools::door_tools_can_threshold_then(g, what, Some(&ct_of(t)), men) {
         crate::doortools::DoorToolsCanThresholdThen::Text(w) => Err(Some(w)),
         crate::doortools::DoorToolsCanThresholdThen::Bool(true) => Ok(()),
@@ -117,12 +117,12 @@ pub fn row_behind_words(g: &Game, who: String) -> String {
 }
 /// `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`
 pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: bool) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsThenOnWord, DoorToolsThenOnWordWhat, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
+    use crate::doortools::{DoorToolKind as Kind, DoorToolsThenOnWord, DoorToolsThresholdThen};
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
         if on_word {
-            return match crate::doortools::door_tools_then_on_word(g, if bang { DoorToolsThenOnWordWhat::Bang } else { DoorToolsThenOnWordWhat::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
+            return match crate::doortools::door_tools_then_on_word(g, if bang { crate::doortools::ThresholdThen::Bang } else { crate::doortools::ThresholdThen::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
         }
-        return match crate::doortools::door_tools_threshold_then(g, if bang { DoorToolsThresholdThenWhat::Bang } else { DoorToolsThresholdThenWhat::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
+        return match crate::doortools::door_tools_threshold_then(g, if bang { crate::doortools::ThresholdThen::Bang } else { crate::doortools::ThresholdThen::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
     }
     match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
 }
@@ -132,7 +132,7 @@ pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 // ---------------------------------------------------------------- the class
 
 /// the menu's switches as one number, to see one move: on the page all four are settled on
-fn door_tools_thr_sig_now(g: &mut crate::game::Game) -> f64 {
+fn door_tools_thr_sig_now() -> f64 {
     (1 | 2 | 4 | 8) as f64
 }
 
@@ -163,7 +163,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
 /// the row of the door held from outside, the one order of that page on the page's switches
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
-    g.door_tools.thr_sig = door_tools_thr_sig_now(g);
+    g.door_tools.thr_sig = door_tools_thr_sig_now();
     for id in [crate::orders::rows::threshold::ORDER.id, crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
@@ -173,14 +173,12 @@ pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
 }
 
 /// spend one (false: none left)
-pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorToolsTakeWhat) -> bool {
-    use crate::doortools::DoorToolsTakeWhat as W;
+pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCan) -> bool {
+    use crate::doortools::DoorToolsCan as W;
     door_tools_sync(g);
     if what == W::Frag {
         if g.door_tools.frags <= 0.0 { return false; }
         g.door_tools.frags -= 1.0;
-        let said = format!("frag spent · {} left", g.door_tools.frags);
-        door_tools_note(g, &said);
         return true;
     }
     if what == W::Charge {
@@ -190,23 +188,17 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
         if g.door_tools.bangs <= 0.0 { return false; }
         g.door_tools.bangs -= 1.0;
     }
-    let said = format!("{} spent · {} charges {} bangs left", what.as_str(), g.door_tools.charges, g.door_tools.bangs);
-    door_tools_note(g, &said);
     true
 }
 
 /// one back in the bag
-pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsRefundWhat) {
-    use crate::doortools::DoorToolsRefundWhat as W;
+pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCan) {
+    use crate::doortools::DoorToolsCan as W;
     if what == W::Frag {
         g.door_tools.frags += 1.0;
-        let said = format!("frag back · {} left", g.door_tools.frags);
-        door_tools_note(g, &said);
         return;
     }
     if what == W::Charge { g.door_tools.charges += 1.0; } else { g.door_tools.bangs += 1.0; }
-    let said = format!("{} back · {} charges {} bangs left", what.as_str(), g.door_tools.charges, g.door_tools.bangs);
-    door_tools_note(g, &said);
 }
 
 /// a new cast is a fresh run; the rows that hang on the cast dealt again
@@ -255,7 +247,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
             crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
         }
     }
-    if g.door_tools.thr_sig != door_tools_thr_sig_now(g) {
+    if g.door_tools.thr_sig != door_tools_thr_sig_now() {
         door_tools_thr_rows(g);
         g.door_tools.big_row = None;
     }
@@ -311,7 +303,6 @@ pub fn door_tools_reset(g: &mut crate::game::Game) {
     g.door_tools.frags = crate::seats::seat_share(g, n);
     g.door_tools.stats = crate::doortools::DoorToolsStats::default();
     g.door_tools.seen = None;
-    g.door_tools.led = crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 };
 }
 
 /// nobody came with him: the count is his card's, nothing set, nothing spent

@@ -20,9 +20,9 @@ fn pair_with_body(seed: u32, body: Option<[f64; 2]>) -> ((Play, GuardId, GuardId
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..if body.is_some() { 2 } else { 1 }]);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let t1 = foes[0];
     let lying = body.map(|at| {
         // (stood there for his bones to be there, then dropped)
@@ -70,12 +70,12 @@ fn two_seats(seed: u32) -> (Play, GuardId, Vec<Vec<GuardId>>) {
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     let mut men = Vec::new();
     for i in 0..2 {
         let s = p.g.seats[i];
-        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true, None));
+        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true));
         let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, s));
         assert!(!mine.is_empty(), "seed {seed}: seat {i} has no men");
         men.push(mine);
@@ -172,9 +172,9 @@ fn sent_to_a_back(oneeye: bool, at: [f64; 2], yaw: f64) -> (Play, GuardId, Guard
     if oneeye { p.g.k.pairup.on = true; game::pairup::pair_up_apply(&mut p.g, None); }
     p.g.k.silent.on = true;
     p.run(0.5);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let foe = foes[0];
     p.drop_all_but(&foes[..1]);
     for _ in 0..5 { p.pin_man(foe, at, yaw, GuardState::Patrol, 0.0); p.frame(); }
@@ -246,9 +246,9 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let t1 = foes[0];
     p.drop_all_but(&foes[..1]);
     let east = std::f64::consts::FRAC_PI_2;
@@ -297,7 +297,7 @@ fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::Eve
     p.g.god_mode = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foe = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+    let foe = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
     let at = p.g.ch[p.g.gd[foe].ch].pos;
     let yaw = p.g.ch[p.g.gd[foe].ch].body_yaw;
     for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
@@ -335,10 +335,10 @@ fn a_low_man_shoves_a_chair_at_half_the_noise() {
         let m = p.mates()[0];
         let c = p.g.gd[m].ch;
         let chair = p.g.props.props.iter().copied().min_by(|&a, &b| {
-            let d = |q| { let (x, z) = (game::props::prop_x(&p.g, q), game::props::prop_z(&p.g, q)); (x - 19.9).hypot(z - 18.2) };
+            let d = |q| { let (x, z) = (p.g.tab.props_prop[q].x, p.g.tab.props_prop[q].z); (x - 19.9).hypot(z - 18.2) };
             d(a).partial_cmp(&d(b)).unwrap()
         }).expect("the office has furniture");
-        let (x, z) = (game::props::prop_x(&p.g, chair), game::props::prop_z(&p.g, chair));
+        let (x, z) = (p.g.tab.props_prop[chair].x, p.g.tab.props_prop[chair].z);
         p.g.ch[c].pos = [x - 0.45, 0.0, z];
         p.g.ch[c].vel = [3.0, 0.0, 0.0];
         p.g.ch[c].anim.crouch = crouch;
@@ -362,10 +362,10 @@ fn in_a_mans_line(seed: u32, mate_x: f64) -> (i32, i32, f64) {
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[1..2]);
     let man = foes[1];
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let look = |p: &mut Play| p.pin_man(man, [8.5, 11.0], EAST, GuardState::Suspicious, 0.4);
     look(&mut p);
     p.sam_put([15.2, 11.0]);

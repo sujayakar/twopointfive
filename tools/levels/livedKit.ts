@@ -147,11 +147,11 @@ export function livedKit(K: Kit) {
 
 /** the group a generator is left in when its lived tail is done: the kits' own first group (officeGen.ts officeKit, levelKit.ts), and no lived one */
 const AFTER_LIVED = 'level';
-/** THE LIVED TAIL of a generator that lays its lived things itself (lib/lived.ts: what goes with the switch off rides LAST in a level's lists — boxes in
+/** THE LIVED TAIL of a generator that lays its lived things itself (lib/lived.ts: they ride LAST in a level's lists — boxes in
  *  group 'lived.<room>', props named 'lived.<room>.<kind><n>'). `room(id)` opens a room or a yard: every box laid from here takes its group and every prop
  *  its name; `done()`, after the last piece, writes the names of the props laid since the last `done()` (numbered on from it, so a name is never given
  *  twice) and CLOSES THE LAST ROOM: the generator's group goes back to a plain one, so a box laid after the tail is no lived thing by accident (it was
- *  left in the last room's group, and went with the switch off) and the exporter refuses it by name ("lived things must come last"). It adds no box and
+ *  left in the last room's group) and the exporter refuses it by name ("lived things must come last"). It adds no box and
  *  takes no kit: `props` and `grp` are the generator's own (officeGen.ts officeKit: K.props, K.grp). */
 export function livedTail(props: { kind: string; name: string }[], grp: (group: string) => void) {
   const spans: [number, string][] = [], serial = new Map<string, number>();

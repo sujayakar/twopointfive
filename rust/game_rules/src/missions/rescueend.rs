@@ -13,13 +13,12 @@ fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// Nobody led, nobody counted.
-pub(super) fn rescue_end_new(g: &crate::game::Game) -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
+pub(super) fn rescue_end_new() -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
 
 /// A fresh staging: nobody led, nobody counted.
 pub(super) fn rescue_end_reset(g: &mut crate::game::Game) {
     let e = &mut g.rescue.ending;
     e.lead = None;
-    e.led = false;
     e.clear_at = f64::NAN;
 }
 
@@ -34,8 +33,7 @@ fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
     let all = g.guards.clone();
     let mut left = Vec::new();
     for h in all {
-        if g.gd[h].civ.is_none()
-            && crate::teams::hostile_to(g, h, crate::teams::Team::Player)
+        if g.team(h).theirs()
             && !crate::condition::down(g, g.gd[h].ch)
             && !g.gd[h].fled
         {
@@ -114,7 +112,6 @@ fn rescue_end_word(g: &mut crate::game::Game, by: Option<CharId>) -> bool {
         crate::civilians::hostage_lead(g, h, by, gap + i as f64 * step);
     }
     g.rescue.ending.lead = by;
-    if by.is_some() { g.rescue.ending.led = true; }
     crate::rescue::rescue_note(g, if by.is_some() { "lead" } else { "stay" });
     true
 }

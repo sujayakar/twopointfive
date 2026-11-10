@@ -55,24 +55,6 @@ pub struct ManTakeNo {
     pub until: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SpottedModSPOTTEDLOGItem {
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SpottedModDropsValue {
-    pub down: JsSet<GuardId>,
-    pub at: Vec<crate::spotted::SpottedModDropsValueAtItem>,
-    pub seen: bool,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct SpottedModDropsValueAtItem {
-    pub pos: V3,
-    pub t: f64,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SpottedFeet {
     pub goal: Option<V3>,
@@ -81,34 +63,18 @@ pub struct SpottedFeet {
     pub watch: Option<V3>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FreshItem {
-    pub pos: V3,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SpottedMod {
     pub men: JsMap<GuardId, crate::spotted::Man>,
-    pub spotted_log: Vec<crate::spotted::SpottedModSPOTTEDLOGItem>,
-    pub drops: Option<crate::spotted::SpottedModDropsValue>,
 }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct SpottedStats {
-    pub wary: i32,
     pub caught: i32,
-    pub calm: i32,
     pub slips: i32,
     pub freezes: i32,
-    pub steps: i32,
-    pub held: i32,
-    pub held_unaware: i32,
-    pub keen: i32,
     pub cues: i32,
-    pub braces: i32,
-    pub takes: i32,
-    pub taken: i32,
 }
 

@@ -46,7 +46,7 @@ fn walk_in(s: u32) -> (i32, i32, i32) {
     p.run(0.3);
     let m = p.men()[0];
     let d = p.door("breakroom_n");
-    let foes: Vec<(GuardId, [f64; 2])> = p.g.guards.clone().into_iter().filter(|&x| p.g.gd[x].team != game::teams::Team::Operative).map(|x| (x, p.at(x))).collect();
+    let foes: Vec<(GuardId, [f64; 2])> = p.g.guards.clone().into_iter().filter(|&x| !p.g.team(x).ours()).map(|x| (x, p.at(x))).collect();
     let still = |p: &mut Play| for &(x, at) in &foes { p.pin_man(x, at, 0.0, GuardState::Patrol, 0.0); };
     p.leaf_stays(d);
     p.leaf_put_open(d, 1.35);

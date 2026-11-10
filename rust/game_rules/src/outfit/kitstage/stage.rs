@@ -53,7 +53,7 @@ fn park(g: &mut Game) -> (u32, u32) {
     let (mut k, mut men, mut alarms) = (0.0, 0, 0);
     let all: Vec<GuardId> = g.guards.iter().chain(g.civilians.iter()).copied().collect();
     for x in all {
-        if g.gd[x].team == crate::teams::Team::Operative { continue; }
+        if g.team(x).ours() { continue; }
         let (c, light) = (g.gd[x].ch, g.gd[x].flashlight);
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
@@ -120,7 +120,6 @@ pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
 
 /// the room behind the door at this share of itself: each lamp's own base, which the game multiplies each step, and its fixture's glow
 pub(super) fn quiet_inside(g: &mut Game, st: &mut KitStage, k: f64, blade: f64) {
-    st.share = k;
     st.a.blade = blade;
     for a in &st.lit_in {
         g.tab.fixture[a.t].on = true;
@@ -232,7 +231,7 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
         let x = st.order[k];
         let is_open = acts::actor(g, st) == Some(x);
         let (p, low) = match st.mate { Some(p) if k == 0 && !is_open => (p, st.quiet), _ => (st.spots[k], false) };
-        let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
+        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
         super::walk::send(g, x, p, super::walk::faces(st, p), None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }
@@ -267,9 +266,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     let quiet_lit = porch_lit(or(o.porch.intensity, QK.lamp.intensity), o.porch.day, plan.indoors, out_now);
     let q = st.quiet_kind != 0 && QK.on && quiet_lit > 0.0;
     st.quiet = q;
-    st.out.clear();
     st.lit_in.clear();
-    st.share = 1.0;
     let (lamp0, offset_q, aim_q) = if q {
         let po = plan.lamps.porch.offset;
         (&QK.lamp, po, if o.porch.aim { plan.lamps.porch.aim } else { [po[0], po[1] + QK.tip, 0.0] })
@@ -324,9 +321,9 @@ fn place(g: &mut Game, st: &mut KitStage) {
             let r = &g.tab.fixture[t];
             let Some(l) = r.light else { continue };
             if r.kind != FixtureKind::Analytic || g.tab.light[l].kind == 2.0 { continue; }
-            let (pos, range, name) = (r.pos, g.tab.light[l].range, r.name.clone());
+            let (pos, range) = (r.pos, g.tab.light[l].range);
             if out_of(pos) >= plan.wall.back {
-                if g.tab.fixture[t].on && dist(pos, foot) <= range { g.tab.fixture[t].on = false; st.out.push(name); }
+                if g.tab.fixture[t].on && dist(pos, foot) <= range { g.tab.fixture[t].on = false;  }
             } else if lit0.contains(&t) && dist(pos, wedge) <= m::min(range, KIT_PLAN.lit_reach) {
 let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].base_emissive);
                 st.lit_in.push(LampAs { t, intensity, emissive });
@@ -540,7 +537,6 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
     g.saves.enabled = false;
     g.tune.qrf = false;
     let t = &mut g.k.turn;
-    t.on = 1.0;
     t.aim = m::round(K.gun_rate * R * 1000.0) / 1000.0;
     t.aim_acc = m::round(K.gun_rate * R / K.ramp * 100.0) / 100.0;
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;

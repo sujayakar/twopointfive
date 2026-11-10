@@ -30,7 +30,7 @@ fn ambient_live(g: &crate::game::Game) -> bool {
 fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
-    let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
+    let calm = g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
         && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && !m.hold
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
@@ -54,14 +54,6 @@ fn end_ambient(g: &mut crate::game::Game) {
     s.next = time + crate::dialogue::ambient().cooldown;
     if !r.held[0] { crate::control::set_hold(g, r.a, false, "dialogue"); }
     if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
-}
-
-/// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript.
-pub fn ambient_restart(g: &mut crate::game::Game) {
-    let Some(s) = g.m.dialogue.ambient_by_game.as_mut() else { return; };
-    s.run = None;
-    s.next = -1.0;
-    if !is_office(g) { ambient_state(g).played.clear(); }
 }
 
 /// The line of a pair as it will be said: its `own` wording off the office, else its text.
@@ -163,7 +155,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let pad = match crate::devices::devices_pad_near(g, pa) {
                 Some(k) => {
                     let written = g.dr[k.door].def.name.clone();
-                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(g, &written), lock_id: k.def.name.clone() })
+                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(&written), lock_id: k.def.name.clone() })
                 }
                 None => None,
             };

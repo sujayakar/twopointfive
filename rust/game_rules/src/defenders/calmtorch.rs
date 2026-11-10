@@ -64,7 +64,6 @@ fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let x = g.ch[c].pos[0];
     let z = g.ch[c].pos[2];
-    g.stats.calmtorch.asks += 1;
     if !work_lit(g, x, z, None) {
         return -1.0;
     }
@@ -94,9 +93,9 @@ fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 /// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind.
 fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_none()
-        && g.gd[gd].team == crate::teams::Team::Guard
+        && g.team(gd) == crate::teams::Team::Guard
         && g.gd[gd].state == crate::game::GuardState::Patrol
-        && crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch
+        && crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch
         && g.gd[gd].awareness < g.k.torch.calm_aw
         && g.gd[gd].task.is_none()
         && g.gd[gd].body_duty.is_none()
@@ -163,9 +162,7 @@ pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool 
 /// The switch under his thumb, for the player's ears only: no event is filed, nobody hears it.
 fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on {
-        g.stats.calmtorch.clicks_on += 1;
     } else {
-        g.stats.calmtorch.clicks_off += 1;
     }
     let pos = g.ch[g.gd[gd].ch].pos;
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);

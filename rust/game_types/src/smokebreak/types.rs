@@ -5,21 +5,17 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokeBreakStats {
-    pub men: f64,
     pub lit: f64,
     pub draws: f64,
     pub flames: f64,
     pub embers: f64,
     pub breaths: f64,
-    pub frames: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Man {
     pub t: f64,
     pub flamed: bool,
-    pub draws: f64,
-    pub outs: f64,
     pub ember_t: f64,
     pub live: bool,
     /// INVENTED by a review: see the proposals

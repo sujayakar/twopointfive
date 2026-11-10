@@ -58,7 +58,7 @@ fn nearest(g: &crate::game::Game, p: V3, may: impl Fn(&crate::scene_scenarios::Q
 fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().any(|x| crate::quiet::out_through(x, p)) }
 
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
-pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
     if g.aside {
         g.mission.drive_t = -1.0;
@@ -221,7 +221,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let mut bd = 1e9;
     for &gd in g.guards.iter() {
         let t = &g.gd[gd];
-        if t.state != GuardState::Patrol || t.hold || t.held.is_some() || t.script.is_some() || t.unit.is_some() || t.team != crate::teams::Team::Guard || t.task.is_some() {
+        if t.state != GuardState::Patrol || t.hold || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.task.is_some() {
             continue;
         }
         let d = v3::dist(g.ch[t.ch].pos, goal);
@@ -314,7 +314,7 @@ pub fn adopt(g: &mut crate::game::Game, gd: GuardId, mark: &crate::nightbreach::
 
 /// THE MISSIONS' TICK, each its own while it is up, and the squads its men are in.
 pub(crate) fn mission_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
-    crate::nightbreach::night_breach_tick(g, dt, input, cam);
+    crate::nightbreach::night_breach_tick(g, dt, cam);
     crate::quiet::quiet_mission_tick(g, cam);
     crate::enemysquads::squads_tick(g);
     crate::roomclear::room_clear_scenario_tick(g, dt);
@@ -416,7 +416,7 @@ mod tests {
         g.mission.stage = MissionStage::Drive;
         g.mission.drive_t = 1.0;
         g.aside = true;
-        update_mission(&mut g, 0.1, InputId(0));
+        update_mission(&mut g, 0.1);
         assert_eq!(g.mission.drive_t, -1.0);
         assert!(g.mission.stage == MissionStage::Drive);
         assert_eq!(g.mission.stats.elapsed, 0.0);

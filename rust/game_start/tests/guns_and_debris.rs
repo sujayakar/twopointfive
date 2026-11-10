@@ -104,7 +104,7 @@ fn debris_is_heard_where_it_lands() {
 /// A lump or a plank in a level's corridor, let fall where it lies.
 fn litter(p: &mut Play, at: [f64; 3], h: [f64; 3], yaw: f64) -> game::ids::DebrisChunkId {
     let b = game::scene_boxes::make_box(&mut p.g, &game::scene_boxes::MakeBoxP { c: at, h, yaw: Some(yaw), ..game::scene_boxes::MakeBoxP::default() });
-    game::debris::debris_spawn_raw(&mut p.g, game::debris::ChunkKind::Chunk, b, [0.0; 3], [0.0; 3], None, None).expect("a piece")
+    game::debris::debris_spawn_raw(&mut p.g, game::debris::ChunkKind::Chunk, b, [0.0; 3], [0.0; 3], None).expect("a piece")
 }
 fn place_of(p: &Play, c: game::ids::DebrisChunkId) -> [f64; 3] { p.g.tab[p.g.tab.debris_chunk[c].box_].c }
 

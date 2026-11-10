@@ -7,7 +7,7 @@ fn text(o: &mut Vec<u8>, s: &str) { u32s(o, s.len() as u32); o.extend(s.as_bytes
 fn step(p: &mut Play) {
     let (h, g) = (p.host, &mut p.g);
     let me = game::game::game_host_seat(g);
-    let mut c = game::seats::with_seat(g, me, &mut |g| game::cmd::sample_cmd(g, h.input, h.cam, h.canvas, None));
+    let mut c = game::seats::with_seat(g, me, &mut |g| game::cmd::sample_cmd(g, h.input, h.cam, h.canvas));
     c.keys.push(String::from("KeyW"));
     game::game::game_step(g, 1.0 / 60.0, &c);
 }

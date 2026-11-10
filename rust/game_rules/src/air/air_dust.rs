@@ -60,16 +60,6 @@ fn air_dust_ensure(g: &mut crate::game::Game) {
     }
 }
 
-/// A tale's count into the book.
-fn air_dust_tally(g: &mut crate::game::Game, t: &::sim::air::Said) {
-    let st = &mut g.air_dust.stats;
-    st.steps += t.steps;
-    st.probes += t.probes;
-    if t.steps > 0.0 {
-        st.open = t.open; // (the open ways the last step found: a tick with no step leaves them)
-    }
-}
-
 /// The field from nothing, in the module: every roofed cell at the leak, every opening asked, then run on until it stands still.
 fn air_dust_build(g: &mut crate::game::Game) {
     let fog = g.weather.fog_spec;
@@ -100,8 +90,7 @@ fn air_dust_build(g: &mut crate::game::Game) {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
             let stamp = ::sim::state::stamp(g.sim);
-            let t = ::sim::air_settle(g.sim, stamp, w, set, ask, &g.weather.roof_rects, &g.k);
-            air_dust_tally(g, &t);
+            ::sim::air_settle(g.sim, stamp, w, set, ask, &g.weather.roof_rects, &g.k);
         });
     }
     air_dust_send(g);
@@ -119,7 +108,6 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
         let stamp = ::sim::state::stamp(g.sim);
         let t = ::sim::air_update(g.sim, stamp, w, set, ask, dt, &g.weather.roof_rects, &g.k);
         g.air_dust.drift += t.moved;
-        air_dust_tally(g, &t);
     });
     if g.air_dust.drift > SEND {
         air_dust_send(g);
@@ -130,7 +118,6 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
 fn air_dust_send(g: &mut crate::game::Game) {
     copy_to_gpu(g);
     let d = &mut g.air_dust;
-    d.stats.sends += 1.0;
     d.drift = 0.0;
 }
 

@@ -46,11 +46,6 @@ pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
-/// Under the ceiling slab: the office's footprint less a tile's width.
-fn indoors(p: V3) -> bool {
-    p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 23.7
-}
-
 /// The point just over a box's top, where line-of-sight targets aim.
 pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
@@ -116,17 +111,17 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
     g.destr = Destruction::blank();
     g.destr.w = world.grid_w;
     g.destr.cs = world.grid_cell;
-    g.destr.debris = crate::debris::debris_new(g);
-    g.destr.breaks = crate::break_table::breaks_new(g);
+    g.destr.debris = crate::debris::debris_new();
+    g.destr.breaks = crate::break_table::breaks_new();
     g.destr.hw = m::ceil((world.max[0] - world.min[0]) / g.k.chaos.cell);
     g.destr.hh = m::ceil((world.max[2] - world.min[2]) / g.k.chaos.cell);
     g.destr.heat = vec![0.0f32; (g.destr.hw * g.destr.hh) as usize];
     g.destr.cells = vec![Vec::new(); (world.grid_w * world.grid_h) as usize];
     destruction_index(g);
     g.destr.walls = Box::new(crate::wallbreak::wall_break_new(g));
-    g.destr.edge_look = crate::edge_look::edge_look_new(g);
+    g.destr.edge_look = crate::edge_look::edge_look_new();
     g.destr.breaks.look = Some(crate::break_table::BreaksLook {  });
-    g.destr.furn = crate::furnblast::furniture_new(g);
+    g.destr.furn = crate::furnblast::furniture_new();
     core::mem::replace(&mut g.destr, Destruction::blank())
 }
 
@@ -386,18 +381,18 @@ pub(super) fn destruction_hash(g: &mut crate::game::Game) -> f64 {
 }
 
 /// One event out of a cap; a knock-off riding on its group leader's slot is free.
-pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
-    if k == DestructionTakeK::Knock && g.destr.free_knocks > 0.0 {
+pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::RateCapN) -> bool {
+    if k == crate::destruction::RateCapN::Knock && g.destr.free_knocks > 0.0 {
         g.destr.free_knocks -= 1.0;
         return true;
     }
     let t = g.time;
     let (caps, knobs) = (&mut g.destr.caps, &g.k.chaos);
     match k {
-        DestructionTakeK::Puff => rate_cap_take(&mut caps.puff, t, knobs),
-        DestructionTakeK::Paper => rate_cap_take(&mut caps.paper, t, knobs),
-        DestructionTakeK::Knock => rate_cap_take(&mut caps.knock, t, knobs),
-        DestructionTakeK::Decal => rate_cap_take(&mut caps.decal, t, knobs),
+        crate::destruction::RateCapN::Puff => rate_cap_take(&mut caps.puff, t, knobs),
+        crate::destruction::RateCapN::Paper => rate_cap_take(&mut caps.paper, t, knobs),
+        crate::destruction::RateCapN::Knock => rate_cap_take(&mut caps.knock, t, knobs),
+        crate::destruction::RateCapN::Decal => rate_cap_take(&mut caps.decal, t, knobs),
     }
 }
 
@@ -436,7 +431,7 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
         crate::debris::debris_feet(g, &men, knobs, None, None);
     }
     crate::edge_look::edge_look_feet(g, &men, knobs, dt);
-    if js::truthy(crate::sim_fallshome::fall_store_waiting_in(g, crate::sim_fallshome::FALL_PIECES)) {
+    if !g.falls.pieces.waiting.is_empty() {
         crate::debris::debris_landings(g);
     }
     if !g.destr.debris.list.is_empty() {
@@ -505,7 +500,6 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
         }
     }
 }
-
 
 /// The men on their feet this frame, bar a seated civilian.
 fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
@@ -610,10 +604,4 @@ mod tests {
         assert_eq!(c.ts.len(), 2);
     }
 
-    #[test]
-    fn indoors_is_strict() {
-        assert!(indoors([4.31, 0.0, 4.31]));
-        assert!(!indoors([4.3, 0.0, 10.0]));
-        assert!(!indoors([10.0, 0.0, 23.7]));
-    }
 }

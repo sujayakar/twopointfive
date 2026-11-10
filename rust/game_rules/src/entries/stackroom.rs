@@ -233,14 +233,13 @@ pub fn stack_room_has_over(g: &mut Game, over: &Over, d: DoorId, side: f64, p: V
 /// … the same, counted: a tuck or a step back not taken for it
 pub(super) fn stack_room_keeps(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
     let ok = stack_room_has(g, d, side, p);
-    if !ok { g.stats.stackroom.kept += 1; }
     ok
 }
 
 /// is `q` the mark a man of the squad already stands on at this door
 fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V3) -> bool {
     for man in crate::orders::squad_orders_squad(g, seat) {
-        let a = crate::orders::squad_orders_of(g, seat, man);
+        let a = crate::orders::squad_orders_of(seat, man);
         let Some(a) = a else { continue };
         if crate::condition::down(g, g.gd[man].ch) { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
@@ -304,7 +303,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let posts = posts?;
     let Some(f) = floor_of(g, d, side) else { return Some(posts.to_vec()) };
     let s = g.k.stackroom;
-    g.stats.stackroom.asked += posts.len() as i32;
     let mut bad = Vec::with_capacity(posts.len());
     for p in posts { bad.push(!on_floor(g, &f, p.pos) || anothers(g, d, p.pos)); }
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
@@ -315,7 +313,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     for i in 0..out.len() {
         if !bad[i] { continue; }
-        g.stats.stackroom.off += 1;
         let pp = out[i];
         let mut used: Vec<V3> = taken.to_vec();
         for j in 0..out.len() { if j != i && !bad[j] { used.push(out[j].pos); } }
@@ -335,7 +332,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                 if fix_fits(g, &x, p, s.apart) {
                     let (face, stack_side) = on_wall(th, side, -hand);
                     got = Some(Got { pos: p, face, stack_side: Some(stack_side), group: if pp.group.is_none() { None } else if hand > 0.0 { Some(1.0) } else { Some(0.0) } });
-                    g.stats.stackroom.other += 1;
                 }
             }
             // 2 the file turns the corner: behind the nearest man of his own file, straight off the door's wall
@@ -354,7 +350,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                         prev = p;
                         if fix_fits(g, &x, p, s.apart) && off_lane(g, d, w, p) {
                             got = Some(Got { pos: p, face: v3::yaw_to(p, c), stack_side: Some(mm.stack_side), group: mm.group });
-                            g.stats.stackroom.behind += 1;
                         }
                     }
                     if got.is_some() { break; }
@@ -365,7 +360,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                 for r in crate::orders::squad_orders_rear_posts(g, d, side, 6.0, &[]) {
                     if fix_fits(g, &x, r.pos, s.apart) {
                         got = Some(Got { pos: r.pos, face: r.face, stack_side: Some(r.stack_side), group: r.group });
-                        g.stats.stackroom.rear += 1;
                         break;
                     }
                 }
@@ -383,14 +377,12 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                 }
                 if let Some(q) = q {
                     got = Some(Got { pos: q, face: v3::yaw_to(q, c), stack_side: None, group: if pp.group.is_none() { None } else { Some(2.0) } });
-                    g.stats.stackroom.floor += 1;
                 }
             }
             // 5 the room is too small: by a doorway of a room next to it that the team already holds, never the man who has the door to open
             if got.is_none() && !pp.lead && !glass {
                 if let Some(n) = next_room(g, d, side, &f, &used, min_m, shy) {
                     got = Some(Got { pos: n.pos, face: n.face, stack_side: None, group: if pp.group.is_none() { None } else { Some(2.0) } });
-                    g.stats.stackroom.next += 1;
                 }
             }
             // 6 anywhere on the face's floor, off the opening's lane, a body fits
@@ -399,7 +391,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                     let p = centre(g, cc);
                     if off_lane(g, d, w, p) && fix_fits(g, &x, p, s.squeeze) && clear_of_props(g, p) {
                         got = Some(Got { pos: p, face: v3::yaw_to(p, c), stack_side: None, group: if pp.group.is_none() { None } else { Some(2.0) } });
-                        g.stats.stackroom.squeezed += 1;
                         break;
                     }
                 }
@@ -413,7 +404,6 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
                         let p = centre(g, cc);
                         if crate::doortools::off_of(g, d, p, side) >= s.lane_back && fix_fits(g, &x, p, apart) && clear_of_props(g, p) {
                             got = Some(Got { pos: p, face: v3::yaw_to(p, c), stack_side: None, group: if pp.group.is_none() { None } else { Some(2.0) } });
-                            g.stats.stackroom.lane += 1;
                             break;
                         }
                     }
@@ -421,13 +411,11 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             }
         }
         let Some(got) = got else {
-            if on_floor(g, &f, pp.pos) { continue; }   // (nowhere better than at the other door: there, as it was dealt)
-            g.stats.stackroom.none += 1;
+            if on_floor(g, &f, pp.pos) { continue; }   
             return None;
         };
         // the door has ONE opener: with a man still on the other jamb the handle is that man's
         let lead = pp.lead && !out.iter().enumerate().any(|(j, o)| j != i && !bad[j] && o.lead);
-        if pp.lead && !lead { g.stats.stackroom.unled += 1; }
         out[i] = crate::orders::StackPost { pos: got.pos, face: got.face, stack_side: got.stack_side.unwrap_or(pp.stack_side), lead, group: got.group };
         bad[i] = false;
     }
@@ -562,14 +550,13 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let (jamb_out, jamb_past) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past);
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
     let far = far_cells(g, d, side);
-    g.stats.stackroom.view_asked += 1;
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     // A STACK THAT STANDS DOES NOT CREEP: a place a man of this order already stands on, no mark as dealt now, is his while it still stands as a place
     let mut pre: JsMap<usize, V3> = JsMap::new();
     {
         let mut stood: Vec<V3> = Vec::new();
         for &man in men {
-            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), man);
+            let a = crate::orders::squad_orders_of(&crate::seats::here(g), man);
             let Some(a) = a else { continue };
             if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
@@ -689,15 +676,13 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             }
         }
     }
-    g.stats.stackroom.view_left += stay.len() as i32;
-    g.stats.stackroom.view_stood += pre.len() as i32;
     if got.is_empty() { return Some(posts.to_vec()); }
     let mut out = posts.to_vec();
     let mut led = false;
     for (i, dealt) in got.iter() {
         let pp = posts[i];
         let h = dealt.h;
-        if dealt.over { g.stats.stackroom.view_over += 1; } else { g.stats.stackroom.view_out += 1; }
+        if dealt.over {  } else {  }
         let (face, stack_side) = on_wall(th, side, h);   // (as a wall mark is faced: down the wall at the doorway)
         // a place given to the other hand joins that hand's file: 0 past the far jamb, 1 before the hinge
         let group = if dealt.over && pp.group.is_some() && pp.group != Some(2.0) { Some(if h > 0.0 { 0.0 } else { 1.0 }) } else { pp.group };
@@ -798,7 +783,6 @@ fn next_fits(g: &mut Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_
 /// the floor of a face as the rule reads it (rearwatch.ts asks it, as do the QA tools)
 pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::stackroom::StackRoomProbe {
     let f = floor_of(g, d, side);
-    let seed = match &f { Some(f) => Some(centre(g, f.seed)), None => None };
     crate::stackroom::StackRoomProbe {
         floor: f.is_some(),
     }

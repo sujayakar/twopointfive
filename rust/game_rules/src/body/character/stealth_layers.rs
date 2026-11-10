@@ -71,9 +71,6 @@ pub(super) fn anim_watch_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
     anim_watch_slip(g, c, dt, free, m_s);
     anim_watch_arm(g, c, w_l, w_r);
     anim_watch_look(g, c, dt, free, m_w);
-    let a = &mut g.ch[c].anim;
-    let t = a.wt;
-    a.watch_shown.w = t.w; a.watch_shown.yaw = t.yaw * t.w; a.watch_shown.slip = t.sw; a.watch_shown.lean = t.sl;
 }
 
 /// The slip's body: pelvis and trunk; `m` the man he gives room to, in the model.
@@ -202,7 +199,7 @@ fn untwist_at(un: &Untwist, h: V3) -> V3 {
 /// The swap's frame: both arms by IK on a copy of pA, then the clock.
 pub(super) fn anim_kit_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tw_y: f64, tw_p: f64) {
     let rc = anim_sheath_rest_inv(g, c);
-    let sling = crate::rig_props::sling_front_hand(g, None, Some(g.ch[c].anim.kit_rest));
+    let sling = crate::rig_props::sling_front_hand(None, Some(g.ch[c].anim.kit_rest));
     anim_layer(g, c, |s, an, k| sim::layers::kit_layer(s, an, tw_y, tw_p, rc, &sling, k));
     let an = &mut g.ch[c].anim;
     let k = an.kit.as_mut().unwrap();
@@ -241,7 +238,6 @@ pub(super) fn anim_ready_layer(g: &mut crate::game::Game, c: CharId, w: f64, kin
     let there = g.ch[c].anim.rd_at.map(|p| anim_to_model_p(g, c, p));
     let rc = anim_sheath_rest_inv(g, c);
     anim_layer(g, c, |s, an, k| sim::layers::ready_layer(s, an, w, kind, &shape, live, dt, tw_y, tw_p, there, rc, k));
-    g.ch[c].anim.ready_shown = w;
 }
 
 /// The rest pose's chest turn, inverted: the sheath's frame; found once, off a rest pose of its own.
@@ -347,7 +343,6 @@ pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate:
     let t = (g.ch[c].anim.kb_t - t0) / fit;
     g.ch[c].anim.kb_t += dt;
     anim_knife_pose(g, c, &k, t, t0, total, tw_y, tw_p);
-    g.ch[c].anim.knife_shown = t > 0.0 && t < k.end;
 }
 
 /// The blow's pose, its clock being knifeBlow's: `t` the key time, `t0` the seconds to the hilt.

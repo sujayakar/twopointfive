@@ -263,9 +263,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     };
     if mine && g.wall_charge.sam.is_none() {
         if let Some(wall) = g.wall_charge.offered.clone() {
-            let index = wall.index;
             g.wall_charge.sam = Some(WallChargeSam { wall, t0: g.time, at: [p[0], 0.0, p[2]] });
-            wall_charge_note(g, &alloc::format!("the player sets one on wall {}", index));
             return;
         }
     }
@@ -292,19 +290,16 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     if paid < 0.0 {
         return;
     }
-    let index = s.wall.index;
     let free = if g.wall_charge.free_set { Some(true) } else { None };
     let row = SetWallCharge { wall: s.wall, t: g.time, by: String::from(crate::ownblow::SAM_BY), paid, free };
     let id = g.tab.wallcharge_set_wall_charge.push(row);
     g.wall_charge.set.push(id);
-    g.wall_charge.stats.by_sam += 1.0;
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
     crate::furnblast::furniture_warm(g);
-    wall_charge_note(g, &alloc::format!("set by the player on wall {}", index));
 }
 
 /// Is Sam setting one right now
-pub fn wall_charge_setting(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub fn wall_charge_setting(seat: &crate::seats::SeatRef) -> bool {
     seat.wall_charge.sam.is_some()
 }
 

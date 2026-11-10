@@ -49,7 +49,7 @@ pub(super) fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
                 let a = g.wall_charge.alone;
                 g.wall_charge.alone = a - 1.0;
                 if !(a > 0.0 && g.door_tools.charges < g.k.doortools.charges) { break; }
-                crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsRefundWhat::Charge);
+                crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsCan::Charge);
             }
         }
         wall_charge_reset(g);
@@ -91,12 +91,9 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
     let n = match g.k.wallcharge.carried { None => None, Some(c) => Some(crate::seats::seat_share(g, c)) };
     g.wall_charge.carried = n;
     g.wall_charge.brought = n;
-    g.wall_charge.log = Vec::new();
     g.wall_charge.stats = WallChargeStats::default();
     g.wall_charge.last_blow = None;
     g.wall_charge.walks = None;
-    g.wall_charge.keep.asks = 0.0;
-    g.wall_charge.keep.hits = 0.0;
     g.wall_charge.away.clear();
     g.wall_charge.away_marks.clear();
     g.wall_charge.away_none.clear();
@@ -104,21 +101,11 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
 
 /// The switch went off mid-run: what is set goes back in the bag, what is under way ends where it stands.
 fn wall_charge_stop(g: &mut crate::game::Game) {
-    for op in g.wall_charge.ops.clone() { wall_charge_end(g, op, "switched off"); }
-    for c in core::mem::take(&mut g.wall_charge.set) { wall_charge_give_back(g, c, "switched off"); }
+    for op in g.wall_charge.ops.clone() { wall_charge_end(g, op); }
+    for c in core::mem::take(&mut g.wall_charge.set) { wall_charge_give_back(g, c); }
     g.wall_charge.sam = None;
     g.wall_charge.marker = None;
     g.wall_charge.walks = None;
-}
-
-pub fn wall_charge_note(g: &mut crate::game::Game, what: &str) {
-    g.wall_charge.log.push(WallChargeLogItem {  });
-    if g.wall_charge.log.len() > 300 { g.wall_charge.log.drain(0..100); }
-}
-
-pub(super) fn wall_charge_beat(g: &mut crate::game::Game, op: WallOpId, what: &str) {
-    let line = format!("wall {}: {}", g.tab.wallcharge_wall_op[op].wall.index, what);
-    wall_charge_note(g, &line);
 }
 
 /// The kit's hook: this run carries `n` wall charges of its own; none: back to the cost rule.
@@ -172,41 +159,32 @@ pub fn wall_charge_take(g: &mut crate::game::Game) -> f64 {
     g.wall_charge.free_set = false;
     if g.infinite_ammo && wall_charge_affordable(g, &crate::seats::here(g)) {
         g.wall_charge.free_set = true;
-        g.wall_charge.stats.set += 1.0;
-        wall_charge_note(g, "wall charge set · unlimited ammo: none spent");
         return 0.0;
     }
     if let Some(c) = g.wall_charge.carried {
         if c <= 0.0 { return -1.0; }
         g.wall_charge.carried = Some(c - 1.0);
-        g.wall_charge.stats.set += 1.0;
-        let line = format!("wall charge set · {} carried left", c - 1.0);
-        wall_charge_note(g, &line);
         return 0.0;
     }
     let p = wall_charge_price(g, &crate::seats::here(g));
     if g.door_tools.charges < p { return -1.0; }
     let mut i = 0.0;
-    while i < p { crate::doortools::door_tools_take(g, crate::doortools::DoorToolsTakeWhat::Charge); i += 1.0; }
+    while i < p { crate::doortools::door_tools_take(g, crate::doortools::DoorToolsCan::Charge); i += 1.0; }
     if g.wall_charge.roster.is_empty() { g.wall_charge.alone += p; }
-    g.wall_charge.stats.set += 1.0;
     p
 }
 
 /// A charge off the wall unblown: what it cost goes back.
-pub(super) fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId, why: &str) {
+pub(super) fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId) {
     let (free_, paid, index) = { let c = &g.tab.wallcharge_set_wall_charge[c_2]; (c.free.unwrap_or(false), c.paid, c.wall.index) };
     if free_ {
     } else if paid <= 0.0 {
         if let Some(n) = g.wall_charge.carried { g.wall_charge.carried = Some(n + 1.0); }
     } else {
         let mut i = 0.0;
-        while i < paid { crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsRefundWhat::Charge); i += 1.0; }
+        while i < paid { crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsCan::Charge); i += 1.0; }
         if g.wall_charge.roster.is_empty() { g.wall_charge.alone = m::max(0.0, g.wall_charge.alone - paid); }
     }
-    g.wall_charge.stats.back += 1.0;
-    let line = format!("charge off wall {}: {}", index, why);
-    wall_charge_note(g, &line);
 }
 
 // ---------------------------------------------------------------- the place
@@ -483,9 +461,8 @@ fn walk_kept(g: &mut Game, spot: V3, q: V3, cap: f64, room0: f64, kept: Option<&
     let key = format!("w|{},{}|{},{}|{}", spot[0], spot[2], q[0], q[2], cap);
     match kept {
         WallChargeKept::Menu => {
-            g.wall_charge.keep.asks += 1.0;
             let have = g.wall_charge.walks.as_ref().and_then(|k| k.map.get(key.clone()).cloned());
-            if let Some(WallChargeWalkAnswer::Walk { len }) = have { g.wall_charge.keep.hits += 1.0; return len; }
+            if let Some(WallChargeWalkAnswer::Walk { len }) = have {  return len; }
             let len = way(g, spot, q, cap, room0);
             if let Some(k) = g.wall_charge.walks.as_mut() { k.map.set(key, WallChargeWalkAnswer::Walk { len }); }
             len
@@ -513,9 +490,8 @@ fn reach_kept(g: &mut Game, gd: GuardId, to: V3, menu: bool) -> Option<String> {
     let cs = g.col.nav.cell;
     let (id, p) = (g.ch[g.gd[gd].ch].id, man_pos(g, gd));
     let key = format!("r|{}|{},{}|{},{}", id, m::floor(p[0] / cs), m::floor(p[2] / cs), to[0], to[2]);
-    g.wall_charge.keep.asks += 1.0;
     let have = g.wall_charge.walks.as_ref().and_then(|k| k.map.get(key.clone()).cloned());
-    if let Some(WallChargeWalkAnswer::Reach { why }) = have { g.wall_charge.keep.hits += 1.0; return why; }
+    if let Some(WallChargeWalkAnswer::Reach { why }) = have {  return why; }
     let why = crate::orders::squad_orders_reach(g, gd, to);
     if let Some(k) = g.wall_charge.walks.as_mut() { k.map.set(key, WallChargeWalkAnswer::Reach { why: why.clone() }); }
     why
@@ -632,7 +608,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
     let known_s = g.k.wallcharge.fire_known_s;
     if crate::fogofwar::fog_of_war_active(g) {
-        let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.gd[*m].team == crate::teams::Team::Operative).collect();
+        let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.team(*m).ours()).collect();
         for k in crate::picture::known_places(g, &men, known_s) {
             if let Some(h) = crate::character::guard_of(g, k.who) { if counts(g, h, held) { out.push(k.at); } }
         }
@@ -648,8 +624,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
 }
 
 fn counts(g: &mut Game, h: GuardId, held: Option<GuardId>) -> bool {
-    let team = g.gd[h].team;
-    Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && g.team(h).theirs()
 }
 
 fn fire_new(g: &mut Game, w: Option<&WallSpot>, all: Option<&[V3]>) -> WallChargeFireAsk {
@@ -785,8 +760,6 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     let mark: V3 = [at[0], 0.0, at[2]];
     g.wall_charge.away.set(gd, WallChargeAwayValue { c, at: mark, hit_t: t, t });
     g.wall_charge.stats.cleared += 1.0;
-    let line = format!("{} steps back from the charge on wall {}", g.gd[gd].callsign, g.tab.wallcharge_set_wall_charge[c].wall.index);
-    wall_charge_note(g, &line);
     Some(mark)
 }
 

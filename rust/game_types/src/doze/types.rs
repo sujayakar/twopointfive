@@ -59,16 +59,6 @@ pub struct Seat {
     pub to: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WakeWhy {
-    Light,
-    Alarm,
-    Noise,
-    Taken,
-    Net,
-    Bump,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DozeMod {
@@ -78,17 +68,6 @@ pub struct DozeMod {
     #[is(-1.0)] pub pulls_m: f64,
     #[is(-1.0)] pub pulls_e: f64,
     pub left: Option<JsMap<FixtureId, f64>>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct DozeStats {
-    pub sat: i32,
-    pub slept: i32,
-    pub worked: i32,
-    pub lines: i32,
-    pub rose: i32,
-    pub woke: [i32; 6],
 }
 
 pub fn touch() -> Vec<i32> { alloc::vec![0; 96] }

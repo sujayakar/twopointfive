@@ -163,7 +163,7 @@ fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Op
             if inner.index != index { return None; }
         }
     }
-    Some(ThinToll { stuff: t.stuff, take, e_out, thru })
+    Some(ThinToll { take, e_out, thru })
 }
 
 /// What a round leaving a thing at `p` along `d` is born inside: -1 = open air, else a static's index or a leaf's.
@@ -219,8 +219,8 @@ fn crossing(g: &mut crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: V3, 
     let dir_out = deflect(g, b, at, d, toll.take, e);
     let into = born_in(g, exit, d, index);
     Some(WallCross {
-        stuff: toll.stuff, e_out: toll.e_out, thru: toll.thru,
-        index, t, n_in, n_out, exit, at, dir_in: d, dir_out, e_in: e, into,
+        e_out: toll.e_out, thru: toll.thru,
+        index, t, n_in, n_out, exit, at, dir_in: d, dir_out, into,
     })
 }
 
@@ -290,7 +290,6 @@ pub(super) fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::W
     for x in walls {
         if x.t > t_hit + 1e-6 { break; }
         g.stats.wallpen.crossed += 1;
-        if x.index >= 1e6 { g.stats.wallpen.leaves += 1; }
         let s = crate::marks::static_surface(g, x.index);
         let (n_out, out) = (x.n_out, v3::mad(x.at, x.dir_in, x.thru));
         crate::marks::bullet_mark(g, out, n_out, s, def);
@@ -304,13 +303,6 @@ pub(super) fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::W
         if third {
             crate::destruction::destruction_round(g, shooter, x.at, x.dir_in, &crate::destruction::DestructionRoundHit { n: x.n_in, index: Some(x.index), prop: None, box_: None }, def);
         }
-        let line = format!(
-            "{}s {} {} ({}, {} cm of path) crossed: energy {} \u{2192} {} (who {})",
-            js::to_fixed(g.time, 1), if x.index >= 1e6 { "leaf" } else { "static" }, js::num_str(js::rem(x.index, 1e6)), x.stuff.as_str(),
-            js::to_fixed(x.thru * 100.0, 0), js::to_fixed(x.e_in, 2), js::to_fixed(x.e_out, 2), js::num_str(g.ch[shooter].id),
-        );
-        g.m.wallpen.log.push(line);
-        if g.m.wallpen.log.len() > 24 { g.m.wallpen.log.remove(0); }
     }
 }
 
@@ -327,10 +319,8 @@ pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short
         None => crate::scene_collision::raycast(g, from, dir, reach).map(hit_of),
     };
     let Some(hit) = hit else { return Some(ThinLine2::Clear) };
-    g.stats.wallpen.asked += 1;
     let p = thin_path(g, from, dir, reach, energy, Some(Some(hit)), None)?;
     if p.st.is_some() || p.walls.is_empty() { return None; }
-    g.stats.wallpen.through += 1;
     Some(ThinLine2::ThinLine(ThinLine { panes: p.cross.len() as f64, walls: p.walls }))
 }
 
@@ -354,9 +344,6 @@ pub fn flight_len(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, ener
 }
 
 /// The round stopped in something a weaker or shallower round would have gone through: counted.
-pub(super) fn spent_in_wall(g: &mut crate::game::Game, index: f64) {
-    if thing_at(g, index).is_some() { g.stats.wallpen.spent += 1; }
-}
 
 #[cfg(test)]
 mod tests {

@@ -57,31 +57,31 @@ pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crat
 
 /// the man by name, if he is still at his work
 fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
-    let u = crate::director::director_beat_unit(g, r, callsign)?;
+    let u = crate::director::director_beat_unit(g, callsign)?;
     if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
 }
 
 /// (tut-quiet.script.ts:34 beat 'lane') a voice behind the wall the player creeps along.
-pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 1.2, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 1.2)?))
         }
         1 => {
             let Some(a) = calm(g, r, "Novak") else { return Ok(None) };
-            crate::director::director_beat_say(g, r, b, &a, "cold tonight", None)?;
+            crate::director::director_beat_say(g, r, &a, "cold tonight", None)?;
             f.at = 2;
-            Ok(Some(crate::director::director_beat_wait(g, r, 3.6, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 3.6)?))
         }
         2 => {
             if calm(g, r, "Novak").is_none() || calm(g, r, "Kowalski").is_none() { return Ok(None); }
-            crate::director::director_beat_radio(g, b, "Kowalski", "anything out back?");
+            crate::director::director_beat_radio(g, "Kowalski", "anything out back?");
             f.at = 3;
-            Ok(Some(crate::director::director_beat_wait(g, r, 2.4, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 2.4)?))
         }
         3 => {
-            if let Some(a) = calm(g, r, "Novak") { crate::director::director_beat_say(g, r, b, &a, "nothing. quiet", None)?; }
+            if let Some(a) = calm(g, r, "Novak") { crate::director::director_beat_say(g, r, &a, "nothing. quiet", None)?; }
             Ok(None)
         }
         at => Err(format!("tut-quiet lane: no resume point {at}")),
@@ -94,7 +94,7 @@ fn taken(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
 }
 
 fn gone() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_TAKEN }, Some("he is taken"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_TAKEN })
 }
 
 /// he has come round the long wall's end
@@ -103,11 +103,11 @@ fn in_strip(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<
 }
 
 fn met() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_MET }, Some("the player is in front of him"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_MET })
 }
 
 fn lit() -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_LIT }, Some("the player is in his light"))
+    crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_LIT })
 }
 
 /// q.inside(v, 'sam') of a volume the define pass named
@@ -120,10 +120,10 @@ fn sam_inside(g: &Game, seat: &crate::seats::SeatRef, r: DirectorRunId, v: &Opti
 fn turns(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate::director::Cond> {
     let heard = crate::director::EventFilter::Heard { by: u.clone(), run_level: RUN_LEVEL, run_within: RUN_WITHIN, walk_level: WALK_LEVEL, walk_within: WALK_WITHIN };
     vec![
-        crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_PAST }, Some("the player is past him")),
+        crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_PAST }),
         gone(),
-        crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Step, None, Some(heard)),
-        crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Whistle, None, None),
+        crate::director::director_beat_on(g, r, crate::director::EventViewKind::Step, None, Some(heard)),
+        crate::director::director_beat_on(g, r, crate::director::EventViewKind::Whistle, None, None),
     ]
 }
 
@@ -132,7 +132,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
     loop {
         match f.at {
             0 => {
-                let Some(u) = crate::director::director_beat_unit(g, r, "Novak") else { return Ok(None) };
+                let Some(u) = crate::director::director_beat_unit(g, "Novak") else { return Ok(None) };
                 f.u = Some(u);
                 f.at_2 = None;
                 f.at = NIGHT_LOOP;
@@ -142,14 +142,14 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                     f.at = NIGHT_ROUND;
                     continue;
                 }
-                let whistle = crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Whistle, None, Some(crate::director::EventFilter::XBelow { x: CROSS_WALL_X }));
+                let whistle = crate::director::director_beat_on(g, r, crate::director::EventViewKind::Whistle, None, Some(crate::director::EventFilter::XBelow { x: CROSS_WALL_X }));
                 f.at = 1;
                 return Ok(Some(crate::director::director_beat_any(vec![whistle, gone()])));
             }
             1 => {
                 f.w = Some(got.clone());
                 if got.index != 0.0 || got.event.is_none() { return Ok(None); }
-                let wait = crate::director::director_beat_wait(g, r, 0.9, None)?;
+                let wait = crate::director::director_beat_wait(g, r, 0.9)?;
                 f.at = 2;
                 return Ok(Some(crate::director::director_beat_any(vec![wait, gone()])));
             }
@@ -176,9 +176,9 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                     smoke: Some(Some(false)),
                     ..crate::director::OrderPatch2::default()
                 })?;
-                let at_gap = crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_GAP }, Some("he is at the gap"));
+                let at_gap = crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_GAP });
                 let (seen, lost) = (met(), gone());
-                let wait = crate::director::director_beat_wait(g, r, 40.0, None)?;
+                let wait = crate::director::director_beat_wait(g, r, 40.0)?;
                 f.at = 3;
                 return Ok(Some(crate::director::director_beat_any(vec![at_gap, seen, lost, wait])));
             }
@@ -187,18 +187,18 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
                 if got.index == 2.0 { return Ok(None); }
                 if got.index == 1.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 if got.index == 3.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
                     f.at_2 = None;
                     f.at = NIGHT_LOOP;
                     continue;
                 }
                 let at = f.at_2.expect("tut-quiet night: at is set before the order");
                 crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { aim_at: Some(Some(crate::director::Place::List(at))), ..crate::director::OrderPatch2::default() })?;
-                let wait = crate::director::director_beat_wait(g, r, LOOK_SECS, None)?;
+                let wait = crate::director::director_beat_wait(g, r, LOOK_SECS)?;
                 let (light, lost) = (lit(), gone());
                 f.at = 4;
                 return Ok(Some(crate::director::director_beat_any(vec![wait, light, lost])));
@@ -208,10 +208,10 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
                 if got.index == 2.0 { return Ok(None); }
                 if got.index == 1.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
-                crate::director::director_beat_say(g, r, b, &u, "nothing. wind", None)?;
+                crate::director::director_beat_say(g, r, &u, "nothing. wind", None)?;
                 crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 {
                     goal: Some(Some(crate::director::Place::List(SMOKE))),
                     face: Some(Some(m::PI / 2.0)),
@@ -221,9 +221,9 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                     smoke: Some(Some(true)),
                     ..crate::director::OrderPatch2::default()
                 })?;
-                let mut of = vec![crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_CHAIR }, Some("he is at his chair"))];
+                let mut of = vec![crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_CHAIR })];
                 of.extend(turns(g, r, &u));
-                of.push(crate::director::director_beat_wait(g, r, SMOKE_SECS, None)?);
+                of.push(crate::director::director_beat_wait(g, r, SMOKE_SECS)?);
                 f.at = 5;
                 return Ok(Some(crate::director::director_beat_any(of)));
             }
@@ -235,7 +235,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 }
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
                 crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { light: Some(Some(false)), ..crate::director::OrderPatch2::default() })?;
-                let mut of = vec![crate::director::director_beat_wait(g, r, SMOKE_SECS, None)?];
+                let mut of = vec![crate::director::director_beat_wait(g, r, SMOKE_SECS)?];
                 of.extend(turns(g, r, &u));
                 f.at = 6;
                 return Ok(Some(crate::director::director_beat_any(of)));
@@ -252,7 +252,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 };
                 if index == 2.0 { return Ok(None); }
                 if index == 1.0 || index == 3.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 if index == 4.0 {
@@ -262,7 +262,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                         continue;
                     }
                 }
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
                 f.at_2 = None;
                 f.at = NIGHT_LOOP;
             }
@@ -272,7 +272,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 ///  night's c.until closures, by the TEST_ ids.
-pub(super) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
     let u = f.u.clone().expect("tut-quiet night: u is set at its start");
     let vars = tut_quiet_vars(g, r).clone();
     match id {
@@ -286,21 +286,21 @@ pub(super) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// (tut-quiet.script.ts:96 beat 'store') by ear, from the dark: two men in the lit room ahead.
-pub(super) fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietStoreFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_quiet::TutQuietStoreFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 1.4, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 1.4)?))
         }
         1 => {
             let Some(a) = calm(g, r, "Kowalski") else { return Ok(None) };
-            crate::director::director_beat_say(g, r, b, &a, "Reyes. how long?", None)?;
+            crate::director::director_beat_say(g, r, &a, "Reyes. how long?", None)?;
             f.at = 2;
-            Ok(Some(crate::director::director_beat_wait(g, r, 2.4, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 2.4)?))
         }
         2 => {
             if let Some(a) = calm(g, r, "Reyes") {
-                if calm(g, r, "Kowalski").is_some() { crate::director::director_beat_say(g, r, b, &a, "still counting", None)?; }
+                if calm(g, r, "Kowalski").is_some() { crate::director::director_beat_say(g, r, &a, "still counting", None)?; }
             }
             Ok(None)
         }

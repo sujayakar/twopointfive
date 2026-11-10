@@ -14,7 +14,7 @@ fn wary_dots(awareness: f64) -> String {
 /// a man of the floor's mark: which glyphs, which colour, and nothing of where
 fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     let m = &g.gd[gd];
-    let own = m.team == crate::teams::Team::Operative;
+    let own = g.ch[m.ch].team.ours();
     let (mut text, mut tone) = (String::new(), HeadTone::Calm);
     let zz = crate::doze::doze_mark(g, gd);
     match m.state {
@@ -24,9 +24,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
         GuardState::Patrol => if !zz.is_empty() { text = String::from(zz); } else if !own { let d = wary_dots(m.awareness); if !d.is_empty() { text = d; tone = HeadTone::Sus; } },
     }
     // (a man of your own bent away with a forearm over his eyes says it himself)
-    let posed = own && g.k.moves.on > 0.5 && g.k.moves.dazzle > 0.5;
-    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !posed {
-        if text.is_empty() && own { tone = HeadTone::Sus; }
+    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !own {
         text.insert(0, '✹');
     }
     (text, tone)

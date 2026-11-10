@@ -57,13 +57,11 @@ pub fn sparks_emit_burst(g: &mut crate::game::Game, at: V3, o: crate::sparks::Sp
 }
 pub fn sparks_clear(g: &mut crate::game::Game) {
     for s in g.sparks.pool.iter_mut() { s.alive = false; }
-    g.sparks.live = 0.0;
 }
 /// the sparks fly, meet the walls and the floor, and die   (sparks.ts Sparks.update; the game always hands its own collision)
 pub fn sparks_update(g: &mut crate::game::Game, dt: f64) {
     let p = g.sparks.params;
     let decay = m::exp(-p.drag * dt);
-    let mut live = 0.0;
     for i in 0..g.sparks.pool.len() {
         let mut s = g.sparks.pool[i];
         if !s.alive { continue; }
@@ -80,9 +78,7 @@ pub fn sparks_update(g: &mut crate::game::Game, dt: f64) {
         } else { s.pos = v3::add(s.pos, mv); }
         if s.pos[1] < 0.01 { s.pos[1] = 0.01; if s.vel[1] < 0.0 { s.vel[1] *= -0.25; s.vel[0] *= 0.7; s.vel[2] *= 0.7; } }
         g.sparks.pool[i] = s;
-        live += 1.0;
     }
-    g.sparks.live = live;
 }
 /// one thin emissive box a live spark, along its travel
 pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {

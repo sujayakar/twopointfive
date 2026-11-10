@@ -1,5 +1,3 @@
-pub use ::game_types::stackline::types;
-pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
@@ -46,6 +44,5 @@ pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignme
     let f = crate::guards::frame_of(g, d);
     let face = if (post[0] - f.hx) * f.nx + (post[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 };
     if ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * face < 0.05 || !stack_line_sees(g, d, p, face) { return None; }
-    g.stats.stackline.paced += 1;
     Some(brisk)
 }
