@@ -4,10 +4,10 @@
 //   keys[slot]   the key (31 bits), 0 = empty          cand[slot]   who asks to found it or move it, until claimed
 //   cells[2s]    E.rgb, samples                        cells[2s+1]  where it began, sun seen         spot[slot]  where it looks from now, and its normal (0: founded by nobody yet)
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first. No rule here goes by slot, which is where a race put it: so a run repeats)
-const SLOTS = 393216u; const REACH = 128u; const CELL = 0.32; const THIN = 0.2; const TRIES = 4u; const LEAST = 3.0;
+const SLOTS = 262144u; const REACH = 128u; const CELL = 0.48; const THIN = 0.2; const TRIES = 4u; const LEAST = 3.0;
 // how wide its own ray begins (a point: the dice go over the patch) · how much more a later sample weighs (2: as its number; 4: the first ones, lit by a table that was still dark, are soon forgotten) · from
 // how many samples on it looks every fourth and every eighth frame · how many it keeps when the light changes near it
-const START = 0.02; const RISE = 4.0; const FOURTH = 24.0; const EIGHTH = 60.0; const FORGET = 7.0;
+const START = 0.02; const RISE = 4.0; const FOURTH = 24.0; const EIGHTH = 60.0; const FORGET = 7.0; const NEARER = true;
 fn facing(n: vec3f) -> u32 { let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
 /** how wide a patch is there: CELL over the level and its roofs; the city's are four times that, and grow with how far off they are, or they would fill the table by themselves */
 fn cacheSize(x: vec3f) -> f32 { let a = max(max(abs(x.x) - 20.0, abs(x.z) - 15.0), max(x.y - 12.0, -0.6 - x.y)); if (a <= 0.0) { return CELL; } return CELL * exp2(clamp(floor(log2(max(a, 1.0)) - 1.0), 2.0, 5.0)); }

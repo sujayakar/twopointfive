@@ -12,6 +12,13 @@ fn itsTurn(s: u32) -> bool {
   for (var i = 0u; i < 4u; i++) { let s = g.x * 256u + i * 64u + li; if (itsTurn(s)) { todo[atomicAdd(&many, 1u)] = s; } }
   workgroupBarrier(); let n = atomicLoad(&many); for (var i = li; i < n; i += 64u) { oneMore(todo[i]); }
 }
+/** a point of a lamp, and what it would send x per unit of 1 / chance, where the nearer parts of a rectangle are drawn more often: close to one, a point drawn evenly says next to nothing most times and a hundred times too much now and then */
+fn aimNear(i: u32, x: vec3f, u: vec2f) -> Aim {
+  let l = &lamps[i]; if ((*l).kind != 0u || !NEARER) { return aimLamp(i, x, u); } let hu = length((*l).u); let hv = length((*l).v); let eu = (*l).u / hu; let ev = (*l).v / hv; let o = x - (*l).at; let pu = dot(o, eu); let pv = dot(o, ev); let h = abs(dot(o, (*l).n)); var a: Aim; a.E = vec3f(0.0);
+  let cv = clamp(pv, -hv, hv) - pv; let du = max(sqrt(h * h + cv * cv), 0.02); let a0 = atan((-hu - pu) / du); let a1 = atan((hu - pu) / du); let tu = du * tan(mix(a0, a1, u.x)); let dv = max(sqrt(h * h + tu * tu), 0.02); let b0 = atan((-hv - pv) / dv); let b1 = atan((hv - pv) / dv); let tv = dv * tan(mix(b0, b1, u.y));
+  let q = (*l).at + eu * (pu + tu) + ev * (pv + tv) - x; let d2 = dot(q, q); a.dist = sqrt(d2); a.dir = q / max(a.dist, 1e-4); let c = -dot(a.dir, (*l).n); if (c <= 0.0) { return a; }
+  a.E = (*l).radiance * ((*l).on * c / max(d2, 1e-4) * (a1 - a0) * (du * du + tu * tu) / du * (b1 - b0) * (dv * dv + tv * tv) / dv); return a;
+}
 fn oneMore(s: u32) {
   var a = cells[2u * s]; var b = cells[2u * s + 1u]; let sp = spot[s]; let x0 = bitcast<vec3f>(sp.xyz); let n = octUnpack(sp.w & 0xfffffffeu); let st = steady(b.xyz); let key = atomicLoad(&keys[s]);
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
@@ -19,8 +26,8 @@ fn oneMore(s: u32) {
   for (var k = 0u; k < 2u; k++) {
     var d: vec3f; var far = 400.0; var e = vec3f(0.0);
     if (k == 0u) { if (cs <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); footLight(2.0 * frame.sunDir.w, 1.0); }
-    else { let l = drawLamp(x, n); if (l.x < 0.0) { continue; } let q = aimLamp(u32(l.x), x, rnd2()); d = q.dir; far = q.dist - 0.02; footLight(lampSize(u32(l.x)), far); e = q.E * l.y * max(dot(n, d), 0.0); if (max3(e) <= 0.0) { continue; } }
-    let T = visible(x, d, 2e-3, far); if (k == 0u) { sun = lum(T); } else { E += min(e * T, vec3f(300.0)); }
+    else { let l = drawLamp(x, n); if (l.x < 0.0) { continue; } let q = aimNear(u32(l.x), x, rnd2()); d = q.dir; far = q.dist - 0.02; footLight(lampSize(u32(l.x)), far); e = q.E * l.y * max(dot(n, d), 0.0); if (max3(e) <= 0.0) { continue; } }
+    let T = visible(x, d, 2e-3, far); if (k == 0u) { sun = lum(T); } else { E += min(e * T, vec3f(select(300.0, 1500.0, NEARER))); }
   }
   let w = wideDir(x, n, rnd2(), rnd()); let shaken = disturbed(b.xyz);
   for (var k = select(1u, 0u, shaken); k < 2u; k++) {                 // (near a door, a lamp that switched or a wall that gave way it first looks whether what it was on is still there)
