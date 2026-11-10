@@ -603,6 +603,8 @@ impl Seg<'_> {
             if x == lx && z == lz {
                 continue;
             }
+            // (those round the sample before are listed)
+            let (px, pz) = (lx, lz);
             lx = x;
             lz = z;
             let mut dz = -1.0;
@@ -611,7 +613,7 @@ impl Seg<'_> {
                 while dx <= 1.0 {
                     let (cx, cz) = (x + dx, z + dz);
                     dx += 1.0;
-                    if cx < 0.0 || cz < 0.0 || cx >= gw || cz >= gh {
+                    if cx < 0.0 || cz < 0.0 || cx >= gw || cz >= gh || ((cx - px).abs() <= 1.0 && (cz - pz).abs() <= 1.0) {
                         continue;
                     }
                     let ci = cz as usize * wi + cx as usize;
@@ -931,6 +933,8 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
     let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
     let wi = o.w as usize;
     let mut i = 0.0;
+    // (the sample before this one: the cells round it have been asked)
+    let (mut lx, mut lz) = (f64::NAN, f64::NAN);
     while i <= steps {
         let t = (i / steps) * tmax;
         if t > best + 1.5 {
@@ -946,13 +950,17 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
         if (r0 >= 0.0 && x - 1.0 >= gw) || (r0 <= 0.0 && x + 1.0 < 0.0) || (r2 >= 0.0 && z - 1.0 >= gh) || (r2 <= 0.0 && z + 1.0 < 0.0) || (i > 0.0 && r0 == 0.0 && r2 == 0.0) {
             break;
         }
+        i += 1.0;
+        if x == lx && z == lz {
+            continue;
+        }
         let mut dz = -1.0;
         while dz <= 1.0 {
             let mut dx = -1.0;
             while dx <= 1.0 {
                 let (cx, cz) = (x + dx, z + dz);
                 dx += 1.0;
-                if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) {
+                if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) || ((cx - lx).abs() <= 1.0 && (cz - lz).abs() <= 1.0) {
                     continue;
                 }
                 let c = cz as usize * wi + cx as usize;
@@ -981,7 +989,8 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
             }
             dz += 1.0;
         }
-        i += 1.0;
+        lx = x;
+        lz = z;
     }
     if bi < 0 {
         return RAY_NONE;
