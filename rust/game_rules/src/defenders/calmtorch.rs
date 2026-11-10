@@ -93,7 +93,7 @@ fn place_read(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 /// Is his torch this rule's to decide this frame: a staff man's hand torch on a plain patrol with nothing on his mind.
 fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_none()
-        && g.gd[gd].team == crate::teams::Team::Guard
+        && g.team(gd) == crate::teams::Team::Guard
         && g.gd[gd].state == crate::game::GuardState::Patrol
         && crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch
         && g.gd[gd].awareness < g.k.torch.calm_aw

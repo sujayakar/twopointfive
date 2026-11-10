@@ -138,7 +138,7 @@ fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> 
 }
 
 /// a teammate on his feet
-fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) }
+fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
 
 /// the one partner of a quiet pair: the first operative unit on his feet
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
@@ -231,7 +231,7 @@ fn ok_target(g: &Game, name: &str, on: bool) -> bool {
 
 fn ok_men(g: &Game, down: Option<f64>) -> bool {
     let guards = g.guards.clone();
-    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::Team::Player) && crate::condition::down(g, g.gd[x].ch)).count();
+    let n = guards.iter().filter(|&&x| g.team(x).theirs() && crate::condition::down(g, g.gd[x].ch)).count();
     n as f64 >= down.unwrap_or(1.0)
 }
 
@@ -253,7 +253,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
 fn ok_calm(g: &Game, route: Option<&str>) -> bool {
     let guards = g.guards.clone();
     guards.iter().all(|&x| {
-        !crate::teams::hostile_to(g, x, crate::teams::Team::Player) || crate::condition::down(g, g.gd[x].ch)
+        !g.team(x).theirs() || crate::condition::down(g, g.gd[x].ch)
             || route.map_or(false, |r| g.tab.route[g.gd[x].route].name != r)
             || g.gd[x].state == crate::game::GuardState::Patrol
     })

@@ -247,7 +247,7 @@ pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::sea
     }
     // (every man of the team's who is up, whoever's orders he takes: a charge asks nobody)
     for &gd in &g.guards {
-        if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { continue; }
+        if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let (p, who) = (pos_of(g, gd), callsign(g, gd));
         close_ask(g, &others, d, side, out, inn, p, who, false, &mut near, &mut far);
     }
@@ -1033,7 +1033,7 @@ pub fn door_tools_frag_behind(g: &mut crate::game::Game, d: DoorId, side: f64, m
     let at = door_tools_land_for(g, d, side, deep);
     let land: V3 = [at[0], 0.3, at[2]];
     for gd in g.guards.clone() {
-        if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && !men.contains(&gd) {
+        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && !men.contains(&gd) {
             let p = pos_of(g, gd);
             if frag_in_it(g, d, side, land, p) { return Some(callsign(g, gd)); }
         }

@@ -95,7 +95,7 @@ fn rails_fight(g: &mut crate::game::Game) -> f64 {
         n += 1;
         if !(time > g.rails.act_t) { continue; }
         let hit = kind == K::Kick || kind == K::Bang || (kind == K::Prop && loud)
-            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Operative));
+            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Ours));
         if hit { g.rails.act_t = time; }
     }
     for k in 0..g.guards.len() {
@@ -211,7 +211,7 @@ fn rails_note_given(g: &mut crate::game::Game, o: &str) {
 }
 /// this man runs the leg he is on
 pub fn rails_runs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if !g.rails.running || g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.rails.running || !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     match order_of(g, seat, gd) { Some(o) => !crate::orders::rows::id_is(&o, crate::orders::Is::Follows) && !crate::orders::rows::id_is(&o, crate::orders::Is::Holds), None => false }
 }
 /// is a man of the squad under an order to the step's mark
@@ -423,7 +423,7 @@ pub(super) fn rails_ends_now(g: &crate::game::Game) -> bool { rails_at(g).map_or
 fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let d = match rails_data(g) { Some(d) => d, None => return false };
     let respawn = match d.respawn { Some(r) => r, None => return false };
-    if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     let id = crate::Num(g.ch[g.gd[gd].ch].id);
     if let Some(until) = g.rails.spared.get(id) { if g.time < *until { return true; } }
     let t = g.time + if respawn > 0.0 { respawn } else { g.k.rails.spare_secs };
@@ -444,7 +444,7 @@ fn rails_squad(g: &crate::game::Game) -> Vec<GuardId> {
     for k in 0..g.guards.len() {
         let x = g.guards[k];
         let r = &g.gd[x];
-        if r.unit.is_some() && r.team == crate::teams::Team::Operative && !g.cond[r.ch].down { out.push(x); }
+        if g.ch[r.ch].team.ours() && !g.cond[r.ch].down { out.push(x); }
     }
     out
 }

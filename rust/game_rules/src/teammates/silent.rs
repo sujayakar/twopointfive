@@ -12,9 +12,6 @@ fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
 }
 
-/// the roster's own test for one man
-fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
-
 /// the squad of this seat
 fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
 
@@ -44,7 +41,7 @@ pub fn set_silent(g: &mut crate::game::Game, on: bool) {
 }
 
 /// this teammate is under the silent posture this frame
-pub fn under_silence(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && mate(g, gd) }
+pub fn under_silence(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && g.team(gd).ours() }
 
 /// squadSilent(viewOf(g, gd)): one book is the game in hand, as viewOf says; else asked inside his seat
 fn squad_silent_of_view(g: &mut Game, gd: GuardId) -> bool {

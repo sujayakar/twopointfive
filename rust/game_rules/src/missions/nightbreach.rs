@@ -99,7 +99,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
             let pos = mark_of(own_team.as_ref(), plan.as_ref(), team.as_ref(), i)?;
             let name = if i == 0 { "Blue One" } else { "Blue Two" };
             let opts = crate::guards::UnitOpts {
-                team: crate::teams::Team::Operative,
+                team: crate::teams::Team::Ours,
                 pos,
                 yaw: Some(yaw),
                 name: Some(String::from(name)),
@@ -128,7 +128,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
         }
         for (i, man) in crate::nightbreach::squad4().iter().take(n as usize).enumerate() {
             let opts = crate::guards::UnitOpts {
-                team: crate::teams::Team::Operative,
+                team: crate::teams::Team::Ours,
                 pos: at[i],
                 yaw: Some(yaw),
                 name: Some(man.name.clone()),

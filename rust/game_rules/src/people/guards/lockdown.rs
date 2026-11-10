@@ -18,9 +18,8 @@ fn drop_plan(d: &mut crate::game::Guard) {
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     let slot = match t {
         crate::teams::Team::Guard => &mut r.guard,
-        crate::teams::Team::Operative => &mut r.operative,
+        crate::teams::Team::Ours => &mut r.operative,
         crate::teams::Team::Hostile => &mut r.hostile,
-        crate::teams::Team::Player => &mut r.player,
         crate::teams::Team::Civilian => &mut r.civilian,
     };
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
@@ -48,7 +47,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
     let mut alive: Vec<GuardId> = Vec::new();
     for &x in g.guards.iter() {
         let m_ = &g.gd[x];
-        if !g.cond[m_.ch].down && m_.held.is_none() && m_.team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
+        if !g.cond[m_.ch].down && m_.held.is_none() && g.ch[m_.ch].team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
     }
     if alive.len() < 2 { return; }
     let (mut a, mut b, mut bd) = (alive[0], alive[1], m::INF);
@@ -291,7 +290,6 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
 /// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
-    if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
     let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
     let eight = crate::seats::budget_with_seats(g, MAX_CHARACTERS);   // (the eight is written for one player: a seat more, a man more)
@@ -321,7 +319,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         match o.weapon {
             Some(w) => w,
             None => match o.team {
-                crate::teams::Team::Operative => crate::weapons::WeaponId::Fn2000,
+                crate::teams::Team::Ours => crate::weapons::WeaponId::Fn2000,
                 crate::teams::Team::Hostile => crate::weapons::WeaponId::Aks74u,
                 _ => crate::weapons::WeaponId::Guard9mm,
             },
@@ -423,7 +421,7 @@ pub(super) fn tick_engagement(g: &mut crate::game::Game) {
         let (time, kind, level, who) = { let e = &g.events[i]; (e.time, e.kind, e.level, e.who) };
         i += 1;
         if time == g.time && (kind == crate::director::EventKind::Shot || kind == crate::director::EventKind::GuardShot) && level.unwrap_or(0.0) >= 1.0 {
-            let t = if kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, who.unwrap_or(-1.0)) };
+            let t = if kind == crate::director::EventKind::Shot { crate::teams::Team::Ours } else { crate::teams::team_of_id(g, who.unwrap_or(-1.0)) };
             if let Some(e) = g.m.guards.engagements.as_mut() { rounds_add(&mut e.rounds, t); }
         }
     }

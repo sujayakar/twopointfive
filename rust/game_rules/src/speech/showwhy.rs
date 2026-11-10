@@ -135,10 +135,10 @@ fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId,
     let ux = dx / l;
     let uz = dz / l;
     let ap = (pl[0] - c[0]) * ux + (pl[2] - c[2]) * uz;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let half = g.k.showwhy.mate_half;
     for &o in &g.guards {
-        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != team {
             continue;
         }
         let op = g.ch[g.gd[o].ch].pos;

@@ -60,8 +60,7 @@ pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate:
         }
     }
     if !g.ai_enabled || g.gd[gd].civ.is_some() { return; }
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return; }
+    if !g.team(gd).theirs() { return; }
     let state = g.gd[gd].state;
     let now = g.time;
     if state == crate::game::GuardState::Patrol {

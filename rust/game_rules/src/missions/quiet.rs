@@ -97,7 +97,6 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
         g.k.silent.on = true;
         g.k.silent.start = true;
         g.quiet.mine = Some(held_now(g));
-        crate::teams::staff_vs_operatives(g, true);
     }
     g.staged.begin(crate::scene_scenarios::MissionKind::Quiet, crate::mission::Facts { unseen: true, ..Default::default() });
     quiet_mission_rack(g);
@@ -132,7 +131,6 @@ pub fn quiet_mission_release(g: &mut crate::game::Game) {
     if let (Some(w), Some(mine)) = (g.quiet.was, g.quiet.mine) {
         let n = held_now(g);
         held_set(g, released(w, mine, n));
-        crate::teams::staff_vs_operatives(g, false);
     }
     g.quiet.was = None;
     g.quiet.mine = None;
@@ -159,7 +157,6 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
         if let Some(mine) = g.quiet.mine {
             g.quiet.was = Some(held_now(g));
             held_set(g, mine);
-            crate::teams::staff_vs_operatives(g, true);
             g.m.quiet.holder = true;
         }
     }
@@ -291,7 +288,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
     if js::truthy(g.quiet.squad) {
         let at = match s.mate { Some(p) => v3::copy(p), None => behind_or_why(g, &s)? };
         let man = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
-            team: crate::teams::Team::Operative,
+            team: crate::teams::Team::Ours,
             pos: at,
             yaw: Some(s.sam_yaw),
             name: Some(String::from("Blue One")),

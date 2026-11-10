@@ -44,7 +44,7 @@ struct Run { behind: usize, ours: usize, cap: usize, to: [usize; 3], up: usize, 
 
 fn file_of(level: &str) -> String { format!("{level}.json") }
 
-fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
+fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.team(m) == Team::Hostile).collect() }
 
 /// The commander: an order every four to seven seconds, onto one of the three men nearest the squad, "open and clear" the door nearest that man (or the next one) or
 /// "move" onto him, by turns. His die is his own, so two seeds are two fights: on a fixed beat onto the nearest man the seeds of a mission were one fight over again.
@@ -159,7 +159,7 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
         let t = p.time() - t0;
         if r.fell.is_none() && p.mates().iter().any(|&m| !p.up(m)) { r.fell = Some(t); }
         for m in p.g.guards.clone() {
-            let side = match p.g.gd[m].team { Team::Operative => 0, Team::Hostile => 1, _ => continue };
+            let side = match p.g.team(m) { Team::Ours => 0, Team::Hostile => 1, _ => continue };
             let now = (p.reloading(m).is_some(), p.rounds_fired(m));
             let (reloading, fired) = *was.get(&m.0).unwrap_or(&now);
             if now.0 && !reloading { r.reloads[side] += 1; }

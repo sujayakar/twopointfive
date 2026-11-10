@@ -725,7 +725,7 @@ impl DoorsAsk for Play {
     fn leaves_gone_round(&self) -> f64 { self.g.doors.rounds }
     fn blind_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].blind_until - self.g.time).max(0.0) }
     fn fold_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].fold_until - self.g.time).max(0.0) }
-    fn is_staff(&mut self, m: GuardId) { self.g.gd[m].team = game::teams::Team::Guard; }
+    fn is_staff(&mut self, m: GuardId) { self.g.ch[self.g.gd[m].ch].team = game::teams::Team::Guard; }
     fn entry_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_pods_as_were(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn shallow_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_shallow_pods(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn stack_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }

@@ -355,7 +355,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
         Some(&b) => b,
         None => v3::add(pos, [0.0, 1.1, 0.0]),
     };
-    let team = g.gd[victim].team;
+    let team = g.team(victim);
     let mut seen = false;
     let mut i = 0;
     while i < g.guards.len() {
@@ -363,7 +363,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
         i += 1;
         if o != victim
             && !crate::condition::down(g, g.gd[o].ch)
-            && g.gd[o].team == team
+            && g.team(o) == team
             && g.gd[o].held.is_none()
             && !crate::control::man::blind(g, o)
             && crate::guards::point_in_view(g, o, at, Some(16.0), Some(60.0))
@@ -383,7 +383,7 @@ pub fn tactics_body_found(g: &mut crate::game::Game, finder: GuardId, body: Guar
     if !tactics_on(g) { return; }
     let at = crate::guards::body_pos(g, body);
     if let Some(d) = door_near(g, at, None) {
-        let team = g.gd[finder].team;
+        let team = g.team(finder);
         let who = g.gd[body].callsign.clone();
         mark_danger(g, d, team, crate::tactics::DangerWhy::Body, Some(&who));
     }
@@ -395,8 +395,7 @@ pub fn body_duty_blocked(g: &mut crate::game::Game, gd: GuardId, body: GuardId) 
     let at = crate::guards::body_pos(g, body);
     match door_near(g, at, None) {
         Some(d) => {
-            let team = g.gd[gd].team;
-            danger_at(g, d, team).is_some()
+            danger_at(g, d, g.team(gd)).is_some()
         }
         None => false,
     }
@@ -416,7 +415,7 @@ pub(super) fn scan_rounds(g: &mut crate::game::Game) {
         if seen.has(e.serial) { continue; }
         seen.add(e.serial);
         let shooter = if e.kind == crate::director::EventKind::Shot {
-            crate::teams::Team::Player
+            crate::teams::Team::Ours
         } else {
             crate::teams::team_of_id(g, e.who.unwrap_or(-1.0))
         };
@@ -429,8 +428,8 @@ pub(super) fn scan_rounds(g: &mut crate::game::Game) {
             while oi < g.guards.len() {
                 let o = g.guards[oi];
                 oi += 1;
-                let team = g.gd[o].team;
-                if !crate::teams::is_hostile(g, shooter, team) || g.gd[o].held.is_some() { continue; }
+                let team = g.team(o);
+                if !shooter.foe_of(team) || g.gd[o].held.is_some() { continue; }
                 if crate::condition::down(g, g.gd[o].ch) && !(g.gd[o].died_at >= e.time - 1e-6) { continue; }
                 if dist_to_segment(pos_of(g, o), x.at, to) <= ROUND_AT_M {
                     mark_danger(g, d, team, crate::tactics::DangerWhy::Rounds, None);
@@ -454,7 +453,7 @@ pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Opti
     if !tactics_on(g) || g.gd[gd].script.is_some() || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let role = s(g).roles.get(gd).copied();
     let avoid = role.and_then(|r| g.tab.tactics_role[r].avoid.clone());
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut recs: Vec<DoorId> = Vec::new();
     for r in danger_doors(g, Some(team)) {
         let door = g.tab.tactics_danger_rec[r].door;
@@ -499,7 +498,7 @@ fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &st
         since = m::min(since, t);
     }
     let team = g.tab.tactics_plan[plan].team;
-    let seen = g.guards.iter().any(|&o| g.gd[o].team == team && g.gd[o].last_seen_t > since);
+    let seen = g.guards.iter().any(|&o| g.team(o) == team && g.gd[o].last_seen_t > since);
     let moving = crate::words::wg(g, &"going around", &"moving round");
     if seen {
         format!("{} — coming at {} from {}", moving, who, place)
@@ -528,7 +527,7 @@ fn danger_only(g: &mut Game, gd: GuardId, t: V3, pens: &mut JsMap<GuardId, Optio
 /// Deal roles to `men` over the nav grid toward `target`, register the plan and return it; None if fewer than two have a route.
 pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: V3, why: Option<&str>, prefer: Option<GuardId>) -> Option<TacticsPlanId> {
     s(g);
-    let team = g.gd[men[0]].team;
+    let team = g.team(men[0]);
     let t_pt: V3 = [target[0], 0.0, target[2]];
     // any old plan these men were in goes
     for &m in men {
@@ -772,11 +771,11 @@ mod tests {
         assert_eq!(g.tab.tactics_danger_rec[r].t0, 10.0);
         assert_eq!(g.stats.tactics.dangers, 1);
         // the other side has a row of its own, and the readers tell them apart
-        let other = mark_danger(&mut g, d, Team::Player, DangerWhy::Drop, None);
+        let other = mark_danger(&mut g, d, Team::Ours, DangerWhy::Drop, None);
         assert_ne!(other, r);
         assert_eq!(danger_at(&mut g, d, Team::Guard), Some(r));
         assert_eq!(danger_at(&mut g, DoorId(4), Team::Guard), None);
-        assert_eq!(danger_doors(&mut g, Some(Team::Player)), vec![other]);
+        assert_eq!(danger_doors(&mut g, Some(Team::Ours)), vec![other]);
         assert_eq!(danger_doors(&mut g, None), vec![r, other]);
         // run out: not live, and a new mark starts it over in the same row
         g.time = 100.0;

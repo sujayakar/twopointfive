@@ -152,7 +152,7 @@ pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// Is the clean line at Sam's back this man's to use: Sam has fired from behind the man, and the man is no civilian.
 pub fn gun_hold_free(g: &mut crate::game::Game, p: crate::guards::Pair) -> bool {
-    if g.gd[p.held].team == crate::teams::Team::Civilian {
+    if g.team(p.held) == crate::teams::Team::Civilian {
         return false;
     }
     let key = p.key;

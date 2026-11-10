@@ -136,7 +136,7 @@ fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
 /// somebody not of his side in the beam, this side of what it ends on
 fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
     g.guards.iter().any(|&x| {
-        if x == gd || crate::condition::down(g, g.gd[x].ch) || g.gd[x].team == crate::teams::Team::Operative {
+        if x == gd || crate::condition::down(g, g.gd[x].ch) || g.team(x).ours() {
             return false;
         }
         let at = g.ch[g.gd[x].ch].pos;
@@ -149,7 +149,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
 
 /// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens
 pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || crate::condition::down(g, g.gd[gd].ch) {
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) {
         return false;
     }
     let Some(held) = held else { return false };
@@ -192,8 +192,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// is this man's weapon light this rule's to decide
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && crate::roomfight::fight_live(g)
         && crate::seats::order_of(g, gd).is_some()
 }
@@ -290,7 +289,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// is this man one of the team whose pace PACE governs right now
 pub fn team_paced(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g)
+    g.team(gd).ours() && crate::roomfight::fight_live(g)
 }
 
 /// the speed his legs may be asked for

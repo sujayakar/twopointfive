@@ -34,7 +34,7 @@ fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBe
 }
 /// `gd.team === 'guard' ? 'search' : 'alert'`
 fn hand_back_state(g: &Game, gd: GuardId) -> crate::squad::EndGuardScriptState {
-    if g.gd[gd].team == crate::teams::Team::Guard { crate::squad::EndGuardScriptState::Search } else { crate::squad::EndGuardScriptState::Alert }
+    if g.team(gd) == crate::teams::Team::Guard { crate::squad::EndGuardScriptState::Search } else { crate::squad::EndGuardScriptState::Alert }
 }
 /// the man's chest, else `up` over his feet
 fn chest_of(g: &Game, c: CharId, up: f64) -> V3 {
@@ -667,7 +667,7 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
     let units = &g.tab.director_run[r].units;
     match who {
         DirectorInsideVolumeWho::Sam => sam,
-        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.gd[gd].team == crate::teams::Team::Operative && alive(gd) && in_volume(v, g.ch[g.gd[gd].ch].pos)),
+        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.team(gd).ours() && alive(gd) && in_volume(v, g.ch[g.gd[gd].ch].pos)),
         DirectorInsideVolumeWho::AnyUnit => units.values().any(|u| alive(u.gd) && in_volume(v, g.ch[g.gd[u.gd].ch].pos)),
         DirectorInsideVolumeWho::Unit(u) => units.get(crate::Num(u.id)).map_or(false, |x| alive(x.gd) && in_volume(v, g.ch[g.gd[x.gd].ch].pos)),
     }

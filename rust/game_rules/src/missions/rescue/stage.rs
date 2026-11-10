@@ -459,13 +459,13 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             Some(r) => {
                 let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
                 crate::guards::UnitOpts {
-                    team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
+                    team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
                     budget: Some(m::max(crate::nightbreach::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
                 }
             }
             None => crate::guards::UnitOpts {
-                team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
+                team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
                 budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::default()
             },

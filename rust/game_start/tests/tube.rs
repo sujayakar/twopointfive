@@ -9,8 +9,8 @@ use game_start::play::{Opts, Play};
 fn no_half_dark_place_blinds_a_goggled_man() {
     let mut p = Play::mission("test-rooms.json", "?levelFile=test-rooms.json&rescue", &Opts { seed: 1, ..Default::default() });
     p.sam_unhurt();
-    let mate = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team == game::teams::Team::Operative && p.g.gd[gd].unit.is_some()).expect("the pair");
-    let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let mate = p.g.guards.iter().copied().find(|&gd| p.g.team(gd).ours() && p.g.gd[gd].unit.is_some()).expect("the pair");
+    let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let mut seen = Vec::new();
     for k in 0..8 {
         // (five metres short of the spot and looking along the corridor at it, with nobody who can do anything about him)

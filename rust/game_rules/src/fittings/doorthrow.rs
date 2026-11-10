@@ -9,13 +9,7 @@ use alloc::vec::Vec;
 
 /// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.
 fn side_of(t: crate::teams::Team) -> f64 {
-    if t == crate::teams::Team::Player || t == crate::teams::Team::Operative {
-        1.0
-    } else if t == crate::teams::Team::Civilian {
-        3.0
-    } else {
-        2.0
-    }
+    if t.ours() { 1.0 } else if t.theirs() { 2.0 } else { 3.0 }
 }
 
 /// The guard or civilian whose body has this character id.
@@ -59,7 +53,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
         None => return 0.0,
     };
     let until = m::max(g.cond[g.gd[gd].ch].fold_until, g.cond[g.gd[gd].ch].blind_until);
-    let side = if g.gd[gd].civ.is_some() { 3.0 } else { side_of(g.gd[gd].team) };
+    let side = side_of(g.team(gd));
     let state = g.gd[gd].state;
     let braced = if g.gd[gd].held.is_some() {
         braced_bit | held_bit
@@ -75,9 +69,9 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
 /// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).
 fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
     if crate::seats::is_man_id(g, id_2) {
-        return Some(crate::teams::Team::Player);
+        return Some(crate::teams::Team::Ours);
     }
-    man_of(g, id_2).map(|gd| g.gd[gd].team)
+    man_of(g, id_2).map(|gd| g.team(gd))
 }
 
 /// After the leaves are stepped: a carried man is settled against the walls, a struck man startled or thrown.
@@ -145,8 +139,8 @@ fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         Some(by) => by,
         None => return,
     };
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, by, team) || (team != crate::teams::Team::Guard && team != crate::teams::Team::Hostile) {
+    let team = g.team(gd);
+    if !by.foe_of(team) || !team.theirs() {
         return; // Sam's men know whose door it is
     }
     if g.gd[gd].state == crate::game::GuardState::Patrol {
@@ -215,8 +209,7 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     let by = team_of(g, s.by);
     if let Some(by) = by {
-        let team = g.gd[gd].team;
-        if crate::teams::is_hostile(g, by, team) {
+        if by.foe_of(g.team(gd)) {
             let aware = g.k.doorthrow.aware;
             crate::mind::raise(g, gd, aware, "doorthrow");
             if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].last_known.is_none() {

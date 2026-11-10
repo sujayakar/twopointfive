@@ -9,7 +9,7 @@ fn clinic(seed: u32, hour: &str) -> (Play, Vec<GuardId>) {
     p.g.god_mode = true;
     p.g.fog_of_war.on = false;
     p.run(0.5);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     (p, foes)
 }
 

@@ -392,7 +392,7 @@ pub(in crate::people) fn team_through() -> f64 {
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
 fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.gd[gd].team == crate::teams::Team::Operative { team_through() } else { crate::scene_boxes::box_flag().glass }
+    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag().glass }
 }
 
 /// That man's own line to a point, asked bare.

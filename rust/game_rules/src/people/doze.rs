@@ -80,7 +80,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
 /// a staff man on a calm patrol with nothing on his mind or in his hands
 fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
-    m.team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
+    g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
         && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
 }
 /// put his record on this game's books
@@ -537,21 +537,20 @@ fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
 /// the light on a sleeper's face that is news to him: everything but his own side's lamps and the room's screens
 fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
-    let team = g.gd[gd].team;
-    let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
+    let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, g.team(gd)) };
     let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner
 fn own_side_owns(g: &Game, owner: f64, team: crate::teams::Team) -> bool {
-    g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.gd[x].team == team)
+    g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.team(x) == team)
 }
 /// where the light on his face comes from: the nearest carried lamp of another side through clear air, else his own spot
 fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
     let mut best: Option<V3> = None;
     let mut bd = 14.0;
     let me = g.ch[g.gd[gd].ch].id;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut i = 0usize;
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];

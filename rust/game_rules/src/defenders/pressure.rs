@@ -92,11 +92,11 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
     let mut shut: Option<usize> = None;
     if g.gd[gd].state == crate::game::GuardState::Alert && g.time - g.gd[gd].last_seen_t < 1.5 {
         let mut seen = 0;   // (his own eyes: the game's sight test, and some light on the man)
-        let team = g.gd[gd].team;
+        let team = g.team(gd);
         for i in 0..g.fight.ops.len() {
             let o = op_gd(g, i);
-            let (ot, oc) = (g.gd[o].team, g.gd[o].ch);
-            if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
+            let (ot, oc) = (g.team(o), g.gd[o].ch);
+            if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
             let vis = crate::guards::can_see_char(g, gd, oc);
             if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
         }

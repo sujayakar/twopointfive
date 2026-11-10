@@ -492,7 +492,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].stun_at = g.time + 2.0;
     let l_from = g.tab.lanes_lane[l].from;
     for &o in g.guards.iter() {
-        if g.gd[o].team == SIDE && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
+        if g.team(o) == SIDE && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
     }
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.lanes.stun_m;
@@ -606,7 +606,7 @@ pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) ->
         if g.ch[pc].alive {
             let id = g.ch[pc].id;
             let t = crate::teams::team_of_id(g, id);
-            if crate::teams::is_hostile(g, SIDE, t) { if let Some(p) = manned_at(g, l, eye, pc) { return Some(p); } }
+            if SIDE.foe_of(t) { if let Some(p) = manned_at(g, l, eye, pc) { return Some(p); } }
         }
     }
     let mut i = 0;
@@ -614,8 +614,8 @@ pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) ->
         let o = g.guards[i];
         i += 1;
         if crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() { continue; }
-        let t = g.gd[o].team;
-        if crate::teams::is_hostile(g, SIDE, t) { let c = g.gd[o].ch; if let Some(p) = manned_at(g, l, eye, c) { return Some(p); } }
+        let t = g.team(o);
+        if SIDE.foe_of(t) { let c = g.gd[o].ch; if let Some(p) = manned_at(g, l, eye, c) { return Some(p); } }
     }
     None
 }

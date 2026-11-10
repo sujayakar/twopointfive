@@ -122,9 +122,9 @@ impl Owes {
     }
     /// a teammate, or a hostage, down by one of the team
     fn by_the_team(&self, g: &Game, gd: GuardId) -> bool {
-        if g.gd[gd].team != Team::Operative && !g.staged.captives.contains(&gd) { return false; }
+        if !g.team(gd).ours() && !g.staged.captives.contains(&gd) { return false; }
         let k = g.gd[gd].killer_id;
-        k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.gd[x].team == Team::Operative && g.ch[g.gd[x].ch].id == k)
+        k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.team(x).ours() && g.ch[g.gd[x].ch].id == k)
     }
     /// under an order with a mark he is not on, not in a fight, not blinded: does he want to be walking, and has the game given up on that walk
     fn under_order(&self, g: &Game, gd: GuardId, p: [f64; 3], t: f64) -> (bool, bool) {
@@ -139,7 +139,7 @@ impl Owes {
     fn overlaps(&mut self, g: &Game, t: f64) {
         let mut team: Vec<(usize, [f64; 3])> = Vec::new();
         team.push((usize::MAX, g.ch[g.pl[g.player].ch].pos));
-        for (i, &gd) in g.guards.iter().enumerate() { if g.gd[gd].team == Team::Operative && !game::condition::down(g, g.gd[gd].ch) { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
+        for (i, &gd) in g.guards.iter().enumerate() { if g.team(gd).ours() && !game::condition::down(g, g.gd[gd].ch) { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
         for a in 0..team.len() { for b in a + 1..team.len() {
             let key = (team[a].0, team[b].0);
             let at = self.pairs.iter().position(|p| p.0 == key);

@@ -58,8 +58,7 @@ pub fn lens_recheck(g: &mut crate::game::Game) {
 
 /// The mains are the business of the side whose building it is.
 fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
 }
 
 /// The re-arm's gate for one man: a trip he can undo, a few seconds old, and he alive, not held, within reach of the panel's front.

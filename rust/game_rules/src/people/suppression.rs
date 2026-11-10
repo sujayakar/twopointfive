@@ -46,18 +46,18 @@ pub fn note_round(g: &mut crate::game::Game, shooter: CharId, from: V3, to: V3, 
     let t_hit = v3::len(seg);
     if t_hit < 1e-3 { return; }
     let dir = v3::scale(seg, 1.0 / t_hit);
-    let shooter_team = crate::teams::team_of_char(g, shooter);
+    let shooter_team = g.ch[shooter].team;
     let round = Round { shooter, hit, from, to, dir, t_hit, shooter_team };
     for pl in crate::seats::men(g) {
         let c = g.pl[pl].ch;
-        note_one(g, &round, c, None, false, crate::teams::Team::Player);
+        note_one(g, &round, c, None, false, crate::teams::Team::Ours);
     }
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         if !crate::condition::down(g, g.gd[gd].ch) {
-            let (c, held, team) = (g.gd[gd].ch, g.gd[gd].held.is_some(), g.gd[gd].team);
+            let (c, held, team) = (g.gd[gd].ch, g.gd[gd].held.is_some(), g.team(gd));
             note_one(g, &round, c, Some(gd), held, team);
         }
     }
@@ -82,7 +82,7 @@ fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool,
         None => v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]),
     };
     let s = v3::clamp(v3::dot(v3::sub(chest, r.from), r.dir), 0.0, r.t_hit);
-    let foe = crate::teams::is_hostile(g, r.shooter_team, team);
+    let foe = r.shooter_team.foe_of(team);
     let min_travel = g.k.suppression.min_travel;
     if s < min_travel && !(foe && crate::flinch::flinch_inside(g, s)) { return; }
     let closest = v3::mad(r.from, r.dir, s);
@@ -205,7 +205,7 @@ fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::
     let mut pool: Vec<&'static str> = Vec::new();
     pool.extend_from_slice(lines_of(moment, temperament.as_str()));
     pool.extend_from_slice(lines_of(moment, "*"));
-    if g.gd[gd].team != crate::teams::Team::Guard {
+    if g.team(gd) != crate::teams::Team::Guard {
         pool.retain(|l| !mentions_him(l));
     }
     if pool.is_empty() { return false; }
@@ -292,9 +292,9 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
         if band > was && reacts(g, gd) {
             let src_id = g.cond[g.gd[gd].ch].sup.src_id;
             let friendly = !crate::seats::is_man_id(g, src_id) && src_id >= 0.0 && {
-                let team = g.gd[gd].team;
+                let team = g.team(gd);
                 let theirs = crate::teams::team_of_id(g, src_id);
-                !crate::teams::is_hostile(g, team, theirs)
+                !team.foe_of(theirs)
             };
             if was < 1.0 {
                 start_from_round(g, gd);
@@ -314,7 +314,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                     if o != gd
                         && !crate::condition::down(g, g.gd[o].ch)
                         && g.time - g.cond[g.gd[o].ch].sup.pinned_at < g.k.suppression.pair_secs
-                        && g.gd[o].team == g.gd[gd].team
+                        && g.team(o) == g.team(gd)
                         && !crate::runner::runner_mute(g, o)
                     {
                         other = true;
@@ -329,7 +329,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                     g.cond[g.gd[gd].ch].sup.bark_t = now;
                     g.cond[g.gd[gd].ch].sup.bark_was = Some(SupMoment::Pinned);
                     g.m.suppression.floor_bark_t = Some(now);
-                    let line = if g.gd[gd].team != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
+                    let line = if g.team(gd) != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
                     crate::game::game_say(g, gd, line, Some(true), None);
                 } else {
                     let force = g.cond[g.gd[gd].ch].sup.bark_was == Some(SupMoment::Flinch) && g.time - g.cond[g.gd[gd].ch].sup.bark_t > 1.5;

@@ -424,7 +424,7 @@ fn tick_bang(g: &mut Game, t: f64) {
         let hs = dr!(g).hostiles.clone();
         let up: Vec<GuardId> = hs.iter().copied().filter(|h| !crate::condition::down(g, g.gd[*h].ch)).collect();
         let all = core::mem::replace(&mut g.guards, up);
-        crate::combat::detonate_stun(g, it, Some(false), Some(crate::combat::DetonateStunSam { side: Some(crate::teams::Team::Operative), spare: None }));
+        crate::combat::detonate_stun(g, it, Some(false), Some(crate::combat::DetonateStunSam { side: Some(crate::teams::Team::Ours), spare: None }));
         g.guards = all;
         breach_drill_beat(g, "bang");
         breach_drill_muzzles_on_door(g);

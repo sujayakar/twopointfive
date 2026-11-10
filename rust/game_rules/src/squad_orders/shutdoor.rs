@@ -214,10 +214,10 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
         }
         let at = g.ch[c].pos;
         if !in_shut_swing(g, d, at[0], at[2], Some(k().body))
-            || (seen && g.gd[m].team != crate::teams::Team::Operative && !crate::fogofwar::fog_of_war_drawn(g, m)) {
+            || (seen && !g.team(m).ours() && !crate::fogofwar::fog_of_war_drawn(g, m)) {
             continue;
         }
-        return Some(if g.gd[m].team == crate::teams::Team::Operative {
+        return Some(if g.team(m).ours() {
             alloc::format!("{} is in its way.", g.gd[m].callsign)
         } else {
             String::from("somebody's in its way.")
@@ -231,8 +231,7 @@ fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
     let player = g.player;
     let sam_ch = g.pl[player].ch;
     for h in g.guards.clone() {
-        let team = g.gd[h].team;
-        if crate::condition::down(g, g.gd[h].ch) || !crate::teams::is_hostile(g, crate::teams::Team::Operative, team) { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || !g.team(h).theirs() { continue; }
         for m in crate::roomfight::room_fight_seen_by(g, h) {
             let (m_at, h_at) = (pos_of(g, m), pos_of(g, h));
             if crate::guards::crosses_door(g, m_at, h_at, d).is_some() { return true; }

@@ -29,12 +29,12 @@ fn flee_of(g: &Game, i: usize, gd: GuardId) -> Option<crate::game::GuardScript> 
 fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) -> crate::frag::TakenBy {
     let (mut stay, mut go): (Vec<V3>, Vec<V3>) = (Vec::new(), Vec::new());
     let from: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let me = g.ch[g.gd[gd].ch].pos;
     let mut n = 0;
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
-        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != team { continue; }
         let s = l.and_then(|i| flee_of(g, i, o));
         let oc = g.gd[o].ch;
         let p = g.ch[oc].pos;
@@ -44,7 +44,7 @@ fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) ->
         if on_leg { go.push(q); }
         else if s.is_some() || crate::control::man::staggered(g, o) || crate::control::man::blind(g, o) || flat(p, dz) > g.k.frag.flee_m || { let h = head_of(g, oc); exposed_to(g, from, p, h, None) <= 0.0 } { stay.push(p); }
     }
-    if team == crate::teams::Team::Operative {
+    if team.ours() {
         for pl in crate::seats::men(g) {
             let pp = g.ch[g.pl[pl].ch].pos;
             if flat(pp, me) <= 8.5 { stay.push(pp); }
@@ -128,13 +128,13 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() { return; }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let serial = g.tab.item[it].serial;
     let d = m::hyp2(pos[0] - at[0], pos[2] - at[2]);
     if !live!(g, i).knows.has(gd) {
         if d > m::max(g.k.frag.see_m, g.k.frag.flee_m) { return; }
         let mut when = -1.0;
-        if same_side(live!(g, i).side, team) { when = g.time + 0.1; }
+        if live!(g, i).side == team { when = g.time + 0.1; }
         else if !crate::control::man::blind(g, gd) {
             let head = head_of(g, c);
             let to = m::atan2(at[0] - pos[0], at[2] - pos[2]);
@@ -149,21 +149,21 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
                 hears = pr.muffle < 0.5 && pr.path_len <= hear_m + 1.0;
             }
             if sees || hears {
-                let react = if g.gd[gd].trained || team == crate::teams::Team::Operative { g.k.frag.react[0] } else { g.k.frag.react[1] };
+                let react = if g.gd[gd].trained || team.ours() { g.k.frag.react[0] } else { g.k.frag.react[1] };
                 when = g.time + react + hash01(serial, g.ch[c].id) * g.k.frag.react_jit;
             }
         }
         if when >= 0.0 { live!(g, i).knows.set(gd, when); }
     }
     match live!(g, i).knows.get(gd).copied() { Some(k) if g.time >= k => {} _ => return }
-    if !live!(g, i).shouted.has(team) && !same_side(live!(g, i).side, team) && !crate::control::man::staggered(g, gd) {
+    if !live!(g, i).shouted.has(team) && live!(g, i).side != team && !crate::control::man::staggered(g, gd) {
         live!(g, i).shouted.add(team);
         crate::game::game_say(g, gd, "grenade!", None, None);
         let mouth = head_of(g, c);
         let mut n = 0;
         while n < g.guards.len() {
             let o = g.guards[n]; n += 1;
-            if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team || live!(g, i).knows.has(o) { continue; }
+            if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != team || live!(g, i).knows.has(o) { continue; }
             let oc = g.gd[o].ch;
             if v3::dist(g.ch[oc].pos, pos) > g.k.frag.shout_m { continue; }
             let oh = head_of(g, oc);
@@ -242,7 +242,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     }
     let run = crate::teampace::team_blast_pace(g, gd, g.k.frag.run_speed);
     let speed = crate::condition::condition_pace(g, g.gd[gd].ch, run);
-    let acc = if team == crate::teams::Team::Operative && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
+    let acc = if team.ours() && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
     let keep_goal = keep.as_ref().and_then(|k| k.goal);
     let apart = taken_by(g, Some(i), gd, dz);
     let w_spot = crate::frag::FleeSpotWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeSpotWiseApart { stay: apart.stay.clone(), go: apart.go.clone() }) };
@@ -335,7 +335,7 @@ pub fn own_noise(g: &crate::game::Game, gd: GuardId, who: Option<f64>) -> bool {
     let Some(who) = who else { return false };
     if who == 0.0 { return false; }
     let t = crate::teams::team_of_id(g, who);
-    same_side(t, g.gd[gd].team)
+    t == g.team(gd)
 }
 
 /// A defender's live grenade Sam can see, or hear land, inside cueM: one HUD line, once.
@@ -386,7 +386,7 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
 
 /// The men of the floor who may carry a frag.
 pub fn defenders_of(g: &crate::game::Game) -> Vec<GuardId> {
-    g.guards.iter().copied().filter(|&gd| g.gd[gd].team == crate::teams::Team::Hostile && g.gd[gd].unit.is_some()).collect()
+    g.guards.iter().copied().filter(|&gd| g.team(gd) == crate::teams::Team::Hostile).collect()
 }
 
 /// Deal the floor's frags: one defender in defShare, at most defMax, by a hash of the men's ids.
@@ -468,7 +468,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
         let mut n = 0;
         while n < g.guards.len() {
             let o = g.guards[n]; n += 1;
-            if g.gd[o].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[o].ch) || crate::rails::rails_down(g, o) { continue; }
+            if !g.team(o).ours() || crate::condition::down(g, g.gd[o].ch) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let op = g.ch[oc].pos;
             if flat(op, fix) > g.k.frag.def_bunch { continue; }
@@ -617,11 +617,11 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
     if heard {
         g.stats.frag.cues += 1;
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut n = 0;
     while n < g.guards.len() {   // the team's, the same shout in the same ears: for the next few seconds they are looking for it
         let o = g.guards[n]; n += 1;
-        if crate::condition::down(g, g.gd[o].ch) || g.gd[o].team == team || same_side(g.gd[o].team, team) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || g.team(o) == team { continue; }
         let oh = head_of(g, g.gd[o].ch);
         let po = crate::scene_collision::sound_paths_propagate(g, head, oh, None);
         if po.path_len <= g.k.frag.cue_m * 1.5 && po.muffle < 0.75 {
@@ -722,11 +722,11 @@ fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
 fn own_clear(g: &mut crate::game::Game, gd: GuardId, land: V3, release: Option<bool>) -> bool {
     let release = release.unwrap_or(false);
     let from: V3 = [land[0], land[1] + g.k.frag.lift, land[2]];
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut n = 0;
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
-        if g.gd[o].team != team { continue; }
+        if g.team(o) != team { continue; }
         if crate::condition::down(g, g.gd[o].ch) {   // a mate down and breathing is still one of his
             if down_asked(g, o) {
                 let b = lying(g, o);

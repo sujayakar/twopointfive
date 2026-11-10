@@ -348,7 +348,7 @@ fn tension(g: &Game) -> f64 {
     let mut x = game::m::max(if g.light_home.mains.active { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
     for &gd in &g.guards {
         let d = &g.gd[gd];
-        let own = d.team == game::teams::Team::Operative;
+        let own = g.ch[d.ch].team.ours();
         if d.state == S::Dead || (own && d.state != S::Alert) { continue; }
         let s = match d.state {
             _ if d.script.is_some() && g.clearing.is_some() => 0.3,

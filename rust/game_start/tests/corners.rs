@@ -21,7 +21,7 @@ fn unseen(seed: u32, (level, door, out, at): (&str, &str, [f64; 2], [f64; 2]), s
     let d = game::doors::doors_by_name(&p.g, door).expect("the door");
     let c = p.g.dr[d].frame_centre;
     let off_door = |k: f64| [c[0] + out[0] * k, c[2] + out[1] * k];
-    let far = p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == game::teams::Team::Hostile).max_by(|&x, &y| dist(p.at(x), at).partial_cmp(&dist(p.at(y), at)).unwrap()).unwrap();
+    let far = p.g.guards.iter().copied().filter(|&m| p.g.team(m) == game::teams::Team::Hostile).max_by(|&x, &y| dist(p.at(x), at).partial_cmp(&dist(p.at(y), at)).unwrap()).unwrap();
     p.drop_all_but(&[far]);
     p.run(1.0);
     let men = p.mates();
@@ -79,7 +79,7 @@ fn a_man_who_walks_into_a_room_looks_where_he_goes() {
             p.run(0.3);
             let d = game::doors::doors_by_name(&p.g, door).expect("the door");
             let c = p.g.dr[d].frame_centre;
-            let far = p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == game::teams::Team::Hostile).max_by(|&x, &y| dist(p.at(x), at).partial_cmp(&dist(p.at(y), at)).unwrap()).unwrap();
+            let far = p.g.guards.iter().copied().filter(|&m| p.g.team(m) == game::teams::Team::Hostile).max_by(|&x, &y| dist(p.at(x), at).partial_cmp(&dist(p.at(y), at)).unwrap()).unwrap();
             p.drop_all_but(&[far]);
             p.run(1.0);
             let men = p.mates();

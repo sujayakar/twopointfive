@@ -39,7 +39,7 @@ fn read_of(g: &mut Game, kind: SquadThrowKind) -> String {
     let mut at = |p: V3, up: bool| { s.push_str(&format!(";{},{}{}", js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)), if up { "" } else { "x" })); };
     at(g.ch[g.pl[g.player].ch].pos, !crate::condition::down(g, g.pl[g.player].ch));
     for &gd in g.guards.iter() {
-        if g.gd[gd].team == crate::teams::Team::Operative { at(g.ch[g.gd[gd].ch].pos, !crate::condition::down(g, g.gd[gd].ch)); }
+        if g.team(gd).ours() { at(g.ch[g.gd[gd].ch].pos, !crate::condition::down(g, g.gd[gd].ch)); }
     }
     s
 }

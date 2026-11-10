@@ -254,7 +254,7 @@ fn staff_count(g: &crate::game::Game) -> f64 {
     m::max(1.0, n)
 }
 /// his own side and his own kind
-fn is_mate(g: &Game, gd: GuardId, x: GuardId) -> bool { g.gd[x].team == g.gd[gd].team && g.gd[x].unit.is_none() == g.gd[gd].unit.is_none() }
+fn is_mate(g: &Game, gd: GuardId, x: GuardId) -> bool { g.team(x) == g.team(gd) && g.gd[x].unit.is_none() == g.gd[gd].unit.is_none() }
 fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let down = known_down(g, gd);
     if let Some(l) = g.gd[gd].leader { if l != gd && !down.has(g.gd[l].callsign.clone()) { return Some(l); } }
@@ -358,7 +358,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     let nameless = crate::teams::defender_words(g, gd);
     if nameless { tokens.partner = None; tokens.victim = None; tokens.body = None; tokens.missing = None; }
     // facts
-    let shift = g.gd[gd].team == crate::teams::Team::Guard && g.gd[gd].unit.is_none();
+    let shift = g.team(gd) == crate::teams::Team::Guard && g.gd[gd].unit.is_none();
     let office = shift && is_office(g);
     let weapon = g.gd[gd].weapon;
     let drew_on_you = crate::weapons::firearm_spent(g, weapon) > 0.0;

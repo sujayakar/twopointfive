@@ -11,7 +11,7 @@ fn office(seed: u32) -> Play {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() });
     p.sam_unhurt();
     p.run(0.5);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
+    for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
     p
 }
 
@@ -81,7 +81,7 @@ fn a_man_with_a_fresh_sighting_is_dealt_no_opening() {
         p.run(4.0);
         let Some(m) = p.mates().into_iter().find(|&m| p.g.cover.jobs.has(m)) else { panic!("seed {s}: nobody was dealt an opening") };
         let op = game::roomfight::room_fight_op_of(&mut p.g, m).expect("a squad man of a room clear has his row of the fight");
-        let h = p.g.guards.iter().copied().find(|&h| p.g.gd[h].team == game::teams::Team::Hostile && p.up(h)).expect("a defender is up");
+        let h = p.g.guards.iter().copied().find(|&h| p.g.team(h) == game::teams::Team::Hostile && p.up(h)).expect("a defender is up");
         let t = p.time();
         let secs = p.g.k.cover.contact_secs;
         let meter = p.g.tab.roomfight_op[op].meters.get_mut(h).expect("the fight keeps a row a defender");
@@ -102,7 +102,7 @@ fn a_stack_of_four_keeps_its_rear() {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, ..Default::default() });
         p.sam_unhurt();
         p.run(0.5);
-        for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
+        for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
         let d = p.g.doors.list.iter().copied().find(|&d| p.g.dr[d].def.name == door).unwrap_or_else(|| panic!("{level} has the door {door}"));
         let c = p.g.dr[d].frame_centre;
         p.order("stack", [c[0], c[2]], Who::All);

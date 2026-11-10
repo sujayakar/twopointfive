@@ -66,17 +66,16 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         Some(s) => s,
         None => {
             let who = g.tab.item[it].who;
-            if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Player }
+            if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Ours }
         }
     };
     let (from, over, entry) = (v3::add(at, [0.0, 0.3, 0.0]), v3::add(at, [0.0, g.k.flash.lift, 0.0]), crate::roomfight::fight_live(g));
     let flash = Flash { at, from, over, entry, lifted: entry && !seg(g, from, over), radius: b.dazzle_radius, secs: [b.dazzle_seconds, b.dazzle_min] };
-    let squad = |t: crate::teams::Team| t == crate::teams::Team::Player || t == crate::teams::Team::Operative;
     if crate::effects::flags().dazzle {
         for gd in g.guards.clone() {
-            let (c, team) = (g.gd[gd].ch, g.gd[gd].team);
+            let (c, team) = (g.gd[gd].ch, g.team(gd));
             if crate::condition::down(g, c) { continue; }
-            let Some((secs, fold)) = flash.takes(g, c, team == side || squad(side) && squad(team), false, false) else { continue };
+            let Some((secs, fold)) = flash.takes(g, c, team == side, false, false) else { continue };
             if fold > 0.0 {
                 let drilled = crate::roomfight::drilled_k(g, gd);
                 crate::condition::fold(g, c, fold * drilled);
@@ -93,7 +92,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let c = g.pl[g.player].ch;
         if borrowed || !crate::effects::flags().dazzle || crate::condition::down(g, g.pl[g.player].ch) { return; }
-        let Some((secs, fold)) = flash.takes(g, c, squad(sam_side), spare, g.k.samstun.own_seen) else { return };
+        let Some((secs, fold)) = flash.takes(g, c, sam_side.ours(), spare, g.k.samstun.own_seen) else { return };
         if !(secs > 0.0) { return; }
         crate::samstun::dazzle_player(g, secs, at);
         if fold > 0.0 {

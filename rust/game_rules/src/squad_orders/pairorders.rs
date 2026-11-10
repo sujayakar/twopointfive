@@ -49,10 +49,9 @@ fn pair_orders_quiet(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// a man an order can be about: standing, on the other side from Sam, not in Sam's arm, and seen   (PairOrders.isFoe)
 pub(super) fn pair_orders_is_foe(g: &Game, h: GuardId) -> bool {
-    let team = g.gd[h].team;
+    let team = g.team(h);
     !crate::condition::down(g, g.gd[h].ch)
-        && team != crate::teams::Team::Operative
-        && crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+        && team.theirs()
         && g.gd[h].held.is_none()
         && !crate::fogofwar::fog_of_war_hides(g, h)
 }
@@ -380,8 +379,7 @@ pub fn pair_orders_tick(g: &mut Game, dt: f64) {
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        let team = g.gd[h].team;
-        if crate::condition::down(g, g.gd[h].ch) || team == crate::teams::Team::Operative || !crate::teams::is_hostile(g, crate::teams::Team::Player, team) { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || !g.team(h).theirs() { continue; }
         let [fx, fz] = look_of(g, h);
         let mut hb = match g.pair.habit.get(h) {
             Some(v) => *v,
@@ -499,11 +497,11 @@ fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardI
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let team = g.gd[o].team;
-        if o == foe || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || team == crate::teams::Team::Operative || !crate::teams::is_hostile(g, crate::teams::Team::Player, team) { continue; }
+        let team = g.team(o);
+        if o == foe || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || !team.theirs() { continue; }
         let s = crate::guards::can_see_char(g, o, gc);
         if s.visible && crate::guards::sight_gain_on(g, o, gd, s.dist) * g.k.pair.watch_secs >= g.k.pair.watch_aw { return Some(o); }
-        if team != g.gd[foe].team || !crate::guards::point_in_view(g, o, at, None, None) { continue; }
+        if team != g.team(foe) || !crate::guards::point_in_view(g, o, at, None, None) { continue; }
         if pair_orders_body_lit(g, o, foe, at) { return Some(o); }
     }
     None
@@ -546,7 +544,7 @@ fn pair_orders_looks_back(g: &mut Game, w: GuardId, foe: GuardId, gd: GuardId) -
     let fc = g.gd[foe].ch;
     let hp = g.ch[fc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[fc].pos);
     let at: V3 = [hp[0], 0.35, hp[2]];
-    if g.gd[w].team == g.gd[foe].team && swept_d(g, eye, hb, l, half, at[0], at[1], at[2]) >= 0.0 && pair_orders_body_lit(g, w, foe, at) { return true; }
+    if g.team(w) == g.team(foe) && swept_d(g, eye, hb, l, half, at[0], at[1], at[2]) >= 0.0 && pair_orders_body_lit(g, w, foe, at) { return true; }
     let c = pos_of(g, gd);
     let d = swept_d(g, eye, hb, l, half, c[0], c[1] + 1.0, c[2]);
     d >= 0.0 && crate::guards::sight_gain_on(g, w, gd, d) * g.k.pair.watch_secs >= g.k.pair.watch_aw
@@ -966,8 +964,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
     while i < g.guards.len() {
         let e = g.guards[i];
         i += 1;
-        let team = g.gd[e].team;
-        if e == gd || crate::condition::down(g, g.gd[e].ch) || g.gd[e].held.is_some() || team == crate::teams::Team::Operative || !crate::teams::is_hostile(g, crate::teams::Team::Player, team) { continue; }
+        if e == gd || crate::condition::down(g, g.gd[e].ch) || g.gd[e].held.is_some() || !g.team(e).theirs() { continue; }
         let sw = g.pair.swept.get(e).copied().unwrap_or(0.0);
         let hb = g.pair.habit.get(e).copied();
         let l = match hb { Some(v) => m::hyp2(v[0], v[1]), None => 0.0 };

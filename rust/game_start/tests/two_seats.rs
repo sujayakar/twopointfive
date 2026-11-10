@@ -12,7 +12,7 @@ fn two(seed: u32) -> (Play, GuardId) {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, seats: 2, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     (p, foes[0])
 }
@@ -60,7 +60,7 @@ fn the_team_is_down_when_all_of_it_is() {
             let m = man(&p, seat);
             p.g.cond[p.g.pl[m].ch].down = true;
             assert!(game::doze::live(&mut p.g), "seed {s}: seat {seat}'s man down and the other up: the floor is still calm");
-            p.g.gd[t1].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
+            p.g.ch[p.g.gd[t1].ch].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
             p.g.alarm.episode = true;
             let was = p.g.escalation;
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
@@ -72,7 +72,7 @@ fn the_team_is_down_when_all_of_it_is() {
             q.g.cond[q.g.pl[a].ch].down = true;
             q.g.cond[q.g.pl[b].ch].down = true;
             assert!(!game::doze::live(&mut q.g), "seed {s}: CONTROL: both down, nobody is left to doze for");
-            q.g.gd[t2].team = game::teams::Team::Guard;
+            q.g.ch[q.g.gd[t2].ch].team = game::teams::Team::Guard;
             q.g.alarm.episode = true;
             let was = q.g.escalation;
             q.pin_man(t2, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
@@ -365,7 +365,7 @@ fn partners(seed: u32) -> (Play, GuardId) {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=2", &Opts { seed, seats: 2, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     let t1 = foes[0];
     p.g.k.pairup.on = true;
@@ -508,7 +508,7 @@ fn a_blast_kill_names_what_went_off_with_one_player() {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
         p.run(0.3);
-        let t1 = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+        let t1 = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
         let pl = p.g.player;
         p.g.pl[pl].holstered = false;
         assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");

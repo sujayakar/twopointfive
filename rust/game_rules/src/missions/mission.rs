@@ -221,7 +221,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let mut bd = 1e9;
     for &gd in g.guards.iter() {
         let t = &g.gd[gd];
-        if t.state != GuardState::Patrol || t.hold || t.held.is_some() || t.script.is_some() || t.unit.is_some() || t.team != crate::teams::Team::Guard || t.task.is_some() {
+        if t.state != GuardState::Patrol || t.hold || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.task.is_some() {
             continue;
         }
         let d = v3::dist(g.ch[t.ch].pos, goal);

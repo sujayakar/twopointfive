@@ -242,7 +242,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.team(gd).ours() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
         let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[pc].pos);
         if d < nd { nd = d; near = Some(gd); }
     }
@@ -258,7 +258,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
                 let gd = g.guards[i]; i += 1;
                 if g.time - g.torch_on_t < 1.5 { break; }
                 let fl = g.gd[gd].flashlight;
-                if crate::condition::down(g, g.gd[gd].ch) || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
+                if crate::condition::down(g, g.gd[gd].ch) || !g.tab.light[fl].enabled || g.team(gd).ours() { continue; }
                 let (fl_pos, fl_dir) = (g.tab.light[fl].pos, g.tab.light[fl].dir);
                 let cos_o = m::cos(g.tab.light[fl].outer_deg * v3::DEG);
                 for s in spots {
@@ -343,8 +343,8 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let gun = if cb { Some(g.gd[gd].weapon) } else { None };
             crate::gunreload::feed_deal(g, c, gun, Some(true));
         }
-        let team = g.gd[gd].team;
-        let trained = if team == Team::Operative { 1.0 } else if g.gd[gd].trained { 0.75 } else if team == Team::Civilian { 0.5 } else { 0.12 };
+        let team = g.team(gd);
+        let trained = if team.ours() { 1.0 } else if g.gd[gd].trained { 0.75 } else if team == Team::Civilian { 0.5 } else { 0.12 };
         g.ch[c].anim.trained = trained;
         let held = crate::guards::in_hand(g, gd).map(|h| match h { crate::guards::InHand::Torch => crate::handwork::SwapFeedHeld::Torch, crate::guards::InHand::Weapon => crate::handwork::SwapFeedHeld::Weapon });
         crate::handwork::swap_feed(g, gd, held, !cb);

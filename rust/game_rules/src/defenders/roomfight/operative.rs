@@ -13,7 +13,7 @@ fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardI
     let known = known.unwrap_or(false);
     let r = crate::guards::sight_gain_on(g, viewer, target, dist);
     let st = g.gd[viewer].state;
-    if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.gd[viewer].team == crate::teams::Team::Operative { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
+    if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.team(viewer).ours() { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
 }
 
 /// this teammate's feet are held this frame.
@@ -153,8 +153,8 @@ fn his_eyes(g: &mut Game, o: RoomfightOpId, dt: f64, sk: &FightSkill, blind: boo
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        let (mine, theirs) = (g.gd[gd].team, g.gd[h].team);
-        if theirs == mine || !crate::teams::is_hostile(g, mine, theirs) { continue; }
+        let (mine, theirs) = (g.team(gd), g.team(h));
+        if theirs == mine || !mine.foe_of(theirs) { continue; }
         if !g.tab.roomfight_op[o].meters.has(h) { g.tab.roomfight_op[o].meters.set(h, Meter { m: 0.0, seen_t: -100.0, glass_t: None }); }
         if crate::condition::down(g, g.gd[h].ch) { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; }
         if g.gd[h].fled { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; } // a man who dropped it and ran is nobody's target

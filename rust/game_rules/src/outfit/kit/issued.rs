@@ -23,7 +23,7 @@ fn suit_tint(s: SuitId) -> V3 { suits().get(String::from(s.as_str())).unwrap().t
 fn trim_tint(t: TrimId) -> V3 { trims().get(String::from(t.as_str())).unwrap().tint }
 /// `g.guards.some(gd => !!gd.unit && gd.team === 'operative')`
 fn team_on_floor(g: &Game) -> bool {
-    g.guards.iter().any(|&gd| g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative)
+    g.guards.iter().any(|&gd| g.team(gd).ours())
 }
 /// `kitIssueWhole(g.level.scenarios?.issue?.members)`
 fn issue_names_you(g: &Game) -> bool {

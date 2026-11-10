@@ -715,7 +715,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
 
 /// The sneaking follower's feet this frame. None: he is the build's own follower.
 pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f64, stopped: bool, speed0: f64) -> Option<crate::sneak::Feet> {
-    if !g.k.sneak.on || !mate(g, gd) { return None; }
+    if !g.k.sneak.on || !g.team(gd).ours() { return None; }
     if !sneak_tick(g) { return None; }
     let now = g.time;
     // the state and his row are out of `g` for the frame's read: nothing the read calls reads them

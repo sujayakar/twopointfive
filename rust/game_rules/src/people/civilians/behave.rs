@@ -903,7 +903,7 @@ pub(super) fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate:
 /// May this man be run to and told.
 pub(super) fn tellable(g: &crate::game::Game, o: GuardId) -> bool {
     let x = &g.gd[o];
-    !g.cond[x.ch].down && x.team == crate::teams::Team::Guard && x.held.is_none() && x.script.is_none() && x.state != crate::game::GuardState::Alert && g.guards.contains(&o)
+    !g.cond[x.ch].down && g.ch[x.ch].team == crate::teams::Team::Guard && x.held.is_none() && x.script.is_none() && x.state != crate::game::GuardState::Alert && g.guards.contains(&o)
 }
 
 /// A spot's identity (`badTargets` held the object): its place in civSpots, the phones first, then the exits.

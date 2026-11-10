@@ -22,11 +22,6 @@ fn lead_of(seat: &crate::seats::SeatRef) -> PlayerId {
     seat.player
 }
 
-/// A teammate under orders.
-fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
-}
-
 /// The squad's living men.
 fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut men = crate::orders::squad_orders_squad(g, seat);
@@ -49,7 +44,7 @@ fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
         let state = g.gd[h].state;
         if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search)
             && g.gd[h].last_seen_t >= 0.0
-            && crate::teams::hostile_to(g, h, g.gd[m].team)
+            && g.team(h).foe_of(g.team(m))
         {
             return Some(String::from("a defender has seen them"));
         }
@@ -172,7 +167,7 @@ pub fn hold_fire_drill(g: &mut crate::game::Game) {
 
 /// Is this loud teammate under the hold this frame.
 fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !mate(g, gd) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
+    if !g.team(gd).ours() || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
         return false;
     }
     let men = living(g, &crate::seats::here(g));

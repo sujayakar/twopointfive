@@ -92,12 +92,11 @@ pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> b
 
 /// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither.
 pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
-    let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
-    let team = g.gd[gd].team;
-    if shooter == team {
-        return crate::guards::ShotRelation::Own;
-    }
-    if crate::teams::is_hostile(g, team, shooter) { crate::guards::ShotRelation::Threat } else { crate::guards::ShotRelation::None }
+    use crate::guards::ShotRelation;
+    let team = g.team(gd);
+    if e.kind == crate::director::EventKind::Shot { return if team.theirs() { ShotRelation::Threat } else { ShotRelation::None }; }   // (a player's round is no news to his squad)
+    let shooter = crate::teams::team_of_id(g, e.who.unwrap_or(-1.0));
+    if shooter == team { ShotRelation::Own } else if team.foe_of(shooter) { ShotRelation::Threat } else { ShotRelation::None }
 }
 
 /// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has.
@@ -121,7 +120,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     }
     let player_pos = g.ch[g.pl[g.player].ch].pos;
     if let Some(s) = sh {
-        let who = g.gd[s].foe.or_else(|| if g.gd[s].team == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
+        let who = g.gd[s].foe.or_else(|| if g.team(s) == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
             if let Some(i) = crate::picture::idea_of(g, s, who) {
                 let mine = crate::picture::idea_of(g, gd, who);
@@ -145,7 +144,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
         }
     }
     let s = match sh {
-        Some(s) if g.gd[s].team != crate::teams::Team::Guard => s,
+        Some(s) if g.team(s) != crate::teams::Team::Guard => s,
         _ => return Some(player_pos),
     };
     if let Some(fc) = g.gd[s].foe {
@@ -160,12 +159,12 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
 /// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id.
 pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     if crate::seats::is_man_id(g, who) {
-        crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+        team.theirs()
     } else {
         let of = crate::teams::team_of_id(g, who);
-        crate::teams::is_hostile(g, team, of)
+        team.foe_of(of)
     }
 }
 
@@ -266,7 +265,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.gd[o].team != g.gd[gd].team {
+        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.team(o) != g.team(gd) {
             continue;
         }
         if crate::guards::body_seen(g, gd, o, None) {

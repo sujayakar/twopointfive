@@ -54,16 +54,16 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
         let ch = g.pl[pl].ch;
         if line_hit(g, ch, false, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
-    let mine = g.gd[self_].team;
+    let mine = g.team(self_);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         let ch = g.gd[o].ch;
         if o == self_ || crate::condition::down(g, g.gd[o].ch) || !g.ch[ch].alive { continue; }
-        let theirs = g.gd[o].team;
-        if crate::teams::is_hostile(g, mine, theirs) { continue; }
-        let mate = theirs == crate::teams::Team::Operative && g.gd[o].unit.is_some();
+        let theirs = g.team(o);
+        if mine.foe_of(theirs) { continue; }
+        let mate = theirs.ours();
         if line_hit(g, ch, mate, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
     None

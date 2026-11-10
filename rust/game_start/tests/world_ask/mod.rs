@@ -282,7 +282,7 @@ impl DarkAsk for Play {
     fn dark_line(&self, text: &str, kind: game::darkdoor::LineKind) -> bool { game::darkdoor::lines().get(String::from(kind.as_str())).map_or(false, |r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn dark_any(&self, text: &str) -> bool { game::darkdoor::lines().values().any(|r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn lamp_on(&self, gd: GuardId) -> bool { self.g.tab.light[self.g.gd[gd].flashlight].enabled }
-    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.gd[m].team == game::teams::Team::Hostile && self.lamp_on(m)).count() }
+    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.team(m) == game::teams::Team::Hostile && self.lamp_on(m)).count() }
     fn gunfire_reached(&mut self, gd: GuardId) { self.g.gd[gd].witness.heard.shots = self.g.gd[gd].witness.heard.shots.max(1.0); }
     fn heard_nothing(&self, gd: GuardId) -> bool { let h = &self.g.gd[gd].witness.heard; h.shots + h.kick + h.bang == 0.0 && self.g.gd[gd].witness.alerted_by.is_none() && self.state(gd) == game::game::GuardState::Patrol }
     fn face_each_other(&mut self, a: GuardId, b: GuardId) {

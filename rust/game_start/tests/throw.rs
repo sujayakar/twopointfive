@@ -55,7 +55,7 @@ fn the_throw_shown_is_the_throw_given() {
             let mates: Vec<_> = p.mates().into_iter().filter(|&x| p.up(x)).collect();
             let Some(&m0) = mates.first() else { break };
             let at0 = p.at(m0);
-            let Some(h) = p.g.guards.clone().into_iter().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).map(|gd| p.at(gd)).min_by(|a, b| dist(*a, at0).partial_cmp(&dist(*b, at0)).unwrap()) else { break };
+            let Some(h) = p.g.guards.clone().into_iter().filter(|&gd| p.g.team(gd) == game::teams::Team::Hostile && p.up(gd)).map(|gd| p.at(gd)).min_by(|a, b| dist(*a, at0).partial_cmp(&dist(*b, at0)).unwrap()) else { break };
             if k % 2 == 0 {
                 let d = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).min_by(|a, b| dist(*a, h).partial_cmp(&dist(*b, h)).unwrap()).unwrap_or(h);
                 let t = game::orders::squad_orders_target_at(&mut p.g, [d[0], 0.0, d[1]]);

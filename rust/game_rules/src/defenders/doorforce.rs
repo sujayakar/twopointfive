@@ -62,7 +62,7 @@ fn log(g: &mut crate::game::Game, s: &str) {
 /// A man this rule may have: a defender, up, on his own senses.
 fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    g.gd[gd].team != crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
+    !g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
 }
 
 /// A leaf that is a shut door to a man: hung, home in its frame.
@@ -146,12 +146,12 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         _ => return,
     }
     let c = g.gd[gd].ch;
-    let (me, team) = (g.ch[c].id, g.gd[gd].team);
+    let (me, team) = (g.ch[c].id, g.team(gd));
     let player_ch = g.pl[g.player].ch;
     let player_id = g.ch[player_ch].id;
     if who == me { return; }
     let their = crate::teams::team_of_id(g, who);
-    if !crate::teams::is_hostile(g, team, their) || (g.player_invisible && who == player_id) { return; }
+    if !team.foe_of(their) || (g.player_invisible && who == player_id) { return; }
     let a = e.level.unwrap_or(0.3) * v3::clamp(1.0 - prop.path_len / horizon, 0.0, 1.0) * prop.carry;
     if a < k.hear_min && !loud { return; }
     let mut add = if loud { k.shot } else { a * k.gain };
@@ -211,9 +211,9 @@ pub fn door_force_own_boot(g: &mut crate::game::Game, gd: GuardId, e: crate::gam
     if g.time - t > 1.0 { return false; }
     let c = g.gd[gd].ch;
     if who == g.ch[c].id { return true; }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let their = crate::teams::team_of_id(g, who);
-    !crate::teams::is_hostile(g, team, their)
+    !team.foe_of(their)
 }
 
 /// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind.

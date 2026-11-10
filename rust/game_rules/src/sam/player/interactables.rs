@@ -428,7 +428,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let gd = g.guards[gi];
             gi += 1;
             if crate::condition::down(g, g.gd[gd].ch) || g.pl[pl].takedown.is_some() { continue; }
-            if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+            if g.team(gd).ours() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             crate::close::close_rows(g, gd, &p, busy, row_cb!(crate::close::CloseRowsRowOver), offer_cb!(list, things));
         }
         for gd in crate::civilians::civilian_bodies(g) {

@@ -33,8 +33,7 @@ fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
     let all = g.guards.clone();
     let mut left = Vec::new();
     for h in all {
-        if g.gd[h].civ.is_none()
-            && crate::teams::hostile_to(g, h, crate::teams::Team::Player)
+        if g.team(h).theirs()
             && !crate::condition::down(g, g.gd[h].ch)
             && !g.gd[h].fled
         {

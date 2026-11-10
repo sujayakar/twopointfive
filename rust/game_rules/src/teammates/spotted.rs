@@ -66,7 +66,7 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 
 /// his foe is Sam on his feet, or a live operative
 fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
-    g.gd[h].foe.is_some_and(|f| !crate::condition::down(g, f) && crate::character::guard_of(g, f).map_or(true, |o| g.gd[o].team == crate::teams::Team::Operative))
+    g.gd[h].foe.is_some_and(|f| !crate::condition::down(g, f) && crate::character::guard_of(g, f).map_or(true, |o| g.team(o).ours()))
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs`
@@ -399,8 +399,8 @@ fn hands(g: &mut crate::game::Game, gd: GuardId) {
             i += 1;
             let st = g.gd[h].state;
             if st == crate::game::GuardState::Dead || g.gd[h].held.is_some() { continue; }
-            let (mine, his) = (g.gd[gd].team, g.gd[h].team);
-            if !crate::teams::is_hostile(g, mine, his) { continue; }
+            let (mine, his) = (g.team(gd), g.team(h));
+            if !mine.foe_of(his) { continue; }
             if g.pl[g.player].takedown.as_ref().map(|td| td.g) == Some(h) || take_no.map(|n| n.foe) == Some(h) { continue; }
             let d = flat(&p, &pos(g, h));
             let limit = if st == crate::game::GuardState::Suspicious { bd } else { m::min(bd, k.take_reach + 0.3) };
@@ -460,8 +460,8 @@ pub fn spotted_take(g: &mut crate::game::Game, gd: GuardId, foe: GuardId) -> boo
     if let Some(tk) = take { return tk.foe == foe; }
     let st = g.gd[foe].state;
     if st == crate::game::GuardState::Dead || g.gd[foe].held.is_some() { return false; }
-    let (mine, his) = (g.gd[gd].team, g.gd[foe].team);
-    if !crate::teams::is_hostile(g, mine, his) || crate::silent::reached(g, gd) || crate::silent::quiet_gun(g, gd) || take_no.map(|n| n.foe) == Some(foe) { return false; }
+    let (mine, his) = (g.team(gd), g.team(foe));
+    if !mine.foe_of(his) || crate::silent::reached(g, gd) || crate::silent::quiet_gun(g, gd) || take_no.map(|n| n.foe) == Some(foe) { return false; }
     let (p, c) = (pos(g, gd), pos(g, foe));
     let limit = if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search { k.take_reach + 0.3 } else { k.take_m };
     if flat(&p, &c) >= limit || crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [c[0], 1.0, c[2]], None) { return false; }
@@ -506,8 +506,8 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
         while i < g.guards.len() {
             let h = g.guards[i];
             i += 1;
-            let (mine, his) = (g.gd[gd].team, g.gd[h].team);
-            if crate::condition::down(g, g.gd[h].ch) || !crate::teams::is_hostile(g, mine, his) { continue; }
+            let (mine, his) = (g.team(gd), g.team(h));
+            if crate::condition::down(g, g.gd[h].ch) || !mine.foe_of(his) { continue; }
             let d = flat(&pos(g, gd), &pos(g, h));
             if has_them(g, &crate::seats::here(g), h) {
                 if d < k.caught_m && d < bd { bd = d; by = Some(h); }

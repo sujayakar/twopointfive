@@ -1380,6 +1380,8 @@ pub struct Character {
     #[is(RigId(0))] pub rig: RigId,
     /// whose body this is
     #[is(crate::character::Who::Guard(GuardId(0)))] pub who: crate::character::Who,
+    /// whose man he is
+    pub team: crate::teams::Team,
     /// INVENTED: his row of the block's men (ManCols.r). None (0xffffffff) once he has left, or for a man of no game
     #[is(0xffffffff)] pub man_row: u32,
     /// INVENTED: owner, rank, reason, since of a man with no row: the numbers he took with him (manLeaves)
