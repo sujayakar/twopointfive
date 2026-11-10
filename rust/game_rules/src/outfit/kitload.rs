@@ -46,19 +46,9 @@ fn add(a: [f64; 2], b: Option<[f64; 2]>, n: Option<f64>) -> [f64; 2] {
     }
 }
 
-/// `Number(m[field]) | 0` for the card's counted fields; a field that holds no count is 0. kitload.ts:98.
+/// The card's count in a field, whole; a field that holds no count is 0.
 fn card_count(m: &crate::kit::MemberKit, field: &str) -> f64 {
-    let n = match field {
-        "smoke" => m.smoke,
-        "bangs" => m.bangs,
-        "frags" => m.frags,
-        "shells" => m.shells,
-        "charges" => m.charges,
-        "cams" => m.cams,
-        "rings" => m.rings,
-        _ => 0.0,
-    };
-    js::to_i32(n) as f64
+    js::to_i32(crate::kit::Thing::of(field).map_or(0.0, |k| m.n(k))) as f64
 }
 
 /// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).

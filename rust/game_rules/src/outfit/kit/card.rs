@@ -367,8 +367,7 @@ pub fn kit_built_home(g: &mut Game) {
 
 /// What a kept card had to leave behind to fit, in a line for his card; `gunless`: yours, with no long gun. Worded as issued where it is shown.
 pub fn kit_left_words(g: &Game, left: &[String], gunless: bool) -> String {
-    let shells = slot_word().get(String::from("shells")).cloned().expect("the launcher's rounds have a word");
-    if gunless && left.len() == 1 && left[0].contains(&shells) { return format!("No FN2000 in your saved kit: {} left behind.", left[0]); }
+    if gunless && left.len() == 1 && left[0].contains(Thing::Shells.name()) { return format!("No FN2000 in your saved kit: {} left behind.", left[0]); }
     let small = ["canister", "frag", "grenade", "door charge", "camera", "wand", "sponge"];
     let in_the_pouches = left.iter().any(|w| small.iter().any(|s| w.contains(s)));
     let what = if g.k.bigslot.on && !in_the_pouches { "big slot" } else { "pouches" };
