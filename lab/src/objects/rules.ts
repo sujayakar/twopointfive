@@ -10,14 +10,14 @@ import { Put, type Live, type Made } from './object';
 import { extent, fightSeen, leavesOf, touch } from './shape';
 import { walk } from './person';
 export interface Found { id: string; what: string; value: number; unit: string; level?: number; note?: string }
-export interface Count { pieces: number; moving: number; leaves: number; clusters: number; bytes: number }
+export interface Count { /** of blocks of cells */ cells: number; pieces: number; moving: number; leaves: number; clusters: number; bytes: number }
 export interface Built { w: World; pieces: Piece[]; live: Live | void }
 export function build(m: Made, level: number, seed = 1): Built { const w = new World(), live = m.levels[level]!.put(new Put(w, m.name, [0, 0, 0], 0, seed)); return { w, pieces: [...w.pieces, ...w.moving], live }; }
 /** what it takes on the GPU: pieces, the tree over them (eight orders of what stands, one of what moves), planes and curves and marks, leaves and their trees */
 export function count(b: Built): Count {
   const { w } = b, rows = [...w.pieces, ...w.moving].reduce((n, p) => n + (p.planes?.length ?? 0) + 2 * (p.curves?.length ?? 0) + 3 * (p.marks?.length ?? 0), 0), leaves = w.instances.reduce((n, i) => n + w.clusters[i.cluster]!.leaves.length, 0), kinds = w.clusters.reduce((n, c) => n + c.leaves.length, 0);
-  const vox = new Set([...w.pieces, ...w.moving].flatMap(p => p.vox ? [p.vox] : [])); let vb = 0; for (const v of vox) vb += v.byteLength;
-  return { pieces: w.pieces.length, moving: w.moving.length, leaves, clusters: w.instances.length, bytes: (w.pieces.length + w.moving.length) * PIECE_FLOATS * 4 + w.pieces.length * 32 * 8 + w.moving.length * 64 + rows * 16 + kinds * (32 + 32 * 8 * 0.67) + w.instances.length * (64 + 48 + 96 + 64) + vb };
+  const vox = new Set([...w.pieces, ...w.moving].flatMap(p => p.vox ? [p.vox] : [])); let vb = 0, cells = 0; for (const v of vox) { vb += v.byteLength; const f = new Float32Array(v.buffer, v.byteOffset, 4), n = f[0]! * f[1]! * f[2]!; for (let i = 0; i < n; i++) if (v[4 + i]) cells++; }
+  return { cells, pieces: w.pieces.length, moving: w.moving.length, leaves, clusters: w.instances.length, bytes: (w.pieces.length + w.moving.length) * PIECE_FLOATS * 4 + w.pieces.length * 32 * 8 + w.moving.length * 64 + rows * 16 + kinds * (32 + 32 * 8 * 0.67) + w.instances.length * (64 + 48 + 96 + 64) + vb };
 }
 const plain = (p: Piece) => !p.quad && !p.planes?.length && !p.curves?.length;
 /** what hangs together with what touches the floor: the rest floats */
@@ -45,7 +45,7 @@ export function rules(m: Made): { found: Found[]; counts: Count[] } {
     if (k === 0) { const { lo, hi } = bounds(b), is = [0, 1, 2].map(a => hi[a]! - lo[a]!), off = Math.max(...is.map((v, a) => Math.abs(v - m.size[a]!) / Math.max(m.size[a]!, 0.15 * Math.max(...m.size)))); say('rule.size', 'how far it is from the size it says', off * 100, '%', 0, `it is ${is.map(v => v.toFixed(2)).join(' × ')}`); }
     if (k === 0 && b.w.instances.length) { let far = 0; for (const i of b.w.instances) { const s = sub(i.at, [i.rot[1][0] * 0.95 * i.scale, i.rot[1][1] * 0.95 * i.scale, i.rot[1][2] * 0.95 * i.scale]); let d = 9; for (const p of here) { const r = sub(s, p.at), e = [0, 1, 2].map(a => Math.max(0, Math.abs(r[0] * p.rot[a]![0] + r[1] * p.rot[a]![1] + r[2] * p.rot[a]![2]) - p.half[a]!)); d = Math.min(d, Math.hypot(...e)); } if (d > 0.15) far++; } say('rule.stems', 'sprays with no branch within 15 cm of their stem', 100 * far / b.w.instances.length, '%', k); }
   });
-  m.levels.forEach((l, k) => { if (k) { const a = counts[k - 1]!, c = counts[k]!, n = (q: Count) => q.pieces + q.moving + q.leaves; say('rule.order', 'its error over that of the level before (more than 1)', m.levels[k - 1]!.error > 0 ? l.error / m.levels[k - 1]!.error : l.error > 0 ? 9 : 0, '×', k); say('cost.parts', 'parts, over those of the level before', n(c) / n(a), '×', k, `${n(c)} of ${n(a)}`); } else if (l.error !== 0) say('rule.order', 'the finest is off by nothing', 0, '×', 0); });
+  m.levels.forEach((l, k) => { if (k) { const a = counts[k - 1]!, c = counts[k]!, n = (q: Count) => q.pieces + q.moving + q.leaves + q.cells; say('rule.order', 'its error over that of the level before (more than 1)', m.levels[k - 1]!.error > 0 ? l.error / m.levels[k - 1]!.error : l.error > 0 ? 9 : 0, '×', k); say('cost.parts', 'parts, over those of the level before', n(c) / n(a), '×', k, `${n(c)} of ${n(a)}`); } else if (l.error !== 0) say('rule.order', 'the finest is off by nothing', 0, '×', 0); });
   return { found, counts };
 }
 const still = { at: () => [0, 0, 0] as V3 } as never;
