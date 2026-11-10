@@ -171,7 +171,7 @@ pub fn interact_let_go(g: &mut Game) {
 
 /// a standing ring's `free` (`!!S.ring?.free`)
 fn ring_free(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    g.sets[seat.id].hand.sel.ring.as_ref().map_or(false, |r| r.free.unwrap_or(false))
+    g.sets[seat.id].hand.sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true))
 }
 
 /// his hands are on a choice or a verb
@@ -231,190 +231,186 @@ fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring:
     still
 }
 
-/// the selector's ring as the plain RingState it is, less its own two words
-fn ring_state(ring: &crate::game::PlayerSelRing) -> crate::cmdring::RingState {
-    crate::cmdring::RingState { ax: ring.ax, ay: ring.ay, z: ring.z, t0: ring.t0, lit: ring.lit, armed: ring.armed, free: ring.free, more: ring.more, at: ring.at, ox: ring.ox, oy: ring.oy, mx: ring.mx, my: ring.my, clear: ring.clear, pt: ring.pt }
-}
-
-/// the selector's ring lent as a RingState to a call that also takes `g`, and what the call wrote put back. Its callees here (ringSpot, project, ringPin, ringWant) do not read the selector.
+/// the selector's ring lent to a call that also takes `g`: no callee here reads the selector
 fn lend_ring<T>(g: &mut Game, f: impl FnOnce(&mut Game, &mut crate::cmdring::RingState) -> T) -> T {
-    let mut r = ring_state(g.sets[g.seat].hand.sel.ring.as_ref().unwrap());
+    let mut r = ring(g).state;
     let out = f(g, &mut r);
-    let ring = g.sets[g.seat].hand.sel.ring.as_mut().unwrap();
-    ring.ax = r.ax; ring.ay = r.ay; ring.z = r.z; ring.t0 = r.t0; ring.lit = r.lit; ring.armed = r.armed; ring.free = r.free; ring.more = r.more; ring.at = r.at;
-    ring.ox = r.ox; ring.oy = r.oy; ring.mx = r.mx; ring.my = r.my; ring.clear = r.clear; ring.pt = r.pt;
+    ring(g).state = r;
     out
 }
+/// the ring that is up
+fn ring(g: &mut Game) -> &mut crate::game::PlayerSelRing { g.sets[g.seat].hand.sel.ring.as_mut().unwrap() }
 
-/// `ringOnThing(g, S.ring, input, cam, view, open)`
-fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
-    lend_ring(g, |g, r| ring_on_thing(g, &crate::seats::here(g), r, input, cam, view, open))
+/// His interact key, the back key and what they are read by, this tick.
+#[derive(Clone, Copy)]
+struct Press { dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>, down: bool, hit: bool, back: bool }
+impl Press {
+    /// the ring put on its thing (`open`), or kept there: has the hand not moved the cursor since the last look?
+    fn ring_on_thing(&self, g: &mut Game, open: bool) -> bool {
+        let (Some(cam), Some(view)) = (self.cam, self.view) else { return false };
+        lend_ring(g, |g, r| ring_on_thing(g, &crate::seats::here(g), r, self.input, cam, view, Some(open)))
+    }
+    /// a mouse button pressed this tick is the ring's and nothing else's
+    fn swallow(&self, g: &mut Game, bit: i32) {
+        let i = &mut g.tab.input[self.input];
+        i.clicked = (js::to_i32(i.clicked) & !bit) as f64;
+    }
 }
 
-/// `x &= ~bits` on one of the Input's words of bits
-fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
-
-/// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, the back key and the Space press; what is performed goes out as Game.act.
+/// Once a tick, straight after the rows are built: the arrows, the back key and the interact key; what is done goes out as the seat's `act`.
 pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) {
-    let pl = g.player;
-    g.sets[g.seat].act = None;
     let key = crate::consts::INTERACT_KEY;
-    let down = crate::input::input_down(g, input, key);
-    let hit = crate::input::input_hit(g, input, key);
-    let back = crate::backkey::back_hit(g, input);
-    if g.sets[g.seat].hand.f_held && !down && !hit { g.sets[g.seat].hand.f_held = false; }   // a spent press has come up: Space is live again
+    let (down, hit) = (crate::input::input_down(g, input, key), crate::input::input_hit(g, input, key));
+    let k = Press { dt, input, view, cam, down, hit, back: crate::backkey::back_hit(g, input) };
+    g.sets[g.seat].act = None;
+    if !down && !hit { g.sets[g.seat].hand.f_held = false; }   // (a spent press has come up: the key is live again)
     if crate::input::input_hit(g, input, "Paused") { interact_let_go(g); }
-    // ---- a sustained verb is running: Space (a fresh press), the back key, or a step INTO it stops it; nothing else is on offer meanwhile
-    let run = running_verb(g, &crate::seats::here(g));
-    if !run.is_empty() {
-        let mask = move_mask(g, input);
-        if run != g.sets[g.seat].hand.sel.run_key {
-            g.sets[g.seat].hand.sel.run_key = run;
-            g.sets[g.seat].hand.sel.move_latch = mask;
-        } else {
-            g.sets[g.seat].hand.sel.move_latch = (js::to_i32(g.sets[g.seat].hand.sel.move_latch) & js::to_i32(mask)) as f64;
-        }
-        if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, down); }
-        if hit && !g.sets[g.seat].hand.f_held { g.sets[g.seat].hand.f_held = true; cancel_sustained(g); }
-        else if back { cancel_sustained(g); }
-        else if (js::to_i32(mask) & !js::to_i32(g.sets[g.seat].hand.sel.move_latch)) != 0 { cancel_sustained(g); }
-        return;
-    }
-    g.sets[g.seat].hand.sel.run_key = String::new();
-    g.sets[g.seat].hand.sel.move_latch = 0.0;
-    if crate::condition::down(g, g.pl[pl].ch) {
-        close_selector(g, false);
-        return;
-    }
-    // ---- the press edge: armed unless this press is already spent
+    if verb_runs(g, k) { return; }
+    if crate::condition::down(g, g.pl[g.player].ch) { close_selector(g, false); return; }
     let free = g.sets[g.seat].hand.sel.open && ring_free(g, &crate::seats::here(g));
-    if hit && !g.sets[g.seat].hand.f_held && !free {
-        let s = &mut g.sets[g.seat].hand.sel;
-        s.down_t = 0.0; s.open = false; s.ring = None; s.word = String::new();
-    }
-    let armed = g.sets[g.seat].hand.sel.down_t >= 0.0;
-    let live = choosable(&g.sets[g.seat].nearby) || (whistle_wedge(g, &crate::seats::here(g)));
+    let s = &mut g.sets[g.seat].hand;
+    if hit && !s.f_held && !free { s.sel.down_t = 0.0; s.sel.open = false; s.sel.ring = None; s.sel.word = String::new(); }
+    let armed = s.sel.down_t >= 0.0;
+    let live = choosable(&g.sets[g.seat].nearby) || whistle_wedge(g, &crate::seats::here(g));
     if g.sets[g.seat].hand.sel.open && !live { shut_list(g); }
-    // ---- THE LIST AS A RING (it is the ring that stays)
-    if g.sets[g.seat].hand.sel.open && g.sets[g.seat].hand.sel.ring.is_some() && (g.sets[g.seat].orders.menu.is_some() || g.sets[g.seat].orders.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
-    let early = down && armed && !g.sets[g.seat].hand.sel.open && wedge_digit(g, input);
-    if armed && live && !g.sets[g.seat].hand.sel.open && g.sets[g.seat].orders.cmd_ring.is_none() && down && (early || g.sets[g.seat].hand.sel.down_t >= g.k.handring.hold_secs - 1e-6) {
-        g.sets[g.seat].hand.sel.open = true;
-        let w = view.map_or(0.0, |v| v.client_width);
-        let h = view.map_or(0.0, |v| v.client_height);
-        let time = g.time - g.k.cmdring.tap_secs;
-        let lit = (g.sets[g.seat].hand.near_sel + 1) as f64;
-        let o = crate::cmdring::ring_open(g, input, w, h, time, Some(lit));
-        g.sets[g.seat].hand.sel.ring = Some(crate::game::PlayerSelRing { ax: o.ax, ay: o.ay, z: o.z, t0: o.t0, lit: o.lit, armed: o.armed, free: o.free, more: o.more, at: o.at, ox: o.ox, oy: o.oy, mx: o.mx, my: o.my, clear: o.clear, pt: o.pt, key: g.sets[g.seat].hand.near_key.clone(), whistle: None });
-        crate::player::pick_hover(g);
-        if let (Some(c), Some(v)) = (cam, view) { ring_on_own(g, input, c, v, Some(true)); }
-    }
-    if g.sets[g.seat].hand.sel.ring.is_some() && g.sets[g.seat].hand.sel.open {
-        if crate::input::input_hit(g, input, "Blur") { close_selector(g, true); return; }
-        if crate::input::input_rmb_hit(g, input) {
-            let i = &mut g.tab.input[input];
-            i.clicked = off_bits(i.clicked, 4);
-            close_selector(g, true);
-            return;
-        }
-        let lmb = crate::input::input_lmb_hit(g, input);
-        let mut digit = 0;
-        for d in 1..=9 {
-            if g.tab.input[input].pressed.delete(format!("Digit{}", d)) && digit == 0 { digit = d; }   // (not his weapon slots while it is up)
-        }
-        if g.sets[g.seat].hand.sel.ring.as_ref().unwrap().key != g.sets[g.seat].hand.near_key {
-            let near_key = g.sets[g.seat].hand.near_key.clone();
-            let ring = g.sets[g.seat].hand.sel.ring.as_mut().unwrap();
-            ring.key = near_key; ring.armed = false; ring.clear = Some(false); ring.whistle = Some(false);
-            if ring.at.is_some() {
-                if let (Some(c), Some(v)) = (cam, view) { ring_on_own(g, input, c, v, Some(true)); }
-            }
-        }
-        let still = match (cam, view) {
-            (Some(c), Some(v)) if g.sets[g.seat].hand.sel.ring.as_ref().unwrap().at.is_some() => ring_on_own(g, input, c, v, None),
-            _ => false,
-        };
-        let wedges = g.k.cmdring.wedges;
-        let keys = hand_ring_keys(g, &crate::seats::here(g));
-        let lone = crate::ringlone::lone_key(g, &mut |_| keys);
-        let at_set = g.sets[g.seat].hand.sel.ring.as_ref().unwrap().at.is_some();
-        let time = g.time;
-        let shapes = if at_set { keys } else { 0.0 };
-        let want0 = lend_ring(g, |g, r| crate::cmdring::ring_want(g, r, input, digit as f64, time, Some(lone), Some(shapes)));
-        let pt = g.sets[g.seat].hand.sel.ring.as_ref().unwrap().pt.unwrap_or(0.0);
-        let want = if still && digit == 0 && want0 != pt { 0.0 } else { want0 };
-        let wh = whistle_wedge(g, &crate::seats::here(g));
-        let to_wh = wh && want == wedges;
-        // (the row: `want && !toWh ? g.nearby[want - 1] : null`, off the list's end = none)
-        let at: i32 = if js::truthy(want) && !to_wh && g.sets[g.seat].nearby.get((want - 1.0) as usize).map_or(false, wedged) { (want - 1.0) as i32 } else { -1 };
-        if at_set && (digit != 0 || !still) {
-            g.sets[g.seat].hand.sel.ring.as_mut().unwrap().pt = Some(if digit != 0 { 0.0 } else { want0 });
-        }
-        if at >= 0 {
-            g.sets[g.seat].hand.sel.ring.as_mut().unwrap().whistle = Some(false);
-            if at != g.sets[g.seat].hand.near_sel { g.sets[g.seat].hand.near_sel = at; crate::player::pick_hover(g); }
-        }
-        if to_wh || (wh && !choosable(&g.sets[g.seat].nearby)) { g.sets[g.seat].hand.sel.ring.as_mut().unwrap().whistle = Some(true); }
-        else if !wh { g.sets[g.seat].hand.sel.ring.as_mut().unwrap().whistle = Some(false); }
-        let whistle = g.sets[g.seat].hand.sel.ring.as_ref().unwrap().whistle.unwrap_or(false);
-        let near_sel = g.sets[g.seat].hand.near_sel;
-        g.sets[g.seat].hand.sel.ring.as_mut().unwrap().lit = if whistle { wedges } else { (near_sel + 1) as f64 };
-        let lit: Option<crate::game::Interactable> = if whistle { None } else { g.sets[g.seat].hover.clone().filter(wedged) };
-        let pointed = digit == 0 && (at >= 0 || to_wh);
-        if lmb {   // (the click is the ring's: he does not fire)
-            let i = &mut g.tab.input[input];
-            i.clicked = off_bits(i.clicked, 1);
-            i.buttons = off_bits(i.buttons, 1);
-            let seat = g.seat;
-            if input == g.tab.cmd_seat[seat].input { crate::cmd::seat_swallow(g, seat, 1.0); }
-        }
-        let r_free = g.sets[g.seat].hand.sel.ring.as_ref().unwrap().free.unwrap_or(false);
-        let ask = lmb || (digit > 0 && (to_wh || at >= 0)) || (if r_free { hit } else { !down && pointed });
-        let can = if whistle { crate::whistle::whistle_ready_in(g) <= 0.0 } else { lit.as_ref().map_or(false, |r| r.in_reach) };
-        if ask && can {
-            close_selector(g, down);
-            if whistle {
-                if !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { crate::whistle::try_whistle(g); }
-            } else { give(g, lit.as_ref()); }
-            return;
-        }
-        if !r_free && !down {
-            g.sets[g.seat].hand.sel.ring.as_mut().unwrap().free = Some(true);
-            g.sets[g.seat].hand.sel.down_t = -1.0;
-        }
-        if back { close_selector(g, true); }
-        else if down && !g.sets[g.seat].hand.sel.ring.as_ref().unwrap().free.unwrap_or(false) { g.sets[g.seat].hand.sel.down_t += m::min(dt, 0.05); }
-        return;
-    }
-    // ---- the highlight: ↑ / ↓ any time, the wheel while an armed press is down; else the wheel is his pace
-    let mut d_sel = 0;
-    if crate::input::input_hit(g, input, "ArrowDown") { d_sel += 1; }
-    if crate::input::input_hit(g, input, "ArrowUp") { d_sel -= 1; }
-    if d_sel != 0 && g.sets[g.seat].nearby.len() > 1 { g.sets[g.seat].hand.near_sel += d_sel; crate::player::pick_hover(g); }
+    let s = &g.sets[g.seat];
+    let ring_up = s.hand.sel.open && s.hand.sel.ring.is_some();
+    if ring_up && (s.orders.menu.is_some() || s.orders.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
+    if armed && live && !s.hand.sel.open && s.orders.cmd_ring.is_none() && down && (wedge_digit(g, input) || s.hand.sel.down_t >= g.k.handring.hold_secs - 1e-6) { ring_opens(g, k); }
+    if g.sets[g.seat].hand.sel.open && g.sets[g.seat].hand.sel.ring.is_some() { ring_tick(g, k); return; }
+    light_moves(g, input);
+    if k.back && armed { close_selector(g, true); return; }   // (the press is spent: nothing happens on its release)
+    if !armed { if g.sets[g.seat].hand.sel.open { close_selector(g, false); } return; }
+    if down { held_on(g, dt); return; }
+    released(g);
+}
+/// The key is kept down; a hitch of the host does not turn a tap into a hold.
+fn held_on(g: &mut Game, dt: f64) { g.sets[g.seat].hand.sel.down_t += m::min(dt, 0.05); }
+
+/// What he is in the middle of: the key again, the back key or a step INTO it stops it, and nothing else is on offer. True: there is such a thing.
+fn verb_runs(g: &mut Game, k: Press) -> bool {
+    let run = running_verb(g, &crate::seats::here(g));
+    let mask = if run.is_empty() { 0.0 } else { move_mask(g, k.input) };
+    let hand = &mut g.sets[g.seat].hand;
+    if run.is_empty() { hand.sel.run_key = run; hand.sel.move_latch = 0.0; return false; }
+    if run != hand.sel.run_key { hand.sel.run_key = run; hand.sel.move_latch = mask; }
+    else { hand.sel.move_latch = (js::to_i32(hand.sel.move_latch) & js::to_i32(mask)) as f64; }
+    let steps = js::to_i32(mask) & !js::to_i32(hand.sel.move_latch) != 0;
+    if hand.sel.open || hand.sel.down_t >= 0.0 { close_selector(g, k.down); }
+    let hand = &mut g.sets[g.seat].hand;
+    let again = k.hit && !hand.f_held;
+    if again { hand.f_held = true; }
+    if again || k.back || steps { cancel_sustained(g); }
+    true
+}
+
+/// The key held: his rows go up as a ring, on the first of their things where it is near.
+fn ring_opens(g: &mut Game, k: Press) {
+    let (w, h) = k.view.map_or((0.0, 0.0), |v| (v.client_width, v.client_height));
+    let (time, lit) = (g.time - g.k.cmdring.tap_secs, (g.sets[g.seat].hand.near_sel + 1) as f64);
+    g.sets[g.seat].hand.sel.open = true;
+    let state = crate::cmdring::ring_open(g, k.input, w, h, time, Some(lit));
+    let hand = &mut g.sets[g.seat].hand;
+    hand.sel.ring = Some(crate::game::PlayerSelRing { state, key: hand.near_key.clone(), whistle: None });
+    crate::player::pick_hover(g);
+    k.ring_on_thing(g, true);
+}
+
+/// The ring is up: what the hand points it at is lit, and a click, a digit or the key let go of does it.
+fn ring_tick(g: &mut Game, k: Press) {
+    if crate::input::input_hit(g, k.input, "Blur") { close_selector(g, true); return; }
+    if crate::input::input_rmb_hit(g, k.input) { k.swallow(g, 4); close_selector(g, true); return; }
+    let lmb = crate::input::input_lmb_hit(g, k.input);
+    let digit = digit_taken(g, k.input);
+    rows_changed(g, k);
+    let still = ring(g).state.at.is_some() && k.ring_on_thing(g, false);
+    let (at, to_whistle) = ring_points(g, k, digit, still);
+    let whistles = ring(g).whistle == Some(true);
     let near_sel = g.sets[g.seat].hand.near_sel;
-    if let Some(ring) = g.sets[g.seat].hand.sel.ring.as_mut() { ring.lit = (near_sel + 1) as f64; }
-    // ---- the back key: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
-    if back && armed { close_selector(g, true); return; }
-    if !armed {
-        if g.sets[g.seat].hand.sel.open { close_selector(g, false); }
+    ring(g).state.lit = if whistles { g.k.cmdring.wedges } else { (near_sel + 1) as f64 };
+    if lmb {
+        k.swallow(g, 1);
+        let i = &mut g.tab.input[k.input];
+        i.buttons = (js::to_i32(i.buttons) & !1) as f64;
+        if k.input == g.tab.cmd_seat[g.seat].input { crate::cmd::seat_swallow(g, g.seat, 1.0); }
+    }
+    let lit = if whistles { None } else { g.sets[g.seat].hover.clone().filter(wedged) };
+    let free = ring(g).state.free == Some(true);
+    let pointed = to_whistle || at.is_some();
+    let asked = lmb || (digit > 0 && pointed) || (if free { k.hit } else { !k.down && digit == 0 && pointed });
+    let can = if whistles { crate::whistle::whistle_ready_in(g) <= 0.0 } else { lit.as_ref().is_some_and(|r| r.in_reach) };
+    if asked && can {
+        close_selector(g, k.down);
+        if !whistles { give(g, lit.as_ref()); }
+        else if !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { crate::whistle::try_whistle(g); }
         return;
     }
-    if down {
-        g.sets[g.seat].hand.sel.down_t += m::min(dt, 0.05);   // (a frame hitch must not turn a tap into a hold)
-        return;
+    if !free && !k.down {   // (the key let go of on nothing: the ring stays up)
+        ring(g).state.free = Some(true);
+        g.sets[g.seat].hand.sel.down_t = -1.0;
     }
-    // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
-    let row_now = g.sets[g.seat].hover.clone();
-    let listed = g.sets[g.seat].hand.sel.open;
-    let quick = g.sets[g.seat].hand.sel.down_t < (g.k.handring.hold_secs);
+    if k.back { close_selector(g, true); }
+    else if k.down && !free { held_on(g, k.dt); }
+}
+/// The digit pressed this tick, 0 for none: the ring's while it is up, not his slots'.
+fn digit_taken(g: &mut Game, input: InputId) -> i32 {
+    let pressed = &mut g.tab.input[input].pressed;
+    (1..=9).rev().fold(0, |digit, d| if pressed.delete(format!("Digit{}", d)) { d } else { digit })
+}
+/// The rows changed under it: nothing is pointed at until the hand moves again, and it goes to its thing.
+fn rows_changed(g: &mut Game, k: Press) {
+    let key = g.sets[g.seat].hand.near_key.clone();
+    let r = ring(g);
+    if r.key == key { return; }
+    r.key = key;
+    r.whistle = Some(false);
+    r.state.armed = false;
+    r.state.clear = Some(false);
+    if r.state.at.is_some() { k.ring_on_thing(g, true); }
+}
+/// Which row the hand or a digit points at, and whether it is the whistle's wedge instead. That one is lit.
+fn ring_points(g: &mut Game, k: Press, digit: i32, still: bool) -> (Option<i32>, bool) {
+    let keys = hand_ring_keys(g, &crate::seats::here(g));
+    let lone = crate::ringlone::lone_key(g, &mut |_| keys);
+    let stands = ring(g).state.at.is_some();
+    let time = g.time;
+    let way = lend_ring(g, |g, r| crate::cmdring::ring_want(g, r, k.input, digit as f64, time, Some(lone), Some(if stands { keys } else { 0.0 })));
+    let want = if still && digit == 0 && way != ring(g).state.pt.unwrap_or(0.0) { 0.0 } else { way };   // (a ring that moved under a still hand was not pointed)
+    if stands && (digit != 0 || !still) { ring(g).state.pt = Some(if digit != 0 { 0.0 } else { way }); }
+    let whistle = whistle_wedge(g, &crate::seats::here(g));
+    let to_whistle = whistle && want == g.k.cmdring.wedges;
+    let nearby = &g.sets[g.seat].nearby;
+    let at = if js::truthy(want) && !to_whistle && nearby.get((want - 1.0) as usize).is_some_and(wedged) { Some((want - 1.0) as i32) } else { None };
+    let only = whistle && !choosable(nearby);
+    if let Some(at) = at {
+        ring(g).whistle = Some(false);
+        if at != g.sets[g.seat].hand.near_sel { g.sets[g.seat].hand.near_sel = at; crate::player::pick_hover(g); }
+    }
+    if to_whistle || only { ring(g).whistle = Some(true); } else if !whistle { ring(g).whistle = Some(false); }
+    (at, to_whistle)
+}
+
+/// The arrows move the light over his rows.
+fn light_moves(g: &mut Game, input: InputId) {
+    let by = crate::input::input_hit(g, input, "ArrowDown") as i32 - crate::input::input_hit(g, input, "ArrowUp") as i32;
+    if by != 0 && g.sets[g.seat].nearby.len() > 1 { g.sets[g.seat].hand.near_sel += by; crate::player::pick_hover(g); }
+    let hand = &mut g.sets[g.seat].hand;
+    if let Some(r) = hand.sel.ring.as_mut() { r.state.lit = (hand.near_sel + 1) as f64; }
+}
+
+/// The key let go of, or tapped: the row that is lit is done; with none, he is told why nothing is.
+fn released(g: &mut Game) {
+    let lit = g.sets[g.seat].hover.clone();
+    let sel = &g.sets[g.seat].hand.sel;
+    let (listed, quick) = (sel.open, sel.down_t < g.k.handring.hold_secs);
     close_selector(g, false);
-    if !listed && row_now.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
+    if !listed && lit.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
         let w = empty_word(empty_thing(g, &crate::seats::here(g)).as_ref());
-        refuse(g, pl, None, &w);
+        refuse(g, g.player, None, &w);
         return;
     }
-    if quick && crate::ownblow::own_blow_held(g, row_now.as_ref()) { return; }
-    give(g, row_now.as_ref());
+    if quick && crate::ownblow::own_blow_held(g, lit.as_ref()) { return; }
+    give(g, lit.as_ref());
 }
 
 /// A press of his own that did nothing says why: a greyed row of its own after his rows, for `EMPTY_SHOW_SECS` from now (a button held on it comes back here each frame).

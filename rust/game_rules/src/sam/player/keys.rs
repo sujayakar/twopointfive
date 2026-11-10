@@ -2,6 +2,7 @@
 use super::*;
 use crate::game::{Game, SlotKind, ThrowKind};
 use crate::ids::*;
+use crate::v3;
 use alloc::format;
 use alloc::string::String;
 
@@ -103,4 +104,23 @@ fn empty_in_hand(g: &mut Game, t: Tick) -> bool {
 pub(super) fn at_the_gun(g: &mut Game, c: CharId, name: &str, vol: f64) {
     let muzzle = g.ch[c].muzzle;
     crate::audio_iface::game_audio_like_play(g, name, Some(muzzle), Some(vol), None);
+}
+
+/// N: the goggles' switch, and the tube's picture easing after them.
+pub(super) fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) {
+    let p = g.player;
+    if g.pl[p].nv && !crate::kit::kit_you_nvg(g, p) { g.pl[p].nv = false; }
+    let (rifle, pistol) = (g.pl[p].rifle, g.pl[p].pistol);
+    if !crate::kit::kit_you_light(g, p) && (g.fa[rifle].light_on || g.fa[pistol].light_on) {
+        g.fa[rifle].light_on = false;
+        g.fa[pistol].light_on = false;
+    }
+    if input.map_or(false, |i| crate::input::input_hit(g, i, "KeyN")) && crate::kit::kit_you_nvg(g, p) {
+        let on = !g.pl[p].nv;
+        g.pl[p].nv = on;
+        crate::audio_iface::game_audio_like_play(g, if on { "nvOn" } else { "nvOff" }, None, Some(0.7), None);
+        crate::kitanim::kit_nv(g);
+    }
+    let eye = crate::kitanim::kit_nv_eye(g);
+    g.pl[p].nv_amount = v3::damp(g.pl[p].nv_amount, if eye { 1.0 } else { 0.0 }, if eye { 5.0 } else { 9.0 }, dt);
 }

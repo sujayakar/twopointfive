@@ -125,3 +125,31 @@ fn scrape(g: &mut Game, t: Tick, rag: RagdollId, hips: V3, speed: f64) {
     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(hips), Some(0.25), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     prop_noise(g, [hips[0], 0.0, hips[2]], 0.22);
 }
+
+/// Planar distance from the player to a corpse: the nearer of its ankles, its hips and its grip.
+pub(super) fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
+    let within = within.unwrap_or(f64::INFINITY);
+    let me = g.pl[g.player].ch;
+    let p = g.ch[me].pos;
+    let c = g.gd[gd].ch;
+    let a: V3 = [p[0], 0.5, p[2]];
+    let foot_l = g.ch[c].bones.get(crate::character::Bone::FootL).copied();
+    let foot_r = g.ch[c].bones.get(crate::character::Bone::FootR).copied();
+    let hips = g.ch[c].bones.get(crate::character::Bone::Hips).copied();
+    let l = body_reach(g, a, p, foot_l, 0.0, within);
+    let r = body_reach(g, a, p, foot_r, 0.0, within);
+    let h = body_reach(g, a, p, hips, 0.3, within) + 0.3;
+    let grip = crate::hands::body_grip_dist(g, gd, within);
+    m::min_n(&[l, r, h, grip])
+}
+
+/// bodyDist's reach: not through a partition or a shut door; a point already past `within` keeps its plain distance, its line never walked.
+fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, within: f64) -> f64 {
+    let Some(q) = q else { return 99.0 };
+    let d = v3::dist_xz(q, p);
+    if d + add >= within {
+        return d;
+    }
+    let t: V3 = [q[0], 0.5, q[2]];
+    if crate::scene_collision::solid_blocked(g, a, t, None) { 99.0 } else { d }
+}
