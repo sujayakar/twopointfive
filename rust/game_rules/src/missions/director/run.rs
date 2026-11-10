@@ -36,10 +36,6 @@ fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBe
 fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
     if g.team(gd) == crate::teams::Team::Guard { crate::game::GuardState::Search } else { crate::game::GuardState::Alert }
 }
-/// the man's chest, else `up` over his feet
-fn chest_of(g: &Game, c: CharId, up: f64) -> V3 {
-    g.ch[c].bone_or(crate::character::Bone::Chest, up)
-}
 /// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word (TS 505)
 fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
     let s = match asked {
@@ -565,7 +561,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
             continue;
         }
         let at: Option<V3> = match &b.at {
-            RunBurstsItemAt::Unit(u) => unit_guard(g, r, u.id).map(|v| chest_of(g, g.gd[v].ch, 1.1)),
+            RunBurstsItemAt::Unit(u) => unit_guard(g, r, u.id).map(|v| g.ch[g.gd[v].ch].bone_or(crate::character::Bone::Chest, 1.1)),
             RunBurstsItemAt::List(v) => Some([v[0], js::or(v[1], 1.1), v[2]]),
             RunBurstsItemAt::Mark(mk) => {
                 let p = uncaught(director_place_of(g, &Place::Mark(mk.clone())));

@@ -17,7 +17,7 @@ fn hand_or_muzzle(g: &Game, c: CharId) -> V3 {
 fn in_c(cf: Frame, d: V3) -> V3 {
     v3::mad(v3::mad(v3::scale(cf.x, d[0]), cf.y, d[1]), cf.z, d[2])
 }
-/// the identity frame longHold and torchHold apply a group's adj to
+/// the identity frame a group's adj is applied to
 pub(super) fn unit_frame() -> Frame {
     Frame { o: [0.0, 0.0, 0.0], x: [1.0, 0.0, 0.0], y: [0.0, 1.0, 0.0], z: [0.0, 0.0, 1.0] }
 }

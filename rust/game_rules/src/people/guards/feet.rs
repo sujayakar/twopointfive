@@ -8,29 +8,13 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers ----
 
-/// `gd.path = path`: a whole replacement, so the identity serial moves
-fn lay_path(g: &mut Game, gd: GuardId, path: Vec<V3>) {
-    g.gd[gd].path = path;
-    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-}
-
-/// `gd.pathGoal = <anything>`: THE ONE SETTER of a man's path goal. The standoff asks whether his goal IS its own back-off point, the very object
-/// ; a Vec3 here is a value, so `path_goal_orbit` says it, and any other write of the goal is by
-/// that fact no longer that object. Every whole write of `path_goal` outside the standoff goes through here, so the flag cannot be left standing.
-pub fn guard_set_path_goal(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>) {
-    let o = &mut g.gd[gd];
-    o.path_goal = goal;
-    o.path_goal_orbit = false;
-}
-
 /// standoffAlert's setGoal
 fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
     g.gd[gd].path_goal_orbit = false;   // whatever comes next, S.orbitGoal is no longer the object pathGoal may hold
     let p = match p {
         None => {
             if g.tab.guards_standoff[s].orbit_goal.is_some() {
-                lay_path(g, gd, Vec::new());
-                g.gd[gd].path_goal = None;
+                g.gd[gd].drop_path();
             }
             g.tab.guards_standoff[s].orbit_goal = None;
             return;
@@ -174,7 +158,7 @@ fn walks_his_goal(g: &mut Game, st: Standing, goal: V3, pace: f64) -> Legs {
         // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
         // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
         if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
-            lay_path(g, gd, vec![goal]);
+            g.gd[gd].set_path(vec![goal]);
             g.gd[gd].path_i = 0;
             g.gd[gd].path_goal = Some(goal);
             g.gd[gd].path_goal_orbit = true;
@@ -263,9 +247,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     };
     let why = match why { None => return p, Some(w) => w };
     g.gd[gd].standoff = None;
-    lay_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     reset_chase(g, gd);
     let seen_t = g.tab.guards_standoff[s].seen_t;
@@ -622,9 +604,7 @@ pub(super) fn unstick_first(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> 
     if r == crate::guards::UnstickStep::Walking { return true; }
     g.m.guards.unstick_legs.delete(gd);
     let goal = g.gd[gd].path_goal;
-    lay_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
+    g.gd[gd].drop_path();
     if let Some(goal) = goal { go_to(g, gd, goal, Some(true)); }
     g.m.guards.unstick_legs.has(gd)
 }
@@ -638,10 +618,9 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
         }
     }
     if let Some(u0) = live_leg(g, gd) {
-        lay_path(g, gd, vec![v3::copy(u0.to)]);
+        g.gd[gd].set_path(vec![v3::copy(u0.to)]);
         g.gd[gd].path_i = 0;
-        g.gd[gd].path_goal = Some(v3::copy(goal));
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].set_path_goal(Some(v3::copy(goal)));
         g.gd[gd].repath_t = 0.0;
         g.gd[gd].line_side = 0.0;
         return;
@@ -654,10 +633,9 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
         let u = unstick_begin(g, gd);
         if u == crate::guards::UnstickBegin::Leg {
             let to = g.m.guards.unstick_legs.get(gd).unwrap().to;
-            lay_path(g, gd, vec![v3::copy(to)]);
+            g.gd[gd].set_path(vec![v3::copy(to)]);
             g.gd[gd].path_i = 0;
-            g.gd[gd].path_goal = Some(v3::copy(goal));
-            g.gd[gd].path_goal_orbit = false;
+            g.gd[gd].set_path_goal(Some(v3::copy(goal)));
             g.gd[gd].repath_t = 0.0;
             g.gd[gd].line_side = 0.0;
             return;
@@ -668,10 +646,9 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     let start = g.pos_of(gd);
     let mut is_free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let threaded = crate::doors::doors_thread_path(g, &way, start, Some(&mut is_free));
-    lay_path(g, gd, threaded);
+    g.gd[gd].set_path(threaded);
     g.gd[gd].path_i = 0;
-    g.gd[gd].path_goal = Some(v3::copy(goal));
-    g.gd[gd].path_goal_orbit = false;
+    g.gd[gd].set_path_goal(Some(v3::copy(goal)));
     g.gd[gd].repath_t = 0.0;
     g.gd[gd].line_side = 0.0;
 }

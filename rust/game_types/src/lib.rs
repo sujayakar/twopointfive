@@ -24,6 +24,8 @@ pub struct Opaque;
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
 impl Num {
+    /// a key that a -0 goes in as 0
+    pub fn of(x: f64) -> Num { Num(x + 0.0) }
     /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN
     fn key(self) -> u64 { if self.0 == 0.0 { 0 } else if self.0.is_nan() { f64::NAN.to_bits() } else { self.0.to_bits() } }
 }

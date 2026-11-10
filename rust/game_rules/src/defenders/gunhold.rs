@@ -293,11 +293,10 @@ fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goa
 fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3]) {
     let start = g.pos_of(gd);
     let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
-    crate::game::guard_set_path(g, gd, threaded);
+    g.gd[gd].set_path(threaded);
     let man = &mut g.gd[gd];
     man.path_i = 0;
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.set_path_goal(None);
     man.repath_t = 0.0;
     man.stall_ref = None;
     man.line_side = 0.0;

@@ -951,10 +951,7 @@ fn comes_to(g: &mut Game, o: GuardId, spot: V3) {
     crate::mind::raise(g, o, 0.5, "tactics");
     let man = &mut g.gd[o];
     man.search_t = 0.0;
-    man.path = Vec::new();
-    man.path_serial = man.path_serial.wrapping_add(1);
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.drop_path();
     man.stall_ref = None;
     man.body_duty = None;
     man.search_plan = None;

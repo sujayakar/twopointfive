@@ -314,9 +314,7 @@ pub fn frag_reset(g: &mut crate::game::Game) {
     let men: Vec<GuardId> = books.iter().flat_map(|l| l.flee.keys()).collect();
     let (frag, time) = (crate::owner::by::FRAG, g.time);
     for gd in men {
-        crate::game::guard_set_path(g, gd, Vec::new());
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         crate::owner::release(g, gd, frag, time);
     }
     g.m.frag.books.as_mut().unwrap().clear();

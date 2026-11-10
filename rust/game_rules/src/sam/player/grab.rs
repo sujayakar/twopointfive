@@ -44,7 +44,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseK
     man.speed = 0.0;
     man.react_t = m::max(man.react_t, 1.0);
     g.ch[gc].vel = [0.0, 0.0, 0.0];
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     let at = v3::add(g.ch[gc].pos, [0.0, 1.3, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
@@ -171,7 +171,7 @@ fn cut_off(g: &mut Game, gd: GuardId) {
         let after = match g.gd[gd].state { s @ (GuardState::Patrol | GuardState::Search) => s, _ => GuardState::Suspicious };
         crate::squad::end_guard_script(g, gd, Some(after));
     }
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     let gc = g.gd[gd].ch;
     g.ch[gc].vel = [0.0, 0.0, 0.0];
     g.ch[gc].anim.look_yaw_extra = 0.0;
@@ -204,16 +204,7 @@ fn leaves_clearing(g: &mut Game, gd: GuardId) {
     crate::belief::word(g, o, at);
     g.gd[o].react_t = 0.7;
     g.gd[o].search_t = 0.0;
-    lose_path(g, o);
+    g.gd[o].drop_path();
     g.gd[o].search_plan = None;
     g.gd[o].pieing = None;
-}
-
-/// He has nowhere to go: a whole new path, so its serial moves, and the goal is no longer the standoff's own point.
-pub(super) fn lose_path(g: &mut Game, gd: GuardId) {
-    let m_ = &mut g.gd[gd];
-    m_.path = Vec::new();
-    m_.path_serial = m_.path_serial.wrapping_add(1);
-    m_.path_goal = None;
-    m_.path_goal_orbit = false;
 }

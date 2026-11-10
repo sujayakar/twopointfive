@@ -283,8 +283,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].drop_path();
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
         let left = enemy_up_on_floor(g, &crate::seats::here(g), team);

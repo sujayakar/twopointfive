@@ -309,10 +309,9 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     let mut free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
     let o = &mut g.gd[gd];
-    o.path = path;
-    o.path_serial = o.path_serial.wrapping_add(1);   // (a new array: readers ask by identity. The man's own count, as every other whole write of his path: a number of the game's counter here could come back to one a reader kept)
+    o.set_path(path);   // (a new array: readers ask by identity. The man's own count, as every other whole write of his path: a number of the game's counter here could come back to one a reader kept)
     o.path_i = 0;
-    o.path_goal = Some(v3::copy(goal)); o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    o.set_path_goal(Some(v3::copy(goal)));
     o.repath_t = 0.0;
     o.line_side = 0.0;
     p.map_or(false, |p| !p.is_empty())
@@ -486,7 +485,7 @@ fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f:
     o.path = path;
     o.path_serial = path_serial;   // (the same array back: its old serial, none dealt)
     o.path_i = path_i;
-    o.path_goal = path_goal; o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    o.set_path_goal(path_goal);
     o.repath_t = repath_t;
     o.line_side = line_side;
     false

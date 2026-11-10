@@ -57,8 +57,7 @@ pub fn dazed(g: &mut Game, gd: GuardId, secs: f64, at: V3, aware: f64, by: &'sta
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     crate::mind::raise(g, gd, aware, by);
     if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
+    g.gd[gd].drop_path();
     g.gd[gd].speed = 0.0;
 }
 /// …by a flash: blind as well, and he remembers it. `from` where his figure turns from it
@@ -70,8 +69,7 @@ pub fn dazzled(g: &mut Game, gd: GuardId, secs: f64, at: V3, from: Option<V3>, b
 }
 /// Knocked out of his walk: he stands where he is, and the way he was on is forgotten.
 pub fn stopped_dead(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;

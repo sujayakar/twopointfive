@@ -178,10 +178,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     g.stats.whistle.answered += 1;
     if !crate::belief::word_now(g, gd) { crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle"); }
     {
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         g.gd[gd].stall_t = 0.0;
         g.gd[gd].search_t = 0.0;

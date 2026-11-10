@@ -274,12 +274,12 @@ pub fn or_bits(x: f64, bits: f64) -> f64 {
 pub fn has_bits(x: f64, bits: i32) -> bool {
     (to_i32(x) & bits) != 0
 }
-/// a pattern's `\w`
+/// a pattern's `\w`: a byte of a character past ASCII is outside it
 #[inline]
 pub fn is_word(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
-/// `s.length`
+/// `s.length`: UTF-16 units, not bytes
 #[inline]
 pub fn utf16_len(s: &str) -> f64 {
     s.encode_utf16().count() as f64

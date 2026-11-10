@@ -482,7 +482,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
 /// The squad's HUD block: what is left, and a charge waiting for the trigger.
 pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
     let mut out = vec![format!("charges {} · bangs {}", seat.door_tools.charges, seat.door_tools.bangs)];
-    let f = super::tools::key_word(g);
+    let f = super::tools::blow_letter(g);
     if g.k.frag.squad > 0.0 {
         out.push(format!("frags {}", seat.door_tools.frags));
     }
@@ -535,7 +535,7 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
 pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     let mut out: Vec<Note> = Vec::new();
-    let f = super::tools::key_word(g);
+    let f = super::tools::blow_letter(g);
     let word = crate::orders::squad_orders_big(g, seat) && {
         let men = door_tools_word_men(g, seat);
         !door_tools_waiting_any(g, seat, &men).is_empty()
@@ -568,7 +568,7 @@ pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatR
 /// The word, while somebody is waiting on it: the key that gives it, to whom; with the orders going to somebody else, who is waiting (a set charge is left out of that: it has its own line, and its own key).
 pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
-    let f = super::tools::key_word(g);
+    let f = super::tools::blow_letter(g);
     let word_men = door_tools_word_men(g, seat);
     let all = crate::orders::squad_orders_men(g, seat, None, None);
     if !crate::orders::squad_orders_big(g, seat) {   // (the small squad's: its plain stacks, under wordSmall: the key is always the word's there)

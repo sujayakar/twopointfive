@@ -30,7 +30,7 @@ struct Cx { d: DoorId, t: f64, el: f64, lead: GuardId, name: String }
 fn in_ops(seat: &crate::seats::SeatRef, o: DoorOpId) -> bool { seat.door_tools.ops.contains(&o) }
 /// `this.lights ?? NIGHTBREACH.opLights` (settled: on)
 pub(super) fn light_of(seat: &crate::seats::SeatRef) -> bool { seat.door_tools.lights.unwrap_or(true) }
-pub(super) fn is_pre(p: Phase) -> bool { matches!(p, Phase::Stack | Phase::Ready | Phase::Place | Phase::Standoff | Phase::Armed) }
+pub(crate) fn is_pre(p: Phase) -> bool { matches!(p, Phase::Stack | Phase::Ready | Phase::Place | Phase::Standoff | Phase::Armed) }
 
 /// `{ post: P.pos, face: P.face, watch: the frame, stance: 'highReady', upper: 'none', move, stackSide, going, there }`: stood off from the charge
 pub(super) fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -> DoorToolsAssignA {
