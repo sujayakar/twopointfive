@@ -51,7 +51,7 @@ fn return_known(g: &mut Game, key: u32, k: Known) {
 
 /// This man has the pair in his eyes this frame: what his side knows of the hold is brought up to it.
 pub fn gun_hold_see(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) {
-    let (variant, phase, shot_t) = match g.pl[g.player].holding.as_ref() {
+    let (variant, phase, shot_t) = match g.pl[g.player].holding() {
         Some(h) => (h.variant, h.phase, h.shot_t),
         None => return,
     };
@@ -103,7 +103,7 @@ fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot_t: 
 /// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him): the keys of the hold's Known and of his St.
 fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
     let s = g.gd[gd].standoff?;
-    let (held, key) = g.pl[g.player].holding.as_ref().map(|h| (h.g, h.serial))?;
+    let (held, key) = g.pl[g.player].holding().map(|h| (h.g, h.serial))?;
     if held != g.tab.guards_standoff[s].pair {
         return None;
     }
@@ -657,7 +657,7 @@ pub fn gun_hold_feet(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::
 /// gunHoldFeet from its fourth line on, with the hold's Known in hand. His St is always the table's row (`st!()`): plan_round writes it there.
 fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsStandoffId, fs: GunHoldFeetFs, k: &mut Known) -> Option<GunHoldFeet> {
     let c = g.gd[gd].ch;
-    if let Some(shot_t) = g.pl[g.player].holding.as_ref().map(|h| h.shot_t) {
+    if let Some(shot_t) = g.pl[g.player].holding().map(|h| h.shot_t) {
         let sensed = g.tab.guards_standoff[s].seen_t == g.time || flat(g.ch[c].pos, p.sam) < HEAR_M;
         learn_shot(g, k, shot_t, sensed);
     }

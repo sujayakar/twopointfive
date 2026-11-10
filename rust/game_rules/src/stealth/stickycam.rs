@@ -252,7 +252,7 @@ fn cam_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCam
 /// Nothing in his hands that takes them.
 fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
     let p = &g.pl[pl];
-    p.dragging.is_none() && !p.sprinting && p.takedown.is_none() && p.holding.is_none()
+    p.dragging().is_none() && !p.sprinting && p.takedown().is_none() && p.holding().is_none()
 }
 
 /// The camera he could take back this frame.

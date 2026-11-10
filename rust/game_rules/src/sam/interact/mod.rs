@@ -2,7 +2,7 @@ pub use ::game_types::interact::types;
 pub use types::*;
 pub mod hud;
 pub use hud::*;
-use crate::game::Game;
+use crate::game::{Deed, Game};
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -25,7 +25,7 @@ fn walled(g: &Game, eye: V3, to: V3) -> bool {
 /// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it, about the seat it is asked of.
 pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::interact::EmptyThing> {
     let pl = seat.player;
-    if g.pl[pl].takedown.is_some() { return None; }
+    if g.pl[pl].takedown().is_some() { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<crate::interact::EmptyThing> = None;
@@ -97,37 +97,32 @@ fn move_mask(g: &Game, input: InputId) -> f64 {
 /// Which sustained verb is running right now, as an identity ('' = none).
 pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
     let pl = seat.player;
-    if let Some(d) = g.pl[pl].easing { return format!("ease:{}", g.dr[d].def.name); }
-    if let Some(d) = g.pl[pl].picking { return format!("pick:{}", g.dr[d].def.name); }
-    if let Some(w) = &g.pl[pl].wanding { let d = w.door; return format!("wand:{}", g.dr[d].def.name); }
-    if let Some(d) = g.pl[pl].coding { return format!("code:{}", g.dr[d].def.name); }
-    if let Some(h) = &g.pl[pl].holding {
-        if h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip {
-            let who = h.g;
-            return format!("hold:{}", g.gd[who].callsign);
-        }
-    }
-    if g.mission.drive_t >= 0.0 { return String::from("drive"); }
-    if g.pl[pl].breaker_move.is_some() { return String::from("breaker"); }
-    if let Some(c) = &g.pl[pl].charging { let d = c.door; return format!("charge:{}", g.dr[d].def.name); }
-    if crate::wallcharge::wall_charge_setting(seat) { return String::from("charge:wall"); }
-    String::new()
+    let (verb, d) = match &g.pl[pl].deed {
+        Some(Deed::Ease(e)) => ("ease", e.door),
+        Some(Deed::Pick(d)) => ("pick", *d),
+        Some(Deed::Wand(w)) => ("wand", w.door),
+        Some(Deed::Code(c)) => ("code", c.door),
+        Some(Deed::Charge(c)) => ("charge", c.door),
+        Some(Deed::Hold(h)) if crate::player::hold_works(h) => return format!("hold:{}", g.gd[h.g].callsign),
+        Some(Deed::Breaker(_)) => return String::from("breaker"),
+        _ if g.mission.drive_t >= 0.0 => return String::from("drive"),
+        _ if crate::wallcharge::wall_charge_setting(seat) => return String::from("charge:wall"),
+        _ => return String::new(),
+    };
+    format!("{verb}:{}", g.dr[d].def.name)
 }
 
 /// Stop the running sustained verb where it is. True if there was anything to stop.
 pub(super) fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
-    if g.pl[pl].easing.is_some() { g.pl[pl].easing = None; return true; }
-    if g.pl[pl].picking.is_some() { crate::player::stop_picking(g); return true; }
-    if g.pl[pl].wanding.is_some() { crate::player::stop_wand(g); return true; }
-    if g.pl[pl].coding.is_some() { crate::devices::stop_coding(g); return true; }
-    let (held, working) = match &g.pl[pl].holding {
-        Some(h) => (true, h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip),
-        None => (false, false),
-    };
-    if held && working { crate::player::ease_off_hold(g); return true; }
+    match &g.pl[pl].deed {
+        Some(Deed::Pick(_)) => { crate::player::stop_picking(g); return true; }
+        Some(Deed::Wand(_)) => { crate::player::stop_wand(g); return true; }
+        Some(Deed::Ease(_) | Deed::Code(_) | Deed::Charge(_)) => { crate::deed::put_down(g, pl); return true; }
+        Some(Deed::Hold(h)) if crate::player::hold_works(h) => { crate::player::ease_off_hold(g); return true; }
+        _ => {}
+    }
     if g.mission.drive_t >= 0.0 { crate::mission::cancel_drive(g); return true; }
-    if crate::doortools::door_tools_cancel_sam(g) { return true; }
     if crate::wallcharge::wall_charge_cancel(g) { return true; }
     false
 }
@@ -140,7 +135,7 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 /// the whistle has a wedge of the ring this frame
 pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
     let mut n = 0.0;
     for r in seat.nearby { { n += 1.0; } }
     n < g.k.cmdring.wedges

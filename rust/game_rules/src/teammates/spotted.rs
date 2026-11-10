@@ -401,7 +401,7 @@ fn hands(g: &mut crate::game::Game, gd: GuardId) {
             if st == crate::game::GuardState::Dead || g.gd[h].held.is_some() { continue; }
             let (mine, his) = (g.team(gd), g.team(h));
             if !mine.foe_of(his) { continue; }
-            if g.pl[g.player].takedown.as_ref().map(|td| td.g) == Some(h) || take_no.map(|n| n.foe) == Some(h) { continue; }
+            if g.pl[g.player].takedown().map(|td| td.g) == Some(h) || take_no.map(|n| n.foe) == Some(h) { continue; }
             let d = flat(&p, &pos(g, h));
             let limit = if st == crate::game::GuardState::Suspicious { bd } else { m::min(bd, k.take_reach + 0.3) };
             if d >= limit || !on_him(g, h, gd) || !open_to(g, p, h) { continue; }

@@ -663,7 +663,7 @@ impl DoorsAsk for Play {
     fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.hold, h.pinned) = (false, false); }
     fn sam_holds(&mut self, m: GuardId) -> bool {
         game::player::start_grab(&mut self.g, m, None);
-        self.until(2.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
+        self.until(2.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
     }
     fn in_standoff(&self, m: GuardId) -> Option<bool> { self.g.gd[m].standoff.map(|s| self.g.tab.guards_standoff[s].line_open) }
     fn saw_held(&self, m: GuardId) -> Option<String> { self.g.gd[m].witness.saw_held.as_ref().map(|w| w.who.clone()) }

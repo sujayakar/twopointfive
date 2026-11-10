@@ -37,7 +37,7 @@ fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 
 /// Two bodies that must meet: he is in a player's arm, or is the body one hauls.
 fn paired(g: &crate::game::Game, c_2: CharId) -> bool {
-    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging { if g.gd[d].ch == c_2 { return true; } } }
+    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging() { if g.gd[d].ch == c_2 { return true; } } }
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     match rec { Some(r) => g.gd[r].held.is_some(), None => false }
 }

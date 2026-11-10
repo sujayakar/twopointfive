@@ -204,7 +204,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         let to = wall_pt(g, &w, 0.0, 0.1, Some(0.9));
         !crate::scene_collision::solid_blocked(g, [p[0], 0.9, p[2]], to, None)
     };
-    let free = !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none();
+    let free = !g.pl[pl].sprinting && g.pl[pl].dragging().is_none() && g.pl[pl].holding().is_none() && g.pl[pl].takedown().is_none();
     let reach = near && free;
     let line1 = if c.is_some() { "wall · charge set" } else if w.outer == Some(true) { "wall · outer wall" } else { "wall · partition" };
     let line2 = if reach { "" } else if near { "hands full" } else { "step closer" };
@@ -267,7 +267,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         }
     }
     let s = match g.sets[g.seat].wall_charge.sam.clone() { Some(s) => s, None => return };
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].takedown().is_some()
         || v3::dist_xz(p, s.at) > g.k.wallcharge.sam_shift || (has_act && !mine) {
         wall_charge_cancel(g);
         return;

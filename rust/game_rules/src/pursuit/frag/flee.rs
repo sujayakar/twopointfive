@@ -155,8 +155,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
         let along = away(b.at, g.ch[c].pos);
         crate::samstun::stagger_player(g, secs, along);
-        if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.sets[g.seat].hand.f_held = true; }
-        if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.sets[g.seat].hand.f_held = true; }
+        crate::deed::shaken_off(g, pl);
         g.sets[g.seat].hand.throw_held = false;
         g.pl[pl].pending_throw = None;
     }

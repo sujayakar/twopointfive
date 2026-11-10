@@ -77,7 +77,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             c: p.ch,
             pl: Some(pl),
             gd: None,
-            can: !g.cond[p.ch].down && p.dragging.is_none() && p.holding.is_none() && p.kick.is_none() && p.picking.is_none() && p.wanding.is_none() && p.takedown.is_none(),
+            can: !g.cond[p.ch].down && p.dragging().is_none() && p.holding().is_none() && p.kick().is_none() && p.picking().is_none() && p.wanding().is_none() && p.takedown().is_none(),
             right_free: p.holstered,
         });
     }
@@ -112,7 +112,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             let (mut crack, mut move_) = (false, false);
             let speed = m::hyp2(cvel[0], cvel[2]);
             if let Some(p) = pl {
-                if let Some(dd) = g.pl[p].door_move.as_ref().map(|dm| dm.d) {
+                if let Some(dd) = g.pl[p].door_move().map(|dm| dm.d) {
                     if !g.dr[dd].leaf.off { hit = Some(dd); crack = true; move_ = true; }
                 }
             }
@@ -127,7 +127,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 let vz = cpos[2] - hz;
                 if vx * vx + vz * vz > m::pow(wd + 1.2, 2.0) { continue; }
                 if let Some(p) = pl {
-                    if g.pl[p].easing == Some(d) { hit = Some(d); crack = true; break; }
+                    if g.pl[p].easing().map(|e| e.door) == Some(d) { hit = Some(d); crack = true; break; }
                 }
                 let u = crate::doors::door_dir(g, d);
                 let along = vx * u[0] + vz * u[1];

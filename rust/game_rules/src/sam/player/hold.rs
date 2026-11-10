@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 /// the hold of this seat, where the TypeScript keeps `H`: re-read at every use, never held across a call that takes `g`
 macro_rules! hold {
     ($g:ident, $p:ident) => {
-        $g.pl[$p].holding.as_mut().unwrap()
+        $g.pl[$p].holding_mut().unwrap()
     };
 }
 
@@ -458,11 +458,11 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         an.stance = Stance::None;
         an.look_yaw_extra = 0.0;
     }
-    let has = g.pl[p].holding.is_some();
+    let has = g.pl[p].holding().is_some();
     let low = if has { 1.0 } else { 0.0 };
     let beats = has;
     let haul = has;
-    let h = g.pl[p].holding.clone();
+    let h = g.pl[p].holding().cloned();
     let strip = match h.as_ref().and_then(|h| h.strip) {
         Some(s) => Some(crate::disarm::disarm_pose(s)),
         None => None,
@@ -572,7 +572,7 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
 /// A new beat of the hold: its clock from nought, nothing chosen, nothing queued, Sam's question dead.
 fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     let p = g.player;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     h.phase = phase;
     h.t = 0.0;
     h.wind_t = -1.0;
@@ -580,11 +580,16 @@ fn set_phase(g: &mut crate::game::Game, phase: crate::character::HoldPhase) {
     cancel_ask(g);
 }
 
+/// Is the choke or the whip under way, or chosen?
+pub(in crate::sam) fn hold_works(h: &Hold) -> bool {
+    h.wind_t >= 0.0 || matches!(h.phase, crate::character::HoldPhase::Choke | crate::character::HoldPhase::Whip)
+}
+
 /// Stop the choke / the whip under way (a Space tap, a step, the back key): the hold goes on and he felt what nearly happened; a choke merely chosen is just un-chosen.
 pub(in crate::sam) fn ease_off_hold(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     let gd = h.g;
     if h.phase != Ph::Choke && h.phase != Ph::Whip {
         h.wind_t = -1.0;
@@ -602,7 +607,7 @@ pub(in crate::sam) fn ease_off_hold(g: &mut crate::game::Game) {
 fn cancel_ask(g: &mut crate::game::Game) {
     let p = g.player;
     let time = g.time;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     h.after = None;
     if h.ask.is_none() {
         return;
@@ -616,7 +621,7 @@ fn cancel_ask(g: &mut crate::game::Game) {
 /// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear. Nobody answers it.
 fn say_after(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(a) = g.pl[p].holding.as_mut().and_then(|h| h.after.take()) else { return };
+    let Some(a) = g.pl[p].holding_mut().and_then(|h| h.after.take()) else { return };
     let time = g.time;
     say_over_sam(g, &a.text, time);
 }
@@ -635,7 +640,7 @@ fn swap_hold(g: &mut crate::game::Game) {
     use crate::character::HoldVariant as Var;
     let p = g.player;
     let swap = g.k.hold.secs.swap;
-    let Some(h) = g.pl[p].holding.as_mut() else { return };
+    let Some(h) = g.pl[p].holding_mut() else { return };
     if h.phase != crate::character::HoldPhase::Held {
         return;
     }
@@ -672,7 +677,7 @@ fn swap_hold(g: &mut crate::game::Game) {
 fn start_choke(g: &mut crate::game::Game) {
     use crate::character::HoldPhase as Ph;
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let hc = g.gd[gd].ch;
     set_phase(g, Ph::Choke);
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
@@ -684,7 +689,7 @@ fn start_choke(g: &mut crate::game::Game) {
 /// HOLD.secs.chokeHold after the whip was chosen: the pistol comes off his head and cocks back; the crack is whipOut's.
 fn start_whip(g: &mut crate::game::Game) {
     let p = g.player;
-    if g.pl[p].holding.is_none() {
+    if g.pl[p].holding().is_none() {
         return;
     }
     set_phase(g, crate::character::HoldPhase::Whip);
@@ -698,7 +703,7 @@ fn start_whip(g: &mut crate::game::Game) {
 fn place_held(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let hc = g.gd[gd].ch;
     let r = g.ch[hc].radius;
     let dist = g.k.hold.dist;
@@ -725,7 +730,7 @@ fn place_held(g: &mut crate::game::Game) {
 fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
-    let Some(held) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(held) = g.pl[p].holding().map(|h| h.g) else { return };
     let dist = g.k.hold.dist;
     let f = crate::character::character_forward(g, c);
     let hx = g.ch[c].pos[0] + f[0] * dist;
@@ -786,7 +791,7 @@ pub(super) fn held_talk(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: 
 /// A tap on his row, one EXCHANGE: Sam's line first, up for its beat; the answer follows when it ends.
 fn ask_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(h) = g.pl[p].holding.clone() else { return };
+    let Some(h) = g.pl[p].holding().cloned() else { return };
     let gd = h.g;
     let talk = held_talk(g, &crate::seats::here(g), &h);
     if talk.sam_up {
@@ -827,7 +832,7 @@ fn ask_held(g: &mut crate::game::Game) {
 /// Sam's line has hung its beat: the man answers it, and the muffled sound of it under the arm.
 fn answer_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let pick = crate::game::game_interrogate(g, gd, None);
     if pick.is_some() {
         let hc = g.gd[gd].ch;
@@ -857,13 +862,13 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.6 }));
     crate::mission::tally(g, crate::mission::TallyK::Keys);
     crate::chronicle::chron_key(g, gd);
-    let variant = match &g.pl[p].holding {
+    let variant = match g.pl[p].holding() {
         Some(h) if h.g == gd => Some(h.variant),
         _ => None,
     };
     if let Some(variant) = variant {
         if let Some(line) = crate::dialogue::sam_key_line_for(g, gd, variant, rnd) {
-            if let Some(h) = g.pl[p].holding.as_mut() {
+            if let Some(h) = g.pl[p].holding_mut() {
                 h.after = Some(crate::player::HoldAfter { text: line.text });
             }
         }
@@ -873,7 +878,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
 /// After the door leaves have had their say: whatever a leaf shoved the held man off his station by, the PAIR gives. Not during the reach.
 pub fn settle_held(g: &mut crate::game::Game) {
     let p = g.player;
-    let gd = match &g.pl[p].holding {
+    let gd = match g.pl[p].holding() {
         Some(h) if h.phase != crate::character::HoldPhase::Grab => h.g,
         _ => return,
     };
@@ -898,7 +903,7 @@ pub fn settle_held(g: &mut crate::game::Game) {
 /// The choke run through HOLD.secs.choke: he goes limp in the arm and folds forward at Sam's feet, out cold.
 fn choke_out(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let c = g.pl[p].ch;
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
@@ -909,13 +914,13 @@ fn choke_out(g: &mut crate::game::Game) {
     crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), crate::game::With::Hand);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, FOLD_NOISE);
-    g.pl[p].holding = None;
+    g.pl[p].holding_over();
 }
 
 /// The whip run through HOLD.secs.whip: the pistol lands behind his right ear and he drops out of the arm, the loudest thing a hold does.
 fn whip_out(g: &mut crate::game::Game) {
     let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
+    let Some(gd) = g.pl[p].holding().map(|h| h.g) else { return };
     let c = g.pl[p].ch;
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
@@ -930,7 +935,7 @@ fn whip_out(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "whipThud", Some(head), Some(0.7), None);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, WHIP_NOISE);
-    g.pl[p].holding = None;
+    g.pl[p].holding_over();
     g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, 0.5);
 }
 

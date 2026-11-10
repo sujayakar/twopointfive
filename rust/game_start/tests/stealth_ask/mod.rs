@@ -226,8 +226,8 @@ impl StealthAsk for Play {
         self.g.dr[d].leaf.latched = false;
         self.g.dr[d].leaf.angle = turn;
     }
-    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.phase) }
-    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.g) }
+    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding().map(|h| h.phase) }
+    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding().map(|h| h.g) }
     fn out_cold(&self, gd: GuardId) -> bool { self.state(gd) == game::game::GuardState::Dead && game::game::is_breathing(&self.g, gd) }
     fn down_kind(&self, gd: GuardId) -> Option<game::game::DownKind> { self.g.gd[gd].down_kind }
     fn grab_row(&self, gd: GuardId) -> bool { self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
@@ -372,7 +372,7 @@ impl StealthAsk for Play {
     fn fog_saw(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_seen(&self.g, gd) }
     fn in_newest_wedge(&self, at: [f64; 3]) -> bool { let e = *self.g.fog_of_war.eyes.last().expect("an eye"); game::fogofwar::fog_of_war_in_field(&self.g, e, at) }
     fn cams(&self) -> (usize, f64) { let pl = &self.g.pl[self.g.player]; (pl.cams.len(), self.g.fa[pl.rifle].cams) }
-    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding.as_ref().map(|w| w.live) }
+    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding().map(|w| w.live) }
     fn eye_is_lens(&self) -> bool { self.g.fog_of_war.eyes.iter().any(|e| e.wand == Some(true)) }
     fn smoke_counts(&mut self) -> game::smokebreak::SmokeBreakStats { game::smokebreak::state_of(&mut self.g).stats }
     fn hand_from_head(&self, gd: GuardId, bone: game::character::Bone) -> f64 {

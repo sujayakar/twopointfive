@@ -15,7 +15,7 @@ fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let p = &g.pl[pl];
     let a = &g.ch[c].anim;
     // (kitHold: the gun is still on its way to his hands; `undefined` alone is "in his hands", null is bare hands and holds the laser off too)
-    a.upper == crate::character::UpperMode::Aim && !g.cond[p.ch].down && !p.sprinting && p.holding.is_none() && !a.hide_held_item && a.kit_hold.is_none()
+    a.upper == crate::character::UpperMode::Aim && !g.cond[p.ch].down && !p.sprinting && p.holding().is_none() && !a.hide_held_item && a.kit_hold.is_none()
 }
 
 /// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (combat.ts handProps asks, right after his rig).

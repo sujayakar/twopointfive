@@ -242,7 +242,7 @@ fn ok_downed(g: &Game, how: &str, n: Option<f64>) -> bool {
 }
 
 fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios::Rect) -> bool {
-    let (guards, drag) = (g.guards.clone(), g.pl[seat.player].dragging);
+    let (guards, drag) = (g.guards.clone(), g.pl[seat.player].dragging());
     guards.iter().any(|&x| {
         if !crate::condition::down(g, g.gd[x].ch) || drag == Some(x) { return false; }
         let c = g.gd[x].ch;
@@ -464,7 +464,7 @@ pub mod flags {
     /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true
     pub fn setup(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { crate::slotsetup::slot_setup_open(g, seat) }
     pub fn setup_shut(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !crate::slotsetup::slot_setup_open(g, seat) }
-    pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging.is_some() }
+    pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging().is_some() }
     /// the mains are off
     pub fn dark(g: &mut crate::game::Game) -> bool { g.light_home.mains.active }
     /// a wall charge is on a wall, waiting on the trigger
@@ -483,9 +483,9 @@ pub mod flags {
     /// …and one has made its hole this run
     pub fn wall_blown(seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
     /// a man in his arm
-    pub fn holding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holding.is_some() }
-    pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
-    pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding.is_some() }
+    pub fn holding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holding().is_some() }
+    pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking().is_some() }
+    pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding().is_some() }
     /// the order menu is up
     pub fn menu(g: &mut crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
     /// his own ring is up, with or without a key down

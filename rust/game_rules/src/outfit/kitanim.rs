@@ -10,15 +10,15 @@ fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     if crate::condition::down(g, g.pl[p].ch)
-        || g.pl[p].holding.is_some()
-        || g.pl[p].takedown.is_some()
-        || g.pl[p].dragging.is_some()
-        || g.pl[p].picking.is_some()
-        || g.pl[p].wanding.is_some()
-        || g.pl[p].coding.is_some()
-        || g.pl[p].easing.is_some()
-        || g.pl[p].door_move.is_some()
-        || g.pl[p].kick.is_some()
+        || g.pl[p].holding().is_some()
+        || g.pl[p].takedown().is_some()
+        || g.pl[p].dragging().is_some()
+        || g.pl[p].picking().is_some()
+        || g.pl[p].wanding().is_some()
+        || g.pl[p].coding().is_some()
+        || g.pl[p].easing().is_some()
+        || g.pl[p].door_move().is_some()
+        || g.pl[p].kick().is_some()
         || g.pl[p].wall.is_some()
         || g.pl[p].sprinting
         || crate::handwork::sam_work(g).is_some()
@@ -85,7 +85,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     if crate::condition::down(g, g.pl[p].ch) {
         return None;
     }
-    if let Some(variant) = g.pl[p].holding.as_ref().map(|h| h.variant) {
+    if let Some(variant) = g.pl[p].holding().map(|h| h.variant) {
         if variant == crate::character::HoldVariant::Arm && !g.ch[c].anim.hold_gun_side && !g.ch[c].anim.no_knife {
             return Some(crate::character::KitItem::Knife);
         }
@@ -105,7 +105,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     }
     let k = crate::game::player_canister_sel(g, p);
     match k {
-        Some(k) if !g.pl[p].holstered && g.pl[p].dragging.is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
+        Some(k) if !g.pl[p].holstered && g.pl[p].dragging().is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
         _ => None,
     }
 }
@@ -182,13 +182,13 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     // something else has his arms, or the item is not his to carry about: no errand
     let carry = crate::bigkit::sam_big_carry(g, &crate::seats::here(g));
     let hard = crate::condition::down(g, g.pl[p].ch)
-        || g.pl[p].holding.is_some()
-        || g.pl[p].takedown.is_some()
-        || g.pl[p].dragging.is_some()
-        || (g.pl[p].kick.is_some() && !carry)
-        || g.pl[p].picking.is_some()
-        || g.pl[p].wanding.is_some()
-        || g.pl[p].coding.is_some()
+        || g.pl[p].holding().is_some()
+        || g.pl[p].takedown().is_some()
+        || g.pl[p].dragging().is_some()
+        || (g.pl[p].kick().is_some() && !carry)
+        || g.pl[p].picking().is_some()
+        || g.pl[p].wanding().is_some()
+        || g.pl[p].coding().is_some()
         || (crate::handwork::sam_work(g).is_some() && !crate::workstow::sam_stowing(g, &crate::seats::here(g)))
         || crate::character::anim_in_throw(g, c);
     let quiet = hard || (hands_off_c(g, c) && !carry);
@@ -265,7 +265,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.sets[g.seat].orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.sets[g.seat].orders.menu.is_some() || g.pl[p].holding().is_some() || g.pl[p].dragging().is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }
@@ -330,12 +330,12 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     let was = g.pl[p].kit_was;
     if h.is_none()
         && was == Some(Some(crate::character::KitItem::Knife))
-        && g.pl[p].holding.is_none()
-        && g.pl[p].takedown.is_none()
-        && g.pl[p].kick.is_none()
-        && g.pl[p].picking.is_none()
-        && g.pl[p].wanding.is_none()
-        && g.pl[p].coding.is_none()
+        && g.pl[p].holding().is_none()
+        && g.pl[p].takedown().is_none()
+        && g.pl[p].kick().is_none()
+        && g.pl[p].picking().is_none()
+        && g.pl[p].wanding().is_none()
+        && g.pl[p].coding().is_none()
     {
         v.knife = true;
     }

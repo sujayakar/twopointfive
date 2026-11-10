@@ -164,7 +164,7 @@ fn a_code_learnt_is_sams_own_line_and_not_with_a_man_in_his_arm() {
         p.run(0.05);
         game::player::start_grab(&mut p.g, m, None);
         p.run(1.4);
-        assert!(p.g.pl[me].holding.is_some(), "seed {s}: the staging: she is not in his arm");
+        assert!(p.g.pl[me].holding().is_some(), "seed {s}: the staging: she is not in his arm");
         let before = sams_line(&p);
         assert!(game::devices::devices_overhear_said(&mut p.g, m, "pad_side"), "seed {s}");
         p.frame();
@@ -538,7 +538,7 @@ fn the_wall_key_with_no_wall_says_why() {
     p.run(0.1);
     game::game::game_toggle_drag(&mut p.g, Some(m));
     p.run(0.2);
-    assert!(p.g.pl[p.g.player].dragging.is_some(), "the staging: he is not dragging");
+    assert!(p.g.pl[p.g.player].dragging().is_some(), "the staging: he is not dragging");
     p.tap("KeyQ");
     assert_eq!(word(&p).as_deref(), Some("your hands are full"));
 }

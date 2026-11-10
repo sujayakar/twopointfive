@@ -15,7 +15,7 @@ fn sstep(a: f64, b: f64, t: f64) -> f64 {
 /// player.ts startGrab, once the hold exists: the gun still in his hand is the disarm's to take.
 pub fn disarm_begin(g: &mut crate::game::Game) {
     let pl = g.player;
-    let Some((gd, variant)) = g.pl[pl].holding.as_ref().map(|h| (h.g, h.variant)) else { return };
+    let Some((gd, variant)) = g.pl[pl].holding().map(|h| (h.g, h.variant)) else { return };
     if crate::guards::in_hand(g, gd) != Some(crate::guards::InHand::Weapon) { return; }
     let def = g.fa[g.gd[gd].weapon].def;
     let (kind, supp) = { let row = g.m.weapons.weapons.get(def).unwrap(); (row.drop, row.suppressed) };
@@ -28,7 +28,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
 
 /// The grab's first voice: the strip is heard first when the disarm leads. Its rate is pinned.
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
-    let s = g.pl[g.player].holding.as_ref().and_then(|h| h.strip);
+    let s = g.pl[g.player].holding().and_then(|h| h.strip);
     if leads(g, s) { return; }
     crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
@@ -58,7 +58,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let pl_ch = g.pl[pl].ch;
     // `h` is a copy of the hold: only its guard and phase are read from it, which nothing below writes. `s` is a copy of the move, put back after each write.
-    let h = g.pl[pl].holding.clone();
+    let h = g.pl[pl].holding().cloned();
     let s0 = h.as_ref().and_then(|h| h.strip);
     let mut i = 0;
     while i < g.items.items.len() {
@@ -127,7 +127,7 @@ fn long(kind: &str) -> bool { kind == "rifle" }
 /// The gun leaves his hand: an item from here on, his `dropped`, his hands empty; in Sam's hand or, rapped out by the pistol hold, falling.
 /// Its writes go to `s`: the caller holds the move and puts it back in the hold.
 fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
-    let gd = g.pl[pl].holding.as_ref().unwrap().g;
+    let gd = g.pl[pl].holding().unwrap().g;
     let c = g.gd[gd].ch;
     let opts = crate::throwables::ThrowablesSpawnOpts {
         who: Some(g.ch[c].id),
@@ -240,18 +240,18 @@ pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
 
 /// `S` is one object in the TypeScript, shared with the hold: a copy here, so each write is put back through the table.
 fn put_strip(g: &mut Game, pl: PlayerId, s: Strip) {
-    if let Some(h) = g.pl[pl].holding.as_mut() { h.strip = Some(s); }
+    if let Some(h) = g.pl[pl].holding_mut() { h.strip = Some(s); }
 }
 
 /// `H.strip = undefined`
 fn clear_strip(g: &mut Game, pl: PlayerId) {
-    if let Some(h) = g.pl[pl].holding.as_mut() { h.strip = None; }
+    if let Some(h) = g.pl[pl].holding_mut() { h.strip = None; }
 }
 
 /// `men(g).some(o => o.holding?.strip?.item === it)`
 fn any_man_carries(g: &Game, it: ItemId) -> bool {
     let men = crate::seats::men(g);
-    men.iter().any(|&o| g.pl[o].holding.as_ref().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
+    men.iter().any(|&o| g.pl[o].holding().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
 }
 
 /// DropKind's words are two of crate::throwables::ItemKind's: the gun's own kind of item.

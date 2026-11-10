@@ -651,12 +651,12 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
         None => pick_line(g, &mut ctx, talk, &mut |g: &mut Game| crate::dice::draw_of(g, "dialogue::interrogate#1", gd)),
     };
     let player = g.player;
-    let holds_him = g.pl[player].holding.as_ref().map_or(false, |h| h.g == gd);
+    let holds_him = g.pl[player].holding().map_or(false, |h| h.g == gd);
     if let Some(after) = pick.after.as_ref().filter(|a| !a.is_empty()) {
         // (`.length` of the TypeScript counts UTF-16 units: '…' and '—' are one, three bytes here)
         if holds_him && after.encode_utf16().count() as f64 <= SAM_MAX_CHARS {
             let id = alloc::format!("{}+", pick.id);
-            g.pl[player].holding.as_mut().unwrap().after = Some(crate::player::HoldAfter { text: after.clone() });
+            g.pl[player].holding_mut().unwrap().after = Some(crate::player::HoldAfter { text: after.clone() });
             let mem = sam_memory_of(g);
             mem.said.set(id.clone(), time);
             mem.last = Some(id);
