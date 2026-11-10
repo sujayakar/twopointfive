@@ -6,15 +6,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FootBook {
     pub shoves: f64,
-    pub stats: crate::debris::FootBookStats,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct FootBookStats {
-    pub kicked: f64,
-    pub off_man: f64,
-    pub walled: f64,
-    pub gave_up: f64,
+    pub stats: crate::debris::DebrisFeetStats,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
