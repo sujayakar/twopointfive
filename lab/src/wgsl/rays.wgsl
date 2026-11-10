@@ -18,6 +18,9 @@ fn foot(w: f32, s: f32) {
 }
 /** for a ray whose edges are looked at (a lamp's own shadow): solids as they are all the way, and only leaves by the cells */
 fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(1e9); leafTo = 0.0; leafOnly = true; }
+/** for a ray to a light so big (its width, metres; the sun's: over its distance) and so far: it begins at a point, for whoever asks throws the dice over what it averages, and is as wide as the light
+ *  looks. (Not as wide as its asker: it draws together toward the light, and what stands close to a torch must be there.) */
+fn footLight(size: f32, far: f32) { foot(0.02, size / max(far, 0.1)); }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 /** boxes looked at by the last rays (nothing reads it but the panel) */
 var<private> walked: u32 = 0u;

@@ -174,6 +174,8 @@ fn wetFilm(s0: Surf, fp: f32) -> Surf {
 fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.more.x > 0.0) { let k = frame.more.x * smoothstep(0.35, 0.65, s.ng.y) * exposed(s.x + s.ng * 0.2); s.albedo = mix(s.albedo, vec3f(0.86, 0.895, 0.94), k); s.metal *= 1.0 - k; return s; } if (frame.weather.x > 0.0 && s.metal < 0.5 && exposed(s.x + s.ng * 0.2) > 0.5) { let soaks = select(0.35, 1.0, matteRough(s.kind) > 0.0 || s.kind == 6u); s.albedo = mix(s.albedo, mix(s.albedo * 0.85, 0.98 * s.albedo * 0.52 / (1.0 - 0.48 * s.albedo), soaks), frame.weather.x * (0.35 + 0.5 * sat(s.ng.y))); } return s; }
 
 // ================================================================ lamps
+/** how wide a lamp is */
+fn lampSize(i: u32) -> f32 { return select(2.0 * lamps[i].area, sqrt(lamps[i].area), lamps[i].kind == 0u); }
 struct Aim { dir: vec3f, dist: f32, E: vec3f };       // toward a point of a lamp: what it would send a surface facing it, per unit of 1 / pdf
 fn aimLamp(i: u32, x: vec3f, u: vec2f) -> Aim {
   let l = &lamps[i]; var a: Aim; a.E = vec3f(0.0); a.dist = 0.0; a.dir = vec3f(0.0, 1.0, 0.0);

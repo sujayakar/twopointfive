@@ -27,8 +27,8 @@
       }
       let a = returns(q); let y = q.x + q.ng * 0.004;
       for (var m = 0u; m < 2u; m++) {
-        var e = vec3f(0.0); var dl = vec3f(0.0); var far = 400.0; if (m == 0u) { let c = dot(q.ng, frame.sunDir.xyz); if (c <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } dl = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz * c; }
-        else { let l = drawLamp(y, q.ng); if (l.x < 0.0) { continue; } let g = aimLamp(u32(l.x), y, rnd2()); dl = g.dir; far = g.dist - 0.02; e = g.E * l.y * max(dot(q.ng, dl), 0.0); if (max3(e) <= 0.0) { continue; } }
+        var e = vec3f(0.0); var dl = vec3f(0.0); var far = 400.0; if (m == 0u) { let c = dot(q.ng, frame.sunDir.xyz); if (c <= 0.0 || max3(frame.sunE.xyz) <= 0.0) { continue; } dl = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz * c; footLight(2.0 * frame.sunDir.w, 1.0); }
+        else { let l = drawLamp(y, q.ng); if (l.x < 0.0) { continue; } let g = aimLamp(u32(l.x), y, rnd2()); dl = g.dir; far = g.dist - 0.02; footLight(lampSize(u32(l.x)), far); e = g.E * l.y * max(dot(q.ng, dl), 0.0); if (max3(e) <= 0.0) { continue; } }
         L += thr * a / PI * min(e, vec3f(300.0)) * visible(y, dl, 1e-3, far); }
       thr *= a; o = y; d = cosineDir(q.ng, rnd2());
     }

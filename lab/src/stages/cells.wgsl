@@ -24,8 +24,8 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
     } else {
       var o = x; var d = S; var far = 400.0; var e = vec3f(0.0); var wide = 2.0 * frame.sunDir.w;
       if (task == 6u) { if (sun0) { d = coneDir(S, frame.sunDir.w, rnd2()); e = vec3f(1.0); if (!leafy) { o = onSide(at.xyz, ext.xyz, d); } } }
-      else { let l = drawLamp(x, vec3f(0.0)); if (l.x >= 0.0) { let k = u32(l.x); if (!leafy) { o = onSide(at.xyz, ext.xyz, lamps[k].at - x); } let a = aimLamp(k, o, rnd2()); e = a.E * l.y; d = a.dir; far = a.dist - 0.02; wide = select(2.0 * lamps[k].area, sqrt(lamps[k].area), lamps[k].kind == 0u) / max(far, 0.1); way = d; } }
-      if (max3(e) > 0.0) { foot(h, wide); fromCell = cell; out = min(e * visible(o, d, 2e-3, far), vec3f(300.0)); fromCell = NOTHING; }
+      else { let l = drawLamp(x, vec3f(0.0)); if (l.x >= 0.0) { let k = u32(l.x); if (!leafy) { o = onSide(at.xyz, ext.xyz, lamps[k].at - x); } let a = aimLamp(k, o, rnd2()); e = a.E * l.y; d = a.dir; far = a.dist - 0.02; wide = lampSize(k) / max(far, 0.1); way = d; } }
+      if (max3(e) > 0.0) { footLight(wide, 1.0); fromCell = cell; out = min(e * visible(o, d, 2e-3, far), vec3f(300.0)); fromCell = NOTHING; }
     }
   }
   found[li] = out; if (task == 7u) { wayTo[c8] = way; } workgroupBarrier(); if (!go || task != 0u) { return; }
