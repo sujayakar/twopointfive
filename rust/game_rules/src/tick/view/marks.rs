@@ -96,8 +96,7 @@ pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
 /// the arc he has up, with where it comes to rest and what it would reach
 fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
     let sol = g.sets[seat.id].hand.throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
-    let mut world = crate::ask::WorldAsk::try_of(g).ok();
-    let rest = world.as_mut().and_then(|w| crate::player::throw_rest(w, seat.player));
+    let rest = crate::player::throw_rest(g, seat.player);
     let at = rest.as_ref().map(|r| r.at);
     Some(ThrowView { points: sol.points.clone(), land: sol.land, short: crate::he40::preview_too_close(g, seat.player), reach: crate::frag::throw_reach(g, seat.player, at), rest })
 }
@@ -111,7 +110,7 @@ pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let model = g.tune.aim_model && steady;
     let swing = if steady { crate::aimweight::aim_gun_point(g, seat) } else { None };
     let trail = swing.is_some() && !crate::aimweight::aim_gun_on(g, pl);
-    let shut = steady && crate::ask::WorldAsk::try_of(g).map_or(false, |mut w| crate::player::gun_shut(&mut w, seat));
+    let shut = steady && crate::player::gun_shut(g, seat);
     let snap = seat.aim_snap;
     let ring = if gun_out && (snap.is_some() || model || swing.is_some()) {
         let at = swing.or(snap).unwrap_or(seat.aim_point);

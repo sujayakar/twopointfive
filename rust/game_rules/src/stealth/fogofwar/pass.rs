@@ -9,12 +9,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
-/// a box's row
-fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
-    let k = bx(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
+    let k = g.tab[b].mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
     key_of_mkey(g, k)
 }
 
@@ -78,9 +76,9 @@ fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { bone_or(g, c, crate::chara
 fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
 
 
-/// Once a frame after everybody has moved; asked outside a tick, the pass stands the copy of the box world for itself. (FogOfWar.update)
+/// Once a frame after everybody has moved. (FogOfWar.update)
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
-    if crate::scene_collision::standing(g) { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
+    fog_of_war_pass(g, dt);
 }
 
 /// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)
@@ -555,12 +553,12 @@ fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], 
 
 /// The eyes of a pass handed to the module, each with the field `in_field` holds it to. (FogOfWar.handEyes)
 fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
-    crate::scene_collision::sight_open(g, eyes.len() as f64);
+    crate::scene_collision::sight_open(eyes.len() as f64);
     for (k, e) in eyes.iter().enumerate() {
         let fov = match e.fov { Some(f) => f, None => field_deg(g) };
         let near = match e.near { Some(n) => n, None => field_near(g) };
         let look_len = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
-        crate::scene_collision::sight_eye(g, k as f64, e.pos, e.look, look_len, m::cos(fov * 0.5 * DEG), near, fov >= 360.0);
+        crate::scene_collision::sight_eye(k as f64, e.pos, e.look, look_len, m::cos(fov * 0.5 * DEG), near, fov >= 360.0);
     }
 }
 
@@ -660,18 +658,16 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>)
                 gh
             }
         };
-        let flags = bx(g, bx_).flags;
-        let q = bx(g, gh[0]);
-        q.c = pose.c; q.yaw = pose.yaw; q.flags = flags;
-        let had_rot = q.rot.is_some();
+        let flags = g.tab.boxes[bx_].flags;
+        let had_rot = g.tab[gh[0].into()].rot.is_some();
+        { let mut q = g.tab.edit(gh[0]); q.c = pose.c; q.yaw = pose.yaw; q.flags = flags; }
         if g.dr[d].leaf.off || had_rot {
             let (h, marks) = (g.dr[d].leaf_h, g.dr[d].leaf_marks.clone());
-            let q = bx(g, gh[0]);
-            q.h = h; q.marks = marks; q.rot = None;
-            bx(g, gh[1]).rot = None;
-            bx(g, gh[2]).rot = None;
+            { let mut q = g.tab.edit(gh[0]); q.h = h; q.marks = marks; q.rot = None; }
+            g.tab.edit(gh[1]).rot = None;
+            g.tab.edit(gh[2]).rot = None;
         }
-        for s in 0..2 { let q = bx(g, gh[1 + s]); q.c = pose.handles[s]; q.yaw = pose.yaw; }
+        for s in 0..2 { let mut q = g.tab.edit(gh[1 + s]); q.c = pose.handles[s]; q.yaw = pose.yaw; }
         out.push(gh[0].into()); out.push(gh[1].into()); out.push(gh[2].into());
     }
     g.fog_of_war.door_n = out.len() as f64 - g.fog_of_war.door_from;

@@ -6,6 +6,8 @@ pub mod stand;
 pub use stand::*;
 pub mod restart;
 pub use restart::*;
+pub mod steps;
+pub use steps::*;
 pub mod tick;
 pub use tick::*;
 pub mod doors;

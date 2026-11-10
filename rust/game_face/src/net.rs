@@ -59,9 +59,6 @@ pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize
     let r = records(p, n, keys, kn);
     let a = super::with(h, |x| {
         if seat >= x.g.seats.len() { return None; }
-        // (it asks of the box world: its copy stands, as for any question between two ticks)
-        if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
-        game::scene_box_mirror::box_mirror_things(&mut x.g);
         let s = x.g.seats[seat];
         let mut path = Vec::new();
         let a = game::walkahead::walk_ahead(&mut x.g, s, &r, 1.0 / 60.0, Some(&mut path));

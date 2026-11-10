@@ -4,14 +4,14 @@
 //! A thing is one record (`Prop`, in `g.tab.props_prop`), its pose and its speed beside the facts of its kind. The things in the level now are `g.props.props`, in the level's
 //! own order; a thing a blast took out is out of that list and keeps its record for the level put back. No box of the box world is written by the step: furniture is not in it
 //! (nothing sees, hears or walks by a chair), so the boxes the picture draws are placed from the record after it (`prop_place`). The statics a thing rests against and the
-//! leaves that sweep it are read from the world's copy (`sim::world`, `sim::collide`).
+//! leaves that sweep it are read from the box world's rows (`sim::collide`).
 use crate::game::Game;
 use crate::ids::*;
 use crate::js;
 use crate::m;
 use crate::v3::V3;
 use ::sim::maths::{cos, exp, hypot2, sin};
-use ::sim::world::{asking, js_abs, js_ceil, js_max, js_min, world, REC, R_C, R_COS, R_H, R_SIN};
+use ::sim::world::{asking, js_abs, js_ceil, js_max, js_min, World, REC, R_C, R_COS, R_H, R_SIN};
 use alloc::{string::String, vec::Vec};
 use prim::sqrt;
 pub use ::game_types::props::types;
@@ -47,13 +47,20 @@ fn turn(p: &mut Prop, yaw: f64) {
 pub fn prop_move_to(g: &mut Game, id: PropId, x: f64, z: f64) {
     let p = &mut g.tab.props_prop[id];
     (p.x, p.z) = (x, z);
-    crate::scene_box_mirror::thing_wrote(g);
+    stands(&mut g.tab.boxes, p);
 }
 
 /// how it is turned, likewise
 pub fn prop_turn_to(g: &mut Game, id: PropId, yaw: f64) {
     turn(&mut g.tab.props_prop[id], yaw);
-    crate::scene_box_mirror::thing_wrote(g);
+    stands(&mut g.tab.boxes, &g.tab.props_prop[id]);
+}
+/// the box world is told where a thing stands
+fn stands(boxes: &mut crate::boxworld::Boxes, p: &Prop) { boxes.thing(p.id as u32, p.x, p.z, p.yaw, p.radius); }
+/// …and what of the furniture is in the level, in its order
+fn listed(g: &mut Game) {
+    let t = &g.tab.props_prop;
+    g.tab.boxes.things(g.props.props.iter().map(|&p| (t[p].id as u32, &t[p].boxes[..])));
 }
 
 /// a thing of furniture made: its record, its part boxes, placed
@@ -113,7 +120,6 @@ fn prop_new(g: &mut Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropI
         rolling: false,
     });
     debug_assert!(got == id, "a thing's id is its row of the table: one PropSystem a game");
-    crate::scene_box_mirror::thing_wrote(g);
     prop_place(g, id);
     id
 }
@@ -124,12 +130,12 @@ pub fn prop_place(g: &mut Game, id: PropId) {
     let (x, z, yaw, cs, sn) = (t.x, t.z, t.yaw, t.cs, t.sn);
     for (part, &b) in t.def.parts.iter().zip(t.boxes.iter()) {
         let off = part.off;
-        let bx = &mut boxes[b];
+        let mut bx = boxes.edit(b);
         bx.c = [x + cs * off[0] + sn * off[2], off[1], z - sn * off[0] + cs * off[2]];
         bx.yaw = yaw + part.yaw;
     }
     t.dirty = false;
-    crate::scene_box_mirror::thing_wrote(g);
+    stands(boxes, t);
 }
 
 pub fn prop_wake(g: &mut Game, id: PropId) {
@@ -145,7 +151,7 @@ fn wake(p: &mut Prop) {
 /// `g.props` and the old value is put back, so the caller's `g.props = …` is what keeps it
 pub fn prop_system_new(g: &mut Game, defs: &[crate::scene_level::PropDef]) -> PropSystem {
     if defs.len() as f64 > PROP_CAP {
-        panic!("a level of {} loose things of furniture: the game holds {} (the box world's copy lists no more)", defs.len(), PROP_CAP);
+        panic!("a level of {} loose things of furniture: the game holds {}", defs.len(), PROP_CAP);
     }
     let mut sys = PropSystem::blank();
     for (i, d) in defs.iter().enumerate() {
@@ -154,6 +160,7 @@ pub fn prop_system_new(g: &mut Game, defs: &[crate::scene_level::PropDef]) -> Pr
     }
     sys.props = sys.all.clone();
     let old = core::mem::replace(&mut g.props, sys);
+    listed(g);
     prop_system_settle(g);
     core::mem::replace(&mut g.props, old)
 }
@@ -169,7 +176,7 @@ pub fn prop_system_boxes(g: &Game, out: &mut Vec<AnyBoxId>) {
 pub fn prop_system_remove(g: &mut Game, p: PropId) {
     if let Some(i) = g.props.props.iter().position(|&q| q == p) {
         g.props.props.remove(i);
-        crate::scene_box_mirror::thing_wrote(g);
+        listed(g);
     }
 }
 
@@ -178,7 +185,7 @@ pub fn prop_system_reset(g: &mut Game) {
     if g.props.props.len() != g.props.all.len() {
         g.props.props.clear();
         g.props.props.extend_from_slice(&g.props.all);
-        crate::scene_box_mirror::thing_wrote(g);
+        listed(g);
     }
     for i in 0..g.props.props.len() {
         let id = g.props.props[i];
@@ -191,7 +198,6 @@ pub fn prop_system_reset(g: &mut Game) {
         (p.push_t, p.noise_t) = (-10.0, -10.0);
         p.who = 0.0;
         p.rolling = false;
-        crate::scene_box_mirror::thing_wrote(g);
         prop_place(g, id);
     }
 }
@@ -204,19 +210,13 @@ fn prop_system_settle(g: &mut Game) {
         g.tab.props_prop[id].dirty = true;
     }
     if !g.props.props.is_empty() {
-        crate::scene_collision::window(g, &mut |g: &mut Game| {
-            crate::scene_collision::rules_statics(g);
-            debug_assert!(crate::scene_collision::standing(g), "the furniture settled as a level stood up, with no copy of the box world standing");
-            let g = &mut *g;
-            let w = g.col.mirror.slot as usize;
-            let mut st = Step { t: &mut g.tab.props_prop, live: &g.props.props, ways: &[], men: &mut [], leaves: &[], w, enabled: true, time: g.props.time, friction: 0.0, cas: &g.k.castor, said: Vec::new() };
-            for _ in 0..SETTLE_PASSES {
-                for &i in st.live {
-                    st.solve_statics(i, false);
-                }
-                st.solve_pairs(false);
+        let mut st = Step { t: &mut g.tab.props_prop, live: &g.props.props, ways: &[], men: &mut [], leaves: &[], w: g.tab.boxes.world(), enabled: true, time: g.props.time, friction: 0.0, cas: &g.k.castor, said: Vec::new() };
+        for _ in 0..SETTLE_PASSES {
+            for &i in st.live {
+                st.solve_statics(i, false);
             }
-        });
+            st.solve_pairs(false);
+        }
     }
     for i in 0..g.props.props.len() {
         let id = g.props.props[i];
@@ -229,33 +229,9 @@ fn prop_system_settle(g: &mut Game) {
     g.props.muted = false;
 }
 
-/// closest part of any thing along the ray (t < tmax): the module's ray, over the copy of the furniture
-pub fn prop_system_raycast(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<PropSystemRaycast> {
-    if g.props.props.is_empty() {
-        return None;
-    }
-    match crate::scene_collision::things_ray(g, ro, rd, tmax) {
-        // (no copy of the furniture standing: the TypeScript's walk, which in Rust is the twin)
-        None => prop_system_raycast_here(g, ro, rd, tmax).map(|h| PropSystemRaycast { t: h.t, n: h.n, prop: h.prop, box_: h.box_ }),
-        Some(None) => None,
-        Some(Some(h)) => Some(PropSystemRaycast { t: h.t, n: h.n, prop: g.props.props[h.row as usize], box_: h.box_ }),
-    }
-}
-
-/// TWIN, with what its row and part name
-pub fn prop_system_raycast_here(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<PropSystemRaycastHere> {
-    let mut out = [0.0; sim::lines::RAY_PART + 1];
-    let k = sim::lines::ray_things(g.col.mirror.slot as usize, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
-    if k < 0 {
-        return None;
-    }
-    let box_ = thing_part(g, out[sim::lines::RAY_PART] as usize);
-    Some(PropSystemRaycastHere { t: out[0], n: [out[1], out[2], out[3]], prop: g.props.props[k as usize], box_ })
-}
-
-/// which box a place in the furniture's list of parts is, the things in their order
-fn thing_part(g: &Game, at: usize) -> BoxId {
-    crate::scene_box_mirror::box_mirror_thing_box(g, at as f64).expect("the module's ray into the furniture met a part of its list that is no part of the furniture as it stands")
+/// closest part of any thing along the ray (t < tmax)
+pub fn prop_system_raycast(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<PropSystemRaycast> {
+    crate::scene_collision::things_ray(g, ro, rd, tmax).map(|h| PropSystemRaycast { t: h.t, n: h.n, prop: g.props.props[h.row as usize], box_: h.box_ })
 }
 
 /// planar impulse J at a world point; `who` is blamed; thud reports it as an impact
@@ -294,9 +270,7 @@ pub fn prop_system_update(g: &mut Game, dt: f64, contacts: &mut [PropContact], l
     let n = g.props.props.len();
     if !g.props.all.is_empty() {
         debug_assert!(!g.props.muted, "the furniture was stepped while its level was still being settled");
-        let dyn_ = g.col.dynamic_boxes.clone();
-        let sweeps: Vec<usize> = leaves.iter().filter_map(|b| dyn_.iter().position(|q| q == b)).collect();
-        crate::scene_collision::rules_world(g, &dyn_);
+        let sweeps: Vec<usize> = leaves.iter().filter_map(|b| g.col.dynamic_boxes.iter().position(|q| q == b)).collect();
         let said = prop_system_step(g, dt, contacts, &sweeps);
         // (the noises are heard once the step is whole, in the order they were made)
         for e in said {
@@ -314,7 +288,7 @@ pub fn prop_system_update(g: &mut Game, dt: f64, contacts: &mut [PropContact], l
 /// the substeps of one tick: the men's places and the things' records written, the noises listed
 fn prop_system_step(g: &mut Game, dt: f64, men: &mut [PropContact], leaves: &[usize]) -> Vec<PropEvent> {
     let g = &mut *g;
-    let w = g.col.mirror.slot as usize;
+    let w = g.tab.boxes.world();
     let mut st = Step {
         t: &mut g.tab.props_prop,
         live: &g.props.props,
@@ -513,7 +487,7 @@ struct Step<'a> {
     men: &'a mut [PropContact],
     /// which of the box world's leaves may sweep them
     leaves: &'a [usize],
-    w: usize,
+    w: &'a World,
     enabled: bool,
     time: f64,
     friction: f64,
@@ -633,10 +607,10 @@ impl Step<'_> {
             let rr = radius + 0.02;
             let (x, z) = (self.t[i].x, self.t[i].z);
             let n = ::sim::collide::gather(self.w, x - rr, z - rr, x + rr, z + rr, Y_MIN, height, NEAR);
-            let o = world(self.w);
+            let o = self.w;
             let mut any = false;
             for k in 0..n {
-                let b = asking(self.w).list[k] as usize * REC;
+                let b = asking().list[k] as usize * REC;
                 let (bx, bz, bhx, bhz) = (o.rec[b + R_C], o.rec[b + R_C + 2], o.rec[b + R_H], o.rec[b + R_H + 2]);
                 let (bcs, bsn) = (o.rec[b + R_COS], o.rec[b + R_SIN]);
                 let c = &mut self.t[i];
@@ -804,7 +778,7 @@ impl Step<'_> {
             // 4. the leaves sweep them aside
             let t = self.time;
             for &l in self.leaves {
-                let o = world(self.w);
+                let o = self.w;
                 let b = l * REC;
                 let (lx, lz, lhx, lhz) = (o.leaf[b + R_C], o.leaf[b + R_C + 2], o.leaf[b + R_H], o.leaf[b + R_H + 2]);
                 let (lcs, lsn) = (o.leaf[b + R_COS], o.leaf[b + R_SIN]); // (kept beside the leaf's yaw by whoever wrote the row)

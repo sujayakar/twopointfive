@@ -168,12 +168,12 @@ pub fn gun_hold_free(g: &mut crate::game::Game, p: crate::guards::Pair) -> bool 
 // ---------------------------------------------------------------- the floor his gun covers
 
 /// `!g.col.shotBlocked(from, [x, h, z], 0.02, PISTOL_ENERGY)`: expo's and shown's `open`
-fn open_at(g: &mut Game, from: V3, x: f64, h: f64, z: f64) -> bool {
+fn open_at(g: &Game, from: V3, x: f64, h: f64, z: f64) -> bool {
     !crate::scene_collision::shot_blocked(g, from, [x, h, z], Some(0.02), Some(PISTOL_ENERGY))
 }
 
 /// What a man on nav cell `i` shows Sam's gun from where the pair was last seen: 2 open, 1 open standing, 0 hidden; kept per cell.
-fn expo(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, i: f64) -> f64 {
+fn expo(g: &crate::game::Game, k: &mut crate::gunhold::Known, i: f64) -> f64 {
     if flat(k.sam, k.expo_at) > 0.5 || g.time - k.expo_t > 1.5 {
         k.expo.clear();
         k.expo_at = v3::copy(k.sam);
@@ -241,7 +241,7 @@ fn shown(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3, low: bool)
 }
 
 /// The closure `price` returns, its captures read where it runs.
-fn price_at(g: &mut Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
+fn price_at(g: &Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
     let (cell, w) = (g.col.nav.cell, g.col.nav.w);
     let near2 = g.k.gunhold.near_m * g.k.gunhold.near_m;
     let x = (ix + 0.5) * cell;
@@ -264,7 +264,7 @@ fn price_at(g: &mut Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
 /// A way to `goal` at that price; its length and the longest unbroken stretch of it across floor Sam's gun covers in front of him.
 fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
     let start = g.ch[g.gd[gd].ch].pos;
-    let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
+    let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
     if path.is_empty() || flat(path[path.len() - 1], goal) > 0.6 {
         return None;
     }
@@ -296,7 +296,7 @@ fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known,
 /// Sets his path: no pathGoal, so a man stuck on this way is planned again at this rule's price.
 fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3]) {
     let start = g.ch[g.gd[gd].ch].pos;
-    let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &mut Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
+    let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
     crate::game::guard_set_path(g, gd, threaded);
     let man = &mut g.gd[gd];
     man.path_i = 0;
@@ -796,7 +796,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
             row.low = cv.low;
             row.edge = cv.edge;
             row.goal = None;
-            let way = crate::scene_collision::nav_grid_find_path(g, at, cv.spot, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| price_at(g, k, ix, iz)));
+            let way = crate::scene_collision::nav_grid_find_path(g, at, cv.spot, Some(6000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)));
             let way = way.unwrap_or_else(|| vec![v3::copy(cv.spot)]);
             take(g, gd, &way);
             let row = st!();

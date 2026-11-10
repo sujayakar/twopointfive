@@ -240,7 +240,7 @@ pub fn seat_of_char(g: &crate::game::Game, c_2: Option<CharId>) -> Option<SeatId
 }
 
 /// … and the man himself
-pub fn man_of(g: &mut crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId> {
+pub fn man_of(g: &crate::game::Game, c_2: Option<CharId>) -> Option<PlayerId> {
     if g.seats.len() == 1 {
         return match c_2 { Some(c) if g.pl[g.player].ch == c => Some(g.player), _ => None };
     }

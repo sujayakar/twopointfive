@@ -12,7 +12,7 @@ const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 /// `g.col.nav.findPath(a, b, maxIter, pen)` at a price this file holds as a value
 fn find_path(g: &mut Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::LanePenalty>) -> Option<Vec<V3>> {
     match pen {
-        Some(p) => { let mut price = |_: &mut Game, ix: f64, iz: f64| lane_penalty_at(p, ix, iz); crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), Some(&mut price)) }
+        Some(p) => { let mut price = |_: &Game, ix: f64, iz: f64| lane_penalty_at(p, ix, iz); crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), Some(&mut price)) }
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), None),
     }
 }

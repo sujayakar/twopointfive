@@ -411,12 +411,6 @@ pub struct ChaseFix {
     pub crouch: f64,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum SteadyLamps {
-    Bool(bool),
-    LampRows(crate::scene_collision::LampRows),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RaiseEscalationCause {
     Search,

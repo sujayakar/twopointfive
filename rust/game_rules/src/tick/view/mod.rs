@@ -63,7 +63,7 @@ pub fn host_now(g: &Game, input: crate::ids::InputId, cam: crate::ids::CameraId,
     HostNow { mouse: [i.mouse_x, i.mouse_y], client: [canvas.client_width, canvas.client_height], view_proj: c.view_proj, inv_view_proj: c.inv_view_proj }
 }
 
-/// the view of what `seat`'s cursor is on, through the camera as it stands (the copy of the boxes standing: scene_collision::stands)
+/// the view of what `seat`'s cursor is on, through the camera as it stands
 pub fn cursor_view(g: &Game, seat: &crate::seats::SeatRef, now: &HostNow) -> CursorView {
     CursorView { under: crate::orders::hover(g, seat, now).map(|t| under(g, &t)) }
 }

@@ -7,17 +7,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// a box's row
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript, statics appended later included. `level.boxes` is not a field in Rust.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 
 /// Paints a box's row.
 fn paint(g: &mut Game, b: BoxId, albedo: V3, flags: f64, rough: Option<f64>, aniso: Option<bool>) {
-    let x = seam_box(g, b);
+    let mut x = g.tab.boxes.edit(b);
     x.albedo = albedo; x.flags = flags; x.rough = rough; x.aniso = aniso;
-    crate::scene_collision::wrote(g);   // (what it sends back of the light is of the box world's row)
 }
 
 /// `WEATHER_PRESETS[kind]`.
@@ -558,7 +555,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
         let mut asphalt = None;
         for i in 0..g.engine.world.statics.len() {
             let b = g.engine.world.statics[i];
-            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
             if c[1] < 0.0 && c[1] + h[1] > -0.01 && h[0] > 18.0 && h[2] > 12.0 { asphalt = Some(b); break; }
         }
         if let Some(b) = asphalt { soak(g, b); }
@@ -572,7 +569,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
 
 /// Darkens a box and remembers what to put back.
 fn soak(g: &mut Game, b: BoxId) {
-    let (albedo, flags, rough, aniso) = { let x = seam_box(g, b); (x.albedo, x.flags, x.rough, x.aniso) };
+    let (albedo, flags, rough, aniso) = { let x = &g.tab.boxes[b]; (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
     let gloss = crate::scene_boxes::box_flag().gloss;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
@@ -644,7 +641,7 @@ pub fn loud_len(g: &mut crate::game::Game, path_len: f64, ear: V3) -> f64 {
 }
 
 /// A stroke of lightning under a picked weather, added to the six faces of the light meter's stand-in.
-pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let l = if g.weather.kind_now.is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
     let Some(l) = l else { return };
     let (enabled, color, intensity, dir) = { let r = &g.tab.light[l]; (r.enabled, r.color, r.intensity, r.dir) };

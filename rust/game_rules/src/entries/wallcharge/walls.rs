@@ -6,9 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A box's row (Box.* in the TypeScript).
-fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box { &g.tab.boxes[b] }
-
 /// How near a point passes a line on the floor, a to b.
 pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
     let dx = b[0] - a[0];
@@ -20,7 +17,7 @@ pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
 
 /// The wall's thickness.
 pub(super) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
-    let h = seam_box(g, w.box_).h;
+    let h = g.tab.boxes[w.box_].h;
     2.0 * (if w.along_x { h[2] } else { h[0] })
 }
 
@@ -33,7 +30,7 @@ pub(super) fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSp
 /// A point by the wall: `du` along it from the charge, `off` out from the charge's face (the far face is at −thick), at height y.
 pub fn wall_pt(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
-    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (c, h) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     wall_pt_of(c, h, w, du, off, y)
 }
 
@@ -49,7 +46,7 @@ pub(super) fn wall_n(w: &crate::wallcharge::WallSpot) -> V3 {
 
 /// Metres out from the charge's face (negative: in the wall, or past it).
 pub(super) fn wall_off(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
-    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (c, h) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     wall_off_of(c, h, w, p)
 }
 
@@ -78,7 +75,6 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
     if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) {
         return n;
     }
-    let world = crate::ask::WorldAsk::of(g);
     let (c, h) = { let x = &g.tab.boxes[g.col.boxes[index as usize]]; (x.c, x.h) };
     let along_x = h[0] >= h[2];
     let hu = if along_x { h[0] } else { h[2] };
@@ -91,7 +87,7 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
             for &t in &sky_along {
                 let d = sg * (ht + off);
                 let p: V3 = if along_x { [c[0] + t * hu, 1.5, c[2] + d] } else { [c[0] + d, 1.5, c[2] + t * hu] };
-                if !world.line(p, [p[0], SKY_TOP, p[2]], crate::ask::Line::Solid) {
+                if !crate::scene_collision::solid_blocked(g, p, [p[0], SKY_TOP, p[2]], None) {
                     sky += 1;
                 }
             }
@@ -105,7 +101,6 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
 
 /// Is structure static `index` an outer wall a charge cuts: not steel, thin enough, long enough, adoptable, the sky over one face or both.
 pub fn outer_wall(g: &mut crate::game::Game, index: f64) -> bool {
-    crate::scene_collision::stands(g);
     let mut asked = Vec::new();
     let r = outer_wall_of(g, index, &mut asked);
     sky_kept(g, asked);
@@ -137,13 +132,12 @@ fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
 
 /// Is the charge's own side indoors: a roof over the floor at its foot, by nine upward rays off the charge's face.
 fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let world = crate::ask::WorldAsk::of(g);
     let sky_off = sky_off();
     let mut roof = 0;
     for &off in &sky_off {
         for du in [-1.0, 0.0, 1.0] {
             let p = wall_pt(g, w, du, off, Some(1.5));
-            if world.line(p, [p[0], SKY_TOP, p[2]], crate::ask::Line::Solid) {
+            if crate::scene_collision::solid_blocked(g, p, [p[0], SKY_TOP, p[2]], None) {
                 roof += 1;
             }
         }
@@ -152,17 +146,11 @@ fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> 
 }
 
 /// The safety radius at a place: how far the squad stands off, and how far the blast reaches on its own side.
-pub(super) fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
+pub(super) fn safe_radius(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     let indoors = charge_indoors_of(g, w);
     let i = if indoors { 1 } else { 0 };
     crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i] }
 }
-/// …for a rule that holds the game: the copy of the boxes stood first
-pub(super) fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
-    crate::scene_collision::stands(g);
-    safe_radius_of(g, w)
-}
-
 /// The room a hole in `w` at `du` opens into (0: none): the first room a point beyond the far face stands in, a pace to either hand.
 pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, t: f64) -> f64 {
     let mut d = 0.45;
@@ -182,13 +170,12 @@ pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::Wall
 /// The wall at a point: the full-height unrotated wall whose footprint the point is on, a partition or structure with the word for what it is.
 pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<crate::wallcharge::WallSpot> {
     let from = from.unwrap_or_else(|| g.ch[g.pl[g.player].ch].pos);
-    crate::scene_collision::stands(g);
     let mut asked = Vec::new();
     let r = wall_at_of(g, at, from, &mut asked);
     sky_kept(g, asked);
     r
 }
-/// …asked of the game shared, the copy of the boxes standing
+/// …asked of the game shared
 fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option<crate::wallcharge::WallSpot> {
     let n = m::min(g.destr.walls.authored, g.col.boxes.len() as f64) as usize;
     let f = crate::scene_boxes::box_flag();

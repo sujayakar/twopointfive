@@ -817,12 +817,12 @@ fn wall_charge_look_from(g: &mut crate::game::Game, p: V3, into: f64, want: f64)
 }
 
 // ------------------------------------------------------------ the blast
-/// Sam's trigger on one charge: one window round the blow, the whole of it the team's doing
+/// Sam's trigger on one charge: the whole of the blow is the team's doing
 pub fn wall_charge_blow(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pressed: Option<bool>) -> Option<crate::wallcharge::WallChargeBlow> {
     let c = match c_2 { Some(c) => Some(c), None => wall_charge_nearest(g, None) };
     let pressed = pressed.unwrap_or(true);
     let who = g.ch[g.pl[g.player].ch].id;
-    let r = crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| wall_charge_blow_raw(g, c, pressed)));
+    let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| wall_charge_blow_raw(g, c, pressed));
     r.map(|x| WallChargeBlow { hole: x.hole })
 }
 

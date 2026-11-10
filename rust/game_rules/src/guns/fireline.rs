@@ -167,7 +167,7 @@ fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, g
     let cs = g.col.nav.cell;
     let p = g.ch[g.gd[gd].ch].pos;
     let berth_m = g.k.fireline.berth_m;
-    let mut penalty = |g: &mut Game, ix: f64, iz: f64| -> f64 {
+    let mut penalty = |g: &Game, ix: f64, iz: f64| -> f64 {
         if in_shape(g, l, (ix + 0.5) * cs, (iz + 0.5) * cs, Some(berth_m)) { 40.0 } else { 1.0 }
     };
     let path = crate::scene_collision::nav_grid_find_path(g, p, goal, Some(2500.0), Some(&mut penalty));

@@ -52,7 +52,7 @@ place it (`group_of`). `?pick=compound` goes to that short-list row, and Next on
 | Quiet, as two | `lights-out-two` |
 
 **The one path.** `start_at_address` → `start_from_query`: the row's hour (`row_settings`), fog, weather, `spec_of`, then `start_scenario`, which calls the kind's own start. A refusal comes
-back in words and leaves the plain floor. Each tick, `step_seats_on_first` runs `rails_gate` first, then `director_tick`, the four kinds' ticks, and later `update_mission`, `par_tick`,
+back in words and leaves the plain floor. Each tick, `STEPS` runs `rails_gate` first, then `director_tick`, the four kinds' ticks, and later `update_mission`, `par_tick`,
 `lesson_tick` and `rails_tick`. `verdict_tick` follows the whole step.
 
 **Room clear** is the night breach's staging on the level's own layout: `room_clear_scenario_start` calls `night_breach_start`. `StructureData` holds the rooms (bounds, doors, `garrison`,

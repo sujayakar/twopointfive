@@ -154,10 +154,10 @@ const GRAVITY_NOW: f64 = 9.81;
 /// substeps of a tick
 const SUB: f64 = 2.0;
 
+use ::sim::world::World;
 /// what the walk asks of the world, and what it knows of it
 struct Walk<'a> {
-    w: usize,
-    ask: bool,
+    w: &'a World,
     snow: Option<::sim::snow::Snow>,
     rifle_share: f64,
     tune: &'a crate::knobs::Knobs,
@@ -169,22 +169,21 @@ enum Told {
     Gone { it: ItemId },
 }
 /// a thing of furniture's pose as one number: any change of pose changes it
-fn pose_key(w: usize, id: usize) -> f64 {
-    use ::sim::world::{world, TH, TH_X, TH_YAW, TH_Z};
-    let o = world(w);
+fn pose_key(o: &World, id: usize) -> f64 {
+    use ::sim::world::{TH, TH_X, TH_YAW, TH_Z};
     o.thing[id * TH + TH_X] * 7919.0 + o.thing[id * TH + TH_Z] * 104729.0 + o.thing[id * TH + TH_YAW]
 }
 /// the furniture along a ray: how far, the normal, and the id of the thing met
-fn things(w: usize, p: V3, d: V3, tmax: f64) -> Option<(f64, V3, usize)> {
+fn things(w: &World, p: V3, d: V3, tmax: f64) -> Option<(f64, V3, usize)> {
     let mut out = [0.0f64; 5];
     let r = ::sim::lines::ray_things(w, p[0], p[1], p[2], d[0], d[1], d[2], tmax, &mut out);
     if r < 0 { return None; }
-    Some((out[0], [out[1], out[2], out[3]], ::sim::world::world(w).thing_live[r as usize * ::sim::world::TL] as usize))
+    Some((out[0], [out[1], out[2], out[3]], w.things[r as usize].id as usize))
 }
 /// the closest hit among the statics, the leaves and the furniture: how far, the face's normal, and the id of the thing of furniture plus one (0: a wall, a floor, a leaf)
 fn hit_of(d: &Walk, p: V3, dir: V3, tmax: f64) -> Option<(f64, V3, usize)> {
     let mut out = [0.0f64; 4];
-    let k = ::sim::lines::ray_rule(d.w, p[0], p[1], p[2], dir[0], dir[1], dir[2], tmax, 0, -1, d.ask, &mut out, d.tune);
+    let k = ::sim::lines::ray_rule(d.w, p[0], p[1], p[2], dir[0], dir[1], dir[2], tmax, -1, true, &mut out, d.tune);
     if k == ::sim::lines::RAY_HOST { panic!("a ray that is no number, from a thrown thing at {:?}", p); }
     let st = if k >= 0 { Some((out[0], [out[1], out[2], out[3]])) } else { None };
     if let Some((t, n, id)) = things(d.w, p, dir, st.map_or(tmax, |s| s.0)) { return Some((t, n, id + 1)); }
@@ -316,32 +315,19 @@ fn step(d: &Walk, id: ItemId, it: &mut Item, dt: f64, told: &mut Vec<Told>) {
 /// One tick of the pool: it walks from the newest down, then what the steps told is done in order.
 pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     if g.items.items.is_empty() { return; }
-    throwables_world(g);
-    let ask = crate::scene_collision::rules_panes(g);
     let snow = if crate::snow_bog::snow_bog_may(g) {
         // lying snow: the level's table in the box world, the rule's numbers and the roofs in force
-        let roofs = crate::weather::weather_roofs_now(g);
+        let roofs = &g.weather.roof_rects;
         debug_assert!(roofs.len() <= ::sim::snow::MAX_ROOFS, "more roofs over the snow than a walk is handed");
-        let kinds = crate::snow_bog::snow_bog_kinds(g);
-        crate::scene_box_mirror::box_mirror_snow(g, &kinds);
         let k = &g.k.snowbog;
         let mut roof = [0.0; ::sim::snow::MAX_ROOFS * 4];
         for (i, r) in roofs.iter().enumerate() { roof[i * 4..i * 4 + 4].copy_from_slice(&r[..4]); }
         Some(::sim::snow::Snow { top: k.top, bank: k.bank_m, packed: k.packed, old: k.old, dead: k.dead, grip: k.grip, stick: k.stick, roofs: roofs.len(), roof })
     } else { None };
-    let d = Walk { w: g.col.mirror.slot as usize, ask: ask != 0.0, snow, rifle_share: rifle_item().prop_share, tune: &g.k };
+    let d = Walk { w: g.tab.boxes.world(), snow, rifle_share: rifle_item().prop_share, tune: &g.k };
     let mut told = Vec::new();
     for &id in g.items.items.iter().rev() { step(&d, id, &mut g.tab.item[id], dt, &mut told); }
     throwables_say(g, told);
-}
-
-/// The box world's copy stood for the walk, with the game's own leaves and the furniture in it.
-fn throwables_world(g: &mut crate::game::Game) {
-    let dyn_ = g.col.dynamic_boxes.clone();
-    crate::scene_collision::rules_world(g, &dyn_);
-    if !crate::scene_box_mirror::box_mirror_things(g) {
-        panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
-    }
 }
 
 /// What the steps told, done in the order they told it: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.
@@ -410,9 +396,6 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
         }
     }
 }
-
-/// Vec<BoxId> and no Tab<BoxId, Box>).
-fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
 
 /// Fill 4 to 7's magazines: half length, half width, half thickness, colour.
 const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
@@ -522,7 +505,7 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         // motion identity per part: the g-buffer reprojects the flying can through its own last transform, whatever spawned or died around it in the list
         for k in n0..out.len() {
             let b = out[k];
-            seam_box_set_mkey(g, b, item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
+            g.tab.edit(b).mkey = Some(item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
         }
     }
 }

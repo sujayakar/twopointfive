@@ -293,6 +293,11 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 
 /// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.
 pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    game_update_watched(g, dt, input, cam, canvas, &mut |_, _| ())
+}
+
+/// The same tick with `after` told each step as it ends.
+pub fn game_update_watched(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View, after: Watch) {
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
@@ -310,14 +315,14 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
-        game_step(g, dt, &c);
+        game_step_watched(g, dt, &[c], after);
     } else {
         let seats = g.seats.clone();
         let mut cmds = Vec::with_capacity(seats.len());
         for s in seats {
             if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
         }
-        game_step_seats(g, dt, &cmds);
+        game_step_watched(g, dt, &cmds, after);
     }
     game_host_after(g, input, cam);
 }
@@ -346,9 +351,10 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.
 pub(in crate::tick) fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
-    let mut col_own = crate::scene_collision::AsideOwn::default();
-    crate::scene_collision::aside(g, &mut col_own, fn_)
+    let asked = core::mem::replace(&mut g.col.sound.asking, true);   // (no sound's route is kept)
+    let r = fn_(g);
+    g.col.sound.asking = asked;
+    r
 }
 
 /// A lens of the host's to put a record's view on while it asks aside: scratch, in no snapshot.

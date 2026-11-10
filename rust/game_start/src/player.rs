@@ -12,7 +12,6 @@ use core::cell::{Cell, RefCell};
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
-use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::game::{Game, InteractableKind, Verb};
 use game::ids::{DoorId, GuardId, SeatId};
@@ -154,7 +153,6 @@ impl Player {
         assert!(!g.is_null(), "a scripted player is asked between two hands");
         f(unsafe { &*g })
     }
-    pub fn world<R>(&self, f: impl FnOnce(&WorldAsk) -> R) -> R { self.ask(|g| f(&WorldAsk::of(g))) }
     pub fn seen<R>(&self, f: impl FnOnce(&Game, &game::seats::SeatRef) -> R) -> R { self.ask(|g| f(g, &game::seats::seat(g, self.seat))) }
     pub fn t(&self) -> f64 { self.t.get() }
     pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
@@ -250,38 +248,18 @@ impl Player {
     pub async fn crouch(&self, on: bool) { for _ in 0..3 { if self.seen(|g, s| g.pl[s.player].crouch) == on { break; } self.press("KeyC", 3).await; } }
 
     // ---- his feet
-    /// the nearest place a man may stand, on the asked point's own side of a wall where there is one (scene_collision nav_grid_nearest_free_point, asked of the game shared)
+    /// the nearest place a man may stand, on the asked point's own side of a wall where there is one
     pub fn free(&self, p: V3) -> Option<V3> {
-        self.world(|w| {
-            let g = w.shared();
-            let n = &g.col.nav;
-            if !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return Some([p[0], 0.0, p[2]]); }
-            let mid = |x: f64, z: f64| [(x + 0.5) * n.cell, 0.0, (z + 0.5) * n.cell];
-            let (gx, gz) = (m::floor(p[0] / n.cell).clamp(0.0, n.w - 1.0), m::floor(p[2] / n.cell).clamp(0.0, n.h - 1.0));
-            if n.blocked[(gz * n.w + gx) as usize] == 0 { return Some(mid(gx, gz)); }
-            let (mut fallback, mut extra) = (None, 1);
-            for r in 1..8i32 {
-                for dz in -r..=r { for dx in -r..=r {
-                    if dx.abs().max(dz.abs()) != r { continue; }
-                    let (x, z) = (gx + dx as f64, gz + dz as f64);
-                    if x < 0.0 || z < 0.0 || x >= n.w || z >= n.h || n.blocked[(z * n.w + x) as usize] != 0 { continue; }
-                    let q = mid(x, z);
-                    fallback = fallback.or(Some(q));
-                    if !w.line([p[0], 1.0, p[2]], [q[0], 1.0, q[2]], Line::Solid) { return Some(q); }
-                } }
-                if fallback.is_some() { if extra <= 0 { return fallback; } extra -= 1; }
-            }
-            fallback
-        })
+        self.ask(|g| if game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { game::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) })
     }
-    pub fn way(&self, a: V3, b: V3) -> Option<Vec<V3>> { self.world(|w| w.way(a, b, self.feet.search)) }
+    pub fn way(&self, a: V3, b: V3) -> Option<Vec<V3>> { self.ask(|g| game::scene_collision::way_host(g, a, b, self.feet.search)) }
     pub fn way_len(&self, a: V3, b: V3) -> f64 {
         let Some(w) = self.way(a, b) else { return f64::INFINITY };
         let (mut l, mut q) = (0.0, a);
         for p in w { l += flat(q, p); q = p; }
         l + flat(q, b)
     }
-    pub fn solid(&self, a: V3, b: V3) -> bool { self.world(|w| w.line([a[0], 1.1, a[2]], [b[0], 1.1, b[2]], Line::Solid)) }
+    pub fn solid(&self, a: V3, b: V3) -> bool { self.ask(|g| game::scene_collision::solid_blocked(g, [a[0], 1.1, a[2]], [b[0], 1.1, b[2]], None)) }
     /// walk to `p`; false: stopped early (`stop`, `max` seconds, or not getting anywhere after fresh ways)
     pub async fn go(&self, p: V3, max: f64, mut stop: impl FnMut() -> bool, o: Walk) -> bool {
         let (mut left, mut again) = (max, 0u32);
@@ -405,7 +383,7 @@ impl Future for Once {
 
 /// WHAT A HOST HANDS A SEAT OVER TO: he writes the hand of the tick about to run
 pub trait Script {
-    /// the hand of the tick about to run: what the host sampled, with his over it. The box world's copy stands (`scene_collision::stands`).
+    /// the hand of the tick about to run: what the host sampled, with his over it
     fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64);
     /// he has nothing more to do
     fn over(&self) -> bool;

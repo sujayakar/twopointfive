@@ -447,9 +447,8 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
 /// what a question of a point wants standing (before the first tick: the seat's list of things to work, which a tick keeps)
 fn pointed(g: &mut Game) {
     if g.sets[g.seat].work.cache.is_none() { crate::workthings::work_things_keep(g); }
-    crate::scene_collision::stands(g);
 }
-/// …asked of the game shared, the copy of the boxes standing (`asked` = the walls whose sky was asked, for a rule to keep)
+/// …asked of the game shared (`asked` = the walls whose sky was asked, for a rule to keep)
 pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
     let sam = g.ch[g.pl[seat.player].ch].pos;

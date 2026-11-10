@@ -280,7 +280,7 @@ fn thread_door(hinge: [f64; 2], closed_dir: f64, width: f64, prev: V3, p: V3, fr
 }
 
 /// Insert approach and exit points where a path crosses a doorway, so men take doors head-on and clear the swung leaf before turning.
-pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_free: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> bool>) -> Vec<V3> {
+pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_free: Option<&mut dyn FnMut(&crate::game::Game, f64, f64) -> bool>) -> Vec<V3> {
     if path.is_empty() { return Vec::new(); }
     let mut is_free = is_free;
     let mut out: Vec<V3> = Vec::new();

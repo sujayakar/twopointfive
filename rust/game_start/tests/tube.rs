@@ -24,8 +24,7 @@ fn no_half_dark_place_blinds_a_goggled_man() {
         }
         if !game::nvg::nvg_down(&p.g, mate) { continue; }
         let at = [x, 1.2, 14.2];
-        let (mut place, mut flood) = (0.0, 0.0);
-        game::scene_collision::window(&mut p.g, &mut |g| { place = game::nvg::nvg_place_light(g, at); flood = game::irlight::ir_light_at(g, at, None); });
+        let (place, flood) = (game::nvg::nvg_place_light(&mut p.g, at), game::irlight::ir_light_at(&mut p.g, at, None));
         seen.push((x, place, flood, game::nvg::tube_vis(&p.g, place + flood)));
     }
     assert!(seen.iter().any(|s| s.1 > 0.0028 && s.1 < 0.0104), "the scene: some of the corridor was to be half dark: {seen:.4?}");

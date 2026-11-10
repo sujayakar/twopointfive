@@ -109,7 +109,7 @@ pub fn doorway_lane_price(g: &mut crate::game::Game, not: Option<&mut dyn FnMut(
 }
 
 /// What a `DoorwayLanePrice` costs at a cell: the function doorwayLanePrice hands back.
-pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 {
+pub fn doorway_lane_price_at(g: &crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 {
     let DoorwayLanePrice::Lanes { open, memo } = price;
     let i = crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz));
     if let Some(v) = memo.get(i) { return *v; }

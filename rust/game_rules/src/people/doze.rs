@@ -519,7 +519,8 @@ fn shover_at(g: &Game, ch: PropId, c: CharId) -> V3 {
 /// the light on a sleeper's face that is news to him: everything but his own side's lamps and the room's screens
 fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
-    let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, g.team(gd)) };
+    let team = g.team(gd);
+    let mut skip = move |g: &Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
     let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }

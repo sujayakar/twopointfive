@@ -17,7 +17,7 @@ fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
 
 /// is this floor point under what the meter calls lit, by the place's own lights only
 fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
-    let mut carried = |_: &mut Game, _: f64| true;
+    let mut carried = |_: &Game, _: f64| true;
     let e = light_estimate_at(g, [x, 1.2, z], Some(&mut carried), None, None);
     crate::game::game_visibility_of(g, e) < g.k.lights.lit_at
 }
@@ -199,7 +199,7 @@ pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// stands this floor point lit by the place's steady lights
 fn place_lit_steady(g: &mut Game, p: V3) -> bool {
-    let mut carried = |_: &mut Game, _: f64| true;
+    let mut carried = |_: &Game, _: f64| true;
     let e = light_estimate_at(g, [p[0], 1.2, p[2]], Some(&mut carried), Some(true), None);
     crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at
 }

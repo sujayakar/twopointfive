@@ -253,14 +253,11 @@ fn cause_of(c: crate::wallbreak::LevelChangeCause) -> crate::wallbreak::LevelCha
     c
 }
 
-/// `W.box`: its centre, half sizes and yaw. The body is one read of the box's row, once a table holds the rows.
-fn seam_box(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
-
 /// the breach a wall's row belongs to: a new one, or the one on that wall it widens
 fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {
     use crate::wallbreak::{LevelChangeCause, LevelChangeKind};
     let w = crate::wallbreak::wall_break_all(g).into_iter().find(|x| x.id == row.id)?;
-    let (c, h, yaw) = seam_box(g, w.box_);
+    let (c, h, yaw) = { let x = &g.tab.boxes[w.box_]; (x.c, x.h, x.yaw) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let along_x = h[0] >= h[2];
     let u: [f64; 2] = if along_x { [cs, -sn] } else { [sn, cs] };

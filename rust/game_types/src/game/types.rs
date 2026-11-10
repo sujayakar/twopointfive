@@ -1302,7 +1302,7 @@ impl Game {
 #[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Tabs {
-    pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
+    pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
     /// (a man's file as it was read, which nothing writes after: in no bytes)
     #[bytes(skip)]
@@ -1365,17 +1365,18 @@ impl core::ops::Index<AnyBoxId> for Tabs {
     type Output = crate::scene_boxes::Box;
     #[inline] fn index(&self, id: AnyBoxId) -> &Self::Output { match id { AnyBoxId::World(b) => &self.boxes[b], AnyBoxId::Frame(b) => &self.frame_boxes[b] } }
 }
-impl core::ops::IndexMut<AnyBoxId> for Tabs {
-    #[inline] fn index_mut(&mut self, id: AnyBoxId) -> &mut Self::Output { match id { AnyBoxId::World(b) => &mut self.boxes[b], AnyBoxId::Frame(b) => &mut self.frame_boxes[b] } }
+impl Tabs {
+    /// a box to write, of the world or of the picture
+    #[inline]
+    pub fn edit(&mut self, b: impl Into<AnyBoxId>) -> crate::boxworld::Edit<'_> {
+        match b.into() { AnyBoxId::World(b) => self.boxes.edit(b), AnyBoxId::Frame(b) => crate::boxworld::Edit::frame(&mut self.frame_boxes[b]) }
+    }
 }
 
 /// each module's top-level state: g.m.<module>
 #[derive(Clone, Debug, ToBytes, Blank)]
 #[bytes(parts)]
 pub struct Mods {
-    /// (the process's: in no bytes)
-    #[bytes(skip)]
-    pub math_side: crate::math_side::MathSideMod,
     /// (the process's: in no bytes)
     #[bytes(skip)]
     pub math_exact: crate::math_exact::MathExactMod,
@@ -1388,12 +1389,6 @@ pub struct Mods {
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
     pub sim_sim: crate::sim_sim::SimSimMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod,
-    /// (counts of what was asked: in no bytes)
-    #[bytes(skip)]
-    pub scene_collision: crate::scene_collision::SceneCollisionMod,
     pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     /// (a memo, worked out again from the rig: in no bytes)
     #[bytes(skip)]
@@ -1479,7 +1474,6 @@ pub struct Mods {
     pub blast_feel: crate::blast_feel::BlastFeelMod,
     pub combat: crate::combat::CombatMod,
     pub scene_level_load: crate::scene_level_load::SceneLevelLoadMod,
-    pub snow_bog: crate::snow_bog::SnowBogMod,
     pub frag: crate::frag::FragMod,
     pub teampace: crate::teampace::TeampaceMod,
     pub squad: crate::squad::SquadMod,

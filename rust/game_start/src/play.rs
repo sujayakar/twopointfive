@@ -133,7 +133,9 @@ impl Play {
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)
     pub fn frame(&mut self) { self.frame_shown(|_| {}); }
     /// …with what a host does between the tick and the emptying of its out list: draws, as a page does, while `g.out` still holds what was told
-    pub fn frame_shown(&mut self, show: impl FnOnce(&mut Play)) {
+    pub fn frame_shown(&mut self, show: impl FnOnce(&mut Play)) { self.frame_watched(&mut |_, _| (), show); }
+    /// …with `after` told each step of the tick as it ends
+    pub fn frame_watched(&mut self, after: game::game::Watch, show: impl FnOnce(&mut Play)) {
         use game::out_events::OutEvent as E;
         if let Some(at) = self.cursor {
             let (w, h) = (self.host.canvas.client_width, self.host.canvas.client_height);
@@ -141,7 +143,7 @@ impl Play {
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
         self.hold_legs();
-        stand::step(&mut self.g, &self.host, DT);
+        stand::step_watched(&mut self.g, &self.host, DT, after);
         let asked = game::savestate::control::asked(&self.g.out);
         let told = game::savestate::control::after_step(&mut self.g, DT, asked);
         if told.kept.is_some() || told.back || told.said.is_some() { self.told.push(told); }
@@ -219,7 +221,7 @@ impl Play {
         }
     }
     /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
-    /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
+    /// the game stepped on them, its checkpoints, the cameras after their men.
     pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
         self.lens_of(script, 0);
         let mut cmds = self.net_sample();
@@ -230,10 +232,8 @@ impl Play {
         self.hear();
         self.lens_and_keys();
     }
-    /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
+    /// his hand over what the host sampled for his seat
     pub fn hand_by(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
-        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
-        game::scene_box_mirror::box_mirror_things(&mut self.g);
         script.hand(&self.g, cmd, DT);
     }
     /// the view of the seat turned and pulled back as he asked since his last hand

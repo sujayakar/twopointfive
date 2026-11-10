@@ -49,11 +49,11 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
 fn go_to_plan(g: &mut Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.ch[g.gd[gd].ch].pos;
     let mut p = match pen {
-        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
+        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), None),
     };
     if let (Some(plain), Some(q)) = (p.as_ref(), round) {
-        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| crate::orders::prop_penalty_at(g, q, ix, iz)));
+        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &Game, ix: f64, iz: f64| crate::orders::prop_penalty_at(g, q, ix, iz)));
         p = Some(crate::orders::prop_way(g, from, plain, r.as_deref()));
     }
     if p.is_some() { return p; }
@@ -406,7 +406,7 @@ pub fn eye_blocked(g: &mut crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool
 }
 
 /// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.
-pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
+pub fn eye_contact(g: &crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let is_player = crate::character::is_player(g, pc);
     let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
     let tgt = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.1, 0.0]) };
@@ -630,7 +630,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     }
     let way = p.unwrap_or_default();
     let start = g.ch[g.gd[gd].ch].pos;
-    let mut is_free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
+    let mut is_free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let threaded = crate::doors::doors_thread_path(g, &way, start, Some(&mut is_free));
     lay_path(g, gd, threaded);
     g.gd[gd].path_i = 0;

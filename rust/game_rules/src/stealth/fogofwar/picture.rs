@@ -14,8 +14,6 @@ use crate::m;
 use crate::v3::V3;
 use alloc::{vec, vec::Vec};
 
-/// a box's row
-fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
@@ -85,7 +83,7 @@ fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<boo
         let at = i;
         i += 1;
         let b = match g.engine.world.statics.get(boxes[at] as usize) { Some(&b) => b, None => continue };
-        let q = bx(g, b);
+        let mut q = g.tab.edit(b);
         let on = match lit {
             Some(on) => on,
             None => {
@@ -118,7 +116,7 @@ fn fog_of_war_face_seen(g: &mut crate::game::Game, t: FixtureId) {
         let at = i;
         i += 1;
         let b = match g.engine.world.statics.get(boxes[at] as usize) { Some(&b) => b, None => continue };
-        let e = bx(g, b).emissive;
+        let e = g.tab.boxes[b].emissive;
         let k = &mut g.fog_picture.face_recs.get_mut(t).unwrap()[at];
         k[0] = m::max(k[0] * FACE_HOLD, e[0]);
         k[1] = m::max(k[1] * FACE_HOLD, e[1]);

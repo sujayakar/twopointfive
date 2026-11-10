@@ -126,12 +126,11 @@ fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through.
-pub(super) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
-    if !crate::combat::solid_between(q, a, b) { return false; }
+pub(super) fn wood_between(g: &Game, a: V3, b: V3) -> bool {
+    if !crate::combat::solid_between(g, a, b) { return false; }
     let d = v3::sub(b, a);
     let l = v3::len(d);
-    let h = if l > 1e-3 { q.ray(a, v3::scale(d, 1.0 / l), l) } else { None };
-    let g = q.game();
+    let h = if l > 1e-3 { crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), l) } else { None };
     match h {
         Some(h) if h.index < 1e6 => { let b = g.col.boxes[h.index as usize]; !crate::glass::is_pane(g, Some(b)) }
         _ => true,

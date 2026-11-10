@@ -7,10 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-// ---------------------------------------------------------------- seams
-/// devices.ts:370 `out[k].mkey = …`: the made box's row in `g.tab.boxes`
-fn seam_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
-
 // ---------------------------------------------------------------- small readers of this file
 /// `c.bones.<b> ?? v3.add(c.pos, off)`
 fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, off: V3) -> V3 {
@@ -515,7 +511,7 @@ pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
     device_boxes_raw(g, out);
     let base = crate::scene_boxes::mkey().device;
-    for k in n0..out.len() { seam_set_mkey(g, out[k], base + (k - n0) as f64); }
+    for k in n0..out.len() { g.tab.edit(out[k]).mkey = Some(base + (k - n0) as f64); }
 }
 /// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.
 fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {

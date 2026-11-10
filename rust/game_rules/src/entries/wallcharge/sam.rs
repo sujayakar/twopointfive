@@ -6,7 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
 fn hole_open(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
@@ -52,7 +51,7 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
     let (step, r) = (0.125, 2.5);
     let mut best: Option<WallChargeHoleAt> = None;
     let mut run = f64::NAN;
-    let (bc, bh) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (bc, bh) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     let c = if w.along_x { bc[0] } else { bc[2] };
     let l = if w.along_x { bh[0] } else { bh[2] };
     let lo = m::max(-r, c - l - w.u);

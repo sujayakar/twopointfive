@@ -78,12 +78,12 @@ pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId
         let owner = g.tab[b].owner;
         let c = if any && js::truthy(owner) { g.m.stature.by_id[(js::to_i32(owner) & 0xff) as usize] } else { None };
         let Some(c) = c else {   // (a box that outlives the frame, a row of Game.fx, whose man is back at 1)
-            let x = &mut g.tab[b]; if x.dc.is_some() { x.dc = None; x.dh = None; }
+            if g.tab[b].dc.is_some() { let mut x = g.tab.edit(b); x.dc = None; x.dh = None; }
             continue;
         };
         let s = stature_of(g, c); let (bc, bh) = { let x = &g.tab[b]; (x.c, x.h) };
         let dc = drawn_point(g, c, bc, Some(s));
-        let x = &mut g.tab[b]; x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
+        let mut x = g.tab.edit(b); x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
     }
     if any { for x in g.m.stature.by_id.iter_mut() { *x = None; } }
 }

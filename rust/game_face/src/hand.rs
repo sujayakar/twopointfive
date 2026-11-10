@@ -35,9 +35,6 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         }
         let mut cmd = cmd;
         if x.hands.as_ref().is_some_and(|h| h.0 == seat) {
-            // (he asks of the box world: its copy stands, as for any question between two ticks)
-            if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
-            game::scene_box_mirror::box_mirror_things(&mut x.g);
             if let Some((_, h)) = &mut x.hands { h.hand(&x.g, &mut cmd, 1.0 / 60.0); }
         }
         x.hand_over(seat, cmd);

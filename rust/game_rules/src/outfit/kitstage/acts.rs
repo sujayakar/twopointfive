@@ -945,7 +945,7 @@ fn wall_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
             return Err(no);
         }
     }
-    let share = |g: &mut Game, x: f64, z: f64| -> f64 { match w.as_ref() { Some(w) => crate::wallcharge::wall_charge_blast_share(g, w, [x, 0.0, z], None, None), None => 0.0 } };
+    let share = |g: &Game, x: f64, z: f64| -> f64 { match w.as_ref() { Some(w) => crate::wallcharge::wall_charge_blast_share(g, w, [x, 0.0, z], None, None), None => 0.0 } };
     if st.walled && share(g, pl[0], pl[2]) > 0.0 {
         let (a_s, o_s) = (along(st, st.sam), out_of(st, st.sam));
         let mut chose: Option<V2> = None;

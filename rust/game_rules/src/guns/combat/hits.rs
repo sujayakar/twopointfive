@@ -6,13 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-// ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
-
-/// `b.owner` of a box made this frame.
-fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
-/// `b.mkey = k` of a box made this frame: the same.
-fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, k: f64) { g.tab[b].mkey = Some(k); }
-
 // ---------------------------------------------------------------- panels and contact
 
 fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, or: V3) -> V3 {
@@ -46,17 +39,16 @@ pub fn arm_through(g: &mut crate::game::Game, c_2: CharId) -> bool {
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.
-pub fn solid_between(a: &mut impl crate::ask::Asker, from: V3, to: V3) -> bool {
-    if a.leaf_across(from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+pub fn solid_between(g: &Game, from: V3, to: V3) -> bool {
+    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
     let rd = v3::scale(d, 1.0 / l);
     let mut scratch: Vec<i32> = solid_scratch();
-    let n = a.gather(m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
+    let n = crate::scene_collision::gather(g, m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
     let mut i = 0usize;
     while (i as f64) < n {
-        let g = a.game();
         let b = g.col.boxes[scratch[i] as usize];   // gather answers places in g.col.boxes, not IDs
         if crate::scene_boxes::ray_box(g, from, rd, b.into(), l).is_some() { return true; }
         i += 1;
@@ -232,11 +224,11 @@ fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
     while k < out.len() {
         let b = out[k];
         k += 1;
-        let o = js::to_i32(seam_box_owner(g, b)) & 0xff;
+        let o = js::to_i32(g.tab[b].owner) & 0xff;
         if o == 0 { continue; }
         let at = ord[o as usize];
         ord[o as usize] = at.wrapping_add(1);
-        seam_box_set_mkey(g, b, crate::scene_boxes::mkey().rig + ((o << 8) as f64) + m::min(255.0, at as f64));
+        g.tab.edit(b).mkey = Some(crate::scene_boxes::mkey().rig + ((o << 8) as f64) + m::min(255.0, at as f64));
     }
 }
 

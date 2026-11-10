@@ -7,8 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
-/// `col.boxes[i]`'s centre, half sizes and yaw: g.col.boxes is Vec<BoxId> and no table holds the rows, while the index says g.col.boxes[id].c
-fn seam_box_c_h_yaw(g: &Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, seat: &crate::seats::SeatRef, m: &Option<&mut Legs>) -> V3 {
@@ -148,7 +146,7 @@ fn face_at(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Option<[f
     let knee = face_cast(g, ox, oz, n, KNEE_Y, COPLANAR)?;
     if face_cast(g, ox, oz, n, CHEST_Y, UPPER_TOL).is_none() && face_cast(g, ox, oz, n, HIGH_Y, UPPER_TOL).is_none() { return None; }
     let b = g.col.boxes[knee.index as usize];
-    let (c, h, yaw) = seam_box_c_h_yaw(g, b);
+    let (c, h, yaw) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let hw = m::abs(t[0] * cs - t[2] * sn) * h[0] + m::abs(t[0] * sn + t[2] * cs) * h[2];
     let uc = c[0] * t[0] + c[2] * t[2];
@@ -559,15 +557,14 @@ pub(super) fn wall_take_yaw(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// Where the can he is aiming will come to rest: the arc's first touch bounces and rolls on. Read only.
-pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crate::player::ThrowRest> {
-    let g = world.shared();
+pub fn throw_rest(g: &Game, pl: PlayerId) -> Option<crate::player::ThrowRest> {
     let (from, v0) = match &g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
     if !(g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
     let kind = g.pl[pl].held_kind;
-    let rest = crate::frag::rest_of_throw(world, kind, from, v0);
+    let rest = crate::frag::rest_of_throw(g, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
 

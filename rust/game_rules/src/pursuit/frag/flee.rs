@@ -14,7 +14,7 @@ fn find_way(g: &mut Game, a: V3, b: V3, nodes: f64, who: Option<GuardId>) -> Opt
         None => None,
     };
     match pen {
-        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(&l, ix, iz))),
+        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(&l, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), None),
     }
 }
@@ -342,7 +342,7 @@ fn roll_slow(g: &Game, v: V3, bog: f64) -> bool {
     m::abs(v[1]) < 0.5 && m::hyp2(v[0], v[2]) < 0.35 + (if bog > 0.0 { crate::throwables::bog_stick(g, bog) } else { 0.0 })
 }
 /// The item step's own bounce and roll replayed on a copy for what is left of its fuse: nothing is moved or sounded.
-fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f64>, props: bool, high: bool) -> RollOn {
+fn roll_body(g: &Game, it: RollBody, touch_fuse: Option<f64>, props: bool, high: bool) -> RollOn {
     let (mut p, mut v) = (it.pos, it.vel);
     let h = 1.0 / 120.0;
     let mut path: Vec<V3> = Vec::new();
@@ -352,7 +352,6 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
     let span = m::min(14.0, m::hyp2(v[0], v[2]) * m::max(0.0, it.fuse)) + 1.0;
     let mut furn = false;
     if props {
-        let g = a.game();
         for &pr in &g.props.props {
             let (x, z) = (g.tab.props_prop[pr].x, g.tab.props_prop[pr].z);
             if m::hyp2(x - p[0], z - p[2]) < span + g.tab.props_prop[pr].radius { furn = true; break; }
@@ -369,11 +368,11 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
         let dir = v3::scale(mv, 1.0 / len);
         let tmax = len + it.radius * 3.5;
         // (t, normal, a prop's)
-        let mut hit: Option<(f64, V3, bool)> = a.ray(p, dir, tmax).map(|x| (x.t, x.n, false));
+        let mut hit: Option<(f64, V3, bool)> = crate::scene_collision::raycast(g, p, dir, tmax).map(|x| (x.t, x.n, false));
         let mut back = 0.0;
         if furn {
             let upto = match hit { Some(x) => x.0, None => tmax };
-            if let Some(x) = a.thing_ray(p, dir, upto) { hit = Some((x.0, x.1, true)); }
+            if let Some(x) = crate::scene_collision::things_ray(g, p, dir, upto) { hit = Some((x.t, x.n, true)); }
         }
         if let Some(x) = hit {
             back = it.radius / m::max(0.3, -v3::dot(dir, x.1));
@@ -386,34 +385,34 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
                 let vn_ = v3::scale(n, vn);
                 let vt = v3::sub(v, vn_);
                 v = v3::add(v3::scale(vt, m::max(0.0, 1.0 - it.friction * (0.5 + 0.5 * m::abs(n[1])))), v3::scale(vn_, -it.restitution));
-                bog = if n[1] > 0.6 && !on_prop { a.bog_at(p[0], p[1] - it.radius, p[2]) } else { 0.0 };
+                bog = if n[1] > 0.6 && !on_prop { crate::snow_bog::snow_bog_at(g, p[0], p[1] - it.radius, p[2]) } else { 0.0 };
                 if bog > 0.0 {
                     let up = v3::dot(v, n);
-                    let (b, s) = (crate::throwables::bog_bounce(a.game(), bog), crate::throwables::bog_slide(a.game(), bog));
+                    let (b, s) = (crate::throwables::bog_bounce(g, bog), crate::throwables::bog_slide(g, bog));
                     v = v3::add(v3::scale(v3::sub(v, v3::scale(n, up)), s), v3::scale(n, up * b));
                 }
                 touched = true;
-                if n[1] > 0.6 && roll_slow(a.game(), v, bog) { done = true; }
+                if n[1] > 0.6 && roll_slow(g, v, bog) { done = true; }
             }
             p = v3::mad(p, n, 0.002);
         } else {
             p = v3::add(p, mv);
         }
         if p[1] < it.radius {
-            bog = a.bog_at(p[0], 0.0, p[2]);
+            bog = crate::snow_bog::snow_bog_at(g, p[0], 0.0, p[2]);
             p[1] = it.radius;
             if v[1] < 0.0 {
                 v[1] *= -it.restitution;
                 v[0] *= 0.7;
                 v[2] *= 0.7;
                 if bog > 0.0 {
-                    v[1] *= crate::throwables::bog_bounce(a.game(), bog);
-                    v[0] *= crate::throwables::bog_slide(a.game(), bog);
-                    v[2] *= crate::throwables::bog_slide(a.game(), bog);
+                    v[1] *= crate::throwables::bog_bounce(g, bog);
+                    v[0] *= crate::throwables::bog_slide(g, bog);
+                    v[2] *= crate::throwables::bog_slide(g, bog);
                 }
                 touched = true;
             }
-            if roll_slow(a.game(), v, bog) { done = true; }
+            if roll_slow(g, v, bog) { done = true; }
         }
         let far = match last { None => true, Some(q) => flat(q, p) > 0.25 };
         if touched && far {
@@ -443,7 +442,7 @@ fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props
 }
 
 /// Where a can thrown from `from` at `v0` will be when it is done moving, or when its fuse finds it.
-pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKind, from: V3, v0: V3) -> crate::frag::RestOfThrow {
+pub fn rest_of_throw(g: &Game, kind: crate::game::ThrowKind, from: V3, v0: V3) -> crate::frag::RestOfThrow {
     let is_frag = kind == crate::game::ThrowKind::Frag;
     let (radius, restitution, friction) = if is_frag {
         let b = crate::throwables::frag_item();
@@ -452,10 +451,9 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
         let b = crate::throwables::can_item();
         (b.radius, b.restitution, b.friction)
     };
-    let g = a.game();
     let stun = if kind == crate::game::ThrowKind::Flash { Some(crate::combat::flash_fuse(g)) } else { None };
     let fuse = if is_frag { g.k.frag.fuse } else if stun.is_some() { crate::effects::bang().max_air } else { 6.0 };
-    let r = roll_body(a, RollBody { pos: from, vel: v0, radius, restitution, friction, bounces: 0.0, fuse }, stun, true, true);
+    let r = roll_body(g, RollBody { pos: from, vel: v0, radius, restitution, friction, bounces: 0.0, fuse }, stun, true, true);
     RestOfThrow { at: r.at, path: r.path }
 }
 

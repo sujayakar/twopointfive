@@ -455,7 +455,7 @@ impl FurnAsk for Play {
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
     fn keep(&self) -> Moment { Moment::of(&self.g) }
-    fn put_back(&mut self, k: &Moment) { self.g = k.stands(self.g.sim); }
+    fn put_back(&mut self, k: &Moment) { self.g = k.laid(self.g.sim); }
 }
 
 /// The net

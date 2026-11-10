@@ -19,10 +19,10 @@ fn walled(g: &Game, eye: V3, to: V3) -> bool {
     let dx = to[0] - eye[0];
     let dz = to[2] - eye[2];
     let k = m::max(0.0, 1.0 - crate::handring::EMPTY_SHY_M / m::max(1e-6, m::hyp2(dx, dz)));
-    crate::ask::WorldAsk::of(g).line(eye, [eye[0] + dx * k, eye[1], eye[2] + dz * k], crate::ask::Line::Solid)
+    crate::scene_collision::solid_blocked(g, eye, [eye[0] + dx * k, eye[1], eye[2] + dz * k], None)
 }
 
-/// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it, about the seat it is asked of (the copy of the boxes standing: a tick's rule calls `stands` first).
+/// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it, about the seat it is asked of.
 pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::interact::EmptyThing> {
     let pl = seat.player;
     if g.pl[pl].takedown().is_some() { return None; }
@@ -409,7 +409,6 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let quick = g.sets[g.seat].hand.sel.down_t < (g.k.handring.hold_secs);
     close_selector(g, false);
     if !listed && row_now.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
-        crate::scene_collision::stands(g);
         let w = empty_word(empty_thing(g, &crate::seats::here(g)).as_ref());
         refuse(g, pl, None, &w);
         return;

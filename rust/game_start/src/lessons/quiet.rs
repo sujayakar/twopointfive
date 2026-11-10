@@ -49,7 +49,7 @@ fn clear_to(b: &Bot, from: V3, h: GuardId) -> bool {
     let d = [to[0] - p[0], to[1] - p[1], to[2] - p[2]];
     let len = game::m::hyp3(d[0], d[1], d[2]);
     let dir = [d[0] / len, d[1] / len, d[2] / len];
-    !b.world(|w| w.ray(p, dir, len - 0.3).is_some()) && !b.ask(|g| game::props::prop_system_raycast_here(g, p, dir, len - 0.3).is_some())
+    b.ask(|g| game::scene_collision::raycast(g, p, dir, len - 0.3).is_none() && game::props::prop_system_raycast(g, p, dir, len - 0.3).is_none())
 }
 /// he has stood still for `secs`
 async fn stood_still(b: &Bot, x: GuardId, secs: f64, max: f64) -> bool {

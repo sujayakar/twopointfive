@@ -916,7 +916,7 @@ fn pair_orders_clear_of(g: &mut Game, a: V3, b: V3) -> bool {
 }
 
 /// the sweep's ring: is this floor watched by a standing man whose look swings (rows: x, z, hx, hz, half)
-fn ring_at(g: &mut Game, ring: &[[f64; 5]], x: f64, z: f64) -> bool {
+fn ring_at(g: &Game, ring: &[[f64; 5]], x: f64, z: f64) -> bool {
     for r in ring.iter() {
         let dx = x - r[0];
         let dz = z - r[1];
@@ -1004,11 +1004,11 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
         }
     }
     let mut path = {
-        let mut pen = |g: &mut Game, ix: f64, iz: f64| -> f64 {
+        let mut pen = |g: &mut &mut Game, ix: f64, iz: f64| -> f64 {
             let (x, z) = ((ix + 0.5) * c, (iz + 0.5) * c);
             if crate::sneak::sneak_walk_watched(g, &mut w, x, z, Some(true)) || ring_at(g, &ring, x, z) { 14.0 } else { 1.0 }
         };
-        crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), Some(&mut pen))
+        crate::scene_collision::way_priced(&mut *g, from, to, 6000.0, &mut pen)
     };
     if path.is_none() { path = crate::scene_collision::nav_grid_find_path(g, from, to, None, None); }
     if let Some(rest) = rest {
@@ -1038,7 +1038,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
 /// how lit a spot of floor is on the light meter's scale: the place's steady lamps, direct only   (PairOrders.litAt)
 fn pair_orders_lit_at(g: &mut Game, p: V3) -> f64 {
     let at = [p[0], g.k.pair.dark_h, p[2]];
-    let mut any = |_g: &mut Game, _o: f64| -> bool { true };
+    let mut any = |_g: &Game, _o: f64| -> bool { true };
     let e = crate::guards::light_estimate_at(g, at, Some(&mut any), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }

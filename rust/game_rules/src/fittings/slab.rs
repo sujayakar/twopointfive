@@ -2,14 +2,14 @@
 //! by the walls its rays find, is pushed out of what its toppling reaches, slams flat, slides out and comes to rest clear of every static.
 //!
 //! A slab is one record, on its door (`Door::slab`). The slabs still in the air are stepped one at a time, in the order of their doors, and each one's box is posed before the
-//! next is stepped, so a slab's rays meet the ones before it where this tick left them. THE SLAB'S OWN BOX IS NOT A WALL TO IT: every ray leaves one leaf of the world's copy out.
+//! next is stepped, so a slab's rays meet the ones before it where this tick left them. THE SLAB'S OWN BOX IS NOT A WALL TO IT: every ray leaves one leaf of the world out.
 use crate::doorblast::SlabMet;
 use crate::doors::Slab;
 use crate::knobs::{DoorblastK, Knobs};
 use ::sim::collide;
 use ::sim::lines::{ray_rule, RAY_HOST};
 use ::sim::maths::{cos, exp, hypot2, sin};
-use ::sim::world::{asking, clamp, js_abs, js_ceil, js_max, js_min, or_one, world, REC, R_C, R_COS, R_H, R_SIN};
+use ::sim::world::{asking, clamp, js_abs, js_ceil, js_max, js_min, or_one, World, REC, R_C, R_COS, R_H, R_SIN};
 
 const HALF_PI: f64 = core::f64::consts::PI / 2.0;
 const PI: f64 = core::f64::consts::PI;
@@ -20,16 +20,15 @@ const OV: usize = 512;
 
 /// its door, and the world it flies in
 pub struct Flight<'a> {
-    pub w: usize,
+    pub w: &'a World,
     pub height: f64,
     pub thick: f64,
     pub hu: f64,
     pub closed: f64,
     pub fcx: f64,
     pub fcz: f64,
-    /// which leaf of the world's copy is its own box (−1: none of them)
+    /// which leaf of the box world is its own box (−1: none of them)
     pub but: i32,
-    pub ask: bool,
     pub tune: &'a Knobs,
     pub k: &'a DoorblastK,
 }
@@ -53,7 +52,7 @@ fn reach_along(d: &Flight, s: &Slab, ex: f64, ez: f64) -> f64 {
 /// The nearest static, or other door's leaf, along a horizontal ray: how far, and the face's normal in plan
 fn hit_at(d: &Flight, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> Option<(f64, f64, f64)> {
     let mut out = [0.0f64; 4];
-    let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out, d.tune);
+    let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, d.but, true, &mut out, d.tune);
     if k == RAY_HOST {
         panic!("{}", crate::scene_collision::no_number(None, None, None));
     }
@@ -68,9 +67,9 @@ fn overlaps(d: &Flight, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f
     let (ux, uz, su, sn) = (cos(a), sin(a), hu - 0.012, hn - 0.012);
     let (ex, ez) = (js_abs(ux) * hu + js_abs(uz) * hn, js_abs(uz) * hu + js_abs(ux) * hn);
     let n = collide::gather(d.w, x - ex, z - ez, x + ex, z + ez, y0, y1, OV);
-    let o = world(d.w);
+    let o = d.w;
     for i in 0..n {
-        let b = asking(d.w).list[i] as usize * REC;
+        let b = asking().list[i] as usize * REC;
         let (bx, bz) = (o.rec[b + R_COS], -o.rec[b + R_SIN]);
         let (dx, dz) = (o.rec[b + R_C] - x, o.rec[b + R_C + 2] - z);
         let (h0, h2) = (o.rec[b + R_H], o.rec[b + R_H + 2]);

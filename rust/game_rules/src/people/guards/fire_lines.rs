@@ -47,8 +47,6 @@ fn clear_path(g: &mut Game, gd: GuardId) {
     g.gd[gd].path_goal = None;
     g.gd[gd].path_goal_orbit = false;
 }
-/// `Box.flags` of a row.
-fn seam_box_flags(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
 // ---------------------------------------------------------------- what a man sees
 
@@ -420,7 +418,7 @@ pub(super) fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool
     if !(h.index < 1e6) { return false; }
     let i = h.index as usize;
     // (the level's list IS col.boxes in the TypeScript, game.ts: the one Rust keeps live is g.col.boxes; `?.` is a place past its end)
-    let flags = match g.col.boxes.get(i).copied() { Some(b) => seam_box_flags(g, b), None => 0.0 };
+    let flags = match g.col.boxes.get(i).copied() { Some(b) => g.tab.boxes[b].flags, None => 0.0 };
     (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
 }
 

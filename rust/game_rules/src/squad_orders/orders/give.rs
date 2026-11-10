@@ -55,10 +55,6 @@ fn menu_target_of(m: &Menu) -> OrderTarget {
     }
 }
 // ---- what skeleton 5 still cannot reach ----
-/// `b.owner`. Once the table of Box rows is there, the body is that row's field
-fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
-/// `b.flags`. As seam_box_owner
-fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
 // ---- an order's functions, called through its row (orders/rows/) ----
 /// `d.label(t)`
 fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
@@ -175,7 +171,7 @@ fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, r
     let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
     if let Some(h) = first {
         if let Some(b) = crate::scene_boxes::box_world_at(g, h.index as usize) {
-            if !js::truthy(seam_box_owner(g, b)) && (js::to_i32(seam_box_flags(g, b)) & js::to_i32(f.glass)) == 0 {
+            if !js::truthy(g.tab[b].owner) && (js::to_i32(g.tab[b].flags) & js::to_i32(f.glass)) == 0 {
                 return SquadOrdersSceneHit { t: h.t, index: h.index };
             }
         }
@@ -186,7 +182,7 @@ fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, r
     for k in 0..16 {
         let from = if k != 0 { v3::mad(ro, rd, t0) } else { ro };
         let Some(hit) = crate::scene_boxes::box_world_raycast(g, from, rd, Some(200.0), Some(skip), Some(owner), None) else { break };
-        owner = match crate::scene_boxes::box_world_at(g, hit.index as usize) { Some(b) => seam_box_owner(g, b), None => 0.0 };
+        owner = match crate::scene_boxes::box_world_at(g, hit.index as usize) { Some(b) => g.tab[b].owner, None => 0.0 };
         t0 += hit.t;
         if !js::truthy(owner) { return SquadOrdersSceneHit { t: t0, index: hit.index }; }
     }

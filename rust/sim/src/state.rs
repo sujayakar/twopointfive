@@ -3,7 +3,7 @@
 //! WHY ONE BLOCK. State of the game has to be taken and put back (a rollback, a save kept in memory), put into another game, folded into the state's word and
 //! compared, and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
 //!   · a family of the update that keeps state here adds ONE FIELD to `State` (a struct of flat, fixed-size columns) and its row in `PARTS`. Nothing else in
-//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY the host proves (the box world), and
+//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY made again from the game, and
 //!     tools/qa/rust-rules-check.ts is red on a `static mut` it has no row for (STATICS there).
 //!   · NO ADDRESS IN A BLOCK, ONLY INDICES. A block is the same bytes in whichever slot it stands, in the host's own memory while another game has the slot,
 //!     in a file, on another machine. A pointer kept in one is wrong the moment it moves.

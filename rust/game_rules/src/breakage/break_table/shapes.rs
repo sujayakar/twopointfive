@@ -336,12 +336,10 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
 /// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.
 pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
-    let (yaw, h, c) = seam_box_numbers(g, b);
+    let (yaw, h, c) = { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) };
     wall_normal_at(yaw, h, c, toward, keep)
 }
 
-/// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
-fn seam_box_numbers(g: &crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
 
 #[cfg(test)]
 mod tests {
