@@ -224,8 +224,8 @@ pub(super) fn kit_words(g: &crate::game::Game, i: f64, m: Option<&crate::kit::Me
 }
 /// A card he has been handed, in a line
 pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> String {
-    let suit = if m.suit != SuitId::Issued { suits().get(String::from(m.suit.as_str())).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
-    let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().get(String::from(m.trim.as_str())).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
+    let suit = if m.suit != SuitId::Issued { suits().of(m.suit.as_str()).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
+    let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().of(m.trim.as_str()).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
     let look = line_of(&[suit, trim], ", ");
     let frags = if js::truthy(m.frags) { alloc::format!(", {} frag{}", m.frags, super::loadouts::plural(m.frags)) } else { String::new() };
     if i == 0.0 {
@@ -261,7 +261,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
 /// The big slot's shotgun or hammer of a card's line.
 fn big_words(m: &crate::kit::MemberKit) -> String {
     if !js::truthy(m.walls) && m.big != BigKit::None {
-        return big_word().get(String::from(m.big.as_str())).cloned().unwrap_or_default();
+        return big_word().of(m.big.as_str()).cloned().unwrap_or_default();
     }
     String::new()
 }
@@ -486,10 +486,10 @@ fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {
 pub fn kit_sanitize(g: &crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
     let mut card = kit_default(g, i);
     let Some(raw) = raw else { return card; };
-    let at = |k: &str| raw.get(String::from(k));
-    let word = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Text(s)) => Some(s.as_str()), _ => None };
-    let flag = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Bool(b)) => Some(*b), _ => None };
-    let num = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Num(n)) => *n, _ => 0.0 };
+    let at = |k: &str| raw.of(k);
+    let word = |k: &str| match raw.of(k) { Some(KitValue::Text(s)) => Some(s.as_str()), _ => None };
+    let flag = |k: &str| match raw.of(k) { Some(KitValue::Bool(b)) => Some(*b), _ => None };
+    let num = |k: &str| match raw.of(k) { Some(KitValue::Num(n)) => *n, _ => 0.0 };
 
     let you = i == 0.0;
     let rows = kit_rows(g, i);

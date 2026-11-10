@@ -38,7 +38,7 @@ pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::inte
             if d < man && !walled(g, eye, it.pos) { man = d; }
             continue;
         }
-        if !g.m.player.press_things.has(String::from(it.kind.as_str())) { continue; }
+        if !g.m.player.press_things.holds(it.kind.as_str()) { continue; }
         let door = it.door;
         // (a door's reach is its distance and his feet: its `inReach` is also the big tool's, from where a stack stands)
         let r = if door.is_some() {

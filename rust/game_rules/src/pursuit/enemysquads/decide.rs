@@ -46,18 +46,18 @@ mod tests {
     fn a_maps_row_writes_only_what_it_names() {
         let table = crate::knobs::SquadsK::page();
         let rows = crate::knobs::DrillAtK::page().rows;
-        let compound = drill_over(table, rows.get(String::from("the compound")).unwrap());
+        let compound = drill_over(table, rows.of("the compound").unwrap());
         assert!(compound.drill_net && compound.drill_own && !compound.drill_back);
         assert_eq!((compound.net_k, compound.reinforce_k, compound.own_up), (1.0, 0.75, 1.0));
         assert_eq!(compound.back_beat, table.back_beat);
         assert_eq!(compound.drill_look, table.drill_look);
-        let warehouse = drill_over(table, rows.get(String::from("the warehouse")).unwrap());
+        let warehouse = drill_over(table, rows.of("the warehouse").unwrap());
         assert!(!warehouse.drill_net && !warehouse.drill_own && !warehouse.drill_back);
         assert_eq!((warehouse.net_k, warehouse.reinforce_k), (table.net_k, table.reinforce_k));
-        let barracks = drill_over(table, rows.get(String::from("the barracks")).unwrap());
+        let barracks = drill_over(table, rows.of("the barracks").unwrap());
         assert!(!barracks.drill_net && barracks.drill_back);
         assert_eq!(barracks.back_beat, 3.0);
-        assert!(rows.get(String::from("no such map")).is_none());
+        assert!(rows.of("no such map").is_none());
     }
 }
 

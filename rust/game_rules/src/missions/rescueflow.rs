@@ -917,7 +917,7 @@ fn rescue_flow_boxes(g: &mut crate::game::Game) {
             let k = &g.rescue.flow.known[at];
             (k.state, k.o.at, k.o.north, k.o.half)
         };
-        let c = *colours.get(String::from(state.as_str())).unwrap();
+        let c = *colours.of(state.as_str()).unwrap();
         let beat = if state == OpenState::Hot { 0.65 + 0.35 * m::sin(time * 9.0) } else { 1.0 };
         let e = glow * beat;
         let box_ = crate::scene_boxes::make_box_kept(

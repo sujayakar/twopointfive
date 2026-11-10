@@ -518,7 +518,7 @@ pub(super) fn pending_intel(g: &crate::game::Game, ctx: &crate::dialogue::Dialog
     let tokens = ctx_tokens_map(&ctx.tokens);
     for kind in order {
         let Some(it) = ctx.intel.iter().find(|i| i.kind == kind) else { continue; };
-        if !it.live || !it.known || g.tab.game_talk[talk].given.has(String::from(kind.as_str())) { continue; }
+        if !it.live || !it.known || g.tab.game_talk[talk].given.holds(kind.as_str()) { continue; }
         let own = kind == IntelKind::CheckOn && it.text == check_on_self();
         let shaped = match sc {
             Some(x) if !own => shaped_intel_text(kind, &ShapedIntelTextSc { id: x.id.clone(), shape: x.shape }, ctx.t),

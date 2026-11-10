@@ -11,9 +11,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// pose.at: where a pose stands in its game's pool, as a layer of rust/sim takes it
 fn at(pose: crate::anim_skeleton::Pose) -> usize { pose.at as usize }
 /// SIGNAL_DUR[kind]
-pub(super) fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().of(kind.as_str()).unwrap() }
 /// TELL_DUR[kind]
-pub(super) fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().of(kind.as_str()).unwrap() }
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 

@@ -28,6 +28,6 @@ mod tests {
         for c in [BACK_KEY, "KeyE"] { row.pressed.add(String::from(c)); }
         let id: InputId = g.tab.input.push(row);
         assert!(back_hit(&g, id) && back_take(&mut g, id) && !back_take(&mut g, id));
-        assert!(g.tab.input[id].pressed.has(String::from("KeyE")));
+        assert!(g.tab.input[id].pressed.holds("KeyE"));
     }
 }

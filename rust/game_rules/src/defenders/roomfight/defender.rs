@@ -598,7 +598,7 @@ mod tests {
     #[test]
     fn the_table_on_the_game_has_the_hostile_row() {
         let g = Game::blank();
-        let own = fight_skill().get(String::from("hostile")).copied().unwrap();
+        let own = fight_skill().of("hostile").copied().unwrap();
         let on_game = hostile_skill(&g);
         assert_eq!((on_game.react, on_game.ready, on_game.turn), (own.react, own.ready, own.turn));
     }

@@ -437,7 +437,7 @@ fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) 
 
 /// `FRAG_WHY[w]++`: why a throw was not looked for.
 fn no(g: &mut Game, w: &str) {
-    let n = g.m.frag.frag_why.get(String::from(w)).copied().unwrap_or(0.0) + 1.0;
+    let n = g.m.frag.frag_why.of(w).copied().unwrap_or(0.0) + 1.0;
     g.m.frag.frag_why.set(String::from(w), n);
 }
 

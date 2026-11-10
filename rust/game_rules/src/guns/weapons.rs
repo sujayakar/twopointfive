@@ -7,12 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// A row's turn weight: its own `handling`, else its class's, else a carbine's.
+/// A row's turn weight: its own `handling`, else its class's.
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 {
-    if let Some(h) = def.handling { return h; }
-    let table = crate::weapons::handling_by_class();
-    if let Some(h) = table.get(String::from(def.cls.as_str())) { return *h; }
-    *table.get(String::from(crate::weapons::WeaponClass::Carbine.as_str())).unwrap()
+    def.handling.unwrap_or(crate::weapons::handling_by_class(def.cls))
 }
 
 #[cfg(test)]

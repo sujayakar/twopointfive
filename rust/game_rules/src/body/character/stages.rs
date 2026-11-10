@@ -1087,9 +1087,9 @@ fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f
 }
 
 /// `STANCES[s]`, for a stance that has a shape (not 'none').
-fn stance_shape(s: Stance) -> StanceShape { *stances().get(String::from(s.as_str())).unwrap() }
+fn stance_shape(s: Stance) -> StanceShape { *stances().of(s.as_str()).unwrap() }
 /// `READY[k].knife`
-fn ready_knife(k: ReadyKind) -> bool { ready().get(String::from(k.as_str())).unwrap().knife }
+fn ready_knife(k: ReadyKind) -> bool { ready().of(k.as_str()).unwrap().knife }
 /// `BLOW.clip[s]`
 fn blow_clip(s: BlowStyle) -> f64 { BLOW.clip.of(s) }
 

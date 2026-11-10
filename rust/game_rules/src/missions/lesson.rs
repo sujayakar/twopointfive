@@ -152,7 +152,7 @@ fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate
 fn squad_men(g: &Game, seat: &crate::seats::SeatRef, sel: crate::orders::SquadOrdersMenSel) -> Vec<GuardId> { crate::orders::squad_orders_men(g, seat, Some(sel), None) }
 /// a text cell of a chronicle row (`e.data.<key>`)
 fn chron_text<'a>(e: &'a crate::chronicle::ChronEvent, key: &str) -> Option<&'a str> {
-    match e.data.get(String::from(key)) { Some(Some(crate::chronicle::ChronEventDataValue::Text(s))) => Some(s.as_str()), _ => None }
+    match e.data.of(key) { Some(Some(crate::chronicle::ChronEventDataValue::Text(s))) => Some(s.as_str()), _ => None }
 }
 /// STAGES.indexOf
 fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1, |i| i as i32) }

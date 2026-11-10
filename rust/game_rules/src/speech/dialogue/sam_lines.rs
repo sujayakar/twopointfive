@@ -354,7 +354,7 @@ mod tests {
         *sam_memory_of(&mut g) = lent;
         let row = sam_memory_of(&mut g);
         assert_eq!(row.last.as_deref(), Some("Sp1"));
-        assert_eq!(row.said.get(String::from("So1")).copied(), Some(3.0));
+        assert_eq!(row.said.of("So1").copied(), Some(3.0));
     }
 
     #[test]
@@ -385,8 +385,8 @@ mod tests {
         let mut t = crate::dialogue::DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the vault"));
         let m = tokens_map(&t);
-        assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));
-        assert_eq!(m.get(String::from("door")), Some(&None));
+        assert_eq!(m.of("sawWhere"), Some(&Some(String::from("the vault"))));
+        assert_eq!(m.of("door"), Some(&None));
     }
 
 }

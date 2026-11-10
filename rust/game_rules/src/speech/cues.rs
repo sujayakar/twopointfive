@@ -103,7 +103,7 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
             while j < b.len() && js::is_word(b[j]) { j += 1; }
             if j > i + 1 && j < b.len() && b[j] == b'}' {
                 out.push_str(&line[from..i]);
-                if let Some(v) = vars.and_then(|m| m.get(String::from(&line[i + 1..j]))) { out.push_str(v); }
+                if let Some(v) = vars.and_then(|m| m.of(&line[i + 1..j])) { out.push_str(v); }
                 i = j + 1;
                 from = i;
                 continue;
@@ -268,7 +268,7 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     let rank = cls * 2.0 + (if squad { 0.0 } else { 1.0 });
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t >= at && t - at < secs);
     if cls > 0.0 {
-        if within(g.cues.said.get(String::from(words)).copied(), g.k.cues.dup_secs) {
+        if within(g.cues.said.of(words).copied(), g.k.cues.dup_secs) {
             g.cues.stats.dup += 1.0;
             return file_done(g, false, "dup");
         }
@@ -391,7 +391,7 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
         }
     }
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t - at < secs);
-    if within(g.cues.heard_said.get(String::from(text)).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
+    if within(g.cues.heard_said.of(text).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
     if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
     if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }

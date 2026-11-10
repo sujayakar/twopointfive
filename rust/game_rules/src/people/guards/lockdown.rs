@@ -328,13 +328,13 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     let def = crate::rig_props::torch_light_def(g, &format!("unitlight{}", id), id, fi, f0, f1);
     let fl = crate::render_lights::light_set_add(g, def);
     let look = crate::game::GuardNewLook {
-        tint2: Some(match o.tint2 { Some(t) => t, None => *crate::guards::team_tint2().get(String::from(o.team.as_str())).unwrap() }),
+        tint2: Some(match o.tint2 { Some(t) => t, None => *crate::guards::team_tint2().of(o.team.as_str()).unwrap() }),
         yaw: Some(o.yaw.unwrap_or(0.0)),
         name: Some(name.clone()),
         team: Some(o.team),
     };
     let (men, rig) = (g.men, g.rig);
-    let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().get(String::from(o.team.as_str())).unwrap() };
+    let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().of(o.team.as_str()).unwrap() };
     let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
     g.gd[gd].unit = Some(crate::game::UnitInfo { light: o.light != Some(false), pair: o.pair, seat: None });
     crate::control::set_hold(g, gd, true, "guards");

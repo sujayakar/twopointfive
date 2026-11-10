@@ -481,7 +481,7 @@ fn night_breach_note(g: &mut crate::game::Game, what: &str) {
 
 /// A line a living teammate says once a staging; with nobody up it is not said.
 fn night_breach_once_by_a_man(g: &mut crate::game::Game, key: &str, text: &str) {
-    if !g.night_breach.said.has(String::from(key)) {
+    if !g.night_breach.said.holds(key) {
         g.night_breach.said.add(String::from(key));
         crate::squadnet::team_says(g, None, text);
     }

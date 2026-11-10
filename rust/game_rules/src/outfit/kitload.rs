@@ -69,12 +69,12 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
             c = add(c, Some([x.mob, x.con]), None);
         }
     } else if field == "big" {
-        let big = g.k.kitload.big.get(String::from(crate::kit::big_of(m).as_str())).copied();
+        let big = g.k.kitload.big.of(crate::kit::big_of(m).as_str()).copied();
         c = add(c, big, None);
     } else if field == "wand" {
-        let wand = if m.wand { g.k.kitload.small.get(String::from("wand")).copied() } else { None };
+        let wand = if m.wand { g.k.kitload.small.of("wand").copied() } else { None };
         c = add(c, wand, None);
-    } else if let Some(small) = g.k.kitload.small.get(String::from(field)).copied() {
+    } else if let Some(small) = g.k.kitload.small.of(field).copied() {
         c = add(c, Some(small), Some(m::max(0.0, card_count(m, field))));
     }
     if js::truthy(c[0]) || js::truthy(c[1]) {

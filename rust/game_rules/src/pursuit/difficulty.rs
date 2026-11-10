@@ -16,7 +16,7 @@ const CONE_TAIL: &str = ". Under the fog of war each teammate sees only the cone
 
 /// HARD_AT[structure]?.stuns: a row with no stuns reads as no row.
 fn hard_at_stuns(g: &Game, structure: &str) -> Option<f64> {
-    g.k.hard_at.rows.get(String::from(structure)).copied().flatten()
+    g.k.hard_at.rows.of(structure).copied().flatten()
 }
 
 /// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it.
@@ -120,7 +120,7 @@ fn href_parts(href: &str) -> (&str, Vec<&str>) {
 /// the structure a level file's room clear stands on.
 pub fn structure_of_level(file: Option<&str>) -> String {
     let file = file.unwrap_or("");
-    level_structure().get(String::from(file)).cloned().unwrap_or_default()
+    level_structure().of(file).cloned().unwrap_or_default()
 }
 
 /// LEVERS with the fog's bottom rung and the fourth lever; TOLD.on and TOLD.fogOff are settled on.

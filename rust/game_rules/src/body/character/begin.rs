@@ -83,7 +83,7 @@ fn jog_seam_close(d: &mut [f32], rows: usize, seam: &[crate::character::AnimJogS
 
 /// `ch.nodeByName.get(name)`, loud when missing (the constructor's `node`)
 fn node(g: &crate::game::Game, ch: RigId, name: &str) -> usize {
-    match g.art.rig[ch].node_by_name.get(String::from(name)) {
+    match g.art.rig[ch].node_by_name.of(name) {
         Some(i) => *i as usize,
         None => panic!("missing node {}", name),
     }
@@ -232,12 +232,12 @@ fn its_poses(g: &mut Game, ch: RigId, a: &mut Anim) {
 fn its_clips(g: &mut Game, ch: RigId, a: &mut Anim) {
     let need: [&'static str; 15] = ["Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Crouch_Idle_Loop", "Crouch_Fwd_Loop", "Pistol_Idle_Loop", "Pistol_Aim_Neutral", "Pistol_Aim_Up", "Pistol_Aim_Down", "Pistol_Shoot", "Idle_Torch_Loop", "Hit_Chest", "Sprint_Loop", "Pistol_Reload", "Punch_Cross"];
     for k in need {
-        match g.art.rig[ch].clips.get(String::from(k)) {
+        match g.art.rig[ch].clips.of(k) {
             Some(cl) => { a.clips.set(k, *cl); }
             None => panic!("missing clip {}", k),
         }
     }
-    if let Some(j) = g.art.rig[ch].clips.get(String::from("Punch_Jab")) { a.clips.set("Punch_Jab", *j); }
+    if let Some(j) = g.art.rig[ch].clips.of("Punch_Jab") { a.clips.set("Punch_Jab", *j); }
 }
 
 /// The rig's named nodes, and each digit's joints.

@@ -82,7 +82,7 @@ fn radio(g: &mut Game, r: DirectorRunId, names: &[&str], line: &str) -> Result<(
 
 /// `!!q.flag(n)`, `!c.flag.n`: the run's flag as a condition
 fn flag_truthy(g: &Game, r: DirectorRunId, n: &str) -> bool {
-    match g.tab.director_run[r].flags.get(String::from(n)) {
+    match g.tab.director_run[r].flags.of(n) {
         Some(Some(crate::director::Json::Text(s))) => !s.is_empty(),
         Some(Some(crate::director::Json::Num(x))) => js::truthy(*x),
         Some(Some(crate::director::Json::Bool(v))) => *v,
@@ -93,7 +93,7 @@ fn flag_truthy(g: &Game, r: DirectorRunId, n: &str) -> bool {
 
 /// `c.flag.gun as string | undefined`
 pub(super) fn flag_text(g: &Game, r: DirectorRunId, n: &str) -> Option<String> {
-    match g.tab.director_run[r].flags.get(String::from(n)) {
+    match g.tab.director_run[r].flags.of(n) {
         Some(Some(crate::director::Json::Text(s))) => Some(s.clone()),
         _ => None,
     }

@@ -10,7 +10,7 @@ type Data = JsMap<String, Option<ChronEventDataValue>>;
 
 /// A field of a row: absent and undefined are one.
 pub(super) fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
-    d.get(String::from(k)).and_then(|v| v.as_ref())
+    d.of(k).and_then(|v| v.as_ref())
 }
 
 /// `String(d.k)` and `${d.k}`: a missing field writes 'undefined'.

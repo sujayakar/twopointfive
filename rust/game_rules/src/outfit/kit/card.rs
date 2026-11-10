@@ -95,7 +95,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Trim if you => if m.trim == TrimId::Issued { "your own green joints" } else { "the joints: how you pick yourself out from above" },
         KitField::Trim => if m.trim == TrimId::Issued { "the pair colour on a four (red, blue)" } else { "the joints: how you tell him from above" },
         KitField::Big => {
-            let notes = big_note().get(String::from(big_of(m).as_str())).cloned().expect("every big thing has its line");
+            let notes = big_note().of(big_of(m).as_str()).cloned().expect("every big thing has its line");
             return notes[if you { 0 } else { 1 }].clone();
         }
     };
@@ -320,8 +320,8 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
         clip: worn,
         paste_why,
         words,
-        suit: suits().get(String::from(m.suit.as_str())).map(|s| s.tint),
-        trim: trims().get(String::from(m.trim.as_str())).map(|s| s.tint),
+        suit: suits().of(m.suit.as_str()).map(|s| s.tint),
+        trim: trims().of(m.trim.as_str()).map(|s| s.tint),
     }
 }
 
