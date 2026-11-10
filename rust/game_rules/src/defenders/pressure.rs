@@ -180,7 +180,7 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
         }
     };
     crate::roomfight::run(g, d, spot, door, 0.3, crate::owner::by::OUT);
-    state_of(g).outs.push(Out { door, def: d, moving: true, plant_t: -1.0, fought: false, step_t: -100.0 });
+    state_of(g).outs.push(Out { door, def: d, moving: true, plant_t: -1.0, fought: false });
     if why == LastWhy::Seen {
         crate::game::game_say(g, gd, "too many — I'm out the back!", Some(true), None);
     } else {
@@ -194,7 +194,11 @@ fn tick_out(g: &mut Game, o: &mut Out) -> bool {
     let gd = gd_of(g, d);
     if !alive(g, d) || !g.fight.defs.contains(&d) { return true; }
     if o.moving {
-        if crate::roomfight::on_leg_of(g, d, crate::owner::by::OUT) { o.step_t = crate::roomfight::boots(g, gd, o.step_t); return false; }
+        match crate::roomfight::leg_ended(g, d, crate::owner::by::OUT) {
+            None => return false,
+            Some(crate::roomfight::LegEnd::Taken) => return true,
+            Some(_) => {}
+        }
         o.moving = false; o.plant_t = g.time;
         // whoever of his side holds the room he has come into hears it from him: the door he came by is the one to watch
         let here = pos_of(g, gd);

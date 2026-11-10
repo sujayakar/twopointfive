@@ -351,8 +351,8 @@ fn haul(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man,
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     if g.time < m.haul_by {
-        let w = &mut g.tab.roomfight_def[d];
-        w.move_t = m::min(w.move_t, 5.0); w.stall_t = 0.0; w.stall_at[0] = pos[0]; w.stall_at[2] = pos[2];
+        let w = &mut g.tab.roomfight_def[d].leg;
+        w.t = m::min(w.t, 5.0); w.stall_t = 0.0; w.stall_at[0] = pos[0]; w.stall_at[2] = pos[2];
     }
     let pp = prop_at(g, p);
     let (mut tx, mut tz) = (m.stand[0] - pos[0], m.stand[2] - pos[2]);

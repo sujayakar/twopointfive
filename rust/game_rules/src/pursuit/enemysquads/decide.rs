@@ -705,18 +705,24 @@ fn pair(g: &mut Game, net: &[StateNetItem], h: &[RoomfightDefId], fix_at: V3, ro
         None => (Vec::new(), Vec::new()),
     }
 }
+/// At a run to a place, by those points and that door, tried again where he gets nowhere.
+pub(super) fn send_round(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, way: Vec<V3>) {
+    let pace = g.tune.guard_chase + 0.3;
+    let leg = crate::roomfight::Leg { by: door, ..crate::roomfight::Leg::errand(to, pace) };
+    crate::roomfight::send_by(g, d, leg, way, crate::owner::by::SQUAD_LEG);
+}
 /// decide's `send`
 fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, w: Option<&Way>, ally: Option<EnemysquadsSquadId>, fix_at: V3, lost: bool) {
     let (gd, station) = { let r = &g.tab.roomfight_def[d]; (r.gd, r.station) };
     let t0 = g.time;
     g.tab.enemysquads_squad[q].sent.push(Sent {
         gd, from: v3::copy(station), ally, role, phase: if w.is_some() { SentPhase::Run } else { SentPhase::Loose },
-        spot: w.map(|x| x.spot), door: w.and_then(|x| x.door), fix_at: v3::copy(fix_at), tries: 0.0, step_t: -100.0, t0,
-        hold: Some(role == SentRole::Flank && lost && w.map_or(false, |x| x.door.is_some())), way: w.and_then(|x| x.path.clone()), aim: w.and_then(|x| x.aim),
+        spot: w.map(|x| x.spot), door: w.and_then(|x| x.door), fix_at: v3::copy(fix_at), t0,
+        hold: Some(role == SentRole::Flank && lost && w.map_or(false, |x| x.door.is_some())), way: w.and_then(|x| x.path.clone()).unwrap_or_default(), aim: w.and_then(|x| x.aim),
         there: None, set_t: None, gone_t: None, back: None,
     });
     match w {
-        Some(x) => { let to = x.path.as_ref().and_then(|p| p.first().copied()).unwrap_or(x.spot); crate::roomfight::run(g, d, to, x.door, 0.3, crate::owner::by::SQUAD_LEG); }
+        Some(x) => send_round(g, d, x.spot, x.door, x.path.clone().unwrap_or_default()),
         None => crate::roomfight::loose_at(g, d, fix_at),
     }
 }

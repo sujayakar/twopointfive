@@ -490,7 +490,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
                 }
             }
         }
-        if crate::roomfight::on_leg_of(g, f, crate::owner::by::MISSION) { return false; }
+        if crate::roomfight::leg_ended(g, f, crate::owner::by::MISSION).is_none() { return false; }
         if in_rect(pos_of(g, h), bounds) {
             let row = g.rescue.defs.get_mut(h).unwrap();
             row.in_room = true; row.crew = DefCrew::In;
