@@ -161,8 +161,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
             row.hold = Some(false);
             row.spot = Some(row.from);
             row.door = None;
-            row.way = None;
-            row.tries = 0.0;
+            row.way.clear();
             row.from
         };
         for e in def!(g, xd).ev.iter_mut() {
@@ -170,7 +169,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
         }
         // (`X.pt[0] = at[0]; X.pt[2] = at[2]` in place, enemysquads.ts:778: a fix or a cover that IS the point moves with it)
         { let was = def!(g, xd).pt; crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
-        crate::roomfight::run(g, xd, from, None, 0.3, crate::owner::by::SQUAD_LEG);
+        send_round(g, xd, from, None, Vec::new());
         names.push(x);
     }
     if names.is_empty() {
@@ -319,12 +318,10 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
                 hold: None,
                 spot: None,
                 door: None,
+                way: Vec::new(),
                 fix_at: c.at,
-                tries: 0.0,
-                step_t: -100.0,
                 t0: g.time,
                 there: None,
-                way: None,
                 aim: None,
                 set_t: None,
                 ally: None,
@@ -557,7 +554,6 @@ pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: G
                     {
                         let x = &mut rc!(g, q).look[i];
                         x.spot = was_at;
-                        x.tries = 0.0;
                         x.look_t = None;
                     }
                     if let Some(d) = def_of(g, man) {
@@ -631,10 +627,8 @@ fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
 }
 /// A looker's leg: pressure.ts's scripted leg, at the pace of a man going to look.
 pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::SQUAD_LEG);
-    let gd = def!(g, d).gd;
-    let speed = g.tune.guard_investigate;
-    crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
+    let pace = g.tune.guard_investigate;
+    crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::SQUAD_LEG);
 }
 
 /// the memo of radioCheck's `atHome`
@@ -1122,31 +1116,15 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
 pub(super) fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
     let row = &def!(g, d);
     let gd = row.gd;
-    let man = &g.gd[gd];
     crate::enemysquads::Looker {
         gd,
         who,
         spot: at,
         from: row.station,
         back: false,
-        tries: 0.0,
-        step_t: -100.0,
         t0: g.time,
         news0: sq!(g, q).news_t,
         look_t: None,
-        calm: crate::enemysquads::Calm {
-            state: man.state,
-            awareness: man.awareness,
-            hold: man.hold,
-            pinned: man.pinned,
-            station: row.station,
-            home: row.home,
-            room: row.room,
-            ev: row.ev.clone(),
-            watch: row.watch,
-            want: row.want,
-            pt: row.pt,
-        },
         about: None,
         all: None,
         stops: None,
@@ -1165,7 +1143,6 @@ fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
             let from = {
                 let x = &mut rc!(g, q).look[i];
                 x.back = true;
-                x.tries = 0.0;
                 x.from
             };
             if let Some(d) = def_of(g, man) {
@@ -1180,32 +1157,6 @@ fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
 /// the row of the look list of the man `l`: a Looker is named by its man (home() keeps a man off a second row)
 fn look_of(g: &mut Game, q: EnemysquadsSquadId, l: GuardId) -> &mut crate::enemysquads::Looker {
     rc!(g, q).look.iter_mut().find(|y| y.gd == l).unwrap()
-}
-/// Back on the post he left, as he held it: wary and no more.
-fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: RoomfightDefId) {
-    let gd = def!(g, d).gd;
-    let c = &l.calm;
-    let roused = c.state == crate::game::GuardState::Alert || c.state == crate::game::GuardState::Search;
-    let heard = g.gd[gd].witness.heard.last_shot_t > l.t0 || g.gd[gd].awareness >= 0.85;
-    if g.gd[gd].script.is_some() {
-        let to = if !roused {
-            crate::game::GuardState::Suspicious
-        } else if c.state == crate::game::GuardState::Alert {
-            crate::game::GuardState::Alert
-        } else {
-            crate::game::GuardState::Search
-        };
-        crate::squad::end_guard_script(g, gd, Some(to));
-    }
-    let aw = g.gd[gd].awareness;
-    crate::mind::set(g, gd, if roused {
-        m::max(aw, c.awareness)
-    } else if heard {
-        m::max_n(&[aw, c.awareness, 0.35])
-    } else {
-        m::min(0.45, m::max_n(&[aw, c.awareness, 0.35]))
-    }, "enemysquads");
-    crate::roomfight::back_on(g, d, crate::roomfight::Held { hold: c.hold, pinned: c.pinned, station: c.station, home: c.home, room: c.room, ev: c.ev.clone(), watch: c.watch, want: c.want, pt: c.pt }, "enemysquads");
 }
 /// what he finds: the mate he was sent for, or any man lying at another squad's posts   (looks' `lying`)
 fn lying(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<EnemysquadsSquadId>, who: GuardId, around: bool) -> Option<GuardId> {
@@ -1261,9 +1212,6 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         went_silent(g, q, gd, None);
         return true;
     }
-    let step_t = look_of(g, q, l).step_t;
-    let step_t = crate::roomfight::boots(g, gd, step_t);
-    look_of(g, q, l).step_t = step_t;
     // (back, spot and from move only just before a return below: these are his row as it stands all the way down)
     let (l_back, l_spot, l_from, l_news0, x, all) = {
         let r = look_of(g, q, l);
@@ -1278,7 +1226,8 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         return true;
     }
     let eyes = g.time - g.gd[gd].last_seen_t < 1.0 && noticed(g, gd);
-    if eyes || !crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
+    let how = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG);
+    if eyes || matches!(how, Some(crate::roomfight::LegEnd::Contact | crate::roomfight::LegEnd::Taken)) {
         if eyes {
             let p = pos(g, gd);
             if room_of(g, q, p, Some(1.0)).is_none() {
@@ -1320,9 +1269,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
     }
     let goal = if l_back { l_from } else { l_spot };
     let dist = flat(pos(g, gd), goal);
-    let arrived = g.gd[gd].script.as_ref().map_or(false, |s| s.arrived == Some(true));
-    let there = arrived || dist < (if l_back { 0.5 } else { LOOK_AT_M });
-    let stuck = def!(g, d).stall_t > 1.3;
+    let there = how == Some(crate::roomfight::LegEnd::Arrived) || !l_back && dist < LOOK_AT_M;
     let close = dist < LOOK_NEAR_M;
     let looking = !l_back && look_of(g, q, l).look_t.is_some();
     if x.is_some() && !l_back && !looking {
@@ -1335,21 +1282,13 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
             }
         }
     }
-    if !there && !looking {
-        if !stuck && def!(g, d).move_t <= 8.0 {
-            return false;
-        }
-        if !(stuck && close) && look_of(g, q, l).tries < 8.0 {
-            look_of(g, q, l).tries += 1.0;
-            walk(g, d, goal);
-            return false;
-        }
-    }
+    if !there && !looking && how.is_none() { return false; } // (on his way)
     let reached = there || close;
     if l_back {
         if reached {
-            let row = look_of(g, q, l).clone();
-            settle(g, &row, d);
+            crate::roomfight::back_on(g, d, true, "enemysquads");
+        } else {
+            crate::roomfight::stand_here(g, d);
         }
         return true;
     }
@@ -1358,17 +1297,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
     if let Some(body) = lying(g, q, gd, x, who, true) {
         return found(g, q, gd, x, body);
     }
-    if g.time - look_t < LOOK_SECS {
-        let arrived = g.gd[gd].script.as_ref().map_or(false, |s| s.arrived == Some(true));
-        if arrived && flat(pos(g, gd), l_spot) < 0.5 {
-            g.gd[gd].script.as_mut().unwrap().arrived = Some(false);
-            def!(g, d).stall_t = 0.0;
-            def!(g, d).move_t = 0.0;
-        } else if arrived || def!(g, d).stall_t > 1.0 || def!(g, d).move_t > 8.0 {
-            walk(g, d, l_spot);
-        }
-        return false;
-    }
+    if g.time - look_t < LOOK_SECS { return false; }
     let on_air = match x {
         Some(x) => {
             let men = &sq!(g, x).men;
@@ -1386,7 +1315,6 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
                 let next = stops.remove(0);
                 r.spot = next;
                 r.look_t = None;
-                r.tries = 0.0;
                 Some(next)
             }
             _ => None,
@@ -1414,7 +1342,6 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         {
             let r = look_of(g, q, l);
             r.back = true;
-            r.tries = 0.0;
         }
         walk(g, d, l_from);
         return false;

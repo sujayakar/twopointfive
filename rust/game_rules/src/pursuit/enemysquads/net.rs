@@ -728,7 +728,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         }
         let t = g.time;
         let from = v3::copy(g.tab.roomfight_def[d].station);
-        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::default() });
+        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, t0: t, ..Sent::default() });
         crate::roomfight::loose_at(g, d, due.at);
         let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
@@ -861,8 +861,8 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
             event(g, q, SquadEventWhat::Back, Some(gd));
         }
         let r = &mut g.tab.enemysquads_squad[q].sent[i];
-        r.phase = SentPhase::Run; r.back = Some(true); r.spot = Some(s.from); r.door = None; r.way = None; r.tries = 0.0;
-        crate::roomfight::run(g, d, s.from, None, 0.3, crate::owner::by::SQUAD_LEG);
+        r.phase = SentPhase::Run; r.back = Some(true); r.spot = Some(s.from); r.door = None; r.way.clear();
+        send_round(g, d, s.from, None, Vec::new());
         return;
     }
     if mode == crate::roomfight::DefMode::Hold && g.time - s.t0 > 6.0 { sent_home(g, q, i); }
@@ -870,38 +870,22 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
 
 /// squadsTick 3, a man on a leg (`s.phase === 'run'`)
 fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: RoomfightDefId, mode: crate::roomfight::DefMode) {
-    use crate::roomfight::DefMode;
+    use crate::roomfight::{DefMode, LegEnd};
     let gd = s.gd;
-    let step = crate::roomfight::boots(g, gd, s.step_t);
-    g.tab.enemysquads_squad[q].sent[i].step_t = step;
-    let at = pos_of(g, gd);
-    if mode == DefMode::Move {
-        if let Some(w) = &s.way {
-            if w.len() > 1 && (flat(at, w[0]) < 1.4 || flat(at, w[1]) < flat(w[0], w[1])) {
-                g.tab.enemysquads_squad[q].sent[i].way.as_mut().unwrap().remove(0);
-                crate::roomfight::run(g, d, w[1], s.door, 0.3, crate::owner::by::SQUAD_LEG);
-            }
-        }
+    let Some(how) = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG) else { return };
+    if how == LegEnd::Taken && mode != DefMode::Free {
+        // (somebody stronger has him: he goes on when he is let go, if that is soon)
+        if g.time - s.t0 > g.k.squads.hold_secs { g.tab.enemysquads_squad[q].sent.remove(i); return; }
+        if crate::roomfight::on_leg(g, d) || crate::owner::kept(g, gd, crate::owner::by::SQUAD_LEG).is_some() || !fit(g, gd) { return; }
+        let here = pos_of(g, gd);
+        let mut way = s.way.clone();
+        if let Some(k) = (0..way.len()).min_by(|&a, &b| flat(way[a], here).total_cmp(&flat(way[b], here))) { way.drain(..k); }
+        send_round(g, d, s.spot.unwrap_or(s.from), s.door, way);
         return;
     }
-    let there = s.spot.map_or(false, |p| flat(at, p) < 2.0);
+    if s.back == Some(true) { g.tab.enemysquads_squad[q].sent.remove(i); return; }
+    let there = how == LegEnd::Arrived;
     let seen = g.time - g.gd[gd].last_seen_t < 1.0;
-    let again = mode == DefMode::Hold && !there && !seen && s.tries < 3.0 && s.spot.is_some();
-    if s.back == Some(true) {
-        if again && fit(g, gd) {
-            g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
-            crate::roomfight::run(g, d, s.spot.unwrap(), None, 0.3, crate::owner::by::SQUAD_LEG);
-            return;
-        }
-        g.tab.enemysquads_squad[q].sent.remove(i);
-        return;
-    }
-    if again && fit(g, gd) {
-        g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
-        let next = match s.way.as_ref().and_then(|w| w.first().copied()) { Some(p) => p, None => s.spot.unwrap() };
-        crate::roomfight::run(g, d, next, s.door, 0.3, crate::owner::by::SQUAD_LEG);
-        return;
-    }
     let holds = s.hold == Some(true);
     let name = name_of(g, q);
     if s.role == SentRole::Flank && mode == DefMode::Hold && (if holds { there || seen } else { seen && !there }) {

@@ -3,20 +3,6 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Calm {
-    pub awareness: f64,
-    pub hold: bool,
-    pub pinned: bool,
-    pub station: V3,
-    pub home: V3,
-    pub room: Option<RoomfightRoomId>,
-    pub ev: Vec<f64>,
-    pub watch: f64,
-    pub want: f64,
-    pub pt: V3,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
     #[default] Out,
@@ -33,11 +19,8 @@ pub struct Man {
     pub goal: V3,
     pub from: V3,
     pub watch: Option<V3>,
-    pub tries: f64,
-    pub step_t: f64,
     pub heard0: f64,
     pub there_t: f64,
-    pub calm: Option<crate::powerout::Calm>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]

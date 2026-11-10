@@ -616,7 +616,7 @@ impl DoorsAsk for Play {
         game::savestate::control::restart(&mut self.g);
     }
     fn falls_back(&self, name: &str) -> bool {
-        self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.move_kind == game::roomfight::DefMoveKind::Fallback })
+        self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.leg.kind == game::roomfight::DefMoveKind::Fallback })
     }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }

@@ -924,7 +924,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.last = DONE;
             return;
         };
-        if !crate::roomfight::on_leg_of(g, d, crate::owner::by::LAST_MAN) {
+        if crate::roomfight::leg_ended(g, d, crate::owner::by::LAST_MAN).is_some() {
             settle(g, gd, d);
         }
         return;
