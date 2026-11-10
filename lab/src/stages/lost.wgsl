@@ -7,7 +7,7 @@ const NEAR = 0.7;                                                   // farther t
   let c = g.x; let up = c % LOST_UP; let pi = (c / LOST_UP) % LOST_PX; let kind = c / (LOST_UP * LOST_PX); let px = 0.00025 * exp2(f32(pi)); let lo = lostK.at[kind * 2u]; let hi = lostK.at[kind * 2u + 1u]; let level = bitcast<u32>(lo.w); let cls = bitcast<u32>(hi.w);
   meshLostOn = lostK.pad.x > 0u; leafMode = 1u; var F: array<f32, 68>; for (var i = 0u; i < 68u; i++) { F[i] = 0.0; }
   for (var s = 0u; s < 4u; s++) {
-    rngState = pcg(li + 64u * (s + 4u * (lostK.round + 64u * c))); let r3 = vec3f(rnd(), rnd(), rnd()); let turn = rnd() * 6.2832; let sy = array<f32, 3>(0.342, 0.707, 0.966)[up]; let V = vec3f(cos(turn) * sqrt(1.0 - sy * sy), sy, sin(turn) * sqrt(1.0 - sy * sy)); let ro = mix(lo.xyz, hi.xyz, r3) + V * 4.0; let seed = rngState;
+    rngState = pcg(li + 64u * (s + 4u * (lostK.round + g.y + 64u * c))); let r3 = vec3f(rnd(), rnd(), rnd()); let turn = rnd() * 6.2832; let sy = array<f32, 3>(0.342, 0.707, 0.966)[up]; let V = vec3f(cos(turn) * sqrt(1.0 - sy * sy), sy, sin(turn) * sqrt(1.0 - sy * sy)); let ro = mix(lo.xyz, hi.xyz, r3) + V * 4.0; let seed = rngState;
     for (var side = 0u; side < 2u; side++) {
       let fine = side == 0u; rngState = seed; foot(0.0, 0.0); meshFoot = 0.0; meshError = select(lostK.tau * px, 0.0, fine); meshObject = select(level, 0u, fine); meshDrawn = !fine; let h = nearest(ro, -V, 1e-3, 30.0, 0u, 1e9); meshObject = 0u; meshDrawn = false; meshError = 0.0; if (h.piece == NOTHING) { continue; } let mine = (pieces[h.piece].flags & MESH) != 0u && mrowU(pieces[h.piece].planes + 2u).y == cls; if (!mine && cls != 0u) { continue; }      /* (the ground that shows between stones is part of their floor) */
       F[32u + side] += 1.0;
@@ -24,5 +24,5 @@ const NEAR = 0.7;                                                   // farther t
       F[side * 16u + 15u] += m * e * lum(matteSeen(q.kind, q.albedo, max(dot(q.n, V), 0.02))); meshFoot = 0.0;
     }
   }
-  for (var i = 0u; i < 17u; i++) { sums[(c * 64u + li) * 17u + i] = vec4f(F[i * 4u], F[i * 4u + 1u], F[i * 4u + 2u], F[i * 4u + 3u]); }
+  for (var i = 0u; i < 17u; i++) { sums[((g.y * lostK.pad.y + c) * 64u + li) * 17u + i] = vec4f(F[i * 4u], F[i * 4u + 1u], F[i * 4u + 2u], F[i * 4u + 3u]); }
 }
