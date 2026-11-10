@@ -130,7 +130,7 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
 }
 /// the chest twist still to come (yaw spread over spine1‥3, pitch at spine3), run backwards: its three turns undone about the spine's joints
 /// as they stood on the pose run forward when this was made (CharacterAnimator.untwist, doorLayer's pivots)
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Untwist {
     ident: bool,
     ie1: [f64; 4],
@@ -321,6 +321,7 @@ fn shape_mix(a: Shape, b: Shape, k: f64) -> Shape {
 }
 /// the thing a man works at, as his hands see it: the spot, out of its face, its right and its up (the twist still to come undone), where
 /// the shoulders will be once he has bowed in, the verb and its clock
+#[derive(Clone, Copy, Default)]
 struct Work {
     p_t: [f64; 3],
     n_t: [f64; 3],
@@ -420,9 +421,118 @@ impl Work {
         shape_mix(hold, Shape { wrist: hip, f: [0.0, -1.0, 0.2], b: [-sg * 0.9, 0.0, 0.3], curl: [0.6, 0.6, 0.65, 0.7], thumb: 0.45, spread: 0.0, body: true }, smoothstep(dur, dur + 0.3, t))
     }
 }
+/// What the steps of a man at work with his hands hand on to the ones after them.
+#[derive(Clone, Copy, Default)]
+struct AtWork {
+    n_at: [f64; 3],
+    p0: [f64; 3],
+    dt: f64,
+    live: bool,
+    r_free: bool,
+    tw_y: f64,
+    tw_p: f64,
+    // as_asked: what he is asked to do, and the keys of a code: four presses, the first four are all a code's hand reads
+    at: usize,
+    at_b: usize,
+    t: f64,
+    dur: f64,
+    kind: WorkKind,
+    dir: f64,
+    gaze_local: [f64; 3],
+    fix: [[f64; 4]; 2],
+    keys: [[f64; 2]; 4],
+    nk: usize,
+    // which_hands: which hands: settled while the verb runs, kept while it comes away
+    w_was: f64,
+    done: bool,
+    main: usize,
+    two: bool,
+    n0: [f64; 3],
+    ax: [f64; 3],
+    // how_low: the body: bowed to a low thing, leaned into a long reach
+    bow1: f64,
+    lean1: f64,
+    // shoulders_to_be: where the shoulders will be once he has bowed and leaned in: what the reach is asked of while the hands are still coming up
+    sh_full: Option<[[f64; 3]; 2]>,
+    // eased in by last frame's weight, and out again after
+    bow: f64,
+    lean: f64,
+    // thing: the thing as his hands see it: model -X is his right
+    wk: Work,
+    // arms_up: which arms are up, and can each reach: asked inside 0.57 m of the shoulder joint and ahead of it, let go past 0.6; the put-away is on his own body. One hand's verb is the lead hand's alone; the other hand lets go once the thing is out
+    tgt_l: f64,
+    tgt_r: f64,
+    // arms_come: the arms come
+    w_l: f64,
+    w_r: f64,
+}
+
 /// Hands at work on a thing: the body bowed to a low thing and leaned into a long reach, the eyes onto it, then each hand that is up by IK on a copy,
 /// its target travelling with the eased weight.
 pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f64; 3], dt: f64, live: bool, r_free: bool, tw_y: f64, tw_p: f64) -> u32 {
+    let mut o = AtWork { n_at, p0, dt, live, r_free, tw_y, tw_p, ..AtWork::default() };
+    as_asked(an, l, &mut o);
+    which_hands(an, &mut o);
+    let Some(Some(n)) = with_pose(g, o.at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1, SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        how_low(fk, &mut o);
+        Some(n)
+    }) else {
+        return 0;
+    };
+    if !shoulders_to_be(g, n, &mut o) {
+        return 0;
+    }
+    eased(&mut o);
+    let Some(mut hs) = hands_of(g, an) else {
+        return 0;
+    };
+    let c = &mut an.wk;
+    let Some(()) = with_pose(g, o.at, |d, rig, _n, fk| {
+        bows(d, rig, &o);
+        if o.sh_full.is_some() || o.bow + o.lean > 1e-4 {
+            fk_run(rig, d, fk.rot, fk.pos);
+        }
+        thing(fk, &mut o);
+        if !o.done {
+            look_at(d, rig, fk, &o.gaze_local, o.wk.at(0.0, 0.0, 0.0), 0.75 * o.w_was, 0.0);
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        arms_up(c, fk, &mut o);
+        arms_come(c, &mut o);
+    }) else {
+        return 0;
+    };
+    for side in 0..2usize {
+        let e = if side == 1 { o.w_r } else { o.w_l };
+        if e < 0.003 {
+            continue;
+        }
+        // (the shape off the run-forward as it stands: the pose's own for the first hand, the first hand's copy for the second)
+        let Some(sp) = with_pose(g, o.at, |_d, _rig, _n, fk| o.wk.shape(fk, side)) else {
+            return 0;
+        };
+        if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
+            return 0;
+        }
+        let hh = &mut hs;
+        with_pose(g, o.at_b, |d, rig, _n, fk| {
+            arm_works(&sp, hh, d, rig, fk, side, e, &o);
+        });
+        ask_mask(&[(arm_of(side).0, 1.0, true)]);
+        if !ask_blend(g, o.at, o.at_b, smoothstep(0.0, 0.25, e), true, o.at, n) {
+            return 0;
+        }
+    }
+    hands_to(&hs, an);
+    RAN | RAN_ALL
+}
+
+/// What he is asked to do, and the keys of a code: four presses, the first four are all a code's hand reads.
+fn as_asked(an: &mut Anim, l: &WorkPose, o: &mut AtWork) {
     let (at, at_b, _) = poses(an);
     let (t, dur, kind, dir, gaze_local, fix) = (l.t, l.dur, l.kind, l.dir.unwrap_or(1.0), an.gaze_local, [an.hand_fix[0], an.hand_fix[1]]);
     // (four presses: the first four keys are all a code's hand reads)
@@ -432,144 +542,152 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         nk = if k.len() < 4 { k.len() } else { 4 };
         keys[..nk].copy_from_slice(&k[..nk]);
     }
-    let wk_ = &mut an.wk;
-    let (w_was, done) = (clamp(max(wk_.w_l.x, wk_.w_r.x), 0.0, 1.0), t > dur);
+    *o = AtWork { at, at_b, t, dur, kind, dir, gaze_local, fix, keys, nk, ..*o };
+}
+
+/// Which hands: settled while the verb runs, kept while it comes away.
+fn which_hands(an: &mut Anim, o: &mut AtWork) {
+    let AtWork { n_at, live, r_free, t, dur, kind, .. } = *o;
+    let was = &mut an.wk;
+    let (w_was, done) = (clamp(max(was.w_l.x, was.w_r.x), 0.0, 1.0), t > dur);
     if live && !done {
         // (which hands: settled while the verb runs, kept while it comes away)
-        wk_.main = if r_free { 1.0 } else { 0.0 };
-        wk_.two = (kind == WorkKind::Charge || kind == WorkKind::Take) && r_free;
+        was.main = if r_free { 1.0 } else { 0.0 };
+        was.two = (kind == WorkKind::Charge || kind == WorkKind::Take) && r_free;
     }
-    let (main, two) = (if wk_.main != 0.0 { 1usize } else { 0 }, wk_.two);
+    let (main, two) = (if was.main != 0.0 { 1usize } else { 0 }, was.two);
     let n0 = normalize(n_at);
     // ---- the body: bowed to a low thing, leaned into a long reach (by last frame's weight; the head levelled back out of both), the eyes onto it
     let ax = cross3(&AY, &normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
-    let Some(Some((n, bow1, lean1))) = with_pose(g, at, |d, rig, n, fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1, SPINE2, NECK, HEAD])) {
-            return None;
-        }
-        fk_run(rig, d, fk.rot, fk.pos);
-        let bow1 = 30.0 * DEGR * smoothstep(0.3, 0.8, (fk.at(role(UPPER_ARM_L))[1] + fk.at(role(UPPER_ARM_R))[1]) / 2.0 - p0[1]);
-        let lean1 = 14.0 * DEGR * smoothstep(0.42, 0.66, dist3(&fk.at(arm_of(main).1), &mad3(p0, n0, 0.12)));
-        Some((n, bow1, lean1))
-    }) else {
-        return 0;
-    };
-    let body = |d: &mut [S], rig: &Rig, bow: f64, lean: f64| {
-        let q = |sh: f64| q_mul(&axis_angle(&ax, lean * sh), &q_pitch(bow * sh));
-        turn(d, rig, role(SPINE1), q(0.4));
-        turn(d, rig, role(SPINE2), q(0.35));
-        turn(d, rig, role(SPINE3), q(0.25));
-        turn(d, rig, role(NECK), q(-0.4));
-        turn(d, rig, role(HEAD), q(-0.4));
-    };
-    // where the shoulders WILL be once he has bowed and leaned in: what the reach is asked of while the hands are still coming up
+    *o = AtWork { w_was, done, main, two, n0, ax, ..*o };
+}
+
+/// The body: bowed to a low thing, leaned into a long reach.
+fn how_low(fk: &mut Fk, o: &mut AtWork) {
+    let AtWork { p0, main, n0, .. } = *o;
+    let bow1 = 30.0 * DEGR * smoothstep(0.3, 0.8, (fk.at(role(UPPER_ARM_L))[1] + fk.at(role(UPPER_ARM_R))[1]) / 2.0 - p0[1]);
+    let lean1 = 14.0 * DEGR * smoothstep(0.42, 0.66, dist3(&fk.at(arm_of(main).1), &mad3(p0, n0, 0.12)));
+    *o = AtWork { bow1, lean1, ..*o };
+}
+
+/// The body bowed and leaned (by last frame's weight; the head levelled back out of both).
+fn body(o: &AtWork, d: &mut [S], rig: &Rig, bow: f64, lean: f64) -> () {
+    let AtWork { ax, .. } = *o;
+    let q = |sh: f64| q_mul(&axis_angle(&ax, lean * sh), &q_pitch(bow * sh));
+    turn(d, rig, role(SPINE1), q(0.4));
+    turn(d, rig, role(SPINE2), q(0.35));
+    turn(d, rig, role(SPINE3), q(0.25));
+    turn(d, rig, role(NECK), q(-0.4));
+    turn(d, rig, role(HEAD), q(-0.4));
+}
+
+/// Where the shoulders will be once he has bowed and leaned in: what the reach is asked of while the hands are still coming up.
+fn shoulders_to_be(g: usize, n: usize, o: &mut AtWork) -> bool {
+    let AtWork { live, at, at_b, w_was, done, bow1, lean1, .. } = *o;
     let mut sh_full: Option<[[f64; 3]; 2]> = None;
     if live && !done && w_was < 0.97 && bow1 + lean1 > 1e-4 {
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
+            return false;
         }
         sh_full = with_pose(g, at_b, |d, rig, _n, fk| {
-            body(d, rig, bow1, lean1);
+            body(o, d, rig, bow1, lean1);
             fk_run(rig, d, fk.rot, fk.pos);
             [fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R))]
         });
     }
+    *o = AtWork { sh_full, ..*o };
+    true
+}
+
+/// Eased in by last frame's weight, and out again after.
+fn eased(o: &mut AtWork) {
+    let AtWork { t, dur, w_was, done, bow1, lean1, .. } = *o;
     let ease = w_was * if done { smoothstep(dur + 0.3, dur, t) } else { 1.0 };
     let (bow, lean) = (bow1 * ease, lean1 * ease);
-    let Some(mut hs) = hands_of(g, an) else {
-        return 0;
-    };
-    let c = &mut an.wk;
-    let Some((wk, w_l, w_r)) = with_pose(g, at, |d, rig, _n, fk| {
-        if bow + lean > 1e-4 {
-            body(d, rig, bow, lean);
-        }
-        if sh_full.is_some() || bow + lean > 1e-4 {
-            fk_run(rig, d, fk.rot, fk.pos);
-        }
-        let un = Untwist::at(fk, tw_y, tw_p, true);
-        let p_t = un.un(p0);
-        let n_t = normalize(sub3(un.un(add3(p0, n0)), p_t));
-        // the thing's right as he sees it (model −X is his right)
-        let r0 = cross3(&AY, &n0);
-        let r0 = if len3(&r0) < 1e-4 { [-1.0, 0.0, 0.0] } else { normalize(r0) };
-        let r_t = normalize(sub3(un.un(add3(p0, r0)), p_t));
-        let wk = Work { p_t, n_t, r_t, u_t: cross3(&n_t, &r_t), sh_full, un, t, dur, kind, dir, main, two, done, keys, nk };
-        if !done {
-            look_at(d, rig, fk, &gaze_local, wk.at(0.0, 0.0, 0.0), 0.75 * w_was, 0.0);
-        }
-        fk_run(rig, d, fk.rot, fk.pos);
-        // ---- which arms are up, and can each reach (asked inside 0.57 m of the shoulder joint and ahead of it, let go past 0.6; the put-away is on his own body)
-        let (mut tgt_l, mut tgt_r) = (0.0, 0.0);
-        if live {
-            for side in 0..2usize {
-                // (one hand's verb: the lead hand alone; the other hand lets go once the thing is out)
-                if (!two || done) && side != main {
-                    continue;
-                }
-                let (sh, sp) = (fk.at(arm_of(side).1), wk.shape(fk, side));
-                let (mut dd, mut ahead) = (dist3(&sh, &sp.wrist), sp.wrist[2] - sh[2]);
-                if let Some(sf) = sh_full {
-                    let df = dist3(&sf[side], &sp.wrist);
-                    if df < dd {
-                        dd = df;
-                        ahead = max(ahead, sp.wrist[2] - sf[side][2]);
-                    }
-                }
-                let ok = sp.body || if if side == 1 { c.ok_r } else { c.ok_l } { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
-                *(if side == 1 { &mut c.ok_r } else { &mut c.ok_l }) = ok;
-                if ok {
-                    if side == 1 {
-                        tgt_r = 1.0;
-                    } else {
-                        tgt_l = 1.0;
-                    }
+    *o = AtWork { bow, lean, ..*o };
+}
+
+/// Bowed and leaned as he is.
+fn bows(d: &mut [S], rig: &Rig, o: &AtWork) {
+    let AtWork { bow, lean, .. } = *o;
+    if bow + lean > 1e-4 {
+        body(o, d, rig, bow, lean);
+    }
+}
+
+/// The thing as his hands see it: model -X is his right.
+fn thing(fk: &mut Fk, o: &mut AtWork) {
+    let AtWork { p0, tw_y, tw_p, at, t, dur, kind, dir, keys, nk, done, main, two, n0, sh_full, .. } = *o;
+    let un = Untwist::at(fk, tw_y, tw_p, true);
+    let p_t = un.un(p0);
+    let n_t = normalize(sub3(un.un(add3(p0, n0)), p_t));
+    // the thing's right as he sees it (model −X is his right)
+    let across = cross3(&AY, &n0);
+    let r0 = if len3(&across) < 1e-4 { [-1.0, 0.0, 0.0] } else { normalize(across) };
+    let r_t = normalize(sub3(un.un(add3(p0, r0)), p_t));
+    let wk = Work { p_t, n_t, r_t, u_t: cross3(&n_t, &r_t), sh_full, un, t, dur, kind, dir, main, two, done, keys, nk };
+    *o = AtWork { wk, ..*o };
+}
+
+/// Which arms are up, and can each reach: asked inside 0.57 m of the shoulder joint and ahead of it, let go past 0.6; the put-away is on his own body. One hand's verb is the lead hand's alone; the other hand lets go once the thing is out.
+fn arms_up(c: &mut game_types::character::AnimWk, fk: &mut Fk, o: &mut AtWork) {
+    let AtWork { live, done, main, two, sh_full, wk, .. } = *o;
+    let (mut tgt_l, mut tgt_r) = (0.0, 0.0);
+    if live {
+        for side in 0..2usize {
+            // (one hand's verb: the lead hand alone; the other hand lets go once the thing is out)
+            if (!two || done) && side != main {
+                continue;
+            }
+            let (sh, sp) = (fk.at(arm_of(side).1), wk.shape(fk, side));
+            let (mut dd, mut ahead) = (dist3(&sh, &sp.wrist), sp.wrist[2] - sh[2]);
+            if let Some(sf) = sh_full {
+                let df = dist3(&sf[side], &sp.wrist);
+                if df < dd {
+                    dd = df;
+                    ahead = max(ahead, sp.wrist[2] - sf[side][2]);
                 }
             }
-        }
-        let rate = |tg: f64, x: f64| if tg > x { 26.0 } else { 22.0 };
-        let (rl, rr) = (rate(tgt_l, c.w_l.x), rate(tgt_r, c.w_r.x));
-        spring_step(&mut c.w_l, tgt_l, rl, dt);
-        spring_step(&mut c.w_r, tgt_r, rr, dt);
-        let (w_l, w_r) = (clamp(c.w_l.x, 0.0, 1.0), clamp(c.w_r.x, 0.0, 1.0));
-        c.shown = if main == 1 { w_r } else { w_l };
-        (wk, w_l, w_r)
-    }) else {
-        return 0;
-    };
-    for side in 0..2usize {
-        let e = if side == 1 { w_r } else { w_l };
-        if e < 0.003 {
-            continue;
-        }
-        // (the shape off the run-forward as it stands: the pose's own for the first hand, the first hand's copy for the second)
-        let Some(sp) = with_pose(g, at, |_d, _rig, _n, fk| wk.shape(fk, side)) else {
-            return 0;
-        };
-        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
-        }
-        let hh = &mut hs;
-        with_pose(g, at_b, |d, rig, _n, fk| {
-            let (sg, (sh_n, ua, fa, hd)) = (if side == 1 { 1.0 } else { -1.0 }, arm_of(side));
-            fk_run(rig, d, fk.rot, fk.pos);
-            let (live0, rot0) = (fk.at(hd), fk.rot(hd));
-            let far = smoothstep(0.38, 0.54, dist3(&fk.at(ua), &sp.wrist)) * e;
-            if far > 1e-3 {
-                // the shoulder reaches too (the door hand's turn)
-                turn(d, rig, sh_n, q_mul(&q_yaw(sg * 10.0 * DEGR * far), &q_roll(-sg * 3.0 * DEGR * far)));
-                fk_run(rig, d, fk.rot, fk.pos);
+            let ok = sp.body || if if side == 1 { c.ok_r } else { c.ok_l } { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
+            *(if side == 1 { &mut c.ok_r } else { &mut c.ok_l }) = ok;
+            if ok {
+                if side == 1 {
+                    tgt_r = 1.0;
+                } else {
+                    tgt_l = 1.0;
+                }
             }
-            // elbow down and out
-            let rot = nlerp(&rot0, &hand_rot(&fix[side], sp.f, sp.b), e);
-            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &sp.wrist, e), Some(&[-sg * 0.45, -1.0, -0.3]), e, Some(&rot), false);
-            hand(d, hh, side, &sp.curl, sp.thumb, sp.spread);
-        });
-        ask_mask(&[(arm_of(side).0, 1.0, true)]);
-        if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
-            return 0;
         }
     }
-    hands_to(&hs, an);
-    RAN | RAN_ALL
+    *o = AtWork { tgt_l, tgt_r, ..*o };
+}
+
+/// The arms come.
+fn arms_come(c: &mut game_types::character::AnimWk, o: &mut AtWork) {
+    let AtWork { dt, main, tgt_l, tgt_r, .. } = *o;
+    let rate = |tg: f64, x: f64| if tg > x { 26.0 } else { 22.0 };
+    let (rl, rr) = (rate(tgt_l, c.w_l.x), rate(tgt_r, c.w_r.x));
+    spring_step(&mut c.w_l, tgt_l, rl, dt);
+    spring_step(&mut c.w_r, tgt_r, rr, dt);
+    let (w_l, w_r) = (clamp(c.w_l.x, 0.0, 1.0), clamp(c.w_r.x, 0.0, 1.0));
+    c.shown = if main == 1 { w_r } else { w_l };
+    *o = AtWork { w_l, w_r, ..*o };
+}
+
+/// An arm at the thing: the shoulder reaches too (the door hand's turn), the elbow down and out.
+fn arm_works(sp: &Shape, hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, side: usize, e: f64, o: &AtWork) {
+    let AtWork { fix, .. } = *o;
+    let (sg, (sh_n, ua, fa, hd)) = (if side == 1 { 1.0 } else { -1.0 }, arm_of(side));
+    fk_run(rig, d, fk.rot, fk.pos);
+    let (live0, rot0) = (fk.at(hd), fk.rot(hd));
+    let far = smoothstep(0.38, 0.54, dist3(&fk.at(ua), &sp.wrist)) * e;
+    if far > 1e-3 {
+        // the shoulder reaches too (the door hand's turn)
+        turn(d, rig, sh_n, q_mul(&q_yaw(sg * 10.0 * DEGR * far), &q_roll(-sg * 3.0 * DEGR * far)));
+        fk_run(rig, d, fk.rot, fk.pos);
+    }
+    // elbow down and out
+    let rot = nlerp(&rot0, &hand_rot(&fix[side], sp.f, sp.b), e);
+    two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &sp.wrist, e), Some(&[-sg * 0.45, -1.0, -0.3]), e, Some(&rot), false);
+    hand(d, hh, side, &sp.curl, sp.thumb, sp.spread);
 }
