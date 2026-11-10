@@ -8,6 +8,7 @@ fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {
   if (leaf) { let a = (q.albedo + q.through) / PI; if (c.n > 0.0) { return a * c.E + leafPhase(q, rd) * frame.sunE.xyz * c.sun; } return a * (frame.sunE.xyz * 0.06 + skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 0.5); }
   if (c.n <= 0.0) { return vec3f(0.0); }
   // the coat goes by the way it is looked at from: what lands from all round by Schlick's curve (in the mean, what returns counts), the sun by its own lobe, a little wide. Spread evenly, windows in the sun lit what stands across from them
-  let f = coatF0(q); let lf = lum(f); let r = q.rough; let u = 1.0 - sat(-dot(q.ng, rd)); let u2 = u * u; let coat = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(exp(-3.55 * r * r) * u2 * u2 * u); let matte = matteOf(q) * matteMean(q.kind, q.albedo) * (1.0 - lf - (1.0 - lf) / 21.0);
-  return (matte * (c.E + frame.sunE.xyz * max(dot(q.ng, frame.sunDir.xyz), 0.0) * c.sun) + coat * c.E) / PI + frame.sunE.xyz * (c.sun * coatOf(q, -rd, frame.sunDir.xyz, 0.08));
+  let f = coatF0(q); let lf = lum(f); let r = q.rough; let u = 1.0 - sat(-dot(q.ng, rd)); let u2 = u * u; let even = 0.0476 * exp(-3.55 * r * r); let coat = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(select(exp(-3.55 * r * r) * u2 * u2 * u, even, COAT_EVEN)); let matte = matteOf(q) * matteMean(q.kind, q.albedo) * (1.0 - lf - (1.0 - lf) / 21.0);
+  let sun = frame.sunE.xyz * (max(dot(q.ng, frame.sunDir.xyz), 0.0) * c.sun / PI); if (COAT_SUN > 0.9) { return (matte + coat) * (sun + c.E / PI); } return matte * (sun + c.E / PI) + coat * (c.E / PI) + frame.sunE.xyz * (c.sun * coatOf(q, -rd, frame.sunDir.xyz, COAT_SUN));
 }
+const COAT_EVEN = false; const COAT_SUN = 0.08;       /* (how much wider the sun's lobe is; over 0.9: spread evenly) */
