@@ -175,7 +175,7 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
     as_big(an, b, lg, &mut f);
     an.big_under = false;
     // ---- the beat as shares
-    beat(an, b, blows, &mut f);
+    beat(an, blows, &mut f);
     const LEGS: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     let Some(Some(n)) = with_pose(g, f.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEGS) { Some(n) } else { None }) else {
         return 0;
@@ -213,17 +213,17 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
     let done = with_pose(g, f.at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         big_frame(fk, &mut f);
-        hands_now(b, fk, &mut f);
+        hands_now(fk, &mut f);
         // a fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle
         no_tool(&mut f);
         if f.ham {
-            hammer_place(g, d, fk, at_back, grab_at, b, &mut f);
+            hammer_place(fk, at_back, grab_at, &mut f);
         } else {
             // (the rifle's own place over the shoulder: the fist there, the muzzle down his back)
-            shotgun_place(b, tune, &mut f);
+            shotgun_place(tune, &mut f);
         }
         right_hand(d, rig, fk, &mut f);
-        left_hand(b, d, rig, fk, &mut f);
+        left_hand(d, rig, fk, &mut f);
         {
             big_fingers(d, hh, &f);
         }
@@ -252,7 +252,7 @@ fn as_big(an: &mut Anim, b: &AnimBigTool, lg: &AnimLongGrip, f: &mut BigBeat) {
 }
 
 /// The beat as shares: wound up, swung, struck, kicked, planted; in his hands; and where the drawn tool is.
-fn beat(an: &mut Anim, b: &AnimBigTool, blows: &[f64], f: &mut BigBeat) {
+fn beat(an: &mut Anim, blows: &[f64], f: &mut BigBeat) {
     let BigBeat { ham, t, equip, end, snug, windup, stowing, us, .. } = *f;
     let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
     for &b in blows {
@@ -395,8 +395,8 @@ fn dir_t(f: &BigBeat, q: [f64; 3]) -> [f64; 3] {
 }
 
 /// The two hands as they are, and the point as this pose sees it.
-fn hands_now(b: &AnimBigTool, fk: &mut Fk, f: &mut BigBeat) {
-    let BigBeat { at0, tw_y, tw_p, at, .. } = *f;
+fn hands_now(fk: &mut Fk, f: &mut BigBeat) {
+    let BigBeat { at0, tw_y, tw_p, .. } = *f;
     let (hr_n, hl_n) = (role(HAND_R), role(HAND_L));
     let (s_r, s_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
     let hp_at = untwist(fk, tw_y, tw_p, at0);
@@ -406,8 +406,8 @@ fn hands_now(b: &AnimBigTool, fk: &mut Fk, f: &mut BigBeat) {
 }
 
 /// A fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle.
-fn fist(b: &AnimBigTool, f: &BigBeat, side: usize, gp: [f64; 3], dv: [f64; 3], sh: [f64; 3]) -> BigSpot {
-    let BigBeat { at, fix_l, fix_r, f_up, .. } = *f;
+fn fist(f: &BigBeat, side: usize, gp: [f64; 3], dv: [f64; 3], sh: [f64; 3]) -> BigSpot {
+    let BigBeat { fix_l, fix_r, f_up, .. } = *f;
     let mut h = add3(sub3(gp, sh), dir_t(f, [if side == 1 { -0.03 } else { 0.03 }, 0.0, 0.02]));
     h = mad3(h, dv, -dot3(&h, &dv));
     if len3(&h) < 1e-3 {
@@ -420,16 +420,17 @@ fn fist(b: &AnimBigTool, f: &BigBeat, side: usize, gp: [f64; 3], dv: [f64; 3], s
 
 /// Nothing placed yet (the left hand's place is by the kind: the hammer's line, or the gun's three axes).
 fn no_tool(f: &mut BigBeat) {
-    let (mut back_r, mut held) = (BigSpot::default(), BigSpot::default());
+    let (back_r, held) = (BigSpot::default(), BigSpot::default());
     // (the left hand's place on the tool, by the kind: the hammer's line, or the gun's three axes)
-    let mut ham_line = BigLine::default();
-    let mut gun = ([0.0f64; 3], [0.0f64; 3], [0.0f64; 3]);
+    let ham_line = BigLine::default();
+    let gun = ([0.0f64; 3], [0.0f64; 3], [0.0f64; 3]);
     *f = BigBeat { back_r, held, ham_line, gun, ..*f };
 }
 
 /// The hammer: on his back, up, wound, over the top and down onto the point.
-fn hammer_place(g: usize, d: &mut [S], fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, b: &AnimBigTool, f: &mut BigBeat) {
-    let BigBeat { tw_y, tw_p, snug, clear, stowing, us, wind, sw, hit, grab, put, ue, eb, es, tdir, tleft, s_r, hp_at, arc, mut back_r, mut held, mut ham_line, .. } = *f;
+fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBeat) {
+    let BigBeat { tw_y, tw_p, snug, clear, stowing, us, wind, sw, hit, grab, put, ue, eb, es, tdir, tleft, s_r, hp_at, arc, .. } = *f;
+    let (back_r, held, ham_line);
     let off = |gp: [f64; 3], dv: [f64; 3]| BigLine { g: add3(s_r, dir_t(f, gp)), d: normalize(dir_t(f, dv)) };
     // on his back, as the drawer has it: the fist takes it just under the head (snug: the back's frame as it WILL be after the chest twist still
     // to come, and the place that ENDS UP there)
@@ -463,8 +464,8 @@ fn hammer_place(g: usize, d: &mut [S], fk: &mut Fk, at_back: &mut f64, grab_at: 
         // over the top and down into it
         l = line_mix(line_mix(l, over_l, es, None), line_mix(over_l, blow_l, es, None), es, None);
     }
-    back_r = fist(b, f, 1, back_l.g, back_l.d, s_r);
-    held = fist(b, f, 1, l.g, l.d, s_r);
+    back_r = fist(f, 1, back_l.g, back_l.d, s_r);
+    held = fist(f, 1, l.g, l.d, s_r);
     // (how much of the fist's place this frame is the tool's place ON HIS BACK, and how far up the handle it holds it)
     {
         let mut wb = (1.0 - eb) * (1.0 - hit);
@@ -480,8 +481,9 @@ fn hammer_place(g: usize, d: &mut [S], fk: &mut Fk, at_back: &mut f64, grab_at: 
 }
 
 /// The shotgun: over the shoulder, then its butt in the pocket and its bore on the point.
-fn shotgun_place(b: &AnimBigTool, tune: &Knobs, f: &mut BigBeat) {
-    let BigBeat { at, adj, stock_l0, fix_r, kick, in_hands, f_fwd, s_r, hp_at, arc, mut back_r, mut held, mut gun, .. } = *f;
+fn shotgun_place(tune: &Knobs, f: &mut BigBeat) {
+    let BigBeat { adj, stock_l0, fix_r, kick, in_hands, f_fwd, s_r, hp_at, arc, .. } = *f;
+    let (back_r, held, gun);
     back_r = BigSpot { at: add3(s_r, dir_t(f, tune.kit.apex.at)), rot: hand_rot(&fix_r, dir_t(f, tune.kit.apex.fing), dir_t(f, tune.kit.apex.back)), f: [0.0; 3], b: [0.0; 3] };
     let pk = add3(s_r, dir_t(f, BIGMOVE.shotgun.pocket));
     let mut z = normalize(sub3(hp_at, pk));
@@ -517,8 +519,8 @@ fn right_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
 }
 
 /// The left let go of his gun, waiting in front of him, then onto the tool.
-fn left_hand(b: &AnimBigTool, d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
-    let BigBeat { at, ham, lg_wrist, lg_fing, lg_back, fix_l, stowing, us, ue, hr_n, hl_n, s_l, u_l, held, ham_line, gun, own, .. } = *f;
+fn left_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
+    let BigBeat { ham, lg_wrist, lg_fing, lg_back, fix_l, stowing, us, ue, hr_n, hl_n, s_l, u_l, held, ham_line, gun, own, .. } = *f;
     let j = smoothstep(BIGMOVE.join[0], BIGMOVE.join[1], ue) * (if stowing { 1.0 - smoothstep(0.0, BIGMOVE.unjoin, us) } else { 1.0 });
     // let go of his gun, waiting in front of him
     let mut l = spot_mix(u_l, BigSpot { at: add3(s_l, dir_t(f, BIGMOVE.wait)), rot: hand_rot(&fix_l, dir_t(f, [-0.25, -0.35, 0.9]), dir_t(f, [0.35, 0.9, 0.25])), f: [0.0; 3], b: [0.0; 3] }, e3(ue / 0.3), None);
@@ -526,7 +528,7 @@ fn left_hand(b: &AnimBigTool, d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBe
         let wr = fk.at(hr_n);
         let on_it = if ham {
             let gp = mad3(mad3(wr, held.f, BIGRIG.hammer.grip.fwd), held.b, -BIGRIG.hammer.grip.palm);
-            fist(b, f, 0, mad3(gp, ham_line.d, -BIGRIG.hammer.hands), ham_line.d, s_l)
+            fist(f, 0, mad3(gp, ham_line.d, -BIGRIG.hammer.hands), ham_line.d, s_l)
         } else {
             let (x, yu, z) = gun;
             let in_g = |p: [f64; 3]| -> [f64; 3] { [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]] };

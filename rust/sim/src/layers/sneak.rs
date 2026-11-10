@@ -358,8 +358,8 @@ fn drift(tune: &Knobs, o: &CreepArms, ph: f64) -> [f64; 3] {
 fn left_shape(tune: &Knobs, o: &mut CreepArms) {
     let CreepArms { cr, cke, ws, dealt, .. } = *o;
     let hd = &CREEP.l;
-    let (mut pole, mut fing, mut back, mut cu, mut th, mut sp) = (hd.pole, hd.fing, hd.back, hd.curl, hd.thumb, hd.spread);
-    let mut to = add3(
+    let (pole, fing, back, cu, th, sp) = (hd.pole, hd.fing, hd.back, hd.curl, hd.thumb, hd.spread);
+    let to = add3(
         mad3(lerp3(&hd.at, &hd.at_c, cr), tune.kit.close.lead, cke),
         scale3(drift(tune, o, 0.0), if dealt { 1.0 / max(0.38, lerp(tune.kit.close.left, 1.0, ws)) } else { 1.0 }),
     );
@@ -399,8 +399,8 @@ fn mir(v: [f64; 3]) -> [f64; 3] {
 fn right_shape(tune: &Knobs, o: &mut CreepArms) {
     let CreepArms { cr, cke, .. } = *o;
     let hd = &CREEP.r;
-    let (mut a0, mut p0, mut fing, mut back) = (add3(lerp3(&hd.at, &hd.at_c, cr), drift(tune, o, 2.1)), hd.pole, hd.fing, hd.back);
-    let (mut curl, mut thb, mut spr) = (hd.curl, hd.thumb, hd.spread * (1.0 - cke));
+    let (a0, p0, fing, back) = (add3(lerp3(&hd.at, &hd.at_c, cr), drift(tune, o, 2.1)), hd.pole, hd.fing, hd.back);
+    let (curl, thb, spr) = (hd.curl, hd.thumb, hd.spread * (1.0 - cke));
     *o = CreepArms { fing, back, a0, p0, curl, thb, spr, ..*o };
 }
 
@@ -423,7 +423,7 @@ fn right_wide(o: &mut CreepArms) {
 /// The right arm's point.
 fn right_point(o: &mut CreepArms) {
     let CreepArms { fix_r, sr, fing, back, a0, p0, .. } = *o;
-    let (mut to, mut rot, mut pole) = (add3(sr, sq(o, a0)), hand_rot(&fix_r, sq(o, fing), sq(o, back)), sq(o, p0));
+    let (to, rot, pole) = (add3(sr, sq(o, a0)), hand_rot(&fix_r, sq(o, fing), sq(o, back)), sq(o, p0));
     *o = CreepArms { pole, to, rot, ..*o };
 }
 
