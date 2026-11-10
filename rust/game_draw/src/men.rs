@@ -219,7 +219,7 @@ fn shown(g: &Game, bared: bool) -> Vec<CharId> {
 /// whose table a man is dressed by, and whether he is in the sneaking suit
 fn dress(g: &Game, c: CharId) -> (CastSide, bool) {
     if players(g).any(|p| p == c) {
-        let side = g.m.cast.worn.get(c).map_or(CastSide::Operator, |&v| g.tab.anim_gltf_cast_variant[v].side);
+        let side = g.m.cast.worn.get(c).map_or(CastSide::Operator, |&v| g.art.variant[v].side);
         return (side, suit(g, c, true));
     }
     if let Some(&gd) = g.guards.iter().find(|&&gd| g.gd[gd].ch == c) { return (game::char_look::side_of_team(g.team(gd), Some(g.gd[gd].trained)), suit(g, c, false)); }

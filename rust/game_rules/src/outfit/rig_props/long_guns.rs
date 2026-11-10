@@ -47,7 +47,7 @@ fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kS
     left = v3::mad(left, up, -v3::dot(left, up));
     left = if v3::len(left) > 1e-3 { v3::normalize(left) } else { [fw[2], 0.0, -fw[0]] };
     let cf = Frame { o: mid, x: left, y: up, z: v3::cross(left, up) };
-    let off = if !front && g.tab.rig[g.ch[c_2].rig].cast.is_some() { [p.off[0], p.off[1], p.off[2] - SLUNG_CAST_OUT] } else { p.off };
+    let off = if !front && g.art.rig[g.ch[c_2].rig].cast.is_some() { [p.off[0], p.off[1], p.off[2] - SLUNG_CAST_OUT] } else { p.off };
     let mut o = v3::add(mid, in_c(cf, off));
     let mut z = v3::normalize(in_c(cf, p.bore));
     let mut want = 0.0;
@@ -405,7 +405,7 @@ fn pack_side(g: &crate::game::Game, c_2: CharId, what: crate::rig_props::PackSid
     let bind_what = what;
     let p = pack_side_bind(g, c_2, bind_what, rig)?;
     let ch = g.ch[c_2].rig;
-    let chest = g.tab.rig[ch].back.as_ref()?.chest;
+    let chest = g.art.rig[ch].back.as_ref()?.chest;
     let w = crate::packside::side_skinned(p, &g.ch[c_2].skel.joint_data, chest * 16);
     Some(Frame { o: w.o, x: w.x, y: w.y, z: w.z })
 }

@@ -49,7 +49,7 @@ fn creep_plant_find(g: &mut Game, c: CharId, clip: ClipId, off: f64) -> f64 {
     let mut best = 0.0;
     let mut score = -m::INF;
     for i in 0..96 {
-        let dur = g.tab.clip[clip].duration;
+        let dur = g.art.clip[clip].duration;
         crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c);
         anim_fk_part(g, c, p_c, &legs);
         let pos = &g.ch[c].anim.fk.pos;
@@ -244,7 +244,7 @@ fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
     if let Some(q) = g.ch[c].anim.rc_inv { return q; }
     let rig = g.ch[c].anim.rig;
     let mut f = crate::anim_skeleton::pose_fk_new(g, rig);
-    let n = g.tab.rig[rig].nodes.len();
+    let n = g.art.rig[rig].nodes.len();
     let fresh = crate::anim_skeleton::pose_new(g, n);
     crate::anim_skeleton::rest_pose(g, rig, fresh);
     crate::anim_skeleton::pose_fk_run(g, &mut f, fresh);

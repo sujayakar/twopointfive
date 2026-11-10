@@ -862,7 +862,7 @@ fn strike(g: &mut Game, c: CharId, f: &mut Frame) {
         let sc = if a.strike_k == StrikeKind::Jab { a.clips.get("Punch_Jab").copied().unwrap_or(cross) } else { cross };
         let t = a.strike_t;
         crate::anim_skeleton::sample_clip(g, sc, t, false, p_b);
-        let d = g.tab.clip[sc].duration;
+        let d = g.art.clip[sc].duration;
         let w = v3::clamp(m::min(t / 0.05, (d - t) / 0.15), 0.0, 1.0);
         w_strike = w;
         let bw_style = g.ch[c].anim.bw.as_ref().map(|b| b.style);
@@ -886,7 +886,7 @@ fn strike(g: &mut Game, c: CharId, f: &mut Frame) {
     if hit_t >= 0.0 {
         let clip = clip_of(g, c, "Hit_Chest");
         crate::anim_skeleton::sample_clip(g, clip, hit_t, false, p_b);
-        let d = g.tab.clip[clip].duration;
+        let d = g.art.clip[clip].duration;
         let w = v3::clamp(1.0 - m::abs(hit_t / d - 0.3) / 0.7, 0.0, 1.0) * 0.8;
         blend_masked(g, c, None, p_b, w, Mask::Upper, p_a);
         let a = &mut g.ch[c].anim;
@@ -1073,7 +1073,7 @@ fn twists(g: &mut Game, c: CharId, f: &mut Frame) {
 /// A clip of his rig by its name (`this.clips.Walk_Loop`).
 pub(super) fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.clips.get(name).unwrap() }
 /// A clip's length (`c.Walk_Loop.duration`).
-fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.tab.clip[clip_of(g, c, name)].duration }
+fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.art.clip[clip_of(g, c, name)].duration }
 /// `bigOff(this.bigTool)`: the skeleton's parameter is the fields it reads.
 fn big_off_tool(b: &AnimBigTool) -> bool { big_off(BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end }) }
 /// What the goggles' flip and a smoke both ask of the hands (lines 2585 and 2588 share every term after `!this.nv`).

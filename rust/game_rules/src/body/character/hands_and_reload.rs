@@ -24,7 +24,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
     if let Some(a) = &a {
         if a.clip != g.ch[c].anim.act_name {
             let rig = g.ch[c].anim.rig;
-            let clip = g.tab.rig[rig].clips.get(a.clip.clone()).copied();
+            let clip = g.art.rig[rig].clips.get(a.clip.clone()).copied();
             let an = &mut g.ch[c].anim;
             an.act_name = a.clip.clone();
             an.act_clip = clip;
@@ -262,7 +262,7 @@ pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::an
     let rig = g.ch[c].anim.rig;
     for k in 0..list.len() {
         let i = list[k] as usize;
-        let par = g.tab.rig[rig].nodes[i].parent;
+        let par = g.art.rig[rig].nodes[i].parent;
         if par < 0.0 {
             let d = crate::anim_skeleton::pose_cols(g, pose);
             let (r, t) = ([d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64], [d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64]);
@@ -430,7 +430,7 @@ pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, spe
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
     let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
     let idle = clip_at(g, c, idle, idle_t);
-    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
+    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; clip_at(g, c, clip, t) };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
     anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));

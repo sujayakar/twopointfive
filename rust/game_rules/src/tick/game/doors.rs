@@ -25,7 +25,7 @@ pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId]) {
             drawn = re;
         }
     }
-    if g.tab.rig[g.rig].cast.is_some() {
+    if g.art.rig[g.rig].cast.is_some() {
         for &c in drawn.iter() { let parts = crate::cast::cast_parts(g, c); g.ch[c].parts = parts; }
     }
 }

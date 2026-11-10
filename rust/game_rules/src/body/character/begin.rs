@@ -54,7 +54,7 @@ fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimS
 /// Jog_Fwd_Loop at phase ph with its loop seam closed, on the animator being built
 fn sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: crate::anim_skeleton::Pose) {
     let cj = kept(a, "Jog_Fwd_Loop");
-    let t = ph * g.tab.clip[cj].duration;
+    let t = ph * g.art.clip[cj].duration;
     crate::anim_skeleton::sample_clip(g, cj, t, true, out);
     let k = ph - m::floor(ph) - 0.5;
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64) as usize;
@@ -83,7 +83,7 @@ fn jog_seam_close(d: &mut [f32], rows: usize, seam: &[crate::character::AnimJogS
 
 /// `ch.nodeByName.get(name)`, loud when missing (the constructor's `node`)
 fn node(g: &crate::game::Game, ch: RigId, name: &str) -> usize {
-    match g.tab.rig[ch].node_by_name.get(String::from(name)) {
+    match g.art.rig[ch].node_by_name.get(String::from(name)) {
         Some(i) => *i as usize,
         None => panic!("missing node {}", name),
     }
@@ -214,7 +214,7 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
 /// Its poses, all at rest.
 fn its_poses(g: &mut Game, ch: RigId, a: &mut Anim) {
     a.poses = crate::anim_skeleton::pose_set_new(g, crate::character::ANIM_POSES);
-    let n = g.tab.rig[ch].nodes.len() as f64;
+    let n = g.art.rig[ch].nodes.len() as f64;
     let set = a.poses;
     a.pose = crate::anim_skeleton::pose_set_make(g, set, n);
     a.p_a = crate::anim_skeleton::pose_set_make(g, set, n);
@@ -232,12 +232,12 @@ fn its_poses(g: &mut Game, ch: RigId, a: &mut Anim) {
 fn its_clips(g: &mut Game, ch: RigId, a: &mut Anim) {
     let need: [&'static str; 15] = ["Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Crouch_Idle_Loop", "Crouch_Fwd_Loop", "Pistol_Idle_Loop", "Pistol_Aim_Neutral", "Pistol_Aim_Up", "Pistol_Aim_Down", "Pistol_Shoot", "Idle_Torch_Loop", "Hit_Chest", "Sprint_Loop", "Pistol_Reload", "Punch_Cross"];
     for k in need {
-        match g.tab.rig[ch].clips.get(String::from(k)) {
+        match g.art.rig[ch].clips.get(String::from(k)) {
             Some(cl) => { a.clips.set(k, *cl); }
             None => panic!("missing clip {}", k),
         }
     }
-    if let Some(j) = g.tab.rig[ch].clips.get(String::from("Punch_Jab")) { a.clips.set("Punch_Jab", *j); }
+    if let Some(j) = g.art.rig[ch].clips.get(String::from("Punch_Jab")) { a.clips.set("Punch_Jab", *j); }
 }
 
 /// The rig's named nodes, and each digit's joints.
@@ -287,9 +287,9 @@ fn its_masks(g: &mut Game, ch: RigId, a: &mut Anim) {
 fn its_grip(g: &mut Game, ch: RigId, a: &mut Anim) {
     let (rest, nd) = (a.rest, a.nodes);
     a.fk = crate::anim_skeleton::pose_fk_new(g, ch);
-    a.fk_legs = fk_list(&g.tab.rig[ch], &[nd.hips as f64, nd.thigh_l as f64, nd.shin_l as f64, nd.foot_l as f64, nd.toe_l as f64, nd.thigh_r as f64, nd.shin_r as f64, nd.foot_r as f64, nd.toe_r as f64]);
-    a.fk_arms = fk_list(&g.tab.rig[ch], &[nd.spine3 as f64, nd.upper_arm_r as f64, nd.forearm_r as f64, nd.hand_r as f64, nd.middle1_r as f64, nd.upper_arm_l as f64, nd.forearm_l as f64, nd.hand_l as f64]);
-    a.fk_head = fk_list(&g.tab.rig[ch], &[nd.head as f64]);
+    a.fk_legs = fk_list(&g.art.rig[ch], &[nd.hips as f64, nd.thigh_l as f64, nd.shin_l as f64, nd.foot_l as f64, nd.toe_l as f64, nd.thigh_r as f64, nd.shin_r as f64, nd.foot_r as f64, nd.toe_r as f64]);
+    a.fk_arms = fk_list(&g.art.rig[ch], &[nd.spine3 as f64, nd.upper_arm_r as f64, nd.forearm_r as f64, nd.hand_r as f64, nd.middle1_r as f64, nd.upper_arm_l as f64, nd.forearm_l as f64, nd.hand_l as f64]);
+    a.fk_head = fk_list(&g.art.rig[ch], &[nd.head as f64]);
 
     crate::anim_skeleton::sample_clip(g, kept(a, "Pistol_Aim_Neutral"), 0.0, false, a.p_aim);
     crate::anim_skeleton::pose_fk_run(g, &mut a.fk, rest);
@@ -333,7 +333,7 @@ fn crouch_gait(g: &mut Game, ch: RigId, a: &mut Anim) {
     let p = s1;
     crate::anim_skeleton::pose_copy(g, p, rest);
     let cf = kept(a, "Crouch_Fwd_Loop");
-    let cf_dur = g.tab.clip[cf].duration;
+    let cf_dur = g.art.clip[cf].duration;
     const M: usize = 48;
     let (mut zmin, mut zmax) = (1e9f64, -1e9f64);
     let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
@@ -363,13 +363,13 @@ fn crouch_gait(g: &mut Game, ch: RigId, a: &mut Anim) {
 fn jog_seam(g: &mut Game, ch: RigId, a: &mut Anim) {
     let (s1, s2, rest) = (a.p_b, a.p_c, a.rest);
     let cj = kept(a, "Jog_Fwd_Loop");
-    let cj_dur = g.tab.clip[cj].duration;
+    let cj_dur = g.art.clip[cj].duration;
     let (pa, pb) = (s1, s2);
     crate::anim_skeleton::pose_copy(g, pa, rest);
     crate::anim_skeleton::pose_copy(g, pb, rest);
     crate::anim_skeleton::sample_clip(g, cj, 0.0, false, pa);
     crate::anim_skeleton::sample_clip(g, cj, cj_dur, false, pb);
-    let tracks: Vec<(f64, f64)> = g.tab.clip[cj].tracks.iter().map(|tr| (tr.node, tr.path)).collect();
+    let tracks: Vec<(f64, f64)> = g.art.clip[cj].tracks.iter().map(|tr| (tr.node, tr.path)).collect();
     for (node, path) in tracks {
         if path == 0.0 {
             let d = v3::sub(crate::anim_skeleton::pose_pos(g, pa, node), crate::anim_skeleton::pose_pos(g, pb, node));
@@ -390,7 +390,7 @@ fn its_cast(g: &mut Game, ch: RigId, a: &mut Anim) {
     let names = n_entries(&nn);
     let at: Vec<usize> = names.iter().map(|e| node(g, ch, e.1)).collect();
     layer_tables_fit();
-    let all: Vec<ClipId> = g.tab.rig[ch].clips.values().copied().collect();
+    let all: Vec<ClipId> = g.art.rig[ch].clips.values().copied().collect();
     crate::anim_skeleton::layer_clips_fit(g, &all, a.p_a.nodes as f64);
 
     let mut cast = crate::anim_skeleton::LayerCast::blank();
@@ -445,7 +445,7 @@ fn sprint_gait(g: &mut Game, ch: RigId, a: &mut Anim) {
     let p = s1;
     crate::anim_skeleton::pose_copy(g, p, rest);
     let cs = kept(a, "Sprint_Loop");
-    let cs_dur = g.tab.clip[cs].duration;
+    let cs_dur = g.art.clip[cs].duration;
     const M: usize = 64;
     let (mut zmin, mut zmax, mut ymin) = (1e9f64, -1e9f64, 1e9f64);
     let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
