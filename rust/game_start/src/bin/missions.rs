@@ -12,7 +12,8 @@
 //! WHAT A ROW SAYS, summed over the seeds: the squad's men up at the end of those staged · enemies left of those staged · floors cleared · when the first of the squad
 //! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · how long open ways onto floor nobody has been on were within 4 m of
 //! a man of the squad, and how much of that a gun of theirs was on them (a second a way) · the enemy man-seconds each
-//! rule of the list had a man. Eight seeds of the seventeen at both difficulties (272 runs) are four minutes on four cores.
+//! rule of the list had a man · how many of the squad's men who fell were shot from behind (120 degrees and more off where they looked) · how many by one of
+//! their own · with `--played`, how many runs did not end with the floor taken. Eight seeds of the seventeen at both difficulties (272 runs) are four minutes on four cores.
 //!
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of the hostage in a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
@@ -41,7 +42,7 @@ const WAYS_M: f64 = 4.0;
 
 /// what one run came to
 #[derive(Clone, Debug, Default, PartialEq)]
-struct Run { up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
+struct Run { behind: usize, ours: usize, cap: usize, up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
 
 fn file_of(level: &str) -> String { format!("{level}.json") }
 
@@ -72,12 +73,14 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
     let mut r = Run { squad: p.mates().len(), enemies: enemies(&p).len(), ..Default::default() };
     let mut was: BTreeMap<u32, (bool, f64)> = BTreeMap::new();
     let t0 = p.time();
+    let mut owes = game_start::owes::Owes::new();
     let mut him = played.then(|| HandsOff::new(p.g.seats[0], Plan { seed, cap: CAP, ..Default::default() }));
     for f in 0..((if played { CAP + 5.0 } else { secs }) * 60.0) as usize {
         match &mut him {
             Some(h) => { if h.over() { break; } p.played_by(h); }
             None => { if f % ORDER_EVERY == ORDER_FIRST && !order(&mut p, (f / ORDER_EVERY) % 2 == 0) { break; } p.frame(); }
         }
+        owes.tick(&mut p.g);
         let t = p.time() - t0;
         if r.fell.is_none() && p.mates().iter().any(|&m| !p.up(m)) { r.fell = Some(t); }
         for m in p.g.guards.clone() {
@@ -92,6 +95,10 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
         if f % WAYS_EVERY == 0 { for (_, on) in p.watched(WAYS_M) { r.ways[0] += WAYS_EVERY as f64 / 60.0; if on { r.ways[1] += WAYS_EVERY as f64 / 60.0; } } }
         if r.clear.is_none() && enemies(&p).into_iter().all(|m| !p.up(m)) { r.clear = Some(t); }
     }
+    let names: Vec<String> = p.mates().iter().map(|&m| p.g.gd[m].callsign.clone()).collect();
+    r.behind = p.recap_deaths().iter().filter(|d| names.contains(&d.name) && d.off.abs() >= 120.0).count();
+    r.ours = owes.friendly as usize;
+    r.cap = him.as_ref().map_or(0, |h| (h.end() != Some(game_start::hands_off::End::Taken)) as usize);
     r.up = p.mates().into_iter().filter(|&m| p.up(m)).count();
     r.left = enemies(&p).into_iter().filter(|&m| p.up(m)).count();
     r
@@ -103,7 +110,7 @@ fn median(mut v: Vec<f64>) -> String {
     format!("{:.1}", v[v.len() / 2])
 }
 
-const HEAD: [&str; 16] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "ways s", "ways watched s", "rules man-secs"];
+const HEAD: [&str; 19] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "ways s", "ways watched s", "rules man-secs", "behind", "by ours", "not taken"];
 
 fn row(level: &str, hard: bool, runs: &[Run]) -> String {
     let sum = |f: &dyn Fn(&Run) -> f64| runs.iter().map(f).sum::<f64>();
@@ -115,7 +122,7 @@ fn row(level: &str, hard: bool, runs: &[Run]) -> String {
      sum(&|r| r.enemies as f64).to_string(), runs.iter().filter(|r| r.left == 0).count().to_string(), median(fell.clone()), fell.len().to_string(), median(clear),
      format!("{}/{}", sum(&|r| r.rounds[0]), sum(&|r| r.rounds[1])), format!("{}/{}", sum(&|r| r.reloads[0] as f64), sum(&|r| r.reloads[1] as f64)),
      format!("{:.0}", sum(&|r| r.ways[0])), format!("{:.0}", sum(&|r| r.ways[1])),
-     had.iter().map(|(k, v)| format!("{k} {v:.1}")).collect::<Vec<_>>().join(" · ")].join("\t")
+     had.iter().map(|(k, v)| format!("{k} {v:.1}")).collect::<Vec<_>>().join(" · "), sum(&|r| r.behind as f64).to_string(), sum(&|r| r.ours as f64).to_string(), sum(&|r| r.cap as f64).to_string()].join("\t")
 }
 
 /// `1-4,7` as 1 2 3 4 7
@@ -127,7 +134,7 @@ fn seeds_of(word: &str) -> Vec<u32> {
 fn fail(why: &str) -> ! { eprintln!("missions: {why}"); std::process::exit(2) }
 
 /// the columns that are numbers to be added up
-const ADDED: [usize; 8] = [2, 3, 4, 5, 6, 7, 13, 14];
+const ADDED: [usize; 11] = [2, 3, 4, 5, 6, 7, 13, 14, 16, 17, 18];
 
 fn diff(before: &str, after: &str) {
     let read = |f: &str| -> BTreeMap<(String, String), Vec<String>> {

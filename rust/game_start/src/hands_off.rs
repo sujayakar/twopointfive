@@ -46,6 +46,8 @@ impl End { pub fn as_str(self) -> &'static str { match self { End::Taken => "tak
 
 /// seconds from a man showing to the first round
 const REACT: f64 = 0.6;
+/// he holds his round with a mate this near its line
+const MATE_M: f64 = 0.6;
 
 /// a man as he has been shown to him: first, last, and the beat he needs
 #[derive(Clone, Copy)]
@@ -407,7 +409,17 @@ impl HandsOff {
         me.target.set(best);
         me.set_busy(best.is_some());
         me.hands(g, cmd, best.map(chest));
-        if best.is_some() && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
+        // (and not with one of his own in the line)
+        let mate_in_line = best.is_some_and(|h| {
+            let (a, b) = (pos, g.ch[g.gd[h].ch].pos);
+            let l = flat(a, b);
+            me.up().into_iter().any(|m| {
+                let p = g.ch[g.gd[m].ch].pos;
+                let along = ((p[0] - a[0]) * (b[0] - a[0]) + (p[2] - a[2]) * (b[2] - a[2])) / l.max(1e-6);
+                along > 0.0 && along < l && flat(p, [a[0] + (b[0] - a[0]) * along / l, 0.0, a[2] + (b[2] - a[2]) * along / l]) < MATE_M
+            })
+        });
+        if best.is_some() && !mate_in_line && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
         if game::weapons::firearm_rounds_ready(g, pl.rifle) == 0.0 && !game::weapons::firearm_reloading(g, pl.rifle) { me.down("KeyR"); }
     }
 }
