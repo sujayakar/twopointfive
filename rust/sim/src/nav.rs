@@ -401,180 +401,209 @@ fn dear_along<P: Prices>(src: &mut P, gw: usize, gh: usize, cell: f64, a0: f64, 
         Ok(count)
     }
 }
+/// the search's tables
+struct Tables {
+    shut: &'static [u8; MAX_NAV],
+    g: &'static mut [S; MAX_NAV],
+    f: &'static mut [S; MAX_NAV],
+    came: &'static mut [u32; MAX_NAV],
+    closed: &'static mut [u8; MAX_NAV],
+    open: &'static mut [u32; MAX_OPEN],
+    seen: &'static mut [u32; MAX_OPEN],
+    cells: &'static mut [u32; MAX_NAV],
+    way: &'static mut [f64; MAX_WAY * 2],
+}
+fn tables() -> Tables {
+    unsafe {
+        Tables {
+            shut: &*core::ptr::addr_of!(SHUT),
+            g: &mut *core::ptr::addr_of_mut!(G),
+            f: &mut *core::ptr::addr_of_mut!(F),
+            came: &mut *core::ptr::addr_of_mut!(CAME),
+            closed: &mut *core::ptr::addr_of_mut!(CLOSED),
+            open: &mut *core::ptr::addr_of_mut!(OPEN),
+            seen: &mut *core::ptr::addr_of_mut!(SEEN),
+            cells: &mut *core::ptr::addr_of_mut!(CELLS),
+            way: &mut *core::ptr::addr_of_mut!(WAY),
+        }
+    }
+}
+
 /// THE SEARCH, from where it stands (its start, or where it waited), to its answer or its next wait
 fn go<P: Prices>(src: &mut P) -> i32 {
     let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
-    let (shut, g, f, came, closed, open, seen, cells, way) = unsafe {
-        (
-            &*core::ptr::addr_of!(SHUT),
-            &mut *core::ptr::addr_of_mut!(G),
-            &mut *core::ptr::addr_of_mut!(F),
-            &mut *core::ptr::addr_of_mut!(CAME),
-            &mut *core::ptr::addr_of_mut!(CLOSED),
-            &mut *core::ptr::addr_of_mut!(OPEN),
-            &mut *core::ptr::addr_of_mut!(SEEN),
-            &mut *core::ptr::addr_of_mut!(CELLS),
-            &mut *core::ptr::addr_of_mut!(WAY),
-        )
-    };
-    let (gw, gh, cell) = (run.gw, run.gh, run.cell);
-    let grid = Grid { gw, gh, cell };
+    let mut t = tables();
     if !run.smoothing {
-        let (start, goal, max_iter) = (run.start, run.goal, run.max_iter);
-        let (gxf, gzf) = (run.gx as f64, run.gz as f64);
-        let (mut n_open, mut n_seen, mut iter) = (run.n_open, run.n_seen, run.iter);
-        let mut full = false;
-        loop {
-            let cur;
-            if run.held {
-                // (popped and closed before the wait: its neighbours' prices are here now)
-                cur = run.cur;
-                run.held = false;
-            } else {
-                if n_open == 0 {
-                    break;
-                }
-                let it = iter;
-                iter = iter.wrapping_add(1);
-                if !(it < max_iter) {
-                    break;
-                }
-                // pop the least f (the first of equals, as the scan finds it)
-                // (a cell is under MAX_NAV, a power of two: the mask says so to the compiler, and the scan is then two loads and a compare an entry)
-                let mut mi = 0usize;
-                let mut mf = get(f, open[0] as usize & (MAX_NAV - 1));
-                for (i, &c) in open[..n_open].iter().enumerate().skip(1) {
-                    let fi = get(f, c as usize & (MAX_NAV - 1));
-                    if fi < mf {
-                        mi = i;
-                        mf = fi;
-                    }
-                }
-                cur = open[mi] as usize;
-                n_open -= 1;
-                open[mi] = open[n_open];
-                if cur == goal {
-                    break;
-                }
-                if closed[cur] != 0 {
-                    continue;
-                }
-                closed[cur] = 1;
-                // (cannot be on a floor `begin` took: MAX_FLOOR)
-                if n_open + 8 > MAX_OPEN || n_seen + 8 > MAX_OPEN {
-                    full = true;
-                    break;
-                }
-            }
-            // the cells a step from `cur` may enter, in the search's own order, said ONCE: both passes below go by this list (which cells they are
-            // does not hang on what the second pass writes)
-            let mut near = [(0usize, false); 8];
-            let mut n_near = 0usize;
-            {
-                let (cx, cz) = ((cur % gw) as i32, (cur / gw) as i32);
-                for dz in -1..=1i32 {
-                    for dx in -1..=1i32 {
-                        if dx == 0 && dz == 0 {
-                            continue;
-                        }
-                        let (nx, nz) = (cx + dx, cz + dz);
-                        if nx < 0 || nz < 0 || nx >= gw as i32 || nz >= gh as i32 {
-                            continue;
-                        }
-                        let ni = nz as usize * gw + nx as usize;
-                        if shut[ni] != 0 || closed[ni] != 0 {
-                            continue;
-                        }
-                        if dx != 0 && dz != 0 && (shut[cz as usize * gw + (cx + dx) as usize] != 0 || shut[(cz + dz) as usize * gw + cx as usize] != 0) {
-                            continue;
-                        }
-                        near[n_near] = (ni, dx != 0 && dz != 0);
-                        n_near += 1;
-                    }
-                }
-            }
-            if !P::FLAT {
-                // every one of them is priced before any is stepped into. One whose price is not known: the cell waits with all of them asked for,
-                // and is opened when they are here
-                let mut wait = false;
-                for &(ni, _) in &near[..n_near] {
-                    if src.at(ni).is_none() {
-                        wait = true;
-                    }
-                }
-                if wait {
-                    run.held = true;
-                    run.cur = cur;
-                    run.n_open = n_open;
-                    run.n_seen = n_seen;
-                    run.iter = iter;
-                    return NEED;
-                }
-            }
-            for &(ni, diagonal) in &near[..n_near] {
-                let step = if diagonal { SQRT2 } else { 1.0 };
-                // (a price is here: the pass above saw to it, and a search that finds none all the same is the host's, not a guess. A step at the
-                //  price of 1 is the step: the same double)
-                let Some(price) = src.at(ni) else {
-                    blank(n_seen);
-                    return end(ASK_HOST);
-                };
-                let ng = get(g, cur) + step * js_max(1.0, price);
-                if ng < get(g, ni) {
-                    let (hx, hz) = (js_abs((ni % gw) as f64 - gxf), js_abs((ni / gw) as f64 - gzf));
-                    put(g, ni, ng);
-                    came[ni] = cur as u32 + 1;
-                    put(f, ni, ng + ((hx + hz) + (SQRT2 - 2.0) * js_min(hx, hz)));
-                    open[n_open] = ni as u32;
-                    n_open += 1;
-                    seen[n_seen] = ni as u32;
-                    n_seen += 1;
-                }
-            }
+        if let Err(said) = search(src, run, &mut t) {
+            return said;
         }
-        let mut n = 0usize;
-        let found = came[goal] != 0;
-        if found && !full {
-            let mut c = goal;
-            loop {
-                if c == start {
-                    break;
-                }
-                cells[n] = c as u32;
-                n += 1;
-                if came[c] == 0 {
-                    break;
-                }
-                c = came[c] as usize - 1;
-            }
-        }
-        blank(n_seen);
-        if full {
-            return end(ASK_HOST);
-        }
-        if !found {
-            return end(NO_WAY);
-        }
-        cells[..n].reverse();
-        run.n = n;
         run.smoothing = true;
     }
-    let n = run.n;
-    // (with a price: which raw cells the search paid extra for, read once for the whole way. Each was priced as the search reached it; one that
-    //  was not is asked for like any other)
-    if !P::FLAT {
-        let mut wait = false;
-        for &c in &cells[..n] {
-            if src.at(c as usize).is_none() {
-                wait = true;
+    smooth(src, run, &mut t)
+}
+
+/// the search itself: its way's cells stand in `cells`, or what it says instead
+fn search<P: Prices>(src: &mut P, run: &mut Run, t: &mut Tables) -> Result<(), i32> {
+    let mut full = false;
+    loop {
+        if run.held {
+            // (popped and closed before the wait: its neighbours' prices are here now)
+            run.held = false;
+        } else {
+            if run.n_open == 0 {
+                break;
             }
+            let it = run.iter;
+            run.iter = it.wrapping_add(1);
+            if !(it < run.max_iter) {
+                break;
+            }
+            let cur = pop(run, t);
+            if cur == run.goal {
+                break;
+            }
+            if t.closed[cur] != 0 {
+                continue;
+            }
+            t.closed[cur] = 1;
+            // (cannot be on a floor `begin` took: MAX_FLOOR)
+            if run.n_open + 8 > MAX_OPEN || run.n_seen + 8 > MAX_OPEN {
+                full = true;
+                break;
+            }
+            run.cur = cur;
         }
-        if wait {
-            return NEED;
+        let (near, n_near) = steps_from(run, t);
+        if !P::FLAT && !priced_all(src, near[..n_near].iter().map(|&(ni, _)| ni)) {
+            // (it waits with all of them asked for, and is opened when they are here)
+            run.held = true;
+            return Err(NEED);
+        }
+        for &(ni, diagonal) in &near[..n_near] {
+            step_into(src, run, t, ni, diagonal)?;
         }
     }
-    // the greedy smoothing: from the anchor, the farthest cell of the way a man can walk straight to — and, with a price, to which the straight leg
-    // crosses no more dear cells than the raw cells it stands in for
+    let way = if full { Err(ASK_HOST) } else { way_back(run, t) };
+    blank(run.n_seen);
+    match way {
+        Ok(n) => {
+            run.n = n;
+            Ok(())
+        }
+        Err(said) => Err(end(said)),
+    }
+}
+
+/// The open cell of the least f (the first of equals, as the scan finds it), off the list. A cell is under MAX_NAV, a power of two: the mask says so to
+/// the compiler, and the scan is then two loads and a compare an entry.
+#[inline(always)]
+fn pop(run: &mut Run, t: &mut Tables) -> usize {
+    let mut mi = 0usize;
+    let mut mf = get(t.f, t.open[0] as usize & (MAX_NAV - 1));
+    for (i, &c) in t.open[..run.n_open].iter().enumerate().skip(1) {
+        let fi = get(t.f, c as usize & (MAX_NAV - 1));
+        if fi < mf {
+            mi = i;
+            mf = fi;
+        }
+    }
+    let cur = t.open[mi] as usize;
+    run.n_open -= 1;
+    t.open[mi] = t.open[run.n_open];
+    cur
+}
+
+/// The cells a step from where the search stands may enter, in its own order, and which of the steps are diagonal: said ONCE, both passes go by this
+/// list (which cells they are does not hang on what the second pass writes).
+#[inline(always)]
+fn steps_from(run: &Run, t: &Tables) -> ([(usize, bool); 8], usize) {
+    let (gw, gh, shut) = (run.gw, run.gh, t.shut);
+    let mut near = [(0usize, false); 8];
+    let mut n = 0usize;
+    let (cx, cz) = ((run.cur % gw) as i32, (run.cur / gw) as i32);
+    for dz in -1..=1i32 {
+        for dx in -1..=1i32 {
+            if dx == 0 && dz == 0 {
+                continue;
+            }
+            let (nx, nz) = (cx + dx, cz + dz);
+            if nx < 0 || nz < 0 || nx >= gw as i32 || nz >= gh as i32 {
+                continue;
+            }
+            let ni = nz as usize * gw + nx as usize;
+            if shut[ni] != 0 || t.closed[ni] != 0 {
+                continue;
+            }
+            if dx != 0 && dz != 0 && (shut[cz as usize * gw + (cx + dx) as usize] != 0 || shut[(cz + dz) as usize * gw + cx as usize] != 0) {
+                continue;
+            }
+            near[n] = (ni, dx != 0 && dz != 0);
+            n += 1;
+        }
+    }
+    (near, n)
+}
+
+/// whether every one of these cells has its price: each whose price is not known is asked for
+fn priced_all<P: Prices>(src: &mut P, cells: impl Iterator<Item = usize>) -> bool {
+    let mut all = true;
+    for c in cells {
+        if src.at(c).is_none() {
+            all = false;
+        }
+    }
+    all
+}
+
+/// A step from where the search stands into cell `ni`. A price is here: the pass before saw to it, and a search that finds none all the same is the
+/// host's, not a guess. A step at the price of 1 is the step: the same double.
+#[inline(always)]
+fn step_into<P: Prices>(src: &mut P, run: &mut Run, t: &mut Tables, ni: usize, diagonal: bool) -> Result<(), i32> {
+    let step = if diagonal { SQRT2 } else { 1.0 };
+    let Some(price) = src.at(ni) else {
+        blank(run.n_seen);
+        return Err(end(ASK_HOST));
+    };
+    let ng = get(t.g, run.cur) + step * js_max(1.0, price);
+    if ng < get(t.g, ni) {
+        let (hx, hz) = (js_abs((ni % run.gw) as f64 - run.gx as f64), js_abs((ni / run.gw) as f64 - run.gz as f64));
+        put(t.g, ni, ng);
+        t.came[ni] = run.cur as u32 + 1;
+        put(t.f, ni, ng + ((hx + hz) + (SQRT2 - 2.0) * js_min(hx, hz)));
+        t.open[run.n_open] = ni as u32;
+        run.n_open += 1;
+        t.seen[run.n_seen] = ni as u32;
+        run.n_seen += 1;
+    }
+    Ok(())
+}
+
+/// the way the search found, its cells from the first step to the goal: how many
+fn way_back(run: &Run, t: &mut Tables) -> Result<usize, i32> {
+    if t.came[run.goal] == 0 {
+        return Err(NO_WAY);
+    }
+    let (mut n, mut c) = (0usize, run.goal);
+    while c != run.start {
+        t.cells[n] = c as u32;
+        n += 1;
+        if t.came[c] == 0 {
+            break;
+        }
+        c = t.came[c] as usize - 1;
+    }
+    t.cells[..n].reverse();
+    Ok(n)
+}
+
+/// THE GREEDY SMOOTHING: from the anchor, the farthest cell of the way a man can walk straight to, and, with a price, to which the straight leg crosses
+/// no more dear cells than the raw cells it stands in for (which of those the search paid extra for is read once for the whole way).
+fn smooth<P: Prices>(src: &mut P, run: &Run, t: &mut Tables) -> i32 {
+    let (n, gw, gh, cell) = (run.n, run.gw, run.gh, run.cell);
+    let grid = Grid { gw, gh, cell };
+    if !P::FLAT && !priced_all(src, t.cells[..n].iter().map(|&c| c as usize)) {
+        return NEED;
+    }
     let centre = |c: u32| -> (f64, f64) { (((c as usize % gw) as f64 + 0.5) * cell, ((c as usize / gw) as f64 + 0.5) * cell) };
     let (mut anchor0, mut anchor2) = (run.a0, run.a2);
     let mut out = 0usize;
@@ -582,45 +611,45 @@ fn go<P: Prices>(src: &mut P) -> i32 {
     while i < n {
         let mut j = n - 1;
         while j > i {
-            let (q0, q2) = centre(cells[j]);
-            if grid.walkable(shut, anchor0, anchor2, q0, q2) {
+            let (q0, q2) = centre(t.cells[j]);
+            if grid.walkable(t.shut, anchor0, anchor2, q0, q2) {
                 if P::FLAT {
                     break;
                 }
-                match dear_along(src, gw, gh, cell, anchor0, anchor2, q0, q2) {
-                    Err(()) => return NEED,
-                    Ok(d) => {
-                        // (the raw cells this leg stands in for: priced above, every one)
-                        let mut stood = 0u32;
-                        for &c in &cells[i..=j] {
-                            match src.at(c as usize) {
-                                None => return end(ASK_HOST),
-                                Some(p) => {
-                                    if p > 1.0 {
-                                        stood += 1;
-                                    }
-                                }
-                            }
-                        }
-                        if d <= stood {
-                            break;
-                        }
-                    }
+                let Ok(dear) = dear_along(src, gw, gh, cell, anchor0, anchor2, q0, q2) else {
+                    return NEED;
+                };
+                let Some(stood) = dear_of(src, &t.cells[i..=j]) else {
+                    return end(ASK_HOST);
+                };
+                if dear <= stood {
+                    break;
                 }
             }
             j -= 1;
         }
-        let (p0, p2) = centre(cells[j]);
+        let (p0, p2) = centre(t.cells[j]);
         // (cannot be on a floor `begin` took: a waypoint is a cell of the way, each once)
         if out >= MAX_WAY {
             return end(ASK_HOST);
         }
-        way[out * 2] = p0;
-        way[out * 2 + 1] = p2;
+        t.way[out * 2] = p0;
+        t.way[out * 2 + 1] = p2;
         out += 1;
         anchor0 = p0;
         anchor2 = p2;
         i = j + 1;
     }
     end(out as i32)
+}
+
+/// how many of these cells cost more than plain floor (None = one has no price)
+fn dear_of<P: Prices>(src: &mut P, cells: &[u32]) -> Option<u32> {
+    let mut n = 0u32;
+    for &c in cells {
+        if src.at(c as usize)? > 1.0 {
+            n += 1;
+        }
+    }
+    Some(n)
 }
