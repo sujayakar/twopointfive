@@ -35,7 +35,8 @@ fn run(index: u32) {
   var waiting = vec3f(0.0);
   // a ray to what is there; then, from a surface, one to a lamp
   for (var k = 0u; k < 2u; k++) {
-    let ray = Ray(leave_surface(place, normal, toward), toward, 1e-4, reach);
+    var ray = wide_cone(leave_surface(place, normal, toward), toward);
+    ray.most = reach;
     let met = nearest(ray);
     if (k == 1u) {
       if (met.piece == NOTHING) { light += waiting; }

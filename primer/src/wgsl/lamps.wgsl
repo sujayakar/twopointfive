@@ -161,6 +161,13 @@ fn pick_by_score(origin: vec3f, normal: vec3f, die: f32) -> Pick {
   return Pick(kept, kept_score / total, total);
 }
 
+/// How large a lamp is, across.
+fn lamp_size(lamp: Lamp) -> f32 {
+  if (lamp.kind == LAMP_PANEL) { return sqrt(lamp.area); }
+  if (lamp.kind == LAMP_SUN) { return 2.0 * lamp.radius * 1e4; } // it is taken to be 10 km off
+  return 2.0 * lamp.radius;
+}
+
 /// Is the sun's disc that way?
 fn sun_met(toward: vec3f) -> u32 {
   for (var i = 0u; i < world.lamp_count; i++) {

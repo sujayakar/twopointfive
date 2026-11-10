@@ -19,7 +19,7 @@ fn run(pixel: vec2u) {
     var u = die.x;
     for (var i = 0u; i < world.lamp_count; i++) {
       if (lamps[i].changing != CLASS) { continue; }
-      let s = brightness(landing(i, place, hit.position, hit.normal));
+      let s = brightness(landing(i, place, hit));
       if (s <= 0.0) { continue; }
       let take = s / (g.total + s);
       if (offer(&g, i, place, s, s, 0.0, u)) { u = u / take; } else { u = (u - take) / (1.0 - take); }
@@ -41,7 +41,7 @@ fn run(pixel: vec2u) {
         if (nth == 0u) { lamp = i; break; }
         nth--;
       }
-      let s = brightness(landing(lamp, at, hit.position, hit.normal));
+      let s = brightness(landing(lamp, at, hit));
       let keep = offer(&g, lamp, at, s, s * f32(of_class), 1.0, unit(hash2(h, 5u)));
       if (keep || k < 24u) { draw_ray(pixel, hit.position, lamps[lamp].center, RAY_CANDIDATE); }
     }

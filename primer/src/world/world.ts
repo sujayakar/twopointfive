@@ -1,17 +1,20 @@
 // THE WORLD ON THE GPU: what a room is, as buffers. Things that stand still are written once; things
 // that move are written again each tick, with a small tree of their own.
 
-import { f32, i32, pack, packAll, struct, u32, vec3f, vec4f, type Value } from '../gpu/layout';
+import { f32, pack, packAll, struct, u32, vec3f, vec4f, type Value } from '../gpu/layout';
 import { makeBuffer, type Gpu } from '../gpu/device';
 import type { Graph } from '../gpu/graph';
 import { blueNoise } from './blue';
 import { coatTable } from './coat';
+import { clumps } from './smoke';
 import { Builder, placed, type LampGiven, type Material, type PieceGiven, type Place, type RoomSpec } from './room';
 import { boundsOf, buildTree, type TreeNode } from './tree';
+import type { MeshGiven, Meshes } from '../mesh/meshes';
+import { valueOf } from '../page/knobs';
 import { NO_TURN, cross, length, normalize, scale, type Vec3 } from './vec';
 
 export const NOTHING = 0xffffffff;
-const MOST = { materials: 64, lamps: 80, objects: 128, planes: 1024, openings: 8 };
+const MOST = { materials: 64, lamps: 80, objects: 128, planes: 1024, openings: 8, volumes: 8 };
 
 const Piece = struct('Piece', {
   center: vec3f('', { unit: 'm' }),
@@ -23,6 +26,11 @@ const Piece = struct('Piece', {
   object: u32('what it moves with; 0 is the room'),
   first_plane: u32(''),
   plane_count: u32(''),
+  form: u32('solid; a mesh; or only a stand-in for one'),
+  wide_from: f32('the ray width it is there from', { unit: 'm' }),
+  wide_until: f32('and until', { unit: 'm' }),
+  cover: f32('the share of rays it stops; 1 is solid'),
+  mesh_scale: f32(''),
 });
 const Node = struct('Node', {
   low: vec3f('', { unit: 'm' }),
@@ -70,6 +78,24 @@ const Opening = struct('Opening', {
   half_v: vec3f('the other half edge', { unit: 'm' }),
   spare2: f32(''),
 });
+const Volume = struct('Volume', {
+  center: vec3f('', { unit: 'm' }),
+  contrast: f32('how uneven'),
+  half_size: vec3f('', { unit: 'm' }),
+  wave: f32('the longest wave', { unit: 'm' }),
+  absorb: vec3f('a meter'),
+  g: f32('how forward it turns light'),
+  scatter: vec3f('a meter'),
+  soft: f32('how far in from its sides it fades, of 1'),
+  emit: vec3f('a meter'),
+  spare0: f32(''),
+  drift: vec3f('', { unit: 'm/s' }),
+  spare1: f32(''),
+  clump: vec4f('how much thinner, with 1 to 4 waves left out'),
+});
+const Event = struct('Event', { center: vec3f('', { unit: 'm' }), radius: f32('', { unit: 'm' }), strength: f32(''), spare0: f32(''), spare1: f32(''), spare2: f32('') });
+const Events = struct('Events', {});
+Events.wgsl = `struct Events { count: u32, spare0: u32, spare1: u32, spare2: u32, items: array<Event, 32> }`;
 const WorldStruct = struct('World', {
   sky_zenith: vec3f(''),
   still_pieces: u32(''),
@@ -79,11 +105,20 @@ const WorldStruct = struct('World', {
   moving_root: u32('where the tree of what moves begins'),
   lamp_count: u32(''),
   opening_count: u32(''),
-  spare1: u32(''),
-  spare2: i32(''),
+  mesh_jobs: u32('clusters to be asked'),
+  volume_count: u32(''),
+  subject_center: vec3f('the object whose levels are measured', { unit: 'm' }),
+  subject_radius: f32('', { unit: 'm' }),
+  dial_half: vec3f('the stone that the dial asks', { unit: 'm' }),
+  dial_fine: u32(''),
+  dial_coarse: u32(''),
+  spare3: u32(''),
+  spare4: u32(''),
+  sun_center: vec3f('what the sun’s map is centered on', { unit: 'm' }),
 });
 
-const SHAPES = { box: 0, ball: 1, cylinder: 2 } as const;
+const SHAPES = { box: 0, ball: 1, cylinder: 2, mesh: 3 } as const;
+const FORMS = { solid: 0, mesh: 1, stand_in: 2, leaf: 3 } as const;
 const LAMPS = { ball: 0, panel: 1, sun: 2 } as const;
 const PATTERNS = { plain: 0, checker: 1, strips: 2 } as const;
 /** half a degree across */
@@ -91,6 +126,7 @@ const SUN_RADIUS = 0.00465;
 
 export const WORLD_CONSTANTS = [
   ...Object.entries(SHAPES).map(([k, v]) => `const SHAPE_${k.toUpperCase()} = ${v}u;`),
+  ...Object.entries(FORMS).map(([k, v]) => `const FORM_${k.toUpperCase()} = ${v}u;`),
   ...Object.entries(LAMPS).map(([k, v]) => `const LAMP_${k.toUpperCase()} = ${v}u;`),
   ...Object.entries(PATTERNS).map(([k, v]) => `const PATTERN_${k.toUpperCase()} = ${v}u;`),
 ].join('\n');
@@ -99,6 +135,7 @@ export class World {
   room!: RoomSpec;
   sliders: Record<string, number> = {};
   pieceCount = 0;
+  volumeCount = 0;
   lampCount = 0;
   /** counts up whenever what is in the world is made anew */
   version = 0;
@@ -109,6 +146,13 @@ export class World {
   private lampObject = new Map<number, number>();
   private objects = 1;
   private places = new Map<number, Place>();
+  /** how far each object reaches from its own origin */
+  private reach = new Map<number, number>();
+  private power = new Map<number, number>();
+  /** what the tree of what moves costs to make, each frame */
+  treeMs = 0;
+  /** what stands counts as moving too */
+  mergeLists = false;
   private stillNodes: TreeNode[] = [];
   private planes: number[][] = [];
   private planeStart = new Map<PieceGiven['planes'], number>();
@@ -116,13 +160,15 @@ export class World {
   private bytes = new Map<string, number>();
   private buffers = new Map<string, GPUBuffer>();
 
-  constructor(private gpu: Gpu, graph: Graph) {
+  constructor(private gpu: Gpu, graph: Graph, private meshes: Meshes) {
     const U = GPUBufferUsage.UNIFORM;
     this.fixed('world', WorldStruct.stride, U);
     this.fixed('materials', MOST.materials * MaterialStruct.stride, U);
     this.fixed('lamps', MOST.lamps * Lamp.stride, U);
     this.fixed('objects', MOST.objects * ObjectStruct.stride, U);
+    this.fixed('events', 16 + 32 * Event.stride, U);
     this.fixed('planes', MOST.planes * 16, U);
+    this.fixed('volumes', MOST.volumes * Volume.stride, U);
     this.fixed('openings', MOST.openings * Opening.stride, U);
     this.fixed('tables', (64 * 64 + 16 * 16 * 4) * 4, U);
     const tables = new Float32Array(64 * 64 + 16 * 16 * 4);
@@ -141,7 +187,9 @@ export class World {
     uniform('tables', 'Tables', [TABLES]);
     storage('pieces', 'array<Piece>', [Piece]);
     storage('nodes', 'array<Node>', [Node]);
+    uniform('events', 'Events', [Event, Events]);
     uniform('planes', `array<vec4f, ${MOST.planes}>`);
+    uniform('volumes', `array<Volume, ${MOST.volumes}>`, [Volume]);
     uniform('openings', `array<Opening, ${MOST.openings}>`, [Opening]);
   }
 
@@ -164,6 +212,8 @@ export class World {
     this.sliders = sliders ?? Object.fromEntries((room.sliders ?? []).map((s) => [s.key, s.value]));
     const b = new Builder();
     room.build(b, this.sliders);
+    this.meshes.open(b.meshes);
+    for (const m of b.meshes) b.pieces.push(this.meshPiece(m));
     if (b.materials.length > MOST.materials) throw new Error(`${room.name}: too many materials`);
     if (b.lamps.length > MOST.lamps) throw new Error(`${room.name}: too many lamps`);
     if (b.objects > MOST.objects) throw new Error(`${room.name}: too many objects`);
@@ -182,7 +232,14 @@ export class World {
       for (const [n, d] of p.planes) this.planes.push([...normalize(n), d / length(n)]);
     }
 
-    const isMover = (p: PieceGiven) => (p.object ?? 0) > 0;
+    this.reach.clear();
+    for (const p of b.pieces) {
+      const far = length(p.center) + length(p.half);
+      this.reach.set(p.object ?? 0, Math.max(far, this.reach.get(p.object ?? 0) ?? 0));
+    }
+    this.wasAt.clear();
+    this.wasPower.clear();
+    const isMover = (p: PieceGiven) => this.mergeLists || (p.object ?? 0) > 0;
     const still = b.pieces.filter((p) => !isMover(p));
     this.movers = b.pieces.filter(isMover);
     const tree = buildTree(still.map(boundsOf));
@@ -201,8 +258,14 @@ export class World {
     pack(WorldStruct, new DataView(row), 0, {
       sky_zenith: sky.zenith, sky_horizon: sky.horizon, sky_ground: sky.ground,
       still_pieces: this.still.length, moving_pieces: this.movers.length,
-      moving_root: this.stillNodes.length, lamp_count: b.lamps.length, opening_count: b.openings.length,
+      moving_root: this.stillNodes.length, lamp_count: b.lamps.length, opening_count: b.openings.length, mesh_jobs: this.meshes.jobCount, volume_count: b.volumes.length,
+      subject_center: room.subject?.center ?? [0, 0, 0], subject_radius: room.subject?.radius ?? 0, sun_center: room.camera.target, ...this.dial(b.meshes),
     });
+    this.write('volumes', packAll(Volume, b.volumes.map((v) => ({
+      center: v.center, half_size: v.half, absorb: v.absorb, scatter: v.scatter, emit: v.emit ?? [0, 0, 0], g: v.g ?? 0,
+      contrast: v.contrast ?? 0, wave: v.wave ?? 0.5, soft: v.soft ?? 0.2, drift: v.drift ?? [0, 0, 0], clump: clumps(v),
+    }))));
+    this.volumeCount = b.volumes.length;
     this.write('openings', packAll(Opening, b.openings.map((o) => ({ center: o.center, half_u: o.halfU, half_v: o.halfV }))));
     this.write('world', row);
     this.places.clear();
@@ -229,23 +292,77 @@ export class World {
       this.places.set(id, here);
     }
     this.write('objects', packAll(ObjectStruct, rows));
+    this.writeEvents(at);
 
+    const started = performance.now();
     if (this.movers.length) {
-      const standing = this.movers.map((p) => placed(p, at(p.object!)));
+      const standing = this.movers.map((p) => placed(p, at(p.object ?? 0)));
       const tree = buildTree(standing.map(boundsOf), this.stillNodes.length, this.still.length);
       const ordered = tree.order.map((i) => standing[i]!);
       this.write('pieces', packAll(Piece, ordered.map((p) => this.pieceRow(p))), this.still.length * Piece.stride);
       this.write('nodes', packAll(Node, tree.nodes as unknown as Record<string, Value>[]), this.stillNodes.length * Node.stride);
     }
-    this.write('lamps', packAll(Lamp, this.lamps.map((l, i) => lampRow(l, at(this.lampObject.get(i) ?? 0)))));
+    this.treeMs = this.treeMs * 0.9 + (performance.now() - started) * 0.1;
+    this.write('lamps', packAll(Lamp, this.lamps.map((l, i) => lampRow(l, at(this.lampObject.get(i) ?? 0), this.power.get(i) ?? 1))));
     return moved;
+  }
+
+  private wasAt = new Map<number, string>();
+  private wasPower = new Map<number, number>();
+  /** what moved or was switched since last time: where the past is not to be trusted */
+  private writeEvents(at: (id: number) => Place): void {
+    this.power = this.room.power?.(this.sliders) ?? new Map();
+    const rows: Record<string, Value>[] = [];
+    for (let id = 1; id < this.objects; id++) {
+      const here = at(id);
+      const key = String([here.position, here.turn]);
+      if (this.wasAt.get(id) !== undefined && this.wasAt.get(id) !== key) {
+        rows.push({ center: here.position, radius: this.reach.get(id) ?? 0.5, strength: 0.9 });
+      }
+      this.wasAt.set(id, key);
+    }
+    this.lamps.forEach((l, i) => {
+      const now = this.power.get(i) ?? 1;
+      const before = this.wasPower.get(i) ?? now;
+      if (now !== before) rows.push({ center: l.center ?? [0, 0, 0], radius: 4, strength: 1 });
+      this.wasPower.set(i, now);
+    });
+    const kept = rows.slice(0, 32);
+    const bytes = new ArrayBuffer(16 + 32 * Event.stride);
+    new DataView(bytes).setUint32(0, kept.length, true);
+    if (kept.length) new Uint8Array(bytes, 16).set(new Uint8Array(packAll(Event, kept)));
+    this.write('events', bytes);
+  }
+
+  /** what the dial asks: the room's first mesh */
+  private dial(meshes: MeshGiven[]): Record<string, Value> {
+    const first = meshes[0];
+    if (!first) return {};
+    const roots = this.meshes.roots.get(first.asset.name)!;
+    return {
+      dial_half: first.asset.low.map((l, k) => ((first.asset.high[k]! - l) / 2) * 0.95),
+      dial_fine: roots.fine, dial_coarse: roots.coarse,
+    };
+  }
+
+  /** a mesh, as a piece for rays: its box, and where its triangles are */
+  private meshPiece(m: MeshGiven): PieceGiven {
+    const { low, high } = m.asset;
+    const roots = this.meshes.roots.get(m.asset.name)!;
+    return {
+      shape: 'mesh', form: 'mesh', material: m.material, turn: m.turn, center: m.position,
+      // the tree is in the mesh's own frame, about its own origin: the box must be too
+      half: low.map((l, k) => Math.max(Math.abs(l), Math.abs(high[k]!)) * m.scale) as Vec3,
+      meshRoot: valueOf('mesh_trace') === 1 ? roots.coarse : roots.fine, meshScale: m.scale,
+    };
   }
 
   private pieceRow(p: PieceGiven): Record<string, Value> {
     return {
       center: p.center, shape: SHAPES[p.shape ?? 'box'], half_size: p.half, material: p.material,
       turn: p.turn ?? NO_TURN, lamp: p.lamp ?? NOTHING, object: p.object ?? 0,
-      first_plane: this.planeStart.get(p.planes) ?? 0, plane_count: p.planes?.length ?? 0,
+      first_plane: p.meshRoot ?? this.planeStart.get(p.planes) ?? 0, plane_count: p.planes?.length ?? 0,
+      form: FORMS[p.form ?? 'solid'], wide_from: p.from ?? 0, wide_until: p.until ?? 1e9, cover: p.cover ?? 1, mesh_scale: p.meshScale ?? 1,
     };
   }
 }
@@ -264,9 +381,10 @@ function materialRow(m: Material): Record<string, Value> {
   };
 }
 
-function lampRow(l: LampGiven, at: Place): Record<string, Value> {
+function lampRow(l: LampGiven, at: Place, power: number): Record<string, Value> {
+  const radiance = scale(l.radiance, power);
   if (l.kind === 'sun') {
-    return { kind: LAMPS.sun, radiance: l.radiance, normal: l.toward!, radius: l.radius ?? SUN_RADIUS, changing: 0 };
+    return { kind: LAMPS.sun, radiance, normal: l.toward!, radius: l.radius ?? SUN_RADIUS, changing: 0 };
   }
   const turned = placed({ center: l.center!, half: [0, 0, 0], material: 0 }, at);
   const spin = (v: Vec3): Vec3 =>
@@ -275,7 +393,7 @@ function lampRow(l: LampGiven, at: Place): Record<string, Value> {
   const v = spin(l.halfV ?? [0, 0, 0]);
   const n = cross(u, v);
   return {
-    center: turned.center, kind: LAMPS[l.kind], radiance: l.radiance, changing: l.changing ? 1 : 0,
+    center: turned.center, kind: LAMPS[l.kind], radiance, changing: l.changing ? 1 : 0,
     half_u: u, half_v: v, radius: l.radius ?? 0,
     area: l.kind === 'panel' ? 4 * length(n) : 4 * Math.PI * l.radius! ** 2,
     normal: l.kind === 'panel' ? scale(n, 1 / length(n)) : [0, 1, 0],

@@ -30,6 +30,8 @@ export interface Stage {
   /** has `fn run(pixel: vec2u)`, or `fn run(index: u32)` when it runs over a count */
   code: string;
   over: Size;
+  /** done by a function given to `setCustom`, not by a compute shader */
+  custom?: boolean;
   /** numbers fixed when the shader is made */
   constants?: Record<string, number>;
 }
@@ -44,11 +46,13 @@ export interface Module {
 export interface Shared {
   type: string;
   structs: Struct[];
-  access: 'uniform' | 'read' | 'read_write';
+  access: 'uniform' | 'read' | 'read_write' | 'texture';
   buffer: () => GPUBuffer;
+  /** for a texture */
+  view?: () => GPUTextureView;
 }
 
-type Binding = { variable: string; source: string; access: 'uniform' | 'read' | 'read_write'; declaration: string };
+type Binding = { variable: string; source: string; access: Shared['access']; declaration: string };
 interface Built {
   pipeline: GPUComputePipeline;
   layout: GPUBindGroupLayout;
@@ -83,6 +87,7 @@ export class Graph {
   private lastWritten = new Map<string, number>();
   private writtenNow = new Set<string>();
   private edits = new Map<string, string>();
+  private customs = new Map<string, (encoder: GPUCommandEncoder) => boolean>();
 
   constructor(readonly gpu: Gpu, private prelude: () => string) {
     this.timer = new Timer(gpu);
@@ -103,6 +108,32 @@ export class Graph {
     this.stages.push(stage);
   }
   /** a name that stands for another buffer, chosen anew each frame */
+  /** what a custom stage does; false while it is not ready */
+  setCustom(name: string, run: (encoder: GPUCommandEncoder) => boolean): void {
+    this.customs.set(name, run);
+  }
+  /** other text for a module: every stage that uses it is made anew */
+  changeModule(name: string, module: Module): void {
+    this.modules.set(name, module);
+    for (const stage of this.stages) {
+      if (this.modulesOf(['frame', ...stage.uses]).includes(name)) this.built.delete(stage.name);
+    }
+    this.groups.clear();
+  }
+  /** the WGSL of shared resources for a pipeline made by hand, and how to bind them */
+  sharedFor(names: string[]): { wgsl: string; buffers: () => GPUBuffer[] } {
+    const structs = new Map<string, Struct>();
+    names.forEach((n) => this.shared.get(n)!.structs.forEach((s) => structs.set(s.name, s)));
+    const wgsl = [
+      this.prelude(),
+      ...[...structs.values()].map((s) => s.wgsl),
+      ...names.map((n, i) => {
+        const s = this.shared.get(n)!;
+        return `@group(0) @binding(${i}) var<${s.access === 'uniform' ? 'uniform' : 'storage, read'}> ${n}: ${s.type};`;
+      }),
+    ].join('\n');
+    return { wgsl, buffers: () => names.map((n) => this.shared.get(n)!.buffer()) };
+  }
   addAlias(name: string, standsFor: () => string): void {
     this.aliases.set(name, standsFor);
   }
@@ -251,7 +282,9 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
       ),
       ...bindings.map(
         (b, i) =>
-          `@group(0) @binding(${i}) var<${b.access === 'uniform' ? 'uniform' : 'storage, ' + b.access}> ${b.variable}: ${b.declaration};`,
+          b.access === 'texture'
+            ? `@group(0) @binding(${i}) var ${b.variable}: ${b.declaration};`
+            : `@group(0) @binding(${i}) var<${b.access === 'uniform' ? 'uniform' : 'storage, ' + b.access}> ${b.variable}: ${b.declaration};`,
       ),
       ...modules.map((m) => this.modules.get(m)!.code),
       this.accessors(stage),
@@ -277,9 +310,9 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
       entries: bindings.map((b, binding) => ({
         binding,
         visibility: GPUShaderStage.COMPUTE,
-        buffer: {
-          type: b.access === 'uniform' ? 'uniform' as const : b.access === 'read' ? 'read-only-storage' as const : 'storage' as const,
-        },
+        ...(b.access === 'texture'
+          ? { texture: { sampleType: 'uint' as const } }
+          : { buffer: { type: b.access === 'uniform' ? 'uniform' as const : b.access === 'read' ? 'read-only-storage' as const : 'storage' as const } }),
       })),
     });
     const { text, before } = this.source(stage);
@@ -347,6 +380,13 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
     this.ran = [];
     this.timer.begin();
     for (const stage of stages) {
+      if (stage.custom) {
+        const done = this.customs.get(stage.name);
+        if (!done || !done(encoder)) ready = false;
+        for (const write of Object.values(asMap(stage.writes))) this.writtenNow.add(withoutBefore(this.resolve(write)));
+        this.ran.push(stage.name);
+        continue;
+      }
       const built = this.built.get(stage.name);
       if (!built) void this.build(stage);
       if (!built || built === 'building') {
@@ -361,16 +401,20 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
           encoder.clearBuffer(this.buffer(name + '@before'));
         }
       }
-      const resources = built.bindings.map((b) =>
-        this.shared.has(b.variable) ? this.shared.get(b.variable)!.buffer() : this.buffer(b.source),
-      );
+      const resources: (GPUBuffer | GPUTextureView)[] = built.bindings.map((b) => {
+        const shared = this.shared.get(b.variable);
+        return !shared ? this.buffer(b.source) : shared.view ? shared.view() : shared.buffer();
+      });
       const key = stage.name + ':' + resources.map((r) => this.id(r)).join(',');
       let group = this.groups.get(key);
       if (!group) {
         group = device.createBindGroup({
           label: stage.name,
           layout: built.layout,
-          entries: resources.map((buffer, binding) => ({ binding, resource: { buffer } })),
+          entries: built.bindings.map((b, binding) => ({
+            binding,
+            resource: b.access === 'texture' ? (resources[binding] as GPUTextureView) : { buffer: resources[binding] as GPUBuffer },
+          })),
         });
         this.groups.set(key, group);
       }

@@ -6,7 +6,7 @@ struct Found {
   lamp: u32,   // which lamp it is, if it glows
 }
 
-fn pattern_at(m: Material, p: vec3f, normal: vec3f) -> f32 {
+fn pattern_at(m: Material, p: vec3f, normal: vec3f, width: f32) -> f32 {
   if (m.pattern == PATTERN_PLAIN) { return 0.0; }
   // along the two axes the surface lies in
   let n = abs(normal);
@@ -14,7 +14,10 @@ fn pattern_at(m: Material, p: vec3f, normal: vec3f) -> f32 {
   if (n.x > n.y && n.x > n.z) { uv = p.zy; }
   else if (n.z > n.y) { uv = p.xy; }
   let cell = floor(uv / m.pattern_size + 1e-4);
-  if (m.pattern == PATTERN_CHECKER) { return abs(cell.x + cell.y) % 2.0; }
+  if (m.pattern == PATTERN_CHECKER) {
+    // seen wider than its squares, a pattern is its mean
+    return mix(abs(cell.x + cell.y) % 2.0, 0.5, smoothstep(0.5, 1.5, width / m.pattern_size));
+  }
   return clamp((cell.x + 4.0) / 7.0, 0.0, 1.0); // strips: eight steps across
 }
 
@@ -29,7 +32,7 @@ fn found_at(ray: Ray, met: Meeting) -> Found {
   let object = objects[piece.object];
   let own = turn_back(object.turn, f.surface.position - object.position);
   let own_normal = turn_back(object.turn, met.normal);
-  let mixing = pattern_at(m, own, own_normal);
+  let mixing = pattern_at(m, own, own_normal, width_at(ray, met.distance));
   f.surface.matte = mix(m.matte, m.matte_other, mixing);
   f.surface.roughness = mix(m.roughness, m.roughness_other, mixing);
   f.surface.through = m.through;

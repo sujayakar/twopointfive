@@ -12,9 +12,11 @@ import { addStages } from './stages/all';
 import { Cache } from './stages/cache';
 import { Frame } from './stages/frame';
 import { eyeOf, type Eye } from './world/camera';
+import { MeshDraw } from './mesh/draw';
+import { Meshes } from './mesh/meshes';
 import { World, WORLD_CONSTANTS } from './world/world';
 import type { Camera, RoomSpec } from './world/room';
-import { add, normalize, scale } from './world/vec';
+import { add, normalize, scale, type Vec3 } from './world/vec';
 import math from './wgsl/math.wgsl';
 import dice from './wgsl/dice.wgsl';
 import ray from './wgsl/ray.wgsl';
@@ -22,6 +24,8 @@ import sky from './wgsl/sky.wgsl';
 import lampsCode from './wgsl/lamps.wgsl';
 import material from './wgsl/material.wgsl';
 import surface from './wgsl/surface.wgsl';
+import smoke from './wgsl/smoke.wgsl';
+import noSmoke from './wgsl/no_smoke.wgsl';
 import openings from './wgsl/openings.wgsl';
 import frameCode from './wgsl/frame.wgsl';
 import reservoir from './wgsl/reservoir.wgsl';
@@ -52,6 +56,11 @@ function jitterOf(frame: number): [number, number] {
   return [halton(2), halton(3)];
 }
 
+/** the ray shader, with or without its triangles: code that never runs still costs */
+export function rayModule(text: string, triangles: boolean): string {
+  return triangles ? text : text.replace(/\/\/#triangles[\s\S]*?\/\/#end/g, '');
+}
+
 /** in a frozen frame the truth goes on settling, so that the frame can be compared with it */
 const settlesWhileFrozen = (stage: string): boolean =>
   stage.startsWith('view ') || stage.startsWith('judge ') || stage === 'truth' || stage === 'true picture' || stage.endsWith(' true');
@@ -59,6 +68,8 @@ const settlesWhileFrozen = (stage: string): boolean =>
 export class Lab {
   readonly graph: Graph;
   readonly world: World;
+  readonly meshes: Meshes;
+  readonly meshDraw: MeshDraw;
   readonly views: Views;
   readonly rays: Rays;
   readonly judge: Judge;
@@ -92,18 +103,23 @@ export class Lab {
   private present: Present;
   private before: Eye | null = null;
   private jitterBefore: [number, number] = [0, 0];
+  private cutEye: Vec3 = [0, 0, 0];
+  /** where the pinned pixel's point is; read back a few frames late */
+  pinnedAt: { position: Vec3; normal: Vec3 } | null = null;
   private cameraKey = '';
   private worldVersion = -1;
   private startTruthOver = true;
 
   private constructor(readonly gpu: Gpu, readonly canvas: HTMLCanvasElement) {
     this.graph = new Graph(gpu, () => `${choiceConstants()}\n${WORLD_CONSTANTS}\n${math}`);
-    this.world = new World(gpu, this.graph);
+    this.meshes = new Meshes(gpu, this.graph);
+    this.meshDraw = new MeshDraw(gpu, this.graph, this.meshes);
+    this.world = new World(gpu, this.graph, this.meshes);
     this.views = new Views(this.graph);
     this.rays = new Rays(gpu, this.graph);
     this.judge = new Judge(gpu, this.graph);
     this.addModules();
-    addStages(this.graph, this.views);
+    addStages(this.graph, this.views, () => this.meshes.jobCount > 0);
     this.cache = new Cache(gpu, this.graph);
     this.knobs = knobStruct();
     this.frameBuffer = makeBuffer(gpu, 'frame', Frame.stride, GPUBufferUsage.UNIFORM);
@@ -114,6 +130,11 @@ export class Lab {
     onKnob((k) => {
       if (k.resetsTruth) this.startTruthOver = true;
       this.judge.forget();
+      if (k.key === 'mesh_trace' && this.world.room && this.meshes.jobCount) this.openRoom(this.world.room, this.world.sliders);
+      if (k.key === 'lists_merged' && this.world.room) {
+        this.world.mergeLists = k.value !== 0;
+        this.openRoom(this.world.room, this.world.sliders);
+      }
     });
   }
 
@@ -128,13 +149,16 @@ export class Lab {
     const g = this.graph;
     g.addModule('frame', { code: frameCode, needs: [], shared: ['frame', 'knobs'] });
     g.addModule('dice', { code: dice, needs: [], shared: ['frame', 'knobs', 'tables'] });
-    g.addModule('ray', { code: ray, needs: [], shared: ['world', 'nodes', 'pieces', 'planes'] });
+    g.addModule('ray', { code: rayModule(ray, false), needs: ['dice'], shared: ['world', 'nodes', 'pieces', 'planes'] });
+    g.addModule('ray of pieces', { code: rayModule(ray, false), needs: ['dice'], shared: ['world', 'nodes', 'pieces', 'planes'] });
+    g.addModule('ray of triangles', { code: rayModule(ray, true), needs: ['dice'], shared: ['world', 'nodes', 'pieces', 'planes', 'mesh_data'] });
+    g.addModule('smoke', { code: noSmoke, needs: ['dice'], shared: ['world'] });
     g.addModule('sky', { code: sky, needs: [], shared: ['world'] });
     g.addModule('lamps', { code: lampsCode, needs: [], shared: ['world', 'lamps'] });
     g.addModule('material', { code: material, needs: [], shared: ['tables'] });
     g.addModule('surface', { code: surface, needs: ['ray', 'material'], shared: ['materials', 'lamps', 'objects', 'pieces'] });
     g.addModule('openings', { code: openings, needs: ['material'], shared: ['world', 'openings'] });
-    g.addModule('reservoir', { code: reservoir, needs: ['lamps'], shared: [] });
+    g.addModule('reservoir', { code: reservoir, needs: ['lamps', 'front'], shared: [] });
     g.addModule('show', { code: show + AT_SIZE, needs: [], shared: [] });
   }
 
@@ -148,9 +172,32 @@ export class Lab {
       this.pinned = null;
     }
     this.world.place(this.tick / 60);
+    this.useSmoke(this.world.volumeCount > 0);
+    this.useTriangles(this.meshes.jobCount > 0 && valueOf('mesh_trace') > 0);
     this.startTruthOver = true;
     this.graph.forget();
     this.cache.zero = true;
+  }
+  /** rays meet triangles too, or not: the shaders of everything that traces are made anew */
+  private triangles = false;
+  private useTriangles(on: boolean): void {
+    if (on === this.triangles) return;
+    this.triangles = on;
+    const shared = ['world', 'nodes', 'pieces', 'planes'];
+    this.graph.changeModule('ray', { code: rayModule(ray, on), needs: ['dice'], shared: on ? [...shared, 'mesh_data'] : shared });
+  }
+
+  private smoke = false;
+  private useSmoke(on: boolean): void {
+    if (on === this.smoke) return;
+    this.smoke = on;
+    this.graph.changeModule('smoke', { code: on ? smoke : noSmoke, needs: ['dice'], shared: on ? ['world', 'volumes'] : ['world'] });
+  }
+
+  /** turns one of a room's sliders without building the room anew: histories and the cache live on */
+  turnLive(key: string, value: number): void {
+    this.world.sliders[key] = value;
+    this.startTruthOver = true;
   }
   resetCamera(): void {
     this.camera = structuredClone(this.world.room.camera);
@@ -212,12 +259,15 @@ export class Lab {
 
     const encoder = gpu.device.createCommandEncoder();
     if (this.startTruthOver) {
-      for (const name of ['truth', 'disc', 'bars']) graph.clear(encoder, name);
+      for (const name of ['truth', 'disc', 'bars', 'strip']) graph.clear(encoder, name);
       this.judge.forget();
       this.truthCount = 0;
       this.startTruthOver = false;
     }
-    if (runs) this.rays.start(encoder);
+    if (runs) {
+      this.rays.start(encoder);
+      this.meshDraw.start(encoder);
+    }
     this.writeUniforms(render, output, runs, runs ? this.cache.step(encoder) : { cache_go: 0, cache_commit: 0, cache_round: this.cache.round });
     const views = this.shown.slice(0, panelsIn[this.layout]);
     const wanted = views.map((id) => this.views.bufferOf(id));
@@ -259,6 +309,7 @@ export class Lab {
     const now = eyeOf(this.camera, output[0] / output[1]);
     const before = this.before ?? now;
     const jitter: [number, number] = valueOf('jitter') ? jitterOf(this.frames) : [0, 0];
+    if (!valueOf('mesh_frozen')) this.cutEye = now.eye;
     const ghost = this.ghost ? eyeOf(this.ghost, output[0] / output[1]) : now;
     const bytes = new ArrayBuffer(Frame.stride);
     pack(Frame, new DataView(bytes), 0, {
@@ -272,7 +323,8 @@ export class Lab {
       render_step: 1, wide_step: valueOf('wide_step'), narrow_step: valueOf('narrow_step'), output_step: 1,
       pinned_on: this.pinned ? 1 : 0,
       pinned: this.pinned ? [Math.floor(this.pinned[0] * render[0]), Math.floor(this.pinned[1] * render[1])] : [0, 0],
-      jitter, jitter_before: this.jitterBefore, ...cache,
+      jitter, jitter_before: this.jitterBefore, ...cache, cut_eye: this.cutEye,
+      pinned_position: this.pinnedAt?.position ?? [0, 0, 0], pinned_normal: this.pinnedAt?.normal ?? [0, 1, 0],
     });
     const { queue } = this.gpu.device;
     queue.writeBuffer(this.frameBuffer, 0, bytes);

@@ -10,7 +10,7 @@ fn run(slot: u32) {
     dice_of(DICE_KIND_FILLING, at, frame.cache_round, 700u), dice_of(DICE_KIND_FILLING, at, frame.cache_round, 701u));
   if (way.weight > 0.0) {
     let start = leave_surface(p.position, p.normal, way.toward);
-    let ray = Ray(start, way.toward, 1e-4, 1e4);
+    let ray = wide_cone(start, way.toward);
     let met = nearest(ray);
     out = y_of(ray, met, way.weight);
     if (slot == pinned_slot()) { draw_ray(frame.pinned, start, start + way.toward * min(met.distance, 6.0), RAY_CACHE); }

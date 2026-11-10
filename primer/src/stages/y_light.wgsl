@@ -11,9 +11,10 @@ fn run(pixel: vec2u) {
   let cosine = dot(y.normal, aim.toward);
   if (cosine <= 0.0 || aim.chance <= 0.0) { put_light_y(pixel, out); return; }
   let start = leave_surface(y.position, y.normal, aim.toward);
-  let met = nearest(Ray(start, aim.toward, 1e-4, aim.distance - 2e-3));
+  let met = nearest(shadow_cone(start, aim.toward, aim.distance - 2e-3, lamp_size(lamps[pick.lamp])));
   out.seen = select(0.0, 1.0, met.piece == NOTHING);
-  out.lands = aim.light * (out.seen * cosine / (PI * pick.chance * aim.chance));
+  let passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.1, knobs.air_shadow_steps, dice1(pixel, DICE_SHADOW_STEP + DICE_OFFSET)).passes;
+  out.lands = passes * aim.light * (out.seen * cosine / (PI * pick.chance * aim.chance));
   draw_ray_of(pixel, frame.GRID_step, start, start + aim.toward * min(met.distance, 20.0), select(RAY_BLOCKED, RAY_SEEN, out.seen > 0.0));
   put_light_y(pixel, out);
 }

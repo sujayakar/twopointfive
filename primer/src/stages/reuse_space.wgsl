@@ -26,7 +26,7 @@ fn run(pixel: vec2u) {
     let other = time_at(q);
     if (other.memory <= 0.0) { continue; }
     var s = 0.0;
-    if (other.lamp < world.lamp_count) { s = brightness(landing(other.lamp, other.dice, hit.position, hit.normal)); }
+    if (other.lamp < world.lamp_count) { s = brightness(landing(other.lamp, other.dice, hit)); }
     let die = dice_of(DICE_KIND_WHITE, pixel, frame.number, 315u + 10u * k + 200u * CLASS).x;
     if (offer(&g, other.lamp, other.dice, s, s * other.weight * other.memory, other.memory, die)) { g.age = other.age; }
     others[count] = q;
@@ -41,7 +41,7 @@ fn run(pixel: vec2u) {
     samples = own_memory;
     for (var k = 0u; k < count; k++) {
       let o = hit_x_at(others[k]);
-      if (brightness(landing(g.lamp, g.dice, o.position, o.normal)) > 0.0) { samples += behind[k]; }
+      if (brightness(landing(g.lamp, g.dice, o)) > 0.0) { samples += behind[k]; }
     }
   }
   put_merged(pixel, weigh(g, samples));

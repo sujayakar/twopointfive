@@ -2,12 +2,15 @@
 // and remembers enough to weigh what it kept. A sample is a lamp and a place on it (two numbers from 0 to
 // 1, which each surface turns into a point of the lamp as it sees it).
 
-/// What a sample would send here with nothing in the way, over its chance on the lamp: landing light.
-fn landing(lamp: u32, dice: vec2f, position: vec3f, normal: vec3f) -> vec3f {
-  let aim = aim_at(lamps[lamp], position, dice);
-  let cosine = dot(normal, aim.toward);
-  if (cosine <= 0.0 || aim.chance <= 0.0) { return vec3f(0.0); }
-  return aim.light * (cosine / (PI * aim.chance));
+/// What a sample would send here with nothing in the way, over its chance on the lamp: landing light. On something
+/// thin, light on the back counts as much as it comes through.
+fn landing(lamp: u32, dice: vec2f, hit: HitX) -> vec3f {
+  let aim = aim_at(lamps[lamp], hit.position, dice);
+  let cosine = dot(hit.normal, aim.toward);
+  if (aim.chance <= 0.0) { return vec3f(0.0); }
+  let front = front_share(hit);
+  let share = select(1.0 - front, front, cosine > 0.0);
+  return aim.light * share * (abs(cosine) / (PI * aim.chance));
 }
 
 struct Gathering {

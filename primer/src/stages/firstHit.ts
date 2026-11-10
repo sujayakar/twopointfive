@@ -17,6 +17,7 @@ export const HitX = struct('HitX', {
   piece: u32('which piece'),
   position_before: vec3f('where this spot was last frame', { unit: 'm', look: { kind: 'place' } }),
   lamp: u32('which lamp it is, if it shines'),
+  trust: f32('how far the past can be trusted here', { look: { kind: 'share' } }),
   steps: f32('tree nodes the ray looked at', { look: { kind: 'heat', from: 0, to: 30 } }),
 });
 
@@ -25,9 +26,9 @@ export function addFirstHit(graph: Graph): void {
   graph.addStage({
     name: 'first hit',
     question: 'What does each pixel look at?',
-    reads: [],
+    reads: { mesh_hit: 'mesh_hit_used' },
     writes: ['hit_x'],
-    uses: ['ray', 'surface', 'sky'],
+    uses: ['ray', 'surface', 'sky', 'change'],
     over: 'render',
     code,
   });

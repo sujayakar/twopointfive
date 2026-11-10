@@ -32,3 +32,6 @@ fn on_screen_before(position: vec3f) -> Seen {
 /// The render pixel that stands for a pixel of a smaller grid: one of several, never their mean (the mean of
 /// two surfaces is a surface that is not there).
 fn render_pixel(p: vec2i, step: u32) -> vec2i { return p * i32(step) + (i32(step) - 1) / 2; }
+
+/// A pixel's width, one meter off.
+fn width_of_pixel() -> f32 { return 2.0 * length(frame.up) / f32(frame.render_size.y); }

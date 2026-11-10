@@ -14,7 +14,7 @@ export const lampHall: RoomSpec = {
   moves: true,
   sliders: [
     { key: 'lamps', label: 'Lamps', min: 4, max: 60, step: 1, value: 60, about: 'small colored balls behind slats' },
-    { key: 'swing', label: 'Torch swings', min: 0, max: 1, step: 1, value: 1, about: 'a lamp that moves: its light gets a history of its own' },
+    { key: 'swing', label: 'Torch swings', min: 0, max: 1, step: 1, value: 1, live: true, about: 'a lamp that moves: its light gets a history of its own' },
   ],
   build(b, s) {
     const floor = b.material({ matte: grey(0.6), roughness: 0.6 });
@@ -58,7 +58,7 @@ export const fence: RoomSpec = {
   sky: { zenith: grey(0.01), horizon: grey(0.01), ground: grey(0.01) },
   sliders: [
     { key: 'size', label: 'Lamp, its radius (m)', min: 0.01, max: 0.6, step: 0.01, value: 0.15, about: 'the same power at any size: a larger one only makes softer shadows' },
-    { key: 'roll', label: 'Ball rolls', min: 0, max: 1, step: 1, value: 1, about: 'something that moves in front of a lamp that does not' },
+    { key: 'roll', label: 'Ball rolls', min: 0, max: 1, step: 1, value: 1, live: true, about: 'something that moves in front of a lamp that does not' },
   ],
   build(b, s) {
     const floor = b.material({ matte: grey(0.7), roughness: 0.9 });
@@ -89,8 +89,9 @@ export const door: RoomSpec = {
   exposure: 2.2,
   moves: true,
   sliders: [
-    { key: 'open', label: 'Door, degrees', min: 0, max: 110, step: 1, value: 35, about: 'the less it is open, the rarer the light behind it' },
-    { key: 'sway', label: 'Door moves', min: 0, max: 1, step: 1, value: 0, about: 'it swings by itself' },
+    { key: 'open', label: 'Door, degrees', min: 0, max: 110, step: 1, value: 35, live: true, about: 'the less it is open, the rarer the light behind it' },
+    { key: 'sway', label: 'Door moves', min: 0, max: 1, step: 1, value: 0, live: true, about: 'it swings by itself' },
+    { key: 'lamp', label: 'Lamp', min: 0, max: 1, step: 0.05, value: 1, live: true, about: 'dim it, and watch how long its light stays in histories and in the cache' },
     { key: 'wall', label: 'Wall, half as thick (m)', min: 0.01, max: 0.15, step: 0.01, value: 0.05, about: 'thin walls are where kept light leaks' },
   ],
   build(b, s) {
@@ -117,6 +118,7 @@ export const door: RoomSpec = {
     const leaf = b.object();
     b.box([0, H - 0.15, 0.45], [0.025, H - 0.16, 0.44], wood, { object: leaf });
   },
+  power: (s) => new Map([[0, s.lamp!]]),
   move(seconds, s) {
     const degrees = s.sway ? 45 + 45 * Math.sin(seconds * 0.8) : s.open!;
     return new Map<number, Place>([[1, { position: [0, 0, -0.1], turn: turnAbout(Y, (degrees * Math.PI) / 180) }]]);
@@ -132,7 +134,7 @@ export const stripFloor: RoomSpec = {
   exposure: 0.2,
   moves: true,
   sky: { zenith: [0.12, 0.2, 0.4], horizon: [0.35, 0.38, 0.42], ground: grey(0.1) },
-  sliders: [{ key: 'turn', label: 'Things turn', min: 0, max: 1, step: 1, value: 1, about: 'the image in a mirror moves otherwise than the mirror' }],
+  sliders: [{ key: 'turn', label: 'Things turn', min: 0, max: 1, step: 1, value: 1, live: true, about: 'the image in a mirror moves otherwise than the mirror' }],
   build(b) {
     const strips = b.material({ matte: grey(0.5), matte2: grey(0.5), pattern: 'strips', patternSize: 0.6, roughness: 0.02, roughness2: 0.7, metal: 1 });
     const wall = b.material({ matte: [0.6, 0.58, 0.55], roughness: 0.9 });
@@ -162,7 +164,7 @@ export const turntable: RoomSpec = {
   exposure: 0.4,
   moves: true,
   sky: { zenith: [0.1, 0.14, 0.2], horizon: [0.15, 0.16, 0.17], ground: grey(0.05) },
-  sliders: [{ key: 'speed', label: 'Speed', min: 0, max: 3, step: 0.05, value: 1, about: 'of everything that moves' }],
+  sliders: [{ key: 'speed', label: 'Speed', min: 0, max: 3, step: 0.05, value: 1, live: true, about: 'of everything that moves' }],
   build(b) {
     const floor = b.material({ matte: grey(0.55), matte2: grey(0.42), pattern: 'checker', patternSize: 0.5, roughness: 0.7 });
     const still = b.material({ matte: [0.6, 0.55, 0.45], roughness: 0.6 });

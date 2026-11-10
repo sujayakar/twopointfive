@@ -29,12 +29,15 @@ fn run(pixel: vec2u) {
     let by_lobe = coat_chance(s, toward);
     if (dot(s.normal, toward) <= 0.0) { continue; }
     let start = leave_surface(s.position, s.normal, toward);
-    let met = nearest(Ray(start, toward, 1e-4, reach));
+    var ray = narrow_cone(start, toward, s.roughness);
+    if (way == 0u) { ray = shadow_cone(start, toward, reach, lamp_size(lamps[pick.lamp])); }
+    let met = nearest(ray);
+    let passes = smoke_between(start, toward, min(met.distance, reach), 0.0, 0.02, knobs.air_shadow_steps, 0.5).passes;
     if (way == 0u) {
       draw_ray(pixel, start, start + toward * min(met.distance, 20.0), select(RAY_BLOCKED, RAY_SEEN, met.piece == NOTHING));
       if (met.piece != NOTHING) { continue; }
       let w = select(balance(by_aim, by_lobe), 1.0, knobs.shine_by == SHINE_BY_AIM || knobs.break_count_twice != 0u);
-      let found = light * coat_response(s, toward) * (w / max(by_aim, 1e-12));
+      let found = light * passes * coat_response(s, toward) * (w / max(by_aim, 1e-12));
       out.value += found;
       weights.aimed = brightness(found);
       continue;
@@ -52,7 +55,7 @@ fn run(pixel: vec2u) {
     by_aim = 0.0;
     if (pick.total > 0.0) { by_aim = score(at, s.position, s.normal) / pick.total * aim_chance(at, s.position, toward, met.distance); }
     let w = select(balance(by_lobe, by_aim), 1.0, knobs.shine_by == SHINE_BY_LOBE || knobs.break_count_twice != 0u);
-    let found = at.radiance * coat_weight(s, toward) * w;
+    let found = at.radiance * passes * coat_weight(s, toward) * w;
     out.value += found;
     weights.followed = brightness(found);
   }

@@ -3,7 +3,7 @@
 import { f32, struct, u32, vec3f } from '../gpu/layout';
 import type { Graph } from '../gpu/graph';
 import type { Views } from '../page/views';
-import { choice, chosen, slider, toggle } from '../page/knobs';
+import { choice, chosen, slider, toggle, valueOf } from '../page/knobs';
 import { addSignal, Signal } from './signals';
 import wideRays from './wide_rays.wgsl';
 import narrowRays from './narrow_rays.wgsl';
@@ -22,6 +22,10 @@ export const HitY = struct('HitY', {
   object: u32('what it moves with'),
   glow: vec3f('what it sends by itself'),
   steps: f32('tree nodes the ray looked at', { look: { kind: 'heat', from: 0, to: 30 } }),
+  passes: vec3f('what of its light gets through the air on the way', { look: { kind: 'color' } }),
+  spare0: f32('', { look: { kind: 'none' } }),
+  added: vec3f('what the air on the way sends by itself'),
+  spare1: f32('', { look: { kind: 'none' } }),
 });
 export const LightAtY = struct('LightAtY', {
   lands: vec3f('what lands there straight from lamps'),
@@ -52,12 +56,19 @@ fn y_of(ray: Ray, met: Meeting, weight: f32) -> HitY {
   y.distance = -1.0;
   y.steps = f32(met.steps);
   y.object = NOTHING;
+  let air = smoke_between(ray.origin, ray.toward, min(met.distance, 60.0), ray.width, ray.spread, max(knobs.air_shadow_steps, 1u), 0.5);
+  y.passes = air.passes;
+  y.added = air.added;
   if (met.piece == NOTHING) { return y; }
   let found = found_at(ray, met);
   let s = found.surface;
   y.position = s.position;
   y.distance = met.distance;
   y.normal = s.normal;
+  // something thin sends back light from both its sides: one is asked, as often as it counts
+  let front = brightness(front_of(s));
+  let die = unit(hash2(bitcast<u32>(ray.toward.x), hash2(bitcast<u32>(ray.toward.z), frame.number + 3u)));
+  if (front < 1.0 && die >= front) { y.normal = -s.normal; }
   y.lamp = found.lamp;
   y.glow = found.glow;
   y.object = pieces[met.piece].object;
@@ -68,7 +79,7 @@ fn y_of(ray: Ray, met: Meeting, weight: f32) -> HitY {
 
 /** rays, light at their hits, and the answer, for one kind of ray */
 export function addBounce(graph: Graph, views: Views): void {
-  graph.addModule('y', { needs: ['ray', 'surface', 'material'], shared: [], code: Y_OF });
+  graph.addModule('y', { needs: ['ray', 'surface', 'material', 'smoke'], shared: [], code: Y_OF });
   graph.addModule('no ray', { needs: [], shared: [], code: 'const NO_RAY = -2.0;' });
   addSignal(graph, {
     id: 'wide', size: 'wide', name: 'Wide light',
@@ -84,7 +95,7 @@ export function addBounce(graph: Graph, views: Views): void {
   graph.addBuffer({ name: 'hit_r', struct: HitY, size: 'narrow', about: 'where the narrow rays landed' });
   graph.addStage({
     name: 'wide rays', question: 'What is there, over the half-sphere above x?',
-    reads: ['hit_x'], writes: ['hit_y'], uses: ['y', 'dice', 'draw', 'openings'], over: 'wide', code: wideRays,
+    reads: ['hit_x'], writes: ['hit_y'], uses: ['y', 'front', 'dice', 'draw', 'openings'], over: 'wide', code: wideRays,
   });
   graph.addStage({
     name: 'narrow rays', question: 'What does the coat mirror?',
@@ -104,27 +115,28 @@ export function addBounce(graph: Graph, views: Views): void {
 
 /** after the cache's own stages: light at the hits, and what comes back */
 export function addAnswers(graph: Graph): void {
-  for (const [grid, hit, offset] of [['wide', 'hit_y', 0], ['narrow', 'hit_r', 20]] as const) {
+  for (const [id, grid, hit, offset] of [['wide', 'wide', 'hit_y', 0], ['narrow', 'narrow', 'hit_r', 20], ['air', 'wide', 'hit_a', 40]] as const) {
     graph.addBuffer({ name: `light_${hit}`, struct: LightAtY, size: grid, about: 'what lamps land where the rays landed' });
     graph.addStage({
-      name: `${grid} y light`, question: 'What do lamps send to where the ray landed?',
+      name: `${id} y light`, question: 'What do lamps send to where the ray landed?',
       reads: { hit }, writes: { light_y: `light_${hit}` },
-      uses: ['ray', 'lamps', 'dice', 'draw'], over: grid, constants: { DICE_OFFSET: offset }, code: yLight.replaceAll('GRID', grid),
+      uses: ['ray', 'lamps', 'smoke', 'dice', 'draw'], over: grid, constants: { DICE_OFFSET: offset }, code: yLight.replaceAll('GRID', grid),
     });
-    graph.addBuffer({ name: `${grid}_raw_y`, struct: Signal, size: grid, about: 'what came back along each ray' });
+    graph.addBuffer({ name: `${id}_raw_y`, struct: Signal, size: grid, about: 'what came back along each ray' });
     graph.addStage({
-      name: `${grid} answer`, question: 'What comes back along the ray?',
+      name: `${id === 'air' ? 'air rays' : id} answer`, question: 'What comes back along the ray?',
       reads: { hit, light_y: `light_${hit}`, cache: 'cache', cache_points: 'cache_points' },
-      writes: { raw: `${grid}_raw_y` },
-      uses: ['no ray', 'ray', 'sky', 'dice', 'cache'], over: grid, constants: { DICE_OFFSET: offset }, code: yAnswer,
+      writes: { raw: `${id}_raw_y` },
+      uses: ['no ray', 'sky', 'dice', 'cache'], over: grid, constants: { DICE_OFFSET: offset }, code: yAnswer,
     });
   }
   graph.addBuffer({ name: 'wide_raw_x', struct: Signal, size: 'wide', about: 'the cache, read at x' });
   graph.addStage({
     name: 'cache at x', question: 'What does the cache say where the eye looks?',
     reads: ['hit_x', 'cache', 'cache_points'], writes: { raw: 'wide_raw_x' },
-    uses: ['ray', 'dice', 'cache'], over: 'wide', code: xAnswer,
+    uses: ['dice', 'cache'], over: 'wide', code: xAnswer,
   });
-  graph.addAlias('wide_raw', () => (chosen('stop_at') === 'x' ? 'wide_raw_x' : 'wide_raw_y'));
+  graph.addAlias('wide_raw', () =>
+    chosen('stop_at') === 'x' ? 'wide_raw_x' : valueOf('gi_time') || valueOf('gi_space') ? 'wide_raw_gi' : 'wide_raw_y');
   graph.addAlias('narrow_raw', () => 'narrow_raw_y');
 }

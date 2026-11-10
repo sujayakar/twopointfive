@@ -18,14 +18,16 @@ fn run(slot: u32) {
     } else if (y.distance < 0.0 && y.distance != NO_RAY) {
       bounced = sky(y.toward) * y.weight;
     }
-    let n = min(e.samples + 1.0, f32(knobs.cache_memory));
+    if (y.distance != NO_RAY) { bounced = bounced * y.passes + y.added * y.weight; }
+    let memory = mix(6.0, f32(knobs.cache_memory), trust_at(p.position));
+    let n = min(e.samples + 1.0, memory);
     // later samples may count for more: the first ones read a table that was still dark
     var k = 1.0 / n;
     if (knobs.cache_late != 0u && knobs.cache_mode == CACHE_MODE_RUNNING) { k = min(1.0, 2.0 / (n + 1.0)); }
     if (!is_bad(bounced.x + bounced.y + bounced.z)) { e.bounced = mix(e.bounced, bounced, k); }
-    if (!is_bad(asked.lands.x + asked.lands.y + asked.lands.z)) { e.direct = mix(e.direct, asked.lands, 1.0 / min(e.direct_samples + 1.0, f32(knobs.cache_memory))); }
+    if (!is_bad(asked.lands.x + asked.lands.y + asked.lands.z)) { e.direct = mix(e.direct, asked.lands, 1.0 / min(e.direct_samples + 1.0, memory)); }
     e.samples = n;
-    e.direct_samples = min(e.direct_samples + 1.0, f32(knobs.cache_memory));
+    e.direct_samples = min(e.direct_samples + 1.0, memory);
   }
   if (knobs.cache_mode == CACHE_MODE_RUNNING) {
     e.known = e.bounced;

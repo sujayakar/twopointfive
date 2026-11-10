@@ -7,6 +7,7 @@ import type { Views } from '../page/views';
 import { choice, onKnob, slider, toggle, valueOf } from '../page/knobs';
 import { HitY, LightAtY } from './bounce';
 import cacheCode from '../wgsl/cache.wgsl';
+import cacheKeys from '../wgsl/cache_keys.wgsl';
 import found from './cache_found.wgsl';
 import rays from './cache_rays.wgsl';
 import lamps from './cache_lamps.wgsl';
@@ -88,9 +89,10 @@ export class Cache {
 }
 
 export function addCache(graph: Graph, views: Views): void {
-  graph.addModule('cache', { needs: ['ray', 'dice'], shared: ['cache_keys'], code: cacheCode });
+  graph.addModule('cache keys', { needs: ['dice'], shared: ['cache_keys'], code: cacheKeys });
+  graph.addModule('cache', { needs: ['ray of pieces', 'cache keys'], shared: [], code: cacheCode });
   graph.addModule('turn', {
-    needs: [], shared: ['cache_keys'],
+    needs: ['cache keys'], shared: [],
     code: `
 /// Does this entry get a ray this round? Young ones always do.
 fn its_turn(slot: u32, p: CachePoint, e: Entry) -> bool {
@@ -100,8 +102,7 @@ fn its_turn(slot: u32, p: CachePoint, e: Entry) -> bool {
 /// The entry that speaks for the pinned point, as far as its key tells.
 fn pinned_slot() -> u32 {
   if (frame.pinned_on == 0u) { return NOTHING; }
-  let hit = hit_x_at(vec2i(frame.pinned));
-  return cache_find(cache_key(hit.position, hit.normal, 0u));
+  return cache_find(cache_key(frame.pinned_position, frame.pinned_normal, 0u));
 }`,
   });
   const entries = { count: CACHE_SLOTS };
@@ -109,26 +110,26 @@ fn pinned_slot() -> u32 {
   graph.addBuffer({ name: 'cache', struct: Entry, size: entries, history: true, about: 'what each entry has gathered' });
   graph.addBuffer({ name: 'cache_hits', struct: HitY, size: entries, about: 'where each entry’s ray landed' });
   graph.addBuffer({ name: 'cache_direct', struct: LightAtY, size: entries, about: 'what the lamp each entry asked sends it' });
-  const mine = { hit_x: 'hit_x', cache_points: 'cache_points', cache_before: 'cache@before' };
+  const mine = { cache_points: 'cache_points', cache_before: 'cache@before' };
   // rays first, from the entries as they stand
   graph.addStage({
     name: 'cache rays', question: 'What does each entry see along one ray?',
-    reads: mine, writes: ['cache_hits'], uses: ['y', 'dice', 'cache', 'turn', 'draw', 'openings'], over: entries, code: rays,
+    reads: mine, writes: ['cache_hits'], uses: ['y', 'dice', 'turn', 'draw', 'openings'], over: entries, code: rays,
   });
   graph.addStage({
     name: 'cache lamps', question: 'What does one lamp send each entry?',
-    reads: mine, writes: ['cache_direct'], uses: ['ray', 'lamps', 'dice', 'cache', 'turn', 'draw'], over: entries, code: lamps,
+    reads: mine, writes: ['cache_direct'], uses: ['ray', 'lamps', 'smoke', 'dice', 'turn', 'draw'], over: entries, code: lamps,
   });
   graph.addStage({
     name: 'cache gather', question: 'What has each entry learnt?',
     reads: { cache_points: 'cache_points', cache_before: 'cache@before', cache_hits: 'cache_hits', cache_direct: 'cache_direct' },
-    writes: ['cache'], uses: ['no ray', 'ray', 'sky', 'dice', 'cache'], over: entries, code: gather,
+    writes: ['cache'], uses: ['no ray', 'sky', 'dice', 'cache', 'change'], over: entries, code: gather,
   });
   // then founding, for the rays to come
   for (const [name, source, over] of [['wide', 'hit_y', 'wide'], ['narrow', 'hit_r', 'narrow'], ['own', 'cache_hits', entries]] as const) {
     graph.addStage({
       name: `cache found ${name}`, question: 'Where did a ray land that no entry speaks for?',
-      reads: { source }, writes: ['cache_points'], uses: ['ray', 'dice', 'cache'],
+      reads: { source }, writes: ['cache_points'], uses: ['dice', 'cache'],
       over: over as Grid | { count: number },
       code: typeof over === 'string'
         ? `${found.replace('fn run(index: u32)', 'fn found(index: u32)')}\nfn run(pixel: vec2u) { found(pixel.y * frame.${over}_size.x + pixel.x); }`
@@ -139,7 +140,7 @@ fn pinned_slot() -> u32 {
   const look = (id: string, name: string, about: string, body: string) =>
     views.add({
       id, group: 'The cache, where you look', name, about,
-      reads: ['hit_x', 'cache', 'cache_points'], uses: ['ray', 'dice', 'cache'],
+      reads: ['hit_x', 'cache', 'cache_points'], uses: ['dice', 'cache'],
       code: `
   let hit = hit_x_at(at_render(p));
   if (hit.distance < 0.0 || hit.lamp != NOTHING) { return vec3f(0.02); }
@@ -160,7 +161,7 @@ fn pinned_slot() -> u32 {
   views.add({
     id: 'cache off', group: 'The cache, where you look', name: 'All else, off the truth',
     about: 'What is kept beside what the path tracer finds at the same place: red too bright, blue too dark, full color at one stop.',
-    reads: ['hit_x', 'cache', 'cache_points', 'truth'], uses: ['ray', 'dice', 'cache'],
+    reads: ['hit_x', 'cache', 'cache_points', 'truth'], uses: ['dice', 'cache'],
     code: `
   let hit = hit_x_at(at_render(p));
   if (hit.distance < 0.0 || hit.lamp != NOTHING) { return vec3f(0.02); }

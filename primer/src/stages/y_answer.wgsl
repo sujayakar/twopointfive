@@ -22,6 +22,7 @@ fn run(pixel: vec2u) {
   }
   else if (knobs.stop_at == STOP_AT_Y) { out.value = y.sends * (direct + known) * y.weight; }
   else { out.value = y.sends * (light_y_at(vec2i(pixel)).lands + known) * y.weight; }
+  if (y.distance != NO_RAY) { out.value = out.value * y.passes + y.added * y.weight; }
   if (is_bad(out.value.x + out.value.y + out.value.z)) { out.value = vec3f(0.0); }
   put_raw(pixel, out);
 }

@@ -1,9 +1,11 @@
 // A ROOM is a small scene about one question. It is written as code: pieces, lamps, a sky, a camera,
 // a few sliders, and (if things move) where each object stands at a given time.
 
+import type { MeshGiven } from '../mesh/meshes';
+import type { VolumeGiven } from './smoke';
 import { NO_TURN, add, normalize, turnBoth, turnVec, type Quat, type Vec3 } from './vec';
 
-export type Shape = 'box' | 'ball' | 'cylinder';
+export type Shape = 'box' | 'ball' | 'cylinder' | 'mesh';
 
 export interface Material {
   matte: Vec3;
@@ -30,6 +32,16 @@ export interface PieceGiven {
   object?: number;
   /** cut planes in the piece's own frame: normal, and how far out. What is past them is gone */
   planes?: [Vec3, number][];
+  /** the ray widths between which it is there, meters */
+  from?: number;
+  until?: number;
+  /** the share of rays it stops: a stand-in for something with holes */
+  cover?: number;
+  /** a mesh; or what stands in for one when rays are to meet pieces */
+  form?: 'solid' | 'mesh' | 'stand_in' | 'leaf';
+  /** a mesh's first node, in the buffer of meshes */
+  meshRoot?: number;
+  meshScale?: number;
 }
 
 export interface LampGiven {
@@ -60,6 +72,8 @@ export interface RoomSlider {
   step: number;
   value: number;
   about: string;
+  /** turned while the room stands: it is not built anew */
+  live?: boolean;
 }
 
 export interface Camera {
@@ -81,8 +95,12 @@ export interface RoomSpec {
   sky?: { zenith: Vec3; horizon: Vec3; ground: Vec3 };
   sliders?: RoomSlider[];
   build: (b: Builder, sliders: Record<string, number>) => void;
+  /** the object whose levels are measured: a ball round it */
+  subject?: { center: Vec3; radius: number };
   /** where each object stands `seconds` after the start */
   move?: (seconds: number, sliders: Record<string, number>) => Map<number, Place>;
+  /** how bright each lamp is, of 1, when a slider dims it */
+  power?: (sliders: Record<string, number>) => Map<number, number>;
   /** does it ever move by itself? */
   moves?: boolean;
 }
@@ -91,6 +109,8 @@ export class Builder {
   materials: Material[] = [];
   pieces: PieceGiven[] = [];
   lamps: LampGiven[] = [];
+  meshes: MeshGiven[] = [];
+  volumes: VolumeGiven[] = [];
   openings: { center: Vec3; halfU: Vec3; halfV: Vec3 }[] = [];
   /** object 0 is the room itself and never moves */
   objects = 1;
@@ -98,6 +118,17 @@ export class Builder {
   material(m: Material): number {
     this.materials.push(m);
     return this.materials.length - 1;
+  }
+  /** a mesh; the pieces that `standIn` makes are what rays meet in its place */
+  mesh(m: MeshGiven, standIn?: () => void): void {
+    this.meshes.push(m);
+    const first = this.pieces.length;
+    standIn?.();
+    for (const p of this.pieces.slice(first)) p.form = 'stand_in';
+  }
+  /** a box of smoke */
+  smoke(v: VolumeGiven): void {
+    this.volumes.push(v);
   }
   /** a door or window that wide rays may be aimed through */
   opening(center: Vec3, halfU: Vec3, halfV: Vec3): void {

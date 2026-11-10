@@ -16,6 +16,8 @@ export const Truth = struct('Truth', {
   two: vec3f('two bounces'),
   more: vec3f('three bounces and more'),
   narrow: vec3f('sent to the eye by the coat, of all other light'),
+  spare: f32('', { look: { kind: 'none' } }),
+  air: vec3f('what the air between the eye and x adds'),
 });
 
 slider('truth_bounces', {
@@ -46,7 +48,7 @@ export function addTruth(graph: Graph): void {
     question: 'What would infinitely many paths find?',
     reads: ['hit_x'],
     writes: ['truth'],
-    uses: ['ray', 'surface', 'sky', 'lamps', 'material', 'dice', 'draw'],
+    uses: ['ray', 'surface', 'sky', 'lamps', 'material', 'smoke', 'dice', 'draw'],
     over: 'render',
     code,
   });

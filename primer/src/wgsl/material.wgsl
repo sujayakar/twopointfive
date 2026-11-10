@@ -38,11 +38,22 @@ fn coat_share(s: Surface) -> vec3f {
   return (coat_f0(s) * ab.x + ab.y) * coat_gain(s);
 }
 
-/// The matte lobe gets what the coat did not turn away. So a white surface sends back everything:
+/// The matte lobe gets what the coat did not turn away; of something thin, some of it on the other side. So a white surface sends back everything:
 /// share + (1 − share) · 1 = 1, and a white ball under an even sky vanishes.
 fn matte_share(s: Surface) -> vec3f {
   let kept = select(1.0 - coat_share(s), vec3f(1.0), knobs.break_no_sharing != 0u);
-  return s.matte * (1.0 - s.metal) * kept;
+  return (s.matte + s.through) * (1.0 - s.metal) * kept;
+}
+fn is_thin(s: Surface) -> bool { return any(s.through > vec3f(0.0)); }
+/// Of what the matte lobe sends to the eye, how much is of light that lands on the eye's side.
+fn front_of(s: Surface) -> vec3f {
+  return select(vec3f(1.0), s.matte / max(s.matte + s.through, vec3f(1e-6)), is_thin(s));
+}
+/// The matte response to light from a direction, the cosine in it.
+fn matte_response(s: Surface, light: vec3f) -> vec3f {
+  let cosine = dot(s.normal, light);
+  let front = front_of(s);
+  return matte_share(s) * select(1.0 - front, front, cosine > 0.0) * (abs(cosine) / PI);
 }
 
 fn smith(cosine: f32, alpha: f32) -> f32 {

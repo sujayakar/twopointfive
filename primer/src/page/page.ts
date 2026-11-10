@@ -8,6 +8,8 @@ import { unpack, type Value } from '../gpu/layout';
 import { CACHE_SLOTS } from '../stages/cache';
 import { ROOMS, roomNamed } from '../rooms';
 import { RAY_KINDS, projectLine } from './rays';
+import { DIAL_FORMS, DIAL_RAYS } from '../stages/dial';
+import { STRIP_MOST, STRIP_WIDTHS } from '../stages/strip';
 import { MIXER } from '../stages/picture';
 import { dolly, orbit, pan } from '../world/camera';
 import { add, axesAround, dot, scale, sub, type Vec3 } from '../world/vec';
@@ -33,8 +35,10 @@ export class Page {
   private meterRows = el('div', { id: 'meter' });
   private code: HTMLDialogElement = el('dialog', { id: 'code' });
   private lampRows = el('div', { id: 'lamps' });
+  private dialRows = el('div', { id: 'dial-rows' });
+  private levelRows = el('div', { id: 'level-rows' });
   private cacheRows = el('div', { id: 'cache-rows' });
-  private tab: 'pixel' | 'lamps' | 'cache' | 'mixer' | 'meter' = 'pixel';
+  private tab: 'pixel' | 'lamps' | 'cache' | 'levels' | 'dial' | 'mixer' | 'meter' = 'pixel';
 
   constructor(private lab: Lab, root: HTMLElement) {
     this.stage.append(lab.canvas, this.overlay, this.headers, this.marker, this.wipeLine, this.status);
@@ -114,7 +118,8 @@ export class Page {
         type: 'range', id: `room-${s.key}`, min: String(s.min), max: String(s.max), step: String(s.step),
         input: () => {
           shown.textContent = input.value;
-          this.openRoom(lab.world.room.id, { ...lab.world.sliders, [s.key]: Number(input.value) });
+          if (s.live) lab.turnLive(s.key, Number(input.value));
+          else this.openRoom(lab.world.room.id, { ...lab.world.sliders, [s.key]: Number(input.value) });
         },
       });
       input.value = String(lab.world.sliders[s.key]);
@@ -150,7 +155,7 @@ export class Page {
   }
 
   private drawRight(): void {
-    const tabs: [typeof this.tab, string][] = [['pixel', 'Pixel'], ['lamps', 'Lamps'], ['cache', 'Cache'], ['mixer', 'Mixer'], ['meter', 'Meter']];
+    const tabs: [typeof this.tab, string][] = [['pixel', 'Pixel'], ['lamps', 'Lamps'], ['cache', 'Cache'], ['levels', 'Levels'], ['dial', 'Dial'], ['mixer', 'Mixer'], ['meter', 'Meter']];
     const head = el('div', { class: 'segments', role: 'group' },
       ...tabs.map(([id, text]) =>
         el('button', { type: 'button', 'aria-pressed': String(this.tab === id), click: () => { this.tab = id; this.draw(); } }, text)));
@@ -158,9 +163,12 @@ export class Page {
       this.tab === 'pixel' ? this.pinnedRows
       : this.tab === 'lamps' ? this.lampRows
       : this.tab === 'cache' ? this.cacheRows
+      : this.tab === 'levels' ? this.levelRows
+      : this.tab === 'dial' ? this.dialRows
       : this.tab === 'meter' ? this.meterRows
       : el('div', { id: 'mixer' }, ...MIXER.map((k) => this.mixerRow(k.key)));
-    this.lab.alsoWanted = this.tab === 'lamps' ? ['bars', 'reservoir_still', 'reservoir_changing'] : [];
+    this.lab.alsoWanted = this.tab === 'lamps' ? ['bars', 'reservoir_still', 'reservoir_changing'] : this.tab === 'levels' ? ['strip']
+      : this.tab === 'dial' && this.lab.meshes.jobCount ? DIAL_FORMS.map((f) => `dial ${f.id}`) : [];
     this.right.replaceChildren(head, body);
   }
 
@@ -232,7 +240,8 @@ export class Page {
     }
     if (lab.pinned) {
       await lab.rays.read();
-      if (this.tab === 'cache' || lab.shown.slice(0, panelsIn[lab.layout]).includes('disc')) await this.findPinnedHit();
+      await this.findPinnedHit();
+      lab.pinnedAt = this.pinnedHit;
     }
     this.drawOverlay();
     if (this.tab === 'pixel') await this.refreshPinned();
@@ -240,6 +249,8 @@ export class Page {
     if (this.tab === 'meter') this.refreshMeter();
     if (this.tab === 'cache' || valueOf('cache_entries')) await this.readEntries();
     if (this.tab === 'cache') this.refreshCache();
+    if (this.tab === 'levels') await this.refreshLevels();
+    if (this.tab === 'dial') await this.refreshDial();
     const judged = lab.judged();
     if (judged.length && lab.ready) {
       await lab.judge.read(judged);
@@ -393,6 +404,81 @@ export class Page {
     this.cacheRows.replaceChildren(...rows);
   }
 
+  // ---- levels
+
+  /** what one object blocks and sends back, by the width of the ray that asks */
+  private async refreshLevels(): Promise<void> {
+    const { lab } = this;
+    if (!lab.world.room.subject) {
+      this.levelRows.replaceChildren(el('p', { class: 'hint' }, 'This room has no object whose levels are measured. Try Levels or Stone yard.'));
+      return;
+    }
+    if (!lab.made.includes('strip')) return;
+    const spec = lab.graph.spec('strip');
+    const count = lab.graph.elements(spec.size);
+    const data = await readBack(lab.gpu, lab.graph.buffer('strip'), 0, count * spec.struct.stride);
+    const per = count / STRIP_WIDTHS;
+    const bins = Array.from({ length: STRIP_WIDTHS }, (_, bin) => {
+      let blocks = 0;
+      let sends = 0;
+      let steps = 0;
+      for (let k = 0; k < per; k++) {
+        const v = unpack(spec.struct, data, (bin * per + k) * spec.struct.stride);
+        const c = v.sends as number[];
+        blocks += (v.blocks as number) / per;
+        sends += (0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!) / per;
+        steps += (v.steps as number) / per;
+      }
+      return { width: STRIP_MOST * 0.004 ** (1 - (bin + 0.5) / STRIP_WIDTHS), blocks, sends, steps };
+    });
+    const W = 240;
+    const H = 110;
+    const x = (i: number) => (i / (STRIP_WIDTHS - 1)) * W;
+    const line = (values: number[], color: string) => {
+      const base = values.slice(0, 6).reduce((a, b) => a + b, 0) / 6 || 1;
+      const points = values.map((v, i) => `${x(i).toFixed(1)},${(H / 2 - ((v / base - 1) * H) / 1).toFixed(1)}`).join(' ');
+      return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.6"/>`;
+    };
+    const ticks = [0.01, 0.1, 1].map((w) => {
+      const i = (1 - Math.log(w / STRIP_MOST) / Math.log(0.004)) * STRIP_WIDTHS - 0.5;
+      return `<line x1="${x(i)}" x2="${x(i)}" y1="0" y2="${H}" stroke="#2c2f34"/><text x="${x(i) + 3}" y="${H - 3}" fill="#9a9c98" font-size="9">${w} m</text>`;
+    });
+    const grid = [-0.1, 0, 0.1].map((v) => `<line x1="0" x2="${W}" y1="${H / 2 - v * H}" y2="${H / 2 - v * H}" stroke="${v ? '#24272b' : '#4a4e55'}"/>`);
+    const chart = el('div', { class: 'chart' });
+    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="what it blocks and sends back, by ray width">${grid.join('')}${ticks.join('')}${line(bins.map((b) => b.blocks), '#6bb8ff')}${line(bins.map((b) => b.sends), '#ffe08a')}</svg>`;
+    const row = (name: string, f: (b: (typeof bins)[0]) => number) =>
+      el('tr', {}, el('td', {}, name), ...[4, 24, 34, 44].map((i) => el('td', {}, f(bins[i]!).toFixed(name === 'nodes' ? 1 : 3))));
+    this.levelRows.replaceChildren(
+      el('p', { class: 'hint' }, 'One object, asked from all sides by rays of each width, beside the finest (the middle line; faint lines 10 % off). Blue: what it blocks. Yellow: what it sends back. A good level keeps both flat.'),
+      chart,
+      el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, ''), ...[4, 24, 34, 44].map((i) => el('th', {}, `${bins[i]!.width.toFixed(2)} m`)))),
+        el('tbody', {}, row('blocks', (b) => b.blocks), row('sends', (b) => b.sends), row('nodes', (b) => b.steps))));
+  }
+
+  // ---- the dial
+
+  private async refreshDial(): Promise<void> {
+    const { lab } = this;
+    if (!lab.meshes.jobCount) {
+      this.dialRows.replaceChildren(el('p', { class: 'hint' }, 'Open the Ladder or the Stone yard: the dial asks the first mesh of a room.'));
+      return;
+    }
+    const rays = DIAL_RAYS * valueOf('dial_repeat');
+    const rows = await Promise.all(DIAL_FORMS.map(async (f) => {
+      const ms = lab.graph.timer.ms.get(`dial ${f.id}`);
+      if (!lab.made.includes(`dial ${f.id}`)) return null;
+      const data = new Float32Array((await readBack(lab.gpu, lab.graph.buffer(`dial ${f.id}`), 0, 4096 * 8)).buffer);
+      let steps = 0;
+      for (let i = 0; i < 4096; i++) steps += data[i * 2 + 1]! / 4096 / valueOf('dial_repeat');
+      return el('tr', { title: f.about }, el('td', {}, f.name), el('td', {}, ms === undefined ? '–' : ((ms * 1e6) / rays).toFixed(2)), el('td', {}, steps.toFixed(1)));
+    }));
+    this.dialRows.replaceChildren(
+      el('p', { class: 'hint' }, `${(DIAL_RAYS / 1000).toFixed(0)} thousand rays through a ball round one stone, for each form, every frame.`),
+      el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'The stone is'), el('th', {}, 'ns a ray'), el('th', {}, 'steps'))), el('tbody', {}, ...rows.filter((r) => r !== null))),
+      control('dial_coherent'), control('dial_repeat'),
+      el('p', { class: 'hint' }, 'For a feel of where forms cross over. The times are of passes on this GPU, smoothed; with nothing else in the panels they are steadier.'));
+  }
+
   /** a small line, from zero up */
   private chart(values: number[]): HTMLElement {
     const W = 220;
@@ -495,6 +581,7 @@ export class Page {
     this.meterRows.replaceChildren(
       el('p', { class: 'hint' }, `${gpu.about || 'GPU'} · render ${w} × ${h}, output ${graph.grids.output.join(' × ')}`),
       el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Stage'), el('th', {}, 'ms'), el('th', {}, 'MB'))), el('tbody', {}, ...rows)),
+      el('p', { class: 'hint' }, `Making the tree of what moves: ${this.lab.world.treeMs.toFixed(2)} ms on the CPU.`),
       el('p', { class: 'hint' }, 'Only what the panels depend on runs. On Apple GPUs passes overlap, so these do not add up to the frame.'));
   }
 

@@ -66,8 +66,10 @@ export const colorBox: RoomSpec = {
   exposure: 0.3,
   sliders: [
     { key: 'lamp', label: 'Lamp, half its width (m)', min: 0.02, max: 1.1, step: 0.01, value: 0.35, about: 'the same power at any size' },
+    { key: 'on', label: 'Lamp on', min: 0, max: 1, step: 1, value: 1, live: true, about: 'switch it off, and watch the light drain out of the cache' },
     { key: 'paint', label: 'Walls send back', min: 0, max: 0.98, step: 0.01, value: 0.75, about: 'near 1, light goes round and round' },
   ],
+  power: (s) => new Map([[0, s.on!]]),
   build(b, s) {
     const p = s.paint!;
     const white = b.material({ matte: grey(p), roughness: 0.9 });

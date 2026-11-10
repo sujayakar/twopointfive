@@ -21,7 +21,7 @@ fn run(pixel: vec2u) {
     let memory = min(old.memory, f32(knobs.reuse_memory) * fresh_memory);
     if (memory > 0.0 && same_surface(hit, hit.position_before, old_hit)) {
       var s = 0.0;
-      if (old.lamp < world.lamp_count) { s = brightness(landing(old.lamp, old.dice, hit.position, hit.normal)); }
+      if (old.lamp < world.lamp_count) { s = brightness(landing(old.lamp, old.dice, hit)); }
       // a lamp that was hidden from here is known to send nothing
       let known = select(1.0, old.seen, knobs.reuse_seen != 0u);
       let die = dice_of(DICE_KIND_WHITE, pixel, frame.number, 300u + 200u * CLASS).x;

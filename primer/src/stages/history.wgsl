@@ -92,6 +92,8 @@ fn run(pixel: vec2u) {
     }
   }
 
+  // where something changed, the past counts for less
+  count = min(count, mix(2.0, f32(knobs.history_frames) - 1.0, hit.trust));
   count = min(count, f32(knobs.history_frames) - 1.0);
   if (LEASH == 1u && count > 0.0) {
     let reach = spread * knobs.history_leash + abs(mean) * 0.02 + 1e-4;

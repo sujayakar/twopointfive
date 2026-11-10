@@ -4,7 +4,8 @@
 import { struct, vec3f } from '../gpu/layout';
 import type { Graph } from '../gpu/graph';
 import type { Views } from '../page/views';
-import { slider } from '../page/knobs';
+import { chosen, slider } from '../page/knobs';
+import { Truth } from './truth';
 
 export const Light = struct('Light', { light: vec3f('what goes to the eye') });
 
@@ -20,6 +21,7 @@ export const MIXER = [
   gain('mix_two', 'Two bounces', 'Light that has met two. (The truth only.)'),
   gain('mix_more', 'More bounces', 'All the rest. (The truth only.)'),
   gain('mix_wide', 'Wide light', 'All light that bounced, and the sky, sent back by the matte lobe. (Real time.)'),
+  gain('mix_air', 'Smoke', 'What the air scatters and sends out.'),
   gain('mix_narrow', 'Mirror', 'All light but the lamps’ own, sent back by the coat.'),
 ];
 
@@ -30,7 +32,7 @@ export function addTruePicture(graph: Graph, views: Views): void {
     question: 'What does the eye see, if every part is true?',
     reads: ['hit_x', 'truth'],
     writes: ['true_picture'],
-    uses: ['x'],
+    uses: ['x', 'smoke', 'dice'],
     over: 'render',
     code: `
 fn run(pixel: vec2u) {
@@ -43,6 +45,12 @@ fn run(pixel: vec2u) {
       + t.one * knobs.mix_one + t.two * knobs.mix_two + t.more * knobs.mix_more;
     sum += matte_share(s) * lands + t.shine * knobs.mix_shine + t.narrow * knobs.mix_narrow;
   }
+  if (world.volume_count > 0u) {
+    let most = select(hit.distance, 60.0, hit.distance < 0.0);
+    let toward = normalize(hit.position - frame.eye);
+    let passes = smoke_between(frame.eye, toward, most, 0.0, width_of_pixel(), 48u, dice1(pixel, DICE_AIR)).passes;
+    sum = sum * passes + truth_at(vec2i(pixel)).air * knobs.mix_air;
+  }
   put_true_picture(pixel, Light(sum));
 }`,
   });
@@ -53,12 +61,14 @@ fn run(pixel: vec2u) {
 }
 
 export function addPicture(graph: Graph, views: Views): void {
-  graph.addBuffer({ name: 'picture', struct: Light, size: 'render', about: 'the sum of the signals' });
+  graph.addBuffer({ name: 'surfaces', struct: Light, size: 'render', about: 'the sum of the signals, in a vacuum' });
+  graph.addBuffer({ name: 'picture', struct: Light, size: 'render', about: 'the same, through the air' });
+  graph.addAlias('air_used', () => ({ off: 'air_settled', raw: 'air_raw_up', settled: 'air_settled', truth: 'air_settled' })[chosen('source_air')]!);
   graph.addStage({
     name: 'sum',
     question: 'What does the eye see, from the signals as they are switched?',
     reads: ['hit_x', 'unblocked', 'still_used', 'changing_used', 'shine_used', 'wide_used', 'narrow_used'],
-    writes: ['picture'],
+    writes: ['surfaces'],
     uses: ['x'],
     over: 'render',
     code: `
@@ -79,9 +89,34 @@ fn run(pixel: vec2u) {
     sum += matte_share(s) * wide_used_at(p).value * knobs.mix_wide;
     sum += shine_used_at(p).value * knobs.mix_shine + coat_share(s) * narrow_used_at(p).value * knobs.mix_narrow;
   }
-  put_picture(pixel, Light(sum));
+  put_surfaces(pixel, Light(sum));
 }`,
   });
+  graph.addStage({
+    name: 'through the air',
+    question: 'What of it gets through the air, and what does the air add?',
+    reads: ['hit_x', 'surfaces', 'air_used', 'truth_or_not'],
+    writes: ['picture'],
+    uses: ['smoke', 'dice'],
+    over: 'render',
+    code: `
+fn run(pixel: vec2u) {
+  let p = vec2i(pixel);
+  var light = surfaces_at(p).light;
+  if (world.volume_count > 0u && knobs.source_air != SOURCE_AIR_OFF) {
+    let hit = hit_x_at(p);
+    let most = select(hit.distance, 60.0, hit.distance < 0.0);
+    let toward = normalize(hit.position - frame.eye);
+    let passes = smoke_between(frame.eye, toward, most, knobs.forced_width, width_of_pixel(), knobs.air_steps, dice1(pixel, DICE_AIR)).passes;
+    var added = air_used_at(p).value;
+    if (knobs.source_air == SOURCE_AIR_TRUTH) { added = truth_or_not_at(p).air; }
+    light = light * passes + added * knobs.mix_air;
+  }
+  put_picture(pixel, Light(light));
+}`,
+  });
+  graph.addBuffer({ name: 'no_truth', struct: Truth, size: 'render', about: 'nothing: the truth is not asked' });
+  graph.addAlias('truth_or_not', () => (chosen('source_air') === 'truth' ? 'truth' : 'no_truth'));
   views.add({
     id: 'picture', group: 'Pictures', name: 'Real time', about: 'The sum of the signals, each as its switch says: off, raw, settled or true.',
     reads: ['picture'], code: 'return show_light(picture_at(at_render(p)).light);',

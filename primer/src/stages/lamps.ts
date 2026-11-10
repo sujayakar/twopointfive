@@ -3,8 +3,10 @@
 import { f32, struct, u32, vec2f, vec3f } from '../gpu/layout';
 import type { Graph } from '../gpu/graph';
 import type { Views } from '../page/views';
-import { choice, slider, toggle, valueOf } from '../page/knobs';
-import { addSignal } from './signals';
+import { choice, chosen, slider, toggle, valueOf } from '../page/knobs';
+import { addSignal, Signal } from './signals';
+import sunMap from './sun_map.wgsl';
+import sunSeen from './sun_seen.wgsl';
 import unblocked from './unblocked.wgsl';
 import freshPick from './fresh_pick.wgsl';
 import reuseTime from './reuse_time.wgsl';
@@ -17,6 +19,9 @@ const Unblocked = struct('Unblocked', {
   lamps: f32('how many lamps can reach this', { look: { kind: 'heat', from: 0, to: 60 } }),
   changing: vec3f('the same, of lamps that change'),
 });
+const SUN_MAP = 768;
+/** half the square that the sun's map covers, meters */
+const SUN_REACH = 5;
 export const Reservoir = struct('Reservoir', {
   lamp: u32('the lamp it kept'),
   weight: f32('W: what to multiply that lamp’s light by', { look: { kind: 'heat', from: 0, to: 20 } }),
@@ -57,21 +62,35 @@ choice('shine_by', {
   label: 'Highlights are found by', value: 2, options: [['aim', 'Aiming'], ['lobe', 'The lobe'], ['both', 'Both, weighed']],
   about: 'Aiming finds small lamps and fails on mirrors; following the lobe finds large ones and fails on rough coats with small lamps. Weighed, each is used where it is good.',
 });
+choice('sun_by', {
+  label: 'Is the sun seen? Ask', value: 0, options: [['rays', 'Rays'], ['map', 'Its map'], ['leaves', 'Map for leaves, rays for the rest']],
+  about: 'A map is the sun’s own first hits, kept: one depth a texel. Rays are exact and cost by the pixel. Leaves are many, small and noisy to rays, and a map takes them all at once.',
+});
+slider('sun_map_width', { label: 'Width of the map’s rays', min: 0, max: 4, step: 0.1, value: 0, unit: 'texels', about: 'Wider, and the map is made of coarser levels.' });
+slider('sun_map_margin', { label: 'Off the surface, for the map', min: 0, max: 0.1, step: 0.001, value: 0.012, unit: 'm', about: 'A texel covers more than a point, so a surface shades itself unless it is asked a little off. Too far, and contact is lost.' });
 toggle('break_count_twice', { label: 'Count both in full', about: 'Both ways find the same light. Adding them without weights makes highlights twice as bright.' });
 
 export function addLamps(graph: Graph, views: Views): void {
   graph.addBuffer({ name: 'unblocked', struct: Unblocked, size: 'render', about: 'what the lamps would land with nothing in the way' });
   graph.addStage({
     name: 'unblocked', question: 'What would the lamps send, with nothing in the way?',
-    reads: ['hit_x'], writes: ['unblocked'], uses: ['lamps'], over: 'render', code: unblocked,
+    reads: ['hit_x'], writes: ['unblocked'], uses: ['lamps', 'front'], over: 'render', code: unblocked,
   });
   for (const [cls, id] of [[0, 'still'], [1, 'changing']] as const) {
     addSignal(graph, {
       id, size: 'render',
       name: cls === 0 ? 'Lamps that stand' : 'Lamps that change',
       about: cls === 0 ? 'Light straight from lamps that stand.' : 'Light straight from lamps that are switched, swung or carried.',
+      rawIsAlias: true,
       truth: `select(t.${id}, t.${id} / max(u.${id}, vec3f(1e-9)), knobs.denoise_what == DENOISE_WHAT_SHARE)`,
     }, 'nothing is in the way', ['unblocked']);
+    graph.addBuffer({ name: `${id}_raw_ray`, struct: Signal, size: 'render', about: 'what the shadow ray found' });
+    graph.addBuffer({ name: `${id}_raw_map`, struct: Signal, size: 'render', about: 'the same, the sun by its map' });
+    graph.addAlias(`${id}_raw`, () => (chosen('sun_by') === 'rays' ? `${id}_raw_ray` : `${id}_raw_map`));
+    views.add({
+      id: `${id}_raw.value`, group: 'Lamps', name: `${id}: found this frame`, about: 'The share seen, or the light, as it is found.',
+      reads: [`${id}_raw`], code: `let v = ${id}_raw_at(at_render(p)).value; if (knobs.denoise_what == DENOISE_WHAT_SHARE) { return v; } return show_light(v * 0.8);`,
+    });
     const about = cls === 0 ? 'of lamps that stand' : 'of lamps that change';
     graph.addBuffer({ name: `fresh_${id}`, struct: Reservoir, size: 'render', about: `this frame’s own pick ${about}` });
     graph.addBuffer({ name: `time_${id}`, struct: Reservoir, size: 'render', about: `the pick ${about}, after reuse in time` });
@@ -100,8 +119,8 @@ export function addLamps(graph: Graph, views: Views): void {
     graph.addStage({
       name: `shadow ${id}`, question: 'Is the lamp that was picked seen?',
       reads: { hit_x: 'hit_x', picked: `picked_${id}` },
-      writes: { reservoir: `reservoir_${id}`, raw: `${id}_raw` },
-      uses: ['ray', 'lamps', 'reservoir', 'draw'], over: 'render', constants: { CLASS: cls }, code: shadow,
+      writes: { reservoir: `reservoir_${id}`, raw: `${id}_raw_ray` },
+      uses: ['ray', 'lamps', 'reservoir', 'smoke', 'dice', 'draw'], over: 'render', constants: { CLASS: cls }, code: shadow,
     });
     graph.addStage({
       name: `remember ${id}`, question: 'What is kept for next frame?',
@@ -120,6 +139,35 @@ fn run(pixel: vec2u) {
 }`,
     });
   }
+  graph.addBuffer({ name: 'sun_map', struct: struct('SunDepth', { depth: f32('how far sunlight gets', { unit: 'm' }) }), size: { count: SUN_MAP * SUN_MAP }, about: 'the sun’s own first hits' });
+  graph.addModule('sun', { needs: ['lamps'], shared: ['world'], code: `
+const SUN_MAP = ${SUN_MAP}u;
+const SUN_REACH = ${SUN_REACH.toFixed(1)};
+fn sun_lamp() -> u32 {
+  for (var i = 0u; i < world.lamp_count; i++) { if (lamps[i].kind == LAMP_SUN) { return i; } }
+  return NOTHING;
+}` });
+  graph.addStage({
+    name: 'sun map', question: 'How far does sunlight get?', reads: [], writes: ['sun_map'],
+    uses: ['ray', 'sun'], over: { count: SUN_MAP * SUN_MAP }, code: sunMap,
+  });
+  for (const id of ['still', 'changing']) {
+    graph.addStage({
+      name: `${id} sun by map`, question: 'Is the sun seen, by its map?',
+      reads: { hit_x: 'hit_x', ray_raw: `${id}_raw_ray`, reservoir: `reservoir_${id}`, sun_map: 'sun_map' },
+      writes: { raw: `${id}_raw_map` }, uses: ['sun', 'dice'], over: 'render', code: sunSeen,
+    });
+  }
+  views.add({
+    id: 'sun map', group: 'Lamps', name: 'The sun’s map', about: 'How far sunlight gets, as the sun sees it. Dark: near the sun.',
+    reads: ['sun_map'], uses: ['sun'],
+    code: `
+  let size = vec2f(frame.output_size);
+  let spot = (vec2f(p) + 0.5 - size * 0.5) / (0.5 * min(size.x, size.y));
+  if (any(abs(spot) >= vec2f(1.0))) { return vec3f(0.02); }
+  let at = vec2u((spot * 0.5 + 0.5) * f32(SUN_MAP));
+  return show_heat((sun_map[at.y * SUN_MAP + at.x].depth - 16.0) / 6.0);`,
+  });
   addSignal(graph, {
     id: 'shine', size: 'render', name: 'Highlights',
     about: 'Light straight from lamps, sent to the eye by the coat.',
@@ -129,7 +177,7 @@ fn run(pixel: vec2u) {
   graph.addStage({
     name: 'shine', question: 'What does the coat show of the lamps?',
     reads: ['hit_x'], writes: ['shine_raw', 'shine_ways'],
-    uses: ['x', 'ray', 'lamps', 'dice', 'draw'], over: 'render', code: shine,
+    uses: ['x', 'ray', 'lamps', 'smoke', 'dice', 'draw'], over: 'render', code: shine,
   });
 
   views.add({

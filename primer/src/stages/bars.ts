@@ -33,7 +33,7 @@ fn run(index: u32) {
     let aim = aim_at(lamp, hit.position, dice_of(DICE_KIND_WHITE, vec2u(index, k), frame.truth_number, 950u));
     if (dot(aim.toward, hit.normal) <= 0.0 || brightness(aim.light) <= 0.0) { continue; }
     let start = leave_surface(hit.position, hit.normal, aim.toward);
-    if (nearest(Ray(start, aim.toward, 1e-4, aim.distance - 2e-3)).piece == NOTHING) { seen += 0.125; }
+    if (nearest(fine_ray(start, aim.toward, 1e-4, aim.distance - 2e-3)).piece == NOTHING) { seen += 0.125; }
   }
   bar.count += 1.0;
   bar.seen = mix(bar.seen, seen, 1.0 / bar.count);

@@ -41,5 +41,11 @@ export const Frame = struct('Frame', {
   cache_go: u32('does the cache get rays this frame?'),
   cache_commit: u32('may readers see what has been gathered?'),
   cache_round: u32('rounds since it was cleared'),
-  opening_spare: u32(''),
+  spare6: u32(''),
+  cut_eye: vec3f('the eye the cut of meshes is picked for', { unit: 'm' }),
+  spare7: u32(''),
+  pinned_position: vec3f('the pinned point', { unit: 'm' }),
+  spare8: u32(''),
+  pinned_normal: vec3f(''),
+  spare9: u32(''),
 });

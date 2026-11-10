@@ -94,3 +94,6 @@ textarea { flex: 1; min-height: 0; resize: none; background: var(--raised); colo
   #right { order: 3; border: 0; }
   dialog { inset: 10px; }
 }
+
+#right > .segments { flex-wrap: wrap; gap: 3px; }
+#right > .segments button { flex: 1 0 30%; margin: 0; border-radius: 5px; }
