@@ -16,7 +16,7 @@ import { join } from 'node:path';
 const { loadGltfCharacter, loadGltfCast, SLOT_NAMES, CAST_PART_STEP, CAST_MAX_PARTS, castSide, castFile: castFileName, CAST_FILE, CAST_FILE_LOOK } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { fitRig, fitRigCast, rigTable, RIG_SLOTS, RIG_PAD_MAX } = await import(`${ROOT}/src/render/sdfrig.ts`);
 const { meshBvhFor } = await import(`${ROOT}/src/render/meshShadows.ts`);
-const { MESH_MAX_CHARS, wornTree, LEAF_PAD } = await import(`${ROOT}/src/render/meshbvh.ts`);
+const { MESH_MAX_CHARS, MESH_SPAN, wornTree, LEAF_PAD } = await import(`${ROOT}/src/render/meshbvh.ts`);
 
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); return ok; };
@@ -111,7 +111,7 @@ async function castFileOf(look: boolean) {
     for (let t = 0; t < union; t++) { const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3; const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2]; if (Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) < 1e-10) degen++; }
     for (let v = 0; v < m.vertexCount; v++) { const l = Math.hypot(m.normals[v * 3], m.normals[v * 3 + 1], m.normals[v * 3 + 2]); if (!(l > 0.9 && l < 1.1)) badN++; }
     verdict(degen <= union * 0.002 && badN === 0, `unit normals everywhere, zero-area triangles under 0.2 % (${degen})`, `${badN} bad normals`); }
-  { const t0 = performance.now(); const bvh = meshBvhFor(m); const ms = performance.now() - t0; const mb = ((MESH_MAX_CHARS + MESH_MAX_CHARS * bvh.numNodes * 2 + MESH_MAX_CHARS * bvh.numTris * 3 + MESH_MAX_CHARS * m.vertexCount) * 16) / 1048576;
+  { const t0 = performance.now(); const bvh = meshBvhFor(m); const ms = performance.now() - t0; const mb = ((MESH_MAX_CHARS * 2 + MESH_MAX_CHARS * bvh.numNodes + MESH_MAX_CHARS * bvh.numTris * 3 + MESH_MAX_CHARS * m.vertexCount) * 16) / 1048576;
     verdict(bvh.numTris === union, `the mesh-shadow tree builds: ${bvh.numNodes} nodes over ${bvh.numTris} triangles, ${bvh.maxDepth + 1} levels, ${ms.toFixed(0)} ms — ${mb.toFixed(1)} MB for ${MESH_MAX_CHARS} men and their skinned vertices`); }
 }
 
@@ -138,12 +138,12 @@ async function castFitOf(look: boolean) {
 }
 
 // ---- a man's own tree (meshbvh.ts wornTree) against the whole mesh's: the same rays meet the same triangle first, through the same boxes, and the refit's order is one
-//      CAST_TREE_BREAK=1: every leaf's two first triangles are dealt the other way round · =2: the refit's order is turned about
+//      CAST_TREE_BREAK=1: every leaf's two first triangles are dealt the other way round · =2: the refit's order is turned about · =3: a box's far side is drawn in four millimetres
 export async function castTree() { await castTreeOf(false); await castTreeOf(true); }
 async function castTreeOf(look: boolean) {
   console.log(`\n=== cast-tree: each variant's own shadow tree — ${look ? CAST_FILE_LOOK : CAST_FILE} ===`);
   if (!verdict(existsSync(pathOf(look)), 'the file exists')) return;
-  const ch = await characterSet(look), m = ch.mesh, b = meshBvhFor(m), P = m.positions, BREAK = process.env.CAST_TREE_BREAK ?? '', bad = { tris: [] as string[], boxes: [] as string[], order: [] as string[], rays: [] as string[] }; let rays = 0, hits = 0, whole = 0, own = 0, ms = 0;
+  const ch = await characterSet(look), m = ch.mesh, b = meshBvhFor(m), P = m.positions, BREAK = process.env.CAST_TREE_BREAK ?? '', bad = { tris: [] as string[], boxes: [] as string[], order: [] as string[], rays: [] as string[], steps: [] as string[] }; let rays = 0, hits = 0, whole = 0, own = 0, ms = 0;
   type Walk = { N: number; skip: (i: number) => number; first: (i: number) => number; count: (i: number) => number; corner: (c: number) => number; mn: Float32Array; mx: Float32Array; worn: (t: number) => boolean };
   const hitOf = (w: Walk, ro: number[], rd: number[]): { tri: string; visits: number } => {
     let i = 0, visits = 0;
@@ -173,14 +173,17 @@ async function castTreeOf(look: boolean) {
       else { const l = i + 1, r = b.right[i]; empty[i] = empty[l] & empty[r]; for (let a = 0; a < 3; a++) { Mn[i * 3 + a] = empty[l] ? Mn[r * 3 + a] : empty[r] ? Mn[l * 3 + a] : Math.min(Mn[l * 3 + a], Mn[r * 3 + a]); Mx[i * 3 + a] = empty[l] ? Mx[r * 3 + a] : empty[r] ? Mx[l * 3 + a] : Math.max(Mx[l * 3 + a], Mx[r * 3 + a]); } } }
     if ([0, 1, 2].some(a => mn[a] !== Mn[a] || mx[a] !== Mx[a])) bad.boxes.push(v.name);
     const W: Walk = { N: b.numNodes, skip: i => b.skip[i], first: i => b.triStart[i], count: i => b.triCount[i], corner: c => b.corners[c], mn: Mn, mx: Mx, worn: k => worn(b.corners[k * 3]) }, O: Walk = { N: t.numNodes, skip: i => t.nodes[i * 4], first: i => t.nodes[i * 4 + 1], count: i => t.nodes[i * 4 + 2], corner: c => t.verts[t.corners[c]], mn, mx, worn: () => true };
-    const roll = seeded(7 + v.mask); let wrong = 0;
-    for (let k = 0; k < 1500; k++) { const th = roll() * 6.2832, ro = [Math.cos(th) * 0.8, roll() * 2, Math.sin(th) * 0.8], to = [(roll() - 0.5) * 0.7, roll() * 1.9, (roll() - 0.5) * 0.5], d = to.map((x, a) => x - ro[a]), L = Math.hypot(d[0], d[1], d[2]), rd = d.map(x => x / L), a = hitOf(W, ro, rd), c = hitOf(O, ro, rd); rays++; whole += a.visits; own += c.visits; if (a.tri) hits++; if (a.tri !== c.tri) wrong++; }
-    if (wrong) bad.rays.push(`${v.name} ${wrong}`);
+    // (the boxes as the walk has them: whole steps of a cube MESH_SPAN wide, outward)
+    const per = 65535 / MESH_SPAN, org = [-MESH_SPAN / 2 + 0.013, -MESH_SPAN / 2 + 0.9, -MESH_SPAN / 2 - 0.021], qn = mn.map((x, i) => org[i % 3] + Math.floor((x - org[i % 3]) * per) / per), qx = mx.map((x, i) => org[i % 3] + (BREAK === '3' ? Math.floor((x - org[i % 3]) * per) - 60 : Math.ceil((x - org[i % 3]) * per)) / per), Q: Walk = { ...O, mn: qn, mx: qx };
+    const roll = seeded(7 + v.mask); let wrong = 0, wrongQ = 0;
+    for (let k = 0; k < 1500; k++) { const th = roll() * 6.2832, ro = [Math.cos(th) * 0.8, roll() * 2, Math.sin(th) * 0.8], to = [(roll() - 0.5) * 0.7, roll() * 1.9, (roll() - 0.5) * 0.5], d = to.map((x, a) => x - ro[a]), L = Math.hypot(d[0], d[1], d[2]), rd = d.map(x => x / L), a = hitOf(W, ro, rd), c = hitOf(O, ro, rd); rays++; whole += a.visits; own += c.visits; if (a.tri) hits++; if (a.tri !== c.tri) wrong++; if (a.tri !== hitOf(Q, ro, rd).tri) wrongQ++; }
+    if (wrong) bad.rays.push(`${v.name} ${wrong}`); if (wrongQ) bad.steps.push(`${v.name} ${wrongQ}`);
   }
   verdict(bad.tris.length === 0, 'a man\'s tree holds what he wears and nothing else, in the whole tree\'s order', bad.tris.join(' · '));
   verdict(bad.order.length === 0, 'every node is in one refit step, after both its children\'s', bad.order.slice(0, 3).join(' · '));
   verdict(bad.boxes.length === 0, 'and its root comes to the whole tree\'s box', bad.boxes.join(' · '));
   verdict(bad.rays.length === 0 && hits > rays / 5 && own < whole, `every ray meets the same triangle first (${rays} rays, ${hits} hits; ${(whole / rays).toFixed(1)} nodes a ray in the whole tree, ${(own / rays).toFixed(1)} in his own; the slowest tree was cut in ${ms.toFixed(0)} ms)`, bad.rays.join(' · '));
+  verdict(bad.steps.length === 0, 'and the same through the boxes as the walk has them, in whole steps', bad.steps.join(' · '));
 }
 
 // ---- whose trees are made (render/meshShadows.ts plan): nobody's over a still frame, one man's when he moves, his who is another or wears something else, and what the card is told of it
@@ -191,9 +194,9 @@ export async function castSkip() {
   const ch = await characterSet(false), slots = { now: new Uint32Array(0) }, heads = { now: new Uint32Array(0) }, calls: number[][] = [];
   const device = new Proxy(fake('device'), { get: (t: any, p) => p === 'createBuffer' ? (d: any) => ({ size: d.size, label: d.label, destroy() { /* none */ }, getMappedRange: () => new ArrayBuffer(d.size), unmap() { /* none */ } }) : p === 'queue' ? { writeBuffer: (b: any, _at: number, data: any) => { if (b.label === 'meshSlots') slots.now = data.slice(); if (b.label === 'meshShadows') heads.now = data.slice(); } } : t[p] });
   const chars = new CharacterRenderer(device, ch), M = new MeshShadows(device, ch, chars), enc = new Proxy(fake('encoder'), { get: (t: any, p) => p === 'beginComputePass' ? () => ({ setBindGroup() { /* none */ }, setPipeline() { /* none */ }, dispatchWorkgroups: (...n: number[]) => { calls.push(n); }, end() { /* none */ } }) : t[p] }); await M.init();
-  const W = JOINT_STRIDE * 16, bones = new Uint32Array(5 + 4 * W).map((_, i) => i * 7), masks = ch.cast.variants.slice(0, 4).map((v: any) => v.mask as number);
-  const frame = (): number[] => { calls.length = 0; if (BREAK === '2') chars.drawn(0, bones, 5); else chars.drawn(4, bones, 5); masks.forEach((m: number, i: number) => chars.drawnParts(i, m)); if (BREAK === '1') (M as any).slotMask = [...masks]; const n = M.plan(4); if (n) M.encode(enc); return n ? [...slots.now.slice(8 * 12, 8 * 12 + n)] : []; };
-  const say = (a: number[]) => a.join(',') || 'nobody', tree = (m: number) => wornTree(M.bvh, ch.mesh.vertexCount, (v: number) => ((m >>> ch.mesh.part[v]) & 1) === 1), slotIs = (k: number, m: number) => { const t = tree(m), o = k * 12; return slots.now[o] === t.verts.length && slots.now[o + 1] === t.leaves && slots.now[o + 2] === t.steps.length - 1 && heads.now[k * 4] === t.numNodes && heads.now[k * 4 + 3] === t.numTris && heads.now[k * 4 + 1] === slots.now[o + 9] && heads.now[k * 4 + 2] === slots.now[o + 10]; };
+  const W = JOINT_STRIDE * 16, bones = new Uint32Array(5 + 4 * W).map((_, i) => i * 7), bounds = new Float32Array(2 + 4 * 4).map((_, i) => i * 1.3), masks = ch.cast.variants.slice(0, 4).map((v: any) => v.mask as number);
+  const frame = (): number[] => { calls.length = 0; if (BREAK === '2') chars.drawn(0, bones, 5); else chars.drawn(4, bones, 5); masks.forEach((m: number, i: number) => chars.drawnParts(i, m)); if (BREAK === '1') (M as any).slotMask = [...masks]; const n = M.plan(4, bounds, 2); if (n) M.encode(enc); return n ? [...slots.now.slice(8 * 16, 8 * 16 + n)] : []; };
+  const say = (a: number[]) => a.join(',') || 'nobody', tree = (m: number) => wornTree(M.bvh, ch.mesh.vertexCount, (v: number) => ((m >>> ch.mesh.part[v]) & 1) === 1), slotIs = (k: number, m: number) => { const t = tree(m), o = k * 16, f = new Float32Array(slots.now.buffer), g = new Float32Array(heads.now.buffer); return [0, 1, 2].every(a => f[o + 12 + a] === Math.fround(bounds[2 + k * 4 + a] - MESH_SPAN / 2) && g[k * 8 + 4 + a] === f[o + 12 + a]) && slots.now[o] === t.verts.length && slots.now[o + 1] === t.leaves && slots.now[o + 2] === t.steps.length - 1 && heads.now[k * 8] === t.numNodes && heads.now[k * 8 + 3] === t.numTris && heads.now[k * 8 + 1] === slots.now[o + 9] && heads.now[k * 8 + 2] === slots.now[o + 10]; };
   const first = frame(), still = frame(), quiet = calls.length; bones[5 + 2 * W + 100]++; const one = frame(), shape = calls.map(c => c[c.length === 1 ? 0 : 1]).join(','), after = frame();
   const m1 = masks[1]; masks[1] = masks[3]; const dressed = frame(), told = masks.every((m: number, k: number) => slotIs(k, m)); masks[1] = m1; frame();
   const a = bones.slice(5, 5 + W); bones.copyWithin(5, 5 + 3 * W, 5 + 4 * W); bones.set(a, 5 + 3 * W); [masks[0], masks[3]] = [masks[3], masks[0]]; const swapped = frame(), told2 = masks.every((m: number, k: number) => slotIs(k, m)), last = frame();

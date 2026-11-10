@@ -82,7 +82,7 @@ fn a_mud_wall_goes_off_as_mud() {
                 assert!(whiter(x.albedo, paint) < 0.02, "seed {s}: the hole's edge shows {:?}, whiter than the wall's mud {paint:?}", x.albedo);
             }
         }
-        let studs = p.g.tab.boxes.iter().filter(|(_, b)| b.name.as_deref() == Some("stud")).count();
+        let studs = p.g.tab.boxes.iter().filter(|(_, b)| b.stud).count();
         assert_eq!(studs, 0, "seed {s}: a mud wall has no studs to leave standing");
     }
 }

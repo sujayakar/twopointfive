@@ -269,7 +269,7 @@ impl StealthAsk for Play {
         self.g.tune.qrf = true;
         self.g.tune.qrf_eta = eta;
         self.g.tune.qrf_size = men;
-        if let Some(r) = self.g.level.scenarios.as_mut().and_then(|s| s.response.as_mut()) { r.men = Some([men, men]); r.eta = Some([eta, eta]); }
+        if let Some(r) = std::sync::Arc::make_mut(&mut self.g.level).scenarios.as_mut().and_then(|s| s.response.as_mut()) { r.men = Some([men, men]); r.eta = Some([eta, eta]); }
     }
     fn alarm_raised_to(&mut self, level: f64) { game::guards::raise_escalation(&mut self.g, level, None, None, None); }
     fn body_is_found(&mut self, gd: GuardId) { self.g.gd[gd].found = true; }

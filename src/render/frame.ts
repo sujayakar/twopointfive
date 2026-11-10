@@ -7,7 +7,7 @@ import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
 import { REACH_VEC4S } from './lights';
 import { LOOK_MIRRORS, LOOK_MIRROR_PLAIN, LOOK_WORDS } from './lookTex';
-import { MESH_MAX_CHARS } from './meshbvh';
+import { MESH_MAX_CHARS, MESH_SPAN } from './meshbvh';
 import { MARK_TABLE_ROWS } from '../scene/markings';
 import { cutConfig, CUT_ROWS, CUT_STRIDE } from '../scene/cut';
 import { GB_ROWS } from '../scene/boxes';
@@ -392,7 +392,7 @@ export function scenePrelude(cut: boolean = cutConfig.on): string {
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
-  return wgslWorldConsts() + weatherVolWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
+  return wgslWorldConsts() + weatherVolWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_SPAN: f32 = ${MESH_SPAN}; const MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
     + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's quantum as a const, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call
 }
 
@@ -421,7 +421,7 @@ export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {
 
 export interface SceneBuffers {
   frame: GPUBuffer; boxGeo: GPUBuffer; boxMat: GPUBuffer; gridCells: GPUBuffer; gridItems: GPUBuffer; sceneInfo: GPUBuffer; lights: GPUBuffer; smoke: GPUBuffer; smokeAtlasView: GPUTextureView; lightReach: GPUBuffer; linSamp: GPUSampler; capsules: GPUBuffer;
-  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 128-byte storage buffer of zeros while none is attached (zero headers are empty trees); ignored when !meshBinding.enabled */
+  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 256-byte storage buffer of zeros while none is attached (zero headers are empty trees); ignored when !meshBinding.enabled */
   mesh: GPUBuffer;
   /** the smoke's page texture (smoke/smoke.ts; engine.ts has a 1³ stand-in until a solver is attached) */
   smokePage: GPUTextureView;

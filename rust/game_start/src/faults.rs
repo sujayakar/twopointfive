@@ -236,7 +236,6 @@ impl<'a> Rules<'a> {
         self.finish(w, b.rough);
         self.words(w, said.stuff, said.does);
         if b.emissive.is_some_and(|e| !light(&e)) { self.say(format!("{w}.emissive"), "0 or more"); }
-        self.word(&format!("{w}.name"), &b.name);
         self.word(&format!("{w}.group"), &b.group);
         self.marks(w, &b.markings, &b.h, b.rot.is_some());
         self.round(w, b);

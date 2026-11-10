@@ -625,15 +625,16 @@ mod tests {
         breach.door = String::from("plan");
         breach.fling = -3.0;
         breach.room = Some(String::from("vault"));
-        g.level.breach = Some(breach);
-        g.level.clear_plans = Some(vec![
+        let level = alloc::sync::Arc::make_mut(&mut g.level);
+        level.breach = Some(breach);
+        level.clear_plans = Some(vec![
             clear_plan("hostages", 0.0, None, Some(crate::scene_level::BreachPlanBounds { x0: 11.0, x1: 13.0, z0: 13.0, z1: 16.0 })),
             clear_plan("stopped", 2.0, Some("nope"), None),
             clear_plan("split", 2.0, None, None),
             clear_plan("split", -2.0, None, None),
         ]);
-        g.level.errand.door = String::from("entry");
-        (g.level.errand.area.x0, g.level.errand.area.x1, g.level.errand.area.z0, g.level.errand.area.z1) = (2.0, 4.0, 15.0, 18.0);
+        level.errand.door = String::from("entry");
+        (level.errand.area.x0, level.errand.area.x1, level.errand.area.z0, level.errand.area.z1) = (2.0, 4.0, 15.0, 18.0);
         let mut sc = crate::scene_scenarios::LevelScenarios::default();
         let mut rc = crate::scene_scenarios::StructureData::default();
         rc.rooms = vec![room("b", "big", 11.0, 19.0, 8.0, 16.0, "room"), room("a", "small", 7.0, 9.0, 11.0, 14.0, "room")];
@@ -645,7 +646,7 @@ mod tests {
         side.door = String::from("nobody");
         rs.side = Some(side);
         sc.rescue = Some(rs);
-        g.level.scenarios = Some(sc);
+        level.scenarios = Some(sc);
 
         let want: [(&str, f64, &str, &str, f64); 12] = [
             ( "floor" , -1.0 , "floor" , "360 cells against 740" , -1.0 ),

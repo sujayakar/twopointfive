@@ -33,6 +33,6 @@ fn a_step_lists_the_box_world_itself() {
     // the tick brings the ray grid up with no host's call: a grid thrown away is there again after one tick
     p.g.ray_grid = Default::default();
     step(&mut p, 1);
-    assert!(p.g.ray_grid.get::<game::scene_boxes::RayGrid>().is_some(), "the tick brought no grid up");
+    assert!(game::scene_boxes::ray_grid(&p.g).is_some(), "the tick brought no grid up");
     assert!(p.g.tab.frame_boxes.len() < at_two_seconds + 200, "the frame's table grew from {} to {} rows in ten seconds: nothing freed them", at_two_seconds, p.g.tab.frame_boxes.len());
 }

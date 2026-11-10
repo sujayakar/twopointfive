@@ -112,11 +112,10 @@ fn clumps_most(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
     n
 }
 
-/// The grid's own count of the game's box world: cells, entries of them, tilted statics. Both callers' `col` is `g.col`, so it is read there: StoodCol has no method.
+/// The grid's own count of the game's box world: cells, entries of them, tilted statics.
 fn grid_count(g: &Game) -> (f64, f64, f64) {
-    let mut entries = 0.0;
-    for c in g.col.cells.iter() { entries += c.len() as f64; }
-    (g.col.w * g.col.h, entries, g.col.tilted_at.len() as f64 / 5.0)
+    let w = g.tab.boxes.world();
+    ((w.w * w.h) as f64, w.items.len() as f64, (w.tilted.len() / 5) as f64)
 }
 
 /// Boxes of the list with this flag up.

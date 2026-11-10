@@ -174,26 +174,22 @@ pub(super) fn sc20k_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried,
         None => (s.hull, s.butt, s.mag, s.fore, s.rail, s.optic),
     };
     let bare = g.ch[c_2].gun_look.as_ref().and_then(|l| l.bare_long).unwrap_or(false);
-    sc20k_part(g, out, gf, hull, body, None);
-    sc20k_part(g, out, gf, butt, furn, None);
-    if !no_mag { sc20k_part(g, out, gf, mag, metal, None); }
-    sc20k_part(g, out, gf, s.grip, furn, None);
-    sc20k_part(g, out, gf, fore, furn, None);
-    sc20k_part(g, out, gf, if bare { bare_barrel(s.suppressor) } else { s.suppressor }, metal, None);
-    sc20k_part(g, out, gf, rail, if is_m4 { col.anodised } else { col.dark_metal }, None);
-    sc20k_part(g, out, gf, optic, metal, None);
-    sc20k_part(g, out, gf, s.foregrip, furn, None);
-    sc20k_part(g, out, gf, s.light, col.torch, None);
-    sc20k_part(g, out, gf, s.lens, col.lens_body, Some(lens));
+    seg(g, out, gf, hull, body, None);
+    seg(g, out, gf, butt, furn, None);
+    if !no_mag { seg(g, out, gf, mag, metal, None); }
+    seg(g, out, gf, s.grip, furn, None);
+    seg(g, out, gf, fore, furn, None);
+    seg(g, out, gf, if bare { bare_barrel(s.suppressor) } else { s.suppressor }, metal, None);
+    seg(g, out, gf, rail, if is_m4 { col.anodised } else { col.dark_metal }, None);
+    seg(g, out, gf, optic, metal, None);
+    seg(g, out, gf, s.foregrip, furn, None);
+    seg(g, out, gf, s.light, col.torch, None);
+    seg(g, out, gf, s.lens, col.lens_body, Some(lens));
     if let Some(mm) = m {
-        sc20k_part(g, out, gf, mm.tube, metal, None);
-        sc20k_part(g, out, gf, mm.peq, if black { col.polymer } else { col.fde }, None);
-        sc20k_part(g, out, gf, mm.gl, metal, None);
+        seg(g, out, gf, mm.tube, metal, None);
+        seg(g, out, gf, mm.peq, if black { col.polymer } else { col.fde }, None);
+        seg(g, out, gf, mm.gl, metal, None);
     }
-}
-/// One part of the rifle: seg() at depth 2 with the rifle's tag.
-fn sc20k_part(g: &Game, out: &mut Carried, gf: Frame, part: Seg, albedo: V3, emissive: Option<V3>) {
-    seg(g, out, gf, part, albedo, emissive, Some(SC20K_TAG));
 }
 /// `curOwner = c.id & 0xff`: the character id the boxes being emitted are stamped with
 
@@ -462,8 +458,8 @@ pub fn big_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, 
         return;
     }
     let (table, col) = (BIGRIG, crate::rig_props::col());
-    seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow(), Some(BIG_TAG));
-    seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow(), Some(BIG_TAG));
+    seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow());
+    seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow());
 }
 
 /// A man's own long gun let go of for the big slot's tool: on its sling down his front, dark.

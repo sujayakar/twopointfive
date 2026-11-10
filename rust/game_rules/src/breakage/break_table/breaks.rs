@@ -525,7 +525,7 @@ pub(in crate::breakage) fn breaks_carcass(g: &mut crate::game::Game, c_2: Debris
     g.tab.edit(b).cut = Some(shell_cut);
     let p = crate::scene_boxes::MakeBoxP {
         c: g.tab[b].c, h, yaw: Some(g.tab[b].yaw), rot: g.tab[b].rot, albedo: Some(v3::scale(g.tab[b].albedo, st.inside)),
-        flags: Some(g.tab[b].flags), name: Some(String::from("debris")), mkey: Some(mate_mkey(g, c_2)), ..Default::default()
+        flags: Some(g.tab[b].flags), mkey: Some(mate_mkey(g, c_2)), ..Default::default()
     };
     let mate = crate::scene_boxes::make_box(g, &p);
     g.tab.debris_chunk[c_2].mate = Some(mate);
@@ -581,7 +581,7 @@ fn breaks_kink(g: &mut crate::game::Game, c_2: DebrisChunkId, thin: f64, mid: f6
     let word = word_of_box(g, b);
     let p = crate::scene_boxes::MakeBoxP {
         c: g.tab[b].c, h: big_h, yaw: Some(g.tab[b].yaw), rot: g.tab[b].rot, albedo: Some(g.tab[b].albedo), stuff: word.stuff, does: word.does,
-        flags: Some(g.tab[b].flags), name: Some(String::from("debris")), mkey: Some(mate_mkey(g, c_2)), ..Default::default()
+        flags: Some(g.tab[b].flags), mkey: Some(mate_mkey(g, c_2)), ..Default::default()
     };
     let mate = crate::scene_boxes::make_box(g, &p);
     g.tab.debris_chunk[c_2].mate = Some(mate);
