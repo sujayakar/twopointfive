@@ -748,7 +748,7 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
         fk_run(rig, d, fk.rot, fk.pos);
         held_hands_go(tune, fk, &mut f);
         // limp, both hang palm-in
-        held_arms(h, tune, d, rig, fk, hh, he_hr, &f);
+        held_arms(tune, d, rig, fk, hh, he_hr, &f);
     })
     .is_none()
     {
@@ -1068,7 +1068,7 @@ fn held_feet(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, f: &BeingHeld) {
 
 /// Where each hand is bound: flung out and onto the arm, up, or after the gun torn out of it.
 fn held_hands_go(tune: &Knobs, fk: &mut Fk, f: &mut BeingHeld) {
-    let BeingHeld { live, grab, ug, cr, z, s_t, s_on, .. } = *f;
+    let BeingHeld { grab, ug, cr, z, s_t, s_on, .. } = *f;
     let (hl, hr) = (role(HAND_L), role(HAND_R));
     let (live_l, live_r, r_l0, r_r0) = (fk.at(hl), fk.at(hr), fk.rot(hl), fk.rot(hr));
     let (mut tgt_l, mut tgt_r) = (z.tgt[0], z.tgt[1]);
@@ -1089,7 +1089,7 @@ fn held_hands_go(tune: &Knobs, fk: &mut Fk, f: &mut BeingHeld) {
 }
 
 /// Both arms onto their spots, and the fingers (a blend between the hold and the hang goes round the way it went the frame before).
-fn held_arms(h: &HeldPose, tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, he_hr: &mut [Option<[f64; 4]>; 2], f: &BeingHeld) {
+fn held_arms(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, he_hr: &mut [Option<[f64; 4]>; 2], f: &BeingHeld) {
     let BeingHeld { fix_l, fix_r, limp_a, z, s_t, s_on, e_a, kept, hl, hr, r_l0, r_r0, tgt_l, tgt_r, .. } = *f;
     let (rot_hang_l, rot_hang_r) = (hand_rot(&fix_l, [0.1, -1.0, 0.15], [1.0, 0.0, 0.1]), hand_rot(&fix_r, [-0.1, -1.0, 0.15], [-1.0, 0.0, 0.1]));
     // (which way round the blend between the hold and the hang goes is the way it went the frame before)

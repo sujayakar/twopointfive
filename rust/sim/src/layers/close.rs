@@ -582,7 +582,7 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
     let mut o = Ready { w, live, dt, tw_y, tw_p, rc_inv, ..Ready::default() };
     let (at, at_b, _) = poses(an);
     as_ready(an, shape, kind, there, &mut o);
-    let (mut rd, mut cl_l, mut reach_shown) = (core::mem::take(&mut an.rd), an.cl_l, an.reach_shown);
+    let (mut rd, mut cl_l) = (core::mem::take(&mut an.rd), an.cl_l);
     let c = &mut rd[..];
     // ---- the trunk: which way the man is from the chest (flat, within a radian of dead ahead), the bow toward him, the guard's blade
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
@@ -641,7 +641,7 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
         cl_l = clamp(cl_l + if live && o.u >= tune.kit.close.left_at { dt / (tune.kit.close.left_in * (1.0 + READY_UP.slow * c[UP])) } else { -dt / tune.kit.close.left_out }, 0.0, 1.0);
         lg = cl_l * cl_l * (3.0 - 2.0 * cl_l);
     }
-    reach_shown = smoothstep(0.16, 1.0, o.u);
+    let reach_shown = smoothstep(0.16, 1.0, o.u);
     let right = o.u > 0.0 || o.w_rb > 1e-3;
     let (r_up, r_fore, r_hand) = if o.u > 0.0 { (smoothstep(0.0, 0.75, o.u), smoothstep(0.08, 0.88, o.u), reach_shown) } else { (w_up * o.w_rb, w_fore * o.w_rb, w_hand * o.w_rb) };
     let side = |r: usize| if right { role(r) } else { usize::MAX };
@@ -765,7 +765,7 @@ fn arm_length(fk: &mut Fk, o: &mut Ready) {
     let Ready { sl, .. } = *o;
     let el = fk.at(role(FOREARM_L));
     let arm = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
-    let (mut az, mut h, mut up) = (0.0, 0.0, 0.0);
+    let (az, h, up) = (0.0, 0.0, 0.0);
     *o = Ready { arm, az, h, up, ..*o };
 }
 
