@@ -75,10 +75,7 @@ fn find(root: &mut [usize], i: usize) -> usize {
 fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
     let p = man_pos(g, gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
-    let mut l = 0.0;
-    let mut q = p;
-    for &c in w.iter() { l += flat(q, c); q = c; }
-    l + flat(q, to)
+    crate::places::walk_len(p, &w) + flat(w.last().copied().unwrap_or(p), to)
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
@@ -339,14 +336,6 @@ pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders:
 
 // ------------------------------------------------------------ ORDERS.propRound
 
-/// orders.ts:2645 `len`: the metres of a way from `from`
-fn way_len(from: V3, w: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut q = from;
-    for &c in w { l += flat(q, c); q = c; }
-    l
-}
-
 /// orders.ts:2647 `doors`: the doors a way crosses, each once, in the order it crosses them
 fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     let mut out: Vec<DoorId> = Vec::new();
@@ -366,7 +355,7 @@ fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
 /// Of the way over the statics alone and the way laid with movable things dear, the one he walks.
 pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
     let round = match round { Some(r) if !r.is_empty() => r, _ => return plain.to_vec() };
-    if way_len(from, round) > way_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
+    if crate::places::walk_len(from, round) > crate::places::walk_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
     let a = way_doors(g, from, plain);
     let b = way_doors(g, from, round);
     if a.len() == b.len() && a.iter().all(|d| b.contains(d)) { round.to_vec() } else { plain.to_vec() }

@@ -131,13 +131,7 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
 
 /// A path's length on the floor.
 pub(super) fn path_len(from: V3, path: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut q = from;
-    for w in path {
-        l += flat(q, *w);
-        q = *w;
-    }
-    l
+    crate::places::walk_len(from, path)
 }
 
 /// How far on foot from `a` to `b`; infinity: no way found.

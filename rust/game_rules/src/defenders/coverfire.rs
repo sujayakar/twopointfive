@@ -362,13 +362,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
 fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
-    let mut len = 0.0;
-    let mut q = pos;
-    for p in path.iter() {
-        len += flat(q, *p);
-        q = *p;
-    }
-    len += flat(q, to);
+    let len = crate::places::walk_len(pos, &path) + flat(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
 }
 
