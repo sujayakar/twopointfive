@@ -134,6 +134,33 @@ pub enum DownKind {
     Choked,
 }
 
+/// what put a man down, as the debrief tells it
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum With<'a> {
+    /// what is in the hand: the gun, or the hand itself
+    #[default] Hand,
+    Ring,
+    Whip,
+    Knife,
+    /// a charge on the wall he stood behind
+    Charge,
+    /// what went off, by its name
+    Blast(&'a str),
+}
+
+impl With<'_> {
+    /// how a man who still breathes was put down, in a word
+    pub fn method(self, how: DownKind) -> &'static str {
+        match (how, self) {
+            (DownKind::Choked, _) => "choke",
+            (_, With::Ring) => "ring",
+            (_, With::Whip) => "whip",
+            (_, With::Charge) => "charge",
+            _ => "takedown",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,

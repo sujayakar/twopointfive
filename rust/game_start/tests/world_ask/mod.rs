@@ -489,7 +489,7 @@ impl NetAsk for Play {
         let st = self.g.m.enemysquads.states.as_ref()?;
         st.squads.iter().flat_map(|&q| self.g.tab.enemysquads_squad[q].events.iter()).filter(|e| e.what == what).map(|e| e.t).fold(None, |a: Option<f64>, t| Some(a.map_or(t, |x| x.min(t))))
     }
-    fn put_down(&mut self, gd: GuardId) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); }
+    fn put_down(&mut self, gd: GuardId) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
 }
 
 /// A hostage rescue
@@ -527,7 +527,7 @@ impl RescueAsk for Play {
         let cast: Vec<GuardId> = self.g.staged.foes.iter().copied().filter(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).collect();
         for m in cast {
             let how = if loud { game::game::DownKind::Shot } else { game::game::DownKind::Struck };
-            game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), None);
+            game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), game::game::With::Hand);
         }
     }
     fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }

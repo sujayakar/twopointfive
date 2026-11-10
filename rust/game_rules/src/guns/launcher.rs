@@ -206,12 +206,8 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c: C
     match crate::character::guard_of(g, c) {
         Some(gd) if high => {
             play_rate(g, "bodyHit", at, 0.6, 0.75);
-            let line = match g.gd[gd].civ {
-                Some(cv) => format!("ring to the head — {}, the {}, is out cold. breathing — but a civilian: that costs, and they may find {}", g.cv[cv].name, g.cv[cv].label, g.cv[cv].her),
-                None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
-            };
             let by = if crate::character::is_player(g, r.shooter) { crate::game::DownBy::Player } else { crate::game::DownBy::Guard };
-            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(by), Some(&line));
+            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(by), crate::game::With::Ring);
             let level = g.k.ring.ko_noise;
             crate::flight::thump_at(g, c, level, r.shooter);
         }

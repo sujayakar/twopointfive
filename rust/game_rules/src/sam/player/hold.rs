@@ -916,7 +916,7 @@ fn choke_out(g: &mut crate::game::Game) {
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "chokeLimp", Some(at), Some(0.35), None);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Choke));
-    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), None);
+    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), crate::game::With::Hand);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, FOLD_NOISE);
     g.pl[p].holding = None;
@@ -936,7 +936,7 @@ fn whip_out(g: &mut crate::game::Game) {
     };
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
-    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some("pistol-whipped — out cold, and that was not quiet"));
+    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Whip);
     crate::audio_iface::game_audio_like_play(g, "whipThud", Some(head), Some(0.7), None);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, WHIP_NOISE);
