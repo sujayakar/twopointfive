@@ -118,7 +118,7 @@ fn a_foot_down_stays_down_as_he_sets_off_stops_and_turns() {
     for s in SEEDS {
         let (mut p, c) = rifle_up(s);
         let toes = |p: &Play| [p.joint(c, Bone::ToeL), p.joint(c, Bone::ToeR)];
-        let mut check = |p: &mut Play, what: &str, frames: usize| {
+        let check = |p: &mut Play, what: &str, frames: usize| {
             let was = toes(p);
             let (f, _) = feet(p, c, frames);
             for foot in &f { assert!(foot.slid < 0.05, "seed {s} {what}: a foot slid {:.3} m on the floor", foot.slid); }

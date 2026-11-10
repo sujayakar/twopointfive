@@ -4,7 +4,7 @@ use crate::Row;
 use alloc::vec::Vec;
 use game::character::Bone;
 use game::fogofwar::fog_of_war_hidden as hidden;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game::m;
 use game::out_events::OutEvent;

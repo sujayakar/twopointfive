@@ -1,5 +1,4 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the highlight, at the door, again and again. Every row of every card is played here on the kinds of way a level has: a door, a set, a blank wall, an open gap, the quiet picture, the solo night. There is no other game to compare with: a row's marks are what it did, in the game's own books.
-use game::game::GuardState;
 use game::kitstage::{self, light::KIT_VIEW_LOOP as K, walk, KitStage};
 use game::out_events::OutEvent;
 use game_start::json::{self, Json};

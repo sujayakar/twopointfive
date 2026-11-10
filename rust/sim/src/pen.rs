@@ -6,7 +6,6 @@
 use game_types::knobs::Knobs;
 use alloc::vec::Vec;
 use crate::collide;
-use crate::roles::*;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
 use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};

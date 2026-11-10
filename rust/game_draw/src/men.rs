@@ -3,7 +3,7 @@
 use crate::Row;
 use alloc::vec::Vec;
 use game::anim_gltf::CastSide;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game::m;
 

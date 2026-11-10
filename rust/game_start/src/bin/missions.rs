@@ -19,7 +19,6 @@
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of the hostage in a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
 use game::dice::Die;
-use game::game::GuardState;
 use game::ids::{DoorId, GuardId};
 use game::orders::Who;
 use game::teams::Team;

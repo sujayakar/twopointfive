@@ -1,5 +1,4 @@
 //! WHERE A MAN GOES FOR COVER (suppression `cover_from`, asked by a man breaking off, under fire, startled or at a blown wall).
-use game::game::GuardState;
 use game::ids::GuardId;
 use game_start::play::{Opts, Play};
 

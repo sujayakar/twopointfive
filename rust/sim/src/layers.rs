@@ -5413,7 +5413,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
                         ahead = max(ahead, sp.wrist[2] - sf[side][2]);
                     }
                 }
-                let ok = sp.body || if (if side == 1 { c.ok_r } else { c.ok_l }) { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
+                let ok = sp.body || if if side == 1 { c.ok_r } else { c.ok_l } { dd < 0.6 && dd > 0.14 && ahead > 0.0 } else { dd < 0.57 && dd > 0.18 && ahead > 0.04 };
                 *(if side == 1 { &mut c.ok_r } else { &mut c.ok_l }) = ok;
                 if ok {
                     if side == 1 {
@@ -5656,7 +5656,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         fk_run(rig, d, fk.rot, fk.pos);
         let (hl, hr) = (role(HAND_L), role(HAND_R));
         let (live_l, live_r, r_l0, r_r0) = (fk.at(hl), fk.at(hr), fk.rot(hl), fk.rot(hr));
-        let (mut tgt_l, mut tgt_r);
+        let (tgt_l, tgt_r);
         if grab {
             // round the outside of him and on: the left leads, the right follows
             let (u_l, u_r) = (smoothstep(0.0, 0.75, ug), smoothstep(0.2, 1.0, ug));

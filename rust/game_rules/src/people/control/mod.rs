@@ -399,7 +399,7 @@ mod tests {
     fn heard(_: &mut Game, _: GuardId, _: Outcome) {}
     fn let_go(_: &mut Game, _: GuardId) {}
     fn rule(id: RuleId, stage: Stage, propose: fn(&Game, GuardId) -> Option<Intent>) -> Listed {
-        Listed { id, name: "a test's rule", stage, transition: if propose as usize == never as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
+        Listed { id, name: "a test's rule", stage, transition: if propose as usize == never as *const () as usize { never_moved } else { still }, propose, commit: heard, lost: let_go }
     }
 
     #[test]

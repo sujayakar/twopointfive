@@ -143,7 +143,7 @@ fn a_flash_of_either_player_is_the_teams() {
         let mut men = vec![(body(&p, 0), first, true, 0.0), (body(&p, 1), second, true, 0.0)];
         for m in p.mates() { men.push((p.g.gd[m].ch, first, false, 0.0)); }
         men.push((p.g.gd[foe].ch, first, false, 1.0));
-        for (c, seat, player, class) in men {
+        for (c, seat, _player, class) in men {
             let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
             let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
             game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], Some(&o)));

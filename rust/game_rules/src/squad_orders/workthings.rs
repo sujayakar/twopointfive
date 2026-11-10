@@ -617,5 +617,5 @@ pub fn work_not_his(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// A man who cannot leave where he stands is not handed the errand.
 pub fn work_stays_put(g: &crate::game::Game, gd: GuardId) -> bool {
-    (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
+    g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some() 
 }
