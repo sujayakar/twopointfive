@@ -280,7 +280,7 @@ fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwi
 fn plant_broken(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::lightswitch::Hand) -> bool {
     let pl = seat.player;
     let p = &g.pl[pl];
-    if g.cond[p.ch].down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
+    if g.cond[p.ch].down || p.holding().is_some() || p.takedown().is_some() || p.dragging().is_some() || p.wall.is_some() { return true; }
     let c = p.ch;
     crate::samstun::sam_staggered(g, seat, None) || v3::dist_xz(h.sw.pos, g.ch[c].pos) > 1.6
 }
@@ -327,7 +327,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
 // ---------------------------------------------------------------- Sam's row and its deed
 fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
     let p = &g.pl[pl];
-    p.dragging.is_none() && !p.sprinting && p.takedown.is_none() && p.holding.is_none()
+    p.dragging().is_none() && !p.sprinting && p.takedown().is_none() && p.holding().is_none()
 }
 
 /// The plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest.

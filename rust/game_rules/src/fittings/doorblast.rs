@@ -1,6 +1,6 @@
 pub use ::game_types::doorblast::types;
 pub use types::*;
-use crate::game::Game;
+use crate::game::{Deed, Game};
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -146,22 +146,16 @@ fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
 /// Sam's hands come off a leaf that has left its frame.
 fn hands_off(g: &mut crate::game::Game, d: DoorId) {
     for pl in crate::seats::men(g) {
-        if g.pl[pl].easing == Some(d) {
-            g.pl[pl].easing = None;
-        }
-        if g.pl[pl].picking == Some(d) {
-            g.pl[pl].picking = None;
-            let c = g.pl[pl].ch;
-            g.ch[c].anim.lockpick = false;
-            g.pl[pl].speed_sm = 0.0;
-        }
-        if g.pl[pl].coding == Some(d) {
-            g.pl[pl].coding = None;
-            g.pl[pl].code_t = 0.0;
-        }
-        if g.pl[pl].wanding.as_ref().map(|w| w.door) == Some(d) {
-            crate::wand::wand_drop(g, pl);
-        }
+        let at = match &g.pl[pl].deed {
+            Some(Deed::Ease(e)) => e.door,
+            Some(Deed::Code(c)) => c.door,
+            Some(Deed::Wand(w)) => w.door,
+            Some(Deed::Pick(p)) => *p,
+            _ => continue,
+        };
+        if at != d { continue; }
+        if g.pl[pl].picking().is_some() { g.pl[pl].speed_sm = 0.0; }
+        crate::deed::put_down(g, pl);
     }
 }
 

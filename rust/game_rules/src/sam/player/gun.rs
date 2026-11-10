@@ -182,7 +182,7 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
 pub fn stow_holster(g: &mut crate::game::Game, on: bool) { set_holstered(g, on, Some(true)); }
 
 /// every gun's reload in hand abandoned: the hands are wanted
-pub(super) fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::sam) fn cancel_reloads(g: &mut crate::game::Game, pl: PlayerId) {
     let (c, pistol, rifle) = (g.pl[pl].ch, g.pl[pl].pistol, g.pl[pl].rifle);
     crate::weapons::firearm_cancel_reload(g, pistol);
     crate::weapons::firearm_cancel_reload(g, rifle);

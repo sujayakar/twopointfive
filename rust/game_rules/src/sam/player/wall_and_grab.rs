@@ -1,5 +1,5 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
+use crate::game::{Deed, Game};
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -358,7 +358,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     let u_hi = w0.hi - BODY_R;
     let base = w0.d + BODY_R + WALL_GAP;
     if w0.kind == Some(WallHoldKind::Stack) && !crate::game::player_rifle_up(g, p) {
-        let drawn = !g.pl[p].holstered && g.pl[p].dragging.is_none();
+        let drawn = !g.pl[p].holstered && g.pl[p].dragging().is_none();
         let w = w!(g, p);
         w.kind = None;
         w.up = Some(0.0);
@@ -562,8 +562,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
         0.0
     };
     if let Some(w) = g.pl[p].wall.as_mut() { w.drawn = false; }
-    release_wall(g);
-    if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
+    crate::deed::hands_free(g);
     let mut td = crate::game::PlayerTakedown { g: gd, t: 0.0, kind: None, from: None, alert: None, yaw: None, at: None, lethal: None, loud: None };
     if let (true, Some(k)) = (side_on, kind) {
         td.kind = Some(k);
@@ -571,25 +570,19 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
         td.alert = Some(g.gd[gd].state == crate::game::GuardState::Alert);
         td.at = Some(crate::close::close_station(g, gd, k, from).pos);
     }
-    g.pl[p].takedown = Some(td);
-    g.pl[p].sprinting = false;
-    if loud { g.pl[p].takedown.as_mut().unwrap().loud = Some(true); }
+    if loud { td.loud = Some(true); }
+    if lethal { td.lethal = Some(true); }
+    crate::deed::begin(g, Deed::Takedown(td));
     let blow = if kind == Some(crate::close::CloseKind::Front) { crate::character::StrikeKind::Jab } else { crate::character::StrikeKind::Cross };
     if lethal {
-        g.pl[p].takedown.as_mut().unwrap().lethal = Some(true);
         crate::character::anim_strike(g, c, Some(blow), Some(true));
     } else {
         crate::character::anim_strike(g, c, Some(blow), None);
     }
     crate::takedown::take_begin(g, c, gd, kind, lethal);
-    cancel_reloads(g, p);
     if let Some(k) = kind {
         crate::close::close_took(crate::close::CloseTookWhat::Take);
     }
-    throw_off(g, p);
-    g.sets[g.seat].hand.throw_held = false;
-    g.sets[g.seat].hand.throw_preview = None;
-    g.pl[p].pending_throw = None;
     g.gd[gd].speed = 0.0;
     g.ch[gc].vel = [0.0, 0.0, 0.0];
     lose_path(g, gd);
@@ -601,11 +594,11 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
 /// One frame of the takedown: hold station on the man, land the blow at its beat, give control back as it recovers.
 pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     let p = g.player;
-    let Some(td) = g.pl[p].takedown else { return; };
+    let Some(td) = g.pl[p].takedown().copied() else { return; };
     let gd = td.g;
     let c = g.pl[p].ch;
     if !crate::game::game_on_floor(g, gd) {
-        g.pl[p].takedown = None;
+        g.pl[p].takedown_over();
         return;
     }
     let gc = g.gd[gd].ch;
@@ -624,7 +617,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
             let (a, b) = (g.ch[gc].pos, g.ch[c].pos);
             let y = m::atan2(a[0] - b[0], a[2] - b[2]);
             td_yaw = Some(y);
-            if let Some(t) = g.pl[p].takedown.as_mut() { t.yaw = Some(y); }
+            if let Some(t) = g.pl[p].takedown_mut() { t.yaw = Some(y); }
         }
         yaw = td_yaw.unwrap_or(g.ch[c].body_yaw);
     } else if !crate::condition::down(g, g.gd[gd].ch) {
@@ -637,7 +630,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     g.ch[c].aim_yaw = g.ch[c].body_yaw;
     g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.1, 8.0, dt);
     let t = td.t + dt;
-    if let Some(row) = g.pl[p].takedown.as_mut() { row.t = t; }
+    if let Some(row) = g.pl[p].takedown_mut() { row.t = t; }
     if t >= 0.28 && !crate::condition::down(g, g.gd[gd].ch) {
         let was_alert = g.gd[gd].state == crate::game::GuardState::Alert;
         let noise = if let Some(kind) = td.kind {
@@ -677,7 +670,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         g.events.push(ev);
         g.pl[p].noise = m::max(g.pl[p].noise, level);
     }
-    if t > 0.62 { g.pl[p].takedown = None; }
+    if t > 0.62 { g.pl[p].takedown_over(); }
 }
 
 /// Which hold a grab made now would be to begin with.
@@ -701,7 +694,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         }) };
     {
         let (st, pl) = (g.gd[gd].state, &g.pl[p]);
-        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.holding.is_some() || pl.takedown.is_some() || pl.kick.is_some() || pl.picking.is_some() || pl.wanding.is_some() {
+        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.holding().is_some() || pl.takedown().is_some() || pl.kick().is_some() || pl.picking().is_some() || pl.wanding().is_some() {
             return;
         }
     }
@@ -711,19 +704,12 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     if crate::game::player_rifle_up(g, p) { set_holstered(g, true, Some(true)); }
     let variant = grab_variant(g, &crate::seats::here(g));
     if let Some(w) = g.pl[p].wall.as_mut() { w.drawn = false; }
-    release_wall(g);
-    if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
-    g.pl[p].sprinting = false;
+    crate::deed::hands_free(g);
     g.pl[p].crouch = false;
     g.pl[p].speed_sm = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
     g.pl[p].backpedal = false;
     g.ch[c].anim.reverse = false;
-    cancel_reloads(g, p);
-    throw_off(g, p);
-    g.sets[g.seat].hand.throw_held = false;
-    g.sets[g.seat].hand.throw_preview = None;
-    g.pl[p].easing = None;
     // him: whatever he was saying is cut off
     if let Some(bub) = g.gd[gd].bubble.clone() {
         let now = g.time;
@@ -789,7 +775,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     let talk = g.gd[gd].talk;
     g.tab.game_talk[talk].held_since = g.time;
     let serial = g.serial();
-    g.pl[p].holding = Some(Hold {
+    let hold = Hold {
         g: gd,
         variant,
         phase: crate::character::HoldPhase::Grab,
@@ -805,7 +791,8 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         after: None,
         serial,
         ..Hold::default()
-    });
+    };
+    crate::deed::begin(g, Deed::Hold(hold));
     crate::disarm::disarm_begin(g);
     if let Some(k) = kind { crate::close::close_took(crate::close::CloseTookWhat::Grab); }
     g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.k.hold.secs.grab);

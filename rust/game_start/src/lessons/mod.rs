@@ -194,8 +194,8 @@ impl Bot {
     pub fn gun(&self) -> FirearmId { self.me(|p| if p.slot == SlotKind::Pistol { p.pistol } else { p.rifle }) }
     pub fn rounds(&self) -> f64 { let w = self.gun(); self.ask(|g| game::weapons::firearm_rounds_ready(g, w)) }
     pub fn reloading(&self) -> bool { let w = self.gun(); self.ask(|g| game::weapons::firearm_reloading(g, w)) }
-    pub fn holding(&self) -> bool { self.me(|p| p.holding.is_some()) }
-    pub fn held_fast(&self) -> bool { self.me(|p| p.holding.as_ref().is_some_and(|h| h.phase == game::character::HoldPhase::Held)) }
+    pub fn holding(&self) -> bool { self.me(|p| p.holding().is_some()) }
+    pub fn held_fast(&self) -> bool { self.me(|p| p.holding().is_some_and(|h| h.phase == game::character::HoldPhase::Held)) }
     pub fn dark(&self) -> bool { self.ask(|g| g.light_home.mains.active) }
     pub fn has_code(&self, code: &str) -> bool { self.me(|p| p.codes.has(String::from(code))) }
     pub fn stage(&self) -> MissionStage { self.ask(|g| g.mission.stage) }

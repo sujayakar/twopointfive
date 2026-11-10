@@ -598,7 +598,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
 /// Each living enemy in the team's picture now, where he stands or was last seen.
 pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
-    let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
+    let held = g.pl[g.player].holding().map(|h| h.g);
     let known_s = g.k.wallcharge.fire_known_s;
     if crate::fogofwar::fog_of_war_active(g) {
         let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.team(*m).ours()).collect();

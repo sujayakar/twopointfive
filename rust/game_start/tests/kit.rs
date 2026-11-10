@@ -225,7 +225,7 @@ fn in_the_guns_hold() -> (Play, GuardId, [f64; 2]) {
     p.run(0.5);
     (p, man, at)
 }
-fn holding(p: &Play) -> bool { p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
+fn holding(p: &Play) -> bool { p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
 fn rounds(p: &Play) -> f64 { game::weapons::firearm_rounds_ready(&p.g, p.g.pl[p.g.player].pistol) }
 fn charge(p: &Play) -> f64 { p.g.pl[p.g.player].ocp.charge }
 fn click(p: &mut Play, b: Button) { p.press(b); p.frame(); p.release(b); }

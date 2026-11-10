@@ -14,7 +14,7 @@ fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold.
 pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let p = seat.player;
-    let held = match &g.pl[p].holding {
+    let held = match g.pl[p].holding() {
         Some(h) => h.g,
         None => return false,
     };
@@ -31,10 +31,10 @@ pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 /// The pair as the observers reason about it this frame; None when nobody is held. `key` is the hold's serial.
 pub(super) fn pair_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::guards::Pair> {
     let p = seat.player;
-    if g.pl[p].holding.is_none() || !shield_up(g, seat) {
+    if g.pl[p].holding().is_none() || !shield_up(g, seat) {
         return None;
     }
-    let (key, held) = match &g.pl[p].holding {
+    let (key, held) = match g.pl[p].holding() {
         Some(h) => (h.serial, h.g),
         None => return None,
     };

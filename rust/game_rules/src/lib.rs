@@ -16,7 +16,7 @@ pub use outfit::{cast, char_look, gear, gunlook, gunslots, issue, kit, kitanim, 
 pub mod guns;
 pub use guns::{autoreload, combat, fireline, flight, friendlyfire, friends, glasspen, gunreload, gunroles, he40, launcher, shotgun, throwables, throwplan, tracers, wallpen, weapons};
 pub mod sam;
-pub use sam::{aim, aimcost, aimweight, backkey, gunwall, hands, handwork, interact, noshove, ownblow, player, samlook, samstun};
+pub use sam::{aim, aimcost, aimweight, backkey, deed, gunwall, hands, handwork, interact, noshove, ownblow, player, samlook, samstun};
 pub mod stealth;
 pub use stealth::{close, devices, disarm, fogofwar, lightswitch, peeksight, stalk, stickycam, takedown, wallsnap, whistle};
 pub mod fittings;

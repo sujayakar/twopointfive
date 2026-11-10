@@ -79,17 +79,17 @@ fn unsettled(g: &mut Game) -> Option<String> {
 fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     let p = &g.pl[seat.player];
     let a = &g.ch[p.ch].anim;
-    if p.holding.is_some() { return Some("holding somebody"); }
-    if p.takedown.is_some() { return Some("mid-takedown"); }
-    if p.dragging.is_some() { return Some("hauling a body"); }
-    if p.picking.is_some() { return Some("picking a lock"); }
-    if p.wanding.is_some() { return Some("looking under a door"); }
-    if p.coding.is_some() { return Some("at a keypad"); }
-    if p.breaker_move.is_some() { return Some("at the breaker"); }
-    if p.easing.is_some() { return Some("easing a door"); }
-    if p.door_move.is_some() { return Some("working a door"); }
-    if crate::wallcharge::wall_charge_setting(seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
-    if p.kick.is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
+    if p.holding().is_some() { return Some("holding somebody"); }
+    if p.takedown().is_some() { return Some("mid-takedown"); }
+    if p.dragging().is_some() { return Some("hauling a body"); }
+    if p.picking().is_some() { return Some("picking a lock"); }
+    if p.wanding().is_some() { return Some("looking under a door"); }
+    if p.coding().is_some() { return Some("at a keypad"); }
+    if p.breaker_move().is_some() { return Some("at the breaker"); }
+    if p.easing().is_some() { return Some("easing a door"); }
+    if p.door_move().is_some() { return Some("working a door"); }
+    if crate::wallcharge::wall_charge_setting(seat) || p.charging().is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
+    if p.kick().is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
     if p.pending_throw.is_some() || seat.hand.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
     if p.launch_held.is_some() { return Some("lining up the launcher"); }
     if crate::weapons::firearm_reloading(g, p.pistol) || crate::weapons::firearm_reloading(g, p.rifle) { return Some("reloading"); }
@@ -209,7 +209,7 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
         if !g.saves.visited.has(room.clone()) { g.saves.visited.add(room.clone()); request(g, "room", &room); }
     }
     // a body hidden: hauled some way from where it was taken hold of, and let go
-    let drags = g.pl[g.player].dragging;
+    let drags = g.pl[g.player].dragging();
     let body_at = |g: &Game, gd: GuardId| -> V3 { match g.ch[g.gd[gd].ch].ragdoll { Some(r) => { let x = &g.tab.ragdoll[r].x; [x[0], 0.0, x[2]] } None => g.ch[g.pl[g.player].ch].pos } };
     if let Some(b) = drags { if g.saves.drag_ref != Some(b) { g.saves.drag_ref = Some(b); g.saves.body_from = Some(body_at(g, b)); } }
     else if let Some(b) = g.saves.drag_ref.take() {

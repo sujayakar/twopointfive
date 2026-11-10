@@ -107,7 +107,7 @@ pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let pl = seat.player;
     let p = &g.pl[pl];
     let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !g.cond[p.ch].down;
-    let steady = gun_out && !p.sprinting && p.dragging.is_none();
+    let steady = gun_out && !p.sprinting && p.dragging().is_none();
     let model = g.tune.aim_model && steady;
     let swing = if steady { crate::aimweight::aim_gun_point(g, seat) } else { None };
     let trail = swing.is_some() && !crate::aimweight::aim_gun_on(g, pl);

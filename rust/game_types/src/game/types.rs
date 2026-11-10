@@ -663,15 +663,11 @@ pub struct Player {
     #[is([0.0, 0.0])] pub shoved: [f64; 2],
     #[is(-1.0)] pub shoved_t: f64,
     #[is([0.0, 0.0])] pub shoved_from: [f64; 2],
-    pub haul: Option<crate::hands::Haul>,
-    pub door_move: Option<crate::hands::DoorMove>,
-    pub dragging: Option<GuardId>,
-    pub drag_yaw: f64,
-    pub drag_noise_t: f64,
-    pub drag_stuck_t: f64,
+    /// what his hands or feet are in the middle of: one thing, or nothing
+    pub deed: Option<crate::game::Deed>,
+    /// the body he has hold of
+    pub tow: Option<crate::game::Tow>,
     pub noise: f64,
-    pub takedown: Option<crate::game::PlayerTakedown>,
-    pub holding: Option<crate::player::Hold>,
     pub bubble: Option<crate::game::PlayerBubble>,
     pub speed_sm: f64,
     pub hit_flash: f64,
@@ -707,9 +703,6 @@ pub struct Player {
     #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
-    pub coding: Option<DoorId>,
-    pub code_t: f64,
-    pub breaker_move: Option<crate::game::PlayerBreakerMove>,
     pub hand_wait: f64,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
@@ -717,19 +710,12 @@ pub struct Player {
     #[is(LightId(0))] pub light: LightId,
     #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
-    pub easing: Option<DoorId>,
-    pub ease_stall_t: f64,
-    pub ease_best: f64,
     /// he is low because his hands' work put him there, not by his own key
     pub knee: Option<crate::player::Knee>,
-    pub picking: Option<DoorId>,
-    pub kick: Option<crate::game::PlayerKick>,
     pub wand: bool,
-    pub wanding: Option<crate::wand::Wanding>,
     #[is(crate::kit::BigKit::None)] pub big_kit: crate::kit::BigKit,
     pub cams: Vec<StickyCamId>,
     pub cam_seq: f64,
-    pub charging: Option<crate::game::PlayerCharging>,
     pub work_stow: Option<crate::game::PlayerWorkStow>,
     pub wall: Option<crate::player::WallHold>,
     pub safe: Option<V3>,
@@ -737,6 +723,89 @@ pub struct Player {
     #[is(1.0)] pub step_travel: f64,
     pub step_owed: f64,
     #[is(-1.0)] pub step_at: f64,
+}
+
+/// A thing done by hand or foot that has an end of its own. He is in the middle of one at a time: `deed::begin` puts down the one before.
+#[derive(Clone, Debug, ToBytes)]
+pub enum Deed {
+    /// a door kicked in, or the big slot's beat at one
+    Kick(crate::game::PlayerKick),
+    /// a lock picked
+    Pick(DoorId),
+    /// a look under a door
+    Wand(crate::wand::Wanding),
+    /// a leaf eased open
+    Ease(crate::game::Easing),
+    /// a code keyed in
+    Code(crate::game::Coding),
+    /// a charge set on a door
+    Charge(crate::game::PlayerCharging),
+    /// the breaker's lever thrown
+    Breaker(crate::game::PlayerBreakerMove),
+    /// a leaf pushed or pulled by hand
+    Door(crate::hands::DoorMove),
+    /// a man struck down
+    Takedown(crate::game::PlayerTakedown),
+    /// a man held
+    Hold(crate::player::Hold),
+}
+
+macro_rules! deeds {
+    ($($(#[$doc:meta])* $kind:ident $ty:ty: $get:ident $get_mut:ident $over:ident;)*) => {
+        impl Player {
+            $(
+                $(#[$doc])*
+                pub fn $get(&self) -> Option<&$ty> { match &self.deed { Some(Deed::$kind(d)) => Some(d), _ => None } }
+                pub fn $get_mut(&mut self) -> Option<&mut $ty> { match &mut self.deed { Some(Deed::$kind(d)) => Some(d), _ => None } }
+                /// that deed is over, if he is in the middle of it
+                pub fn $over(&mut self) { if let Some(Deed::$kind(_)) = self.deed { self.deed = None; } }
+            )*
+        }
+    };
+}
+deeds! {
+    Kick crate::game::PlayerKick: kick kick_mut kick_over;
+    Pick DoorId: picking picking_mut picking_over;
+    Wand crate::wand::Wanding: wanding wanding_mut wanding_over;
+    Ease crate::game::Easing: easing easing_mut easing_over;
+    Code crate::game::Coding: coding coding_mut coding_over;
+    Charge crate::game::PlayerCharging: charging charging_mut charging_over;
+    Breaker crate::game::PlayerBreakerMove: breaker_move breaker_move_mut breaker_over;
+    Door crate::hands::DoorMove: door_move door_move_mut door_move_over;
+    Takedown crate::game::PlayerTakedown: takedown takedown_mut takedown_over;
+    Hold crate::player::Hold: holding holding_mut holding_over;
+}
+
+impl Player {
+    /// the body he has hold of
+    pub fn dragging(&self) -> Option<GuardId> { self.tow.map(|t| t.who) }
+    /// how he has hold of it, once he has it by an end or on his shoulder
+    pub fn haul(&self) -> Option<crate::hands::Haul> { self.tow.and_then(|t| t.haul) }
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Easing {
+    pub door: DoorId,
+    /// the furthest it has come, and how long it has come no further
+    pub best: f64,
+    pub stall_t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Coding {
+    pub door: DoorId,
+    pub t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes)]
+pub struct Tow {
+    pub who: GuardId,
+    pub haul: Option<crate::hands::Haul>,
+    pub yaw: f64,
+    /// until the next scrape of it is heard
+    pub noise_t: f64,
+    /// how long it has been wedged
+    pub stuck_t: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
