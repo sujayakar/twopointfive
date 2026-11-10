@@ -404,13 +404,13 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
                 let mut x = g.tab.boxes.edit(p); x.cut = cut; x.cut_core = core;
             }
             let mut x = g.tab.boxes.edit(p);
-            if x.name.as_deref() == Some("stud") {
-                x.name = Some(String::from("piece"));
+            if x.stud {
+                x.stud = false;
                 x.albedo = v3::copy(albedo); x.rough = rough; x.metal = metal; x.stuff = stuff; x.does = does;
             }
         } else {
             let yaw = g.tab.boxes[bx].yaw; let w = word(g, bx);
-            let mp = crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(v3::copy(albedo)), flags: Some(flags0), name: Some(String::from("piece")), rough, metal, aniso, stuff: w.stuff, does: w.does, ..Default::default() };
+            let mp = crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(v3::copy(albedo)), flags: Some(flags0), rough, metal, aniso, stuff: w.stuff, does: w.does, ..Default::default() };
             let p = crate::scene_boxes::make_box(g, &mp);
             if cut.is_some() {
                 let core = crate::break_table::breaks_end_core(surf.as_str(), stuff, albedo);
@@ -442,7 +442,7 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
             g.destr.walls.owner.set(crate::Num(i), b);
         }
         let mut x = g.tab.boxes.edit(p);
-        x.name = Some(String::from("stud"));
+        x.stud = true;
         x.flags = (js::to_i32(x.flags) | js::to_i32(flag().thin)) as f64;
         x.albedo = v3::copy(studs[j].albedo); x.rough = Some(studs[j].rough); x.metal = Some(studs[j].metal); x.does = Some(studs[j].does);
     }

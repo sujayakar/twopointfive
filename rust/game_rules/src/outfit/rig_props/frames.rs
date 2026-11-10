@@ -99,14 +99,14 @@ pub fn wrist_tie_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried) {
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
-pub(super) fn seg(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, name: Option<&str>) {
+pub(super) fn seg(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
-    seg_at(g, out, g_2, s, adj, albedo, emissive, name);
+    seg_at(g, out, g_2, s, adj, albedo, emissive);
 }
 
 /// seg() with the part's adjustment handed in.
-pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, name: Option<&str>) {
+pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
@@ -125,7 +125,6 @@ pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_p
         flags: Some(if lit { crate::rig_props::GLOW_FLAGS } else { crate::rig_props::PROP_FLAGS }),
         owner: Some(owner),
         rot: Some(rot),
-        name: name.map(String::from),
         stuff,
         ..Default::default()
     });

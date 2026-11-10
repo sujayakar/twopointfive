@@ -544,7 +544,7 @@ pub(in crate::breakage) fn wall_break_would_open(g: &mut crate::game::Game, at: 
             let word = crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does });
             for rect in wall_break_pieces(g, b, Some(&open)) {
                 let rb = wall_break_rect_box(g, b, rect);
-                let p = crate::scene_boxes::MakeBoxP { c: rb.c, h: rb.h, yaw: Some(yaw), albedo: Some(albedo), flags: Some(flags0), name: Some(String::from("piece")), stuff: word.stuff, does: word.does, ..Default::default() };
+                let p = crate::scene_boxes::MakeBoxP { c: rb.c, h: rb.h, yaw: Some(yaw), albedo: Some(albedo), flags: Some(flags0), stuff: word.stuff, does: word.does, ..Default::default() };
                 left.push(crate::scene_boxes::make_box(g, &p));
             }
         }

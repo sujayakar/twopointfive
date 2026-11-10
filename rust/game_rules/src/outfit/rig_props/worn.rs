@@ -209,15 +209,9 @@ fn of_model(s: crate::gunlook::Seg) -> Seg {
     Seg { l0: s.l0, l1: s.l1, thick: s.thick, tall: s.tall, adj: s.adj.map(|a| Adj { off: a.off, rot: a.rot }) }
 }
 
-
-/// `seg(out, f, s, albedo, emissive, path, label, 2, name)`: a named part of a group in the viewer's tree.
-fn part(g: &crate::game::Game, out: &mut Carried, f: Frame, s: Seg, albedo: V3, emissive: Option<V3>, name: Option<&str>) {
-    seg(g, out, f, s, albedo, emissive, name);
-}
-
 /// `segAt(out, f, s, adj, albedo, NO_GLOW)`: an unlit part with its adjustment handed in, no node of its own.
 fn part_at(g: &crate::game::Game, out: &mut Carried, f: Frame, s: Seg, adj: Option<Adj>, albedo: V3) {
-    seg_at(g, out, f, s, adj, albedo, no_glow(), None);
+    seg_at(g, out, f, s, adj, albedo, no_glow());
 }
 
 /// A gun group's frame moved by a GRIPFIT shift, in its own axes.
@@ -372,8 +366,8 @@ fn guard_kit(g: &Game, c: CharId, o: RigOpts, out: &mut Carried, rig: Rig, hand:
 fn guard_torch(g: &Game, c: CharId, o: RigOpts, out: &mut Carried, rig: Rig, hand: V3, lens: V3) {
     let (cols, t) = (col(), rig.torch);
     let f = apply_adj(frame_from(hand, o.beam_dir.unwrap_or(g.ch[c].gun_dir), None), t.adj);
-    part(g, out, f, t.body, cols.torch, None, None);
-    part(g, out, f, t.lens, cols.lens_body, Some(lens), None);
+    seg(g, out, f, t.body, cols.torch, None);
+    seg(g, out, f, t.lens, cols.lens_body, Some(lens));
 }
 fn guard_pistol(g: &Game, c: CharId, o: RigOpts, out: &mut Carried, rig: Rig, hand: V3, lens: Option<V3>) {
     let (cols, gp) = (col(), rig.guard_pistol);
@@ -381,15 +375,15 @@ fn guard_pistol(g: &Game, c: CharId, o: RigOpts, out: &mut Carried, rig: Rig, ha
     let at = pistol_frame(g, c, hand, PistolFrameP { adj: gp.adj }, Some(in_hand)).g;
     let f = if in_hand { fit_frame(at, gripfit().guard_pistol) } else { at };
     if let Some(gm) = pistol_look_of(g, c, true) {
-        seg_at(g, out, f, of_model(gm.slide), gp.slide.adj, cols.gun, no_glow(), None);
-        seg_at(g, out, f, of_model(gm.grip), gp.grip.adj, model_col(gm.frame, false), no_glow(), None);
+        seg_at(g, out, f, of_model(gm.slide), gp.slide.adj, cols.gun, no_glow());
+        seg_at(g, out, f, of_model(gm.grip), gp.grip.adj, model_col(gm.frame, false), no_glow());
         if let Some(can) = gm.can { part_at(g, out, f, of_model(can), gp.slide.adj, gm.can_col.map_or(cols.can, |c| model_col(c, false))); }
         if let Some(mag) = gm.mag { part_at(g, out, f, of_model(mag), gp.grip.adj, cols.dark_metal); }
     } else {
-        part(g, out, f, gp.slide, cols.gun, None, None);
-        part(g, out, f, gp.grip, cols.gun, None, None);
+        seg(g, out, f, gp.slide, cols.gun, None);
+        seg(g, out, f, gp.grip, cols.gun, None);
     }
-    if let Some(lens) = lens { part(g, out, f, gp.lens, cols.lens_body, Some(lens), None); }
+    if let Some(lens) = lens { seg(g, out, f, gp.lens, cols.lens_body, Some(lens)); }
 }
 
 /// Sam's pistol in his right hand (kitBoxes' first branch): a closure's worth of locals, so a function here.
@@ -458,13 +452,13 @@ fn player_pistol(g: &crate::game::Game, c_2: CharId, o: RigOpts, out: &mut Carri
             part_at(g, out, f, of_model(mag), mix_adj(p.grip.adj, Some(grip_hung()), hk), cols.dark_metal);
         }
         if hk < 0.5 {
-            seg(g, out, under, rail, cols.torch, None, None);
+            seg(g, out, under, rail, cols.torch, None);
         }
     } else {
-        part(g, out, f, p.slide, cols.gun, None, None);
-        part(g, out, f, p.grip, pcol, None, None);
+        seg(g, out, f, p.slide, cols.gun, None);
+        seg(g, out, f, p.grip, pcol, None);
         if has_can {
-            part(g, out, f, p.suppressor, ccol, None, None);
+            seg(g, out, f, p.suppressor, ccol, None);
         }
         let kit_no_mag = o.kit.and_then(|k| k.no_mag).unwrap_or(false);
         let show_no_mag = pshow.map(|s| s.no_mag).unwrap_or(false);
@@ -473,10 +467,10 @@ fn player_pistol(g: &crate::game::Game, c_2: CharId, o: RigOpts, out: &mut Carri
                 part_at(g, out, f, of_model(mag), p.grip.adj, cols.dark_metal);
             }
         }
-        part(g, out, under, rail, cols.torch, None, None);
+        seg(g, out, under, rail, cols.torch, None);
         if o.light_on {
             let lens = Seg { l0: p.lens.l0, l1: p.lens.l1, thick: p.lens.thick, tall: p.lens.tall, adj: p.lens.adj };
-            part(g, out, apply_adj(under, p.rail.adj), lens, cols.lens_body, Some(p.lens.glow), None);
+            seg(g, out, apply_adj(under, p.rail.adj), lens, cols.lens_body, Some(p.lens.glow));
         }
     }
     if let Some(pid) = pid {
@@ -540,7 +534,7 @@ pub(super) fn long_model_boxes(g: &crate::game::Game, out: &mut Carried, l: &cra
             _ => g_2,
         };
         let emissive = if p.is == Some(ModelPartIs::Lens) { lens } else { no_glow() };
-        seg(g, out, f, of_model(p.s), model_col(p.col, black), Some(emissive), Some(GUNMODEL_TAG));
+        seg(g, out, f, of_model(p.s), model_col(p.col, black), Some(emissive));
     }
 }
 
@@ -624,10 +618,10 @@ fn knife_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, k: Option<
     let fist = Frame { o, x: v3::cross(h.back, h.thumb), y: h.back, z: h.thumb };
     let f = apply_adj(fist, k.adj);
     let cols = col();
-    part(g, out, f, k.handle, cols.knife_grip, None, Some(KNIFE_TAG));
-    part(g, out, f, k.guard, cols.blade, None, Some(KNIFE_TAG));
-    part(g, out, f, k.blade, cols.blade, None, Some(KNIFE_TAG));
-    part(g, out, f, k.edge, cols.edge, None, Some(KNIFE_TAG));
+    seg(g, out, f, k.handle, cols.knife_grip, None);
+    seg(g, out, f, k.guard, cols.blade, None);
+    seg(g, out, f, k.blade, cols.blade, None);
+    seg(g, out, f, k.edge, cols.edge, None);
 }
 
 /// The knife's sheath on the left chest webbing: the dark body always, and with `full` the knife's handle and guard standing out of its mouth.
@@ -640,10 +634,10 @@ fn sheath_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried, full: Opt
     };
     out.owner = owner_of(g, c_2);
     let cols = col();
-    part(g, out, f, rig.sheath.body, cols.sheath, None, Some(SHEATH_TAG));
+    seg(g, out, f, rig.sheath.body, cols.sheath, None);
     if full {
-        part(g, out, f, rig.knife.guard, cols.blade, None, Some(SHEATH_TAG));
-        part(g, out, f, rig.knife.handle, cols.knife_grip, None, Some(SHEATH_TAG));
+        seg(g, out, f, rig.knife.guard, cols.blade, None);
+        seg(g, out, f, rig.knife.handle, cols.knife_grip, None);
     }
 }
 
@@ -673,13 +667,13 @@ fn held_can_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::game::ThrowKi
         g0 = frame_from(v3::mad(v3::mad(v3::mad(hand, fingers, fc.fwd), back, -fc.palm), thumb, fc.side - mid), thumb, Some(fingers));
     }
     let f1 = apply_adj(g0, k.adj);
-    let (body, band, label): (V3, V3, &str) = match kind {
-        ThrowKind::Frag => ([0.13, 0.17, 0.08], [0.75, 0.62, 0.1], "canister in the fist (frag)"),
-        ThrowKind::Flash => ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66], "canister in the fist (stun)"),
-        ThrowKind::Smoke => ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06], "canister in the fist (smoke)"),
+    let (body, band): (V3, V3) = match kind {
+        ThrowKind::Frag => ([0.13, 0.17, 0.08], [0.75, 0.62, 0.1]),
+        ThrowKind::Flash => ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]),
+        ThrowKind::Smoke => ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06]),
     };
-    seg(g, out, f1, k.body, body, Some([0.0, 0.0, 0.0]), None);
-    seg(g, out, f1, k.band, band, Some([0.0, 0.0, 0.0]), None);
+    seg(g, out, f1, k.body, body, Some([0.0, 0.0, 0.0]));
+    seg(g, out, f1, k.band, band, Some([0.0, 0.0, 0.0]));
 }
 
 /// The can of a throw off the free hand: in the left fist, as a fitted can is in the right.
@@ -714,17 +708,17 @@ pub(super) fn carbine_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carrie
         return;
     }
     let cols = col();
-    part(g, out, f, c_3.receiver, cols.gun, None, None);
-    part(g, out, f, c_3.handguard, cols.furniture, None, None);
-    part(g, out, f, c_3.barrel, cols.gun, None, None);
-    part(g, out, f, c_3.muzzle, cols.gun, None, None);
-    part(g, out, f, c_3.mag, cols.furniture, None, None);
-    part(g, out, f, c_3.mag2, cols.furniture, None, None);
-    part(g, out, f, c_3.grip, cols.furniture, None, None);
-    part(g, out, f, c_3.stock_top, cols.gun, None, None);
-    part(g, out, f, c_3.stock_low, cols.gun, None, None);
-    part(g, out, f, c_3.light, cols.torch, None, None);
-    part(g, out, f, c_3.lens, cols.lens_body, Some(lens), None);
+    seg(g, out, f, c_3.receiver, cols.gun, None);
+    seg(g, out, f, c_3.handguard, cols.furniture, None);
+    seg(g, out, f, c_3.barrel, cols.gun, None);
+    seg(g, out, f, c_3.muzzle, cols.gun, None);
+    seg(g, out, f, c_3.mag, cols.furniture, None);
+    seg(g, out, f, c_3.mag2, cols.furniture, None);
+    seg(g, out, f, c_3.grip, cols.furniture, None);
+    seg(g, out, f, c_3.stock_top, cols.gun, None);
+    seg(g, out, f, c_3.stock_low, cols.gun, None);
+    seg(g, out, f, c_3.light, cols.torch, None);
+    seg(g, out, f, c_3.lens, cols.lens_body, Some(lens));
 }
 
 #[cfg(test)]

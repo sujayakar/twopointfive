@@ -1,7 +1,7 @@
 //! The types of `scene_level`.
 #![allow(unused_imports)]
 use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 /// which level's script this is, by the level file's name; the body is levels/<name>.script.ts, its define pass called by a match
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -34,7 +34,7 @@ pub struct PropPart {
     pub h: V3,
     pub yaw: f64,
     pub albedo: V3,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
 }
@@ -306,7 +306,7 @@ impl Default for RoomClearPlan {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
-    pub props: Vec<crate::scene_level::PropDef>,
+    pub props: Vec<Arc<crate::scene_level::PropDef>>,
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub player_spawn: V3,

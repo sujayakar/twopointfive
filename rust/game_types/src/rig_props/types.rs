@@ -256,7 +256,6 @@ pub struct Frame {
     pub z: V3,
 }
 
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RigOpts {
     pub goggles: bool,
@@ -514,12 +513,6 @@ pub static RIG: crate::rig_props::Rig = crate::rig_props::Rig { goggles: crate::
 
 pub fn col() -> crate::rig_props::COL { crate::rig_props::COL { gun: [0.05, 0.05, 0.055], can: [0.09, 0.09, 0.095], torch: [0.16, 0.16, 0.17], lens_body: [0.3, 0.3, 0.3], goggles_housing: [0.04, 0.045, 0.04], blade: [0.11, 0.11, 0.12], edge: [0.34, 0.34, 0.36], knife_grip: [0.02, 0.02, 0.022], sheath: [0.028, 0.03, 0.026], furniture: [0.2, 0.085, 0.05], anodised: [0.03, 0.03, 0.033], fde: [0.2, 0.155, 0.1], dark_glass: [0.015, 0.02, 0.022], haft: [0.3, 0.22, 0.07], sledge: [0.04, 0.04, 0.045], brass: [0.5, 0.36, 0.12], shell: [0.26, 0.04, 0.03], cloth: [0.11, 0.1, 0.065], polymer: [0.045, 0.05, 0.046], dark_metal: [0.026, 0.026, 0.03] } }
 
-pub const KNIFE_TAG: &str = "knife";
-
-pub const SHEATH_TAG: &str = "sheath";
-
-pub const SC20K_TAG: &str = "sc20k";
-
 pub const PROP_FLAGS: f64 = 8.0;
 
 pub const GLOW_FLAGS: f64 = 10.0;
@@ -531,8 +524,6 @@ pub const NV_SWING: f64 = 0.018;
 pub fn gripfit() -> crate::rig_props::GRIPFIT { crate::rig_props::GRIPFIT { can: crate::rig_props::GRIPFITCan { fwd: 0.106, palm: 0.047, side: 0.0 }, pistol: [-0.006, 0.0, 0.023], long: [-0.031, 0.0, 0.037], fore: crate::rig_props::GRIPFITFore { back: 0.062, lift: 0.011, down: 0.015 }, mag: crate::rig_props::GRIPFITMag { fwd: 0.095, palm: 0.028, side: 0.03 }, guard_pistol: [-0.026, -0.005, 0.035], torch: crate::rig_props::GRIPFITTorch { fwd: 0.1, palm: 0.036 } } }
 
 pub fn adj_none() -> crate::rig_props::Adj { crate::rig_props::Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] } }
-
-pub const GUNMODEL_TAG: &str = "gunmodel";
 
 pub const COVER_OPEN: f64 = 75.0;
 
@@ -551,8 +542,6 @@ pub const BARE_BARREL: f64 = 0.008;
 pub const TORCH_CARRY_RATE: f64 = 13.0;
 
 pub static BIGRIG: crate::rig_props::Bigrig = crate::rig_props::Bigrig { hammer: crate::rig_props::BigrigHammer { handle: crate::rig_props::Seg { l0: -0.46, l1: 0.265, thick: 0.02, tall: 0.02, adj: None }, head: crate::rig_props::Seg { l0: 0.265, l1: 0.335, thick: 0.085, tall: 0.045, adj: None }, grip: crate::rig_props::BigrigHammerGrip { fwd: 0.08, palm: 0.03, side: 0.0 }, hands: 0.36, head_at: 0.3, back: crate::rig_props::RigSc20kSlung { off: [-0.055, 0.01, -0.19], bore: [-0.42, 0.91, 0.0], roll: 90.0, follow: 0.5, adj: None } }, shotgun: crate::rig_props::BigrigShotgun { back: crate::rig_props::RigSc20kSlung { off: [-0.02, 0.17, -0.18], bore: [0.5, -0.866, 0.2], roll: 180.0, follow: 0.5, adj: None } }, clear: crate::rig_props::BigrigClear { hammer: 0.11, shotgun: 0.075 } };
-
-pub const BIG_TAG: &str = "big";
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RifleAt {
