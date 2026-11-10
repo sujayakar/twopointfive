@@ -3,23 +3,29 @@
 An object is drawn fine and traced in boxes: what the eye meets is the fine shape, and every ray, foot and blast goes on meeting the pieces you put (notes/makers.md). So a fine object is the pieces you make today, and over them, shapes. Nothing is downloaded; everything is a program.
 
 ## Three kinds of shape (`src/fine/template.ts`)
-- **FITS**: made once, stretched to fit any box. Every vertex knows how much it goes with each side of the box (s, −1 to 1) and where it is from there in metres (o): place = s · half + o. Edges, piping and chips keep their size. Use one that exists first: `hard` (painted, plastic), `metal`, `cast` (stone, concrete, plaster), `wood`, `soft` (cushions), `drum`, `ball`, `limb`, `knot`, `paver`, `board`, `panel`, `sheet`. Of the rooftop's 6,200 things all but 86 are one of 22 such shapes.
+- **FITS**: made once, stretched to fit any box. Every vertex knows how much it goes with each side of the box (s, −1 to 1) and where it is from there in metres (o): place = s · half + o. Edges, piping and chips keep their size. Use one that exists first: `hard` (painted, plastic), `metal`, `cast` (stone, concrete, plaster), `wood`, `soft` (cushions), `drum`, `ball`, `limb`, `knot`, `paver`, `board`, `panel`, `sheet`. Of the rooftop's 6,577 things all but 86 are one of 22 such shapes.
 - **PLAIN**: a shape of its own, for what nothing else is like. If it is a piece of planes and curves, `odd` makes it from the piece, creases and all.
 - **SKINNED**: one skin over a rig. Every vertex has two bones (pieces, in the order the rig makes them) and a weight. All bodies of a rig share one shape.
 
 ## What you hand over, for one object
 1. **The pieces**, as now. They are the box that stands in: nothing you draw may be farther than 2 cm from them, 3 where nobody walks or shoots (shadows and blasts are theirs). Their tint is the mean of what is drawn: the bench compares the two under a grey sky, within 2 %.
 2. **Which shape each piece is drawn with** (usually decided by its material and form: `shapeOf` in src/fine/make.ts). Say so only where you want another.
-3. **New shapes, if any**, each a function of nothing: a field and a net (`solid` in src/mesh/made.ts), what rises from it, what color it is (times the piece's material and tint: keep the mean at 1), and its kind. Finest detail: what is seen at 2.7 mm a pixel, the game's nearest (so 1.5 mm is fine enough; below that is the material's). 2,000 to 20,000 triangles; 0.2 to 0.8 MB with its levels; five seconds to make at most, since it is made once and baked.
+3. **New shapes, if any**, each a function of nothing: a field and a net (`solid` in src/mesh/made.ts), what rises from it, what color it is (times the piece's material and tint: keep the mean at 1: what is brighter than 1.1 is cut), and its kind. Finest detail: what is seen at 2.7 mm a pixel, the game's nearest (so 1.5 mm is fine enough; below that is the material's). 2,000 to 20,000 triangles; 0.2 to 0.8 MB with its levels; five seconds to make at most, since it is made once and baked.
 4. **Its far levels.** Simplifying makes the near ones by itself. Give the last two by hand where form is simple (a box with cut edges, 44 triangles; a sharp one, 12; a drum of 28, 16 and 9 sides), each with its error in metres: the most the outline is off, and no less than half the size of the grain that is lost with it, or the swap is seen.
 5. **How it moves**: nothing to add. A shape on a moving piece moves with it; a skinned one with its rig. Rows of a piece's frame must be square and of length 1.
 6. **How it breaks**: what is laid on a wall in parts comes out part by part; what is one thing goes whole with its piece, and the wedges and rubble that come are drawn as the boxes they are. Rubble of its own material is the piece's.
 7. **Print and patterns** stay the piece's: marks, patterns and bumps are laid on the face a point is nearest to. A skin laid over a face (pavers, boards) hides that face's pattern.
 
-## What it costs (A10G, the whole rooftop)
-- 71 shapes, 18 MB, 9 squeezed; read back in a tenth of a second. Made: 41 s in one thread, 17 in four or more (the body alone is 16: it is the one that should be made finer by hand). The scene's table, 6,200 things at 80 bytes, takes 30 ms.
-- A thing in view: 128 triangles and up. A shape more: half a megabyte, nothing a frame. A thing more: nothing that can be measured up to thousands.
-- 0.2 to 0.3 ms a frame for all of it, less what the boxes no longer draw.
+## What it costs (A10G, the whole rooftop, two cars, seven people, against boxes in one run)
+- Frames, the world moving, 30 views by day, dusk and night: 1080p at 0.75 from 0.30 less to 0.54 ms more (mean 0.29) on 10 to 15; 1080p whole 0.69 less to 0.65 more on 15 to 23; 1440p at 0.75 0.64 less to 0.69 more. Less where curved pieces fill the picture (a car): boxes find those a pixel at a time, triangles do not. Its own passes 0.17 to 0.31. CPU up to 0.4 ms.
+- 6,577 things, 53.6 M triangles placed, 0.16 to 0.70 M drawn. 71 shapes (49 of them odd, 40 of those a car's), 0.40 M triangles, 16.4 MB, 8.0 squeezed; read back in a tenth of a second (0.2 with the page's text around it). Buffers that do not grow with the scene: 17 MB of indices, 2 of clusters.
+- Made: 41 to 48 s in one thread, 23 in two, 17.5 in four or more: the body alone is 17. The table of what is drawn for what: 30 ms.
+- A hole: 10 to 25 ms for the blow itself, with boxes the same; it takes 4 to 7 panels. The longest frame after is the boxes' too (50 to 85 ms: what is joined, where lamps reach).
+- Swaps, a slow pull back, a thirtieth a step, the settled picture before and after: mean 0.95 to 1.3 of 255 where the same drawn twice is 0.9 to 1.1; one pixel in a thousand changes by 18 to 27, where drawn twice it is 15 to 20; at the worst step 65 (walking). Seen if looked for, close by. Not mended: a swap by dice over a few frames would.
+- A thing in view: 12 triangles and up. A shape more: a quarter of a megabyte, nothing a frame.
 
 ## What the bench should ask of one (not built)
 How far the shape is from its pieces (2 cm); brightness of shape and pieces under a grey sky and a low sun (2 %); each swap, as for levels now; triangles and bytes; seconds to make.
+
+## Known faults of the first ones
+The body's materials meet along a ragged line (a vertex a centimetre): a maker should cut its net along them. Skins hide the patterns under them (planks of a floor look plainer fine than as a box). A box is cut by the section with an end to show; a skin or a body is cut open. Cloth, water, glass, leaves and the city stay as they were.
