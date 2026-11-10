@@ -52,21 +52,20 @@ pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
     if let Some(s) = spec.filter(|s| s.kind == crate::scene_scenarios::MissionKind::Quiet) { crate::quiet::quiet_mission_deal(g, s.seed, men.seats); }
     crate::game::game_new(g, men.rig, Some(crate::game::GameNewOpts { seats: Some(men.seats) }));
     settle(g);
-    // A GAME STOOD WITH NO ADDRESS is the harness's plain stand (standGame with `harness`): the solo night's card goes on at the stand, by the
-    // harness's own flag. A game stood FROM AN ADDRESS has no such flag, as a page has none: nothing is
-    // put on at the stand, and the address's own question is asked once its mission is staged (`start_at_address`)
-    if men.words.is_none() {
-        g.stood.solo_stand = true;
-        crate::kit::kit_solo_stand(g, None);
-    }
     // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
     { let hour = g.stood.hour; if hour != crate::hours::HourId::Night { crate::hours::apply_hour(g, hour); } }
     host_new(g);
     let why = if let Some(q) = men.words.as_ref() {
         crate::scenario_run::start_at_address(g, q).why
     } else if let Some(spec) = men.scenario.as_ref() {
-        crate::scenario_run::start_scenario(g, spec)
-    } else { return None };
+        let why = crate::scenario_run::start_scenario(g, spec);
+        crate::kit::kit_solo_if(g, false);
+        why
+    } else {
+        // (no address and no mission: the solo night, in the player's own card)
+        crate::kit::kit_solo_if(g, true);
+        return None;
+    };
     settle(g);   // (the men the mission made: their poses go home as a tick's opening would take them)
     crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the first tick reads before its own paint
     crate::fire::update_fire(g, 0.0);
