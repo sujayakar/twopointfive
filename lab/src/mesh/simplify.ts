@@ -19,6 +19,8 @@ const PULL = 1e-3;                                                  // how hard 
 
 /** scratch for one patch at a time, kept between patches */
 export class Simplifier {
+  /** `ends`: vertices only ever go to where one of the two was, so that whatever else is known of each stays true of it */
+  constructor(private ends = false) {} private pick = 0;
   private cap = 0; private mark = new Int32Array(0); private stamp = 0; private localOf = new Int32Array(0);
   private V = new Float64Array(0); private Q = new Float64Array(0); private N = new Float64Array(0); private C = new Float64Array(0); private S = new Float64Array(0);
   private ver = new Int32Array(0); private gone = new Uint8Array(0); private locked = new Uint8Array(0); private was = new Int32Array(0); private moved = new Uint8Array(0);
@@ -54,8 +56,8 @@ export class Simplifier {
     const L = this.locked, V = this.V, Q = this.Q, at = this.at, la = L[a]!, lb = L[b]!; if (la && lb) return Infinity;
     const qa = a * 11, qb = b * 11, A = a * 3, B = b * 3, w = Q[qa + 10]! + Q[qb + 10]!; if (w <= 0) return Infinity;
     const xx = Q[qa]! + Q[qb]!, xy = Q[qa + 1]! + Q[qb + 1]!, xz = Q[qa + 2]! + Q[qb + 2]!, yy = Q[qa + 3]! + Q[qb + 3]!, yz = Q[qa + 4]! + Q[qb + 4]!, zz = Q[qa + 5]! + Q[qb + 5]!, bx = Q[qa + 6]! + Q[qb + 6]!, by = Q[qa + 7]! + Q[qb + 7]!, bz = Q[qa + 8]! + Q[qb + 8]!, c = Q[qa + 9]! + Q[qb + 9]!;
-    let x: number, y: number, z: number;
-    if (la) { x = V[A]!; y = V[A + 1]!; z = V[A + 2]!; } else if (lb) { x = V[B]!; y = V[B + 1]!; z = V[B + 2]!; } else {
+    let x: number, y: number, z: number; this.pick = lb ? 1 : 0;
+    if (this.ends) { const at2 = (v: number) => { const X = V[v]!, Y = V[v + 1]!, Z = V[v + 2]!; return xx * X * X + yy * Y * Y + zz * Z * Z + 2 * (xy * X * Y + xz * X * Z + yz * Y * Z) + 2 * (bx * X + by * Y + bz * Z) + c; }; if (!la && !lb) this.pick = at2(A) <= at2(B) ? 0 : 1; const v = this.pick ? B : A; x = V[v]!; y = V[v + 1]!; z = V[v + 2]!; } else if (la) { x = V[A]!; y = V[A + 1]!; z = V[A + 2]!; } else if (lb) { x = V[B]!; y = V[B + 1]!; z = V[B + 2]!; } else {
       const mx = (V[A]! + V[B]!) / 2, my = (V[A + 1]! + V[B + 1]!) / 2, mz = (V[A + 2]! + V[B + 2]!) / 2, l = PULL * w;
       const a11 = xx + l, a22 = yy + l, a33 = zz + l, r1 = l * mx - bx, r2 = l * my - by, r3 = l * mz - bz;
       const c11 = a22 * a33 - yz * yz, c12 = xz * yz - xy * a33, c13 = xy * yz - xz * a22, det = a11 * c11 + xy * c12 + xz * c13;
@@ -132,7 +134,7 @@ export class Simplifier {
     let left = nt, worst = 0, off = 0, plain = Infinity; const third = nt * 0.72;       // (what a quarter of them cost says what is dear)
     while (left > target && this.heapN > 0) {
       this.pop(); const s = this.heapN, a = this.heapA[s]!, b = this.heapB[s]!; if (gone[a] || gone[b] || ver[a] !== this.heapVA[s] || ver[b] !== this.heapVB[s]) continue;
-      const key = this.heapKey[s]!, keep = locked[b] ? b : a, drop = keep === a ? b : a; if (this.cost(a, b) === Infinity) continue; const apart = this.geo;
+      const key = this.heapKey[s]!, c0 = this.cost(a, b); if (c0 === Infinity) continue; const keep = this.pick ? b : a, drop = this.pick ? a : b, apart = this.geo;
       if (left <= third) { if (plain === Infinity) plain = worst; if (key > plain * DEAR) break; }
       // one hole more or less would be made where the two have other than two neighbors in common
       let shared = 0, faces = 0; { const n = this.round(a), mine = this.near.slice(0, n), m = this.round(b); for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) if (mine[i] === this.near[j]) shared++; const r = this.rings[a]!; for (let i = 0; i < this.ringN[a]!; i++) { const t = r[i]!; if (!dead[t] && (T[t * 3] === b || T[t * 3 + 1] === b || T[t * 3 + 2] === b)) faces++; } }
@@ -142,7 +144,7 @@ export class Simplifier {
       // what each stood for, and what it knew that its neighbors do not say
       const wa = Q[keep * 11 + 10]!, wb = Q[drop * 11 + 10]!, w = wa + wb; const la = this.odd(keep), lb = this.odd(drop);
       S[keep] = (wa * (S[keep]! + (locked[keep] ? 0 : la)) + wb * (S[drop]! + lb)) / w;
-      if (!locked[keep]) { for (let k = 0; k < 3; k++) { N[keep * 3 + k] = (wa * N[keep * 3 + k]! + wb * N[drop * 3 + k]!) / w; } for (let k = 0; k < 4; k++) C[keep * 4 + k] = (wa * C[keep * 4 + k]! + wb * C[drop * 4 + k]!) / w; const l = Math.hypot(N[keep * 3]!, N[keep * 3 + 1]!, N[keep * 3 + 2]!) || 1; for (let k = 0; k < 3; k++) N[keep * 3 + k]! /= l; V[keep * 3] = X; V[keep * 3 + 1] = Y; V[keep * 3 + 2] = Z; moved[keep] = 1; } else S[keep] = pool.spread[was[keep]!]!;
+      if (this.ends) { /* (what is kept is as it was) */ } else if (!locked[keep]) { for (let k = 0; k < 3; k++) { N[keep * 3 + k] = (wa * N[keep * 3 + k]! + wb * N[drop * 3 + k]!) / w; } for (let k = 0; k < 4; k++) C[keep * 4 + k] = (wa * C[keep * 4 + k]! + wb * C[drop * 4 + k]!) / w; const l = Math.hypot(N[keep * 3]!, N[keep * 3 + 1]!, N[keep * 3 + 2]!) || 1; for (let k = 0; k < 3; k++) N[keep * 3 + k]! /= l; V[keep * 3] = X; V[keep * 3 + 1] = Y; V[keep * 3 + 2] = Z; moved[keep] = 1; } else S[keep] = pool.spread[was[keep]!]!;
       this.O[keep] = Math.max(this.O[keep]!, this.O[drop]!); for (let k = 0; k < 11; k++) Q[keep * 11 + k]! += Q[drop * 11 + k]!;
       const r = this.rings[drop]!, n = this.ringN[drop]!; gone[drop] = 1;
       for (let i = 0; i < n; i++) { const t = r[i]!; if (dead[t]) continue; let has = false; for (let k = 0; k < 3; k++) if (T[t * 3 + k] === keep) has = true; if (has) { dead[t] = 1; left--; continue; } for (let k = 0; k < 3; k++) if (T[t * 3 + k] === drop) T[t * 3 + k] = keep; this.addRing(keep, t); }
@@ -151,7 +153,7 @@ export class Simplifier {
       const m = this.round(keep), ring = this.near.slice(0, m); for (let i = 0; i < m; i++) { const c = this.cost(keep, ring[i]!); if (c < Infinity) this.push(c, keep, ring[i]!); }
     }
     // what is left faces as its triangles do: their vector area is that of all they stand for, so light falls on them as it did
-    for (let v = 0; v < nv; v++) { if (gone[v] || locked[v]) continue; let x = 0, y = 0, z = 0; const r = this.rings[v]!; for (let i = 0; i < this.ringN[v]!; i++) { const t = r[i]!; if (dead[t]) continue; const a = T[t * 3]! * 3, b = T[t * 3 + 1]! * 3, c = T[t * 3 + 2]! * 3, ux = V[b]! - V[a]!, uy = V[b + 1]! - V[a + 1]!, uz = V[b + 2]! - V[a + 2]!, wx = V[c]! - V[a]!, wy = V[c + 1]! - V[a + 1]!, wz = V[c + 2]! - V[a + 2]!; x += uy * wz - uz * wy; y += uz * wx - ux * wz; z += ux * wy - uy * wx; } const l = Math.hypot(x, y, z); if (l < 1e-30) continue; N[v * 3] = x / l; N[v * 3 + 1] = y / l; N[v * 3 + 2] = z / l; moved[v] = 1; }
+    for (let v = 0; v < nv; v++) { if (this.ends || gone[v] || locked[v]) continue; let x = 0, y = 0, z = 0; const r = this.rings[v]!; for (let i = 0; i < this.ringN[v]!; i++) { const t = r[i]!; if (dead[t]) continue; const a = T[t * 3]! * 3, b = T[t * 3 + 1]! * 3, c = T[t * 3 + 2]! * 3, ux = V[b]! - V[a]!, uy = V[b + 1]! - V[a + 1]!, uz = V[b + 2]! - V[a + 2]!, wx = V[c]! - V[a]!, wy = V[c + 1]! - V[a + 1]!, wz = V[c + 2]! - V[a + 2]!; x += uy * wz - uz * wy; y += uz * wx - ux * wz; z += ux * wy - uy * wx; } const l = Math.hypot(x, y, z); if (l < 1e-30) continue; N[v * 3] = x / l; N[v * 3 + 1] = y / l; N[v * 3 + 2] = z / l; moved[v] = 1; }
     const out = new Uint32Array(left * 3), to = new Int32Array(nv).fill(-1); let o = 0;
     for (let t = 0; t < nt; t++) { if (dead[t]) continue; for (let k = 0; k < 3; k++) { const l = T[t * 3 + k]!; let g = to[l]!; if (g < 0) { if (!moved[l]) g = was[l]!; else { g = pool.add(); pool.pos[g * 3] = V[l * 3]! + cx; pool.pos[g * 3 + 1] = V[l * 3 + 1]! + cy; pool.pos[g * 3 + 2] = V[l * 3 + 2]! + cz; for (let q = 0; q < 3; q++) pool.nrm[g * 3 + q] = N[l * 3 + q]!; for (let q = 0; q < 4; q++) pool.col[g * 4 + q] = C[l * 4 + q]!; pool.spread[g] = S[l]!; } to[l] = g; } out[o++] = g; } }
     return { tri: out, error: Math.sqrt(worst), apart: Math.sqrt(off) };

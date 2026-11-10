@@ -14,6 +14,7 @@ export interface Piece {
   tint?: V3; lamp?: number; marks?: Mark[]; seed?: number; /** part of something bigger that rays of any width must meet (what is left of a wall) */ stays?: boolean;
   /** what it is a part of */ thing?: { name: string };
   /** what moves it, by name */ rig?: string;
+  /** a finer shape is drawn for it (fine/make.ts): the raster draws its box only where the section cuts it */ fine?: boolean;
   /** something finer is drawn in its place: it stands for what moves and walks, and for rays that ask for no more */ ghost?: boolean;
   /** of triangles: its object's row (mesh/pack.ts) */ mesh?: number;
   /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
