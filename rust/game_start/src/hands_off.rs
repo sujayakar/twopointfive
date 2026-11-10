@@ -6,7 +6,7 @@
 //! through the keys. The beat between a man showing and the first round is rolled on a die of his own.
 //!
 //! He is a script of the one scripted player (`player.rs`).
-use crate::player::{at, flat, Feet, Player, Script, Walk, MOVE, V3};
+use crate::player::{at, flat, Feet, Player, Script, Walk, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -361,7 +361,7 @@ impl HandsOff {
 
     /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it. The box world's copy stands (`scene_collision::stands`).
     pub fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) {
-        cmd.keys.retain(|k| !MOVE.contains(&k.as_str()));
+        cmd.keys.retain(|k| !game::player::WALK_KEYS.contains(&k.as_str()));
         cmd.buttons = (cmd.buttons as u32 & !1) as f64;
         if self.end.is_some() { return; }
         // (a world he may not ask of ends his scene, and not the game)

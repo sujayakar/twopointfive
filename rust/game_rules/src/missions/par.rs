@@ -49,7 +49,6 @@ pub fn par_result(d: &ParData, secs: f64, lost: f64, of: f64) -> ParResult {
 /// the level's par while it is LIVE: the block there, its room clear up, no show running (None = stood down)
 pub fn par_data(g: &Game) -> Option<ParData> {
     let d = g.level.scenarios.as_ref().and_then(|s| s.par)?;
-    if g.puppet.is_some() { return None; }
     if crate::roomclear::room_clear_scenario_active(g) { Some(d) } else { None }
 }
 

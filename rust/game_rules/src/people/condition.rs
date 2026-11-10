@@ -12,7 +12,7 @@ pub fn down(g: &Game, c: CharId) -> bool { g.cond[c].down }
 /// Is this man hurt now; `now` is the clock asked of, the game's by default.
 pub fn is_hurt(g: &Game, c: CharId, now: Option<f64>) -> bool {
     let (at, now) = (g.cond[c].hurt_at, now.unwrap_or(g.time));
-    if at < 0.0 || g.puppet.is_some() { return false; }
+    if at < 0.0 { return false; }
     g.k.condition.hurt_secs <= 0.0 || now - at < g.k.condition.hurt_secs
 }
 /// Blind now (the fog, a can and a blow all leave the one clock).
@@ -26,7 +26,7 @@ pub fn condition_hurt(g: &mut Game, c: CharId) -> bool {
         crate::character::Who::Guard(gd) => g.gd[gd].civ.is_some() || g.gd[gd].god,
         crate::character::Who::Player(_) => g.god_mode,
     };
-    if g.puppet.is_some() || spared || down(g, c) { return false; }
+    if spared || down(g, c) { return false; }
     if !is_hurt(g, c, None) { g.stats.condition.hurt += 1; }
     g.cond[c].hurt_at = g.time;
     true

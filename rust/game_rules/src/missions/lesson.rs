@@ -589,7 +589,7 @@ pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
 
 /// The lesson in force (None: not live).
 pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::LessonData> {
-    if g.puppet.is_some() || g.staged.up.is_none() { return None; }
+    if g.staged.up.is_none() { return None; }
     g.level.lesson().filter(|l| !l.steps.is_empty())
 }
 

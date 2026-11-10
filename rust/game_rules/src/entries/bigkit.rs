@@ -50,7 +50,6 @@ pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, p
     let kit = g.pl[pid].big_kit;
     if !g.k.bigslot.on
         || kit == crate::kit::BigKit::None
-        || g.puppet.is_some()
         || crate::doors::door_off(g, d)
         || g.dr[d].def.steel.unwrap_or(false)
         || !crate::doors::door_is_closed(g, d)

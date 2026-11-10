@@ -45,7 +45,7 @@ fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::Rad
 /// The run is really the player's and still going, Sam is on his feet, and it is the night she talks him through.
 fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let s = g.mission.stage;
-    !g.aside && g.puppet.is_none() && g.ai_enabled
+    !g.aside && g.ai_enabled
         && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
         && !crate::condition::down(g, g.pl[seat.player].ch)
         && !g.staged.facts.fight

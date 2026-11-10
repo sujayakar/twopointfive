@@ -242,7 +242,7 @@ pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::sea
     let inn = door_pt(g, d, width / 2.0, 0.45, into, Some(1.1));
     let (mut near, mut far): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let others = crate::ask::WorldAsk::of(g).over(crate::ask::Over::but_door(g, d));
-    if !crate::condition::down(g, g.pl[seat.player].ch) && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[seat.player].ch) {
         let p = g.ch[g.pl[seat.player].ch].pos;
         close_ask(g, &others, d, side, out, inn, p, String::from("you"), true, &mut near, &mut far);
     }
@@ -266,7 +266,7 @@ pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> Strin
 /// The face of this door the player could set a charge on by hand right now (None: none).
 fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
     let pl = g.player;
-    if g.puppet.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || crate::doors::door_off(g, d) || g.dr[d].def.steel == Some(true)
+    if g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || crate::doors::door_off(g, d) || g.dr[d].def.steel == Some(true)
         || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() || charge_order_on(g, &crate::seats::here(g), d) { return None; }
     door_tools_sync(g);
     if g.door_tools.charges <= 0.0 { return None; }
@@ -363,7 +363,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let d = s.door;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.puppet.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some()
         || crate::doors::door_off(g, d) || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
         || charge_order_on(g, &crate::seats::here(g), d)
         || off_of(g, d, p, s.side) <= 0.0 || flat(p, s.at) > SAM_SHIFT || (act_some && !(mine && act_door == Some(d))) {

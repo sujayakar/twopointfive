@@ -355,7 +355,7 @@ fn fist_doubling(fists: i32) -> f64 {
 /// Once a frame, after the orders, the door tools and the room fight have had theirs.
 pub fn show_why_tick(g: &mut crate::game::Game) {
     let k = g.k.showwhy;
-    if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) || g.puppet.is_some() {
+    if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) {
         return;
     }
     let (t, pl) = (g.time, g.player);

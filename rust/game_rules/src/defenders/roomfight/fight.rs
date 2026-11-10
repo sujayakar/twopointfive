@@ -108,7 +108,7 @@ pub fn room_fight_new(g: &crate::game::Game) -> crate::roomfight::RoomFight {
 
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).
 pub fn room_fight_on(g: &crate::game::Game) -> bool {
-    if !(g.ai_enabled && g.tune.teams && g.puppet.is_none()) { return false; }
+    if !(g.ai_enabled && g.tune.teams) { return false; }
     let show_runs = match g.director.run { Some(r) => !g.tab.director_run[r].ended, None => false };
     !(show_runs && !crate::rails::rails_live(g))
 }

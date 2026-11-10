@@ -5,11 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Is the rule running: no puppet.
-pub(super) fn ff_live(g: &crate::game::Game) -> bool {
-    !g.puppet.is_some()
-}
-
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet.
 pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
@@ -32,7 +27,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
 pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
-    if !ff_live(g) || !ff_side(g, Some(self_)) {
+    if !ff_side(g, Some(self_)) {
         return None;
     }
     let mut dx = to[0] - muzzle[0];

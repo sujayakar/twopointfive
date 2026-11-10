@@ -2,7 +2,7 @@
 use super::acts::{actor, ask_veil, row, Leaf};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::types::*;
-use crate::game::{Game, GamePuppet};
+use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use alloc::string::String;
@@ -81,8 +81,6 @@ fn homeward(g: &mut Game, st: &mut KitStage, x: GuardId) {
 }
 /// each tick: every man's walk, the order sent again where it is not his
 pub(super) fn walks(g: &mut Game, st: &mut KitStage) {
-    // (a row of Sam's: every order is taken away each step, each man stands where he is and is sent on as it ends)
-    if g.puppet.is_some() { for &x in &st.order { crate::control::set_hold(g, x, true, "kitstage"); } return; }
     let (team, loose, man, none_door) = match st.a.beat.as_ref() { Some(b) => { let r = row(b.row); (r.team, b.loose, b.man, r.door == Leaf::None) } None => (false, false, None, false) };
     if team && !loose { return; }   // (the squad's own order has every man: the wall charge)
     let now = g.time;
@@ -170,12 +168,23 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
     }
 }
 /// Sam walked to a mark, nothing else asked of him
-pub(super) fn sam_goes(g: &mut Game, p: V2) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), ..GamePuppet::default() }); }
-pub(super) fn sam_goes_low(g: &mut Game, p: V2, crouch: bool) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), crouch: if crouch { Some(true) } else { None }, ..GamePuppet::default() }); }
+pub(super) fn sam_goes(st: &mut KitStage, p: V2) { st.a.led = Some(Led { to: Some(p), ..Led::default() }); }
+pub(super) fn sam_goes_low(st: &mut KitStage, p: V2, low: bool) { st.a.led = Some(Led { to: Some(p), low, ..Led::default() }); }
 /// Sam's quiet rows are played from his place: a row cut with him off it left him there for the whole of the next
-pub(super) fn sam_stand(g: &mut Game, st: &KitStage) {
+pub(super) fn sam_stand(g: &Game, st: &mut KitStage) {
     let c = g.pl[g.player].ch;
-    if flat(g.ch[c].pos, st.sam) > K.on_slot { sam_goes(g, st.sam); } else { g.puppet = Some(GamePuppet::default()); }
+    if flat(g.ch[c].pos, st.sam) > K.on_slot { let home = st.sam; sam_goes(st, home); } else { st.a.led = Some(Led::default()); }
+}
+/// HIS KEYS AND HIS HAND FOR THIS TICK, as anybody's who plays a seat: the walk keys toward the place, in the view's own directions, the cursor on the point, and down once
+pub(super) fn sam_hand(g: &mut Game, st: &mut KitStage, cmd: &mut crate::cmd::PlayerCmd) {
+    g.hand_at = st.a.led.and_then(|l| l.at);
+    let Some(led) = st.a.led else { return };
+    let pl = g.player;
+    if led.low && !g.pl[pl].crouch { st.a.press.push("KeyC"); }
+    let Some(to) = led.to else { return };
+    let p = g.ch[g.pl[pl].ch].pos;
+    if flat(p, to) <= 0.1 { return; }
+    for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(alloc::string::String::from(key)); } }
 }
 /// the half step a man takes toward the front of the door for a throw or his light: from where he lives, `metres` at most toward the old post
 pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {

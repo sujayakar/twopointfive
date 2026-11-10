@@ -1325,8 +1325,6 @@ pub struct InteractView {
     pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
-    /// the panel is the corner's three things (a puppet keeps the list as it was)
-    pub corner: bool,
     /// (None: no thing, or a row about none)
     pub ring: Option<crate::view::ThingRing>,
     pub dots: Vec<crate::view::ThingDot>,

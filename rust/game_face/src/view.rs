@@ -38,7 +38,7 @@ pub unsafe extern "C" fn face_cursor_view(h: u32, seat: i32, p: *const u8) {
         told(&game::view::cursor_view(g, &game::seats::seat(g, s), &now))
     }));
 }
-/// THE MISSION'S VERDICT, for a host with no puppet (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
+/// THE MISSION'S VERDICT, for a host with no picture (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
 /// at face_out as lines (game::verdict::verdict_lines: the end's word, the why, the seconds, the way won, the counts, the men). The game's own tick
 /// latches it: the first end of a run stays. While it is 0 nothing is allocated and face_out is left as it was.
 #[no_mangle]

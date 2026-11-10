@@ -114,7 +114,7 @@ fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 
 /// What the cursor is on, before the whole-squad rule
 pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
-    if g.puppet.as_ref().map_or(false, |p| p.aim.is_some()) { return target_at(g, seat, seat.aim_point, asked); }
+    if g.hand_at.is_some() { return target_at(g, seat, seat.aim_point, asked); }
     if let Some(mk) = crate::rails::rails_mark_under(g, now) { return target_at(g, seat, mk, asked); }
     let (u, v) = (now.mouse[0] / m::max(1.0, now.client[0]), now.mouse[1] / m::max(1.0, now.client[1]));
     let ray = crate::camera::ray(&now.inv_view_proj, u, v);

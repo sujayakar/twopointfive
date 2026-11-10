@@ -27,8 +27,8 @@ const PATH_CAP: usize = 1500;
 const PATH_SECS: f64 = 0.5;
 const HOLE_M: f64 = 0.9;
 
-/// A run a verdict can be given on: somebody plays it, and no puppet.
-fn live(g: &Game) -> bool { !g.aside && g.puppet.is_none() }
+/// A run a verdict can be given on: somebody plays it.
+fn live(g: &Game) -> bool { !g.aside }
 /// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
 /// Seconds since the try started.
@@ -260,7 +260,7 @@ pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
     g.verdict.res.as_ref().map(|r| (r.won, r.word.as_str(), r.why.as_str()))
 }
 
-/// The latched record as lines, for a host with no puppet and for holding the record to another's: the word, the why, then a line each of the
+/// The latched record as lines, for a host with no picture and for holding the record to another's: the word, the why, then a line each of the
 /// seconds, the way won, lost and of, the defenders down and of, the hostages alive and of, void, clean, and the men (`id state downAt downBy
 /// drops walked`, where walked is the count of his path's numbers). None while the mission is being played.
 pub fn verdict_lines(g: &crate::game::Game) -> Option<(bool, String)> {

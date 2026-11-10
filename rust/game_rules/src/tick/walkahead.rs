@@ -82,7 +82,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         // his keys, his stance, his stride (updatePlayer's movement block for a man whose legs are his own)
         crate::noshove::no_shove_begin(g, Some(&mut *m));
         let (mut mx, mut mz) = (0.0, 0.0);
-        if !crate::game::player_list_open(g, pl) && !crate::samstun::sam_rooted(g, &crate::seats::here(g), Some(now)) {
+        if !crate::samstun::sam_rooted(g, &crate::seats::here(g), Some(now)) {
             let b = crate::camera::follow_camera_planar_basis(g, cam);
             let way = crate::player::keys_way(b.fwd, b.right, has(&r.keys, "KeyW"), has(&r.keys, "KeyS"), has(&r.keys, "KeyD"), has(&r.keys, "KeyA"));
             mx = way[0];

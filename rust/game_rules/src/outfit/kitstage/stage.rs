@@ -549,6 +549,9 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;
     t.body_acc = m::round(K.body_rate * R / K.ramp * 100.0) / 100.0;
     for x in g.staged.team.clone() { g.gd[x].god = true; }
+    // (a flash at the door is there to be seen: the team's own, Sam's too, finds none of them)
+    g.k.samstun.own_seen = false;
+    g.k.flash.own_m = 0.0;
     // (the posing step walked the parked men back inside the world's edge)
     let _ = park(g);
     if !st.still { acts::live(g, st); }
@@ -701,6 +704,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     if st.still { home_men(g, &mut st); }
     else {
         acts::before_step(g, &mut st, cmd);
+        super::walk::sam_hand(g, &mut st, cmd);
         // (Sam's own keys, for this tick; the cursor where the director asked for it)
         for k in st.a.press.drain(..) { cmd.pressed.push(String::from(k)); }
         cmd.clicked = st.a.clicked;

@@ -6,7 +6,7 @@ use super::plan::KIT_PLAN;
 use super::types::*;
 use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
 use crate::doors::door_off;
-use crate::game::{Game, GamePuppet, SlotKind};
+use crate::game::{Game, SlotKind};
 use crate::ids::*;
 use crate::m;
 use crate::sim_lightshome::{self as home, light_in};
@@ -109,9 +109,8 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             b.post = Some(post);
             if flat(p, post) > 0.1 {
                 b.marks.push("walk");
-                let aim = g.puppet.as_ref().and_then(|q| q.aim);
-                sam_goes(g, post);
-                g.puppet.as_mut().unwrap().aim = aim;
+                let on = st.a.led.and_then(|l| l.at);
+                st.a.led = Some(Led { to: Some(post), at: on, low: false });
             }
         }
         return if t >= QK.hold { Step::Done } else { Step::On };
@@ -119,7 +118,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     quiet_tick(g, st, b)
 }
 /// THE SUIT, THE TRIM: no walk, no turn: he leans half a step toward the pool so that a shoulder catches it, holds, and leans back (down throughout)
-pub(super) fn lean_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     let face = st.plan.as_ref().map_or(0.0, |x| x.wall.face);
     let t = at(st, [0.0, face + KIT_PLAN.off_face, 0.0]);
@@ -133,21 +132,21 @@ pub(super) fn lean_start(g: &mut Game, st: &KitStage, b: &mut Beat) -> Result<()
     sam_stand(g, st);
     Ok(())
 }
-pub(super) fn lean_tick(g: &mut Game, st: &KitStage, b: &mut Beat) -> Step {
+pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
     let el = g.time - b.pt;
     match b.phase {
-        "home" => { if flat(p, st.sam) > K.on_slot && el < 3.0 { return Step::On; } to(g, b, "out"); sam_goes(g, b.post.unwrap()); Step::On }
+        "home" => { if flat(p, st.sam) > K.on_slot && el < 3.0 { return Step::On; } to(g, b, "out"); sam_goes(st, b.post.unwrap()); Step::On }
         "out" => {
             if flat(p, b.post.unwrap()) > 0.12 && el < 2.0 { return Step::On; }
             b.marks.push("lean");
             if b.mark_t.is_nan() { b.mark_t = g.time; }
             to(g, b, "hold");
-            g.puppet = Some(GamePuppet::default());
+            st.a.led = Some(Led::default());
             Step::On
         }
-        "hold" => { if el < QK.lean_secs { return Step::On; } to(g, b, "back"); sam_goes(g, st.sam); Step::On }
+        "hold" => { if el < QK.lean_secs { return Step::On; } to(g, b, "back"); { let home = st.sam; sam_goes(st, home) }; Step::On }
         _ => if flat(p, st.sam) <= K.on_slot || el >= 2.5 { Step::Done } else { Step::On },
     }
 }
@@ -317,7 +316,7 @@ pub(super) fn life_off(g: &mut Game, st: &mut KitStage, cut_it: bool) {
 /// LIFE AT REST, with no guard: after `every` seconds of rest the warm lamp behind the door slides along the wall and back, dark for a blink, and nobody's gun wanders. Off as shipped (`idle.on`): a check raises `life_on` for itself.
 pub(super) fn life(g: &mut Game, st: &mut KitStage) {
     let now = g.time;
-    let busy = !st.quiet || st.a.beat.is_some() || st.a.asked.is_some() || !st.a.cost_t.is_nan() || st.veil_asked.is_some() || st.a.dirty || g.puppet.is_some() || (st.walled && !st.hole);
+    let busy = !st.quiet || st.a.beat.is_some() || st.a.asked.is_some() || !st.a.cost_t.is_nan() || st.veil_asked.is_some() || st.a.dirty || st.a.led.is_some() || (st.walled && !st.hole);
     if st.a.life_t.is_nan() {
         if !st.a.life_on.unwrap_or(QK.idle.on) { st.a.life_next = f64::NAN; return; }
         if busy || st.a.life_next.is_nan() { st.a.life_next = now + QK.idle.every[st.a.life_n as usize % QK.idle.every.len()]; return; }

@@ -9,8 +9,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.
 pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
-    let aim = g.puppet.as_ref().and_then(|p| p.aim);
-    if let Some(aim) = aim {
+    if let Some(aim) = g.hand_at {
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
             g.tab.input[input].mouse_x = sx;
