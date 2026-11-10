@@ -48,7 +48,7 @@
 //           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
 //           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began
 //           (host/drawpage.ts: preset, scale, the size drawn, 'sharp', 'shed', 'pinned') and `why` = the ladder's own last line by then (ui/quality.ts
-//           `lastChange`: 'calibrated: measured 10.0 ms of GPU a frame on high ×0.77 → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
+//           `lastChange`: 'calibrated (…): 10.0 ms compute at high → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
 //           the ladder's line for it] for each change of either, the first `moves` of them, `more` = how many after that. A fourth entry, 1, marks a
 //           change made WHILE PLAY WAS NOT LIVE (a menu, a held brief): its second is where play stood, not when it happened. The page is asked a
 //           few times a second on live frames, never every frame

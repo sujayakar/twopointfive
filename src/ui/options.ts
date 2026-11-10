@@ -23,7 +23,6 @@ import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a
 import type { Engine } from '../engine';
 import type { AudioEngine } from '../audio/audio';
 import { visitTier, type Quality, type QualityName } from './quality';
-import { RENDER_PASSES } from '../gpu/timer';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 /** WHAT THE SCREEN SETS OF A GAME, whoever holds it: each reads as the game is set now, and is set by being written */
@@ -299,7 +298,6 @@ function render(S: Screen) {
     sec(body, 'Quality');
     seg(body, 'Graphics quality', TIERS, cur, v => { if (v === 'auto') quality.setAuto(); else quality.pin(v); }, () => TIERS.find(t => t.v === cur())?.line ?? '');
     const live = el('div', 'op-info'); body.appendChild(live); paints.push(() => { live.textContent = displayNote(); });
-    { const again = () => { if (!live.isConnected) return; live.textContent = displayNote(); setTimeout(again, 400); }; setTimeout(again, 400); }   // (a tier picked here draws its own frames after the click: the line follows them)
     range(body, 'Render resolution', 50, 100, 5, () => Math.round(G.renderScale * 100), v => { const auto = quality.auto; if (auto) quality.pin(quality.current); G.renderScale = v / 100; if (auto) S.paint(); }, v => `${v.toFixed(0)} %`,
       'This is the percentage of the tier\'s full resolution that the scene is rendered at before it\'s upscaled to the window. Edges stay clean down to about 60 %. Under Auto, moving this pins the current tier.');
     flip(body, 'Hold frame rate', () => quality.adaptive, v => { quality.adaptive = v; },
@@ -393,14 +391,13 @@ function controls(body: HTMLElement, host: KeyHost) {
   }
 }
 
-/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, and, once the tier has drawn a few frames of its own, the GPU milliseconds of one and what
- *  that is in frames per second */
+/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, GPU milliseconds and what that is in frames per second */
 export function displayNote(): string {
   if (!deps) return '';
   const { engine, quality } = deps;
-  const gpu = quality.measured ? engine.timer?.unionMs?.(RENDER_PASSES) ?? 0 : 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
+  const gpu = engine.timer?.unionMs?.() ?? 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
   const res = engine.width && engine.outWidth ? `${engine.width}×${engine.height} rendered → ${engine.outWidth}×${engine.outHeight} shown` : '';
-  const tier = quality.auto ? `Auto is running ${quality.current[0].toUpperCase()}${quality.current.slice(1)}.${quality.calibrating ? ' It’s measuring your machine.' : /^calibrat/.test(quality.lastChange ?? '') && quality.calibNote ? ` ${quality.calibNote}` : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
+  const tier = quality.auto ? `Auto is running ${quality.current}${/^(auto|calibrat)/.test(quality.lastChange ?? '') ? ' — ' + quality.lastChange : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
   return [tier, res, gpu > 0.5 ? `GPU ${gpu.toFixed(1)} ms a frame (≈ ${fps.toFixed(0)} fps of headroom)` : ''].filter(Boolean).join(' · ');
 }
 /** Auto's calibration has just settled under an open screen: its line and the tier's button follow */

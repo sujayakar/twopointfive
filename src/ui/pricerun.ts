@@ -70,7 +70,7 @@ const KEY = 'twopointsix.pricelevels';
 export const PRICE_KEY = PRICE_LEVELS_WORD, PRICE_RUN_KEY = PRICE_RUN_WORD;
 /** the render passes, which the GPU's busy span leaves out everywhere on the page · the one of them the look's surface layers are shaded in: its stamp is
  *  printed beside and is inside `all` · and the ones that draw to the display, which `all` leaves out on every machine (gpu/timer.ts has all three and why) */
-const DRAWN = RENDER_PASSES, SURFACE = SURFACE_PASS, PRESENTS = PRESENT_PASSES;
+const DRAWN = [...RENDER_PASSES], SURFACE = SURFACE_PASS, PRESENTS = [...PRESENT_PASSES];
 export const PRICE = {
   /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. ONE WAY, on every page: the page's loop is held from before its boot and
    *  the mission is played in fixed sixtieths by the page's own scripted step (host/drawpage.ts `__runFrames`), ONE STEP A DISPLAY FRAME, EVERY STEP DRAWN, to exactly
@@ -250,7 +250,7 @@ function countPrograms() {
 interface PageHooks { __prewarm?: () => boolean; /** the page's warm-up has cleared what it threw in (host/drawpage.ts; undefined: a build without the word) */ __prewarmed?: boolean; __perfrec?: { commit?: string };
   __ready?: Promise<unknown>; __timeScale?: number; __pauseLoop?: boolean; __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean | 'none') => void; __menu?: { isOpen?: boolean }; __game?: { time: number; /** the mission's own word: its stage, whether the alarm is on, and its count of alarm episodes (someone went to alert while nobody was) */ mission?: { stage?: string; alarmOn?: boolean; stats?: { alerts?: number } } };
   __engine?: { width: number; height: number; outWidth: number; outHeight: number; settings: { renderScale: number; sharpDirect?: boolean; maxInternalHeight?: number; gatherThird?: boolean; volQuarter?: boolean }; gpu?: { adapterInfo?: string; adapterFallback?: boolean }; device?: { queue: { onSubmittedWorkDone(): Promise<unknown> } };
-    timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: readonly string[]): number } };
+    timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: string[]): number } };
   __quality?: { label: string; calibrating: boolean; displayHz?: number; displayHzPin?: number; /** the preset standing · auto: it moves by itself · the ladder's switch (the menu's "Hold frame rate") · a preset's rows put on */ current?: string; auto?: boolean; adaptive?: boolean; apply?: (name: string) => void; /** the ladder's sample of a frame (a method of its class: an own one put over it stands in until it is deleted) */ sample?: (dt: number, gpuMs?: number) => void };
   __perfsweep?: { extra?: { id: string; flip(): string | { apply(): () => void } }[] };
   __boot?: { line?: string };
