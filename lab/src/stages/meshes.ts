@@ -2,7 +2,6 @@
 import type { Lab, Method } from '../lab';
 import type { Graph, Stage } from '../graph';
 import { buffer } from '../gpu';
-import { F } from '../scene/world';
 import { meshed } from '../mesh/code';
 import { rasterStage } from './raster';
 import pickCode from './meshpick.wgsl' with { type: 'text' };
@@ -36,7 +35,7 @@ export interface Drawn { slots: number; triangles: number; hid: number; full: nu
 export function meshStage(lab: Lab, g: Graph): Stage {
   return { name: 'meshes', over: 'render', code: '', async make() {
     const d = g.g.device, w = lab.building.world.meshes!, S = GPUBufferUsage.STORAGE, C = GPUShaderStage.COMPUTE, mk = (n: string, bytes: number, usage = S) => buffer(g.g, n, bytes, usage), shared = (n: string, bytes: number, more = 0) => lab.buffer(n, bytes, S | GPUBufferUsage.COPY_SRC | more);
-    const floor = new Set(w.objects.filter(o => o.levels.length > 1).map(o => o.row)), all = lab.scene.standing.flatMap((p, i) => p.flags & F.MESH ? [i] : []).sort((a, b) => +floor.has(lab.scene.standing[a]!.mesh!) - +floor.has(lab.scene.standing[b]!.mesh!)), heroes = all.filter(i => !floor.has(lab.scene.standing[i]!.mesh!)).length, placed = mk('placed', Math.max(16, all.length * 4)); d.queue.writeBuffer(placed, 0, new Uint32Array(all));
+    const floor = new Set(w.objects.filter(o => o.levels.length > 1).map(o => o.row)), all = lab.scene.standing.flatMap((p, i) => p.mesh !== undefined ? [i] : []).sort((a, b) => +floor.has(lab.scene.standing[a]!.mesh!) - +floor.has(lab.scene.standing[b]!.mesh!)), heroes = all.filter(i => !floor.has(lab.scene.standing[i]!.mesh!)).length, placed = mk('placed', Math.max(16, all.length * 4)); d.queue.writeBuffer(placed, 0, new Uint32Array(all));
     const lists = [shared('meshListA', QUEUE * 8), shared('meshListB', QUEUE * 8)], n = shared('meshN', 128), slots = shared('meshSlots', MOST * 64), again = shared('meshAgain', MOST * 16), args = shared('meshArgs', 64, GPUBufferUsage.INDIRECT), indices = shared('meshIndices', INDICES * 4, GPUBufferUsage.INDEX);
     // ---- how far everything is, coarser and coarser: the farthest of each square
     const hzbGroups = new Map<string, GPUBindGroup>(); let hzb: GPUTexture | null = null, hzbViews: GPUTextureView[] = [], hzbSize: [number, number] = [0, 0];

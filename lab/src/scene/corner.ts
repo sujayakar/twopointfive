@@ -83,7 +83,7 @@ export function makeCorner(): Building {
   core([4.09, FL - 0.02, 2.02], [4.187, FL - 0.0005, 8.089], M.stone!, [1, 1, 1]); core([11.993, FL - 0.02, 2.02], [12.089, FL - 0.0005, 8.089], M.stone!, [1, 1, 1]);
   core([4.089, FL, -1.6], [4.1025, FL + 3.19, 0.5], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL + 2.4, 0.5], [4.1024, FL + 3.189, 1.75], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL, 1.75], [4.1023, FL + 3.188, 3.1], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL + 2.7, 3.1], [4.1022, FL + 3.187, 6.9], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL, 6.9], [4.1021, FL + 3.186, 7.9], M.plaster!, [0.86, 0.85, 0.83]);
   w.add({ at: [12.0, FL + 1.0, -4.8], half: [0.028, 0.02, 3.2], mat: M.steel!, ...cut });      // (the rail goes on as it was by the pool)
-  for (const p of c.placed) w.pieces.push({ at: p.at, rot: p.rot, half: p.half, mat: p.mat, flags: F.MESH | F.CUT, quad: [1, 0, 0, 0], tint: p.tint, mesh: p.row });
+  for (const p of c.placed) w.pieces.push({ at: p.at, rot: p.rot, half: p.half, mat: p.mat, flags: F.MESH | F.TRIANGLES | F.CUT, quad: [1, 0, 0, 0], tint: p.tint, mesh: p.row });
   // ---- where their light is measured: a box for each class
   const of = (cls: number, most = 1): { lo: V3; hi: V3; levels: number } => { const l = c.placed.filter(p => p.cls === cls).slice(0, most), k = 0.8; return { lo: [0, 1, 2].map(a => Math.min(...l.map(p => p.at[a]! - p.half[a]! * k))) as V3, hi: [0, 1, 2].map(a => Math.max(...l.map(p => p.at[a]! + p.half[a]! * k))) as V3, levels: 1 }; };
   c.classes = Object.values(CLASS).map(k => of(k, k === CLASS.brick ? 3 : 2)); w.meshes = c; return b;

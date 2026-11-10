@@ -38,7 +38,7 @@ let ready: Meshes | null = null;
 export const give = (m: Meshes) => { ready = m; };
 export function makeMeshes(): Building {
   const w = new World(), made = ready ?? buildMeshes(), { squares, heroes } = made;
-  const place = (o: PackedObject, at: V3, rot: Rot, scale: number, mat: number, tint: V3) => { const half = [0, 1, 2].map(k => Math.max(Math.abs(o.mn[k]!), Math.abs(o.mx[k]!)) * scale + 1e-4) as V3; w.pieces.push({ at, rot, half, mat, flags: F.MESH, quad: [scale, 0, 0, 0], tint, mesh: o.row }); };
+  const place = (o: PackedObject, at: V3, rot: Rot, scale: number, mat: number, tint: V3) => { const half = [0, 1, 2].map(k => Math.max(Math.abs(o.mn[k]!), Math.abs(o.mx[k]!)) * scale + 1e-4) as V3; w.pieces.push({ at, rot, half, mat, flags: F.MESH | F.TRIANGLES, quad: [scale, 0, 0, 0], tint, mesh: o.row }); };
   const Y = FINE.yard, q = rng(5); for (let z = 0; z < Y; z++) for (let x = 0; x < Y; x++) place(squares[Math.floor(q() * FINE.kinds)]!, [(x - (Y - 1) / 2) * SIDE, 0, (z - (Y - 1) / 2) * SIDE], ID, 1, M.gravel!, [1, 1, 1]);
   place(heroes[0]!, [0, -0.005, 0], rotY(0.35), 1, M.concrete!, [1, 1, 1]); place(heroes[1]!, [0.95, 0.262, 0.75], compose(rotY(-0.72), rotZ(0.03)), 1, M.concrete!, [1, 1, 1]);
   // ---- what stands round it

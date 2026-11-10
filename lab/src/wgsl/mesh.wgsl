@@ -6,7 +6,10 @@
 //   vertex   x y, z and spread, normal, color               node      both children: least corner, what it is · greatest corner
 // (what it is: a node's row, or 1 << 31 | first << 4 | how many triangles, or children of the object)
 // A hit's code is MESH_HIT | child << bits | cluster << 7 | triangle.
-const MESH = 64u; const MESH_HIT = 0x80000000u;
+/* (one bit for both: of a mesh the count of curves, which it has none of, is 3) */
+fn isMesh(fl: u32) -> bool { return (fl & 112u) == 112u; }
+fn isStand(fl: u32) -> bool { return (fl & 112u) == 64u; }
+const MESH_HIT = 0x80000000u;
 fn mrow(r: u32) -> vec4f { return exF(MESH_ROW + r); }
 /* (words are read as words: a GPU may flush a small one to nothing where it is loaded as a float) */
 fn mrowU(r: u32) -> vec4u { return extra[MESH_ROW + r]; }
@@ -62,8 +65,7 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> boo
 }
 /** is this a ray that meets the boxes that stand in for meshes, and not the meshes? (rays = -1; one that has a width: not the reference's, which has none) */
 fn byStand() -> bool { return frame.knobs.y < 0.0 && footW + footS > 0.0; }
-const STAND = 128u;
-fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { let fl = pieces[k].flags; if ((fl & STAND) != 0u && !byStand()) { return false; } if ((fl & MESH) != 0u) { if (byStand()) { return false; } return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
+fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { let fl = pieces[k].flags; if (isStand(fl) && !byStand()) { return false; } if (isMesh(fl)) { if (byStand()) { return false; } return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f { meshAny = true; let T = visiblePieces(ro, rd, tmin, tmax); meshAny = false; return T; }
 
 // ---- what is there
@@ -95,7 +97,7 @@ const LOST_PX = 9u; const LOST_UP = 3u; const LOST_KINDS = 20u;
 /** off while it is measured */
 var<private> meshLostOn = true;
 /** whose table: 0 = nobody's */
-fn meshKind(h: Hit) -> u32 { if ((h.piece & LEAF_HIT) != 0u || (pieces[h.piece].flags & MESH) == 0u) { return 0u; } let o = pieces[h.piece].planes; let head = mrowU(o); let c = (h.code & 0x7fffffffu) >> head.y; return 1u + mrowU(o + 2u).y * 2u + select(0u, 1u, mrow(head.z + c * 4u + 3u).w > 0.0); }
+fn meshKind(h: Hit) -> u32 { if ((h.piece & LEAF_HIT) != 0u || !isMesh(pieces[h.piece].flags)) { return 0u; } let o = pieces[h.piece].planes; let head = mrowU(o); let c = (h.code & 0x7fffffffu) >> head.y; return 1u + mrowU(o + 2u).y * 2u + select(0u, 1u, mrow(head.z + c * 4u + 3u).w > 0.0); }
 /** x a place among the nodes: which, and how far to the next */
 fn lostAt(x: f32, n: array<f32, 5>, many: u32) -> vec2f { var i = 0u; for (var k = 1u; k + 1u < many; k++) { if (x >= n[k]) { i = k; } } return vec2f(f32(i), clamp((x - n[i]) / (n[i + 1u] - n[i]), 0.0, 1.0)); }
 /** how much of the sun (x), and of what comes from all round (y), a pixel so wide of this kind should send, seen along V */
@@ -107,4 +109,4 @@ fn meshLost(kind: u32, px: f32, V: vec3f) -> vec2f {
     out += w * vec2f(sun, mrow(r + 3u).w); }
   return out;
 }
-fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & MESH) != 0u) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }
+fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if ((h.piece & LEAF_HIT) == 0u && isMesh(pieces[h.piece].flags)) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }
