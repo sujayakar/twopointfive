@@ -13,8 +13,6 @@
 export const LEAF_MAX = 4;
 /** characters that get a tree on the GPU (= BoxWorld's capsule character cap: the capsule list and the skin instances are the same list in the same order) */
 export const MESH_MAX_CHARS = 8;
-/** metres a box's 65535 steps are on the GPU: the cube round a man's cull sphere's middle that all of him is in, whatever he is doing */
-export const MESH_SPAN = 4;
 const BINS = 12;          // SAH candidate planes per axis
 const MAX_DEPTH = 40;     // past this a range is split at its median instead of by SAH (bounds the refit's level loop; never reached on the mannequin)
 

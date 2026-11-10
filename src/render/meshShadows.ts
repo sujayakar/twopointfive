@@ -4,10 +4,9 @@
 // box his leaves (their corners written beside them), refit the rest bottom-up — if a bone of his has moved since his tree was made, or the slot is another man's now; every shadow ray that reaches him walks his tree instead of testing his 15 capsules.
 //
 // ONE storage buffer (`buf`, bound read-only at scene binding 13 as array<vec4u>; floats travel as their bit patterns) holds what the walk reads:
-//   [k·2]                        man k's tree: (N = nodes, where they begin, where his corners begin, T = triangles); zeros = an empty tree (the walk ends at once)
-//   [k·2 + 1]                    (the corner his boxes are measured from.xyz as bits, 0): MESH_SPAN metres are 65535 of a box's steps
-//   [nodes + i]                  node i: (xMin | xMax << 16, the same of y, of z, link), the box in whole steps, outward. A link with the top bit is a leaf's: triStart | triCount << 24, and its
-//                                next node is i + 1; without it an internal node's: where a ray goes that misses it (its children are i + 1 and, for the refit alone, WornTree.nodes' right)
+//   [k]                          man k's tree: (N = nodes, where they begin, where his corners begin, T = triangles); zeros = an empty tree (the walk ends at once)
+//   [nodes + i·2 + 0]            node i: (aabbMin.xyz as bits, skip)         skip = next node when this one is missed / done
+//   [nodes + i·2 + 1]                    (aabbMax.xyz as bits, triStart | triCount << 24)   count 0 = internal (children i+1 and, for the refit alone, WornTree.nodes' right)
 //   [corners + t·3 + j]          corner j of triangle t, skinned this frame: (pos.xyz as bits, 0)
 // k is the character's index in this frame's capsule list = its skin instance (rust/game_rules/src/tick/game writes both from one list; scene.charBounds[k] culls it,
 // capsules[k·capsPerChar] carries its owner id). A slot has room for the whole mesh's tree, whatever the man in it wears.
@@ -15,11 +14,11 @@ import { makeBuffer, makeBufferWithData, makeShader, computePipelineAsync } from
 import { GltfCharacter, MeshData } from '../anim/gltf';
 import { nextTask } from './gbuffer';
 import { JOINT_STRIDE, type CharacterRenderer } from '../anim/characters';
-import { MeshBvh, buildMeshBvh, wornTree, topologyDigest, LEAF_MAX, LEAF_PAD, MESH_MAX_CHARS, MESH_SPAN } from './meshbvh';
+import { MeshBvh, buildMeshBvh, wornTree, topologyDigest, LEAF_MAX, LEAF_PAD, MESH_MAX_CHARS } from './meshbvh';
 
 export { MESH_MAX_CHARS };
-const NODE_BASE = MESH_MAX_CHARS * 2;   // vec4u elements before the first node (two of a header a man)
-const SLOT = 16;                     // u32 words of a slot's record (`slots`): what is his in the pool and in the buffers
+const NODE_BASE = MESH_MAX_CHARS;    // vec4u elements before the first node (a header a man)
+const SLOT = 12;                     // u32 words of a slot's record (`slots`): what is his in the pool and in the buffers
 const DUE = MESH_MAX_CHARS * SLOT;   // … and after the records, the slots whose trees are made this frame
 const REFIT_WG = 256;                // one workgroup of this size refits one character's tree, level by level
 
@@ -35,12 +34,12 @@ export function meshBvhFor(mesh: MeshData): MeshBvh {
 // programs, and compiles nothing. They are read from `slots` and not from the mesh buffer's own headers because that buffer is written here: a loop bound read from it
 // would not be uniform to the compiler, and the refit's barrier must stand in uniform control flow.)
 const skinRefitSrc = () => /* wgsl */`
-const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD}; const MESH_SPAN: f32 = ${MESH_SPAN}; const SLOT: u32 = ${SLOT}u; const DUE: u32 = ${DUE}u;
+const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD}; const SLOT: u32 = ${SLOT}u; const DUE: u32 = ${DUE}u;
 @group(0) @binding(0) var<storage, read_write> mbuf: array<vec4u>;
 @group(0) @binding(1) var<storage, read> rest: array<vec4u>;         // 2 per vertex: (rest pos.xyz bits, joints j0 | j1<<8 | j2<<16 | j3<<24), (weights.xyzw bits)
 @group(0) @binding(2) var<storage, read> pool: array<u32>;           // every worn tree's lists (meshbvh.ts WornTree), one after another
 @group(0) @binding(3) var<storage, read> jointMats: array<mat4x4f>;  // CharacterRenderer.jointMats: instance k's skinning matrices at k·JOINT_STRIDE (what vsSkin rasterises with)
-@group(0) @binding(4) var<storage, read> slots: array<u32>;          // SLOT words a slot: the counts (vertices, leaves, steps), then where in the pool its vertices, corners, nodes, order and steps begin, then where its own skinned vertices, nodes and corners do, and the corner its boxes are measured from (f32 bits); from DUE on, the slots to do this frame
+@group(0) @binding(4) var<storage, read> slots: array<u32>;          // SLOT words a slot: the counts (vertices, leaves, steps), then where in the pool its vertices, corners, nodes, order and steps begin, then where its own skinned vertices, nodes and corners do; from DUE on, the slots to do this frame
 @group(0) @binding(5) var<storage, read_write> skinned: array<vec4f>;
 fn slotWord(k: u32, w: u32) -> u32 { return slots[k * SLOT + w]; }
 
@@ -55,6 +54,11 @@ fn slotWord(k: u32, w: u32) -> u32 { return slots[k * SLOT + w]; }
   let m = jointMats[base + (j & 255u)] * w.x + jointMats[base + ((j >> 8u) & 255u)] * w.y + jointMats[base + ((j >> 16u) & 255u)] * w.z + jointMats[base + (j >> 24u)] * w.w;
   skinned[slotWord(k, 8u) + gid.x] = vec4f((m * p).xyz, 0.0);
 }
+fn putNode(k: u32, ni: u32, mn: vec3f, mx: vec3f) {
+  let o = slotWord(k, 5u) + ni * 4u; let at = slotWord(k, 9u) + ni * 2u;
+  mbuf[at] = vec4u(bitcast<vec3u>(mn), pool[o]);
+  mbuf[at + 1u] = vec4u(bitcast<vec3u>(mx), pool[o + 1u] | (pool[o + 2u] << 24u));
+}
 // one thread per leaf: its corners, where the walk reads them, and their box (+ LEAF_PAD)
 @compute @workgroup_size(64) fn leaves(@builtin(global_invocation_id) gid: vec3u) {
   let k = slots[DUE + gid.y];
@@ -63,9 +67,7 @@ fn slotWord(k: u32, w: u32) -> u32 { return slots[k * SLOT + w]; }
   let c0 = pool[o + 1u] * 3u; let c1 = c0 + pool[o + 2u] * 3u;
   var mn = vec3f(1e30); var mx = vec3f(-1e30);
   for (var c = c0; c < c1; c++) { let v = skinned[slotWord(k, 8u) + pool[slotWord(k, 4u) + c]].xyz; mbuf[slotWord(k, 10u) + c] = vec4u(bitcast<vec3u>(v), 0u); mn = min(mn, v); mx = max(mx, v); }
-  let org = bitcast<vec3f>(vec3u(slotWord(k, 12u), slotWord(k, 13u), slotWord(k, 14u))); let per = 65535.0 / MESH_SPAN;
-  let lo = vec3u(clamp(floor((mn - LEAF_PAD - org) * per), vec3f(0.0), vec3f(65535.0))); let hi = vec3u(clamp(ceil((mx + LEAF_PAD - org) * per), vec3f(0.0), vec3f(65535.0)));
-  mbuf[slotWord(k, 9u) + ni] = vec4u(lo | (hi << vec3u(16u)), 0x80000000u | pool[o + 1u] | (pool[o + 2u] << 24u));
+  putNode(k, ni, mn - vec3f(LEAF_PAD), mx + vec3f(LEAF_PAD));
 }
 // one workgroup per character to do (wid.x): the steps over the leaves in turn, a storage barrier between two — a node's children are of earlier steps, so they are final by its own
 @compute @workgroup_size(${REFIT_WG}) fn refit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lid: u32) {
@@ -74,8 +76,8 @@ fn slotWord(k: u32, w: u32) -> u32 { return slots[k * SLOT + w]; }
     let e = pool[begin + s + 1u];
     for (var q = pool[begin + s] + lid; q < e; q += ${REFIT_WG}u) {
       let ni = pool[order + q];
-      let l = mbuf[nb + ni + 1u].xyz; let r = mbuf[nb + pool[nodes + ni * 4u + 3u]].xyz;
-      mbuf[nb + ni] = vec4u(min(l & vec3u(0xffffu), r & vec3u(0xffffu)) | (max(l >> vec3u(16u), r >> vec3u(16u)) << vec3u(16u)), pool[nodes + ni * 4u]);
+      let l = nb + (ni + 1u) * 2u; let r = nb + pool[nodes + ni * 4u + 3u] * 2u;
+      putNode(k, ni, min(bitcast<vec3f>(mbuf[l].xyz), bitcast<vec3f>(mbuf[r].xyz)), max(bitcast<vec3f>(mbuf[l + 1u].xyz), bitcast<vec3f>(mbuf[r + 1u].xyz)));
     }
     storageBarrier();
   }
@@ -99,11 +101,11 @@ export class MeshShadows {
   private mod: GPUShaderModule; private pl: GPUPipelineLayout; private layout: GPUBindGroupLayout;
   private restBuf: GPUBuffer; private slotBuf: GPUBuffer; private skinnedBuf: GPUBuffer; private poolBuf: GPUBuffer | null = null;
   private pool = new Uint32Array(0); private poolSent = 0; private kept = new Map<number, Kept>();
-  private slots = new Uint32Array(DUE + MESH_MAX_CHARS); private slotsF = new Float32Array(this.slots.buffer); private heads = new Uint32Array(MESH_MAX_CHARS * 8); private headsF = new Float32Array(this.heads.buffer); private slotMask: number[] = []; private slotMoves: number[] = [];
+  private slots = new Uint32Array(DUE + MESH_MAX_CHARS); private heads = new Uint32Array(MESH_MAX_CHARS * 4); private slotMask: number[] = []; private slotMoves: number[] = [];
   private mesh: MeshData; private cast: number[];
   /** the last frame's listed characters, how many of them were skinned + refit, and the nodes and triangles of all their trees (the panel reads them) */
   listed = 0; lastChars = 0; lastNodes = 0; lastTris = 0;
-  private due = 0; private dueVerts = 0; private dueLeaves = 0;
+  private due = 0; private dueVerts = 0; private dueLeaves = 0; private told = false;
 
   constructor(private device: GPUDevice, ch: GltfCharacter, private chars: CharacterRenderer) {
     this.cast = ch.cast ? ch.cast.variants.map(v => v.mask) : [0];
@@ -111,7 +113,7 @@ export class MeshShadows {
     const N = bvh.numNodes, T = bvh.numTris, V = mesh.vertexCount;
     if (ch.skin.joints.length > 256 || JOINT_STRIDE > 256) throw new Error('mesh shadows: joint indices are packed as bytes');
     if (T >= 1 << 24 || LEAF_MAX > 255) throw new Error('mesh shadows: triStart | count << 24 packing');
-    this.triBase = NODE_BASE + MESH_MAX_CHARS * N;
+    this.triBase = NODE_BASE + MESH_MAX_CHARS * N * 2;
     this.bufBytes = (this.triBase + MESH_MAX_CHARS * T * 3) * 16;
     const S = GPUBufferUsage.STORAGE;
     this.buf = makeBuffer(device, this.bufBytes, S | GPUBufferUsage.COPY_DST, 'meshShadows');   // (zeros: every slot an empty tree)
@@ -150,27 +152,26 @@ export class MeshShadows {
   }
 
   /** The first `numChars` characters' slots brought to who stands in them now: how many of their trees are to be made this frame (a bone has moved, or it is another man, or he wears something else).
-   *  0 = encode has nothing to do, and the pass is not opened. `bounds` from `boundsAt`: each one's cull sphere, four numbers a man (his boxes are measured in a cube round its middle, MESH_SPAN wide). */
-  plan(numChars: number, bounds: Float32Array, boundsAt: number): number {
-    const n = Math.min(Math.max(0, numChars | 0), MESH_MAX_CHARS); this.listed = n; this.lastNodes = this.lastTris = this.due = this.dueVerts = this.dueLeaves = 0;
+   *  0 = encode has nothing to do, and the pass is not opened. */
+  plan(numChars: number): number {
+    const n = Math.min(Math.max(0, numChars | 0), MESH_MAX_CHARS); this.listed = n; this.lastNodes = this.lastTris = this.due = this.dueVerts = this.dueLeaves = 0; this.told = false;
     for (let k = 0; k < n; k++) {
       const mask = this.chars.partsOf(k), K = this.treeOf(mask), c = K.count, moves = this.chars.moves[k], dressed = this.slotMask[k] === mask; this.lastNodes += c.nodes; this.lastTris += c.tris;
       if (dressed && this.slotMoves[k] === moves) continue;
       this.slotMoves[k] = moves; this.dueVerts = Math.max(this.dueVerts, c.verts); this.dueLeaves = Math.max(this.dueLeaves, c.leaves);
-      this.slots[DUE + this.due++] = k;
-      for (let a = 0; a < 3; a++) this.slotsF[k * SLOT + 12 + a] = this.headsF[k * 8 + 4 + a] = bounds[boundsAt + k * 4 + a] - MESH_SPAN / 2;
+      const at = DUE + this.due++; if (this.slots[at] !== k) { this.slots[at] = k; this.told = true; }
       if (dressed) continue;
-      this.slotMask[k] = mask;
-      const nodeAt = NODE_BASE + k * this.bvh.numNodes, triAt = this.triBase + k * this.bvh.numTris * 3;
+      this.slotMask[k] = mask; this.told = true;
+      const nodeAt = NODE_BASE + k * this.bvh.numNodes * 2, triAt = this.triBase + k * this.bvh.numTris * 3;
       this.slots.set([c.verts, c.leaves, c.steps, K.verts, K.corners, K.nodes, K.order, K.steps, k * this.mesh.vertexCount, nodeAt, triAt, 0], k * SLOT);
-      this.heads.set([c.nodes, nodeAt, triAt, c.tris], k * 8);
+      this.heads.set([c.nodes, nodeAt, triAt, c.tris], k * 4);
     }
     return this.lastChars = this.due;
   }
   /** Skin + refit what plan() found (the joint matrices must already be in jointMats for this frame). Encode BEFORE any pass that traces (the cascades come first in engine.render). */
   encode(enc: GPUCommandEncoder, ts?: GPUComputePassTimestampWrites) {
     const q = this.device.queue;
-    q.writeBuffer(this.slotBuf, 0, this.slots); q.writeBuffer(this.buf, 0, this.heads);
+    if (this.told) { q.writeBuffer(this.slotBuf, 0, this.slots); q.writeBuffer(this.buf, 0, this.heads); }
     if (this.poolSent !== this.pool.length) {
       const bytes = this.pool.byteLength;
       if (!this.poolBuf || this.poolBuf.size < bytes) { this.poolBuf?.destroy(); this.poolBuf = makeBuffer(this.device, Math.ceil(bytes * 1.25 / 16) * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'meshPool'); this.bg = null; }

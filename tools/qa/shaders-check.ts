@@ -529,9 +529,9 @@ async function levelsetSection(): Promise<void> {
         if (k === 'createBuffer') return (d: { label?: string; size: number }) => ({ destroy() { /* */ }, size: d.size, label: d.label });
         if (k === 'queue') return { writeBuffer(b: { label?: string }, _o: number, data: Uint32Array) { if (b.label === 'meshSlots') bufs.push(data.slice()); } };
         if (k === 'then') return undefined; return t[k]; } });
-      const ch = await characterSet(look), mask = ch.cast!.variants[0].mask, M = new MeshShadows(device as never, ch, { partsOf: () => mask, moves: new Uint32Array(16), jointMats: fake('jointMats') } as never); await M.init(); M.plan(1, new Float32Array(4), 0); M.encode(fake('encoder'));
+      const ch = await characterSet(look), mask = ch.cast!.variants[0].mask, M = new MeshShadows(device as never, ch, { partsOf: () => mask, moves: new Uint32Array(16), jointMats: fake('jointMats') } as never); await M.init(); M.plan(1); M.encode(fake('encoder'));
       const part = ch.mesh.part!, t = wornTree(M.bvh, ch.mesh.vertexCount, v => ((mask >>> part[v]) & 1) === 1), slot = bufs[bufs.length - 1];
-      return { text: texts[0] ?? '', sizes: [t.verts.length, t.leaves, t.steps.length - 1, MESH_MAX_CHARS * 2, M.triBase], told: slot ? [slot[0], slot[1], slot[2], slot[9], slot[10]] : [] }; };
+      return { text: texts[0] ?? '', sizes: [t.verts.length, t.leaves, t.steps.length - 1, MESH_MAX_CHARS, M.triBase], told: slot ? [slot[0], slot[1], slot[2], slot[9], slot[10]] : [] }; };
     const trimWas = SHADER_TRIM.on; const A = await built(false), L = await built(true); SHADER_TRIM.on = trimWas;
     if (BREAK) L.text = L.text.replace('const LEAF_PAD', `const T_OF_THIS_CAST: u32 = ${L.sizes[2]}u; const LEAF_PAD`);   // (the red path: a size written back into the text)
     const differ = A.sizes.join() !== L.sizes.join();
