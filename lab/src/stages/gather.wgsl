@@ -8,22 +8,22 @@
     rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let along = cross(n, vec3f(0.0, 1.0, 0.0)); cacheTell(who * 2u + k, x, n);
       var s = vec3f(0.0); var m = 0.0; for (var i = -2; i <= 2; i++) { let y = x + along * (0.4 * f32(i)); if (i != 0 && !joined(x + n * 0.08, y + n * 0.08)) { continue; } let c = cacheSmooth(y, n); if (c.n > 0.0) { s += c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun; m += 1.0; } }       /* (a cut is wide and flat, and one patch beside another would be seen) */
       if (m > 0.0) { E += 0.5 * min(s / m + torchLight(x, n), vec3f(50.0)); } }
-    textureStore(outE, id.xy, vec4f(E, 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
+    textureStore(outE, id.xy, vec4f(E, 0.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
   }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
-  rngInit(id.xy, 17u); leafMode = 2u; still = true; let x = p.x + p.ng * 0.004 * (1.0 + p.t * 0.02); var E = vec3f(0.0); var way = vec3f(0.0); var dist = 0.0; let N = u32(@tune.rays); let px = 2.0 * length(frame.camUp.xyz) / frame.size.y * 2.0 * p.t;
+  rngInit(id.xy, 17u); leafMode = 2u; still = true; let x = p.x + p.ng * 0.004 * (1.0 + p.t * 0.02); var E = vec3f(0.0); var way = vec3f(0.0); var torchy = 0.0; let N = u32(@tune.rays); let px = 2.0 * length(frame.camUp.xyz) / frame.size.y * 2.0 * p.t;
   for (var k = 0u; k < N; k++) {
     let side = p.leaf && rnd() < 0.45; let n = select(select(p.ng, p.n, p.leaf), -p.n, side); let u = blue2(id.xy, 1u + k); let w = wideDir(select(x, p.x - p.ng * 0.02, side), n, u, rnd()); if (w.w <= 0.0) { continue; }
     if (dot(w.xyz, p.ng) * select(1.0, -1.0, side) <= 0.0) { continue; }
     // the path goes on till it is as wide as what is kept: then that answers
     var d = w.xyz; var o = select(x, p.x - p.ng * 0.02, side) + d * select(0.0, 0.03, p.leaf); var wide = px; var thr = vec3f(1.0); var L = vec3f(0.0);
     for (var v = 0u; v < 4u; v++) {
-      foot(wide, @tune.wide); let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING; if (v == 0u) { dist += min(h.t, 12.0); }
+      foot(wide, @tune.wide); let h = nearest(o, d, 2e-3, 600.0, 0u, 1e9); let miss = h.piece == NOTHING;
       let sm = smokeSeen(o, d, min(h.t, 80.0)); let fo = blkSeen(); L += thr * (sm.rgb * fo.T * h.thru + fo.L); thr *= h.thru * fo.T * sm.a;
       if (miss) { L += thr * skyLod(d, 1.0); break; }
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
-        L += thr * sentBack(q, rnd2(), d);
+        L += thr * sentBack(q, rnd2(), d); torchy += lum(thr * sentTorch) * w.w;
         if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }
@@ -37,5 +37,5 @@
     let Ew = min(L * w.w, vec3f(50.0)); E += Ew; way += w.xyz * lum(Ew);
   }
   let sp = spotLight(x, select(p.ng, p.n, p.leaf), px, 12u); E = E / f32(N) + sp; way = way / f32(N) + spotWay * lum(sp);       /* (what a torch lights, straight from there, anew each frame; what goes on from that is kept, for a little while) */
-  textureStore(outE, id.xy, vec4f(E, dist / f32(N))); textureStore(outV, id.xy, vec4f(way, 0.0));
+  textureStore(outE, id.xy, vec4f(E, torchy / f32(N) + lum(sp)));       /* (a: how much of it is torches', which move) */ textureStore(outV, id.xy, vec4f(way, 0.0));
 }
