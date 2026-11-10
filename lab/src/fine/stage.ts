@@ -8,7 +8,7 @@ import type { Packed } from './template';
 import lib from './fine.wgsl' with { type: 'text' };
 import pickCode from './pick.wgsl' with { type: 'text' };
 
-export const FINE_RASTER = { tau: 0.5, hide: true, /** what was picked stays */ hold: false };
+export const FINE_RASTER = { tau: 0.5, hide: true, /** near where levels swap the dice say which is drawn, a frame at a time, over so much of an octave (0: none): the picture's history mixes them */ dice: 0, /** what was picked stays */ hold: false };
 const MOST = 1 << 17, INDICES = 1 << 22;
 /** a scene's shapes, as they are handed over: made here, in workers, or read from a file */
 export interface Loaded { scene: FineScene; shapes: Map<string, Packed>; /** where each begins */ at: Map<string, number>; rows: number }
@@ -41,7 +41,7 @@ const hitCode = lib + `
 fn fineSurf(id: u32, ro: vec3f, rd: vec3f, t: f32, fp: f32) -> Surf {
   let sl = fineSlots[(id >> 7u) & 0x7fffffu]; let k = id & 127u; fineWho = sl.x; let a = fineAt(sl.x); let c = fine[sl.y]; let ix = fine[sl.z + c.y + (k >> 2u)][k & 3u]; let vb = sl.z + c.x; let A = fineVertex(a, vb + (ix & 255u), true); let B = fineVertex(a, vb + ((ix >> 8u) & 255u), true); let C = fineVertex(a, vb + ((ix >> 16u) & 255u), true);
   let x = ro + rd * t; let e1 = B.w - A.w; let e2 = C.w - A.w; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-20); let s0 = x - A.w; let u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
-  var n = normalize(A.n * w + B.n * u + C.n * v); if (dot(n, rd) > 0.0) { n = normalize(n - rd * (dot(n, rd) + 0.02)); } let col = A.col * w + B.col * u + C.col * v; let body = (a.flags & FI_BODY) != 0u; fineHit = select(a.piece, movers[insts4[sl.x * 5u + 4u].y + A.bone], body);
+  var n = normalize(A.n * w + B.n * u + C.n * v); if (dot(n, rd) > 0.0) { n = normalize(n - rd * (dot(n, rd) + 0.02)); } let col = A.col * w + B.col * u + C.col * v; let body = (a.flags & FI_BODY) != 0u; fineHit = select(a.piece, movers[insts4[sl.x * 5u + 4u].y + (ix >> 24u)], body);
   // what it is made of: its piece's, patterns, print and all, on the face it is nearest to; or its own
   var s: Surf; let k2 = fineHit; let m = mats[select((insts4[sl.x * 5u + 4u].z >> 16u) & 255u, pieces[k2].mat & 255u, body)];
   if ((a.flags & FI_SELF) != 0u && !body) {
@@ -85,7 +85,7 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     const now = new Uint32Array(T.movers.length); let frames = 0; const many = l.scene.insts.length;
     return enc => {
       fit(); const hide = FINE_RASTER.hide && !FINE_RASTER.hold && frames++ > 0, stamp = (name: string) => { const t = g.timer.pass(name); return t ? { timestampWrites: t } : {}; }; let changed = frames < 3; T.movers.forEach((p, i) => { const s = lab.slots.get(p) ?? 0; if (now[i] !== s) { now[i] = s; changed = true; } }); if (changed) d.queue.writeBuffer(moved, 0, now);
-      { const f = new Float32Array(8), u = new Uint32Array(f.buffer); f[0] = FINE_RASTER.tau; u[1] = many; u[2] = MOST; f[3] = hide ? 1 : 0; f[4] = hzbSize[0]; f[5] = hzbSize[1]; f[6] = hzbViews.length; d.queue.writeBuffer(K, 0, f); } pickG ??= group(pickL, [fine, insts, moved, K, n, slots, again], [{ binding: 7, resource: hzb!.createView() }]);
+      { const f = new Float32Array(8), u = new Uint32Array(f.buffer); f[0] = FINE_RASTER.tau; u[1] = many; u[2] = MOST; f[3] = hide ? 1 : 0; f[4] = hzbSize[0]; f[5] = hzbSize[1]; f[6] = hzbViews.length; f[7] = FINE_RASTER.dice; d.queue.writeBuffer(K, 0, f); } pickG ??= group(pickL, [fine, insts, moved, K, n, slots, again], [{ binding: 7, resource: hzb!.createView() }]);
       const hold = FINE_RASTER.hold && frames > 2; if (hold) enc.clearBuffer(n, 12, 16); else enc.clearBuffer(n, 0, 124); if (!hold) { const p = enc.beginComputePass({ label: 'fine pick', ...stamp('fine pick') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, pickG); p.setPipeline(first!); p.dispatchWorkgroups(Math.ceil(many / 64)); p.end(); }
       const draw = (phase: 0 | 1) => { { const p = enc.beginComputePass({ label: 'fine indices', ...stamp('fine indices') }); p.setBindGroup(0, empty); p.setBindGroup(1, sayG[phase]!); p.setPipeline(expand!); p.dispatchWorkgroups(1024); p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); } const p = enc.beginRenderPass({ label: 'fine draw', colorAttachments: [{ view: g.view('id'), loadOp: 'load', storeOp: 'store' }], depthStencilAttachment: { view: g.view('depth'), depthLoadOp: 'load', depthStoreOp: 'store' }, ...(stamp('fine draw') as { timestampWrites?: GPURenderPassTimestampWrites }) }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, drawG); p.setPipeline(lab.cut < 1e8 ? putCut! : put!); p.setIndexBuffer(indices, 'uint32'); p.drawIndexedIndirect(args, 0); p.end(); };
       draw(0); { const p = enc.beginComputePass({ label: 'fine depth', ...stamp('fine depth') }); reduce(p); if (hide) { p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, pickG); p.setPipeline(second!); p.dispatchWorkgroups(Math.ceil(many / 64)); } p.end(); } if (hide) draw(1);
