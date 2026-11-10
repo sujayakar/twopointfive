@@ -10,6 +10,7 @@ What was made
 
 What was measured (A10G, 1920 x 1080 unless said)
 - **The raster is nearly free.** At half a pixel of error: 3.2 M triangles 0.69 ms in all (pick 0.20, indices 0.15, draw 0.28, depth 0.07); 2.3 M 0.52; 0.6 M 0.28. The finest column (2.8 M) smaller and smaller: 7.8 M a ms where 0.4 M are seen, 13.8 M a ms where none is bigger than a thousandth of a pixel. Small triangles do not begin to cost: there is no reason for a raster of our own.
+- **On a Mac** (Apple GPU, Metal 3, which one was not said; the page's Measure, 10 November; the depth pyramid not counted): 5.0 to 7.0 M a ms, about half the card, and no slowdown under a pixel there either: 5.3 M a ms where the column's triangles are seen, 7.0 where they are tiny. The yard at 9 m, half a pixel: 3.56 M triangles, pick 0.22, indices 0.14, draw 0.71 ms (the card: 3.50 M, 0.20, 0.16, 0.30); a pixel: 1.64 M, 0.56 ms in all. Shared corners draw twice as quickly as fetched ones. 1.3 M triangles of meshes made in 7.8 s.
 - **Corners shared by indices written each frame** beat corners fetched one by one: in the draw 1.3 to 1.9 times on full clusters, 4 times where a cluster is a stone of 32 triangles; with the writing of indices counted 1.1, 1.2 and 2.8 times. A triangle's first corner belongs to no other, and tells it (there is no triangle number in WebGPU).
 - **Left out**: what depth hides is worth 2.6 times fewer triangles close to the column, 1.05 over the floor. Cones are worth nothing on rough stone.
 - **Where it is**: at half a pixel half of what is drawn is within 0.13 px of the finest mesh, nine tenths within 0.45 (0.74 from 30 m). The finest column's triangles are 2 mm: under 0.3 mm a pixel they are seen as soft shapes, and the material's grain goes on from there.
@@ -26,4 +27,4 @@ Traps
 - A depth pyramid whose mips round down is read by shifting the pixel, not by scaling 0 to 1.
 - Waiting for each frame lets the GPU's clock fall by half: keep some in flight.
 
-Left open: brightness of coarse levels (above), and rims of reliefs, which are simplified each on its own; swaps of a tenth of the error move 1 % of pixels by 12 of 255 (not looked at in motion); building takes 20 to 45 s in one thread; no Mac has been asked.
+Left open: brightness of coarse levels (above), and rims of reliefs, which are simplified each on its own; swaps of a tenth of the error move 1 % of pixels by 12 of 255 (not looked at in motion); building takes 20 to 45 s in one thread; what rays cost on a Mac has not been asked.
