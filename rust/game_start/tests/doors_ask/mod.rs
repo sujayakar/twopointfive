@@ -477,7 +477,7 @@ impl DoorsAsk for Play {
         self.g.dr[d].leaf.angle = s * rad;
     }
     fn hung_toward(&mut self, d: DoorId, toward: [f64; 2]) {
-        if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None, None); }
+        if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None); }
     }
     fn post_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].post).map(|p| [p[0], p[2]]) }
     fn there_of(&self, gd: GuardId) -> String { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map_or(String::new(), |a| self.g.tab.orders_assignment[a].there.words.clone()) }

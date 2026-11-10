@@ -141,7 +141,7 @@ pub fn wall_charge_row_words(g: &crate::game::Game, seat: &crate::seats::SeatRef
 /// The refusal's words, with none to set.
 pub(super) fn wall_charge_none_words(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     if seat.wall_charge.carried.is_some() {
-        if seat.wall_charge.brought == Some(0.0) { return String::from(crate::words::wg(g, &"nobody brought a wall charge.", &"no wall charge carried.")); }
+        if seat.wall_charge.brought == Some(0.0) { return String::from("nobody brought a wall charge."); }
         return String::from("no wall charge left.");
     }
     if wall_charge_price(g, seat) > 1.0 && seat.door_tools.charges > 0.0 { String::from("not enough charge for a wall.") } else { String::from("no charges left.") }

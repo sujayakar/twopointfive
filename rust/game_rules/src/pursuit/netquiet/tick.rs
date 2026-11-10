@@ -16,11 +16,6 @@ fn lines_of(kind: LineKind) -> Vec<String> {
     lines().get(String::from(kind.as_str())).cloned().unwrap_or_default()
 }
 
-///  a line as it is said now, by the line it stands for
-fn line_now(t: &str) -> Option<String> {
-    lines_now().get(String::from(t)).cloned()
-}
-
 /// `KINDS.indexOf(kind)`
 fn kind_index(kind: LineKind) -> f64 {
     KINDS.iter().position(|k| *k == kind).map_or(-1.0, |i| i as f64)
@@ -146,7 +141,7 @@ fn owe(n: &mut crate::netquiet::Mind, kind: crate::netquiet::LineKind, name: &st
 
 /// he says a line of the kind's pool
 fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind, name: &str, radio: bool) {
-    let pool: Vec<String> = lines_of(kind).into_iter().map(|t| line_now(&t).unwrap_or(t)).collect();
+    let pool = lines_of(kind);
     let len = pool.len() as f64;
     let at = js::rem(m::floor(crate::dice::draw_of(g, "netquiet::speak#1", gd) * len), len) as usize;
     let text = pool[at].replace("{name}", name);
@@ -1051,13 +1046,6 @@ mod tests {
         n.whip_at = Some([1.0, 0.0, 1.0]);
         n.whip_t = 1.0;
         assert!(whipping(&mut g, gd));
-    }
-
-    #[test]
-    fn every_reworded_line_stands_for_a_line_of_a_pool() {
-        for was in lines_now().keys() {
-            assert!(KINDS.iter().any(|k| lines_of(*k).contains(&was)), "{}", was);
-        }
     }
 
     #[test]

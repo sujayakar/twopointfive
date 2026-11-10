@@ -215,7 +215,7 @@ pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate:
         return of(Some(a), None);
     }
     if let Some((a, who)) = dirty { return of(Some(a), Some(who)); }
-    let text: &str = if !any { crate::words::wg(g, &"nobody's carrying one.", &"none with them.") } else if !asked { "not ready." } else if close { "too close to arm." } else { "no shot from here." };
+    let text: &str = if !any { "nobody's carrying one." } else if !asked { "not ready." } else if close { "too close to arm." } else { "no shot from here." };
     of(None, Some(String::from(text)))
 }
 

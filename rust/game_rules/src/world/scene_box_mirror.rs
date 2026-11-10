@@ -829,12 +829,6 @@ fn flags_from(flags: f64, word: f64) -> f64 {
     (f ^ ((f & js::to_i32(mirrored())) ^ js::to_i32(word))) as f64
 }
 
-/// Leaf i of list 0 as the module's rule left it → its box. → the yaw.
-pub fn box_mirror_follow_leaf(g: &mut crate::game::Game, i: f64, b: BoxId) -> f64 {
-    let r = box_mirror_leaf_row(g, i);
-    box_mirror_follow_row(g, b, &r)
-}
-
 /// A leaf's row as leafRow read it → its box, the same writes as followLeaf. → the yaw.
 pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> f64 {
     let x = seam_box(g, b);

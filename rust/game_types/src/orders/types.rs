@@ -340,7 +340,6 @@ pub struct OrderDef {
     /// the word's own row: F gives it with the ring up, and it has no wedge
     pub word: bool,
     pub ack: Option<Vec<String>>,
-    pub ack_now: Option<Vec<String>>,
     pub free: Option<bool>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
@@ -355,7 +354,6 @@ impl Default for OrderDef {
             listed: None,
             word: false,
             ack: None,
-            ack_now: None,
             free: None,
             stands_in: None,
         }

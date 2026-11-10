@@ -92,7 +92,7 @@ pub(super) fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKe
     if list.is_empty() { return b; }
     let i = js::rem(crate::math_dice::hash_str(&alloc::format!("{}|room|{}", ctx.who, sc.id)), list.len() as f64) as usize;
     let r = &list[i];
-    Beat { sam: r.sam.clone(), sam_now: None, him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
+    Beat { sam: r.sam.clone(), him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
 }
 
 /// The man's line off a beat for this man; `None` if it does not resolve.

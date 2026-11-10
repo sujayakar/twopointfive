@@ -6,31 +6,27 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A wait's first line by why: `wg(LINES_NOW.wait[why] ?? LINES.wait[why], LINES.wait[why])`.
-fn said_wait(g: &Game, why: Why) -> String {
-    let (was, now) = (lines().wait, lines_now().wait);
-    let (n, w) = match why {
-        Why::Lit => (now.lit, was.lit),
-        Why::Near => (now.near, was.near),
-        Why::Long => (now.long, was.long),
-        Why::Open => (now.open, was.open),
-        Why::Door => (now.door, was.door),
-    };
-    let n = n.unwrap_or_else(|| w.clone());
-    crate::words::wg(g, &n, &w)
+/// A wait's first line by why.
+fn said_wait(why: Why) -> String {
+    let l = lines().wait;
+    match why {
+        Why::Lit => l.lit,
+        Why::Near => l.near,
+        Why::Long => l.long,
+        Why::Open => l.open,
+        Why::Door => l.door,
+    }
 }
-/// A wait's second line by why: `wg(LINES_NOW.nag[why] ?? LINES.nag[why], LINES.nag[why])`.
-fn said_nag(g: &Game, why: Why) -> String {
-    let (was, now) = (lines().nag, lines_now().nag);
-    let (n, w) = match why {
-        Why::Lit => (now.lit, was.lit),
-        Why::Near => (now.near, was.near),
-        Why::Long => (now.long, was.long),
-        Why::Open => (now.open, was.open),
-        Why::Door => (now.door, was.door),
-    };
-    let n = n.unwrap_or_else(|| w.clone());
-    crate::words::wg(g, &n, &w)
+/// A wait's second line by why.
+fn said_nag(why: Why) -> String {
+    let l = lines().nag;
+    match why {
+        Why::Lit => l.lit,
+        Why::Near => l.near,
+        Why::Long => l.long,
+        Why::Open => l.open,
+        Why::Door => l.door,
+    }
 }
 
 /// Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first).
@@ -526,7 +522,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
             man.why = why;
             man.wait_t = now;
             man.nagged = false;
-            let line = said_wait(g, why);
+            let line = said_wait(why);
             cue(g, gd, man, &line, None);
         }
         if mode == Mode::Cross {
@@ -540,7 +536,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
         man.why = why;
     }
     if man.mode == Mode::Wait && !man.nagged && now - man.wait_t >= k_.nag_secs && !(now >= man.voice_t && now - man.voice_t < 3.0) {
-        let line = said_nag(g, man.why);
+        let line = said_nag(man.why);
         man.nagged = cue(g, gd, man, &line, Some(true));
     }
 }

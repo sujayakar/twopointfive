@@ -233,10 +233,9 @@ fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescuef
     crate::rescue::rescue_note(g, &note);
     if n > 0.0 { return; }   // (a man's second errand is not announced: one line a man)
     let text: &str = match goal {
-        Goal::Room => crate::words::w(g, &"it's gone quiet in there — I'm going in for them!"),
+        Goal::Room => "it's gone quiet in there — I'm going in for them!",
         Goal::Side => {
-            let now = crate::words::wg(g, &"going around — I'll take the other door!", &"going round — I'll take the other door!");
-            crate::words::w(g, &now)
+            "going around — I'll take the other door!"
         }
         Goal::Out => "on the way out — they don't leave with the hostages!",
         Goal::Noise => "moving on that noise — keep them boxed in!",

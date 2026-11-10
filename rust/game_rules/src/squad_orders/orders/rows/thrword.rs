@@ -29,8 +29,7 @@ fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let ops = crate::doortools::door_tools_held_on(g, &crate::seats::here(g), t, men);
     if ops.iter().any(|&o| g.tab.doortools_door_op[o].word.is_none()) { return Ok(()); }
-    let (now, was) = (String::from("nobody's holding that door."), String::from("nobody is holding that door."));
-    Err(Some(crate::words::wg(g, &now, &was)))
+    Err(Some(String::from("nobody's holding that door.")))
 }
 
 /// doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`

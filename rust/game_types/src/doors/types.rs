@@ -65,8 +65,6 @@ pub struct Leaf {
     pub press_t: f64,
     pub solid_t: f64,
     #[is(10.0)] pub open_t: f64,
-    /// times an angle was turned to the side it opens into
-    pub mirrored: f64,
 }
 /// how it is being driven, and by whom
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -198,7 +196,6 @@ pub struct Door {
     pub leaf_h: V3,
     pub leaf_marks: Option<Vec<crate::scene_markings::MarkingDef>>,
     pub def: crate::doors::DoorDef,
-    #[is([0.0, 1.0, 0.0])] pub pos_at: V3,
     pub frame_centre: V3,
 }
 
@@ -217,7 +214,6 @@ pub struct Doors {
     pub list: Vec<DoorId>,
     pub rounds: f64,
 }
-
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SIDEKICK {
@@ -279,8 +275,6 @@ pub const DRIVEN_SECS: f64 = 0.25;
 pub const SHUT_HOME: f64 = 0.05;
 
 pub const FLOOR_KEY: &str = "floor";
-
-pub const MAN_SIDE: f64 = 3.0;
 
 pub const MAN_FOLDED: f64 = 4.0;
 

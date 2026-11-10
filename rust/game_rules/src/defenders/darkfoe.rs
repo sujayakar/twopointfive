@@ -320,7 +320,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
                 blind_for: 0.0,
                 moves: 0.0,
                 since: k.again_secs,
-                to: None,
             });
         }
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
@@ -383,7 +382,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
         };
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
         s.moves += 1.0;
-        s.to = Some(v3::copy(to.spot));
         walk(g, d, to.spot);
     }
 }

@@ -184,13 +184,11 @@ fn ring_free(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// his hands are on a choice or a verb
 pub fn hands_busy(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    let pl = seat.player;
     (g.sets[seat.id].hand.sel.open && !ring_free(g, seat)) || g.sets[seat.id].hand.sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 
 /// is there anything here the back key would back out of
 pub fn backable_interact(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    let pl = seat.player;
     g.sets[seat.id].hand.sel.open || g.sets[seat.id].hand.sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 

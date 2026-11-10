@@ -7302,3 +7302,26 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
     (an.feet.step_l, an.feet.step_r) = (foot[0], foot[1]);
     code
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every carriage and sway rides on these: a follower that passed its mark would show as a wobble, and one that went by the frame would change with the machine.
+    #[test]
+    fn a_follower_gets_there_without_passing_it_at_any_frame_rate() {
+        let mut s = Spring { x: 0.3, v: 0.0 };
+        let mut last = s.x;
+        for _ in 0..120 {
+            spring_step(&mut s, 1.0, 16.0, 1.0 / 60.0);
+            assert!(s.x >= last - 1e-9 && s.x <= 1.0 + 1e-9, "it went from {last} to {}", s.x);
+            last = s.x;
+        }
+        assert!((last - 1.0).abs() < 1e-3, "two seconds on it is at {last}");
+        // one long frame or four short ones: the same place and the same speed
+        let (mut one, mut four) = (Spring { x: 0.0, v: 2.0 }, Spring { x: 0.0, v: 2.0 });
+        spring_step(&mut one, 1.0, 16.0, 1.0 / 15.0);
+        for _ in 0..4 { spring_step(&mut four, 1.0, 16.0, 1.0 / 60.0); }
+        assert!((one.x - four.x).abs() < 1e-9 && (one.v - four.v).abs() < 1e-9, "{} {} against {} {}", one.x, one.v, four.x, four.v);
+    }
+}

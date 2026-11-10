@@ -416,7 +416,7 @@ fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt: f6
                     clear_path(g, gd);
                     if !g.tab.tactics_role[role].said_set {
                         g.tab.tactics_role[role].said_set = true;
-                        let line: &str = crate::words::wg(g, &"set — can't get any farther around", &"set — as far round as I get");
+                        let line: &str = "set — can't get any farther around";
                         crate::game::game_say(g, gd, line, Some(true), None);
                     }
                 }

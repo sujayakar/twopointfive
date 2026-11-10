@@ -370,7 +370,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let who = if hostages { Some(String::from("hostages")) } else { door_tools_frag_behind(g, d, side, &men) };
         if let Some(who) = who {
             let line = if who == "hostages" { String::from("hostages — no frag. going in.") }
-                else if who == "you" { String::from(crate::words::wg(g, &"you're in there — no frag. going in.", &"you are in there — no frag. going in.")) }
+                else if who == "you" { String::from("you're in there — no frag. going in.") }
                 else { format!("{} is in there — no frag. going in.", who) };
             say(g, lead, &line);
             o!(g, op).bang_held = false;
@@ -381,7 +381,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
             return;
         }
     } else if door_tools_sam_behind(g, d, side) {
-        let line = crate::words::wg(g, &"you're in there — no bang. going in.", &"you are in there — no bang. going in.");
+        let line = "you're in there — no bang. going in.";
         say(g, lead, line);
         o!(g, op).bang_held = false;
         door_tools_refund(g, crate::doortools::DoorToolsCan::Bang);
@@ -427,7 +427,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
                 door_tools_beat(g, op, &format!("{} waits: the door is in the way ({} rad)", tag, js::to_fixed(angle, 2)));
             }
             if t - o!(g, op).frag_way_t.unwrap() < g.k.doortools.frag_way_wait { return; }
-            let line = crate::words::wg(g, &format!("the door's in the way — no {}. going in.", what), &format!("door is in the way — no {}. going in.", what));
+            let line = format!("the door's in the way — no {}. going in.", what);
             say(g, th, &line);
             o!(g, op).bang_held = false;
             o!(g, op).frag = Some(false);
@@ -1125,7 +1125,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
                 if !locked { door_tools_shove(g, op); }
             }
             if t - thr!(g, op).shut_t.unwrap() < g.k.doortools.frag_way_wait { return; }
-            let line = crate::words::wg(g, &"the door's in the way — no bang. going in.", &"door is in the way — no bang. going in.");
+            let line = "the door's in the way — no bang. going in.";
             say(g, th, line);
             door_tools_beat(g, op, "can held");
             thr!(g, op).shut_t = None;

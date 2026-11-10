@@ -144,9 +144,7 @@ pub const SKY_FLASH_K: f64 = 0.045;
 
 pub fn thunder_lines() -> Vec<String> { alloc::vec![String::from("lovely night for it."), String::from("that one was close."), String::from("glad I'm not out in that."), String::from("it's really coming down."), String::from("storm's right on top of us.")] }
 
-pub const THUNDER_OUT: &str = "no let-up, is there.";
-
-pub const THUNDER_OUT_GUIDE: &str = "it's not letting up, huh.";
+pub const THUNDER_OUT: &str = "it's not letting up, huh.";
 
 pub const BARK_COOLDOWN: f64 = 45.0;
 

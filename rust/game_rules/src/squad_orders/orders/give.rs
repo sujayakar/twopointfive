@@ -378,10 +378,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         g.sets[g.seat].orders.acks += 1.0;
         let lines: Vec<String> = match opts.and_then(|o| o.ack.clone()).filter(|a| !a.is_empty()) {
             Some(own) => vec![own],
-            None => {
-                let now = g.tab.orders_order_def[def].ack_now.clone().unwrap_or_else(|| ack.clone());
-                crate::words::wg(g, &now, &ack)
-            }
+            None => ack,
         };
         let n = men.len() as f64;
         let by = men[js::rem(k, n) as usize];

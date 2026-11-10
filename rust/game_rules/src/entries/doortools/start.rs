@@ -52,11 +52,6 @@ fn stacked_a(post: V3, face: f64, watch: V3, stance: crate::character::Stance, s
     }
 }
 
-/// `t` as canThresholdThen takes it
-fn can_t(t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsCanThresholdThenT {
-    match t { crate::orders::OrderTarget::Floor(x) => crate::doortools::DoorToolsCanThresholdThenT::Floor(x.clone()), crate::orders::OrderTarget::Door(x) => crate::doortools::DoorToolsCanThresholdThenT::Door(x.clone()), crate::orders::OrderTarget::None(x) => crate::doortools::DoorToolsCanThresholdThenT::None(x.clone()), crate::orders::OrderTarget::Foe(x) => crate::doortools::DoorToolsCanThresholdThenT::Foe(x.clone()) }
-}
-
 /// `t` as canThresholdThen takes it, from thresholdThen's own
 fn can_t_then(t: &crate::doortools::DoorToolsThresholdThenT) -> crate::doortools::DoorToolsCanThresholdThenT {
     match t { crate::doortools::DoorToolsThresholdThenT::Floor(x) => crate::doortools::DoorToolsCanThresholdThenT::Floor(x.clone()), crate::doortools::DoorToolsThresholdThenT::Door(x) => crate::doortools::DoorToolsCanThresholdThenT::Door(x.clone()), crate::doortools::DoorToolsThresholdThenT::None(x) => crate::doortools::DoorToolsCanThresholdThenT::None(x.clone()), crate::doortools::DoorToolsThresholdThenT::Foe(x) => crate::doortools::DoorToolsCanThresholdThenT::Foe(x.clone()) }
@@ -694,7 +689,7 @@ pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: cra
     let door = match t { Some(crate::doortools::DoorToolsCanThresholdThenT::Door(x)) => Some(x.door), _ => None };
     let ops = door_tools_threshold_held(g, &crate::seats::here(g), men, door);
     if ops.is_empty() {
-        let s: &str = crate::words::wg(g, &"nobody's holding that door.", &"nobody is holding that door.");
+        let s: &str = "nobody's holding that door.";
         return crate::doortools::DoorToolsCanThresholdThen::Text(String::from(s));
     }
     if what != crate::doortools::ThresholdThen::Bang { return crate::doortools::DoorToolsCanThresholdThen::Bool(true); }
@@ -703,7 +698,7 @@ pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: cra
         let (d, side, them) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.men.clone()) };
         let Some(who) = door_tools_can_behind(g, d, side, &them).filter(|s| !s.is_empty()) else { continue };
         if who == "you" {
-            let s: &str = crate::words::wg(g, &"you're behind that door.", &"you are behind that door.");
+            let s: &str = "you're behind that door.";
             return crate::doortools::DoorToolsCanThresholdThen::Text(String::from(s));
         }
         return crate::doortools::DoorToolsCanThresholdThen::Text(format!("{} is behind that door.", who));

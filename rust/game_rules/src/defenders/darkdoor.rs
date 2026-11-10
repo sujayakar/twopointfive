@@ -40,7 +40,7 @@ fn lit_r(r: crate::darkdoor::DarkRoom) -> crate::darkdoor::StandsLitR {
 /// one line of a kind from this man, the next of its pool by his own count: spoken, or on the net with the handset's chirp.
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind, radio: bool) {
     let (_, say, he, they) = *LINES.iter().find(|l| l.0 == kind).unwrap();
-    let extra: Pool = if g.team(gd) != crate::teams::Team::Guard { crate::words::w(g, &they) } else { he };
+    let extra: Pool = if g.team(gd) != crate::teams::Team::Guard { they.clone() } else { he };
     let mut pool: Vec<&'static str> = Vec::new();
     pool.extend_from_slice(say);
     pool.extend_from_slice(extra);

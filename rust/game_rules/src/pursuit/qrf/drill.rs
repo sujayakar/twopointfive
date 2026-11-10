@@ -454,8 +454,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let line = if running {
             format!("{} is taking too long — leave it, next", t.room)
         } else {
-            let word = crate::words::wg(g, &"into", &"onto");
-            format!("can't get {} the {} from here — next", word, t.room)
+            format!("can't get into the {} from here — next", t.room)
         };
         radio(g, Some(el[0]), &line);
         let at = g.time - RECLEAR_SECS + 30.0;
@@ -564,10 +563,9 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             }));
         }
     }
-    let the = crate::words::w(g, &"");
     let at = match fix_of(g) { Some(bf) => bf.pos, None => man_pos(g, lead) };
     let room = crate::dialogue::room_name(g, at);
-    radio(g, Some(lead), &format!("lost him. on me — re-form, we clear toward {}{}", the, room));
+    radio(g, Some(lead), &format!("lost him. on me — re-form, we clear toward {}", room));
     note(g, "regroup");
 }
 
@@ -700,7 +698,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
         let posts: Vec<String> = g.qrf.perim.as_ref().unwrap().men.iter().map(|p| p.post.name.clone()).collect();
         radio(g, Some(first), &format!("{} — going outside. {}, from the outside, lights on the doors", names.join(", "), posts.join(" and ")));
     } else {
-        let line = crate::words::wg(g, &"there's no outside team — the lights are all you get. watch the exits from inside", &"no outside team to be had — the lamps are all you get. watch the exits from inside");
+        let line = "there's no outside team — the lights are all you get. watch the exits from inside";
         control(g, line);
     }
     let (spawned, peeled) = { let p = g.qrf.perim.as_ref().unwrap(); (p.spawned, p.peeled) };
@@ -794,7 +792,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 let names: Vec<String> = up.iter().map(|u| u.1.clone()).collect();
                 radio(g, Some(first.0), &format!("perimeter set — eyes on {}. lights are up outside; nobody walks out of here", names.join(" and ")));
             } else {
-                let line = crate::words::wg(g, &"perimeter is what it is — lights up, no eyes outside. hold the exits from inside", &"perimeter is what it is — lamps up, no eyes outside. hold the exits from inside");
+                let line = "perimeter is what it is — lights up, no eyes outside. hold the exits from inside";
                 control(g, line);
             }
             note(g, &format!("perimeter-set:{}", up.len()));

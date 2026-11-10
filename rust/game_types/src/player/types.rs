@@ -126,7 +126,6 @@ pub struct WallHold {
     pub at_edge: f64,
     pub peek: f64,
     pub peek_dir: f64,
-    pub crouched: bool,
     pub take_t: f64,
     pub yaw0: Option<f64>,
     pub yaw_d: Option<f64>,

@@ -483,18 +483,16 @@ fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &st
     let members = g.tab.tactics_plan[plan].members.clone();
     for o in members {
         let Some(t) = crate::enemysquads::squad_look_since(g, o) else {
-            let moving = crate::words::wg(g, &"going around", &"moving round");
-            return format!("{} — coming at {} from {}", moving, who, place);
+            return format!("going around — coming at {} from {}", who, place);
         };
         since = m::min(since, t);
     }
     let team = g.tab.tactics_plan[plan].team;
     let seen = g.guards.iter().any(|&o| g.team(o) == team && g.gd[o].last_seen_t > since);
-    let moving = crate::words::wg(g, &"going around", &"moving round");
     if seen {
-        format!("{} — coming at {} from {}", moving, who, place)
+        format!("going around — coming at {} from {}", who, place)
     } else {
-        format!("{} — coming in from {}", moving, place)
+        format!("going around — coming in from {}", place)
     }
 }
 
