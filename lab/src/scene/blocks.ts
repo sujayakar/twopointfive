@@ -10,6 +10,13 @@ export function classOf(p: Piece): number {
   const e = [...p.half].sort((a, b) => a - b), size = e[1]! * 2; if (size >= FINEST / 2 && e[2]! * 2 >= FINEST * 2) return 3;       /* (a strip of wall over a door, a shelf's board: a sheet, however narrow) */
   return size < FINEST ? 0 : size < FINEST * 2 ? 1 : 3;
 }
+/** a limb is bent pieces, a wall is slabs: what is thick enough and joined to its like is as long as the whole run of them, and stays when that is long. (A thin thing may go however long it is) */
+export function joinRuns(ps: Piece[]): number {
+  const mid = (p: Piece) => [...p.half].sort((a, b) => a - b)[1]! * 2, could = ps.filter(p => !(p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.BEND | F.MESH)) && (p.lamp ?? -1) < 0 && mid(p) >= FINEST / 2), box = could.map(boundsOf), up = could.map((_, i) => i), top = (i: number): number => up[i] === i ? i : (up[i] = top(up[i]!));
+  const at = new Map<string, number[]>(), G = 1.28; could.forEach((p, i) => { const b = box[i]!; for (let x = Math.floor(b.mn[0] / G); x <= Math.floor(b.mx[0] / G); x++) for (let y = Math.floor(b.mn[1] / G); y <= Math.floor(b.mx[1] / G); y++) for (let z = Math.floor(b.mn[2] / G); z <= Math.floor(b.mx[2] / G); z++) { const k = `${p.mat} ${x} ${y} ${z}`, l = at.get(k); if (!l) { at.set(k, [i]); continue; } for (const j of l) { const q = box[j]!; if (top(i) !== top(j) && [0, 1, 2].every(a => b.mn[a]! <= q.mx[a]! + 0.005 && q.mn[a]! <= b.mx[a]! + 0.005)) up[top(i)] = top(j); } l.push(i); } });
+  const whole = new Map<number, { mn: number[]; mx: number[] }>(); could.forEach((_, i) => { const t = top(i), b = box[i]!, w = whole.get(t) ?? { mn: [9e9, 9e9, 9e9], mx: [-9e9, -9e9, -9e9] }; for (let a = 0; a < 3; a++) { w.mn[a] = Math.min(w.mn[a]!, b.mn[a]!); w.mx[a] = Math.max(w.mx[a]!, b.mx[a]!); } whole.set(t, w); });
+  let n = 0; could.forEach((p, i) => { const w = whole.get(top(i))!; if (classOf(p) !== 3 && Math.max(w.mx[0]! - w.mn[0]!, w.mx[1]! - w.mn[1]!, w.mx[2]! - w.mn[2]!) >= FINEST * 2) { p.stays = true; n++; } }); return n;
+}
 export interface Blocks { lo: V3; n: V3; /** a brick's number + 1, or 0 */ page: Uint32Array; bricks: Uint32Array; /** each cell's corner and level */ cells: Float32Array; /** where each is told of in bricks */ said: Uint32Array; many: number }
 
 /** which cells have anything in them */

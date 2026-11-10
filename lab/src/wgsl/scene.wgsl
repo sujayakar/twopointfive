@@ -16,7 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
-  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, 0, how hard the wind blows (1)
+  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, other dice (a study's), how hard the wind blows (1)
   tune: array<vec4f, 8>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
@@ -51,8 +51,11 @@ const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run
 var<private> rngState: u32;
-fn rngInit(p: vec2u, salt: u32) { rngState = pcg(p.x + pcg(p.y + pcg(frame.counts.z + pcg(salt + frame.counts.w)))); }
-fn rngKey(k: u32, salt: u32) { rngState = pcg(k + pcg(frame.counts.z + pcg(salt + frame.counts.w))); }
+const STAGE_BIT = 0u;
+/** other dice, for the stages a study names (low byte: which dice, above it: whose): how much of the picture is their chance */
+fn otherDice() -> u32 { let q = u32(frame.misc2.z); return select(0u, q & 255u, ((q >> 8u) & STAGE_BIT) != 0u); }
+fn rngInit(p: vec2u, salt: u32) { rngState = pcg(p.x + pcg(p.y + pcg(frame.counts.z + pcg(salt + frame.counts.w + 977u * otherDice())))); }
+fn rngKey(k: u32, salt: u32) { rngState = pcg(k + pcg(frame.counts.z + pcg(salt + frame.counts.w + 977u * otherDice()))); }
 var<private> qIndex: u32; var<private> qSeed: u32; var<private> qDim: u32;
 fn owen(x0: u32, seed: u32) -> u32 { var x = reverseBits(x0); x ^= x * 0x3d20adeau; x += seed; x *= (seed >> 16u) | 1u; x ^= x * 0x05526c56u; x ^= x * 0x53a22864u; return reverseBits(x); }
 fn sobol2(i0: u32) -> u32 { var i = i0; var r = 0u; var v = 0x80000000u; for (var k = 0u; k < 20u; k++) { if (i == 0u) { break; } if ((i & 1u) == 1u) { r ^= v; } i >>= 1u; v ^= v >> 1u; } return r; }
@@ -61,7 +64,7 @@ fn rnd() -> f32 { if (QUASI) { return quasi().x; } rngState = rngState * 7477964
 fn rnd2() -> vec2f { if (QUASI) { return quasi(); } return vec2f(rnd(), rnd()); }
 /** blue noise over the screen, stepped through the frames by the golden ratio: neighbours differ, and so do frames */
 fn blue2(p: vec2u, k: u32) -> vec2f {
-  let o = vec2u((k * 23u) & 63u, (k * 41u) & 63u);
+  let od = otherDice(); let o = vec2u((k * 23u + od * 13u) & 63u, (k * 41u + od * 37u) & 63u);
   let c = (p + o) & vec2u(63u); let i = c.y * 64u + c.x; let r = exF(u32(frame.misc2.y) + (i >> 1u)); let n = select(r.xy, r.zw, (i & 1u) == 1u);
   return fract(n + f32(frame.counts.z & 1023u) * vec2f(0.61803399, 0.75487767));
 }

@@ -40,6 +40,8 @@ export interface Stage {
 const SCALAR: Record<string, string> = { rgba32uint: 'u32', rg32uint: 'u32', r32uint: 'u32' };
 const UNFILTERABLE = new Set(['r32float', 'rgba32float', 'rg32float']);
 
+/** whose dice a study may throw anew, by name: 1 lamps, 2 wide bounce, 4 narrow, 8 kept light on surfaces, 16 in cells, 32 the air, 64 the rest */
+export const stageBit = (n: string) => /^(lamps)$/.test(n) ? 1 : n === 'gather' ? 2 : /^(mirror|shine)$/.test(n) ? 4 : /^cache/.test(n) ? 8 : n === 'cells' ? 16 : /^(air|haze|smoke)/.test(n) ? 32 : 64;
 export class Graph {
   readonly signals = new Map<string, Signal>();
   readonly buffers = new Map<string, GPUBuffer>();
@@ -99,7 +101,7 @@ export class Graph {
       let c = 'c'; if (spoilt) c = `select(c, vec4f(bitcast<f32>(0x7fc00000u | (p.x & 0u))), frame.counts.z == ${this.spoil!.frame}u && all(p / 8u == vec2u(4u)))`; if (guarded) c = `finite4(${c}, ${most})`; if (round) c = `round16(${c}, vec4u(a, a >> 13u, b, b >> 13u))`;
       out.push(`fn put_${v}(p: vec2u, c: vec4f) { ${round ? `let a = pcg(p.x + pcg(p.y + pcg(frame.counts.z + ${31 + 7 * salt++}u))); let b = pcg(a); ` : ''}textureStore(${v}, p, ${c}); }`); code = code.replaceAll(`textureStore(${v},`, `put_${v}(`);
     }
-    out.push(code); const all = tuned(out.join('\n')), whole = s.dice ? all.replace('const BLK_DICE = false;', 'const BLK_DICE = true;') : all; return s.quasi ? whole.replace('const QUASI = false;', 'const QUASI = true;') : whole;
+    out.push(code); const all = tuned(out.join('\n')).replace('const STAGE_BIT = 0u;', `const STAGE_BIT = ${stageBit(s.name)}u;`), whole = s.dice ? all.replace('const BLK_DICE = false;', 'const BLK_DICE = true;') : all; return s.quasi ? whole.replace('const QUASI = false;', 'const QUASI = true;') : whole;
   }
   async build(stages: Stage[]) {
     const d = this.g.device;
