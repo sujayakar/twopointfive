@@ -150,17 +150,7 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || !crate::scene_collision::nav_grid_walkable(g, foot, p) || crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], [bp[0], 0.4, bp[2]], None, None, None) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-                if let Some(s) = g.gd[o].body_duty.and_then(|d| d.spot) {
-                    if v3::dist_xz(s, p) < 0.9 { taken = true; break; }
-                }
-            }
-            if !taken { return p; }
+            if !crate::places::taken(g, gd, p, 0.9) { return p; }
         }
     }
     v3::copy(foot)
@@ -179,21 +169,7 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-                if let Some(d) = g.gd[o].body_duty {
-                    if d.stage == crate::game::GuardBodyDutyStage::Fan {
-                        if let Some(s) = d.spot {
-                            if v3::dist_xz(s, p) < 2.5 { taken = true; break; }
-                        }
-                    }
-                }
-            }
-            if taken { continue; }
+            if crate::places::taken(g, gd, p, 2.5) { continue; }
             paths += 1;
             if paths > 12 { return None; }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) { Some(path) if !path.is_empty() => path, _ => continue };
