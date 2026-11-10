@@ -26,12 +26,6 @@ pub struct Book {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NextRoom {
-    pub pos: V3,
-    pub face: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct StackRoomProbe {
     pub floor: bool,
 }

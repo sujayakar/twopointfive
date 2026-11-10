@@ -12,12 +12,6 @@ pub enum GoRow { None, Small, Big }
 pub enum ThresholdOut {
     Step { lead: GuardId, f: Option<crate::doortools::DoorToolsThrFar>, sl: crate::doortools::DoorToolsDoneItemSliceValue, sf: Option<crate::doortools::DoorToolsDoneItemSliceValue>, light: bool, name: String },
 }
-/// walkLen for one deal's worth of questions, each pair of places measured once; held in a local of the deal, never in a field
-#[derive(Clone, Debug)]
-pub enum Walks {
-    Memo { memo: JsMap<String, f64>, lim: f64 },
-}
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorTools {
     #[is(2.0)] pub charges: f64,
@@ -775,7 +769,6 @@ pub const LEAF_STEP: f64 = 0.1;
 
 pub const LEAF_COST: f64 = 4.0;
 
-pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc::vec![0.5, 2.4]] }
 
 pub const SAM_SHIFT: f64 = 0.35;
 
