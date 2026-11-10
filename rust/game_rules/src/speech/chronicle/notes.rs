@@ -412,10 +412,10 @@ pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option
 }
 
 /// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.
-pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<GuardId>, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
+pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, into_man: bool, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let t = now_of(g);
-    if hit_guard.is_some() { g.chronicle.counts.shots_near_men += 1.0; return None; }
+    if into_man { g.chronicle.counts.shots_near_men += 1.0; return None; }
     let mut near = false;
     let mut nearest = String::new();
     {
