@@ -31,10 +31,11 @@ with no module at all.
 
 1. **The hand.** `src/draw/hand.ts` samples keys, mouse and camera; `face_hand` takes it. What a player or a panel does that is no input
    (a setting, a kit, an order from a card) goes as a command: `src/draw/commands.ts`, read by `rust/game_start/src/host/command.rs`.
-2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one list of calls in order,
-   `step_seats_on_first` in `rust/game_rules/src/tick/game/tick.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
+2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one table of steps in order,
+   `STEPS` in `rust/game_rules/src/tick/game/steps.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
    on one man, then every man (`update_guard`), doors, furniture, destruction, air, lights, fire, devices, weather, items, glass, the fog,
-   the drawn bodies, the light meter. A new system is a line in that list.
+   the drawn bodies, the light meter. A new system is a row of it. `rust/game_start/steps.txt` says which
+   parts of the game each row writes, and the gate holds it to that; `hold steps` says what each costs.
 3. **What is drawn.** `rust/game_draw` fills sections: flat rows of numbers, one run a kind (men, lights, boxes, marks, fog, smoke, sky, view).
    Filling takes the game shared, so drawing cannot change it. `tools/draw/gen.ts` makes the page's offsets from the same declaration.
 4. **What is told.** The HUD's record comes from `rust/game_rules/src/tick/view/`, sounds and one-shot effects from

@@ -134,7 +134,7 @@ dressing (debris, smoke details) and uses relaxed simd and/or gpu". Today no cra
 and neither side may link the other. Inside the rules:
 
 - **Dress rows.** `g.m.dress.dress` is up by the start's flag on the page and the server, and down in a native test unless asked (`Opts.dress`).
-  `wind`, `moths`, `stature`, `fx`, `blast_feel`, `fixtures`, `net` and `cues` guard steps in `game/tick.rs`. Those steps write state, so hosts of one
+  `wind`, `moths`, `stature`, `fx`, `blast_feel`, `fixtures`, `net` and `cues` guard steps in `game/steps.rs`. Those steps write state, so hosts of one
   game must agree.
 - **The picture's own.** A field a host may lack or fill differently is `#[bytes(skip)]`, as `fog_picture`, `mark_set` and `feel` are.
 
@@ -147,7 +147,7 @@ and neither side may link the other. Inside the rules:
 ## To change it
 
 - **A module:** a `pub mod` line in `game_types/src/lib.rs` with its `types.rs`; `pub mod` in its system's
-  `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a line in `step_seats_on_first`; a test.
+  `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a row of `STEPS`; a test.
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
   A seat's field also goes in `SeatRef`.
 - **A column:** a field of its part in `rust/sim`, inside its size assert. A new part is a `State` field, a `PARTS` row and a `PART_NAMES` name

@@ -50,7 +50,7 @@ their code is in `frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.r
 A teammate on a script, or a man of the response team on his, has his senses kept by that system (`kept_elsewhere`).
 
 **The layers, as far as they exist.** Sense and belief are one step: a sense moves his mind through `mind.rs` as it runs. Groups think in their own
-ticks in `step_seats_on_first` (`game/tick.rs`), before any man's frame: `squads_tick`, `squad_orders_tick`, `room_fight_tick`, `lanes_tick`,
+steps in the tick's table (`STEPS`, `game/steps.rs`), before any man's frame: `squads_tick`, `squad_orders_tick`, `room_fight_tick`, `lanes_tick`,
 `frag_tick` and others. They answer by setting his script, his flags and their own rows. Then each man's whole frame runs before the next man's.
 Decide and act are together in `lent` and `behave::act`.
 
