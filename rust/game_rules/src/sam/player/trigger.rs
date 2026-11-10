@@ -120,7 +120,7 @@ fn launcher(g: &mut Game, t: Tick, go: Go, blocked: bool, was: Option<RifleAttac
     if pressed && !begun { at_the_gun(g, c, "dryFire", 0.4); }
     if !kept && !begun { return None; }
     if owed { g.pl[pl].launch_held = Some(load); return None; }
-    let from = crate::rig_props::sc20k_launcher_muzzle(g, c, None);
+    let from = crate::rig_props::sc20k_launcher_muzzle(g, c);
     let seat = crate::seats::here(g);
     let point = match load {
         RifleAttachment::Ring => crate::launcher::ring_aim_point(g, &seat, from),
