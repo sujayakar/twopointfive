@@ -14,7 +14,7 @@ import { LOOSE } from './stages/loose';
 import ltc from './ltc.json';
 import { JOIN_ROWS } from './joins';
 import { SKY_ROWS, TROD_ROWS } from './scene/skymap';
-import { layBlocks, blockRows, classOf, type Blocks } from './scene/blocks';
+import { layBlocks, blockRows, classOf, joinRuns, type Blocks } from './scene/blocks';
 
 /** how many pieces may yet come to stand (what is left of broken walls), how many may yet move (rubble), and rows kept for the planes and marks of each */
 export const SPARE = { stand: 480, move: 160, rows: 14 } as const;
@@ -30,7 +30,7 @@ export class SceneGpu {
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture, airRowsN = 0, heights: Float32Array | null = null, ripN = 1) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
     // ---- what stands: pieces in the tree's order
-    for (const p of world.pieces) if (p.ghost) p.flags |= F.MESH; const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8, s.map(classOf))), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
+    for (const p of world.pieces) if (p.ghost) p.flags |= F.MESH; joinRuns(world.pieces); const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8, s.map(classOf))), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
     // ---- leaves, planes, marks share one buffer
     if (!world.clusters.some(c => c.leaves.length === 1)) world.clusters.push({ leaves: [{ at: [0, 0, 0], n: [0, 1, 0], t: [1, 0, 0], size: 1, tone: 0.55 }], kind: 0 });
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;
