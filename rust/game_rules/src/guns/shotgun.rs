@@ -51,11 +51,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), &rest, &mut shell);
         i += 1.0;
     }
-    let mut l = 0;
-    while l < shell.late.len() {
-        crate::combat::run_shell_late(g, &shell.late[l]);
-        l += 1;
-    }
+    for r in &shell.late { crate::combat::round_in(g, r); }
     for (c, h) in shell.men.iter() {
         if h.down { continue; }
         g.stats.shotgun.peppered += 1;
