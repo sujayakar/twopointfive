@@ -11,7 +11,7 @@ const MAT_STRIDE: u32 = 4u;
 fn boxAlbedo(i: u32) -> vec3f { return boxMat[MAT_BASE + i * 4u + 0u].xyz; }
 fn boxCutHeight(i: u32) -> f32 { return boxMat[MAT_BASE + i * 4u + 0u].w; }   // above this height it is hidden from the eye, where it is cut away
 fn boxEmits(i: u32) -> vec3f { return boxMat[MAT_BASE + i * 4u + 1u].xyz; }
-fn boxFinishWord(i: u32) -> f32 { return boxMat[MAT_BASE + i * 4u + 1u].w; }   // its roughness to 1, 2 for a metal, 4 for an anisotropic one, and 8 of its look's word (what it is made of, whether it moves, a number of its own)
+fn boxFinishWord(i: u32) -> f32 { return boxMat[MAT_BASE + i * 4u + 1u].w; }
 fn boxRot(i: u32) -> vec4f { return boxMat[MAT_BASE + i * 4u + 2u]; }
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[MAT_BASE + i * 4u + 3u].xyz; }   // the colour a ray that does not see its marks finds
 fn boxMarkGain(i: u32) -> f32 { return boxMat[MAT_BASE + i * 4u + 3u].w; }   // what its marks' light is multiplied by

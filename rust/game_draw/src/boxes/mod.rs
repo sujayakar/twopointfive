@@ -22,6 +22,26 @@ pub const MAX: usize = 4096;
 /// a move longer than this in one tick is a cut, and is not drawn through (metres)
 const SNAP: f64 = 1.5;
 
+game::packed! {
+    /// a box's word: its bits, whose it is, and the first row (from 1) of its marks
+    pub struct BoxWord: u32 {
+        low: 0, 8;
+        owner: 8, 8;
+        high: 16, 2;
+        mark: 18, 14;
+    }
+}
+game::packed! {
+    /// its finish: its roughness, whether it is bare metal and anisotropic, what it is made of, whether it moves, and a number of its own that shifts its map
+    pub struct Finish: f32 over rough {
+        metal: 1, 1;
+        aniso: 2, 1;
+        stuff: 3, 5;
+        moves: 8, 1;
+        own: 9, 6;
+    }
+}
+
 section! {
     /// a box's place
     pub struct Geo {
@@ -31,8 +51,7 @@ section! {
         pub rot: Half2,
         /// its half sizes
         pub h: [f32; 3],
-        /// its bits; whose it is in the second byte; from bit 18 the first row (from 1) of its marks
-        pub flags: u32,
+        pub flags: BoxWord,
     }
 }
 section! {
@@ -42,8 +61,7 @@ section! {
         /// above this height it is hidden from the eye, where it is cut away
         pub cut_height: f32,
         pub emits: [f32; 3],
-        /// its roughness to 1, 2 for a metal, 4 for an anisotropic one, and 8 of its look's word (what it is made of, whether it moves, a number of its own)
-        pub finish_word: f32,
+        pub finish_word: Finish,
         pub rot: [f32; 4],
         /// the colour a ray that does not see its marks finds
         pub albedo_sec: [f32; 3],
@@ -207,7 +225,7 @@ impl Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
         for v in pack::sent(b, look).iter().chain(pack::emission(b, look.bared).iter()) { eat(v.to_bits()); }
-        eat(pack::finish(b, look).to_bits());
+        eat(pack::finish(b, false, look).0.to_bits() as u64);
         eat(pack::gain(b, look.bared).to_bits());
         eat(b.owner.to_bits());
         eat(b.stuff.map_or(99, |s| s as u64));

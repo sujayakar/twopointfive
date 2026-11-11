@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2018466319;
+export const LAYOUT = 3458102093;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -277,7 +277,7 @@ export const enum Geo {
   rot = 3,
   /** f32 × 3: its half sizes */
   h = 4,
-  /** u32: its bits; whose it is in the second byte; from bit 18 the first row (from 1) of its marks */
+  /** u32 */
   flags = 7,
   /** words a row */
   row = 8,
@@ -291,7 +291,7 @@ export const enum Mat {
   cutHeight = 3,
   /** f32 × 3 */
   emits = 4,
-  /** f32: its roughness to 1, 2 for a metal, 4 for an anisotropic one, and 8 of its look's word (what it is made of, whether it moves, a number of its own) */
+  /** f32 */
   finishWord = 7,
   /** f32 × 4 */
   rot = 8,

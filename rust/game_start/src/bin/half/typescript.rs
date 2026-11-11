@@ -28,7 +28,7 @@ pub fn said(doc: &[&str]) -> String { doc.iter().map(|l| l.trim()).collect::<Vec
 fn words(ty: &str) -> (usize, &str) {
     match ty.trim().strip_prefix('[').and_then(|t| t.strip_suffix(']')).and_then(|t| t.rsplit_once(';')) {
         Some((t, n)) => { let (k, kind) = words(t); (k * n.trim().parse::<usize>().unwrap_or_else(|_| panic!("a row's field of {ty}")), kind) }
-        None => match ty.trim() { "Half2" => (1, "two halves"), t => (1, t) },
+        None => match ty.trim() { "Half2" => (1, "two halves"), t => (1, game_draw::gpu::PACKED.iter().find(|p| p.name == t).map_or(t, |p| if p.float { "f32" } else { "u32" })) },
     }
 }
 /// a row's offsets, in words
@@ -51,6 +51,14 @@ fn gpu() -> String {
     let told: Vec<&str> = game_draw::sections().iter().map(|s| s.1.name).collect();
     let mut l = vec![format!("{WRITTEN} from rust/game_draw/src/gpu.rs. To change a row a shader reads, change it there: the shader's own struct is written with this (src/render/shaders/rows.wgsl).")];
     for s in game_draw::gpu::shaded() { if !told.contains(&s.row.name) { l.push(String::new()); l.extend(offsets(&s.row)); } }
+    for p in game_draw::gpu::PACKED {
+        if p.float { continue; }   // (the module's alone to write)
+        let (name, mask) = (small(p.name), |bits: u32| (1u64 << bits) - 1);
+        l.extend([String::new(), format!("/** {} */", said(p.doc)),
+            format!("export const {name} = ({}): number => ({}) >>> 0;", p.parts.iter().map(|x| format!("{}: number", camel(x.0))).collect::<Vec<_>>().join(", "),
+                p.parts.iter().map(|(n, at, bits)| format!("({} & {}) << {at}", camel(n), mask(*bits))).collect::<Vec<_>>().join(" | "))]);
+        for (n, at, bits) in p.parts { let n = camel(n); l.push(format!("export const {name}{} = (w: number): number => w >>> {at} & {};", n[..1].to_uppercase() + &n[1..], mask(*bits))); }
+    }
     let mut at = 0;
     let bases: Vec<String> = game_draw::gpu::BOX_MAT.iter().map(|(n, rows)| { let b = format!("{n} = {at}"); at += rows; b }).collect();
     l.extend([String::new(), "/** THE BOXES' MATERIAL BUFFER: where each of its tables begins, in rows of four floats, and how long it is */".into(), format!("export const enum BoxMat {{ {}, rows = {at} }}", bases.join(", ")), String::new()]);
