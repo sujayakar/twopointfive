@@ -490,7 +490,7 @@ pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             ch.aim_pitch = 0.0;
             g.gd[gd].speed = 0.0;
         }
-        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
+        crate::duty::hold(g, gd, false, "squad"); crate::duty::pin(g, gd, false, "squad");
         crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
         crate::mind::set(g, gd, 0.0, "squad"); crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; g.gd[gd].script = None;
         g.ch[c].anim.stance = if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady };

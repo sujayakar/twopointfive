@@ -401,7 +401,7 @@ pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crat
     }
     let after = if ducking_hides(g, gd) { g.k.suppression.displace_after } else { OPEN_BEAT };
     if g.cond[g.gd[gd].ch].sup.pinned_t > after
-        && !g.gd[gd].pinned
+        && !g.gd[gd].duty.pinned
         && g.gd[gd].standoff.is_none()
         && g.time - g.cond[g.gd[gd].ch].sup.displaced_at > g.k.suppression.displace_cooldown
     {
@@ -513,7 +513,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             let a = away + da;
             let p: V3 = [from[0] + m::sin(a) * r, 0.0, from[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
-            if g.gd[gd].stays_in_rooms && !crate::enemysquads::in_squad_rooms(g, gd, p) { continue; }
+            if g.gd[gd].duty.rooms && !crate::enemysquads::in_squad_rooms(g, gd, p) { continue; }
             if v3::dist_xz(p, threat) < m::max(d0 - 1.5, min_travel + 0.5) { continue; }
             let chest: V3 = [p[0], 0.9, p[2]];
             if !crate::scene_collision::segment_blocked(g, t, chest, None, None, None) { continue; }

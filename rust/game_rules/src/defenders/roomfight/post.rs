@@ -61,7 +61,7 @@ pub fn send_by(g: &mut Game, d: RoomfightDefId, leg: Leg, mut way: Vec<V3>, by: 
         by, way, kind: if leg.cover { DefMoveKind::Cover } else { DefMoveKind::Fallback }, door: leg.by, stays: leg.stays, tries: leg.tries, end: None,
         t: 0.0, stall_at: here, stall_t: 0.0, step_t: row.leg.step_t, left,
     };
-    crate::control::set_pinned(g, gd, false, crate::owner::name_of(by).unwrap_or("roomfight"));
+    crate::duty::pin(g, gd, false, crate::owner::name_of(by).unwrap_or("roomfight"));
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(first)), speed: Some(Some(leg.pace)), face: Some(leg.face), strafe: Some(Some(leg.face.is_some())), aim_at: Some(leg.aim),
         upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(leg.cover)),
@@ -140,8 +140,8 @@ pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {
         row.leg.left = None;
         row.free_at = now;
     }
-    crate::control::set_hold(g, gd, false, by);
-    crate::control::set_pinned(g, gd, false, by);
+    crate::duty::hold(g, gd, false, by);
+    crate::duty::pin(g, gd, false, by);
 }
 
 /// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix.
@@ -177,7 +177,7 @@ fn post_now(g: &Game, d: RoomfightDefId) -> PostLeft {
     let row = &g.tab.roomfight_def[d];
     let man = &g.gd[row.gd];
     PostLeft {
-        t: g.time, state: man.state, awareness: man.awareness, hold: man.hold, pinned: man.pinned, station: row.station, home: row.home, room: row.room, ev: row.ev.clone(),
+        t: g.time, state: man.state, awareness: man.awareness, hold: man.duty.holds, pinned: man.duty.pinned, station: row.station, home: row.home, room: row.room, ev: row.ev.clone(),
         watch: row.watch, want: row.want, pt: row.pt,
     }
 }
@@ -196,8 +196,8 @@ pub fn back_on(g: &mut Game, d: RoomfightDefId, wary: bool, by: &'static str) {
         if heard { a } else { m::min(0.45, a) }
     };
     crate::mind::set(g, gd, now, by);
-    crate::control::set_hold(g, gd, h.hold, by);
-    crate::control::set_pinned(g, gd, h.pinned, by);
+    crate::duty::hold(g, gd, h.hold, by);
+    crate::duty::pin(g, gd, h.pinned, by);
     let (state, seen) = (g.gd[gd].state, g.gd[gd].last_seen_t);
     let row = &mut g.tab.roomfight_def[d];
     row.mode = DefMode::Hold;

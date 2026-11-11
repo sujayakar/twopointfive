@@ -84,7 +84,7 @@ fn misses_raise_sams_own() {
         p.run(0.5);
         assert_eq!(p.g.cond[p.g.pl[p.g.player].ch].sup.v, 0.0, "seed {s}: he stands under nothing yet");
         (p.g.gd[a].state, p.g.gd[a].awareness, p.g.gd[a].last_known) = (GuardState::Alert, 1.0, Some([26.0, 0.0, 11.4]));
-        (p.g.gd[a].pinned, p.g.gd[a].hold) = (true, false);
+        (p.g.gd[a].duty.pinned, p.g.gd[a].duty.holds) = (true, false);
         let (mut peak, mut hits, mut misses, mut add_on_hit) = (0.0_f64, 0, 0, 0);
         let half = p.g.k.suppression.half_life;
         let mut last = p.g.time;
@@ -115,7 +115,7 @@ fn hunter(s: u32, start: [f64; 2], fix: [f64; 2], ago: f64) -> (Play, GuardId) {
     let gd = men[0];
     p.posted_calm(gd, start, fix);
     let h = &mut p.g.gd[gd];
-    (h.heard_up_to, h.state, h.awareness, h.react_t, h.last_known, h.hold) = (1e12, GuardState::Alert, 1.0, 0.0, Some([fix[0], 0.0, fix[1]]), false);
+    (h.heard_up_to, h.state, h.awareness, h.react_t, h.last_known, h.duty.holds) = (1e12, GuardState::Alert, 1.0, 0.0, Some([fix[0], 0.0, fix[1]]), false);
     h.last_seen_t = p.g.time - ago;
     game::guards::reset_chase(&mut p.g, gd);
     (p, gd)

@@ -662,7 +662,7 @@ fn sync_last_man(g: &mut crate::game::Game) {
 
 /// at his post: holding his room, on nobody's scripted leg
 fn posted(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
-    crate::roomfight::at_post(g, d) && g.gd[gd].hold && g.gd[gd].script.is_none()
+    crate::roomfight::at_post(g, d) && g.gd[gd].duty.holds && g.gd[gd].script.is_none()
 }
 
 /// once a frame, after morale's tick: the lines owed, the whip, a step of the last man's act

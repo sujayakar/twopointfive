@@ -111,7 +111,7 @@ fn alone_and_free_to_go(g: &mut Game, d: RoomfightDefId) -> bool {
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).moved_at > 6.0 && g.time - state_of(g).tried.get(d).copied().unwrap_or(-100.0) > 6.0 && !state_of(g).outs.iter().any(|o| o.def == d)
         && !g.fight.defs.iter().any(|&x| x != d && alive(g, x) && df(g, x).room == room && df(g, x).mode != mode_free)
-        && !g.gd[gd].stays_in_rooms
+        && !g.gd[gd].duty.rooms
 }
 
 /// Two of them in his eyes; else the team's boots at one of his room's doors, on a floor gone loud.

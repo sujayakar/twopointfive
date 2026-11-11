@@ -432,8 +432,8 @@ fn spawn_the_opposition(g: &mut Game, cast: &[CastRow]) -> Result<(), String> {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
             name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::default()
         })?;
-        crate::control::set_hold(g, gd, true, "rescue");
-        crate::control::set_pinned(g, gd, true, "rescue");
+        crate::duty::hold(g, gd, true, "rescue");
+        crate::duty::pin(g, gd, true, "rescue");
         g.staged.foes.push(gd);
         g.rescue.defs.set(gd, Def {
             role: c.role, in_room: c.in_room, mark: DefMark { aim_at: c.mark.aim_at },
@@ -483,8 +483,8 @@ fn spawn_the_team(g: &mut Game, s: &crate::scene_scenarios::RescueData) -> Resul
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;
-        crate::control::set_hold(g, gd, true, "rescue");
-        crate::control::set_pinned(g, gd, true, "rescue");
+        crate::duty::hold(g, gd, true, "rescue");
+        crate::duty::pin(g, gd, true, "rescue");
         g.gd[gd].trained = true;
         g.staged.team.push(gd);
         i += 1;

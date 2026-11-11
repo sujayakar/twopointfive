@@ -34,7 +34,7 @@ pub use entries::{autopilot, bigkit, doorpath, doortools, entrypoints, roomfit, 
 pub mod teammates;
 pub use teammates::{cleared, cover, irlaser, irlight, nvg, rearwatch, silent, sneak, spotted, teampace, unseen};
 pub mod people;
-pub use people::{attention, belief, civilians, condition, control, doze, flinch, floorseen, guards, morale, needs, owner, picture, runner, sense, startle, suppression, teams, mind};
+pub use people::{attention, belief, civilians, condition, control, doze, duty, flinch, floorseen, guards, morale, needs, owner, picture, runner, sense, startle, suppression, teams, mind};
 pub mod defenders;
 pub use defenders::{calmtorch, coverfire, darkdoor, darkfoe, digin, doorforce, gunhold, lanes, laststand, powerout, pressure, roomfight, smokebreak, wallreact};
 pub mod pursuit;

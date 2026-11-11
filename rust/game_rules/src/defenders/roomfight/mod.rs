@@ -26,5 +26,5 @@ use crate::v3::{self, Quat, V3};
 pub fn def_move_pt(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
     let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
     g.tab.roomfight_def[d].pt = to;
-    if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
+    if g.gd[gd].duty.gun == Some(old) { g.gd[gd].duty.gun = Some(to); }
 }

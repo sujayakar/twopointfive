@@ -470,11 +470,11 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
     let st = crate::close::Seat {
         at: match at { Some(a) => [a[0], 0.0, a[2]], None => [pos[0], 0.0, pos[2]] },
         face: face.unwrap_or(g.ch[c].body_yaw),
-        hold: match prev { Some(prev) => prev.hold, None => g.gd[gd].hold },
+        hold: match prev { Some(prev) => prev.hold, None => g.gd[gd].duty.holds },
         down: false,
     };
     seated_of(g).set(gd, st);
-    crate::control::set_hold(g, gd, true, "close");
+    crate::duty::hold(g, gd, true, "close");
     true
 }
 
@@ -483,7 +483,7 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
     let back = back.unwrap_or(false);
     let st = match seated_of(g).get(gd).copied() { Some(st) => st, None => return };
     seated_of(g).delete(gd);
-    crate::control::set_hold(g, gd, st.hold, "close");
+    crate::duty::hold(g, gd, st.hold, "close");
     let c = g.gd[gd].ch;
     if g.ch[c].anim.act.as_ref().map_or(false, |a| a.clip == sit_clip().clip) { g.ch[c].anim.act = None; }
     if back && st.down && !crate::condition::down(g, g.gd[gd].ch) {

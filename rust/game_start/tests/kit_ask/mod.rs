@@ -401,7 +401,7 @@ impl KitAsk for Play {
         let sam = self.sam_at();
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
+        (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.duty.pinned, m.duty.holds, m.foe) =
             (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(self.g.pl[self.g.player].ch));
         m.path.clear();
         m.path_goal = None;
@@ -422,7 +422,7 @@ impl KitAsk for Play {
         self.g.hand_at = Some([aim[0], 1.2, aim[1]]);
     }
     fn all_but_held(&mut self, gd: GuardId) {
-        for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.hold, m.pinned, self.g.cond[m.ch].blind_until) = (true, true, 1e9); } }
+        for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.duty.holds, m.duty.pinned, self.g.cond[m.ch].blind_until) = (true, true, 1e9); } }
     }
     fn aim_model(&mut self, on: bool) { self.g.tune.aim_model = on; }
     fn sam_round_at(&mut self, at: [f64; 3]) {
@@ -445,7 +445,7 @@ impl KitAsk for Play {
         self.g.ch[c].vel = [0.0; 3];
         (self.g.ch[c].body_yaw, self.g.ch[c].aim_yaw) = (yaw, yaw);
         let m = &mut self.g.gd[gd];
-        (m.hold, m.pinned, m.path_goal, m.state, m.awareness) = (false, false, None, GuardState::Patrol, 0.0);
+        (m.duty.holds, m.duty.pinned, m.path_goal, m.state, m.awareness) = (false, false, None, GuardState::Patrol, 0.0);
         m.path.clear();
         m.script = Some(game::game::GuardScript { goal: Some([goal[0], 0.0, goal[1]]), speed: Some(speed), upper: Some(game::character::UpperMode::Relaxed), ..game::game::GuardScript::default() });
     }
@@ -463,13 +463,13 @@ impl KitAsk for Play {
 
     fn camera_square(&mut self) { let c = self.host.cam; self.g.tab.camera[c].yaw = 0.0; game::camera::follow_camera_rebuild(&mut self.g, c); }
     fn no_wits(&mut self) { self.g.ai_enabled = false; }
-    fn man_posted(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.hold, m.pinned) = (true, true); }
+    fn man_posted(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.duty.holds, m.duty.pinned) = (true, true); }
     fn sam_carries(&mut self, tool: game::kit::BigKit) { let pl = self.g.player; self.g.pl[pl].big_kit = tool; }
     fn man_carries(&mut self, gd: GuardId, tool: game::kit::BigKit) { if let Some(mut e) = self.g.m.kit.man_of.get(gd).cloned() { e.kit.big = tool; self.g.m.kit.man_of.set(gd, e); } }
-    fn man_let_off_his_post(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.hold, m.pinned) = (false, false); }
+    fn man_let_off_his_post(&mut self, gd: GuardId) { let m = &mut self.g.gd[gd]; (m.duty.holds, m.duty.pinned) = (false, false); }
     fn man_calmed(&mut self, gd: GuardId) {
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.last_known, m.pinned, m.hold) = (GuardState::Patrol, 0.0, None, false, true);
+        (m.state, m.awareness, m.last_known, m.duty.pinned, m.duty.holds) = (GuardState::Patrol, 0.0, None, false, true);
         m.path.clear();
         self.g.alarm.episode = false;
         self.g.escalation = 0.0;
@@ -478,7 +478,7 @@ impl KitAsk for Play {
     fn man_up_on_a_post(&mut self, gd: GuardId, fix: [f64; 2]) {
         let t = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.hold, m.pinned, m.state, m.awareness, m.last_known, m.last_seen_t) = (false, true, GuardState::Alert, 1.0, Some([fix[0], 0.0, fix[1]]), t - 30.0);
+        (m.duty.holds, m.duty.pinned, m.state, m.awareness, m.last_known, m.last_seen_t) = (false, true, GuardState::Alert, 1.0, Some([fix[0], 0.0, fix[1]]), t - 30.0);
     }
     fn no_civilians(&mut self) { self.g.tune.civilians = false; self.g.civilians.clear(); }
     fn alone_with_charges(&mut self, n: f64) { game::doortools::door_tools_alone(&mut self.g, n); }
@@ -718,7 +718,7 @@ impl KitAsk for Play {
     fn man_goes_to_look(&mut self, gd: GuardId, at: [f64; 2]) {
         self.man_suspects(gd, at);
         let m = &mut self.g.gd[gd];
-        (m.react_t, m.search_t, m.hold, m.pinned) = (0.0, 0.0, false, false);
+        (m.react_t, m.search_t, m.duty.holds, m.duty.pinned) = (0.0, 0.0, false, false);
     }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }

@@ -484,7 +484,7 @@ impl Play {
         self.g.ch[c].aim_yaw = yaw;
         self.g.cond[c].down = state == GuardState::Dead;
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
+        (h.duty.holds, h.duty.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
     }
     /// Every man of the other side but these is down.

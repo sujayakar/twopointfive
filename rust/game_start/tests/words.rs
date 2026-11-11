@@ -32,11 +32,11 @@ fn a_write_moves_the_word_of_its_own_part() {
     assert_eq!(words(&mut p).len(), game::state_words::state_names().len());
     let gd = p.g.guards[0];
     assert_eq!(moved(&mut p, |g| g.time += 1.0), ["time"]);
-    assert_eq!(moved(&mut p, |g| g.gd[gd].hold = !g.gd[gd].hold), ["gd"]);
+    assert_eq!(moved(&mut p, |g| g.gd[gd].duty.holds = !g.gd[gd].duty.holds), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].path.push([1.0, 0.0, 1.0])), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.k.pressure.loud_secs += 1.0), ["k"]);
     // (a system's own slot, which only its module can name)
-    assert_eq!(moved(&mut p, |g| game::control::set_hold(g, gd, !g.gd[gd].hold, "here")), ["gd", "ctl"]);
+    assert_eq!(moved(&mut p, |g| game::mind::raise(g, gd, 0.5, "here")), ["gd", "ctl"]);
     // (a seat's set, of the seat that stands on Game and of the other)
     assert_eq!(moved(&mut p, |g| g.sets[g.seat].threat_proximity += 1.0), ["seats.threat_proximity"]);
     let other = p.g.seats[1];

@@ -404,7 +404,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
         g.gd[gd].standoff = None;
         g.gd[gd].muzzle_down = false;
     }
-    crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
+    crate::duty::hold(g, gd, true, "runner"); crate::duty::pin(g, gd, true, "runner");
     let e = known(g, gd);
     let mate = pick_mate(g, gd);
     if let Some(ma) = mate {
@@ -621,8 +621,8 @@ fn stays_dry_and_calm(g: &mut Game, gd: GuardId) {
     g.fa[w].chamber = 0.0;
     g.fa[w].mag = Some(0.0);
     g.fa[w].burst = None;
-    crate::control::set_hold(g, gd, true, "runner");
-    crate::control::set_pinned(g, gd, true, "runner");
+    crate::duty::hold(g, gd, true, "runner");
+    crate::duty::pin(g, gd, true, "runner");
     if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
     crate::mind::set(g, gd, 0.0, "runner");
     crate::mind::foe(g, gd, None, "runner");

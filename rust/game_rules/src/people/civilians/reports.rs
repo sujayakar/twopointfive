@@ -685,7 +685,7 @@ pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
-    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
+    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && man.duty.free() && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
 }
 
 /// passing pleasantries, one a floor at a time

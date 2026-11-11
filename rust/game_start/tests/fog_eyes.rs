@@ -155,7 +155,7 @@ fn no_teammate_walks_through_a_leaf_the_picture_has_shut() {
         let behind = [sam[0] * 2.0 - door[0], sam[1] * 2.0 - door[1]];
         p.point_at(behind);
         for _ in 0..(60 * 15) {
-            for &f in foes.iter() { p.g.gd[f].hold = true; p.g.gd[f].pinned = true; }
+            for &f in foes.iter() { p.g.gd[f].duty.holds = true; p.g.gd[f].duty.pinned = true; }
             p.frame();
             let (held, angle, shown) = p.leaf(&name);
             if angle.abs() > 0.3 { opened = true; }

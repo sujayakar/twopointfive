@@ -190,7 +190,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while gi < g.guards.len() {
         let x = g.guards[gi]; gi += 1;
         if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
-        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
+        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].duty.holds && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
         else if g.team(x).ours() && op_of(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
     let mut ei = 0;
@@ -286,8 +286,8 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
         if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
-        if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::control::set_hold(g, gd, true, "roomfight"); }
-        crate::control::set_pinned(g, gd, pinned0, "roomfight");
+        if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
+        crate::duty::pin(g, gd, pinned0, "roomfight");
     }
     for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }

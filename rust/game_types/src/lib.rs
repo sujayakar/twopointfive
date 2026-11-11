@@ -63,6 +63,7 @@ pub mod cmd { pub mod types; pub use types::*; }
 pub mod cmdring { pub mod types; pub use types::*; }
 pub mod combat { pub mod types; pub use types::*; }
 pub mod condition { pub mod types; pub use types::*; }
+pub mod duty { pub mod types; pub use types::*; }
 pub mod consts { pub mod types; pub use types::*; }
 pub mod cover { pub mod types; pub use types::*; }
 pub mod coverfire { pub mod types; pub use types::*; }
