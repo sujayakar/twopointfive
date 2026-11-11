@@ -4,7 +4,7 @@
 //                 Absent where the first picture never came back before the record was written (the page was left, or `waitMs` ran out): such a
 //                 load is known only up to its start card, and is never read as a fast one
 //   interactive   …to the start card being live · `shown` …to the first frame's GPU work being back (the first picture)
-//   script        …to the page's script starting (the HTML and the bundle fetched and parsed) · `device` the adapter and the device · `level` the level
+//   script        …to the page's script starting (the HTML and the bundle fetched and parsed) · `device` what was still to wait for of the adapter and the device, once the game stood · `level` the level
 //                 built · `gltf` the characters fetched and read · `game` the game made · `pipelinesMs` the wait on shader pipelines, with `pipelines`
 //                 (total · done · failed), the three `slowest` by label and `shaderText` · `firstFrameCpu` / `firstFrameGpu` the first frame
 //   marks, spans  ui/boot.ts's two tables whole (ms since the navigation's start by mark; ms by span, the shader groups' among them): a mark added there

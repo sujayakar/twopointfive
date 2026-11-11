@@ -145,15 +145,15 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 6. Thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
 7. The seed the game's draws are keyed by, before the men are made: what they are dealt is drawn under it.
-8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
+8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: the game's own
+   `game_new`.
 9. The moving state at home in the block (`settle`: the pose pool, the smoke grid).
-9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
 10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).
 12. A mission, where asked: the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's
     question, as a click on a row of the mission list starts it on a page. Refused words stop the start, unless `StartOpts.may_refuse` says to report them
     in `Stood.refused`.
-13. What the light under a roof is worked out from (`light_ready`).
+13. What the light under a roof is worked out from (`light_ready`), unless the host makes it in slices.
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the Input's frame
 ended. It answers what the step told its host (sounds, marks, lines said). `step` is the same with that list left on the game, for a host that draws

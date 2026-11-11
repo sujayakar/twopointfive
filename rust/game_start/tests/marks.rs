@@ -232,24 +232,21 @@ fn a_level_put_back_stops_a_blast_s_stages() {
     for _ in 0..60 { p.frame(); d.take(&p.g, want::events); assert_eq!(told(&d), 0, "a stage came after the level was put back"); }
 }
 
-/// THE RULE: the traffic map is one word for two texels over the floor; where a door stands the floor is walked; along a long wall stones gather, and a level's own map does not change as it is played.
+/// THE RULE: the traffic map is two bytes a texel over the floor; where a door stands the floor is walked; along a long wall stones gather, and a level's own map does not change as it is played.
 #[test]
 fn the_traffic_map_says_where_the_level_is_walked() {
     let mut p = office(13);
-    let mut d = Drawn::default();
-    d.take(&p.g, want::level_look);
-    assert_eq!(d.traffic.words.len(), 40 * 8 * 28 * 8 / 2);
-    let texel = |d: &Drawn, i: usize| (d.traffic.words[i / 2].w >> (i % 2 * 16)) & 0xffff;
+    let map = game_draw::traffic::map(&p.g);
+    assert_eq!(map.len(), 40 * 8 * 28 * 8 * 2);
     let at = |x: f64, z: f64| (z * 8.0) as usize * 320 + (x * 8.0) as usize;
     let door = &p.g.level.doors[0];
     let mid = [door.hinge[0] + door.closed_dir.cos() * door.width * 0.5, door.hinge[1] + door.closed_dir.sin() * door.width * 0.5];
-    assert!(texel(&d, at(mid[0], mid[1])) & 0xff > 100, "a door's threshold is not worn: {}", texel(&d, at(mid[0], mid[1])) & 0xff);
-    assert!((0..320 * 224).any(|i| texel(&d, i) >> 8 == 255), "no band along any wall");
-    assert!((0..320 * 224).filter(|&i| texel(&d, i) & 0xff == 0).count() > 320 * 224 / 2, "the whole floor is walked");
-    let was = d.traffic.words.clone();
+    let worn = map[at(mid[0], mid[1]) * 2];
+    assert!(worn > 100, "a door's threshold is not worn: {worn}");
+    assert!(map.chunks(2).any(|t| t[1] == 255), "no band along any wall");
+    assert!(map.chunks(2).filter(|t| t[0] == 0).count() > 320 * 224 / 2, "the whole floor is walked");
     p.run(0.5);
-    d.take(&p.g, want::level_look);
-    assert!(was == d.traffic.words, "the map moved");
+    assert!(map == game_draw::traffic::map(&p.g), "the map moved");
 }
 
 /// THE RULE: on a level that wears the look a leaf stands in its paint, a shade of its own by its name, on the game's own box, so what is drawn and what a breach throws off it are in that paint.

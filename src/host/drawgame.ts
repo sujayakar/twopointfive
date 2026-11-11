@@ -23,10 +23,12 @@ export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array
 export const partsOf = (o: Start): PartOf[] => (['mannequin', 'mannequinBin', 'cast', 'castLook'] as const).map(name => ({ name, length: o[name].length, hash: hashOf(o[name]) }));
 
 /** `face_start`'s: the rows that dress the picture are up */
-const DRESS = 1;
+const DRESS = 1, /** … and what `ready` makes is this page's to make */ LATER = 2;
 /** `face_step`'s: the save controller */
 const SAVES = 8;
 
+/** lines of the light's table to a call (a millisecond or two), and how long calls go on between two turns of the event loop (ms) */
+const READY = 512, READY_MS = 8;
 /** bytes a tape may be: it ends there (an hour and a half and more of play) */
 const TAPE_MOST = 48 * 1048576;
 /** the save controller with nothing to tell */
@@ -101,13 +103,20 @@ export class DrawGame {
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
-    try { this.h = this.X.face_start(at, n, -1, o.seed, seats, DRESS); } finally { this.X.face_free(at, n); }
+    try { this.h = this.X.face_start(at, n, -1, o.seed, seats, DRESS | LATER); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
     this.ticks = 0; this.done++; this.said = null; this.between = 1; this.tried = -1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.X.face_reserve(64 * 1048576);
     this.draw();
   }
+
+  /** WHAT THE FIRST STEP WANTS AND A START LEAVES, made a slice at a time between turns of the event loop while the page has something else to wait for (rust game_face `face_ready`) */
+  async ready(turn: () => Promise<void>): Promise<void> {
+    for (let t0 = performance.now(); this.X.face_ready(this.h, READY);) if (performance.now() - t0 >= READY_MS) { await turn(); t0 = performance.now(); }
+  }
+  /** the floors' traffic map, two bytes a texel: worked out as it is asked */
+  traffic(): Uint8Array { this.X.face_traffic(this.h); return this.bytes(); }
 
   /** the numbers of the next hand, to be written by whoever samples the player */
   numbersOf(): Float64Array { if (this.numbers.buffer !== this.memory.buffer) this.numbers = new Float64Array(this.memory.buffer, this.hand, HAND.count); return this.numbers; }
