@@ -18,7 +18,7 @@ hook. This page is the working recipe and the traps.
 | a change meant to change no play | `hold keep DIR` on the old tree, `hold check DIR` on the new one (`cargo run --release --bin hold --`) |
 | a change meant to change play | `missions > before.tsv`, the same to `after.tsv`, `missions diff before.tsv after.tsv`, then `gate` and `gate pin` with the reason in the commit |
 | anything in `rust/` | `gate` (`cargo build --profile gate --bin gate` in `rust/game_start`), and the module rebuilt before a page asks it |
-| a section, command or view | `bun run tools/draw/gen.ts`, then a page: `--check` is red where a file would change |
+| a section, command or view | `cargo run --profile gate --bin half` in `rust/game_start`, then a page: `half --check` is red where a file would change |
 | a shader | `bun run tools/qa/checks.ts shaders`, then `node tools/qa/wgsl-compile.cjs` (it parses and type-checks, a minute), then a page boot, which alone makes the pipelines |
 | the renderer's look | a `picture` check if one fits, a boot with a screenshot, and "never seen on a GPU" |
 | page code or `src/ui/` | `bun run typecheck`, `bun run tools/qa/checks.ts page menus`, the page script nearest it (`bun run tools/qa/pages.ts menus`) |

@@ -1,4 +1,4 @@
-// WHAT THE LAST TICK LEFT TO BE DRAWN, read where Rust left it (rust/game_draw). `sections.ts` (made by tools/draw/gen.ts) has every offset as a constant;
+// WHAT THE LAST TICK LEFT TO BE DRAWN, read where Rust left it (rust/game_draw). `sections.ts` (written by the program `half`, rust/game_start/src/bin/half) has every offset as a constant;
 // this says where each section lies. Nothing here knows the game, and reading a field makes no object:
 //   const f = D.f, o = D.at[Section.fog]; … f[o + Fog.edge] …
 import { LAYOUT, Section } from './sections';
@@ -6,11 +6,11 @@ import { LAYOUT, Section } from './sections';
 /** the module's calls this needs */
 export interface DrawFace { face_draw(h: number, want: number): number; face_draw_over(h: number, want: number): number; face_frame(h: number, a: number, x: number, y: number, z: number): number; face_draw_layout(): number }
 
-/** why this module's sections are not the ones this page's offsets were made from, or '' */
+/** why what crosses is not, to this module, what this page's half was written from, or '' */
 export function drawRefused(X: DrawFace): string {
   if (typeof X.face_draw !== 'function') return 'the module draws nothing: it was built from another tree';
   const has = X.face_draw_layout() >>> 0;
-  return has === LAYOUT ? '' : `the module's draw sections are of another stamp (${has}) than this page's (${LAYOUT})`;
+  return has === LAYOUT ? '' : `what the module draws, tells and takes is of another stamp (${has}) than this page's (${LAYOUT})`;
 }
 
 export class Drawn {

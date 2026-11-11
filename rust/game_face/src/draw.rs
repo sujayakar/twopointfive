@@ -13,7 +13,7 @@
 //!   face_draw_cut(h)                   the picture goes on from where the game stands now, and blends from nothing before it (ticks were stepped that were not drawn)
 //!   face_traffic(h)                    the floors' traffic map at face_out (game_draw::traffic), worked out as it is asked: once, as a level opens
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
-//!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
+//!   face_draw_layout() -> stamp        the stamp of everything declared that crosses (and its text at face_out): a page whose half is of another is refused
 
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
@@ -68,9 +68,8 @@ pub extern "C" fn face_draw_name(h: u32, i: usize) {
 }
 #[no_mangle]
 pub extern "C" fn face_draw_layout() -> u32 {
-    let t = game_draw::layout();
-    let mut s = 0x811c_9dc5u32;
-    for b in t.bytes() { s = (s ^ b as u32).wrapping_mul(0x0100_0193); }
+    let t = game_draw::layout() + &game_start::host::crosses::text();
+    let s = game::crosses::stamp(&t);
     super::out(t.into_bytes());
     s
 }
