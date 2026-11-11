@@ -224,8 +224,8 @@ export function matWord(b: Box): number {
 export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
 /** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
  *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
- *  const GLASS_BREAK (render/frame.ts glassBreakConfig; common.wgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
+ *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by glass_open.wgsl glassCellOpen and composite's crack drawing only under the prelude
+ *  const GLASS_BREAK (render/frame.ts glassBreakConfig; glassOpenWgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
  *  is not a different frame. */
 export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
 export const MAT_STRIDE = 16; // words (64 B): albedo.rgb cutHeight | emissive.rgb finish (matWord: roughness + metal + aniso — was the owner, which no shader read from here: boxOwner() takes it from the geo flags) | rotation quaternion xyzw (= yaw for ordinary boxes, the full 3D rotation for boxes with Box.rot; raster and rays both use it) | SECONDARY albedo.rgb (= albedo unless markings are folded in — common.wgsl boxAlbedoSec: what gather / cascade / probe hits read) + markGain (× the emission of the box's emissive markings)

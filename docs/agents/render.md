@@ -71,7 +71,8 @@ everywhere. What is drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ 
 for gun gas, out of one pool (`smokeGridConfig`). `smokeFrom` hands the grid over where a step was taken, and the solver is **bent toward it** a
 little every step (`SmokeParams`: `bend`, `pull`), as fast as the gap shows; it thins by the game's law alone. Only the game's own share of a cell is measured;
 a fire's plume or a breath says so in its `K`
-word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). `SMOKE_LOOK` is how smoke is drawn.
+word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). Both go by
+a pane where it has fallen out: the solver asks `glass_open.wgsl`, as the picture does, and bakes again as a pane opens. `SMOKE_LOOK` is how smoke is drawn.
 
 **Eyes.** Buffers hold exposed light. `hourExposure` says what an hour's picture stands for, and every source is drawn at the lesser of its authored
 and its real strength under it (`photometry.ts`). `PlaceField` solves one light level a place from the cache, on `PlaceMap`'s cells. `lookExpoFor`

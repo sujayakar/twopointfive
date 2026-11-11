@@ -399,7 +399,7 @@ async function main(): Promise<void> {
     if (!drawn) { input.endFrame(); if (still) thaw = true; return; }
     { if (reel.live) { ear[0] = cam.target[0]; ear[1] = cam.target[1] + 1.6; ear[2] = cam.target[2]; } else { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; } audio.setListener(ear, cam.forward); audio.update(dt, time); audio.scoreMenu = title;
       D.fresh(); const h = D.at[Section.heard]; if (audio.music) audio.music.intensity = D.f[h + Heard.tension]; }
-    for (const s of world.stale) smoke.obstaclesChanged(s.c, s.r);   // (what stands is another thing there: the last frame's rows say where)
+    for (const s of world.stale) smoke.obstaclesChanged(s.lo, s.hi);   // (what stands is another thing there: the last frame's rows say where)
     world.stale.length = 0; smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);

@@ -2,7 +2,7 @@
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld, planBoxes, type Box, type DrawWait } from './scene/boxes';
-import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, lookConfig } from './render/frame';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, meshBinding, WeatherFrame, noWeather, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
@@ -369,13 +369,12 @@ export class Engine {
   constructor(public gpu: Gpu, rcCfg: RcConfig = defaultRcConfig, world?: (device: GPUDevice) => BoxWorld) {
     const device = this.device = gpu.device;
     const maxStorage = device.limits.maxStorageBuffersPerShaderStage;
-    if (maxStorage < 9) reachBinding.storage = false;   // the per-light reach rows: storage by default (measured cheaper), the uniform binding when this adapter cannot afford a 9th storage buffer in the compute stage — decided HERE so every Engine user gets the same fallback
-    if (maxStorage < 8) throw new Error(`This GPU / browser exposes ${maxStorage} storage buffers per shader stage; the renderer needs 8 (scene group 6 + the cascade trace's / light probe's 2) — the WebGPU default, which every core (non-compatibility-mode) adapter provides.`);   // (readable on the #fatal card instead of a pipeline-creation failure deep in the pass graph; the per-light reach masks ride in a uniform to keep this at 8 — frame.ts binding 12)
-    // the mesh-shadow trees want one more read-only storage slot in the scene group: 6 + reach (1 if storage) + mesh 1, plus the cascade trace's / probe's 2 in
-    // their own group, must fit the per-stage limit — 10 with the reach rows in storage, which is exactly what Chrome offers on Metal. Where it does not fit the
+    if (maxStorage < 9) throw new Error(`This GPU / browser exposes ${maxStorage} storage buffers per shader stage; the renderer needs 9 (scene group 7 + the cascade trace's / light probe's 2; the smoke's link 9).`);   // (readable on the start card, not a validation error)
+    // the mesh-shadow trees want one more read-only storage slot in the scene group: 7 + mesh 1, plus the cascade trace's / probe's 2 in
+    // their own group, must fit the per-stage limit — 10, which is exactly what Chrome offers on Metal. Where it does not fit the
     // binding is left out of the layout altogether (a stub meshLoad() in the prelude) and the experiment is unavailable rather than costing the reach rows their
     // measured storage path. Decided once, here, before any scene pipeline is compiled.
-    meshBinding.enabled = 6 + (reachBinding.storage ? 1 : 0) + 1 + 2 <= maxStorage;
+    meshBinding.enabled = 7 + 1 + 2 <= maxStorage;
     this.meshShadowsAvailable = meshBinding.enabled;
     this.timer = new GpuTimer(device, gpu.hasTimestamps);
     this.sceneLayout = createSceneLayout(device);
