@@ -43,7 +43,7 @@ export async function sdfrigPack() {
   const ch = await loadGltfCharacter(GLTF); const fit = fitRig(ch);
   const dev = fake();
   // (the page's world writes a frame's proxies and fits them as it uploads: draw/men.ts, draw/world.ts)
-  const world = new (class extends BoxWorld { upload() { if (this.rig) this.applyRig(this.rig); } })(dev);
+  const world = new (class extends BoxWorld { constructor() { super(dev); } upload() { if (this.rig) this.applyRig(this.rig); } })();
   const rows = (w: any, owner: number, albedo: number[], caps: number[][], bound: number[]): void => { const f = new Float32Array(15 * 8), u = new Uint32Array(f.buffer); for (let i = 0; i < 15; i++) f.set(caps[i] ?? [0, -100, 0, 0, 0, -100, 0], i * 8); w.addCapsuleRows(f, u, 0, owner, [albedo], new Float32Array(bound), 0); };
   // two characters' worth of synthetic proxies: a standing-ish set of 15 segments (a, r, b) round (10, 0, 12) and (14, 0, 12)
   const mk = (ox: number) => { const caps: number[][] = []; for (let i = 0; i < 15; i++) { const y0 = 0.1 + i * 0.1; caps.push([ox + (i % 3) * 0.1, y0, 12 + (i % 2) * 0.15, 0.05 + (i % 4) * 0.03, ox + ((i + 1) % 3) * 0.1, y0 + 0.25, 12 - (i % 2) * 0.1]); } return caps; };
