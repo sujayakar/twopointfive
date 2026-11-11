@@ -716,7 +716,7 @@ pub(super) fn send_round(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<D
 /// A man goes on his errand: his row on the squad's list, and his leg, round by the way or loose at the fix.
 fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, w: Option<&Way>, sit: &Situation) {
     let (ally, fix_at, lost) = (sit.fix.ally, sit.fix.at, sit.lost);
-    let (gd, station) = { let r = &g.tab.roomfight_def[d]; (r.gd, r.station) };
+    let (gd, station) = (g.tab.roomfight_def[d].gd, crate::roomfight::station(g, d));
     let t0 = g.time;
     g.tab.enemysquads_squad[q].sent.push(Sent {
         gd, from: v3::copy(station), ally, role, phase: if w.is_some() { SentPhase::Run } else { SentPhase::Loose },

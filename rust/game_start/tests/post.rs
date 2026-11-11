@@ -20,7 +20,7 @@ fn consulate(seed: u32) -> (Play, RoomfightDefId) {
 fn elsewhere(p: &Play, d: RoomfightDefId) -> game::V3 {
     let room = p.g.tab.roomfight_def[d].room;
     let o = p.g.fight.defs.iter().copied().find(|&o| o != d && p.g.tab.roomfight_def[o].room != room).expect("a defender of another room");
-    p.g.tab.roomfight_def[o].station
+    game::roomfight::station(&p.g, o)
 }
 
 /// THE RULE: a leg answers to who sent him on it. Sent somewhere else meanwhile, the first leg is over, whatever he is doing now.
@@ -29,7 +29,7 @@ fn elsewhere(p: &Play, d: RoomfightDefId) -> game::V3 {
 fn a_leg_answers_to_who_sent_him() {
     for s in SEEDS {
         let (mut p, d) = consulate(s);
-        let (to, back) = (elsewhere(&p, d), p.g.tab.roomfight_def[d].station);
+        let (to, back) = (elsewhere(&p, d), game::roomfight::station(&p.g, d));
         send(&mut p.g, d, Leg::to(to, 3.0), by::LANE);
         assert!(on_leg_of(&p.g, d, by::LANE) && !on_leg_of(&p.g, d, by::BREAKER), "seed {s}: it is the lane's leg and nobody else's");
         send(&mut p.g, d, Leg::to(back, 3.0), by::BREAKER);
@@ -44,7 +44,7 @@ fn a_look_is_over_when_he_is_sent_elsewhere() {
     for s in SEEDS {
         let (mut p, d) = consulate(s);
         let (to, gd, t) = (elsewhere(&p, d), p.g.tab.roomfight_def[d].gd, p.time());
-        let home = p.g.tab.roomfight_def[d].station;
+        let home = game::roomfight::station(&p.g, d);
         let look = game::lanes::Peek { lane: 99.0, phase: game::lanes::PeekPhase::Out, t, home, look: to, to: home, line_t: -1.0, eye: None, fire: None, frag: None };
         p.g.m.lanes.states.as_mut().expect("the lanes are on").peek.set(gd, look);
         send(&mut p.g, d, Leg::to(to, 3.0), by::LAST_MAN);
@@ -80,7 +80,7 @@ fn an_errand_is_walked_to_its_end_and_he_stands_there() {
 fn no_way_there_is_told() {
     for s in SEEDS {
         let (mut p, d) = consulate(s);
-        let here = p.g.tab.roomfight_def[d].station;
+        let here = game::roomfight::station(&p.g, d);
         send(&mut p.g, d, Leg::errand([here[0] + 400.0, 0.0, here[2]], 3.0), by::LANE);
         let end = p.until(65.0, |p| leg_ended(&p.g, d, by::LANE).is_some()).expect("his leg ends");
         assert_eq!(leg_ended(&p.g, d, by::LANE), Some(LegEnd::Nowhere), "seed {s}: after {end} s");

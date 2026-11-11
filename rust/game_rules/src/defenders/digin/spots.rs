@@ -351,7 +351,7 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
     }
     let mut mates: Vec<Mate> = Vec::new();
     for id in g.fight.defs.clone() {
-        let (x_gd, x_room, x_station) = { let x = &g.tab.roomfight_def[id]; (x.gd, x.room, x.station) };
+        let (x_gd, x_room, x_station) = { let x = &g.tab.roomfight_def[id]; (x.gd, x.room, crate::roomfight::station(g, id)) };
         if id == d || crate::condition::down(g, g.gd[x_gd].ch) || x_room != Some(room) { continue; }
         let row = state_of(g).men.get(x_gd).copied();
         let p = match row.and_then(|m| m.spot) { Some(s) => s, None => x_station };

@@ -43,6 +43,20 @@ const STALL: f64 = 1.5;
 const MOST: f64 = 10.0;
 const MOST_ERRAND: f64 = 60.0;
 
+/// the floor he holds
+pub fn station(g: &Game, d: RoomfightDefId) -> V3 { g.tab.task[g.tab.roomfight_def[d].task].post.unwrap_or_default() }
+/// what he watches from it
+pub fn watched(g: &Game, d: RoomfightDefId) -> V3 { g.tab.task[g.tab.roomfight_def[d].task].watch.unwrap_or_default() }
+/// this floor is his to hold from now
+pub(super) fn holds_at(g: &mut Game, d: RoomfightDefId, at: V3) { let task = g.tab.roomfight_def[d].task; g.tab.task[task].post = Some(at); }
+
+/// He is no man of the room fight's any more: its row of him goes, and the post with it.
+pub fn dropped(g: &mut Game, d: RoomfightDefId) {
+    let (gd, task) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].task);
+    g.fight.defs.retain(|&x| x != d);
+    crate::duty::done(g, gd, Some(task));
+}
+
 /// The room fight's row of this man, if he is one of its defenders.
 pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd) }
 
@@ -177,8 +191,8 @@ fn post_now(g: &Game, d: RoomfightDefId) -> PostLeft {
     let row = &g.tab.roomfight_def[d];
     let man = &g.gd[row.gd];
     PostLeft {
-        t: g.time, state: man.state, awareness: man.awareness, hold: man.duty.holds, pinned: man.duty.pinned, station: row.station, home: row.home, room: row.room, ev: row.ev.clone(),
-        watch: row.watch, want: row.want, pt: row.pt,
+        t: g.time, state: man.state, awareness: man.awareness, hold: man.duty.holds, pinned: man.duty.pinned, station: station(g, d), home: row.home, room: row.room, ev: row.ev.clone(),
+        watch: row.watch, want: row.want, pt: watched(g, d),
     }
 }
 
@@ -199,9 +213,9 @@ pub fn back_on(g: &mut Game, d: RoomfightDefId, wary: bool, by: &'static str) {
     crate::duty::hold(g, gd, h.hold, by);
     crate::duty::pin(g, gd, h.pinned, by);
     let (state, seen) = (g.gd[gd].state, g.gd[gd].last_seen_t);
+    holds_at(g, d, h.station);
     let row = &mut g.tab.roomfight_def[d];
     row.mode = DefMode::Hold;
-    row.station = h.station;
     row.home = h.home;
     row.room = h.room;
     row.ev = h.ev;
