@@ -7,7 +7,7 @@ use alloc::{string::String, vec::Vec};
 /// (duty.rs), and a rule that asks whether he may leave, where his gun is meant to be or where he may go reads it there.
 #[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct Duty {
-    /// what he has been given to do (duty.rs `task`); None: nothing, he follows his own round or his own fight
+    /// what he has been given to do; None: nothing
     pub task: Option<TaskId>,
     /// he does not leave where he is of his own accord · who last changed that, and when
     pub holds: bool,

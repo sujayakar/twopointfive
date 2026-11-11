@@ -359,7 +359,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
     g.tab.roomfight_op[o].wall_t = 0.0;
     if !on { g.tab.roomfight_op[o].block_t = m::max(0.0, g.tab.roomfight_op[o].block_t - dt); } // off him, the count runs back down
     if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || crate::control::man::changing_magazine(g, gd) || crate::gunslots::side_locked(g, gd) || !on { return None; }
-    if crate::silent::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
+    if crate::duty::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
         room_fight_speak(g, o, "eyes on. holding.", Some(8.0));
         return None;
     }
