@@ -55,7 +55,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world and asked again wherever a static row or a leaf moved (always what a fresh ask gives)',
-  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against',
+  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against', 'sim/src/bricks.rs PANES': 'COPY · the panes open somewhere that FACES was last asked against',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and whether that state\'s faces were asked',
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',

@@ -3,7 +3,7 @@ mod world_ask;
 use game::smoke_types::SmokeEmitter;
 use game_start::play::{Opts, Play};
 use game_start::scene::{Axis, Scene};
-use world_ask::FurnAsk;
+use world_ask::{a_box, scene_with, FurnAsk, GlassAsk};
 
 fn stand(s: &Scene) -> Play {
     let mut p = Play::scene(s, &Opts::default());
@@ -45,6 +45,76 @@ fn a_door_opened_lets_the_smoke_through() {
     p.run(8.0);
     let t = across(&p, far[0], far[1], far[2]);
     assert!(t < 0.8, "eight seconds after the door was kicked open {t:.3} of the light comes through the next room");
+}
+
+/// A room in two by a wall with a pane in it, of this glass; a can let off on the pane's west side until that side is full. The pane is the static answered.
+fn behind_glass(kind: game::glasspen::PaneType) -> (Play, f64) {
+    let mut s = Scene::new("partition");
+    s.room("long", 10.0, 8.0, 26.0, 16.0).door("long-door", Axis::X, 16.0, 13.0).sam(4.0, 24.0);
+    let cut = vec![
+        a_box("wall-a", [18.0, 1.5, 9.75], [0.06, 1.5, 1.75], "wall", &[]),
+        a_box("pane", [18.0, 1.5, 12.0], [0.02, 1.5, 0.5], "white", &["Glass"]),
+        a_box("wall-b", [18.0, 1.5, 14.25], [0.06, 1.5, 1.75], "wall", &[]),
+    ];
+    let mut p = scene_with(&s, cut, &Opts::default());
+    p.sam_unhurt();
+    p.sam_unseen();
+    p.run(0.1);
+    let bi = p.pane_at(18.0, 12.0);
+    p.pane_is(bi, kind);
+    can(&mut p, [16.5, 0.2, 12.0], 40.0);
+    p.run(8.0);
+    assert!(across(&p, 16.5, 1.0, 12.0) < 0.1, "the staging: the side with the can is not full of smoke");
+    assert!(across(&p, 19.5, 1.0, 12.0) > 0.999, "the control: past the whole pane {:.3} of the light comes through", across(&p, 19.5, 1.0, 12.0));
+    (p, bi)
+}
+fn struck(p: &mut Play, bi: f64, y: f64, z: f64) { game::glass::glass_impact(&mut p.g, bi, [17.99, y, z], Some([1.0, 0.0, 0.0]), 1.0, 1.0, None, None, None); }
+
+/// THE RULE: a pane holds smoke and, once it has gone, lets it through. CONTROL: the same air before it goes.
+/// A FAILURE MEANS: smoke stays in a room behind a window that is no longer there, and nobody past the hole loses sight of anything.
+#[test]
+fn a_pane_gone_lets_the_smoke_through() {
+    let (mut p, bi) = behind_glass(game::glasspen::PaneType::Tempered);
+    struck(&mut p, bi, 1.2, 12.0);
+    p.run(10.0);
+    assert!(p.pane_open(bi) >= 1.0, "the staging: the pane was to have gone: open {}", p.pane_open(bi));
+    let t = across(&p, 19.5, 1.0, 12.0);
+    assert!(t < 0.8, "ten seconds after the pane went {t:.3} of the light comes through past it");
+}
+
+/// THE RULE: a game kept while smoke comes through a holed pane and put back goes on as it did. CONTROL: the smoke past the pane thickens in those seconds, so it is not two still airs that agree.
+/// A FAILURE MEANS: what the smoke knows of a pane is kept beside the game, and a machine that rolls back draws and sees another cloud.
+#[test]
+fn smoke_past_a_holed_pane_is_the_same_after_a_put_back() {
+    let (mut p, bi) = behind_glass(game::glasspen::PaneType::Annealed);
+    for y in [0.75, 1.25, 1.75] { for z in [11.75, 12.25] { struck(&mut p, bi, y, z); } }
+    p.run(1.0);
+    let (kept, at) = (p.keep(), across(&p, 18.75, 1.25, 12.0));
+    p.run(5.0);
+    let first = p.words();
+    let t = across(&p, 18.75, 1.25, 12.0);
+    assert!(t < at - 0.05, "the control: {at:.3} and five seconds on {t:.3} of the light comes through past the pane");
+    p.put_back(&kept);
+    p.run(5.0);
+    assert!(p.words() == first, "put back and played again, the game is another");
+}
+
+/// THE RULE: where a piece of a pane is out smoke goes through, though the rest of it stands and nobody could walk through it. CONTROL: the same pane whole, ten seconds longer, and its smoke is still held.
+/// A FAILURE MEANS: the smoke hears of a broken pane only when a man could walk through it.
+#[test]
+fn a_hole_in_a_pane_lets_the_smoke_through() {
+    for holed in [false, true] {
+        let (mut p, bi) = behind_glass(game::glasspen::PaneType::Annealed);
+        if holed { for y in [0.75, 1.25, 1.75] { for z in [11.75, 12.25] { struck(&mut p, bi, y, z); } } }
+        p.run(10.0);
+        let (open, t) = (p.pane_open(bi), across(&p, 18.75, 1.25, 12.0));
+        if holed {
+            assert!(open > 0.0 && !game::glassbreak::glass_break_walkable(&p.g, bi), "the staging: holes, and the pane standing: open {open}");
+            assert!(t < 0.8, "ten seconds after it was holed {t:.3} of the light comes through past it (open {open:.2})");
+        } else {
+            assert!(open == 0.0 && t > 0.999, "the control: past the whole pane {t:.3} of the light comes through, open {open}");
+        }
+    }
 }
 
 /// THE RULE: a wall holds smoke and a hole blown in it lets it through for as long as there is smoke to come. CONTROL: the same air before the blast.
