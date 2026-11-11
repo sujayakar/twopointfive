@@ -193,22 +193,18 @@ fn lookGeoN(n: vec3f, id: u32) -> vec3f {
   if (a.x >= a.y && a.x >= a.z) { g = vec3f(sign(l.x), 0.0, 0.0); } else if (a.y >= a.z) { g = vec3f(0.0, sign(l.y), 0.0); }
   return quatRotate(q, g);
 }
-fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
-/** The surface finish of box i (boxes.ts matWord in boxMat row 1's w: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
+fn boxOwner(b: BoxGeo) -> u32 { return boxWordOwner(b.flags); }
+/** The surface finish of box i (boxmat.wgsl boxFinishWord: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
  *  float): the material half of the one BRDF (base colour = boxAlbedo). The g-buffer writes roughness / metalness per pixel from it (+ its detail layer);
  *  the reflection pass reads the anisotropy. A box nobody gave a finish reads rough 1 (matte: no reflection ray, no analytic highlight). */
 struct Finish { rough: f32, metal: bool, aniso: bool };
-/** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
- *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. */
-fn boxLook(i: u32) -> u32 { return u32(boxFinishWord(i) * 0.125); }
-fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
+/** THE LOOK PROTOTYPE: what box i is made of (look.wgsl's classes, 0 = plain; decided by the box's own word), carried above the finish in the same float (rows.wgsl finish…) */
+fn boxStuff(i: u32) -> u32 { return finishStuff(boxFinishWord(i)); }
 fn boxFinish(i: u32) -> Finish {
-  var w = boxFinishWord(i); var f: Finish;
-  w -= 8.0 * floor(w * 0.125);   // (THE LOOK'S OWN LINE: boxLook's word, above)
-  f.aniso = w >= 4.0; w -= select(0.0, 4.0, f.aniso);
-  f.metal = w >= 2.0; w -= select(0.0, 2.0, f.metal);
-  f.rough = clamp(w, 0.0, 1.0);
+  let w = boxFinishWord(i); var f: Finish;
+  f.aniso = finishAniso(w) != 0u;
+  f.metal = finishMetal(w) != 0u;
+  f.rough = clamp(finishRough(w), 0.0, 1.0);
   return f;
 }
 
@@ -494,7 +490,7 @@ fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
 struct Hit { t: f32, idx: i32, n: vec3f, inside: bool, capAlbedo: vec3f };
 const CAPSULE_HIT: i32 = 0x7ffffff0;   // Hit.idx of a character-proxy hit (a round cone; the name is the record's): capAlbedo then holds his tint
 
-fn capsuleOwner(c: Capsule) -> u32 { return c.misc & 0xffu; }
+fn capsuleOwner(c: Capsule) -> u32 { return capsuleWordOwner(c.misc); }
 /** `skip` packs up to two character ids (bits 0-7: usually the receiving pixel's owner; bits 8-15: the light's owner) whose boxes / proxies a ray ignores. */
 fn skipsOwner(owner: u32, skip: u32) -> bool { return owner != 0u && (owner == (skip & 0xffu) || owner == ((skip >> 8u) & 0xffu)); }
 // THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (rust/game_rules/src/stealth/fogofwar FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
@@ -507,7 +503,7 @@ fn fogThinBox(b: BoxGeo, bi: u32) -> bool {
   if (boxOwner(b) != 0u) { return true; }
   return bi < 4096u && ((fogSight.thin[bi >> 7u][(bi >> 5u) & 3u] >> (bi & 31u)) & 1u) != 0u;
 }
-fn capsuleAlbedo(c: Capsule) -> vec3f { let p = c.misc >> 8u; return vec3f(f32((p >> 11u) & 31u) / 31.0, f32((p >> 5u) & 63u) / 63.0, f32(p & 31u) / 31.0); }
+fn capsuleAlbedo(c: Capsule) -> vec3f { return vec3f(f32(capsuleWordRed(c.misc)) / 31.0, f32(capsuleWordGreen(c.misc)) / 63.0, f32(capsuleWordBlue(c.misc)) / 31.0); }
 
 fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
   let oc = ro - ce; let b = dot(oc, rd); let c = dot(oc, oc) - ra * ra;

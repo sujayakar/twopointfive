@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // THE KIT PICTURE'S BLOCK, CHECKED ON THE LEVEL FILES: `bun run tools/qa/kitview-plan.ts [level …] [--quiet]`. What a level's author runs after writing `scenarios.kitView` (docs/level-format.md). No browser
-// and no game stood: each way is asked of the Rust planner in the game's own module (`face_kit_plan`, rust/game_start/src/kit_stage.rs plan_of_file: the plan as a start makes it, two passes, what is
+// and no game stood: each way is asked of the Rust planner (the native program `levels kitplan`, rust/game_start/src/kit_stage.rs plan_of_file: the plan as a start makes it, two passes, what is
 // sunk for the camera taken off the floor). That the game stands on it is rust/game_start/tests/kit_levels.rs; what the men do there is tests/kit_stage.rs and kit_acts.rs.
 //   B. THE RECORDS OFFICE, both ways: the plan asked of the file with the way's `side` and `slots` taken out agrees with what is written (the side, the hand, each place, the wall, the lamps); with its
 //      `hide` out too, the parked car is among what stands in the camera's way on the front way, and nothing on the west.
@@ -13,11 +13,11 @@
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
 //   E. THE WORD `laid` is the loader's and a file may not write it; a broken block refuses a level.
 // Lines are `- PASS — …` / `- FAIL — …`. The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
-// unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts). A file's faults are the native program's (judge.ts: cargo).
+// unknown level, or no cargo. A file's faults are the native program's (judge.ts: cargo).
 // KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { faceHere, FACE_WASM } from '../blitz/face-build';
 import { levelFaults } from '../levels/lib/judge';
 import { missionRows } from '../desk.ts';
 
@@ -40,18 +40,13 @@ const f2 = (v: number) => (Math.round(v * 100) / 100).toString();
 const pt = (p: readonly number[]) => `(${p.map(f2).join(', ')})`;
 const dist = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// ---- the module: a read of no game
-const WASM = faceHere() ?? FACE_WASM;
-if (!existsSync(WASM)) { console.log(`kitview-plan: no module at ${WASM} (bun run tools/blitz/face-build.ts)`); process.exit(2); }
-const X: Data = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(WASM)))).exports;
-if (typeof X.face_kit_plan !== 'function') { console.log(`kitview-plan: the module at ${WASM} has no face_kit_plan: it is older than this tool (bun run tools/blitz/face-build.ts)`); process.exit(2); }
-const encode = new TextEncoder(), decode = new TextDecoder();
+// ---- the planner: the native program `levels`, built once
+const CRATE = `${ROOT}/rust/game_start`, env = { ...process.env, PATH: `${homedir()}/.cargo/bin:${process.env.PATH ?? ''}` };
+{ const made = Bun.spawnSync(['cargo', 'build', '--release', '--quiet', '--bin', 'levels'], { cwd: CRATE, env, stdout: 'ignore', stderr: 'inherit' }); if (made.exitCode !== 0) { console.log('kitview-plan: the program `levels` did not build'); process.exit(2); } }
 function ask(text: string, way: number): Data {
-  const b = encode.encode(text), p = X.face_alloc(b.length) >>> 0; new Uint8Array(X.memory.buffer).set(b, p);
-  let ok: number; try { ok = X.face_kit_plan(p, b.length, way); } catch (e) { const at = X.face_panic_ptr() >>> 0; throw new Error(`the planner panicked: ${decode.decode(new Uint8Array(X.memory.buffer).subarray(at, at + X.face_panic_len()))}`, { cause: e }); } finally { X.face_free(p, b.length); }
-  const at = X.face_out_ptr() >>> 0, out = decode.decode(new Uint8Array(X.memory.buffer).subarray(at, at + (X.face_out_len() >>> 0)));
-  if (!ok) throw new Error(out);
-  return JSON.parse(out);
+  const p = Bun.spawnSync([`${CRATE}/target/release/levels`, 'kitplan', String(way)], { stdin: new TextEncoder().encode(text), stdout: 'pipe', stderr: 'pipe' });
+  if (p.exitCode !== 0) throw new Error(p.stderr.toString().trim());
+  return JSON.parse(p.stdout.toString());
 }
 
 // ---- the level files

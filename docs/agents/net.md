@@ -33,7 +33,7 @@ section is what a hosted build keeps on a server, which is also where co-op's ga
 ## How it works
 
 **What travels is records, never state.** The game plays the same fight to the bit from its start and its seats' records, so every machine steps
-its own copy. A record (`WireCmd`) is what a hand did: keys, buttons, wheel, cursor, the view's size and nine numbers of its pose. The welcome carries
+its own copy. A record (`WireCmd`) is what a hand did: its keys, and its `SeatInput` (buttons, wheel, cursor, the view's size and pose). The welcome carries
 the start (`NetStart`). Messages are JSON over a WebSocket.
 
 **The server decides** (`SeatLine.take`). A tick runs on the seat's own record if it came in time, otherwise on the newest
@@ -108,7 +108,8 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 ## To change it
 
 - **A number:** `NET`, `NETDOOR`, `FORESEE`, `COOP`. **A message:** `src/net/wire.ts`, then `NetServer.message` or `NetClient.message`.
-- **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
+- **A new field in a record:** a field of `SeatInput` (`rust/game_types/src/handed.rs`), then `half`; `sampleHand` writes it and `cmd` in `rust/game_face/src/hand.rs` reads it. Raise
+  `NET.proto`.
 - **Something per player:** a field of `SeatSet`, and of `SeatRef` and its maker. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
 - **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.

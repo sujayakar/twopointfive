@@ -1,6 +1,6 @@
 //! The shaders' half of the rows they read.
 use crate::typescript::{camel, said, WRITTEN};
-use game_draw::gpu::{shaded, As, Shaded, BOX_MAT};
+use game_draw::gpu::{shaded, As, Shaded, BOX_MAT, PACKED};
 
 pub fn files() -> Vec<(&'static str, String)> { vec![("src/render/shaders/rows.wgsl", structs()), ("src/render/shaders/boxmat.wgsl", tables())] }
 
@@ -21,12 +21,26 @@ fn field(ty: &str) -> Field {
     match t.as_str() {
         "f32" | "u32" | "i32" => Field { ty: t, words: 1, align: 1, packed: None },
         "Half2" => Field { ty: "u32".into(), words: 1, align: 1, packed: Some(("vec2f", "unpack2x16float")) },
-        _ => panic!("a shader has no {ty}"),
+        _ => match PACKED.iter().find(|p| p.name == t) { Some(p) => Field { ty: if p.float { "f32" } else { "u32" }.into(), words: 1, align: 1, packed: None }, None => panic!("a shader has no {ty}") },
     }
 }
 fn note(doc: &[&str]) -> String { if doc.is_empty() { String::new() } else { format!("   // {}", said(doc)) } }
 fn up(s: &str) -> String { s[..1].to_uppercase() + &s[1..] }
 
+/// what reads a packed word's parts
+fn parts() -> Vec<String> {
+    let mut l = Vec::new();
+    for p in PACKED {
+        l.extend([String::new(), format!("// {}", said(p.doc))]);
+        if p.float {
+            let under = 1u32 << p.parts[0].1;
+            l.push(format!("fn {}{}(w: f32) -> f32 {{ return w - {under}.0 * floor(w * {:?}); }}", small(p.name), up(p.share), 1.0 / under as f64));
+        }
+        let (ty, whole) = if p.float { ("f32", "u32(w)") } else { ("u32", "w") };
+        for (n, at, bits) in p.parts { l.push(format!("fn {}{}(w: {ty}) -> u32 {{ return ({whole} >> {at}u) & {}u; }}", small(p.name), up(&camel(n)), (1u64 << bits) - 1)); }
+    }
+    l
+}
 fn structs() -> String {
     let mut l = vec![format!("{WRITTEN} from rust/game_draw/src/gpu.rs: THE ROWS A SHADER READS THAT RUST LAYS OUT. To change one, change it there.")];
     for Shaded { row, lies } in shaded() {
@@ -44,6 +58,7 @@ fn structs() -> String {
         l.push("};".into());
         l.extend(readers);
     }
+    l.extend(parts());
     l.join("\n") + "\n"
 }
 fn small(s: &str) -> String { s[..1].to_lowercase() + &s[1..] }
@@ -69,7 +84,7 @@ fn tables() -> String {
             let (args, out, read) = if list { (format!("{which}: u32, k: u32"), "vec4f".to_string(), format!("boxMat[{here} + k]")) }
                 else { (format!("{which}: u32"), w.ty.replace("u32", "f32"), format!("boxMat[{here}]{}", if w.words == 4 { String::new() } else { format!(".{}", &"xyzw"[at % 4..at % 4 + w.words]) })) };
             assert!(list || (at % 4) + w.words <= 4, "{}.{f} lies over two rows", row.name);
-            assert!(w.packed.is_none() && !ty.contains("u32"), "{}.{f}: a table of floats holds floats", row.name);
+            assert!(w.packed.is_none() && !w.ty.contains("u32"), "{}.{f}: a table of floats holds floats", row.name);
             if list { l.push(format!("const {}_{}S: u32 = {}u;", reader.to_uppercase(), f.to_uppercase(), w.words / 4)); }
             l.push(format!("fn {fn_}({args}) -> {out} {{ return {read}; }}{}", note(doc)));
             at += w.words;

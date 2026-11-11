@@ -5,7 +5,7 @@ import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { capUsage } from './framecap';
-import { BoxWorld, type Box } from '../scene/boxes';
+import { BoxWorld } from '../scene/boxes';
 import { Geo, Mat } from '../draw/sections';
 import gbufSrc from './shaders/gbuffer.wgsl' with { type: 'text' };
 import decalsSrc from './shaders/decals.wgsl' with { type: 'text' };
@@ -16,13 +16,11 @@ import { cutConfig, CUT_ROWS } from '../scene/cut';
 import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S SURFACE (render/snowField.ts): fsBox's snow + the hills' two entry points — dead code unless the prelude's SNOW_SURF is up
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
-import { LOOK_WITH, LOOK_PAINTED, LOOK_WORDS, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
+import { LOOK_WITH, LOOK_PAINTED, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
 import { LookPool } from './lookWorkers';
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookMip } from './lookTex';
 
-/** the word's fields (common.wgsl boxStuff, look.wgsl lookSurface read the same): the stuff below `moves`, the box's own number × `own`, `owns` of them */
-export const LOOK_WORD = { stuffs: LOOK_WORDS, moves: 32, own: 64, owns: 45 } as const;
 /** THE STUFFS SOME BOX HAS BEEN (bits by stuff number), and how many times that grew: the g-buffer makes a stuff's map the first time a box is one (needLook) */
 const SEEN = { bits: 0, grew: 0 };
 function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SEEN.bits & bit)) { SEEN.bits |= bit; SEEN.grew++; } }
@@ -32,32 +30,6 @@ export function lookNeedBits(bits: number) { for (let s = 1; s < 32; s++) if (bi
 export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
 /** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: host/drawpage.ts) */
 export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) lookSeen(lookStuffOf(w)); }
-/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (5 bits), whether it MOVES (a box past the
- *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
- *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
- *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
- *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
- *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/stealth/devices.rs), so a tripwire's beam coming or going still moves the
- *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
- *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
- *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot
- *  change what a thing is made of, and nobody has to be told the paint a box had before. */
-export function lookWordOf(): (b: Box, moves: boolean) => number {
-  return (b, moves) => {
-    let h: number;
-    if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
-    else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
-    h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
-    const stuff = b.stuff !== undefined ? lookStuffOf(b.stuff) : 0;
-    lookSeen(stuff);
-    return stuff + (moves ? LOOK_WORD.moves : 0) + LOOK_WORD.own * ((h >>> 0) % LOOK_WORD.owns);
-  };
-}
-/** … AND FOR AN OLD BREAK'S CUT FACES (Box.cutOld; BoxWorld.coreStuffOf, packed with the cut's record: scene/cut.ts packCut, gbuffer_cut.wgsl): the stuff its
- *  core is made of where the box says one (Box.cutCoreStuff: a wall broken under a coping shows the coping's), else the box's own */
-export function lookCoreOf(): (b: Box) => number {
-  return b => { const w = b.cutCoreStuff ?? b.stuff, stuff = w !== undefined ? lookStuffOf(w) : 0; lookSeen(stuff); return stuff; };
-}
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
 export function nextTask(): Promise<void> {
   return new Promise(res => { if (typeof MessageChannel === 'undefined') { setTimeout(res, 0); return; } const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); res(); }; ch.port2.postMessage(0); });
@@ -181,7 +153,7 @@ export class GBuffer {
   // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl): two mipped texture arrays and the panel's numbers.
   // A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS (11-04, with the catalogue growing past a dozen stuffs: a layer is 2.8 MB and about half a second of arithmetic,
   // and thirteen of them in the constructor had once been six seconds in front of the first compile). A stuff's layer is made the first time some box IS that
-  // stuff (lookWordOf says so; host/drawpage.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
+  // stuff (the module says so; host/drawpage.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
   // goes from a layer to its slot through the block's table and draws a stuff with no slot plain. The arrays are as long as the slots in use: when they are
   // full they are made again longer and what they held is copied across on the GPU.
   private lookTex!: [GPUTexture, GPUTexture];   // (these four: makeLook, which the constructor calls)

@@ -8,6 +8,7 @@ use game::game::Game;
 use game::ids::*;
 use game::scene_boxes::Box;
 
+pub mod air;
 pub mod glass;
 pub mod grid;
 pub mod marks;
@@ -22,6 +23,26 @@ pub const MAX: usize = 4096;
 /// a move longer than this in one tick is a cut, and is not drawn through (metres)
 const SNAP: f64 = 1.5;
 
+game::packed! {
+    /// a box's word: its bits, whose it is, and the first row (from 1) of its marks
+    pub struct BoxWord: u32 {
+        low: 0, 8;
+        owner: 8, 8;
+        high: 16, 2;
+        mark: 18, 14;
+    }
+}
+game::packed! {
+    /// its finish: its roughness, whether it is bare metal and anisotropic, what it is made of, whether it moves, and a number of its own that shifts its map
+    pub struct Finish: f32 over rough {
+        metal: 1, 1;
+        aniso: 2, 1;
+        stuff: 3, 5;
+        moves: 8, 1;
+        own: 9, 6;
+    }
+}
+
 section! {
     /// a box's place
     pub struct Geo {
@@ -31,8 +52,7 @@ section! {
         pub rot: Half2,
         /// its half sizes
         pub h: [f32; 3],
-        /// its bits; whose it is in the second byte; from bit 18 the first row (from 1) of its marks
-        pub flags: u32,
+        pub flags: BoxWord,
     }
 }
 section! {
@@ -42,8 +62,7 @@ section! {
         /// above this height it is hidden from the eye, where it is cut away
         pub cut_height: f32,
         pub emits: [f32; 3],
-        /// its roughness to 1, 2 for a metal, 4 for an anisotropic one, and 8 of its look's word (what it is made of, whether it moves, a number of its own)
-        pub finish_word: f32,
+        pub finish_word: Finish,
         pub rot: [f32; 4],
         /// the colour a ray that does not see its marks finds
         pub albedo_sec: [f32; 3],
@@ -147,6 +166,8 @@ section! {
         pub items: u32,
         /// the panes' broken cells are to be sent
         pub panes_moved: u32,
+        /// the weather's dust in the rooms is to be sent
+        pub air_moved: u32,
         /// the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count)
         pub serial: u32,
         /// which stuffs some box has been, a bit a stuff's number
@@ -185,15 +206,13 @@ pub struct Look {
     pub coat: [f64; STUFFS],
 }
 /// the stuffs a box may say
-pub const STUFFS: usize = 32;
-/// the numbers of a look
-pub const LOOK: usize = 11 + 2 * STUFFS;
+pub use game::handed::STUFFS;
 impl Look {
-    pub fn read(v: &[f64]) -> Look {
-        let at = |i: usize| v[11 + i];
+    pub fn of(l: &game::handed::PageLook) -> Look {
+        let yes = |v: f64| v != 0.0;
         Look {
-            bared: false, on: v[0] != 0.0, marks: v[1] != 0.0, cut: v[2] != 0.0, round: v[3] != 0.0, motion: v[4] != 0.0, panes: v[5] != 0.0, mirrors: v[6] != 0.0, air: v[7] != 0.0, glass_lum: v[8], glass_rough: v[9], texel: v[10],
-            stuff: core::array::from_fn(|i| at(i) as u32), coat: core::array::from_fn(|i| at(STUFFS + i)),
+            bared: false, on: yes(l.on), marks: yes(l.marks), cut: yes(l.cut), round: yes(l.round), motion: yes(l.motion), panes: yes(l.panes), mirrors: yes(l.mirrors), air: yes(l.air),
+            glass_lum: l.glass_lum, glass_rough: l.glass_rough, texel: l.texel, stuff: l.stuff.map(|v| v as u32), coat: l.coat,
         }
     }
 }
@@ -207,7 +226,7 @@ impl Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
         for v in pack::sent(b, look).iter().chain(pack::emission(b, look.bared).iter()) { eat(v.to_bits()); }
-        eat(pack::finish(b, look).to_bits());
+        eat(pack::finish(b, false, look).0.to_bits() as u64);
         eat(pack::gain(b, look.bared).to_bits());
         eat(b.owner.to_bits());
         eat(b.stuff.map_or(99, |s| s as u64));
@@ -241,6 +260,7 @@ pub struct Boxes {
     pub rank: rank::Rank,
     pub grid: grid::Grid,
     pub glass: glass::Glass,
+    pub air: air::Air,
     pub leaves: Vec<Leaf>,
     pub beams: Vec<Beam>,
     pub wet: crate::wet::Wet,
@@ -270,7 +290,7 @@ impl Boxes {
     pub fn bare(&mut self, on: bool) { if on != self.look.bared { self.look.bared = on; self.epoch += 1; } }
     /// nothing is drawn through what went before: the game is another than the one last drawn
     pub fn hold(&mut self) { self.have = self.have.min(1); }
-    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
+    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); self.air.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[game::rig_props::CarriedBox]) {
@@ -396,11 +416,13 @@ impl Boxes {
         self.list(g, n);
         let moved = self.grid.build(&self.stood, n);
         self.glass.frame(g, focus, &mut self.grid.info[0], self.look.panes);
+        self.air.frame(g);
         let h = self.head.last_mut().unwrap();
         h.grid_moved = moved as u32;
         h.items = self.grid.count as u32;
         h.slack = self.grid.slack as f32;
         h.panes_moved = self.glass.moved as u32;
+        h.air_moved = self.air.moved as u32;
     }
 
     /// the lines of light nearest the view: the ones the air shows first, as many as its pass has room for

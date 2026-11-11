@@ -484,6 +484,208 @@ export const enum OutlineAt {
   words = 12,
 }
 
+/** src/render/shaders/composite.wgsl struct Beams, in words of four bytes */
+export const enum BeamsAt {
+  /** u32 */
+  n = 0,
+  /** u32 */
+  p0 = 1,
+  /** u32 */
+  p1 = 2,
+  /** u32 */
+  p2 = 3,
+  /** vec4f */
+  k = 4,
+  /** array<BeamSeg, 8> */
+  seg = 8,
+  /** vec4u */
+  fireN = 104,
+  /** array<FireRec, 4> */
+  fire = 108,
+  /** FireLook */
+  fireLook = 172,
+  /** words it takes */
+  words = 188,
+}
+
+/** src/render/shaders/composite.wgsl struct BeamSeg, in words of four bytes */
+export const enum BeamSegAt {
+  /** vec4f */
+  a = 0,
+  /** vec4f */
+  b = 4,
+  /** vec4f */
+  e = 8,
+  /** words it takes */
+  words = 12,
+}
+
+/** src/render/shaders/composite.wgsl struct FireRec, in words of four bytes */
+export const enum FireRecAt {
+  /** vec4f */
+  a = 0,
+  /** vec4f */
+  b = 4,
+  /** vec4f */
+  c = 8,
+  /** vec4f */
+  d = 12,
+  /** words it takes */
+  words = 16,
+}
+
+/** src/render/shaders/composite.wgsl struct FireLook, in words of four bytes */
+export const enum FireLookAt {
+  /** vec4f */
+  a = 0,
+  /** vec4f */
+  b = 4,
+  /** vec4f */
+  c = 8,
+  /** vec4f */
+  d = 12,
+  /** words it takes */
+  words = 16,
+}
+
+/** src/render/shaders/taau.wgsl struct TaauParams, in words of four bytes */
+export const enum TaauAt {
+  /** mat4x4f */
+  prevViewProjU = 0,
+  /** vec2f */
+  jitter = 16,
+  /** vec2f */
+  inSize = 18,
+  /** vec2f */
+  outSize = 20,
+  /** f32 */
+  alpha = 22,
+  /** f32 */
+  clipGamma = 23,
+  /** u32 */
+  flags = 24,
+  /** f32 */
+  reactK = 25,
+  /** f32 */
+  kSharp = 26,
+  /** f32 */
+  velK = 27,
+  /** f32 */
+  camStill = 28,
+  /** f32 */
+  motionA = 29,
+  /** f32 */
+  histSharp = 30,
+  /** words it takes */
+  words = 32,
+}
+
+/** src/render/shaders/particles_common.wgsl struct EmitBlock, in words of four bytes */
+export const enum EmitBlockAt {
+  /** u32 */
+  numRecs = 0,
+  /** u32 */
+  totalNew = 1,
+  /** u32 */
+  frameSeed = 2,
+  /** u32 */
+  flags = 3,
+  /** array<Window, 2> */
+  win = 4,
+  /** array<vec4f, 14> */
+  kp = 12,
+  /** array<vec4f, 7> */
+  ki = 68,
+  /** array<EmitRec, MAX_EMITS> */
+  recs = 96,
+  /** array<ImpulseRec, MAX_IMPS> */
+  imps = 3680,
+  /** Window */
+  rainWin = 3936,
+  /** vec4f */
+  rainCfg = 3940,
+  /** vec4f */
+  rainCfgB = 3944,
+  /** vec4f */
+  rainCfgC = 3948,
+  /** vec4f */
+  rainCfgD = 3952,
+  /** vec4f */
+  rainCfgE = 3956,
+  /** vec4f */
+  rainCfgF = 3960,
+  /** words it takes */
+  words = 3964,
+}
+
+/** src/render/shaders/particles_common.wgsl struct Window, in words of four bytes */
+export const enum WindowAt {
+  /** u32 */
+  start = 0,
+  /** u32 */
+  size = 1,
+  /** u32 */
+  tail = 2,
+  /** u32 */
+  live = 3,
+  /** words it takes */
+  words = 4,
+}
+
+/** src/render/shaders/particles_common.wgsl struct EmitRec, in words of four bytes */
+export const enum EmitRecAt {
+  /** vec3f */
+  pos = 0,
+  /** u32 */
+  count = 3,
+  /** vec3f */
+  dir = 4,
+  /** f32 */
+  speed = 7,
+  /** vec3f */
+  posB = 8,
+  /** u32 */
+  first = 11,
+  /** vec3f */
+  vadd = 12,
+  /** u32 */
+  shape = 15,
+  /** vec4f */
+  p = 16,
+  /** vec4f */
+  q = 20,
+  /** vec4u */
+  k = 24,
+  /** words it takes */
+  words = 28,
+}
+
+/** src/render/shaders/particles_common.wgsl struct ImpulseRec, in words of four bytes */
+export const enum ImpulseRecAt {
+  /** vec3f */
+  pos = 0,
+  /** f32 */
+  radius = 3,
+  /** vec3f */
+  bias = 4,
+  /** f32 */
+  strength = 7,
+  /** vec3f */
+  eye = 8,
+  /** f32 */
+  up = 11,
+  /** u32 */
+  kinds = 12,
+  /** u32 */
+  seed = 13,
+  /** u32 */
+  iflags = 14,
+  /** u32 */
+  spare = 15,
+  /** words it takes */
+  words = 16,
+}
+
 /** what a frame's flags word raises (common.wgsl FLAG_*) */
 export const FrameFlags = {
   Direct: 1,

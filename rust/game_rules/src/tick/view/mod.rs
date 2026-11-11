@@ -7,7 +7,8 @@
 //! A SECTION IS FILLED BY ITS RULE'S OWN MODULE (`mission::objective`), by the functions the tick runs: nothing is worded or judged twice. No rule calls
 //! this module. A new section: its struct in game_types, its line here, the program `half`, and the HUD's read of it.
 
-pub use ::game_types::view::types;
+pub use ::game_types::view::{told, types};
+pub use told::*;
 pub use types::*;
 pub mod marks;
 pub use marks::*;

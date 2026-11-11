@@ -4,13 +4,20 @@
 //   START what the game was started from · STEP one tick's hand · ORDER commands, at the next step or between two · HANDS a hands-off player's plan, or none ·
 //   MARK what the game came to by a tick, to hold a walk to · FIGURES who stood where by it · TRY the mission began again · END why the tape stopped
 //
-// A hand is kept as it was handed (src/draw/hand.ts), its matrices too, and never made again from a camera: a walk is exact in any browser. A step carries only
+// A hand is kept as it was handed (src/draw/hand.ts: the input's numbers, then the lens's), its matrices too, and never made again from a camera: a walk is exact in any browser. A step carries only
 // the numbers that moved since the step before, each as four bytes where four hold it.
 
-/** `version`: a tape of another one is refused */
-export const HANDTAPE = { magic: 0x31485054, version: 2 };
+import { HAND_NUMBERS } from '../draw/hand';
+import { HAND } from '../draw/input';
+import type { HandsOffPlan } from '../host/benchScenes';
+
+/** `version`: a tape of another one is refused, and one whose hand has other numbers (`HAND`) */
+export const HANDTAPE = { magic: 0x31485054, version: 3 };
 const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7, FIGURES = 8;
 const DT = 1, KEYS = 2, WIDE = 4;
+/** a step's numbers, each with a bit of two words */
+const count = HAND_NUMBERS;
+if (count > 64) throw new Error('a tape has 64 bits to say which of a hand\u2019s numbers moved, and a hand has more');
 
 /** a part of a start that is the build's own: what it should be, for a walk to hand over its own and be held to it */
 export interface PartOf { name: string; length: number; hash: number }
@@ -35,7 +42,7 @@ export function figuresPart(a: TapeFigures, b: TapeFigures): string | null {
 /** ticks between two marks */
 export const MARKS = { every: 60 };
 export type TapeRow = { kind: 'step'; tick: number; dt: number; hand: Float64Array; keys: string } | { kind: 'order'; tick: number; bytes: Uint8Array }
-  | { kind: 'hands'; tick: number; plan: Uint8Array } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
+  | { kind: 'hands'; tick: number; plan: HandsOffPlan | null } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
 
 /** FNV-1a over bytes (a part's hash) */
 export function hashOf(b: Uint8Array): number { let h = 0x811c9dc5; for (let i = 0; i < b.length; i++) h = Math.imul(h ^ b[i], 0x01000193); return h >>> 0; }
@@ -48,10 +55,9 @@ export class HandTape {
   /** bytes on the tape */
   get length(): number { return this.n; }
   private b = new Uint8Array(65536); private d = new DataView(this.b.buffer); private n = 0;
-  private was: Float64Array; private keys = ''; private dt = NaN; private over = false; private enc = new TextEncoder();
+  private was = new Float64Array(count).fill(NaN); private keys = ''; private dt = NaN; private over = false; private enc = new TextEncoder();
 
-  /** `count`: the numbers of a hand */
-  constructor(readonly count: number) { this.was = new Float64Array(count).fill(NaN); this.u32(HANDTAPE.magic); this.u32(HANDTAPE.version); this.u32(count); }
+  constructor() { this.u32(HANDTAPE.magic); this.u32(HANDTAPE.version); this.u32(count); this.u32(HAND); }
 
   private room(k: number): void { if (this.n + k <= this.b.length) return; let size = this.b.length * 2; while (size < this.n + k) size *= 2; const b = new Uint8Array(size); b.set(this.b.subarray(0, this.n)); this.b = b; this.d = new DataView(b.buffer); }
   private u8(v: number): void { this.room(1); this.b[this.n++] = v; }
@@ -68,7 +74,7 @@ export class HandTape {
   /** one tick's hand, before it is stepped */
   step(dt: number, hand: Float64Array, keys: string): void {
     if (this.over) return;
-    const { count, was } = this; let moved0 = 0, moved1 = 0, wide0 = 0, wide1 = 0;
+    const { was } = this; let moved0 = 0, moved1 = 0, wide0 = 0, wide1 = 0;
     for (let i = 0; i < count; i++) { const v = hand[i]; if (Object.is(v, was[i])) continue; was[i] = v; const bit = 1 << (i & 31), wide = !Object.is(Math.fround(v), v) || v !== v;
       if (i < 32) { moved0 |= bit; if (wide) wide0 |= bit; } else { moved1 |= bit; if (wide) wide1 |= bit; } }
     const says = (Object.is(dt, this.dt) ? 0 : DT) | (keys === this.keys ? 0 : KEYS) | (wide0 || wide1 ? WIDE : 0);
@@ -82,7 +88,7 @@ export class HandTape {
   /** commands the game took, at the next step or between two */
   order(bytes: Uint8Array): void { if (!this.over) { this.u8(ORDER); this.bytes(bytes); } }
   /** a hands-off player took the seat, or with no plan gave it back */
-  hands(plan: Uint8Array): void { if (!this.over) { this.u8(HANDS); this.bytes(plan); } }
+  hands(plan: HandsOffPlan | null): void { if (!this.over) { this.u8(HANDS); this.text(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); } }
   mark(m: TapeMark): void { if (this.over) return; this.u8(MARK); this.u32(m.tick); this.f64(m.die); this.u32(m.parts); this.u8(m.state === null ? 0 : 1); if (m.state !== null) this.u32(m.state); }
   figures(f: TapeFigures): void {
     if (this.over) return; this.u8(FIGURES); this.u32(f.tick); this.u32(f.shots); this.u32(f.men.length); this.room(f.men.length * 13);
@@ -119,14 +125,13 @@ export class HandWalk {
   place(): TapePlace { return { at: this.at, ticks: this.ticks, hand: this.hand.slice(), keys: this.keys, dt: this.dt }; }
   back(p: TapePlace): void { this.at = p.at; this.ticks = p.ticks; this.hand.set(p.hand); this.keys = p.keys; this.dt = p.dt; }
 
-  /** `count`: the numbers of this build's hand */
-  constructor(private b: Uint8Array, count: number) {
+  /** `any`: whatever its hand's numbers are (a tool's that reads what came of the run, and hands nothing over again) */
+  constructor(private b: Uint8Array, any = false) {
     this.d = new DataView(b.buffer, b.byteOffset, b.byteLength);
     if (b.length < 12 || this.u32() !== HANDTAPE.magic) throw new TapeRefused('That file isn\u2019t a replay of this game.');
-    const version = this.u32(), numbers = this.u32();
-    if (version !== HANDTAPE.version) throw new TapeRefused(ANOTHER);
-    if (numbers !== count) throw new TapeRefused(ANOTHER);
-    this.hand = new Float64Array(count).fill(NaN);
+    const version = this.u32(), numbers = this.u32(), hand = version >= 3 ? this.u32() : 0;
+    if (any ? version !== 2 && version !== 3 : version !== HANDTAPE.version || hand !== HAND) throw new TapeRefused(ANOTHER);
+    this.hand = new Float64Array(numbers).fill(NaN);
     try {
       if (this.u8() !== START) throw new RangeError();
       const build = this.text(), levelName = this.text(), level = this.bytes(), words = this.text(), parts: PartOf[] = [];
@@ -150,7 +155,7 @@ export class HandWalk {
   private row(): TapeRow {
     const kind = this.u8(), tick = this.ticks;
     if (kind === ORDER) return { kind: 'order', tick, bytes: this.bytes() };
-    if (kind === HANDS) return { kind: 'hands', tick, plan: this.bytes() };
+    if (kind === HANDS) { const said = this.text(), [seed, cap, breaker, ...route] = said.split('\n'); return { kind: 'hands', tick, plan: said ? { seed: Number(seed), cap: Number(cap), breaker: breaker !== '0', route } : null }; }
     if (kind === MARK) { const at = this.u32(), die = this.f64(), parts = this.u32(); return { kind: 'mark', mark: { tick: at, die, parts, state: this.u8() ? this.u32() : null } }; }
     if (kind === FIGURES) { const f: TapeFigures = { tick: this.u32(), shots: this.u32(), men: [] }; for (let n = this.u32(); n > 0; n--) f.men.push({ id: this.u32(), x: this.f32(), z: this.f32(), down: this.u8() === 1 }); return { kind: 'figures', figures: f }; }
     if (kind === TRY) return { kind: 'try', tick };

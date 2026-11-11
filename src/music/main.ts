@@ -8,7 +8,8 @@ import { Music, WebAudioMusicBackend, PIECE_NAMES } from '../audio/music';
 import { PIECES, THEME } from '../audio/pieces';
 import { setlistLevel, setlistNames } from '../audio/setlist';
 import { fetchFace } from '../host/face';
-import { Desk, type DeskFace } from '../view/desk';
+import { Face } from '../draw/face';
+import { Desk } from '../view/desk';
 import { masterChain } from '../audio/webaudio';
 import { VOLUME_DEFAULTS } from '../audio/mixlaw';
 
@@ -23,7 +24,7 @@ interface LevelRow { key: string; title: string; names: readonly string[] }
 const LEVELS: LevelRow[] = [];
 async function askLevels(): Promise<void> {
   const face = await fetchFace(line => { $('levels').textContent = line; }), seen = new Set<string>();
-  for (const m of new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, () => { /* nothing is pressed here */ }).missions().rows) {
+  for (const m of new Desk(new Face(face.exports), () => { /* nothing is pressed here */ }).missions().rows) {
     const r = setlistNames(setlistLevel(m.level), m.kind === 'solo' ? null : m.kind); if (seen.has(r.key)) continue; seen.add(r.key);
     LEVELS.push({ key: r.key, title: m.title.replace(/, (alone|as two)$/, ''), names: r.names }); }
   $('levels').textContent = ''; buildLevels(); paint();

@@ -3,13 +3,16 @@
 //! (`game_start/src/bin/half`).
 //!
 //! - A field is a word or a run of words: `f32`, `u32`, `i32`, two halves in a word (`Half2`), or an array of one. So a row has no padding and lies as it is declared.
+//! - A word may be packed (`packed!`): some whole numbers side by side in it, each by its name.
+//! - A row a host hands over is all doubles (`f64`, `handed`), and its offsets are in doubles.
 //! - A row a shader reads keeps the shader's own rule: three or four numbers begin at a multiple of four words, two at a multiple of two.
 
-/// a type that is nothing but words
+/// a type that is nothing but words, and that every bit pattern is one of: a row handed over is read by its bits (`Laid`)
 pub trait Plain: Copy { const ZERO: Self; }
 impl Plain for f32 { const ZERO: f32 = 0.0; }
 impl Plain for u32 { const ZERO: u32 = 0; }
 impl Plain for i32 { const ZERO: i32 = 0; }
+impl Plain for f64 { const ZERO: f64 = 0.0; }
 impl<T: Plain, const N: usize> Plain for [T; N] { const ZERO: [T; N] = [T::ZERO; N]; }
 
 /// two numbers in a word, each as a half, the first in the low one (a shader's unpack2x16float)
@@ -74,6 +77,34 @@ macro_rules! row {
     };
 }
 
+/// a packed word as a table: its name, whether it is a float (its parts are then of its whole number, and what is under the first of them is a share of its own), and each part's
+/// name, where it begins and how many bits it has
+pub struct PackedTable { pub name: &'static str, pub doc: &'static [&'static str], pub float: bool, pub share: &'static str, pub parts: &'static [(&'static str, u32, u32)] }
+/// A WORD OF PARTS, declared: what puts them in, and the table of itself. `f32 over share`: a float, whose whole number above the first part's place holds them, and
+/// which is `share` (a number to that place) below it
+#[macro_export]
+macro_rules! packed {
+    ($(#[doc = $d:expr])* pub struct $name:ident: u32 { $($part:ident: $at:literal, $bits:literal;)* }) => {
+        $(#[doc = $d])* #[repr(transparent)] #[derive(Clone, Copy, Debug, PartialEq)] pub struct $name(pub u32);
+        impl $crate::rows::Plain for $name { const ZERO: Self = $name(0); }
+        impl $name {
+            pub const TABLE: $crate::rows::PackedTable = $crate::rows::PackedTable { name: stringify!($name), doc: &[$($d),*], float: false, share: "", parts: &[$((stringify!($part), $at, $bits)),*] };
+            #[allow(clippy::too_many_arguments)]
+            pub fn of($($part: u32),*) -> $name { $name(0 $(| ($part & ((1u64 << $bits) - 1) as u32) << $at)*) }
+            $(pub fn $part(self) -> u32 { self.0 >> $at & ((1u64 << $bits) - 1) as u32 })*
+        }
+    };
+    ($(#[doc = $d:expr])* pub struct $name:ident: f32 over $share:ident { $($part:ident: $at:literal, $bits:literal;)* }) => {
+        $(#[doc = $d])* #[repr(transparent)] #[derive(Clone, Copy, Debug, PartialEq)] pub struct $name(pub f32);
+        impl $crate::rows::Plain for $name { const ZERO: Self = $name(0.0); }
+        impl $name {
+            pub const TABLE: $crate::rows::PackedTable = $crate::rows::PackedTable { name: stringify!($name), doc: &[$($d),*], float: true, share: stringify!($share), parts: &[$((stringify!($part), $at, $bits)),*] };
+            #[allow(clippy::too_many_arguments)]
+            pub fn of($share: f64, $($part: u32),*) -> $name { $name(($share + (0 $(| ($part & ((1u64 << $bits) - 1) as u32) << $at)*) as f64) as f32) }
+        }
+    };
+}
+
 row! {
     /// a light, as a shader reads it
     pub struct LightRow {
@@ -89,5 +120,45 @@ row! {
         /// the low byte a man's, the panes it shines through above it
         pub owner: u32,
         pub radius: f32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    packed! {
+        /// whole numbers side by side
+        pub struct Word: u32 {
+            low: 0, 8;
+            mid: 8, 5;
+            top: 24, 8;
+        }
+    }
+    packed! {
+        /// a share, and whole numbers over it
+        pub struct Share: f32 over rough {
+            metal: 1, 1;
+            stuff: 3, 5;
+            own: 9, 6;
+        }
+    }
+
+    /// A FAILURE MEANS: a part of a packed word is read as another's, or one too large runs into its neighbour.
+    #[test]
+    fn a_part_of_a_word_is_read_back_and_no_other_s() {
+        let w = Word::of(200, 17, 255);
+        assert_eq!((w.low(), w.mid(), w.top()), (200, 17, 255));
+        let over = Word::of(256 + 3, 32 + 1, 0);
+        assert_eq!((over.low(), over.mid(), over.top()), (3, 1, 0));
+    }
+    /// The share is read as a shader reads it (its place's remainder), under the largest whole number there can be, to a 500th.
+    #[test]
+    fn a_share_stands_under_every_whole_number() {
+        for k in 0..=500 {
+            let (rough, w) = (k as f64 / 500.0, Share::of(k as f64 / 500.0, 1, 31, 44).0);
+            let read = w - 2.0 * crate::m::floor(w as f64 * 0.5) as f32;
+            assert!((read as f64 - rough).abs() < 0.001, "{rough} is read as {read}");
+            let whole = w as u32;
+            assert_eq!((whole >> 1 & 1, whole >> 3 & 31, whole >> 9 & 63), (1, 31, 44), "under {rough}");
+        }
     }
 }

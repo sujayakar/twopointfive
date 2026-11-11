@@ -8,8 +8,8 @@ import { join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), OUT = join(ROOT, 'src/gpu/wgslrows.ts');
 type Space = 'uniform' | 'storage';
-/** the structs the page writes, and the name each goes by there. `flags`: a family of `const NAME_…: u32` bits */
-const STRUCTS: { file: string; struct: string; as: string; space: Space }[] = [
+/** the structs the page writes, and the name each goes by there (`also`: files a struct it holds is in) */
+const STRUCTS: { file: string; struct: string; as: string; space: Space; also?: string[] }[] = [
   { file: 'src/render/shaders/common.wgsl', struct: 'Frame', as: 'FrameAt', space: 'uniform' },
   { file: 'src/smoke/smoke.wgsl', struct: 'SP', as: 'SpAt', space: 'uniform' },
   { file: 'src/smoke/wind_force.wgsl', struct: 'WindBlock', as: 'WindAt', space: 'uniform' },
@@ -17,6 +17,9 @@ const STRUCTS: { file: string; struct: string; as: string; space: Space }[] = [
   { file: 'src/render/shaders/place_field.wgsl', struct: 'PlaceU', as: 'PlaceAt', space: 'uniform' },
   { file: 'src/render/shaders/powder_field.wgsl', struct: 'PowU', as: 'PowAt', space: 'uniform' },
   { file: 'src/render/shaders/outline.wgsl', struct: 'OutlineU', as: 'OutlineAt', space: 'uniform' },
+  { file: 'src/render/shaders/composite.wgsl', struct: 'Beams', as: 'BeamsAt', space: 'uniform', also: ['src/render/shaders/fire.wgsl'] },
+  { file: 'src/render/shaders/taau.wgsl', struct: 'TaauParams', as: 'TaauAt', space: 'uniform' },
+  { file: 'src/render/shaders/particles_common.wgsl', struct: 'EmitBlock', as: 'EmitBlockAt', space: 'uniform' },
 ];
 const FLAGS: { file: string; prefix: string; as: string; doc: string }[] = [
   { file: 'src/render/shaders/common.wgsl', prefix: 'FLAG_', as: 'FrameFlags', doc: 'what a frame\'s flags word raises (common.wgsl FLAG_*)' },
@@ -76,8 +79,8 @@ export function written(): string {
     for (const m of l.members) L.push(`  /** ${m.type} */`, `  ${m.name} = ${m.word},`);
     L.push('  /** words it takes */', `  words = ${l.words},`, '}', '');
   };
-  for (const { file, struct, as, space } of STRUCTS) {
-    const seen = new Map<string, Layout>(), l = layoutOf(text(file), struct, space, seen); emit(as, l, file);
+  for (const { file, struct, as, space, also } of STRUCTS) {
+    const seen = new Map<string, Layout>(), l = layoutOf([file, ...(also ?? [])].map(text).join('\n'), struct, space, seen); emit(as, l, file);
     for (const [n, e] of seen) if (n !== struct && !done.has(`${n}At`)) emit(`${n}At`, e, file);
   }
   for (const { file, prefix, as, doc } of FLAGS) { const bits = bitsOf(text(file), prefix); oneBits(as, bits); L.push(`/** ${doc} */`, `export const ${as} = {`, ...bits.map(([n, v]) => `  ${camel(n.slice(prefix.length))}: ${v},`), '} as const;', ''); }

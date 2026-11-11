@@ -86,7 +86,8 @@ import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
 import { ViewSize } from './viewsize';
-import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
+import { Face } from '../draw/face';
+import { Desk, desk, setDesk } from '../view/desk';
 import type { BriefView } from '../view/read';
 import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
@@ -108,7 +109,8 @@ import { DrawDecals } from '../draw/marks';
 import { dustFrom, trafficFrom } from '../draw/levellook';
 import { DrawWorld } from '../draw/world';
 import { lookNumbers } from '../draw/look';
-import { HAND, sampleHand } from '../draw/hand';
+import { sampleHand } from '../draw/hand';
+import { SeatInput } from '../draw/input';
 import { HOURS_OF, skyFrom } from '../draw/sky';
 import { fogFrom } from '../draw/fog';
 import { smokeFrom } from '../draw/smoke';
@@ -148,7 +150,7 @@ async function main(): Promise<void> {
   // ---- the game's module
   const faceP = fetchFace(say).then(face => { MODULE.name = face.name ?? '';
     // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
-    setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
+    setDesk(new Desk(new Face(face.exports), (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
     desk().machine(machineKept(), location.search); return face; });
   faceP.catch(() => { /* told where it is awaited, below */ });
   // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked
@@ -188,7 +190,7 @@ async function main(): Promise<void> {
   else if (net) net.start({ level, mannequin, mannequinBin, cast, castLook });
   else {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
-    if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
+    if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape();
     if (game.tape) built = await buildName();
     game.start({ level, words: location.search, kept: machineKept(), mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
     machineStood(game);
@@ -301,7 +303,7 @@ async function main(): Promise<void> {
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
   const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
   if (!play && !kitPicture) gameUp();
-  let bar: TapeBar | null = null, laneTape: LaneTape | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
+  let bar: TapeBar | null = null, laneTape: LaneTape | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[SeatInput.target], n[SeatInput.target + 1], n[SeatInput.target + 2]], yaw: n[SeatInput.yaw], pitch: n[SeatInput.pitch], dist: n[SeatInput.distance], fov: n[SeatInput.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
   // whoever watches a run sees it his own way: the fog off his picture, a tube or none whatever the run's goggles were (null: as the run had it), eased by the page's clock
   const watched = { fog: true, tube: null as boolean | null, k: 0 }, seesAs = (fog: boolean, tube: boolean | null): void => { watched.fog = fog; watched.tube = tube; if (hud) hud.page.bared = !fog; game.viewAs(!fog, tube); };
   const tubeOf = (runs: number, dt: number): number => { if (!play) return runs; const to = watched.tube === null ? runs : watched.tube ? 1 : 0, by = dt * 4; if (watched.tube === null && Math.abs(runs - watched.k) <= by) return watched.k = runs; return watched.k += Math.max(-by, Math.min(by, to - watched.k)); };

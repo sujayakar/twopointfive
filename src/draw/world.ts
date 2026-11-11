@@ -40,6 +40,7 @@ export class DrawWorld extends BoxWorld {
     D.send(q, this.geoBuf, Section.geo, Geo.row, st, n - st); D.send(q, this.matBuf, Section.mat, Mat.row, st, n - st);
     // the tables behind the materials: marks, the panes' cells, the cut planes
     if (u[h + Head.marksMoved]) D.send(q, this.matBuf, Section.marks, Row4.row, 0, D.n[Section.marks], BoxMat.mark * 16);
+    if (u[h + Head.airMoved]) D.send(q, this.matBuf, Section.dustAir, Row4.row, 0, D.n[Section.dustAir], BoxMat.air * 16);
     if (u[h + Head.panesMoved]) D.send(q, this.matBuf, Section.panes, Pane.row, 0, D.n[Section.panes], BoxMat.pane * 16);
     if (this.cutOn) for (let k = 0; k < 2; k++) { const a = u[h + (k ? Head.cutFromOwn : Head.cutFrom)], b = u[h + (k ? Head.cutToOwn : Head.cutTo)]; if (b > a) D.send(q, this.matBuf, Section.cut, Cut.row, a, b - a, BoxMat.cut * 16 + a * Cut.row * 4); }
     D.send(q, this.visibleBuf, Section.visible, Word.row);

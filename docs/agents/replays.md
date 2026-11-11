@@ -122,7 +122,7 @@ hand numbers, or another character file (`other` in `handtape.ts`).
 - **State:** a field reachable from `Game`, so that a clone and `state_words` have it, or a column of the block. A field left out of the hash says so
   with `#[bytes(skip)]`. A new `static mut` in `rust/sim` or `rust/prim` needs its row in `rust-rules-check.ts`.
 - **A die roll:** `draw_of(g, "module::function#1", gd)`, or `draw_for`, `draw_body`, `draw_def`, `draw_op`.
-- **A number of the hand:** `src/draw/hand.ts` and `HAND` in `rust/game_face/src/hand.rs`, in the same order. Every tape is then refused.
+- **A number of the hand:** a field of `SeatInput` or `SeatLens` (`rust/game_types/src/handed.rs`), then `half`. Every tape is then refused (`HAND`).
 - **A kind of row:** its constant, its writer and `row` in `handtape.ts`, and `rest` in `drawplay.ts` if a walk acts on it. Raise `HANDTAPE.version`
   only if an old tape can no longer be read.
 - **A change to play:** old tapes part, and the bar says so. To remake one, `bun run tools/draw/tape-again.ts <tape> <out>`; the sounds' tapes go

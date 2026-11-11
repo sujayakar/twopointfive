@@ -2,7 +2,7 @@
 //! page asks by the list below (`asks!`, whose caller on the page is written from it by the program `half`) and is answered with a view.
 //!
 //! The bytes of an ask: its number (u32), then its fields in order, as a command's. A PRESS changes the desk and answers `Pressed`; every other ask changes nothing.
-use super::command::{Bytes, Field};
+use super::field::{Bytes, Field};
 use super::kept;
 use crate::json::{parse, Json};
 use crate::read::{At, Faults, FromJson};

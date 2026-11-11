@@ -10,6 +10,7 @@ pub mod bytes;
 pub mod crosses;
 #[macro_use]
 pub mod rows;
+pub mod handed;
 pub mod ids;
 pub mod js;
 pub mod query;
@@ -273,7 +274,7 @@ pub mod tracers { pub mod types; pub use types::*; }
 pub mod ui_missions { pub mod types; pub use types::*; }
 pub mod unseen { pub mod types; pub use types::*; }
 pub mod verdict { pub mod types; pub use types::*; }
-pub mod view { pub mod types; pub use types::*; }
+pub mod view { pub mod types; pub mod told; pub use types::*; pub use told::*; }
 pub mod walkahead { pub mod types; pub use types::*; }
 pub mod wallbreak { pub mod types; pub use types::*; }
 pub mod wallcharge { pub mod types; pub use types::*; }
