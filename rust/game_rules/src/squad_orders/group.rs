@@ -26,6 +26,22 @@ pub fn with<R>(g: &mut Game, id: GroupId, f: impl FnOnce(&mut Game) -> R) -> R {
     r
 }
 
+/// WHOSE MAN HE IS: the group he is of, or no group's.
+pub fn of(g: &Game, gd: GuardId) -> Option<GroupId> {
+    if g.gd[gd].duty.group.is_some() { return g.gd[gd].duty.group; }
+    if g.team(gd).ours() { return Some(g.sets[crate::seats::seat_of(g, gd)].group); }
+    g.qrf.group.filter(|_| g.qrf.men.contains(&gd))
+}
+
+/// He is one of its men.
+pub fn has(g: &Game, id: GroupId, gd: GuardId) -> bool {
+    match g.groups[id].commander {
+        Commander::Seat(s) => g.team(gd).ours() && crate::seats::in_seat(g, s, gd),   // (a game of more than one: each seat has its own)
+        Commander::Squad(_) => g.gd[gd].duty.group == Some(id),
+        Commander::Response => g.qrf.men.contains(&gd),
+    }
+}
+
 /// The pass is about a player's own squad.
 pub fn is_seats(g: &Game) -> bool { g.groups[g.group].by_a_player() }
 

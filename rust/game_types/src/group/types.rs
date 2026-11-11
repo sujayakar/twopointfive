@@ -23,6 +23,8 @@ pub struct Group {
 pub enum Commander {
     /// a player, by his keys
     Seat(SeatId),
+    /// the squad itself, of those who hold a place (`enemysquads/`)
+    Squad(EnemysquadsSquadId),
     /// the response team's own drill (`qrf/`)
     Response,
 }

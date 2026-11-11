@@ -138,10 +138,7 @@ pub fn squad_orders_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 
 /// Is he one of the men these orders move: the one roster test.
 pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if !seat_ref.group.by_a_player() { return g.qrf.men.contains(&gd); }
-    if !g.team(gd).ours() { return false; }
-    let seat = seat_ref.id;
-    crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one)
+    crate::group::has(g, seat_ref.group_id, gd)
 }
 
 /// The player is one of these men's own.
