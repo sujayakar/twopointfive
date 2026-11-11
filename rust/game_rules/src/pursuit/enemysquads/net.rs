@@ -698,14 +698,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         let d = match h.iter().copied().find(|&x| g.tab.roomfight_def[x].gd == due.gd) { Some(d) => d, None => continue };
         if g.tab.enemysquads_squad[q].state != SquadState::Contact { continue; }
         let lost = match due.room.clone() { Some(r) => Some(r), None => g.tab.enemysquads_squad[q].hit_room.clone() };
-        let mut up_in = 0usize;
-        if let Some(l) = &lost {
-            for &m in men.iter() {
-                if !alive(g, m) { continue; }
-                let p = g.pos_of(m);
-                if room_of(g, q, p, Some(0.05)).map_or(false, |r| r.id == l.id) { up_in += 1; }   // (`===` of a room: its id, a room is one row of the structure)
-            }
-        }
+        let up_in = lost.as_ref().map_or(0, |l| up_in_room(g, q, men, l));
         // one man alone does not walk into a room nobody of theirs is left in, and a drilled squad's into one that is as good as lost
         let mates = { let x = &g.tab.enemysquads_squad[q]; x.due.iter().any(|o| same_room(&o.room, &due.room)) || x.sent.iter().any(|s| s.role == SentRole::Reinforce && g.time - s.t0 < TOGETHER_SECS) };
         let least = match squad_drill(g) { Some(k) if k.drill_own => k.own_up, _ => if mates { 0.0 } else { 1.0 } };
@@ -736,6 +729,11 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
     }
 }
 
+/// How many of its men are up in that room.
+fn up_in_room(g: &Game, q: EnemysquadsSquadId, men: &[GuardId], room: &crate::scene_scenarios::StructureRoom) -> usize {
+    men.iter().filter(|&&m| alive(g, m) && room_of(g, q, g.pos_of(m), Some(0.05)).is_some_and(|r| r.id == room.id)).count()
+}
+
 /// A drilled squad's men on their way to one room go in together: those whose time it is, and those whose time it soon is, by the one door.
 fn due_together(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
     let now = g.time;
@@ -744,6 +742,7 @@ fn due_together(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
     let id = g.tab.enemysquads_squad[q].group;
     if !crate::group::drilled(g, id) { return; }
     let Some(room) = first.room.clone().or_else(|| g.tab.enemysquads_squad[q].hit_room.clone()) else { return };
+    if squad_drill(g).is_some_and(|k| k.drill_own && (up_in_room(g, q, men, &room) as f64) < k.own_up) { return; }   // (as good as lost: `tick_due` says so)
     let home_men: Vec<GuardId> = home(g, q).into_iter().map(|d| g.tab.roomfight_def[d].gd).collect();
     let with: Vec<SquadDueItem> = g.tab.enemysquads_squad[q].due.iter().filter(|x| same_room(&x.room, &first.room) && x.t - now < TOGETHER_SECS && home_men.contains(&x.gd)).cloned().collect();
     if with.len() < 2 { return; }

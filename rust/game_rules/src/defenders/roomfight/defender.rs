@@ -472,13 +472,6 @@ fn stops_for(g: &mut Game, d: RoomfightDefId, fc: CharId) {
     let fp = g.ch[fc].pos;
     crate::guards::eyes_on(g, gd, fp);
 }
-/// A man on his squad's orders who has met somebody near stops and fights him, as on any leg of his. True: he has.
-pub fn stopped_by_a_foe(g: &mut Game, d: RoomfightDefId) -> bool {
-    let Some(fc) = in_his_way(g, d) else { return false };
-    stops_for(g, d, fc);
-    true
-}
-
 /// His leg is over, and how: it is his post now where he has got to, or he stands there on his sender's word.
 fn end_leg(g: &mut Game, d: RoomfightDefId, end: LegEnd) {
     let leg = &mut g.tab.roomfight_def[d].leg;
