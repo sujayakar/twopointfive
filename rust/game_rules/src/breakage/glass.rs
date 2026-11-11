@@ -106,18 +106,6 @@ pub(super) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f6
     g.events.push(e);
 }
 
-/// nearest point of box b (yawed, no rot) to p, and the distance
-fn nearest_on_box(g: &crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
-    let (yaw, c, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.c, row.h) };
-    let (cs, sn) = (m::cos(yaw), m::sin(yaw));
-    let (dx, dy, dz) = (p[0] - c[0], p[1] - c[1], p[2] - c[2]);
-    let lx = v3::clamp(cs * dx - sn * dz, -h[0], h[0]);
-    let ly = v3::clamp(dy, -h[1], h[1]);
-    let lz = v3::clamp(sn * dx + cs * dz, -h[2], h[2]);
-    let q: V3 = [c[0] + cs * lx + sn * lz, c[1] + ly, c[2] - sn * lx + cs * lz];
-    NearestOnBox { q, d: v3::dist(p, q) }
-}
-
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
 pub(super) fn box_seed(g: &crate::game::Game, b: BoxId) -> f64 {
     let (c, hs) = { let row = &g.tab.boxes[b]; (row.c, row.h) };
@@ -226,16 +214,14 @@ pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>,
     glass_impact(g, bi, hit_p, dir, 1.0, who, Some(cause), quiet, None).pane
 }
 
-/// stars every sheet whose nearest point is within `radius` of `at`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it
+/// stars every sheet a blast at `at` has a line to within `radius`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it
 pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f64 {
     let mut n = 0.0;
     for bi in glass_panes(g) {
         let bx = g.box_at(bi);
         if !is_sheet(g, bx) { continue; }   // solid glass does not craze
         let b = bx.unwrap();
-        let near = nearest_on_box(g, b, at);
-        if near.d > radius { continue; }
-        let q = near.q;
+        let Some(q) = ::sim::panes::blast_meets(g.tab.boxes.world(), &::sim::world::Over::with(true), js::to_u32(bi) as usize, at, radius, &g.k) else { continue };
         let word = box_seed(g, b);
         let mut s = js::to_u32(blast_seed(word, at));
         let (c, h, yaw) = { let row = &g.tab.boxes[b]; (row.c, row.h, row.yaw) };

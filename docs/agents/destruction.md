@@ -69,8 +69,8 @@ the box world's room, the cells stay shut and it answers no.
 under a standing upper. `destruction_round` does the rest. `coverfire.rs` lets a man spend rounds on what hides an enemy he knows of, by asking the same
 engine.
 
-**A blast.** `destruction_blast` runs its listeners (`BlastListener`: the glass and the bars), snow in the way, `doors_blast`, `wall_break_blast`,
-`furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
+**A blast.** `destruction_blast` tells its listeners (`BlastListener`: the glass and bars it has a line to), runs snow, `doors_blast`,
+`wall_break_blast`, tells them again through what opened, `furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
 `wall_break_plan_of` is the plan: columns in line within `hole_k` × radius go whole, within `port_k` lose their upper part, cover cells within
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 

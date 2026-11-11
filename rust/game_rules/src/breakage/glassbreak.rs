@@ -14,6 +14,7 @@ pub fn glass_break_live(g: &crate::game::Game) -> bool {
     g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
 }
 
+use crate::ask::Over;
 use ::sim::panes::{self, Ctx};
 use crate::glasspen::PaneType;
 use ::sim::world::{Sheet, VIEW_BLOWN, VIEW_GIVES, VIEW_NONE};
@@ -280,8 +281,9 @@ pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     glass_break_asking(g, |cx, k| panes::widen(cx, js::to_u32(bi), x, k)) as f64
 }
 
-/// A BLAST at `at`: every sheet in reach takes it by type and by k = power × (1 − d / radius); the panes it changed
-pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 {
+/// A BLAST at `at`, in the world as it takes it: every sheet in reach that it has a line to (panes.rs `blast_meets`, asked of them all before any breaks) takes it by type
+/// and by k = power × (1 − d / radius); the panes it changed
+pub fn glass_break_blast(g: &mut crate::game::Game, over: &Over, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 {
     let opts = opts.unwrap_or_default();
     if !glass_break_live(g) { return 0.0; }
     let radius = opts.radius.unwrap_or(g.k.glassbreak.blast_m);
@@ -289,9 +291,10 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
     let who = opts.who.unwrap_or(0.0);
     let mut changed = 0.0;
     if radius > 0.0 && power > 0.0 {
+        let met = crate::scene_collision::panes_met(g, over, at, radius);
         let arrival = glass_break_asking(g, |cx, _| panes::blast_begin(cx, at));
-        for i in 0..g.tab.boxes.world().sheets.len() {
-            if glass_break_asking(g, |cx, k| panes::blast_sheet(cx, arrival, i, at, radius, power, who, k)) { changed += 1.0; }
+        for pane in met {
+            if glass_break_asking(g, |cx, k| panes::blast_sheet(cx, arrival, pane, at, radius, power, who, k)) { changed += 1.0; }
         }
     }
     changed
@@ -300,24 +303,24 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
 /// a stun charge went off at `at`: a blast at bangPower
 pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
     let opts = GlassBlastOpts { radius: Some(g.k.glassbreak.blast_m), power: Some(g.k.glassbreak.bang_power), who: Some(who) };
-    glass_break_blast(g, at, Some(opts))
+    glass_break_blast(g, &Over::OWN, at, Some(opts))
 }
 
 // ---------------------------------------------------------------- a burst's view of the glass
-/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass
-pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakViewOfKind, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass, in the world as the question takes it
+pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, over: &Over, view: crate::glassbreak::GlassBreakViewOfKind, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let kind = view;
-    let was = g.glass_break.view_of.take();
-    g.glass_break.view_of = Some(GlassBreakViewOf { kind, from, size });
-    glass_viewed(g);
+    let was = g.glass_break.view_of.replace(GlassBreakViewOf { kind, from, size });
+    let shown = glass_viewed(g, over);
     let out = fn_(g);
     g.glass_break.view_of = was;
-    glass_viewed(g);
+    g.tab.boxes.view(shown);
     out
 }
 
-/// the box world is told the view in hand, as numbers: which view, the burst's point, reach and power, whether a man counts on it
-fn glass_viewed(g: &mut Game) {
+/// the box world is told the view in hand, as numbers: which view, the burst's point, reach and power, whether a man counts on it; and which panes such a burst meets.
+/// → the view it had
+fn glass_viewed(g: &mut Game, over: &Over) -> ::sim::world::View {
     let (kind, at) = match g.glass_break.view_of {
         None => (VIEW_NONE, [0.0; 6]),
         Some(v) => (
@@ -325,7 +328,8 @@ fn glass_viewed(g: &mut Game) {
             [v.from[0], v.from[1], v.from[2], v.size.radius.unwrap_or(g.k.glassbreak.blast_m), v.size.power.unwrap_or(1.0), if v.kind == GlassBreakViewOfKind::Counted { 1.0 } else { 0.0 }],
         ),
     };
-    g.tab.boxes.view(kind, at);
+    let met = if kind == VIEW_GIVES { crate::scene_collision::panes_met(g, over, [at[0], at[1], at[2]], at[3]) } else { Vec::new() };
+    g.tab.boxes.view((kind, at, met))
 }
 
 /// the rule's whole answer at a point: a piece out, or the view in hand counts the glass there out
@@ -490,14 +494,14 @@ mod tests {
     #[test]
     fn a_view_is_its_numbers() {
         let mut g = blank();
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         assert_eq!(g.tab.boxes.world().view, VIEW_NONE);
         g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Counted, from: [1.0, 2.0, 3.0], size: GlassBlastOpts { radius: Some(5.0), power: None, who: None } });
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         let v = g.tab.boxes.world();
         assert_eq!((v.view, v.view_at), (VIEW_GIVES, [1.0, 2.0, 3.0, 5.0, 1.0, 1.0]));
         g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Blown, from: [0.0, 0.0, 0.0], size: GlassBlastOpts::default() });
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         let v = g.tab.boxes.world();
         assert_eq!((v.view, v.view_at[3], v.view_at[5]), (VIEW_BLOWN, g.k.glassbreak.blast_m, 0.0));
     }
