@@ -6,7 +6,7 @@ const { mkdirSync, readFileSync } = require('node:fs'), { join } = require('node
 const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 // (the men's place among the sections, by its name: a section put before it moves the number)
 const MEN = Number(/enum Section \{[^}]*\bmen = (\d+)/.exec(readFileSync(join(__dirname, '../../src/draw/sections.ts'), 'utf8'))[1]);
-const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.state;
+const same = (a, b) => a.die === b.die && a.stands === b.stands && a.state === b.state;
 (async () => {
   const ctx = await PAGE.context();
   const open = async (words, ready = true) => {

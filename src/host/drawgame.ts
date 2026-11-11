@@ -72,7 +72,6 @@ export class DrawGame {
     this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, kept });
     if (this.h) { this.face.drop(this.h); this.h = 0 as GameNo; }
     this.h = this.face.start(o.level, o.words, o.mannequin, o.mannequinBin, o.cast, o.castLook, kept, o.seed, seats, DRESS | LATER);
-    if (!this.h) throw new FaceError('no room for another game in this module');
     this.ticks = 0; this.done++; this.said = null; this.between = 1; this.tried = -1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.face.reserve(64 * 1048576);
@@ -108,10 +107,10 @@ export class DrawGame {
   /** it is walked through a tape: nobody commands it but the tape */
   walked = false;
   private order(): void { if (this.commands.length) { const b = this.commands.take(); if (this.walked) return; this.tape?.order(b); this.face.commands(this.h, b); } }
-  /** what the game has come to: the rolls of its die, its block's hash, and the hash of every part of it (`whole` false: without that, the dear one) */
+  /** what the game has come to: the rolls of its die, the word of where everybody stands, and the hash of every part of it (`whole` false: without that, the dear one) */
   mark(whole = true): TapeMark {
     const of = (w: Uint32Array): number => hashOf(new Uint8Array(w.buffer));
-    return { tick: this.ticks, die: this.face.dieN(this.h), parts: of(this.face.partHashes(this.h)), state: whole ? of(this.face.stateWords(this.h)) : null };
+    return { tick: this.ticks, die: this.face.dieN(this.h), stands: this.face.tickWord(this.h), state: whole ? of(this.face.stateWords(this.h)) : null };
   }
   /** who stands where, and the rounds the player has fired */
   figures(): TapeFigures { return { tick: this.ticks, shots: this.tally().stats.shots, men: this.map().men }; }

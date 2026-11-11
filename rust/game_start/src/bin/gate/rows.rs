@@ -21,7 +21,7 @@ pub const SEED: u32 = 9;
 pub const RUN_SECS: usize = 40;
 const BETWEEN_SECS: usize = 10;
 const MOMENTS: [usize; 5] = [3, 9, 15, 21, 27];
-/// the moments that are also loaded into a fresh slot
+/// the moments that are also loaded where another game stood
 const LOADS: [usize; 2] = [9, 21];
 const AFTER_MOMENT_SECS: usize = 3;
 /// the idle seconds of a second start, and of the mission stood between the two
@@ -135,8 +135,8 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         // (the panes want a level with panes; the rest stand on any)
         (format!("play {}", run_name(4)), "glass", "glass"), (format!("play {}", held_run), "lamps", "lamp"), (format!("play {}", held_run), "smoke", "smoke"), (format!("play {}", held_run), "destroyed", "destroyed"),
         (format!("again {}", run), "second", "the second run"),
-        (format!("save {}", run), "dice", "put back, parts"),
-        (format!("load {}", run), "dice", "loaded into"),
+        (format!("save {}", run), "lost", "put back, parts"),
+        (format!("load {}", run), "lost", "loaded into"),
         // (a run whose statics move: the mirror has something to skip)
         (format!("draw {}", moved), "told", "drawing the game changed it"), (format!("draw {}", moved), "mark", "the page's"), (format!("draw {}", moved), "head", "the boxes' head says"), (format!("draw {}", moved), "opened", "just opened"),
         (seats.clone(), "pin", "moved from second"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
@@ -406,53 +406,49 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
     if kinds.contains(&"draw") { crate::draw::row(&name("draw"), k, &series, f); }
 }
 
-/// THE GAME PUT BACK IS THE GAME THAT WENT ON: each moment stands again, the even ones in the run's own slot and the odd ones in slot 1, and is played under the same hand from its frame on:
+/// THE GAME PUT BACK IS THE GAME THAT WENT ON: each moment stands again and is played under the same hand from its frame on:
 /// every part of every frame the same as the run's had. A host's hand is outside the game: where its next line is, and where its cursor lies, go back with the game.
-/// BREAK: `dice` a moment whose dice are the run's end's.
+/// BREAK: `lost` a moment has lost its men's poses.
 fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
     let mut did = vec![(0, String::new()); hand.lines.len()];
-    let home = p.g.sim;
-    let end = p.g.dice.clone();
     let mut fail = Vec::new();
-    'moments: for (m, k) in kept.iter_mut().enumerate() {
-        if f.breaks("dice") { k.moment.game.dice = end.clone(); }
-        game::savestate::control::stand(&mut p.g, k.moment.laid(if m % 2 == 0 { home } else { 1 }));
+    'moments: for k in kept.iter_mut() {
+        if f.breaks("lost") { let g = &mut k.moment.game; for c in g.ch.ids() { g.ch[c].poses.d.fill(0.0); } }
+        p.lay(&k.moment);
         p.cursor = k.cursor;
         let mut next = k.next;
         for (i, was) in k.words.iter().enumerate() {
             frame_of(p, hand, k.at + i, &mut next, &mut did);
             parts::words(&mut p.g, &mut w, &mut row);
-            if &row != was { fail.push(format!("the moment of {} s in slot {}, put back, parts at frame {} of it ({:.2} s on) in {}", k.at / 60, p.g.sim, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'moments; }
+            if &row != was { fail.push(format!("the moment of {} s, put back, parts at frame {} of it ({:.2} s on) in {}", k.at / 60, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'moments; }
         }
     }
     say(name, t.elapsed().as_secs_f64(), &fail, "");
 }
 
-/// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game in a slot nobody was in, and played
+/// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game, and played
 /// under the hand from its kept place: every part of every frame the run's. (A fault this road has had: a calm guard's torch came on for three seconds.)
-/// BREAK: `dice` the moment's dice are another game's.
+/// BREAK: `lost` the moment has lost its men's poses.
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
     let mut did = vec![(0, String::new()); hand.lines.len()];
     let mut fail = Vec::new();
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
-    let mut slot = sim::state::GAMES;
     'loads: for m in kept.iter_mut().filter(|m| LOADS.contains(&(m.at / 60))) {
+        if f.breaks("lost") { let g = &mut m.moment.game; for c in g.ch.ids() { g.ch[c].poses.d.fill(0.0); } }
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
-        if f.breaks("dice") { m.moment.game.dice = q.g.dice.clone(); }
-        slot -= 1;
-        game::savestate::control::stand(&mut q.g, m.moment.laid(slot));
+        q.lay(&m.moment);
         q.host = game_start::stand::host_of(&q.g).expect("a stood game was handed its host's rows");
         q.cursor = m.cursor;
         let mut next = m.next;
         for (i, was) in m.words.iter().enumerate() {
             frame_of(&mut q, hand, m.at + i, &mut next, &mut did);
             parts::words(&mut q.g, &mut w, &mut row);
-            if &row != was { fail.push(format!("the moment of {} s, loaded into slot {}, parts at frame {} of it ({:.2} s on) in {}", m.at / 60, slot, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'loads; }
+            if &row != was { fail.push(format!("the moment of {} s, loaded into another game's place, parts at frame {} of it ({:.2} s on) in {}", m.at / 60, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'loads; }
         }
     }
     say(name, t.elapsed().as_secs_f64(), &fail, "");

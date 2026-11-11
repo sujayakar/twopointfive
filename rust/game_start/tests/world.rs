@@ -285,7 +285,7 @@ fn a_night_after_the_reel_is_a_fresh_night() {
     assert!(p.g.mission.stats.elapsed > 1.9);
 }
 
-/// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's, in its block.
+/// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's.
 /// A FAILURE MEANS: a checkpoint taken in a firefight by a window comes back to another game.
 #[test]
 fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {

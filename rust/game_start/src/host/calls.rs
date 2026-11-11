@@ -19,7 +19,7 @@ macro_rules! calls { ($made:ident) => { $made! {
     free reserve(bytes: usize);
 
     /// A GAME FROM ITS START (game_start `handed`): the level file's text, the address's words (empty: none), the mannequin's gltf and its buffer, the cast's gltf and the look's (empty: none), what the machine keeps (empty:
-    /// nothing). No state crosses. Flags: 1 the rows that dress the picture are up, 2 the host makes what `ready` makes. 0: there is no room for another
+    /// nothing). No state crosses. Flags: 1 the rows that dress the picture are up, 2 the host makes what `ready` makes.
     free start(level: &[u8], words: &str, mannequin: &[u8], mannequin_bin: &[u8], cast: &[u8], cast_look: &[u8], kept: &str, seed: u32, seats: u32, flags: u32) -> GameNo;
     /// what the first step wants and such a start leaves, so many lines of it (the light under the roofs): there is more. A step that finds it wanting makes the rest
     reads ready(lines: u32) -> bool;
@@ -135,9 +135,8 @@ macro_rules! calls { ($made:ident) => { $made! {
     does state_words() => Vec<u32>;
     /// the die's count of draws
     reads die_n() -> f64;
-    /// the parts of rust/sim's block by name, and a hash of each
-    free part_names() => Vec<String>;
-    reads part_hashes() => Vec<u32>;
+    /// a word of where every man and leaf stands: what two machines of one game hold to each other after each tick
+    reads tick_word() -> u32;
 
     /// A PLANTED PANIC, for the check of the road back from one: inside the game, as a rule of the tick would
     does debug_panic();

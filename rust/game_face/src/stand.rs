@@ -1,5 +1,5 @@
 //! A GAME: started, stepped, let go, held to another.
-use super::{free_slot, moment, put, saves, Held, GAMES};
+use super::{moment, put, saves, Held, GAMES};
 use game_start::handed::Handed;
 use game_start::host::calls::GameNo;
 
@@ -8,8 +8,7 @@ pub fn reserve(bytes: usize) { core::mem::drop(Vec::<u8>::with_capacity(bytes.ma
 
 #[allow(clippy::too_many_arguments)]
 pub fn start(level: &[u8], words: &str, mannequin: &[u8], mannequin_bin: &[u8], cast: &[u8], cast_look: &[u8], kept: &str, seed: u32, seats: u32, flags: u32) -> GameNo {
-    let Some(slot) = free_slot() else { return 0 };
-    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ready: flags & 2 == 0, ..Default::default() };
+    let o = game_start::stand::StartOpts { seed, seats, dress: flags & 1 != 0, ready: flags & 2 == 0, ..Default::default() };
     put(Held::new(game_start::handed::stand_handed(&Handed { level, words, mannequin, mannequin_bin, cast, cast_look, kept }, &o).game))
 }
 pub fn ready(x: &Held, lines: u32) -> bool { !game::scene_collision::light_ready(&x.g, lines as usize) }
@@ -37,5 +36,4 @@ pub fn state_words(x: &mut Held) -> Vec<u32> {
     words
 }
 pub fn die_n(x: &Held) -> f64 { x.g.dice.n }
-pub fn part_names() -> Vec<String> { game_start::block::PART_NAMES.iter().map(|n| String::from(*n)).collect() }
-pub fn part_hashes(x: &Held) -> Vec<u32> { game_start::block::part_hashes(x.g.sim) }
+pub fn tick_word(x: &Held) -> u32 { game::state_words::tick_word(&x.g) }

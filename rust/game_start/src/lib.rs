@@ -27,7 +27,6 @@ pub mod play;
 pub mod steps;
 #[cfg(feature = "std")]
 pub mod hand;
-pub mod block;
 pub mod hands_off;
 pub mod host;
 pub mod figures;

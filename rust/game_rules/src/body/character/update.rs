@@ -74,5 +74,5 @@ pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     a.tell_t = -1.0;
 }
-/// The update; every pose of a man stands in his game's block, so there is no stage to open.
+/// The update.
 pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
