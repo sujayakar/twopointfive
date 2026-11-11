@@ -979,26 +979,26 @@ pub struct TalkLast {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
-pub enum GuardTask {
-    Arm0(crate::game::GuardTaskArm0),
-    CheckOn(crate::game::GuardTaskCheckOn),
+pub enum Errand {
+    At(crate::game::ErrandAt),
+    CheckOn(crate::game::ErrandCheckOn),
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskArm0 {
-    pub kind: crate::game::GuardTaskArm0Kind,
+pub struct ErrandAt {
+    pub kind: crate::game::ErrandThing,
     pub pos: V3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum GuardTaskArm0Kind {
+pub enum ErrandThing {
     #[default] Breaker,
     Device,
     Rack,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskCheckOn {
+pub struct ErrandCheckOn {
     pub pos: V3,
     pub who: GuardId,
     pub wp: f64,
@@ -1129,7 +1129,8 @@ pub struct Guard {
     pub stall_ref: Option<V3>,
     pub stall_t: f64,
     pub script: Option<crate::game::GuardScript>,
-    pub task: Option<crate::game::GuardTask>,
+    /// what a man of the night staff is off to do
+    pub errand: Option<crate::game::Errand>,
     pub drawn: bool,
     /// may name a man who is dead or has left
     pub leader: Option<GuardId>,

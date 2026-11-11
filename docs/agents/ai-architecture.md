@@ -15,7 +15,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | record | where | what it holds |
 |---|---|---|
-| his row | `Guard`, `g.gd[gd]` | every man of any side but Sam (`g.pl`): `state`, `awareness`, `last_known`, `foe`, `script`, `duty`, `task`, his clocks |
+| his row | `Guard`, `g.gd[gd]` | every man of any side but Sam (`g.pl`): `state`, `awareness`, `last_known`, `foe`, `script`, `duty`, `errand` (night staff), his clocks |
 | his body | `Character`, `g.ch[c]` | where he is, his bones, his animation |
 | his mind, written | `mind.rs` | the one door to awareness, state, fix and foe, and who last moved each (`Note`) |
 | what he is held to | `duty.rs` | `holds`, `pinned`, `rooms`, and `gun` |

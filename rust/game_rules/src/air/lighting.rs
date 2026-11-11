@@ -166,15 +166,15 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
         }
     }
     if let Some(best) = best {
-        if g.gd[best].task.is_none() {
+        if g.gd[best].errand.is_none() {
             let e = crate::workthings::breaker_errand(g);
             let bp = g.level.breaker.pos;
             let goal: V3 = match e {
                 Some(e) => e.goal,
                 None => [bp[0] - 0.4, 0.0, bp[2] - 0.9],
             };
-            g.gd[best].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 {
-                kind: crate::game::GuardTaskArm0Kind::Breaker,
+            g.gd[best].errand = Some(crate::game::Errand::At(crate::game::ErrandAt {
+                kind: crate::game::ErrandThing::Breaker,
                 pos: goal,
             }));
             crate::mind::fix(g, best, Some(goal), "lighting");
@@ -207,9 +207,9 @@ fn mains_back(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
-        if let Some(crate::game::GuardTask::Arm0(a)) = &g.gd[gd].task {
-            if a.kind == crate::game::GuardTaskArm0Kind::Breaker {
-                g.gd[gd].task = None;
+        if let Some(crate::game::Errand::At(a)) = &g.gd[gd].errand {
+            if a.kind == crate::game::ErrandThing::Breaker {
+                g.gd[gd].errand = None;
             }
         }
         i += 1;

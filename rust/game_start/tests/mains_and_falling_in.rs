@@ -7,7 +7,7 @@ use game::scene_collision::{nav_grid_is_blocked, solid_blocked};
 use game::workthings::{breaker_errand, work_things_things, WorkThingKind};
 use game_start::play::{dist, Opts, Play};
 
-fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| matches!(&p.g.gd[m].task, Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Breaker)).collect() }
+fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| matches!(&p.g.gd[m].errand, Some(game::game::Errand::At(t)) if t.kind == game::game::ErrandThing::Breaker)).collect() }
 fn said_it(p: &Play) -> usize { p.said.iter().filter(|l| l.text.contains("checking the breaker")).count() }
 fn keep_dark(p: &mut Play, secs: f64) { for _ in 0..(secs * 60.0) as usize { p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.05; p.frame(); } }
 

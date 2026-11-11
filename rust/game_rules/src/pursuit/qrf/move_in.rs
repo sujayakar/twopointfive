@@ -429,7 +429,7 @@ fn stay_on_the_hunt(g: &mut crate::game::Game) {
             g.gd[x].search_t = 0.0;
         }
         g.gd[x].body_duty = None;
-        g.gd[x].task = None;
+        g.gd[x].errand = None;
     }
 }
 

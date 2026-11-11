@@ -50,7 +50,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
             g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
             let to = if lvl >= 1.0 || g.alarm.episode { 2.0 } else { 1.0 };
             raise_escalation(g, to, Some(gd), Some(crate::guards::RaiseEscalationCause::Body), Some(before > 0));
-            g.gd[gd].task = None;
+            g.gd[gd].errand = None;
             g.gd[gd].body_duty = Some(crate::game::GuardBodyDuty { body: o, role: crate::game::GuardBodyDutyRole::Finder, stage: crate::game::GuardBodyDutyStage::To, t: 0.0, t0: g.time, spot: None });
             let mut i = 0;
             while i < g.guards.len() {
@@ -61,7 +61,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
                 let breathing = crate::game::is_breathing(g, o);
                 let t = g.time;
                 g.gd[other].witness.called_to_body = Some(crate::game::WitnessCalledToBody { victim: victim.clone(), breathing });
-                if g.gd[other].task.is_some() { continue; }
+                if g.gd[other].errand.is_some() { continue; }
                 crate::belief::word(g, other, body);
                 let x = &g.gd[other];
                 if !x.duty.holds && x.held.is_none() && x.body_duty.is_none() && (x.state == St::Patrol || x.state == St::Suspicious || x.script.is_some()) {
