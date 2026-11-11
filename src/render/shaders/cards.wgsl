@@ -41,7 +41,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let slot = frame.cardSlots[k >> 2u][k & 3u];
   let li = lights[slot];
   let axis = normalize(li.dir);
-  let skip = li.owner & 0xffu;                     // the carrier never shadows his own light (direct.wgsl shadowSample's rule, from the light's end)
+  let skip = li.owner & 0xffu;                     // the carrier never shadows his own light (direct_common.wgsl shadowSample's rule, from the light's end)
   if (lidx == 0u) {
     var C = vec4f(0.0); var Nn = vec4f(0.0);
     if (lightKind(li) == 1u && li.cosOuter > 0.3) {   // a spot with a real cone (the nomination says so already; a light re-slotted mid-frame cannot happen, but a garbage slot must not build garbage)

@@ -2,7 +2,7 @@ import { Vec3 } from '../math/vec';
 
 /** A request to inject smoke. Emitters live for `ttl` seconds; `track` lets them follow a moving source (gun barrel, a flying spark).
  *  Everything after `mode` is optional and absent = the original behaviour, so the hand-tuned legacy emitters are bit-identical;
- *  the graded effects in rust/game_rules/src/tick/effects.rs are the ones that set them (semantics ported from twopointfive's fluid.wgsl Source). */
+ *  the graded effects in rust/game_rules/src/tick/effects.rs are the ones that set them. */
 export interface SmokeEmitter {
   /** an open fire's: the graphics preset that sheds a fire's smoke drops it (smoke.ts emit) */
   fire?: boolean;
