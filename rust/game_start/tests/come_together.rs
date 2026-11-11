@@ -125,3 +125,38 @@ fn a_man_about_to_go_goes_where_they_are_now() {
     }
     assert!(stays >= 3 && turned >= 3, "the staging is wrong: {stays} stay, {turned} turned");
 }
+
+/// THE RULE: two men or more of a squad called to one of their rooms go in by one of its doors as a player's men do, by the squad's own door tools, the first two through it within a moment of each other.
+/// CONTROL: with nobody steady in it, a squad sends each man by himself.
+/// A FAILURE MEANS: they trickle back into a room one at a time, or green men by themselves work as a squad.
+#[test]
+fn a_drilled_squad_goes_back_into_a_room_together() {
+    let (mut went, mut green) = (0, 0);
+    let mut apart: Vec<f64> = Vec::new();
+    for s in SEEDS {
+        for level in ["compound", "warehouse", "barracks", "pass"] {
+            for word in ["", "&training=green"] {
+                let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&roomclear&squad4{word}"), &Opts { seed: s, ..Default::default() });
+                p.sam_unhurt();
+                p.sam_unseen();
+                p.run(0.5);
+                for o in p.mates() { p.parked(o); }
+                let hit = p.hostiles()[0];
+                let at = p.at(hit);
+                p.flash_lands([at[0] + 1.0, at[1]]);
+                let entry = |p: &Play| p.g.tab.enemysquads_squad.iter().find_map(|(_, q)| q.entries.first().map(|e| (e.op, e.men.clone())));
+                if p.until(12.0, |p| entry(p).is_some()).is_none() { if word.is_empty() { continue; } else { green += (!events(&p, What::Reinforce).is_empty()) as usize; continue; } }
+                assert!(word.is_empty(), "{level}, seed {s}: green men work as a squad");
+                let (op, men) = entry(&p).unwrap();
+                assert!(men.len() >= 2, "{level}, seed {s}: {men:?}");
+                p.until(40.0, |p| p.g.tab.doortools_door_op[op].crossed.len() >= 2 || p.g.tab.doortools_door_op[op].ended.is_some());
+                let mut at: Vec<f64> = p.g.tab.doortools_door_op[op].crossed.values().copied().collect();
+                at.sort_by(f64::total_cmp);
+                println!("{level} {s}: {} men, crossed {at:?}, ended {:?}", men.len(), p.g.tab.doortools_door_op[op].ended);
+                if at.len() >= 2 { apart.push(at[1] - at[0]); went += 1; }
+            }
+        }
+    }
+    assert!(went >= 4 && green >= 3, "the staging is wrong: {went} went in together, {green} green squads sent men");
+    assert!(apart.iter().all(|&a| a < 4.0), "the first two through a door: {apart:.1?} s apart");
+}
