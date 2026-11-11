@@ -69,7 +69,7 @@ pub struct RearWaysItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RearwatchMod {
-    pub books: JsMap<PlayerId, crate::rearwatch::Book>,
+    pub books: JsMap<GroupId, crate::rearwatch::Book>,
 }
 
 pub const EYE: f64 = 1.55;

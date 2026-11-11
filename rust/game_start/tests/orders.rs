@@ -63,7 +63,7 @@ fn lit(p: &mut Play, at: [f64; 2]) -> f64 {
     p.g.groups[p.g.group].orders.menu.as_mut().unwrap().sel = i;
     i
 }
-fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone()) }
+fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.group).and_then(|s| s.plan.clone()) }
 
 /// THE RULE: what the menu shows of a shell is what its press gives: the man, and where it goes off. A spot too near to arm is refused in the words shown, and nothing is drawn of it.
 /// A FAILURE MEANS: the picture, the row and the order have gone back to asking for themselves.

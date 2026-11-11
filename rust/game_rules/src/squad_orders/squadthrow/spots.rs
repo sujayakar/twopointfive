@@ -10,14 +10,14 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
 fn tossing_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let t = g.m.squadthrow.states.get(key).and_then(|s| s.last.get(gd).copied()).unwrap_or(-1e9);
     toss_window(g, t)
 }
 
 /// `s?.walks.has(gd)`: on his way to a throw already (makes no row)
 fn walking_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     g.m.squadthrow.states.get(key).map_or(false, |s| s.walks.has(gd))
 }
 
