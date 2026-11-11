@@ -18,7 +18,7 @@ pub(super) fn sent_in(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId], room
     let id = g.tab.enemysquads_squad[q].group;
     let Some((door, side)) = way_in(g, q, men[0], room) else { return false };
     let stuns: f64 = men.iter().map(|&x| crate::tactics::stuns_of(g, x)).sum();
-    let kind = if stuns > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::OpenClear };
+    let kind = if stuns > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::Threshold };
     let got = crate::group::with(g, id, |g| {
         crate::doortools::door_tools_sync(g);
         let work = &mut g.groups[id].tools;
