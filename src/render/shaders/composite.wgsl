@@ -277,10 +277,10 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let uv = gbUV(k, gbLocal(k, X));
   let w = max(fp, 0.0006);
   if ((fl & 4u) != 0u) {   // a tempered pane on its way out: what still stands is dice — drawn while a die is a few pixels across, a milky sheet beyond that; brightest at the wave's edge
-    let dw = gbRow(k, 2u); let grain = max(dw.w, 1e-3);
+    let grain = max(paneGrain(k), 1e-3);
     let res = clamp(grain / (5.0 * w) - 0.2, 0.0, 1.0);
-    let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - dw.z);
-    return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(gbRow(k, 3u).z)), w, 0.9), res), front), 0.45 + 0.4 * front);
+    let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - paneOpenAt(k));
+    return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(paneSeed(k))), w, 0.9), res), front), 0.45 + 0.4 * front);
   }
   if (n == 0u) { return vec2f(0.0); }
   let web = (fl & 16u) != 0u; let full = (fl & 2u) != 0u && !web;
@@ -332,8 +332,8 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   }
   if (full && n >= 2u) {   // where this blow's cracks met the next one's
     var j2 = 0u; var d2 = 1e30; let d1 = dot(d, d) - S.rz * S.rz;
-    for (var j = 0u; j < n; j++) { if (j == me) { continue; } let a = gbRow(k, GB_HDR + j * 4u); let qv = uv - a.xy; let dq = dot(qv, qv) - a.w * a.w; if (dq < d2) { d2 = dq; j2 = j; } }
-    let cj = gbRow(k, GB_HDR + j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
+    for (var j = 0u; j < n; j++) { if (j == me) { continue; } let a = paneSite(k, j * 4u); let qv = uv - a.xy; let dq = dot(qv, qv) - a.w * a.w; if (dq < d2) { d2 = dq; j2 = j; } }
+    let cj = paneSite(k, j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
     let dd = (d2 - d1) / (2.0 * sep);
     acc.x = max(acc.x, gbLine(dd, w, 0.8 * heavy));
     if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv + (cj - S.c) / sep * (dd + 0.004))) { acc.y = min(acc.y, dd); }
