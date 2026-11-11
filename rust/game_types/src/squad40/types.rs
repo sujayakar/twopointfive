@@ -22,7 +22,7 @@ pub struct Turn {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::LentBack>,

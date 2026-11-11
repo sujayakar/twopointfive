@@ -41,12 +41,12 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     let mut held: Vec<String> = Vec::new();
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);
-        let post = of.and_then(|a| g.tab.orders_assignment[a].post);
+        let post = of.and_then(|a| g.tab.task[a].post);
         bodies.push(match post { Some(p) => p, None => g.pos_of(m) });
     }
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);
-        let key = of.and_then(|a| g.tab.orders_assignment[a].fit.as_ref().and_then(|f| f.key.clone()));
+        let key = of.and_then(|a| g.tab.task[a].fit.as_ref().and_then(|f| f.key.clone()));
         if let Some(k) = key { if !k.is_empty() { held.push(k); } }
     }
     let fits = crate::roomfit::fit_spots(g, t_at, men.len() as f64, face, sam, Some(&bodies), Some(&held));
@@ -70,7 +70,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     for (gd, p) in deal {
         let fit = fits.as_ref().and_then(|f| f.iter().find(|x| v3::dist_xz(x.pos, p) < 1e-6).cloned());
         let walk = at.as_ref().and_then(|m| m.get(gd).copied());
-        let on = SquadOrdersAssignA {
+        let on = crate::duty::TaskGiven {
             order: String::from(ORDER.id), post: Some(p), face: Some(face),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
             going: "moving".into(), there: "in position".into(), set_line: Some(String::from("set.")), fit,

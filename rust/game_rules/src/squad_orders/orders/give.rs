@@ -389,7 +389,7 @@ pub fn squad_orders_again(g: &mut crate::game::Game, id_2: &str, men: &[GuardId]
 }
 
 /// Hand a man his assignment
-pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::orders::SquadOrdersAssignA) {
+pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::duty::TaskGiven) {
     let p = g.pos_of(gd);
     let t = g.time;
     let was = g.sets[g.seat].orders.asg.get(gd).copied();
@@ -401,11 +401,11 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
     let via: Vec<V3> = r.as_ref().map_or(Vec::new(), |x| x.via.clone());
     let light = match &g.gd[gd].script {
         Some(s) => s.light,
-        None => was.and_then(|w| g.tab.orders_assignment[w].light),
+        None => was.and_then(|w| g.tab.task[w].light),
     };
-    let yield_t = match was { Some(w) if fighting => g.tab.orders_assignment[w].yield_t, _ => -1.0 };
+    let yield_t = match was { Some(w) if fighting => g.tab.task[w].yield_t, _ => -1.0 };
     let goal = if !via.is_empty() { via[0] } else { match a.post { Some(q) => v3::copy(q), None => [p[0], 0.0, p[2]] } };
-    let row = Assignment {
+    let row = crate::duty::Task {
         order: a.order.clone(),
         t0: t,
         post: a.post,
@@ -455,21 +455,21 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
         tries: a.tries.clone(),
         new_leg: true,
     };
-    let id = g.tab.orders_assignment.push(row);
+    let id = g.tab.task.push(row);
     g.sets[g.seat].orders.asg.set(gd, id);
 }
 
 fn post_dist(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, centre: V3) -> f64 {
     let a = *seat.orders.asg.get(gd).unwrap();
-    v3::dist_xz(g.tab.orders_assignment[a].post.unwrap(), centre)
+    v3::dist_xz(g.tab.task[a].post.unwrap(), centre)
 }
 
 /// Rear security at a door: the last of the file have their eyes spare
 pub fn squad_orders_spare_rear(g: &mut crate::game::Game, men: &[GuardId], door: DoorId, lead: Option<GuardId>, from: Option<&JsMap<GuardId, V3>>) -> Vec<GuardId> {
-    let live: Vec<GuardId> = men.iter().copied().filter(|&gd| !crate::condition::down(g, g.gd[gd].ch) && g.sets[g.seat].orders.asg.get(gd).map_or(false, |&a| g.tab.orders_assignment[a].post.is_some())).collect();
+    let live: Vec<GuardId> = men.iter().copied().filter(|&gd| !crate::condition::down(g, g.gd[gd].ch) && g.sets[g.seat].orders.asg.get(gd).map_or(false, |&a| g.tab.task[a].post.is_some())).collect();
     for &gd in &live {
         let a = *g.sets[g.seat].orders.asg.get(gd).unwrap();
-        g.tab.orders_assignment[a].spare = Some(false);
+        g.tab.task[a].spare = Some(false);
     }
     if live.len() < 2 { return Vec::new(); }
     let centre = g.dr[door].frame_centre;
@@ -490,7 +490,7 @@ pub fn squad_orders_spare_rear(g: &mut crate::game::Game, men: &[GuardId], door:
     rear.truncate(if live.len() >= 4 { 2 } else { 1 });
     for &gd in &rear {
         let a = *g.sets[g.seat].orders.asg.get(gd).unwrap();
-        let row = &mut g.tab.orders_assignment[a];
+        let row = &mut g.tab.task[a];
         row.spare = Some(true);
         if row.from.is_none() {
             row.from = Some(match from.and_then(|f| f.get(gd)) { Some(&q) => q, None => [row.anchor[0], 0.0, row.anchor[2]] });

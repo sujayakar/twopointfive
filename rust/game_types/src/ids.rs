@@ -78,8 +78,8 @@ id! {
     WindWindSourceId,
     /// DoorOp: g.tab.doortools_door_op
     DoorOpId,
-    /// Assignment: g.tab.orders_assignment
-    OrdersAssignmentId,
+    /// Task: g.tab.task
+    TaskId,
     /// RoomSearch: g.tab.doortools_room_search
     DoortoolsRoomSearchId,
     /// Word: g.tab.doortools_word

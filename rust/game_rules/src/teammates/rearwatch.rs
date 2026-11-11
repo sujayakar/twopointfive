@@ -17,15 +17,15 @@ macro_rules! book {
 
 // ---- small reads
 
-fn of(g: &Game, m: GuardId) -> Option<OrdersAssignmentId> {
+fn of(g: &Game, m: GuardId) -> Option<TaskId> {
     crate::orders::squad_orders_of(&crate::seats::here(g), m)
 }
 fn post_of(g: &Game, m: GuardId) -> Option<V3> {
     let a = of(g, m)?;
-    g.tab.orders_assignment[a].post
+    g.tab.task[a].post
 }
-fn spare_of(g: &Game, a: OrdersAssignmentId) -> bool {
-    g.tab.orders_assignment[a].spare.unwrap_or(false)
+fn spare_of(g: &Game, a: TaskId) -> bool {
+    g.tab.task[a].spare.unwrap_or(false)
 }
 fn pin_row(g: &Game, key: PlayerId, m: GuardId) -> Option<RearPin> {
     g.m.rearwatch.books.get(key).unwrap().pins.get(m).copied()
@@ -153,7 +153,7 @@ fn short_of(g: &mut Game, key: PlayerId, m: GuardId) -> bool {
         Some(a) => a,
         None => return false,
     };
-    let q = match g.tab.orders_assignment[a].post {
+    let q = match g.tab.task[a].post {
         Some(q) => q,
         None => return false,
     };
@@ -195,12 +195,12 @@ fn had_of(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId], lane: Option<G
 }
 
 /// `A.from ??= op.from.get(m) ?? where he stands`, and his eyes spare.
-fn keep_eyes_spare(g: &mut Game, a: OrdersAssignmentId, op: DoorOpId, m: GuardId) {
-    g.tab.orders_assignment[a].spare = Some(true);
-    if g.tab.orders_assignment[a].from.is_none() {
+fn keep_eyes_spare(g: &mut Game, a: TaskId, op: DoorOpId, m: GuardId) {
+    g.tab.task[a].spare = Some(true);
+    if g.tab.task[a].from.is_none() {
         let p = g.pos_of(m);
         let from = g.tab.doortools_door_op[op].from.get(m).copied().unwrap_or([p[0], 0.0, p[2]]);
-        g.tab.orders_assignment[a].from = Some(from);
+        g.tab.task[a].from = Some(from);
     }
 }
 
@@ -273,7 +273,7 @@ fn drop_the_pins(g: &mut Game, key: PlayerId) {
     let pins: Vec<RearPin> = g.m.rearwatch.books.get(key).unwrap().pins.values().copied().collect();
     for p in pins {
         if p.raised == Some(true) && p.out == Some(true) {
-            g.tab.orders_assignment[p.a].spare = Some(false);
+            g.tab.task[p.a].spare = Some(false);
         }
     }
     book!(g, key).pins.clear();
@@ -423,7 +423,7 @@ fn plain_stackers(g: &Game, squad: &[GuardId], taken: &JsSet<GuardId>) -> Vec<(D
             continue;
         }
         let Some(a) = of(g, m) else { continue };
-        let r = &g.tab.orders_assignment[a];
+        let r = &g.tab.task[a];
         let (true, Some(door), Some(post)) = (crate::orders::rows::id_is(&r.order, crate::orders::Is::Stacks), r.door, r.post) else { continue };
         let side = crate::orders::side_of(g, door, post);
         match plain.iter_mut().find(|x| x.0 == door && x.1 == side) {
@@ -450,7 +450,7 @@ fn left_outside(g: &mut Game, key: PlayerId, st: &Stacks, dealt: &mut Dealt) {
 fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[GuardId]) -> Option<RearPin> {
     let p = pin_row(g, key, m).unwrap();
     let a = of(g, m).filter(|&a| a == p.a)?;
-    let post = g.tab.orders_assignment[a].post?;
+    let post = g.tab.task[a].post?;
     let od = g.tab.cover_opening[p.o].door?;
     if !(is_open_way(g, od) || g.m.rearwatch.books.get(key).unwrap().shut.has(od)) {
         return None;
@@ -471,7 +471,7 @@ fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[Guard
         return None;
     }
     if turned_in {
-        g.tab.orders_assignment[a].spare = Some(true);
+        g.tab.task[a].spare = Some(true);
         book!(g, key).pins.get_mut(m).unwrap().raised = Some(true);
     }
     if p.out != Some(true) {
@@ -650,8 +650,8 @@ fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
         None => return,
     };
     if let Some(a) = of(g, m) {
-        if a == r.pin.a && g.tab.orders_assignment[a].post.is_none() {
-            g.tab.orders_assignment[a].going = String::from(FALLING).into();
+        if a == r.pin.a && g.tab.task[a].post.is_none() {
+            g.tab.task[a].going = String::from(FALLING).into();
         }
     }
     let s = format!("{} {} off {} · {}", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id, why);
@@ -699,7 +699,7 @@ fn nobody_keeps(g: &mut Game, pl: PlayerId) {
 }
 
 /// The hand-over: he had a door last frame, the entry has let go of him since, and what he has now is 'fall in'.
-fn hand_overs(g: &mut Game, pl: PlayerId, now: &[(GuardId, DoorId, OrdersAssignmentId)], l: &Leaving) {
+fn hand_overs(g: &mut Game, pl: PlayerId, now: &[(GuardId, DoorId, TaskId)], l: &Leaving) {
     for (m, door, a0) in book!(g, pl).was.clone() {
         if book!(g, pl).keeps.has(m) || crate::condition::down(g, g.gd[m].ch) || now.iter().any(|x| x.0 == m) {
             continue;
@@ -712,9 +712,9 @@ fn hand_overs(g: &mut Game, pl: PlayerId, now: &[(GuardId, DoorId, OrdersAssignm
 }
 
 /// His keep of that door: on a new order with no post, the way not yet known beyond and not worked, somebody still in the room, Sam near enough to stay behind for.
-fn stays_on_the_door(g: &mut Game, m: GuardId, door: DoorId, a0: OrdersAssignmentId, l: &Leaving) -> Option<RoomKeep> {
+fn stays_on_the_door(g: &mut Game, m: GuardId, door: DoorId, a0: TaskId, l: &Leaving) -> Option<RoomKeep> {
     let a = of(g, m)?;
-    if a == a0 || g.tab.orders_assignment[a].post.is_some() {
+    if a == a0 || g.tab.task[a].post.is_some() {
         return None;
     }
     let o = crate::cover::cover_ready(g).into_iter().find(|&x| g.tab.cover_opening[x].door == Some(door))?;
@@ -732,7 +732,7 @@ fn stays_on_the_door(g: &mut Game, m: GuardId, door: DoorId, a0: OrdersAssignmen
     if g.k.rearwatch.room_m > 0.0 && dist_xz(p, l.sam_at) > g.k.rearwatch.room_m {
         return None;
     }
-    let to: Option<V3> = g.tab.orders_assignment[a0].watch.map(|w| [w[0], w[1], w[2]]);
+    let to: Option<V3> = g.tab.task[a0].watch.map(|w| [w[0], w[1], w[2]]);
     let pin = RearPin { o, front, door, side: 1.0, op: None, seen_t: g.time, a, going: None, raised: None, out: None, to };
     Some(RoomKeep { pin, room, out_t: f64::NAN, behind: None, at: 0.0 })
 }
@@ -763,7 +763,7 @@ fn keeps_his_door(g: &mut Game, pl: PlayerId, m: GuardId, l: &Leaving) {
         return;
     }
     let a = of(g, m);
-    let Some(a) = a.filter(|&a| g.tab.orders_assignment[a].post.is_none()) else { return another_order(g, pl, m, a, &r) };
+    let Some(a) = a.filter(|&a| g.tab.task[a].post.is_none()) else { return another_order(g, pl, m, a, &r) };
     // ('fall in' given again: the same keep, on the new order)
     if a != r.pin.a {
         book!(g, pl).keeps.get_mut(m).unwrap().pin.a = a;
@@ -777,13 +777,13 @@ fn keeps_his_door(g: &mut Game, pl: PlayerId, m: GuardId, l: &Leaving) {
         Some(d) => crate::orders::door_words(g, d),
         None => g.tab.cover_opening[o].id.clone(),
     };
-    let row = &mut g.tab.orders_assignment[a];
+    let row = &mut g.tab.task[a];
     row.follow = 1e3;
     row.going = format!("holding · {}", name).into();
 }
 
 /// Off the keep with an order that is not 'fall in'. Sent to a mark, the stack on the room's next door: shut, the door he was keeping is still a way behind it.
-fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<OrdersAssignmentId>, r: &RoomKeep) {
+fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<TaskId>, r: &RoomKeep) {
     let (o, door) = (r.pin.o, r.pin.door);
     book!(g, pl).keeps.delete(m);
     let at_him = inner(g, o, g.pos_of(m), 0.4);
@@ -791,7 +791,7 @@ fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<OrdersAssignm
         && !is_open_way(g, door)
         && !crate::entrypoints::entry_points_far_known(g, o, at_him)
         && !door_worked(g, &crate::seats::here(g), door)
-        && g.tab.orders_assignment[a.unwrap()].door != Some(door);
+        && g.tab.task[a.unwrap()].door != Some(door);
     if stays {
         book!(g, pl).shut.set(door, BookShutValue { o, room: r.room, at: at_him });
     }
@@ -840,7 +840,7 @@ fn another_order_has_it(g: &Game, m: GuardId, o: CoverOpeningId, door: DoorId, l
     l.squad.iter().any(|&x| {
         if x == m { return false; }
         let Some(xa) = of(g, x) else { return false };
-        let row = &g.tab.orders_assignment[xa];
+        let row = &g.tab.task[xa];
         row.post.is_some() && (row.door == Some(door) || row.watch.map_or(false, |w| dist_xz(w, o_at) < 1.5))
     })
 }
@@ -881,7 +881,7 @@ fn why_done_with_the_room(g: &mut Game, pl: PlayerId, m: GuardId, room: Roomfigh
 /// A mate following, whose place is not in that room.
 fn bound_beyond(g: &mut Game, x: GuardId, room: RoomfightRoomId) -> bool {
     let Some(xa) = of(g, x) else { return false };
-    let (xpost, xgoal) = (g.tab.orders_assignment[xa].post, g.tab.orders_assignment[xa].goal);
+    let (xpost, xgoal) = (g.tab.task[xa].post, g.tab.task[xa].goal);
     xpost.is_none() && room_of(g, xgoal) != Some(room)
 }
 
@@ -926,7 +926,7 @@ fn held_by_other(g: &crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverO
             continue;
         }
         if let Some(a) = of(g, m) {
-            let row = &g.tab.orders_assignment[a];
+            let row = &g.tab.task[a];
             if let Some(post) = row.post {
                 if dist_xz(g.pos_of(m), post) <= 1.5 && ((od.is_some() && row.door == od) || row.watch.map_or(false, |w| dist_xz(w, at) < 1.5)) {
                     return true;

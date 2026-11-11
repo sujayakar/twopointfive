@@ -25,7 +25,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
 | whose man he is | `owner.rs`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
 | who has his body | `control/` | `Control`, the list of rules and the arbiter (`g.ctl`) |
-| what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`); `Assignment` (`orders/`) | his side; his squad; his place in a room fight; his post under an order |
+| what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`); `Task` (`orders/`) | his side; his squad; his place in a room fight; his post under an order |
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |
 
 And `guards/frame.rs` (one man's frame), `guards/behave/` (what he does by his state), `guards/looks.rs` (`LOOKS`, where some module has him look),
@@ -135,7 +135,7 @@ man. No panel of the page shows any of this: ask from a native test.
 First count how often the thing happens: a rule almost nobody meets is not worth its row.
 
 **A new order:** `orders/rows/<name>.rs` with `pub const ORDER` a `Row` made by `Row::new`, and a line of `rows!`. Its `issue` hands each man an
-`Assignment` (`rows::assign`). `orders/rows/cover.rs` has it all in one file; `orders/rows/shell40.rs` hands its functions on to `squad40.rs`. Read `Is`
+`Task` (`rows::assign`). `orders/rows/cover.rs` has it all in one file; `orders/rows/shell40.rs` hands its functions on to `squad40.rs`. Read `Is`
 once and decide what the rest of the game may ask of it. The test gives it by `Play::order` and must include contact: posture alone proves nothing.
 
 **How he behaves when nothing has taken him:** his state's file in `guards/behave/`. A new sense is a file of `guards/senses/` and a line in `notice`.
