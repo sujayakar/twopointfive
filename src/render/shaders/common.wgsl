@@ -1459,7 +1459,7 @@ fn glassTrace(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> GlassHit {
   }
   return g;
 }
-/** Transmittance only (no normal, no nearest): the tint product of every pane in `mask` (bit k = pane k; direct.wgsl culls per tile) crossed strictly inside (tmin, tmax). */
+/** Transmittance only (no normal, no nearest): the tint product of every pane in `mask` (bit k = pane k; direct_common.wgsl glassPairMask culls per tile) crossed strictly inside (tmin, tmax). */
 fn glassTransmit(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, maskIn: u32) -> vec3f {
   var tr = vec3f(1.0);
   let n = glassCount();

@@ -40,7 +40,7 @@ const sd = CM.charSlots(ch);
 if (!sd.authored) notes.push('charSlots: the mesh did NOT read as authored (stand-in split)');
 const SLOTS: string[] = [...CM.CHAR_SLOTS];
 
-// cast.ts castVariantOf's by-id `pick`, restated: list[skip + id % (n - skip)] (a teammate in play is dealt by his place among the team: `operatorAt`)
+// the by-id pick of `cast_variant_of` (rust/game_rules/src/outfit/cast.rs), restated: list[skip + id % (n - skip)] (a teammate in play is dealt by his place among the team: `operator_at`)
 const pick = (list: any[], id: number, skip = 0) => list.length > skip ? list[skip + id % (list.length - skip)] : list[id % list.length];
 const variantFor = (team: string, trained: boolean, id: number, isSam = false) => {
   const ops = castSide(cast, 'operator'); if (isSam) return ops[0];
@@ -52,7 +52,7 @@ interface Man { who: string; team: string; trained: boolean; tint: V3; tint2: V3
 const men: Man[] = [];
 men.push({ who: 'Sam', team: 'player', trained: false, tint: TEAM_TINT.player, tint2: TEAM_TINT2.player, id: PLAYER_ID, sam: true, from: 'guards.ts TEAM_TINT/TEAM_TINT2.player, consts.ts PLAYER_ID' });
 SQUAD4.forEach((s, i) => men.push({ who: s.name, team: 'operative', trained: false, tint: s.tint, tint2: s.tint2, id: UNIT_ID0 + i, from: `nightbreach.ts SQUAD4[${i}], id = spawnUnit's first free from UNIT_ID0 (the four are spawned first, in roster order)` }));
-// the office shift: game.ts gives route i the id 10 + i and tints[i % 3]; tint2 = the guard team's
+// the office shift: the game gives route i the id 10 + i and tints[i % 3]; tint2 = the guard team's
 for (let i = 0; i < 3; i++) men.push({ who: `shift guard ${i} (route ${i})`, team: 'guard', trained: false, tint: SHIFT[i % SHIFT.length], tint2: TEAM_TINT2.guard, id: 10 + i, from: 'game.ts guards: id 10 + route index, tints[i % 3]; tint2 = TEAM_TINT2.guard' });
 // hostile units (the room clear's defenders): spawned after the four, so ids UNIT_ID0 + 4 …; team colours
 for (let i = 0; i < 5; i++) men.push({ who: `Tango ${i + 1}`, team: 'hostile', trained: false, tint: TEAM_TINT.hostile, tint2: TEAM_TINT2.hostile, id: UNIT_ID0 + 4 + i, from: 'spawnUnit team hostile after the four-man squad: TEAM_TINT/TEAM_TINT2.hostile' });

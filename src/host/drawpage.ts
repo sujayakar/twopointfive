@@ -1,6 +1,6 @@
 // THE GAME'S PAGE (index.html), which draws a game it does not hold. The game is the Rust module's (host/drawgame.ts): started from the
-// level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
-// page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
+// level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). No rule of
+// play is in this page's bundle: tools/draw/ban.ts stops the build on an import from where one could stand.
 import { kitPicture } from './kitguard';   // (FIRST: in the Team & kit picture's window it makes the stores read-only before any module below reads or writes one)
 import { PIPE_QUEUE, gpuStory, initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
 import { Engine } from '../engine';

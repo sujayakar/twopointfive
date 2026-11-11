@@ -152,7 +152,7 @@ export const QUIET: QuietData = {
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
-    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/missions/takecheck.rs; a safe and a locker tell nobody)
+    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent; a safe and a locker tell nobody)
     { place: 'the ops room', area: R.ops, door: 'ops', holder: 'the safe', rackIndex: 1, front: [25.9, 1.0, 9.77], halfW: 0.3 },
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
