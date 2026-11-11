@@ -172,7 +172,7 @@ fn a_laminated_sheet_blown_out_is_air() {
     let (a, b) = ([14.3, 1.5, 13.5], [14.3, 1.5, 14.5]);
     assert!(solid_blocked(&mut p.g, a, b, None), "the staging: whole, the sheet is solid");
     let o = game::glassbreak::GlassBlastOpts { radius: Some(p.g.k.glassbreak.blast_m), power: Some(1.0), who: Some(1.0) };
-    game::glassbreak::glass_break_blast(&mut p.g, [14.0, 1.5, 13.9], Some(o));
+    game::glassbreak::glass_break_blast(&mut p.g, &game::ask::Over::OWN, [14.0, 1.5, 13.9], Some(o));
     p.run(0.2);
     assert_eq!(p.pane_open(near), 1.0, "a charge a hand off, the sheet has not gone");
     assert!(!solid_blocked(&mut p.g, a, b, None) && !shot_blocked(&mut p.g, a, b, None, Some(0.01)), "the sheet has gone and it stops a line");
@@ -244,7 +244,7 @@ fn a_burst_counts_a_whole_crater_out_with_its_first_wedge() {
     p.pane_is(bi, PaneType::Annealed);
     let opts = GlassBlastOpts { radius: Some(p.g.k.frag.glass_m), power: Some(1.0), who: Some(1.0) };
     let from = [18.0, 0.05 + p.g.k.frag.lift, 13.2];
-    glass_break_blast(&mut p.g, from, Some(opts));
+    glass_break_blast(&mut p.g, &game::ask::Over::OWN, from, Some(opts));
     // points of the sheet that lie in a wedge not itself queued, of a crater one of whose wedges is
     let s = p.g.sim;
     let row = (0..sim::panes::row_n(s) as usize).map(|r| sim::panes::row_ref(s, r)).find(|r| r.w[0] as f64 == bi).expect("the blast touched the sheet");
@@ -265,7 +265,7 @@ fn a_burst_counts_a_whole_crater_out_with_its_first_wedge() {
         }
     }
     assert!(sectors > 0 && !pts.is_empty(), "the staging: {sectors} points on pieces and none in a crater half gone");
-    let shut = glass_break_see_through(&mut p.g, GlassBreakViewOfKind::Blown, from, opts, &mut |g| pts.iter().filter(|&&q| !glass_break_rule_open(g, bi, q)).count());
+    let shut = glass_break_see_through(&mut p.g, &game::ask::Over::OWN, GlassBreakViewOfKind::Blown, from, opts, &mut |g| pts.iter().filter(|&&q| !glass_break_rule_open(g, bi, q)).count());
     assert_eq!(shut, 0, "of {} points in a crater half gone, the blast takes some for glass", pts.len());
 }
 

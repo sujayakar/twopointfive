@@ -27,8 +27,8 @@ pub(super) fn hash01(a: f64, b: f64) -> f64 {
     (x >> 8) as f64 / 16777216.0
 }
 
-/// `fn_` asked with glass as `view` reckons it for a burst at `from`.
-fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+/// `fn_` asked with glass as `view` reckons it for a burst at `from`, in the world as the question takes it.
+fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, over: &Over, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let see = match view {
         GlassView::Whole => return fn_(g),
         GlassView::Blown => crate::glassbreak::GlassBreakViewOfKind::Blown,
@@ -39,7 +39,7 @@ fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V
         return fn_(g);
     }
     let size = crate::glassbreak::GlassBlastOpts { radius: Some(g.k.frag.glass_m), power: Some(g.k.frag.glass_power), who: None };
-    crate::glassbreak::glass_break_see_through(g, see, from, size, fn_)
+    crate::glassbreak::glass_break_see_through(g, over, see, from, size, fn_)
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst.
@@ -60,7 +60,7 @@ fn burst_blocked_over(g: &Game, over: &Over, a: V3, b: V3) -> bool {
 /// Has a burst at `from` a line to `to`, glass by `view` (wary if not said).
 pub fn burst_line(g: &mut crate::game::Game, from: V3, to: V3, view: Option<crate::frag::GlassView>) -> bool {
     let view = view.unwrap_or(GlassView::Wary);
-    through_glass(g, from, view, &mut |g: &mut Game| !burst_blocked(g, from, to))
+    through_glass(g, &Over::OWN, from, view, &mut |g: &mut Game| !burst_blocked(g, from, to))
 }
 
 /// Share (0‥1) of a man the burst point has a clear line to: four points from shin to head.
@@ -75,7 +75,7 @@ pub(super) fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head:
         [v3::lerp(feet[0], head[0], 0.8), feet[1] + 0.78 * h, v3::lerp(feet[2], head[2], 0.8)],
         [head[0], head[1], head[2]],
     ];
-    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, &pts))
+    through_glass(g, over, from, view, &mut |g: &mut Game| share_clear(g, over, from, &pts))
 }
 
 /// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line.
@@ -168,7 +168,7 @@ fn lying_up(p: V3) -> V3 {
 pub(super) fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
 /// …of the world as the question takes it
 pub(super) fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
-    through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, pts))
+    through_glass(g, over, from, view, &mut |g: &mut Game| share_clear(g, over, from, pts))
 }
 
 /// THE BLAST: its sparks and dust are its thrower's doing.

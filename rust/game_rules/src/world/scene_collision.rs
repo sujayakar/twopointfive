@@ -252,7 +252,7 @@ pub fn clamp_to_world(p: &mut V3, r: f64) -> bool {
 // ---- lines
 
 /// the world as a question takes it, in the loops' own words, for the question `f`
-fn over_lent<R>(g: &Game, over: &Over, f: impl FnOnce(&sim::world::Over) -> R) -> R {
+pub(crate) fn over_lent<R>(g: &Game, over: &Over, f: impl FnOnce(&sim::world::Over) -> R) -> R {
     let leaves = over.leaves != Leaves::None;
     if over.plain() { return f(&sim::world::Over::with(true)); }
     let but: Vec<u32> = match &over.leaves { Leaves::But(l) => (0..g.col.dynamic_boxes.len() as u32).filter(|&i| l.contains(&g.col.dynamic_boxes[i as usize])).collect(), _ => Vec::new() };
@@ -306,6 +306,12 @@ pub fn segment_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, through: Opt
 /// …of the world as the question takes it
 pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>) -> bool {
     line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), None)
+}
+
+/// the sheets of glass a blast at `at` has a line to within `radius`, each with the point it meets
+pub fn panes_met(g: &Game, over: &Over, at: V3, radius: f64) -> Vec<(u32, V3)> {
+    let w = world(g);
+    over_lent(g, over, |v| w.sheets.iter().filter_map(|s| sim::panes::blast_meets(w, v, s.bi as usize, at, radius, &g.k).map(|q| (s.bi, q))).collect())
 }
 
 /// segmentBlocked with nothing passed: the solid test.

@@ -15,7 +15,7 @@
 //!
 //! A BURST'S VIEW. A blast judges its own lines by glass as it is to a burst: what the blast has just taken is no glass to its
 //! fragments (VIEW_BLOWN, answered here from the pieces queued to leave), and a man reckoning a burst that has not happened counts out the panes it
-//! would break (VIEW_GIVES: panes.rs `gives`, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
+//! would break (VIEW_GIVES: panes.rs `gives`, of the panes it meets, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
 //! judgment and is none at every other time.
 
 use game_types::knobs::Knobs;
