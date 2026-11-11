@@ -1,5 +1,6 @@
 //! WHAT A QUESTION OF THE BOX WORLD STANDS ON: the rows it reads (game_types' boxworld: written by whoever moves a box), its scratch, and the small operations whose answers are the game's own.
 pub use game_types::boxworld::*;
+use alloc::vec::Vec;
 
 /// the answer when a question is none this module can judge (a length that is no length of this world's, a table too short)
 pub const ASK_HOST: u32 = 0xffff_ffff;
@@ -62,34 +63,32 @@ impl Asking {
 }
 
 /// THE STATICS AS A TABLE MADE FROM THEM LAST FOUND THEM: a word of each one's row, and what it takes of the plan (the table's own rectangle of it)
+#[derive(Default)]
 pub struct Seen {
     wrote: u64,
-    boxes: usize,
-    word: [u64; MAX_BOXES],
-    at: [[f64; 5]; MAX_BOXES],
+    of: Vec<(u64, [f64; 5])>,
 }
 impl Seen {
-    pub const NONE: Self = Seen { wrote: 0, boxes: 0, word: [0; MAX_BOXES], at: [[0.0; 5]; MAX_BOXES] };
     /// nothing was seen, and there is something to see
-    pub fn empty_of(&self, o: &World) -> bool { self.boxes == 0 && self.wrote != o.wrote }
-    pub fn forget(&mut self) { (self.wrote, self.boxes) = (0, 0); }
+    pub fn empty_of(&self, o: &World) -> bool { self.of.is_empty() && self.wrote != o.wrote }
+    pub fn forget(&mut self) { *self = Seen::default(); }
     /// the statics looked at again: `moved` is told the rectangle of every one that is not as it was and how high it reaches, where it stood and where it stands
     pub fn look(&mut self, o: &World, round: impl Fn(&[f64]) -> [f64; 5], mut moved: impl FnMut([f64; 5])) {
         if self.wrote == o.wrote { return; }
         self.wrote = o.wrote;
         let n = o.boxes();
-        for i in 0..n.max(self.boxes) {
-            let (had, has) = (i < self.boxes, i < n);
-            let word = if has { word_of(o, i) } else { 0 };
-            if had && has && word == self.word[i] { continue; }
-            if had { moved(self.at[i]); }
-            if has {
-                self.at[i] = round(o.row(i));
-                self.word[i] = word;
-                moved(self.at[i]);
+        for i in 0..n.max(self.of.len()) {
+            let had = self.of.get(i).copied();
+            let word = if i < n { word_of(o, i) } else { 0 };
+            if i < n && had.is_some_and(|(was, _)| was == word) { continue; }
+            if let Some((_, at)) = had { moved(at); }
+            if i < n {
+                let now = (word, round(o.row(i)));
+                if let Some(was) = self.of.get_mut(i) { *was = now; } else { self.of.push(now); }
+                moved(now.1);
             }
         }
-        self.boxes = n;
+        self.of.truncate(n);
     }
 }
 /// a word of static `i`'s row: its sixteen numbers, its planes and its flags (what it sends back is read as it is)

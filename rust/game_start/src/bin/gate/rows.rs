@@ -418,7 +418,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
     let mut fail = Vec::new();
     'moments: for (m, k) in kept.iter_mut().enumerate() {
         if f.breaks("block") { k.moment.block.clone_from(&end); }
-        p.g = k.moment.laid(if m % 2 == 0 { home } else { 1 });
+        game::savestate::control::stand(&mut p.g, k.moment.laid(if m % 2 == 0 { home } else { 1 }));
         p.cursor = k.cursor;
         let mut next = k.next;
         for (i, was) in k.words.iter().enumerate() {
@@ -445,7 +445,7 @@ fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[Strin
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
         slot -= 1;
-        q.g = m.moment.laid(slot);
+        game::savestate::control::stand(&mut q.g, m.moment.laid(slot));
         q.host = game_start::stand::host_of(&q.g).expect("a stood game was handed its host's rows");
         q.cursor = m.cursor;
         let mut next = m.next;
@@ -549,7 +549,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
         }
         None
     };
-    if let Some(why) = moment.take().and_then(|m| { p.g = m.laid(p.g.sim); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
+    if let Some(why) = moment.take().and_then(|m| { p.lay(&m); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
     drop(p);
     for shown in [0, 1] {
         let mut q = stand(&e, SEED, 2);

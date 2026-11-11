@@ -7,6 +7,7 @@
 //! WHICH BOXES HAVE A ROW. A static (the level's list, in its order), a leaf (a door's box), a part of the furniture in the level. Every other box (a piece of debris, a skin) has none,
 //! and is written without one.
 use crate::bytes::{ToBytes, W};
+use crate::made::next;
 use crate::ids::*;
 use crate::scene_boxes::Box as SBox;
 use crate::V3;
@@ -238,11 +239,6 @@ pub fn filed(w: usize, cells: usize, list: &[(u32, [i32; 4])]) -> (Vec<u32>, Vec
 }
 /// every double by its bits (a −0 is not a 0)
 fn same(a: &[f64], b: &[f64]) -> bool { a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()) }
-/// the next writing's number
-fn next() -> u64 {
-    static N: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(1);
-    N.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
-}
 
 /// THE WORLD AS A QUESTION TAKES IT: the boxes as they stand, or as they would be. `leaves` = do the leaves stand; `but` = those that are let through; `open` = statics that are let
 /// through; `extra` = boxes that are not of the level and stand for this question (REC doubles each; a cut one's planes in `extra_cut`, its record's place there).

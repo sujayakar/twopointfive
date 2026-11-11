@@ -10,7 +10,7 @@
 //! The cosines and the lines' lengths are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
-use crate::bricks;
+use crate::bricks::{self, Smoke};
 use crate::lights::{Lights, ROWS, R_DAY, R_ON, R_STEADY};
 use crate::lines;
 use crate::state::state;
@@ -179,14 +179,11 @@ pub fn word(lamps: &[[f64; LAMP]], rows: Option<Rows>) -> f64 {
     });
     s
 }
-/// THE SMOKE'S SHADOW of a question, `sigma` > 0: a lamp no wall hides is dimmed by the smoke of the coarse grid of the game in slot `g` (`stamp`: its block's) along the
-/// line to it, under that `sigma` (extinction per metre per unit of density). 0 = no shadow.
-pub struct Shade {
+/// THE SMOKE'S SHADOW of a question: a lamp no wall hides is dimmed by the smoke along the line to it, under this `sigma` (extinction per metre per unit of density). None = no shadow.
+pub struct Shade<'a> {
     pub sigma: f64,
-    pub g: usize,
-    pub stamp: f64,
+    pub smoke: &'a Smoke,
 }
-pub const NO_SHADE: Shade = Shade { sigma: 0.0, g: 0, stamp: 0.0 };
 
 /// the six axis normals the renderer's meter takes its best face over
 const N6: [[f64; 3]; 6] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
@@ -202,7 +199,7 @@ fn light_window(d: f64, range: f64) -> f64 {
 /// THE LAMPS ON THE POINT `p` (`each`: the question's own and the rows `rows` names, as one list): the six faces go to `acc`. 0, or ASK_HOST
 /// (nothing in `acc` is then to be read).
 #[allow(clippy::too_many_arguments)]
-pub fn estimate(w: &World, lamps: &[[f64; LAMP]], p: [f64; 3], shade: &Shade, rows: Option<Rows>, acc: &mut [f64; 6], tune: &Knobs) -> u32 {
+pub fn estimate(w: &World, lamps: &[[f64; LAMP]], p: [f64; 3], shade: Option<&Shade>, rows: Option<Rows>, acc: &mut [f64; 6], tune: &Knobs) -> u32 {
     *acc = [0.0; 6];
     // (a lamp this dim on the point is no lamp; beside an hour's light, at which eyes are used to as much less)
     let least = 0.002 * rows.map_or(1.0, |q| q.exposure);
@@ -262,7 +259,7 @@ fn cone(l: &Lamp) -> Cone {
 }
 /// one lamp's light on the point, onto the six faces: the shader's own terms, then one line to it, then the receiving cosine a face. 0, or ASK_HOST.
 #[inline(always)]
-fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64; 6], tune: &Knobs) -> u32 {
+fn one(w: &World, p: [f64; 3], shade: Option<&Shade>, l: &Lamp, least: f64, acc: &mut [f64; 6], tune: &Knobs) -> u32 {
     let Some((mut lum, at, end)) = reaches(l, || cone(l), p, least) else { return 0 };
     if let Some(end) = end {
         match lines::sight_line(w, true, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2], tune) {
@@ -270,8 +267,8 @@ fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f
             Some(true) => return 0,
             Some(false) => {}
         }
-        if shade.sigma > 0.0 {
-            lum *= bricks::trans(shade.g, shade.stamp, p, end, shade.sigma);
+        if let Some(s) = shade {
+            lum *= bricks::trans(s.smoke, p, end, s.sigma);
         }
     }
     onto(acc, lum, at);

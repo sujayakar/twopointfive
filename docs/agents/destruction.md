@@ -38,7 +38,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+Glass and bars: the rules in `rust/sim/src/` (`panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs`), the state `World.panes`.
 A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
 `rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
@@ -101,7 +101,7 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
 `way_off` slides it the shortest free way clear of all of him.
 
-**Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
+**Glass.** A pane's state is a row of `World.panes`. `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
 float. The rule lists the pieces that let go; `glass_break_drain` hands each to `glass_shards_release`, the picture's half. Each landing and the glass
 it leaves are kept in `falls.rs`, where `step` makes a footfall louder and grinds the litter. A pane is a wall to feet until what stands below

@@ -413,63 +413,47 @@ pub fn eye_contact(g: &Game, e: crate::scene_collision::EyeContactE, chest: V3, 
 /// the light of these lamps on a point, onto the six faces: the question's own (`lamps`) and the level's, which the loop reads where they stand (`rows`); `shade` = the smoke dims
 /// each on its way.
 pub fn lamps_on(g: &Game, p: V3, lamps: &[[f64; sim::light::LAMP]], shade: bool, rows: crate::scene_collision::LampRows) -> [f64; 6] {
-    let shade = if shade { sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim) } } else { sim::light::NO_SHADE };
+    let shade = shade.then(|| sim::light::Shade { sigma: g.k.sense.smoke.sigma, smoke: &g.smoke }).filter(|s| s.sigma > 0.0);
     let mut out = [0.0; 6];
-    let r = sim::light::estimate(world(g), lamps, p, &shade, rows_for(g, Some(rows)), &mut out, &g.k);
+    let r = sim::light::estimate(world(g), lamps, p, shade.as_ref(), rows_for(g, Some(rows)), &mut out, &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("light", "a lamp's line too long to be one, or of no number", &p, &p)); }
     out
 }
 
 /// the ways between the coarse grid's cells are asked of the boxes and leaves as they stand: a game put back knows none till its next step
-pub fn grid_ways(g: &Game) { sim::bricks::ways(g.sim, sim::state::stamp(g.sim), world(g), &g.k); }
+pub fn grid_ways(g: &mut Game) { sim::bricks::ways(&mut g.smoke, &g.made.ways, g.tab.boxes.world(), &g.k); }
 
-/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done.
-pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand.
+pub fn grid_step(g: &mut crate::game::Game, n: u32, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) {
     // (the light that comes round: the lamps of nobody's fixture, and the level's by the rows' word)
     let (lamps, said) = crate::guards::steady_lamps(g);
     let sky = crate::hours::sky_now(g);
-    let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
-    if let Some(wd) = wind {
-        if wd.x != 0.0 || wd.z != 0.0 {
-            let (gw, gh, gc) = { let w = world(g); (w.w as f64, w.h as f64, w.cs) };
-            let (nx, nz) = (2.0 * m::ceil(gw * gc / 2.0), 2.0 * m::ceil(gh * gc / 2.0));
-            if nx * nz <= sim::bricks::MAX_GLOW as f64 {
-                let at = sim::bricks::wind_addr();
-                let GridWindShare::Under { roofs } = &wd.share;
-                let mut o = 0usize;
-                let mut z = 0.0;
-                while z < nz {
-                    let mut i = 0.0;
-                    while i < nx {
-                        let v = crate::wind::wind_share_under(g, i + 0.5, z + 0.5, roofs.as_deref());
-                        unsafe { *at.add(o) = v; }
-                        o += 1;
-                        i += 1.0;
-                    }
-                    z += 1.0;
-                }
-                wx = wd.x;
-                wz = wd.z;
-                low = wd.low;
-                gain = wd.gain;
-                full_at = wd.full_at;
-            }
-        }
-    }
-    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
+    // (a wind that is no number, or whose rise with height is none, is still air: the smoke is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
-    let windy = real(wx) && real(wz) && real(low) && real(gain) && real(full_at) && real(k.in_wind) && low >= 0.0 && gain >= 0.0 && full_at > 0.0;
-    let (wx, wz) = if windy { (wx, wz) } else { (0.0, 0.0) };
-    let bk = sim::bricks::K { decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, wind_x: wx, wind_z: wz, wind_low: low, wind_gain: gain, wind_full_at: full_at, wind_keep: k.in_wind };
+    let blows = |w: &&crate::scene_collision::GridWind| (w.x != 0.0 || w.z != 0.0) && [w.x, w.z, w.low, w.gain, w.full_at, k.in_wind].into_iter().all(real) && w.low >= 0.0 && w.gain >= 0.0 && w.full_at > 0.0;
+    let wind = wind.filter(blows);
+    let share = wind.map_or(Vec::new(), |wd| {
+        let GridWindShare::Under { roofs } = &wd.share;
+        let w = world(g);
+        let squares = |cells: u32| (2.0 * m::ceil(cells as f64 * w.cs / 2.0)) as usize;
+        let (nx, nz) = (squares(w.w), squares(w.h));
+        if nx * nz > sim::bricks::MAX_GLOW { return Vec::new(); }
+        (0..nx * nz).map(|i| crate::wind::wind_share_under(g, (i % nx) as f64 + 0.5, (i / nx) as f64 + 0.5, roofs.as_deref())).collect()
+    });
+    let w = wind.filter(|_| !share.is_empty());
+    let bk = sim::bricks::K {
+        decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, share: &share, wind_keep: k.in_wind,
+        wind_x: w.map_or(0.0, |w| w.x), wind_z: w.map_or(0.0, |w| w.z), wind_low: w.map_or(1.0, |w| w.low), wind_gain: w.map_or(0.0, |w| w.gain), wind_full_at: w.map_or(1.0, |w| w.full_at),
+    };
     let gk = sim::glow::K { sweep, sky, lamps: &lamps, rows: rows_for(g, Some(said)) };
-    sim::bricks::step(g.sim, sim::state::stamp(g.sim), world(g), js::to_u32(n), &bk, Some(&gk), &g.k) != ASK_HOST
+    sim::bricks::step(&mut g.smoke, &g.made, g.tab.boxes.world(), n, &bk, Some(&gk), &g.k)
 }
 
 /// a tick with no step of the grid in it: some of what the light of the next ones is worked out from is made ahead, no state
-pub fn grid_ahead(g: &Game) { if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::ahead(g.sim, world(g), &g.k); } }
+pub fn grid_ahead(g: &Game) { sim::bricks::ahead(&g.smoke, &g.made, world(g), &g.k); }
 
 /// What the light under a roof is worked out from is made behind the loading, `most` lines of it, and not in the first step: the statics' lines, no state. → is all of it made
-pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
+pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(&g.made, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
 
 // ---- how a sound reaches a listener
 

@@ -643,14 +643,9 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The attached solver's canister tuning, or None behind a stand-in without any.
-fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
-    g.smoke.params
-}
-
-/// What a smoke can lets out: the attached solver's tuning, or its own numbers behind a stand-in without any.
-pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
-    smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 })
+/// What a smoke can lets out.
+pub fn can_params() -> crate::smoke_types::CanisterParams {
+    crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 }
 }
 
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.
@@ -661,7 +656,7 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
-        let p = can_params(g);
+        let p = can_params();
         seconds = p.canister_duration;
         let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
