@@ -735,7 +735,7 @@ fn room_called(g: &mut Game, op: DoorOpId, lead: GuardId, left: f64) {
 fn hostiles_in(g: &mut Game, inside: impl Fn(&mut Game, V3) -> bool) -> (bool, bool) {
     let mut ins: Vec<GuardId> = Vec::new();
     for x in g.guards.clone() {
-        if !crate::condition::down(g, g.gd[x].ch) && g.team(x) == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) && inside(g, g.pos_of(x)) { ins.push(x); }
+        if !crate::condition::down(g, g.gd[x].ch) && crate::group::foe(g, x) && !crate::runner::runner_nobody(g, x) && inside(g, g.pos_of(x)) { ins.push(x); }
     }
     (!ins.is_empty(), ins.iter().any(|&x| crate::autopilot::in_sight(g, x)))
 }

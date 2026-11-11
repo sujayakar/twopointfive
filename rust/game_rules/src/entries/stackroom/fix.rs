@@ -187,10 +187,9 @@ fn ways_next(g: &mut Game, x: &Face) -> Vec<Way> {
     let (d, f, s, cs) = (x.d, x.f, g.k.stackroom, g.col.nav.cell);
     let into = floor_of(g, d, -x.side);
     let mut ways: Vec<Way> = Vec::new();
-    let pl = g.player;
-    let ring = crate::orders::player_ring(g, pl);
+    let ring = crate::orders::squad_orders_ring(g, &crate::seats::here(g));
     let mut ours: Vec<V3> = Vec::new();
-    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.player_pos(pl)); }
+    if let Some(pl) = crate::group::player(g) { ours.push(g.player_pos(pl)); }
     for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.pos_of(man)); }
     }
