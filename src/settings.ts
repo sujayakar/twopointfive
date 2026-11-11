@@ -66,7 +66,7 @@ export interface RenderSettings {
   dnShadowIters: number; dnShadowCap: number; dnShadowClampK: number; dnShadowSigmaL: number; dnShadowPrior: boolean; dnShadowLitAlike: boolean; dnShadowOccl: boolean; dnShadowMoveCap: number; dnShadowMoveThresh: number; dnShadowJump: number;
   dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number;
   // the runtime quality ladder's HEADROOM-AWARE CLIMB (ui/quality.ts Quality.sample): with adaptive resolution on and the GPU measurably idle (presented at the display rate AND the compute passes'
-  // union under CLIMB.headroom of the frame budget for CLIMB.window s) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
+  // union with room for a fight of CLIMB.fight times it, CLIMB.windows s running) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
   // volumetrics ¼ → ½). Off = the ladder as it was.
   ladderClimb: boolean;
   /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
