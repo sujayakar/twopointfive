@@ -135,8 +135,8 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         // (the panes want a level with panes; the rest stand on any)
         (format!("play {}", run_name(4)), "glass", "glass"), (format!("play {}", held_run), "lamps", "lamp"), (format!("play {}", held_run), "smoke", "smoke"), (format!("play {}", held_run), "destroyed", "destroyed"),
         (format!("again {}", run), "second", "the second run"),
-        (format!("save {}", run), "block", "put back, parts"),
-        (format!("load {}", run), "block", "loaded into"),
+        (format!("save {}", run), "dice", "put back, parts"),
+        (format!("load {}", run), "dice", "loaded into"),
         // (a run whose statics move: the mirror has something to skip)
         (format!("draw {}", moved), "told", "drawing the game changed it"), (format!("draw {}", moved), "mark", "the page's"), (format!("draw {}", moved), "head", "the boxes' head says"), (format!("draw {}", moved), "opened", "just opened"),
         (seats.clone(), "pin", "moved from second"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
@@ -408,16 +408,16 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
 
 /// THE GAME PUT BACK IS THE GAME THAT WENT ON: each moment stands again, the even ones in the run's own slot and the odd ones in slot 1, and is played under the same hand from its frame on:
 /// every part of every frame the same as the run's had. A host's hand is outside the game: where its next line is, and where its cursor lies, go back with the game.
-/// BREAK: a moment whose block bytes are the run's end's.
+/// BREAK: `dice` a moment whose dice are the run's end's.
 fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
     let mut did = vec![(0, String::new()); hand.lines.len()];
     let home = p.g.sim;
-    let end = game_start::block::bytes(home).to_vec();
+    let end = p.g.dice.clone();
     let mut fail = Vec::new();
     'moments: for (m, k) in kept.iter_mut().enumerate() {
-        if f.breaks("block") { k.moment.block.clone_from(&end); }
+        if f.breaks("dice") { k.moment.game.dice = end.clone(); }
         game::savestate::control::stand(&mut p.g, k.moment.laid(if m % 2 == 0 { home } else { 1 }));
         p.cursor = k.cursor;
         let mut next = k.next;
@@ -432,7 +432,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
 
 /// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game in a slot nobody was in, and played
 /// under the hand from its kept place: every part of every frame the run's. (A fault this road has had: a calm guard's torch came on for three seconds.)
-/// BREAK: `block` one byte of the block's die is another.
+/// BREAK: `dice` the moment's dice are another game's.
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
@@ -441,9 +441,9 @@ fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[Strin
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
     let mut slot = sim::state::GAMES;
     'loads: for m in kept.iter_mut().filter(|m| LOADS.contains(&(m.at / 60))) {
-        if f.breaks("block") { m.moment.block[sim::state::PARTS[1].off] ^= 1; }
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
+        if f.breaks("dice") { m.moment.game.dice = q.g.dice.clone(); }
         slot -= 1;
         game::savestate::control::stand(&mut q.g, m.moment.laid(slot));
         q.host = game_start::stand::host_of(&q.g).expect("a stood game was handed its host's rows");
