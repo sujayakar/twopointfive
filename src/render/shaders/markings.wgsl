@@ -298,7 +298,7 @@ fn markHit(slot: u32, bi: u32, wp: vec3f, n: vec3f, V: vec3f, fp: f32, kEmit: f3
   return o;
 }
 /** the 1-based first table row in a box's flags word (0 = no markings) — 0 for everybody while frame.markCfg.x says markings are off */
-fn markSlotOf(flags: u32) -> u32 { return select(0u, flags >> 18u, frame.markCfg.x > 0.0); }
+fn markSlotOf(flags: u32) -> u32 { return select(0u, boxWordMark(flags), frame.markCfg.x > 0.0); }
 // The reflection passes' RAY CONE, set once per pixel by their main() before the rays go out: the receiver pixel's own footprint (mkConeFp0, m), its growth per
 // metre past the mirror (mkConePix = the pixel's angular size: a planar mirror keeps the primary cone diverging at the same rate) and the LOBE's share per metre
 // (mkConeK = markConeK() × α). markReflHit band-limits a TRACED hit's markings by fp0 + t·(pix + k). The lobe's share is deliberately small (settings.markingReflCone,

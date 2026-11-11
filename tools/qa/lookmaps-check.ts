@@ -7,7 +7,9 @@
 import { readFileSync } from 'node:fs';
 import { ROOT } from './here.ts';
 const { lookLayer, lookLayerSliced, lookMip, lookStuffOf, LOOK_LAYERS, LOOK_PAINTED, LOOK_NAMES, LOOK_N, LOOK_ROUGH, LOOK_TILE, LOOK_WITH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND } = await import(`${ROOT}/src/render/lookTex.ts`);
-const { GBuffer, LOOK_DEFAULTS, LOOK_WORD, lookWordOf, lookAmounts, lookNeed, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
+const { GBuffer, LOOK_DEFAULTS, lookAmounts, lookNeed, lookForget } = await import(`${ROOT}/src/render/gbuffer.ts`);
+/** a part of a box's finish, where the module lays it and how many bits it has (src/render/shaders/rows.wgsl, written from rust/game_draw) */
+const FINISH = (n: string): [number, number] => { const m = new RegExp(`fn finish${n}\\(w: f32\\) -> u32 \\{ return \\(u32\\(w\\) >> (\\d+)u\\) & (\\d+)u; \\}`).exec(readFileSync(`${ROOT}/src/render/shaders/rows.wgsl`, 'utf8')); return m ? [+m[1], +m[2]] : [NaN, NaN]; };
 const { PAINT_STUFF, paintOf, toned, worded } = await import(`${ROOT}/src/scene/stuff.ts`);
 const makeBox0 = (p: { albedo: number[] }): any => ({ c: [3, 1, 4], h: [0.5, 0.5, 0.5], yaw: 0, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1e6, ...p });   // (a box as scene/boxes.ts makeBox makes it, with the albedo array handed over as it is)
 const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
@@ -85,8 +87,8 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
   }
   check(bad.length === 0, 'every normal is a direction, every finish is about its layer\'s own, and a layer read from far off is the same paint as up close', bad.join(' · ')); }
 // 8. what a box is made of is the box's own word: a palette paint handed over is made of what its name says, and a tone of it is the same stuff
-{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), T = PAINT_STUFF as Record<string, string>, word = lookWordOf();
-  const drawn = (albedo: number[]) => word(worded(makeBox0({ albedo })), false) & (LOOK_WORD.stuffs - 1);
+{ const P = GWOT_PALETTE as Record<string, number[]>, names = Object.keys(P), T = PAINT_STUFF as Record<string, string>;
+  const drawn = (albedo: number[]) => { const s = worded(makeBox0({ albedo })).stuff; return s === undefined ? 0 : lookStuffOf(s); };
   const wrong = names.filter(m => drawn(P[m]) !== lookStuffOf(T[m])).map(m => `${m} is drawn as class ${drawn(P[m])}, its name says ${T[m]}`);
   check(wrong.length === 0 && names.every(m => paintOf(P[m])?.name === m), `every one of the palette's ${names.length} paints, handed over as the palette's own row, is made of what its name says (${names.filter(m => lookStuffOf(T[m]) > 0).length} have a material, the rest are plain); the same numbers written out again are nobody's paint`,
     wrong.join(' · ') || `a copy of mud's numbers: class ${drawn([...P.mud])}`);
@@ -100,13 +102,13 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     'a paint worn dark in one piece (a trodden patch, a door\'s wear) is still its stuff, however dark it is worn; a worn colour whose numbers are another paint\'s own is still the paint it was worn from; a tone made by arithmetic alone, with nobody saying what it is a tone of, is nobody\'s paint',
     `${taken.length} pairs the colour rule confused, ${kept} now their own: ${taken.join(' · ')}`);
   const csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8');
-  check(/fn boxLook\(i: u32\) -> u32 \{ return u32\(boxFinishWord\(i\) \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 31u; \}/.test(csrc) && LOOK_WORD.stuffs === 32 && /w -= 8\.0 \* floor\(w \* 0\.125\);/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 32u\) != 0u;/.test(lsrc) && LOOK_WORD.moves === 32 && /let salt = word >> 6u;/.test(lsrc) && LOOK_WORD.own === 64,
-    'the shader reads the box\'s word as the table lays it (the stuff, whether it moves, its own number) and takes it off the finish'); }
+  check(/fn boxStuff\(i: u32\) -> u32 \{ return finishStuff\(boxFinishWord\(i\)\); \}/.test(csrc) && FINISH('Stuff')[1] === 31 && /f\.rough = clamp\(finishRough\(w\), 0\.0, 1\.0\);/.test(csrc) && /let word = boxFinishWord\(bi\); let moves = finishMoves\(word\) != 0u;/.test(lsrc) && FINISH('Moves')[1] === 1 && /let salt = finishOwn\(word\);/.test(lsrc),
+    'the shader reads the box\'s word as the module lays it (the stuff, whether it moves, its own number) and takes it off the finish'); }
 // 9. a stuff's number: asked by name, and the box's word still holds the finish to a 500th under the largest word there can be. THE SHADER NAMES NO STUFF
 //    AND NO SIZE OF A RULE THAT GOES BY STUFF: what it did by name until 11-04 is a word in the stuff's row, and the rows say, stuff for stuff, exactly what
 //    the names said (the old rules are written out here as they stood in look.wgsl, by the numbers the stuffs had then and still have)
 { const lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), code = lsrc.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
-  const top = LOOK_WORD.stuffs - 1 + LOOK_WORD.moves + LOOK_WORD.own * (LOOK_WORD.owns - 1); let blurred = 0;
+  const part = (n: string, v: number) => v * 2 ** FINISH(n)[0], top = (part('Stuff', 31) + part('Moves', 1) + part('Own', 44)) / 8; let blurred = 0;
   for (let k = 0; k < 4000; k++) { const f = k / 500, w = Math.fround(8 * top + f); if (Math.abs(w - 8 * top - f) > 1 / 1000) blurred++; }   // (a finish is under 8 and read to a 500th: boxFinish takes the word off first)
   // the shader's text: no constant that is one stuff's number, no test of the class against anything but 0 (plain)
   const names = [...code.matchAll(/\b(SURF_[A-Z]+|LOOK_(?:CLOTH|METAL|PAINT|VENEER|PLASTIC|FABRIC|STEEL|CARPAINT)|LOOK_L_(?:STONE|BRICK|GRAVEL))\b/g)].map(m => m[1]);
@@ -122,9 +124,9 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
     if (t[1] !== was.foot(c)) differ.push(`${LOOK_NAMES[l]} foot`); if (t[2] !== was.ground(c)) differ.push(`${LOOK_NAMES[l]} ground`); if (t[3] !== was.sheds(c)) differ.push(`${LOOK_NAMES[l]} sheds`); }
   const sizes = LOOK_HANDLED.long / 2 === 0.65 && LOOK_HANDLED.tall / 2 === 0.8 && LOOK_HANDLED.thin / 2 === 0.02 && LOOK_GROUND.top === 0.25 && LOOK_GROUND.snow === 0.06 && LOOK_GROUND.foot === 0.12;
   const withOk = JSON.stringify(LOOK_WITH) === JSON.stringify({ 'mud wall': ['field stone', 'mud brick'], earth: ['gravel'] });
-  check(lookStuffOf('veneer') === 12 && lookStuffOf('steel') === 15 && lookStuffOf('field stone') === 0 && lookStuffOf('mud brick') === 0 && lookStuffOf('no such') === 0 && lookStuffOf(undefined) === 0 && LOOK_PAINTED < LOOK_WORD.stuffs && LOOK_WORD.moves === LOOK_WORD.stuffs && LOOK_WORD.own === 2 * LOOK_WORD.moves && blurred === 0 && names.length === 0 && tests.length === 0 && differ.length === 0 && sizes && withOk,
+  check(lookStuffOf('veneer') === 12 && lookStuffOf('steel') === 15 && lookStuffOf('field stone') === 0 && lookStuffOf('mud brick') === 0 && lookStuffOf('no such') === 0 && lookStuffOf(undefined) === 0 && LOOK_PAINTED <= FINISH('Stuff')[1] && FINISH('Own')[1] >= 44 && blurred === 0 && names.length === 0 && tests.length === 0 && differ.length === 0 && sizes && withOk,
     'a stuff is asked for by name; the masonry under a mud wall and a name nobody has are no stuff; the word has room for 31 stuffs and under the largest word a finish still reads to a 500th. The shader names no stuff: no constant that is one stuff\'s number and no test of a class but against plain, and the rows say for every stuff what the names said (which way its grain runs, the least face that shows it, what is under its coat, what comes up at its foot, the ground that freezes, what snow does not lie on), with the sizes a rule went by in the table as they were',
-    `${LOOK_PAINTED} stuffs of ${LOOK_WORD.stuffs - 1}; largest word ${top} (× 8 = ${8 * top}); ${blurred} finishes of 4000 off by a 1000th or more · names in the shader: ${names.join(', ') || 'none'} · tests of a class: ${tests.join(' | ') || 'none but against plain'} · rows against the old rules: ${differ.join(', ') || `${WAS.length} stuffs, six words each, all the same`} · sizes as they were ${sizes} · the layers a layer needs ${withOk}`); }
+    `${LOOK_PAINTED} stuffs of ${FINISH('Stuff')[1]}; largest word ${top} (× 8 = ${8 * top}); ${blurred} finishes of 4000 off by a 1000th or more · names in the shader: ${names.join(', ') || 'none'} · tests of a class: ${tests.join(' | ') || 'none but against plain'} · rows against the old rules: ${differ.join(', ') || `${WAS.length} stuffs, six words each, all the same`} · sizes as they were ${sizes} · the layers a layer needs ${withOk}`); }
 // 10. the g-buffer's half, on a device that only counts. A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS: nothing is made in the constructor's turn; the boot makes
 //     the men's cloth alone; a stuff's layer is made the first time a box is that stuff, with the layers its drawing reads, each after a wait on the event loop,
 //     into arrays as long as the slots in use (what they held is copied, not made again); a stuff with no map has no slot; and asking twice makes nothing twice

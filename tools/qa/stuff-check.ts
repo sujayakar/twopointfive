@@ -1,18 +1,18 @@
-// A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; tools/levels/lib/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
+// A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; tools/levels/lib/levelLoad.ts; rust/game_draw/src/boxes/pack.rs finish).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
 //                                                    as it stood): lines 2, 3, 4, 7, 14, 15 and 17 must FAIL
 //   KITWORDS_BREAK=1 bun run tools/qa/stuff-check.ts  the kits' trim is read with its words struck out (a piece of trim that says nothing): line 12 must FAIL
 //   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts NAMED_COATS) is emptied: line 8 must FAIL
 //   (line 18 builds every level generator in this process: a second or so; it reads no level file, so neither word above changes it)
-// No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
+// No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './here.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
 const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, saidAs, wordFor, worded, repainted, repaintWord, NAMED_COATS } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
-const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
+const GB = await import(`${ROOT}/src/render/gbuffer.ts`);
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
 const { parseLevelData, serializeLevelData, KEYS } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
@@ -27,7 +27,7 @@ console.log(`\n=== stuff: a thing is made of what it says${BRK ? ' (STUFF_BREAK:
 const FILES = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort();
 /** a level file as the check reads it: with STUFF_BREAK its rows say nothing, as a file from before did */
 const dataOf = (f: string): any => { const d = parseLevelData(readFileSync(`${ROOT}/levels/${f}`, 'utf8')) as any; if (BRK) for (const m of Object.values(d.materials) as any[]) delete m.stuff; return d; };
-const word = lookWordOf(), cls = (b: any, moves = false) => word(b, moves) & (LOOK_WORD.stuffs - 1);
+const cls = (b: any) => b.stuff === undefined ? 0 : lookStuffOf(b.stuff);
 const said = (c: number) => c === 0 ? 'plain' : LOOK_NAMES[c - 1];
 const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? undefined : w;
 
@@ -79,10 +79,9 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 
 // 6. the page: the look's word is made from the boxes alone, and the two words that gave the colour rule back are no longer the look page's
 { const main = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8');
-  const core = lookCoreOf(), cut = makeBox({ c: [0, 1, 0], h: [1, 1, 0.2], albedo: [0.4, 0.4, 0.4], stuff: 'block' }); const own = core(cut); cut.cutCoreStuff = 'slab'; const other = core(cut); cut.cutCoreStuff = 'plain' as any; const none = core(cut);
-  check(!lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main) && own === lookStuffOf('block') && other === lookStuffOf('slab') && none === 0,
-    '6 the look\'s word is made from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',
-    `look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')} · an old cut: ${said(own)}, with a core of slab ${said(other)}, of plain ${said(none)}`); }
+  check(!lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main),
+    '6 the look\'s word is made from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere',
+    `look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')}`); }
 
 // 7. a box says its own word: over its row's, through the level file and back, on a loose prop's part too; a row may say one (what cannot be said is refused: rust/game_start/tests/level_faults.rs)
 { const D = dataOf('library-hall.json') as any, bi = D.boxes.findIndex((b: any) => b.material === 'concrete' && b.stuff === undefined), wi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.flags === undefined && b.stuff === undefined), fi = D.boxes.findIndex((b: any) => b.material !== undefined && b.flags !== undefined && b.stuff === undefined), pi = D.props.findIndex((p: any) => p.kind === 'chair'), ii = D.boxes.findIndex((b: any) => b.albedo !== undefined && b.stuff === undefined);

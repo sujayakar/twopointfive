@@ -102,10 +102,10 @@ impl Mirror {
     /// the first table that is not `d`'s: its name and first row. `opened`: `d` is a host that has just opened, and what is a table's history is left out (the file's head says which)
     fn differs(&mut self, d: &Drawn, opened: bool) -> Option<(&'static str, usize)> {
         let h = d.boxes.head[0];
-        if let Some(i) = if opened { self.geo.first_as(&d.boxes.geo, |a, b| words(a)[..7] == words(b)[..7] && a.flags & HISTORY == b.flags & HISTORY) } else { self.geo.first_differ(&d.boxes.geo) } { return Some(("geo", i)); }
+        if let Some(i) = if opened { self.geo.first_as(&d.boxes.geo, |a, b| words(a)[..7] == words(b)[..7] && a.flags.0 & HISTORY == b.flags.0 & HISTORY) } else { self.geo.first_differ(&d.boxes.geo) } { return Some(("geo", i)); }
         if let Some(i) = self.mat.first_differ(&d.boxes.mat) { return Some(("mat", i)); }
         if self.cut.rows.len() < d.boxes.cut.len() { self.cut.rows.resize(d.boxes.cut.len(), Cut::ZERO); }
-        if let Some(i) = (0..h.count as usize).find(|&i| d.boxes.geo[i].flags & (ROUND | CUT) != 0 && !same(&self.cut.rows[i], &d.boxes.cut[i])) { return Some(("cut", i)); }
+        if let Some(i) = (0..h.count as usize).find(|&i| d.boxes.geo[i].flags.0 & (ROUND | CUT) != 0 && !same(&self.cut.rows[i], &d.boxes.cut[i])) { return Some(("cut", i)); }
         if !opened {
             if let Some(i) = self.marks.first_differ(&d.boxes.marks.rows) { return Some(("marks", i)); }
             if let Some(i) = self.decals.first_differ(&d.marks.words) { return Some(("decal words", i)); }

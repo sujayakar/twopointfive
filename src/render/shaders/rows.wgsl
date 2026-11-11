@@ -5,7 +5,7 @@ struct BoxGeo {
   c: vec3f,   // its middle
   rot: u32,   // its yaw's cosine and sine (a tilted box is turned by `Mat.rot`)
   h: vec3f,   // its half sizes
-  flags: u32,   // its bits; whose it is in the second byte; from bit 18 the first row (from 1) of its marks
+  flags: u32,
 };
 fn boxGeoRot(r: BoxGeo) -> vec2f { return unpack2x16float(r.rot); }
 
@@ -33,7 +33,7 @@ struct Capsule {
   a: vec3f,
   r: f32,
   b: vec3f,
-  misc: u32,   // whose it is in the low byte, its colour (5, 6, 5 bits) in the next two, and in the top one the radius at `b` in millimetres (0: `r` again)
+  misc: u32,
 };
 
 // a light, as a shader reads it
@@ -63,3 +63,24 @@ struct CharInst {
   parts: u32,   // the cast's parts he wears, a bit a part
   pad: u32,
 };
+
+// a box's word: its bits, whose it is, and the first row (from 1) of its marks
+fn boxWordLow(w: u32) -> u32 { return (w >> 0u) & 255u; }
+fn boxWordOwner(w: u32) -> u32 { return (w >> 8u) & 255u; }
+fn boxWordHigh(w: u32) -> u32 { return (w >> 16u) & 3u; }
+fn boxWordMark(w: u32) -> u32 { return (w >> 18u) & 16383u; }
+
+// its finish: its roughness, whether it is bare metal and anisotropic, what it is made of, whether it moves, and a number of its own that shifts its map
+fn finishRough(w: f32) -> f32 { return w - 2.0 * floor(w * 0.5); }
+fn finishMetal(w: f32) -> u32 { return (u32(w) >> 1u) & 1u; }
+fn finishAniso(w: f32) -> u32 { return (u32(w) >> 2u) & 1u; }
+fn finishStuff(w: f32) -> u32 { return (u32(w) >> 3u) & 31u; }
+fn finishMoves(w: f32) -> u32 { return (u32(w) >> 8u) & 1u; }
+fn finishOwn(w: f32) -> u32 { return (u32(w) >> 9u) & 63u; }
+
+// whose a proxy is, its colour, and the radius at its other end in millimetres (0: the first's again)
+fn capsuleWordOwner(w: u32) -> u32 { return (w >> 0u) & 255u; }
+fn capsuleWordBlue(w: u32) -> u32 { return (w >> 8u) & 31u; }
+fn capsuleWordGreen(w: u32) -> u32 { return (w >> 13u) & 63u; }
+fn capsuleWordRed(w: u32) -> u32 { return (w >> 19u) & 31u; }
+fn capsuleWordRb(w: u32) -> u32 { return (w >> 24u) & 255u; }
