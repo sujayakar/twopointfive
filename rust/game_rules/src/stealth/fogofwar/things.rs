@@ -187,10 +187,13 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
     let mut out = core::mem::take(&mut g.fog_of_war.thing_out);
     out.clear();
     let (rig_from, rig_to) = (g.fog_of_war.rig_from as usize, g.fog_of_war.rig_to as usize);
+    // (what men wear is theirs, and no thing of the list: it is asked for no key)
+    let worn = |i: usize| i >= rig_from && i < rig_to;
+    let keys: Vec<Option<f64>> = list.iter().enumerate().map(|(i, &b)| if worn(i) { None } else { g.tab[b].mkey.map(|k| key_of_mkey(g, k)) }).collect();
     let mut i = 0;
     while i < list.len() {
-        if i >= rig_from && i < rig_to { out.push(list[i]); i += 1; continue; }
-        i = thing(g, look, list, i, &mut out);
+        if worn(i) { out.push(list[i]); i += 1; continue; }
+        i = thing(g, look, list, &keys, i, &mut out);
     }
     things_gone(g, look, &mut out);
     let stats = &g.fog_of_war.thing_stats;
@@ -217,18 +220,16 @@ impl Look {
 }
 
 /// One thing of the list, its boxes from `i` on: shown, shown as it was last seen, or left out. Returns where the next begins.
-fn thing(g: &mut Game, look: Look, list: &[AnyBoxId], i: usize, out: &mut Vec<AnyBoxId>) -> usize {
-    let b = &g.tab[list[i]];
-    let (keyed, owner, c) = (b.mkey.is_some(), b.owner, b.c);
-    if !keyed {
+fn thing(g: &mut Game, look: Look, list: &[AnyBoxId], keys: &[Option<f64>], i: usize, out: &mut Vec<AnyBoxId>) -> usize {
+    let Some(tk) = keys[i] else {
+        let b = &g.tab[list[i]];
+        let (owner, c) = (b.owner, b.c);
         if look.prime || (look.ours && owner != 0.0 && g.engine.lights.fog_team.owners.has(crate::Num(owner))) || fog_of_war_cell_seen_at(g, c[0], c[2]) { out.push(list[i]); }
         else { g.fog_of_war.thing_stats.out += 1.0; }
         return i + 1;
-    }
-    let tk = thing_key_of(g, list[i]);
+    };
     if tk < 0.0 { out.push(list[i]); return i + 1; }
-    let mut j = i + 1;
-    while j < list.len() && g.tab[list[j]].mkey.is_some() && thing_key_of(g, list[j]) == tk { j += 1; }
+    let j = i + keys[i..].iter().take_while(|&&k| k == Some(tk)).count();
     if thing_shows(g, look, list, i, j, tk) { out.extend_from_slice(&list[i..j]); return j; }
     match g.fog_of_war.thing_recs.get(crate::Num(tk)) {
         Some(r) => { out.extend(r.ghost.iter().map(|&b| AnyBoxId::Frame(b))); g.fog_of_war.thing_stats.held += 1.0; }
@@ -245,17 +246,19 @@ fn thing_shows(g: &mut Game, look: Look, list: &[AnyBoxId], i: usize, j: usize, 
     let (x, z, ox, oz) = at;
     let mine = g.fog_of_war.our_chunks.len() > 0 && g.fog_of_war.our_chunks.has(key);
     let prime = look.prime && !(look.props_loaded && is_prop(tk));
-    if !g.fog_of_war.thing_recs.has(key) {
+    let Some(r) = g.fog_of_war.thing_recs.get_mut(key) else {
         if !(prime || mine || fog_of_war_thing_seen(g, x, z, ox, oz)) { return false; }
         thing_take(g, tk, list, i, j, at, look.f, !prime);
         g.fog_of_war.thing_recs.get_mut(key).unwrap().f = look.f;
         return true;
-    }
-    let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
+    };
     r.f = look.f;
-    let (ghost, held, moving, was) = (r.ghost.clone(), r.held, r.moving, (r.x, r.z, r.ox, r.oz));
-    if thing_same(g, list, i, j, &ghost) {
-        let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
+    let (held, moving, was) = (r.held, r.moving, (r.x, r.z, r.ox, r.oz));
+    let ghost = core::mem::take(&mut r.ghost);
+    let same = thing_same(g, list, i, j, &ghost);
+    let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
+    r.ghost = ghost;
+    if same {
         r.moving = false;
         r.held = false;
         return true;

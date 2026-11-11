@@ -17,7 +17,7 @@ pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
 }
 
 /// thingKeyOf from the key itself.
-fn key_of_mkey(g: &Game, k: f64) -> f64 {
+pub(super) fn key_of_mkey(g: &Game, k: f64) -> f64 {
     let sys = sys_of(k);
     let low = js::to_u32(k) & 0xFFFFFF;
     // (the second test is THING_PASS's `MKEY.skin >>> 24`, line 355: the skeleton's first value of the set stops at device: notes, Skeleton)
@@ -28,7 +28,7 @@ fn key_of_mkey(g: &Game, k: f64) -> f64 {
         return sys as f64 * 0x1000000 as f64 + part as f64;
     }
     // (THING_BITS[sys] ?? 0: the table stops at the item's system)
-    let bits = thing_bits().get(sys as usize).copied().unwrap_or(0.0) as u32;
+    let bits = THING_BITS.get(sys as usize).copied().unwrap_or(0.0) as u32;
     sys as f64 * 0x1000000 as f64 + (low >> bits) as f64
 }
 
