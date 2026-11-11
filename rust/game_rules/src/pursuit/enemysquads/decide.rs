@@ -383,7 +383,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
 }
 
 /// teamKnown, each place with how well it is known
-fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
+pub(super) fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -524,7 +524,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
 }
 
 /// wayRound with goRound on: the net's door, no wall between a known place and a spot, every spot tried, a way walked mark by mark
-fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
+pub(super) fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
     let pos = g.pos_of(gd);

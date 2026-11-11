@@ -611,7 +611,7 @@ pub fn squads_tick(g: &mut crate::game::Game) {
     if net_asks(g) { net_check(g); }
     look_out(g);
     for &q in squads.iter() { tick_out(g, q); }
-    for &q in squads.iter() { super::together::entries_tick(g, q); }
+    for &q in squads.iter() { super::together::together_tick(g, q); }
     squad_say(g);
 }
 
@@ -746,17 +746,9 @@ fn due_together(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
     let home_men: Vec<GuardId> = home(g, q).into_iter().map(|d| g.tab.roomfight_def[d].gd).collect();
     let with: Vec<SquadDueItem> = g.tab.enemysquads_squad[q].due.iter().filter(|x| same_room(&x.room, &first.room) && x.t - now < TOGETHER_SECS && home_men.contains(&x.gd)).cloned().collect();
     if with.len() < 2 { return; }
-    let go: Vec<GuardId> = with.iter().map(|x| x.gd).collect();
-    if !super::together::sent_in(g, q, &go, &room, first.at) { return; }
-    g.tab.enemysquads_squad[q].due.retain(|x| !go.contains(&x.gd));
-    for x in &with {
-        let Some(d) = def_of(g, x.gd) else { continue };
-        let from = v3::copy(crate::roomfight::station(g, d));
-        g.tab.enemysquads_squad[q].sent.push(Sent { gd: x.gd, from, role: SentRole::Reinforce, phase: SentPhase::Told, fix_at: x.at, t0: now, ..Sent::default() });
-        event(g, q, SquadEventWhat::Reinforce, Some(x.gd));
-    }
-    let text = format!("{}: coming to you, {} of us \u{2014} hold on!", name_of(g, q), super::radio_check::count_word(go.len()));
-    crate::game::game_say(g, go[0], &text, Some(true), None);
+    if !super::together::set_out(g, q, &with, &room, first.at) { return; }
+    let text = format!("{}: coming to you, {} of us \u{2014} hold on!", name_of(g, q), super::radio_check::count_word(with.len()));
+    crate::game::game_say(g, with[0].gd, &text, Some(true), None);
 }
 
 /// squadsTick 2: news, the net's word of another squad's contact or its own men's ears on a loud thing outside its rooms
@@ -862,7 +854,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
         }
     };
     let mode = g.tab.roomfight_def[d].mode;
-    if s.phase == SentPhase::Told { return; }   // (together.rs)
+    if matches!(s.phase, SentPhase::Form | SentPhase::Told) { return; }   // (together.rs)
     if s.phase == SentPhase::Run { tick_run(g, q, i, s, d, mode); return; }
     if s.phase == SentPhase::Set {
         if mode != crate::roomfight::DefMode::Hold {
@@ -943,6 +935,12 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
         } else {
             event(g, q, SquadEventWhat::Met, Some(gd));
         }
+        return;
+    }
+    if there && !seen && s.role == SentRole::Reinforce {   // (he waits there for those sent with him: together.rs)
+        let t = g.time;
+        let r = &mut g.tab.enemysquads_squad[q].sent[i];
+        (r.phase, r.there) = (SentPhase::Form, Some(t));
         return;
     }
     g.tab.enemysquads_squad[q].sent[i].phase = SentPhase::Loose;
