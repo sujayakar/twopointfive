@@ -5,9 +5,8 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DoorblastK {
-    /// metres inside which each kind of blast takes an ordinary leaf off (what its caller hands Doors.blast): `stun` is what combat.ts detonateStun hands it —
-    ///  0, a stun canister takes no door; `frag` (about a stride and a half) is the panel's test blast and a guess for whoever throws one — the gear and
-    ///  destruction goals own those callers and may hand any number of their own
+    /// metres inside which a stun can's blast takes an ordinary leaf off (what `detonate_stun` hands `doors_blast`): 0, a stun canister takes no door. Other
+    ///  blasts hand their own number.
     pub tear_m: DoorblastKTearM,
     /// how hard a charge set on the leaf throws it, 0‥1 of `speed`
     #[k(0.55)] pub charge_k: f64,
@@ -32,34 +31,30 @@ pub struct DoorblastK {
     #[k(0.9)] pub land_level: f64,
 }
 
-/// metres inside which each kind of blast takes an ordinary leaf off (what its caller hands Doors.blast): `stun` is what combat.ts detonateStun hands it —
-///  0, a stun canister takes no door; `frag` (about a stride and a half) is the panel's test blast and a guess for whoever throws one — the gear and
-///  destruction goals own those callers and may hand any number of their own
+/// metres inside which a stun can's blast takes an ordinary leaf off (what `detonate_stun` hands `doors_blast`): 0, a stun canister takes no door. Other
+///  blasts hand their own number.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DoorblastKTearM {
     #[k(0.0)] pub stun: f64,
 }
 
-/// GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)';
-///  10-20, having played it with the destruction scale at its top, where a leaf went in three rounds: 'it should take like 2x the rounds', then, shown
-///  that the scale the page opens on already asks six: 'let's just go back to 6 then, 12 seems like too much'; 10-22, from the squad lesson, where six read as too easy: 'it should be a real gameplay tradeoff (requires a lot of ammo? maybe like 12 shots?)' — so `toll` below is 2 and the count is `flat`).
-///  THE COUNT is the wall engine's own: wallbreak.ts WallBreak.round hands every round that met a leaf to `leafRound` with the weight a wall's cell would
-///  have taken for it (a rifle round 1 at chaos 0.5, a pistol round WALLS.pistolK of that; of a shotgun's pellets the ones the walls are handed), and the
-///  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
-///  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. With `flat` the count is A COST and the same wherever the
-///  Tab 'chaos' slider stands above nothing (a wall's still rides it: at its top drywall opens in three while a leaf asks its twelve); without, as a wall's. A
+/// GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)', and from the
+///  squad lesson, where six rounds read as too easy: 'it should be a real gameplay tradeoff (requires a lot of ammo? maybe like 12 shots?)', so `toll` below is 2).
+///  THE COUNT comes off the wall engine: it hands every round that met a leaf to `leaf_round` with the weight a wall's cell would have taken for it, and the leaf
+///  takes the destruction scale back out, so A COUNT IS A COST the same wherever the scale stands above nothing (a wall's rides it): a rifle round is 1, a pistol round
+///  `walls.pistol_k` of that, of a shotgun's pellets the ones the walls are handed. The leaf stands `leaf_tough` of it — `toll` times plasterboard's own number (or wood's
+///  if that were ever less) — ONE count for the whole leaf, wherever on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. A
 ///  round that goes on through counts as one that stops; so does one fired with the gun pressed through the leaf.
 ///  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
 ///  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
-///  dressed by the break table (breakTable.ts retag + dress: a snapped end, a splinter's taper, a board's torn corners — a door's paint would otherwise
+///  dressed by the break table (a snapped end, a splinter's taper, a board's torn corners — a door's paint would otherwise
 ///  read as masonry or sheet metal), then slivers, then dust-fine splinters; where the cuts fall goes by where the last round struck, so no two doors break alike. What is left is
-///  the LOCK RAIL lying by the frame with the handles on it — the leaf's own box, so to every reader this is a door off its hinges (Door.off: an open
-///  doorway to sight, shots, sound, smoke, the AI and every door order; reset() hangs it; a checkpoint files the rail where it lies and a leaf's count
-///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch).
+///  the LOCK RAIL lying by the frame with the handles on it — the leaf's own box, so to every reader this is a door off its hinges (`leaf.off`: an open
+///  doorway to sight, shots, sound, smoke, the AI and every door order; a reset hangs it; a checkpoint files the rail where it lies and a leaf's count
+///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (`wall_break_on`).
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct DoorshotK {
-    /// how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol; 1 = drywall's own six and twelve, what a recording from
-    ///  before this key replays with) · `flat`: that count whatever the destruction scale (false = it rides the scale as a wall's does, as recorded before the key; ?doorcost=0 = 1 and false)
+    /// how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol; 1 = drywall's own six and twelve; ?doorcost=0 = 1)
     #[k(2.0)] pub toll: f64,
     /// the pieces: strips across the leaf × lengths up it, how uneven the cuts are (0‥1), and how many go as rigid pieces (past it, splinters)
     #[k(4.0)] pub strips: f64,
@@ -82,6 +77,6 @@ pub struct DoorshotK {
     /// the middle of the gradient: finger-long slivers thrown on through when it goes (how many, m/s)
     #[k(alloc::vec![22.0, 3.2])] pub slivers: Vec<f64>,
     /// how loud the leaf going is — a 'kick' at the door, blamed on whoever fired the round: the door's own crack and dust, and to the floor's ears a door
-    ///  going in (guards.ts hearingCheck answers a kick floor-wide; the debrief files 'a door kicked in'), however quiet the gun was
+    ///  going in (the hearing check answers a kick floor-wide; the debrief files 'a door kicked in'), however quiet the gun was
     #[k(0.8)] pub level: f64,
 }

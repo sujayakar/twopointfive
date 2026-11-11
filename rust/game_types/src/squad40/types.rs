@@ -95,11 +95,8 @@ pub struct ShellPlan {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Squad40Mod {
-    /// (src/game/squad40.ts:87 states)
     pub states: JsMap<PlayerId, crate::squad40::State>,
-    /// (src/game/squad40.ts:90 SQUAD40_LOG)
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
 }
 
-/// (src/game/squad40.ts:148 none)
 pub const none: &str = "no 40 mm left.";

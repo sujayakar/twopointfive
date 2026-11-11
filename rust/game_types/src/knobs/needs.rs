@@ -14,8 +14,8 @@ pub struct NeedsK {
     #[k(20.0)] pub announce_lead: f64,
     #[k(12.0)] pub say_lead: f64,
     #[k(5.0)] pub stretch_lead: f64,
-    /// a colleague his raised voice reaches is told to his face and answers `replyAfter` s later: this many metres of open air along the SOUND'S PATH (collision.ts
-    ///  SoundPaths — × its carry: 0.72 of it round a corner and in at the door, 0.32 through a shut leaf; the whistle's model); nobody that near and it goes over the net
+    /// a colleague his raised voice reaches is told to his face and answers `reply_after` s later: this many metres of open air along the SOUND'S PATH (× its carry;
+    ///  the whistle's model); nobody that near and it goes over the net
     #[k(14.0)] pub partner_m: f64,
     #[k(1.5)] pub reply_after: f64,
     /// the dwell per kind (s): standing at the counter / outside / at the cooler; the stretch's is the lap itself (0 = no standing about)

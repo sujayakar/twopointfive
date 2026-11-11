@@ -3,7 +3,7 @@
 use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
-/// which level's script this is, by the level file's name; the body is levels/<name>.script.ts, its define pass called by a match
+/// which level's script this is, by the level file's name; the body is its rust/game_rules/src/missions/script_tut_*.rs, its define pass called by a match
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub enum LevelScriptFn {
     #[default] Unset,

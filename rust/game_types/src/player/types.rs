@@ -29,7 +29,7 @@ pub struct Hold {
     pub coil0: Option<f64>,
     pub rmb_choke: Option<f64>,
     pub rmb_t: Option<f64>,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
+    /// dealt when a hold starts: a new hold of the same man counts as new
     pub serial: u32,
 }
 
@@ -144,7 +144,7 @@ pub struct WallHold {
     pub cam_along: Option<f64>,
     pub cam: bool,
     pub ran: Option<f64>,
-    /// INVENTED: g.serial() where wallSnap makes the hold: unseen.ts:184 and :195 ask by identity whether this is the same take of the wall (State.hold, placed). A copy of the hold keeps it
+    /// dealt where the hold on a wall is made: `unseen` asks by it whether this is the same take of the wall (`placed`). A copy of the hold keeps it
     pub serial: u32,
 }
 

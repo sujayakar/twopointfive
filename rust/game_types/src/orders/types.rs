@@ -154,7 +154,7 @@ pub struct OrderTargetFloor {
     pub at: V3,
     pub wall: Option<crate::wallcharge::WallSpot>,
     pub thing: Option<crate::workthings::WorkThing>,
-    /// INVENTED by a review: see the proposals
+    /// 0 but on the target an open menu keeps, dealt as it opens: `wall_charge_kept_for` knows the menu's own target by it
     pub serial: u32,
 }
 
@@ -218,7 +218,7 @@ pub struct SquadOrdersLogItem {
     pub who: Vec<String>,
     pub target: String,
     pub auto: Option<bool>,
-    /// INVENTED: g.serial() at the push: rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
+    /// dealt at the push: the rescue and the lesson hold a row as a cursor by it
     pub serial: u32,
 }
 
@@ -426,7 +426,7 @@ pub struct Assignment {
     pub lean: Option<f64>,
     pub fit: Option<crate::roomfit::Fit>,
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-    /// INVENTED: true at assign and at the unguarded writes made here, not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
+    /// true at assign and at the goal's unguarded writes, false once his script's goal is the order's own. `tell_him` passes held: !(new_leg && the order's own goal is the arm chosen) and clears it then
     pub new_leg: bool,
 }
 

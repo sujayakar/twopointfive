@@ -3,7 +3,7 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what difficulty.ts same() compares: the levers as they stand, or one of the two defenders' tables. Two of different arms are not the same.
+/// what `same` compares: the levers as they stand, or one of the two defenders' tables. Two of different arms are not the same.
 #[derive(Clone, Debug)]
 pub enum SameOf {
     Levers { shown: crate::difficulty::LeversShown },

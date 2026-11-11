@@ -5,9 +5,8 @@ use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct CmdringK {
-    /// the key: the squad's command key — the quick order's own code, which the page's board has on Q (host/keymap.ts; the
-    ///  maintainer, 10-21: "let's move the squad command button to Q then too", "from tab"). It was Tab until then: a recording carries its own table, so
-    ///  one made on Tab replays on Tab. Tab itself is the page's again — the way back and the objectives card (ui/tabcard.ts)
+    /// the key: the squad's command key — the quick order's own code, which the page's board has on Q (host/keymap.ts; the maintainer: "let's move the squad
+    ///  command button to Q then too", "from tab"). Tab itself is the page's: the way back and the objectives card (ui/tabcard.ts)
     #[k(String::from("KeyB"))] pub key: String,
     /// wedges on the ring, clockwise from the top: the digits 1 … this (never above 5)
     #[k(5.0)] pub wedges: f64,
