@@ -25,7 +25,7 @@ fn new_state() -> State {
 
 /// this view's row, made if it is not there
 fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     g.m.unseen.states.get_or_insert_with(k, new_state)
 }
 
@@ -113,7 +113,7 @@ fn unseen_live(g: &mut Game) -> bool {
     s.why = why.clone();
     if live != was {
         if live {
-            let k = crate::seats::view_key(g, &crate::seats::here(g));
+            let k = g.group;
             cue(g, k);
         } else {
             state_of(g).hold = None;
@@ -122,10 +122,10 @@ fn unseen_live(g: &mut Game) -> bool {
     live
 }
 
-/// said once as a spell starts, by the first man following; `pl` is the key of the spell's row in `states`, not always a man (a cast's is CAST_KEY)
-fn cue(g: &mut Game, pl: PlayerId) {
+/// said once as a spell starts, by the first man following; `key` is the group whose spell it is
+fn cue(g: &mut Game, key: GroupId) {
     let now = g.time;
-    if now - g.m.unseen.states.get(pl).unwrap().cue_t < g.k.unseen.cue_gap {
+    if now - g.m.unseen.states.get(key).unwrap().cue_t < g.k.unseen.cue_gap {
         return;
     }
     let mut who = None;
@@ -137,7 +137,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
         }
     }
     let Some(gd) = who else { return };
-    g.m.unseen.states.get_mut(pl).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it
+    g.m.unseen.states.get_mut(key).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it
     g.stats.unseen.cues += 1;
     let sam = g.player;
     let low = sam_low(g, sam) || on_wall(g, sam);
@@ -326,7 +326,7 @@ pub(super) fn unseen_glass(g: &mut Game, gd: GuardId) -> bool {
 
 /// the squad line's word beside the posture (None: nothing to say)
 pub(super) fn unseen_word(g: &Game, seat: &crate::seats::SeatRef) -> Option<String> {
-    let live = g.m.unseen.states.get(crate::seats::view_key(g, seat)).is_some_and(|s| s.live);   // (as the tick last read it: `unseen_live` is a clock of its own, kept by the tick)
+    let live = g.m.unseen.states.get(seat.group_id).is_some_and(|s| s.live);   // (as the tick last read it: `unseen_live` is a clock of its own, kept by the tick)
     if live { Some(String::from("sneaking")) } else { None }
 }
 

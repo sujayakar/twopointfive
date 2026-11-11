@@ -41,7 +41,7 @@ fn blank(t: f64) -> crate::showwhy::Mem {
 
 /// This seat's state, made if there is none: the row itself.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
-    let (key, t) = (crate::seats::view_key(g, &crate::seats::here(g)), g.time);
+    let (key, t) = (g.player, g.time);
     g.m.showwhy.states.get_or_insert_with(key, || State { after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
 

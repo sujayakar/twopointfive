@@ -27,7 +27,7 @@ fn walk_lent(w: &Walk) -> Lent {
 }
 
 /// the row of the walk (only between calls that take `g`)
-fn walk_of(g: &mut Game, key: PlayerId, gd: GuardId) -> Option<&mut Walk> {
+fn walk_of(g: &mut Game, key: GroupId, gd: GuardId) -> Option<&mut Walk> {
     g.m.squadthrow.states.get_mut(key).and_then(|s| s.walks.get_mut(gd))
 }
 
@@ -36,14 +36,14 @@ fn arc_of(th: &SquadThrower) -> Arc {
 }
 
 /// The state's row, made if it is not there; its key, for a write that outlives a call taking `g`.
-fn state_key(g: &mut Game) -> PlayerId {
+fn state_key(g: &mut Game) -> GroupId {
     state(g);
-    crate::seats::view_key(g, &crate::seats::here(g))
+    g.group
 }
 
 /// This view's state, the row itself, made if it is not there.
 pub(super) fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     g.m.squadthrow.states.get_or_insert_with(k, || State::default())
 }
 
@@ -267,7 +267,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
 }
 
 /// the walk is over: his word if any, off the list, handed back (walkTick's `end`)
-fn end_walk(g: &mut Game, key: PlayerId, gd: GuardId, line: Option<&str>) {
+fn end_walk(g: &mut Game, key: GroupId, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
         crate::game::game_say(g, gd, l, None, None);
     }
@@ -278,7 +278,7 @@ fn end_walk(g: &mut Game, key: PlayerId, gd: GuardId, line: Option<&str>) {
 }
 
 /// One more look, from where he is (twice at most): true = he is walking again. (walkTick's lookAgain)
-fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
+fn look_again(g: &mut Game, key: GroupId, gd: GuardId) -> bool {
     let (again, at, kind) = match walk_of(g, key, gd) {
         Some(w) => (w.again, w.at, w.kind),
         None => return false,
@@ -317,7 +317,7 @@ fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
 /// One frame of a walking thrower.
 #[derive(Clone, Copy)]
 struct OnHisWalk {
-    key: PlayerId,
+    key: GroupId,
     gd: GuardId,
     a: TaskId,
     now: f64,
@@ -385,7 +385,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
 }
 
 /// His order is no longer this walk: it is forgotten, and he holds where he stands.
-fn holds_where_he_is(g: &mut Game, key: PlayerId, gd: GuardId, had_a_walk: bool) {
+fn holds_where_he_is(g: &mut Game, key: GroupId, gd: GuardId, had_a_walk: bool) {
     if had_a_walk {
         g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
     }
@@ -485,7 +485,7 @@ fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
 
 /// The squad's HUD block: the throw just made.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    if let Some(w) = g.m.squadthrow.states.get(crate::seats::view_key(g, seat)).and_then(|s| s.shown.as_ref()) {
+    if let Some(w) = g.m.squadthrow.states.get(seat.group_id).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
             return vec![crate::view::Note { key: String::new(), text: w.text.clone() }];
         }
@@ -513,7 +513,7 @@ fn sync(g: &mut crate::game::Game) {
 
 /// Once a frame after the ring's input: the rows in step with the switch, the walks whose man is gone, and what is worked out for an open menu.
 pub fn squad_throw_frame(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squadthrow.states.get(key).map_or(false, |s| !s.walks.is_empty()) {
         let mut at = 0usize;
         while let Some(gd) = g.m.squadthrow.states.get(key).and_then(|s| s.walks.next_key(&mut at)) {

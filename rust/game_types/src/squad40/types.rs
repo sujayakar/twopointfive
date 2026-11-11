@@ -95,7 +95,7 @@ pub struct ShellPlan {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Squad40Mod {
-    pub states: JsMap<PlayerId, crate::squad40::State>,
+    pub states: JsMap<GroupId, crate::squad40::State>,
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
 }
 

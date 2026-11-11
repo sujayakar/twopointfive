@@ -21,7 +21,7 @@ fn a_man_let_off_his_way_is_not_left_with_spare_eyes() {
             let o = &p.g.groups[p.g.group].orders;
             o.asg.get(m).is_some_and(|&a| p.g.tab.task[a].post.is_some())
         }).expect("he has an order with a mark");
-        let key = game::seats::view_key(&p.g, &game::seats::here(&p.g));
+        let key = p.g.group;
         let a = *p.g.groups[p.g.group].orders.asg.get(m).unwrap();
         let post = p.g.tab.task[a].post.unwrap();
         // the farthest way with a door in it, off its hinges; he had it through a door that was going, and last had a line to it long ago

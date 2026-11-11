@@ -14,13 +14,13 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.
 fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {
-    let k = crate::seats::view_key(g, seat);
+    let k = seat.group_id;
     g.m.wandorder.states.get(k).and_then(|st| st.jobs.get(gd).copied())
 }
 
 /// Writes a copy back over the row, if the row is still there (never sets a new one: that would move it in the walk's order).
 fn put_job(g: &mut Game, gd: GuardId, j: Job) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     if let Some(row) = g.m.wandorder.states.get_mut(k).and_then(|st| st.jobs.get_mut(gd)) {
         *row = j;
     }
@@ -114,7 +114,7 @@ fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Jo
 
 /// Done with it: the lens out, a word, a plain hold: beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands.
 fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job, line: Option<&str>, moved: bool) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let c = g.gd[gd].ch;
     let d = j.door;
     lens_out(g, gd, j);
@@ -172,7 +172,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
 pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
     let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };
-    let st_key = crate::seats::view_key(g, &crate::seats::here(g));
+    let st_key = g.group;
     if !g.m.wandorder.states.has(st_key) {
         return Issue::Arm1(());
     }
@@ -316,7 +316,7 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
 /// fight or another order has.
 pub fn wand_order_frame(g: &mut crate::game::Game) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let mut want = false;
     if live(g) {
         for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
@@ -378,7 +378,7 @@ pub fn mate_wand_eye(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fo
 
 /// `mateWandEye` from its second line on, in his seat's view.
 fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let st = g.m.wandorder.states.get(k)?;
     if st.jobs.is_empty() {
         return None;
@@ -414,7 +414,7 @@ fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
 
 /// Every teammate's live lens: a device feed under 'only my own eyes'.
 pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let Some(st) = g.m.wandorder.states.get(k) else { return Vec::new() };
     if st.jobs.is_empty() {
         return Vec::new();
