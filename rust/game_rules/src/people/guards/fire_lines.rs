@@ -730,7 +730,7 @@ mod tests {
 
     // The expected words are pinned.
     #[test]
-    fn line_geom_is_the_typescripts_bits() {
+    fn line_geom_keeps_its_bits() {
         let x = line_geom_of([0.1, 1.4, 0.2], [3.3, 1.1, 4.9], [1.37, 0.91, 2.11], 0.0 + 0.05, 1.83, [0.7, 0.0, -0.4]).unwrap();
         assert_eq!(bits(&[x.t, x.e, x.d, x.clear]), [0x3fd9d0d69e66051a, 0x3f99c0d942568028, 0x3f99c0d94256801b, 0x3fe2f094994da159]);
         let x = line_geom_of([0.1, 1.4, 0.2], [0.4, 0.9, 9.1], [0.31, 0.2, 5.77], 0.2 + 0.05, 0.2 + 1.75, [2.1, 0.0, 1.9]).unwrap();
@@ -739,7 +739,7 @@ mod tests {
     }
 
     #[test]
-    fn aim_ahead_is_the_typescripts_bits() {
+    fn aim_ahead_keeps_its_bits() {
         assert_eq!(bits(&aim_ahead_of([0.2, 1.45, -0.3], -0.4, 0.77)), [0x40046fa613722776, 0x3f947ae147ae1480, 0x4001067c11618aec]);
         assert_eq!(bits(&aim_ahead_of([1.1, 0.1 + 1.4, 2.2], 0.05, -2.3)), [0xc0136ec85ce57064, 0x3ffe65b7a8bfd90f, 0xc008fd061a86f980]);
     }

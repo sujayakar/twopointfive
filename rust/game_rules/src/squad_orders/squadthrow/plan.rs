@@ -78,7 +78,7 @@ fn plan_for(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Thro
 }
 
 fn fresh(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> ThrowPlan {
-    let th = if left(g, kind) > 0.0 { squad_throw_plan(g, men, at, kind, None, None) } else { None };
+    let th = if left(g, kind) > 0.0 { squad_throw_plan(g, men, at, kind) } else { None };
     keep(g, men, at, kind, th)
 }
 

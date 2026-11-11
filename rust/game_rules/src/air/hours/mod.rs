@@ -581,7 +581,7 @@ mod tests {
     fn def(id: HourId) -> HourDef { hours().of(id.as_str()).unwrap().clone() }
 
     #[test]
-    fn cloud_sun_and_soft_are_the_typescripts_bits() {
+    fn cloud_sun_and_soft_keep_their_bits() {
         for &(c, s, f) in SUN_SOFT {
             let c = f64::from_bits(c);
             assert_eq!(cloud_sun(c).to_bits(), s);
@@ -589,7 +589,7 @@ mod tests {
         }
     }
     #[test]
-    fn cloud_light_and_total_are_the_typescripts_bits() {
+    fn cloud_light_and_total_keep_their_bits() {
         for &(id, c, a, b, t) in LIGHT {
             let (d, c) = (def(id), f64::from_bits(c));
             let [x, y] = cloud_light(&d, c);
@@ -598,7 +598,7 @@ mod tests {
         }
     }
     #[test]
-    fn greyed_is_the_typescripts_bits() {
+    fn greyed_keeps_its_bits() {
         for &(id, a, b) in GREYED {
             let d = def(id);
             assert_eq!(b3(greyed(d.sun.color, 0.37, Some(1.3))), a);
@@ -606,11 +606,11 @@ mod tests {
         }
     }
     #[test]
-    fn to_sun_is_the_typescripts_bits() {
+    fn to_sun_keeps_its_bits() {
         for &(id, a) in TO_SUN { assert_eq!(b3(to_sun_of(&def(id))), a); }
     }
     #[test]
-    fn rays_are_the_typescripts_bits() {
+    fn rays_keep_their_bits() {
         let f = ::sim::dome::fan();
         for (r, &(d, c)) in f.sky.iter().chain(f.ground.iter()).zip(RAYS.iter()) {
             assert_eq!(b3(r.d), d);
@@ -618,7 +618,7 @@ mod tests {
         }
     }
     #[test]
-    fn hour_words_are_read_as_the_typescript_reads_them() {
+    fn hour_words_are_read_as_pinned() {
         assert_eq!(hour_id_of(Some("MidDay")), HourId::Midday);
         assert_eq!(hour_id_of(Some("sunset")), HourId::Dusk);
         assert_eq!(hour_id_of(Some("constructor")), HourId::Night);

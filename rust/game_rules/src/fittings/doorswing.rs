@@ -597,7 +597,7 @@ mod tests {
 
     /// Every rule of `first_rule` and the outside rule on one made-up level, against pinned answers. The leaf room rule, in the deal's loop, is not reached.
     #[test]
-    fn rules_answer_as_the_typescript() {
+    fn rules_give_the_pinned_answers() {
         let mut g = Game::blank();
         door(&mut g, "floor", [10.0, 4.0], 1.6, -1.6, |d| d.exterior = Some(true));
         door(&mut g, "authored", [10.0, 6.0], 1.6, -1.6, |d| d.swing = Some(-1.0));

@@ -583,7 +583,7 @@ mod tests {
     }
 
     #[test]
-    fn the_envelope_is_the_typescripts_bits() {
+    fn the_envelope_keeps_its_bits() {
         let s = stroke();
         for (i, (a, b)) in SPANS.iter().enumerate() {
             assert_eq!(stroke_mean(&s, *a, *b).to_bits(), WANT_MEAN[i], "mean {}", i);
@@ -648,7 +648,7 @@ mod tests_2 {
 
     /// `dir_of`'s pinned doubles.
     #[test]
-    fn dir_of_has_the_typescript_bits() {
+    fn dir_of_keeps_its_bits() {
         let rows: [(u64, u64, [u64; 3]); 5] = [
             (0x3fe6666666666666, 0x3fd999999999999a, [0xbfe2fcd60b856028, 0xbfd8ec3ae92b676b, 0x3fe68afcebc95d21]),
             (0x4002666666666666, 0x3ff199999999999a, [0xbfd5a5df199aaf8d, 0xbfec84c54c2d6338, 0xbfd3579379410117]),

@@ -12,7 +12,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of levels/tut-queue.script.ts") } }
+fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of the level tut-queue") } }
 
 const GUNNER: &str = "Tango 3";
 const MATE: &str = "Tango 4";
