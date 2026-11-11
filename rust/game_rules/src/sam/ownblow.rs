@@ -17,7 +17,7 @@ pub fn blow_tail(key_is: bool, key: &str, sep: Option<&str>) -> String {
 
 /// The nearest free charge of his own, a door's or a wall's.
 fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
-    if g.sets[g.seat].door_tools.set.is_empty() && g.sets[g.seat].wall_charge.set.is_empty() { return None; }
+    if g.groups[g.group].tools.set.is_empty() && g.sets[g.seat].wall_charge.set.is_empty() { return None; }
     let p = g.player_pos(g.player);
     let d = crate::doortools::door_tools_sam_set(g);
     let w = crate::wallcharge::wall_charge_sam_set(g);

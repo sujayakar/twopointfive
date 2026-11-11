@@ -58,7 +58,6 @@ pub struct SquadOrders {
     pub sam_v: f64,
     #[is([0.0, 0.0, 1.0])] pub sam_dir: V3,
     pub door_marks: Vec<crate::orders::SquadOrdersDoorMarksItem>,
-    pub cast: Option<crate::orders::OtherCast>,
     pub aside_mem: JsMap<GuardId, crate::orders::SquadOrdersAsideMemValue>,
     pub back_fix: JsMap<TaskId, crate::orders::SquadOrdersBackFixValue>,
     pub rest_of: JsMap<TaskId, crate::orders::SquadOrdersRestOfValue>,
@@ -239,12 +238,6 @@ pub struct SquadOrdersDoorMarksItem {
     pub side: f64,
     pub stack: Vec<V3>,
     pub standoff: Vec<V3>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct OtherCast {
-    pub team: crate::teams::Team,
-    pub ring: JsSet<String>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

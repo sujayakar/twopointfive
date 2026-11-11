@@ -477,7 +477,7 @@ pub mod flags {
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking().is_some() }
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding().is_some() }
     /// the order menu is up
-    pub fn menu(g: &crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
+    pub fn menu(g: &crate::game::Game) -> bool { g.groups[g.group].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.sets[seat.id].hand.sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT

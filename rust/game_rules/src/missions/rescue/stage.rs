@@ -309,25 +309,25 @@ fn rescue_marks(g: &mut crate::game::Game, on: bool) {
     let side = s.as_ref().and_then(|s| s.side.clone());
     let fd = match &s { Some(s) => crate::doors::doors_by_name(g, &s.room.door), None => None };
     let sd = match &side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
-    let mut i = g.sets[g.seat].orders.door_marks.len();
+    let mut i = g.groups[g.group].orders.door_marks.len();
     while i > 0 {
         i -= 1;
-        if sd == Some(g.sets[g.seat].orders.door_marks[i].door) { g.sets[g.seat].orders.door_marks.remove(i); }
+        if sd == Some(g.groups[g.group].orders.door_marks[i].door) { g.groups[g.group].orders.door_marks.remove(i); }
     }
-    g.sets[g.seat].door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
-    g.sets[g.seat].door_tools.lights = None;
+    g.groups[g.group].tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
+    g.groups[g.group].tools.lights = None;
     if !on { return; }
     if let (Some(sd), Some(x)) = (sd, side.as_ref()) {
         if let Some(stack) = x.stack.as_ref().filter(|st| !st.is_empty()) {
             let face = rescue_face_of(g, sd);
-            g.sets[g.seat].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
+            g.groups[g.group].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
                 door: sd, side: face, stack: stack.clone(),
                 standoff: x.standoff.clone().unwrap_or_else(|| stack.clone()),
             });
         }
     }
-    if let Some(d) = fd { g.sets[g.seat].door_tools.linked.push(d); }
-    if let Some(d) = sd { g.sets[g.seat].door_tools.linked.push(d); }
+    if let Some(d) = fd { g.groups[g.group].tools.linked.push(d); }
+    if let Some(d) = sd { g.groups[g.group].tools.linked.push(d); }
 }
 
 /// The face of one of the room's doors that is not the room's.
@@ -556,7 +556,7 @@ fn wind_the_clock_back(g: &mut Game) {
     g.rescue.noise_serial = None;
     g.rescue.alarm_at = f64::NAN;
     g.rescue.way = None;
-    g.rescue.last_order = g.sets[g.seat].orders.log.last().map(|o| o.serial);
+    g.rescue.last_order = g.groups[g.group].orders.log.last().map(|o| o.serial);
 }
 
 /// Sam at the start, facing in, rifle in his hands if he has one.

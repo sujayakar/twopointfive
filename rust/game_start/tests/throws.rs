@@ -19,7 +19,7 @@ fn yard(seed: u32) -> (Scene, [f64; 2], [f64; 2]) {
     (s, [x + 12.0 + nudge(seed, 1), 22.0], [8.0 + nudge(seed, 1), 8.0])
 }
 fn throws(p: &Play) -> Vec<ThrowLine> { p.view().throws }
-fn left(p: &Play) -> f64 { p.g.sets[p.g.seat].door_tools.frags }
+fn left(p: &Play) -> f64 { p.g.groups[p.g.group].tools.frags }
 
 /// THE RULE: an ordered frag shows the man who will throw it, the arc and where it lands, until it leaves his hand, and then nothing. A FAILURE MEANS: the HUD draws a throw nobody was
 /// told of or one that has gone. The control is the view before the order, with nothing in it.
@@ -30,7 +30,7 @@ fn an_ordered_frag_shows_who_and_where_and_goes_when_it_leaves_his_hand() {
         let mut p = Play::scene(&s, &Opts { seed, ..Default::default() });
         p.sam_unhurt();
         p.run(0.3);
-        p.g.sets[p.g.seat].door_tools.frags = 2.0;
+        p.g.groups[p.g.group].tools.frags = 2.0;
         assert!(throws(&p).is_empty(), "seed {seed}: nothing is ordered yet");
         p.order("fragThere", spot, Who::All);
         let was = left(&p);
@@ -60,8 +60,8 @@ fn lit_frag(p: &mut Play, at: [f64; 2]) -> bool {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     if !game::orders::squad_orders_open(&mut p.g, Some(&t), None) { return false; }
     p.ring_over_menu();
-    let row = p.g.sets[p.g.seat].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
-    match (row, p.g.sets[p.g.seat].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
+    let row = p.g.groups[p.g.group].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
+    match (row, p.g.groups[p.g.group].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
 }
 
 /// THE RULE: a lit frag row previews the plan the row stands on (the man, the spot and the walk the press would give), and nothing where the row is refused. A FAILURE MEANS: the HUD shows a
@@ -73,10 +73,10 @@ fn a_lit_frag_row_previews_its_plan_and_nothing_when_refused() {
         let mut p = Play::scene(&s, &Opts { seed, ..Default::default() });
         p.sam_unhurt();
         p.run(0.3);
-        p.g.sets[p.g.seat].door_tools.frags = 2.0;
+        p.g.groups[p.g.group].tools.frags = 2.0;
         assert!(lit_frag(&mut p, spot), "seed {seed}: the row is on the ring");
         p.frame();
-        if p.g.sets[p.g.seat].orders.menu.is_none() { assert!(lit_frag(&mut p, spot), "seed {seed}"); }
+        if p.g.groups[p.g.group].orders.menu.is_none() { assert!(lit_frag(&mut p, spot), "seed {seed}"); }
         let v = throws(&p);
         let k = p.g.m.squadthrow.states.get(p.g.player).and_then(|s| s.plans.get(game::squadthrow::SquadThrowKind::Frag)).cloned().expect("the row's plan is kept");
         assert!(k.refuse.is_none(), "seed {seed}: the yard is open ground: {:?}", k.refuse);
@@ -88,10 +88,10 @@ fn a_lit_frag_row_previews_its_plan_and_nothing_when_refused() {
         assert_eq!(v[0].walk, k.walk, "seed {seed}: the walk already worked out");
         // the control: nothing left, and the row is refused
         game::orders::squad_orders_close(&mut p.g);
-        p.g.sets[p.g.seat].door_tools.frags = 0.0;
+        p.g.groups[p.g.group].tools.frags = 0.0;
         assert!(lit_frag(&mut p, spot), "seed {seed}: the row stays, greyed");
         p.frame();
-        if p.g.sets[p.g.seat].orders.menu.is_none() { continue; }
+        if p.g.groups[p.g.group].orders.menu.is_none() { continue; }
         assert!(throws(&p).iter().all(|t| !t.preview), "seed {seed}: refused and previewed: {:?}", throws(&p));
     }
 }
@@ -104,8 +104,8 @@ fn a_lit_shell_row_previews_its_kept_plan_and_nothing_when_refused() {
         let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
         assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None));
         p.ring_over_menu();
-        let rows = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().rows.clone();
-        p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the ring") as f64;
+        let rows = p.g.groups[p.g.group].orders.menu.as_ref().unwrap().rows.clone();
+        p.g.groups[p.g.group].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the ring") as f64;
     };
     let kept = |p: &Play| p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone());
     for seed in SEEDS {
@@ -144,7 +144,7 @@ fn in_a_game_of_two_a_throw_is_told_to_the_seat_whose_man_it_is() {
         p.sam_unhurt();
         p.run(0.2);
         let st = p.g.seats[1];
-        game::seats::with_seat(&mut p.g, st, &mut |g| g.sets[g.seat].door_tools.frags = 2.0);
+        game::seats::with_seat(&mut p.g, st, &mut |g| g.groups[g.group].tools.frags = 2.0);
         let walks_of = |p: &Play| game::seats::seat(&p.g, p.g.seats[1]).door_tools.frags;
         let before = walks_of(&p);
         p.seat_orders(1, "fragThere", spot, Who::All);

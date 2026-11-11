@@ -62,6 +62,8 @@ id! {
     DebrisChunkId,
     /// Seat: g.tab.cmd_seat
     SeatId,
+    /// Group: g.groups
+    GroupId,
     /// RtLight: g.tab.light
     LightId,
     /// Fixture: g.tab.fixture

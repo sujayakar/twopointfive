@@ -75,7 +75,7 @@ fn men_out(g: &mut Game, op: DoorOpId, t: f64) -> bool {
 fn can_for_pocket(g: &mut Game, op: DoorOpId, cx: &Cx, th: GuardId) -> Option<Can> {
     let men = o!(g, op).men.clone();
     let mate = door_tools_can_behind(g, cx.d, o!(g, op).side, &men).map(|w| if w == "you" { String::from("you are in there") } else { format!("{w} is in there") });
-    let none = g.sets[g.seat].door_tools.bangs <= 0.0 || mate.is_some();
+    let none = g.groups[g.group].tools.bangs <= 0.0 || mate.is_some();
     o!(g, op).rear.delete(th);
     let most = cans_most(g, op, cx.t);
     let (tossed, force, first) = { let x = thr!(g, op); (x.tossed, x.force, x.first == Some(ThresholdFirst::Can)) };

@@ -10,7 +10,7 @@ pub mod seenwalk;
 pub mod shutdoor;
 pub mod squad;
 pub mod squad40;
-pub mod squadcast;
+pub mod group;
 pub mod squadsmoke;
 pub mod squadthrow;
 pub mod stayask;

@@ -22,7 +22,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.g.god_mode = true;
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
-    if let Some(n) = charges { p.g.sets[p.g.seat].door_tools.charges = n; }
+    if let Some(n) = charges { p.g.groups[p.g.group].tools.charges = n; }
     for gd in p.g.guards.clone() { if !p.g.team(gd).ours() && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
@@ -55,7 +55,7 @@ fn a_keypad_door_is_tried_then_greyed_in_the_words_it_was_refused_in() {
         assert_eq!(squad_orders_give(&mut p.g, "openClear", Some(&t), None, None), None, "a live row was refused");
         p.until(60.0, |p| p.said.iter().any(|l| l.text == words)).unwrap_or_else(|| panic!("a minute and the lead has not said {words:?}: {}", p.roll()));
         p.run(0.5);
-        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty(), "he said it and the order goes on");
+        assert!(p.g.groups[p.g.group].tools.ops.is_empty(), "he said it and the order goes on");
         assert!(p.g.dr[d].leaf.locked, "the door gave");
         let t = squad_orders_target_at(&mut p.g, [c[0], 0.0, c[2]]);
         for id in ["openClear", "bangClear"] { assert_eq!(row(&mut p, id, &t).as_deref(), Some(words), "{id}: known shut now, and the row is not grey in his words"); }

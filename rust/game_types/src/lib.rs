@@ -64,6 +64,7 @@ pub mod cmdring { pub mod types; pub use types::*; }
 pub mod combat { pub mod types; pub use types::*; }
 pub mod condition { pub mod types; pub use types::*; }
 pub mod duty { pub mod types; pub use types::*; }
+pub mod group { pub mod types; pub use types::*; }
 pub mod consts { pub mod types; pub use types::*; }
 pub mod cover { pub mod types; pub use types::*; }
 pub mod coverfire { pub mod types; pub use types::*; }
@@ -247,7 +248,6 @@ pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }
 pub mod squad { pub mod types; pub use types::*; }
 pub mod squad40 { pub mod types; pub use types::*; }
-pub mod squadcast { pub mod types; pub use types::*; }
 pub mod squadnet { pub mod types; pub use types::*; }
 pub mod squadsmoke { pub mod types; pub use types::*; }
 pub mod squadthrow { pub mod types; pub use types::*; }

@@ -420,8 +420,8 @@ impl DoorsAsk for Play {
     fn door(&self, name: &str) -> DoorId { game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")) }
     fn door_shut(&self, d: DoorId) -> bool { !self.g.dr[d].leaf.off && self.g.dr[d].leaf.latched && self.g.dr[d].leaf.angle.abs() < 0.05 }
     fn door_gone(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off }
-    fn tool_stats(&self) -> DoorToolsStats { self.g.sets[self.g.seat].door_tools.stats }
-    fn ops_on(&self, d: DoorId) -> Vec<DoorOpId> { self.g.sets[self.g.seat].door_tools.ops.iter().copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).collect() }
+    fn tool_stats(&self) -> DoorToolsStats { self.g.groups[self.g.group].tools.stats }
+    fn ops_on(&self, d: DoorId) -> Vec<DoorOpId> { self.g.groups[self.g.group].tools.ops.iter().copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).collect() }
     fn op_phase(&self, op: DoorOpId) -> Phase { self.g.tab.doortools_door_op[op].phase }
     fn op_lead(&self, op: DoorOpId) -> GuardId { self.g.tab.doortools_door_op[op].lead }
     fn op_beats(&self, op: DoorOpId) -> Vec<String> { self.g.tab.doortools_door_op[op].beats.iter().map(|b| b.what.clone()).collect() }
@@ -455,11 +455,11 @@ impl DoorsAsk for Play {
     fn beat_t(&self, op: DoorOpId, starts: &str) -> Option<f64> { self.g.tab.doortools_door_op[op].beats.iter().find(|b| b.what.starts_with(starts)).map(|b| b.t) }
     fn crossed_t(&self, op: DoorOpId) -> Vec<f64> { self.g.tab.doortools_door_op[op].crossed.values().copied().collect() }
     fn op_ended(&self, op: DoorOpId) -> Option<String> { self.g.tab.doortools_door_op[op].ended.map(|e| e.as_str().to_string()) }
-    fn last_op(&self, d: DoorId) -> Option<DoorOpId> { self.g.sets[self.g.seat].door_tools.ops.iter().chain(self.g.sets[self.g.seat].door_tools.done.iter()).copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).max_by(|a, b| self.g.tab.doortools_door_op[*a].t0.partial_cmp(&self.g.tab.doortools_door_op[*b].t0).unwrap()) }
+    fn last_op(&self, d: DoorId) -> Option<DoorOpId> { self.g.groups[self.g.group].tools.ops.iter().chain(self.g.groups[self.g.group].tools.done.iter()).copied().filter(|&o| self.g.tab.doortools_door_op[o].door == d).max_by(|a, b| self.g.tab.doortools_door_op[*a].t0.partial_cmp(&self.g.tab.doortools_door_op[*b].t0).unwrap()) }
     fn op_men(&self, op: DoorOpId) -> Vec<GuardId> { self.g.tab.doortools_door_op[op].men.clone() }
     fn op_bang_at(&self, op: DoorOpId) -> Option<[f64; 2]> { self.g.tab.doortools_door_op[op].bang_at.map(|p| [p[0], p[2]]) }
-    fn left(&self) -> (f64, f64, f64) { (self.g.sets[self.g.seat].door_tools.charges, self.g.sets[self.g.seat].door_tools.bangs, self.g.sets[self.g.seat].door_tools.frags) }
-    fn carries(&mut self, charges: f64, bangs: f64) { self.g.sets[self.g.seat].door_tools.charges = charges; self.g.sets[self.g.seat].door_tools.bangs = bangs; }
+    fn left(&self) -> (f64, f64, f64) { (self.g.groups[self.g.group].tools.charges, self.g.groups[self.g.group].tools.bangs, self.g.groups[self.g.group].tools.frags) }
+    fn carries(&mut self, charges: f64, bangs: f64) { self.g.groups[self.g.group].tools.charges = charges; self.g.groups[self.g.group].tools.bangs = bangs; }
     fn struck(&self, gd: GuardId) -> bool { self.g.gd[gd].down_kind == Some(game::game::DownKind::Struck) }
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn frame_at(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
@@ -488,7 +488,7 @@ impl DoorsAsk for Play {
     fn leaf_vel(&self, d: DoorId) -> f64 { self.g.dr[d].leaf.vel }
     fn leaf_stays(&mut self, d: DoorId) { self.g.dr[d].leaf.quiet_t = -3600.0; }
     fn restarted(&mut self) { game::savestate::control::restart(&mut self.g); }
-    fn any_op(&self) -> bool { !self.g.sets[self.g.seat].door_tools.ops.is_empty() }
+    fn any_op(&self) -> bool { !self.g.groups[self.g.group].tools.ops.is_empty() }
     fn fire_lasts(&self) -> f64 { self.g.k.fireline.fire_s }
     fn doors(&self) -> Vec<DoorId> { self.g.doors.list.clone() }
     fn door_name(&self, d: DoorId) -> String { self.g.dr[d].def.name.clone() }
@@ -499,15 +499,15 @@ impl DoorsAsk for Play {
     fn gun_yaw(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].aim_yaw }
     fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.task[a].watch).map(|p| [p[0], p[2]]) }
     fn floor_free(&self, at: [f64; 2]) -> bool { !game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
-    fn orders_given(&self) -> usize { self.g.sets[self.g.seat].orders.log.len() }
-    fn menu_up(&self) -> Option<usize> { self.g.sets[self.g.seat].orders.menu.as_ref().map(|m| m.rows.len()) }
+    fn orders_given(&self) -> usize { self.g.groups[self.g.group].orders.log.len() }
+    fn menu_up(&self) -> Option<usize> { self.g.groups[self.g.group].orders.menu.as_ref().map(|m| m.rows.len()) }
     fn menu_opens(&mut self, at: [f64; 2]) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         assert!(game::orders::squad_orders_open(&mut self.g, Some(&t), None), "the menu did not open on {at:?}");
         self.ring_over_menu();
     }
     fn wedge(&self, id: &str) -> Option<usize> {
-        let s = &self.g.sets[self.g.seat];
+        let s = &self.g.groups[self.g.group];
         let m = s.orders.menu.as_ref()?;
         let i = m.rows.iter().position(|&d| self.g.tab.orders_order_def[d].id == id)?;
         game::orders::squad_orders_seats(&self.g, m, s.orders.cmd_ring).row.iter().position(|&r| r == i as f64)
@@ -583,7 +583,7 @@ impl DoorsAsk for Play {
     fn picture_shows_open(&self, d: DoorId) -> bool { !game::fogofwar::fog_of_war_door_held(&self.g, d) }
     fn fog_on(&mut self) { self.g.fog_of_war.on = true; }
     fn fog_off(&mut self) { self.g.fog_of_war.on = false; }
-    fn last_order(&self) -> Option<(String, Vec<String>)> { self.g.sets[self.g.seat].orders.log.last().map(|r| (r.order.clone(), r.who.clone())) }
+    fn last_order(&self) -> Option<(String, Vec<String>)> { self.g.groups[self.g.group].orders.log.last().map(|r| (r.order.clone(), r.who.clone())) }
     fn key_tapped_on(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
@@ -593,7 +593,7 @@ impl DoorsAsk for Play {
         self.key_up(&key);
         self.run(6.0 / 60.0);
     }
-    fn choice_on(&mut self, who: game::orders::Who) { self.g.sets[self.g.seat].orders.who = who; }
+    fn choice_on(&mut self, who: game::orders::Who) { self.g.groups[self.g.group].orders.who = who; }
     fn corner_in_his_way(&mut self, gd: GuardId, at: [f64; 2]) {
         let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd).expect("his order");
         let c = [at[0], 0.0, at[1]];
@@ -779,8 +779,8 @@ impl DoorsAsk for Play {
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
     fn rescue_jobs(&self) -> usize { self.g.rescue.flow.jobs.len() }
-    fn cans_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.bangs }
-    fn frags_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.frags }
+    fn cans_left(&self) -> f64 { self.g.groups[self.g.group].tools.bangs }
+    fn frags_left(&self) -> f64 { self.g.groups[self.g.group].tools.frags }
     fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool { game::squadthrow::squad_thrower(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag).is_some() }
     fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])> {
         let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag, Some(true), None)?;
@@ -812,8 +812,8 @@ impl DoorsAsk for Play {
         !game::scene_collision::segment_blocked(&mut self.g, [p[0], 1.55, p[1]], at, None, None, None)
     }
     fn op_ended_on(&self, d: DoorId) -> bool { self.ops_on(d).is_empty() && self.last_op(d).is_some() }
-    fn ring_up(&self) -> bool { self.g.sets[self.g.seat].orders.cmd_ring.is_some() }
-    fn ring_part(&self) -> Vec<GuardId> { self.g.sets[self.g.seat].orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
+    fn ring_up(&self) -> bool { self.g.groups[self.g.group].orders.cmd_ring.is_some() }
+    fn ring_part(&self) -> Vec<GuardId> { self.g.groups[self.g.group].orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
     fn ring_caption(&mut self) -> String { self.view().ring.map_or(String::new(), |r| r.caption) }
     fn ring_wedges(&mut self) -> Vec<(f64, String)> { self.view().ring.map_or(Vec::new(), |r| r.wedges.iter().map(|w| (w.key, w.text.clone())).collect()) }
     fn goal_half_off(&mut self) { self.g.k.cmdring.goal_half = false; }

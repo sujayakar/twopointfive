@@ -125,7 +125,7 @@ fn a_man_searching_the_room_pans_to_both_sides_of_its_middle() {
         let c = p.g.gd[man].ch;
         game::character::pos_replace(&mut p.g, c, [at[0], 0.0, at[1]]);
         p.g.tab.task[a].post = Some([at[0], 0.0, at[1]]);
-        p.g.sets[p.g.seat].door_tools.ops.clear();
+        p.g.groups[p.g.group].tools.ops.clear();
         let fight = p.g.fight.ops.clone();
         p.g.fight.ops = fight.into_iter().filter(|&o| p.g.tab.roomfight_op[o].gd != man).collect();
         p.frame();

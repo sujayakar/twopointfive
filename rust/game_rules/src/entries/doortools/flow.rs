@@ -213,7 +213,7 @@ pub(super) fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, poo
     match mate { Some(m) => DoorToolsAway::Guard(m), None => DoorToolsAway::Alone }
 }
 fn away_said(g: &mut Game, why: &str, far: bool) {
-    let d = &mut g.sets[g.seat].door_tools;
+    let d = &mut g.groups[g.group].tools;
     d.away_why = String::from(why);
     d.away_far = far;
 }
@@ -278,10 +278,10 @@ fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         watch: None,
         shy: Some(None),
         thru: Some(door),
-        pace: Some(g.sets[g.seat].orders.knobs.entry),
+        pace: Some(g.groups[g.group].orders.knobs.entry),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        light: Some(g.sets[g.seat].door_tools.lights.unwrap_or(true)),
+        light: Some(g.groups[g.group].tools.lights.unwrap_or(true)),
         search: Some(true),
         going: String::from(going).into(),
         there: "holding the room".into(),
@@ -295,8 +295,8 @@ pub(super) fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: Door
     let flow_max = g.k.doortools.flow_max;
     let cells = g.tab.doortools_room_search[sr].pts.len();
     if !(flow_max > 0.0) || cells as f64 <= flow_max { return true; }
-    if !g.sets[g.seat].door_tools.big_said.has(op) {
-        g.sets[g.seat].door_tools.big_said.add(op);
+    if !g.groups[g.group].tools.big_said.has(op) {
+        g.groups[g.group].tools.big_said.add(op);
         door_tools_beat(g, op, &format!("flow: no · a room of {} cells is looked over, not gone through (flowMax {})", cells, js::num_str(flow_max)));
     }
     false
@@ -659,7 +659,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
     let pod_apart = g.k.doortools.pod_apart;
     let (door, side) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side) };
     let mut taken: Vec<V3> = Vec::new();
-    for &o in g.sets[g.seat].door_tools.ops.iter() {
+    for &o in g.groups[g.group].tools.ops.iter() {
         if o == op { continue; }
         for p in g.tab.doortools_door_op[o].pod.values() { taken.push(p.pos); }
         for q in g.tab.doortools_door_op[o].queue.iter() { taken.push(q.pod.pos); }
