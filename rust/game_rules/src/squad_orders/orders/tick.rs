@@ -101,6 +101,7 @@ fn through_his_door(g: &mut Game, gd: GuardId, a: TaskId) {
 
 /// The fight AI has an alerted man until his fight has gone cold: true while it is hot. Cold, he goes over to searching.
 fn fight_has_him(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
+    if !crate::group::is_seats(g) { return false; }   // (a group no player commands says itself when a fight takes a man off his order)
     if g.gd[gd].script.is_some() || g.gd[gd].state != crate::game::GuardState::Alert { return false; }
     if g.tab.task[a].yield_t < 0.0 {
         g.tab.task[a].yield_t = g.time;
