@@ -22,7 +22,7 @@
 //!   decals    a build leaves the rows of a list that was longer behind its end
 use crate::rows::{Flags, RUN_SECS, SEED};
 use game::rows::words;
-use game_draw::boxes::{Cut, Geo, Mat, Row4, Word};
+use game_draw::boxes::{glass::Pane, Cut, Geo, Mat, Row4, Word};
 use game_draw::{want, Drawn, Row};
 use game_start::hand::act;
 use game::savestate::control::Moment;
@@ -68,7 +68,7 @@ impl<T: Row> Buffer<T> {
 
 #[derive(Default)]
 struct Mirror {
-    geo: Buffer<Geo>, mat: Buffer<Mat>, cut: Buffer<Cut>, marks: Buffer<Row4>, panes: Buffer<Row4>, cells: Buffer<Word>, items: Buffer<Word>, decals: Buffer<Word>,
+    geo: Buffer<Geo>, mat: Buffer<Mat>, cut: Buffer<Cut>, marks: Buffer<Row4>, panes: Buffer<Pane>, cells: Buffer<Word>, items: Buffer<Word>, decals: Buffer<Word>,
     smoke_at: Buffer<Word>, smoke_bricks: Buffer<game_draw::smoke::SmokeBrick>, smoke_made: Option<u32>, plan: (u32, u32),
     /// the list as last told: how many statics, and the serial
     list: Option<(u32, u32)>,

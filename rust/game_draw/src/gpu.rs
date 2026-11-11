@@ -26,7 +26,7 @@ section! {
     }
 }
 
-pub fn shaded() -> [Shaded; 8] {
+pub fn shaded() -> [Shaded; 9] {
     use As::{Record, Struct, Table};
     [
         Shaded { row: table::<boxes::Geo>(), lies: Struct("BoxGeo") },
@@ -36,6 +36,7 @@ pub fn shaded() -> [Shaded; 8] {
         Shaded { row: table::<men::Inst>(), lies: Struct("CharInst") },
         Shaded { row: table::<boxes::Mat>(), lies: Table { region: "mat", reader: "box" } },
         Shaded { row: table::<boxes::Cut>(), lies: Table { region: "cut", reader: "cut" } },
+        Shaded { row: table::<boxes::glass::Pane>(), lies: Table { region: "pane", reader: "pane" } },
         Shaded { row: table::<boxes::marks::MarkHead>(), lies: Record { region: "mark", reader: "mark" } },
     ]
 }
@@ -55,6 +56,8 @@ pub fn text() -> String {
 
 /// cells of the air over the plan, half a metre to a side, four to a row
 const AIR: usize = 80 * 56;
+/// rows of four floats a row of these takes
+const fn fours<T>() -> usize { core::mem::size_of::<T>() / 16 }
 /// THE BOXES' MATERIAL BUFFER: what shares it, in rows of four floats, one after another. The cut planes are last: a page that cuts nothing has none
 pub const BOX_MAT: [(&str, usize); 5] =
-    [("mat", boxes::MAX * 4), ("mark", boxes::marks::TABLE), ("pane", boxes::grid::MAX_PANES * boxes::glass::ROWS), ("air", AIR / 4), ("cut", boxes::MAX * 9)];
+    [("mat", boxes::MAX * fours::<boxes::Mat>()), ("mark", boxes::marks::TABLE), ("pane", boxes::grid::MAX_PANES * fours::<boxes::glass::Pane>()), ("air", AIR / 4), ("cut", boxes::MAX * fours::<boxes::Cut>())];
