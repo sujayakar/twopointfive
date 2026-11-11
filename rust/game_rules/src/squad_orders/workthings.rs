@@ -560,8 +560,8 @@ pub fn work_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
 
 /// The man is walking to the breaker and this teammate is stood on that walk: he is not held for him.
 pub fn work_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    let end = match &g.gd[h].task {
-        Some(crate::game::GuardTask::Arm0(t)) if t.kind == crate::game::GuardTaskArm0Kind::Breaker => t.pos,
+    let end = match &g.gd[h].errand {
+        Some(crate::game::Errand::At(t)) if t.kind == crate::game::ErrandThing::Breaker => t.pos,
         _ => return false,
     };
     if g.gd[h].state != crate::game::GuardState::Suspicious { return false; }

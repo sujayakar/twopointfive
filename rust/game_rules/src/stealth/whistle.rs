@@ -97,7 +97,7 @@ fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
 fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
-    if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
+    if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].errand.is_some() { return false; }
     if crate::seats::is_man_id(g, who) {
         g.team(gd).theirs()
     } else {

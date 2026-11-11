@@ -97,7 +97,7 @@ fn calm_torch_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
         && g.gd[gd].state == crate::game::GuardState::Patrol
         && crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch
         && g.gd[gd].awareness < g.k.torch.calm_aw
-        && g.gd[gd].task.is_none()
+        && g.gd[gd].errand.is_none()
         && g.gd[gd].body_duty.is_none()
 }
 

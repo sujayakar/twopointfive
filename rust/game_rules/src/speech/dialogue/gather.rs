@@ -279,14 +279,14 @@ struct About {
     held_since: f64,
     roll: crate::guards::Rollcall,
     partner: Option<GuardId>, missing: Option<GuardId>,
-    checker: Option<GuardId>, check: Option<crate::game::GuardTaskCheckOn>,
+    checker: Option<GuardId>, check: Option<crate::game::ErrandCheckOn>,
     post_man: Option<GuardId>,
     keyed: Option<DoorId>, pad: Option<crate::devices::KeypadRt>,
     shift: bool, office: bool,
 }
 impl About {
     fn of(g: &mut Game, gd: GuardId) -> About {
-        let checks = |g: &Game, x: GuardId| match g.gd[x].task { Some(crate::game::GuardTask::CheckOn(c)) if !crate::condition::down(g, g.gd[x].ch) => Some(c), _ => None };
+        let checks = |g: &Game, x: GuardId| match g.gd[x].errand { Some(crate::game::Errand::CheckOn(c)) if !crate::condition::down(g, g.gd[x].ch) => Some(c), _ => None };
         let checker = g.guards.iter().copied().find(|&x| checks(g, x).is_some());
         let at = g.pos_of(gd);
         let shift = g.team(gd) == crate::teams::Team::Guard && g.gd[gd].unit.is_none();

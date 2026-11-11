@@ -31,7 +31,7 @@ fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
     let calm = g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
-        && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && m.duty.free()
+        && m.held.is_none() && m.script.is_none() && m.errand.is_none() && m.body_duty.is_none() && m.duty.free()
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
     if !calm { return false; }
@@ -42,7 +42,7 @@ fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
 /// Still fit to keep talking (the hold flag is ours by now).
 fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let m = &g.gd[x];
-    m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.task.is_none()
+    m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.errand.is_none()
         && m.body_duty.is_none() && m.awareness < 0.3 && g.guards.contains(&x)
 }
 
