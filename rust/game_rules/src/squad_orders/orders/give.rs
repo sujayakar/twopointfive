@@ -394,8 +394,8 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
     let t = g.time;
     let was = g.sets[g.seat].orders.asg.get(gd).copied();
     let fighting = g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert;
-    crate::control::set_pinned(g, gd, false, "orders");
-    crate::control::set_hold(g, gd, false, "orders");
+    crate::duty::pin(g, gd, false, "orders");
+    crate::duty::hold(g, gd, false, "orders");
     g.sets[g.seat].orders.ours.delete(gd);
     let r = a.post.map(|post| squad_orders_route(g, gd, post, a.shy, a.thru, None));
     let via: Vec<V3> = r.as_ref().map_or(Vec::new(), |x| x.via.clone());

@@ -24,7 +24,7 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
         g.gd[gd].react_t -= dt;
         brake(g, gd, 8.0, dt);
         if let Some(gp) = crate::belief::gun_point(g, gd) { a.aim_at = Some(v3::add(gp, [0.0, 1.0, 0.0])); }
-    } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].hold) {
+    } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].duty.holds) {
         brake(g, gd, 8.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         a.aim_at = Some(v3::add(gp, [0.0, 1.0, 0.0]));

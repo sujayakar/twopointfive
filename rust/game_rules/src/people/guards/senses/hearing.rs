@@ -220,7 +220,7 @@ fn loud(g: &mut Game, gd: GuardId, s: &Sound) {
                 "grenade! that was a grenade!"
             } else if e.charge == Some(true) {
                 if crate::teams::defender_words(g, gd) { "that was a charge — they're breaching!" } else { "that was a charge!" }
-            } else if g.gd[gd].hold || g.gd[gd].pinned {
+            } else if !g.gd[gd].duty.free() {
                 "flashbang!"
             } else {
                 "flashbang! go, go!"

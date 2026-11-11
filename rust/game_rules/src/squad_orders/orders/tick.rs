@@ -72,7 +72,7 @@ fn man_on_his_order(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, mates: &[G
     through_his_door(g, gd, a);
     if fight_has_him(g, gd, a) { return; }
     if g.tab.orders_assignment[a].yield_t >= 0.0 { back_on_his_order(g, gd, a); }
-    if g.sets[g.seat].orders.ours.delete(gd) { crate::control::set_pinned(g, gd, false, "orders"); }
+    if g.sets[g.seat].orders.ours.delete(gd) { crate::duty::pin(g, gd, false, "orders"); }
     if order_sent_him_elsewhere(g, gd, a) { return; }   // (his new order's turn is next frame)
     let order_id = g.tab.orders_assignment[a].order.clone();   // (a row's tick may rewrite his Assignment)
     let feet = if g.tab.orders_assignment[a].post.is_none() { falls_in(g, gd, a, followers) } else { walks_to_his_mark(g, gd, a, &order_id) };
@@ -105,7 +105,7 @@ fn fight_has_him(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     if g.tab.orders_assignment[a].yield_t < 0.0 {
         g.tab.orders_assignment[a].yield_t = g.time;
     }
-    if g.tab.orders_assignment[a].post.is_some() { crate::control::set_pinned(g, gd, true, "orders"); g.sets[g.seat].orders.ours.add(gd); }
+    if g.tab.orders_assignment[a].post.is_some() { crate::duty::pin(g, gd, true, "orders"); g.sets[g.seat].orders.ours.add(gd); }
     let hot = g.gd[gd].reload_t >= 0.0
         || g.time - m::max(m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t), g.tab.orders_assignment[a].yield_t) < g.k.orders.cold_secs;
     if hot { return true; }

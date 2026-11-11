@@ -905,8 +905,8 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             crate::roomfight::def_move_pt(g, d, to);
             if !seen {
                 crate::belief::cover(g, gd, to);
-            } else if g.gd[gd].covers == Some(was) {
-                g.gd[gd].covers = Some(to);   // (`def_move_pt` above has done this already)
+            } else if g.gd[gd].duty.gun == Some(was) {
+                g.gd[gd].duty.gun = Some(to);   // (`def_move_pt` above has done this already)
             }
         }
         if there && !seen {

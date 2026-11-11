@@ -42,7 +42,7 @@ pub(super) fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> Roomfi
     let nerve = pick(g, crate::dice::Who::Man(gd), s.nerve);
     let H = g.gd[gd].witness.heard;
     let row = Def {
-        gd, pinned0: g.gd[gd].pinned, station: p, home: front, room, staged: None, ev, watch: -1.0, want: -1.0, want_at: 0.0,
+        gd, pinned0: g.gd[gd].duty.pinned, station: p, home: front, room, staged: None, ev, watch: -1.0, want: -1.0, want_at: 0.0,
         glance_to: -1.0, glance_until: -1.0, glance_next, pt: front,
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
         last_state: g.gd[gd].state, last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0,
@@ -66,7 +66,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
     if mode == DefMode::Free { room_fight_tick_free(g, d); return; }
     if g.gd[gd].script.is_some() && crate::director::director_lesson_runs(g) { g.tab.roomfight_def[d].staged = Some(true); return; }
     if g.tab.roomfight_def[d].staged == Some(true) {
-        g.tab.roomfight_def[d].staged = Some(false); crate::control::set_hold(g, gd, true, "roomfight");
+        g.tab.roomfight_def[d].staged = Some(false); crate::duty::hold(g, gd, true, "roomfight");
         if v3::dist_xz(g.pos_of(gd), g.tab.roomfight_def[d].station) > 1.5 {
             g.fight.defs.retain(|&x| x != d);
             return;
@@ -76,11 +76,11 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
         let st = g.gd[gd].state;
         crate::squad::end_guard_script(g, gd, Some(st));
     }
-    if !g.gd[gd].hold {
+    if !g.gd[gd].duty.holds {
         g.gd[gd].skill = None; g.fight.defs.retain(|&x| x != d);
         return;
     }
-    crate::control::set_pinned(g, gd, true, "roomfight");
+    crate::duty::pin(g, gd, true, "roomfight");
     let dazzled = crate::control::man::blind(g, gd);
     room_fight_evidence(g, d, dt);
     if !dazzled { room_fight_choose_watch(g, d); room_fight_apply_watch(g, d, dt); }
@@ -386,7 +386,7 @@ pub fn break_off_way(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<Way
     let cp = g.ch[c].pos;
     let here = match &mut asker { Some(a) => crate::picture::exposure_ask(g, a, cp), None => 0.0 };
     let room = g.tab.roomfight_def[d].room;
-    let ent = if g.gd[gd].stays_in_rooms { Vec::new() } else { entries_of(g, room) };
+    let ent = if g.gd[gd].duty.rooms { Vec::new() } else { entries_of(g, room) };
     for (i, e) in ent.iter().enumerate() {
         if ev_at(g, d, i) > 0.3 || dist_xz(e.at, threat) < 3.0 || g.dr[e.door].def.steel == Some(true) || crate::doors::doors_locked_out(g, e.door, cp, None) { continue; }
         let f = crate::guards::frame_of(g, e.door);
@@ -495,8 +495,8 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, fighting: bool
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
     crate::mind::raise(g, gd, 0.92, "roomfight");
-    crate::control::set_hold(g, gd, true, "roomfight");
-    crate::control::set_pinned(g, gd, true, "roomfight");
+    crate::duty::hold(g, gd, true, "roomfight");
+    crate::duty::pin(g, gd, true, "roomfight");
     let was = g.tab.roomfight_def[d].room;
     let pos = g.ch[c].pos;
     let room = room_fight_room_at(g, pos);
@@ -561,8 +561,8 @@ fn room_fight_tick_free(g: &mut crate::game::Game, d: RoomfightDefId) {
         def.home = [pos[0] + f[0] * 6.0, 0.0, pos[2] + f[2] * 6.0];
         def.moved_at = time;
     }
-    crate::control::set_hold(g, gd, true, "roomfight");
-    crate::control::set_pinned(g, gd, true, "roomfight");
+    crate::duty::hold(g, gd, true, "roomfight");
+    crate::duty::pin(g, gd, true, "roomfight");
     tell_news(g, News::Man(gd, Did::HoldsWhereHeIs));
 }
 
@@ -588,12 +588,12 @@ mod tests {
         let mut g = Game::blank();
         let (pt, q, seen): (V3, V3, V3) = ([1.0, 0.0, 2.0], [3.0, 0.0, 4.0], [5.0, 0.0, 6.0]);
         let (gd, d) = post(&mut g, pt);
-        g.gd[gd].last_known = Some(pt); g.gd[gd].covers = Some(pt);   // a noise filed at the door he covers is still a noise
+        g.gd[gd].last_known = Some(pt); g.gd[gd].duty.gun = Some(pt);   // a noise filed at the door he covers is still a noise
         move_pt(&mut g, d, q);
-        assert_eq!((g.gd[gd].covers, g.gd[gd].last_known), (Some(q), Some(pt)));
-        g.gd[gd].covers = Some(seen);                // a point given once is not his post
+        assert_eq!((g.gd[gd].duty.gun, g.gd[gd].last_known), (Some(q), Some(pt)));
+        g.gd[gd].duty.gun = Some(seen);                // a point given once is not his post
         move_pt(&mut g, d, pt);
-        assert_eq!(g.gd[gd].covers, Some(seen));
+        assert_eq!(g.gd[gd].duty.gun, Some(seen));
     }
     #[test]
     fn the_table_on_the_game_has_the_hostile_row() {

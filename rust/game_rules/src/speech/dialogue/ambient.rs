@@ -31,7 +31,7 @@ fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
     let calm = g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
-        && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && !m.hold
+        && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && m.duty.free()
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
     if !calm { return false; }
@@ -52,8 +52,8 @@ fn end_ambient(g: &mut crate::game::Game) {
     let s = ambient_state(g);
     let Some(r) = s.run.take() else { return; };
     s.next = time + crate::dialogue::ambient().cooldown;
-    if !r.held[0] { crate::control::set_hold(g, r.a, false, "dialogue"); }
-    if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
+    if !r.held[0] { crate::duty::hold(g, r.a, false, "dialogue"); }
+    if !r.held[1] { crate::duty::hold(g, r.b, false, "dialogue"); }
 }
 
 /// The line of a pair as it will be said: its `own` wording off the office, else its text.
@@ -162,7 +162,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let own = !is_office(g);
             let (csa, csb) = (g.gd[a].callsign.clone(), g.gd[b].callsign.clone());
             let other = third.map(|t| g.gd[t].callsign.clone());
-            let (hold_a, hold_b) = (g.gd[a].hold, g.gd[b].hold);
+            let (hold_a, hold_b) = (g.gd[a].duty.holds, g.gd[b].duty.holds);
             let s = ambient_state(g);
             let played = &s.played;
             let mut fits: Vec<PairTalk> = crate::dialogue::ambient_pairs().into_iter().filter(|p| pair_fits(p, third.is_some(), pad.is_some(), own, played)).collect();
@@ -180,8 +180,8 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let a_opens = js::to_i32(crate::dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
             let (opener, other2, held) = if a_opens { (a, b, [hold_a, hold_b]) } else { (b, a, [hold_b, hold_a]) };
             s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0, at: time + 0.3, other, pad, held });
-            crate::control::set_hold(g, opener, true, "dialogue");
-            crate::control::set_hold(g, other2, true, "dialogue");
+            crate::duty::hold(g, opener, true, "dialogue");
+            crate::duty::hold(g, other2, true, "dialogue");
             return;
         }
     }

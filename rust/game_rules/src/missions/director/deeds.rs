@@ -41,7 +41,7 @@ pub(in crate::missions) fn director_beat_order(g: &mut crate::game::Game, r: Dir
     if o.flinch.is_some() { patch.flinch = o.flinch; }
     if o.direct.is_some() { patch.direct = o.direct; }
     if o.smoke.is_some() { patch.smoke = o.smoke; }
-    crate::control::set_hold(g, gd, false, "director");
+    crate::duty::hold(g, gd, false, "director");
     crate::squad::order(g, gd, patch);
     Ok(())
 }
@@ -118,7 +118,7 @@ pub(in crate::missions) fn director_beat_rout(g: &mut crate::game::Game, r: Dire
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
-    crate::control::set_hold(g, gd, false, "director");
+    crate::duty::hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     Ok(true)
 }
@@ -127,7 +127,7 @@ pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: D
     let state = state.unwrap_or(crate::game::GuardState::Search);
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
-    crate::control::set_hold(g, gd, false, "director");
+    crate::duty::hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     Ok(())
 }

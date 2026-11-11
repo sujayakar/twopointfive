@@ -337,7 +337,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().of(o.team.as_str()).unwrap() };
     let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
     g.gd[gd].unit = Some(crate::game::UnitInfo { light: o.light != Some(false), pair: o.pair, seat: None });
-    crate::control::set_hold(g, gd, true, "guards");
+    crate::duty::hold(g, gd, true, "guards");
     g.gd[gd].heard_up_to = g.event_seq;
     let c = g.gd[gd].ch;
     crate::character::character_update(g, c, 0.0);

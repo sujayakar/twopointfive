@@ -259,7 +259,7 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
         let to = if is_aim { Some(match aim_at { Some(a) => a, None => aim_ahead(g, c) }) } else { None };
         muzzle_check(g, gd, to, dt, None);
     }
-    if !g.gd[gd].pinned {
+    if !g.gd[gd].duty.pinned {
         let hot = g.gd[gd].state == St::Alert;
         crate::gunwall::gun_wall_check(g, gd, if is_aim { Some(crate::gunwall::GunUp::Aim) } else { None }, aim_at, dt, Some(hot));
     }
