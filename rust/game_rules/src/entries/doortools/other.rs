@@ -75,7 +75,7 @@ struct Deal { op: DoorOpId, inside: Vec<GuardId>, squad: Vec<GuardId>, when: Wat
 
 /// Who watches which: a door somebody else has, or whose far side is known, is given up; then those left are dealt to the men with nothing to watch.
 fn watch_dealt(g: &mut Game, op: DoorOpId, room: RoomfightRoomId, inside: Vec<GuardId>, when: Watched) {
-    let squad: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && !inside.contains(&x)).collect();
+    let squad: Vec<GuardId> = g.guards.iter().copied().filter(|&x| crate::group::ours(g, x) && !crate::condition::down(g, g.gd[x].ch) && !inside.contains(&x)).collect();
     let x = Deal { op, inside, squad, when };
     let entries = g.tab.roomfight_room[room].entries.clone();
     for (o, r) in rows(g, op) {
@@ -229,7 +229,7 @@ pub(super) fn door_tools_hold_doors(g: &mut Game, op: DoorOpId) {
     }
     if !said.is_empty() { door_tools_beat(g, op, &format!("doors · {}", said.join(" · "))); }
 }
-fn ours_up(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&x| g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch)).collect() }
+fn ours_up(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&x| crate::group::ours(g, x) && !crate::condition::down(g, g.gd[x].ch)).collect() }
 /// The order's men who are up and hold the room so.
 fn held_by(g: &Game, op: DoorOpId, so: &dyn Fn(&DoorToolsHeldValue) -> bool) -> Vec<GuardId> {
     dop!(g, op).men.iter().copied().filter(|&x| !crate::condition::down(g, g.gd[x].ch) && g.groups[g.group].tools.held.get(x).is_some_and(so)).collect()
