@@ -1,5 +1,5 @@
 //! THE SIMULATION'S LOOPS: the questions of the box world (lines, rays, circles, a way across the floor), the senses, the smoke, the glass and the animator's layers, over
-//! flat state in one block a game (state.rs). THE HOST, in these files, is whoever calls this crate: the rules (rust/game_rules), which write what a question reads and say by
+//! records and slices of the game. THE HOST, in these files, is whoever calls this crate: the rules (rust/game_rules), which write what a question reads and say by
 //! name what a question could not answer. docs/agents/rust.md says what Rust code owes the game.
 //!
 //! What every line in this crate owes the game:
@@ -8,8 +8,7 @@
 //!     standard makes it exact too (a stored pose: single.rs; a rough rectangle of the plan: glow.rs; a hand's note: layers/).
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
 //!   · no world outside. No clock, no random source of its own, no files.
-//!   · state in one place. What a game keeps here from one call to the next is in its block (state.rs: indices, never addresses); every other `static mut`
-//!     is scratch of one call or a copy the host proves.
+//!   · no state. What a game keeps is the game's; a `static mut` here is scratch of one call or a table of numbers.
 //!
 //! WHO HOLDS IT. The compiler: the crate is `no_std`, so no line of it can name a hash map, a thread, a clock or a file (`std::…` does not resolve here).
 //! tools/qa/rust-rules-check.ts: the float methods the compiler cannot keep out once any crate links the standard
@@ -40,12 +39,9 @@ pub mod sight;
 pub mod single;
 pub mod skeleton;
 pub mod snow;
-pub mod state;
 pub mod weather;
 pub mod wind;
 pub mod world;
-
-// ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 // ---- the game's own smoke on the coarse grid (bricks.rs) and the light that comes round (glow.rs)
@@ -62,8 +58,4 @@ pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> 
     b[world::R_H + 1] = hy;
     b[world::R_H + 2] = hz;
     panes::box_seed(&b)
-}
-/// what a game holds of what a level is counted for as it loads (game_rules levelfit.rs): 0 window's bars gone · 1 clumps of a sheet
-pub fn panes_cap(i: u32) -> u32 {
-    (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
 }

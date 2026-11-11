@@ -151,14 +151,11 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     p.run(0.35);   // (the leaf is swinging, and the sweep is half way round)
     for b in p.g.engine.world.statics.clone() { p.g.tab.boxes.edit(b).albedo = [0.05, 0.05, 0.05]; }   // (and all of it is painted: a lamp breaks, a lot is soaked)
     p.run(0.2);
-    let (kept, block) = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
+    let kept = game::savestate::control::Moment::of(&p.g);
     let field = |p: &Play| -> Vec<u64> { let l = &p.g.smoke.glow; [&l.best, &l.mean, &l.all, &l.up, &l.place].into_iter().flatten().chain([&l.lamps, &l.at, &l.left]).map(|v| v.to_bits()).collect() };
     p.run(4.0);
     let want = field(&p);
-    let slot = p.g.sim;
-    sim::state::put(slot, &block);
-    game::savestate::control::stand(&mut p.g, kept.clone());
-    game::game::stand_in(&mut p.g, slot);
+    p.lay(&kept);
     p.run(4.0);
     let got = field(&p);
     let parts = want.iter().zip(&got).filter(|(a, b)| a != b).count();
@@ -245,16 +242,13 @@ fn the_fog_hides_a_man_behind_smoke_and_not_from_the_one_who_sees_past_it() {
 fn a_game_put_back_has_no_smoke_of_the_try_before() {
     let mut p = stand(&two_rooms());
     p.run(0.3);
-    let (kept, block) = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
+    let kept = game::savestate::control::Moment::of(&p.g);
     let (a, b) = ([12.5, 1.2, 13.0], [17.5, 1.2, 13.0]);
     let mut last = 0.0;
     for (n, at) in [[15.0, 0.1, 13.0], [15.0, 0.1, 13.0], [25.0, 0.1, 13.0], [15.0, 0.1, 13.0]].into_iter().enumerate() {
         if n > 0 {
-            let slot = p.g.sim;
-            sim::state::put(slot, &block);
-            game::savestate::control::stand(&mut p.g, kept.clone());
-            game::game::stand_in(&mut p.g, slot);
-                    p.run(0.3);
+            p.lay(&kept);
+            p.run(0.3);
             assert!(through(&mut p, a, b) == 1.0, "try {n}: {:.3} of the light comes through a room with nothing let out in it", through(&mut p, a, b));
         }
         can(&mut p, at, 20.0);

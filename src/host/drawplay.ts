@@ -62,7 +62,7 @@ export class DrawPlay {
     if (this.play || said.tick !== this.at) return;
     const tick = said.tick, mine = this.game.mark(said.state !== null && !this.words);
     if (mine.die !== said.die) this.play = { tick, why: `${mine.die} rolls of the die, ${said.die} on the tape` };
-    if (!this.words && (mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.parts !== said.parts ? 'the hash of its block' : 'the hash of every part of it' };
+    if (!this.words && (mine.stands !== said.stands || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.stands !== said.stands ? 'where everybody stands' : 'the hash of every part of it' };
   }
   private stood(said: TapeFigures): void { if (this.play || said.tick !== this.at) return; const why = figuresPart(said, this.game.figures()); if (why) this.play = { tick: said.tick, why }; }
   /** the moment the game stands at is held for a seek back, the crowded ones let go first */

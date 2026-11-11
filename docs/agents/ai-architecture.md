@@ -90,7 +90,7 @@ his squad's rooms (`duty::bars`), and `duty::round_held` is asked before a round
 way, met somebody or was taken off it. An `errand` tries again; one that `stays` has him stand at its end.
 
 **Dice.** `draw_of(g, "module::function#1", gd)` is a fixed function of the seed, the site, the man, the tick and how many times this site has drawn
-for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The block's die still steps once a
+for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The die's count still steps once a
 draw, as a witness, so `hold` sees a new draw in its `dice` part.
 
 **Debugging.** `control_line` says it in one line: Alvarez: shaken by a blast for 0.4 s · said no: a live grenade, broke and ran · a covered lane has

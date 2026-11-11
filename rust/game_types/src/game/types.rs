@@ -499,10 +499,6 @@ pub struct Game {
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub stats: Stats,
-    /// which game of rust/sim's this is: every wrapper over rust/sim reads it, and the game's die lives there
-    /// (which of rust/sim's slots it stands in is the host's: in no bytes)
-    #[bytes(skip)]
-    pub sim: usize,
     /// (made again from the rest: in no bytes)
     #[bytes(skip)]
     pub made: crate::made::Tables,

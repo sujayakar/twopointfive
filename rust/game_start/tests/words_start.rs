@@ -14,7 +14,7 @@ fn a_start_stands_with_what_its_address_says() {
     let stand = |words: &str| {
         let link = format!("?levelFile=depot.json&roomclear&squad4{words}");
         let h = Handed { level: level.as_bytes(), words: &link, mannequin: a.mannequin.text.as_bytes(), mannequin_bin: a.mannequin.bin.unwrap(), cast: a.cast.map_or("", |c| c.text).as_bytes(), cast_look: a.cast_look.map_or("", |c| c.text).as_bytes(), kept: "" };
-        stand_handed(&h, &StartOpts { seed: 1, slot: 1, ..Default::default() })
+        stand_handed(&h, &StartOpts { seed: 1, ..Default::default() })
     };
     let plain = stand("");
     let read = |g: &game::game::Game, n: &str| game_start::host::knobs::get(g, n).unwrap();

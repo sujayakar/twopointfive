@@ -173,9 +173,7 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
         row("sheets of glass (a row a pane that is no longer whole)", big.sheets, cap.sheets),
     ];
     let clumps = clumps_most(g, &lv.boxes);
-    rows.push(row("clumps the largest sheet of glass dices into", clumps, ::sim::panes_cap(1) as f64));
-    let bars = flagged(g, &col.boxes, flag.bar);
-    rows.push(row("window's bars (a row a bar gone, in a game)", bars, ::sim::panes_cap(0) as f64));
+    rows.push(row("clumps the largest sheet of glass dices into", clumps, ::sim::pattern::MAX_CLUMPS as f64));
     rows.push(row("doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors));
     rows.push(row("a man a seat and the guards as the level is stood up (what a spawned unit is counted against the picture's budget of characters by)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
     let civ_cap = civ_most(g);

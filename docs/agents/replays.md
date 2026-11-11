@@ -34,7 +34,7 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `rust/maths/`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
 | `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
-| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value and its block; `restart` |
+| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value; `restart` |
 | `rust/game_rules/src/tick/standing.rs` | the men as a stand stands them, and again on a restart |
 | `rust/game_rules/src/tick/state_words.rs` | the hash of the whole game, a word a part |
 
@@ -59,7 +59,7 @@ what the machine kept (`Kept`'s text), and the length and hash of each character
 them. Nothing of the picture is on it.
 
 **Recording.** `DrawGame.step` writes any waiting commands, writes the hand, steps, and every `MARKS.every` ticks writes a mark and figures. A mark is
-the die's count, a hash of the block's parts' hashes and one of every part's (`state_words`). Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
+the die's count, the word of where everybody stands (`tick_word`) and a hash of every part (`state_words`). Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
 when the mission's run number changes. A panic, or `TAPE_MOST` bytes, ends the tape.
 
 **Saves are on the tape by being input.** F5 is a key in the hand and a load is a command, and the save controller takes its turn in the step
@@ -79,7 +79,7 @@ and feeds it row by row. `walked` makes it deaf to any other command. It reads o
 are closest. A seek back goes to the moment before the target and plays on unseen, some of it each frame (`sought` in `drawpage.ts`), and
 `face_draw_cut` starts the picture over. `?at=` opens at a tick; Shift+F7 uses it to start at the try that is on.
 
-**A moment and a save.** A `Moment` clones `Game` and copies its block. `face_moment_back` stands exactly there, with the shelf and what was said, so
+**A moment and a save.** A `Moment` is a clone of `Game`. `face_moment_back` stands exactly there, with the shelf and what was said, so
 the same hands play the same run. A save put back (`after_step` in `control.rs`) goes on from now: `serial_next` keeps the later value, so no serial is dealt
 twice, and what belongs to the run as it is now carries over (`abandoned`).
 
@@ -119,7 +119,7 @@ hand numbers, or another character file (`other` in `handtape.ts`).
 
 - **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_start/src/host/command.rs`), which is on the tape by
   itself. A call that changes the game any other way makes every walk part.
-- **State:** a field reachable from `Game`, so that a clone and `state_words` have it, or a column of the block. A field left out of the hash says so
+- **State:** a field reachable from `Game`, so that a clone and `state_words` have it. A field left out of the hash says so
   with `#[bytes(skip)]`. A new `static mut` in `rust/sim` or `rust/prim` needs its row in `rust-rules-check.ts`.
 - **A die roll:** `draw_of(g, "module::function#1", gd)`, or `draw_for`, `draw_body`, `draw_def`, `draw_op`.
 - **A number of the hand:** a field of `SeatInput` or `SeatLens` (`rust/game_types/src/handed.rs`), then `half`. Every tape is then refused (`HAND`).
@@ -148,7 +148,7 @@ Native tests in `rust/game_start/tests/`:
 | `senses.rs`, `draw.rs` | a game put back has the light and smoke of one that never left, and tells the picture so |
 
 `gate` rows for each pinned run: `play` (held to `rust/game_start/pins.txt`), `again` (stood again in one process), `save` (a moment put back plays
-every frame the same), `load` (the same in a fresh slot), `draw` (drawing changes nothing, also after a moment), and `seats` for two players.
+every frame the same), `load` (the same where another game stood), `draw` (drawing changes nothing, also after a moment), and `seats` for two players.
 `hold keep` and `hold check` compare two builds frame by frame and name the part that differs. `rust-rules-check.ts`, a row of
 `bun run tools/qa/checks.ts`, keeps rounded functions, cells and unlisted statics out of the simulation.
 

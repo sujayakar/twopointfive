@@ -28,8 +28,6 @@ use game_types::panes::{Charge, Going, BK, MAX_SITES};
 pub use game_types::panes::{Hole, Panes, Row};
 use prim::{floor, sqrt};
 
-/// the window's bars one level can lose (game_rules levelfit.rs refuses a level of more)
-pub const MAX_BARS: usize = 128;
 /// the crossings one pane remembers (GLASSPEN.holes: its knob is under this)
 pub const HOLE_PTS: usize = 24;
 const MAX_SECTORS: usize = 12;

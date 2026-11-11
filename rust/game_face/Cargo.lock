@@ -21,7 +21,6 @@ dependencies = [
  "game_draw",
  "game_rules",
  "game_start",
- "sim",
 ]
 
 [[package]]

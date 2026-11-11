@@ -1,4 +1,4 @@
-//! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game and its block, as the page's
+//! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game, as the page's
 //! module does, and puts one back.
 use game::savestate::control::{self, Do};
 use game_start::play::{Opts, Play};
@@ -91,7 +91,7 @@ fn back_at_the_runs_first_step_the_saves_stay() {
     let of = control::stood(&mut h.p.g);
     let kept = control::kept_of(of);
     let (_, first) = kept.iter().find(|(k, _)| k == control::START).expect("the run's first step is kept");
-    let (shelf, new) = (h.p.g.saves.shelf.clone(), first.image.laid(h.p.g.sim));
+    let (shelf, new) = (h.p.g.saves.shelf.clone(), first.image.laid());
     control::over(&mut h.p.g, new);
     h.p.g.saves.shelf = shelf;
     h.frame();

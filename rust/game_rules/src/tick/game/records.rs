@@ -7,8 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// A game stands in this slot of rust/sim's.
-pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; }
 
 /// A man easing past furniture: a player crouched and not dashing; anyone else low.
 pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
