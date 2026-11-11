@@ -133,7 +133,7 @@ program is in, up to a cap.
 - **A setting:** `RenderSettings`, `defaultSettings`; if tiers differ, a row in `PRESETS` written in `Quality.apply` and priced in `presetCost`; a row
   in `graphicspanel.ts`; a row in `SWEEP_ROWS` to price it.
 - **A word on the address:** `pictureWords` if it moves shader text or buffers, `urlFlagsOnEngine` for a setting.
-- **Something new drawn:** `overview.md` has the section's way. A field of a row a shader reads is a line of its `row!` and where it is filled
+- **Something new drawn:** `overview.md` has the section's way. A field of a row a shader reads is in its `row!` and where it is filled
   (`pack.rs`); `half` writes the rest.
 - **A kernel's text:** `bun run tools/qa/checks.ts shaders`, and `node tools/qa/wgsl-compile.cjs` asks a browser's compiler. A grown kernel costs
   Windows compile time (`inline` counts it) and nears the software adapter's limit (`kernel-stack.cjs`).
