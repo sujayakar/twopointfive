@@ -133,7 +133,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let frames = (r.secs * 60.0).round() as usize;
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
-    // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
+    // the parts: the game's own (game::state_words), then rust/sim's block (`sim.smoke`, `sim.panes`, …)
     let names = parts::names();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();

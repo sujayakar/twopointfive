@@ -11,9 +11,9 @@ struct GunFrame {
     left: [f64; 3],
 }
 impl GunFrame {
-    fn of(fk: &Fk) -> GunFrame {
-        let wrist = fk.at(role(HAND_R));
-        let bore = v3::normalize(v3::sub(fk.at(role(MIDDLE1_R)), wrist));
+    fn of(rig: &Rig, fk: &Fk) -> GunFrame {
+        let wrist = fk.at(rig.role(HAND_R));
+        let bore = v3::normalize(v3::sub(fk.at(rig.role(MIDDLE1_R)), wrist));
         let y = v3::mad(AY, bore, -bore[1]);
         let up = if v3::len(y) > 1e-4 { v3::normalize(y) } else { [0.0, 0.0, -1.0] };
         GunFrame { wrist, bore, up, left: v3::cross(up, bore) }
@@ -87,52 +87,37 @@ struct Feed {
 /// fetched and seated, the handle run, back to the fore-end; an untrained man's lands on the lip, is backed off and found, and is slapped home. Or, for
 /// a gun fed its own way, the hand through the stations it is handed. Solved on the scratch pose at `at_b` in the gun's frame as the trigger hand has
 /// it, laid on the pose by w through the support arm's mask.
-pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, keys: Option<&[FeedKey]>, tune: &Knobs) -> bool {
+pub fn reload_arm(body: &mut Body, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, keys: Option<&[FeedKey]>, tune: &Knobs) {
     let mut q = Feed { t, ..Feed::default() };
     let (at, at_b, _) = poses(an);
     as_he_is(an, &mut q);
-    if keys.map_or(0, |k| k.len()) > KEYS_MAX {
-        return false;
-    }
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS, SPINE2, THIGH_L, THIGH_R]) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
+    // (a feed with nothing to feed: the hand stays home)
+    if keys.is_some_and(|k| k.len() < 2) {
+        return;
     }
     let hh = &mut h;
-    let posed = with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (up_l, fore_l, hand_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L));
-        as_it_lies(fk, hand_l, &mut q);
-        hip_line(fk, &mut q);
-        pouch_and_beats(fk, &mut q);
+        let (up_l, fore_l, hand_l) = (rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L));
+        as_it_lies(rig, fk, hand_l, &mut q);
+        hip_line(rig, fk, &mut q);
+        pouch_and_beats(rig, fk, &mut q);
         if let Some(keys) = keys {
-            if keys.len() < 2 {
-                return false;
-            }
             keyed_hand(keys, d, rig, fk, hand_l, up_l, fore_l, &mut q);
             keyed_fingers(keys, d, rig, fk, hh, hand_l, &q);
-            return true;
+            return;
         }
         mag_points(marks, &mut q);
         mag_path(tune, &mut q);
         mag_turns(marks, &mut q);
         mag_hand(d, rig, fk, hand_l, up_l, fore_l, &q);
         mag_fingers(d, rig, fk, hh, hand_l, &q);
-        true
     });
-    if posed == Some(true) {
-        arm_mask(false);
-        if !ask_blend(g, at, at_b, w, true, at, n) {
-            return false;
-        }
-        hands_to(&h, an);
-    }
-    true
+    arm_mask(body, false);
+    body.blend(at, at_b, w, true, at);
+    hands_to(&h, an);
 }
 
 /// How he is trained, where his pouches are, and the beats of it.
@@ -142,10 +127,10 @@ fn as_he_is(an: &Anim, q: &mut Feed) {
 }
 
 /// The gun where the trigger hand has it, the hand where it was, and the trunk's own frame.
-fn as_it_lies(fk: &mut Fk, hand_l: usize, q: &mut Feed) {
-    let gun = GunFrame::of(fk);
+fn as_it_lies(rig: &Rig, fk: &mut Fk, hand_l: usize, q: &mut Feed) {
+    let gun = GunFrame::of(rig, fk);
     let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
-    let (left, up, fwd) = trunk_frame(fk);
+    let (left, up, fwd) = trunk_frame(rig, fk);
     (q.gun, q.cur, q.rot0, q.left, q.up, q.fwd) = (gun, cur, rot0, left, up, fwd);
 }
 
@@ -156,11 +141,11 @@ fn tk(q: &Feed, from: [f64; 3], by: [f64; 3]) -> [f64; 3] {
 }
 
 /// The hip's pouches: off the pelvis in the trunk's frame, or by the hips' own line where a bladed chest would carry them round with it.
-fn hip_line(fk: &mut Fk, q: &mut Feed) {
+fn hip_line(rig: &Rig, fk: &mut Fk, q: &mut Feed) {
     let Feed { hip_line, left, up, fwd, .. } = *q;
-    let hips = fk.at(role(HIPS));
+    let hips = fk.at(rig.role(HIPS));
     let (hl, hf) = if hip_line {
-        let across = v3::sub(fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+        let across = v3::sub(fk.at(rig.role(THIGH_L)), fk.at(rig.role(THIGH_R)));
         let level = v3::normalize(v3::mad(across, up, -v3::dot(across, up)));
         (level, v3::cross(level, up))
     } else {
@@ -176,9 +161,9 @@ fn hk(q: &Feed, by: [f64; 3]) -> [f64; 3] {
 }
 
 /// Which pouch, the beats, and the hand: round a thing from its front (fingers across it, palm toward him), or fingers down into the pouch.
-fn pouch_and_beats(fk: &mut Fk, q: &mut Feed) {
+fn pouch_and_beats(rig: &Rig, fk: &mut Fk, q: &mut Feed) {
     let Feed { tr, bt, gun, left, up, fwd, .. } = *q;
-    let pouch = if tr > 0.5 { tk(q, fk.at(role(SPINE2)), MV2.reload.pouch[1]) } else { hk(q, MV2.reload.pouch[0]) };
+    let pouch = if tr > 0.5 { tk(q, fk.at(rig.role(SPINE2)), MV2.reload.pouch[1]) } else { hk(q, MV2.reload.pouch[0]) };
     let (r_pole, pole_w) = (MV2.reload.pole, MV2.reload.pole_w);
     let (o, i, r, dur) = (bt.out, bt.in_, bt.rack, bt.dur);
     // the hand: round a thing from its front (fingers across it, palm toward him) · fingers down into the pouch
@@ -234,7 +219,7 @@ fn keyed_fingers(keys: &[FeedKey], d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut
         }
     }
     let c = |kk: f64| lerp(0.3, kk, gr);
-    hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, gr), 0.1 * (1.0 - gr));
+    hand(rig, d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, gr), 0.1 * (1.0 - gr));
     wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
 }
 
@@ -332,32 +317,25 @@ fn mag_fingers(d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, hand_l: usiz
     let grip = if kp >= 0.0 { max(bump(t, o - 0.12, o - 0.02, kp - 0.02, kp + 0.06), bump(t, fr, fr + 0.08, i + 0.04, i + 0.12)) } else { bump(t, o - 0.12, o - 0.02, i + 0.04, i + 0.12) };
     let hook = if bt.pull { bump(t, r - 0.14, r - 0.04, r + 0.14, r + 0.22) } else { 0.0 };
     let c = |kk: f64| lerp(0.3, kk, max(grip, hook));
-    hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1.0 - grip));
+    hand(rig, d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1.0 - grip));
     wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
 }
 /// A pistol's magazine change, the support hand's, over the reload clip's pose: to the butt as the magazine drops free, to the belt for a fresh one (a
 /// magazine kept goes to the hip first), seated with the heel of the palm, and over the top to run the slide. The trigger hand, the gun and the body
 /// stay the clip's.
-pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> bool {
+pub fn pistol_reload_arm(body: &mut Body, an: &mut Anim, t: f64, w: f64, tune: &Knobs) {
     let (at, at_b, _) = poses(an);
     let (bt, fix_l) = (an.rl_b, an.hand_fix[0]);
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS]) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let gun = GunFrame::of(fk);
-        let hand_l = role(HAND_L);
+        let gun = GunFrame::of(rig, fk);
+        let hand_l = rig.role(HAND_L);
         let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
-        let (left, up, fwd) = trunk_frame(fk);
-        let hips = fk.at(role(HIPS));
+        let (left, up, fwd) = trunk_frame(rig, fk);
+        let hips = fk.at(rig.role(HIPS));
         let tk = |p: [f64; 3]| v3::mad(v3::mad(v3::mad(hips, left, p[0]), up, p[1]), fwd, p[2]);
         let (pouch, dump) = (tk(tune.kit.mag.pouch), tk(tune.kit.mag.dump));
         let (o, i, r, dur, kp, fr) = (bt.out, bt.in_, bt.rack, bt.dur, bt.keep, bt.fresh);
@@ -398,17 +376,14 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
             q.at(t)
         };
         let rot = hand_rot(&fix_l, lines(wf, pf, sf), lines(wb, pb, sb));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &p.at(t), Some(&tune.kit.mag.pole), tune.kit.mag.pole_w, Some(&rot), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), hand_l, &p.at(t), Some(&tune.kit.mag.pole), tune.kit.mag.pole_w, Some(&rot), false);
         let grip = max(if kp >= 0.0 { bump(t, o - 0.08, o, kp - 0.02, kp + 0.06) } else { 0.0 }, bump(t, fr, fr + 0.08, i - 0.02, i + 0.06));
         let pinch = if bt.pull { bump(t, r - 0.1, r - 0.02, r + 0.08, r + 0.16) } else { 0.0 };
         let c = |kk: f64| lerp(0.25, kk, max(grip, pinch));
-        hand(d, hh, 0, &[c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, max(grip, pinch)), 0.1 * (1.0 - grip));
+        hand(rig, d, hh, 0, &[c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, max(grip, pinch)), 0.1 * (1.0 - grip));
         wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.1, dur - 0.22, dur - 0.05));
     });
-    arm_mask(false);
-    if !ask_blend(g, at, at_b, w, true, at, n) {
-        return false;
-    }
+    arm_mask(body, false);
+    body.blend(at, at_b, w, true, at);
     hands_to(&h, an);
-    true
 }

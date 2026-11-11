@@ -1,20 +1,19 @@
-//! THE ANIMATOR'S LAYERS: the steps of a man's update that pose him, each written once, here. A layer takes his animation as it is (`an`), the numbers the game is
-//! tuned by (`tune`) where it asks one, and what only this call knows, reads and writes the pose WHERE IT LIVES (the game's pool, poses.rs) and the rig on the bench (skeleton.rs), and
-//! asks the rig's named nodes of roles.rs. What it keeps from one tick to the next it keeps on him.
-//!
-//! A layer answers whether it ran: not = not a pose of this pool, or a role with no node (the caller stops, by name).
+//! THE ANIMATOR'S LAYERS: the steps of a man's update that pose him, each written once, here. A layer takes the man as he is posed (`body`, skeleton.rs `Body`: his poses, his rig and
+//! the bones a pose is run forward into), his animation (`an`), the numbers the game is tuned by (`tune`) where it asks one, and what only this call knows. It reads and writes the poses
+//! where they live and asks the rig's named nodes of the rig (`rig.role`). What it keeps from one tick to the next it keeps on him (`an`); the bones are its own till it is done.
 use game_types::character::{KICK_IMPACT, KICK_PLANT, LONG_ANCHOR_SIDE_MAX, LONG_PULL_MAX, READY_RATE, READY_REACH, THROW_DUR, THROW_RELEASE, TOE_FLOOR_Y, TOSS_AFTER, TOSS_LOW, TOSS_TOP, WALL_GAIT_REST, WALL_ROOT_OFF, BIGMOVE, BLOW, BOB, CREEP, FEET, GAZE, GAZE_EL, HAND, KNIFE_BLOW, LEAN_POSE, LIFE, LONG_PIVOT, LONG_STEADY, MV2, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, REACH, READY_AZ, READY_BARE, READY_UP, RUN_LINGER, SMOKEARM, SNEAK, SOFT_KNEE, SPRINT_WARP, STEALTH, SWIV_REF_L, SWIV_REF_R, TAKEN, TOSS_HANG, WALL_POSE, WORK};
 use game_types::rig_props::{Adj as RigAdj, SlingFrontHand, BIGRIG, RIG};
-use game_types::character::{Anim, AnimBigTool, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
+use game_types::character::{Anim, AnimBigTool, AnimJogSeamItem, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
 use game_types::gunreload::{FeedKey, FeedKeyAt, FeedKeyHow, FeedMarks};
+use game_types::ids::ClipId;
 use game_types::knobs::Knobs;
 use game_types::m::{abs, max, min, round, sign, PI};
 use game_types::v3::{self, clamp, damp, lerp, quat, smoothstep, wrap_angle};
-use crate::roles::*;
+use game_types::anim_skeleton::roles::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{NODE, ask_blend, ask_mask, ask_sample, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{NODE, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, Body, Fk, Rig};
 
 mod big;
 mod carry;
@@ -122,21 +121,16 @@ fn turn(d: &mut [S], rig: &Rig, i: usize, q: [f64; 4]) {
     let par = parent_rot(rig, d, i);
     rotate_model(d, i, &q, &par);
 }
-/// do these roles have nodes of a rig of `n` nodes
-fn cast(n: usize, roles: &[usize]) -> bool {
-    roles.iter().all(|&r| role(r) < n)
-}
 /// the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry
 /// and on exit)
 fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
-    let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+    let (foot_l, foot_r) = (rig.role(FOOT_L), rig.role(FOOT_R));
     let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
-    shift(d, rig, role(HIPS), off);
-    fk.part(rig, d, list(FK_LEGS));
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+    shift(d, rig, rig.role(HIPS), off);
+    fk.part(rig, d, rig.list(FK_LEGS));
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
 }
-const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
 #[inline(always)]
 fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
     smoothstep(a, b, t) * (1.0 - smoothstep(c, d, t))
@@ -147,7 +141,7 @@ fn falsy(x: f64) -> bool {
     x == 0.0 || x != x
 }
 /// where a point must be posed below spine3 to END UP at `h` after the chest twist still to come (the run-forward bones current)
-fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
+fn untwist(rig: &Rig, fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
     if falsy(tw_y) && falsy(tw_p) {
         return h;
     }
@@ -158,7 +152,7 @@ fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
         e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
     }
     let (ie1, ie2, ie3) = (quat::conj(e1), quat::conj(e2), quat::conj(e3));
-    let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
+    let (p1, p2, p3) = (fk.at(rig.role(SPINE1)), fk.at(rig.role(SPINE2)), fk.at(rig.role(SPINE3)));
     let p2t = v3::add(quat::rotate(e1, v3::sub(p2, p1)), p1);
     let p3t = v3::add(quat::rotate(e2, v3::sub(v3::add(quat::rotate(e1, v3::sub(p3, p1)), p1), p2t)), p2t);
     let x1 = v3::add(quat::rotate(ie3, v3::sub(h, p3t)), p3t);
@@ -168,7 +162,7 @@ fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
 /// the neck and head turned by `w` of the way from where the eyes look to `target` (model space); runs the pose forward first
 fn look_at(d: &mut [S], rig: &Rig, fk: &mut Fk, gaze_local: &[f64; 3], target: [f64; 3], w: f64, roll: f64) {
     fk_run(rig, d, fk.rot, fk.pos);
-    let (nk, hd) = (role(NECK), role(HEAD));
+    let (nk, hd) = (rig.role(NECK), rig.role(HEAD));
     let hr = fk.rot(hd);
     let gaze = quat::rotate(hr, *gaze_local);
     let eyes = v3::mad(v3::mad(fk.at(hd), quat::rotate(hr, AY), 0.1), gaze, 0.08);
@@ -232,21 +226,20 @@ fn set_own_rot(d: &mut [S], i: usize, q: &[f64; 4]) {
     set_ch(d, i, 5, q[2]);
     set_ch(d, i, 6, q[3]);
 }
-/// A CLIP A LAYER SAMPLES FOR ITSELF: the rest pose copied into a scratch pose of the same character and the
-/// clip sampled over it. `clip` is the module's number for it, handed with the layer's own numbers (game_rules anim_skeleton `clip_no`); false = no such clip or pose
-fn sample_on_rest(g: usize, at_rest: usize, at_out: usize, nodes: usize, clip: f64, t: f64, looped: bool) -> bool {
-    clip >= 0.0 && ask_blend(g, at_rest, at_rest, 1.0, false, at_out, nodes) && ask_sample(g, at_out, nodes, clip as usize, t, looped)
+/// A CLIP A LAYER SAMPLES FOR ITSELF : the rest pose copied into a scratch pose of the same character and the
+/// clip sampled over it.
+fn sample_on_rest(body: &mut Body, at_rest: usize, at_out: usize, clip: ClipId, t: f64, looped: bool) {
+    body.copy(at_rest, at_out);
+    body.sample(at_out, clip, t, looped);
 }
 // ================================================================ THE ARMS
-// An arm is posed on a COPY of the pose (a second pose of the pool) and laid back through a mask: the copy is made with `ask_blend` at
-// weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints and
+// An arm is posed on a COPY of the pose (a second pose of his) and laid back through a mask: the limbs are solved on the copy, the mask is written from the named joints and
 // the copy is blended in. The run-forward bones are then the COPY's.
 
 /// both arms from the collar bones down
-fn arms_mask() {
-    ask_mask(&[(role(SHOULDER_L), 1.0, true), (role(SHOULDER_R), 1.0, true)]);
+fn arms_mask(body: &mut Body) {
+    body.mask(&[(body.rig.role(SHOULDER_L), 1.0, true), (body.rig.role(SHOULDER_R), 1.0, true)]);
 }
-const ARM_ROLES: [usize; 9] = [SPINE3, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, FOREARM_L, FOREARM_R, HAND_L, HAND_R];
 /// the rotation that carries the aim clip's grip (bore `g0`, gun hand at model rotation `rr0`) onto the wanted bore `gd` — the
 /// shortest arc, then unrolled about the bore so the pistol's top strap (`grip_up`, in the hand) faces `up_ref` as nearly as the bore allows
 fn grip_turn(g0: &[f64; 3], rr0: &[f64; 4], gd: &[f64; 3], up_ref: &[f64; 3], grip_up: &[f64; 3]) -> [f64; 4] {
@@ -268,14 +261,8 @@ struct Hands {
     /// the same joints in the rest pose (the straight hand every shape is curled from)
     rest: [[f64; 4]; 2 * HAND_DIGITS],
 }
-fn digits(side: usize) -> &'static [u32] {
-    list(if side == 1 { DIGITS_R } else { DIGITS_L })
-}
 /// what stands between a man's hand pass and a layer that shapes a hand: the digits as the locomotion left them, the notes so far, the straight hand
-fn hands_of(g: usize, an: &Anim) -> Option<Hands> {
-    if digits(0).len() != HAND_DIGITS || digits(1).len() != HAND_DIGITS {
-        return None;
-    }
+fn hands_of(body: &mut Body, an: &Anim) -> Hands {
     let mut h = Hands { base: [0.0; 120], note: [0.0; 10], rest: [[0.0; 4]; 30] };
     for side in 0..2 {
         for (to, from) in h.base[side * 60..side * 60 + 60].iter_mut().zip(&an.hn.base[side]) {
@@ -286,16 +273,14 @@ fn hands_of(g: usize, an: &Anim) -> Option<Hands> {
         }
     }
     let rest = &mut h.rest;
-    with_pose(g, an.rest.at as usize, |d, _rig, n, _fk| {
+    body.pose(an.rest.at as usize, |d, rig, _fk| {
         for side in 0..2 {
-            for (i, &node) in digits(side).iter().enumerate() {
-                if (node as usize) < n {
-                    rest[side * HAND_DIGITS + i] = own_rot(d, node as usize);
-                }
+            for (i, &node) in rig.digits(side).iter().enumerate() {
+                rest[side * HAND_DIGITS + i] = own_rot(d, node as usize);
             }
         }
-    })?;
-    Some(h)
+    });
+    h
 }
 /// …and the notes back
 fn hands_to(h: &Hands, an: &mut Anim) {
@@ -331,8 +316,8 @@ const FIST: [f64; 3] = [72.0, 92.0, 62.0];
 const THUMB_FIST: [f64; 3] = [30.0, 25.0, 45.0];
 /// curl the four fingers (0 straight … 1 fist) and set the thumb (0 alongside … 1 folded over the fist) of one hand, from the rest
 /// (straight) hand; then the hand pass's note: a layer has set this hand, and how far its shape stands from where the locomotion left each digit.
-fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, spread: f64) {
-    let (ns, at) = (digits(side), side * HAND_DIGITS);
+fn hand(rig: &Rig, d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, spread: f64) {
+    let (ns, at) = (rig.digits(side), side * HAND_DIGITS);
     for fi in 0..4 {
         for j in 0..3 {
             let mut q = q_pitch(curl[fi] * FIST[j] * DEGR);
@@ -408,9 +393,9 @@ fn hand_rot(fix: &[f64; 4], f: [f64; 3], b: [f64; 3]) -> [f64; 4] {
     quat::mul(from_basis(&v3::cross(ff, bb), &ff, &bb), *fix)
 }
 /// the trunk's own left, up and forward, off the run-forward bones
-fn trunk_frame(fk: &Fk) -> ([f64; 3], [f64; 3], [f64; 3]) {
-    let up = v3::normalize(v3::sub(fk.at(role(SPINE3)), fk.at(role(HIPS))));
-    let l = v3::sub(fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+fn trunk_frame(rig: &Rig, fk: &Fk) -> ([f64; 3], [f64; 3], [f64; 3]) {
+    let up = v3::normalize(v3::sub(fk.at(rig.role(SPINE3)), fk.at(rig.role(HIPS))));
+    let l = v3::sub(fk.at(rig.role(UPPER_ARM_L)), fk.at(rig.role(UPPER_ARM_R)));
     let left = v3::normalize(v3::mad(l, up, -v3::dot(l, up)));
     (left, up, v3::cross(left, up))
 }
@@ -458,8 +443,8 @@ fn knife_rot(fix_r: &[f64; 4], blade: [f64; 3], back: [f64; 3]) -> [f64; 4] {
 }
 /// where the right wrist goes, the fist's turn and the elbow's pole with the fist closed on the sheathed handle, in the chest
 /// joint's frame off the rest pose's (`rc_inv`: the rest chest's turn, inverted). `pull` m back down the knife's line, `off` m further off the chest.
-fn sheath_fist(fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: f64, off: f64) -> ([f64; 3], [f64; 4], [f64; 3]) {
-    let s3 = role(SPINE3);
+fn sheath_fist(rig: &Rig, fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: f64, off: f64) -> ([f64; 3], [f64; 4], [f64; 3]) {
+    let s3 = rig.role(SPINE3);
     let q = quat::mul(fk.rot(s3), *rc_inv);
     let t = v3::normalize(quat::rotate(q, RIG.sheath.along));
     let b0 = quat::rotate(q, RIG.sheath.out);
@@ -471,8 +456,8 @@ fn sheath_fist(fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: 
     (to, knife_rot(fix_r, t, b), pole)
 }
 /// the support arm from the upper arm down (the collar bone stays the clip's), or both arms
-fn arm_mask(both: bool) {
-    ask_mask(&[(role(UPPER_ARM_L), 1.0, true), (if both { role(UPPER_ARM_R) } else { usize::MAX }, 1.0, true)]);
+fn arm_mask(body: &mut Body, both: bool) {
+    body.mask(&[(body.rig.role(UPPER_ARM_L), 1.0, true), (if both { body.rig.role(UPPER_ARM_R) } else { usize::MAX }, 1.0, true)]);
 }
 const KEYS_MAX: usize = 48;
 /// a keyed path being put together: (time, vector) knots for curve3

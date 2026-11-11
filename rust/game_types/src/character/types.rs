@@ -691,7 +691,6 @@ pub struct Anim {
     pub grip_can: bool,
     #[is(crate::character::AnimHn { nodes: Vec::new(), fist: Vec::new(), own: Vec::new(), open: Vec::new(), trig: alloc::vec![0.0; 12], thumb: alloc::vec![alloc::vec![0.0; 12], alloc::vec![0.0; 12]], base: alloc::vec![alloc::vec![0.0; 60], alloc::vec![0.0; 60]], note: alloc::vec![alloc::vec![0.0; 5], alloc::vec![0.0; 5]], seed: 0.0, built: f64::NAN, quiet: false, grip: alloc::vec![0.0, 0.0], off: 1.0, fired: 9.0, gun: 0.0 })] pub hn: crate::character::AnimHn,
     pub nodes: crate::character::AnimNodes,
-    #[is(PoseSetId(0))] pub poses: PoseSetId,
     #[is(RigId(0))] pub rig: RigId,
     pub nv: Option<crate::character::AnimNv>,
     pub nv_arm: f64,
@@ -705,10 +704,6 @@ pub struct Anim {
     #[is(true)] pub act_loop: bool,
     #[is(crate::character::MvGait { live: false, g: 0.0, u: 0.0, st: 0.0 })] pub mv_out: crate::character::MvGait,
     #[is(crate::character::AnimMvPo { stw: 0.0, stn: 1.0, dzw: 0.0, gun: false, gun_p: [0.0, 0.0, 0.0], gun_r: [0.0, 0.0, 0.0, 1.0] })] pub mv_po: crate::character::AnimMvPo,
-    pub fk_legs: Vec<i32>,
-    pub fk_arms: Vec<i32>,
-    pub fk_head: Vec<i32>,
-    pub cast: crate::anim_skeleton::LayerCast,
     pub hn_flat: Option<Vec<f64>>,
     #[is(f64::NAN)] pub hn_flat_of: f64,
     #[is(crate::character::AnimHdIdle { upper: crate::character::UpperMode::None, long: false, crouch: 0.0, carry: None })] pub hd_idle: crate::character::AnimHdIdle,
@@ -1228,7 +1223,8 @@ pub struct AnimHdIdle {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RagDrive {
-    pub pose: crate::anim_skeleton::Pose,
+    /// the pose he fell in
+    pub pose: Vec<f32>,
     pub ov: Vec<Option<crate::anim_skeleton::NodeOverride>>,
     pub hips: usize,
     pub hips_rot0: Quat,
@@ -1344,6 +1340,8 @@ pub struct Character {
     pub in_hand_cur: Option<crate::inhand::InHandWord>,
     pub in_hand_k: f64,
     pub sim_hand_r: Option<Quat>,
+    /// the poses he keeps
+    pub poses: crate::anim_skeleton::Poses,
     pub in_hand_ov: Option<Vec<Option<crate::anim_skeleton::NodeOverride>>>,
     pub prev_bones: JsMap<crate::character::Bone, V3>,
     pub prev_dt: f64,
@@ -1617,13 +1615,6 @@ pub struct StealthCable {
     pub undo: f64,
     pub ahead: f64,
     pub nod_max: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct CharacterModAT0Value {
-    pub rows: f64,
-    pub at: Vec<i32>,
-    pub v: Vec<f32>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -2465,7 +2456,6 @@ pub struct CharacterCapsules {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CharacterMod {
     #[is(crate::character::CharacterModHOLDSHOW { beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
-    pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
 }
 
 pub static WORK: crate::character::Work = crate::character::Work { key_lead: 0.2, tip_len: 0.215, hover: 0.022, key_off: 0.03, lever: 0.035 };
@@ -2593,14 +2583,6 @@ pub static BLOW: crate::character::Blow = crate::character::Blow { rise: crate::
 
 pub static TAKEN: crate::character::Taken = crate::character::Taken { sag: crate::character::PerFall { arch: 0.1, hunch: 0.65, snap: 0.15 }, secs: 1.0 };
 
-pub const KNIFE_KEYS_MAX: f64 = 4.0;
-
-pub const THROW_KEYS_MAX: f64 = 16.0;
-
-pub fn throw_nums() -> [String; 11] { [String::from("chestYaw"), String::from("pelvisYaw"), String::from("pitch"), String::from("roll"), String::from("pelX"), String::from("pelY"), String::from("pelZ"), String::from("clavUp"), String::from("clavFwd"), String::from("swivR"), String::from("swivL")] }
-
-pub fn throw_vecs() -> [String; 6] { [String::from("handR"), String::from("fingR"), String::from("backR"), String::from("handL"), String::from("fingL"), String::from("backL")] }
-
 pub static CREEP: crate::character::Creep = crate::character::Creep { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CreepLow { rate: 8.0, up: 24.0 }, wide: crate::character::CreepWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CreepHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CreepHand { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CreepHand { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } };
 
 pub const READY_RATE: f64 = 12.0;
@@ -2632,8 +2614,6 @@ pub static TOSS_HANG: V3 = [0.1, -0.47, -0.02];
 pub fn thr_low() -> crate::character::THRLOW { crate::character::THRLOW { chest_yaw: alloc::vec![[0.0, 0.0], [0.05, -4.0], [0.1, -9.0], [0.17, -5.0], [0.25, 1.0], [0.36, 5.0], [0.55, 2.0], [0.75, 0.0]], pelvis_yaw: alloc::vec![[0.0, 0.0], [0.09, -4.0], [0.16, -1.0], [0.24, 2.0], [0.4, 3.0], [0.6, 0.5], [0.75, 0.0]], pitch: alloc::vec![[0.0, 0.0], [0.11, 9.0], [0.2, 7.0], [0.29, 1.0], [0.4, -2.0], [0.6, 0.0], [0.75, 0.0]], roll: alloc::vec![[0.0, 0.0], [0.1, 3.0], [0.22, 2.0], [0.45, 0.0], [0.75, 0.0]], pel_x: alloc::vec![[0.0, 0.0], [0.1, -0.012], [0.28, 0.012], [0.5, 0.006], [0.75, 0.0]], pel_y: alloc::vec![[0.0, 0.0], [0.12, -0.045], [0.2, -0.035], [0.31, 0.0], [0.42, 0.005], [0.6, 0.0], [0.75, 0.0]], pel_z: alloc::vec![[0.0, 0.0], [0.1, -0.015], [0.28, 0.03], [0.5, 0.015], [0.75, 0.0]], clav_up: alloc::vec![[0.0, 0.0], [0.1, -3.0], [0.3, 5.0], [0.6, 0.0], [0.75, 0.0]], clav_fwd: alloc::vec![[0.0, 0.0], [0.1, -5.0], [0.28, 6.0], [0.5, 2.0], [0.75, 0.0]], hand_r: alloc::vec![(0.1, alloc::vec![-0.13, -0.41, -0.32]), (0.165, alloc::vec![-0.1, -0.53, -0.02]), (0.225, alloc::vec![-0.07, -0.36, 0.37]), (0.28, alloc::vec![-0.05, -0.08, 0.5]), (0.34, alloc::vec![-0.04, -0.06, 0.52]), (0.46, alloc::vec![-0.04, -0.08, 0.49])], swiv_r: alloc::vec![[0.0, -62.0], [0.1, -78.8], [0.165, -82.2], [0.225, -107.2], [0.28, -121.9], [0.34, -122.7], [0.46, -121.7], [0.62, -84.0], [0.75, -62.0]], fing_r: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.06, alloc::vec![0.0, -0.95, -0.3]), (0.1, alloc::vec![-0.1, -0.8, -0.6]), (0.165, alloc::vec![0.0, -1.0, 0.0]), (0.225, alloc::vec![0.0, -0.7, 0.7]), (0.28, alloc::vec![0.0, -0.1, 1.0]), (0.34, alloc::vec![0.0, 0.2, 1.0]), (0.46, alloc::vec![0.0, 0.1, 1.0]), (0.62, alloc::vec![0.0, -0.8, 0.55]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_r: alloc::vec![(0.0, alloc::vec![-1.0, 0.0, 0.0]), (0.06, alloc::vec![-1.0, 0.0, -0.1]), (0.1, alloc::vec![-0.9, 0.1, -0.4]), (0.165, alloc::vec![-0.6, -0.1, -0.8]), (0.225, alloc::vec![-0.35, -0.7, -0.6]), (0.28, alloc::vec![-0.25, -0.95, -0.1]), (0.34, alloc::vec![-0.25, -0.95, 0.15]), (0.46, alloc::vec![-0.4, -0.9, 0.1]), (0.62, alloc::vec![-0.9, -0.3, 0.0]), (0.75, alloc::vec![-1.0, 0.0, 0.0])] } }
 
 pub static BIGMOVE: crate::character::Bigmove = crate::character::Bigmove { grab: 0.5, take: [0.47, 0.82], join: [0.65, 0.96], put: 0.58, put_at: 0.45, unjoin: 0.28, snug: crate::character::BigmoveSnug { hide: 0.06, take: [0.44, 0.56], put_at: 0.8, show: 0.94 }, arc: [-0.16, 0.12, 0.04], wait: [-0.1, -0.34, 0.2], hammer: crate::character::BigmoveHammer { ready: crate::character::BigmoveHammerReady { g: [0.06, -0.1, 0.34], d: [-0.42, 0.9, -0.1] }, wound: crate::character::BigmoveHammerWound { g: [-0.12, 0.2, -0.05], d: [-0.45, 0.3, -0.84] }, over: crate::character::BigmoveHammerOver { g: [0.04, 0.14, 0.24], d: [-0.08, 0.93, 0.36] }, grab_at: 0.1, raise: 0.6, swing: 0.38, swing_min: 0.1, swing_max: 0.2, rebound: 0.25, settle: 0.5, butt: [0.18, 0.05, 0.18], far: [0.6, 1.1], wound_body: crate::character::BigmoveHammerWoundBody { yaw: -50.0, pel_yaw: -17.0, pitch: -7.0, back: 0.09, side: -0.03 }, blow_body: crate::character::BigmoveHammerBlowBody { yaw: 16.0, pel_yaw: 7.0, pitch: 15.0, pitch_far: 11.0, fwd: 0.07, fwd_far: 0.08, drop: 0.03 }, face: 1.0, drop: 0.035, stance: crate::character::BigmoveHammerStance { l: [0.06, 0.07], r: [-0.07, -0.1], lift: 0.025 } }, shotgun: crate::character::BigmoveShotgun { pocket: [0.035, -0.05, 0.06], yaw: -22.0, pel_yaw: -10.0, pitch: 6.0, kick: 0.08, climb: 12.0, kick_in: 0.04, kick_out: 0.13, kick_pitch: -6.0, shove: 0.035 }, fist: [0.74, 0.8, 0.84, 0.88], open: [0.26, 0.3, 0.34, 0.38] };
-
-pub const ANIM_POSES: f64 = 13.0;
 
 pub fn rag_limbs() -> Vec<(String, f64, f64, f64)> { alloc::vec![(String::from("thighL"), -1.0, 10.0, 12.0), (String::from("shinL"), 0.0, 12.0, 14.0), (String::from("thighR"), -1.0, 11.0, 13.0), (String::from("shinR"), 2.0, 13.0, 15.0), (String::from("upperArmL"), -1.0, 4.0, 6.0), (String::from("forearmL"), 4.0, 6.0, 8.0), (String::from("upperArmR"), -1.0, 5.0, 7.0), (String::from("forearmR"), 6.0, 7.0, 9.0), (String::from("neck"), -1.0, 2.0, 3.0)] }
 

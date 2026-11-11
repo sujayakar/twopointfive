@@ -3,7 +3,7 @@
 //! The rows go where the game keeps them: `g.art.rig`, `g.art.clip`, `g.art.mesh`, `g.art.cast` / `_cast_variant`.
 use crate::json::{self, Json};
 use alloc::{string::String, vec, vec::Vec};
-use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, SkinData, Track};
+use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, Path, SkinData, Track};
 use alloc::sync::Arc;
 use game::game::Game;
 use game::ids::*;
@@ -81,7 +81,7 @@ fn num_or(v: &Json, d: f64) -> f64 { v.num().unwrap_or(d) }
 fn v3_or(v: &Json, d: [f64; 3]) -> [f64; 3] { v.v3().unwrap_or(d) }
 
 /// what the mannequin's file gives, before any row is made: a cast shares everything of it but the mesh
-struct Base { nodes: Vec<GltfNode>, order: Vec<f64>, skin: SkinData, mesh: MeshData, clips: Vec<Clip>, node_by_name: JsMap<String, f64> }
+struct Base { nodes: Vec<GltfNode>, order: Vec<u32>, skin: SkinData, mesh: MeshData, clips: Vec<Clip>, node_by_name: JsMap<String, f64> }
 
 fn load_base(f: GltfFile) -> Base {
     let o = open(f);
@@ -95,9 +95,11 @@ fn load_base(f: GltfFile) -> Base {
     }).collect();
     for i in 0..nodes.len() { for c in nodes[i].children.clone() { nodes[c as usize].parent = i as f64; } }
     let roots: Vec<f64> = g.get("scenes").at(num_or(g.get("scene"), 0.0) as usize).get("nodes").nums();
-    let mut order: Vec<f64> = Vec::new();
-    fn visit(nodes: &[GltfNode], order: &mut Vec<f64>, i: f64) { order.push(i); for &c in nodes[i as usize].children.iter() { visit(nodes, order, c); } }
+    let mut order: Vec<u32> = Vec::new();
+    fn visit(nodes: &[GltfNode], order: &mut Vec<u32>, i: f64) { order.push(i as u32); for &c in nodes[i as usize].children.iter() { visit(nodes, order, c); } }
     for &r in roots.iter() { visit(&nodes, &mut order, r); }
+    assert!(nodes.len() <= sim::skeleton::MAX_NODES, "a rig of {} nodes, and a man is posed on {} at most", nodes.len(), sim::skeleton::MAX_NODES);
+    assert!({ let mut seen = order.clone(); seen.sort_unstable(); seen.into_iter().eq(0..nodes.len() as u32) }, "a rig whose scene does not reach each of its {} nodes once", nodes.len());
     let mut node_by_name: JsMap<String, f64> = JsMap::new();
     for (i, nd) in nodes.iter().enumerate() { node_by_name.set(nd.name.clone(), i as f64); }
 
@@ -155,15 +157,16 @@ fn load_base(f: GltfFile) -> Base {
         let mut duration = 0.0f64;
         for ch in an.get("channels").items() {
             let smp = an.get("samplers").at(ch.get("sampler").num().unwrap() as usize);
-            let path = match ch.get("target").get("path").str() { Some("translation") => 0.0, Some("rotation") => 1.0, Some("scale") => 2.0, _ => continue };
+            let path = match ch.get("target").get("path").str() { Some("translation") => Path::Move, Some("rotation") => Path::Turn, Some("scale") => Path::Scale, _ => continue };
             let times = o.accessor(smp.get("input").num().unwrap()).data.f32();
             let values = o.accessor(smp.get("output").num().unwrap()).data.f32();
             duration = game::m::max(duration, times[times.len() - 1] as f64);
-            tracks.push(Track { node: ch.get("target").get("node").num().unwrap(), path, times, values, step: smp.get("interpolation").str() == Some("STEP") });
+            tracks.push(Track { node: ch.get("target").get("node").num().unwrap() as usize, path, times, values, step: smp.get("interpolation").str() == Some("STEP"), line: 0 });
         }
         let name = String::from(an.get("name").str().unwrap_or(""));
-        let clip = Clip { name: name.clone(), duration: game::m::max(duration, 1.0 / 30.0), tracks };
+        let clip = Clip::new(name.clone(), game::m::max(duration, 1.0 / 30.0), tracks);
         // (a Map: a name met twice keeps its first place and takes the later clip)
+        assert!(clip.tracks.iter().all(|t| t.node < nodes.len()), "the clip \"{name}\" moves a node the rig has not");
         match clips.iter_mut().find(|c| c.name == name) { Some(c) => *c = clip, None => clips.push(clip) }
     }
     Base { nodes, order, skin, mesh: md, clips, node_by_name }
@@ -270,7 +273,8 @@ pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> R
             (art.mesh.push(md), Some(art.cast.push(CastInfo { parts, variants })))
         }
     };
-    let mut rig = GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, back: None };
+    let mut rig = GltfCharacter { parent: base.nodes.iter().map(|n| n.parent as i32).collect(), nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, roles: Default::default(), back: None };
+    rig.roles = game::character::roles_of(&rig);
     rig.back = game::packside::back_of(art, &rig);
     art.rig.push(rig)
 }

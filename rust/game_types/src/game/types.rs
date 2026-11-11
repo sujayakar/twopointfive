@@ -336,7 +336,6 @@ pub struct Game {
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
-    pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
@@ -461,8 +460,6 @@ pub struct Game {
     pub box_frame_rows: Vec<FrameBoxId>,
     /// rows box_frame may deal again
     pub box_frame_free: Vec<FrameBoxId>,
-    /// poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
-    pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows. The host drains it (the face clears it before a step)
     /// (a step's output, and no state: in no bytes)
     #[bytes(skip)]
@@ -512,6 +509,9 @@ pub struct Game {
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     #[is(crate::owned::Owned::new())] pub mark_set: crate::owned::Owned,
+    /// where a layer of the animator runs a pose forward: nobody reads it after the layer (in no bytes)
+    #[bytes(skip)]
+    pub bones: crate::anim_skeleton::PoseFK,
     /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
     /// (made from the statics: in no bytes)
     #[bytes(skip)]
@@ -1326,7 +1326,6 @@ impl Game {
 pub struct Tabs {
     pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
-    pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
     /// (a host's hand, which differs by machine: in no bytes)
@@ -1399,7 +1398,6 @@ pub struct Mods {
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
-    pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     pub character: crate::character::CharacterMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,

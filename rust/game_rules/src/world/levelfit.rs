@@ -125,23 +125,6 @@ fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
     n
 }
 
-/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast.
-fn man_singles_of(g: &Game, s: &crate::levelfit::Stood) -> f64 {
-    let (Some(guards), Some(civilians)) = (&s.guards, &s.civilians) else { return 0.0 };
-    if s.seats.is_none() || s.player.is_none() { return 0.0; }
-    let mut bodies: Vec<CharId> = Vec::new();
-    for pl in crate::seats::men(g) { bodies.push(g.pl[pl].ch); }
-    for &gd in guards.iter() { bodies.push(g.gd[gd].ch); }
-    for &c in civilians.iter() { bodies.push(g.gd[c].ch); }
-    let mut worst = 0.0;
-    for c in bodies {
-        let set = g.ch[c].anim.poses;
-        let most = crate::anim_skeleton::pose_set_most(g, set);
-        if most > worst { worst = most; }
-    }
-    worst
-}
-
 /// One row of the count.
 fn row(what: &str, has: f64, cap: f64) -> crate::levelfit::FitRow {
     crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
@@ -198,8 +181,6 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
     let man_rows = men_most(g, civs);
     rows.push(row("rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64));
     let civ_cap = civ_most(g);
-    let poses = men_most(g, civ_cap) * man_singles_of(g, g_2);
-    rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, crate::anim_skeleton::pose_pool_room()));
     rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap));
     rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, crate::doors::DOOR_CONTACTS));
     rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));

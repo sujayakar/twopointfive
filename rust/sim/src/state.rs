@@ -11,13 +11,12 @@
 //!     and nothing else: each part asserts its size is the sum of its fields.
 //!   · ZEROS ARE A GAME WITH NOTHING IN IT. A new block is zeros with its head written; a part reads its zeros as "empty".
 //!   · no allocation: `GAMES` blocks, a fixed size each, so the module's memory never grows.
-//!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the poses, the smoke grid's bricks) is sized for the largest game, and its FIRST WORD is how
+//!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the smoke grid's bricks, the panes) is sized for the largest game, and its FIRST WORD is how
 //!     many of its bytes are in use, that word included. No rule reads what lies past them (a moment copies the block whole all the same).
 //!
 //! WHO HOLDS A SLOT is the host's business (game_face `face_start` deals them, and a moment kept keeps a copy of a block's bytes and `put`s it back: game_rules
 //! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
-use crate::poses::Poses;
 use crate::men::Men;
 use crate::lights::Lights;
 use crate::panes::Panes;
@@ -44,7 +43,6 @@ pub struct State {
     pub lights: Lights,
     pub weather: Weather,
     pub smoke: Smoke,
-    pub poses: Poses,
     pub panes: Panes,
 }
 
@@ -56,16 +54,15 @@ pub struct Part {
     /// a pool: its first word is how many of its bytes are in use
     pub pool: bool,
 }
-/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools: every
-/// game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all.
-pub const PARTS: [Part; 7] = [
+/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools; last the panes, which a game with
+/// no pane touched does not use at all.
+pub const PARTS: [Part; 6] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
-    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (a pose is ten columns of whole vectors)
-    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -82,8 +79,6 @@ const _: () = {
     assert!(at == LEN);
     // (a man's columns are whole vectors from a 16-byte boundary: men.rs)
     assert!(offset_of!(State, men) % 16 == 0);
-    // (a pose starts on a 16-byte boundary: the block does, the pool's head is 16 bytes, and a pose is whole vectors — skeleton.rs `rows`)
-    assert!(offset_of!(State, poses) % 16 == 0);
 };
 
 /// The layout's word: the parts (where, how long, which version) folded. Two builds with the same word lay a block out alike.
