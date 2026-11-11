@@ -210,7 +210,8 @@ fn rot_of(rot: &[f64], i: usize) -> [f64; 4] {
     [rot[i * 4], rot[i * 4 + 1], rot[i * 4 + 2], rot[i * 4 + 3]]
 }
 
-/// skeleton.ts twoBoneIK. `rot` / `pos` are the pose run forward: current on entry (all of it if `fresh`), current again on exit.
+/// skeleton.ts twoBoneIK. `rot` / `pos` are the pose run forward: the limb and what it hangs from current on entry, the limb and what hangs off it on exit;
+/// and, not `fresh`, the whole pose on exit, for a layer that has turned something else since it ran it and reads it after.
 #[allow(clippy::too_many_arguments)]
 pub fn two_bone_ik(
     rig: &Rig, d: &mut [S], rot: &mut [f64], pos: &mut [f64], a: usize, b: usize, c: usize, target: &[f64; 3], pole: Option<&[f64; 3]>, pole_w: f64, end_rot: Option<&[f64; 4]>, fresh: bool,
@@ -397,7 +398,7 @@ pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &
     let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
     Some(f(&mut poses_of!(b, g)[s..s + singles(n)], &rig, n, &mut fk))
 }
-/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, and the host reads back the nodes a layer says it ran
+/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, until the next layer. Nobody else reads them
 pub struct Fk<'a> {
     pub rot: &'a mut [f64],
     pub pos: &'a mut [f64],
@@ -474,23 +475,5 @@ pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: b
     };
     let b = bench();
     crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped);
-    true
-}
-/// PoseFK.run (root < 0) / runFrom
-pub fn ask_run(g: usize, at: usize, root: i32) -> bool {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    let Some(s) = start(g, at, n) else {
-        return false;
-    };
-    if root >= n as i32 {
-        return false;
-    }
-    let d = &poses_of!(b, g)[s..s + singles(n)];
-    if root < 0 {
-        fk_run(&rig, d, &mut b.rot, &mut b.pos);
-    } else {
-        fk_run_from(&rig, d, &mut b.rot, &mut b.pos, root as usize);
-    }
     true
 }

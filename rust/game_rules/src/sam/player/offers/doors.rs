@@ -10,8 +10,7 @@ pub(super) fn door(g: &mut Game, o: &mut Offers, h: Him, d: DoorId) {
     let reach = near && !h.sprints;
     let free = reach && !h.busy;
     let mut it = Interactable { door: Some(d), ..mark(InteractableKind::Door, at, "", if reach { "" } else { "step closer" }, reach) };
-    let keys = g.pl[h.pl].keys.clone();
-    let locked = crate::doors::doors_locked_out(g, d, h.p, Some(&keys));
+    let locked = crate::doors::doors_locked_out(g, d, h.p, Some(&g.pl[h.pl].keys));
     let mut rows = Vec::new();
     if let Some(pad) = crate::devices::pad_state(g, &crate::seats::here(g), d, h.p) {
         it.line1 = keypad_line(g, h, d, &pad);
@@ -26,7 +25,7 @@ pub(super) fn door(g: &mut Game, o: &mut Offers, h: Him, d: DoorId) {
         let boot = Boot { holds: !steel && crate::doors::doors_boot_holds(g, d, h.p), steel };
         if near && h.sprints { boot.run_word(&mut it); }
         if free { rows.extend(lock_rows(h, &it, pick, steel)); rows.extend(boot.row(g, h, &it)); }
-    } else if crate::doors::doors_key_opens(g, d, h.p, Some(&keys)) {
+    } else if crate::doors::doors_key_opens(g, d, h.p, Some(&g.pl[h.pl].keys)) {
         it.line1 = String::from("door · locked — you have the key");
         if free { rows.push(row(&it, Verb::Unlock, "unlock — his key", "")); rows.push(ease_row(&it)); }
     } else {

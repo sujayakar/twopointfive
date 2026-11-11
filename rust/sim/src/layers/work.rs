@@ -3,7 +3,7 @@ use super::*;
 
 /// At a lock: the crouch's rounded spine sat up toward it, the shoulders up, the head onto it, and both hands at the keyway (the pick raking, the wrench
 /// hand under it giving as a pin sets).
-pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> u32 {
+pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (t, lock, gaze_local, fix_l, fix_r) = (an.lp_t, an.lockpick_at, an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
@@ -22,13 +22,13 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> u32 {
         look_at(d, rig, fk, &gaze_local, lock, w, 9.0 * DEGR * w);
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -52,14 +52,14 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> u32 {
     });
     arms_mask();
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// Both hands on a body: the trunk bowed toward the grip and tipped off a load, the eyes a stride beyond the hands, and each wrist to its spot through
 /// the inverse of the chest twist still to come.
-pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3], r_at: [f64; 3], tw_y: f64, tw_p: f64) -> u32 {
+pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3], r_at: [f64; 3], tw_y: f64, tw_p: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (rw, look, grip) = (clamp(h_.rw.unwrap_or(1.0), 0.0, 1.0), h_.look.unwrap_or(0.7), h_.grip);
     let (bow, tilt) = (h_.bow * w, h_.tilt.unwrap_or(0.0) * w);
@@ -91,13 +91,13 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
         }
         Some((n, tl, tr))
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -111,22 +111,22 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
     if rw >= 0.999 {
         arms_mask();
         if !ask_blend(g, at, at_b, w, true, at, n) {
-            return 0;
+            return false;
         }
     } else {
         ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
         if !ask_blend(g, at, at_b, w, true, at, n) {
-            return 0;
+            return false;
         }
         if rw > 0.003 {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
             if !ask_blend(g, at, at_b, w * rw, true, at, n) {
-                return 0;
+                return false;
             }
         }
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// the chest twist still to come (yaw spread over spine1‥3, pitch at spine3), run backwards: its three turns undone about the spine's joints
 /// as they stood on the pose run forward when this was made (CharacterAnimator.untwist, doorLayer's pivots)
@@ -191,7 +191,7 @@ fn arm_of(side: usize) -> (usize, usize, usize, usize) {
 }
 /// A hand on a door: the spine bowed into a long reach, then the arm that is up by IK on a copy, its target travelling with the eased weight from
 /// wherever the pose beneath has the wrist to the spot on the leaf, the palm flat on the face.
-pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 3], dt: f64, intent: f64, right_free: bool, tw_y: f64, tw_p: f64) -> u32 {
+pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 3], dt: f64, intent: f64, right_free: bool, tw_y: f64, tw_p: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (hand_no, reach, fix, dp) = (l.hand, l.reach.unwrap_or(false), [an.hand_fix[0], an.hand_fix[1]], &mut an.dp);
     let (live, w_was) = (intent > 0.003, clamp(max(dp.w_l.x, dp.w_r.x), 0.0, 1.0));
@@ -247,10 +247,10 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         spring_step(&mut dp.w_r, tgt_r, rr, dt);
         Some((n, tw, f, p_tgt, clamp(dp.w_l.x, 0.0, 1.0), clamp(dp.w_r.x, 0.0, 1.0)))
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     let nn = tw.dir(n0);
     // ---- the arm(s): the target travels with the eased weight, the hand's turn, the elbow's swivel and the clavicle's reach riding the same ease
@@ -262,7 +262,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         let fs = if side == arm { f } else { door_fingers(&tw, &n0, side) };
         let wrist = v3::mad(v3::mad(p_tgt, nn, 0.035), fs, -0.08);
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
+            return false;
         }
         let hh = &mut hs;
         with_pose(g, at_b, |d, rig, _n, fk| {
@@ -284,11 +284,11 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
         if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
-            return 0;
+            return false;
         }
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 /// what a hand at work does: the wrist's spot, where the fingers point and the back of the hand faces, the fingers themselves, and whether
 /// the spot is on his own body
@@ -469,7 +469,7 @@ struct AtWork {
 
 /// Hands at work on a thing: the body bowed to a low thing and leaned into a long reach, the eyes onto it, then each hand that is up by IK on a copy,
 /// its target travelling with the eased weight.
-pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f64; 3], dt: f64, live: bool, r_free: bool, tw_y: f64, tw_p: f64) -> u32 {
+pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f64; 3], dt: f64, live: bool, r_free: bool, tw_y: f64, tw_p: f64) -> bool {
     let mut o = AtWork { n_at, p0, dt, live, r_free, tw_y, tw_p, ..AtWork::default() };
     as_asked(an, l, &mut o);
     which_hands(an, &mut o);
@@ -481,14 +481,14 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         how_low(fk, &mut o);
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     if !shoulders_to_be(g, n, &mut o) {
-        return 0;
+        return false;
     }
     eased(&mut o);
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     let c = &mut an.wk;
     let Some(()) = with_pose(g, o.at, |d, rig, _n, fk| {
@@ -504,7 +504,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         arms_up(c, fk, &mut o);
         arms_come(c, &mut o);
     }) else {
-        return 0;
+        return false;
     };
     for side in 0..2usize {
         let e = if side == 1 { o.w_r } else { o.w_l };
@@ -513,10 +513,10 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         }
         // (the shape off the run-forward as it stands: the pose's own for the first hand, the first hand's copy for the second)
         let Some(sp) = with_pose(g, o.at, |_d, _rig, _n, fk| o.wk.shape(fk, side)) else {
-            return 0;
+            return false;
         };
         if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
-            return 0;
+            return false;
         }
         let hh = &mut hs;
         with_pose(g, o.at_b, |d, rig, _n, fk| {
@@ -524,11 +524,11 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
         if !ask_blend(g, o.at, o.at_b, smoothstep(0.0, 0.25, e), true, o.at, n) {
-            return 0;
+            return false;
         }
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// What he is asked to do, and the keys of a code: four presses, the first four are all a code's hand reads.

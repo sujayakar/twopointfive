@@ -8,7 +8,7 @@ use alloc::{string::String, vec, vec::Vec};
 /// markFromRect with the painter `c => c.fill(1)`, through marking: a rect in metres snapped inward onto the lattice, every cell palette entry 1; None if the
 /// snapped rect is empty. A private fn because the skeleton's mark_from_rect hands its painter the canvas by value, so a fill could not reach the rows.
 fn filled_rect(face: crate::scene_markings::MarkFace, res: crate::scene_markings::MarkRes, rect: [f64; 4], pal: crate::scene_markings::MarkPal, base: f64) -> Option<crate::scene_markings::MarkingDef> {
-    let t = base * *crate::scene_markings::res_k().get(String::from(res.as_str())).unwrap();
+    let t = base * *crate::scene_markings::res_k().of(res.as_str()).unwrap();
     let eps = 1e-7;
     let (u0, v0, u1, v1) = (m::ceil(rect[0] / t - eps), m::ceil(rect[1] / t - eps), m::floor(rect[2] / t + eps), m::floor(rect[3] / t + eps));
     let (w, h) = (m::min(u1 - u0, crate::scene_markings::MAX_CELLS_W), m::min(v1 - v0, crate::scene_markings::MAX_CELLS_H));

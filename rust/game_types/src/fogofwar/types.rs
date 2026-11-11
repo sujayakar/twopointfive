@@ -130,7 +130,7 @@ pub const FOG_EYES_WAS: f64 = 5.0;
 
 pub const DOOR_EPS: f64 = 0.01;
 
-pub fn thing_bits() -> Vec<f64> { alloc::vec![0.0, 0.0, 4.0, 3.0] }
+pub const THING_BITS: [f64; 4] = [0.0, 0.0, 4.0, 3.0];
 
 pub const THING_TEST: f64 = 7.0;
 

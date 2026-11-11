@@ -567,22 +567,31 @@ fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize
             st[O_GLOW_PLACE + m] = read[m];
         }
     }
-    for _ in 0..rounds {
-        for m in 0..nx * nz {
-            let (x, z) = (m % nx, m / nx);
-            let weight = if st[O_GLOW_UP + m] > NOTHING || read[m] == open { 1.0 } else { DARK };
-            let (mut sum, mut den) = (weight * read[m], weight);
-            let mut hand = |n: usize| {
-                sum += pull * st[O_GLOW_PLACE + n];
-                den += pull;
-            };
-            if way[m] & 1 != 0 { hand(m + 1); }
-            if way[m] & 2 != 0 { hand(m + nx); }
-            if x > 0 && way[m - 1] & 1 != 0 { hand(m - 1); }
-            if z > 0 && way[m - nx] & 2 != 0 { hand(m - nx); }
-            let was = st[O_GLOW_PLACE + m];
-            st[O_GLOW_PLACE + m] = was + OMEGA * (sum / den - was);
+    // what a round asks of each metre that no round changes: its own reading by its weight, all the weights, and which neighbours it is one place with
+    let (mut own, mut den, mut next) = ([0.0; MAX_GLOW], [0.0; MAX_GLOW], [0u8; MAX_GLOW]);
+    for m in 0..nx * nz {
+        let weight = if st[O_GLOW_UP + m] > NOTHING || read[m] == open { 1.0 } else { DARK };
+        next[m] = way[m] & 3 | if m % nx > 0 && way[m - 1] & 1 != 0 { 4 } else { 0 } | if m >= nx && way[m - nx] & 2 != 0 { 8 } else { 0 };
+        own[m] = weight * read[m];
+        den[m] = (0..next[m].count_ones()).fold(weight, |d, _| d + pull);
+    }
+    let n = nx * nz;
+    let place = &mut st[O_GLOW_PLACE..O_GLOW_PLACE + n];
+    let mut settle = |m: usize| {
+        let mut sum = own[m];
+        if next[m] == 15 {
+            sum = sum + pull * place[m + 1] + pull * place[m + nx] + pull * place[m - 1] + pull * place[m - nx];
+        } else {
+            if next[m] & 1 != 0 { sum += pull * place[m + 1]; }
+            if next[m] & 2 != 0 { sum += pull * place[m + nx]; }
+            if next[m] & 4 != 0 { sum += pull * place[m - 1]; }
+            if next[m] & 8 != 0 { sum += pull * place[m - nx]; }
         }
+        let was = place[m];
+        place[m] = was + OMEGA * (sum / den[m] - was);
+    };
+    for _ in 0..rounds {
+        (0..n).for_each(&mut settle);
     }
 }
 
@@ -766,9 +775,33 @@ pub fn step(g: usize, w: &World, st: &mut [f64; LEN], nbx: usize, nbz: usize, k:
     }
     levels(c, w, st, new, LEVELS[young as usize], open_air(&k.sky), tune);
 }
-/// what a tick between two steps makes ahead, in lines followed (a metre looked through counts as some)
+/// what a tick between two steps makes ahead, in lines followed (a metre looked through counts as some, and one asked of its neighbours)
 const AHEAD: usize = 350;
 const LOOK: usize = 6;
+/// Some of the table, the metres from `at` on and round: their lines, and with `join` which of them are one place, till `most` lines have been followed. → is it whole
+fn some(c: &mut Cast, w: &World, at: usize, most: usize, join_too: bool, tune: &Knobs) -> bool {
+    let (nx, n, mut done) = (c.marks.nx, c.marks.nx * c.marks.nz, 0);
+    for k in 0..n {
+        let m = (at + k) % n;
+        let joins = join_too && c.joined[m] == 0;
+        let lines = c.traced[m] != c.marks.now && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune);
+        if !joins && !lines {
+            continue;
+        }
+        if done >= most {
+            return false;
+        }
+        if joins {
+            join(c, w, m, tune);
+            done += LOOK;
+        }
+        if lines {
+            done += LOOK + cast(c, w, m, tune);
+        }
+    }
+    c.made = c.marks.now;
+    true
+}
 /// BETWEEN STEPS, some of what the next ones will want, in the order they come by: a static that is written is paid for over the ticks until then. No state is
 /// in it: a step finds what was made, or makes it.
 pub fn ahead(g: usize, w: &World, st: &[f64; LEN], nbx: usize, nbz: usize, tune: &Knobs) {
@@ -778,35 +811,16 @@ pub fn ahead(g: usize, w: &World, st: &[f64; LEN], nbx: usize, nbz: usize, tune:
         return;
     }
     let c = fresh(g, w, nx, nz, None);
-    if c.made == c.marks.now {
-        return;
+    if c.made != c.marks.now {
+        let at = if st[O_GLOW_AT] >= 0.0 && st[O_GLOW_AT] < n as f64 { st[O_GLOW_AT] as usize } else { 0 };
+        some(c, w, at, AHEAD, false, tune);
     }
-    let (at, mut done) = (if st[O_GLOW_AT] >= 0.0 && st[O_GLOW_AT] < n as f64 { st[O_GLOW_AT] as usize } else { 0 }, 0);
-    for k in 0..n {
-        let m = (at + k) % n;
-        if c.traced[m] != c.marks.now && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
-            done += LOOK + cast(c, w, m, tune);
-            if done >= AHEAD {
-                return;
-            }
-        }
-    }
-    c.made = c.marks.now;
 }
-/// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands: the lines of every metre under a roof and which metres are one place. No state is in it: a step that finds it
-/// wanting makes what it wants.
-pub fn ready(g: usize, w: &World, nbx: usize, nbz: usize, to_sun: [f64; 3], tune: &Knobs) {
+/// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands, `most` lines of it: those of the metres under a roof, and which metres are one place. No state is in it: a step that
+/// finds it wanting makes what it wants. → is it whole
+pub fn ready(g: usize, w: &World, nbx: usize, nbz: usize, to_sun: [f64; 3], most: usize, tune: &Knobs) -> bool {
     let (nx, nz) = (nbx * PER, nbz * PER);
-    if nx * nz == 0 || nx * nz > MAX_GLOW {
-        return;
-    }
-    let c = fresh(g, w, nx, nz, Some(to_sun));
-    for m in 0..nx * nz {
-        join(c, w, m, tune);
-        if roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
-            cast(c, w, m, tune);
-        }
-    }
+    nx * nz == 0 || nx * nz > MAX_GLOW || some(fresh(g, w, nx, nz, Some(to_sun)), w, 0, most, true, tune)
 }
 /// what is said of a metre: the mean of the six faces, the best of them, and how light the place it is in is
 #[derive(Clone, Copy, Debug)]

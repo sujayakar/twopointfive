@@ -247,7 +247,7 @@ async fn deed(b: &Bot, id: &str) {
             if !b.until(|| !b.up(h), 3.0).await { b.fail(format!("the sponge round did not put the hall's man out ({:?}, aware {:.2})", b.state(h), b.awareness(h))).await; }
             b.wait(1.5).await;
             if trips(b) > t0 { b.fail(String::from("the ring broke the chest beam")).await; }
-            let ko = b.ask(|g| g.chronicle.events.iter().any(|e| e.kind == game::chronicle::ChronKind::Ko && matches!(e.data.get(String::from("method")), Some(Some(game::chronicle::ChronEventDataValue::Text(m))) if m == "ring")));
+            let ko = b.ask(|g| g.chronicle.events.iter().any(|e| e.kind == game::chronicle::ChronKind::Ko && matches!(e.data.of("method"), Some(Some(game::chronicle::ChronEventDataValue::Text(m))) if m == "ring")));
             if !ko { b.fail(String::from("the hall's man is down and the night's record has no man put out by a ring")).await; }
             if b.sightings() > n0 { b.fail(String::from("the shift had eyes on him at the shot")).await; }
             let stirred: Vec<String> = b.men().into_iter().filter(|&x| b.up(x) && b.state(x) != GuardState::Patrol).map(|x| format!("{} {:?}", b.called(x), b.state(x))).collect();

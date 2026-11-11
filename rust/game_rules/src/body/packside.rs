@@ -18,7 +18,7 @@ pub fn back_of(art: &crate::anim_gltf::Art, rig: &crate::anim_gltf::GltfCharacte
     let cast = &art.cast[rig.cast?];
     let md = &art.mesh[rig.mesh];
     let part = md.part.as_ref()?;
-    let node = rig.node_by_name.get(String::from("DEF-spine.003")).copied()?;
+    let node = rig.node_by_name.of("DEF-spine.003").copied()?;
     let chest = rig.skin.joints.iter().position(|j| *j == node)?;
     let at = |v: usize| -> V3 { let p = &md.positions; [p[v * 3] as f64, p[v * 3 + 1] as f64, p[v * 3 + 2] as f64] };
     let mut packs: Vec<Option<PackExt>> = cast.parts.iter().map(|name| name.starts_with("kit_").then_some(PackExt { x0: m::INF, x1: -m::INF, top0: -m::INF, top1: -m::INF, z0: m::INF, z1: -m::INF })).collect();
@@ -59,7 +59,8 @@ pub fn back_of(art: &crate::anim_gltf::Art, rig: &crate::anim_gltf::GltfCharacte
         let j = joint(v * 4 + b);
         if trunk.get(j).copied().unwrap_or(false) { line.push(BackPt { j, x, y, z }); }
     }
-    Some(Back { chest, packs, kit, ram: bit_of(&cast.parts, "kit_breacher"), pack: bit_of(&cast.parts, "kit_rifleman"), line })
+    let ends = [back_line(&line, -REACH), back_line(&line, REACH)];
+    Some(Back { chest, packs, kit, ram: bit_of(&cast.parts, "kit_breacher"), pack: bit_of(&cast.parts, "kit_rifleman"), line, ends })
 }
 /// The pack a man drawn with this part mask wears on his back; None with no cast, or none worn.
 pub fn pack_of(g: &Game, ch: RigId, mask: f64) -> Option<PackExt> {
@@ -90,33 +91,35 @@ pub fn side_bind(g: &Game, e: PackExt, what: crate::rig_props::PackSideWhat, dim
     SidePlace { o: [x, t.butt - dims.rear.unwrap_or(0.3), t.gun - dims.top.unwrap_or(0.02)], x: [1.0, 0.0, 0.0], y: [0.0, 0.0, 1.0], z: [0.0, -1.0, 0.0], pivot: Some([x, t.butt, t.gun]), len: Some(dims.len.unwrap_or(0.8)), r: Some(0.0) }
 }
 /// His back's line under a lateral strip at bind x: the hindmost point of each band up it.
-fn back_line(back: &Back, x: f64) -> [Option<BackPt>; BANDS] {
-    let xc = m::max(-REACH, m::min(REACH, x));
+fn back_line(line: &[BackPt], xc: f64) -> Vec<BackPt> {
     let mut bands = [None::<BackPt>; BANDS];
-    for p in back.line.iter().filter(|p| m::abs(p.x - xc) <= HALF) {
+    for p in line.iter().filter(|p| m::abs(p.x - xc) <= HALF) {
         let had = &mut bands[m::floor(p.y / BAND) as usize];
         if had.is_none_or(|h| p.z < h.z) { *had = Some(*p); }
     }
-    bands
+    bands.into_iter().flatten().collect()
 }
 /// How far a thing at a pack's side turns about its top end to lie along his back as posed.
 pub fn side_pitch(g: &Game, p: SidePlace, c: CharId) -> f64 {
     let t = g.k.packside;
     let (Some(back), Some(pivot)) = (g.art.rig[g.ch[c].rig].back.as_ref(), p.pivot) else { return 0.0 };
-    let a = back.chest * 16;
     let len = p.len.unwrap_or(0.8);
     let r = p.r.unwrap_or(0.0) + t.rest;
     let mut th = t.pitch1;
-    let jd = &g.ch[c].skel.joint_data;
-    let d = |i: usize| jd[i] as f64;
-    for q in back_line(back, pivot[0]).into_iter().flatten() {
-        let b = q.j * 16;
+    let skin = |j: usize| crate::anim_skeleton::skeleton_instance_joint(g, &g.ch[c].skel, j).map(f64::from);
+    let chest = skin(back.chest);
+    let mut of = (back.chest, chest);
+    let own;
+    let strip: &[BackPt] = if pivot[0] <= -REACH { &back.ends[0] } else if pivot[0] >= REACH { &back.ends[1] } else { own = back_line(&back.line, pivot[0]); &own };
+    for q in strip {
+        if q.j != of.0 { of = (q.j, skin(q.j)); }
+        let (d, a) = (&of.1, &chest);
         let x = pivot[0];
-        let wx = d(b) * x + d(b + 4) * q.y + d(b + 8) * q.z + d(b + 12) - d(a + 12);
-        let wy = d(b + 1) * x + d(b + 5) * q.y + d(b + 9) * q.z + d(b + 13) - d(a + 13);
-        let wz = d(b + 2) * x + d(b + 6) * q.y + d(b + 10) * q.z + d(b + 14) - d(a + 14);
-        let yy = d(a + 4) * wx + d(a + 5) * wy + d(a + 6) * wz - pivot[1];
-        let zz = d(a + 8) * wx + d(a + 9) * wy + d(a + 10) * wz - pivot[2];
+        let wx = d[0] * x + d[4] * q.y + d[8] * q.z + d[12] - a[12];
+        let wy = d[1] * x + d[5] * q.y + d[9] * q.z + d[13] - a[13];
+        let wz = d[2] * x + d[6] * q.y + d[10] * q.z + d[14] - a[14];
+        let yy = a[4] * wx + a[5] * wy + a[6] * wz - pivot[1];
+        let zz = a[8] * wx + a[9] * wy + a[10] * wz - pivot[2];
         let rho = m::hyp2(yy, zz);
         if yy > -0.06 || rho > len + 0.04 || rho < r { continue; }
         th = m::min(th, m::atan2(zz, -yy) - m::asin(r / rho));

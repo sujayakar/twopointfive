@@ -11,6 +11,7 @@
 //!   face_draw_as(h, bared, tube)       a viewer's own picture of a run (Drawn::view_as); from the first call the game keeps what such a picture is made from, tick by tick
 //!   face_draw_hold(h)                  a tick of the host's in which the game was not stepped: what moves stands where the last tick left it
 //!   face_draw_cut(h)                   the picture goes on from where the game stands now, and blends from nothing before it (ticks were stepped that were not drawn)
+//!   face_traffic(h)                    the floors' traffic map at face_out (game_draw::traffic), worked out as it is asked: once, as a level opens
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 
@@ -55,6 +56,11 @@ pub extern "C" fn face_draw_as(h: u32, bared: u32, tube: u32) {
 pub extern "C" fn face_draw_hold(h: u32) { super::with(h, |x| x.drawn.hold()); }
 #[no_mangle]
 pub extern "C" fn face_draw_cut(h: u32) { super::with(h, |x| x.drawn.cut()); }
+#[no_mangle]
+pub extern "C" fn face_traffic(h: u32) {
+    let b = super::with_ref(h, |x| game_draw::traffic::map(&x.g));
+    super::out(b);
+}
 #[no_mangle]
 pub extern "C" fn face_draw_name(h: u32, i: usize) {
     let b = super::with(h, |k| k.drawn.events.names.get(i).cloned().unwrap_or_default());

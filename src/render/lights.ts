@@ -97,13 +97,8 @@ export const MAX_LIGHTS = 64;
 export const SLOT_SAME = 64;
 const NO_LIGHTS: readonly RtLight[] = [];
 if (MAX_LIGHTS > 64) throw new Error('lights: MAX_LIGHTS > 64 — volumetrics.wgsl keeps its per-ray beam selection in a 64-bit mask (selLo/selHi); widen it first; and restir.wgsl reads a slot in six bits of a byte (slotInv)');   // (a WGSL shift by k ≥ 32 wraps: light 70 would alias light 38)
-/** The per-light reach rows (reach.ts) ride in ONE uniform binding (scene group binding 12, `array<vec4u, REACH_VEC4S>` in common.wgsl — a uniform,
- *  not a seventh scene storage buffer, so every pipeline stays inside the WebGPU default of 8 storage buffers per stage): MAX_LIGHTS rows ×
- *  REACH_ROW_WORDS u32. That caps the block at maxUniformBufferBindingSize's default (64 KB) and needs a 16-byte multiple (vec4u stride) —
- *  64 × 70 × 4 = 17920 B today; the LightSet constructor refuses anything else so a grid resize / MAX_LIGHTS bump cannot silently break it. */
+/** The per-light reach rows (reach.ts) ride in one storage binding (scene group binding 12): MAX_LIGHTS rows × REACH_ROW_WORDS u32 */
 export const REACH_BYTES = MAX_LIGHTS * REACH_ROW_WORDS * 4;
-/** vec4u elements of that uniform array (frame.ts injects it into the scene prelude as REACH_VEC4S) */
-export const REACH_VEC4S = REACH_BYTES / 16;
 
 /** Torch bounce cards: the light SLOTS (this frame's upload) whose footprint cards.wgsl should build — every uploaded, steady, spot-kind `card` light,
  *  the `max` nearest `target` (the view's look-at point on the floor) first if there are more. Pure; engine.render calls it after upload(). */
@@ -130,7 +125,7 @@ function sameWords(a: Int32Array, b: Int32Array, n: number, at = 0, bt = 0): boo
 export class LightSet {
   lights: RtLight[] = [];
   buf: GPUBuffer;
-  /** per uploaded light slot, its reach mask row (reach.ts) — binding 12 of the scene group, a REACH_BYTES uniform block */
+  /** per uploaded light slot, its reach mask row (reach.ts) — binding 12 of the scene group */
   reachBuf: GPUBuffer;
   private reachData = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS);
   /** the reach buffer's rows as last written, word for word (upload writes the live rows only when they differ from this) */
@@ -169,8 +164,7 @@ export class LightSet {
 
   constructor(private device: GPUDevice) {
     this.buf = makeBuffer(device, MAX_LIGHTS * 64, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lights');
-    if (REACH_BYTES > 65536 || REACH_BYTES % 16 !== 0) throw new Error(`lightReach uniform block: MAX_LIGHTS ${MAX_LIGHTS} × REACH_ROW_WORDS ${REACH_ROW_WORDS} × 4 = ${REACH_BYTES} bytes — it must stay ≤ 65536 (the default maxUniformBufferBindingSize) and a multiple of 16 (array<vec4u> stride); shrink the reach grid (scene/world.ts gridW·gridH → render/reach.ts) or MAX_LIGHTS (render/lights.ts)`);
-    this.reachBuf = makeBuffer(device, REACH_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lightReach');   // (bindable either way: frame.ts reachBinding picks the layout)
+    this.reachBuf = makeBuffer(device, REACH_BYTES, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lightReach');
     this.reachData.fill(0xffffffff); device.queue.writeBuffer(this.reachBuf, 0, this.reachData);
   }
 

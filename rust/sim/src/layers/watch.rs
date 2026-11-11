@@ -3,12 +3,12 @@ use super::*;
 
 /// He gives a man room as he passes, the body's share: by how near the man is the pelvis comes lower and off his side over feet left where they were,
 /// and the trunk tips away from him with the head brought level back out of it.
-pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> u32 {
+pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> bool {
     let (at, slip_k, crouch, slip_lean, wt) = (an.p_a.at as usize, an.slip_k, an.crouch, an.slip_lean, &mut an.wt);
     let (there, m) = (there.is_some(), there.unwrap_or([0.0; 3]));
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let s_want = if there { clamp(slip_k, 0.0, 1.0) * free * clamp(crouch, 0.0, 1.0) } else { 0.0 };
         wt.sw = if abs(s_want - wt.sw) < 0.003 { s_want } else { damp(wt.sw, s_want, tune.watch.slip_rate, dt) };
@@ -24,7 +24,6 @@ pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             let lw = clamp(slip_lean, 0.0, 1.0);
             wt.sl = if abs(lw - wt.sl) < 0.003 { lw } else { damp(wt.sl, lw, tune.watch.slip_rate, dt) };
         }
-        let mut ran = RAN;
         let (sw, sx, sl) = (wt.sw, wt.sx, wt.sl);
         if sw > 0.003 {
             let kk = sw * sw * (3.0 - 2.0 * sw);
@@ -36,7 +35,6 @@ pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             fk.part(rig, d, list(FK_LEGS));
             two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &f_l, Some(&knee_pole(&r_l)), 0.0, Some(&r_l), false);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &f_r, Some(&knee_pole(&r_r)), 0.0, Some(&r_r), true);
-            ran |= RAN_ALL;
             let roll = sx * tune.watch.lean * DEGR * kl;
             turn(d, rig, role(SPINE1), q_roll(roll * 0.4));
             turn(d, rig, role(SPINE2), q_roll(roll * 0.35));
@@ -44,26 +42,24 @@ pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             turn(d, rig, role(NECK), q_roll(-roll * 0.4));
             turn(d, rig, role(HEAD), q_roll(-roll * 0.6));
         }
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// He watches a man: the head goes to the point (the chest a little, the neck, the head), within what a neck does of the chest's line; the angle follows
 /// the point, and the whole comes and goes by its weight.
-pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> u32 {
+pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> bool {
     let (at, watch_k, gaze_local, wt) = (an.p_a.at as usize, an.watch_k, an.gaze_local, &mut an.wt);
     let (there, m) = (there.is_some(), there.unwrap_or([0.0; 3]));
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &[SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let (s3, nk, hd) = (role(SPINE3), role(NECK), role(HEAD));
         let w_want = if there { clamp(watch_k, 0.0, 1.0) * free } else { 0.0 };
         wt.w = if abs(w_want - wt.w) < 0.003 { w_want } else { damp(wt.w, w_want, tune.watch.w_rate, dt) };
-        let mut ran = RAN;
         if there && w_want > 0.0 {
             fk_run(rig, d, fk.rot, fk.pos);
-            ran |= RAN_ALL;
             let hr = fk.rot(hd);
             let gaze = quat::rotate(hr, gaze_local);
             let eyes = v3::mad(v3::mad(fk.at(hd), quat::rotate(hr, AY), 0.1), gaze, 0.08);
@@ -89,33 +85,33 @@ pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             turn(d, rig, nk, quat::mul(q_yaw(yw * sh1), q_pitch(pw * sh1 / rest)));
             turn(d, rig, hd, quat::mul(q_yaw(yw * sh2), q_pitch(pw * sh2 / rest)));
         }
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The slip's arm: the one on the man's side goes out low toward him, the hand open. Solved on the scratch pose at `at_b` and laid back through that
 /// shoulder's mask.
-pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32 {
+pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> bool {
     let (at, at_b, _) = poses(an);
     let (t, f) = (an.wt, &an.hand_fix);
     let (sw, sl, left, sx, sz, fix) = (t.sw, t.sl, t.side == 0.0, t.sx, t.sz, [f[0], f[1]]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     if !(sw > 0.003) {
-        return RAN;
+        return true;
     }
     let kl = sw * sw * (3.0 - 2.0 * sw) * sl;
     let sgn = if left { 1.0 } else { -1.0 };
     let w_arm = (if left { wl } else { wr }) * kl * tune.watch.arm_w * smoothstep(tune.watch.arm_side[0], tune.watch.arm_side[1], sgn * sx);
     if !(w_arm > 0.003) {
-        return RAN;
+        return true;
     }
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let side = if left { 0 } else { 1 };
     let fix = fix[side];
@@ -131,8 +127,8 @@ pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32
     });
     ask_mask(&[(sh_n, w_arm, true)]);
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }

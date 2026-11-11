@@ -7,12 +7,12 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// a row's digit, the same on every gun
 fn row_digit(kind: SetupKind) -> f64 {
-    *row_key().get(String::from(kind.as_str())).unwrap()
+    *row_key().of(kind.as_str()).unwrap()
 }
 
 /// a gun's own digit
 fn slot_digit(gun: SetupGun) -> i32 {
-    *slot_key().get(String::from(gun.as_str())).unwrap() as i32
+    slot_key(gun) as i32
 }
 
 /// the key's code of a digit (`Digit${d}`)

@@ -69,7 +69,8 @@ impl Him {
 pub(super) fn build_interactables(g: &mut Game) {
     let h = Him::of(g);
     let mut o = Offers::default();
-    things::lamps(g, &mut o);
+    let old = core::mem::take(&mut g.sets[g.seat].interactables);
+    things::lamps(g, &mut o, old);
     let rows = if crate::condition::down(g, g.pl[h.pl].ch) { Vec::new() }
         else if g.pl[h.pl].holding().is_some() { men::held(g, &mut o, h) }
         else { around(g, &mut o, h) };
@@ -150,8 +151,7 @@ fn listed(g: &mut Game, o: &mut Offers, h: Him) -> Vec<Interactable> {
 /// The rows of the things in reach, the thing that matters most first. A tutorial offers only the rows its steps teach: a thing left with none is marked.
 fn in_order(g: &Game, o: &mut Offers, p: V3) -> Vec<Interactable> {
     let Offers { list, things } = o;
-    let rank = interact_priority();
-    let key = |at: usize| { let it = &list[at]; ([!it.in_reach as i32 as f64, *rank.get(String::from(it.kind.as_str())).unwrap()], thing_dist(g, it, p)) };
+    let key = |at: usize| { let it = &list[at]; ([!it.in_reach as i32 as f64, interact_rank(it.kind)], thing_dist(g, it, p)) };
     js::sort_by(things, |a, b| { let (a, b) = (key(a.0), key(b.0)); js::or(js::or(a.0[0] - b.0[0], a.0[1] - b.0[1]), a.1 - b.1) });
     let mut rows = Vec::new();
     for (at, its) in things.iter() {

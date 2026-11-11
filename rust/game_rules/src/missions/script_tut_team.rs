@@ -61,7 +61,7 @@ fn zones() -> Vec<TutTeamZone> {
 
 /// c.flag[name] === true (a flag of this script is only ever written true, so its truthy tests read the same)
 fn flag(g: &Game, r: DirectorRunId, name: &str) -> bool {
-    matches!(g.tab.director_run[r].flags.get(String::from(name)), Some(Some(crate::director::Json::Bool(true))))
+    matches!(g.tab.director_run[r].flags.of(name), Some(Some(crate::director::Json::Bool(true))))
 }
 /// the four flags a beat that starts clean from a checkpoint sets, in the script's order
 fn set_all_flags(g: &mut Game, r: DirectorRunId) {

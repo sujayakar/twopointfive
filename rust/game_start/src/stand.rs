@@ -53,8 +53,11 @@ pub struct StartOpts {
     pub dress: bool,
     /// a mission that the address's words ask for and the game refuses is said (`Stood.refused`) and is no stop: for whoever holds the refusals themselves to something (the gate)
     pub may_refuse: bool,
+    /// what the light under the roofs is worked out from is made by the stand. Down: a host that has something else to wait for makes it in slices (game_rules `light_ready`), and a step that
+    /// comes first makes what it wants
+    pub ready: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false, ready: true } } }
 
 pub use game::standing::Host;
 
@@ -146,8 +149,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
         }
     }
     if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
-    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
-    game::scene_collision::light_ready(&mut g);
+    if o.ready { game::scene_collision::light_ready(&g, usize::MAX); }
     let host = host_of(&g).expect("the men's lines make the host's rows");
     game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)
     Stood { game: g, host, level: loaded, rig, refused: why }

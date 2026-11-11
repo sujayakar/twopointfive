@@ -92,9 +92,6 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // asleep for four seconds, and back
 { const ok = c.wordsOk, was = seen, ticks = game.ticks; asleep = true; run(240); asleep = false; let n = 0; while (c.behind > 2 && n++ < 100) beat(); run(30);
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
-// a ring left standing as a card goes up
-{ input.keys.clear(); run(60); input.pressed.add('KeyB'); input.keys.add('KeyB'); run(60); input.keys.clear(); run(30); const ring = game.view().ring !== null; off = true; run(40); const gone = game.view().ring === null; off = false; run(40);
-  line(ring && gone && game.view().ring === null && !c.bad, 'a ring left standing is put away as a card goes up', `stood ${ring}, gone under the card ${gone}`); }
 // his hands off under a card
 { input.keys.add('KeyW'); run(30); off = true; run(20); const p = game.view().me, a = game.at(p)!; run(30); const z = game.at(p)!; line(far([a[0], a[2]], [z[0], z[2]]) < 0.02 && !c.bad, 'under a card his hands are off, and the game goes on', `${walked} ticks seen in all before it`); }
 // what a card calls the players

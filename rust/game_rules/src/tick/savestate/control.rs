@@ -407,7 +407,7 @@ pub fn restart(g: &mut Game) -> bool {
     was.write_under(g);
     // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
     let _ = crate::standing::stand_men(g, &first.men);
-    crate::scene_collision::light_ready(g);
+    crate::scene_collision::light_ready(g, usize::MAX);
     was.write_over(g);
     g.mission.serial = g.serial();
     assert!((g.host_cam, g.host_input) == host, "the men's lines made the host's rows elsewhere than the first time");
@@ -436,7 +436,7 @@ pub fn again(g: &mut Game, size: Option<u32>) -> bool {
     let mut men = first.men.clone();
     if let (Some(n), Some(q)) = (size, men.words.as_mut()) { q.set("squad", &alloc::format!("{n}")); }
     let _ = crate::standing::stand_men(g, &men);
-    crate::scene_collision::light_ready(g);
+    crate::scene_collision::light_ready(g, usize::MAX);
     g.kit_stage = Some(alloc::boxed::Box::new((*stage).clone()));
     true
 }
@@ -531,7 +531,7 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     }
     g.sets[g.seat].hand.setup = None;
     crate::orders::squad_orders_let_go(g);
-    let label = was.saves.shelf.m.get(String::from(key)).map(|e| e.info.label.clone()).unwrap_or_default();
+    let label = was.saves.shelf.m.of(key).map(|e| e.info.label.clone()).unwrap_or_default();
     g.saves.shelf = was.saves.shelf;
     g.saves.stats = was.saves.stats;
     g.saves.enabled = was.saves.enabled;

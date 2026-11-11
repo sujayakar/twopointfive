@@ -151,7 +151,7 @@ fn report_goes_on_the_radio(g: &mut Game, p: &crate::civilians::Pending, civ: Ci
     let o = match p.o { Some(o) if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].held.is_none() => o, _ => return };
     let lines = crate::dialogue::civ_lines();
     let key = String::from(p.key.as_deref().unwrap_or("someone"));
-    let line = match lines.guard_radio.get(key) { Some(t) => t.clone(), None => lines.guard_radio.get(String::from("someone")).unwrap().clone() };
+    let line = match lines.guard_radio.get(key) { Some(t) => t.clone(), None => lines.guard_radio.of("someone").unwrap().clone() };
     let text = fill(g, cv, &line, Some(o));
     crate::guards::say(g, o, &text, Some(true), None);
     let oc = g.gd[o].ch;
@@ -172,7 +172,7 @@ fn outside_call(g: &mut Game, cv: GuardId, civ: CivId) {
     let aw = away(g);
     let lines = crate::dialogue::civ_lines();
     let table = if aw { &lines.guide.own.control } else { &lines.guide.control };
-    let line = table.get(String::from("outside")).unwrap().clone();
+    let line = table.of("outside").unwrap().clone();
     control(g, cv, &line);
     let sent = crate::devices::send_to_look(g, pos);
     if g.cv[civ].armed { later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv, o: sent, ..Default::default() }); }
@@ -224,9 +224,9 @@ pub(super) fn away(g: &crate::game::Game) -> bool { !crate::dialogue::is_office(
 /// What she tells the man she reaches, by cause.
 pub(super) fn report_pool(cause: Option<&str>) -> Vec<String> {
     let lines = crate::dialogue::civ_lines();
-    let k = match cause { Some(c) if lines.report.has(String::from(c)) => c, _ => "sam" };
-    let was = lines.report.get(String::from(k));
-    match lines.guide.report.get(String::from(k)).or(was) { Some(p) => p.clone(), None => Vec::new() }
+    let k = match cause { Some(c) if lines.report.holds(c) => c, _ => "sam" };
+    let was = lines.report.of(k);
+    match lines.guide.report.of(k).or(was) { Some(p) => p.clone(), None => Vec::new() }
 }
 
 /// A pool without its shouts for 'security' where there is no such desk.
@@ -606,7 +606,7 @@ pub fn civilian_seated(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// `TASK_CLIP[task]`: the whole-figure clip a task plays, and how long it takes to get up out of it.
 fn clip_of(task: crate::scene_level::CivilianTask) -> Option<TASKCLIPValue> {
-    crate::civilians::task_clip().get(String::from(task.as_str())).cloned().flatten()
+    crate::civilians::task_clip().of(task.as_str()).cloned().flatten()
 }
 /// `C.def.face?.[gd.wp]`
 fn face_at(g: &Game, cv: CivId, wp: usize) -> Option<f64> { g.cv[cv].def.face.as_ref().and_then(|f| f.get(wp).copied()) }
@@ -859,7 +859,7 @@ pub fn to_alarmed(g: &mut crate::game::Game, gd: GuardId, cause: crate::civilian
     crate::mind::raise(g, gd, if saw_him { 1.0 } else { 0.5 }, "civilians");
     set_state(g, gd, CivState::Alarmed);
     let lines = crate::dialogue::civ_lines();
-    let pool = match lines.gasp.get(String::from(cause.as_str())) { Some(p) => p, None => lines.gasp.get(String::from("sam")).unwrap() };
+    let pool = match lines.gasp.of(cause.as_str()) { Some(p) => p, None => lines.gasp.of("sam").unwrap() };
     let s = pick(g, gd, pool);
     scream(g, gd, Some(&s));
 }

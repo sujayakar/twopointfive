@@ -81,16 +81,7 @@ pub fn wrist_tie_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried) {
     let z = v3::normalize(v3::cross(x, y));
     y = v3::cross(z, x);
     let owner = owner_of(g, c_2);
-    out.put(&crate::scene_boxes::MakeBoxP {
-        c: v3::scale(v3::add(a, b), 0.5),
-        h: [l / 2.0 + 0.048, 0.026, 0.045],
-        yaw: Some(m::atan2(z[0], z[2])),
-        rot: Some(v3::quat::from_basis(x, y, z)),
-        albedo: Some([0.6, 0.59, 0.55]),
-        flags: Some(crate::rig_props::PROP_FLAGS),
-        owner: Some(owner),
-        ..Default::default()
-    });
+    out.part(Part { owner, c: v3::scale(v3::add(a, b), 0.5), h: [l / 2.0 + 0.048, 0.026, 0.045], axes: [x, y, z], albedo: [0.6, 0.59, 0.55], emissive: no_glow(), flags: crate::rig_props::PROP_FLAGS, stuff: None });
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
@@ -107,22 +98,9 @@ pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_p
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
     let len = m::max(0.001, (s.l1 - s.l0) / 2.0);
     let lit = emissive[0] + emissive[1] + emissive[2] > 0.0;
-    let yaw = m::atan2(dir[0], dir[2]);
-    let rot = v3::quat::from_basis(f.x, f.y, f.z);
     let stuff = crate::scene_stuff::paint_of(g, Some(&albedo[..])).and_then(|p| p.stuff);
     let owner = out.owner;
-    out.put(&crate::scene_boxes::MakeBoxP {
-        c: mid,
-        h: [s.thick, s.tall, len],
-        yaw: Some(yaw),
-        albedo: Some(albedo),
-        emissive: Some([emissive[0], emissive[1], emissive[2]]),
-        flags: Some(if lit { crate::rig_props::GLOW_FLAGS } else { crate::rig_props::PROP_FLAGS }),
-        owner: Some(owner),
-        rot: Some(rot),
-        stuff,
-        ..Default::default()
-    });
+    out.part(Part { owner, c: mid, h: [s.thick, s.tall, len], axes: [f.x, f.y, f.z], albedo, emissive, flags: if lit { crate::rig_props::GLOW_FLAGS } else { crate::rig_props::PROP_FLAGS }, stuff });
 }
 
 /// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down.
@@ -166,19 +144,15 @@ pub fn goggles_boxes(g: &crate::game::Game, c_2: CharId, nv: bool, out: &mut Car
     let t = g_2.tubes;
     let col = crate::rig_props::col();
     let at = |f: Frame, p: V3| -> V3 { v3::mad(v3::mad(v3::mad(f.o, f.x, p[0]), f.y, p[1]), f.z, p[2]) };
-    let part = |out: &mut Carried, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, rot: Quat| out.put(&crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), emissive: Some([0.0, 0.0, 0.0]), flags: Some(flags), owner: Some(owner), rot: Some(rot), ..Default::default() });
+    let part = |out: &mut Carried, c: V3, h: V3, f: Frame, albedo: V3, flags: f64| out.part(Part { owner, c, h, axes: [f.x, f.y, f.z], albedo, emissive: no_glow(), flags, stuff: None });
     let hs = apply_adj(cl, g_2.housing_adj);
-    let rot_h = v3::quat::from_basis(hs.x, hs.y, hs.z);
-    let yaw_h = m::atan2(hs.z[0], hs.z[2]);
     for (part_at, part_half) in [(t.bridge.at, t.bridge.half), (t.arm.at, t.arm.half)] {
-        part(out, at(hs, part_at), part_half, yaw_h, col.goggles_housing, crate::rig_props::PROP_FLAGS, rot_h);
+        part(out, at(hs, part_at), part_half, hs, col.goggles_housing, crate::rig_props::PROP_FLAGS);
     }
     let ln = apply_adj(cl, g_2.lens_adj);
-    let rot_l = v3::quat::from_basis(ln.x, ln.y, ln.z);
-    let yaw_l = m::atan2(ln.z[0], ln.z[2]);
     for sx in [-t.side, t.side] {
-        part(out, at(ln, [sx, t.down, (t.front - t.back) / 2.0]), [t.half, t.half, (t.front + t.back) / 2.0], yaw_l, col.goggles_housing, crate::rig_props::PROP_FLAGS, rot_l);
-        part(out, at(ln, [sx, t.down, t.front + t.glass]), [t.half * 0.8, t.half * 0.8, t.glass], yaw_l, col.dark_glass, crate::rig_props::GLOW_FLAGS, rot_l);
+        part(out, at(ln, [sx, t.down, (t.front - t.back) / 2.0]), [t.half, t.half, (t.front + t.back) / 2.0], ln, col.goggles_housing, crate::rig_props::PROP_FLAGS);
+        part(out, at(ln, [sx, t.down, t.front + t.glass]), [t.half * 0.8, t.half * 0.8, t.glass], ln, col.dark_glass, crate::rig_props::GLOW_FLAGS);
     }
 }
 

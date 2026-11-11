@@ -488,12 +488,16 @@ fn normal_of(r: &Row) -> [f64; 3] {
 }
 /// The nearest point of a box (yawed, no more) to p
 #[inline]
-fn nearest_on(b: &[f64], p: [f64; 3]) -> [f64; 3] {
+fn nearest_on(b: &[f64], p: [f64; 3]) -> [f64; 3] { nearest_within(b, p, 1.0) }
+/// …on the box drawn in about its middle to `of` of its size
+#[inline]
+fn nearest_within(b: &[f64], p: [f64; 3], of: f64) -> [f64; 3] {
     let (cs, sn) = (b[R_COS], b[R_SIN]);
     let (px, pz) = (p[0] - b[R_C], p[2] - b[R_C + 2]);
-    let lx = js_max(-b[R_H], js_min(b[R_H], cs * px - sn * pz));
-    let lz = js_max(-b[R_H + 2], js_min(b[R_H + 2], sn * px + cs * pz));
-    let ly = js_max(-b[R_H + 1], js_min(b[R_H + 1], p[1] - b[R_C + 1]));
+    let (h0, h1, h2) = (of * b[R_H], of * b[R_H + 1], of * b[R_H + 2]);
+    let lx = js_max(-h0, js_min(h0, cs * px - sn * pz));
+    let lz = js_max(-h2, js_min(h2, sn * px + cs * pz));
+    let ly = js_max(-h1, js_min(h1, p[1] - b[R_C + 1]));
     [b[R_C] + cs * lx + sn * lz, b[R_C + 1] + ly, b[R_C + 2] - sn * lx + cs * lz]
 }
 #[inline]
@@ -1557,14 +1561,35 @@ pub fn blast_begin(c: &Ctx, at: [f64; 3]) -> Arrival {
     let p = pn(c.g);
     Arrival { seq, at: [p.bl[5 * i + 1], p.bl[5 * i + 2], p.bl[5 * i + 3]] }
 }
-/// glassbreak.ts blastIn over one sheet of the level. → it took the blow (blast()'s count of panes changed)
-pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64, tune: &Knobs) -> bool {
-    let bi = c.w.sheets[s].bi;
-    let q = nearest_on(rec(c.w, bi as usize), at);
-    let d = hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]);
-    if d > radius {
-        return false;
+/// WHERE A BLAST AT `at` MEETS PANE `bi`: the nearest point of the pane that it has a line to, of the nearest of its whole face and of the face drawn in (a sill
+/// or a jamb stands before the edge of most), its middle and four toward its corners. Walls and leaves are in its way; other glass is not (each pane is judged as
+/// if the others were not there). None = no line to a point of it within `radius`.
+pub fn blast_meets(w: &World, v: &Over, bi: usize, at: [f64; 3], radius: f64, tune: &Knobs) -> Option<[f64; 3]> {
+    let b = rec(w, bi);
+    let off = |p: [f64; 3]| hypot3(p[0] - at[0], p[1] - at[1], p[2] - at[2]);
+    if off(nearest_on(b, at)) > radius {
+        return None;
     }
+    let met = |p: [f64; 3], d: f64| d < 1e-4 || lines::blocked_over(w, v, at[0], at[1], at[2], p[0], p[1], p[2], d, 0.02, crate::world::F_GLASS, 0, tune) != -1;
+    let (cs, sn, long) = (b[R_COS], b[R_SIN], b[R_H] >= b[R_H + 2]);
+    let toward = |u: f64, y: f64| {
+        let (lx, lz) = if long { (u * b[R_H], 0.0) } else { (0.0, u * b[R_H + 2]) };
+        [b[R_C] + cs * lx + sn * lz, b[R_C + 1] + y * b[R_H + 1], b[R_C + 2] - sn * lx + cs * lz]
+    };
+    let faces = [1.0, 0.9, 0.75, 0.5].map(|of| nearest_within(b, at, of));
+    let spots = [(0.0, 0.0), (0.7, 0.7), (-0.7, 0.7), (0.7, -0.7), (-0.7, -0.7)].map(|(u, y)| toward(u, y));
+    let mut best: Option<([f64; 3], f64)> = None;
+    for p in faces.into_iter().chain(spots) {
+        let d = off(p);
+        if d <= radius && best.is_none_or(|(_, nearer)| d < nearer) && met(p, d) {
+            best = Some((p, d));
+        }
+    }
+    best.map(|(p, _)| p)
+}
+/// glassbreak.ts blastIn over one sheet it meets, at the point it meets it (`blast_meets`). → it took the blow (blast()'s count of panes changed)
+pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, (bi, q): (u32, [f64; 3]), at: [f64; 3], radius: f64, power: f64, who: f64, tune: &Knobs) -> bool {
+    let d = hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]);
     let kk = power * (1.0 - d / radius);
     if kk <= BLAST_MIN_K {
         return false;
@@ -1623,7 +1648,7 @@ pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius
     true
 }
 /// Stars toward the blast: glass.ts crackNear's construction (a hashed point on the face inside its frame by a tenth, pulled a third of the way to the
-/// nearest point `q`), those a blow of `prev` did not make.
+/// meeting point `q`), those a blow of `prev` did not make.
 fn stars_toward(r: &mut Row, twin_at: [f64; 3], q: [f64; 3], kk: f64, prev: f64, tune: &Knobs) {
     let web = r.ty == LAMINATED;
     let stars_of = |x: f64| if web { 3.0 } else { 1.0 + round_half_up(2.0 * js_min(1.0, x)) };
@@ -1646,7 +1671,7 @@ fn stars_toward(r: &mut Row, twin_at: [f64; 3], q: [f64; 3], kk: f64, prev: f64,
         add_site(r, pu, pv, 0.6 + kk, s, tune);
     }
 }
-/// Every piece within the blast's reach of its nearest point goes, the near ones first.
+/// Every piece within the blast's reach of where it meets the pane goes, the near ones first.
 fn pieces_go(c: &mut Ctx, ri: usize, at: [f64; 3], (qu, qv): (f64, f64), kk: f64, tune: &Knobs) {
     let reach = blast_reach(kk);
     let r = pn(c.g).row(ri);
@@ -1666,7 +1691,7 @@ fn pieces_go(c: &mut Ctx, ri: usize, at: [f64; 3], (qu, qv): (f64, f64), kk: f64
         queue(c, ri, f.fid, c.now + dd * 0.03, C_BLAST, at, kk);
     }
 }
-/// metres round a pane's nearest point to a blast of strength k within which its pieces are taken
+/// metres round where a blast of strength k meets a pane within which its pieces are taken
 #[inline]
 fn blast_reach(kk: f64) -> f64 {
     1.4 * kk + 0.15
@@ -1932,6 +1957,27 @@ pub fn open_sig(g: usize) -> i32 {
     }
     s
 }
+/// EVERY PANE THAT IS OPEN SOMEWHERE: its static, and a word of all that says where (what glass.rs `open` reads of its row with no burst's view in hand)
+pub fn open_panes(g: usize, mut each: impl FnMut(u32, u64)) {
+    let p = &state_read(g).panes;
+    if p.used == 0 {
+        return;
+    }
+    for ri in 0..p.n as usize {
+        let r = p.row_read(ri);
+        if r.n_open == 0 && !dicing(r) && !gone(r) {
+            continue;
+        }
+        let mut h = 0xcbf29ce484222325u64;
+        if !gone(r) {
+            for v in r.w[..GW_GOING].iter().map(|w| *w as u64).chain(r.d.iter().map(|d| d.to_bits())) {
+                h = (h ^ v).wrapping_mul(0x9e3779b97f4a7c15);
+                h ^= h >> 29;
+            }
+        }
+        each(r.w[0], h);
+    }
+}
 /// Is the point where a piece of static `bi` has fallen out
 pub fn open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> bool {
     let p = &state_read(g).panes;
@@ -1973,7 +2019,9 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knob
     if !thin(b) || !(radius > 0.0) || !(power > 0.0) {
         return false;
     }
-    let q = nearest_on(b, at);
+    let Some(&(_, q)) = o.view_met.iter().find(|m| m.0 == bi as u32) else {
+        return false;
+    };
     let kk = power * (1.0 - hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]) / radius);
     if kk < js_min(js_min(tune.glassbreak.blast_dice_k, tune.glassbreak.blast_sheet_k), if sure { tune.glassbreak.tooth_k } else { BLAST_MIN_K }) {
         return false;
@@ -2120,7 +2168,7 @@ pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
 }
 /// what bars a charge at `from` takes: every standing bar with a point of its length inside its reach and nothing solid between, each judged as if the others
 /// were not there. A static and the point each, ascending.
-pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, tune: &Knobs) -> Vec<(u32, [f64; 3])> {
+pub fn bars_blast(c: &Ctx, v: &Over, from: [f64; 3], reach: f64, statics: usize, tune: &Knobs) -> Vec<(u32, [f64; 3])> {
     let o = c.w;
     let mut near = [0u32; MAX_BARS];
     let mut n = 0usize;
@@ -2137,7 +2185,8 @@ pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, tune: &Kn
     if n == 0 {
         return Vec::new();
     }
-    let no_bars = Over { open: &near[..n], ..Over::with(true) };
+    let open: Vec<u32> = near[..n].iter().chain(v.open).copied().collect();
+    let no_bars = Over { open: &open, ..*v };
     let mut took = Vec::new();
     for i in 0..n {
         let bi = near[i] as usize;

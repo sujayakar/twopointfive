@@ -523,7 +523,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let mut thing = false;
     let mut i = 0;
     while i < g.sets[g.seat].nearby.len() {
-        if g.sets[g.seat].nearby[i].in_reach && g.m.player.press_things.has(String::from(g.sets[g.seat].nearby[i].kind.as_str())) {
+        if g.sets[g.seat].nearby[i].in_reach && g.m.player.press_things.holds(g.sets[g.seat].nearby[i].kind.as_str()) {
             let it = g.sets[g.seat].nearby[i].clone();
             if thing_dist(g, &it, face.at) < g.k.wallsnap.press_thing_at { thing = true; break; }
         }

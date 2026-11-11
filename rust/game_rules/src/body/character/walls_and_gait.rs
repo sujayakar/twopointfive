@@ -11,9 +11,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// pose.at: where a pose stands in its game's pool, as a layer of rust/sim takes it
 fn at(pose: crate::anim_skeleton::Pose) -> usize { pose.at as usize }
 /// SIGNAL_DUR[kind]
-pub(super) fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().of(kind.as_str()).unwrap() }
 /// TELL_DUR[kind]
-pub(super) fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().of(kind.as_str()).unwrap() }
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 
@@ -80,13 +80,12 @@ pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, ba
         let (mut roll, mut x) = (0.0, 0.0);
         let mut i = 0.0;
         while i < nn {
-            let (p, list) = (g.ch[c].anim.p_upper, g.ch[c].anim.fk_legs.clone());
+            let (rig, p) = (g.ch[c].anim.rig, g.ch[c].anim.p_upper);
             crate::anim_skeleton::sample_clip(g, clip, i / nn * dur, true, p);
-            anim_fk_part(g, c, p, &list);
-            let fk = &g.ch[c].anim.fk;
-            let (a, b) = (fk.pos[thigh_l], fk.pos[thigh_r]);
+            let at = |i| crate::anim_skeleton::pose_node(g, rig, p, i).1;
+            let (a, b) = (at(thigh_l), at(thigh_r));
             roll += m::atan2(a[1] - b[1], a[0] - b[0]);
-            x += fk.pos[hips][0];
+            x += at(hips)[0];
             i += 1.0;
         }
         g.ch[c].anim.steady_mean = Some([roll / nn, x / nn]);
@@ -189,11 +188,11 @@ pub(super) fn anim_wall_body(g: &mut crate::game::Game, c: CharId, w: f64) {
 /// the wall hold, arms
 pub(super) fn anim_wall_arms(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::wall_arms(s, an, w)); }
 
-/// A layer over his animation: his rig on the bench, the layer, what it ran forward read back.
-pub(super) fn anim_layer(g: &mut crate::game::Game, c: CharId, layer: impl FnOnce(usize, &mut Anim, &crate::knobs::Knobs) -> u32) {
+/// A layer over his animation: his rig on the bench, and the layer.
+pub(super) fn anim_layer(g: &mut crate::game::Game, c: CharId, layer: impl FnOnce(usize, &mut Anim, &crate::knobs::Knobs) -> bool) {
     let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
-    let code = layer(slot, &mut g.ch[c].anim, &g.k);
-    crate::anim_skeleton::layer_ran(g, code as f64, c);
+    let ran = layer(slot, &mut g.ch[c].anim, &g.k);
+    crate::anim_skeleton::layer_ran(g, ran, c);
 }
 
 // ---- the kick, signals, a smoke, the goggles, a tell
@@ -267,13 +266,9 @@ fn twq(y: f64, p: f64) -> Quat {
 }
 /// the head joint's rotation on `pose` as it will be DRAWN
 fn anim_nv_head(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose) -> Quat {
-    // (the fk stands out of g for the call: pose_fk_run takes both)
-    let mut fk = core::mem::replace(&mut g.ch[c].anim.fk, crate::anim_skeleton::PoseFK::blank());
-    crate::anim_skeleton::pose_fk_run(g, &mut fk, pose);
-    g.ch[c].anim.fk = fk;
     let a = &g.ch[c].anim;
-    let tw = a.nv_tw;
-    v3::quat::mul(twq(tw[2], tw[3]), v3::quat::mul(twq(tw[0], tw[1]), a.fk.rot[a.nodes.head]))
+    let (tw, head) = (a.nv_tw, crate::anim_skeleton::pose_node(g, a.rig, pose, a.nodes.head).0);
+    v3::quat::mul(twq(tw[2], tw[3]), v3::quat::mul(twq(tw[0], tw[1]), head))
 }
 
 /// the idle tells

@@ -4,17 +4,17 @@ use super::*;
 /// Both arms onto the pistol: the gun hand at the chest + the stance's [side, up, fwd], the muzzle at its pitch and level in roll, the support hand
 /// keeping the exact hold it has in the aim clip (both hands moved by one rigid transform of the clip's grip); elbows swivelled down and in by the tuck;
 /// a little sway, and during a kick a pump of the gun toward the chest. Solved on a copy seeded with the aim clip's arms (`at_aim`).
-pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> u32 {
+pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (at_aim, t, st, grip_up) = (an.p_aim.at as usize, an.idle_t, &an.st, an.grip_up);
     let (st_fwd, st_up, st_side, st_pitch, st_blade, tuck) = (st.fwd.x, st.up.x, st.side.x, st.pitch.x, st.blade.x, st.tuck.x);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     // the body as it is, the aim clip's arms
     arms_mask();
     if !ask_blend(g, at, at, 1.0, false, at_b, n) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n) {
-        return 0;
+        return false;
     }
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
         fk.part(rig, d, list(FK_ARMS));
@@ -31,19 +31,19 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> u32 {
         let pr = [chest[0] + side, chest[1] + up, chest[2] + fwd];
         // the support wrist relative to the gun wrist, turned with the gun
         let grip = quat::rotate(turn, v3::sub(pl0, pr0));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &pr, Some(&[-0.12 - 0.6 * (1.0 - tuck), -1.0, -0.5]), 0.4 + 0.55 * tuck, Some(&quat::mul(turn, rr0)), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &pr, Some(&[-0.12 - 0.6 * (1.0 - tuck), -1.0, -0.5]), 0.4 + 0.55 * tuck, Some(&quat::mul(turn, rr0)), true);
         // (from where the gun hand actually got to: the hands must not part; the support wrist's rotation read as the solve left the bones)
         let (pl, rl0) = (v3::add(fk.at(hand_r), grip), fk.rot(hand_l));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &pl, Some(&[0.2 + 0.6 * (1.0 - tuck), -1.0, -0.35]), 0.4 + 0.5 * tuck, Some(&quat::mul(turn, rl0)), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0);
-    if code == 0 {
-        return 0;
+    .unwrap_or(false);
+    if !code {
+        return false;
     }
     arms_mask();
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     code
 }
@@ -113,21 +113,21 @@ struct LongArms {
 /// shoulders with the aim's share of the pitch, holding the grip as the aim clip holds the pistol's turned onto the wanted bore; the support hand solved
 /// onto the gun's grip point from where the trigger hand got to. Should the support arm fall short the whole gun is brought back by the shortfall
 /// (capped) and both re-solved, and that hold-back is kept and let out over half a second. Solved on a copy seeded with the aim clip's arms.
-pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_door: bool, keep: bool, ch: &[f64; LC_COUNT], rl_at: [f64; 3], tune: &Knobs) -> u32 {
+pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_door: bool, keep: bool, ch: &[f64; LC_COUNT], rl_at: [f64; 3], tune: &Knobs) -> bool {
     let mut o = LongArms { kick_t, dt, keep, rl_at, ..LongArms::default() };
     let (at, at_b, _) = poses(an);
     let at_aim = an.p_aim.at as usize;
     as_carried(an, &mut o);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     // the body as it is, the aim clip's clavicles, trigger grip and fingers to start from
     arms_mask();
     if !ask_blend(g, at, at, 1.0, false, at_b, n) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n) {
-        return 0;
+        return false;
     }
     let (hh, lg) = (&mut h, &mut an.lg);
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -144,27 +144,27 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
         hold_within_reach(lg, d, fk, rig, hand_r, hand_l, &o);
         // the support hand cupped round the handguard
         hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.68], 0.35, 0.0);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0);
-    if code == 0 {
-        return 0;
+    .unwrap_or(false);
+    if !code {
+        return false;
     }
     if yield_door {
         // arm by arm, short of whatever a hand on a door still holds
         let (wl, wr) = (w * (1.0 - clamp(o.dl, 0.0, 1.0)), w * (1.0 - clamp(o.dr, 0.0, 1.0)));
         ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
         if !ask_blend(g, at, at_b, wl, true, at, n) {
-            return 0;
+            return false;
         }
         ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
         if !ask_blend(g, at, at_b, wr, true, at, n) {
-            return 0;
+            return false;
         }
     } else {
         arms_mask();
         if !ask_blend(g, at, at_b, w, true, at, n) {
-            return 0;
+            return false;
         }
     }
     hands_to(&h, an);
@@ -324,7 +324,7 @@ fn elbows(tune: &Knobs, ch: &[f64; LC_COUNT], o: &mut LongArms) {
 fn solve(rig: &Rig, hand_r: usize, hand_l: usize, o: &LongArms, d: &mut [S], fk: &mut Fk, to: [f64; 3]) -> [f64; 3] {
     let LongArms { g_wrist, rr, pole_r, pole_l, pw, rl, .. } = *o;
     let (up_r, fore_r, up_l, fore_l) = (role(UPPER_ARM_R), role(FOREARM_R), role(UPPER_ARM_L), role(FOREARM_L));
-    two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&pole_r), pw, Some(&rr), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&pole_r), pw, Some(&rr), true);
     // from where the trigger hand actually got to
     let pl = v3::add(fk.at(hand_r), in_gun(o, &g_wrist));
     two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &pl, Some(&pole_l), pw, Some(&rl), true);
@@ -358,14 +358,14 @@ fn hold_within_reach(lg: &mut game_types::character::AnimLg, d: &mut [S], fk: &m
 }
 /// The flashlight brought up in the gun hand: the right wrist to a spot ahead of the shoulder, the elbow down and a little out, by e. Solved on the
 /// scratch pose at `at_b`, laid on the right arm.
-pub fn torch_up(g: usize, an: &Anim, e: f64) -> u32 {
+pub fn torch_up(g: usize, an: &Anim, e: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let fix_r = an.hand_fix[1];
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
@@ -376,7 +376,7 @@ pub fn torch_up(g: usize, an: &Anim, e: f64) -> u32 {
     });
     ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
     if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
-        return 0;
+        return false;
     }
-    RAN | RAN_ALL
+    true
 }

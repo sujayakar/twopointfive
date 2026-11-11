@@ -10,11 +10,11 @@ impl Pose {
     pub fn blank() -> Self { Pose { at: 0, nodes: 0 } }
 }
 impl Default for Pose { fn default() -> Self { Self::blank() } }
-/// A BODY'S WORLD OF JOINTS. tmp and local were scratch; ibms and jointViews views of the rig and of joint_data; ownRot was how globalRot's rows were reused without allocating. `joint_data` is what the picture skins with
+/// A BODY'S WORLD OF JOINTS. tmp and local were scratch; ibms and jointViews views of the rig; ownRot was how globalRot's rows were reused without allocating. `world`: where he stood as he was posed last, which with the joints is all a picture skins him by
 #[derive(Clone, Debug, ToBytes)]
-pub struct SkeletonInstance { pub rig: RigId, pub globals: Vec<crate::v3::m4::Mat4>, pub global_rot: Vec<Quat>, pub joint_data: Vec<f32> }
+pub struct SkeletonInstance { pub rig: RigId, pub globals: Vec<crate::v3::m4::Mat4>, pub global_rot: Vec<Quat>, pub world: crate::v3::m4::Mat4 }
 impl SkeletonInstance {
-    pub fn blank() -> Self { SkeletonInstance { rig: RigId(0), globals: Vec::new(), global_rot: Vec::new(), joint_data: Vec::new() } }
+    pub fn blank() -> Self { SkeletonInstance { rig: RigId(0), globals: Vec::new(), global_rot: Vec::new(), world: crate::v3::m4::create() } }
 }
 /// the rig's named nodes and lists, as a layer is handed them: keys are literals in the code
 #[derive(Clone, Debug, ToBytes)]
@@ -56,7 +56,8 @@ pub struct NodeOverride {
     pub pos: Option<V3>,
 }
 
-#[derive(Clone, Debug, ToBytes, Blank)]
+/// A pose run forward: every node's turn and place in the model.
+#[derive(Clone, Debug, Blank)]
 pub struct PoseFK {
     pub rot: Vec<Quat>,
     pub pos: Vec<V3>,
@@ -72,7 +73,6 @@ pub struct AnimSkeletonModPOSEBENCH {
 pub struct AnimSkeletonModLAYERS {
     pub roles: Option<RigId>,
     pub names: Option<crate::anim_skeleton::AnimSkeletonModLAYERSNames>,
-    pub lists: Vec<Vec<i32>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -97,7 +97,7 @@ pub struct AnimSkeletonMod {
     #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
-    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { roles: None, names: None, lists: Vec::new() })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
+    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { roles: None, names: None })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
 }
 

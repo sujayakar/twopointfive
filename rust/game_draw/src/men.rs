@@ -110,7 +110,7 @@ impl Men {
     fn man(&mut self, g: &Game, id: CharId) {
         let c = &g.ch[id];
         // (a man with no pose yet has no bones to be drawn by)
-        if c.skel.joint_data.is_empty() || c.bones.get(game::character::Bone::Hips).is_none() { return; }
+        if c.skel.globals.is_empty() || c.bones.get(game::character::Bone::Hips).is_none() { return; }
         let (side, suit) = dress(g, id);
         let s = game::stature::stature_of(g, id);
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
@@ -146,12 +146,11 @@ impl Men {
         self.insts.push(i);
         // ---- his bones, scaled about his feet where he is drawn taller or shorter
         let mut bones = Bones::ZERO;
-        let src = &c.skel.joint_data[..c.skel.joint_data.len().min(JOINTS * 16)];
-        if s == 1.0 { bones.w[..src.len()].copy_from_slice(src); } else {
+        game::anim_skeleton::skeleton_instance_skin(g, &c.skel, &mut bones.w[..JOINTS * 16]);
+        if s != 1.0 {
             let off = c.pos.map(|v| v * (1.0 - s));
-            for (o, mat) in src.chunks_exact(16).enumerate() {
-                let d = &mut bones.w[o * 16..o * 16 + 16];
-                for k in 0..16 { d[k] = if k % 4 == 3 { mat[k] } else { (mat[k] as f64 * s + if k >= 12 { off[k - 12] } else { 0.0 }) as f32 }; }
+            for d in bones.w[..g.art.rig[c.skel.rig].skin.joints.len().min(JOINTS) * 16].chunks_exact_mut(16) {
+                for k in 0..16 { if k % 4 != 3 { d[k] = (d[k] as f64 * s + if k >= 12 { off[k - 12] } else { 0.0 }) as f32; } }
             }
         }
         self.now.push(bones);

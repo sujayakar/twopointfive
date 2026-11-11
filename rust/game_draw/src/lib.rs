@@ -140,7 +140,6 @@ sections! {
     door_boxes: boxes::Leaf = winds.leaves;
     open_panes: boxes::Word = winds.open;
     resets: resets::Reset = resets;
-    traffic: boxes::Word = traffic.words;
     dust: dust::DustLook = dust;
     feet: snow::Foot = snow.feet;
     things: snow::Thing = snow.things;
@@ -166,7 +165,6 @@ pub struct Drawn {
     pub doorways: Vec<doorways::Doorway>,
     pub events: events::Events,
     pub marks: marks::Marks,
-    pub traffic: traffic::Traffic,
     pub dust: Vec<dust::DustLook>,
     pub rims: Vec<rims::Rim>,
     tick: Option<u32>,
@@ -210,7 +208,7 @@ impl Drawn {
         if want & want::men != 0 { self.men.take(g, over || again && self.had & want::men != 0); }
         if want & want::rims != 0 { rims::fill(g, &mut self.rims); }
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
-        if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); self.traffic.take(g); }
+        if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table, self.men.bared); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         if want & want::snow != 0 { self.snow.take(g); }

@@ -52,14 +52,14 @@ struct Lean {
 /// After the stances and the arms, the body's share of the reactions: the flinch, the start, the hit, the blinded hunch, the clutch's fold, a hurt man's
 /// hunch and heavy step, a shaken man's ducked head and the toss's wind-up, summed into one turn of the trunk, one of the head and one move of the
 /// pelvis over feet held where they are. The arms that follow (the start's, the blinded hand, the held gun, the toss) are the host's.
-pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> u32 {
+pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> bool {
     let mut o = Lean { dt, gate, ..Lean::default() };
     as_he_is(an, &mut o);
     let (m, po) = (&mut an.mvs, &mut an.mv_po);
     as_it_struck(m, &mut o);
     with_pose(g, o.at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, HAND_R]) {
-            return 0;
+            return false;
         }
         none_yet(&mut o);
         flinch(tune, m, &mut o);
@@ -71,17 +71,14 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         hurt(m, &mut o);
         shaken(m, &mut o);
         toss_english(&mut o);
-        let mut ran = RAN;
         if o.drop > 2e-4 || abs(o.sx) + abs(o.sz) > 2e-4 {
             fk_run(rig, d, fk.rot, fk.pos);
             mv_hips(d, rig, fk, &[o.sx, -o.drop, o.sz]);
-            ran |= RAN_ALL;
         }
         // a blinded man's gun stays on the line it had: where the trigger hand is before the trunk turns away
         po.gun = false;
         if o.dzw > 0.003 && o.lg_w > 0.02 {
             fk_run(rig, d, fk.rot, fk.pos);
-            ran |= RAN_ALL;
             let hand = role(HAND_R);
             po.gun = true;
             po.gun_p = fk.at(hand);
@@ -92,9 +89,9 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         po.stw = o.stw;
         po.stn = o.stn;
         po.dzw = o.dzw;
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 
 /// How he is, as the rules have said it.
@@ -378,7 +375,6 @@ struct Arms {
     td: f64,
     arm_l: f64,
     ts_out: f64,
-    code: u32,
     up_l: usize,
     fore_l: usize,
     hand_l: usize,
@@ -388,28 +384,28 @@ struct Arms {
 /// The reactions' arms, after their body: the start's shoulders and elbows on the pose at `at`; then, each solved on the scratch pose at `at_b` and laid
 /// back through its own mask, a blinded man's gun held on the line it had, his hand flat over his eyes, and the toss of the support hand along its keyed
 /// path.
-pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> u32 {
+pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> bool {
     let mut o = Arms { dt, gate, ..Arms::default() };
     as_moved(an, &mut o);
     let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HEAD]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     start_arms(g, &o);
     if !held_gun(g, n, &mut o) {
-        return 0;
+        return false;
     }
     if !blinded_hand(g, n, tune, &mut h, &mut o) {
-        return 0;
+        return false;
     }
     if !toss_hand(g, n, &mut h, &mut o) {
-        return 0;
+        return false;
     }
     (an.mvs.ts_t, an.mvs.arm_l) = (o.ts_out, o.arm_l);
     hands_to(&h, an);
-    o.code
+    true
 }
 
 /// How he moved, as the body's share left it.
@@ -417,7 +413,7 @@ fn as_moved(an: &Anim, o: &mut Arms) {
     let (at, at_b, _) = poses(an);
     let (lg_w, gaze, fix_l, m, po) = (an.lg.w.x, an.gaze_local, an.hand_fix[0], &an.mvs, &an.mv_po);
     let (rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r) = (m.ts_rel, m.dz_t, m.ts_t, po.stw, po.stn, po.dzw, po.gun, po.gun_p, po.gun_r);
-    let (td, arm_l, ts_out, code) = (rel + TOSS_AFTER, m.arm_l, ts, RAN);
+    let (td, arm_l, ts_out) = (rel + TOSS_AFTER, m.arm_l, ts);
     let (up_l, fore_l, hand_l, sh_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L));
     o.at = at;
     o.at_b = at_b;
@@ -436,7 +432,6 @@ fn as_moved(an: &Anim, o: &mut Arms) {
     o.td = td;
     o.arm_l = arm_l;
     o.ts_out = ts_out;
-    o.code = code;
     o.up_l = up_l;
     o.fore_l = fore_l;
     o.hand_l = hand_l;
@@ -463,7 +458,7 @@ fn start_arms(g: usize, o: &Arms) {
 
 /// A blinded man's gun stays on the line it had, by how much of a long gun he has up.
 fn held_gun(g: usize, n: usize, o: &mut Arms) -> bool {
-    let Arms { at, at_b, lg_w, dzw, gun, gun_p, gun_r, mut code, .. } = *o;
+    let Arms { at, at_b, lg_w, dzw, gun, gun_p, gun_r, .. } = *o;
     if gun {
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return false;
@@ -476,15 +471,13 @@ fn held_gun(g: usize, n: usize, o: &mut Arms) -> bool {
         if !ask_blend(g, at, at_b, 1.0, true, at, n) {
             return false;
         }
-        code |= RAN_ALL;
     }
-    o.code = code;
     true
 }
 
 /// Blinded: the support hand goes flat over the eyes, wrist by the near eye, fingers across to the far one.
 fn blinded_hand(g: usize, n: usize, tune: &Knobs, h: &mut Hands, o: &mut Arms) -> bool {
-    let Arms { at, at_b, gaze, fix_l, dz_t, dzw, mut arm_l, mut code, up_l, fore_l, hand_l, sh_l, .. } = *o;
+    let Arms { at, at_b, gaze, fix_l, dz_t, dzw, mut arm_l, up_l, fore_l, hand_l, sh_l, .. } = *o;
     if dzw > 0.003 {
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return false;
@@ -508,15 +501,14 @@ fn blinded_hand(g: usize, n: usize, tune: &Knobs, h: &mut Hands, o: &mut Arms) -
             return false;
         }
         arm_l = max(arm_l, wz);
-        code |= RAN_ALL;
     }
-    (o.arm_l, o.code) = (arm_l, code);
+    o.arm_l = arm_l;
     true
 }
 
 /// The toss: the support hand off the gun, down beside the hip, through and up, back to the gun (a path off the shoulder; its ends are the live hand).
 fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
-    let Arms { dt, gate, at, at_b, fix_l, rel, ts, td, mut arm_l, mut ts_out, mut code, up_l, fore_l, hand_l, sh_l, .. } = *o;
+    let Arms { dt, gate, at, at_b, fix_l, rel, ts, td, mut arm_l, mut ts_out, up_l, fore_l, hand_l, sh_l, .. } = *o;
     if ts >= 0.0 {
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return false;
@@ -565,24 +557,23 @@ fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
         if ts_out > td {
             ts_out = -1.0;
         }
-        code |= RAN_ALL;
     }
-    (o.arm_l, o.ts_out, o.code) = (arm_l, ts_out, code);
+    (o.arm_l, o.ts_out) = (arm_l, ts_out);
     true
 }
 /// A man knocked about and still up: the support hand off the gun and pressed to his ribs. Solved on the scratch pose at `at_b`, laid on the pose by w
 /// through the support arm's mask.
-pub fn clutch_arm(g: usize, an: &mut Anim, w: f64) -> u32 {
+pub fn clutch_arm(g: usize, an: &mut Anim, w: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let fix_l = an.hand_fix[0];
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -595,24 +586,24 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64) -> u32 {
     });
     arm_mask(false);
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// Kept down: the wrists crossed in the small of the back, palms out (kind 1), or the fingers laced on the crown with the elbows wide, in the head's own
 /// frame (kind 2). Both arms, solved on the scratch pose at `at_b` and laid on the pose by w.
-pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
+pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (back, gaze, fix_l, fix_r) = (kind == 1.0, an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, HEAD]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -662,16 +653,16 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
     });
     arm_mask(true);
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// The man a takedown is done to, still on his feet: head, trunk and (hauled back) his arms, pitch only.
-pub fn taken_layer(g: usize, an: &Anim, style: TakenStyle, off: f64, u: f64) -> u32 {
+pub fn taken_layer(g: usize, an: &Anim, style: TakenStyle, off: f64, u: f64) -> bool {
     with_pose(g, an.p_a.at as usize, |d, rig, n, _fk| {
         if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
-            return 0;
+            return false;
         }
         let out = (1.0 - smoothstep(0.6, TAKEN.secs, u)) * if off < 0.0 { 1.0 } else { 1.0 - smoothstep(0.0, 0.2, off) };
         if style == TakenStyle::Arch {
@@ -703,7 +694,7 @@ pub fn taken_layer(g: usize, an: &Anim, style: TakenStyle, off: f64, u: f64) -> 
             turn(d, rig, role(NECK), q_pitch(-12.0 * s * DEGR));
             turn(d, rig, role(HEAD), q_pitch(-18.0 * s * DEGR));
         }
-        RAN
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }

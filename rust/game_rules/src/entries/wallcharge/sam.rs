@@ -180,8 +180,6 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut cr
     g.sets[g.seat].wall_charge.marker = None;
     if !wall_charge_on(g) || !g.sets[g.seat].wall_charge.seated { return; }
     let pl = g.player;
-    let f = crate::doortools::blow_letter(g);
-    let key = crate::ownblow::blow_key_word(false, &f);
     let sam_wall = g.pl[pl].wall_work().map(|s| s.wall.clone());
     let wall = match sam_wall {
         Some(w) => Some(w),
@@ -207,6 +205,8 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut cr
     };
     let free = !g.pl[pl].sprinting && g.pl[pl].tow.is_none() && !g.pl[pl].on_a_man();
     let reach = near && free;
+    let f = crate::doortools::blow_letter(g);
+    let key = crate::ownblow::blow_key_word(false, &f);
     let line1 = if c.is_some() { "wall · charge set" } else if w.outer == Some(true) { "wall · outer wall" } else { "wall · partition" };
     let line2 = if reach { "" } else if near { "hands full" } else { "step closer" };
     let height = g.k.wallcharge.height;

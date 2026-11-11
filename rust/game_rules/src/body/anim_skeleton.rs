@@ -103,11 +103,6 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
                 unsafe { w_list.add(i * max + k).write(l[k] as u32) };
             }
             unsafe { w_len.add(i).write(l.len() as u32) };
-            let lists = &mut g.m.anim_skeleton.layers.lists;
-            if lists.len() <= i {
-                lists.resize(i + 1, Vec::new());
-            }
-            lists[i] = l.clone();
         }
         let m_num = ::sim::roles::addr(7) as *mut f64;
         let w_num = ::sim::roles::addr(9) as *mut u32;
@@ -123,37 +118,10 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     slot
 }
 
-/// What a layer's export answered: 0 is a mistake and loud; else the run-forward bones it ran are brought back from the bench into the man's `fk`, and no others.
-pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
-    if code == 0.0 {
+/// What a layer answered: one that could not run is a mistake, and loud.
+pub(super) fn layer_ran(g: &crate::game::Game, ran: bool, c: CharId) {
+    if !ran {
         panic!("posing: a layer of the Rust module could not run: it was handed a pose, a node of the rig, a clip or a table of keys the module does not hold: char row {:?}, unit {}, guard {:?}", c, g.guards.iter().any(|x| g.gd[*x].ch == c && g.gd[*x].unit.is_some()), g.guards.iter().find(|x| g.gd[**x].ch == c).map(|x| g.gd[*x].callsign.clone()));
-    }
-    if js::to_i32(code) & 2 != 0 {
-        bench_get_fk(&mut g.ch[c].anim.fk);
-        return;
-    }
-    let mut bits = js::to_u32(code) >> 2;
-    let mut i = 0usize;
-    while bits != 0 {
-        if bits & 1 != 0 {
-            let l = &g.m.anim_skeleton.layers.lists[i];
-            let fk = &mut g.ch[c].anim.fk;
-            let b = ::sim::skeleton::bench_read();
-            for k in 0..l.len() {
-                let n = l[k] as usize;
-                let (r, p) = (n * 4, n * 3);
-                let (q, v) = (&mut fk.rot[n], &mut fk.pos[n]);
-                q[0] = b.rot[r];
-                q[1] = b.rot[r + 1];
-                q[2] = b.rot[r + 2];
-                q[3] = b.rot[r + 3];
-                v[0] = b.pos[p];
-                v[1] = b.pos[p + 1];
-                v[2] = b.pos[p + 2];
-            }
-        }
-        bits >>= 1;
-        i += 1;
     }
 }
 
@@ -203,42 +171,6 @@ fn bench_get(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64
         for i in 0..n {
             d[c * n_ + i] = ::sim::single::get(&b.pose, o + c * n_ + i) as f32;
         }
-    }
-}
-
-/// The run-forward bones onto the bench.
-fn bench_put_fk(fk: &crate::anim_skeleton::PoseFK) {
-    let b = ::sim::skeleton::bench();
-    let (mut r, mut p) = (0usize, 0usize);
-    for i in 0..fk.rot.len() {
-        let (q, v) = (fk.rot[i], fk.pos[i]);
-        b.rot[r] = q[0];
-        b.rot[r + 1] = q[1];
-        b.rot[r + 2] = q[2];
-        b.rot[r + 3] = q[3];
-        b.pos[p] = v[0];
-        b.pos[p + 1] = v[1];
-        b.pos[p + 2] = v[2];
-        r += 4;
-        p += 3;
-    }
-}
-
-/// The run-forward bones back off the bench.
-fn bench_get_fk(fk: &mut crate::anim_skeleton::PoseFK) {
-    let b = ::sim::skeleton::bench_read();
-    let (mut r, mut p) = (0usize, 0usize);
-    for i in 0..fk.rot.len() {
-        let (q, v) = (&mut fk.rot[i], &mut fk.pos[i]);
-        q[0] = b.rot[r];
-        q[1] = b.rot[r + 1];
-        q[2] = b.rot[r + 2];
-        q[3] = b.rot[r + 3];
-        v[0] = b.pos[p];
-        v[1] = b.pos[p + 1];
-        v[2] = b.pos[p + 2];
-        r += 4;
-        p += 3;
     }
 }
 
@@ -896,14 +828,14 @@ pub(super) fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::
         rig: ch,
         globals: rig.nodes.iter().map(|_| v3::m4::create()).collect(),
         global_rot: rig.nodes.iter().map(|_| v3::quat::ident()).collect(),
-        joint_data: vec![0.0f32; rig.skin.joints.len() * 16],
+        world: v3::m4::create(),
     }
 }
 
-/// A body posed: run forward, and skinned where it stands.
+/// A body posed: run forward, where it stands.
 pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     skeleton_instance_forward(g, this, pose, twists, overrides);
-    skeleton_instance_skin(g, this, world);
+    this.world = *world;
 }
 
 /// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides.
@@ -965,14 +897,19 @@ pub(super) fn skeleton_instance_forward(g: &crate::game::Game, this: &mut crate:
     }
 }
 
-/// The skinning matrices of a body run forward (world · global · inverse bind, straight into the joint's slice of joint_data): what is drawn of it, and no part of the run.
-pub(super) fn skeleton_instance_skin(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, world: &crate::v3::m4::Mat4) {
+/// The skinning matrices of a body as it was posed last (world · global · inverse bind, a joint sixteen numbers): what is drawn of it, and no part of the run.
+pub fn skeleton_instance_skin(g: &crate::game::Game, this: &crate::anim_skeleton::SkeletonInstance, to: &mut [f32]) {
     let rig = &g.art.rig[this.rig];
-    let world = v3::m4::wide(world);
-    for ((&node, ibm), out) in rig.skin.joints.iter().zip(rig.skin.inverse_bind.chunks_exact(16)).zip(this.joint_data.chunks_exact_mut(16)) {
-        let bound = v3::m4::mul(&this.globals[node as usize], ibm.first_chunk().unwrap());
-        out.copy_from_slice(&v3::m4::mul_wide(&world, &bound));
-    }
+    let world = v3::m4::wide(&this.world);
+    for (j, out) in to.chunks_exact_mut(16).enumerate().take(rig.skin.joints.len()) { out.copy_from_slice(&joint_skin(rig, this, &world, j)); }
+}
+/// …of one joint of the skin's list.
+pub fn skeleton_instance_joint(g: &crate::game::Game, this: &crate::anim_skeleton::SkeletonInstance, j: usize) -> [f32; 16] {
+    joint_skin(&g.art.rig[this.rig], this, &v3::m4::wide(&this.world), j)
+}
+fn joint_skin(rig: &crate::anim_gltf::GltfCharacter, this: &crate::anim_skeleton::SkeletonInstance, world: &[f64; 16], j: usize) -> [f32; 16] {
+    let bound = v3::m4::mul(&this.globals[rig.skin.joints[j] as usize], rig.skin.inverse_bind[j * 16..].first_chunk().unwrap());
+    v3::m4::mul_wide(world, &bound)
 }
 
 /// Model-space origin of a node.
@@ -1035,38 +972,41 @@ pub(super) fn pose_fk_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skele
     }
 }
 
-/// Model-space rotation and origin of every node from a local pose, written in place: a question of the module, or this file's own arithmetic for a rig the bench cannot hold.
-pub(super) fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::PoseFK, pose: crate::anim_skeleton::Pose) {
-    if bench_rig(g, this.rig) {
-        bench_put_fk(this);
-        let (slot, place) = lent_at(g, pose, 0.0);
-        known(answer(::sim::skeleton::ask_run(slot, place, -1)));
-        bench_get_fk(this);
-        return;
-    }
-    let d = cols_of_read(g, pose);
-    fk_own(this, d, rows_of(pose), &g.art.rig[this.rig]);
+/// Model-space rotation and origin of every node from a local pose, written in place.
+pub(super) fn pose_fk_run(g: &crate::game::Game, this: &mut crate::anim_skeleton::PoseFK, pose: crate::anim_skeleton::Pose) {
+    fk_own(this, cols_of_read(g, pose), rows_of(pose), &g.art.rig[this.rig]);
 }
 
-/// PoseFK.run's own arithmetic over a pose's singles (`n_` rows a column).
+/// PoseFK.run's arithmetic over a pose's singles (`n_` rows a column).
 fn fk_own(this: &mut crate::anim_skeleton::PoseFK, d: &[f32], n_: usize, rig: &crate::anim_gltf::GltfCharacter) {
     for &oi in &rig.order {
         let i = oi as usize;
         let parent = rig.nodes[i].parent;
-        let (rx, ry, rz, rw) = (d[3 * n_ + i] as f64, d[4 * n_ + i] as f64, d[5 * n_ + i] as f64, d[6 * n_ + i] as f64);
-        if parent < 0.0 {
-            this.rot[i] = [rx, ry, rz, rw];
-            this.pos[i] = [d[i] as f64, d[n_ + i] as f64, d[2 * n_ + i] as f64];
-            continue;
-        }
-        let (pr, pp) = (this.rot[parent as usize], this.pos[parent as usize]);
-        let (qx, qy, qz, qw) = (pr[0], pr[1], pr[2], pr[3]);
-        let (v0, v1, v2) = (d[i] as f64, d[n_ + i] as f64, d[2 * n_ + i] as f64);
-        let (tx, ty, tz) = (2.0 * (qy * v2 - qz * v1), 2.0 * (qz * v0 - qx * v2), 2.0 * (qx * v1 - qy * v0)); // t = quat.rotate(pr, t_local)
-        let (t0, t1, t2) = (v0 + qw * tx + (qy * tz - qz * ty), v1 + qw * ty + (qz * tx - qx * tz), v2 + qw * tz + (qx * ty - qy * tx));
-        this.rot[i] = [qw * rx + qx * rw + qy * rz - qz * ry, qw * ry - qx * rz + qy * rw + qz * rx, qw * rz + qx * ry - qy * rx + qz * rw, qw * rw - qx * rx - qy * ry - qz * rz]; // rot = quat.mul(pr, r)
-        this.pos[i] = [pp[0] + t0, pp[1] + t1, pp[2] + t2];
+        let up = (parent >= 0.0).then(|| (this.rot[parent as usize], this.pos[parent as usize]));
+        (this.rot[i], this.pos[i]) = fk_node(d, n_, i, up);
     }
+}
+
+/// A node of a local pose in the model: its turn and its place, its parents run down to it and no other node.
+pub(super) fn pose_node(g: &crate::game::Game, rig: RigId, pose: crate::anim_skeleton::Pose, i: usize) -> (Quat, V3) {
+    let parent = g.art.rig[rig].nodes[i].parent;
+    let up = (parent >= 0.0).then(|| pose_node(g, rig, pose, parent as usize));
+    fk_node(cols_of_read(g, pose), rows_of(pose), i, up)
+}
+
+/// A node hangs off its parent: his place is the parent's and his offset turned by the parent's turn, his turn is the parent's and his own.
+#[inline]
+pub(super) fn fk_node(d: &[f32], n: usize, i: usize, up: Option<(Quat, V3)>) -> (Quat, V3) {
+    let (rx, ry, rz, rw) = (d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64);
+    let (v0, v1, v2) = (d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64);
+    let Some((pr, pp)) = up else { return ([rx, ry, rz, rw], [v0, v1, v2]) };
+    let (qx, qy, qz, qw) = (pr[0], pr[1], pr[2], pr[3]);
+    let (tx, ty, tz) = (2.0 * (qy * v2 - qz * v1), 2.0 * (qz * v0 - qx * v2), 2.0 * (qx * v1 - qy * v0));
+    let (t0, t1, t2) = (v0 + qw * tx + (qy * tz - qz * ty), v1 + qw * ty + (qz * tx - qx * tz), v2 + qw * tz + (qx * ty - qy * tx));
+    (
+        [qw * rx + qx * rw + qy * rz - qz * ry, qw * ry - qx * rz + qy * rw + qz * rx, qw * rz + qx * ry - qy * rx + qz * rw, qw * rw - qx * rx - qy * ry - qz * rz],
+        [pp[0] + t0, pp[1] + t1, pp[2] + t2],
+    )
 }
 
 #[cfg(test)]
@@ -1287,12 +1227,28 @@ mod tests {
         at_near(fk.pos[4], [3.0, 2.0, 4.0], "and a joint that turned back takes his child with him");
     }
 
+    #[test]
+    fn a_node_hangs_off_its_parent_by_the_parents_turn() {
+        let yaw = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
+        let (n, i) = (2usize, 1usize);
+        let mut d = [0f32; 14];
+        d[n + i] = 0.5;
+        d[2 * n + i] = 1.0;
+        let own = yaw(m::PI / 2.0);
+        for c in 0..4 { d[(3 + c) * n + i] = own[c] as f32; }
+        let (q, p) = fk_node(&d, n, i, Some((yaw(m::PI / 2.0), [1.0, 2.0, 3.0])));
+        assert!(v3::dist(p, [2.0, 2.5, 3.0]) < 1e-6, "a metre ahead of a parent who faces his left: {p:?}");
+        let half = yaw(m::PI);
+        let dot = q[0] * half[0] + q[1] * half[1] + q[2] * half[2] + q[3] * half[3];
+        assert!(m::abs(dot) > 1.0 - 1e-6, "two quarter turns make a half: {q:?}");
+    }
+
     /// What a body draws with: plain, a turn laid on a subtree, a joint driven from outside, and a pose made again from what was drawn.
     #[test]
     fn a_body_is_posed_from_its_joints_and_a_bake_keeps_what_it_drew() {
         let (_h, mut g) = hold();
         let id = alloc::sync::Arc::make_mut(&mut g.art).rig.push(rig());
-        let mut si = SkeletonInstance { rig: id, globals: vec![v3::m4::create(); 5], global_rot: vec![v3::quat::ident(); 5], joint_data: vec![0.0; 80] };
+        let mut si = SkeletonInstance { rig: id, globals: vec![v3::m4::create(); 5], global_rot: vec![v3::quat::ident(); 5], world: v3::m4::create() };
         let w = v3::m4::from_trss(10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0);
         let quarter = m::PI / 2.0;
         let p = pose_pool_new(&mut g, 5);
@@ -1301,7 +1257,7 @@ mod tests {
         // plain: where a run forward puts them, the skinning matrices in the world
         skeleton_instance_update(&mut g, &mut si, p, &w, None, None);
         at_near(skeleton_instance_node_pos(&si, 2.0), [1.0, 2.0, 5.0], "two joints along");
-        near(si.joint_data[2 * 16 + 12] as f64, 11.0, "the skin of that joint stands in the world");
+        near(skeleton_instance_joint(&g, &si, 2)[12] as f64, 11.0, "the skin of that joint stands in the world");
 
         // a twist turns that joint and all under it, about the vertical, and two on one joint add
         let twists = [TwistSpec { node: 1.0, yaw: quarter * 0.5, pitch: 0.0 }, TwistSpec { node: 1.0, yaw: quarter * 0.5, pitch: 0.0 }];

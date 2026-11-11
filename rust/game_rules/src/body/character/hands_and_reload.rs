@@ -175,9 +175,8 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 }
 
 /// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest.
-pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
-    let an = &g.ch[c].anim;
-    let (nd, fk) = (&an.nodes, &an.fk);
+pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId, fk: &crate::anim_skeleton::PoseFK) -> crate::character::AnimTrunkFrame {
+    let nd = &g.ch[c].anim.nodes;
     let up = v3::normalize(v3::sub(fk.pos[nd.spine3], fk.pos[nd.hips]));
     let mut left = v3::sub(fk.pos[nd.upper_arm_l], fk.pos[nd.upper_arm_r]);
     left = v3::normalize(v3::mad(left, up, -v3::dot(left, up)));
@@ -236,49 +235,6 @@ fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
 }
 
 // ---- procedural layers
-
-/// One node of PoseFK.run's arithmetic, operand for operand, under its parent's rotation and origin.
-#[inline]
-fn fk_node(d: &[f32], n: usize, i: usize, pr: Quat, pp: V3) -> (Quat, V3) {
-    let (rx, ry, rz, rw) = (d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64);
-    let (qx, qy, qz, qw) = (pr[0], pr[1], pr[2], pr[3]);
-    let (v0, v1, v2) = (d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64);
-    let (tx, ty, tz) = (2.0 * (qy * v2 - qz * v1), 2.0 * (qz * v0 - qx * v2), 2.0 * (qx * v1 - qy * v0));
-    let (t0, t1, t2) = (v0 + qw * tx + (qy * tz - qz * ty), v1 + qw * ty + (qz * tx - qx * tz), v2 + qw * tz + (qx * ty - qy * tx));
-    (
-        [
-            qw * rx + qx * rw + qy * rz - qz * ry,
-            qw * ry - qx * rz + qy * rw + qz * rx,
-            qw * rz + qx * ry - qy * rx + qz * rw,
-            qw * rw - qx * rx - qy * ry - qz * rz,
-        ],
-        [pp[0] + t0, pp[1] + t1, pp[2] + t2],
-    )
-}
-
-/// fk.run() for a few nodes: those of `list` hold exactly what a full run would give them, the rest of fk stands as the last run left it.
-pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, list: &[i32]) {
-    let n = crate::anim_skeleton::pose_rows(pose.nodes as f64) as usize;
-    let rig = g.ch[c].anim.rig;
-    for k in 0..list.len() {
-        let i = list[k] as usize;
-        let par = g.art.rig[rig].nodes[i].parent;
-        if par < 0.0 {
-            let d = crate::anim_skeleton::pose_cols(g, pose);
-            let (r, t) = ([d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64], [d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64]);
-            let fk = &mut g.ch[c].anim.fk;
-            fk.rot[i] = r;
-            fk.pos[i] = t;
-            continue;
-        }
-        let fk = &g.ch[c].anim.fk;
-        let (pr, pp) = (fk.rot[par as usize], fk.pos[par as usize]);
-        let (q, p) = fk_node(crate::anim_skeleton::pose_cols(g, pose), n, i, pr, pp);
-        let fk = &mut g.ch[c].anim.fk;
-        fk.rot[i] = q;
-        fk.pos[i] = p;
-    }
-}
 
 /// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's.
 pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) {
@@ -457,22 +413,5 @@ mod tests {
             if h < 0.0 { low += 1; } else { high += 1; }
         }
         assert!(low > 60 && high > 60, "men's hands fall to both sides: {low} and {high}");
-    }
-
-    /// A node hangs off its parent: his place is the parent's and his offset turned by the parent's turn, his turn is the parent's and his own.
-    #[test]
-    fn a_node_hangs_off_its_parent_by_the_parents_turn() {
-        let yaw = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
-        let (n, i) = (2usize, 1usize);
-        let mut d = [0f32; 14];
-        d[n + i] = 0.5;
-        d[2 * n + i] = 1.0;
-        let own = yaw(m::PI / 2.0);
-        for c in 0..4 { d[(3 + c) * n + i] = own[c] as f32; }
-        let (q, p) = fk_node(&d, n, i, yaw(m::PI / 2.0), [1.0, 2.0, 3.0]);
-        assert!(v3::dist(p, [2.0, 2.5, 3.0]) < 1e-6, "a metre ahead of a parent who faces his left: {p:?}");
-        let half = yaw(m::PI);
-        let dot = q[0] * half[0] + q[1] * half[1] + q[2] * half[2] + q[3] * half[3];
-        assert!(m::abs(dot) > 1.0 - 1e-6, "two quarter turns make a half: {q:?}");
     }
 }

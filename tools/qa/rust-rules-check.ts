@@ -29,7 +29,7 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
  *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
-  'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists',
+  'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists; and what stopped the last line like it, asked first of the next, which changes no answer',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
   'sim/src/clips.rs ALL': 'COPY · a character file\'s clips, authored data nothing writes after the file is loaded (src/anim/gltf.ts): copied in once by src/anim/skeleton.ts as a clip is first sampled, the same for every game and in no snapshot; the same for every game',
   'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
@@ -50,11 +50,12 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs PRICE': 'SCRATCH · one priced search\'s prices, written by the host where the search asked', 'sim/src/nav.rs KNOWN': 'SCRATCH · which cells one priced search has a price for, blank after it',
   'sim/src/nav.rs PRICED': 'SCRATCH · the cells one priced search has a price for, so it can blank them',
   'sim/src/nav.rs RUN': 'SCRATCH · a search set to its start, before it is run', 'sim/src/nav.rs LIVE': 'SCRATCH · whether a search has the tables: one asked from inside a price has none',
+  'sim/src/nav.rs AT': 'SCRATCH · where a cell last stands in one search\'s open list, left blank after it', 'sim/src/nav.rs BEFORE': 'SCRATCH · where it stands beside',
   'sim/src/nav.rs SCORE': 'SCRATCH · one search\'s open cells\' scores', 'sim/src/nav.rs LEAST': 'SCRATCH · the least of each block of them',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world and asked again wherever a static row or a leaf moved (always what a fresh ask gives)',
-  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against',
+  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against', 'sim/src/bricks.rs PANES': 'COPY · the panes open somewhere that FACES was last asked against',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and whether that state\'s faces were asked',
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
