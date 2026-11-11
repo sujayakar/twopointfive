@@ -31,7 +31,7 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireStats 
     g.m.fire.states.get_or_insert_with(fresh)
 }
 
-/// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.
+/// Integer hash to [0, 1).
 fn h01(x: f64) -> f64 {
     let mut x = (js::to_i32(x) as u32 ^ 0x2545F491).wrapping_mul(0x9E3779B1);
     x ^= x >> 15;
@@ -280,7 +280,6 @@ fn plain(g: &mut crate::game::Game, t: FixtureId) {
 #[cfg(test)]
 mod tests {
     // (The arithmetic goes by the knob table through the private `*_with` helpers: fire_pops and the rest only lend them `g.k.fire`.)
-    // The bits were printed by the TypeScript under bun with EXACT.on, from src/game/fire.ts of this tree.
     use super::*;
 
     #[test]
@@ -723,7 +722,7 @@ fn soot(cells: f64, tint: V3) -> crate::smoke_types::SmokeEmitter {
 #[cfg(test)]
 mod tests_2 {
     use super::*;
-    // Each number is the TypeScript's own expression under bun with EXACT.on, the page's table: wander 0.14, wanderUp 0.1, lift 0.5, depth 0.4, coals 0.26, coalSwing 0.6.
+    // The pinned numbers, at the table's wander 0.14, wander_up 0.1, lift 0.5, depth 0.4, coals 0.26, coal_swing 0.6.
     #[test]
     fn lamp_wanders_across_on_the_typescript_bits() {
         assert_eq!(wander_across(3.25, 0.14, 0.83, 0.1937, 2.9, 0.7711, 123.456).to_bits(), 0x400aeb1a98f0afd6);

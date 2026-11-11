@@ -809,7 +809,7 @@ fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteO
     }
 }
 
-/// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody.
+/// One partner, silent, not found out: the flow sends nobody.
 fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     crate::pairup::pair_up(g) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }

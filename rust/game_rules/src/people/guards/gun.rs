@@ -113,7 +113,7 @@ pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn Fn
 }
 
 /// The lamps, the sun's beam or the moon's, the stroke, onto six faces, with the sky's under the open sky; the best of them. Under a roof the sky is what the
-/// openings show of it, and with all that comes round it is the field's (sim/glow.rs): its mean with the best face of the beams, or its own best face.
+/// openings show of it, and with all that comes round it is the field's (`sim::glow`): its mean with the best face of the beams, or its own best face.
 fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
     let mut acc = lamps_on(g, p, skip_owner, steady_only, leave);
     crate::hours::sun_light(g, p, &mut acc);
@@ -505,7 +505,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         }
         g.fa[w].burst = Some(crate::weapons::BurstState { left: n, next_t: 0.0, idx: 0.0, t: g.time, off });
     }
-    // `b` is the TypeScript's own local: a burst something else ends under the calls below is written no more, and b is still read
+    // `b` is a local: a burst something else ends under the calls below is written no more, and b is still read
     let mut b = g.fa[w].burst.unwrap();
     b.t = g.time;
     g.fa[w].burst = Some(b);
@@ -711,7 +711,7 @@ pub fn bubble_secs(text: &str) -> f64 {
 mod tests {
     use super::*;
 
-    /// bubbleSecs against the TypeScript's own bits; an em dash is one unit, a clef two.
+    /// `bubble_secs` against pinned bits; an em dash is one unit, a clef two.
     #[test]
     fn bubble_secs_bits() {
         let rows: [(&str, u64); 5] = [

@@ -6,11 +6,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name.
+/// A door's sound, heard and played.
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
-/// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
 fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
@@ -222,7 +221,7 @@ pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::Do
     emit(g, d, sound, pos, who, level);
 }
 
-/// The subscriber game.ts:1208 hangs on the doors: a torn leaf is a row in the destruction's change feed.
+/// A torn leaf is a row in the destruction's change feed.
 fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::wallbreak::LevelChangeCause) {
     let c = g.dr[d].frame_centre;
     let r = g.dr[d].def.width / 2.0 + 0.1;
@@ -383,7 +382,7 @@ pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys:
 mod tests {
     use super::*;
 
-    // every number below is the TypeScript's own, printed under bun with EXACT.on from doors.ts on a fresh `new Doors`
+    // every number below is pinned
     const A: ([f64; 2], f64, f64) = ([1.25, -3.5], 0.7, 0.95);
     const C: ([f64; 2], f64, f64) = ([-1.0, -0.8], 0.7, 0.95);
     const U_A: [u64; 2] = [0x3fe87996529f9d92, 0x3fe49d6e694619b8];

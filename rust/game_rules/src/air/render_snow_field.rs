@@ -5,8 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 
-// (depot-four tick 2712: a frag bursts, furniture_blast < break_static_in < snow_paint). render/snowField.ts is the renderer's file, but these three
-// "ask what a box DOES … ONE MODEL THE PICTURE AND THE GAME BOTH READ": furnblast and snowBog call them. Pure readings of a box; translated.
+// These three ask what a box DOES, one model the picture and the game both read: furnblast and snow_bog call them. Pure readings of a box.
 /// which lying snow a box is, by its word, or none
 pub fn snow_paint_of(g: &crate::game::Game, b: &crate::render_snow_field::SnowPaintOfB) -> Option<crate::scene_materials::SnowKind> {
     crate::scene_materials::does_of_word(g, b.does.as_deref()).snow

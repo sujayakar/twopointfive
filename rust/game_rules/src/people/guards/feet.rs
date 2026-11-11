@@ -29,7 +29,7 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
     g.tab.guards_standoff[s].orbit_goal = Some(p);
 }
 
-/// goTo's plan. `round` None is the TypeScript's `round === pen`: no second search.
+/// go_to's plan. `round` None: no second search.
 fn go_to_plan(g: &Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.pos_of(gd);
     let mut p = match pen {
@@ -658,7 +658,7 @@ mod tests {
     use super::*;
     use crate::game::GuardState;
 
-    // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
+    // pinned bits, at the page's GUARD_EYE
     #[test]
     fn dist_term_is_the_typescripts_bits() {
         let k = crate::knobs::GuardEyeK::page();

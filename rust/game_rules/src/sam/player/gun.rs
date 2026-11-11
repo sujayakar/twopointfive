@@ -224,17 +224,17 @@ pub(super) fn on_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].w
 /// On a wall some other way: his back to it.
 pub(super) fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some() && !on_stack(g, pl) }
 
-/// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })
+/// a tube gun's beat as the weapon's row
 pub(crate) fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {
     crate::weapons::WeaponDefReload { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, shell: r.shell, exact: Some(r.exact) }
 }
 
-/// a tube gun's beat as the animator's (the same object in the TypeScript; `exact` is what tells it from a magazine change's)
+/// a tube gun's beat as the animator's; `exact` is what tells it from a magazine change's
 fn shell_row_as_beat(r: &crate::gunreload::ShellRow) -> crate::character::ReloadBeat {
     crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: Some(r.exact) }
 }
 
-/// feedPlan's answer as the weapon's events hold it (the closures of player.ts:381-384 read it; they are ReloadEvents::Rifle now)
+/// the feed plan as the weapon's events hold it (`ReloadEvents::Rifle` reads it)
 fn feed_for_events(f: &crate::gunreload::FeedPlan) -> crate::weapons::FeedPlan {
     let cues = f.cues.as_ref().map(|cs| cs.iter().map(|q| crate::weapons::FeedCue { t: q.t, sfx: q.sfx.clone(), gain: q.gain, rate: q.rate }).collect());
     crate::weapons::FeedPlan { cues, drop: f.drop }

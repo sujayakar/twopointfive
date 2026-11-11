@@ -17,7 +17,7 @@ fn text_value(w: &str) -> KitValue {
     KitValue::Text(String::from(w))
 }
 
-/// A yes/no row, in the order the TypeScript writes its two values.
+/// A yes/no row, `first` listed first.
 fn flags(first: bool) -> Vec<KitValue> {
     vec![KitValue::Bool(first), KitValue::Bool(!first)]
 }

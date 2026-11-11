@@ -400,7 +400,7 @@ mod tests {
         assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
     }
 
-    /// The doubles are the TypeScript's own: closeLane under bun with EXACT on, point blank 2.
+    /// The pinned doubles of the closing lane, at point blank 2.
     #[test]
     fn the_lane_at_arms_length_has_the_typescripts_bits() {
         let rows: [(f64, f64, f64, u64); 5] = [

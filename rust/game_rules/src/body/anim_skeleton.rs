@@ -23,11 +23,11 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
     }
 }
 
-/// A table of names of rust/sim/src/knobs.rs, one a line.
+/// A table's names, one a line.
 fn bench_names(table: f64) -> Vec<String> {
     let table = table as u32;
     let (at, n) = (::sim::roles::addr(table), ::sim::roles::len(table));
-    // (knobs.rs hands its tables out by address alone, as the page reads them; these are its &'static str names)
+    // (`sim::roles` hands its tables out by address alone, as the page reads them; these are its &'static str names)
     let b: &[u8] = unsafe { core::slice::from_raw_parts(at as *const u8, n) };
     let mut s = String::new();
     for i in 0..n {
@@ -197,7 +197,7 @@ fn span_of(p: Pose) -> (usize, usize) {
     (p.at as usize - ::sim::poses::HEAD / 4, ::sim::skeleton::singles(p.nodes as usize))
 }
 
-/// All of a block's pool, as the Float32Array the TypeScript's `cols` is a view of. It is rust/sim's static, not g's, so a body may hold it beside g's tables.
+/// All of a block's pool. It is rust/sim's static, not g's, so a body may hold it beside g's tables.
 fn pool_at(slot: usize) -> &'static mut [f32] {
     let data = &mut ::sim::state::state(slot).poses.data;
     // (single.rs S is repr(transparent) over the single it stores)
@@ -220,8 +220,8 @@ fn cols_at_read(slot: usize, p: Pose) -> &'static [f32] {
     &pool_at_read(slot)[s..s + n]
 }
 
-/// A pose's singles WHEREVER THEY ARE, as the TypeScript's `cols`: in the pool, or, for a pose of its own (a function's scratch, a ragdoll's: a plain
-/// `new Pose`, which never moves into the pool), in its row of `g.loose_poses`. The row's floats are its own heap, which stands while the row does
+/// A pose's singles WHEREVER THEY ARE: in the pool, or, for a pose of its own (a function's scratch, a ragdoll's, which never moves into the pool),
+/// in its row of `g.loose_poses`. The row's floats are its own heap, which stands while the row does
 /// wherever the list of rows moves; like a pool slice, the answer is for use now and is never kept.
 fn cols_of(g: &mut crate::game::Game, p: Pose) -> &'static mut [f32] {
     if p.nodes != 0 && p.at >= Pose::LOOSE {
@@ -244,8 +244,8 @@ fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
     cols_at_read(g.sim, p)
 }
 
-/// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`, as the TypeScript's `new Pose` is an array of its own. Only a pose
-/// made through a character's set lives in the game's pool (pose_set_make): so the pool holds what the TypeScript's holds, and no more. No nodes
+/// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`. Only a pose
+/// made through a character's set lives in the game's pool (pose_set_make). No nodes
 /// makes a pose with no place and no floats.
 pub(super) fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
     if num_nodes == 0 { return Pose { at: u32::MAX, nodes: 0 }; }
@@ -255,13 +255,13 @@ pub(super) fn pose_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::an
     Pose { at: Pose::LOOSE + row, nodes: num_nodes as u32 }
 }
 
-/// A function's scratch pose let go (the TypeScript drops the object): its row is freed when it is the last, which a scratch made and dropped inside
+/// A function's scratch pose let go: its row is freed when it is the last, which a scratch made and dropped inside
 /// one function is. A pose in the pool, or a row with later rows after it, stands.
 pub(super) fn pose_done(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose) {
     if p.nodes != 0 && p.at >= Pose::LOOSE && (p.at - Pose::LOOSE) as usize + 1 == g.loose_poses.len() { g.loose_poses.pop(); }
 }
 
-/// A pose of a set, in its game's pool, zeros. A pool with no room leaves it a pose of its own, as the TypeScript's stays its own array (the set
+/// A pose of a set, in its game's pool, zeros. A pool with no room leaves it a pose of its own (the set
 /// counts it a stray).
 fn pose_pool_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_skeleton::Pose {
     let at = ::sim::poses::new_of(g.sim, num_nodes);
@@ -269,7 +269,7 @@ fn pose_pool_new(g: &mut crate::game::Game, num_nodes: usize) -> crate::anim_ske
     Pose { at, nodes: num_nodes as u32 }
 }
 
-/// A pose of its own takes a place in the pool and its floats (a man's set coming home; a pose the bridge carried from an array of its own). One in
+/// A pose of its own takes a place in the pool and its floats (a man's set coming home). One in
 /// the pool stands as it is, and so does one with no row. A pool with no room leaves it where it is.
 pub(super) fn pose_take_home(g: &mut crate::game::Game, p: &mut crate::anim_skeleton::Pose) {
     if p.at < Pose::LOOSE {
@@ -352,7 +352,7 @@ pub(super) fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) ->
     if g.tab.pose_set[id].list.len() as f64 >= most {
         panic!("posing: a set of {} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number: game/levelfit.ts fitRows)", most);
     }
-    // (a pose made while the set is at home is made in the pool; one made before is an array of its own until the set goes home, as the TypeScript's)
+    // (a pose made while the set is at home is made in the pool; one made before stands outside it until the set goes home)
     let p = if g.tab.pose_set[id].home.is_some() { pose_pool_new(g, n as usize) } else { pose_new(g, n as usize) };
     g.tab.pose_set[id].list.push(p);
     if g.tab.pose_set[id].home.is_some() && !pose_in(g, p) {
@@ -1460,7 +1460,7 @@ mod tests {
         ::sim::state::state(g.sim).poses.live = 0;
         assert!(b.at >= Pose::LOOSE);
         assert_eq!(g.tab.pose_set[s].stray, 1.0);
-        // the pool has room again: the set going home takes the stray in (the TypeScript's poseSetIn tries each pose again)
+        // the pool has room again: the set going home takes the stray in
         assert!(pose_set_in(&mut g, s));
         assert!(g.tab.pose_set[s].list[1].at < Pose::LOOSE);
         pose_set_out(&mut g, s);

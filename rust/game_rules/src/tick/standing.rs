@@ -27,7 +27,7 @@ pub fn settle(g: &mut Game) {
 /// the canvas of a host that draws nothing
 pub fn canvas() -> crate::host_hud::View { crate::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 } }
 
-/// THE HOST'S OWN INPUT AND CAMERA for a game that stands: a detached Input with the cursor where the harness always put it,
+/// THE HOST'S OWN INPUT AND CAMERA for a game that stands: a detached Input with the cursor in the middle of the canvas,
 /// a canvas of 1600 by 1000, a follow camera on the level's spawn, and the box world listed once.
 pub fn host_new(g: &mut Game) -> Host {
     let input = crate::input::input_detached(g);
@@ -39,7 +39,7 @@ pub fn host_new(g: &mut Game) -> Host {
     g.tab.camera[cam].aspect = canvas.width / canvas.height;
     crate::camera::follow_camera_rebuild(g, cam);
     crate::scene_boxes::box_world_listed(g);
-    // (the host's camera and keys are handed to the game here, once, as standGame hands a TypeScript host's: game.ts hostCam)
+    // (the host's camera and keys are handed to the game here, once)
     g.host_cam = Some(cam);
     g.host_input = Some(input);
     Host { input, cam, canvas }

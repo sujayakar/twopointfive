@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- a walk's price list, as the closures of the TypeScript held it ----
+// ---- a walk's price list ----
 
 /// a `penalty` a walk is priced by: `dearFor`'s, or `route`'s and `sideFor`'s own (a doorway `dear` is `wall`, else `unk`, else 1)
 #[derive(Clone, Copy)]
@@ -548,7 +548,7 @@ pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd:
     }
     let own = match shy { Some(s) => through(g, from, &path, s), None => false };
     let round = own && squad_orders_big(g, &crate::seats::here(g));   // (the short way to his mark runs through the very door he is to stack on)
-    // (cleared.ts: the short way runs through a room nobody of the team has been in: `off_m` metres of it)
+    // (the short way runs through a room nobody of the team has been in: `off_m` metres of it)
     let cleared_dear = g.k.orders.cleared_dear;
     let unk = crate::cleared::cleared_rooms_dear_for(g, from, to, cleared_dear, None);
     let off_m = match unk.as_ref() { Some(u) => along(g, from, &path, Pen::Dear(u)), None => 0.0 };
@@ -679,7 +679,7 @@ fn sw_take(g: &mut Game, b: OrdersAssignmentId, w: &[V3]) {
     let row = &mut g.tab.orders_assignment[b];
     row.goal = if !via.is_empty() { via[0] } else { v3::copy(row.post.unwrap()) };
     row.via = via;
-    row.new_leg = true;   // (orders.ts:2346: the corners are a fresh list and the goal one of its points or a copy: a new object, so a new leg; on Assignment.new_leg's list)
+    row.new_leg = true;   // (the corners are a fresh list and the goal one of its points or a copy, so a new leg)
 }
 
 /// A pair goes round one way: at the end of a giving, men of one order and door nearly together who would split round a building take one of their two ways.
@@ -894,14 +894,14 @@ pub(super) fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId
         let groups: Vec<f64> = posts.iter().map(|x| x.group.unwrap_or(0.0)).collect();
         let fc = g.dr[door].frame_centre;
         for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(fc)) {
-            let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();   // (the TypeScript finds the same array by identity: pair hands the spots back unchanged, and the marks are a body apart, so the bits of the place name it)
+            let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();   // (pair hands the spots back unchanged, and the marks are a body apart, so the bits of the place name the post)
             out.get_or_insert_with(JsMap::new).set(gd, SquadOrdersWalkStacksMapValue { door, side, post });
         }
     }
     out.map(SquadOrdersWalkStacks::Map)
 }
 
-/// the all-optional order as the two struct types the skeleton made of the one TypeScript shape
+/// the all-optional order, from one of its two struct types to the other
 macro_rules! order_as {
     ($to:ident, $s:expr, $tries:expr) => {{
         let s = $s;

@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec;
 
-/// The row of a man the rule has already asked about: the one truth behind every `S` of the TypeScript.
+/// The row of a man the rule has already asked about.
 fn row(g: &mut Game, c: CharId) -> &mut St {
     g.m.gunwall.st.get_mut(c).unwrap()
 }
@@ -395,7 +395,7 @@ mod tests {
         g.ch[c].aim_pitch = 0.0;
         let there = raised_line(&mut g, c, GunUp::Aim, 0.0, Some([5.0, 0.1, 5.0]));
         near(there.a[2] - 5.0, l.a[2] - g.ch[c].pos[2]);
-        // ported, a long gun's muzzle rides high and across him
+        // at port arms, a long gun's muzzle rides high and across him
         let port = raised_line(&mut g, c, GunUp::Port, 0.0, None);
         assert!(port.b[1] > port.a[1] && port.b[2] > port.a[2]);
         // stooped, the whole line is lower; a longer gun reaches further at the low ready too

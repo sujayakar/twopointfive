@@ -870,7 +870,6 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own bits, under EXACT
     #[test]
     fn leaf_dist_bits() {
         let l = vec![vec![1.25, -3.5, 2.1, -2.7], vec![0.3, 0.7, 0.3, 1.9]];

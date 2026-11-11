@@ -23,7 +23,7 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
     ids
 }
 
-/// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true.
+/// The weapon row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled.
 pub(super) fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
@@ -53,7 +53,7 @@ pub(super) fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit:
     })
 }
 
-/// He is handed the gun that is not in his hands (None: the pistol alone is his whole kit). GUNSLOTS.on is settled true.
+/// He is handed the gun that is not in his hands (None: the pistol alone is his whole kit).
 pub(super) fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
     g.gd[gd].second = None;
     let Some(row) = row else { return };
@@ -93,7 +93,7 @@ pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
     side_out(g, gd, crate::v3::dist_xz(k, p))
 }
 
-/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds. GUNSLOTS.on and .dry are settled true.
+/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds.
 pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     let Some(s) = g.gd[gd].second else { return false };
     if s.out || !js::truthy(crate::weapons::firearm_rounds_ready(g, s.gun)) { return false; }
@@ -197,7 +197,7 @@ mod tests {
     use super::*;
     use crate::weapons::WeaponId as W;
 
-    /// One man with a pair of guns, on a blank game, the page's knobs and rows. Nothing here reaches a stub.
+    /// One man with a pair of guns, on a blank game, the page's knobs and rows.
     fn stand(in_hand: W, second: W) -> (Box<Game>, GuardId, FirearmId, FirearmId) {
         let mut g = Box::new(Game::blank());
         let a = g.fa.push(crate::weapons::Firearm { def: in_hand, ..crate::weapons::Firearm::blank() });

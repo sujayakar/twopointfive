@@ -13,7 +13,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
     g.light_home = crate::fixtures::LightHome::blank();
-    // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
+    // the level's boxes are g.col.boxes, as the caller left them. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
     if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }
     let n_seats = opts.and_then(|o| o.seats).unwrap_or(1.0);
@@ -149,7 +149,7 @@ fn panel_lights(g: &mut Game, ids: &[BoxId], t: FixtureId) {
     if kind != crate::fixtures::FixtureKind::Emissive { return; }
     for &bi in boxes.iter() {
         let (h, c, yaw) = { let b = &g.tab.boxes[ids[bi as usize]]; (b.h, b.c, b.yaw) };
-        let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (levelfit.ts: the one rule for which fixture box is an area light; the lamp bound asks it too)
+        let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (the one rule for which fixture box is an area light; the lamp bound asks it too)
         let (thin, a0, a1, area) = (panel.thin as usize, panel.a0 as usize, panel.a1 as usize, panel.area);
         // emitting side: ceiling fixtures face down; wall / desk fixtures whichever side is open
         let n: V3 = if thin == 1 {

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-road.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-road: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_road::types;
 pub use types::*;
@@ -127,7 +127,7 @@ pub(super) fn tut_road_define(m: &mut crate::director::Manifest) -> Result<crate
     })
 }
 
-/// (levels/tut-road.script.ts:54-57 P.beat 'hold') every man on his mark, his gun on the way the player will come.
+/// beat 'hold': every man on his mark, his gun on the way the player will come.
 pub(super) fn tut_road_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadHoldFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         let staff = tut_road_vars(g, r).staff.clone();
@@ -151,7 +151,7 @@ pub(super) fn tut_road_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
     Ok(None)
 }
 
-/// (levels/tut-road.script.ts:61-61 P.beat 'cease') the sentry's cue to stop shooting at the truck.
+/// beat 'cease': the sentry's cue to stop shooting at the truck.
 pub(super) fn tut_road_cease_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_road::TutRoadCeaseFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         g.tab.director_run[r].flags.set(String::from("cease"), Some(crate::director::Json::Bool(true)));
@@ -161,7 +161,7 @@ pub(super) fn tut_road_cease_step(g: &mut crate::game::Game, r: DirectorRunId, f
     Ok(None)
 }
 
-/// (levels/tut-road.script.ts:62-77 P.beat 'road') the sentry puts rounds into the truck until the player is at the post's wall.
+/// beat 'road': the sentry puts rounds into the truck until the player is at the post's wall.
 pub(super) fn tut_road_road_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadRoadFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -212,7 +212,7 @@ pub(super) fn tut_road_road_test(g: &crate::game::Game, r: DirectorRunId, f: &cr
     }
 }
 
-/// (levels/tut-road.script.ts:81-81 P.beat 'way') the hut's door is thrown open if the lesson went on with it still standing.
+/// beat 'way': the hut's door is thrown open if the lesson went on with it still standing.
 pub(super) fn tut_road_way_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_road::TutRoadWayFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         let d = tut_road_vars(g, r).hut_door.clone().expect("set by tut_road_define");
@@ -226,7 +226,7 @@ pub(super) fn tut_road_way_step(g: &mut crate::game::Game, r: DirectorRunId, f: 
     Ok(None)
 }
 
-/// (levels/tut-road.script.ts:86-99 P.beat 'hut') the man in the back room shoots through the boards at the wall over the front room.
+/// beat 'hut': the man in the back room shoots through the boards at the wall over the front room.
 pub(super) fn tut_road_hut_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadHutFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -304,7 +304,7 @@ pub(super) fn tut_road_hut_test(g: &crate::game::Game, r: DirectorRunId, f: &cra
     }
 }
 
-/// (levels/tut-road.script.ts:104-123 P.beat 'gun') one man on a belt-fed gun: where his rounds go is the lesson's; a player out on the snow is the game's gunner's.
+/// beat 'gun': one man on a belt-fed gun: where his rounds go is the lesson's; a player out on the snow is the game's gunner's.
 pub(super) fn tut_road_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadGunFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -376,7 +376,7 @@ pub(super) fn tut_road_gun_test(g: &crate::game::Game, r: DirectorRunId, id: u32
     }
 }
 
-/// (levels/tut-road.script.ts:124-124 P.beat 'bags') the gun's traverse along the sandbags.
+/// beat 'bags': the gun's traverse along the sandbags.
 pub(super) fn tut_road_bags_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_road::TutRoadBagsFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         g.tab.director_run[r].flags.set(String::from("gun"), Some(crate::director::Json::Text(String::from("bags"))));
@@ -386,7 +386,7 @@ pub(super) fn tut_road_bags_step(g: &mut crate::game::Game, r: DirectorRunId, f:
     Ok(None)
 }
 
-/// (levels/tut-road.script.ts:125-125 P.beat 'ease') the gun moves to the roadblock's wall.
+/// beat 'ease': the gun moves to the roadblock's wall.
 pub(super) fn tut_road_ease_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_road::TutRoadEaseFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         g.tab.director_run[r].flags.set(String::from("gun"), Some(crate::director::Json::Text(String::from("ease"))));
@@ -396,7 +396,7 @@ pub(super) fn tut_road_ease_step(g: &mut crate::game::Game, r: DirectorRunId, f:
     Ok(None)
 }
 
-/// (levels/tut-road.script.ts:130-148 P.beat 'gate') three more come in by the upper gate and shoot the head of the wall, until one of them is down.
+/// beat 'gate': three more come in by the upper gate and shoot the head of the wall, until one of them is down.
 pub(super) fn tut_road_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_road::TutRoadGateFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
@@ -511,7 +511,7 @@ pub(super) fn tut_road_gate_test(g: &crate::game::Game, r: DirectorRunId, f: &cr
     }
 }
 
-/// (levels/tut-road.script.ts:152-152 P.beat 'open') the gate stands open on its stay.
+/// beat 'open': the gate stands open on its stay.
 pub(super) fn tut_road_open_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_road::TutRoadOpenFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         let d = tut_road_vars(g, r).gate.clone().expect("set by tut_road_define");

@@ -134,15 +134,15 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 /// A MISSION'S ADDRESS IS READ IN TWO PLACES by whoever starts a game from one. BEFORE THE GAME IS MADE, on the blank game: the mission row's own
 /// hour and weather written onto the words, then the weather the game is BORN in (`?weather=`, or snow on a level built for it), locked (the
 /// address's for the life of a game this start stands, as a page's is), and the visit's hour (`?hour=`, `?sun=`), which the stand lays over the level. A Weather born in its kind lays its roofs, its wet ground and its wind once; a host that stood the level's
-/// own storm first and changed the kind afterwards had another box table than a page.
+/// own storm first and changed the kind afterwards would have another box table than a page.
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
     crate::rowset::row_settings(q);
-    // (a Training level's stagings wear what its lesson asks: kit.ts kitLessonPage)
+    // (a Training level's stagings wear what its lesson asks)
     crate::kit::kit_lesson_page(g, lesson_of_address(q).is_some());
-    // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
+    // (a level built for snow is in snow whatever the address said)
     let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
-    // (hours.ts hourAsked: the visit's hour, which the stand lays over the level once the game is made)
+    // (the visit's hour, which the stand lays over the level once the game is made)
     let sun = q.float("sun").filter(|s| s.is_finite());
     g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), way: crate::roomclear::way_of_address(q) };
     kind

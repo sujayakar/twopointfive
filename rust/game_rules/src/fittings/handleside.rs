@@ -269,7 +269,7 @@ fn feet_to(g: &mut crate::game::Game, gd: GuardId, p: V3) {
     g.gd[gd].stuck_t = 0.0;
 }
 
-/// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = doors.ts's own beat.
+/// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = the doors' own beat.
 pub fn hand_press(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     if g.team(gd) == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
     if let Some(r) = g.m.handleside.rested.get(gd).copied() { if g.time < r.until { return None; } }
@@ -282,7 +282,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, order:
     let order = order.unwrap_or(false);
     let k = g.k.handle;
     if at_handle(g, d, at, Some(k.reach - 0.07)) { return None; }
-    if order && !crate::doors::doors_pull_face(g, d, at) {   // a door order's lead, whichever cast of doortools.ts gives it
+    if order && !crate::doors::doors_pull_face(g, d, at) {   // a door order's lead, whichever cast's door tools give it
         match near_stand(g, d, side, at) {
             Some(crate::handleside::NearStand::Post) => {
                 return None;

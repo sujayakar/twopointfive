@@ -81,7 +81,7 @@ pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<c
     Some(crate::fogofwar::FogEye { id: g.ch[c].id, pos: l.pos, look: [m::sin(a), 0.0, m::cos(a)], at: l.pos, fov: Some(fov), near: Some(0.0), wand: Some(true) })
 }
 
-/// The look let go of with nothing said; player.ts stopWand is the worded way out.
+/// The look let go of; `stop_wand` does this and stops him where he kneels.
 pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
     if g.pl[pl].wanding().is_none() { return; }
     g.pl[pl].wanding_over();

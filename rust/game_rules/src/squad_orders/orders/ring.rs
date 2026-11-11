@@ -355,7 +355,7 @@ fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
     true
 }
 
-/// `this.goalPart(t, add)` for ring_up's argument (the same object in the TypeScript, two types here): the outer None is still null
+/// `squad_orders_goal_part` as ring_up's argument, in that call's own type: the outer None is still null
 fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<SquadOrdersRingUpG>> {
     squad_orders_goal_part(g, t, add).map(|p| p.map(|p| SquadOrdersRingUpG { men: p.men }))
 }

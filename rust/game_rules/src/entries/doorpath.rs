@@ -408,13 +408,13 @@ fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, q: V
         if let Some(post) = g.tab.orders_assignment[a].post {
             if v3::dist_xz(post, old) < 0.1 {
                 let goal: V3 = [q[0], post[1], q[2]];
-                g.tab.orders_assignment[a].post = Some(goal); if g.tab.orders_assignment[a].had == Some(goal) { g.tab.orders_assignment[a].had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
+                g.tab.orders_assignment[a].post = Some(goal); if g.tab.orders_assignment[a].had == Some(goal) { g.tab.orders_assignment[a].had = None; }   // (`had` is asked by value: a mark he had that holds these numbers goes, and any other stays)
                 g.tab.orders_assignment[a].goal = goal;
                 if let Some(s) = g.gd[gd].script.as_mut() {
                     if let Some(sg) = s.goal {
                         if v3::dist_xz(sg, old) < 0.1 {
                             s.goal = Some(goal);
-                            // (`gd.script.goal = A.goal`: his goal IS the order's goal object now, so the order's next hand-over is no new leg,
+                            // (his goal is the order's goal now, so the order's next hand-over is no new leg,
                             //  whatever was pending on the assignment)
                             g.tab.orders_assignment[a].new_leg = false;
                         }

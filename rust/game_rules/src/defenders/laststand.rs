@@ -113,7 +113,7 @@ fn vars_of(pairs: &[(&str, &str)]) -> JsMap<String, String> { let mut v = JsMap:
 fn the_word(n: &str) -> String {
     if n.starts_with("the ") || n.ends_with(|c: char| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
-// ---------------------------------------------------------------- the skeleton's functions
+// ---------------------------------------------------------------- the module's functions
 
 /// a new tally of the endgame
 fn new_stats() -> crate::laststand::StateStats {
@@ -551,7 +551,7 @@ pub(super) fn last_stand_stop(g: &mut crate::game::Game) {
     st.stale = true;
 }
 
-/// roomclear.ts objective(): the rooms their net has named and the named places that are no room of it, by the men still up who said so
+/// the objective's hint: the rooms their net has named and the named places that are no room of it, by the men still up who said so
 pub fn last_stand_hint(g: &crate::game::Game) -> Option<crate::laststand::Hint> {
     let st = g.m.laststand.states.as_ref()?;
     if st.stale { return None; }

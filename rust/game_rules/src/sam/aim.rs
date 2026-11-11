@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// Back to nothing; `last_shot` stays, as in the TypeScript.
+/// Back to nothing; `last_shot` stays.
 pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.track = 0.0;
     this.tgt_key = String::new();
@@ -355,7 +355,6 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
     let tgt = m::min(p.target_move_cap, g.arms[g.pl[pl].ch].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
     let own = feet_of(g, &g.arms[g.pl[pl].ch].aim, &c_vel, p.steady_pace) * p.shooter_move_k;
-    // AIM_HOOKS.playerExternalK as player.ts:258 sets it at load, the only value it ever holds.
     let k = if crate::game::player_braced(g, pl) { g.k.rifle_spread.brace_k } else { 1.0 };
     let kk = if k.is_finite() { m::max(0.0, k) } else { 1.0 };
     crate::aim::PlayerAim { spread: (base * settle + tgt) * kk + own * v3::lerp(kk, 1.0, v3::clamp(1.0 - g.k.aimcost.brace_feet, 0.0, 1.0)), track, base, settle, tgt, own }

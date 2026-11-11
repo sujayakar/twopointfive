@@ -81,7 +81,7 @@ pub(super) fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
 
-/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after, since a `pose_new` would hold a place in the pool for good where the TypeScript's scratch held none.
+/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after.
 pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64);
     let stale = match g.m.character.at0.get(clip) {
@@ -128,7 +128,7 @@ pub(super) fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton:
     let nr = crate::anim_skeleton::pose_rows(p.nodes as f64) as usize;
     for i in 0..p.nodes as usize {
         if only[i] as f64 <= 0.0 { continue; }
-        // One borrow at a time, read before written: p may be `from` (the head comment of the TypeScript's says so), and three slices of one pool cannot be held.
+        // One borrow at a time, read before written: p may be `from`, and three slices of one pool cannot be held.
         let a = joint_of(crate::anim_skeleton::pose_cols(g, from), nr, i);
         let b = joint_of(crate::anim_skeleton::pose_cols(g, to), nr, i);
         let pc = crate::anim_skeleton::pose_cols(g, p);
@@ -144,7 +144,7 @@ fn joint_of(cols: &[f32], nr: usize, i: usize) -> [f64; 7] {
     j
 }
 
-/// add_pose_delta's sums for one joint, as the TypeScript does them: in doubles, stored as singles once.
+/// add_pose_delta's sums for one joint: in doubles, stored as singles once.
 fn delta_joint(p: [f64; 7], a: [f64; 7], b: [f64; 7], w: f64) -> [f32; 7] {
     let mut o = [0.0f32; 7];
     for c in 0..3 { o[c] = (p[c] + (b[c] - a[c]) * w) as f32; }

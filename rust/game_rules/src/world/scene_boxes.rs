@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, sync::Arc, vec, vec::Vec};
 
-// THE BOX TABLES' MAKERS. Invented by the skeleton, so they have no TypeScript line: written here. A box of the world is a row of `g.tab.boxes` and is never
+// THE BOX TABLES' MAKERS. A box of the world is a row of `g.tab.boxes` and is never
 // dealt again, so its number is the same on every host. A box of the frame, or one its maker keeps a while, is a row of `g.tab.frame_boxes`: a row is freed by
 // the tick's own listing, not by a host's drawing, but a freed row is dealt again: it names a box only while its holder holds it.
 
@@ -48,11 +48,11 @@ fn boxes_frame_reset(g: &mut Game) {
 pub fn box_kept(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     match g.box_frame_free.pop() { Some(id) => { g.tab.frame_boxes[id] = b; id } None => g.tab.frame_boxes.push(b) }
 }
-/// The holder of a kept box has dropped it (the TypeScript drops the object). The frame's list or the engine's may still name it, so it is not free at
+/// The holder of a kept box has dropped it. The frame's list or the engine's may still name it, so it is not free at
 /// once: it joins the frame's rows, and the next listing frees it once it is on no list (`box_world_listed`).
 pub fn box_let_go(g: &mut Game, id: FrameBoxId) { g.box_frame_rows.push(id); }
 
-/// makeBox for a box pushed straight onto the frame's list: a row for this frame (boxes.ts makeBox, where its caller keeps nothing of it)
+/// makeBox for a box pushed straight onto the frame's list: a row for this frame, of which its caller keeps nothing
 pub fn make_box_frame(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> FrameBoxId { let b = crate::scene_boxes::make_box_value(p); box_frame(g, b) }
 /// makeBox for a box its maker keeps until it hands it to `box_let_go` (one that stands by a short timer on `g.fx`)
 pub fn make_box_kept(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> FrameBoxId { let b = crate::scene_boxes::make_box_value(p); box_kept(g, b) }
@@ -301,7 +301,7 @@ fn ray_walk(g: &Game, r: &RayGrid, near: &mut Nearest, ro: V3, rd: V3, skip_flag
     loop {
         if t_enter > near.best { return; }
         let c = cz * w_ + cx;
-        // (a NaN origin leaves the cell NaN: the TypeScript's array reads give undefined and no candidate)
+        // (a NaN origin leaves the cell NaN: no candidate)
         if c == c {
             let c = c as usize;
             let (s, e) = (r.start[c] as usize, r.start[c + 1] as usize);
@@ -553,7 +553,7 @@ mod tests {
         fnv(fnv(h, b as u32), (b >> 32) as u32)
     }
 
-    /// the same world as /tmp/p_scene_boxes_01_bits.ts builds, to the draw
+    /// the world the pinned bits are of, draw for draw
     fn world(g: &mut Game, x: &mut Lcg) {
         g.engine.world = crate::scene_boxes::BoxWorld::blank();
         g.engine.world.max_boxes = 4096.0;
@@ -610,13 +610,12 @@ mod tests {
         h
     }
 
-    /// raycast through the grid, the brute force and the tests of every shape, against the TypeScript's own bits (bun, EXACT on)
+    /// raycast through the grid, the brute force and the tests of every shape, against pinned bits
     #[test]
     fn raycast_matches_the_typescripts_bits() {
         let mut g = Game::blank();
         let mut x = Lcg(12345);
         world(&mut g, &mut x);
-        // no list yet: no grid, as in the TypeScript before an upload
         assert_eq!(box_world_list(&mut g), 200.0);
         assert!(box_world_at(&g, 219).is_some() && box_world_at(&g, 220).is_none());
         let mut seen = 2166136261u32;

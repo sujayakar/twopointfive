@@ -86,7 +86,7 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
 pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> bool {
     use crate::autopilot::AutoPickWhy;
     let p = auto_pick(g, &crate::seats::here(g), t, None, men);
-    let (tail, group) = (g.sets[g.seat].orders.log.last().map(|row| row.serial), g.sets[g.seat].orders.group); // the last row, asked by identity in the TypeScript: its serial
+    let (tail, group) = (g.sets[g.seat].orders.log.last().map(|row| row.serial), g.sets[g.seat].orders.group); // the last row's serial: a row the call below logs has another
     let to = p.men.clone().or_else(|| men.map(|m| m.to_vec()));
     if p.why == AutoPickWhy::Pending { return false; }
     if p.why == AutoPickWhy::Set {

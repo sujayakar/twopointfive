@@ -56,7 +56,7 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
 mod tests {
     use super::*;
 
-    /// The TypeScript's bits under bun, EXACT.on, from watch's expressions copied into a script (watch is not exported) and the module's eyeSlack of 4.
+    /// The pinned bits of look_from, with an eye slack of 4.
     #[test]
     fn look_from_matches_the_typescripts_bits() {
         let a = look_from([1.25, 0.0, -3.5], 0.7, 0.785, 0.45, 0.6, 4.0);

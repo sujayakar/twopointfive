@@ -221,7 +221,7 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    /// The hand's beats on the page's numbers, against the TypeScript's handAt: (t, up, drawn, cycle, into's bits).
+    /// The hand's beats on the page's numbers: (t, up, drawn, cycle, into's bits).
     #[test]
     fn hand_beats_are_the_typescripts() {
         let k = crate::knobs::SmokebreakK::page();

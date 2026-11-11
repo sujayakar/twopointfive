@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the rig's named nodes as `Object.entries(N)` walks them: the key a layer asks for (the TypeScript's own name), the node's name
+/// the rig's named nodes in their order: the key a layer asks for, the node's name
 fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
     [
         ("hips", &nn.hips), ("spine1", &nn.spine1), ("spine2", &nn.spine2), ("spine3", &nn.spine3), ("neck", &nn.neck), ("head", &nn.head),
@@ -16,7 +16,7 @@ fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
     ]
 }
 
-// ---- what the constructor does before the animator is on a body: anim_fk_list, anim_stance_of and anim_sample_jog take a CharId (notes, ## Skeleton)
+// ---- what a new character works out before the animator is on a body
 
 /// the nodes fkPart must compute for `ends`: each and all its ancestors, parents first
 fn fk_list(rig: &crate::anim_gltf::GltfCharacter, ends: &[f64]) -> Vec<i32> {
@@ -30,7 +30,7 @@ fn fk_list(rig: &crate::anim_gltf::GltfCharacter, ends: &[f64]) -> Vec<i32> {
     }
     rig.order.iter().filter(|&&i| want[i as usize]).map(|&i| i as i32).collect()
 }
-/// a run clip's stances from its toes; None if either foot never qualifies   (character.ts stanceOf: it reads no state)
+/// a run clip's stances from its toes; None if either foot never qualifies
 fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> {
     let mm = ty[0].len();
     let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
