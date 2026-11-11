@@ -39,7 +39,7 @@ fn shown(p: &mut Play) -> Option<Throw> {
 
 /// the walks to a throw under way, by man: the spot asked for and the spot he walks to
 fn walks(p: &Play) -> Vec<(game::ids::GuardId, [f64; 2], [f64; 2])> {
-    let Some(s) = p.g.m.squadthrow.states.get(p.g.player) else { return Vec::new() };
+    let Some(s) = p.g.m.squadthrow.states.get(p.g.group) else { return Vec::new() };
     s.walks.keys().into_iter().map(|gd| { let w = s.walks.get(gd).unwrap(); (gd, flat(w.at), flat(w.post)) }).collect()
 }
 
@@ -48,7 +48,7 @@ fn given(p: &mut Play, thrown: usize, before: &[(game::ids::GuardId, [f64; 2], [
     let log = &p.g.m.squadthrow.squadthrow_log;
     if log.len() > thrown { let x = log.last().unwrap(); let who = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].callsign == x.who)?; return Some((who, None, flat(x.rest))); }
     let new = walks(p).into_iter().find(|w| !before.contains(w))?;
-    let s = p.g.m.squadthrow.states.get(p.g.player)?;
+    let s = p.g.m.squadthrow.states.get(p.g.group)?;
     Some((new.0, Some(new.2), flat(s.walks.get(new.0)?.arc.rest)))
 }
 

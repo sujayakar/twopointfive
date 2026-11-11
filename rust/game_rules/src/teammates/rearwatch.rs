@@ -27,7 +27,7 @@ fn post_of(g: &Game, m: GuardId) -> Option<V3> {
 fn spare_of(g: &Game, a: TaskId) -> bool {
     g.tab.task[a].spare.unwrap_or(false)
 }
-fn pin_row(g: &Game, key: PlayerId, m: GuardId) -> Option<RearPin> {
+fn pin_row(g: &Game, key: GroupId, m: GuardId) -> Option<RearPin> {
     g.m.rearwatch.books.get(key).unwrap().pins.get(m).copied()
 }
 fn is_going(p: crate::doortools::Phase) -> bool {
@@ -61,7 +61,7 @@ fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
 
 /// This view's book, made if it is not yet.
 fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     g.m.rearwatch.books.get_or_insert_with(key, Book::default)
 }
 
@@ -89,7 +89,7 @@ pub fn rear_ways(g: &mut crate::game::Game, door: DoorId, side: f64, marks: &[V3
         c[0] += q[0] / n;
         c[2] += q[2] / n;
     }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let mut out: Vec<RearWaysItem> = Vec::new();
     for o in crate::cover::cover_ready(g) {
         let (od, at, on) = {
@@ -148,7 +148,7 @@ pub fn rear_ways(g: &mut crate::game::Game, door: DoorId, side: f64, marks: &[V3
 }
 
 /// SHORT OF HIS MARK: between a stride and a step from it for too long, off the watch until he stands on it.
-fn short_of(g: &mut Game, key: PlayerId, m: GuardId) -> bool {
+fn short_of(g: &mut Game, key: GroupId, m: GuardId) -> bool {
     let a = match of(g, m) {
         Some(a) => a,
         None => return false,
@@ -179,7 +179,7 @@ fn short_of(g: &mut Game, key: PlayerId, m: GuardId) -> bool {
 }
 
 /// The man of this order already pinned behind this stack, who is not its lead nor the lane's man.
-fn had_of(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId], lane: Option<GuardId>) -> Option<GuardId> {
+fn had_of(g: &Game, key: GroupId, op: DoorOpId, men: &[GuardId], lane: Option<GuardId>) -> Option<GuardId> {
     let (door, side, lead) = {
         let r = &g.tab.doortools_door_op[op];
         (r.door, r.side, r.lead)
@@ -205,7 +205,7 @@ fn keep_eyes_spare(g: &mut Game, a: TaskId, op: DoorOpId, m: GuardId) {
 }
 
 /// Who of a stack should have this way: a line from where he is, then into the doorway, then the man already on it.
-fn rank(g: &Game, key: PlayerId, op: Option<DoorOpId>, m: GuardId, o: CoverOpeningId, front: V3) -> f64 {
+fn rank(g: &Game, key: GroupId, op: Option<DoorOpId>, m: GuardId, o: CoverOpeningId, front: V3) -> f64 {
     let mut r = 0.0;
     let p = g.pos_of(m);
     if rear_sees(g, p, o, front).is_some() {
@@ -253,7 +253,7 @@ struct Pick {
 
 /// Game.update, after the door tools' tick and before the cover's: who has the way behind each stack.
 pub fn rear_watch_tick(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     book_of(g);
     room_keep_tick(g, key);
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return drop_the_pins(g, key); }
@@ -269,7 +269,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
 }
 
 /// Orders are over: nobody is pinned, and a man whose eyes were made spare from outside has them back.
-fn drop_the_pins(g: &mut Game, key: PlayerId) {
+fn drop_the_pins(g: &mut Game, key: GroupId) {
     let pins: Vec<RearPin> = g.m.rearwatch.books.get(key).unwrap().pins.values().copied().collect();
     for p in pins {
         if p.raised == Some(true) && p.out == Some(true) {
@@ -285,7 +285,7 @@ fn squad_up(g: &Game) -> Vec<GuardId> {
 }
 
 /// The stack of each order of the door tools that has one now, and every man those orders take.
-fn door_tool_stacks(g: &mut Game, key: PlayerId) -> (Vec<Group>, JsSet<GuardId>) {
+fn door_tool_stacks(g: &mut Game, key: GroupId) -> (Vec<Group>, JsSet<GuardId>) {
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
     for op in g.groups[g.group].tools.ops.clone() {
@@ -339,7 +339,7 @@ fn stack_formed(g: &Game, op: DoorOpId) -> bool {
 }
 
 /// Before the door goes: the men with spare eyes who are not the lane's, and the man who has the watch.
-fn before_the_door(g: &mut Game, key: PlayerId, op: DoorOpId, men: &[GuardId]) -> Vec<GuardId> {
+fn before_the_door(g: &mut Game, key: GroupId, op: DoorOpId, men: &[GuardId]) -> Vec<GuardId> {
     let phase = g.tab.doortools_door_op[op].phase;
     let lane = g.tab.doortools_door_op[op].lane.as_ref().map(|l| l.gd);
     let mut cands: Vec<GuardId> = men.iter().copied().filter(|&m| {
@@ -377,7 +377,7 @@ fn before_the_door(g: &mut Game, key: PlayerId, op: DoorOpId, men: &[GuardId]) -
 }
 
 /// The door is going: the one man who had the watch keeps it, or a way come open since the last man of the file; in the entry only the man at the END of the turn.
-fn as_the_door_goes(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId]) -> Vec<GuardId> {
+fn as_the_door_goes(g: &Game, key: GroupId, op: DoorOpId, men: &[GuardId]) -> Vec<GuardId> {
     let r = &g.tab.doortools_door_op[op];
     let (phase, door) = (r.phase, r.door);
     let last = r.queue.last().map(|q| q.gd);
@@ -402,7 +402,7 @@ fn as_the_door_goes(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId]) -> V
 }
 
 /// A plain 'stack' on a door, no tool on it yet: its men by door.
-fn plain_stacks(g: &mut Game, key: PlayerId, squad: &[GuardId], taken: &JsSet<GuardId>) -> Vec<Group> {
+fn plain_stacks(g: &mut Game, key: GroupId, squad: &[GuardId], taken: &JsSet<GuardId>) -> Vec<Group> {
     let mut groups: Vec<Group> = Vec::new();
     for (door, side, men) in plain_stackers(g, squad, taken) {
         let marks: Vec<V3> = men.iter().map(|&m| post_of(g, m).unwrap()).collect();
@@ -435,7 +435,7 @@ fn plain_stackers(g: &Game, squad: &[GuardId], taken: &JsSet<GuardId>) -> Vec<(D
 }
 
 /// LEFT OUTSIDE: the entry had no point inside for him, or the order ended with him still on his mark. Dealt BEFORE the stacks'.
-fn left_outside(g: &mut Game, key: PlayerId, st: &Stacks, dealt: &mut Dealt) {
+fn left_outside(g: &mut Game, key: GroupId, st: &Stacks, dealt: &mut Dealt) {
     for m in g.m.rearwatch.books.get(key).unwrap().pins.keys() {
         if dealt.next.has(m) || st.groups.iter().any(|gr| gr.men.contains(&m)) || st.taken.has(m) || crate::condition::down(g, g.gd[m].ch) {
             continue;
@@ -447,7 +447,7 @@ fn left_outside(g: &mut Game, key: PlayerId, st: &Stacks, dealt: &mut Dealt) {
 }
 
 /// His pin, while he is on the same order with a post, his way is open or kept, his eyes are spare, he still has a line to it and nobody else holds it.
-fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[GuardId]) -> Option<RearPin> {
+fn keeps_it_from_outside(g: &mut Game, key: GroupId, m: GuardId, squad: &[GuardId]) -> Option<RearPin> {
     let p = pin_row(g, key, m).unwrap();
     let a = of(g, m).filter(|&a| a == p.a)?;
     let post = g.tab.task[a].post?;
@@ -483,7 +483,7 @@ fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[Guard
 }
 
 /// A stack of two or more, or a door already going, gets its man on the best way behind it that nobody holds.
-fn pin_the_rear_man(g: &mut Game, key: PlayerId, gr: &Group, squad: &[GuardId], dealt: &mut Dealt) {
+fn pin_the_rear_man(g: &mut Game, key: GroupId, gr: &Group, squad: &[GuardId], dealt: &mut Dealt) {
     if gr.cands.is_empty() || (gr.men.len() < 2 && !gr.going) {
         return;
     }
@@ -493,7 +493,7 @@ fn pin_the_rear_man(g: &mut Game, key: PlayerId, gr: &Group, squad: &[GuardId], 
 }
 
 /// The first way that a man of the stack can watch, and the best of those who can.
-fn who_watches(g: &Game, key: PlayerId, gr: &Group, ways: &[RearWaysItem], next: &JsMap<GuardId, RearPin>) -> Option<Pick> {
+fn who_watches(g: &Game, key: GroupId, gr: &Group, ways: &[RearWaysItem], next: &JsMap<GuardId, RearPin>) -> Option<Pick> {
     for w in ways {
         let mut see: Vec<GuardId> = gr.cands.iter().copied().filter(|&m| {
             if next.has(m) { return false; }
@@ -522,7 +522,7 @@ fn who_watches(g: &Game, key: PlayerId, gr: &Group, ways: &[RearWaysItem], next:
 }
 
 /// He has that way: the pin written, the way taken for this tick, the log told of a new one.
-fn pin_him(g: &mut Game, key: PlayerId, gr: &Group, pick: Pick, dealt: &mut Dealt) {
+fn pin_him(g: &mut Game, key: GroupId, gr: &Group, pick: Pick, dealt: &mut Dealt) {
     let Pick { man: pm, way, blind } = pick;
     let po = way.o;
     let was = pin_row(g, key, pm);
@@ -580,7 +580,7 @@ fn pin_him(g: &mut Game, key: PlayerId, gr: &Group, pick: Pick, dealt: &mut Deal
 }
 
 /// Every man who had a pin and has none now goes in the log, with why: read by the checks and whoever asks why a back door went unwatched.
-fn log_the_men_off(g: &mut Game, key: PlayerId, st: &Stacks, next: &JsMap<GuardId, RearPin>) {
+fn log_the_men_off(g: &mut Game, key: GroupId, st: &Stacks, next: &JsMap<GuardId, RearPin>) {
     for m in g.m.rearwatch.books.get(key).unwrap().pins.keys() {
         if next.has(m) {
             continue;
@@ -644,8 +644,8 @@ fn others(g: &mut Game, squad: &[GuardId], m: GuardId, room: RoomfightRoomId) ->
     out
 }
 /// A keeper let go: he follows, last.
-fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
-    let r = match book!(g, pl).keeps.delete(m) {
+fn let_go(g: &mut Game, key: GroupId, m: GuardId, why: &str) {
+    let r = match book!(g, key).keeps.delete(m) {
         Some(r) => r,
         None => return,
     };
@@ -655,7 +655,7 @@ fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
         }
     }
     let s = format!("{} {} off {} · {}", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id, why);
-    note(book!(g, pl), &s);
+    note(book!(g, key), &s);
 }
 /// The walk to Sam, once a judging for each man.
 fn walk(g: &Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> f64 {
@@ -675,39 +675,39 @@ struct Leaving {
 }
 
 /// A TAKEN ROOM'S OTHER DOOR, KEPT WHILE THE SQUAD LEAVES.
-fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
-    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return nobody_keeps(g, pl); }
+fn room_keep_tick(g: &mut crate::game::Game, key: GroupId) {
+    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return nobody_keeps(g, key); }
     let now = crate::doortools::door_tools_door_keepers(&crate::seats::here(g));
     let sam_ch = g.pl[g.player].ch;
     let l = Leaving { sam_up: !crate::condition::down(g, sam_ch), sam_at: g.ch[sam_ch].pos, squad: squad_up(g) };
-    hand_overs(g, pl, &now, &l);
-    book!(g, pl).was = now;
-    forget_shut_doors(g, pl, &l);
-    for m in book!(g, pl).keeps.keys() {
-        keeps_his_door(g, pl, m, &l);
+    hand_overs(g, key, &now, &l);
+    book!(g, key).was = now;
+    forget_shut_doors(g, key, &l);
+    for m in book!(g, key).keeps.keys() {
+        keeps_his_door(g, key, m, &l);
     }
 }
 
 /// Orders are over: every keeper is let go, and nothing is remembered.
-fn nobody_keeps(g: &mut Game, pl: PlayerId) {
-    for m in book!(g, pl).keeps.keys() {
-        let_go(g, pl, m, "switched off");
+fn nobody_keeps(g: &mut Game, key: GroupId) {
+    for m in book!(g, key).keeps.keys() {
+        let_go(g, key, m, "switched off");
     }
-    let b = book!(g, pl);
+    let b = book!(g, key);
     b.was = Vec::new();
     b.shut.clear();
 }
 
 /// The hand-over: he had a door last frame, the entry has let go of him since, and what he has now is 'fall in'.
-fn hand_overs(g: &mut Game, pl: PlayerId, now: &[(GuardId, DoorId, TaskId)], l: &Leaving) {
-    for (m, door, a0) in book!(g, pl).was.clone() {
-        if book!(g, pl).keeps.has(m) || crate::condition::down(g, g.gd[m].ch) || now.iter().any(|x| x.0 == m) {
+fn hand_overs(g: &mut Game, key: GroupId, now: &[(GuardId, DoorId, TaskId)], l: &Leaving) {
+    for (m, door, a0) in book!(g, key).was.clone() {
+        if book!(g, key).keeps.has(m) || crate::condition::down(g, g.gd[m].ch) || now.iter().any(|x| x.0 == m) {
             continue;
         }
         let Some(keep) = stays_on_the_door(g, m, door, a0, l) else { continue };
         let s = format!("{} {} keeps {} while the squad leaves the room", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[keep.pin.o].id);
-        book!(g, pl).keeps.set(m, keep);
-        note(book!(g, pl), &s);
+        book!(g, key).keeps.set(m, keep);
+        note(book!(g, key), &s);
     }
 }
 
@@ -743,33 +743,33 @@ fn sam_in_room(g: &mut Game, l: &Leaving, room: RoomfightRoomId) -> bool {
 }
 
 /// A kept door that became a stack's way behind: until the squad has been beyond it, an order works it, or the squad is out of the room.
-fn forget_shut_doors(g: &mut Game, pl: PlayerId, l: &Leaving) {
-    for door in book!(g, pl).shut.keys() {
-        let w = *book!(g, pl).shut.get(door).unwrap();
+fn forget_shut_doors(g: &mut Game, key: GroupId, l: &Leaving) {
+    for door in book!(g, key).shut.keys() {
+        let w = *book!(g, key).shut.get(door).unwrap();
         let gone = crate::entrypoints::entry_points_far_known(g, w.o, w.at)
             || door_worked(g, &crate::seats::here(g), door)
             || !(l.squad.iter().any(|&x| room_of(g, g.pos_of(x)) == Some(w.room)) || sam_in_room(g, l, w.room));
         if gone {
-            book!(g, pl).shut.delete(door);
+            book!(g, key).shut.delete(door);
         }
     }
 }
 
 /// Each kept door, each tick: his still, on 'fall in'? Then he holds it, last in the file, or he is let go.
-fn keeps_his_door(g: &mut Game, pl: PlayerId, m: GuardId, l: &Leaving) {
-    let r = book!(g, pl).keeps.get(m).unwrap().clone();
+fn keeps_his_door(g: &mut Game, key: GroupId, m: GuardId, l: &Leaving) {
+    let r = book!(g, key).keeps.get(m).unwrap().clone();
     if crate::condition::down(g, g.gd[m].ch) {
-        book!(g, pl).keeps.delete(m);
+        book!(g, key).keeps.delete(m);
         return;
     }
     let a = of(g, m);
-    let Some(a) = a.filter(|&a| g.tab.task[a].post.is_none()) else { return another_order(g, pl, m, a, &r) };
+    let Some(a) = a.filter(|&a| g.tab.task[a].post.is_none()) else { return another_order(g, key, m, a, &r) };
     // ('fall in' given again: the same keep, on the new order)
     if a != r.pin.a {
-        book!(g, pl).keeps.get_mut(m).unwrap().pin.a = a;
+        book!(g, key).keeps.get_mut(m).unwrap().pin.a = a;
     }
-    if let Some(why) = why_let_go(g, pl, m, &r, l) {
-        return let_go(g, pl, m, why);
+    if let Some(why) = why_let_go(g, key, m, &r, l) {
+        return let_go(g, key, m, why);
     }
     // (the last place in the file; the door's one name, as the squad's rows say it)
     let o = r.pin.o;
@@ -783,9 +783,9 @@ fn keeps_his_door(g: &mut Game, pl: PlayerId, m: GuardId, l: &Leaving) {
 }
 
 /// Off the keep with an order that is not 'fall in'. Sent to a mark, the stack on the room's next door: shut, the door he was keeping is still a way behind it.
-fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<TaskId>, r: &RoomKeep) {
+fn another_order(g: &mut Game, key: GroupId, m: GuardId, a: Option<TaskId>, r: &RoomKeep) {
     let (o, door) = (r.pin.o, r.pin.door);
-    book!(g, pl).keeps.delete(m);
+    book!(g, key).keeps.delete(m);
     let at_him = inner(g, o, g.pos_of(m), 0.4);
     let stays = a.is_some()
         && !is_open_way(g, door)
@@ -793,7 +793,7 @@ fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<TaskId>, r: &
         && !door_worked(g, &crate::seats::here(g), door)
         && g.tab.task[a.unwrap()].door != Some(door);
     if stays {
-        book!(g, pl).shut.set(door, BookShutValue { o, room: r.room, at: at_him });
+        book!(g, key).shut.set(door, BookShutValue { o, room: r.room, at: at_him });
     }
     let s = format!(
         "{} {} off {} · another order{}",
@@ -802,11 +802,11 @@ fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<TaskId>, r: &
         g.tab.cover_opening[o].id,
         if stays { " (still a way behind the stack)" } else { "" }
     );
-    note(book!(g, pl), &s);
+    note(book!(g, key), &s);
 }
 
 /// Why he should leave the door now, if he should.
-fn why_let_go(g: &mut Game, pl: PlayerId, m: GuardId, r: &RoomKeep, l: &Leaving) -> Option<&'static str> {
+fn why_let_go(g: &mut Game, key: GroupId, m: GuardId, r: &RoomKeep, l: &Leaving) -> Option<&'static str> {
     let (o, door) = (r.pin.o, r.pin.door);
     if !l.sam_up {
         return Some("the player is down");
@@ -823,12 +823,12 @@ fn why_let_go(g: &mut Game, pl: PlayerId, m: GuardId, r: &RoomKeep, l: &Leaving)
     }
     // (several men keeping doors of one room do not wait on each other: DEEPER and PASSED are by the walk to Sam. Asked four times a second)
     if room_of(g, l.sam_at) == Some(r.room) {
-        let row = book!(g, pl).keeps.get_mut(m).unwrap();
+        let row = book!(g, key).keeps.get_mut(m).unwrap();
         row.out_t = f64::NAN;
         row.behind = None;
         return None;
     }
-    if g.time >= r.at || r.at - g.time > 1.0 { why_done_with_the_room(g, pl, m, r.room, l) } else { None }
+    if g.time >= r.at || r.at - g.time > 1.0 { why_done_with_the_room(g, key, m, r.room, l) } else { None }
 }
 
 /// The door is worked, or another man on a mark has it or watches it.
@@ -846,9 +846,9 @@ fn another_order_has_it(g: &Game, m: GuardId, o: CoverOpeningId, door: DoorId, l
 }
 
 /// Sam has left the room: nobody left in it who is deeper than he is, the last man has passed him, or the clock has run out.
-fn why_done_with_the_room(g: &mut Game, pl: PlayerId, m: GuardId, room: RoomfightRoomId, l: &Leaving) -> Option<&'static str> {
+fn why_done_with_the_room(g: &mut Game, key: GroupId, m: GuardId, room: RoomfightRoomId, l: &Leaving) -> Option<&'static str> {
     let time = g.time;
-    let row = book!(g, pl).keeps.get_mut(m).unwrap();
+    let row = book!(g, key).keeps.get_mut(m).unwrap();
     row.at = time + 0.25;
     if row.out_t.is_nan() || time < row.out_t {
         row.out_t = time;
@@ -857,16 +857,16 @@ fn why_done_with_the_room(g: &mut Game, pl: PlayerId, m: GuardId, room: Roomfigh
     let sam_at = l.sam_at;
     let mut far: JsMap<GuardId, f64> = JsMap::new();
     let dm = walk(g, &mut far, m, sam_at);
-    let rest: Vec<GuardId> = others(g, &l.squad, m, room).into_iter().filter(|&x| !book!(g, pl).keeps.has(x) || walk(g, &mut far, x, sam_at) > dm).collect();
+    let rest: Vec<GuardId> = others(g, &l.squad, m, room).into_iter().filter(|&x| !book!(g, key).keeps.has(x) || walk(g, &mut far, x, sam_at) > dm).collect();
     if rest.is_empty() {
         return Some("the squad is out of the room");
     }
     // (THE LAST MAN PASSES HIM: the men who had further to walk to Sam than he did when Sam left have all come by)
-    if book!(g, pl).keeps.get(m).unwrap().behind.is_none() {
+    if book!(g, key).keeps.get(m).unwrap().behind.is_none() {
         let behind: Vec<GuardId> = rest.iter().copied().filter(|&x| walk(g, &mut far, x, sam_at) > dm + 0.3).collect();
-        book!(g, pl).keeps.get_mut(m).unwrap().behind = Some(behind);
+        book!(g, key).keeps.get_mut(m).unwrap().behind = Some(behind);
     }
-    let behind = book!(g, pl).keeps.get(m).unwrap().behind.clone().unwrap();
+    let behind = book!(g, key).keeps.get(m).unwrap().behind.clone().unwrap();
     // (… and he does not crowd them at the way out: a mate still in the room whose place is beyond it goes out first)
     let queue = rest.iter().any(|&x| bound_beyond(g, x, room));
     if !behind.is_empty() && !queue {
@@ -900,12 +900,7 @@ fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// the fall-in leg: this man's feet stay where they are, in his seat's book.
 pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let key = if !seat_ref.group.by_a_player() {
-        crate::seats::view_key(g, seat_ref)
-    } else {
-        let seat = crate::seats::view_of(g, gd);
-        crate::cmd::seat_man(g, seat)
-    };
+    let key = if seat_ref.group.by_a_player() { g.sets[crate::seats::view_of(g, gd)].group } else { seat_ref.group_id };
     g.m.rearwatch.books.get(key).map_or(false, |b| b.keeps.has(gd))
 }
 
@@ -957,7 +952,7 @@ pub fn rear_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, front: V3) -> 
 
 /// the way this man is pinned to.
 pub(super) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let b = g.m.rearwatch.books.get(key)?;
     match b.pins.get(gd) {
         Some(p) => Some(*p),
@@ -987,7 +982,7 @@ pub fn rear_watcher(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: Doo
     if !carries(g, op) {
         return None;
     }
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let b = g.m.rearwatch.books.get(key)?;
     let w = *b.by_op.get(op)?;
     if b.pins.get(w)?.op == Some(op) {

@@ -21,7 +21,7 @@ fn kind_word(k: SquadThrowKind) -> ThrowKind { if k == SquadThrowKind::Frag { Th
 /// the seat's throws, in the order they were given, then the lit row's
 pub fn throws_view(g: &Game, seat: &crate::seats::SeatRef) -> Vec<ThrowLine> {
     let mut out = Vec::new();
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     if let Some(s) = g.m.squadthrow.states.get(key) {
         for gd in s.walks.keys() {
             let w = s.walks.get(gd).unwrap();

@@ -503,8 +503,7 @@ impl StealthAsk for Play {
         self.g.tab.enemysquads_squad[q].rooms.iter().any(|r| { let b = &r.bounds; at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 })
     }
     fn wand_jobs(&self) -> Vec<GuardId> {
-        let k = game::seats::view_key(&self.g, &game::seats::here(&self.g));
-        self.g.m.wandorder.states.get(k).map_or(Vec::new(), |st| st.jobs.keys())
+        self.g.m.wandorder.states.get(self.g.group).map_or(Vec::new(), |st| st.jobs.keys())
     }
     fn mates_lenses(&mut self) -> usize { game::wandorder::mate_wand_eyes(&mut self.g).len() }
     fn pair_silent(&mut self) {
