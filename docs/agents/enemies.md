@@ -113,7 +113,8 @@ and `gun_hold_free` opens the clean line at Sam's back once he has fired from be
 **Response team.** A level has one only if its file has a `ResponseData` block (`has_response`). `update_qrf` calls it on a locked-down floor that
 heard gunfire or found two bodies, or on a silent net (`silent_net`). `dealt` draws way, size and time; `read_net` keeps what the net says, its word
 of the team until it sees him. `QrfState` runs on: `arriving` musters the men, `deploy` throws the door, then `pick_target`: to a room by the
-squad's door tools (`start_drill`), to a place by its order to move there (`told`), and `maybe_perimeter`. There is one wave (`request_qrf`). A block's `raid` brings it on the defenders' side in a room clear.
+squad's door tools (`start_drill`), to a place by its order to move there (`told`), and `maybe_perimeter`. There is one wave (`request_qrf`). A
+block's `raid` brings it on the defenders' side in a room clear.
 
 **At ease.** `needs_tick` fills four kinds of `NeedKind` and sends one man at a time after `announce`; a shot ends it (`cancel_trip`). In
 `doze_patrol` a calm staff man with a wait of `min_wait` to `max_wait` sits. `doze_deaf` sleeps him with dull ears and no eyes; noise, light on his

@@ -121,11 +121,9 @@ pub struct Qrf {
     #[is(-100.0)] pub fix_t: f64,
     pub cue_rush: bool,
     pub cleared: JsMap<String, f64>,
-    pub wps: JsMap<GuardId, Vec<V3>>,
     pub door_pulled: bool,
     pub filed: f64,
     pub can: Option<ItemId>,
-    #[is(f64::NAN)] pub can_land_t: f64,
     pub seen_ids: JsSet<crate::Num>,
     /// the group it is at a door, once it has been at one
     pub group: Option<GroupId>,
