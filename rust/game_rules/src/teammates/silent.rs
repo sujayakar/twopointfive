@@ -143,11 +143,6 @@ fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     !(st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed || urgent(g))
 }
 
-/// is this round held: the room fight's and the cover's fire's one question
-pub fn round_held(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    silent_holds_round(g, gd, h) || crate::pairorders::pair_holds_round(g, gd, h) || crate::spotted::spotted_holds_round(g, gd, h)
-}
-
 /// his round at `h` is held
 pub fn silent_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !under_silence(g, gd) {
