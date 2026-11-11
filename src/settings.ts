@@ -114,7 +114,7 @@ export interface RenderSettings {
   capColor: [number, number, number, number]; // section cap tint (rgb) + albedo mix
   nvAmount: number; nvGain: number; hitFlash: number;
   // ---- ReSTIR DI, the direct-light estimator (render/shaders/restir.wgsl; the header there is its description): one reservoir per pixel per emitter class, temporal + spatial
-  // reuse, a fixed shadow-ray budget per pixel whatever the light count. The only estimator since 2026-11-07 (the leader / tail one, direct.wgsl, and its switch went) ----
+  // reuse, a fixed shadow-ray budget per pixel whatever the light count ----
   restirRays: number;          // shadow rays per pixel per frame, 2‥6: 2 = each class alternates re-trace / fresh candidate on a flipping checkerboard · 3 = both temporal samples re-traced +
                                // one fresh candidate alternating between the classes · 4 = re-trace + fresh for both · 5 = + a final visibility ray when spatial reuse picks a neighbour's
                                // sample (spatial reuse then runs everywhere, unbiased) · 6 = + a second fresh candidate per class (presets: ultra 4 · high 4 · medium 4 · low 3 · verylow 2)

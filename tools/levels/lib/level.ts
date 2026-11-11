@@ -137,7 +137,7 @@ export interface Level {
   civilians?: CivilianDef[];
   /** authored volumes (LevelData volumes[] — the editor's V tool): the level script's onEnter triggers test them (rust/game_rules/src/missions/director); absent = the level authors none */
   volumes?: VolumeDef[];
-  /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
+  /** named marks (`marks[]`: the end of a `scenarios.walked` way, or a script's place) */
   marks?: MarkDef[];
   /** what the playtest SCENARIOS take from this level (lib/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */

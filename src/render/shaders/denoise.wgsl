@@ -1,8 +1,8 @@
 // The v3 denoiser CORE (renderer v3 phase 3): ONE reprojection / accumulation / variance / à-trous machinery, THREE clients —
 //   SHADOW    the direct pass's two emitter classes (full internal res), denoised in VISIBILITY-RATIO space r = S/U per channel: U (the exact unshadowed
 //             light) never enters a history or a filter tap, so a light switching, sweeping or flashing is exact and immediate — only the stochastic
-//             visibility is accumulated and smoothed. Input per class: S.rgb + the signed PCSS penumbra hint (S.a), U.rgb (direct.wgsl / restir.wgsl —
-//             the same four textures either estimator writes). Output: S = U × r̂ back into the S textures composite / fgather read, hint kept in .a.
+//             visibility is accumulated and smoothed. Input per class: S.rgb + the signed PCSS penumbra hint (S.a), U.rgb (the four textures restir.wgsl
+//             writes). Output: S = U × r̂ back into the S textures composite / fgather read, hint kept in .a.
 //   DIFFUSE   the ⅓ / ½-res final gather's irradiance E (fgather.wgsl outIndirect) → the gi texture composite upsamples.
 //   SPECULAR  the gather's specular field (glossy floors + glass, outSpecular: rgb + the reflection ray's hit distance in .a) → the spec texture.
 // Per client, per frame:
@@ -13,7 +13,7 @@
 //             (→ the temporal variance of the SAMPLES: high forever inside a penumbra or under 4-ray bounce, zero where every ray agrees) and the history
 //             LENGTH n (capped per tier), accumulate at α = 1/n, and CLAMP the history into this frame's 5×5 neighbourhood statistics (mean ± k·σ, from a
 //             workgroup-memory apron — the transient rule: whatever this frame cannot see in its own neighbourhood leaves the history now, so a muzzle
-//             flash's visibility, a door's light, a torch sweeping on are this-frame events, exactly the property dtemporal.wgsl had); the diffuse client
+//             flash's visibility, a door's light, a torch sweeping on are this-frame events); the diffuse client
 //             also keeps a FAST history (short EMA) and centres its clamp box on it (ReLAX: kills the lag of a long history without the boil of clamping to
 //             one raw frame). Under 4 frames of history the variance is the spatial one of the apron (SVGF's fallback).
 //   À-TROUS   N iterations (per tier) of the 3×3 edge-stopped wavelet at strides 1, 2, 4, 8, 16: weight = B-spline tap × plane distance (depth) × normal
@@ -484,8 +484,8 @@ fn shAtrous(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wi
   var cA = textureLoad(saIn0, pc, 0); var cB = textureLoad(saIn1, pc, 0); let sh = textureLoad(saShIn, pc, 0);
   if (FIRST) { let m = textureLoad(saHm, pc, 0); cA.a = m.y; cB.a = m.w; }   // the chain's first input: variance from the moments (whatever leaves this iteration carries it in .a)
   let prior = (dn.flags.x & DNF_SH_PRIOR) != 0u;
-  // tile pass-through: no hint anywhere within the whole chain's reach of this tile → nothing here can differ from its input (softblur.wgsl's argument
-  // carries over: WITH the hint prior the strength term below is 0 for every pixel further than the chain's travel from a hint) — copy through (FINAL: × U).
+  // tile pass-through: no hint anywhere within the whole chain's reach of this tile → nothing here can differ from its input (WITH
+  // the hint prior the strength term below is 0 for every pixel further than the chain's travel from a hint) — copy through (FINAL: × U).
   // Without the prior every lit pixel filters at every stride, the mask would draw tile seams, and the host does not build it (passes.ts).
   if (prior && (textureLoad(saMask, vec2i(wid.xy), 0).x & 256u) != 0u) {
     shEmit(pc, 1u, cB.xyz, cB.a, sh.y); shEmit(pc, 0u, cA.xyz, cA.a, sh.x); textureStore(saShOut, pc, sh);
@@ -566,7 +566,7 @@ override SPEC: bool = false;   // radTemporal / radAtrous: the specular client (
                                // (FIRST, declared with the shadow à-trous: radAtrous's first iteration reads its variance from the moments texture — the history carries view depth in .a)
 fn gdivOf() -> i32 { return max(1, i32(dn.flags.y)); }
 fn fullPx(g: vec2i) -> vec2i { let gdiv = gdivOf(); return min(g * gdiv + (gdiv - 1) / 2, vec2i(frame.screen) - 1); }
-/** continuous full-res px → continuous texel coords of a gather-grid history (temporal.wgsl's mapping: a static camera lands on the texel it wrote, whatever the rounding of the sizes) */
+/** continuous full-res px → continuous texel coords of a gather-grid history (a static camera lands on the texel it wrote, whatever the rounding of the sizes) */
 fn gatherTexel(pxFull: vec2f) -> vec2f { let gdiv = f32(gdivOf()); let goff = floor((gdiv - 1.0) * 0.5); return (pxFull - goff - 0.5) / gdiv + 0.5; }
 /** SPECULAR, per-pixel mode (dn.sp2.w > 0 — the reflection pass's chain): the roughness of what full-res pixel `full` shows (the g-buffer's material target), and whether a texel there holds
  *  a reflection term at all (rougher than the cutoff = matte / a character / a cap: no term — never a tap, never a history) */
