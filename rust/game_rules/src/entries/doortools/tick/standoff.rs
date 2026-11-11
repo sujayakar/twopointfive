@@ -111,7 +111,7 @@ fn both_jambs(g: &Game, d: DoorId, side: f64, n: f64) -> Option<Vec<StackPost>> 
     None
 }
 fn marks_for(g: &mut Game, d: DoorId, side: f64, n: f64, men: &[GuardId]) -> Option<Vec<V3>> {
-    if let Some(x) = g.sets[g.seat].orders.door_marks.iter().find(|x| x.door == d && x.side == side) {
+    if let Some(x) = g.groups[g.group].orders.door_marks.iter().find(|x| x.door == d && x.side == side) {
         return x.standoff.get(..n as usize).map(|s| s.to_vec());
     }
     let (taken, min_m) = (taken_on(g, d, men), g.k.doortools.backblast_m + 0.2);

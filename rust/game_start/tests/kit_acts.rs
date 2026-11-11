@@ -274,7 +274,7 @@ fn a_card_changed_is_written_live() {
     // counts: on the pools
     tell(&mut p, &mut |m| m.bangs = 3.0, 1, -1);
     p.frame();
-    assert!(p.g.sets[p.g.seat].door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.sets[p.g.seat].door_tools.bangs);
+    assert!(p.g.groups[p.g.group].tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.groups[p.g.group].tools.bangs);
     assert_eq!(st(&p).a.restages, serial, "no restage for any of it");
     // Sam's gun and counts
     kitstage::open(&mut p.g, 0, "weapon");

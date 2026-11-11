@@ -239,8 +239,8 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
 
 /// STACK: the squeezes up the file of each order made and waiting, then the lead's fist.
 fn stacks(g: &mut crate::game::Game) {
-    for i in 0..g.sets[g.seat].door_tools.ops.len() {
-        let op = g.sets[g.seat].door_tools.ops[i];
+    for i in 0..g.groups[g.group].tools.ops.len() {
+        let op = g.groups[g.group].tools.ops[i];
         let men = g.tab.doortools_door_op[op].men.clone();
         if men.is_empty() || !men.iter().all(|&gd| crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd)) { continue; }
         if !waits(g, op) { g.m.showwhy.op_mem.delete(op); continue; }

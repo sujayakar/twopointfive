@@ -30,7 +30,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `suppression.rs`, `flinch.rs`, `startle.rs`, `morale.rs`, `runner.rs`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
 | `darkdoor.rs`, `darkfoe.rs`, `calmtorch.rs`, `powerout.rs` | men and the dark |
 | `gunhold.rs`, `gunroles.rs`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
-| `qrf/`, `squadcast.rs` | the response team, and its room drill by the squad's own code |
+| `qrf/` | the response team: a group (`group.rs`) that works its doors by the squad's own code |
 | `needs.rs`, `doze.rs`, `smokebreak.rs` | men at their ease |
 | `civilians/`, `rescueflush.rs` | civilians and hostages; a rescue's men coming for the hostages |
 

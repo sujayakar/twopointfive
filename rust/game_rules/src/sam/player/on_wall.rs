@@ -135,7 +135,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
         w.owed = Some(owed_with(w.owed, clicked));
         stack_hold(g, p);
     } else if truthy_opt(w0.owed) {
-        if g.sets[g.seat].orders.menu.is_none() {
+        if g.groups[g.group].orders.menu.is_none() {
             let clicked = g.tab.input[input].clicked;
             g.tab.input[input].clicked = (js::to_i32(clicked) | js::to_i32(un(w0.owed))) as f64;
         }

@@ -1145,7 +1145,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let v = crate::seats::view_of(g, gd);
     let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(&crate::seats::here(g), gd)) { Some(a) => a, None => return crate::wallreact::Reconsidered::Fine };
     let post = match g.tab.task[a].post { Some(q) => q, None => return crate::wallreact::Reconsidered::Fine };
-    if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
+    if crate::seats::with_seat(g, v, &mut |g| g.groups[g.group].tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
     if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
     if g.tab.task[a].order == crate::wallcharge::WALL_ORDER && g.tab.task[a].watch.is_some() { return crate::wallreact::Reconsidered::Fine; }
     if g.tab.task[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return crate::wallreact::Reconsidered::Later; }

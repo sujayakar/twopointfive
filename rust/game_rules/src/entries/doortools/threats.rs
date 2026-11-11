@@ -237,7 +237,7 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
     dop!(g, op).bang_t = g.time;
     dop!(g, op).bang_at = Some(v3::copy(at));
     dop!(g, op).phase = Phase::Wait;
-    g.sets[g.seat].door_tools.stats.bangs += 1.0;
+    g.groups[g.group].tools.stats.bangs += 1.0;
     if dop!(g, op).thr.is_none() { door_tools_close_up(g, op, None); }
     let off = off_of(g, d, at, side);
     door_tools_beat_is(g, op, crate::doortools::Beat::Bang, &format!("bang · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, js::to_fixed(m::abs(off), 1)));
@@ -566,7 +566,7 @@ pub(super) fn door_tools_first_in(g: &mut crate::game::Game, op: DoorOpId, at: O
 
 /// Of `men`, the one who has seen most of the room `at` is in.
 pub(super) fn door_tools_seen_most(g: &mut crate::game::Game, lead: GuardId, men: &[GuardId], at: Option<V3>) -> GuardId {
-    let room = match at { Some(a) if g.sets[g.seat].door_tools.seen.is_some() => crate::roomfight::room_fight_room_at(g, a), _ => None };
+    let room = match at { Some(a) if g.groups[g.group].tools.seen.is_some() => crate::roomfight::room_fight_room_at(g, a), _ => None };
     let room = match room {
         Some(r) if !men.is_empty() => r,
         _ => return if men.contains(&lead) || men.is_empty() { lead } else { men[0] },
@@ -624,12 +624,12 @@ fn sector_hit(g: &Game, gd: GuardId, p: V3, y: f64) -> bool {
 pub(super) fn door_tools_keep_sectors(g: &mut crate::game::Game) {
     let t = g.time;
     // (a copy of the keys: the body removes only the entry it stands on)
-    for gd in g.sets[g.seat].door_tools.held.keys() {
-        let mut r = match g.sets[g.seat].door_tools.held.get(gd) { Some(r) => *r, None => continue };
-        if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(&crate::seats::here(g), gd) != Some(r.a) { g.sets[g.seat].door_tools.held.delete(gd); continue; }
+    for gd in g.groups[g.group].tools.held.keys() {
+        let mut r = match g.groups[g.group].tools.held.get(gd) { Some(r) => *r, None => continue };
+        if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(&crate::seats::here(g), gd) != Some(r.a) { g.groups[g.group].tools.held.delete(gd); continue; }
         if r.door.is_some() && (!crate::nvg::nvg_worn(g, gd) || crate::nvg::nvg_black(g, gd)) { asg!(g, r.a).search_t = Some(t); }
         keep_sector(g, gd, &mut r, t);
-        *g.sets[g.seat].door_tools.held.get_mut(gd).unwrap() = r;
+        *g.groups[g.group].tools.held.get_mut(gd).unwrap() = r;
     }
 }
 
@@ -699,7 +699,7 @@ pub(super) fn door_tools_search_of(g: &mut crate::game::Game, op: DoorOpId, at: 
     let room = match at { Some(a) => crate::roomfight::room_fight_room_at(g, a), None => door_tools_room_in(g, op) };
     let room = room?;
     if open_floor(g, room) { return None; }
-    for o in g.sets[g.seat].door_tools.ops.clone() {
+    for o in g.groups[g.group].tools.ops.clone() {
         if o == op { continue; }
         if let Some(Some(s)) = dop!(g, o).search {
             if g.tab.doortools_room_search[s].room == room {

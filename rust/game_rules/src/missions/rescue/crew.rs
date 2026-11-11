@@ -49,7 +49,7 @@ fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueO
     let fd = crate::doors::doors_by_name(g, &s.room.door);
     let sd = match &s.side { Some(side) => crate::doors::doors_by_name(g, &side.door), None => None };
     let fd = fd?;
-    let on: Vec<DoorOpId> = g.sets[g.seat].door_tools.ops.iter().copied().filter(|&o| {
+    let on: Vec<DoorOpId> = g.groups[g.group].tools.ops.iter().copied().filter(|&o| {
         let door = g.tab.doortools_door_op[o].door;
         door == fd || Some(door) == sd
     }).collect();
@@ -149,7 +149,7 @@ fn rescue_pick(g: &crate::game::Game) -> Option<crate::rescue::RescuePick> {
 
 /// One door's order.
 fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, who: &[GuardId], d: DoorId, is_side: bool) {
-    let kind = if g.sets[g.seat].door_tools.bangs > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::OpenClear };
+    let kind = if g.groups[g.group].tools.bangs > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::OpenClear };
     let face = rescue_face_of(g, d);
     match crate::doortools::door_tools_order(g, kind, who, d, face, Some(gate), None) {
         crate::doortools::DoorToolsOrder::Text(_) => {}
@@ -234,7 +234,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     crate::rescueflush::rescue_flush_tick(g);
     crate::rescueflow::rescue_flow_tick(g);
     rescue_search(g);
-    g.sets[g.seat].door_tools.lights = Some(true);
+    g.groups[g.group].tools.lights = Some(true);
     let lit = rescue_dynamic(g);
     let mut i = 0;
     while i < g.staged.team.len() {
@@ -921,7 +921,7 @@ fn rescue_search(g: &mut crate::game::Game) {
             Some(a) => {
                 let row = &g.tab.task[a];
                 !crate::condition::down(g, g.gd[o].ch) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(v3::dist_xz(p, post) > 0.6), None => false }
-                    && in_rect(p, b) && !g.sets[g.seat].door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
+                    && in_rect(p, b) && !g.groups[g.group].tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
             None => false,
         };

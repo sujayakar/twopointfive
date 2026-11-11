@@ -199,7 +199,7 @@ impl Player {
     // ---- his hands
     /// a key goes down for a tick. (The squad's is never pressed twice inside the window of a double press: his second is a second try at an order, never 'fall in')
     pub async fn key(&self, code: &str) {
-        let (quick, twice, secs) = self.ask(|g| (code == g.sets[g.seat].orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
+        let (quick, twice, secs) = self.ask(|g| (code == g.groups[g.group].orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
         if quick && twice {
             while self.t.get() < self.quick_at.get() + secs + 0.05 { self.tick().await }
             self.quick_at.set(self.t.get());

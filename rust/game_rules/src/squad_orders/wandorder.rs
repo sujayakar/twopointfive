@@ -332,11 +332,11 @@ pub fn wand_order_frame(g: &mut crate::game::Game) {
         }
         g.m.wandorder.states.set(k, State { jobs: JsMap::new() });
     }
-    let listed = g.sets[g.seat].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
+    let listed = g.groups[g.group].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
+        let after = g.groups[g.group].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
-        let before = after.and_then(|i| g.sets[g.seat].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
+        let before = after.and_then(|i| g.groups[g.group].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());
     } else if !want && listed {
         crate::orders::squad_orders_unregister(g, WAND_ORDER);

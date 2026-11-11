@@ -537,7 +537,7 @@ impl KitAsk for Play {
     fn sam_rounds(&self) -> f64 { let pl = &self.g.pl[self.g.player]; game::weapons::firearm_rounds_ready(&self.g, pl.pistol) + game::weapons::firearm_rounds_ready(&self.g, pl.rifle) }
     fn sam_charging(&self) -> bool { self.g.pl[self.g.player].charging().is_some() }
     fn two_hands_on_work(&self) -> bool { let c = self.g.pl[self.g.player].ch; self.g.ch[c].anim.wk.two }
-    fn charges_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.charges }
+    fn charges_left(&self) -> f64 { self.g.groups[self.g.group].tools.charges }
     fn door_in(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off || (!self.g.dr[d].leaf.latched && self.g.dr[d].leaf.lock_broken) }
     fn rows(&self) -> Vec<(game::game::InteractableKind, Option<game::game::Verb>)> { self.g.sets[self.g.seat].nearby.iter().map(|r| (r.kind, r.verb)).collect() }
     fn leaf_pt(&self, d: DoorId, along: f64, out: f64) -> [f64; 2] {

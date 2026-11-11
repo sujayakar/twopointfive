@@ -68,15 +68,14 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
 pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
     let t = g.time;
     let who: Vec<String> = men.iter().filter(|&&m| !crate::condition::down(g, g.gd[m].ch)).map(|&m| g.gd[m].callsign.clone()).collect();
-    g.sets[g.seat].orders.shows.push(SquadOrdersShowsItem { t, who });
-    if g.sets[g.seat].orders.shows.len() > 16 { g.sets[g.seat].orders.shows.drain(0..8); }
+    g.groups[g.group].orders.shows.push(SquadOrdersShowsItem { t, who });
+    if g.groups[g.group].orders.shows.len() > 16 { g.groups[g.group].orders.shows.drain(0..8); }
 }
 
 /// The built-in rows of the menu and the night breach's owner.
-pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::OtherCast>) -> crate::orders::SquadOrders {
+pub fn squad_orders_new(g: &mut crate::game::Game) -> crate::orders::SquadOrders {
     let mut s = SquadOrders::blank();
     s.knobs = g.k.orders.clone();
-    s.cast = cast.cloned();
     let words = |w: &[&str]| -> Option<Vec<String>> { Some(w.iter().map(|x| String::from(*x)).collect()) };
     let rows = [
         rows::def(&rows::movethere::ORDER, OrderDef {
@@ -139,7 +138,7 @@ pub fn squad_orders_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 
 /// Is he one of the men these orders move: the one roster test.
 pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if seat_ref.orders.cast.is_some() { return g.qrf.men.contains(&gd); }
+    if !seat_ref.group.by_a_player() { return g.qrf.men.contains(&gd); }
     if !g.team(gd).ours() { return false; }
     let seat = seat_ref.id;
     crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one)
@@ -147,20 +146,17 @@ pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef
 
 /// The player is one of these men's own.
 pub fn squad_orders_sams(seat: &crate::seats::SeatRef) -> bool {
-    seat.orders.cast.is_none()
+    seat.group.by_a_player()
 }
 
 /// Whose side a can of theirs is.
 pub fn squad_orders_team(seat: &crate::seats::SeatRef) -> crate::teams::Team {
-    match &seat.orders.cast {
-        Some(c) => c.team,
-        None => crate::teams::Team::Ours,
-    }
+    seat.group.side
 }
 
 /// The keys a locked door is tried with for them: Sam's ring and the codes he has learned.
 pub fn squad_orders_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> JsSet<String> {
-    if let Some(c) = &seat.orders.cast { return c.ring.clone(); }
+    if !seat.group.by_a_player() { return seat.group.ring.clone(); }
     player_ring(g, seat.player)
 }
 /// A player's own ring: his keys, and the codes he has learned.
@@ -240,12 +236,12 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
             if !crate::condition::down(g, g.gd[gd].ch) { ring.push(Who::Num(k as f64)); }
         }
     }
-    let was = g.sets[g.seat].orders.who;
+    let was = g.groups[g.group].orders.who;
     let now = match ring.iter().position(|&w| same_who(w, was)) {   // (a man of a squad in pairs is not on the ring: gold, either way)
         None => Who::All,
         Some(i) => ring[js::rem(i as f64 + dir + ring.len() as f64, ring.len() as f64) as usize],
     };
-    g.sets[g.seat].orders.who = now;
+    g.groups[g.group].orders.who = now;
     now
 }
 
@@ -324,7 +320,7 @@ pub fn squad_orders_register(g: &mut crate::game::Game, def: OrdersOrderDefId, b
     squad_orders_unregister(g, &id);
     if let Some(si) = &g.tab.orders_order_def[def].stands_in {   // a stand-in: the other row's page and place, the two never listed together
         let wants = si.for_.clone();
-        let stood = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == wants);
+        let stood = g.groups[g.group].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == wants);
         if let Some(stood) = stood {
             squad_orders_seat(g, def, stood);
             return;
@@ -332,24 +328,24 @@ pub fn squad_orders_register(g: &mut crate::game::Game, def: OrdersOrderDefId, b
         g.tab.orders_order_def[def].stands_in = None;   // (not registered: listed as a row of its own)
     }
     let i = match before {
-        Some(b) if !b.is_empty() => g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == b),
+        Some(b) if !b.is_empty() => g.groups[g.group].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == b),
         _ => None,
     };
-    let at = i.unwrap_or(g.sets[g.seat].orders.defs.len());
-    g.sets[g.seat].orders.defs.insert(at, def);
-    let stand_ins: Vec<OrdersOrderDefId> = g.sets[g.seat].orders.defs.iter().copied()
+    let at = i.unwrap_or(g.groups[g.group].orders.defs.len());
+    g.groups[g.group].orders.defs.insert(at, def);
+    let stand_ins: Vec<OrdersOrderDefId> = g.groups[g.group].orders.defs.iter().copied()
         .filter(|&d| g.tab.orders_order_def[d].stands_in.as_ref().map_or(false, |x| x.for_ == id))
         .collect();
     for s in stand_ins {   // (registered again: its stand-ins move with it)
-        if let Some(j) = g.sets[g.seat].orders.defs.iter().position(|&d| d == s) { g.sets[g.seat].orders.defs.remove(j); }
+        if let Some(j) = g.groups[g.group].orders.defs.iter().position(|&d| d == s) { g.groups[g.group].orders.defs.remove(j); }
         squad_orders_seat(g, s, def);
     }
 }
 
 /// Open a fresh group (the men whose arrival one 'set.' waits on).
 pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
-    g.sets[g.seat].orders.group += 1.0;
-    g.sets[g.seat].orders.group
+    g.groups[g.group].orders.group += 1.0;
+    g.groups[g.group].orders.group
 }
 
 /// A ROW OF A SEAT'S MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED. The row this seat's menu has for the id is written in place, on the
@@ -359,47 +355,24 @@ pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
 /// when a held door's page was rebuilt or when the man with the hammer fell left an orphan each time, every later row stood one place further
 /// on, and two machines of one game that had seen a different number of re-listings numbered their rows differently.
 ///
-/// THE ROW IS THE MENU'S OWN (`SquadOrders.made`): each seat has its own, and so has a second cast's. Rows are written in place (a page, a target that
+/// THE ROW IS THE MENU'S OWN (`SquadOrders.made`): each group has its own. Rows are written in place (a page, a target that
 /// comes and goes with the pairs), so two menus that shared one would change each other's.
 pub fn squad_orders_row(g: &mut crate::game::Game, def: crate::orders::OrderDef) -> OrdersOrderDefId {
-    if g.sets[g.seat].orders.made.len() == 0 && !g.sets[g.seat].orders.defs.is_empty() && !g.in_cast { adopt_rows(g); }
-    if let Some(d) = g.sets[g.seat].orders.made.get(def.id.clone()).copied() {
+    if let Some(d) = g.groups[g.group].orders.made.get(def.id.clone()).copied() {
         g.tab.orders_order_def[d] = def;
         return d;
     }
     let (id, d) = (def.id.clone(), new_row(g, def));
-    g.sets[g.seat].orders.made.set(id, d);
+    g.groups[g.group].orders.made.set(id, d);
     d
 }
 
 /// a row the table has not had
 fn new_row(g: &mut Game, def: OrderDef) -> OrdersOrderDefId { g.tab.orders_order_def.push(def) }
 
-/// THE ROWS OF A MENU THAT CAME OFF THE WIRE, which carries the table and each menu's list but not whose the rest of the rows are: a game read from
-/// bytes finds its own again. Of an id, the row on this menu; else the first that no other seat has, counting the seats in order, since a
-/// start makes its rows seat after seat.
-fn adopt_rows(g: &mut Game) {
-    let mut ids: Vec<String> = Vec::new();
-    for (_, r) in g.tab.orders_order_def.iter() { if !ids.contains(&r.id) { ids.push(r.id.clone()); } }
-    for id in ids {
-        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(_, r)| r.id == id).map(|(d, _)| d).collect();
-        let mut left = rows.clone();
-        let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.sets[g.seat].orders.defs.contains(d));
-        let mut ahead = 0;   // (the seats before this one that have none of it listed: each takes the next)
-        let mut past = false;
-        for &s in g.seats.iter() {
-            if s == g.seat { past = true; continue; }
-            let o = &g.sets[s];
-            let theirs = rows.iter().copied().find(|d| o.orders.defs.contains(d)).or_else(|| o.orders.made.get(id.clone()).copied());
-            match theirs { Some(d) => left.retain(|&x| x != d), None => if !past { ahead += 1; } }
-        }
-        if let Some(d) = mine.or_else(|| left.get(ahead).copied()) { g.sets[g.seat].orders.made.set(id, d); }
-    }
-}
-
 pub fn squad_orders_unregister(g: &mut crate::game::Game, id_2: &str) {
-    if let Some(i) = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == id_2) {
-        g.sets[g.seat].orders.defs.remove(i);
+    if let Some(i) = g.groups[g.group].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == id_2) {
+        g.groups[g.group].orders.defs.remove(i);
     }
 }
 
@@ -408,13 +381,13 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
     let own;
     let men: &[GuardId] = match men {
         Some(m) => m,
-        None => { own = g.sets[g.seat].orders.asg.keys(); &own }
+        None => { own = g.groups[g.group].orders.asg.keys(); &own }
     };
     for &gd in men {
-        if g.sets[g.seat].orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
+        if g.groups[g.group].orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
         squad_orders_drop(g, gd);
     }
-    if !g.sets[g.seat].orders.asg.values().any(|&a| g.tab.task[a].post.is_none()) { g.sets[g.seat].orders.trail.clear(); }
+    if !g.groups[g.group].orders.asg.values().any(|&a| g.tab.task[a].post.is_none()) { g.groups[g.group].orders.trail.clear(); }
 }
 
 /// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.

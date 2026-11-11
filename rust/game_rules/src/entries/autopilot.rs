@@ -86,7 +86,7 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
 pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> bool {
     use crate::autopilot::AutoPickWhy;
     let p = auto_pick(g, &crate::seats::here(g), t, None, men);
-    let (tail, group) = (g.sets[g.seat].orders.log.last().map(|row| row.serial), g.sets[g.seat].orders.group); // the last row's serial: a row the call below logs has another
+    let (tail, group) = (g.groups[g.group].orders.log.last().map(|row| row.serial), g.groups[g.group].orders.group); // the last row's serial: a row the call below logs has another
     let to = p.men.clone().or_else(|| men.map(|m| m.to_vec()));
     if p.why == AutoPickWhy::Pending { return false; }
     if p.why == AutoPickWhy::Set {
@@ -101,7 +101,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
             let opts = crate::orders::GiveOpts { men: to, ack: None };
             crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&none), None, Some(&opts))
         } else {
-            let who = g.sets[g.seat].orders.who;
+            let who = g.groups[g.group].orders.who;
             crate::doortools::door_tools_go(g, Some(who))
         }
     } else if let Some(id) = &p.id {
@@ -114,7 +114,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
     if no.is_some() {
         return false;
     }
-    if let Some(row) = g.sets[g.seat].orders.log.last_mut() {
+    if let Some(row) = g.groups[g.group].orders.log.last_mut() {
         if Some(row.serial) != tail { row.auto = Some(true); }
     }
     let id = p.id.as_deref();
@@ -125,7 +125,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
     } else if id == Some(crate::orders::rows::charge::ORDER.id) {
     } else {
     }
-    g.sets[g.seat].orders.group != group
+    g.groups[g.group].orders.group != group
 }
 
 /// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.
