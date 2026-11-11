@@ -71,8 +71,8 @@ pub fn sam_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f
 /// The four keys a code presses; a code of another length is gone through in turn.
 fn pad_keys(code: &str) -> Vec<[f64; 2]> {
     let table = key_at();
-    let five = *table.get(String::from("5")).unwrap();
-    let ks: Vec<[f64; 2]> = code.chars().map(|ch| table.get(String::from(ch)).copied().unwrap_or(five)).collect();
+    let five = *table.of("5").unwrap();
+    let ks: Vec<[f64; 2]> = code.chars().map(|ch| table.of(&*ch.encode_utf8(&mut [0; 4])).copied().unwrap_or(five)).collect();
     if ks.is_empty() { return vec![five]; }
     (0..4).map(|k| ks[k % ks.len()]).collect()
 }
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn a_code_presses_its_own_keys_on_the_pad() {
         let table = key_at();
-        let at = |c: &str| *table.get(String::from(c)).unwrap();
+        let at = |c: &str| *table.of(c).unwrap();
         assert_eq!(pad_keys("1937"), vec![at("1"), at("9"), at("3"), at("7")]);
         assert_eq!(pad_keys("*0"), vec![at("*"), at("0"), at("*"), at("0")]);
         assert_eq!(pad_keys("7x"), vec![at("7"), at("5"), at("7"), at("5")]);

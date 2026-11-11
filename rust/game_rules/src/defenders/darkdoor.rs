@@ -706,7 +706,7 @@ mod tests {
     fn lines_are_the_skeletons() {
         let t = crate::darkdoor::lines();
         for &(k, say, he, they) in LINES.iter() {
-            let row = t.get(String::from(k.as_str())).unwrap();
+            let row = t.of(k.as_str()).unwrap();
             assert_eq!(row.say, say.iter().map(|l| String::from(*l)).collect::<Vec<_>>());
             assert_eq!(row.he.clone().unwrap_or_default(), he.iter().map(|l| String::from(*l)).collect::<Vec<_>>());
             assert_eq!(row.they.clone().unwrap_or_default(), they.iter().map(|l| String::from(*l)).collect::<Vec<_>>());

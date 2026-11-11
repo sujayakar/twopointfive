@@ -364,7 +364,7 @@ pub fn wall_break_round(g: &mut crate::game::Game, who: f64, hit_p: V3, dir: V3,
     let dmg = ((r.dmg[c as usize] as f64) + w) as f32;   // (a Float32Array: the sum is a double, the store rounds, the read below sees the rounded)
     r.dmg[c as usize] = dmg;
     g.destr.walls.dirty = true;
-    let tough = g.k.walls.tough.get(String::from(surf.as_str())).copied().unwrap_or(8.0) * (if kind == BKind::Wall && iy == 0.0 { g.k.walls.sill_k } else { 1.0 });
+    let tough = g.k.walls.tough.of(surf.as_str()).copied().unwrap_or(8.0) * (if kind == BKind::Wall && iy == 0.0 { g.k.walls.sill_k } else { 1.0 });
     crate::wallwear::wall_wear_round(g, b_box, surf, id * 4096.0 + c_hit, id * 4096.0 + c, (dmg as f64) / tough, hit_p, dir);   // (look only: reads the count)
     if (dmg as f64) >= tough { wall_break_open_cells(g, b, &[c], LevelChangeCause::Fire, who, Some(dir), None, None); }
 }

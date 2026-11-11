@@ -10,9 +10,9 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 /// `GLASSPEN.energy[id] ?? GLASSPEN.byClass[cls] ?? GLASSPEN.defaultEnergy`
 fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Option<crate::weapons::WeaponClass>) -> f64 {
-    if let Some(&e) = k.energy.get(String::from(id.as_str())) { return e; }
+    if let Some(&e) = k.energy.of(id.as_str()) { return e; }
     if let Some(c) = cls {
-        if let Some(&e) = k.by_class.get(String::from(c.as_str())) { return e; }
+        if let Some(&e) = k.by_class.of(c.as_str()) { return e; }
     }
     k.default_energy
 }

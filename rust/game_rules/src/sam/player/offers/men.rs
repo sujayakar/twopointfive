@@ -56,7 +56,7 @@ fn civilian_held(g: &Game, hold: &crate::player::Hold, cv: CivId, it: &Interacta
     let c = &g.cv[cv];
     let (she, her) = (&c.she, &c.her);
     let stage = g.tab.game_talk[g.gd[hold.g].talk].stage;
-    let told = crate::dialogue::civ_lines().intel.get(String::from(c.def.kind.as_str())).map_or(0, |l| l.len());
+    let told = crate::dialogue::civ_lines().intel.of(c.def.kind.as_str()).map_or(0, |l| l.len());
     let ask = if tk.asking { format!("you're asking — {she} answers in a beat") }
         else if tk.sam_up { String::from("once you're done talking") }
         else if !tk.ready { format!("{she}'s answering — tap to cut it short") }

@@ -221,7 +221,7 @@ fn work_cell(g: &Game, id: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> (
     if b.kind == BKind::Wall && iy == 0.0 && b.open[cell_ix(b, ix, 1.0, iz)] == 0 { iy = 1.0; }
     let c = cell_ix(b, ix, iy, iz);
     if b.open[c] != 0 { return (c, None); }
-    let tough = g.k.walls.tough.get(String::from(b.surf.as_str())).copied().unwrap_or(8.0);
+    let tough = g.k.walls.tough.of(b.surf.as_str()).copied().unwrap_or(8.0);
     (c, Some(m::max(0.0, tough * (if b.kind == BKind::Wall && iy == 0.0 { g.k.walls.sill_k } else { 1.0 }) - b.dmg[c] as f64)))
 }
 
@@ -675,7 +675,7 @@ mod tests {
     fn the_work_left_in_a_wall_is_its_toughness_less_its_damage_along_the_way() {
         let (mut g, _) = game_with(&[(C, H, 0.0)], &wall(&[10], &[(9, 1.75)]));
         let g = &mut *g;
-        let tough = g.k.walls.tough.get(String::from("drywall")).copied().unwrap();
+        let tough = g.k.walls.tough.of("drywall").copied().unwrap();
         // the upper row: column 1 is damaged, column 2 is open, 3 is whole
         assert_eq!(wall_break_work_left(g, 0.0, [2.0, 1.8, 7.75], [0.0, 0.0, 1.0], None), Some(tough - 1.75));
         assert_eq!(wall_break_work_left(g, 0.0, [2.4, 1.8, 7.75], [0.0, 0.0, 1.0], None), None);

@@ -66,7 +66,7 @@ fn is_digit(code: &str) -> bool {
     let b = code.as_bytes();
     b.len() == 6 && code.starts_with("Digit") && (b'1'..=b'5').contains(&b[5])
 }
-fn has(a: &JsSet<String>, k: &str) -> bool { a.has(String::from(k)) }
+fn has(a: &JsSet<String>, k: &str) -> bool { a.holds(k) }
 fn names(v: &Option<Vec<String>>, k: &str) -> bool { v.as_ref().map_or(false, |l| l.iter().any(|x| x == k)) }
 fn step_at(l: &crate::scene_scenarios::LessonData, i: f64) -> Option<&crate::scene_scenarios::LessonStep> { l.steps.get(i as usize) }
 fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empty()) }
@@ -258,8 +258,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     let menu_up = g.sets[g.seat].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
-        (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
-         i.keys.has(String::from("Enter")) || i.pressed.has(String::from("Enter")) || i.keys.has(String::from("NumpadEnter")) || i.pressed.has(String::from("NumpadEnter")))
+        (i.keys.holds("ShiftLeft") || i.keys.holds("ShiftRight"),
+         i.keys.holds("Enter") || i.pressed.holds("Enter") || i.keys.holds("NumpadEnter") || i.pressed.holds("NumpadEnter"))
     };
     let p = g.player;
     let hand_up = has(&a, "use") && g.sets[g.seat].hand.sel.open;
@@ -294,7 +294,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     i.buttons = (js::to_i32(i.buttons) & buttons) as f64;
     i.clicked = (clicked & buttons) as f64;
     if !wheel && !menu_up && !hand_up { i.wheel = 0.0; }
-    let word = i.pressed.has(String::from("KeyF"));
+    let word = i.pressed.holds("KeyF");
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));
