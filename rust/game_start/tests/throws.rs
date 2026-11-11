@@ -78,7 +78,7 @@ fn a_lit_frag_row_previews_its_plan_and_nothing_when_refused() {
         p.frame();
         if p.g.groups[p.g.group].orders.menu.is_none() { assert!(lit_frag(&mut p, spot), "seed {seed}"); }
         let v = throws(&p);
-        let k = p.g.m.squadthrow.states.get(p.g.player).and_then(|s| s.plans.get(game::squadthrow::SquadThrowKind::Frag)).cloned().expect("the row's plan is kept");
+        let k = p.g.m.squadthrow.states.get(p.g.group).and_then(|s| s.plans.get(game::squadthrow::SquadThrowKind::Frag)).cloned().expect("the row's plan is kept");
         assert!(k.refuse.is_none(), "seed {seed}: the yard is open ground: {:?}", k.refuse);
         let th = k.thrower.as_ref().expect("a plan not refused has a thrower");
         assert_eq!(v.len(), 1, "seed {seed}: {v:?}");
@@ -107,7 +107,7 @@ fn a_lit_shell_row_previews_its_kept_plan_and_nothing_when_refused() {
         let rows = p.g.groups[p.g.group].orders.menu.as_ref().unwrap().rows.clone();
         p.g.groups[p.g.group].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the ring") as f64;
     };
-    let kept = |p: &Play| p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone());
+    let kept = |p: &Play| p.g.m.squad40.states.get(p.g.group).and_then(|s| s.plan.clone());
     for seed in SEEDS {
         let (s, spot, _) = yard(seed);
         let mut p = Play::scene(&s, &Opts { seed, ..Default::default() });

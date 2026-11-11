@@ -42,14 +42,14 @@ fn left_in(g: &Game, s: &State) -> f64 {
 
 /// the rounds the squad's men on their feet have between them.
 pub fn squad40_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let g: &Game = g;
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
 /// the words the throws' row adds while the order is on the page.
 pub(super) fn squad40_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
         Some(b) if b > 0.0 => format!(" · 40 mm {}", js::num_str(squad40_left(g, seat))),
@@ -65,7 +65,7 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
         let k = if tube_up(g, gd) { m::max(0.0, js::or(m::floor(c), 0.0)) } else { 0.0 };
         if js::truthy(k) { rounds.set(gd, k); n += k; }
     }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squad40.states.get(key).is_none() {
         if !js::truthy(n) { return; }
         g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), shown: None, plan: None });
@@ -163,7 +163,7 @@ fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Option
 /// `ready` of plan: a launcher in a free hand, not turning already, the tube closed on his last round
 fn ready(g: &mut Game, gd: GuardId) -> bool {
     if !tube_up(g, gd) || !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_at_work(g, gd) { return false; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let (turning, t) = match g.m.squad40.states.get(key) {
         Some(s) => (s.turns.has(gd), s.last.get(gd).copied().unwrap_or(-1e9)),
         None => (false, -1e9),
@@ -175,7 +175,7 @@ fn ready(g: &mut Game, gd: GuardId) -> bool {
 /// by the row, the picture (`follow`) and the order.
 pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate::squad40::ShellPlan {
     let of = |shot: Option<Shot>, no: Option<String>| ShellPlan { at, men: men.to_vec(), shot, no };
-    let row = crate::seats::view_key(g, &crate::seats::here(g));
+    let row = g.group;
     if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return of(None, Some(String::from(none))); }
     let bb = bodies(g);
     let (mut any, mut asked, mut close) = (false, false, false);
@@ -220,16 +220,16 @@ pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3)>
 /// once a frame with a menu up: the lit row's shot as it is now, for whoever draws it
 fn follow(g: &mut Game) {
     let seat = crate::seats::here(g);
-    let (key, asked) = (crate::seats::view_key(g, &seat), lit(g, &seat));
+    let (key, asked) = (seat.group_id, lit(g, &seat));
     let now = asked.map(|(men, at)| plan(g, &men, at));
     if let Some(s) = g.m.squad40.states.get_mut(key) { s.plan = now; }
 }
 
-/// the round leaves his tube; `pl` is the row of `states` it is counted on.
-fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot) {
+/// the round leaves his tube; `key` is the row of `states` it is counted on.
+fn fire(g: &mut crate::game::Game, key: GroupId, a: &crate::squad40::Shot) {
     let gd = a.gd;
     let now = g.time;
-    let s = g.m.squad40.states.get_mut(pl).unwrap();
+    let s = g.m.squad40.states.get_mut(key).unwrap();
     let left = s.rounds.get(gd).copied().unwrap_or(0.0);
     s.rounds.set(gd, m::max(0.0, left - 1.0));
     s.last.set(gd, now);
@@ -239,7 +239,7 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot) {
     crate::game::game_say(g, gd, "forty out!", None, None);
     let callsign = g.gd[gd].callsign.clone();
     let t = g.time;
-    g.m.squad40.states.get_mut(pl).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
+    g.m.squad40.states.get_mut(key).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
     let log = &mut g.m.squad40.squad40_log;
     log.push(Squad40ModSQUAD40LOGItem { burst: a.burst });
     if log.len() > 100 { log.drain(0..50); }
@@ -250,14 +250,14 @@ fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
         crate::game::game_say(g, gd, l, None, None);
     }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let w = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.delete(gd)).unwrap();
     crate::squadthrow::squad_hand_back(g, &mut lent_of(w), Some(true));
 }
 
 /// A MAN TURNING TO HIS SHOT, each frame (the row's `tick`).
 pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let now = g.time;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -316,7 +316,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     crate::squadthrow::squad_log_row(g, gd, SHELL_THERE, at);
-    if a.aimed { let key = crate::seats::view_key(g, &crate::seats::here(g)); fire(g, key, &a); return None; }
+    if a.aimed { let key = g.group; fire(g, key, &a); return None; }
     let to = v3::copy(a.to);
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, &crate::seats::here(g), gd, t);
@@ -333,7 +333,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
         ..Default::default()
     });
     w.a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.turns.set(gd, w);
     None
@@ -351,7 +351,7 @@ fn list(g: &mut crate::game::Game) {
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    let Some(st) = g.m.squad40.states.get(crate::seats::view_key(g, seat)) else { return Vec::new() };
+    let Some(st) = g.m.squad40.states.get(seat.group_id) else { return Vec::new() };
     if !js::truthy(st.brought) || !def_listed(g, seat, SHELL_THERE) { return Vec::new(); }
     let plain = |text: String| crate::view::Note { key: String::new(), text };
     let left = plain(format!("40 mm {}", js::num_str(squad40_left(g, seat))));
@@ -363,7 +363,7 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
 
 /// Once a frame straight after the menu's own input: the row kept in step with what this staging brought and with the throws' page, a turn whose man is down or under another order ended.
 pub fn squad40_tick(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squad40.states.get(key).is_none() { return; }
     let mut at = 0;
     while let Some(gd) = g.m.squad40.states.get(key).unwrap().turns.next_key(&mut at) {
