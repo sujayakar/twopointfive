@@ -2,10 +2,11 @@
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer } from '../gpu/device';
-import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, CUT_STRIDE } from './cut';
+import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP } from './cut';
 import type { BoxShape } from './shapes';
-import { AIR_ROWS } from './airGrid';
-import { MarkingDef, MARK_TABLE_ROWS } from './markings';
+import { BoxMat, Capsule } from '../draw/gpu';
+import { Cap, Geo, Info } from '../draw/sections';
+import type { MarkingDef } from './markings';
 
 /** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
 export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
@@ -35,8 +36,6 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
-/** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
-export const MAX_GLASS = 32;
 
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
@@ -192,14 +191,9 @@ export function matWord(b: Box): number {
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 
-export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
-/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
- *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by glass_open.wgsl glassCellOpen and composite's crack drawing only under the prelude
- *  const GLASS_BREAK (render/frame.ts glassBreakConfig; glassOpenWgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
- *  is not a different frame. */
-export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
-export const MAT_STRIDE = 16; // words (64 B): albedo.rgb cutHeight | emissive.rgb finish (matWord: roughness + metal + aniso — was the owner, which no shader read from here: boxOwner() takes it from the geo flags) | rotation quaternion xyzw (= yaw for ordinary boxes, the full 3D rotation for boxes with Box.rot; raster and rays both use it) | SECONDARY albedo.rgb (= albedo unless markings are folded in — common.wgsl boxAlbedoSec: what gather / cascade / probe hits read) + markGain (× the emission of the box's emissive markings)
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): rows of four floats a listed pane has in boxMat (boxmat.wgsl PANE_BASE; rust/game_draw boxes/glass.rs is their one
+ *  writer, glass_open.wgsl their reader): zero = whole */
+export const GB_STRIDE = 36;
 
 /** THE BOX WORLD'S TABLES ON THE DEVICE, and what the picture's own plans ask of a static. The rows are the module's (rust/game_draw boxes): draw/world.ts hands them
  *  over as they lie and packs nothing. What is the page's own here is the men's proxies, which are fitted to the rig. */
@@ -224,16 +218,14 @@ export class BoxWorld {
    *  info block's layout) does not move with it. */
   static castCap = BoxWorld.MAX_CAST;
   static readonly CAPS_PER_CHAR = 15; static readonly MAX_CAPSULES = BoxWorld.MAX_CAST * BoxWorld.CAPS_PER_CHAR;
-  // word offsets in infoData (struct SceneInfo): the character bounds, then the globals' height pairs, the grid vec4, the globals' bounds, the glass block
-  static readonly INFO_BOUNDS = 24; static readonly INFO_GLOBALS_Y = BoxWorld.INFO_BOUNDS + BoxWorld.MAX_CAST * 4; static readonly INFO_GRID = BoxWorld.INFO_GLOBALS_Y + 32; static readonly INFO_GLOBALS_B = BoxWorld.INFO_GRID + 4;
-  static readonly GLASS_WORD = BoxWorld.INFO_GLOBALS_B + 128;   // word offset of glassInfo in infoData (the panes follow at +4)
-  infoBuf: GPUBuffer; infoData = new Uint32Array(BoxWorld.GLASS_WORD + 4 + MAX_GLASS * 12); infoF32 = new Float32Array(this.infoData.buffer);
+  /** the scene's block (struct SceneInfo): the module's but for the men's proxies */
+  infoBuf: GPUBuffer; infoData = new Uint32Array(Info.row); infoF32 = new Float32Array(this.infoData.buffer);
   /** the panes uploaded this frame, in SceneInfo order (indices into `statics`) */
   glassList: number[] = [];
   /** static box indices carrying BoxFlag.Glass (intact or broken) */
   glassStatics: number[] = [];
   // character proxies (see struct Capsule in common.wgsl — traced as ROUND CONES; the record and these members keep their old name): 8 floats each
-  capsuleData = new Float32Array(BoxWorld.MAX_CAPSULES * 8); capsuleU32 = new Uint32Array(this.capsuleData.buffer); capsuleCount = 0; charCount = 0;
+  capsuleData = new Float32Array(BoxWorld.MAX_CAPSULES * Capsule.row); capsuleU32 = new Uint32Array(this.capsuleData.buffer); capsuleCount = 0; charCount = 0;
   capsuleBuf: GPUBuffer;
   /** The SDF CHARACTER RIG's fit (render/sdfrig.ts; the engine writes it from its attached fit each frame before upload): with it set, upload() turns the frame's list into the rig —
    *  slot i's radius becomes the fitted r0[i], the fitted r1[i] rides in the top byte of the record's misc word (millimetres; RB_QUANT), and each character's cull sphere is fitted to
@@ -254,8 +246,8 @@ export class BoxWorld {
 
   constructor(protected device: GPUDevice) {
     const n = this.maxBoxes, S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, cells = WORLD.gridW * WORLD.gridH;
-    this.geoBuf = makeBuffer(device, n * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
-    this.matBuf = makeBuffer(device, n * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? n * CUT_STRIDE * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail, the panes' rows, the air grid and the cut planes
+    this.geoBuf = makeBuffer(device, n * Geo.row * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
+    this.matBuf = makeBuffer(device, (this.cutOn ? BoxMat.rows : BoxMat.cut) * 16, S | GPUBufferUsage.COPY_SRC, 'boxMat');   // the material rows, and the tables behind them (a page that cuts nothing has no cut planes)
     if (WORLD.gridW + WORLD.gridH > 96) throw new Error('trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay ≤ 96 for that cap to be unreachable');
     if (n > 65536 || n * cells >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
     this.cellBuf = makeBuffer(device, (cells + 1 + 2 * cells) * 4, S, 'gridCells');
@@ -273,11 +265,11 @@ export class BoxWorld {
   addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
     if (this.charCount >= BoxWorld.castCap) return;
     const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
-    for (let i = 0; i < N; i++) { const o = (base + i) * 8, s = at + i * 8, c = colours[i] ?? colours[0];
-      for (let k = 0; k < 7; k++) D[o + k] = f[s + k];
+    for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];
+      for (let k = 0; k < 3; k++) { D[o + Capsule.a + k] = f[s + Cap.a + k]; D[o + Capsule.b + k] = f[s + Cap.b + k]; } D[o + Capsule.r] = f[s + Cap.r];
       const r = Math.round(Math.min(1, Math.max(0, c[0])) * 31) & 31, g = Math.round(Math.min(1, Math.max(0, c[1])) * 63) & 63, l = Math.round(Math.min(1, Math.max(0, c[2])) * 31) & 31;
-      this.capsuleU32[o + 7] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
-    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
+      this.capsuleU32[o + Capsule.misc] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
+    const bo = Info.charBounds + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
     this.charCount++; this.capsuleCount = this.charCount * N;
   }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
@@ -286,23 +278,23 @@ export class BoxWorld {
   protected applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
     const D = this.capsuleData, U = this.capsuleU32, N = BoxWorld.CAPS_PER_CHAR;
     for (let c = 0; c < this.charCount; c++) {
-      const rig = base.byOwner?.get(U[c * N * 8 + 7] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
+      const rig = base.byOwner?.get(U[c * N * Capsule.row + Capsule.misc] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
       let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
       for (let i = 0; i < N; i++) {
-        const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;   // (a padding record: nothing to fit, never hit)
+        const o = (c * N + i) * Capsule.row; if (!(D[o + Capsule.r] > 0)) continue;   // (a padding record: nothing to fit, never hit)
         const r0 = rig.r0[i], r1 = rig.r1[i];
-        D[o + 3] = r0; U[o + 7] = ((U[o + 7] & 0x00ffffff) | (Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))) << 24)) >>> 0;
+        D[o + Capsule.r] = r0; U[o + Capsule.misc] = ((U[o + Capsule.misc] & 0x00ffffff) | (Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))) << 24)) >>> 0;
         const r = Math.max(r0, r1);
-        x0 = Math.min(x0, D[o] - r, D[o + 4] - r); y0 = Math.min(y0, D[o + 1] - r, D[o + 5] - r); z0 = Math.min(z0, D[o + 2] - r, D[o + 6] - r);
-        x1 = Math.max(x1, D[o] + r, D[o + 4] + r); y1 = Math.max(y1, D[o + 1] + r, D[o + 5] + r); z1 = Math.max(z1, D[o + 2] + r, D[o + 6] + r);
+        x0 = Math.min(x0, D[o + Capsule.a] - r, D[o + Capsule.b] - r); y0 = Math.min(y0, D[o + Capsule.a + 1] - r, D[o + Capsule.b + 1] - r); z0 = Math.min(z0, D[o + Capsule.a + 2] - r, D[o + Capsule.b + 2] - r);
+        x1 = Math.max(x1, D[o + Capsule.a] + r, D[o + Capsule.b] + r); y1 = Math.max(y1, D[o + Capsule.a + 1] + r, D[o + Capsule.b + 1] + r); z1 = Math.max(z1, D[o + Capsule.a + 2] + r, D[o + Capsule.b + 2] + r);
       }
       if (x0 > x1) continue;
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2; let rad = 0;
       for (let i = 0; i < N; i++) {
-        const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;
-        rad = Math.max(rad, Math.hypot(D[o] - cx, D[o + 1] - cy, D[o + 2] - cz) + D[o + 3], Math.hypot(D[o + 4] - cx, D[o + 5] - cy, D[o + 6] - cz) + rig.r1[i]);
+        const o = (c * N + i) * Capsule.row; if (!(D[o + Capsule.r] > 0)) continue;
+        rad = Math.max(rad, Math.hypot(D[o + Capsule.a] - cx, D[o + Capsule.a + 1] - cy, D[o + Capsule.a + 2] - cz) + D[o + Capsule.r], Math.hypot(D[o + Capsule.b] - cx, D[o + Capsule.b + 1] - cy, D[o + Capsule.b + 2] - cz) + rig.r1[i]);
       }
-      const bo = BoxWorld.INFO_BOUNDS + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
+      const bo = Info.charBounds + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
     }
   }
 

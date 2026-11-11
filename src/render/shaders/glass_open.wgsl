@@ -24,7 +24,7 @@ const GP_DICE_JIT: f32 = 0.6;
 const GP_DICE_DELAY: f32 = 1.4;
 const GP_TAU: f32 = 6.283185307179586;
 struct GbSite { c: vec2f, rot: f32, rz: f32, n: u32, seed: u32, e: f32, merge: f32, rho: vec4f, m: vec4f };
-fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[GB_BASE + k * GB_STRIDE + r]; }
+fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[PANE_BASE + k * GB_STRIDE + r]; }
 fn gbHeader(k: u32) -> vec4f { return gbRow(k, 0u); }
 fn gbSiteLoad(k: u32, i: u32) -> GbSite {
   let o = GB_HDR + i * 4u; let a = gbRow(k, o); let b = gbRow(k, o + 1u);

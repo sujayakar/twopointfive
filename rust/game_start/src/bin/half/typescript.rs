@@ -1,17 +1,18 @@
 //! The TypeScript.
 use game::crosses::{self, Asked, Shape, Ty};
+use game::rows::RowTable;
 use game_start::host::{command, crosses as host, desk};
 
 /// the stamp of everything that crosses (game_face `face_draw_layout` answers the module's)
 pub fn stamp() -> u32 { crosses::stamp(&(game_draw::layout() + &host::text())) }
 
 pub fn files(stamp: u32) -> Vec<(&'static str, String)> {
-    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/view/read.ts", views())]
+    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/gpu.ts", gpu()), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/view/read.ts", views())]
 }
 
-const WRITTEN: &str = "// Written by the program `half` (rust/game_start/src/bin/half)";
+pub const WRITTEN: &str = "// Written by the program `half` (rust/game_start/src/bin/half)";
 /// a name as TypeScript has it
-fn camel(s: &str) -> String {
+pub fn camel(s: &str) -> String {
     let mut out = String::new();
     let mut up = false;
     for c in s.trim_end_matches('_').chars() {
@@ -21,15 +22,39 @@ fn camel(s: &str) -> String {
 }
 fn small(s: &str) -> String { s[..1].to_lowercase() + &s[1..] }
 /// what is said of a thing, on one line
-fn said(doc: &[&str]) -> String { doc.iter().map(|l| l.trim()).collect::<Vec<_>>().join(" ") }
+pub fn said(doc: &[&str]) -> String { doc.iter().map(|l| l.trim()).collect::<Vec<_>>().join(" ") }
 
-/// a word's field: how many words, and the kind of each
+/// a row's field: how many words, and the kind of each
 fn words(ty: &str) -> (usize, &str) {
-    let ty = ty.trim();
-    match ty.strip_prefix('[').and_then(|t| t.strip_suffix(']')).and_then(|t| t.split_once(';')) {
-        Some((t, n)) => (n.trim().parse().unwrap_or_else(|_| panic!("a row's field of {ty}")), t.trim()),
-        None => (1, ty),
+    match ty.trim().strip_prefix('[').and_then(|t| t.strip_suffix(']')).and_then(|t| t.rsplit_once(';')) {
+        Some((t, n)) => { let (k, kind) = words(t); (k * n.trim().parse::<usize>().unwrap_or_else(|_| panic!("a row's field of {ty}")), kind) }
+        None => match ty.trim() { "Half2" => (1, "two halves"), t => (1, t) },
     }
+}
+/// a row's offsets, in words
+fn offsets(r: &RowTable) -> Vec<String> {
+    let mut l = Vec::new();
+    if !r.doc.is_empty() { l.push(format!("/** {} */", said(r.doc))); }
+    l.push(format!("export const enum {} {{", r.name));
+    let mut at = 0;
+    for ((f, ty), doc) in r.fields.iter().zip(r.docs) {
+        let (n, kind) = words(ty);
+        l.push(format!("  /** {kind}{}{} */", if n > 1 { format!(" × {n}") } else { String::new() }, if doc.is_empty() { String::new() } else { format!(": {}", said(doc)) }));
+        l.push(format!("  {} = {at},", camel(f)));
+        at += n;
+    }
+    l.extend(["  /** words a row */".into(), format!("  row = {at},"), "}".into()]);
+    l
+}
+/// the rows a shader reads and the page writes, and what shares the boxes' material buffer
+fn gpu() -> String {
+    let told: Vec<&str> = game_draw::sections().iter().map(|s| s.1.name).collect();
+    let mut l = vec![format!("{WRITTEN} from rust/game_draw/src/gpu.rs. To change a row a shader reads, change it there: the shader's own struct is written with this (src/render/shaders/rows.wgsl).")];
+    for s in game_draw::gpu::shaded() { if !told.contains(&s.row.name) { l.push(String::new()); l.extend(offsets(&s.row)); } }
+    let mut at = 0;
+    let bases: Vec<String> = game_draw::gpu::BOX_MAT.iter().map(|(n, rows)| { let b = format!("{n} = {at}"); at += rows; b }).collect();
+    l.extend([String::new(), "/** THE BOXES' MATERIAL BUFFER: where each of its tables begins, in rows of four floats, and how long it is */".into(), format!("export const enum BoxMat {{ {}, rows = {at} }}", bases.join(", ")), String::new()]);
+    l.join("\n")
 }
 fn sections(stamp: u32) -> String {
     let (groups, list) = (game_draw::GROUPS, game_draw::sections());
@@ -48,16 +73,7 @@ fn sections(stamp: u32) -> String {
         if had.contains(&r.name) { continue; }
         had.push(r.name);
         l.push(String::new());
-        if !r.doc.is_empty() { l.push(format!("/** {} */", said(r.doc))); }
-        l.push(format!("export const enum {} {{", r.name));
-        let mut at = 0;
-        for ((f, ty), doc) in r.fields.iter().zip(r.docs) {
-            let (n, kind) = words(ty);
-            l.push(format!("  /** {kind}{}{} */", if n > 1 { format!(" × {n}") } else { String::new() }, if doc.is_empty() { String::new() } else { format!(": {}", said(doc)) }));
-            l.push(format!("  {} = {at},", camel(f)));
-            at += n;
-        }
-        l.extend(["  /** words a row */".into(), format!("  row = {at},"), "}".into()]);
+        l.extend(offsets(r));
     }
     // (a word that crosses by its number: an enum's, in their order)
     let lists: [(&str, &[&str], &str); 5] = [

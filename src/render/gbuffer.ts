@@ -5,7 +5,8 @@ import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { capUsage } from './framecap';
-import { BoxWorld, GEO_STRIDE, MAT_STRIDE, type Box } from '../scene/boxes';
+import { BoxWorld, type Box } from '../scene/boxes';
+import { Geo, Mat } from '../draw/sections';
 import gbufSrc from './shaders/gbuffer.wgsl' with { type: 'text' };
 import decalsSrc from './shaders/decals.wgsl' with { type: 'text' };
 import detailSrc from './shaders/detail.wgsl' with { type: 'text' };   // the detail layer (renderer v3 phase 4): fsBox's wear / dust / edge terms + the traffic-map binding
@@ -127,7 +128,7 @@ export class GBuffer {
   private cutMod: GPUShaderModule | null = null; private cutModSnow: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
-    this.geoBytes = maxBoxes * GEO_STRIDE * 4;
+    this.geoBytes = maxBoxes * Geo.row * 4;
     // THE SNOW'S SURFACE IS A TEXT OF ITS OWN (2026-11-07). The boxes' fragment stage shades the snow paint off the level's snow field (snow.wgsl snowBox, and
     // under the look look.wgsl lookSnow): 113 KB of pasted text on the plain page and 200 on the look's, read by two levels. As a branch of the one text
     // (frame.ts LevelSw, tried the same day) it stood in every level's program, and the look's page lost its device at the first drawn frame on the software
@@ -135,7 +136,7 @@ export class GBuffer {
     // EVERY program of it comes in the level's writing: the boxes, the cut boxes, the hills and the men (no text of this module asks the frame's level word
     // for the snow's surface). A page draws with its level's own and asks for the other behind it (init, prepareSkin): a visit builds each once, and no
     // level's start compiles either again.
-    const text = (cut: boolean, snow: boolean) => scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\nconst GBUF_SNOW: bool = ${snow};   // the snow's surface in the boxes' shading (gbuffer.ts: the module's two writings)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + (cut ? gbufCutSrc : '');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const text = (cut: boolean, snow: boolean) => scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * Geo.row / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\nconst GBUF_SNOW: bool = ${snow};   // the snow's surface in the boxes' shading (gbuffer.ts: the module's two writings)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + (cut ? gbufCutSrc : '');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
     const mod = makeShader(device, text(false, false), 'gbuffer'); this.modSnow = makeShader(device, text(false, true), 'gbufferSnow');
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -162,7 +163,7 @@ export class GBuffer {
     // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
     if (cutConfig.on) { this.cutMod = makeShader(device, text(true, false), 'gbufferCut'); this.cutModSnow = makeShader(device, text(true, true), 'gbufferCutSnow'); }
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
-    this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
+    this.prevBoxes = makeBuffer(device, maxBoxes * (Geo.row + Mat.row) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
     this.wearTex = device.createTexture({ label: 'wearNone', size: [1, 1], format: 'rg8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     device.queue.writeTexture({ texture: this.wearTex }, new Uint8Array([0, 0]), { bytesPerRow: 2 }, [1, 1]);
@@ -520,7 +521,7 @@ export class GBuffer {
   /** At the tail of the frame's command buffer: copy this frame's box transforms (BoxWorld's geo + mat rows, as uploaded for THIS frame) and joint palette into the 'previous' buffers the next
    *  frame's vertex stages read. Queue writes for the next frame are ordered after this command buffer, so the copies see exactly what this frame drew. */
   snapshotPrev(enc: GPUCommandEncoder, world: BoxWorld, skin: SkinnedDrawable | null) {
-    const n = world.count; if (n > 0) { enc.copyBufferToBuffer(world.geoBuf, 0, this.prevBoxes, 0, n * GEO_STRIDE * 4); enc.copyBufferToBuffer(world.matBuf, 0, this.prevBoxes, this.geoBytes, n * MAT_STRIDE * 4); }
+    const n = world.count; if (n > 0) { enc.copyBufferToBuffer(world.geoBuf, 0, this.prevBoxes, 0, n * Geo.row * 4); enc.copyBufferToBuffer(world.matBuf, 0, this.prevBoxes, this.geoBytes, n * Mat.row * 4); }
     if (skin && this.prevJointsFor === skin.jointMats) enc.copyBufferToBuffer(skin.jointMats, 0, this.prevJoints, 0, skin.jointMats.size);
   }
 }

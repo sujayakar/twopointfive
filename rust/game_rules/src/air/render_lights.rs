@@ -10,16 +10,18 @@ use alloc::string::String;
 
 /// One light's GPU record (common.wgsl struct Light, 16 words), hung at `pos` with that radius. `inten` scales the colour; `kind_word` is the kind with
 /// whatever flag bits the caller sets above its low byte, `owner_word` the owner byte with the glass mask above it.
-pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u32, volumetric: f64, owner_word: u32) -> [u32; 16] {
+pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u32, volumetric: f64, owner_word: u32) -> crate::rows::LightRow {
     const DEG: f64 = core::f64::consts::PI / 180.0;
-    let w = |v: f64| (v as f32).to_bits();
+    let f3 = |v: V3| v.map(|x| x as f32);
     // (a portal has no cone: the two cone words are its own)
     let (w11, w12) = match row.portal.as_ref() {
         Some(p) => (p.half_wide, p.share),
         None => (m::cos(row.outer_deg * DEG), m::cos(m::min(row.inner_deg, row.outer_deg - 0.5) * DEG)),
     };
-    [w(pos[0]), w(pos[1]), w(pos[2]), kind_word, w(row.dir[0]), w(row.dir[1]), w(row.dir[2]), w(row.range),
-        w(row.color[0] * inten), w(row.color[1] * inten), w(row.color[2] * inten), w(w11), w(w12), w(volumetric), owner_word, w(radius)]
+    crate::rows::LightRow {
+        pos: f3(pos), kind: kind_word, dir: f3(row.dir), range: row.range as f32, color: f3(v3::scale(row.color, inten)), cos_outer: w11 as f32, cos_inner: w12 as f32,
+        volumetric: volumetric as f32, owner: owner_word, radius: radius as f32,
+    }
 }
 
 // ---- THE LIGHTS' LIST IS THE GAME'S, and goes into every checkpoint: its add / remove / flash and the fog's class are rules, not the picture's. A light taken

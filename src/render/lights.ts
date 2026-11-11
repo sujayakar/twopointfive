@@ -3,6 +3,7 @@ import { Vec3, v3, DEG } from '../math/vec';
 import { makeBuffer } from '../gpu/device';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
 import { lightDayK } from './photometry';
+import { LightRow } from '../draw/gpu';
 
 /** a light as a level's own list holds it (tools/levels/lib/level.ts takes it from here) */
 export interface LightDef {
@@ -113,10 +114,9 @@ export function cardSlotsFor(lights: RtLight[], target: Vec3, max: number): numb
  *  (upload below) and for the lit fog's own list of lamps (rust/game_rules/src/stealth/fogofwar litBlock → shaders/fogofwar.wgsl fowLights). `inten` scales the colour; `kindWord` is
  *  the kind with whatever flag bits the caller sets above its low byte, `ownerWord` the owner byte with the glass mask above it. */
 export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight, inten: number, kindWord: number, volumetric: number, ownerWord: number) {
-  f[o] = l.pos[0]; f[o + 1] = l.pos[1]; f[o + 2] = l.pos[2]; u[o + 3] = kindWord;
-  f[o + 4] = l.dir[0]; f[o + 5] = l.dir[1]; f[o + 6] = l.dir[2]; f[o + 7] = l.range;
-  f[o + 8] = l.color[0] * inten; f[o + 9] = l.color[1] * inten; f[o + 10] = l.color[2] * inten; f[o + 11] = l.portal ? l.portal.halfWide : Math.cos(l.outerDeg * DEG);   // (a portal has no cone: the two cone words are its own)
-  f[o + 12] = l.portal ? l.portal.share : Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + 13] = volumetric; u[o + 14] = ownerWord; f[o + 15] = l.radius;
+  for (let k = 0; k < 3; k++) { f[o + LightRow.pos + k] = l.pos[k]; f[o + LightRow.dir + k] = l.dir[k]; f[o + LightRow.color + k] = l.color[k] * inten; }
+  u[o + LightRow.kind] = kindWord; f[o + LightRow.range] = l.range; f[o + LightRow.cosOuter] = l.portal ? l.portal.halfWide : Math.cos(l.outerDeg * DEG);   // (a portal has no cone: the two cone words are its own)
+  f[o + LightRow.cosInner] = l.portal ? l.portal.share : Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + LightRow.volumetric] = volumetric; u[o + LightRow.owner] = ownerWord; f[o + LightRow.radius] = l.radius;
 }
 
 /** n words of two buffers (from `at`, from `bt`), bit for bit. Read signed and kept out of upload()'s body: mask words run past 2^31, and a loop over them inside that long function ran in a slow tier (0.03 ms a frame in the depot) */
@@ -133,7 +133,7 @@ export class LightSet {
   /** the reach rows are written whole next frame */
   forgetSent() { this.reachSent.fill(0xffffffff); }
   private reachDataI = new Int32Array(this.reachData.buffer); private reachSentI = new Int32Array(this.reachSent.buffer);   // the same words read signed, for the compare alone (sameWords)
-  private data = new ArrayBuffer(MAX_LIGHTS * 64);
+  private data = new ArrayBuffer(MAX_LIGHTS * LightRow.row * 4);
   private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data); private dataI = new Int32Array(this.data);
   /** number of lights uploaded last frame (enabled only) */
   activeCount = 0;
@@ -144,7 +144,7 @@ export class LightSet {
    *  the lights as they were — the estimator's 'target last frame') and two byte maps by object identity: `slotFwd[p]` = the slot this frame of the light that
    *  was in slot p last frame (255 = not uploaded now), `slotInv[s]` = last frame's slot of the light now in slot s (255 = new this frame),
    *  + SLOT_SAME where its record is last frame's word for word: what it gives a point is then what it gave it, and is not worked out twice. */
-  prevData = new Uint8Array(MAX_LIGHTS * 64); prevCount = 0; private prev32 = new Uint32Array(this.prevData.buffer); private prevI = new Int32Array(this.prevData.buffer);
+  prevData = new Uint8Array(MAX_LIGHTS * LightRow.row * 4); prevCount = 0; private prev32 = new Uint32Array(this.prevData.buffer); private prevI = new Int32Array(this.prevData.buffer);
   slotFwd = new Uint8Array(MAX_LIGHTS).fill(255); slotInv = new Uint8Array(MAX_LIGHTS).fill(255);
   /** THE INFRARED LIGHTS (LIGHT_IR; rust/game_rules/src/teammates/irlight.rs poses them every frame): a list of their own, so that no reader of `lights` — the CPU's light estimates, the
    *  fog of war's classes, the reach masks, a digest — can ever count one. Uploaded after `lights`, flagged infrared, and only while `tube` is up; enabled / intensity are read
@@ -163,7 +163,7 @@ export class LightSet {
   irSpell = false;
 
   constructor(private device: GPUDevice) {
-    this.buf = makeBuffer(device, MAX_LIGHTS * 64, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lights');
+    this.buf = makeBuffer(device, MAX_LIGHTS * LightRow.row * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lights');
     this.reachBuf = makeBuffer(device, REACH_BYTES, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lightReach');
     this.reachData.fill(0xffffffff); device.queue.writeBuffer(this.reachBuf, 0, this.reachData);
   }
@@ -221,7 +221,7 @@ export class LightSet {
    *  `row(l)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
   upload(time: number, own: readonly RtLight[] = NO_LIGHTS, masks: { row(l: RtLight): Uint32Array | undefined } | null = null) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
-    { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)
+    { const words = Math.max(1, this.activeCount) * LightRow.row, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)
     this.slotFwd.fill(255); this.slotInv.fill(255);
     const NL = this.lights.length, NI = this.tube ? this.ir.length : 0, ND = own.length; this.irCount = 0;
     if (!NI) for (let i = 0; i < this.ir.length; i++) this.ir[i].slot = -1;
@@ -236,17 +236,17 @@ export class LightSet {
         const s = Math.sin(time * 61 + i * 3.1) * Math.sin(time * 17.3 + i) + Math.sin(time * 7.1 + i * 0.7) * 0.5;
         inten *= 1 - l.flicker * (s > 0.55 ? 0.85 : s > 0.3 ? 0.3 : 0.0);
       }
-      const o = n * 16;
+      const o = n * LightRow.row;
       // kind low byte + flags: 256 = transient (ttl light: excluded from accumulated signals), 512 = broad emitter class (wide penumbrae → its own denoise)
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
       packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
-      if (this.slotInv[n] !== 255 && sameWords(this.dataI, this.prevI, 16, o, this.slotInv[n] * 16)) this.slotInv[n] |= SLOT_SAME;
+      if (this.slotInv[n] !== 255 && sameWords(this.dataI, this.prevI, LightRow.row, o, this.slotInv[n] * LightRow.row)) this.slotInv[n] |= SLOT_SAME;
       this.reachData.set(masks?.row(l) ?? REACH_ALL, n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame
       this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
     }
     this.activeCount = n; this.firstTransientSlot = firstT < 0 ? n : firstT;
-    this.device.queue.writeBuffer(this.buf, 0, this.data, 0, Math.max(64, n * 64));
+    this.device.queue.writeBuffer(this.buf, 0, this.data, 0, Math.max(1, n) * LightRow.row * 4);
     { const now = this.reachData, sent = this.reachSent, words = n * REACH_ROW_WORDS; const same = sameWords(this.reachDataI, this.reachSentI, words);   // the live slots' rows, only when they are not what the buffer already holds (a light's reach changes when it moves a cell or a door swings; most frames nothing does)
       if (!same) { this.device.queue.writeBuffer(this.reachBuf, 0, now.buffer, 0, words * 4); sent.set(now.subarray(0, words)); } }   // (whole rows of the live slots — a multiple of 4 bytes, all writeBuffer asks; rows past n are never read: the shaders stop at frame.numLights)
     return n;

@@ -117,9 +117,7 @@ fn a_mark_on_a_leaf_rides_it() {
     let bits = d.marks.words[REC0 + 11].w;
     assert_eq!(bits & 8, 8, "said to ride");
     let on = (bits >> 16) as usize;
-    let g = d.boxes.geo[on].w;
-    let centre = [f32::from_bits(g[0]), f32::from_bits(g[1]), f32::from_bits(g[2])];
-    assert_eq!(centre, [c[0] as f32, c[1] as f32, c[2] as f32], "box {on} of the list is not the leaf");
+    assert_eq!(d.boxes.geo[on].c, [c[0] as f32, c[1] as f32, c[2] as f32], "box {on} of the list is not the leaf");
     let was = [f(d.marks.words[REC0].w), f(d.marks.words[REC0 + 2].w)];
     p.g.tab.boxes.edit(leaf).c[0] += 1.0;
     let d = drawn(&p);
@@ -268,8 +266,8 @@ fn a_leaf_wears_the_level_s_paint_from_its_first_moment() {
     for l in &leaves {
         let b = p.g.dr[*l].box_;
         let k = drawn.iter().position(|x| *x == game::ids::AnyBoxId::from(b)).expect("a leaf is in the list");
-        let (m, a) = (&d.boxes.mat[n + k].w, p.g.tab.boxes[b].albedo);
-        assert!((0..3).all(|i| (m[i] as f64 - a[i]).abs() < 1e-5), "drawn in {:?}, the box is {a:?}", &m[..3]);
+        let (m, a) = (&d.boxes.mat[n + k].albedo, p.g.tab.boxes[b].albedo);
+        assert!((0..3).all(|i| (m[i] as f64 - a[i]).abs() < 1e-5), "drawn in {m:?}, the box is {a:?}");
     }
     // and what a breach throws off a leaf is in that paint
     let l = leaves[0];

@@ -19,7 +19,8 @@ are in `render-light.md`; the rest is here. See also `STYLE.md` (the look as rul
 | `src/render/passes.ts` | `LightingPasses.encode`: from direct light to the canvas; owns the screen targets |
 | `src/render/frame.ts`, `src/settings.ts` | `FrameParams`, `FrameFlags`, the scene group, `scenePrelude`; `RenderSettings`, every row a pass reads |
 | `src/host/pictureopens.ts`, `src/host/engineflags.ts` | the address's words for the picture, and how it opens on any page |
-| `rust/game_draw/src/boxes/`, `src/draw/world.ts`, `src/scene/boxes.ts`, `src/scene/cut.ts` | the box world: packed in Rust, handed over by `DrawWorld`; layouts; cut planes |
+| `rust/game_draw/src/boxes/`, `src/draw/world.ts`, `src/scene/boxes.ts`, `src/scene/cut.ts` | the box world: packed in Rust, handed over by `DrawWorld` |
+| `rust/game_draw/src/gpu.rs` | the rows a shader reads: `rows.wgsl`, `boxmat.wgsl`, `src/draw/gpu.ts` are made of it |
 | `src/render/gbuffer.ts`, `gbuffer.wgsl`, `gbuffer_cut.wgsl`, `gdown.wgsl`, `look.wgsl`, `detail.wgsl`, `markings.wgsl`, `lookTex.ts` | the surfaces |
 | `volumetrics.wgsl`, `vol_common.wgsl`, `dust_look.wgsl` | one march: haze beams, smoke, rain |
 | `src/smoke/`, `rust/sim/src/bricks.rs`, `src/draw/smoke.ts`, `smokeLook.ts` | the picture's solver, the game's grid, the bend, the look |
@@ -60,14 +61,14 @@ then the frame's own, up to `MAX`. `grid.rs` builds the grid every ray walks. `D
 **Cut boxes** carry up to `MAX_CUT_PLANES` planes in their own frame. A second pipeline (`gbuffer_cut.wgsl`) discards what lies past a plane, and
 every GPU ray meets the cut solid. The trace grid and the smoke's obstacle bake keep the uncut box.
 
-**Surfaces.** Maps (`look.wgsl`, made by the page in `lookTex.ts`, on workers), wear (`detail.wgsl`) and decals are read only in the g-buffer, so a
+**Surfaces.** Maps (`look.wgsl`, made in `lookTex.ts`, on workers), wear (`detail.wgsl`) and decals are read only in the g-buffer, so a
 ray's hit sees a box's flat paint. A box's stuff is a word in its own record, never guessed from its color.
 
 **The march.** `volumetrics.wgsl` is one program on every tier, and there is no froxel grid. A tier differs by numbers (`Caps`, `volSteps`, its size).
 It returns the light in-scattered and what is left of what lies behind.
 
 **Smoke has two models.** What eyes see through is the game's: half-meter cells in `rust/sim/src/bricks.rs`, stepped ten times a second, the same
-everywhere. What is drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ bricks: a coarse lattice (one brick is one game cell) and a fine one
+everywhere. Drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ bricks: a coarse lattice (one brick is one game cell) and a fine one
 for gun gas, out of one pool (`smokeGridConfig`). `smokeFrom` hands the grid over where a step was taken, and the solver is **bent toward it** a
 little every step (`SmokeParams`: `bend`, `pull`), as fast as the gap shows; it thins by the game's law alone. Only the game's own share of a cell is measured;
 a fire's plume or a breath says so in its `K`
@@ -132,7 +133,8 @@ program is in, up to a cap.
 - **A setting:** `RenderSettings`, `defaultSettings`; if tiers differ, a row in `PRESETS` written in `Quality.apply` and priced in `presetCost`; a row
   in `graphicspanel.ts`; a row in `SWEEP_ROWS` to price it.
 - **A word on the address:** `pictureWords` if it moves shader text or buffers, `urlFlagsOnEngine` for a setting.
-- **Something new drawn:** `overview.md` has the section's way. A new box field goes in `pack.rs` and the layouts in `src/scene/boxes.ts`.
+- **Something new drawn:** `overview.md` has the section's way. A field of a row a shader reads is a line of its `row!` and where it is filled
+  (`pack.rs`); `half` writes the rest.
 - **A kernel's text:** `bun run tools/qa/checks.ts shaders`, and `node tools/qa/wgsl-compile.cjs` asks a browser's compiler. A grown kernel costs
   Windows compile time (`inline` counts it) and nears the software adapter's limit (`kernel-stack.cjs`).
   A big body is asked in a loop. Credit: Stephen Jayakar, from his pull request 1.

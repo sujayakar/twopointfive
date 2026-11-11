@@ -21,8 +21,6 @@ export interface CutPlane { n: Vec3; d: number }
 export const MAX_CUT_PLANES = 8;
 /** PLANE rows of a box's record in the cut table (boxMat's tail from CUT_BASE: row CUT_BASE + bi × CUT_STRIDE + k = (n.xyz, d) of plane k < CUT_ROWS; an unused row = CUT_PAD) */
 export const CUT_ROWS = MAX_CUT_PLANES;
-/** vec4 rows a box OWNS in the cut table: its CUT_ROWS plane rows, then one CORE row = (the colour its cut faces show, 1) — or all zero: they show the box's own colour */
-export const CUT_STRIDE = CUT_ROWS + 1;
 /** the switch (see the head of this file). Mutate only at boot (host/drawpage.ts initCutSwitch). */
 export const cutConfig = {
   on: false,

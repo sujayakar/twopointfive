@@ -148,7 +148,7 @@ fn each_players_view_is_his_own_pictures_alone() {
                 let Some(t) = p.g.m.thinline.thin.get(id) else { continue };
                 assert_eq!(p.g.tab[id].h[0], t.hw0, "the box of a line is as thick as it is noted");
                 own = own.max(t.hw0);
-                wide = wide.max(f32::from_bits(drawn.boxes.geo[n + i].w[4]) as f64);
+                wide = wide.max(drawn.boxes.geo[n + i].h[0] as f64);
             }
             game::seats::show_seat(&mut p.g, seats[0]);
             p.words()
