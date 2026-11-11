@@ -661,7 +661,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let mut who: Option<CharId> = None;
     for item in known(g, gd, None) {
         if let Some(h) = crate::character::guard_of(g, item.k.who) {
-            if crate::silent::round_held(g, gd, h) {
+            if crate::duty::round_held(g, gd, h) {
                 bump(g, BumpK::HeldSilent);
                 continue;
             }
