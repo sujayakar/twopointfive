@@ -20,6 +20,12 @@ pub(super) fn air_dust_ready(g: &mut crate::game::Game) {
     air_dust_ensure(g);
 }
 
+/// What of the weather's dust stands at each half metre of the plan (row-major, x first; the open air's own density is 1). A reader's one question: the men's eyes read the same field.
+pub fn air_grid(g: &Game) -> &[f64] {
+    let a = air_read(g);
+    if a.on != 0.0 { &a.s } else { &[] }
+}
+
 /// The module's switch.
 fn air_dust_on(g: &crate::game::Game) -> bool {
     air_read(g).on != 0.0
