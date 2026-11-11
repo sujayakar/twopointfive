@@ -4,6 +4,7 @@
 //!
 //! - A field is a word or a run of words: `f32`, `u32`, `i32`, two halves in a word (`Half2`), or an array of one. So a row has no padding and lies as it is declared.
 //! - A word may be packed (`packed!`): some whole numbers side by side in it, each by its name.
+//! - A row a host hands over is all doubles (`f64`, `handed`), and its offsets are in doubles.
 //! - A row a shader reads keeps the shader's own rule: three or four numbers begin at a multiple of four words, two at a multiple of two.
 
 /// a type that is nothing but words
@@ -11,6 +12,7 @@ pub trait Plain: Copy { const ZERO: Self; }
 impl Plain for f32 { const ZERO: f32 = 0.0; }
 impl Plain for u32 { const ZERO: u32 = 0; }
 impl Plain for i32 { const ZERO: i32 = 0; }
+impl Plain for f64 { const ZERO: f64 = 0.0; }
 impl<T: Plain, const N: usize> Plain for [T; N] { const ZERO: [T; N] = [T::ZERO; N]; }
 
 /// two numbers in a word, each as a half, the first in the low one (a shader's unpack2x16float)

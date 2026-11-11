@@ -27,6 +27,8 @@
 // writes the load's record as it was, with no whole load in it) — and in `off` the lines of the GPU's wait on a frame (never asked) and of the reporter
 // (src/cloud/cloud.ts never asks for the reports).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
+import { newHand, type Hand } from '../../src/draw/hand.ts';
+import { SeatInput, SeatLens } from '../../src/draw/input.ts';
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
 import { ROOT } from './here.ts';
@@ -37,7 +39,6 @@ const KS = await import(`${ROOT}/src/tape/keepstore.ts`);
 const { ReplayKeeper } = await import(`${ROOT}/src/tape/keeper.ts`);
 const { HandTape, HandWalk, HANDTAPE, hashOf } = await import(`${ROOT}/src/tape/handtape.ts`);
 const { handSource, handsOf, keptHands } = await import(`${ROOT}/src/tape/keep.ts`);
-const { HAND } = await import(`${ROOT}/src/draw/hand.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { wire, WireError, toBase64, fromBase64 } = await import(`${ROOT}/src/cloud/wire.ts`);
 const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tapes.ts`);
@@ -61,21 +62,22 @@ function memStore(init: Record<string, string> = {}) {
   return { get length() { return m.size; }, key: (i: number) => [...m.keys()][i] ?? null, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); }, map: m };
 }
 
-/** one tick's hand, written over `N`: plain numbers that move as a page's do, a click now and then, and the keys' text (the codes held, a line feed, the codes that went down) */
-function handOf(N: Float64Array, f: number): string {
+/** one tick's hand, written over `hand`: plain numbers that move as a page's do, a click now and then, and the keys' text (the codes held, a line feed, the codes that went down) */
+function handOf(hand: Hand, f: number): string {
+  const N = hand.input, L = hand.lens;
   const s = f / 60, at = (t0: number, t1: number) => s > t0 && s < t1;
-  N[HAND.w] = N[HAND.pw] = 1600; N[HAND.h] = N[HAND.ph] = 900;
-  N[HAND.mx] = 800 + 300 * Math.sin(s * 0.7); N[HAND.my] = 500 + 200 * Math.cos(s * 0.5);
-  N[HAND.clicked] = f === 470 || f === 500 || f === 530 ? 1 : 0; N[HAND.buttons] = N[HAND.clicked];
-  for (let i = 0; i < 16; i++) { N[HAND.vp + i] = Math.sin(s * 0.3 + i); N[HAND.ivp + i] = Math.cos(s * 0.3 + i); }
-  for (let i = 0; i < 3; i++) N[HAND.pos + i] = 10 + i + Math.sin(s * 0.2 + i);
-  N[HAND.yaw] = s * 0.1; N[HAND.pitch] = 0.7 + 0.1 * Math.sin(s);
+  N[SeatInput.w] = N[SeatInput.pw] = 1600; N[SeatInput.h] = N[SeatInput.ph] = 900;
+  N[SeatInput.mx] = 800 + 300 * Math.sin(s * 0.7); N[SeatInput.my] = 500 + 200 * Math.cos(s * 0.5);
+  N[SeatInput.clicked] = f === 470 || f === 500 || f === 530 ? 1 : 0; N[SeatInput.buttons] = N[SeatInput.clicked];
+  for (let i = 0; i < 16; i++) { L[SeatLens.vp + i] = Math.sin(s * 0.3 + i); L[SeatLens.ivp + i] = Math.cos(s * 0.3 + i); }
+  for (let i = 0; i < 3; i++) L[SeatLens.pos + i] = 10 + i + Math.sin(s * 0.2 + i);
+  N[SeatInput.yaw] = s * 0.1; N[SeatInput.pitch] = 0.7 + 0.1 * Math.sin(s);
   return `${at(0.5, 6) ? 'KeyW' : at(9, 12) ? 'KeyS' : ''}${at(3, 5) ? ' KeyD' : ''}\n${f === 400 ? 'KeyE' : f === 700 ? 'KeyC' : f === 120 || f === 900 ? 'KeyB' : ''}`;
 }
-interface Rig { tape: any; hand: Float64Array; K: any; store: any }
+interface Rig { tape: any; hand: Hand; K: any; store: any }
 /** a run on the page that draws, made up: its tape of hands kept (a beat every 300 frames, the last one a flush) as src/host/drawpage.ts and src/tape/run.ts keep one; `mid` is called after every frame */
 async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?: (R: Rig, f: number) => void | Promise<void> } = {}): Promise<Rig> {
-  const tape = new HandTape(HAND.count), hand = new Float64Array(HAND.count), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a', level = new Uint8Array([1, 2, 3, 4]);
+  const tape = new HandTape(), hand = newHand(), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a', level = new Uint8Array([1, 2, 3, 4]);
   tape.start({ build: 'abc1234', levelName: 'made-up.json', level, words: '', parts: [{ name: 'level', length: level.length, hash: hashOf(level) }], seed: 7, seats: 1, flags: 0, kept: '' });
   let now = 0;
   const K = new ReplayKeeper(handSource(() => tape), { sid, store, played: () => tape.ticks > 0,
@@ -83,7 +85,7 @@ async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?:
     now: () => new Date(Date.UTC(2026, 9, 26, 12, 0, now++)).toISOString(), ...(o.gz !== undefined ? { gz: o.gz } : {}) });
   const R: Rig = { tape, hand, K, store };
   for (let f = 0; f < secs * 60; f++) {
-    tape.step(1 / 60, hand, handOf(hand, f));
+    tape.step(1 / 60, hand.all, handOf(hand, f));
     if ((f + 1) % 300 === 0) { K.beat(); await K.idle(); }
     if (o.mid) await o.mid(R, f);
   }
@@ -387,7 +389,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const D = await pullDump(ADMIN, { pid: PID, since: '2026-10-26T12:00:00.000Z' }), got = D ? linesOf(D.bytes) : { lines: [], bad: 1 };
   const mine = handLines(got.lines, 'visit-a'), seqs = mine.map(l => l.seq).sort((a, b) => a - b), head = KP.visitsOf(got.lines).get('visit-a')?.head as any, A = handsOf(mine), B = await keptHands(R.store, 'visit-a');
   check(!!D && got.bad === 0 && got.lines[0]?.k === 'dump' && !!head && head.hands === HANDTAPE.version && same(seqs, Array.from({ length: kept }, (_, i) => i)), `tapes: read back out of the backend it is one hand-over file of ${got.lines.length} records, ${seqs.length} pieces, none missing, with the head that says it is a tape of hands (${D?.name})`);
-  { const walk = A ? new HandWalk(A, HAND.count) : null; let last = false; if (walk) { for (let r = walk.next(); r; r = walk.next()) { /* to its end */ } last = walk.ticks === R.tape.ticks && R.hand.every((v: number, i: number) => Object.is(v, walk.last[i])); }
+  { const walk = A ? new HandWalk(A) : null; let last = false; if (walk) { for (let r = walk.next(); r; r = walk.next()) { /* to its end */ } last = walk.ticks === R.tape.ticks && R.hand.all.every((v: number, i: number) => Object.is(v, walk.last[i])); }
     check(sameBytes(A, B) && sameBytes(A, R.tape.whole()) && !!walk && walk.start.build === 'abc1234' && walk.start.levelName === 'made-up.json' && last, `tapes: the tape put together from the backend is the one this browser's own store holds and the page wrote, byte for byte (${A?.length} bytes), and its own reader walks it to its last hand (${walk?.ticks} ticks)`); }
   const rowB = (await ADMIN.query('tapes:list', { pid: PID })).find((r: any) => r.sid === 'visit-a'), rowL = (await R.store.rows())[0];
   check(!!rowB && rowB.have === kept && rowB.pieces === rowL.pieces && rowB.seconds === rowL.seconds && rowB.scenario === rowL.scenario && rowB.commit === 'abc1234', `tapes: the visit's row on the backend is the store's own (${rowB?.seconds} s, ${rowB?.scenario})`);

@@ -8,7 +8,7 @@ import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/character.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { DrawPlay } from '../../src/host/drawplay';
-import { HAND, sampleHand } from '../../src/draw/hand';
+import { sampleHand } from '../../src/draw/hand';
 import { HandTape, HandWalk, TapeRefused, type TapeRow } from '../../src/tape/handtape';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
@@ -24,7 +24,7 @@ const TICKS = 1500;
 
 /** a tape with its rows gone over (`n`: steps before it) */
 function changed(bytes: Uint8Array, fn: (r: TapeRow, n: number) => void): Uint8Array {
-  const t = new HandTape(HAND.count), w = new HandWalk(bytes, HAND.count); t.start(w.start);
+  const t = new HandTape(), w = new HandWalk(bytes); t.start(w.start);
   for (let r = w.next(); r; r = w.next()) { fn(r, t.ticks); if (r.kind === 'step') t.step(r.dt, r.hand, r.keys); else if (r.kind === 'order') t.order(r.bytes); else if (r.kind === 'mark') t.mark(r.mark); else if (r.kind === 'figures') t.figures(r.figures); else if (r.kind === 'try') t.again(); }
   return t.whole();
 }
@@ -33,7 +33,7 @@ function dice(n: number): () => number { return () => { n = Math.imul(n ^ n >>> 
 for (const [level, words] of Object.entries(WORDS)) { if (only.length && !only.includes(level)) continue;
   const g = fresh(), roll = dice(7), cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, D = g.drawn;
   const input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 };
-  g.tape = new HandTape(HAND.count); g.commands.god(1);
+  g.tape = new HandTape(); g.commands.god(1);
   g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', level))), words, kept: '{"hard":true}', ...own, seed: 11, named: { level, build: 'check' } });
   for (let i = 0; i < TICKS; i++) {
     if (i % 40 === 0) { input.keys.clear(); for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) if (roll() < 0.35) input.keys.add(k); if (roll() < 0.3) { input.buttons = 1; input.clicked = 1; } else input.buttons = 0; }
