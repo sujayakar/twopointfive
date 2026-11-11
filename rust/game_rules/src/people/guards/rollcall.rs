@@ -12,12 +12,6 @@ use crate::teams::Team;
 
 // ---- small readers
 
-/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the first seat's book with one book, his seat's otherwise, asked inside that seat.
-fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
-    let s = crate::seats::seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
-}
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
@@ -59,7 +53,7 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
     if net && g.gd[gd].unit.is_none() && (radio || crate::fogofwar::fog_of_war_hidden(g, gd) || { let h = head_of(g, gd); !on_screen(g, h) }) {
         crate::cues::cues_radio(g, text);
     }
-    if orders_sams_mine(g, gd) && { let h = head_of(g, gd); !on_screen(g, h) } {
+    if crate::group::of(g, gd).is_some_and(|id| g.groups[id].by_a_player()) && { let h = head_of(g, gd); !on_screen(g, h) } {
         crate::squadnet::squad_net_line(g);
     }
 }

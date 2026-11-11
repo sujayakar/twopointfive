@@ -28,7 +28,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
 | `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
 | `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
-| `group.rs` | the groups: a player's squad and the response team (`qrf/`), each with its book of orders and its door tools. `group::with` makes a pass about another |
+| `group.rs` | the groups: a player's squad, an enemy squad and the response team (`qrf/`): its orders and door tools. `group::of` a man, `group::with` another |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
 block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the game asks for, `KeyB` (`?bkey` leaves it on B).
