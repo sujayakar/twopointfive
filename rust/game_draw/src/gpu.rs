@@ -54,7 +54,7 @@ pub fn text() -> String {
 }
 
 /// cells of the air over the plan, half a metre to a side, four to a row
-const AIR: usize = 80 * 56;
+const AIR: usize = ::sim::air::N;
 /// THE BOXES' MATERIAL BUFFER: what shares it, in rows of four floats, one after another. The cut planes are last: a page that cuts nothing has none
 pub const BOX_MAT: [(&str, usize); 5] =
     [("mat", boxes::MAX * 4), ("mark", boxes::marks::TABLE), ("pane", boxes::grid::MAX_PANES * boxes::glass::ROWS), ("air", AIR / 4), ("cut", boxes::MAX * 9)];
