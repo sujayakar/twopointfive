@@ -4,7 +4,7 @@ import { WORLD } from './world';
 import { makeBuffer } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP } from './cut';
 import type { BoxShape } from './shapes';
-import { BoxMat, Capsule } from '../draw/gpu';
+import { BoxMat, Capsule, capsuleWord, capsuleWordBlue, capsuleWordGreen, capsuleWordOwner, capsuleWordRed } from '../draw/gpu';
 import { Cap, Geo, Info } from '../draw/sections';
 import type { MarkingDef } from './markings';
 
@@ -37,7 +37,7 @@ export const BoxFlag = {
   Bar: 1 << 19,
 } as const;
 
-import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
+import { SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
 /** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
@@ -75,11 +75,11 @@ export interface Box {
   /** The surface FINISH (renderer v3 phase 4 — the one BRDF: base colour = albedo, GGX roughness 0‥1, metalness): absent rough = ROUGH_DEFAULT, matte — no reflection ray is
    *  ever spent on the box — and `metal` = a bare conductor (F0 = its albedo, most of its diffuse gone) rather than a dielectric coat (F0 0.04 over the paint). Authored per
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
-   *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
+   *  (rust/game_draw boxes/pack.rs finish, read by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
   /** WHAT THIS BOX IS MADE OF (scene/stuff.ts): a material of the look, 'waits', 'glass' or 'rubber'; absent = plain. It is SAID, never read off the
    *  colour: by the level file (the box's own `stuff`, else its material row's: levelLoad.ts puts it here when the file is read) or by the code that makes
-   *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (render/gbuffer.ts lookWordOf),
+   *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (rust/game_draw boxes/pack.rs finish),
    *  and the PICTURE of a round's hit reads it (rust/game_rules/src/breakage/particle_fx.rs HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
@@ -184,12 +184,6 @@ export function glassDark(b: Box): number {
   if (!SOLIDGLASS.on || b.marks !== undefined || !solidGlassBox(b)) return -1;
   const a = b.albedo; return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] > SOLIDGLASS.lum ? SOLIDGLASS.lum : -1;
 }
-/** The finish as the one f32 the GPU gets (boxMat[3i+1].w): roughness clamped to 0‥1, + 2 if metal, + 4 if anisotropic — three plain floats' worth in
- *  disjoint ranges, so common.wgsl boxFinish() peels them off with two compares (no bit tricks on a float the driver may renormalise). */
-export function matWord(b: Box): number {
-  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff) ?? (SOLIDGLASS.on && solidGlassBox(b) ? SOLIDGLASS.rough : undefined), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat, and a thing of solid glass no rougher than glass: scene/stuff.ts COATFINISH, SOLIDGLASS)
-  return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
-}
 
 
 /** THE BOX WORLD'S TABLES ON THE DEVICE, and what the picture's own plans ask of a static. The rows are the module's (rust/game_draw boxes): draw/world.ts hands them
@@ -265,7 +259,7 @@ export class BoxWorld {
     for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];
       for (let k = 0; k < 3; k++) { D[o + Capsule.a + k] = f[s + Cap.a + k]; D[o + Capsule.b + k] = f[s + Cap.b + k]; } D[o + Capsule.r] = f[s + Cap.r];
       const r = Math.round(Math.min(1, Math.max(0, c[0])) * 31) & 31, g = Math.round(Math.min(1, Math.max(0, c[1])) * 63) & 63, l = Math.round(Math.min(1, Math.max(0, c[2])) * 31) & 31;
-      this.capsuleU32[o + Capsule.misc] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
+      this.capsuleU32[o + Capsule.misc] = capsuleWord(owner, l, g, r, 0); }
     const bo = Info.charBounds + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
     this.charCount++; this.capsuleCount = this.charCount * N;
   }
@@ -275,12 +269,12 @@ export class BoxWorld {
   protected applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
     const D = this.capsuleData, U = this.capsuleU32, N = BoxWorld.CAPS_PER_CHAR;
     for (let c = 0; c < this.charCount; c++) {
-      const rig = base.byOwner?.get(U[c * N * Capsule.row + Capsule.misc] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
+      const rig = base.byOwner?.get(capsuleWordOwner(U[c * N * Capsule.row + Capsule.misc])) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
       let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
       for (let i = 0; i < N; i++) {
         const o = (c * N + i) * Capsule.row; if (!(D[o + Capsule.r] > 0)) continue;   // (a padding record: nothing to fit, never hit)
         const r0 = rig.r0[i], r1 = rig.r1[i];
-        D[o + Capsule.r] = r0; U[o + Capsule.misc] = ((U[o + Capsule.misc] & 0x00ffffff) | (Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))) << 24)) >>> 0;
+        D[o + Capsule.r] = r0; const w = U[o + Capsule.misc]; U[o + Capsule.misc] = capsuleWord(capsuleWordOwner(w), capsuleWordBlue(w), capsuleWordGreen(w), capsuleWordRed(w), Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))));
         const r = Math.max(r0, r1);
         x0 = Math.min(x0, D[o + Capsule.a] - r, D[o + Capsule.b] - r); y0 = Math.min(y0, D[o + Capsule.a + 1] - r, D[o + Capsule.b + 1] - r); z0 = Math.min(z0, D[o + Capsule.a + 2] - r, D[o + Capsule.b + 2] - r);
         x1 = Math.max(x1, D[o + Capsule.a] + r, D[o + Capsule.b] + r); y1 = Math.max(y1, D[o + Capsule.a + 1] + r, D[o + Capsule.b + 1] + r); z1 = Math.max(z1, D[o + Capsule.a + 2] + r, D[o + Capsule.b + 2] + r);

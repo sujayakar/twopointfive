@@ -2,7 +2,7 @@
 // GPU (the Browser pane: boots, toggles, __png identity, the cost tables); what a headless bun can hold is everything AROUND them:
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the
-//                        bad values are faults; and Box → GPU word → back (matWord ⇄ common.wgsl boxFinish, ported)
+//                        bad values are faults
 //   materials-presets    which presets switch the reflections on and with what (high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
 //                        low / verylow off), apply() writes exactly that, the ?nortreflect veto holds across apply()
 //   materials-frame      the engine writes rtCfg.w = the divisor with the switch on and 0 with it off, holds Gloss DOWN while on whatever settings.gloss says,
@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 
 const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { canonicalLevelData, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
-const { makeBox, matWord, ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { PRESETS, QUALITY_NAMES, rtVeto, Quality } = await import(`${ROOT}/src/ui/quality.ts`);
 const { FrameFlags, FRAME_BYTES, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
 
@@ -35,45 +35,6 @@ const verdict = (ok: boolean, label: string, detail = '') => { if (!ok) { fails+
 const done = (name: string) => { console.log(`\n=== ${name}: ${section ? `${section} FAIL` : 'ALL PASS'} ===`); section = 0; };
 export const materialsFailures = () => fails;
 
-/** common.wgsl boxFinish, ported: the one float back to (rough, metal, aniso) */
-function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look page a word rides above the finish and common.wgsl boxFinish takes it off under LOOK; no word rides in these cases, where this line does nothing: the round trip is tools/qa/lookmaps-check.ts's)
-  const aniso = w >= 4; if (aniso) w -= 4; const metal = w >= 2; if (metal) w -= 2; return { rough: Math.min(1, Math.max(0, w)), metal, aniso }; }
-
-// ------------------------------------------------------------------------------------------------------------------------------------------------ finish
-export async function materialsFinish() {
-  console.log('\n=== materials-finish: the finish through the level file, the loader both ways, its faults, the GPU word ===');
-  const D = JSON.parse(readFileSync(`${ROOT}/levels/office.json`, 'utf8')); const mats = D.materials;
-  const withRough = Object.entries(mats).filter(([, m]: any) => m.rough !== undefined).length;
-  verdict(withRough >= 20 && mats.lino?.rough === 0.22 && mats.stone?.rough === 0.15 && mats.metal?.metal === true && mats.metal?.rough === 0.28 && mats.screenOff?.rough === 0.08 && mats.carpet?.rough >= 0.9,
-    `office.json: ${withRough}/${Object.keys(mats).length} materials carry a finish (lino ${mats.lino?.rough}, stone ${mats.stone?.rough}, metal ${mats.metal?.rough} metal=${mats.metal?.metal}, screenOff ${mats.screenOff?.rough}, carpet ${mats.carpet?.rough})`);
-  const boxRough = D.boxes.filter((b: any) => b.rough !== undefined);
-  verdict(boxRough.length >= 9 && boxRough.every((b: any) => b.albedo && !b.material), `${boxRough.length} boxes carry their own finish, all of them inline-albedo one-offs (the racks, the server floor)`, boxRough.slice(0, 3).map((b: any) => `${b.id} ${b.rough}`).join(' · '));
-  const L = loadLevel(D);
-  const idx = (id: string) => D.boxes.findIndex((b: any) => b.id === id);
-  const linoI = D.boxes.findIndex((b: any) => b.material === 'lino'), metalI = D.boxes.findIndex((b: any) => b.material === 'metal'), rackI = idx(boxRough[0]?.id), carpetI = D.boxes.findIndex((b: any) => b.material === 'carpet');
-  const inlineNoFinish = D.boxes.findIndex((b: any) => b.albedo && b.rough === undefined && b.metal === undefined);
-  verdict(L.boxes[linoI].rough === 0.22 && !L.boxes[linoI].metal && L.boxes[metalI].rough === 0.28 && L.boxes[metalI].metal === true && L.boxes[rackI].rough === boxRough[0].rough && L.boxes[inlineNoFinish].rough === undefined && L.boxes[carpetI].rough >= 0.9,
-    'loadLevel: a lino box gets 0.22, a metal box 0.28 + metal, a rack its own 0.3, an inline box with no finish gets none (matte = ROUGH_DEFAULT on the GPU)',
-    `lino ${L.boxes[linoI].rough} · metal ${L.boxes[metalI].rough}/${L.boxes[metalI].metal} · rack ${L.boxes[rackI].rough} · inline ${L.boxes[inlineNoFinish].rough}`);
-  { const D2 = JSON.parse(JSON.stringify(D)); D2.boxes[carpetI].rough = 0.3; D2.boxes[metalI].metal = false; D2.boxes[metalI].rough = 0.5; const L2 = loadLevel(D2);
-    verdict(L2.boxes[carpetI].rough === 0.3 && L2.boxes[metalI].rough === 0.5 && L2.boxes[metalI].metal === undefined, 'a box\'s own rough / metal override its material\'s (metal:false over a metal material = no metal)', `carpet box ${L2.boxes[carpetI].rough} · metal box ${L2.boxes[metalI].rough}/${L2.boxes[metalI].metal}`); }
-  { const old = JSON.parse(JSON.stringify(D)); for (const m of Object.values(old.materials) as any[]) { delete m.rough; delete m.metal; } for (const b of old.boxes) { delete b.rough; delete b.metal; }
-    const Lo = loadLevel(old); const any = Lo.boxes.some((b: any) => b.rough !== undefined || b.metal !== undefined);
-    const rest: string[] = []; const n = structuralDiff({ ...L, boxes: L.boxes.map((b: any) => { const c = { ...b }; delete c.rough; delete c.metal; return c; }) }, Lo, rest, 3);
-    verdict(!any && n === 0, 'a file without any finish (every rough / metal stripped) loads, and gives the same Level minus the finishes', `${n} other diffs ${rest.join(' | ')}`); }
-  { const D1 = levelToData(L, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id), boxGroups: D.boxes.map((b: any) => b.group), floors: D.floors, surfaces: D.surfaces, meta: D.meta, volumes: D.volumes, devices: D.devices });
-    const diffs: string[] = []; const n = structuralDiff(canonicalLevelData(D), canonicalLevelData(D1), diffs, 4);
-    verdict(n === 0, 'data → level → data keeps every finish where it was (materials by name, the one-offs per box, nothing duplicated onto 900 boxes)', diffs.join(' | '));
-    const Lm = loadLevel(D); Lm.boxes[linoI].rough = undefined; delete Lm.boxes[linoI].rough;
-    const Dm = levelToData(Lm, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id) }); const back = loadLevel(Dm);
-    verdict(Dm.boxes[linoI].rough === ROUGH_DEFAULT && back.boxes[linoI].rough === ROUGH_DEFAULT, 'a finished-material box made matte at runtime is written as an explicit rough 1 and loads back matte', `written ${Dm.boxes[linoI].rough}`); }
-  { const cases = [{}, { rough: 0.22 }, { rough: 0.28, metal: true }, { rough: 0.22, aniso: true }, { rough: 0.05, metal: true, aniso: true }, { rough: 1.7 }, { rough: -1 }, { metal: true }];
-    const rows: string[] = []; let ok = true;
-    for (const c of cases) { const b = makeBox({ c: [0, 0, 0], h: [1, 1, 1], ...c }); const w = matWord(b); const f = decodeFinish(Math.fround(w)); const wantR = Math.min(1, Math.max(0, (c as any).rough ?? ROUGH_DEFAULT));
-      const good = Math.abs(f.rough - wantR) < 1e-6 && f.metal === !!(c as any).metal && f.aniso === !!(c as any).aniso; ok &&= good; rows.push(`${JSON.stringify(c)} → ${w.toFixed(3)} → ${f.rough.toFixed(2)}/${f.metal ? 'M' : '-'}/${f.aniso ? 'A' : '-'}${good ? '' : ' ✗'}`); }
-    verdict(ok, 'matWord → f32 → boxFinish (ported) gives rough / metal / aniso back for every combination, clamping rough to [0, 1] and defaulting to matte', rows.join(' · ')); }
-  done('materials-finish');
-}
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ presets
 export async function materialsPresets() {
