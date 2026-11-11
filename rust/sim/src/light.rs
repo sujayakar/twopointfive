@@ -70,6 +70,7 @@ pub fn by_day(what: u32, intensity: f64, full: f64, exposure: f64) -> f64 {
     intensity * js_min(1.0, js_max(real, 1.0) * exposure)
 }
 /// a lamp as the sum takes it, whichever of the two it came from
+#[derive(Clone, Copy)]
 struct Lamp {
     pos: [f64; 3],
     range: f64,
@@ -207,50 +208,63 @@ pub fn estimate(w: &World, lamps: &[[f64; LAMP]], p: [f64; 3], shade: &Shade, ro
     let least = 0.002 * rows.map_or(1.0, |q| q.exposure);
     each(lamps, rows, |l| one(w, p, shade, l, least, acc, tune))
 }
+/// THE LAMPS OF A QUESTION ASKED OF MANY POINTS, said once
+pub struct Set {
+    n: usize,
+    least: f64,
+    lamps: [(Lamp, Cone); MOST],
+}
+pub const MOST: usize = ROWS + 64;
+/// a spot's two cosines
+#[derive(Clone, Copy)]
+struct Cone {
+    outer: f64,
+    inner: f64,
+}
+const NO_LAMP: Lamp = Lamp { pos: [0.0; 3], range: 0.0, radius: 0.0, kind: 0.0, dir: [0.0; 3], outer: 0.0, inner: 0.0, color: [0.0; 3], int: 0.0 };
+static mut SET: Set = Set { n: 0, least: 0.0, lamps: [(NO_LAMP, Cone { outer: 0.0, inner: 0.0 }); MOST] };
+/// (scratch of one call's points: the next set is laid over it)
+pub fn set(lamps: &[[f64; LAMP]], rows: Option<Rows>) -> &'static Set {
+    let s = unsafe { &mut *core::ptr::addr_of_mut!(SET) };
+    s.least = 0.002 * rows.map_or(1.0, |q| q.exposure);
+    s.n = 0;
+    each(lamps, rows, |l| {
+        if s.n < MOST {
+            s.lamps[s.n] = (*l, cone(l));
+            s.n += 1;
+        }
+        0
+    });
+    s
+}
+impl Set {
+    /// a word of where each lamp stands, and how far from there its light begins
+    pub fn places(&self) -> impl Iterator<Item = u64> + '_ {
+        self.lamps[..self.n].iter().map(|(l, _)| l.pos.iter().chain([&l.radius]).fold(0xcbf29ce484222325u64, |h, v| (h ^ v.to_bits()).wrapping_mul(0x9e3779b97f4a7c15).rotate_left(29)) | 1)
+    }
+    /// the six faces at a point. `shut`: whether the line to lamp `i` is (from the point to just short of it), None = the host's to judge, and so is this
+    pub fn estimate(&self, p: [f64; 3], mut shut: impl FnMut(usize, [f64; 3]) -> Option<bool>) -> Option<[f64; 6]> {
+        let mut acc = [0.0; 6];
+        for (i, (l, c)) in self.lamps[..self.n].iter().enumerate() {
+            if let Some((lum, at, end)) = reaches(l, || *c, p, self.least) {
+                match end {
+                    Some(end) if shut(i, end)? => continue,
+                    _ => {}
+                }
+                onto(&mut acc, lum, at);
+            }
+        }
+        Some(acc)
+    }
+}
+fn cone(l: &Lamp) -> Cone {
+    Cone { outer: cos(l.outer * DEG), inner: cos(js_min(l.inner, l.outer - 0.5) * DEG) }
+}
 /// one lamp's light on the point, onto the six faces: the shader's own terms, then one line to it, then the receiving cosine a face. 0, or ASK_HOST.
 #[inline(always)]
-fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64], tune: &Knobs) -> u32 {
-    let (dx, dy, dz) = (l.pos[0] - p[0], l.pos[1] - p[1], l.pos[2] - p[2]);
-    let range = l.range;
-    // (a lamp further off along one axis than its range is further off than its range: the test below would pass it by, at the price of a root)
-    if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range {
-        return 0;
-    }
-    let dist2 = dx * dx + dy * dy + dz * dz;
-    let dist = sqrt(dist2);
-    if dist > range || dist < 1e-3 {
-        return 0;
-    }
-    let (lx, ly, lz) = (dx / dist, dy / dist, dz / dist);
-    let lr = l.radius;
-    let mut att = light_window(dist, range) / js_max(dist2, lr * lr);
-    let kind = l.kind;
-    if kind == 1.0 {
-        let cd = -(lx * l.dir[0] + ly * l.dir[1] + lz * l.dir[2]);
-        let cos_outer = cos(l.outer * DEG);
-        let cos_inner = cos(js_min(l.inner, l.outer - 0.5) * DEG);
-        if cd < cos_outer {
-            return 0;
-        }
-        att *= smoothstep(cos_outer, cos_inner, cd);
-    } else if kind == 3.0 {
-        let ce = -(lx * l.dir[0] + ly * l.dir[1] + lz * l.dir[2]);
-        if ce <= 0.0 {
-            return 0;
-        }
-        att *= ce;
-    }
-    if att <= 0.0 {
-        return 0;
-    }
-    let (c0, c1, c2, int) = (l.color[0], l.color[1], l.color[2], l.int);
-    if js_max3(c0, c1, c2) * int * att < least {
-        return 0;
-    }
-    let mut lum = (0.2126 * c0 + 0.7152 * c1 + 0.0722 * c2) * int * att;
-    let tmax = dist - lr - 0.02;
-    if tmax > 0.05 {
-        let end = [p[0] + lx * tmax, p[1] + ly * tmax, p[2] + lz * tmax];
+fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64; 6], tune: &Knobs) -> u32 {
+    let Some((mut lum, at, end)) = reaches(l, || cone(l), p, least) else { return 0 };
+    if let Some(end) = end {
         match lines::sight_line(w, true, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2], tune) {
             None => return ASK_HOST,
             Some(true) => return 0,
@@ -260,6 +274,56 @@ fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f
             lum *= bricks::trans(shade.g, shade.stamp, p, end, shade.sigma);
         }
     }
+    onto(acc, lum, at);
+    0
+}
+/// what of a lamp comes to a point: how much, which way the lamp is, and where the line to it ends (None: it is at hand)
+#[inline(always)]
+fn reaches(l: &Lamp, cone: impl Fn() -> Cone, p: [f64; 3], least: f64) -> Option<(f64, [f64; 3], Option<[f64; 3]>)> {
+    let (dx, dy, dz) = (l.pos[0] - p[0], l.pos[1] - p[1], l.pos[2] - p[2]);
+    let range = l.range;
+    // (a lamp further off along one axis than its range is further off than its range: the test below would pass it by, at the price of a root)
+    if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range {
+        return None;
+    }
+    let dist2 = dx * dx + dy * dy + dz * dz;
+    let dist = sqrt(dist2);
+    if dist > range || dist < 1e-3 {
+        return None;
+    }
+    let (lx, ly, lz) = (dx / dist, dy / dist, dz / dist);
+    let lr = l.radius;
+    let mut att = light_window(dist, range) / js_max(dist2, lr * lr);
+    let kind = l.kind;
+    if kind == 1.0 {
+        let cd = -(lx * l.dir[0] + ly * l.dir[1] + lz * l.dir[2]);
+        let Cone { outer: cos_outer, inner: cos_inner } = cone();
+        if cd < cos_outer {
+            return None;
+        }
+        att *= smoothstep(cos_outer, cos_inner, cd);
+    } else if kind == 3.0 {
+        let ce = -(lx * l.dir[0] + ly * l.dir[1] + lz * l.dir[2]);
+        if ce <= 0.0 {
+            return None;
+        }
+        att *= ce;
+    }
+    if att <= 0.0 {
+        return None;
+    }
+    let (c0, c1, c2, int) = (l.color[0], l.color[1], l.color[2], l.int);
+    if js_max3(c0, c1, c2) * int * att < least {
+        return None;
+    }
+    let lum = (0.2126 * c0 + 0.7152 * c1 + 0.0722 * c2) * int * att;
+    let tmax = dist - lr - 0.02;
+    let end = if tmax > 0.05 { Some([p[0] + lx * tmax, p[1] + ly * tmax, p[2] + lz * tmax]) } else { None };
+    Some((lum, [lx, ly, lz], end))
+}
+/// light from that way onto the six faces
+#[inline(always)]
+fn onto(acc: &mut [f64; 6], lum: f64, [lx, ly, lz]: [f64; 3]) {
     for k in 0..6 {
         let nn = &N6[k];
         let cs = nn[0] * lx + nn[1] * ly + nn[2] * lz;
@@ -267,5 +331,4 @@ fn one(w: &World, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f
             acc[k] += lum * cs;
         }
     }
-    0
 }
