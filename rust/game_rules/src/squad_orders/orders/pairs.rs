@@ -264,10 +264,10 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
+        let w = if g.tab.task[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
-        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.words.clone() } else { g.tab.orders_assignment[a].going.words.clone() };
+        let word = if squad_orders_shown_there(g, a) { g.tab.task[a].there.words.clone() } else { g.tab.task[a].going.words.clone() };
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert { return String::from("in contact"); }
         return match w {
             Some(w) if !w.is_empty() => format!("{} · {}", word, w),

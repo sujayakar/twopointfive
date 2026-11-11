@@ -10,7 +10,7 @@ use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 macro_rules! dop { ($g:ident, $op:expr) => { $g.tab.doortools_door_op[$op] }; }
-macro_rules! asg { ($g:ident, $a:expr) => { $g.tab.orders_assignment[$a] }; }
+macro_rules! asg { ($g:ident, $a:expr) => { $g.tab.task[$a] }; }
 
 /// When the other doors are asked of: as they come in; at its end, when the doors watched are kept and no more dealt; as a threshold's men end it, when
 /// a man a leaf would hide his door from has none; and while they hold the room.

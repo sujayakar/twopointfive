@@ -74,7 +74,7 @@ fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empt
 fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
     for gd in rails_squad(g) {
         if let Some(a) = crate::orders::squad_orders_of(seat, gd) {
-            if let Some(p) = g.tab.orders_assignment[a].post {
+            if let Some(p) = g.tab.task[a].post {
                 if v3::dist_xz(p, at) < g.k.rails.way_m { return true; }
             }
         }
@@ -83,7 +83,7 @@ fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
 }
 fn order_of(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(seat, gd)?;
-    Some(g.tab.orders_assignment[a].order.clone())
+    Some(g.tab.task[a].order.clone())
 }
 
 /// the last moment of HIS fight
@@ -360,7 +360,7 @@ pub fn rails_tick(g: &mut crate::game::Game) {
         let mut walking = false;
         for gd in rails_squad(g) {
             if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
-                let r = &g.tab.orders_assignment[a];
+                let r = &g.tab.task[a];
                 if !crate::orders::rows::id_is(&r.order, crate::orders::Is::Holds) && !crate::orders::rows::id_is(&r.order, crate::orders::Is::Follows) && !r.arrived { walking = true; break; }
             }
         }
@@ -449,7 +449,7 @@ fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) {
     let low = low.unwrap_or(false);
     let c = g.gd[gd].ch;
     let (p, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(yaw),

@@ -40,7 +40,7 @@ under it wins, and a door counts by the doorway the ray looks through.
 
 **The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
-`Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
+`Task`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
@@ -52,7 +52,7 @@ tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door
 a last wedge, more.
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
-`can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
+`can` and `valid` may refuse, `issue` hands each man his `Task` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
 sent together on one way, then one man assents. A refusal is said by the man it is about, and "nobody's free for that." by the nearest (`say_why`).
 
 **The tick** (`squad_orders_tick`) runs after the door tools, `rear_watch_tick`, `cover_tick` and `pair_orders_tick`. For each man: give way to the

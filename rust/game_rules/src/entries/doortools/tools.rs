@@ -58,7 +58,7 @@ pub(super) fn door_tools_lane_cover(g: &mut crate::game::Game, op: DoorOpId) {
     js::sort_by(&mut cand, |a, b| b.1 - a.1);
     let gd = match cand.first() { Some(x) => x.0, None => return };
     let a_id = match g.tab.doortools_door_op[op].mine.get(gd) { Some(a) => *a, None => return };
-    let a_post = match g.tab.orders_assignment[a_id].post { Some(p) => p, None => return };
+    let a_post = match g.tab.task[a_id].post { Some(p) => p, None => return };
     let mut dd: Option<DoorId> = None;
     for m in men.iter().copied() {
         let p = g.tab.doortools_door_op[op].post.get(m).copied();
@@ -85,7 +85,7 @@ pub(super) fn door_tools_lane_cover(g: &mut crate::game::Game, op: DoorOpId) {
         || crate::scene_collision::low_blocked(g, q, c)
         || crate::scene_collision::low_blocked(g, q, a_post)
         || men.iter().any(|m| *m != gd && v3::dist_xz(post_or_pos(g, op, *m), q) < 0.9) { return; }
-    let a = g.tab.orders_assignment[a_id].clone();
+    let a = g.tab.task[a_id].clone();
     let back = DoorToolsDoneItemLaneBack {
         post: a.post, face: a.face, watch: a.watch, stance: Some(a.stance), upper: Some(a.upper), move_: a.move_,
         stack_side: Some(a.stack_side), going: a.going.clone(), there: a.there.clone(), ..Default::default()
@@ -486,7 +486,7 @@ pub(super) fn door_tools_pick_step(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     let a = g.tab.doortools_door_op[op].mine.get(lead).copied();
-    let busy = a.map_or(false, |a| g.tab.orders_assignment[a].yield_t >= 0.0) || crate::condition::is_blind(g, g.gd[lead].ch) || crate::condition::is_folded(g, g.gd[lead].ch)
+    let busy = a.map_or(false, |a| g.tab.task[a].yield_t >= 0.0) || crate::condition::is_blind(g, g.gd[lead].ch) || crate::condition::is_folded(g, g.gd[lead].ch)
         || (g.gd[lead].script.as_ref().map_or(false, |s| s.over.is_some()) && (crate::silent::silent_compromised(g, &crate::seats::here(g)) || !crate::silent::squad_silent(g, &crate::seats::here(g))));
     if !busy {
         with_kick(g, op, |k| k.off_t = None);
@@ -623,7 +623,7 @@ fn gun_over(g: &mut Game, op: DoorOpId, gun: &DoorToolsDoneItemKickGun) -> bool 
 /// He is fighting, blind or folded: his gun is down till he is not, or till he has been at it too long.
 fn gun_kept_off(g: &mut Game, op: DoorOpId, k: &DoorToolsDoneItemKick, by: GuardId) -> bool {
     let (t, c) = (g.time, g.gd[by].ch);
-    let fights = g.tab.doortools_door_op[op].mine.get(by).is_some_and(|&a| g.tab.orders_assignment[a].yield_t >= 0.0);
+    let fights = g.tab.doortools_door_op[op].mine.get(by).is_some_and(|&a| g.tab.task[a].yield_t >= 0.0);
     if !fights && !crate::condition::is_blind(g, c) && !crate::condition::is_folded(g, c) {
         with_kick(g, op, |k| k.off_t = None);
         return false;
@@ -889,7 +889,7 @@ pub(super) fn door_tools_holders(g: &crate::game::Game, seat: &crate::seats::Sea
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if men.contains(&gd) { continue; }
         let a = match crate::orders::squad_orders_of(&crate::seats::here(g), gd) { Some(a) => a, None => continue };
-        let (is_stack, door, post) = { let x = &g.tab.orders_assignment[a]; (crate::orders::rows::id_is(&x.order, crate::orders::Is::Stacks), x.door, x.post) };
+        let (is_stack, door, post) = { let x = &g.tab.task[a]; (crate::orders::rows::id_is(&x.order, crate::orders::Is::Stacks), x.door, x.post) };
         if !is_stack || door != Some(d) { continue; }
         let p = match post { Some(p) => p, None => continue };
         let r = v3::dist_xz(p, fc);
@@ -920,8 +920,8 @@ pub(super) fn door_tools_step_backs(g: &mut crate::game::Game, d: DoorId, side: 
     let out2 = crate::stackroom::stack_view_reach(g, d) > 2.6;
     for gd in door_tools_holders(g, &crate::seats::here(g), d, side, men) {
         let a_id = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
-        let from = g.tab.orders_assignment[a_id].post.unwrap();
-        let stack_side = g.tab.orders_assignment[a_id].stack_side;
+        let from = g.tab.task[a_id].post.unwrap();
+        let stack_side = g.tab.task[a_id].stack_side;
         let hi = along_of(g, d, from) > width / 2.0;
         let mut found: Option<crate::orders::StackPost> = None;
         for dir in if hi { [1.0, -1.0] } else { [-1.0, 1.0] } {
@@ -986,18 +986,18 @@ pub(super) fn door_tools_make_room(g: &mut crate::game::Game, d: DoorId, back: &
     let name = crate::orders::door_words(g, d);
     for (gd, post) in back.iter() {
         let a = match crate::orders::squad_orders_of(&crate::seats::here(g), gd) { Some(a) => a, None => continue };
-        let grp = g.tab.orders_assignment[a].group;
+        let grp = g.tab.task[a].group;
         let p = post.pos;
         let hit = crate::scene_collision::raycast(g, [p[0], 1.5, p[2]], [m::sin(post.face), 0.0, m::cos(post.face)], 8.0);
         let r = m::max(1.5, (match hit { Some(h) => h.t, None => 8.0 }) - 0.5);
-        crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
+        crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::stack::ORDER.id), post: Some(p), face: Some(post.face),
             watch: Some([p[0] + m::sin(post.face) * r, 1.1, p[2] + m::cos(post.face) * r]),
             door: Some(d), shy: Some(d), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true), stack_side: Some(post.stack_side),
             going: alloc::format!("making room · {}", name).into(), there: alloc::format!("rear security · {}", name).into(), ..Default::default()
         });
         let a2 = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
-        g.tab.orders_assignment[a2].group = grp;
+        g.tab.task[a2].group = grp;
     }
 }
 

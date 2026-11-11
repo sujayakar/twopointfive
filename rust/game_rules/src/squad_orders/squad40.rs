@@ -116,7 +116,7 @@ fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, at: 
         if g.tab.roomfight_op[o].tgt.is_some() { return true; }
     }
     match crate::orders::squad_orders_of(seat, gd) {
-        Some(a) => g.tab.orders_assignment[a].upper == crate::character::UpperMode::Aim,
+        Some(a) => g.tab.task[a].upper == crate::character::UpperMode::Aim,
         None => false,
     }
 }
@@ -256,7 +256,7 @@ fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
 }
 
 /// A MAN TURNING TO HIS SHOT, each frame (the row's `tick`).
-pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let now = g.time;
     let c = g.gd[gd].ch;
@@ -268,7 +268,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             // (under the row's id with no turn of ours behind it: he holds where he is)
             if w.is_some() { g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd); }
             let face = g.ch[c].body_yaw;
-            crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
+            crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
@@ -321,7 +321,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, &crate::seats::here(g), gd, t);
     let mut w = turn_of(lent, v3::copy(at), now, -1.0, a);
-    crate::orders::rows::assign(g, &crate::orders::rows::shell40::ORDER, gd, crate::orders::SquadOrdersAssignA {
+    crate::orders::rows::assign(g, &crate::orders::rows::shell40::ORDER, gd, crate::duty::TaskGiven {
         post: Some([p[0], 0.0, p[2]]),
         face: Some(v3::yaw_to(p, at)),
         watch: Some(to),

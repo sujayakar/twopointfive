@@ -16,7 +16,7 @@ pub(super) fn pod_at(pos: V3, face: f64) -> crate::entrypoints::Pod { crate::ent
 
 /// where his order has him, or where he stands
 pub(super) fn where_of(g: &Game, m: GuardId) -> V3 {
-    let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
+    let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.task[a].post);
     post.unwrap_or_else(|| g.pos_of(m))
 }
 /// where every order has `m` going, in the orders' order
@@ -79,7 +79,7 @@ pub(super) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
 }
 
 /// a man on his point: his muzzle travels to the unseen floor he has a line to that needs the least turn; false when he has none left
-pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, a: TaskId) -> bool {
     let (look_m, scan_rate, now) = (g.k.doortools.look_m, g.k.doortools.scan_rate, g.time);
     let c = g.gd[gd].ch;
     let (p, aim) = (g.ch[c].pos, g.ch[c].aim_yaw);
@@ -103,7 +103,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
     if crate::roomfight::has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
     let yaw = y0 + v3::clamp(v3::wrap_angle(by - y0), -scan_rate * dt, scan_rate * dt);
     g.tab.doortools_room_search[sr].yaw.set(gd, yaw);
-    let row = &mut g.tab.orders_assignment[a];
+    let row = &mut g.tab.task[a];
     row.watch = Some([p[0] + m::sin(yaw) * 5.0, 1.1, p[2] + m::cos(yaw) * 5.0]);
     row.face = Some(yaw);
     row.there = "clearing the room".into();
@@ -667,7 +667,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if g.tab.doortools_door_op[op].men.contains(&gd) { continue; }
         if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
-            let (post, arrived) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].arrived);
+            let (post, arrived) = (g.tab.task[a].post, g.tab.task[a].arrived);
             if let Some(post) = post { if arrived && off_of(g, door, post, side) < 0.0 { taken.push(post); } }
         }
     }

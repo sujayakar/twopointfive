@@ -128,7 +128,7 @@ fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] 
 fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
-    let d = g.tab.orders_assignment[a].door?;
+    let d = g.tab.task[a].door?;
     Some(g.dr[d].def.name.clone())
 }
 
@@ -147,7 +147,7 @@ fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
 /// `onStack(g, m) === door`
 fn stack_is(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, door: &str) -> bool { on_stack(g, seat, m).as_deref() == Some(door) }
 /// `!!g.orders.of(m)?.arrived`
-fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
+fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.task[a].arrived) }
 /// `g.orders.men(sel)`
 fn squad_men(g: &Game, seat: &crate::seats::SeatRef, sel: crate::orders::SquadOrdersMenSel) -> Vec<GuardId> { crate::orders::squad_orders_men(g, seat, Some(sel), None) }
 /// a text cell of a chronicle row (`e.data.<key>`)
@@ -384,7 +384,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(seat, m) else { return false };
-        let row = &g.tab.orders_assignment[id];
+        let row = &g.tab.task[id];
         crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| v3::dist_xz(w, a) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)

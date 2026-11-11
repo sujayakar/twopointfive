@@ -5,7 +5,7 @@
 //! knelt because Sam crouched watched him for three seconds and lost two men (defender down at 3.18, 3.30, 3.45 s on seeds 1 to 3, two of four
 //! up). Standing, the same squad dropped him in 0.6 s. A pose is not meant to take a man's sight; the poses that are say so by name.
 use game::character::{Stance, UpperMode};
-use game::orders::SquadOrdersAssignA;
+use game::duty::TaskGiven;
 use game_start::play::{Opts, Play};
 use game_start::scene::{Axis, Scene};
 
@@ -42,7 +42,7 @@ fn fight(seed: u32, how: How) -> (Option<f64>, usize, String) {
         How::Posed(stance, upper, crouch) => for &gd in &men {
             let at = p.at(gd);
             let face = p.facing(gd);
-            game::orders::squad_orders_assign(&mut p.g, gd, &SquadOrdersAssignA {
+            game::orders::squad_orders_assign(&mut p.g, gd, &TaskGiven {
                 order: String::from("hold"), post: Some([at[0], 0.0, at[1]]), face: Some(face), stance: Some(stance), upper: Some(upper), crouch: Some(crouch),
                 going: "holding".into(), there: "holding".into(), ..Default::default()
             });

@@ -300,7 +300,7 @@ pub fn squad_orders_own_marks(g: &crate::game::Game, seat: &crate::seats::SeatRe
     for gd in men.iter().copied() {
         let id = match seat.orders.asg.get(gd) { Some(a) => *a, None => continue };
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        let a = &g.tab.orders_assignment[id];
+        let a = &g.tab.task[id];
         if a.door != Some(d) { continue; }
         let post = match a.post { Some(p) => p, None => continue };
         let p = g.pos_of(gd);
@@ -600,7 +600,7 @@ pub fn squad_orders_stack_posts_on(g: &mut crate::game::Game, over: &Over, d: Do
 fn held_by(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
     seat.orders.asg.iter().any(|(gd, id)| {
         if men.contains(&gd) || ignore.contains(&gd) { return false; }
-        let a = &g.tab.orders_assignment[*id];
+        let a = &g.tab.task[*id];
         if a.door != Some(d) { return false; }
         match a.post { Some(post) => v3::dist_xz(post, p) < (if crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) { 0.4 } else { 0.9 }), None => false }
     })
@@ -610,7 +610,7 @@ fn held_by(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], i
 fn taken_at(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], ignore: &[GuardId], p: V3) -> bool {
     seat.orders.asg.iter().any(|(gd, id)| {
         if men.contains(&gd) || ignore.contains(&gd) { return false; }
-        let a = &g.tab.orders_assignment[*id];
+        let a = &g.tab.task[*id];
         if a.door != Some(d) { return false; }
         match a.post { Some(post) => v3::dist_xz(post, p) < 0.45, None => false }
     })
@@ -695,7 +695,7 @@ fn stack_face<'a>(g: &Game, over: &'a Over, door: (DoorId, f64), order: (&'a [Gu
     if squad_orders_big(g, &crate::seats::here(g)) {
         for (gd, id) in g.sets[g.seat].orders.asg.iter() {
             if men.contains(&gd) || ignore.contains(&gd) || crate::condition::down(g, g.gd[gd].ch) { continue; }
-            let a = &g.tab.orders_assignment[*id];
+            let a = &g.tab.task[*id];
             if a.door != Some(d) { continue; }
             if let Some(post) = a.post { held.push(post); }
         }

@@ -181,7 +181,7 @@ pub struct WallOp {
     pub set_t: f64,
     pub stow_off_t: Option<f64>,
     pub owes: Option<bool>,
-    pub mine: JsMap<GuardId, OrdersAssignmentId>,
+    pub mine: JsMap<GuardId, TaskId>,
     pub post: JsMap<GuardId, V3>,
     pub from: JsMap<GuardId, V3>,
     pub hole: Option<crate::wallcharge::WallChargeDoneItemHole>,

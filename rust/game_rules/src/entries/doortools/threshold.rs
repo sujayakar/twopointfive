@@ -196,7 +196,7 @@ pub(super) fn door_tools_pie_off(g: &mut crate::game::Game, op: DoorOpId) {
         let mid = { let l = &s.looks[s.i as usize]; l[l.len() >> 1] };
         let a = match crate::orders::squad_orders_of(&crate::seats::here(g), gd) { Some(a) => a, None => continue };
         if o!(g, op).mine.get(gd).copied() != Some(a) { continue; }
-        let (search, going, there, bent) = { let r = &g.tab.orders_assignment[a]; (r.search, r.going.clone(), r.there.clone(), r.lean.map_or(false, js::truthy) || r.crouch == Some(true)) };
+        let (search, going, there, bent) = { let r = &g.tab.task[a]; (r.search, r.going.clone(), r.there.clone(), r.lean.map_or(false, js::truthy) || r.crouch == Some(true)) };
         if !bent || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let q = g.pos_of(gd);
         let light = super::steps::light_of(&crate::seats::here(g));
@@ -704,7 +704,7 @@ pub(super) fn door_tools_thr_thrower(g: &mut crate::game::Game, op: DoorOpId) ->
 pub(super) fn door_tools_thr_back(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let a = o!(g, op).mine.get(m).copied();
     if door_tools_thr_at(g, op, m) { return true; }
-    match a.and_then(|a| g.tab.orders_assignment[a].post) { Some(p) => v3::dist_xz(g.pos_of(m), p) <= 0.6, None => false }
+    match a.and_then(|a| g.tab.task[a].post) { Some(p) => v3::dist_xz(g.pos_of(m), p) <= 0.6, None => false }
 }
 
 /// (`op.word && this.ops.some(o => o !== op && o.word === op.word)`)
@@ -784,7 +784,7 @@ pub(super) fn door_tools_frag_holds(g: &crate::game::Game, op: DoorOpId) -> bool
 
 /// back: on his own mark of the order (a man with no mark is back once he has stopped running)
 pub(super) fn door_tools_frag_back(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
-    match o!(g, op).mine.get(m).copied().and_then(|a| g.tab.orders_assignment[a].post) { None => true, Some(p) => v3::dist_xz(g.pos_of(m), p) <= 0.8 }
+    match o!(g, op).mine.get(m).copied().and_then(|a| g.tab.task[a].post) { None => true, Some(p) => v3::dist_xz(g.pos_of(m), p) <= 0.8 }
 }
 
 /// the wait that was said is over: said so once, where men are still out

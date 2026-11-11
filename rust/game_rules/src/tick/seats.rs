@@ -518,7 +518,7 @@ pub fn orders_of(g: &crate::game::Game, gd: GuardId) -> PlayerId {
 }
 
 /// the order he is under, in whichever seat's book
-pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> {
+pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<TaskId> {
     if one_book(g) { return crate::orders::squad_orders_of(&crate::seats::here(g), gd); }
     let s = seat_of(g, gd);
     crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_of(&crate::seats::here(g), gd))

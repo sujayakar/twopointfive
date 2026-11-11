@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 macro_rules! o { ($g:expr, $op:expr) => { $g.tab.wallcharge_wall_op[$op] } }
-macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
+macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.task[$a] } }
 
 mod enter;
 use enter::wall_charge_enter;
@@ -142,7 +142,7 @@ pub(super) fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate
 // ------------------------------------------------------------ the order
 /// one man's job on this order, kept as the order's
 fn wall_charge_assign(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, a: &crate::wallcharge::WallChargeAssignA) {
-    let b = crate::orders::SquadOrdersAssignA {
+    let b = crate::duty::TaskGiven {
         post: a.post, going: a.going.clone(), order: a.order.clone().unwrap_or_else(|| String::from(WALL_ORDER)),
         face: a.face, there: a.there.clone(), t0: a.t0, follow: a.follow, watch: a.watch, door: a.door, strafe: a.strafe, stance: a.stance,
         upper: a.upper, stack_side: a.stack_side, move_: a.move_.clone(), set_line: a.set_line.clone(), group: a.group, set_said: a.set_said,
@@ -342,13 +342,13 @@ fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
 fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
     let w = o!(g, op).wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
-    let live: Vec<(GuardId, OrdersAssignmentId)> = o!(g, op).men.iter().filter_map(|&m| {
+    let live: Vec<(GuardId, TaskId)> = o!(g, op).men.iter().filter_map(|&m| {
         let a = o!(g, op).mine.get(m).copied()?;
         if asg!(g, a).post.is_some() { Some((m, a)) } else { None }
     }).collect();
     for &(_, a) in live.iter() { asg!(g, a).spare = Some(false); }
     if live.len() < 2 { return; }
-    let mut rows: Vec<(usize, f64, GuardId, OrdersAssignmentId)> = live.iter().enumerate().map(|(i, &(m, a))| (i, v3::dist_xz(asg!(g, a).post.unwrap(), at), m, a)).collect();
+    let mut rows: Vec<(usize, f64, GuardId, TaskId)> = live.iter().enumerate().map(|(i, &(m, a))| (i, v3::dist_xz(asg!(g, a).post.unwrap(), at), m, a)).collect();
     js::sort_by(&mut rows, |x, y| js::or(y.1 - x.1, y.0 as f64 - x.0 as f64));
     let take = if live.len() >= 4 { 2 } else { 1 };
     for &(_, _, m, a) in rows.iter().take(take) {

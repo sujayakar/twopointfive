@@ -226,7 +226,7 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
         let x = st.order[k];
         let is_open = acts::actor(g, st) == Some(x);
         let (p, low) = match st.mate { Some(p) if k == 0 && !is_open => (p, st.quiet), _ => (st.spots[k], false) };
-        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
+        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.task[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
         super::walk::send(g, x, p, super::walk::faces(st, p), None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }

@@ -88,7 +88,7 @@ fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueO
 /// Sam put him there himself.
 fn posted(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(seat, o) { Some(a) => a, None => return false };
-    if g.tab.orders_assignment[a].post.is_none() { return false; }
+    if g.tab.task[a].post.is_none() { return false; }
     if g.rescue.auto.has(a) { return false; }
     !crate::rescueflow::rescue_flow_gave(g, Some(a))
 }
@@ -774,14 +774,14 @@ fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
     let a = crate::orders::squad_orders_of(&crate::seats::here(g), op);
     let sb = rescue_from_bounds(g);
     let a = match a { Some(a) => a, None => return };
-    let post = match g.tab.orders_assignment[a].post { Some(post) => post, None => return };
-    if !g.tab.orders_assignment[a].via.is_empty() || sb.is_none() { return; }
+    let post = match g.tab.task[a].post { Some(post) => post, None => return };
+    if !g.tab.task[a].via.is_empty() || sb.is_none() { return; }
     let out = match g.rescue.server_out { Some(out) => out, None => return };
     if !in_rect(g.pos_of(op), sb) || in_rect(post, sb) { return; }
     let leg = v3::copy(out);
-    g.tab.orders_assignment[a].via = vec![leg];
-    g.tab.orders_assignment[a].goal = leg;
-    g.tab.orders_assignment[a].new_leg = true;
+    g.tab.task[a].via = vec![leg];
+    g.tab.task[a].goal = leg;
+    g.tab.task[a].new_leg = true;
 }
 
 /// A man the scenario lets go of where he stands: the order menu's 'cover'.
@@ -793,7 +793,7 @@ fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, door: O
         None => [p[0] + m::sin(y) * 4.0, 1.1, p[2] + m::cos(y) * 4.0],
     };
     let words = match door { Some(door) if !door.is_empty() => format!("covering {}", door), _ => String::from("holding") };
-    crate::orders::squad_orders_assign(g, op, &crate::orders::SquadOrdersAssignA {
+    crate::orders::squad_orders_assign(g, op, &crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::cover::ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
         stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
         going: words.clone().into(), there: words.into(),
@@ -919,7 +919,7 @@ fn rescue_search(g: &mut crate::game::Game) {
         let p = g.pos_of(o);
         let stands = match a {
             Some(a) => {
-                let row = &g.tab.orders_assignment[a];
+                let row = &g.tab.task[a];
                 !crate::condition::down(g, g.gd[o].ch) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(v3::dist_xz(p, post) > 0.6), None => false }
                     && in_rect(p, b) && !g.sets[g.seat].door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
@@ -932,10 +932,10 @@ fn rescue_search(g: &mut crate::game::Game) {
             Some(&t1) => t1,
             None => {
                 g.rescue.search_t.set(o, t);
-                let row = &g.tab.orders_assignment[a];
+                let row = &g.tab.task[a];
                 let kept = RescueSearchAValue { a, face: row.face, watch: row.watch, there: row.there.clone() };
                 g.rescue.search_a.set(o, kept);
-                g.tab.orders_assignment[a].there = "searching the room".into();
+                g.tab.task[a].there = "searching the room".into();
                 let line = format!("search:{}", g.gd[o].callsign);
                 rescue_note(g, &line);
                 t
@@ -953,7 +953,7 @@ fn rescue_search(g: &mut crate::game::Game) {
         let at = g.staged.team.iter().position(|&x| x == o).unwrap_or(0);
         let u = js::rem((t - t1) * SEARCH_RATE / span + (if at % 2 != 0 { 0.5 } else { 0.0 }), 2.0);
         let yaw = mid + lo + span * (if u < 1.0 { u } else { 2.0 - u });
-        let row = &mut g.tab.orders_assignment[a];
+        let row = &mut g.tab.task[a];
         row.watch = Some([p[0] + m::sin(yaw) * 4.0, 1.2, p[2] + m::cos(yaw) * 4.0]);
         row.face = Some(yaw);
         row.search = Some(true);
@@ -968,7 +968,7 @@ fn rescue_searched(g: &mut crate::game::Game, o: GuardId) {
     g.rescue.search_a.delete(o);
     if let Some(was) = was {
         if crate::orders::squad_orders_of(&crate::seats::here(g), o) == Some(was.a) {
-            let row = &mut g.tab.orders_assignment[was.a];
+            let row = &mut g.tab.task[was.a];
             row.face = was.face; row.watch = was.watch; row.there = was.there;
         }
     }

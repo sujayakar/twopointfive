@@ -45,7 +45,7 @@ pub struct Known {
 pub struct Job {
     pub kind: crate::rescueflow::JobKind,
     pub o: crate::scene_scenarios::RouteOpening,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub t0: f64,
     pub on_t: f64,
     pub chain: Vec<crate::scene_scenarios::RouteOpening>,
@@ -69,7 +69,7 @@ pub struct RescueFlow {
     pub want: JsMap<String, f64>,
     #[is(crate::rescueflow::RescueFlowStats { takes: 0.0, chained: 0.0 })] pub stats: crate::rescueflow::RescueFlowStats,
     pub regions: JsMap<String, RescueflowRegionId>,
-    pub mine: JsSet<OrdersAssignmentId>,
+    pub mine: JsSet<TaskId>,
     pub sense_at: f64,
     pub turn: f64,
     pub heard: JsSet<u32>,

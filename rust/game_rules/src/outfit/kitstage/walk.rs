@@ -36,7 +36,7 @@ pub(super) fn away(g: &Game, st: &KitStage) -> bool { st.order.iter().any(|&x| o
 
 /// a teammate to a mark, at a walk, turned to `face`, his gun on `watch` or at the low ready: the squad's own hand-over, which takes him off whatever had him. `strafe`: his chest kept on `face` all the way
 pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>, pace: f64, strafe: bool, crouch: bool) {
-    let mut a = crate::orders::SquadOrdersAssignA::default();
+    let mut a = crate::duty::TaskGiven::default();
     a.order = String::from("cover");
     a.post = Some([p[0], 0.0, p[1]]);
     a.face = Some(face);
@@ -48,8 +48,8 @@ pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>
     a.crouch = Some(crouch);
     crate::orders::squad_orders_assign(g, x, &a);
 }
-fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
-fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.orders_assignment[a].order == "cover") }
+fn assignment(g: &Game, x: GuardId) -> Option<TaskId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
+fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.task[a].order == "cover") }
 
 pub(super) fn go(g: &Game, st: &mut KitStage, x: GuardId, pts: Vec<V2>, pace: f64, delay: f64, lane: bool) {
     let w = Walk { man: x, pts, k: 0, pace, at: g.time + delay, lane, sent: None, watch: None, t0: g.time, face: None, dealt: false, low: false };
@@ -59,7 +59,7 @@ pub(super) fn walk_of<'a>(st: &'a mut KitStage, x: GuardId) -> Option<&'a mut Wa
 /// down on a knee, or up: the squad's own word on his order, kept on his walk so that an order sent again has it
 pub(super) fn low(g: &mut Game, st: &mut KitStage, x: GuardId, on: bool) {
     if let Some(w) = walk_of(st, x) { w.low = on; }
-    if let Some(a) = assignment(g, x) { let r = &mut g.tab.orders_assignment[a]; if r.order == "cover" { r.crouch = Some(on); } }
+    if let Some(a) = assignment(g, x) { let r = &mut g.tab.task[a]; if r.order == "cover" { r.crouch = Some(on); } }
 }
 /// a man the running row has not placed has one walk: to his place, on his feet, whatever dealt him another or took his order
 fn placed(st: &KitStage, x: GuardId) -> bool {

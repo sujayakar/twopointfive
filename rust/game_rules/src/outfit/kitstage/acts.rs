@@ -129,7 +129,7 @@ fn on_door(st: &KitStage) -> OrderTarget { OrderTarget::Door(crate::orders::Orde
 fn floor(p: V3) -> OrderTarget { OrderTarget::Floor(crate::orders::OrderTargetFloor { at: [p[0], 0.0, p[2]], ..crate::orders::OrderTargetFloor::default() }) }
 fn roster(g: &Game, x: GuardId) -> Who { Who::Num(crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&o| o == x).map_or(-1.0, |i| i as f64)) }
 fn order_def(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> Option<OrdersOrderDefId> { seat.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == id) }
-fn assignment_order(g: &Game, x: GuardId) -> Option<String> { crate::orders::squad_orders_of(&crate::seats::here(g), x).map(|a| g.tab.orders_assignment[a].order.clone()) }
+fn assignment_order(g: &Game, x: GuardId) -> Option<String> { crate::orders::squad_orders_of(&crate::seats::here(g), x).map(|a| g.tab.task[a].order.clone()) }
 fn door_op(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<DoorOpId> { seat.door_tools.ops.iter().copied().find(|&o| g.tab.doortools_door_op[o].door == d) }
 
 // ------------------------------------------------------------ the game's rows held for a row
@@ -1357,7 +1357,7 @@ fn man_home(g: &mut Game, st: &mut KitStage, b: &Beat, e: End, x: GuardId) {
     let in_order = st.order.contains(&x);
     let (home, face) = home_of(g, st, x);
     if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
-        let r = &mut g.tab.orders_assignment[a];
+        let r = &mut g.tab.task[a];
         if r.order == "cover" { r.watch = None; r.upper = crate::character::UpperMode::None; r.stance = crate::character::Stance::LowReady; if in_order { r.face = Some(face); } }
     }
     if !in_order || lane || (e.far && !e.hole) { return; }
