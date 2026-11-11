@@ -593,6 +593,8 @@ pub fn squad_orders_sam_stopped(seat: &crate::seats::SeatRef) -> bool {
 
 /// A man's order goes, and with it the pin the fight seam put on him.
 pub(super) fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
+    let his = g.sets[g.seat].orders.asg.get(gd).copied();
     g.sets[g.seat].orders.asg.delete(gd);
+    crate::duty::done(g, gd, his);
     if g.sets[g.seat].orders.ours.delete(gd) { crate::duty::pin(g, gd, false, "orders"); }
 }

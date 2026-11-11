@@ -166,12 +166,12 @@ fn theirs(g: &mut Game, x: &Deal, o: DoorId, by: Option<GuardId>) -> bool {
     let tools = &g.sets[g.seat].door_tools;
     if tools.ops.iter().any(|y| *y != x.op && dop!(g, *y).door == o) || tools.held.iter().any(|(y, r)| r.door == Some(o) && Some(y) != by) { return true; }
     let fc = frame(g, o);
-    x.squad.iter().any(|&y| crate::seats::order_of(g, y).map(|a| &asg!(g, a)).is_some_and(|a| a.door == Some(o) || a.watch.is_some_and(|w| v3::dist_xz(w, fc) < 1.5)))
+    x.squad.iter().any(|&y| crate::duty::order(g, y).map(|a| &asg!(g, a)).is_some_and(|a| a.door == Some(o) || a.watch.is_some_and(|w| v3::dist_xz(w, fc) < 1.5)))
 }
 /// A teammate stands by it: on his post, or with no order.
 fn beside(g: &mut Game, squad: &[GuardId], o: DoorId) -> bool {
     let fc = frame(g, o);
-    squad.iter().any(|&x| v3::dist_xz(g.pos_of(x), fc) < 3.0 && crate::seats::order_of(g, x).map_or(true, |a| asg!(g, a).post.is_some()))
+    squad.iter().any(|&x| v3::dist_xz(g.pos_of(x), fc) < 3.0 && crate::duty::order(g, x).map_or(true, |a| asg!(g, a).post.is_some()))
 }
 
 /// How much of a door its own leaf, stood open, would hide from a man at `p`.
