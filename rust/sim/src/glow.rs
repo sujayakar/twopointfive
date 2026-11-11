@@ -567,22 +567,31 @@ fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize
             st[O_GLOW_PLACE + m] = read[m];
         }
     }
-    for _ in 0..rounds {
-        for m in 0..nx * nz {
-            let (x, z) = (m % nx, m / nx);
-            let weight = if st[O_GLOW_UP + m] > NOTHING || read[m] == open { 1.0 } else { DARK };
-            let (mut sum, mut den) = (weight * read[m], weight);
-            let mut hand = |n: usize| {
-                sum += pull * st[O_GLOW_PLACE + n];
-                den += pull;
-            };
-            if way[m] & 1 != 0 { hand(m + 1); }
-            if way[m] & 2 != 0 { hand(m + nx); }
-            if x > 0 && way[m - 1] & 1 != 0 { hand(m - 1); }
-            if z > 0 && way[m - nx] & 2 != 0 { hand(m - nx); }
-            let was = st[O_GLOW_PLACE + m];
-            st[O_GLOW_PLACE + m] = was + OMEGA * (sum / den - was);
+    // what a round asks of each metre that no round changes: its own reading by its weight, all the weights, and which neighbours it is one place with
+    let (mut own, mut den, mut next) = ([0.0; MAX_GLOW], [0.0; MAX_GLOW], [0u8; MAX_GLOW]);
+    for m in 0..nx * nz {
+        let weight = if st[O_GLOW_UP + m] > NOTHING || read[m] == open { 1.0 } else { DARK };
+        next[m] = way[m] & 3 | if m % nx > 0 && way[m - 1] & 1 != 0 { 4 } else { 0 } | if m >= nx && way[m - nx] & 2 != 0 { 8 } else { 0 };
+        own[m] = weight * read[m];
+        den[m] = (0..next[m].count_ones()).fold(weight, |d, _| d + pull);
+    }
+    let n = nx * nz;
+    let place = &mut st[O_GLOW_PLACE..O_GLOW_PLACE + n];
+    let mut settle = |m: usize| {
+        let mut sum = own[m];
+        if next[m] == 15 {
+            sum = sum + pull * place[m + 1] + pull * place[m + nx] + pull * place[m - 1] + pull * place[m - nx];
+        } else {
+            if next[m] & 1 != 0 { sum += pull * place[m + 1]; }
+            if next[m] & 2 != 0 { sum += pull * place[m + nx]; }
+            if next[m] & 4 != 0 { sum += pull * place[m - 1]; }
+            if next[m] & 8 != 0 { sum += pull * place[m - nx]; }
         }
+        let was = place[m];
+        place[m] = was + OMEGA * (sum / den[m] - was);
+    };
+    for _ in 0..rounds {
+        (0..n).for_each(&mut settle);
     }
 }
 
