@@ -1,7 +1,7 @@
 // THE BOX WORLD OF A PAGE THAT HOLDS NO GAME: the renderer's tables, filled with the rows Rust left (rust/game_draw boxes). Nothing is packed here and no box
 // is an object, but for what the picture's own plans ask of a static (where it stands and what kind of thing it is: scene/boxes.ts PlanBox), which are told
 // where one changed, and of a door's leaf.
-import { BoxFlag, BoxWorld, GB_ROWS, GB_STRIDE, MAT_STRIDE, boxOf, stopsSky, type Box, type DrawWait } from '../scene/boxes';
+import { BoxFlag, BoxWorld, GB_ROWS, GB_STRIDE, MAT_STRIDE, boxOf, stopsSky, type Box } from '../scene/boxes';
 import { MARK_TABLE_ROWS } from '../scene/markings';
 import { AIR_ROWS } from '../scene/airGrid';
 import { lookNeedBits } from '../render/gbuffer';
@@ -33,7 +33,7 @@ export class DrawWorld extends BoxWorld {
   constructor(device: GPUDevice, private D: Drawn) { super(device); this.staticsTold = 0; }
   get count(): number { return this.boxes; }
 
-  upload(_between = false, _wait: DrawWait | null = null): void {
+  upload(): void {
     const D = this.D, u = D.u, h = D.at[Section.head], q = this.device.queue, n = u[h + Head.count], st = u[h + Head.statics], from = u[h + Head.from], to = u[h + Head.to];
     this.boxes = n;
     // the statics that changed, and the frame's own
@@ -58,7 +58,7 @@ export class DrawWorld extends BoxWorld {
       words[20] = this.capsuleCount; words[21] = this.charCount;
       if (this.rig) this.applyRig(this.rig);
       q.writeBuffer(this.capsuleBuf, 0, this.capsuleData.buffer, 0, Math.max(32, this.capsuleCount * 32)); q.writeBuffer(this.infoBuf, 0, words); }
-    this.gridStats.slack = D.f[h + Head.slack];
+    this.slack = D.f[h + Head.slack];
     if (u[h + Head.stuffs] !== this.stuffs) { this.stuffs = u[h + Head.stuffs]; lookNeedBits(this.stuffs); }
     if (to > from || this.statics.length !== st) this.mirror(from, to, st);
     this.geomSerial = u[h + Head.serial];
@@ -119,6 +119,4 @@ export class DrawWorld extends BoxWorld {
       for (let k = 0; k < 3; k++) { b.c[k] = f[o + Leaf.c + k]; b.h[k] = f[o + Leaf.h + k]; }
       b.yaw = f[o + Leaf.yaw]; b.flags = u[o + Leaf.flags]; b.mkey = u[o + Leaf.key]; }
   }
-  relist(): void { /* nothing is listed here: the module lists its own */ }
-  ensurePacked(): void { /* …and what is on the device is the last frame's */ }
 }
