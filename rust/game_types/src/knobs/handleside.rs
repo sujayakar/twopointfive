@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HandleK {
-    /// metres of his walk ahead looked along for a leaf in his way; a leaf standing less open than `ajar` rad is in his way (doors.ts: under it a man on the
+    /// metres of his walk ahead looked along for a leaf in his way; a leaf standing less open than `ajar` rad is in his way (under it a man on the
     ///  pull face 'presses' it)
     #[k(2.6)] pub look: f64,
     #[k(1.35)] pub ajar: f64,

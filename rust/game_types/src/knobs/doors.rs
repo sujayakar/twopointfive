@@ -6,19 +6,19 @@ use game_derive::Knobs;
 ///  confuse them' · 'kicking down a door when an enemy on the side should stun or knock them out' · having read the first cut, where a pushed door folded a
 ///  man for two seconds: 'opening a door into an enemy standing on the other side should just alert him, it's not like we're slamming these doors' ·
 ///  'confusion here being put on alert but being very confused and investigating what's going on'). A leaf DRIVEN OPEN — walked open by a man on its other
-///  face, turned by a hand, pushed, shoved or flung by a door order, shouldered at a run, booted — used to stop dead against whoever stood in its swing, and
-///  he held it shut on the man opening it. Now it wins: he is carried clear ahead of it and along it toward its free end (Doors.update), and what it did to
-///  him is handed out on his contact (DoorContact.struck) for doorthrow.ts to make of it, by HOW the leaf was driven —
+///  face, turned by a hand, pushed, shoved or flung by a door order, shouldered at a run, booted — wins against whoever stands in its swing:
+///  he is carried clear ahead of it and along it toward its free end, and what it did to
+///  him is handed out on his contact (`struck`) for the door-throw rule (`fittings/doorthrow.rs`) to make of it, by HOW the leaf was driven —
 ///    OPENED (walked, handed, pushed, shoved, flung)   he is moved aside and no more. A defender is startled for `startle` s and goes to see what is at
 ///                                                     the door (suspicious, the doorway his place to look): no fold, no blindness.
-///    SLAMMED (a leaf in a kicked flight that is no     folded and blind for `pushSecs`. The tier is the LEAF's (Door.sinceBash), never whoever last wrote
+///    SLAMMED (a leaf in a kicked flight that is no     folded and blind for `push_secs`. The tier is the LEAF's (`since_bash`), never whoever last wrote
 ///      boot's: a shoulder at a run, a door ripped       the drive: the runner's own body pressing after his shoulder is the same slam.
 ///      or flung open at that pace)
-///    BOOTED (kickIn: a boot, the ram, a shell)        folded and blind for `kickSecs`, and on a knee if it met him before it had turned `floorRad` from
+///    BOOTED (a boot, the ram, a shell)                folded and blind for `kick_secs`, and on a knee if it met him before it had turned `floor_rad` from
 ///                                                     where it was booted (he stood right at the door)
-///  A drive strikes a man ONCE (DoorDrive.hit); after that it goes on carrying him.
+///  A drive strikes a man ONCE; after that it goes on carrying him.
 ///  By behaviour, never by hit points: nothing here hurts anybody. The same for whoever it meets — a defender, Sam, a teammate, a civilian.
-///  NOTHING AT ALL: a leaf eased (a hand slower than `handRate`, a crouched or silent man's body — DoorContact.quiet — or any leaf slower than `minSpeed` where
+///  NOTHING AT ALL: a leaf eased (a hand slower than `hand_rate`, a crouched or silent man's body — `quiet` on the drive — or any leaf slower than `min_speed` where
 ///  it meets him), pulled (it passes the living on that side as ever), swinging shut, or one the man walked into himself; a leaf opened short of a boot by a
 ///  CALM man (MAN_CALM: staff not alert or searching, any civilian — he opens a door with his hand at a walk: the patrol's round, the cleaner's, move nobody
 ///  and raise no alarm of their own, and a man hidden behind a door stays hidden); a leaf a man of HIS OWN side opened any way short of a boot (the squad's
@@ -26,7 +26,6 @@ use game_derive::Knobs;
 ///  already folded (he is carried, whoever's leaf it is and however quietly it comes: a folded man holds no door shut) or just up from it (`again` s: no
 ///  second throw — an opened leaf moves and startles him like anyone); a man in somebody's arm. A man with no floor to be moved onto (his back
 ///  to a wall) is struck where he stands and the leaf rests on him.
-///  `on`: ON in the page (src/host/profile.ts; ?doorthrow=0 = every leaf stops against a standing man, as it did), OFF here and on the harness's frozen stand
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DoorthrowK {
     /// s folded and blind: a leaf shouldered open at a run into him · a booted one

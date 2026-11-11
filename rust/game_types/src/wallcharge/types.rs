@@ -16,7 +16,7 @@ pub enum WallChargeKept {
     Repick { op: WallOpId },
     Local { memo: JsMap<String, f64> },
 }
-/// what underFire's two answers close over: the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits: the TypeScript keeps them by the array's identity)
+/// what an under-fire ask's two answers hold: the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits)
 #[derive(Clone, Debug)]
 pub enum WallChargeFireAsk {
     Lines { wall: Option<crate::wallcharge::WallSpot>, all: Vec<V3>, memo: JsMap<[crate::Num; 3], f64>, hit: JsMap<[crate::Num; 3], bool> },

@@ -32,7 +32,6 @@ pub struct Shell {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct He40Mod {
-    /// (src/game/he40.ts:43 HE40_LOG)
     pub he40_log: Vec<crate::he40::ShellEnd>,
 }
 

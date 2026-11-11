@@ -19,7 +19,7 @@ pub struct Hold {
     pub a: V3,
     pub b: V3,
     pub hot: bool,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
+    /// dealt when a hold starts
     pub serial: u32,
 }
 

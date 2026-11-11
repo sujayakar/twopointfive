@@ -24,16 +24,16 @@ pub struct RoomfightK {
     ///  the lights were free, his light) on a man behind a pane for as long as he could see him — with night vision, the whole length of a corridor
     #[k(1.5)] pub no_shot_go: f64,
     #[k(4.0)] pub no_shot_pass: f64,
-    /// a man HOLDING an arc he was given (orders.ts holdArcs: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
-    ///  — the other half is the other man's; 180 = as it was (he turned to any call he had a line to, and the two of them ended facing one way)
+    /// a man HOLDING an arc he was given (`squad_orders_hold_arcs`: a watch point, on his mark) answers a mate's call or a footfall only inside this many degrees of it
+    ///  — the other half is the other man's; 180 = he turns to any call he has a line to, and the two of them end up facing one way
     #[k(100.0)] pub arc_half_deg: f64,
     /// A MAN TOLD TO COVER KEEPS HIS ANGLE (the maintainer, of a man covering a lane who swung a quarter turn to a man two mates were already shooting, the
-    ///  lane's own men still coming: "doesn't watch his angle even though red team has it covered"). With `coverKeep` a man stood at the post of a cover order
-    ///  passes over an enemy who is more than `coverHalfDeg` off the way he was told to watch WHILE a mate's gun is on that man with a round at him: the man is
+    ///  lane's own men still coming: "doesn't watch his angle even though red team has it covered"). A man stood at the post of a cover order
+    ///  passes over an enemy who is more than `cover_half_deg` off the way he was told to watch WHILE a mate's gun is on that man with a round at him: the man is
     ///  seen (his meter runs) and is not his — not to his eyes, and no call, shot or footfall of that man's turns his look. The man is his again the moment no
     ///  mate has him (the mate is behind a jamb, reloading, has a friend in his line or his muzzle down), his muzzle comes onto this man, or he is inside
-    ///  `coverNearM`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
-    ///  Not covered: coverfire.ts's rounds into cover at a man a mate knows of. Off = as it was: his eyes took any man they saw.
+    ///  `cover_near_m`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
+    ///  Not covered: the cover fire's rounds into cover at a man a mate knows of.
     #[k(45.0)] pub cover_half_deg: f64,
     #[k(6.0)] pub cover_near_m: f64,
     /// s a teammate stays ROUSED after a shot, a charge or a boot last reached his ears: a sighting alone is a man to him (no making the shape out first) and he
@@ -50,8 +50,8 @@ pub struct RoomfightK {
     #[k(5.0)] pub step_look_secs: f64,
     #[k(3.5)] pub door_look_secs: f64,
     #[k(8.0)] pub door_shot_m: f64,
-    /// the feet half of guards.ts LIGHTS.litMan (that switch is this rule's too — see there): a teammate WALKING on an order who stands in the dark on a man
-    ///  standing in the place's light, with SAM in his line to him — his gun is down for it (samLine) — stops where he is until the line is clear, this many
+    /// the feet half of the guards' lit-man rule (`gun_on_lit_man`): a teammate WALKING on an order who stands in the dark on a man
+    ///  standing in the place's light, with SAM in his line to him — his gun is down for it — stops where he is until the line is clear, this many
     ///  seconds at most a hold (0 = his feet are never held). Only a walk that closes on the man (the leg he is on ends nearer the man than he stands: a word that pulls
     ///  him back is walked), never while he stands in an open doorway's funnel, and only for the player: a mate in the line is the side step's, and moves on by
     ///  himself. Only from the dark, by measurement: the same hold by a man whose light was on
@@ -69,11 +69,11 @@ pub struct RoomfightK {
 ///  One room, three men, no warning: the canister blinds all three and the room is taken in
 ///  two seconds, so nothing a defender could do smarter comes before he is shot. What is left is how a man takes a bang, and that is training — nerves only, no
 ///  reaction, aim or hit-point number is in it. A drilled man is blind exactly as long as anybody and breaks as often
-///  (bangBreak, untouched); he is HALF AS SHAKEN — `shaken` × the seconds a stun canister doubles him over (FLASH.stagger 2.5‥1.0 s → 1.25‥0.5: combat.ts
-///  detonateStun asks `drilledK`), × his flinch at a boot (startle 0.4‥0.65 s → 0.2‥0.33) and × the daze once his eyes clear (daze 1‥2 s → 0.5‥1).
+///  (bangBreak, untouched); he is HALF AS SHAKEN — `shaken` × the seconds a stun canister doubles him over (2.5‥1.0 s → 1.25‥0.5: `detonate_stun`
+///  asks `drilled_k`), × his flinch at a boot (startle 0.4‥0.65 s → 0.2‥0.33) and × the daze once his eyes clear (daze 1‥2 s → 0.5‥1).
 ///  So his blind burst — the room fight's own, down the door HE WAS WATCHING, twelve turns from three tenths after the flash — is partly fired instead of
 ///  lost whole to the seconds he spent doubled over, and it starts AFTER the entry's own beat of silence has sent the lead in:
-///  that is the bite. The first of them to fire shouts it. A breaching charge folds him as long as anybody (doortools.ts staggerSecs, untouched: still no
+///  that is the bite. The first of them to fire shouts it. A breaching charge folds him as long as anybody (`doortools.stagger_secs`, untouched: still no
 ///  burst back through that doorway), and the door worked from the threshold is the other answer.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DrilledK {

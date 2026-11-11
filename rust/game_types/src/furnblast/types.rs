@@ -65,7 +65,7 @@ pub struct BlastFirst {
     pub group: f64,
     pub at: V3,
     pub shatter_m: f64,
-    /// INVENTED: g.serial() where firstToGo makes the answer: rowTake's memo asks by identity whether this is the same ask
+    /// dealt where `furniture_first_to_go` makes the answer: `row_kept` asks by it whether this is the same ask
     pub serial: u32,
 }
 

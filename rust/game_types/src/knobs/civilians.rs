@@ -2,10 +2,10 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// ================================================================ numbers (Tab ▸ Sandbox ▸ civilians rows read a few; the switch and killFails persist per machine)
+/// ================================================================ numbers
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct CivK {
-    /// her eye against the guards' (guards.ts GUARD_EYE 16 m / 58° / near field 3.5 m of 100°): walking about; head down over a task; once frightened (looking for it)
+    /// her eye against the guards' (`guard_eye`: 16 m / 58° / near field 3.5 m of 100°): walking about; head down over a task; once frightened (looking for it)
     pub eye: CivKEye,
     pub eye_busy: CivKEyeBusy,
     pub eye_alarmed: CivKEyeAlarmed,
@@ -57,7 +57,7 @@ pub struct CivK {
     #[k(70.0)] pub greet_floor_secs: f64,
 }
 
-/// her eye against the guards' (guards.ts GUARD_EYE 16 m / 58° / near field 3.5 m of 100°): walking about; head down over a task; once frightened (looking for it)
+/// her eye against the guards' (`guard_eye`: 16 m / 58° / near field 3.5 m of 100°): walking about; head down over a task; once frightened (looking for it)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct CivKEye {
     #[k(12.0)] pub range: f64,

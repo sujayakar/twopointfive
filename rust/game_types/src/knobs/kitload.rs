@@ -9,7 +9,7 @@ pub struct KitloadK {
     /// THE TWO SCORES PULL APART, on purpose: a long gun is mostly SHAPE (it costs hiding, little pace), what fills a pouch is mostly WEIGHT (it costs pace,
     /// little hiding), and the big thing on the back is weight first. So "the long gun and empty pouches" is quick but seen, "the pistol and full pouches"
     /// is hidden but slow, and neither bar says what the other does.
-    /// A GUN WEIGHS WHAT ITS ROW SAYS (weapons.ts `weightKg`, `bulk`: the data every gun carries for this): a point of mobility per kilogram, and of
+    /// A GUN WEIGHS WHAT ITS ROW SAYS (`WeaponDef.weight_kg`, `bulk`: the data every gun carries for this): a point of mobility per kilogram, and of
     ///  concealment a pistol's worth for any gun + so much a step of bulk (0 a pistol … 4 a belt-fed gun). The issue carbine comes to about 0.14 / 0.38, a
     ///  pistol 0.03 / 0.04, the short gun between them 0.08 / 0.21, the belt-fed gun 0.28 / 0.72
     #[k(0.035)] pub gun_kg: f64,

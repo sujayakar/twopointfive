@@ -11,14 +11,14 @@ use game_derive::Knobs;
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct HoldK {
     #[k(0.9)] pub regrab: f64,
-    /// A HOLD WITH NO KNIFE (HeldPose.bare, fed by player.ts under game/close.ts CLOSE.noKnife): the held man's right hand was half up beside his head, open, palm
-    ///  forward — frozen under a blade. With no blade it was a pale open hand waving over the pair, the brightest thing on screen. It is on the arm across his
-    ///  throat instead, fingers hooked over it: this much of the choke's own clawing station, without the clawing (0 = the raised hand, as before).
+    /// A HOLD WITH NO KNIFE (`bare` on the held pose): the held man's right hand is on the arm across his throat, fingers hooked over it: this much of the choke's
+    ///  own clawing station, without the clawing (0 = half up beside his head, open, palm forward, which with no blade is a pale open hand waving over the pair, the brightest
+    ///  thing on screen).
     #[k(0.9)] pub bare_grip: f64,
-    /// …and he is HAULED BACK onto the arm, not stood beside it (judged on stills from the game's camera: upright, Sam hid him and only his two elbows showed
-    ///  either side of Sam's head). `bareArch`° more arch over the spine while he has his feet, his elbows carried down (`bareElbow` of the way to hanging). And
-    ///  THE YANK (HoldPose / HeldPose.yank = seconds since Sam's step in landed, fed by player.ts with the stalk's grab): for `in` s his chest goes back `arch`°
-    ///  further and Sam sits `sink` m into it, held `hold` s, let out over `out` s — the pose's share of the haul back.
+    /// …and he is HAULED BACK onto the arm, not stood beside it (upright, Sam hides him from the game's camera and only his two elbows show either side of Sam's
+    ///  head). `bare_arch`° more arch over the spine while he has his feet, his elbows carried down (`bare_elbow` of the way to hanging). And THE YANK (`yank` on both
+    ///  poses = seconds since Sam's step in landed, set with the stalk's grab): for `in_` s his chest goes back `arch`° further and Sam sits `sink` m into it, held
+    ///  `hold` s, let out over `out` s — the pose's share of the haul back.
     #[k(-11.0)] pub bare_arch: f64,
     #[k(0.6)] pub bare_elbow: f64,
     pub yank: HoldKYank,
@@ -31,13 +31,12 @@ pub struct HoldK {
     pub sway: HoldKSway,
     pub apart: HoldKApart,
     pub catch: HoldKCatch,
-    /// …AND HE IS LAID DOWN AHEAD OF SAM (the ninth pass; `layAhead` m, 0 = as it was). The choke's end is the 'sink' fall (fallGuide): onto his knees, then flat
-    /// on his front — and flat, his pelvis stayed where it knelt and his legs were drawn out straight BEHIND it, 85 cm back along the floor: under Sam, who stood
-    /// with a boot on the man's shin. A kneeling man who goes onto his face pivots about his knees, and Sam lets him down away from himself: the pelvis is led
-    /// that much further along his facing, two fifths of it as he goes to his knees and the rest as he is laid flat, so his feet lie clear ahead of Sam's toes
-    /// whichever way the fall's die tips him. takedown.ts setFall asks the level for the room, a strip as wide as his shoulders and as long as the lay and the
-    /// whole of him: half the lay where only that much is clear, none where a wall, a desk or a low crate is in the way. The choke's end only — the knife from
-    /// behind falls as it did.
+    /// …AND HE IS LAID DOWN AHEAD OF SAM (`lay_ahead` m; 0 = his pelvis stays where it knelt and his legs are drawn out straight behind it, 85 cm back along the floor, under
+    /// Sam). The choke's end is the 'sink' fall: onto his knees, then flat on his front. A kneeling man who goes onto his face pivots about his knees, and Sam lets him down
+    /// away from himself: the pelvis is led that much further along his facing, two fifths of it as he goes to his knees and the rest as he is laid flat, so his feet lie
+    /// clear ahead of Sam's toes whichever way the fall's die tips him. `set_fall` asks the level for the room, a strip as wide as his shoulders and as long as the lay and
+    /// the whole of him: half the lay where only that much is clear, none where a wall, a desk or a low crate is in the way. The choke's end only: the knife from behind
+    /// falls as it always does.
     #[k(0.9)] pub lay_ahead: f64,
     pub hit: HoldKHit,
     pub first: HoldKFirst,
@@ -46,23 +45,18 @@ pub struct HoldK {
     /// station on him and the move is over · `free` the man's wrist is let go of · `up` his hand is where the hold has it. The man, his own model space: `meet` =
     /// where his gun hand is thrown to as the arm lands — out beside his ribs, elbow flared, inside Sam's reach (in front of his belly no arm reaches it from
     /// behind him) — and `torn` where the wrench drags it. Sam, his: `over` = his wrist from the man's (over the top of the gun, a hand behind it), `wrench` = the
-    /// tear from there (out to his right, down, back toward himself), `low` where he lets it go (a straight arm at his right thigh), `yaw`° his chest goes with the
+    /// tear from there (out to his right, down, back toward himself), `low` where he lets it go (a straight arm at his right, level), `yaw`° his chest goes with the
     /// tear; `rap` = the pistol hold's wrist from the man's as the frame comes down on it; `hold` m from Sam's wrist to the gun's middle along his hand, [pistol,
     /// rifle]; `pitch`° the muzzle is down as he takes it · carries it out · lets it go. The fall: `rest` the bounce it lands with (dead), `push` m/s it leaves the
-    /// hand at [out to his right, down], turning flat at `spin` rad/s. SECOND PASS (judged on stills from the game's camera): the gun was let go from a low hand at
-    /// his thigh and fell straight down — it read as SET down, slid down his leg like a cane and lay under his right foot. He now tears it out to a straight arm at
-    /// his right (`low`), his chest going with it (`yaw`), and lets it fly from there: it lands most of a metre clear of the pair at the same moment as before (the
-    /// sounds' beats are the fall's time, which is unchanged). THIRD PASS: let go from a thigh-high hand with the muzzle down it still read as a drop behind him —
-    /// he lets it go earlier (`drop`) from a LEVEL arm, the gun level, and the arm stays out `follow` s after it. FOURTH PASS (10-24, the maintainer's own beats,
-    /// set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the take later (`take` 0.2 → 0.26), the tear in two thirds of
-    /// the time (`out` 0.34 → 0.35, `drop` 0.42 → 0.41: the strip's own click is 0.13 s into it, just before he lets go), and THE FALL IS TIMED: COUNTED IN FRAMES
+    /// hand at [out to his right, down], turning flat at `spin` rad/s. Let go from a low hand with the muzzle down the gun reads as SET down, or as a drop behind
+    /// him, so he lets it fly from a level arm, the gun level, and the arm stays out `follow` s after it: it lands most of a metre clear of the pair.
+    /// THE FALL IS TIMED, to the maintainer's own beats, set by ear on the listening page ("strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"), COUNTED IN FRAMES
     /// OF THE PAGE, where the grab begins inside an update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is
-    /// 15 frames after the catch (0.25 s) and the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is
-    /// the middle of the falls that land 18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it.
-    /// With `stripFirst` up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either
+    /// 15 frames after the catch (0.25 s; its own click is 0.13 s into the tear, just before he lets go) and the knock 42 (0.70 s). `take` and `drop` sit in the middle of
+    /// the frame they must fall in, and `fall` is the middle of the falls that land 18 frames after the let-go (0.303 to 0.318). `fall` 0 = the fixed `push`.
+    /// With the disarm leading (`hold.first`) he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either
     /// order. `push` down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn
-    /// until it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the
-    /// frame).
+    /// until it). The sounds' page rows hold the same times (sounds/catalog.ts).
     pub strip: HoldKStrip,
     /// his root this far dead ahead of Sam's, both on Sam's facing: chest to his back — any further and no arm reaches round a throat with the forearm ACROSS it
     ///  (the mannequin's upper arm is 0.27: the elbow has to sit on his left collarbone)
@@ -70,7 +64,7 @@ pub struct HoldK {
     /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
     ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
     ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-    ///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip)
+    ///  long the row starts nothing (no round, no question, no choke, no whip)
     pub secs: HoldKSecs,
     /// ---- Sam, his model space (the man's root sits at [0, 0, dist]; his neck joint stands about [0, 1.43, dist − 0.02], the front of his throat ~7 cm ahead of that)
     /// left wrist: past the middle of the throat to its far side, the forearm's line a finger off the throat — so it lies across it, elbow on his left collarbone
@@ -124,22 +118,21 @@ pub struct HoldK {
     /// halves together: with these the hand stays within 1.5 cm of where it sat on his neck standing, all the way down, and the arm never past 0.91 of its reach —
     /// more sink for the man, or less for Sam, and the arm runs out (the hand slides up off his neck onto his face).
     pub lower: HoldKLower,
-    /// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands
-    /// come onto the forearm (a quarter second in, where they took 0.8 s), `off` = over which they come OFF it and fall, before the lowering starts (they fell
-    /// with it, through it), `tipBy` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back the way they came on a
-    /// spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = HOLD.lower's table as the beats
-    /// have it (both layers read this one with the half on, that one with it off — which keeps what every older digest has): started a touch earlier and all the
-    /// way down by 85 %, so the last third of a second is HELD at the bottom, and deeper — his fold, Sam's lean and sink — the arm's follow refitted to it (the
-    /// hand within 1.5 cm of where it sat on his neck, the arm to 0.94 of its reach). `after` = 1/s Sam comes up off him once he is out, while he stands still.
+    /// THE CHOKE'S BEATS, off the clips — shares of the eased choke: `clamp` = over which both his hands come onto the forearm (a quarter second in), `off` = over which
+    /// they come OFF it and fall, before the lowering starts, `tip_by` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back
+    /// the way they came on a spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = the lowering as the
+    /// beats have it (with the pose's `beats` up both layers read this table, without them `hold.lower`): started a touch earlier and all the way down by 85 %, so the last
+    /// third of a second is HELD at the bottom, and deeper — his fold, Sam's lean and sink — the arm's follow fitted to it (the hand within 1.5 cm of where it sat on his
+    /// neck, the arm to 0.94 of its reach). `after` = 1/s Sam comes up off him once he is out, while he stands still.
     pub beats: HoldKBeats,
-    /// THE CHOKE'S HAUL (takedown.ts TAKEDOWN.haul; off = the choke as it was). The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
+    /// THE CHOKE'S HAUL (the pose's `haul`). The maintainer: "the choking animation needs to be more intense. in chaos
     /// theory sam has him in a chokehold and then lifts him up and back out of the air a bit when choking". Off the clips (the choke seen from the front): a tenth
     /// of a second in Sam straightens and hauls him up, the man's head forced back into his chest, and leans back through the squeeze; the man is arched back
-    /// onto him, hips ahead of his shoulders. Shares of the eased choke: `in` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
-    /// set back on his feet — as his hands come off the arm, done by half way, before the lowering takes him down; let go of early it comes down at `down` 1/s. Sam: `samLean`° more over the spine (back, over planted feet — his head goes
-    /// some 15 cm back, FURTHER than the man's, or the two heads meet: lifted 11 cm with Sam's hips pushed forward under the lean the man's cap covered Sam's head),
-    /// `samArm` [up, back] m his two hands go with the man's neck. The man: his pelvis `lift` m up and `back` m toward Sam (under 0: FORWARD, with
-    /// Sam's — his hips ahead of his shoulders, which go back with Sam's chest: tipped back from the shoulders the two heads met) and tipped `recline`°, `arch`°
+    /// onto him, hips ahead of his shoulders. Shares of the eased choke: `in_` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
+    /// set back on his feet — as his hands come off the arm, done by half way, before the lowering takes him down; let go of early it comes down at `down` 1/s. Sam: `sam_lean`° more over the spine (back, over planted feet — his head goes
+    /// some 15 cm back, FURTHER than the man's, or the two heads meet),
+    /// `sam_arm` [up, back] m his two hands go with the man's neck. The man: his pelvis `lift` m up and `back` m toward Sam (under 0: FORWARD, with
+    /// Sam's — his hips ahead of his shoulders, which go back with Sam's chest: tipped back from the shoulders the two heads meet) and tipped `recline`°, `arch`°
     /// more arch and `chin`° more chin; his feet come `feet` [up, forward] m off where they stood, toes down `toes`°, and kick `kick`
     /// [forward, up] m with the fight. Pose only — but both men's head and chest bones move with it (sight lines and the light meter read Sam's).
     pub haul: HoldKHaul,
@@ -260,23 +253,18 @@ pub struct HoldKFirst {
 /// station on him and the move is over · `free` the man's wrist is let go of · `up` his hand is where the hold has it. The man, his own model space: `meet` =
 /// where his gun hand is thrown to as the arm lands — out beside his ribs, elbow flared, inside Sam's reach (in front of his belly no arm reaches it from
 /// behind him) — and `torn` where the wrench drags it. Sam, his: `over` = his wrist from the man's (over the top of the gun, a hand behind it), `wrench` = the
-/// tear from there (out to his right, down, back toward himself), `low` where he lets it go (a straight arm at his right thigh), `yaw`° his chest goes with the
+/// tear from there (out to his right, down, back toward himself), `low` where he lets it go (a straight arm at his right, level), `yaw`° his chest goes with the
 /// tear; `rap` = the pistol hold's wrist from the man's as the frame comes down on it; `hold` m from Sam's wrist to the gun's middle along his hand, [pistol,
 /// rifle]; `pitch`° the muzzle is down as he takes it · carries it out · lets it go. The fall: `rest` the bounce it lands with (dead), `push` m/s it leaves the
-/// hand at [out to his right, down], turning flat at `spin` rad/s. SECOND PASS (judged on stills from the game's camera): the gun was let go from a low hand at
-/// his thigh and fell straight down — it read as SET down, slid down his leg like a cane and lay under his right foot. He now tears it out to a straight arm at
-/// his right (`low`), his chest going with it (`yaw`), and lets it fly from there: it lands most of a metre clear of the pair at the same moment as before (the
-/// sounds' beats are the fall's time, which is unchanged). THIRD PASS: let go from a thigh-high hand with the muzzle down it still read as a drop behind him —
-/// he lets it go earlier (`drop`) from a LEVEL arm, the gun level, and the arm stays out `follow` s after it. FOURTH PASS (10-24, the maintainer's own beats,
-/// set by ear on the listening page: "strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"): the take later (`take` 0.2 → 0.26), the tear in two thirds of
-/// the time (`out` 0.34 → 0.35, `drop` 0.42 → 0.41: the strip's own click is 0.13 s into it, just before he lets go), and THE FALL IS TIMED: COUNTED IN FRAMES
+/// hand at [out to his right, down], turning flat at `spin` rad/s. Let go from a low hand with the muzzle down the gun reads as SET down, or as a drop behind
+/// him, so he lets it fly from a level arm, the gun level, and the arm stays out `follow` s after it: it lands most of a metre clear of the pair.
+/// THE FALL IS TIMED, to the maintainer's own beats, set by ear on the listening page ("strip: new 2 at 0.25 s · gun down: in the game at 0.70 s"), COUNTED IN FRAMES
 /// OF THE PAGE, where the grab begins inside an update (the catch is heard on that frame and this move's clock already reads one step at its end): the strip is
-/// 15 frames after the catch (0.25 s) and the knock 42 (0.70 s; it was 0.80). `take` and `drop` sit in the middle of the frame they must fall in, and 0.311 is
-/// the middle of the falls that land 18 frames after the let-go (0.303 to 0.318). `fall` 0 or absent = the fixed push, as a recording from before it has it.
-/// With `stripFirst` up he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either
+/// 15 frames after the catch (0.25 s; its own click is 0.13 s into the tear, just before he lets go) and the knock 42 (0.70 s). `take` and `drop` sit in the middle of
+/// the frame they must fall in, and `fall` is the middle of the falls that land 18 frames after the let-go (0.303 to 0.318). `fall` 0 = the fixed `push`.
+/// With the disarm leading (`hold.first`) he lets go sooner and the fall is longer by that many whole frames, so the knock is on the same frame from the grab's start in either
 /// order. `push` down is still what a gun rapped out, stopped at a wall or let fall with no hold leaves at. `free` follows `take` (the man's hand is held torn
-/// until it). The sounds' page rows hold the same times (sounds/catalog.ts; grabvoice-check takes him by the key, as the page does, and ties them to the
-/// frame).
+/// until it). The sounds' page rows hold the same times (sounds/catalog.ts).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HoldKStrip {
     #[k(0.26)] pub take: f64,
@@ -305,7 +293,7 @@ pub struct HoldKStrip {
 /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
 ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
 ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip)
+///  long the row starts nothing (no round, no question, no choke, no whip)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HoldKSecs {
     #[k(0.45)] pub grab: f64,
@@ -368,13 +356,12 @@ pub struct HoldKLower {
     #[k([0.5, 0.22])] pub sam_arm: [f64; 2],
 }
 
-/// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands
-/// come onto the forearm (a quarter second in, where they took 0.8 s), `off` = over which they come OFF it and fall, before the lowering starts (they fell
-/// with it, through it), `tipBy` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back the way they came on a
-/// spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = HOLD.lower's table as the beats
-/// have it (both layers read this one with the half on, that one with it off — which keeps what every older digest has): started a touch earlier and all the
-/// way down by 85 %, so the last third of a second is HELD at the bottom, and deeper — his fold, Sam's lean and sink — the arm's follow refitted to it (the
-/// hand within 1.5 cm of where it sat on his neck, the arm to 0.94 of its reach). `after` = 1/s Sam comes up off him once he is out, while he stands still.
+/// THE CHOKE'S BEATS, off the clips — shares of the eased choke: `clamp` = over which both his hands come onto the forearm (a quarter second in), `off` = over which
+/// they come OFF it and fall, before the lowering starts, `tip_by` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back
+/// the way they came on a spring of their own, `back` 1/s (the choke's clock is back at rest in a tenth of a second: his arms are not). `lower` = the lowering as the
+/// beats have it (with the pose's `beats` up both layers read this table, without them `hold.lower`): started a touch earlier and all the way down by 85 %, so the last
+/// third of a second is HELD at the bottom, and deeper — his fold, Sam's lean and sink — the arm's follow fitted to it (the hand within 1.5 cm of where it sat on his
+/// neck, the arm to 0.94 of its reach). `after` = 1/s Sam comes up off him once he is out, while he stands still.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HoldKBeats {
     #[k([0.03, 0.14])] pub clamp: [f64; 2],
@@ -404,14 +391,14 @@ pub struct HoldKBeatsLower {
     #[k([0.52, 0.29])] pub sam_arm: [f64; 2],
 }
 
-/// THE CHOKE'S HAUL (takedown.ts TAKEDOWN.haul; off = the choke as it was). The maintainer, 10-22: "the choking animation needs to be more intense. in chaos
+/// THE CHOKE'S HAUL (the pose's `haul`). The maintainer: "the choking animation needs to be more intense. in chaos
 /// theory sam has him in a chokehold and then lifts him up and back out of the air a bit when choking". Off the clips (the choke seen from the front): a tenth
 /// of a second in Sam straightens and hauls him up, the man's head forced back into his chest, and leans back through the squeeze; the man is arched back
-/// onto him, hips ahead of his shoulders. Shares of the eased choke: `in` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
-/// set back on his feet — as his hands come off the arm, done by half way, before the lowering takes him down; let go of early it comes down at `down` 1/s. Sam: `samLean`° more over the spine (back, over planted feet — his head goes
-/// some 15 cm back, FURTHER than the man's, or the two heads meet: lifted 11 cm with Sam's hips pushed forward under the lean the man's cap covered Sam's head),
-/// `samArm` [up, back] m his two hands go with the man's neck. The man: his pelvis `lift` m up and `back` m toward Sam (under 0: FORWARD, with
-/// Sam's — his hips ahead of his shoulders, which go back with Sam's chest: tipped back from the shoulders the two heads met) and tipped `recline`°, `arch`°
+/// onto him, hips ahead of his shoulders. Shares of the eased choke: `in_` over which it comes on (a third of a second: quicker and a finger of his passes 5 cm in a frame), `out` over which he is
+/// set back on his feet — as his hands come off the arm, done by half way, before the lowering takes him down; let go of early it comes down at `down` 1/s. Sam: `sam_lean`° more over the spine (back, over planted feet — his head goes
+/// some 15 cm back, FURTHER than the man's, or the two heads meet),
+/// `sam_arm` [up, back] m his two hands go with the man's neck. The man: his pelvis `lift` m up and `back` m toward Sam (under 0: FORWARD, with
+/// Sam's — his hips ahead of his shoulders, which go back with Sam's chest: tipped back from the shoulders the two heads meet) and tipped `recline`°, `arch`°
 /// more arch and `chin`° more chin; his feet come `feet` [up, forward] m off where they stood, toes down `toes`°, and kick `kick`
 /// [forward, up] m with the fight. Pose only — but both men's head and chest bones move with it (sight lines and the light meter read Sam's).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
@@ -523,11 +510,10 @@ pub struct HoldKGunKnock {
     #[k(18.0)] pub pitch: f64,
 }
 
-/// SAM SPRINTS WITH BOTH HANDS ON THE PISTOL (the maintainer, 10-25: "sprinting with pistol animation is weird, should keep two hands on it and at low ready,
-/// like rifle sprinting animation"). A sprint took the pistol's layer off (`upper` 'none'), so the gun rode a pumping fist while the rifle's sprint is the
-/// long gun's low ready in both hands. With `on`, a figure told `runReady` (player.ts: the sprint, the pistol in his hand) and in no stance of its own takes
+/// SAM SPRINTS WITH BOTH HANDS ON THE PISTOL (the maintainer: "sprinting with pistol animation is weird, should keep two hands on it and at low ready,
+/// like rifle sprinting animation"). A figure told `run_ready` (the sprint, the pistol up in his hand) and in no stance of its own takes
 /// the pistol's LOW READY over the running legs — the stance every man moving between doors already has, arms only — drawn in toward the belt as a runner
-/// carries it: the low ready's spring targets go to these (STANCES' units; fwd / up from the pelvis, pitch in degrees, tuck 0‥1). First numbers, off the
+/// carries it: the low ready's spring targets go to these (fwd / up from the pelvis, pitch in degrees, tuck 0‥1). First numbers, off the
 /// capsule strips.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RunreadyK {
@@ -559,7 +545,7 @@ pub struct RunarmsK {
     #[k(0.85)] pub pole_w: f64,
 }
 
-/// THE FAST CROUCH WALK'S LOOK (CharacterAnimator.dash; the rule and its pace are player.ts CROUCHRUN): at 2.5 m/s the crouch cycle as it stands takes 3.5 steps
+/// THE FAST CROUCH WALK'S LOOK (the animator's `dash`; the rule and its pace are `crouchrun`'s): at 2.5 m/s the crouch cycle as it stands takes 3.5 steps
 ///  a second on a 1.44 m stride — a wound-up toy. By `dash` the stride is this much longer and the cadence that much lower (the planted foot keeps the ground's
 ///  speed, as the deliberate retime's does), the pelvis a little lower to pay for the reach and the trunk further over its knees, the head brought level back
 ///  out of it. Eased in and out at `rate` (1/s). Nothing here runs at dash 0.
@@ -571,13 +557,13 @@ pub struct DashK {
     #[k(7.0)] pub rate: f64,
 }
 
-/// HE WATCHES A MAN, AND GIVES HIM ROOM AS HE PASSES (watchLayer; game/samlook.ts feeds `watchAt` / `slipAt`. The looks only: nothing reads them back).
+/// HE WATCHES A MAN, AND GIVES HIM ROOM AS HE PASSES (`sam/samlook.rs` feeds `watch_at` / `slip_at`. The looks only: nothing reads them back).
 ///  THE LOOK: the head goes to the point — the chest a little, the neck, the head (`share`) — as far off the chest's line as `yaw`° and `up` / `down`° of
-///  pitch; the angle follows the point at `rate` 1/s (a man swapped for another is a turn of the head, not a cut) and the whole comes and goes at `wRate`.
-///  THE SLIP: crouched beside a man, by how near he is (`slipK`): the trunk tips `lean`° away from him with the head brought level back out of it, the pelvis
-///  comes `drop` m lower and `away` m off his side over feet left where they were, and the arm on his side goes out low toward him, the hand open (`armOut` m
-///  out from the shoulder, `armDown` m under it, at `armW` of the arm; none of it for a man dead ahead or dead behind — `armSide`, his bearing's sideways
-///  share where it begins and is whole). A hand with something in it is left alone. Eased at `slipRate`. BETWEEN TWO MEN (`slipLean` under 1: they pull on
+///  pitch; the angle follows the point at `rate` 1/s (a man swapped for another is a turn of the head, not a cut) and the whole comes and goes at `w_rate`.
+///  THE SLIP: crouched beside a man, by how near he is (`slip_k`): the trunk tips `lean`° away from him with the head brought level back out of it, the pelvis
+///  comes `drop` m lower and `away` m off his side over feet left where they were, and the arm on his side goes out low toward him, the hand open (`arm_out` m
+///  out from the shoulder, `arm_down` m under it, at `arm_w` of the arm; none of it for a man dead ahead or dead behind — `arm_side`, his bearing's sideways
+///  share where it begins and is whole). A hand with something in it is left alone. Eased at `slip_rate`. BETWEEN TWO MEN (`slip_lean` under 1: they pull on
 ///  him from both sides) the lean, the step aside and the arm go by that share, and he sinks `squeeze` of the drop further: he gets small, and tips into nobody.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WatchK {
@@ -598,8 +584,8 @@ pub struct WatchK {
     #[k(0.6)] pub squeeze: f64,
 }
 
-/// The motion pass's numbers. Pairs are [untrained, trained], read by CharacterAnimator.trained (0 … 1; the game sets it per side — game.ts). First-pass values
-///  judged on pose strips (tools/qa/pose-strip.ts), not yet on a GPU.
+/// The motion pass's numbers. Pairs are [untrained, trained], read by the animator's `trained` (0 … 1, set per man each tick: the squad 1, a trained foe 0.75, a civilian 0.5, the rest 0.12).
+///  First-pass values judged on pose strips, not yet on a GPU.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct MvK {
     pub recoil: MvKRecoil,
@@ -783,11 +769,11 @@ pub struct KitK {
     #[k(0.35)] pub join: f64,
     #[k(0.3)] pub let_go: f64,
     pub apex: KitKApex,
-    /// WHAT AN ARM CAN DO (the maintainer, 10-10, of rifle → grenade: "nonphysical for some joints + really fast"; tools/qa/kitanim-joints.ts measures every change
-    ///  against these): the errand's wrist never comes nearer its own shoulder than leaves the elbow `elbowMin`° open — a path that cuts past the shoulder goes
-    ///  ROUND it —, the hand is never bent more than `wristMax`° off its forearm (eased in from `wristKnee`°; what it carries turns with it), a rifle is laid along the hand
-    ///  over the first `rollIn` of the hand's trip to the shoulder (0.35 for the rest) and comes back onto the aim over the last `rollIn` of the trip down, the empty hand going
-    ///  between shoulder and hip bows out by `crossFar`, and while a rifle is on its way the trunk under the arms re-stands at `trunk` 1/s (the aim's own 14 squared
+    /// WHAT AN ARM CAN DO (the maintainer, of rifle → grenade: "nonphysical for some joints + really fast"): the errand's wrist never comes nearer its own shoulder
+    ///  than leaves the elbow `elbow_min`° open — a path that cuts past the shoulder goes
+    ///  ROUND it —, the hand is never bent more than `wrist_max`° off its forearm (eased in from `wrist_knee`°; what it carries turns with it), a rifle is laid along the hand
+    ///  over the first `roll_in` of the hand's trip to the shoulder (0.35 for the rest) and comes back onto the aim over the last `roll_in` of the trip down, the empty hand going
+    ///  between shoulder and hip bows out by `cross`, and while a rifle is on its way the trunk under the arms re-stands at `trunk` 1/s (the aim's own 14 squared
     ///  the chest 10° on the key's frame) with the long gun's carriage eased in, not taken at once.
     #[k(44.0)] pub elbow_min: f64,
     #[k(46.0)] pub wrist_knee: f64,
@@ -960,21 +946,20 @@ pub struct KitKClose {
     #[k(0.5)] pub curl: f64,
 }
 
-/// A THROW READS ITS DISTANCE (the maintainer, 10-16, over a can thrown at a wall two steps off with the full wind-up: "we should have different animations
-///  based on how far you're throwing something"). throwItem's `dist` = metres over the floor from the thrower to where the arc ends; with `on` (off in the
-///  module and on the frozen stand, TPS_THROWBY=1; on in the page, ?nothrowby = one swing for every throw) it picks the swing. Three reads on ONE CLOCK — the
-///  can leaves every one of them at THROW_RELEASE, and where it starts and how it flies are the thrower's, not the swing's:
-///   · under `toss` m, and thrown under `tossFast` m/s over the floor (a hard throw a wall stops two steps off is no toss: it is the shortest overhand) — an
-///     UNDERHAND TOSS (THR_LOW): the arm swings back past the hip and through, the wrist never above the shoulder; the backswing is `tossMin` of its size at
-///     arm's length, all of it at `toss` m (drawn in toward `tossPivot`, off the shoulder: the hanging hand). From a hand up in front of him (a gun) there is
-///     no backswing to whip into: past what `tossIn` m/s reaches by the top, the hand drops on one arc to the swing's low point and scoops from there. The
-///     other arm is left to the pose underneath, or, up on a gun's support grip, is let down to hang (TOSS_HANG) for the swing;
-///   · from `toss` to `full` m — the overhand SHORT-ARMED: the body's turn, lean and weight shift from `turnMin` of their size up to all of it, the hand's path
-///     drawn in toward `pivot` (out beside the shoulder: the hand cocks no further back than the ear) from `armMin` of its size up to all of it — but back at
+/// A THROW READS ITS DISTANCE (the maintainer, over a can thrown at a wall two steps off with the full wind-up: "we should have different animations
+///  based on how far you're throwing something"). The throw's `dist` = metres over the floor from the thrower to where the arc ends picks the swing. Three reads on ONE CLOCK — the
+///  can leaves every one of them at `THROW_RELEASE`, and where it starts and how it flies are the thrower's, not the swing's:
+///   · under `toss` m, and thrown under `toss_fast` m/s over the floor (a hard throw a wall stops two steps off is no toss: it is the shortest overhand) — an
+///     UNDERHAND TOSS: the arm swings back past the hip and through, the wrist never above the shoulder; the backswing is `toss_min` of its size at
+///     arm's length, all of it at `toss` m (drawn in toward `toss_pivot`, off the shoulder: the hanging hand). From a hand up in front of him (a gun) there is
+///     no backswing to whip into: past what `toss_in` m/s reaches by the top, the hand drops on one arc to the swing's low point and scoops from there. The
+///     other arm is left to the pose underneath, or, up on a gun's support grip, is let down to hang for the swing;
+///   · from `toss` to `full` m — the overhand SHORT-ARMED: the body's turn, lean and weight shift from `turn_min` of their size up to all of it, the hand's path
+///     drawn in toward `pivot` (out beside the shoulder: the hand cocks no further back than the ear) from `arm_min` of its size up to all of it — but back at
 ///     its authored size for `through` s either side of the release, so it lets go where the whole throw does and the path has no corner — the balance arm's
-///     path and turn toward the pose underneath from `offMin`, the crouched sit-up from `sit`, by a smoothstep of the distance;
-///   · `full` m and over — the overhand as authored. No distance told, or the switch off, is that too, bit for bit.
-///  With the switch on the fist also drops its can the frame the thrown one is in the air (combat.ts: `throwing` runs three frames past the release).
+///     path and turn toward the pose underneath from `off_min`, the crouched sit-up from `sit`, by a smoothstep of the distance;
+///   · `full` m and over — the overhand as authored. No distance told is that too.
+///  The fist also drops its can the frame the thrown one is in the air (`anim_throwing` stays true a few frames past the release).
 ///  The body the picture shows is the body the guards see and shoot at (one model): a toss keeps a crouched head down where the overhand sits him up.
 ///  UNTUNED by eye (nobody has seen these on a GPU).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

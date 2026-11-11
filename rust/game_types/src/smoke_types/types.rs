@@ -104,7 +104,7 @@ pub struct SmokeSystemLike {
 
 pub const WIND_GPU_MAX: f64 = 8.0;
 
-/// which lattice an emitter lands on (smoke/types.ts:22 SmokeEmitter.lattice; absent = by kind, smoke/smoke.ts:182)
+/// which lattice an emitter lands on; none = by its kind: the page's smoke (src/smoke/smoke.ts `levelOf`) puts a canister on the coarse one and everything else on the fine
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SmokeLattice {
     Fine,

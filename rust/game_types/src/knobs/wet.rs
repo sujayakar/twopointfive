@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
+/// The knobs. The first block is the model's, the second the look's — those ride to the
 ///  GPU per character instance so the shaders need no uniform of their own.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WetK {

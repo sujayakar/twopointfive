@@ -1,4 +1,4 @@
-//! The frames of levels/tut-team.script.ts, written by the skeleton's program from the checker. Never edited by hand: a local a body wants across a yield that is not here is a question for the program.
+//! The frames of the tut-team level's script (rust/game_rules/src/missions/script_tut_team.rs): where each beat stands, and the locals that live across a yield.
 #![allow(unused_imports, unused_variables, unused_mut)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};

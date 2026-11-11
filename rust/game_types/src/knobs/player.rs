@@ -2,9 +2,9 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// Sam's hands on the FN2000 (combat.ts fireWeapon's `spread`: ± half of it per axis on the unit direction): a shouldered long gun
-///  standing still, on the move (any ground speed over `moveAt`), × crouched, × braced on the foregrip — which he now ALWAYS is with it in the hands (Player.braced:
-///  no brace input any more, so braceK is simply the rifle's in-hand steadiness and `still` × braceK the cone a standing round is drawn with) — then + the AUTO string's
+/// Sam's hands on the FN2000 (`fire_weapon`'s `spread`: ± half of it per axis on the unit direction): a shouldered long gun
+///  standing still, on the move (any ground speed over `move_at`), × crouched, × braced on the foregrip (`player_braced`: there is no brace input,
+///  so `brace_k` is simply the rifle's in-hand steadiness and `still` × `brace_k` the cone a standing round is drawn with) — then + the AUTO string's
 ///  own growth off the row and + his suppression's, as the pistol's rounds get. The pistol stays dead-on.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RifleSpreadK {
@@ -47,11 +47,11 @@ pub struct TwogearsK {
     #[k(1.45)] pub crouch: f64,
 }
 
-/// SHIFT IN A CROUCH IS A FAST CROUCH WALK (the maintainer, 10-23: "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint
-/// properly"). With `on`, Shift held while he is crouched no longer stands him up into the sprint: he stays down and covers ground at `pace` (m/s; between the
+/// SHIFT IN A CROUCH IS A FAST CROUCH WALK (the maintainer: "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint
+/// properly"). Shift held while he is crouched does not stand him up into the sprint: he stays down and covers ground at `pace` (m/s; between the
 /// walk's 1.55 and the run), each footfall at `loud` (the crouch walk's is 0.125, the walk's 0.26, a run's 0.6: quicker than walking and heard further than
 /// walking, a good deal less than running), and it is no sneak. The sprint is the standing man's: [C] first. He is not `sprinting` — his hands are still his own (a
-/// door, a switch, a grab) — and a hold on left click is the creep whatever Shift says, as before. A body in tow is let go of, as a sprint's is. Off = Shift stands him up, as it did. Its look: character.ts DASH.
+/// door, a switch, a grab) — and a hold on left click is the creep whatever Shift says. A body in tow is let go of, as a sprint's is. Its look: the `dash` table.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct CrouchrunK {
     #[k(2.5)] pub pace: f64,
