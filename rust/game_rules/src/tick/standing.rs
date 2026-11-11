@@ -19,11 +19,6 @@ pub struct Men {
 #[derive(Clone, Copy, Debug)]
 pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: crate::host_hud::View }
 
-/// the men's poses in the pool of the game's block
-pub fn settle(g: &mut Game) {
-    crate::posehome::pose_home_tend(g);
-}
-
 /// the canvas of a host that draws nothing
 pub fn canvas() -> crate::host_hud::View { crate::host_hud::View { client_width: 1600.0, client_height: 1000.0, width: 1600.0, height: 1000.0 } }
 
@@ -51,7 +46,6 @@ pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
     // (a quiet mission's deal says where the men stand and what they make for: they read it from the level as they are made)
     if let Some(s) = spec.filter(|s| s.kind == crate::scene_scenarios::MissionKind::Quiet) { crate::quiet::quiet_mission_deal(g, s.seed, men.seats); }
     crate::game::game_new(g, men.rig, Some(crate::game::GameNewOpts { seats: Some(men.seats) }));
-    settle(g);
     // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
     { let hour = g.stood.hour; if hour != crate::hours::HourId::Night { crate::hours::apply_hour(g, hour); } }
     host_new(g);
@@ -66,7 +60,6 @@ pub fn stand_men(g: &mut Game, men: &Men) -> Option<alloc::string::String> {
         crate::kit::kit_solo_if(g, true);
         return None;
     };
-    settle(g);   // (the men the mission made: their poses go home as a tick's opening would take them)
     crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the first tick reads before its own paint
     crate::fire::update_fire(g, 0.0);
     why

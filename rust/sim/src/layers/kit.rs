@@ -3,49 +3,35 @@ use super::*;
 
 /// The gun hand's errand between the flashlight's ring at the front of the hip and the sidearm on the thigh: the wrist from wherever the pose has it
 /// down onto the one, across to the other, and back. The pose as it stood is kept at `at_sw` (what was in the hand is drawn off it).
-pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64) -> bool {
+pub fn swap_pose(body: &mut Body, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64) {
     let (at, at_b, _) = poses(an);
     let fix_r = an.hand_fix[1];
-    let Some(Some((n, to))) = with_pose(g, at, |d, rig, n, fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &[HIPS, THIGH_R, SPINE1, SPINE2])) {
-            return None;
-        }
+    let to = body.pose(at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (hp, th) = (fk.at(role(HIPS)), fk.at(role(THIGH_R)));
+        let (hp, th) = (fk.at(rig.role(HIPS)), fk.at(rig.role(THIGH_R)));
         // the wrist over the flashlight's ring at the front of the right hip · over the sidearm's grip on the thigh
-        let (belt, hol) = (untwist(fk, tw_y, tw_p, [hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), untwist(fk, tw_y, tw_p, [th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]));
+        let (belt, hol) = (untwist(rig, fk, tw_y, tw_p, [hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), untwist(rig, fk, tw_y, tw_p, [th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]));
         let (first, second) = if to_weapon { (belt, hol) } else { (hol, belt) };
-        Some((n, v3::lerp3(first, second, across)))
-    }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+        v3::lerp3(first, second, across)
+    });
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (live0, rot0) = (fk.at(role(HAND_R)), fk.rot(role(HAND_R)));
+        let (live0, rot0) = (fk.at(rig.role(HAND_R)), fk.rot(rig.role(HAND_R)));
         // (the shoulder drops a little with the reach down)
-        turn(d, rig, role(SHOULDER_R), q_roll(4.0 * DEGR * e));
+        turn(d, rig, rig.role(SHOULDER_R), q_roll(4.0 * DEGR * e));
         fk_run(rig, d, fk.rot, fk.pos);
         // fingers down onto it, the back of the hand out to his right; the elbow back
         let r = quat::nlerp(rot0, hand_rot(&fix_r, [0.05, -1.0, 0.15], [-0.75, 0.0, 0.6]), e);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::lerp3(live0, to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
-        hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R), &v3::lerp3(live0, to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
+        hand(rig, d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
     });
-    if !ask_blend(g, at, at, 1.0, false, at_sw, n) {
-        return false;
-    }
-    ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
-        return false;
-    }
+    body.copy(at, at_sw);
+    body.mask(&[(body.rig.role(SHOULDER_R), 1.0, true)]);
+    body.blend(at, at_b, smoothstep(0.0, 0.25, e), true, at);
     hands_to(&h, an);
-    true
 }
 /// A place and three axes
 #[derive(Clone, Copy)]
@@ -181,28 +167,19 @@ struct Errand {
 /// The kit change's frame: the right hand's errand between what was in it and what will be, both arms by IK on a copy of the pose, whole from the upper
 /// arm down. The path begins on the hand as the pose under it had it when the change began and ends on the hand of the pose under it now. The clock is
 /// the caller's.
-pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4], sling: &SlingFrontHand, tune: &Knobs) -> bool {
+pub fn kit_layer(body: &mut Body, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4], sling: &SlingFrontHand, tune: &Knobs) {
     let mut er = Errand { tw_y, tw_p, rc_inv, ..Errand::default() };
     let (at, at_b, _) = poses(an);
-    let Some(k) = an.kit else {
-        return false;
-    };
+    let k = an.kit.expect("a change of kit is posed and none is under way");
     as_kit(an, &k, &mut er);
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE2]) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut hs) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    let mut hs = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut hs;
-    let Some(left_too) = with_pose(g, at_b, |d, rig, _n, fk| {
+    let left_too = body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        kit_frame(fk, &mut er);
-        kit_hands(fk, &mut er);
-        kit_start(fk, &mut er);
+        kit_frame(rig, fk, &mut er);
+        kit_hands(rig, fk, &mut er);
+        kit_start(rig, fk, &mut er);
         // where the right wrist is, how the hand lies and where the elbow points with the thing in the fist at the place it lives
         // (the rifle's home: over the shoulder onto his back, or let down on its sling in front)
         kit_home(tune, &mut er);
@@ -211,41 +188,36 @@ pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4]
         kit_shares(tune, &mut er);
         if er.has_from && er.t < er.t_a {
             // the item in the fist to where it lives
-            put_away(tune, fk, sling, &mut er);
+            put_away(rig, tune, fk, sling, &mut er);
         } else if er.has_to && er.t < er.t_r {
             // the empty hand to where the next one lives
-            go_across(tune, fk, sling, &mut er);
+            go_across(rig, tune, fk, sling, &mut er);
         } else if er.has_to {
             // …and up with it into the pose underneath
-            bring_up(tune, fk, sling, &mut er);
+            bring_up(rig, tune, fk, sling, &mut er);
         } else {
             // nothing next: the emptied hand back to the pose underneath
-            back_empty(tune, fk, sling, &mut er);
+            back_empty(rig, tune, fk, sling, &mut er);
         }
         rifle_elbow(&mut er);
         // what an arm can do, by how much of the hand is the errand's and not the pose's under it — none on the first frames nor as it lands
         arm_room(tune, &mut er);
         // the support hand, with a gun coming: off whatever it had to wait in front of him, onto the gun late
-        support(tune, fk, &mut er);
+        support(rig, tune, fk, &mut er);
         right_arm(tune, d, rig, fk, &mut er);
         let curl = [lerp(tune.kit.open[0], tune.kit.fist[0], er.grip), lerp(tune.kit.open[1], tune.kit.fist[1], er.grip), lerp(tune.kit.open[2], tune.kit.fist[2], er.grip), lerp(tune.kit.open[3], tune.kit.fist[3], er.grip)];
-        hand(d, hh, 1, &curl, lerp(0.25, 0.6, er.grip), 0.1 * (1.0 - er.grip));
+        hand(rig, d, hh, 1, &curl, lerp(0.25, 0.6, er.grip), 0.1 * (1.0 - er.grip));
         if let Some(sp) = er.tl {
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &sp.0, None, 0.0, Some(&sp.1), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &sp.0, None, 0.0, Some(&sp.1), false);
         }
         er.tl.is_some()
-    }) else {
-        return false;
-    };
+    });
     // (the support hand's fingers go back to the pose's as it joins)
-    let side = |r: usize| if left_too { role(r) } else { usize::MAX };
-    ask_mask(&[(role(UPPER_ARM_R), 1.0, true), (side(UPPER_ARM_L), 1.0, true), (side(HAND_L), 1.0 - er.join, true), (side(HAND_L), 1.0, false)]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return false;
-    }
+    let side = |r: usize| if left_too { body.rig.role(r) } else { usize::MAX };
+    body.mask(&[(body.rig.role(UPPER_ARM_R), 1.0, true), (side(UPPER_ARM_L), 1.0, true), (side(HAND_L), 1.0 - er.join, true), (side(HAND_L), 1.0, false)]);
+    body.blend(at, at_b, 1.0, true, at);
     hands_to(&hs, an);
     (an.kit_hold, an.kit_stow, an.kit_roll, an.kit_lie) = (Some(er.hold), er.stow, er.roll, er.lie);
-    true
 }
 
 /// The errand as it stands, and what the things it goes between are.
@@ -273,9 +245,9 @@ fn as_kit(an: &mut Anim, k: &game_types::character::AnimKit, er: &mut Errand) {
 }
 
 /// The trunk's own frame.
-fn kit_frame(fk: &mut Fk, er: &mut Errand) {
-    let (left, up, fwd) = trunk_frame(fk);
-    let q3 = fk.rot(role(SPINE3));
+fn kit_frame(rig: &Rig, fk: &mut Fk, er: &mut Errand) {
+    let (left, up, fwd) = trunk_frame(rig, fk);
+    let q3 = fk.rot(rig.role(SPINE3));
     (er.left, er.up, er.fwd, er.q3) = (left, up, fwd, q3);
 }
 
@@ -286,20 +258,20 @@ fn dir_t(er: &Errand, q: [f64; 3]) -> [f64; 3] {
 }
 
 /// The two arms as the pose underneath has them, and whether a rifle is in it.
-fn kit_hands(fk: &mut Fk, er: &mut Errand) {
+fn kit_hands(rig: &Rig, fk: &mut Fk, er: &mut Errand) {
     let Errand { from, to, .. } = *er;
-    let (s_r, s_l, elbow_u) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)), fk.at(role(FOREARM_R)));
-    let u_r: Spot = (fk.at(role(HAND_R)), fk.rot(role(HAND_R)), None);
-    let u_l: Spot = (fk.at(role(HAND_L)), fk.rot(role(HAND_L)), None);
+    let (s_r, s_l, elbow_u) = (fk.at(rig.role(UPPER_ARM_R)), fk.at(rig.role(UPPER_ARM_L)), fk.at(rig.role(FOREARM_R)));
+    let u_r: Spot = (fk.at(rig.role(HAND_R)), fk.rot(rig.role(HAND_R)), None);
+    let u_l: Spot = (fk.at(rig.role(HAND_L)), fk.rot(rig.role(HAND_L)), None);
     let (la, lb) = (v3::len(v3::sub(elbow_u, s_r)), v3::len(v3::sub(u_r.0, elbow_u)));
     let rifle = from == RIFLE || to == RIFLE;
     (er.s_r, er.s_l, er.elbow_u, er.u_r, er.u_l, er.la, er.lb, er.rifle) = (s_r, s_l, elbow_u, u_r, u_l, la, lb, rifle);
 }
 
 /// A point as this pose sees it.
-fn un(fk: &mut Fk, er: &Errand, p: [f64; 3]) -> [f64; 3] {
+fn un(rig: &Rig, fk: &mut Fk, er: &Errand, p: [f64; 3]) -> [f64; 3] {
     let Errand { tw_y, tw_p, .. } = *er;
-    untwist(fk, tw_y, tw_p, p)
+    untwist(rig, fk, tw_y, tw_p, p)
 }
 
 /// A direction as this pose sees it.
@@ -309,32 +281,32 @@ fn und(er: &Errand, dv: [f64; 3]) -> [f64; 3] {
 }
 
 /// Where the right hand set out from.
-fn kit_start(fk: &mut Fk, er: &mut Errand) {
+fn kit_start(rig: &Rig, fk: &mut Fk, er: &mut Errand) {
     let Errand { cap, fix_r, q3, s_r, .. } = *er;
-    let st: Spot = (match cap.mr { Some(m) => un(fk, er, m), None => v3::add(s_r, dir_t(er, cap.r)) }, match (cap.mf, cap.mb) { (Some(f), Some(b)) => hand_rot(&fix_r, und(er, f), und(er, b)), _ => quat::mul(q3, cap.rq) }, None);
+    let st: Spot = (match cap.mr { Some(m) => un(rig, fk, er, m), None => v3::add(s_r, dir_t(er, cap.r)) }, match (cap.mf, cap.mb) { (Some(f), Some(b)) => hand_rot(&fix_r, und(er, f), und(er, b)), _ => quat::mul(q3, cap.rq) }, None);
     er.st = st;
 }
 
 /// Where the right wrist is, how the hand lies and where the elbow points with the thing in the fist at the place it lives.
-fn spot(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &Errand, it: Option<KitItem>) -> Spot {
+fn spot(rig: &Rig, tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &Errand, it: Option<KitItem>) -> Spot {
     let Errand { rc_inv, front, crouch, fix_r, holster, h_adj, p_adj, .. } = *er;
     if it == RIFLE && front {
-        return (v3::add(fk.at(role(SPINE2)), dir_t(er, sling.at)), hand_rot(&fix_r, dir_t(er, sling.fing), dir_t(er, sling.back)), Some(dir_t(er, tune.kit.front.pole)));
+        return (v3::add(fk.at(rig.role(SPINE2)), dir_t(er, sling.at)), hand_rot(&fix_r, dir_t(er, sling.fing), dir_t(er, sling.back)), Some(dir_t(er, tune.kit.front.pole)));
     }
     if it == RIFLE {
         let (p, f, b) = (tune.kit.apex.at, tune.kit.apex.fing, tune.kit.apex.back);
-        return (v3::add(fk.at(role(UPPER_ARM_R)), dir_t(er, p)), hand_rot(&fix_r, dir_t(er, f), dir_t(er, b)), Some(dir_t(er, tune.kit.apex.pole)));
+        return (v3::add(fk.at(rig.role(UPPER_ARM_R)), dir_t(er, p)), hand_rot(&fix_r, dir_t(er, f), dir_t(er, b)), Some(dir_t(er, tune.kit.apex.pole)));
     }
     if it == CAN {
         let (p, f, b) = (tune.kit.belt.at, tune.kit.belt.fing, tune.kit.belt.back);
-        return (un(fk, er, v3::add(fk.at(role(HIPS)), dir_t(er, p))), hand_rot(&fix_r, und(er, dir_t(er, f)), und(er, dir_t(er, b))), Some(dir_t(er, tune.kit.belt.pole)));
+        return (un(rig, fk, er, v3::add(fk.at(rig.role(HIPS)), dir_t(er, p))), hand_rot(&fix_r, und(er, dir_t(er, f)), und(er, dir_t(er, b))), Some(dir_t(er, tune.kit.belt.pole)));
     }
     if it == PISTOL {
         // the hand that holds the gun as it stands in the holster
-        let p = un_adj(&holster_frame_of(fk.at(role(THIGH_R)), fk.at(role(SHIN_R)), fk.at(role(HIPS)), [0.0, 0.0, 1.0], holster, &h_adj), &p_adj);
-        return (un(fk, er, p.o), hand_rot(&fix_r, und(er, p.z), und(er, v3::scale(p.x, -1.0))), Some(dir_t(er, tune.kit.holster_pole)));
+        let p = un_adj(&holster_frame_of(fk.at(rig.role(THIGH_R)), fk.at(rig.role(SHIN_R)), fk.at(rig.role(HIPS)), [0.0, 0.0, 1.0], holster, &h_adj), &p_adj);
+        return (un(rig, fk, er, p.o), hand_rot(&fix_r, und(er, p.z), und(er, v3::scale(p.x, -1.0))), Some(dir_t(er, tune.kit.holster_pole)));
     }
-    let (p, r, pl) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, 0.0);
+    let (p, r, pl) = sheath_fist(rig, fk, &rc_inv, &fix_r, crouch, 0.0, 0.0);
     (p, r, Some(pl))
 }
 
@@ -417,12 +389,12 @@ fn kit_shares(tune: &Knobs, er: &mut Errand) {
 }
 
 /// The item in the fist to where it lives.
-fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
+fn put_away(rig: &Rig, tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
     let Errand { t, t_a, s0, roll0, from, rifle, st, rarc, ap, sl, .. } = *er;
     let (hold, stow, roll, pole_w, grip, pole, tg);
     let (it, u) = (from, t / t_a);
     let hu = if it == RIFLE { clamp(u / ap, 0.0, 1.0) } else { u };
-    let (e, s) = (e3(hu), spot(tune, fk, sling, er, it));
+    let (e, s) = (e3(hu), spot(rig, tune, fk, sling, er, it));
     tg = mix(er, &st, &s, e, Some(if it == RIFLE { rarc } else { arc_of(tune, it) }), None);
     pole = s.2;
     pole_w = 0.85 * if rifle { eh(hu) } else { e3(hu * 1.6) };
@@ -443,13 +415,13 @@ fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
 }
 
 /// The empty hand to where the next one lives.
-fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
+fn go_across(rig: &Rig, tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
     let Errand { t, t_a, t_r, from, to, rifle, st, back, rarc, over, cross, top, has_from, .. } = *er;
     let (pole_w, grip, mut pole, tg);
     let u = (t - t_a) / max(1e-3, t_r - t_a);
     let e = e3(u);
-    let sa = if has_from { spot(tune, fk, sling, er, from) } else { st };
-    let s = spot(tune, fk, sling, er, to);
+    let sa = if has_from { spot(rig, tune, fk, sling, er, from) } else { st };
+    let s = spot(rig, tune, fk, sling, er, to);
     let arc = if back {
         if has_from {
             over
@@ -484,11 +456,11 @@ fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand)
 }
 
 /// Up with it into the pose underneath.
-fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
+fn bring_up(rig: &Rig, tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
     let Errand { t, t_r, dur, s0, roll0, re, to, u_r, rifle, st, rarc, ap, sl, .. } = *er;
     let (hold, stow, roll, join, free, pole_w, grip, pole, tg);
     let (it, u) = (to, (t - t_r) / max(1e-3, dur - t_r));
-    let s = if re { st } else { spot(tune, fk, sling, er, it) };
+    let s = if re { st } else { spot(rig, tune, fk, sling, er, it) };
     let hu = if it == RIFLE && !re { clamp((u - (1.0 - ap)) / ap, 0.0, 1.0) } else { u };
     let e = e3(hu);
     tg = mix(er, &s, &u_r, e, if re { None } else { Some(if it == RIFLE { rarc } else { arc_of(tune, it) }) }, None);
@@ -512,12 +484,12 @@ fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
 }
 
 /// Nothing next: the emptied hand back to the pose underneath.
-fn back_empty(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
+fn back_empty(rig: &Rig, tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
     let Errand { t, t_a, dur, from, u_r, st, back, over, top, has_from, .. } = *er;
     let (free, pole_w, grip, pole, tg);
     let u = (t - t_a) / max(1e-3, dur - t_a);
     let e = e3(u);
-    let sa = if has_from { spot(tune, fk, sling, er, from) } else { st };
+    let sa = if has_from { spot(rig, tune, fk, sling, er, from) } else { st };
     tg = mix(er, &sa, &u_r, e, if back && from == RIFLE { Some(over) } else { None }, if from == RIFLE { top } else { None });
     pole = sa.2;
     pole_w = 0.85 * (1.0 - e);
@@ -560,10 +532,10 @@ fn arm_room(tune: &Knobs, er: &mut Errand) {
 }
 
 /// The support hand: off whatever it had, to wait in front of him and onto the gun late; or let go of, and falling away.
-fn support(tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
+fn support(rig: &Rig, tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
     let Errand { t, to, cap, q3, s_l, u_l, mut join, .. } = *er;
     let gun_next = to == PISTOL || to == RIFLE;
-    let s_l0: Spot = (match cap.ml { Some(m) => un(fk, er, m), None => v3::add(s_l, dir_t(er, cap.l)) }, quat::mul(q3, cap.lq), None);
+    let s_l0: Spot = (match cap.ml { Some(m) => un(rig, fk, er, m), None => v3::add(s_l, dir_t(er, cap.l)) }, quat::mul(q3, cap.lq), None);
     let mut tl: Option<Spot> = None;
     if gun_next {
         let rest: Spot = (v3::add(s_l, dir_t(er, tune.kit.rest)), s_l0.1, None);
@@ -580,10 +552,10 @@ fn support(tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
 fn right_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, er: &mut Errand) {
     let Errand { fix_r, pole_w, pole, tg, own, mut lie, .. } = *er;
     let pw = if pole.is_some() { pole_w } else { 0.0 };
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&tg.1), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&tg.1), false);
     if own > 0.0 {
         // the wrist: the hand's line brought back toward its forearm's where the path asked more of it than a wrist bends
-        let fa = v3::sub(fk.at(role(HAND_R)), fk.at(role(FOREARM_R)));
+        let fa = v3::sub(fk.at(rig.role(HAND_R)), fk.at(rig.role(FOREARM_R)));
         let (fl, fg) = (v3::len(fa), quat::rotate(quat::mul(tg.1, quat::conj(fix_r)), [0.0, 1.0, 0.0]));
         if fl > 1e-4 {
             let fd = v3::scale(fa, 1.0 / fl);
@@ -595,7 +567,7 @@ fn right_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, er: &mut Errand)
                 let al = v3::len(ax);
                 if al > 1e-4 {
                     let lim = quat::mul(quat::axis_angle(v3::scale(ax, 1.0 / al), (ang - want) * own), tg.1);
-                    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&lim), false);
+                    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&lim), false);
                     lie = Some(quat::mul(quat::conj(lim), tg.1));
                 }
             }

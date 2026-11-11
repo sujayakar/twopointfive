@@ -44,7 +44,7 @@ pub mod aimweight { pub mod types; pub use types::*; }
 pub mod air_dust { pub mod types; pub use types::*; }
 pub mod anim_characters { pub mod types; pub use types::*; }
 pub mod anim_gltf { pub mod types; pub use types::*; }
-pub mod anim_skeleton { pub mod types; pub use types::*; }
+pub mod anim_skeleton { pub mod roles; pub mod types; pub use types::*; }
 pub mod attention { pub mod types; pub use types::*; }
 pub mod audio_iface { pub mod types; pub use types::*; }
 pub mod autopilot { pub mod types; pub use types::*; }

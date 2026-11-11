@@ -84,7 +84,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
 
-pub use game::standing::{canvas, host_new, settle};
+pub use game::standing::{canvas, host_new};
 
 /// THE HOST OF A GAME THAT WAS HANDED ITS ROWS ELSEWHERE (a start made by another host and brought across): the game's own `host_cam` and
 /// `host_input`, on this host's canvas. None where the game was handed none.
@@ -147,7 +147,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
             None => panic!("the game refused the {}: {}", o.scenario.as_ref().map_or("mission", |s| s.kind.as_str()), why),
         }
     }
-    if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
+    if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); }
     if o.ready { game::scene_collision::light_ready(&g, usize::MAX); }
     let host = host_of(&g).expect("the men's lines make the host's rows");
     game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)

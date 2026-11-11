@@ -13,6 +13,17 @@ impl S {
     pub const ZERO: S = S(0.0);
     /// a single's infinity
     pub const INF: S = S(f32::INFINITY);
+    /// what the game keeps of a pose or a clip, as this file reads it
+    #[inline(always)]
+    pub fn of(d: &[f32]) -> &[S] {
+        // SAFETY: S is the single it stores (repr(transparent))
+        unsafe { core::slice::from_raw_parts(d.as_ptr() as *const S, d.len()) }
+    }
+    #[inline(always)]
+    pub fn of_mut(d: &mut [f32]) -> &mut [S] {
+        // SAFETY: as above, and the slice is lent whole
+        unsafe { core::slice::from_raw_parts_mut(d.as_mut_ptr() as *mut S, d.len()) }
+    }
 }
 /// the double a stored value stands for
 #[inline(always)]

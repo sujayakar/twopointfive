@@ -10,7 +10,7 @@ pub use world::{ask, floor, levelfit, places, scene_boxes, scene_collision, scen
 pub mod air;
 pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, weather, weather_kinds, wet, wind};
 pub mod body;
-pub use body::{anim_gltf, anim_skeleton, character, packside, posehome, ragdoll, stealthfeed};
+pub use body::{anim_gltf, anim_skeleton, character, packside, ragdoll, stealthfeed};
 pub mod outfit;
 pub use outfit::{cast, char_look, gear, gunlook, gunslots, issue, kit, kitanim, kitload, kitstage, loadout, rig_props, slotsetup, stature};
 pub mod guns;
