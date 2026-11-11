@@ -316,7 +316,8 @@ pub(super) fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> boo
 fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> String {
     let why = door_tools_shut_why(g, d);
     g.groups[g.group].tools.stats.halted += 1.0;
-    crate::game::game_say(g, lead, &format!("{}. holding on it — your call.", why), None, None);
+    let said = if crate::group::is_seats(g) { format!("{}. holding on it — your call.", why) } else { format!("{}.", why) };
+    crate::game::game_say(g, lead, &said, None, None);
     why
 }
 
