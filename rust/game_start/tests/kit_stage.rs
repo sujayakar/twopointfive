@@ -237,7 +237,7 @@ fn a_way_with_pieces_lays_them_and_a_way_on_a_set_is_the_set() {
     scen.set_member("kitView", block);
     d.set_member("scenarios", scen);
     let base = d.get("boxes").items().len();
-    let dir = std::env::temp_dir().join("kit-stage-test");
+    let dir = std::env::temp_dir().join(format!("kit-stage-{}-{:?}", std::process::id(), std::thread::current().id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("added.json");
     std::fs::write(&path, json::to_line(&d)).unwrap();
