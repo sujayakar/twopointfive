@@ -236,9 +236,9 @@ fn to_uv(b: &[f64], x: f64, y: f64, z: f64) -> (f64, f64) {
 /// IS STATIC `bi`, A PANE OF GLASS, OPEN AT (x, y, z) — the game's rule: a piece has fallen out there, or
 /// the view in hand counts the glass there out (glass a burst would break is no glass to the man reckoning it). With no glass hung every pane is shut.
 pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
-    let Some(g) = o.panes else { return false };
-    let gives = || o.view == VIEW_GIVES && crate::panes::gives(g, o, bi, x, y, z, tune);
-    let Some((d, w)) = crate::panes::row_for(g, bi as u32) else { return gives() };
+    let gives = || o.view == VIEW_GIVES && crate::panes::gives(o, bi, x, y, z, tune);
+    let Some(row) = crate::panes::row_for(&o.panes, bi as u32) else { return gives() };
+    let (d, w) = (&row.d, &row.w);
     let fl = w[GW_FLAGS];
     if fl & G_GONE != 0 {
         return true;

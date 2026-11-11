@@ -126,8 +126,8 @@ pub struct World {
     pub things: Vec<Thing>,
     /// the level's sheets of glass, ascending
     pub sheets: Vec<Sheet>,
-    /// whose panes these are: the slot of the game's block that holds what is out of them, while glass is hung
-    pub panes: Option<usize>,
+    /// …and those of them that have been touched
+    pub panes: crate::panes::Panes,
     /// the view of the glass a judgment in hand takes (VIEW_*), and its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it
     pub view: u32,
     pub view_at: [f64; 6],
@@ -406,10 +406,12 @@ impl Boxes {
         self.rows.walk[bi] = on as u8;
         self.row(b);
     }
-    /// the glass that hangs: the slot of the block that holds what is out of it (None: no glass hangs), and the level's sheets
-    pub fn glass(&mut self, panes: Option<usize>, sheets: Vec<Sheet>) { (self.rows.panes, self.rows.sheets) = (panes, sheets); }
-    /// the game stands in this slot: its panes are there
-    pub fn stand_in(&mut self, slot: usize) { if let Some(g) = &mut self.rows.panes { *g = slot } }
+    /// the level's sheets of glass
+    pub fn glass(&mut self, sheets: Vec<Sheet>) { self.rows.sheets = sheets; }
+    /// the panes touched, to write
+    pub fn panes(&mut self) -> &mut crate::panes::Panes { &mut self.rows.panes }
+    /// the rows lent to a rule of the panes, which writes `panes` and asks lines of the rest
+    pub fn lent(&mut self) -> &mut World { &mut self.rows }
     /// the view of the glass the judgment in hand takes
     /// → the one that was
     pub fn view(&mut self, (kind, at, met): View) -> View {
@@ -463,6 +465,7 @@ impl ToBytes for Boxes {
         self.rows.start.w(o);
         self.rows.items.w(o);
         self.rows.tilted.w(o);
+        self.rows.panes.w(o);
     }
 }
 

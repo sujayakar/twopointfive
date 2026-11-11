@@ -31,12 +31,10 @@ fn order_of(g: &Game, gd: GuardId) -> String {
 /// every pane that has been touched, by its box's number in the level: gone or not, how many pieces of it are open, its sites, its damage, how many rounds have gone through it. A round can go through a pane no blow has
 /// touched, so a pane is on the list by its holes too. A pane nothing has touched is whole, and has no figure.
 fn glass(g: &Game) -> BTreeMap<u32, String> {
-    let panes = &sim::state::state(g.sim).panes;
-    let mut holes: BTreeMap<u32, u32> = BTreeMap::new();
-    for h in 0..panes.nh as usize { let row = panes.hole_read(h); *holes.entry(row.bi).or_insert(0) += row.n; }
+    let panes = &g.tab.boxes.world().panes;
+    let holes: BTreeMap<u32, usize> = panes.holes.iter().map(|h| (h.bi, h.at.len())).collect();
     let mut out = BTreeMap::new();
-    for r in 0..panes.n as usize {
-        let row = panes.row_read(r);
+    for row in &panes.rows {
         let (bi, flags) = (row.w[0], row.w[sim::glass::GW_FLAGS]);
         out.insert(bi, format!("{} {} {} {} {}", flags & sim::glass::G_GONE != 0, row.n_open, flags >> 8, bits(row.damage), holes.get(&bi).copied().unwrap_or(0)));
     }

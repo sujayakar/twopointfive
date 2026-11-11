@@ -6,6 +6,7 @@ extern crate self as game_types;   // (what a derive writes names this crate fro
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
 pub mod boxworld;
+pub mod panes;
 pub mod bytes;
 pub mod crosses;
 #[macro_use]
