@@ -24,7 +24,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.devices = crate::devices::devices_new(g);   // cameras + emitters join `targets`, before the authored switch states are said, below
     stand_guards(g, &level);
     stand_glass_and_air(g);
-    crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
+    crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (air/fixtures.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     stand_rules(g);
     stand_orders(g);

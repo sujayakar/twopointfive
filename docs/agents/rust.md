@@ -54,9 +54,8 @@ Each crate is its own cargo workspace and target folder.
 - **What a game's copies share.** A kept moment is a copy of the game, so what was read once and is not played with stands behind an `Arc`: `g.art`,
   `g.level`, a piece of furniture's `def`, a box's `marks`, the ray grid. A copy takes the pointer; who writes the level says `Arc::make_mut`. A list that never
   changes is a function (`sam_lines()`), not a field.
-- **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the columns
-  of what `rust/sim` steps: men, lights, weather. A thing with rules of its own is a record on `Game`,
-  its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
+- **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. Every part of
+  it has become a record on `Game`. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
   `sim::state::state_read(g.sim)` and `sim::state::state`.
 - **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`; the touched panes in them are state), the tables of `g.made` (`Made`: the smoke's
   ways, the light under a roof, the sky's) and the air's are made from the game: in no bytes. A copy has none of `g.made`; a game laid over another takes it over (`stand`).

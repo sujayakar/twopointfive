@@ -18,8 +18,6 @@
 #![no_std]
 extern crate alloc;
 
-use game_types::boxworld::World;
-use game_types::knobs::Knobs;
 pub mod air;
 pub mod bricks;
 pub mod clips;
