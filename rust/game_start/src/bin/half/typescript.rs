@@ -1,5 +1,6 @@
 //! The TypeScript.
 use game::crosses::{self, Asked, Shape, Ty};
+use game::handed;
 use game::rows::RowTable;
 use game_start::host::{calls::{self, Back, CALLS}, command, crosses as host, desk};
 
@@ -7,7 +8,7 @@ use game_start::host::{calls::{self, Back, CALLS}, command, crosses as host, des
 pub fn stamp() -> u32 { crosses::stamp(&(game_draw::layout() + &host::text())) }
 
 pub fn files(stamp: u32) -> Vec<(&'static str, String)> {
-    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/gpu.ts", gpu()), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/draw/face.ts", face()), ("src/view/read.ts", views())]
+    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/gpu.ts", gpu()), ("src/draw/input.ts", input()), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/draw/face.ts", face()), ("src/view/read.ts", views())]
 }
 
 pub const WRITTEN: &str = "// Written by the program `half` (rust/game_start/src/bin/half)";
@@ -36,14 +37,15 @@ fn offsets(r: &RowTable) -> Vec<String> {
     let mut l = Vec::new();
     if !r.doc.is_empty() { l.push(format!("/** {} */", said(r.doc))); }
     l.push(format!("export const enum {} {{", r.name));
-    let mut at = 0;
+    let (mut at, doubles) = (0, r.fields.iter().any(|(_, ty)| words(ty).1 == "f64"));
     for ((f, ty), doc) in r.fields.iter().zip(r.docs) {
         let (n, kind) = words(ty);
+        assert!(doubles == (kind == "f64"), "{}: a row is all doubles, or has none", r.name);
         l.push(format!("  /** {kind}{}{} */", if n > 1 { format!(" × {n}") } else { String::new() }, if doc.is_empty() { String::new() } else { format!(": {}", said(doc)) }));
         l.push(format!("  {} = {at},", camel(f)));
         at += n;
     }
-    l.extend(["  /** words a row */".into(), format!("  row = {at},"), "}".into()]);
+    l.extend([format!("  /** {} a row */", if doubles { "doubles" } else { "words" }), format!("  row = {at},"), "}".into()]);
     l
 }
 /// the rows a shader reads and the page writes, and what shares the boxes' material buffer
@@ -54,6 +56,19 @@ fn gpu() -> String {
     let mut at = 0;
     let bases: Vec<String> = game_draw::gpu::BOX_MAT.iter().map(|(n, rows)| { let b = format!("{n} = {at}"); at += rows; b }).collect();
     l.extend([String::new(), "/** THE BOXES' MATERIAL BUFFER: where each of its tables begins, in rows of four floats, and how long it is */".into(), format!("export const enum BoxMat {{ {}, rows = {at} }}", bases.join(", ")), String::new()]);
+    l.join("\n")
+}
+/// the rows the page hands over
+fn input() -> String {
+    let mut l = vec![format!("{WRITTEN} from rust/game_types/src/handed.rs. To change what is handed, change it there."), String::new(),
+        "/** a row's doubles, by its name */".into(), "export type Doubles<N extends string> = Float64Array & { readonly row: N };".into(),
+        "/** what a player's hand is kept as (the input, then the lens) has this stamp: a tape of another is refused */".into(), format!("export const HAND = {};", crosses::stamp(&handed::hand_text()))];
+    for r in handed::tables() {
+        l.push(String::new());
+        l.extend(offsets(&r));
+        l.push(format!("export const {} = (): Doubles<'{}'> => new Float64Array({}.row) as unknown as Doubles<'{}'>;", small(r.name), r.name, r.name, r.name));
+    }
+    l.push(String::new());
     l.join("\n")
 }
 fn sections(stamp: u32) -> String {
@@ -90,7 +105,7 @@ fn sections(stamp: u32) -> String {
 /// what is handed, by Rust's name of its type: its type in TypeScript, and what writes `x` of it
 fn handed(ty: &str, x: &str) -> (String, String) {
     let same = |ts: &str, w: &str| (String::from(ts), format!("this.{w}({x});"));
-    let inner = |t: &str| t.trim().trim_end_matches('>').to_string();
+    let inner = |t: &str| t[..t.len() - 1].to_string();
     match ty.replace(' ', "").as_str() {
         "u32" | "usize" => same("number", "u32"),
         "i32" => same("number", "i32"),
@@ -101,6 +116,7 @@ fn handed(ty: &str, x: &str) -> (String, String) {
         "[f64;3]" => same("ArrayLike<number>", "three"),
         "Vec<f64>" => same("ArrayLike<number>", "doubles"),
         t @ ("GameNo" | "MomentNo") => same(t, "u32"),
+        t if t.starts_with("Laid<") => same(&format!("Doubles<'{}'>", &t[5..t.len() - 1]), "laid"),
         t => match (t.strip_prefix("Option<").map(inner), t.strip_prefix("Vec<").map(inner)) {
             (Some(t), _) => { let (ts, w) = handed(&t, x); (format!("{ts} | null"), format!("this.yes({x} !== null); if ({x} !== null) {w}")) }
             (_, Some(t)) => { let (ts, w) = handed(&t, "v"); (format!("readonly {ts}[]"), format!("this.u32({x}.length); for (const v of {x}) {w}")) }
@@ -148,7 +164,7 @@ fn face() -> String {
     }
     types.sort();
     readers.sort();
-    let mut l = vec![format!("{WRITTEN} from rust/game_start/src/host/calls.rs. To change a call, change it there."), "import type { Vec3 } from '../math/vec';".into(), "import { Wire, nothing, type Carrier } from './wire';".into(),
+    let mut l = vec![format!("{WRITTEN} from rust/game_start/src/host/calls.rs. To change a call, change it there."), "import type { Vec3 } from '../math/vec';".into(), "import type { Doubles } from './input';".into(), "import { Wire, nothing, type Carrier } from './wire';".into(),
         format!("import {{ {}, {} }} from '../view/read';", readers.iter().map(|n| format!("read{n}In")).collect::<Vec<_>>().join(", "), types.iter().map(|n| format!("type {n}")).collect::<Vec<_>>().join(", ")), String::new(),
         "/** a game's number in the module, and a moment's: each is what the module answered with (0: none) */".into(), "export type GameNo = number & { readonly of: 'game' };".into(), "export type MomentNo = number & { readonly of: 'moment' };".into(), String::new(),
         "/** the module's exports: the game, where it is of one, and where its arguments lie */".into()];

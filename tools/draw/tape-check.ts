@@ -9,7 +9,7 @@ import { gzipSync } from 'node:zlib';
 import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/character.ts';
 import { DrawGame, type Start } from '../../src/host/drawgame';
-import { HAND, sampleHand } from '../../src/draw/hand';
+import { sampleHand } from '../../src/draw/hand';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HandTape, MARKS } from '../../src/tape/handtape';
 import { FollowCamera } from '../../src/host/camera';
@@ -37,7 +37,7 @@ for (const m of LISTED) { if (only.length && !only.includes(m.id)) continue;
     try {
       // ── played, with a page's questions between its ticks
       const g = stand(), D = g.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
-      const T = g.tape = new HandTape(HAND.count), S: Start = { level: bytes(file), words: how === 'anything' ? `${words}&qtwice=0&firelean=0` : words, kept: how === 'anything' ? '{"hard":true}' : '', mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
+      const T = g.tape = new HandTape(), S: Start = { level: bytes(file), words: how === 'anything' ? `${words}&qtwice=0&firelean=0` : words, kept: how === 'anything' ? '{"hard":true}' : '', mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
       g.start(S);
       const follow = (): [number, number, number] => { const o = D.at[Section.view] + View.follow; return [D.f[o], D.f[o + 1], D.f[o + 2]]; };
       cam.aspect = 1280 / 720; cam.target = follow(); cam.rebuild();

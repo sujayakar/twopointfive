@@ -10,6 +10,7 @@ pub mod bytes;
 pub mod crosses;
 #[macro_use]
 pub mod rows;
+pub mod handed;
 pub mod ids;
 pub mod js;
 pub mod query;

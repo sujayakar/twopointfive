@@ -32,8 +32,8 @@ macro_rules! calls { ($made:ident) => { $made! {
     /// the host has taken (or does not want) what the tick told it: the list is a step's output and no part of the state, so nothing else empties it
     does out_clear();
 
-    /// WHAT A PLAYER DID, for the next step: his hand's numbers and his keys' codes, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with nothing pressed
-    does hand(seat: u32, numbers: Vec<f64>, keys: &str);
+    /// WHAT A PLAYER DID, for the next step: his hand, the view he has, and his keys' codes, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with nothing pressed
+    does hand(seat: u32, input: Laid<SeatInput>, lens: Laid<SeatLens>, keys: &str);
     /// WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (`command`), done in its order
     does commands(list: &[u8]) => Result<(), String>;
     /// nobody's hands are on a seat: the hands it is handed from here are his own (game_start `hands_off`): the seed, the seconds he plays, does he throw the breaker first, the doors by name he takes first
@@ -47,10 +47,10 @@ macro_rules! calls { ($made:ident) => { $made! {
 
     /// once, as a networked game is stood: every seat is another machine's, so a record's view is worked out again from its pose on every machine alike
     does networked();
-    /// A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: its numbers, and its keys as a hand's. It is no hand: the host's own camera is not moved by it. Of a seat that has both, what was handed last is stepped
-    does record(seat: u32, numbers: Vec<f64>, keys: &str) => Result<(), String>;
-    /// WHERE THE SEAT'S MAN WOULD BE after records the game has not had: their numbers one after another, their keys a line feed between two. None: where the game has him. Nothing a tick reads is written
-    does ahead(seat: u32, numbers: Vec<f64>, keys: &str) => Result<AheadView, String>;
+    /// A SEAT'S RECORD FOR THE NEXT STEP, as it travelled, its keys as a hand's. It is no hand: the host's own camera is not moved by it. Of a seat that has both, what was handed last is stepped
+    does record(seat: u32, input: Laid<SeatInput>, keys: &str) => Result<(), String>;
+    /// WHERE THE SEAT'S MAN WOULD BE after records the game has not had, and each one's keys. None: where the game has him. Nothing a tick reads is written
+    does ahead(seat: u32, inputs: Vec<Laid<SeatInput>>, keys: Vec<&str>) => Result<AheadView, String>;
 
     /// WHAT THE LAST TICK LEFT TO BE DRAWN, the sections of `want` made again from the game as it stands, once a tick: the address of a table of two words a section (its address and its rows). They lie there until the next call
     does draw(want: u32) -> usize;
@@ -59,9 +59,9 @@ macro_rules! calls { ($made:ident) => { $made! {
     /// A FRAME IS DRAWN, `between` 0 and 1 of the way from the tick before to the last, looking at `focus`: the rows that move stand there, and the table again
     does frame(between: f64, focus: [f64; 3]) -> usize;
     /// what the page says of its look, once and when it changes
-    does draw_look(numbers: Vec<f64>);
-    /// once a tick, of a networked host: its own man's place ahead of the tick: where the tick has him (his feet, the way he aims) and where he is drawn; 0 = nobody is ahead
-    does draw_lead(man: u32, numbers: Vec<f64>);
+    does draw_look(look: Laid<PageLook>);
+    /// once a tick, of a networked host: its own man ahead of the tick (none: nobody is)
+    does draw_lead(lead: Option<Laid<LeadNow>>);
     /// a viewer's own picture of a run: with the fog off it, and through a tube or not (none: as the run had it). From the first call the game keeps what such a picture is made from, tick by tick
     does draw_as(bared: bool, tube: Option<bool>);
     /// a tick of the host's in which the game was not stepped: what moves stands where the last tick left it
@@ -75,8 +75,8 @@ macro_rules! calls { ($made:ident) => { $made! {
 
     /// what a HUD is told of the game as its last tick left it, about the seat this machine shows
     reads tick_view() => TickView;
-    /// what the cursor is on, about a seat (none: the one this machine shows): the cursor (x y), the picture it is in (w h), the camera's view and projection and their inverse
-    reads cursor_view(seat: Option<u32>, numbers: Vec<f64>) => CursorView;
+    /// what the cursor is on, about a seat (none: the one this machine shows)
+    reads cursor_view(seat: Option<u32>, cursor: Laid<CursorNow>) => CursorView;
     /// what the end card shows of the run, asked as it opens
     reads debrief_view() => DebriefView;
     /// … and beside that: how it ended with every man of it, the course's par, its marks and the floor its map is of
@@ -145,6 +145,7 @@ macro_rules! calls { ($made:ident) => { $made! {
 
 use alloc::string::String;
 use alloc::vec::Vec;
+use super::field::Laid;
 use game::crosses::{Answer, Ty, Types};
 use game::view::{ActionRow, AheadView, CursorView, DebriefView, EndView, FloorView, HandsSaid, KnobRow, MapView, Met, OutcomeView, Recovered, RunView, SavesTold, SavesView, ShownRow, SoundPath, Tally, TickView};
 

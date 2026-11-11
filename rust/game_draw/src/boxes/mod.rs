@@ -185,15 +185,13 @@ pub struct Look {
     pub coat: [f64; STUFFS],
 }
 /// the stuffs a box may say
-pub const STUFFS: usize = 32;
-/// the numbers of a look
-pub const LOOK: usize = 11 + 2 * STUFFS;
+pub use game::handed::STUFFS;
 impl Look {
-    pub fn read(v: &[f64]) -> Look {
-        let at = |i: usize| v[11 + i];
+    pub fn of(l: &game::handed::PageLook) -> Look {
+        let yes = |v: f64| v != 0.0;
         Look {
-            bared: false, on: v[0] != 0.0, marks: v[1] != 0.0, cut: v[2] != 0.0, round: v[3] != 0.0, motion: v[4] != 0.0, panes: v[5] != 0.0, mirrors: v[6] != 0.0, air: v[7] != 0.0, glass_lum: v[8], glass_rough: v[9], texel: v[10],
-            stuff: core::array::from_fn(|i| at(i) as u32), coat: core::array::from_fn(|i| at(STUFFS + i)),
+            bared: false, on: yes(l.on), marks: yes(l.marks), cut: yes(l.cut), round: yes(l.round), motion: yes(l.motion), panes: yes(l.panes), mirrors: yes(l.mirrors), air: yes(l.air),
+            glass_lum: l.glass_lum, glass_rough: l.glass_rough, texel: l.texel, stuff: l.stuff.map(|v| v as u32), coat: l.coat,
         }
     }
 }

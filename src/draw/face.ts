@@ -1,5 +1,6 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_start/src/host/calls.rs. To change a call, change it there.
 import type { Vec3 } from '../math/vec';
+import type { Doubles } from './input';
 import { Wire, nothing, type Carrier } from './wire';
 import { readActionRowIn, readAheadViewIn, readCursorViewIn, readDebriefViewIn, readEndViewIn, readFloorViewIn, readHandsSaidIn, readKnobRowIn, readMapViewIn, readMetIn, readOutcomeViewIn, readRecoveredIn, readRunViewIn, readSavesToldIn, readSavesViewIn, readShownRowIn, readSoundPathIn, readTallyIn, readTickViewIn, type ActionRow, type AheadView, type CursorView, type DebriefView, type EndView, type FloorView, type HandsSaid, type KnobRow, type MapView, type Met, type OutcomeView, type Recovered, type RunView, type SavesTold, type SavesView, type ShownRow, type SoundPath, type Tally, type TickView } from '../view/read';
 
@@ -30,8 +31,8 @@ export class Face extends Wire<FaceExports> {
   step(h: GameNo, dt: number, flags: number): void { this.f64(dt); this.u32(flags); this.told(this.X.face_step(h, this.at, this.sent()), nothing); }
   /** the host has taken (or does not want) what the tick told it: the list is a step's output and no part of the state, so nothing else empties it */
   outClear(h: GameNo): void { this.X.face_out_clear(h, 0, 0); }
-  /** WHAT A PLAYER DID, for the next step: his hand's numbers and his keys' codes, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with nothing pressed */
-  hand(h: GameNo, seat: number, numbers: ArrayLike<number>, keys: string): void { this.u32(seat); this.doubles(numbers); this.text(keys); this.X.face_hand(h, this.at, this.sent()); }
+  /** WHAT A PLAYER DID, for the next step: his hand, the view he has, and his keys' codes, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with nothing pressed */
+  hand(h: GameNo, seat: number, input: Doubles<'SeatInput'>, lens: Doubles<'SeatLens'>, keys: string): void { this.u32(seat); this.laid(input); this.laid(lens); this.text(keys); this.X.face_hand(h, this.at, this.sent()); }
   /** WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (`command`), done in its order */
   commands(h: GameNo, list: Uint8Array): void { this.bytes(list); this.told(this.X.face_commands(h, this.at, this.sent()), nothing); }
   /** nobody's hands are on a seat: the hands it is handed from here are his own (game_start `hands_off`): the seed, the seconds he plays, does he throw the breaker first, the doors by name he takes first */
@@ -44,10 +45,10 @@ export class Face extends Wire<FaceExports> {
   handsTrace(h: GameNo): string { return this.told(this.X.face_hands_trace(h, 0, 0), I => I.str()); }
   /** once, as a networked game is stood: every seat is another machine's, so a record's view is worked out again from its pose on every machine alike */
   networked(h: GameNo): void { this.X.face_networked(h, 0, 0); }
-  /** A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: its numbers, and its keys as a hand's. It is no hand: the host's own camera is not moved by it. Of a seat that has both, what was handed last is stepped */
-  record(h: GameNo, seat: number, numbers: ArrayLike<number>, keys: string): void { this.u32(seat); this.doubles(numbers); this.text(keys); this.told(this.X.face_record(h, this.at, this.sent()), nothing); }
-  /** WHERE THE SEAT'S MAN WOULD BE after records the game has not had: their numbers one after another, their keys a line feed between two. None: where the game has him. Nothing a tick reads is written */
-  ahead(h: GameNo, seat: number, numbers: ArrayLike<number>, keys: string): AheadView { this.u32(seat); this.doubles(numbers); this.text(keys); return this.told(this.X.face_ahead(h, this.at, this.sent()), readAheadViewIn); }
+  /** A SEAT'S RECORD FOR THE NEXT STEP, as it travelled, its keys as a hand's. It is no hand: the host's own camera is not moved by it. Of a seat that has both, what was handed last is stepped */
+  record(h: GameNo, seat: number, input: Doubles<'SeatInput'>, keys: string): void { this.u32(seat); this.laid(input); this.text(keys); this.told(this.X.face_record(h, this.at, this.sent()), nothing); }
+  /** WHERE THE SEAT'S MAN WOULD BE after records the game has not had, and each one's keys. None: where the game has him. Nothing a tick reads is written */
+  ahead(h: GameNo, seat: number, inputs: readonly Doubles<'SeatInput'>[], keys: readonly string[]): AheadView { this.u32(seat); this.u32(inputs.length); for (const v of inputs) this.laid(v); this.u32(keys.length); for (const v of keys) this.text(v); return this.told(this.X.face_ahead(h, this.at, this.sent()), readAheadViewIn); }
   /** WHAT THE LAST TICK LEFT TO BE DRAWN, the sections of `want` made again from the game as it stands, once a tick: the address of a table of two words a section (its address and its rows). They lie there until the next call */
   draw(h: GameNo, want: number): number { this.u32(want); return this.X.face_draw(h, this.at, this.sent()); }
   /** … of a tick that is not the first a host steps before it draws a frame: what moves is blended over them all */
@@ -55,9 +56,9 @@ export class Face extends Wire<FaceExports> {
   /** A FRAME IS DRAWN, `between` 0 and 1 of the way from the tick before to the last, looking at `focus`: the rows that move stand there, and the table again */
   frame(h: GameNo, between: number, focus: ArrayLike<number>): number { this.f64(between); this.three(focus); return this.X.face_frame(h, this.at, this.sent()); }
   /** what the page says of its look, once and when it changes */
-  drawLook(h: GameNo, numbers: ArrayLike<number>): void { this.doubles(numbers); this.X.face_draw_look(h, this.at, this.sent()); }
-  /** once a tick, of a networked host: its own man's place ahead of the tick: where the tick has him (his feet, the way he aims) and where he is drawn; 0 = nobody is ahead */
-  drawLead(h: GameNo, man: number, numbers: ArrayLike<number>): void { this.u32(man); this.doubles(numbers); this.X.face_draw_lead(h, this.at, this.sent()); }
+  drawLook(h: GameNo, look: Doubles<'PageLook'>): void { this.laid(look); this.X.face_draw_look(h, this.at, this.sent()); }
+  /** once a tick, of a networked host: its own man ahead of the tick (none: nobody is) */
+  drawLead(h: GameNo, lead: Doubles<'LeadNow'> | null): void { this.yes(lead !== null); if (lead !== null) this.laid(lead); this.X.face_draw_lead(h, this.at, this.sent()); }
   /** a viewer's own picture of a run: with the fog off it, and through a tube or not (none: as the run had it). From the first call the game keeps what such a picture is made from, tick by tick */
   drawAs(h: GameNo, bared: boolean, tube: boolean | null): void { this.yes(bared); this.yes(tube !== null); if (tube !== null) this.yes(tube); this.X.face_draw_as(h, this.at, this.sent()); }
   /** a tick of the host's in which the game was not stepped: what moves stands where the last tick left it */
@@ -70,8 +71,8 @@ export class Face extends Wire<FaceExports> {
   drawName(h: GameNo, number: number): string { this.u32(number); return this.told(this.X.face_draw_name(h, this.at, this.sent()), I => I.str()); }
   /** what a HUD is told of the game as its last tick left it, about the seat this machine shows */
   tickView(h: GameNo): TickView { return this.told(this.X.face_tick_view(h, 0, 0), readTickViewIn); }
-  /** what the cursor is on, about a seat (none: the one this machine shows): the cursor (x y), the picture it is in (w h), the camera's view and projection and their inverse */
-  cursorView(h: GameNo, seat: number | null, numbers: ArrayLike<number>): CursorView { this.yes(seat !== null); if (seat !== null) this.u32(seat); this.doubles(numbers); return this.told(this.X.face_cursor_view(h, this.at, this.sent()), readCursorViewIn); }
+  /** what the cursor is on, about a seat (none: the one this machine shows) */
+  cursorView(h: GameNo, seat: number | null, cursor: Doubles<'CursorNow'>): CursorView { this.yes(seat !== null); if (seat !== null) this.u32(seat); this.laid(cursor); return this.told(this.X.face_cursor_view(h, this.at, this.sent()), readCursorViewIn); }
   /** what the end card shows of the run, asked as it opens */
   debriefView(h: GameNo): DebriefView { return this.told(this.X.face_debrief_view(h, 0, 0), readDebriefViewIn); }
   /** … and beside that: how it ended with every man of it, the course's par, its marks and the floor its map is of */
