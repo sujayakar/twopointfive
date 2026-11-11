@@ -319,8 +319,8 @@ fn debris_burst(g: &mut Game, at: V3, toward: V3, n: f64, o: crate::render_parti
 
 /// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's.
 fn leaf_tough(g: &crate::game::Game) -> f64 {
-    let drywall = g.k.walls.tough.get(String::from("drywall")).copied().unwrap_or(6.0);
-    let wood = g.k.walls.tough.get(String::from("wood")).copied().unwrap_or(9.0);
+    let drywall = g.k.walls.tough.of("drywall").copied().unwrap_or(6.0);
+    let wood = g.k.walls.tough.of("wood").copied().unwrap_or(9.0);
     m::min(drywall, wood) * m::max(0.1, g.k.doorshot.toll)
 }
 

@@ -170,7 +170,7 @@ struct BigBeat {
 
 /// The big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot straight into the pose, the
 /// head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
-pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) -> bool {
     let mut f = BigBeat { at0, tw_y, tw_p, ..BigBeat::default() };
     as_big(an, b, lg, &mut f);
     an.big_under = false;
@@ -178,14 +178,14 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
     beat(an, blows, &mut f);
     const LEGS: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     let Some(Some(n)) = with_pose(g, f.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEGS) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if f.ham {
         if !ask_blend(g, f.at, f.at, 1.0, false, at_buf, n) {
-            return 0;
+            return false;
         }
         an.big_under = true;
     }
@@ -202,11 +202,11 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
             look_at(d, rig, fk, &f.gaze_local, tg, 0.8 * look_w, 0.0);
         }
     }) else {
-        return 0;
+        return false;
     };
     // ---- the arms, by IK on a copy against the body as it now stands
     if !ask_blend(g, f.at, f.at, 1.0, false, f.at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut hs;
     let (at_back, grab_at) = (&mut an.big_at_back, &mut an.big_grab);
@@ -229,14 +229,14 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
         }
     });
     if done.is_none() {
-        return 0;
+        return false;
     }
     arm_mask(true);
     if !ask_blend(g, f.at, f.at_b, 1.0, true, f.at, n) {
-        return 0;
+        return false;
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// The tool, the shotgun's grip, and where the beat is.

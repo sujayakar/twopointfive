@@ -8,7 +8,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A kind's row of the table: hearing level and knock.
 pub(super) fn landing_of(kind: ChunkKind) -> LANDINGValue {
-    landing().get(String::from(kind.as_str())).unwrap().clone()
+    landing().of(kind.as_str()).unwrap().clone()
 }
 
 pub(super) fn sfx_of(l: &LANDINGValue) -> Vec<ChunkSfxItem> {

@@ -96,7 +96,7 @@ fn prop_new(g: &mut Game, def: &Arc<crate::scene_level::PropDef>, id_2: f64) -> 
         mass: def.mass,
         inv_mass: 1.0 / def.mass,
         inv_i,
-        tune: *kind().get(String::from(def.kind.as_str())).expect("a kind of furniture KIND has no row for"),
+        tune: *kind().of(def.kind.as_str()).expect("a kind of furniture KIND has no row for"),
         home: [def.x, def.z, def.yaw],
         boxes,
         def: def.clone(),

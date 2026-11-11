@@ -5,7 +5,7 @@ use alloc::string::String;
 
 /// The columns of a word; the default row's for a word the table does not have.
 pub fn does_of_word(g: &crate::game::Game, w: Option<&str>) -> crate::scene_materials::Does {
-    match w.and_then(|w| g.m.scene_materials.rows.get(String::from(w))) {
+    match w.and_then(|w| g.m.scene_materials.rows.of(w)) {
         Some(d) => *d,
         None => crate::scene_materials::default(),
     }

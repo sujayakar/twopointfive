@@ -251,7 +251,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         if g.rescue.secured_at.is_nan() {
             g.rescue.secured_at = g.time;
             rescue_note(g, "secured");
-            if !g.rescue.said.has(String::from("h:secured")) {
+            if !g.rescue.said.holds("h:secured") {
                 g.rescue.said.add(String::from("h:secured"));
                 let h = g.staged.captives.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch));
                 if let Some(h) = h {
@@ -284,7 +284,7 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     }
     if rescue_over(g) || g.rescue.act.is_some() || alive.is_empty() || !g.rescue.secured_at.is_nan() { return; }
     if let Some(n) = g.rescue.noise {
-        if !g.rescue.said.has(String::from("h:entry")) && (crate::squad::in_bounds(n, b, None) || v3::dist_xz(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
+        if !g.rescue.said.holds("h:entry") && (crate::squad::in_bounds(n, b, None) || v3::dist_xz(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
             g.rescue.said.add(String::from("h:entry"));
             let h = next_voice(g, &alive);
             let other = alive.iter().copied().find(|&o| o != h);
@@ -295,8 +295,8 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     }
     let running = !g.rescue.t0.is_nan();
     let pressed = g.rescue.step == RescueStep::Counting || g.rescue.step == RescueStep::AboutTo;
-    if g.rescue.said.has(String::from("h:secured")) && rescue_captor(g).is_none() { return; }
-    if pressed && !g.rescue.said.has(String::from("h:pressed")) {
+    if g.rescue.said.holds("h:secured") && rescue_captor(g).is_none() { return; }
+    if pressed && !g.rescue.said.holds("h:pressed") {
         g.rescue.said.add(String::from("h:pressed"));
         g.rescue.murmur_at = m::min(g.rescue.murmur_at, g.time + 1.5);
     }

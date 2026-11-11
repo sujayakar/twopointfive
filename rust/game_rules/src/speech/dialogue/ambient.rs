@@ -97,7 +97,7 @@ fn pair_fits(p: &PairTalk, third: bool, pad: bool, own: bool, played: &JsMap<Str
 
 /// S.played.get(id) ?? 0
 fn played_of(played: &JsMap<String, f64>, id: &str) -> f64 {
-    played.get(String::from(id)).copied().unwrap_or(0.0)
+    played.of(id).copied().unwrap_or(0.0)
 }
 
 /// The one per-frame hook: the handler's radio, then the pairs: advance a conversation under way (or drop it the frame either man stops being a calm patrol), else look for a pair to start one.

@@ -34,7 +34,7 @@ pub fn with_cast<R>(g: &mut crate::game::Game, cast: &mut crate::squadcast::Squa
 
 /// INVENTED BY THE SKELETON: a ring of keys as a door asks it: it opens what it names, and everything if it names "*" (`every_key()`, squadcast.ts:17's set that always answers yes).
 pub fn ring_has(ring: &JsSet<String>, key: &str) -> bool {
-    ring.has(String::from(key)) || ring.has(String::from("*"))
+    ring.holds(key) || ring.holds("*")
 }
 
 #[cfg(test)]

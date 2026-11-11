@@ -181,9 +181,9 @@ fn long_flat(s: crate::character::LongShape) -> Vec<f64> {
 
 /// The carriage's spring targets for the posture shown: LONG toward LONG_CROUCH by the crouch weight.
 pub(super) fn long_targets(stance: crate::character::LongStance, crouch_w: f64) -> Vec<f64> {
-    let mut a = long_flat(*crate::character::long().get(String::from(stance.as_str())).unwrap());
+    let mut a = long_flat(crate::character::long(stance));
     if crouch_w <= 1e-4 { return a; }
-    let b = long_flat(*crate::character::long_crouch().get(String::from(stance.as_str())).unwrap());
+    let b = long_flat(crate::character::long_crouch(stance));
     let w = v3::clamp(crouch_w, 0.0, 1.0);
     for i in 0..a.len() {
         a[i] += (b[i] - a[i]) * w;
@@ -237,7 +237,7 @@ mod tests_2 {
     fn a_carriage_is_read_by_its_channels_and_goes_to_the_crouch_table_when_he_is_low() {
         let c = lc();
         for st in [LongStance::PatrolLong, LongStance::LowLong, LongStance::Shoulder, LongStance::PortLong] {
-            let (up, down) = (*crate::character::long().get(String::from(st.as_str())).unwrap(), *crate::character::long_crouch().get(String::from(st.as_str())).unwrap());
+            let (up, down) = (crate::character::long(st), crate::character::long_crouch(st));
             let (a, b) = (long_targets(st, 0.0), long_targets(st, 1.0));
             assert_eq!((a[c.side as usize], a[c.up as usize], a[c.fwd as usize], a[c.pitch as usize], a[c.yaw as usize], a[c.lean as usize]), (up.side, up.up, up.fwd, up.pitch, up.yaw, up.lean), "{st:?}");
             assert_eq!((a[c.elbow_r as usize + 1], a[c.elbow_l as usize + 2]), (up.elbow_r[1], up.elbow_l[2]), "{st:?}");

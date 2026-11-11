@@ -207,7 +207,7 @@ fn fill(tpl: &str, vars: &JsMap<String, String>) -> String {
         let after = &rest[open + 1..];
         let word = after.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).unwrap_or(after.len());
         if word > 0 && after[word..].starts_with('}') {
-            if let Some(v) = vars.get(String::from(&after[..word])) { out.push_str(v); }
+            if let Some(v) = vars.of(&after[..word]) { out.push_str(v); }
             rest = &after[word + 1..];
         } else {
             out.push('{');

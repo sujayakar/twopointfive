@@ -25,7 +25,7 @@ fn box_at(len: usize, i: f64) -> Option<usize> {
 }
 
 /// a row of LANE_MARK
-fn lane(name: &str) -> LaneMark { *lane_mark().get(String::from(name)).unwrap() }
+fn lane(name: &str) -> LaneMark { *lane_mark().of(name).unwrap() }
 
 /// `for (const fn of [...this.blastListeners]) fn(ev)`, one of them; what a subscriber adds to `ev.res` stays in the event
 fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::BlastEvent) {

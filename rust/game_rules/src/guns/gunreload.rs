@@ -14,7 +14,7 @@ pub fn feed_of(def: &crate::weapons::WeaponDef) -> Option<crate::gunreload::FEED
 
 /// how each model is fed
 fn feed_by(m: crate::weapons::GunModelId) -> crate::gunreload::FEEDValue {
-    feed().get(String::from(m.as_str())).unwrap().clone()
+    feed().of(m.as_str()).unwrap().clone()
 }
 
 /// the belt's moments inside a beat

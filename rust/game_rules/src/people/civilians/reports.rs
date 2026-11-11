@@ -354,7 +354,7 @@ pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut 
         for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].unit.is_none() && g.team(x) == Team::Guard { men_n += 1; } }
     }
     let here = g.pos_of(gd);
-    let intel_row: Option<Vec<String>> = lines.intel.get(String::from(def_kind.as_str())).cloned();
+    let intel_row: Option<Vec<String>> = lines.intel.of(def_kind.as_str()).cloned();
     let intel_len = intel_row.as_ref().map_or(0, |r| r.len());
     let pool: Vec<String> = if own {
         let mut p = Vec::new();

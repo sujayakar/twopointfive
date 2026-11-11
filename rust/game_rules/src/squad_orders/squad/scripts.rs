@@ -512,7 +512,7 @@ pub(super) fn room_clear_intact(g: &crate::game::Game, id: RoomClearId) -> bool 
 pub(super) fn room_clear_complete(g: &crate::game::Game, id: RoomClearId) -> bool {
     let row = &g.tab.squad_room_clear[id];
     let tr = row.t_now - row.t_resolve;
-    row.phase == RoomClearPhase::Resolve && (tr > 7.5 || (tr > 2.8 && row.done.has(String::from("#formup")) && row.a_home && row.b_home))
+    row.phase == RoomClearPhase::Resolve && (tr > 7.5 || (tr > 2.8 && row.done.holds("#formup") && row.a_home && row.b_home))
 }
 
 fn room_clear_men(g: &crate::game::Game, id: RoomClearId) -> Vec<GuardId> {
@@ -523,7 +523,7 @@ fn room_clear_men(g: &crate::game::Game, id: RoomClearId) -> Vec<GuardId> {
 /// First time only.
 fn room_clear_once(g: &mut crate::game::Game, id: RoomClearId, key: &str) -> bool {
     let done = &mut g.tab.squad_room_clear[id].done;
-    if done.has(String::from(key)) { return false; }
+    if done.holds(key) { return false; }
     done.add(String::from(key));
     true
 }

@@ -381,7 +381,7 @@ fn chron_device(g: &mut crate::game::Game, kind: crate::devices::ChronDeviceKind
 /// The player learns the code of lock `lock_id`; whether it was news.
 pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices::LearnCodeHow, from: Option<GuardId>) -> bool {
     let pl = g.player;
-    if g.pl[pl].codes.has(String::from(lock_id)) { return false; }
+    if g.pl[pl].codes.holds(lock_id) { return false; }
     let k = match g.devices.keypads.iter().find(|k| k.def.name == lock_id) { Some(k) => k.clone(), None => return false };
     g.pl[pl].codes.add(String::from(lock_id));
     let sign = callsign_of(g, from);
@@ -406,14 +406,14 @@ fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool 
 /// … by the man of the seat that stands; `told`: another man has already learnt it just now, and the telling is not said again
 fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].codes.holds(lock_id) { return g.pl[pl].codes.holds(lock_id); }
     let mouth = g.ch[g.gd[speaker].ch].bone_or(crate::character::Bone::Head, 1.6);
     let ear_up = if g.pl[pl].crouch { 1.0 } else { 1.6 };
     let ear = g.ch[g.pl[pl].ch].bone_or(crate::character::Bone::Head, ear_up);
     let prop = crate::weather::hear_path(g, mouth, ear, None);
     if prop.path_len > g.k.overhear.path_m || prop.carry < g.k.overhear.carry { return false; }
     if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
-    learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
+    learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.holds(lock_id)
 }
 /// The digits as said ('7-3-9-1').
 pub fn spell(code: &str) -> String {

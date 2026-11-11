@@ -197,7 +197,7 @@ impl Bot {
     pub fn holding(&self) -> bool { self.me(|p| p.holding().is_some()) }
     pub fn held_fast(&self) -> bool { self.me(|p| p.holding().is_some_and(|h| h.phase == game::character::HoldPhase::Held)) }
     pub fn dark(&self) -> bool { self.ask(|g| g.light_home.mains.active) }
-    pub fn has_code(&self, code: &str) -> bool { self.me(|p| p.codes.has(String::from(code))) }
+    pub fn has_code(&self, code: &str) -> bool { self.me(|p| p.codes.holds(code)) }
     pub fn stage(&self) -> MissionStage { self.ask(|g| g.mission.stage) }
 
     // ---- men

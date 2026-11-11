@@ -383,7 +383,24 @@ pub const LEAN_CHEST: f64 = 1.2;
 
 pub const STACK_PRESS: f64 = 0.12;
 
-pub fn interact_priority() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("guard"), 0.0); t.set(String::from("held"), 0.0); t.set(String::from("body"), 1.0); t.set(String::from("objective"), 2.0); t.set(String::from("door"), 3.0); t.set(String::from("light"), 9.0); t.set(String::from("breaker"), 2.5); t.set(String::from("switch"), 3.2); t.set(String::from("charge"), 9.4); t.set(String::from("wall"), 9.5); t.set(String::from("cam"), 9.6); t.set(String::from("cancel"), 10.0); t } }
+/// which of the things in reach matters most: the lower first
+pub fn interact_rank(kind: crate::game::InteractableKind) -> f64 {
+    use crate::game::InteractableKind as K;
+    match kind {
+        K::Guard => 0.0,
+        K::Held => 0.0,
+        K::Body => 1.0,
+        K::Objective => 2.0,
+        K::Door => 3.0,
+        K::Light => 9.0,
+        K::Breaker => 2.5,
+        K::Switch => 3.2,
+        K::Charge => 9.4,
+        K::Wall => 9.5,
+        K::Cam => 9.6,
+        K::Cancel => 10.0,
+    }
+}
 
 pub const NEARBY_M: f64 = 3.0;
 

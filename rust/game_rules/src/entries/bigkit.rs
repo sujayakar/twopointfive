@@ -122,7 +122,7 @@ pub fn big_spots(g: &crate::game::Game, d: DoorId, side: f64, tool: crate::kit::
     let lock = crate::shotgun::lock_point(g, d, side);
     let mut out: Vec<BigSpot> = Vec::new();
     let table = spots();
-    let t = table.get(String::from(tool.as_str())).unwrap();
+    let t = table.of(tool.as_str()).unwrap();
     for &[past, off] in &t.jamb {
         let pos = crate::doortools::door_pt(g, d, w + past, off, side, None);
         put(g, &mut out, pos, lock, false);

@@ -34,13 +34,13 @@ pub fn hour_id_of(v: Option<&str>) -> crate::hours::HourId {
 pub const HOUR_ROW: [HourId; 5] = [HourId::Dawn, HourId::Midday, HourId::Overcast, HourId::Dusk, HourId::Night];
 
 /// The hour's label on the sheet.
-pub fn hour_label(id: HourId) -> String { if id == HourId::Night { night().label } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.label.clone()) } }
+pub fn hour_label(id: HourId) -> String { if id == HourId::Night { night().label } else { hours().of(id.as_str()).map_or(String::new(), |h| h.label.clone()) } }
 /// The local time it stands for.
-fn hour_clock(id: HourId) -> String { if id == HourId::Night { night().clock } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.clock.clone()) } }
+fn hour_clock(id: HourId) -> String { if id == HourId::Night { night().clock } else { hours().of(id.as_str()).map_or(String::new(), |h| h.clock.clone()) } }
 /// The sheet's sentence.
-fn hour_words(id: HourId) -> String { if id == HourId::Night { night().words } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.words.clone()) } }
+fn hour_words(id: HourId) -> String { if id == HourId::Night { night().words } else { hours().of(id.as_str()).map_or(String::new(), |h| h.words.clone()) } }
 /// The cloud already in an hour's numbers.
-pub(super) fn hour_cloud(id: HourId) -> f64 { hours().get(String::from(id.as_str())).and_then(|h| h.cloud).unwrap_or(0.0) }
+pub(super) fn hour_cloud(id: HourId) -> f64 { hours().of(id.as_str()).and_then(|h| h.cloud).unwrap_or(0.0) }
 
 /// A link with the hour on it (night = none): whatever hour it carried is replaced.
 pub fn hour_href(href: &str, id: HourId) -> String {
@@ -231,7 +231,7 @@ pub fn apply_hour(g: &mut crate::game::Game, id_2: crate::hours::HourId) -> bool
     let cur = g.m.hours.states.clone();   // putIn reads the old row after takeOut has deleted it
     if cur.is_some() { take_out(g); }
     let table = hours();
-    if let Some(def) = table.get(String::from(id_2.as_str())) { put_in(g, def, cur.as_ref()); }
+    if let Some(def) = table.of(id_2.as_str()) { put_in(g, def, cur.as_ref()); }
     true
 }
 
@@ -580,7 +580,7 @@ mod tests {
     ([0x3fea068dbc247329, 0xbfca9cd9ac4258f6, 0xbfe163c6a9876e5b], [0x3fd146eaecb8b589, 0x0000000000000000, 0x0000000000000000, 0x3fb1aab111a22052, 0x0000000000000000, 0x3fc71699249c01a4]),
     ];
     fn b3(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
-    fn def(id: HourId) -> HourDef { hours().get(String::from(id.as_str())).unwrap().clone() }
+    fn def(id: HourId) -> HourDef { hours().of(id.as_str()).unwrap().clone() }
 
     #[test]
     fn cloud_sun_and_soft_are_the_typescripts_bits() {

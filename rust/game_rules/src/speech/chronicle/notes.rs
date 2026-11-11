@@ -329,7 +329,7 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
         }
     };
     let ranks = rank();
-    let rank_of = |word: &str| ranks.get(String::from(word)).copied().unwrap_or(f64::NAN);
+    let rank_of = |word: &str| ranks.of(word).copied().unwrap_or(f64::NAN);
     let row = &mut g.chronicle.events[at];
     let names = data_string(&row.data, "by");
     if !names.split(", ").any(|n| n == callsign) {

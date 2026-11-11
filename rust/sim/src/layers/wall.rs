@@ -78,16 +78,16 @@ struct OnWall {
 /// parked on the hold's own spots, on the move on the hold's own step or the turned cycle narrowed toward the wall, each sole kept where it stood in the
 /// world through a take until its turn to step. `at_c`: the standing idle sampled over the rest pose (its spine, and its pelvis) · `at_b`: the crouched
 /// idle sampled the same way, read only under the hold's own step (gw > 1e-4): the host samples both until the clip sampler is the module's.
-pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouch_idle: f64, tune: &Knobs) -> u32 {
+pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouch_idle: f64, tune: &Knobs) -> bool {
     let mut o = OnWall { w, p0, ..OnWall::default() };
     const ROLES: [usize; 16] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     as_on_wall(an, &mut o);
     // the idles underneath, sampled here: the standing one's spine and pelvis, the crouched one's pelvis
     let Some(nodes) = with_pose(g, o.at, |_d, _rig, nodes, _fk| nodes) else {
-        return 0;
+        return false;
     };
     if !sample_on_rest(g, o.at_rest, o.at_c, nodes, idle, o.idle_t, true) {
-        return 0;
+        return false;
     }
     let Some(Some(under)) = with_pose(g, o.at_c, |d, _rig, nodes, _fk| {
         if !cast(nodes, &ROLES) {
@@ -95,14 +95,14 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
         }
         Some([SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, HIPS].map(|r| own_rot(d, role(r))))
     }) else {
-        return 0;
+        return false;
     };
     let hips_low = if o.gw > 1e-4 {
         if !sample_on_rest(g, o.at_rest, o.at_b, nodes, crouch_idle, o.idle_t, true) {
-            return 0;
+            return false;
         }
         let Some(q) = with_pose(g, o.at_b, |d, _rig, _nodes, _fk| own_rot(d, role(HIPS))) else {
-            return 0;
+            return false;
         };
         q
     } else {
@@ -135,9 +135,9 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
         };
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), o.foot_l, &o.t_l.0, Some(&pole_of(&o.t_l, &o.g_l)), 0.6, Some(&o.t_l.1), false);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), o.foot_r, &o.t_r.0, Some(&pole_of(&o.t_r, &o.g_r)), 0.6, Some(&o.t_r.1), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 
 /// How he stands on the wall, its normal into the room and his right along it, and the sidle's share.
@@ -447,17 +447,17 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
 }
 /// The wall hold's arms: both palms laid on the face beside the hips, fingers down and out along it, the elbows where the pose says; mended (WALLSNAP),
 /// the wrists hang beside the hips, a resting hand on the plaster with the thumb beside the index.
-pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> u32 {
+pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (cr, side_x, peek, yaw, gait, park, fixes) = (an.crouch, an.wst.side.x, an.wst.peek.x, an.wall_yaw, an.wall_gait, an.wst.park.x, [an.hand_fix[0], an.hand_fix[1]]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -490,15 +490,15 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> u32 {
             // the thumb beside the index, out of the plaster
             turn(d, rig, digits(side)[0] as usize, quat::axis_angle(quat::rotate(fk.rot(hnd), AY), sg * WALL_POSE.mend.thumb_in * DEGR));
         }
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0);
-    if code == 0 {
-        return 0;
+    .unwrap_or(false);
+    if !code {
+        return false;
     }
     arms_mask();
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
     code

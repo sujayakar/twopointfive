@@ -352,7 +352,7 @@ fn pair_orders_reset(g: &mut Game) {
 // ------------------------------------------------------------ once a frame
 /// F: the mark, while somebody waits on it; the press is used here and a menu that is up goes away   (PairOrders.input)
 pub fn pair_orders_input(g: &mut Game, input: InputId) {
-    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.has(String::from("KeyF")) || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
+    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.holds("KeyF") || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
     g.tab.input[input].pressed.delete(String::from("KeyF"));
     crate::orders::squad_orders_close(g);
     pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::F));

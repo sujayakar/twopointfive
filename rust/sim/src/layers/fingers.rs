@@ -47,21 +47,21 @@ fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
 /// The hand pass, after every other layer and on the digit joints alone: a hand the library keyed as a fist and no layer has shaped is opened to the
 /// man's relaxed hand, by how much of it is the fist, how free the hand is and how little a layer made of it; the thumb of a hand that is not the fist
 /// goes to the relaxed thumb; and a drilled man's trigger finger lies straight along the frame until he fires.
-pub fn hands_pass(g: usize, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) -> u32 {
+pub fn hands_pass(g: usize, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) -> bool {
     let (at, held, trained) = (an.p_a.at as usize, an.grip, an.trained);
     let Some(tb) = &an.hn_flat else {
-        return 0;
+        return false;
     };
     let hn = &mut an.hn;
     let (fist, open, own, thumb, trig) = (&tb[..120], &tb[120..240], &tb[240..250], &tb[250..274], &tb[274..]);
     if digits(0).len() != HAND_DIGITS || digits(1).len() != HAND_DIGITS {
-        return 0;
+        return false;
     }
     let base: [[f64; 60]; 2] = core::array::from_fn(|sd| core::array::from_fn(|i| hn.base[sd][i] as f64));
     let far = HAND.far * DEGR;
     with_pose(g, at, |d, _rig, n, _fk| {
         if digits(0).iter().chain(digits(1)).any(|&i| i as usize >= n) {
-            return 0;
+            return false;
         }
         for sd in 0..2 {
             hn.grip[sd] = damp(hn.grip[sd], if held[sd] { 1.0 } else { 0.0 }, 14.0, dt);
@@ -113,7 +113,7 @@ pub fn hands_pass(g: usize, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) 
                 q_turn_to(d, ns[3 + j] as usize, trig, j * 4, tr);
             }
         }
-        RAN
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }

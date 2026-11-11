@@ -74,7 +74,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     if now - r.last_at < 5.0 || r.reply.is_some() { return false; }
     let table = crate::dialogue::handler_lines();
-    let Some(pool) = table.get(String::from(beat.as_str())) else { return false };
+    let Some(pool) = table.of(beat.as_str()) else { return false };
     if pool.is_empty() { return false; }
     let dealt = crate::dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];

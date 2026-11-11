@@ -3,7 +3,7 @@ use super::*;
 
 /// The gun hand's errand between the flashlight's ring at the front of the hip and the sidearm on the thigh: the wrist from wherever the pose has it
 /// down onto the one, across to the other, and back. The pose as it stood is kept at `at_sw` (what was in the hand is drawn off it).
-pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64) -> u32 {
+pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let fix_r = an.hand_fix[1];
     let Some(Some((n, to))) = with_pose(g, at, |d, rig, n, fk| {
@@ -17,13 +17,13 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         let (first, second) = if to_weapon { (belt, hol) } else { (hol, belt) };
         Some((n, v3::lerp3(first, second, across)))
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -38,14 +38,14 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
     });
     if !ask_blend(g, at, at, 1.0, false, at_sw, n) {
-        return 0;
+        return false;
     }
     ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
     if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// A place and three axes
 #[derive(Clone, Copy)]
@@ -181,21 +181,21 @@ struct Errand {
 /// The kit change's frame: the right hand's errand between what was in it and what will be, both arms by IK on a copy of the pose, whole from the upper
 /// arm down. The path begins on the hand as the pose under it had it when the change began and ends on the hand of the pose under it now. The clock is
 /// the caller's.
-pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4], sling: &SlingFrontHand, tune: &Knobs) -> u32 {
+pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4], sling: &SlingFrontHand, tune: &Knobs) -> bool {
     let mut er = Errand { tw_y, tw_p, rc_inv, ..Errand::default() };
     let (at, at_b, _) = poses(an);
     let Some(k) = an.kit else {
-        return 0;
+        return false;
     };
     as_kit(an, &k, &mut er);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE2]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut hs;
     let Some(left_too) = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -235,17 +235,17 @@ pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4]
         }
         er.tl.is_some()
     }) else {
-        return 0;
+        return false;
     };
     // (the support hand's fingers go back to the pose's as it joins)
     let side = |r: usize| if left_too { role(r) } else { usize::MAX };
     ask_mask(&[(role(UPPER_ARM_R), 1.0, true), (side(UPPER_ARM_L), 1.0, true), (side(HAND_L), 1.0 - er.join, true), (side(HAND_L), 1.0, false)]);
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&hs, an);
     (an.kit_hold, an.kit_stow, an.kit_roll, an.kit_lie) = (Some(er.hold), er.stow, er.roll, er.lie);
-    RAN | RAN_ALL
+    true
 }
 
 /// The errand as it stands, and what the things it goes between are.

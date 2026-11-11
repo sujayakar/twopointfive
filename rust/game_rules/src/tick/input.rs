@@ -13,12 +13,12 @@ pub fn input_detached(g: &mut Game) -> InputId {
 
 /// Is this key held?
 pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].keys.has(String::from(code))
+    g.tab.input[id].keys.holds(code)
 }
 
 /// Did this key go down this frame?
 pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].pressed.has(String::from(code))
+    g.tab.input[id].pressed.holds(code)
 }
 
 /// Left button held.
