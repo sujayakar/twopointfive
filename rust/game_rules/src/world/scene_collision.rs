@@ -126,9 +126,9 @@ pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
     alloc::format!("a ray that is no number{} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)", at)
 }
 
-/// a question's word of the rows: the block that holds them is this game's
-fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
-    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
+/// a question's word of the level's lamps
+fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows<'_>> {
+    r.map(|r| sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
 }
 
 /// a sense's question the module handed back, in words
@@ -808,9 +808,9 @@ mod tests {
     #[test]
     fn a_question_says_how_the_rows_are_read() {
         let mut g = Box::new(Game::blank());
-        g.sim = 2;
+        g.light_home.rows = vec![Default::default(); 2];
         let rows = rows_for(&g, Some(LampRows { leave: 4.0, steady: true })).unwrap();
-        assert_eq!((rows.g, rows.leave, rows.steady), (2, 4, true));
+        assert_eq!((rows.lamps.len(), rows.leave, rows.steady), (2, 4, true));
         assert!(rows_for(&g, None).is_none());
     }
 

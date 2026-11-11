@@ -309,8 +309,8 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
         let spawn = v3::copy(g.level.player_spawn);
         let at = spot_beside(g, spawn, index);
         let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
+        let rig = g.rig;
+        let p = crate::game::player_new(g, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
         let (owner, intensity) = (g.player_id(p), g.tune.player_light);
         let def = crate::rig_props::rail_light_def(g, owner, intensity);

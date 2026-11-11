@@ -200,7 +200,6 @@ pub mod samlook { pub mod types; pub use types::*; }
 pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
-pub mod scene_air_grid { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }

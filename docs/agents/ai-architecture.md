@@ -22,7 +22,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | his senses | `guards/senses/`, `sense.rs`, `guards/feet.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
 | his eye | `attention.rs` | what small thing holds a calm man's eye (`stealth.md`) |
 | how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
-| whose man he is | `owner.rs`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
+| whose man he is | `owner.rs`, `taskers!` in its types | one word on his body (`Hold`), a bit a tasker |
 | who has his body | `control/` | `Control`, the list of rules and the arbiter (`g.ctl`) |
 | what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`); `Assignment` (`orders/`) | his side; his squad; his place in a room fight; his post under an order |
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |

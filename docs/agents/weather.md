@@ -36,7 +36,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `snow_blast.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
-Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`, `dome.rs`.
+Hot loops are in `rust/sim/src/`: `weather.rs` (the roofs), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`, `dome.rs`.
 `rust/game_draw/src/` tells the picture: `sky.rs`, `winds.rs`, `fires.rs`, `snow.rs`, `wet.rs`.
 
 The page's half reads those rows and writes nothing back:
@@ -106,9 +106,9 @@ cut (a load, a restart) starts each `src/picture/` part again from the rows.
 one's speed for the tick (ramps, `vent_due`, gusts off `vnoise`) and hands them to the picture's solver. `wind_reroof` cuts the storm by the roofs.
 Fires and moths read `wind_at`.
 
-**Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
+**Dust and fog indoors.** `rust/sim/src/air.rs` steps `AirDust`: for each half-meter cell, what share of the open air's fog stands there, only under a picked
 kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
-field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
+field along the line. No section of the draw carries it: the shaders' `wxGrid` reads rows of the box table that nothing fills.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
 coals, and files its smoke, marked as look so that no man sees it, and a hot-air source that parts falling snow. Rounds and blasts leave it burning
@@ -179,7 +179,7 @@ Native tests in `rust/game_start/tests/`:
 | `marks.rs`, `kit_stage.rs` | `a_wet_print_dries_by_itself`; `by_day_the_porch_lamp_is_out_with_the_levels_own` |
 
 `hours/`, `wind.rs` and `fire.rs` have unit tests beside their code. `levels rain` holds every level: open ground is rained on, ground under a ceiling is
-not. `gate`'s pins cover `weather` and `sim.weather`. Checks: `bun run tools/qa/checks.ts rainscale`, `rainwalls`, `sunglint` read the shaders' text
+not. `gate`'s pins cover `weather` and `air_dust`. Checks: `bun run tools/qa/checks.ts rainscale`, `rainwalls`, `sunglint` read the shaders' text
 and run no shader. Page script: `bun run tools/qa/pages.ts weather-page` (on the software adapter).
 
 ## Not seen

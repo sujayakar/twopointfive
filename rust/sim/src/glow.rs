@@ -45,7 +45,7 @@ pub struct K<'a> {
     pub sweep: f64,
     pub sky: Sky,
     pub lamps: &'a [[f64; light::LAMP]],
-    pub rows: Option<light::Rows>,
+    pub rows: Option<light::Rows<'a>>,
 }
 /// the height the lines go out from (between a standing man's chest and his head: the meter is the brighter of the two), a metre of the plan, and how many of those a square of the smoke grid is across
 pub const HEIGHT: f64 = 1.4;

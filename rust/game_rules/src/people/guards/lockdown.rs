@@ -333,9 +333,9 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         name: Some(name.clone()),
         team: Some(o.team),
     };
-    let (men, rig) = (g.men, g.rig);
+    let rig = g.rig;
     let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().of(o.team.as_str()).unwrap() };
-    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
+    let gd = crate::game::guard_new(g, rig, id, route, -1, fl, tint, Some(&look));
     g.gd[gd].unit = Some(crate::game::UnitInfo { light: o.light != Some(false), pair: o.pair, seat: None });
     crate::control::set_hold(g, gd, true, "guards");
     g.gd[gd].heard_up_to = g.event_seq;
@@ -378,8 +378,6 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if g.gd[o].leader == Some(gd) { g.gd[o].leader = None; }
         if matches!(&g.gd[o].task, Some(crate::game::GuardTask::CheckOn(t)) if t.who == gd) { g.gd[o].task = None; }
     }
-    let c = g.gd[gd].ch;
-    crate::sim_men_store::man_leaves(g, c);
     true
 }
 

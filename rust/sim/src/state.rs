@@ -18,10 +18,7 @@
 //! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
 use crate::poses::Poses;
-use crate::men::Men;
-use crate::lights::Lights;
 use crate::panes::Panes;
-use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -40,9 +37,6 @@ const _: () = assert!(size_of::<Head>() == 16);
 #[repr(C, align(16))]
 pub struct State {
     pub head: Head,
-    pub men: Men,
-    pub lights: Lights,
-    pub weather: Weather,
     pub smoke: Smoke,
     pub poses: Poses,
     pub panes: Panes,
@@ -58,11 +52,8 @@ pub struct Part {
 }
 /// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools: every
 /// game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all.
-pub const PARTS: [Part; 7] = [
+pub const PARTS: [Part; 4] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
-    Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (a pose is ten columns of whole vectors)
     Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
@@ -80,8 +71,6 @@ const _: () = {
         i += 1;
     }
     assert!(at == LEN);
-    // (a man's columns are whole vectors from a 16-byte boundary: men.rs)
-    assert!(offset_of!(State, men) % 16 == 0);
     // (a pose starts on a 16-byte boundary: the block does, the pool's head is 16 bytes, and a pose is whole vectors — skeleton.rs `rows`)
     assert!(offset_of!(State, poses) % 16 == 0);
 };
@@ -117,7 +106,7 @@ pub fn state_read(g: usize) -> &'static State {
 /// how many times each slot's block was written whole (`put`)
 static mut PUTS: [u32; GAMES] = [0; GAMES];
 /// THE ONE WAY A BLOCK IS WRITTEN WHOLE: a new game's (no bytes: zeros under the layout's word), one put back, one moved here. Tables made from a block and
-/// kept beside it (bricks.rs, air.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
+/// kept beside it (bricks.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
 pub fn put(g: usize, bytes: &[u8]) {
     let n = if bytes.len() < LEN { bytes.len() } else { LEN };
     unsafe {

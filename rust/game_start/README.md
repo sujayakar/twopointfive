@@ -293,7 +293,7 @@ The rows, each with what it holds and then its breaks:
   `Play.cursor`) goes back with it. Break: `block` a moment whose block bytes are the run's end's.
 - **`load <run>`:** A LOAD: the moments of 9 and 21 s, the value a save keeps, the run's game gone and another mission played 2 s in the process, then
   stood as a page stands a kept game in a slot nobody was in and played 3 s under the same hand: every part of every frame the run's. Break: `block` one
-  byte of the block's die is another.
+  byte of the block's head is another.
 - **`draw <run>`:** everything drawn after every tick, at 0.5 and at 1.0. (a) The word every second is the undrawn run's. (b) A mirror of the page's
   buffers, filled ONLY as the page fills them (`src/bin/gate/draw.rs` lists them), is the module's own tables after every frame. (c) The boxes' head says
   what their lists hold. (d) Once a second, what the mirror holds is what a host that has just opened is told, but for what is a table's history

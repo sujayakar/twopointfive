@@ -54,12 +54,12 @@ Each crate is its own cargo workspace and target folder.
 - **What a game's copies share.** A kept moment is a copy of the game, so what was read once and is not played with stands behind an `Arc`: `g.art`,
   `g.level`, a piece of furniture's `def`, a box's `marks`, the ray grid. A copy takes the pointer; who writes the level says `Arc::make_mut`. A list that never
   changes is a function (`sam_lines()`), not a field.
-- **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
+- **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the columns
+  of what `rust/sim` steps and nothing else has taken over yet: smoke, poses, panes. A thing with rules of its own is a record on `Game`,
   its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
   `sim::state::state_read(g.sim)` and `sim::state::state`.
-- **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`) and the smoke's and air's tables (`rust/sim`, outside the block) are made
-  from the game: in no bytes.
+- **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`) and the smoke's tables (`rust/sim`, outside the block) are made
+  from the game, and so are the dust's lists of cells (`AirPlan`): in no bytes.
 - **A moment** (`Moment`) is `g.clone()` and the block's bytes: a save, a walk of a tape, a recovery. So `Game` clones whole and a block stands in any
   slot.
 - **Seats.** A seat's own things are its row of `g.sets` (`SeatSet`). `g.seat` and `g.player` say which seat a pass is about and its man: in a tick the first

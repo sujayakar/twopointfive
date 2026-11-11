@@ -432,7 +432,7 @@ fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[S
 
 /// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game in a slot nobody was in, and played
 /// under the hand from its kept place: every part of every frame the run's. (A fault this road has had: a calm guard's torch came on for three seconds.)
-/// BREAK: `block` one byte of the block's die is another.
+/// BREAK: `block` one byte of the block's head, which nothing writes, is another.
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
@@ -441,7 +441,7 @@ fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[Strin
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
     let mut slot = sim::state::GAMES;
     'loads: for m in kept.iter_mut().filter(|m| LOADS.contains(&(m.at / 60))) {
-        if f.breaks("block") { m.moment.block[sim::state::PARTS[1].off] ^= 1; }
+        if f.breaks("block") { m.moment.block[core::mem::offset_of!(sim::state::State, head.spare)] ^= 1; }
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
         slot -= 1;

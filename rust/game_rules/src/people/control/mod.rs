@@ -383,8 +383,7 @@ mod tests {
 
     fn stand() -> (Box<Game>, GuardId) {
         let mut g = Box::new(Game::blank());
-        let mut body = crate::character::Character::blank();
-        body.man_kept = Some([0.0; 4]);   // (no row on the block: his numbers are kept on his body)
+        let body = crate::character::Character::blank();
         let mut man = crate::game::Guard::blank();
         man.ch = crate::character::man_new(&mut g, body);
         let gd = g.gd.push(man);

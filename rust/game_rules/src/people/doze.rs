@@ -551,7 +551,7 @@ fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.char_id(gd);
     let team = g.team(gd);
     let mut skip = move |g: &Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::fixtures::SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner

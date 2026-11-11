@@ -1,8 +1,8 @@
 //! THE LIGHT ON A POINT: the direct light of every lamp in reach on the six faces of the meter, each lamp shadowed by one line to it. The hour's sun and sky and a stroke of
 //! lightning are added to the same six faces afterwards (game_rules guards light_at).
 //!
-//! WHERE A QUESTION'S LAMPS COME FROM. The lamps the level's fixtures feed are READ WHERE THEY STAND: the rows of the lights' part of the game's block
-//! (lights.rs), in the order of the engine's list, each through the reader's own gates (`row`). Every other lamp (a man's torch, a flash, a tracer's
+//! WHERE A QUESTION'S LAMPS COME FROM. The lamps the level's fixtures feed are records of the game (game_types fixtures `Lamp`), handed as they stand in the order
+//! of the engine's list, each through the reader's own gates (`row`). Every other lamp (a man's torch, a flash, a tracer's
 //! lamp) is the question's own: the host writes it into the scratch table here, having passed it by its own gates (whose it is,
 //! passing or not), with how many rows stand before it in the list. The two are taken as ONE LIST IN THAT ORDER (`each`), so the sum of floats over
 //! them is the sum a single loop over the engine's list makes.
@@ -11,9 +11,8 @@
 
 use game_types::knobs::Knobs;
 use crate::bricks;
-use crate::lights::{Lights, ROWS, R_DAY, R_ON, R_STEADY};
+use game_types::fixtures::{Lamp as Fed, LAMPS};
 use crate::lines;
-use crate::state::state;
 use crate::maths::cos;
 use crate::world::{ASK_HOST, clamp, js_max, js_max3, js_min, smoothstep, DEG, F_GLASS, World};
 use prim::sqrt;
@@ -32,11 +31,11 @@ const L_COLOR: usize = 11;
 const L_I: usize = 14;
 const L_ROWS: usize = 15;
 
-/// WHAT A QUESTION SAYS OF THE LEVEL'S ROWS: whose block they are in (a slot), which it leaves out (lights.rs R_* bits: who asks what the PLACE lights
+/// WHAT A QUESTION SAYS OF THE LEVEL'S ROWS: them, which it leaves out (`Lamp.leave`: who asks what the PLACE lights
 /// leaves the passing ones, a sleeper's face the screens'), and whether a row with a steady self is taken as that self (a fire's: what the place lights)
 #[derive(Clone, Copy)]
-pub struct Rows {
-    pub g: usize,
+pub struct Rows<'a> {
+    pub lamps: &'a [Fed],
     pub leave: u32,
     pub steady: bool,
     /// the hour's exposure (game_rules hours; 1 = a night): how strong each is beside it (`by_day`)
@@ -92,68 +91,50 @@ fn carried(l: &[f64]) -> Lamp {
 /// strength above nothing · it is no moon (kind 2 has the sun's own shadow test, game_rules hours). Then the self the question takes: the steady one where it
 /// asks for those and the row has one (its place, size and strength; the rest is the lamp's).
 #[inline(always)]
-fn row(l: &Lights, r: usize, q: &Rows) -> Option<Lamp> {
-    let b = l.row_bits[r];
-    if b & R_ON == 0 {
+fn row(l: &Fed, q: &Rows) -> Option<Lamp> {
+    if !l.on {
         return None;
     }
-    if b & q.leave != 0 || l.intensity[r] <= 0.0 || l.kind[r] == 2.0 {
+    if l.leave & q.leave != 0 || l.intensity <= 0.0 || l.kind == 2.0 {
         return None;
     }
-    let s = q.steady && b & R_STEADY != 0;
-    let int = if s { l.s_intensity[r] } else { l.intensity[r] };
-    Some(Lamp {
-        pos: if s { [l.sx[r], l.sy[r], l.sz[r]] } else { [l.x[r], l.y[r], l.z[r]] },
-        range: l.range[r],
-        radius: if s { l.s_radius[r] } else { l.radius[r] },
-        kind: l.kind[r],
-        dir: [l.dx[r], l.dy[r], l.dz[r]],
-        outer: l.outer[r],
-        inner: l.inner[r],
-        color: [l.r[r], l.g[r], l.b[r]],
-        int: by_day(b >> R_DAY & 7, int, int, q.exposure),
-    })
+    let (pos, radius, int) = match l.steady {
+        Some(s) if q.steady => (s.pos, s.radius, s.intensity),
+        _ => (l.pos, l.radius, l.intensity),
+    };
+    Some(Lamp { pos, range: l.range, radius, kind: l.kind, dir: l.dir, outer: l.outer, inner: l.inner, color: l.color, int: by_day(l.day, int, int, q.exposure) })
 }
 /// THE ONE LIST: the question's own lamps and the rows `rows` names, in the order of the engine's list: before each of its own come the rows that
 /// stand before it (its own count, never past the table's), and after the last the rows that are left. `f` is handed each lamp that passed; what it says
 /// other than 0 ends the walk and is returned.
 #[inline(always)]
 fn each(lamps: &[[f64; LAMP]], rows: Option<Rows>, mut f: impl FnMut(&Lamp) -> u32) -> u32 {
-    let table: Option<(&Lights, Rows)> = rows.map(|q| (&state(q.g).lights, q));
-    let total = match table {
-        Some((l, _)) => {
-            let t = l.rows as usize;
-            if t > ROWS { ROWS } else { t }
-        }
-        None => 0,
-    };
+    let fed = rows.map_or(&[][..], |q| q.lamps);
     let mut at = 0;
     for c in lamps {
         let before = c[L_ROWS];
-        let to = if before >= total as f64 { total } else if before > 0.0 { before as usize } else { 0 };
-        let said = rows_to(table, to, &mut at, &mut f);
+        let to = if before >= fed.len() as f64 { fed.len() } else if before > 0.0 { before as usize } else { 0 }.max(at);
+        let said = rows_to(&fed[at..to], &rows, &mut f);
         if said != 0 {
             return said;
         }
+        at = to;
         let said = f(&carried(c));
         if said != 0 {
             return said;
         }
     }
-    rows_to(table, total, &mut at, &mut f)
+    rows_to(&fed[at..], &rows, &mut f)
 }
-/// …the rows from `at` up to `to`, each that passes the reader's gates
+/// …these of the rows, each that passes the reader's gates
 #[inline(always)]
-fn rows_to<F: FnMut(&Lamp) -> u32>(table: Option<(&Lights, Rows)>, to: usize, at: &mut usize, f: &mut F) -> u32 {
-    if let Some((l, q)) = table {
-        while *at < to {
-            let r = *at;
-            *at += 1;
-            if let Some(lamp) = row(l, r, &q) {
-                let said = f(&lamp);
-                if said != 0 {
-                    return said;
-                }
+fn rows_to<F: FnMut(&Lamp) -> u32>(fed: &[Fed], rows: &Option<Rows>, f: &mut F) -> u32 {
+    let Some(q) = rows else { return 0 };
+    for l in fed {
+        if let Some(lamp) = row(l, q) {
+            let said = f(&lamp);
+            if said != 0 {
+                return said;
             }
         }
     }
@@ -214,7 +195,7 @@ pub struct Set {
     least: f64,
     lamps: [(Lamp, Cone); MOST],
 }
-pub const MOST: usize = ROWS + 64;
+pub const MOST: usize = LAMPS + 64;
 /// a spot's two cosines
 #[derive(Clone, Copy)]
 struct Cone {

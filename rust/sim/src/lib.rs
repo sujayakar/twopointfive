@@ -18,8 +18,6 @@
 #![no_std]
 extern crate alloc;
 
-use game_types::boxworld::World;
-use game_types::knobs::Knobs;
 pub mod air;
 pub mod bricks;
 pub mod clips;
@@ -33,10 +31,8 @@ pub mod hear;
 pub mod roles;
 pub mod layers;
 pub mod light;
-pub mod lights;
 pub mod lines;
 pub use ::maths;
-pub mod men;
 pub mod nav;
 pub mod panes;
 pub mod pattern;
@@ -74,41 +70,4 @@ pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> 
 /// what a game holds of what a level is counted for as it loads (game_rules levelfit.rs): 0 window's bars gone · 1 clumps of a sheet
 pub fn panes_cap(i: u32) -> u32 {
     (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
-}
-
-// ---- the dust (air.rs)
-/// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it and the roofs (air.rs plan)
-fn air_of(g: usize, stamp: f64, roofs: &[[f64; 4]]) -> (&'static mut air::Air, &'static mut air::Plan) {
-    let wx = weather::of(g);
-    let p = air::plan(g, stamp, &wx.air, roofs);
-    (&mut wx.air, p)
-}
-/// the dust's field stood up afresh: every cell the open air's, no opening asked, no list
-pub fn air_clear(g: usize, stamp: f64, roofs: &[[f64; 4]]) {
-    let (a, p) = air_of(g, stamp, roofs);
-    a.clear(p)
-}
-/// the field begun: its switch, nothing owed, no opening known
-pub fn air_begin(g: usize, stamp: f64, on: bool, roofs: &[[f64; 4]]) {
-    let (a, p) = air_of(g, stamp, roofs);
-    a.begin(p, on)
-}
-/// the field seeded under the roofs in force at the leak given
-pub fn air_seed(g: usize, stamp: f64, leak: f64, roofs: &[[f64; 4]]) {
-    let (a, p) = air_of(g, stamp, roofs);
-    a.seed(p, leak, |x, z| weather::under_any(roofs, x, z))
-}
-/// …every opening asked and run on until it stands still
-pub fn air_settle(g: usize, stamp: f64, w: &World, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
-    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp, roofs);
-    a.settle(p, w, &mut said, tune);
-    said
-}
-/// one tick of it
-pub fn air_update(g: usize, stamp: f64, w: &World, dt: f64, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
-    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp, roofs);
-    a.update(p, w, dt, &mut said, tune);
-    said
 }
