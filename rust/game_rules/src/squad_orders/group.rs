@@ -62,6 +62,37 @@ pub fn lead(g: &Game, seat: &crate::seats::SeatRef) -> Option<CharId> {
 /// … and where that one is
 pub fn lead_pos(g: &Game, seat: &crate::seats::SeatRef) -> crate::V3 { lead(g, seat).map_or(g.seat_pos(seat), |c| g.ch[c].pos) }
 
+/// It works as a squad: a steady man of it is up (`morale::training_of`). A player's always does.
+pub fn drilled(g: &mut Game, id: GroupId) -> bool {
+    if g.groups[id].by_a_player() { return true; }
+    let men: alloc::vec::Vec<GuardId> = g.guards.iter().copied().filter(|&x| has(g, id, x) && !crate::condition::down(g, g.gd[x].ch) && !g.gd[x].fled).collect();
+    men.into_iter().any(|x| crate::morale::training_of(g, x) == crate::morale::TrainingOf::Steady)
+}
+
+/// A FRAME OF THE GROUPS NO PLAYER COMMANDS: their door work, what their men have been told, and the fight as they do it. (The response team's drill runs its own.)
+pub fn groups_tick(g: &mut Game, dt: f64) {
+    for id in g.groups.ids().collect::<alloc::vec::Vec<_>>() {
+        if !matches!(g.groups[id].commander, Commander::Squad(_)) || (g.groups[id].orders.asg.is_empty() && g.groups[id].tools.ops.is_empty()) { continue; }
+        hurry(g, id);
+        with(g, id, |g| {
+            crate::doortools::door_tools_tick(g);
+            crate::orders::squad_orders_tick(g);
+        });
+        for gd in g.groups[id].orders.asg.keys() {
+            if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].script.is_some() { crate::guards::behave::fight_on_the_way(g, gd, dt); }
+        }
+    }
+}
+
+/// Its men go to a mark at a run and onto it at the order's own pace.
+fn hurry(g: &mut Game, id: GroupId) {
+    for (gd, a) in g.groups[id].orders.asg.iter().map(|(gd, &a)| (gd, a)).collect::<alloc::vec::Vec<_>>() {
+        let far = g.tab.task[a].post.is_some_and(|p| crate::v3::dist_xz(p, g.pos_of(gd)) > ONTO_M);
+        g.tab.task[a].pace = far.then_some(g.tune.guard_chase);
+    }
+}
+const ONTO_M: f64 = 2.5;
+
 /// A round of somebody it is up against: a man's, or a player's if it is up against players.
 pub fn their_shot(g: &Game, e: &crate::game::GameEvent) -> bool {
     use crate::director::EventKind as K;

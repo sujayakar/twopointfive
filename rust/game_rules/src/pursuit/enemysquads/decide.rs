@@ -75,6 +75,8 @@ fn nav_idx(g: &Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid
 fn cell_of(g: &Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::floor(p[0] / c), m::floor(p[2] / c)) }
 fn in_grid(g: &Game, ix: f64, iz: f64) -> bool { ix >= 0.0 && iz >= 0.0 && ix < g.col.nav.w && iz < g.col.nav.h }
 fn room_has(g: &Game, t: RoomfightRoomId, i: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(i)) }
+/// that floor is the room's
+pub(super) fn in_room(g: &Game, t: RoomfightRoomId, p: V3) -> bool { room_has(g, t, cell_of(g, p)) }
 
 pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "enemysquads::pick#1", who) * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more
@@ -89,7 +91,7 @@ pub fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f6
     None
 }
 /// every half metre along a path, its corners included; returns its length
-fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
+pub(super) fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
     let (mut q, mut run0) = (from, 0.0);
     for &w in path {
         let l = dist_xz(q, w);
@@ -165,7 +167,7 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
             def: def.clone(), name: def.name.clone().unwrap_or_else(|| def.id.clone()), rooms: mine, men: men.clone(), group, barricade,
             state: SquadState::Hold, state0: None, fix: None, news_t: -100.0, decide_at: 0.0, decided_at: -100.0, contact_t: -100.0, called_t: -100.0, called_room: None,
             fallen: JsSet::new(), ready: false, own_said: None, stayed: None, hit_room: None, rc: None, calls: None, call_die: None, hung: None, trouble: None, wary: None,
-            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(),
+            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(), entries: Vec::new(),
         });
         squads.push(q);
         let stays = def.may_leave == Some(false);

@@ -85,6 +85,8 @@ pub enum SentPhase {
     #[default] Set,
     Run,
     Loose,
+    /// he is on an order of his squad's, with those sent with him
+    Told,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -233,6 +235,20 @@ pub struct Squad {
     pub went: Vec<crate::enemysquads::Sent>,
     pub due: Vec<crate::enemysquads::SquadDueItem>,
     pub events: Vec<crate::enemysquads::SquadEvent>,
+    pub entries: Vec<crate::enemysquads::Entry>,
+}
+
+/// Men of a squad going into a room together by one door.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Entry {
+    pub op: DoorOpId,
+    pub men: Vec<GuardId>,
+    pub at: V3,
+    pub t0: f64,
+    /// the stuns they set out with
+    pub stuns: f64,
+    /// somebody has said they are on the door
+    pub said: bool,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

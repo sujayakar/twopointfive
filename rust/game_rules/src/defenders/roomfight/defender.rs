@@ -66,6 +66,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
     let mode = g.tab.roomfight_def[d].mode;
     if mode == DefMode::Move { room_fight_tick_move(g, d, dt); return; }
     if mode == DefMode::Free { room_fight_tick_free(g, d); return; }
+    if mode == DefMode::Told { return; }
     if g.gd[gd].script.is_some() && crate::director::director_lesson_runs(g) { g.tab.roomfight_def[d].staged = Some(true); return; }
     if g.tab.roomfight_def[d].staged == Some(true) {
         g.tab.roomfight_def[d].staged = Some(false); crate::duty::hold(g, gd, true, "roomfight");
@@ -443,27 +444,39 @@ pub fn took_cover_said(g: &mut crate::game::Game, d: RoomfightDefId) {
 
 /// a defender on the move: an enemy seen close stops him to fight, or he fights him as he goes, if he is going for cover; there, or going nowhere, he plants.
 fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
-    let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
+    let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].script.is_none() { end_leg(g, d, LegEnd::Taken); return; }
-    // the man his eyes have (guards/senses), near enough to stop for; never the one he is getting away from
-    let from = if g.time < g.tab.roomfight_def[d].bolt_until { g.tab.roomfight_def[d].bolt_from } else { None };
-    let reach = g.k.roomfight.move_engage_m;
-    let near = g.gd[gd].foe.map_or(false, |fc| v3::dist(g.ch[fc].pos, g.ch[c].pos) < reach);
-    let contact = g.gd[gd].foe.filter(|&f| g.gd[gd].saw_foe_this_frame && near && !crate::control::man::blind(g, gd) && Some(f) != from);
     let to_cover = fights_as_he_goes(g, gd);
-    if let Some(ct) = contact.filter(|_| !to_cover) {
-        let fc = ct;
-        crate::mind::foe(g, gd, Some(ct), "roomfight");
-        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
-        end_leg(g, d, LegEnd::Contact);
-        crate::mind::set(g, gd, 1.0, "roomfight");
-        g.gd[gd].react_t = pick(g, crate::dice::Who::Def(d), s.react);
-        let fp = g.ch[fc].pos;
-        crate::guards::eyes_on(g, gd, fp);
-        return;
-    }
+    if let Some(fc) = in_his_way(g, d).filter(|_| !to_cover) { return stops_for(g, d, fc); }
     if to_cover { crate::guards::behave::fight_on_the_way(g, gd, dt); }
     if let Some(end) = post::walked(g, d, dt) { end_leg(g, d, end); }
+}
+
+/// The man his eyes have (guards/senses), near enough to stop for; never the one he is getting away from.
+fn in_his_way(g: &Game, d: RoomfightDefId) -> Option<CharId> {
+    let row = &g.tab.roomfight_def[d];
+    let (gd, from) = (row.gd, if g.time < row.bolt_until { row.bolt_from } else { None });
+    let here = g.pos_of(gd);
+    g.gd[gd].foe.filter(|&f| {
+        g.gd[gd].saw_foe_this_frame && v3::dist(g.ch[f].pos, here) < g.k.roomfight.move_engage_m && !crate::control::man::blind(g, gd) && Some(f) != from
+    })
+}
+/// He stops where he is and fights him.
+fn stops_for(g: &mut Game, d: RoomfightDefId, fc: CharId) {
+    let (gd, s) = (g.tab.roomfight_def[d].gd, hostile_skill(g));
+    crate::mind::foe(g, gd, Some(fc), "roomfight");
+    crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
+    end_leg(g, d, LegEnd::Contact);
+    crate::mind::set(g, gd, 1.0, "roomfight");
+    g.gd[gd].react_t = pick(g, crate::dice::Who::Def(d), s.react);
+    let fp = g.ch[fc].pos;
+    crate::guards::eyes_on(g, gd, fp);
+}
+/// A man on his squad's orders who has met somebody near stops and fights him, as on any leg of his. True: he has.
+pub fn stopped_by_a_foe(g: &mut Game, d: RoomfightDefId) -> bool {
+    let Some(fc) = in_his_way(g, d) else { return false };
+    stops_for(g, d, fc);
+    true
 }
 
 /// His leg is over, and how: it is his post now where he has got to, or he stands there on his sender's word.
