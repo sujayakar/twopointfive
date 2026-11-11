@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1435514782;
+export const LAYOUT = 2018466319;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -363,6 +363,42 @@ export const enum Info {
   glass = 256,
   /** words a row */
   row = 640,
+}
+
+/** what is broken of a listed pane (all nought: it is whole) */
+export const enum Pane {
+  /** f32: how many sites it has been cut from */
+  sites = 0,
+  /** f32: 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web */
+  says = 1,
+  /** f32: 0: its own x runs across it; 1: its z does */
+  axis = 2,
+  /** f32: how far it has gone, to 1 */
+  damage = 3,
+  /** f32 × 2 */
+  half = 4,
+  /** f32 */
+  kind = 6,
+  /** f32 */
+  pad = 7,
+  /** f32 × 2: where the blow that diced it fell */
+  blow = 8,
+  /** f32: the clumps whose key is under this have let go */
+  openAt = 10,
+  /** f32 */
+  grain = 11,
+  /** f32 */
+  cols = 12,
+  /** f32 */
+  rows = 13,
+  /** f32 */
+  seed = 14,
+  /** f32 */
+  pad2 = 15,
+  /** f32 × 128: a site: its place, its turn and its ring's radius · its radials, seed, energy and how much is merged · the four rings' radii · the pieces that have fallen out, twelve bits a band, two bands a float */
+  site = 16,
+  /** words a row */
+  row = 144,
 }
 
 /** a door's leaf where the tick left it: what the picture's own plans ask of it (openings, places, what shuts smoke in) */

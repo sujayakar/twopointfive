@@ -1,14 +1,8 @@
 // ---- GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs + rust/sim/src/glass.rs; the scene's shaders call it inside `if (GLASS_BREAK)`, the prelude const; the smoke's solver (smoke/smoke.wgsl solidAt) where it bakes a pane): per
-// SceneInfo.glass slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
-// rust/game_rules/src/breakage/glassbreak.rs fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
-// pane's local x spans it / 1 = local z, damage 0‥1), row 1 = (hu, hv, type, 0), row 2 = the dice wave (the blow's u, v, the open threshold on a clump's key, grain), row 3 = (dice cols, rows, seed, 0),
-// then 4 rows per site: (u, v, rot, ring-zone radius) · (radials, 24-bit seed, energy, merge share) · the four rho · the open-piece masks (bands 0 | 1 << 12, 2 | 3 << 12,
-// 4 | 5 << 12, 6). The functions below are the rules' own (rust/sim/src/glass.rs, pattern.rs) statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
+// a listed pane's row (boxmat.wgsl pane…: rust/game_draw boxes/glass.rs is its one writer). The functions below are the rules' own (rust/sim/src/glass.rs, pattern.rs) statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
 // s+1; band 0 the crater, 1‥2 the ring pieces between the chords, 3‥6 the daggers: near / far of the sector's left and right half), territories are the power diagram of the
 // sites — and a piece whose bit is set has fallen out: every ray then passes that part of the pane as if no glass were there (view, mirror, light), which is the hole; the CPU's
 // raycast / segment tests ask rust/sim/src/glass.rs open, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
-const GB_STRIDE: u32 = 36u;
-const GB_HDR: u32 = 4u;
 const GP_ANG_JIT: f32 = 0.6;
 const GP_RHO_LO: f32 = 0.78;
 const GP_RHO_SPAN: f32 = 0.44;
@@ -24,11 +18,10 @@ const GP_DICE_JIT: f32 = 0.6;
 const GP_DICE_DELAY: f32 = 1.4;
 const GP_TAU: f32 = 6.283185307179586;
 struct GbSite { c: vec2f, rot: f32, rz: f32, n: u32, seed: u32, e: f32, merge: f32, rho: vec4f, m: vec4f };
-fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[PANE_BASE + k * GB_STRIDE + r]; }
-fn gbHeader(k: u32) -> vec4f { return gbRow(k, 0u); }
+fn gbHeader(k: u32) -> vec4f { return vec4f(paneSites(k), paneSays(k), paneAxis(k), paneDamage(k)); }
 fn gbSiteLoad(k: u32, i: u32) -> GbSite {
-  let o = GB_HDR + i * 4u; let a = gbRow(k, o); let b = gbRow(k, o + 1u);
-  var S: GbSite; S.c = a.xy; S.rot = a.z; S.rz = a.w; S.n = clamp(u32(b.x + 0.5), 3u, 12u); S.seed = u32(b.y); S.e = b.z; S.merge = b.w; S.rho = gbRow(k, o + 2u); S.m = gbRow(k, o + 3u);
+  let o = i * 4u; let a = paneSite(k, o); let b = paneSite(k, o + 1u);
+  var S: GbSite; S.c = a.xy; S.rot = a.z; S.rz = a.w; S.n = clamp(u32(b.x + 0.5), 3u, 12u); S.seed = u32(b.y); S.e = b.z; S.merge = b.w; S.rho = paneSite(k, o + 2u); S.m = paneSite(k, o + 3u);
   return S;
 }
 /** rust/sim/src/glass.rs hash: (seed, a, b) → 24 bits */
@@ -84,7 +77,7 @@ fn gpSectorBand(S: GbSite, uv: vec2f) -> vec2u {
 /** whose territory uv is in: the least power distance |p − c|² − rz² (n ≥ 1) */
 fn gbNearest(k: u32, n: u32, uv: vec2f) -> u32 {
   var bi = 0u; var bd = 1e30;
-  for (var i = 0u; i < n; i++) { let a = gbRow(k, GB_HDR + i * 4u); let q = uv - a.xy; let d = dot(q, q) - a.w * a.w; if (d < bd) { bd = d; bi = i; } }
+  for (var i = 0u; i < n; i++) { let a = paneSite(k, i * 4u); let q = uv - a.xy; let d = dot(q, q) - a.w * a.w; if (d < bd) { bd = d; bi = i; } }
   return bi;
 }
 /** is piece (sector s, band b) of site S out? */
@@ -100,7 +93,7 @@ fn gbClumpCentre(hh: vec2f, g: vec2f, seed: u32, c: u32, r: u32) -> vec2f {
 }
 /** the order key of the dice clump holding uv (gpDiceClump + gpDiceKey): the nearest jittered centre among the 3 × 3 cells round uv's own, then metres from the blow to it + its hashed delay */
 fn gbClumpKey(k: u32, uv: vec2f) -> f32 {
-  let hh = gbRow(k, 1u).xy; let d3 = gbRow(k, 3u); let g = max(d3.xy, vec2f(1.0)); let seed = u32(d3.z); let blow = gbRow(k, 2u).xy;
+  let hh = paneHalf(k); let g = max(vec2f(paneCols(k), paneRows(k)), vec2f(1.0)); let seed = u32(paneSeed(k)); let blow = paneBlow(k);
   let c0 = vec2i(clamp(floor((uv + hh) / (2.0 * hh) * g), vec2f(0.0), g - 1.0)); let gi = vec2i(g + 0.5);
   var best = vec2u(c0); var bp = vec2f(0.0); var bd = 1e30;
   for (var r = max(0, c0.y - 1); r <= min(gi.y - 1, c0.y + 1); r++) { for (var c = max(0, c0.x - 1); c <= min(gi.x - 1, c0.x + 1); c++) {
@@ -114,7 +107,7 @@ fn gbClumpKey(k: u32, uv: vec2f) -> f32 {
 fn gbOpenUV(k: u32, fl: u32, n: u32, uv: vec2f) -> bool {
   if ((fl & 1u) == 0u) { return false; }
   if ((fl & 8u) != 0u) { return true; }
-  if ((fl & 4u) != 0u) { return gbClumpKey(k, uv) < gbRow(k, 2u).z; }   // a tempered pane letting go: the clumps the wave has reached
+  if ((fl & 4u) != 0u) { return gbClumpKey(k, uv) < paneOpenAt(k); }   // a tempered pane letting go: the clumps the wave has reached
   if (n == 0u) { return false; }
   let S = gbSiteLoad(k, gbNearest(k, n, uv)); let sb = gpSectorBand(S, uv);
   if (sb.y >= 3u && (fl & 2u) == 0u) { return false; }   // the uncut sheet beyond the rings of a pane that has not run

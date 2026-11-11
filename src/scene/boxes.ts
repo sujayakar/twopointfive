@@ -191,9 +191,6 @@ export function matWord(b: Box): number {
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 
-/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): rows of four floats a listed pane has in boxMat (boxmat.wgsl PANE_BASE; rust/game_draw boxes/glass.rs is their one
- *  writer, glass_open.wgsl their reader): zero = whole */
-export const GB_STRIDE = 36;
 
 /** THE BOX WORLD'S TABLES ON THE DEVICE, and what the picture's own plans ask of a static. The rows are the module's (rust/game_draw boxes): draw/world.ts hands them
  *  over as they lie and packs nothing. What is the page's own here is the men's proxies, which are fitted to the rig. */
