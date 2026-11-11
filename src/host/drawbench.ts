@@ -34,7 +34,7 @@ export function drawBench(d: DrawBenchDeps): { bench: Bench; begin: () => void; 
   const blocked = (): string | null => measure.sweep.active ? 'the sweep is running' : covered() ? 'a screen is open' : null;
   const bench = new Bench(d.engine, quality, measure.rec, { idle: d.idle, boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(d.gpu.adapterInfo, d.gpu.adapterFallback, hz()), hz, view: benchView(covered), smoke: d.smoke,
     blocked, covered: () => covered() ? 'a screen came up over it' : null, scene, away: () => { const a = away; away = false; return a; },
-    sweep: { start: o => measure.sweep.start(o), active: () => measure.sweep.active, flipped: () => measure.sweep.flipped, progress: () => measure.sweep.progress, stop: why => measure.sweep.stop(why), settled: () => measure.sweep.settled } });
+    sweep: { start: o => measure.sweep.start(o), active: () => measure.sweep.active, flipped: () => measure.sweep.flipped, words: () => measure.sweep.words, progress: () => measure.sweep.progress, stop: why => measure.sweep.stop(why), settled: () => measure.sweep.settled } });
   measure.bench = bench;
   (window as unknown as { __bench: unknown }).__bench = Object.defineProperties(bench, { hands: { get: () => game.hands() }, sceneDefs: { value: BENCH_SCENES }, begin: { value: (o?: Parameters<typeof benchBegin>[2]) => benchBegin(true, location, o) } });
   const secsOf = (b: string | null) => { const s = parseFloat(b ?? ''); return isFinite(s) && s > 0 ? { measureMs: Math.min(60, s) * 1000, settleMs: Math.min(2000, Math.max(300, s * 500)) } : {}; };
