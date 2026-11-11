@@ -1932,6 +1932,27 @@ pub fn open_sig(g: usize) -> i32 {
     }
     s
 }
+/// EVERY PANE THAT IS OPEN SOMEWHERE: its static, and a word of all that says where (what glass.rs `open` reads of its row with no burst's view in hand)
+pub fn open_panes(g: usize, mut each: impl FnMut(u32, u64)) {
+    let p = &state_read(g).panes;
+    if p.used == 0 {
+        return;
+    }
+    for ri in 0..p.n as usize {
+        let r = p.row_read(ri);
+        if r.n_open == 0 && !dicing(r) && !gone(r) {
+            continue;
+        }
+        let mut h = 0xcbf29ce484222325u64;
+        if !gone(r) {
+            for v in r.w[..GW_GOING].iter().map(|w| *w as u64).chain(r.d.iter().map(|d| d.to_bits())) {
+                h = (h ^ v).wrapping_mul(0x9e3779b97f4a7c15);
+                h ^= h >> 29;
+            }
+        }
+        each(r.w[0], h);
+    }
+}
 /// Is the point where a piece of static `bi` has fallen out
 pub fn open_at(g: usize, bi: u32, x: f64, y: f64, z: f64) -> bool {
     let p = &state_read(g).panes;
