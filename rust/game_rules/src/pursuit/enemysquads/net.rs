@@ -215,7 +215,7 @@ fn calls_tick(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> O
     if let (Some(body), true) = (done.body, g.tab.enemysquads_squad[q].rc.is_some()) {
         g.tab.enemysquads_squad[q].rc.as_mut().unwrap().known.add(body);
         if net_asks(g) {
-            let x = g.m.enemysquads.states.as_ref().and_then(|st| st.of.get(body)).copied();
+            let x = squad_id_of(g, body);
             if let Some(x) = x { if x != q { seen_to(g, x, body); } }
         }
         event(g, q, SquadEventWhat::Found, Some(done.by));
@@ -392,7 +392,7 @@ fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
     best
 }
 /// `st.of.get(m)!` (netCheck's sq)
-fn sq_of(g: &Game, m: GuardId) -> EnemysquadsSquadId { *the_state(g).of.get(m).unwrap() }
+fn sq_of(g: &Game, m: GuardId) -> EnemysquadsSquadId { squad_id_of(g, m).unwrap() }
 /// (netCheck's askFor)
 fn ask_for(g: &mut Game, x: EnemysquadsSquadId, by: GuardId) {
     let t = g.time;

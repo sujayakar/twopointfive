@@ -7,6 +7,8 @@ use alloc::{string::String, vec::Vec};
 /// (duty.rs), and a rule that asks whether he may leave, where his gun is meant to be or where he may go reads it there.
 #[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct Duty {
+    /// the squad he is of, where it is no player's (`group::of`)
+    pub group: Option<GroupId>,
     /// what he has been given to do; None: nothing
     pub task: Option<TaskId>,
     /// he does not leave where he is of his own accord · who last changed that, and when
