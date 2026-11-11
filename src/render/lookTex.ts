@@ -6,7 +6,7 @@
 export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 30;
 /** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain). After the stuffs, the two layers of
  *  what a mud wall is made of under its coat, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves. A box's word has room for 31
- *  stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. EVERYTHING THE SHADER DOES BY STUFF IS A WORD IN THAT STUFF'S ROW
+ *  stuffs (rust/game_draw boxes/pack.rs finish). Ask lookStuffOf for a name's number; never count places. EVERYTHING THE SHADER DOES BY STUFF IS A WORD IN THAT STUFF'S ROW
  *  below (STUFFS): how it is laid, what the weather and use do to it, which way its grain runs, what it is made of under its coat. look.wgsl names no
  *  stuff: it reads the rows (through the prelude, gbuffer.ts lookWgsl), so a new stuff is a row and its map and no line of shader. */
 export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'tarmac', 'grass', 'field stone', 'mud brick'] as const;
@@ -75,7 +75,7 @@ export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?
 export const LOOK_ROLLED: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].rolled ?? 0);
 /** what a coat with no word of its own mirrors head-on */
 export const LOOK_MIRROR_PLAIN = 0.04;
-/** how many words a box may say of what it is made of, 0 = nothing (five bits of the look's word: gbuffer.ts LOOK_WORD, common.wgsl boxStuff) */
+/** how many words a box may say of what it is made of, 0 = nothing (five bits of a box's finish: rows.wgsl finishStuff) */
 export const LOOK_WORDS = 32;
 /** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, which way it runs: 0 its box's own, 1 flat, 2 long) */
 export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, st.runs === 'long' ? 2 : st.runs === 'flat' ? 1 : 0]; });

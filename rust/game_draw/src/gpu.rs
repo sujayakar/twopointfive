@@ -2,7 +2,7 @@
 //! buffer and the page's offsets are written from this (`game_start/src/bin/half`); no shader lays one out.
 use crate::{boxes, men};
 use alloc::string::String;
-use game::rows::{table, LightRow, RowTable};
+use game::rows::{table, LightRow, PackedTable, RowTable};
 
 /// how a shader has a row
 pub enum As {
@@ -15,16 +15,28 @@ pub enum As {
 }
 pub struct Shaded { pub row: RowTable, pub lies: As }
 
+game::packed! {
+    /// whose a proxy is, its colour, and the radius at its other end in millimetres (0: the first's again)
+    pub struct CapsuleWord: u32 {
+        owner: 0, 8;
+        blue: 8, 5;
+        green: 13, 6;
+        red: 19, 5;
+        rb: 24, 8;
+    }
+}
 section! {
     /// one of a man's proxies, as a shader traces it: a round cone
     pub struct Capsule {
         pub a: [f32; 3],
         pub r: f32,
         pub b: [f32; 3],
-        /// whose it is in the low byte, its colour (5, 6, 5 bits) in the next two, and in the top one the radius at `b` in millimetres (0: `r` again)
-        pub misc: u32,
+        pub misc: CapsuleWord,
     }
 }
+
+/// the words that hold parts
+pub const PACKED: [PackedTable; 3] = [boxes::BoxWord::TABLE, boxes::Finish::TABLE, CapsuleWord::TABLE];
 
 pub fn shaded() -> [Shaded; 9] {
     use As::{Record, Struct, Table};
@@ -48,6 +60,11 @@ pub fn text() -> String {
     for Shaded { row, .. } in shaded() {
         s.push_str(row.name);
         for (f, t) in row.fields { let _ = write!(s, " {f}:{}", t.replace(' ', "")); }
+        s.push('\n');
+    }
+    for p in PACKED {
+        s.push_str(p.name);
+        for (n, at, bits) in p.parts { let _ = write!(s, " {n}:{at}+{bits}"); }
         s.push('\n');
     }
     for (n, rows) in BOX_MAT { let _ = write!(s, "{n} {rows}\n"); }
