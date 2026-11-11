@@ -146,3 +146,27 @@ fn there_is_one_wave_a_night() {
         assert_eq!((p.response(), p.response_men().len()), (QrfState::Deployed, 4), "seed {s}: spent, and no more men");
     }
 }
+
+/// THE RULE: the team works by the squad's own code: on the floor, with nobody found, it goes to a room's door as one, works it by the door tools, and goes in together, a beat apart.
+/// A FAILURE MEANS: the team has a door drill of its own again, or walks in one at a time.
+#[test]
+fn the_team_goes_into_a_room_as_a_squad() {
+    for s in SEEDS {
+        let mut p = night(s);
+        p.sam_unseen();
+        rifle_rounds(&mut p);
+        p.alarm_raised_to(2.0);
+        p.until(ETA + 5.0, |p| p.response() == QrfState::Deployed).unwrap_or_else(|| panic!("seed {s}: never on the floor"));
+        let said = |p: &Play| p.g.qrf.log.iter().map(|l| l.what.clone()).collect::<Vec<_>>();
+        let ops = |p: &Play| p.g.qrf.group.map_or(0, |id| p.g.groups[id].tools.ops.len() + p.g.groups[id].tools.done.len());
+        p.until(60.0, |p| ops(p) > 0).unwrap_or_else(|| panic!("seed {s}: a minute on the floor and no door worked: {:?}", said(&p)));
+        let men = p.response_men();
+        let side = p.g.groups[p.g.qrf.group.unwrap()].side;
+        assert!(men.iter().all(|&m| p.g.team(m) == side && game::group::of(&p.g, m) == p.g.qrf.group), "seed {s}: not one group");
+        p.until(90.0, |p| p.g.qrf.op.is_some_and(|op| p.g.tab.doortools_door_op[op].crossed.len() >= 2)).unwrap_or_else(|| panic!("seed {s}: nobody is through a door with a mate: {:?}", said(&p)));
+        let op = p.g.qrf.op.unwrap();
+        let mut at: Vec<f64> = p.g.tab.doortools_door_op[op].crossed.values().copied().collect();
+        at.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert!(at[1] - at[0] < 4.0, "seed {s}: {:.1} s between the first two through", at[1] - at[0]);
+    }
+}
