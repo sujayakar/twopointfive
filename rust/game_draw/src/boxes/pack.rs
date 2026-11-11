@@ -1,6 +1,6 @@
 //! ONE BOX, AS THE GPU READS IT: its place and flags, its material and, where it is cut or round, its planes. A pure function of the box and of what the page says once of its look.
 use super::marks::Marks;
-use super::{Cut, Geo, Look, Mat};
+use super::{BoxWord, Cut, Finish, Geo, Look, Mat};
 use game::m;
 use game::rows::Half2;
 use game::scene_boxes::Box;
@@ -35,16 +35,16 @@ pub fn sent(b: &Box, look: &Look) -> [f64; 3] {
     let dark = look.glass_lum >= 0.0 && b.marks.is_none() && solid_glass(b) && game::v3::lum(b.albedo) > look.glass_lum;
     if dark { [look.glass_lum * wet; 3] } else { b.albedo.map(|a| a * wet) }
 }
-/// its finish as one number: roughness, and 2 for a metal, 4 for an anisotropic one
-pub fn finish(b: &Box, look: &Look) -> f64 {
+/// its finish: how rough, and its look's word (what it is made of, whether it moves, a number of its own)
+pub fn finish(b: &Box, moves: bool, look: &Look) -> Finish {
     let own = b.rough.unwrap_or(1.0);
     let coat = match b.stuff { Some(s) if look.coat[s as usize] >= 0.0 => Some(look.coat[s as usize]), _ if look.glass_lum >= 0.0 && solid_glass(b) => Some(look.glass_rough), _ => None };
     let r = match coat { Some(c) if c < own => c, _ => own };
-    m::min(1.0, m::max(0.0, r)) + if b.metal == Some(true) { 2.0 } else { 0.0 } + if b.aniso == Some(true) { 4.0 } else { 0.0 }
+    let (stuff, moving, own) = if look.on { (stuff(b.stuff, look), moves as u32, own_number(b, moves)) } else { (0, 0, 0) };
+    Finish::of(m::min(1.0, m::max(0.0, r)), (b.metal == Some(true)) as u32, (b.aniso == Some(true)) as u32, stuff, moving, own)
 }
-/// what it is made of, whether it moves, and a number of its own that shifts its map
-fn word(b: &Box, moves: bool, look: &Look) -> f64 {
-    if !look.on { return 0.0; }
+/// a number of its own that shifts its map
+fn own_number(b: &Box, moves: bool) -> u32 {
     let n = |v: f64, k: f64| m::round(v * k) as i64;
     let seed = if !moves { n(b.c[0], 100.0) + 7919 * n(b.c[1], 100.0) + 104729 * n(b.c[2], 100.0) }
         else if let Some(k) = b.mkey { k as i64 }
@@ -53,7 +53,7 @@ fn word(b: &Box, moves: bool, look: &Look) -> f64 {
     h ^= h >> 15;
     h = h.wrapping_mul(0x85eb_ca6b);
     h ^= h >> 13;
-    (stuff(b.stuff, look) + if moves { 32 } else { 0 } + 64 * (h % 45)) as f64
+    h % 45
 }
 pub fn stuff(s: Option<BoxStuff>, look: &Look) -> u32 { s.map_or(0, |s| look.stuff[s as usize]) }
 
@@ -84,9 +84,9 @@ pub fn pack(b: &Box, c: [f64; 3], h: [f64; 3], moves: bool, look: &Look, marks: 
     else if look.cut && cut(b) { f |= CUT_BIT; cut_rows_of(cut_rows, b, look); }
     place(geo, mat, c, b.yaw, b.rot);
     let f3 = |v: [f64; 3]| v.map(|x| x as f32);
-    (geo.h, geo.flags) = (f3(h), f);
+    (geo.h, geo.flags) = (f3(h), BoxWord(f));
     (mat.albedo, mat.cut_height) = (f3(a), b.cut_height as f32);
-    (mat.emits, mat.finish_word) = (f3(em), (finish(b, look) + 8.0 * word(b, moves && key(b) >> 24 != SKIN, look)) as f32);
+    (mat.emits, mat.finish_word) = (f3(em), finish(b, moves && key(b) >> 24 != SKIN, look));
     (mat.albedo_sec, mat.mark_gain) = (f3(s), gain(b, look.bared) as f32);
 }
 

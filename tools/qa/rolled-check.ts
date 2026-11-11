@@ -23,11 +23,10 @@ export async function rolledCheck(): Promise<boolean> {
   const NAMES: string[] = T.LOOK_NAMES, ROLLED: number[] = BRK ? NAMES.map(() => 0) : T.LOOK_ROLLED, MIRRORS: number[] = BRK ? Array.from({ length: 32 }, () => 0.04) : T.LOOK_MIRRORS;
   const look = text('src/render/shaders/look.wgsl'), MAX = Number(/const LOOK_MAX_TILT: f32 = ([0-9.]+);/.exec(look)?.[1]);
   // 1. the table
-  { const { LOOK_WORD } = await import(`${ROOT}/src/render/gbuffer.ts`);
-    const word = T.lookStuffOf('carpaint') as number, layer = NAMES.indexOf('carpaint');
+  { const word = T.lookStuffOf('carpaint') as number, layer = NAMES.indexOf('carpaint');
     const says = NAMES.filter((_, l) => ROLLED[l] > 0), shines = MIRRORS.map((m, w) => m !== T.LOOK_MIRROR_PLAIN ? w : -1).filter(w => w >= 0);
     const rest = MIRRORS.every((m, w) => w === word || m === T.LOOK_MIRROR_PLAIN), whole = (v: number) => v === +v.toFixed(4);   // (the prelude writes four places: a number with more would not be the shader's)
-    verdict(ROLLED.length === NAMES.length && MIRRORS.length === T.LOOK_WORDS && T.LOOK_WORDS === LOOK_WORD.stuffs && T.LOOK_MIRROR_PLAIN === 0.04 && layer >= 0 && word === layer + 1 && ROLLED[layer] >= 0.08 && ROLLED[layer] <= 0.3
+    verdict(ROLLED.length === NAMES.length && MIRRORS.length === T.LOOK_WORDS && T.LOOK_WORDS === 1 + Number(/fn finishStuff\(w: f32\) -> u32 \{ return \(u32\(w\) >> \d+u\) & (\d+)u; \}/.exec(text('src/render/shaders/rows.wgsl'))?.[1]) && T.LOOK_MIRROR_PLAIN === 0.04 && layer >= 0 && word === layer + 1 && ROLLED[layer] >= 0.08 && ROLLED[layer] <= 0.3
       && MIRRORS[word] > 0.04 && MIRRORS[word] <= 0.2 && rest && ROLLED.every(r => r >= 0 && r <= 0.3) && MIRRORS.every(m => m >= 0.02 && m <= 0.2 && whole(m)),
       'car paint says its arrises are rolled over a hand or more and its lacquer mirrors more than a plain coat; every other word a box may say, and no word, reads the plain coat',
       `rolled: ${says.map(n => `${n} ${ROLLED[NAMES.indexOf(n)]} m`).join(', ') || 'no stuff'} of ${NAMES.length} · mirrors: ${shines.map(w => `${NAMES[w - 1]} ${MIRRORS[w]}`).join(', ') || 'no stuff'}, the other ${MIRRORS.length - shines.length} of the word's ${T.LOOK_WORDS} the plain coat's ${T.LOOK_MIRROR_PLAIN} (${rest}) · every roll at most 0.3 m, every mirror in 0.02 to 0.2 and written whole in four places: a lacquer, not a metal`); }
