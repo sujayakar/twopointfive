@@ -1,5 +1,5 @@
 //! THE DESK: what the cards before a game show and press, with no game on the floor. One blank game, laid what a start is laid, so a man is staged with what his card shows. A
-//! page asks by the list below (`asks!`, whose caller on the page is made from it by `bun run tools/draw/gen.ts`) and is answered with a view.
+//! page asks by the list below (`asks!`, whose caller on the page is written from it by the program `half`) and is answered with a view.
 //!
 //! The bytes of an ask: its number (u32), then its fields in order, as a command's. A PRESS changes the desk and answers `Pressed`; every other ask changes nothing.
 use super::command::{Bytes, Field};
@@ -10,6 +10,7 @@ use alloc::{boxed::Box, format, string::{String, ToString}, vec, vec::Vec};
 use core::any::Any;
 use game::game::Game;
 use game::bytes::{ToBytes, W};
+use game::crosses::{Asked, Crosses, Ty, Types};
 use game::difficulty;
 use game::kit::{self, CardFor, MemberKit, TeamFor};
 use game::loadout::entry_of;
@@ -158,7 +159,11 @@ impl Desk {
 }
 
 macro_rules! asks {
-    ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } -> $out:ty = $do:expr;)*) => {
+    ($($(#[doc = $d:expr])* $i:literal $name:ident { $($f:ident: $t:ty),* } -> $out:ty = $do:expr;)*) => {
+        /// the asks, what is said of each, and what each answers
+        pub const ASKS: &[Asked] = &[$(Asked { n: $i, name: stringify!($name), fields: &[$((stringify!($f), stringify!($t))),*] }),*];
+        pub const DOCS: &[&[&str]] = &[$(&[$($d),*]),*];
+        pub fn answers(t: &mut Types) -> Vec<Ty> { vec![$(<$out as Crosses>::ty(t)),*] }
         impl Desk {
             /// the ask in `b`, answered; a number no ask has says so
             pub fn answer(&mut self, b: &[u8]) -> Result<Box<dyn Answer>, String> {

@@ -1,6 +1,6 @@
 //! The types of `chronicle`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,7 +12,7 @@ pub struct ChronEvent {
     pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words, Crosses)]
 pub enum ChronKind {
     #[default] Down,
     Shot,
@@ -127,7 +127,7 @@ pub enum ChronCountKey {
     Loads,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RunCounts {
     pub elapsed: f64,
     pub stage: String,
@@ -167,13 +167,13 @@ pub struct RunCounts {
     pub civ_killed: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct ScoreLine {
     pub label: String,
     pub pts: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct Badge {
     pub id: String,
     pub name: String,
@@ -181,7 +181,7 @@ pub struct Badge {
     pub hint: String,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct Debrief {
     pub counts: crate::chronicle::RunCounts,
     pub score: f64,
@@ -297,7 +297,7 @@ pub fn need_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set
 
 pub fn intel() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("door"), String::from("the keyed door (and his key)")); t.set(String::from("code"), String::from("a door code")); t.set(String::from("routes"), String::from("a colleague's route")); t.set(String::from("rollcall"), String::from("when the radio check is due")); t.set(String::from("rollcallLive"), String::from("that a radio check is on now")); t.set(String::from("checkOn"), String::from("that a man is out looking for a colleague")); t.set(String::from("clearing"), String::from("which room the pair is clearing")); t.set(String::from("blackout"), String::from("who is on the breaker")); t.set(String::from("lockdownPosts"), String::from("where the lockdown posts are")); t.set(String::from("missing"), String::from("that a man is missed")); t.set(String::from("drive"), String::from("that the rack is being looked at")); t } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum DebriefState {
     #[default] Down,
     Done,

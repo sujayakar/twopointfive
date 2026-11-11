@@ -163,7 +163,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 - **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
 - **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
-- **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `tools/draw/gen.ts`, then the reader.
+- **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `half`, then the reader.
 
 ## What holds it
 

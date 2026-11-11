@@ -7,6 +7,7 @@ use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
 pub mod boxworld;
 pub mod bytes;
+pub mod crosses;
 pub mod ids;
 pub mod js;
 pub mod query;

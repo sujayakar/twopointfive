@@ -1,8 +1,9 @@
 //! WHAT A PLAYER OR A PANEL DOES THAT IS NOT INPUT, as one typed list: a host hands the list for a seat before a step, and a replay or another machine is handed the
-//! same bytes. A command is declared here once (`commands!`); the page's writer of it is made from the declaration by `bun run tools/draw/gen.ts`.
+//! same bytes. A command is declared here once (`commands!`); the page's writer of it is written from the declaration by the program `half`.
 //!
 //! The bytes: a command's number (u32), then its fields in order, little end first: u32, i32, f64, or text as its length (u32) and its bytes.
 use alloc::{format, string::String};
+use game::crosses::Asked;
 use game::game::Game;
 use game::savestate::control as saves;
 
@@ -19,7 +20,10 @@ impl<'a> Field<'a> for f64 { fn read(b: &mut Bytes<'a>) -> f64 { f64::from_le_by
 impl<'a> Field<'a> for &'a str { fn read(b: &mut Bytes<'a>) -> &'a str { let n = u32::read(b) as usize; core::str::from_utf8(b.take(n)).unwrap_or("") } }
 
 macro_rules! commands {
-    ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } = $do:expr;)*) => {
+    ($($(#[doc = $d:expr])* $i:literal $name:ident { $($f:ident: $t:ty),* } = $do:expr;)*) => {
+        /// the commands, and what is said of each
+        pub const COMMANDS: &[Asked] = &[$(Asked { n: $i, name: stringify!($name), fields: &[$((stringify!($f), stringify!($t))),*] }),*];
+        pub const DOCS: &[&[&str]] = &[$(&[$($d),*]),*];
         /// the list in `b`, done to the game in its order; a number no command has ends it, and says so
         pub fn apply(g: &mut Game, b: &[u8]) -> Result<(), String> {
             let mut r = Bytes::of(b);
