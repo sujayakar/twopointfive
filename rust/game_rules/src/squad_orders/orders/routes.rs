@@ -13,14 +13,21 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 #[derive(Clone, Copy)]
 enum Pen<'a> {
     Dear(&'a crate::cleared::DearPrice),
-    Walk { dear: &'a JsSet<crate::Num>, wall: f64, unk: Option<&'a crate::cleared::DearPrice> },
+    Walk { dear: &'a Cells, wall: f64, unk: Option<&'a crate::cleared::DearPrice> },
+}
+/// some cells of the walk grid, a bit each
+struct Cells(Vec<u64>);
+impl Cells {
+    fn none(g: &Game) -> Cells { Cells(vec![0; (g.col.nav.w * g.col.nav.h) as usize / 64 + 1]) }
+    fn add(&mut self, i: f64) { if let Some(w) = self.0.get_mut(if i >= 0.0 { i as usize / 64 } else { usize::MAX }) { *w |= 1 << (i as usize % 64); } }
+    fn has(&self, i: f64) -> bool { self.0.get(i as usize / 64).is_some_and(|w| w >> (i as usize % 64) & 1 != 0) }
 }
 fn price(g: &Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
     match pen {
         Pen::Dear(u) => crate::cleared::dear_price(g, u, ix, iz),
         Pen::Walk { dear, wall, unk } => {
             let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
-            if dear.has(crate::Num(i)) { return wall; }
+            if dear.has(i) { return wall; }
             match unk { Some(u) => crate::cleared::dear_price(g, u, ix, iz), None => 1.0 }
         }
     }
@@ -45,7 +52,7 @@ fn free_from(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> V3 {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { squad_orders_free_spot(g, seat, p).unwrap_or(p) } else { p }
 }
 /// the cells of a doorway's width, made all but a wall (sideFor's and route's `dear`)
-fn doorway_cells(g: &Game, o: DoorId, dear: &mut JsSet<crate::Num>) {
+fn doorway_cells(g: &Game, o: DoorId, dear: &mut Cells) {
     let (h, a, width) = (g.dr[o].def.hinge, g.dr[o].def.closed_dir, g.dr[o].def.width);
     let (x, z) = (m::cos(a), m::sin(a));
     let mut s = 0.0;
@@ -53,7 +60,7 @@ fn doorway_cells(g: &Game, o: DoorId, dear: &mut JsSet<crate::Num>) {
         for n in [-0.3, 0.0, 0.3] {
             let cell = g.col.nav.cell;
             let i = crate::scene_collision::nav_grid_idx(g, m::floor((h[0] + x * s - z * n) / cell), m::floor((h[1] + z * s + x * n) / cell));
-            dear.add(crate::Num(i));
+            dear.add(i);
         }
         s += 0.2;
     }
@@ -266,8 +273,8 @@ pub(super) fn squad_orders_for_men(g: &mut crate::game::Game, t: &crate::orders:
     t.clone()
 }
 
-/// One face's cost for the men: every man's walk to the floor before it.
-fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>, side: f64) -> f64 {
+/// One face's cost for the men: every man's walk to the floor before it. One that is `too_dear` before every man has walked is not walked on.
+fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &Cells, side: f64, too_dear: impl Fn(f64) -> bool) -> f64 {
     let (hg, w, th) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let (ux, uz) = (m::cos(th), m::sin(th));
     let f: V3 = [hg[0] + ux * w / 2.0 - uz * side * 0.9, 0.0, hg[1] + uz * w / 2.0 + ux * side * 0.9];
@@ -275,6 +282,7 @@ fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>,
     let to = match to { Some(to) if side_of(g, d, to) == side => to, _ => return f64::INFINITY };
     let mut c = 0.0;
     for &gd in men {
+        if too_dear(c) { break; }   // (a walk only adds to it)
         let p = g.pos_of(gd);
         let from = free_from(g, &crate::seats::here(g), p);
         if dist_xz(from, to) < 0.5 { continue; }
@@ -301,14 +309,14 @@ fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>,
 
 /// Which face of the door the men stack on; Sam's on a near tie, and the known face where one is.
 pub fn squad_orders_side_for(g: &mut crate::game::Game, d: DoorId, men: &[GuardId], sam_side: f64) -> f64 {
-    let mut dear: JsSet<crate::Num> = JsSet::new();   // this doorway, and every doorway whose leaf is shut
+    let mut dear = Cells::none(g);   // this doorway, and every doorway whose leaf is shut
     for i in 0..g.doors.list.len() {
         let o = g.doors.list[i];
         if o != d && !g.dr[o].leaf.latched { continue; }
         doorway_cells(g, o, &mut dear);
     }
-    let mine = side_cost(g, d, men, &dear, sam_side);
-    let other = side_cost(g, d, men, &dear, -sam_side);
+    let mine = side_cost(g, d, men, &dear, sam_side, |_| false);
+    let other = side_cost(g, d, men, &dear, -sam_side, |c| !(c + 1.5 < mine));   // (Sam's is the pick from there on)
     let pick = if other + 1.5 < mine { -sam_side } else { sam_side };
     // (one face on floor the team has been on, the other in a room nobody has: the stack is the known face's)
     let room_a = crate::cleared::cleared_rooms_room_by(g, d, sam_side);
@@ -550,7 +558,7 @@ pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd:
         let way = lane_way(g, w, &path, unk.as_ref().map(Pen::Dear));
         return SquadOrdersRoute { via: match way { Some(way) => all_but_last(&way), None => Vec::new() }, ..route_none() };
     }
-    let mut dear: JsSet<crate::Num> = JsSet::new();   // every doorway locked against him (and the one he is shy of), made all but a wall
+    let mut dear = Cells::none(g);   // every doorway locked against him (and the one he is shy of), made all but a wall
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if !(round && Some(d) == shy) && (!g.dr[d].leaf.locked || !g.dr[d].leaf.latched || crate::squadcast::ring_has(&ring, &g.dr[d].lock_id)) { continue; }
