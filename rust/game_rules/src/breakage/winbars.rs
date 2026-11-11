@@ -41,12 +41,7 @@ pub fn bar_at(g: &crate::game::Game, index: f64) -> bool {
 
 /// The flags a bar this rule took was authored with, or None.
 pub(super) fn bar_flags0(g: &crate::game::Game, index: f64) -> Option<f64> {
-    if crate::glassbreak::glass_break_untouched(g) { return None; }
-    let s = g.sim;
-    for i in 0..::sim::panes::bars_gone(s) as usize {
-        if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
-    }
-    None
+    crate::glassbreak::touched(g).bars.iter().find(|b| b[0] as f64 == index).map(|b| b[1] as f64)
 }
 
 /// Once, as the game is made: the line of fire's question and the blasts' list.
@@ -102,7 +97,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
     let flags = g.tab.boxes[b].flags;
-    if !::sim::panes::bar_take(&crate::glassbreak::glass_ctx(g), js::to_u32(index), js::to_u32(flags)) { return false; }
+    if !::sim::panes::bar_take(g.tab.boxes.lent(), js::to_u32(index), js::to_u32(flags)) { return false; }
     let flags = g.tab.boxes[b].flags;
     g.tab.boxes.edit(b).flags = js::or_bits(flags, HIDE);
     changed(g);
@@ -197,7 +192,7 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, over: &crate::ask::Over, ev:
     if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(&crate::glassbreak::glass_ctx(g), v, from, r, built_boxes(g), &g.k));
+    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(g.tab.boxes.world(), v, from, r, built_boxes(g), &g.k));
     for (i, at) in took {
         let i = i as f64;
         let b = g.col.boxes[i as usize];

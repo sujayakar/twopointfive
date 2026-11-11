@@ -75,9 +75,9 @@ impl Glass {
 
 /// what is broken of static `bi`, into its rows; false = it is whole
 fn broken(g: &Game, bi: u32, out: &mut [Row4]) -> bool {
-    let p = sim::panes::pn(g.sim);
+    let p = &g.tab.boxes.world().panes;
     let Some(at) = p.row_of(bi) else { return false };
-    let r = sim::panes::row_ref(g.sim, at);
+    let r = &p.rows[at];
     let flags = r.w[W_FLAGS];
     let (sites, gone, dice) = ((flags >> 8) as usize, flags & GONE != 0, flags & DICE != 0);
     if sites == 0 && !dice && !gone { return false; }
@@ -86,7 +86,7 @@ fn broken(g: &Game, bi: u32, out: &mut [Row4]) -> bool {
     out[0].w = [sites as f32, says as f32, (r.u_axis != 0) as u32 as f32, r.damage as f32];
     out[1].w = [r.hu as f32, r.hv as f32, r.ty as f32, 0.0];
     if dice {
-        out[2].w = [r.d[D_DICE] as f32, r.d[D_DICE + 1] as f32, sim::panes::dice_threshold(g.sim, bi) as f32, g.k.glassbreak.dice_grain as f32];
+        out[2].w = [r.d[D_DICE] as f32, r.d[D_DICE + 1] as f32, sim::panes::dice_threshold(r) as f32, g.k.glassbreak.dice_grain as f32];
         out[3].w = [r.w[W_COLS] as f32, r.w[W_ROWS] as f32, r.w[W_DICE_SEED] as f32, 0.0];
     }
     for i in 0..sites.min(SITES) {

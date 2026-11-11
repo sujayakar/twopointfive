@@ -20,7 +20,6 @@ use crate::bricks::Smoke;
 use crate::poses::Poses;
 use crate::men::Men;
 use crate::lights::Lights;
-use crate::panes::Panes;
 use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
@@ -45,7 +44,6 @@ pub struct State {
     pub weather: Weather,
     pub smoke: Smoke,
     pub poses: Poses,
-    pub panes: Panes,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -57,15 +55,14 @@ pub struct Part {
     pub pool: bool,
 }
 /// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools: every
-/// game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all.
-pub const PARTS: [Part; 7] = [
+/// game's by size, the one sized largest last.
+pub const PARTS: [Part; 6] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (a pose is ten columns of whole vectors)
-    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();

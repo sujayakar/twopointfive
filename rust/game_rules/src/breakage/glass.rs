@@ -57,7 +57,7 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
 
 /// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand
 pub fn reset_glass(g: &mut crate::game::Game) {
-    ::sim::panes::forget_heard(g.sim);   // its first test is panesUntouched's: the part's first word
+    g.tab.boxes.panes().told.clear();
     let s = match g.m.glass.states.as_mut() { Some(s) => s, None => return };
     s.hits = 0.0;
     s.last_hit_t = -100.0;
@@ -188,7 +188,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
         let since_any = time - s.crack_at;
         let sound = !(crack_gap > 0.0 && since_any >= 0.0 && since_any < crack_gap);
         if sound { s.crack_at = time; }
-        if live_gap > 0.0 && !::sim::panes::heard_gap(g.sim, js::to_u32(pane), who, time, live_gap) {
+        if live_gap > 0.0 && !::sim::panes::heard_gap(g.tab.boxes.panes(), js::to_u32(pane), who, time, live_gap) {
             if sound { crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(point), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + 0.08 * u + 0.3 * w })); }
             raise_noise(g, who);
             return res;

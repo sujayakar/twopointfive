@@ -357,7 +357,7 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("door") { let d = p.g.doors.list[0]; let a = p.g.dr[d].leaf.angle; p.g.dr[d].leaf.angle = a + 0.1; }
     if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
     if f.breaks("die") { p.g.dice.n += 1.0; }
-    if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
+    if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; p.g.tab.boxes.panes().holes.push(sim::panes::Hole { bi, at: vec![[0.0; 3]] }); }
     if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }
     if f.breaks("smoke") { let c = p.g.pos_of(man); game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
     if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes.edit(b).flags = 3.0; }

@@ -21,7 +21,7 @@
 use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{exp, hypot3};
-use crate::panes::MAX_ROWS;
+const MAX_ROWS: usize = 256;
 use crate::state::{state, state_read, GAMES};
 use crate::world::{js_max, js_min, ASK_HOST, K_ROT, MAX_LEAVES, REC, R_C, R_H, R_KIND, World, Seen};
 use core::mem::size_of;
@@ -380,12 +380,7 @@ fn over(g: usize, w: &World) {
 fn panes(w: &World, g: &mut Grid) {
     let was = unsafe { &mut (*core::ptr::addr_of_mut!(PANES))[g.g] };
     let mut now = Panes { n: 0, at: [(0, 0); MAX_ROWS] };
-    if let Some(slot) = w.panes {
-        crate::panes::open_panes(slot, |bi, word| {
-            now.at[now.n] = (bi, word);
-            now.n += 1;
-        });
-    }
+    for p in crate::panes::open_panes(&w.panes) { now.at[now.n] = p; now.n += 1; }
     let (old, new) = (&was.at[..was.n], &now.at[..now.n]);
     if old == new {
         return;
