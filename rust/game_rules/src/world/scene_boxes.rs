@@ -263,7 +263,7 @@ fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: 
     let Some(r) = ray_box(g, ro, rd, id, near.best) else { return };
     if r.t < near.best || (r.t == near.best && (i as f64) < near.bi) {
         // (a pane that hangs is asked whether it is open where the ray meets it)
-        if g.tab.boxes.world().panes.is_some() && js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len()
+        if js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len()
             && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i as f64, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
         *near = Nearest { best: r.t, bi: i as f64, bn: r.n };
     }

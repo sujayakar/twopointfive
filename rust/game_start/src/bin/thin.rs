@@ -3,8 +3,6 @@
 //!   thin [SCENE]… > FILE      every scene of every level below (or those named, `office.bars`), a line a part of the state: the scene, the part, a hash of the part after every frame
 //!   diff FILE OTHER           two builds that print the same played the same, part for part, after every frame of every scene
 //!
-//! For a build from before this file: copy it into that tree's `src/bin` and build it there (it asks only what older trees answer too).
-//!
 //! THE SCENES (each a game of its own on each level, the dressing rows up as a page stands it, Sam unhurt, the men's minds off but for `shells`, which stands the level's room clear if it has one):
 //!   shells   a shotgun in Sam's hands by the trigger, dry and its shells loaded again; a shell and a breaching shell into men near and far, locked doors at the lock and past it, panes,
 //!            lamps, loose things, walls; the same from a man of theirs
@@ -202,7 +200,7 @@ fn bars(t: &mut T) {
             break;
         }
     }
-    let gone = sim::panes::bars_gone(t.p.g.sim) as usize;
+    let gone = t.p.g.tab.boxes.world().panes.bars.len();
     t.reached("bars broken", gone);
     t.reached("bars on the level", list.len());
     // the arm through a pane, a wall, a shut leaf

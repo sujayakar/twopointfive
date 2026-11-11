@@ -140,7 +140,7 @@ fn cut_by_a_pane(kind: PaneType, sill: bool, more: Vec<Json>) -> (Play, f64) {
 /// between the pane and a burst to be at x 17.2, a slab from floor to ceiling and wall to wall: 30 cm of concrete, or a partition
 fn slab(does: &str) -> Vec<Json> { vec![a_box_of("slab", [17.6, 1.5, 12.0], [if does == "concrete" { 0.15 } else { 0.06 }, 1.5, 4.0], "wall", does)] }
 /// is a pane not as it was: a piece out, or a row of it made, as any blow makes one
-fn touched(p: &mut Play, bi: f64) -> bool { p.pane_open(bi) > 0.0 || (sim::state::state_read(p.g.sim).panes.used != 0 && sim::panes::row_index(p.g.sim, bi as u32) >= 0) }
+fn touched(p: &mut Play, bi: f64) -> bool { p.pane_open(bi) > 0.0 || p.g.tab.boxes.world().panes.row_of(bi as u32).is_some() }
 /// does a man reckon that a burst on the floor at (x, 12) would take the glass at a point of the pane out of the way
 fn reckoned_out(p: &mut Play, x: f64, bi: f64, y: f64, view: game::glassbreak::GlassBreakViewOfKind) -> bool {
     let (from, size) = ([x, 0.05 + p.g.k.frag.lift, 12.0], game::glassbreak::GlassBlastOpts { radius: Some(p.g.k.frag.glass_m), power: Some(p.g.k.frag.glass_power), who: None });

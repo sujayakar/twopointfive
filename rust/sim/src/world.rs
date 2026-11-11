@@ -7,9 +7,6 @@ pub const ASK_HOST: u32 = 0xffff_ffff;
 pub const MAX_PANES: usize = 256;
 /// statics one gather can list (the caller's own lists are shorter)
 pub const MAX_LIST: usize = 4096;
-/// doubles and words of a pane's row in the game's block (glass.rs names them)
-pub const GD: usize = 80;
-pub const GW: usize = 64;
 
 /// places for what last stopped a line (a power of two)
 pub const LASTS: usize = 1 << 13;
