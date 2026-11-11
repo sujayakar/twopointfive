@@ -55,21 +55,31 @@ struct Frame {
 };
 
 /// Is this level's switch up? `bit` = one of the scene prelude's level words (WX_KINDS, WX_SNOW, SNOW_SURF, SNOW_WISPS, SNOW_TRACKS, SNOW_GLOW, SNOW_SPARKLE,
-/// SNOW_GRAINS, SNOW_UNDER: render/frame.ts LevelSw). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
+/// SNOW_GRAINS, SNOW_UNDER, below). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
 /// is never taken.
 fn lv(bit: u32) -> bool { return (frame.levelCfg.x & bit) != 0u; }
+// LEVEL SWITCHES: what a level raises, a bit each of levelCfg.x (written by render/frame.ts levelSwitches from the page's own switches)
+const WX_KINDS: u32 = 1u;
+const WX_SNOW: u32 = 2u;
+const SNOW_SURF: u32 = 4u;
+const SNOW_WISPS: u32 = 8u;
+const SNOW_TRACKS: u32 = 16u;
+const SNOW_GLOW: u32 = 32u;
+const SNOW_SPARKLE: u32 = 64u;
+const SNOW_GRAINS: u32 = 128u;
+const SNOW_UNDER: u32 = 256u;
 
 const FLAG_DIRECT: u32 = 1u;
 const FLAG_INDIRECT: u32 = 2u;
 const FLAG_VOLUMETRICS: u32 = 4u;
 const FLAG_SMOKE: u32 = 8u;
-const FLAG_RC_VISWEIGHT: u32 = 16u;
+const FLAG_RC_VIS_WEIGHT: u32 = 16u;
 const FLAG_SMOKE_SHADOWS: u32 = 64u;
 const FLAG_REACH_MASK: u32 = 32u;  // per-light reach masks over the level's 1 m cells (reach.ts): a light whose mask excludes the shading point's cell is skipped as if evalLight were !ok
 const FLAG_BOUNCE: u32 = 128u;
 const FLAG_DITHER: u32 = 256u;
-const FLAG_SOFTSHADOW: u32 = 512u;
-const FLAG_NIGHTVISION: u32 = 1024u;
+const FLAG_SOFT_SHADOW: u32 = 512u;
+const FLAG_NIGHT_VISION: u32 = 1024u;
 const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
 const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries BOX_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
