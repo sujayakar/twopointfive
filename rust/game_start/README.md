@@ -126,7 +126,7 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 
 ## The start (`src/stand.rs`)
 
-`stand(level, assets, opts)` makes a game on a host with no picture. A host that hands what it has as one run of bytes starts by `stand_handed`
+`stand(level, assets, opts)` makes a game on a host with no picture. A host that is not Rust hands the bytes it has and starts by `stand_handed`
 (`src/handed.rs`), which is what `face_start` calls. In order:
 
 0. **`host::lay`** (`src/host/mod.rs`), alone: what the machine keeps (`StartOpts.kept`, one JSON text across a host) and the address's words, the address always over it.

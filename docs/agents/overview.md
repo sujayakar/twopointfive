@@ -127,6 +127,8 @@ models and animations. `STYLE.md` is the look as rules, `docs/level-format.md` t
   (`rust/game_start/README.md` has a ten-line example). It lands on.
 - **Something new to draw:** a section in `rust/game_draw/src/`, then the program `half`, then a reader in `src/draw/`.
 - **A command or a setting:** `rust/game_start/src/host/command.rs`, then `half`.
+- **A question a host asks the game:** a line in `rust/game_start/src/host/calls.rs`, a function of its name in `rust/game_face/src/`, the answer's struct in
+  `rust/game_types/src/view/told.rs`, then `half`: the page calls `Face` (`src/draw/face.ts`).
 - **A level:** its generator under `tools/levels/`, then `tools/levels/export.ts`.
 - After Rust changes a page needs the module built: `bun run tools/blitz/face-build.ts`. The dev server serves the one it finds.
 

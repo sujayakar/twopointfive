@@ -1,8 +1,8 @@
 // A RUN'S SAVES ON A CARD, for whichever page holds the run: the button that goes back to the newest, and the strip of them all. What a card asks of the run is the
 // interface here; nothing below knows the game.
 import { pageSay } from '../view/pagesaid';
+import type { SaveRow } from '../view/read';
 
-export interface SaveRow { key: string; slot: 'auto' | 'manual'; label: string; missionT: number; savedAt: number; regret?: string | null }
 export interface RunSaves {
   /** the mission's clock */
   elapsed(): number;

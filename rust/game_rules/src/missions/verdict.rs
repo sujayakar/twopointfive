@@ -256,18 +256,6 @@ pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
     if g.verdict.run != Some(g.mission.serial) { return None; }
     g.verdict.res.as_ref().map(|r| (r.won, r.word.as_str(), r.why.as_str()))
 }
-
-/// The latched record as lines, for a host with no picture and for holding the record to another's: the word, the why, then a line each of the
-/// seconds, the way won, lost and of, the defenders down and of, the hostages alive and of, void, clean, and the men (`id state downAt downBy
-/// drops walked`, where walked is the count of his path's numbers). None while the mission is being played.
-pub fn verdict_lines(g: &crate::game::Game) -> Option<(bool, String)> {
-    if g.verdict.run != Some(g.mission.serial) { return None; }
-    let r = g.verdict.res.as_ref()?;
-    let men: Vec<String> = r.men.iter().map(|x| format!("{} {} {} {} {} {}", x.id, x.state.as_str(), x.down_at, if x.down_by.is_empty() { "-" } else { x.down_by.as_str() }, x.drops.len(), x.path.len())).collect();
-    Some((r.won, format!("{}\n{}\n{}\n{}\n{} {}\n{} {}\n{}\n{}\n{}\n{}", r.word, r.why, r.secs, r.approach.map_or("-", |a| a.as_str()), r.lost, r.of, r.foes.down, r.foes.of,
-        r.hostages.as_ref().map_or(String::from("-"), |h| format!("{} {}", h.alive, h.of)), r.void, r.clean, men.join(";"))))
-}
-
 /// Has this run's try begun, and is it over: a run a machine may keep.
 pub fn run_on(g: &crate::game::Game) -> (bool, bool) {
     if !live(g) || g.verdict.run != Some(g.mission.serial) { return (false, false); }

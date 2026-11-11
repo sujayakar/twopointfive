@@ -1,23 +1,12 @@
 //! WHAT A PLAYER OR A PANEL DOES THAT IS NOT INPUT, as one typed list: a host hands the list for a seat before a step, and a replay or another machine is handed the
 //! same bytes. A command is declared here once (`commands!`); the page's writer of it is written from the declaration by the program `half`.
 //!
-//! The bytes: a command's number (u32), then its fields in order, little end first: u32, i32, f64, or text as its length (u32) and its bytes.
+//! The bytes: a command's number (u32), then its fields in order (`field`).
+use super::field::{Bytes, Field};
 use alloc::{format, string::String};
 use game::crosses::Asked;
 use game::game::Game;
 use game::savestate::control as saves;
-
-/// bytes being read
-pub struct Bytes<'a> { b: &'a [u8], at: usize }
-impl<'a> Bytes<'a> {
-    pub fn of(b: &'a [u8]) -> Bytes<'a> { Bytes { b, at: 0 } }
-    fn take(&mut self, n: usize) -> &'a [u8] { let r = &self.b[self.at..self.at + n]; self.at += n; r }
-}
-pub trait Field<'a>: Sized { fn read(b: &mut Bytes<'a>) -> Self; }
-impl<'a> Field<'a> for u32 { fn read(b: &mut Bytes<'a>) -> u32 { u32::from_le_bytes(b.take(4).try_into().unwrap()) } }
-impl<'a> Field<'a> for i32 { fn read(b: &mut Bytes<'a>) -> i32 { i32::from_le_bytes(b.take(4).try_into().unwrap()) } }
-impl<'a> Field<'a> for f64 { fn read(b: &mut Bytes<'a>) -> f64 { f64::from_le_bytes(b.take(8).try_into().unwrap()) } }
-impl<'a> Field<'a> for &'a str { fn read(b: &mut Bytes<'a>) -> &'a str { let n = u32::read(b) as usize; core::str::from_utf8(b.take(n)).unwrap_or("") } }
 
 macro_rules! commands {
     ($($(#[doc = $d:expr])* $i:literal $name:ident { $($f:ident: $t:ty),* } = $do:expr;)*) => {
@@ -27,7 +16,7 @@ macro_rules! commands {
         /// the list in `b`, done to the game in its order; a number no command has ends it, and says so
         pub fn apply(g: &mut Game, b: &[u8]) -> Result<(), String> {
             let mut r = Bytes::of(b);
-            while r.at < b.len() {
+            while !r.done() {
                 match u32::read(&mut r) {
                     $($i => { $(let $f = <$t as Field>::read(&mut r);)* let f: fn(&mut Game, $($t),*) = $do; f(g, $($f),*); })*
                     n => return Err(format!("no command has the number {n}")),
