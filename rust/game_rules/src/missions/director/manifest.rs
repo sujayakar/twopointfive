@@ -15,12 +15,10 @@ pub(super) fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
 /// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.
 pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
     let mut manifest = Manifest::default();
-    seam_script_define(script, &mut manifest)?;
+    crate::director::script_define(script, &mut manifest)?;   // (its verbs are the manifest_* and program_* below)
     Ok(manifest)
 }
 
-/// the define pass of the level this names; its verbs are the manifest_* and program_* below
-fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.
 pub(in crate::missions) fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {

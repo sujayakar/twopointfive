@@ -283,7 +283,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_seed_and_h01_match_the_typescript() {
+    fn the_seed_and_h01_are_as_pinned() {
         let cases: [(f64, f64, u64); 5] = [
             (1.25, -3.5, 0x3feae7da80000000),
             (0.0, 0.0, 0x3fe3af6980000000),
@@ -297,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn the_cracks_match_the_typescript() {
+    fn the_cracks_are_as_pinned() {
         let k = crate::knobs::FireK::page();
         let one = |seed, time, back| {
             let v = pops_with(&k, seed, time, back);
@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn the_flicker_matches_the_typescript() {
+    fn the_flicker_is_as_pinned() {
         let k = crate::knobs::FireK::page();
         let cases: [(f64, f64, u64); 5] = [
             (0.3, 10.0, 0x3ff035f24fcffb2c),
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn the_flame_axis_matches_the_typescript() {
+    fn the_flame_axis_is_as_pinned() {
         let k = crate::knobs::FireK::page();
         let cases: [(f64, [f64; 2], [u64; 4]); 3] = [
             (0.5, [1.5, -0.75], [0x3fb7c74a5a234cee, 0xbfa7c74a5a234cee, 0x3fd1d577c39a79b3, 0xbfc1d577c39a79b3]),
@@ -724,19 +724,19 @@ mod tests_2 {
     use super::*;
     // The pinned numbers, at the table's wander 0.14, wander_up 0.1, lift 0.5, depth 0.4, coals 0.26, coal_swing 0.6.
     #[test]
-    fn lamp_wanders_across_on_the_typescript_bits() {
+    fn lamp_wanders_across_on_the_pinned_bits() {
         assert_eq!(wander_across(3.25, 0.14, 0.83, 0.1937, 2.9, 0.7711, 123.456).to_bits(), 0x400aeb1a98f0afd6);
         assert_eq!(wander_across(-7.5, 0.14, 0.71, 0.5021, 3.3, 0.0313, 987.654321).to_bits(), 0xc01e8a3e54d176b0);
     }
     #[test]
-    fn lamp_height_is_capped_at_the_swing_on_the_typescript_bits() {
+    fn lamp_height_is_capped_at_the_swing_on_the_pinned_bits() {
         assert_eq!(wander_height(1.13, 0.5, 0.1, 1.07, 0.4).to_bits(), 0x3ffa5c28f5c28f5c);
         assert_eq!(wander_height(1.13, 0.5, 0.1, 1.6, 0.4).to_bits(), 0x3ffbae147ae147ae);   // a crack's kick, past the swing
         assert_eq!(wander_height(1.13, 0.5, 0.1, 0.6, 0.4).to_bits(), 0x3ff87ae147ae147a);
         assert_eq!(wander_height(1.13, 0.5, 0.1, 0.81, 0.4).to_bits(), 0x3ff951eb851eb852);
     }
     #[test]
-    fn coals_breathe_on_the_typescript_bits() {
+    fn coals_breathe_on_the_pinned_bits() {
         assert_eq!(coal_share(1.0, 0.26, 0.6, 1.31).to_bits(), 0x3fd3bc2b94d94079);
         assert_eq!(coal_share(0.37, 0.26, 0.6, 0.83).to_bits(), 0x3fb61d7f6cc7a978);
     }

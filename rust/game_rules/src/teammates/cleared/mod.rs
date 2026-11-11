@@ -275,7 +275,7 @@ mod tests {
 
     /// The pinned metres of `cleared_rooms_dear_along`, a cell dear where its x is even.
     #[test]
-    fn dear_along_keeps_the_typescripts_bits() {
+    fn dear_along_keeps_its_bits() {
         let mut g = Game::blank();
         let cell = g.col.nav.cell;
         assert_eq!(cell, 0.5);

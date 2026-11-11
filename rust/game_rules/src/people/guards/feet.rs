@@ -660,7 +660,7 @@ mod tests {
 
     // pinned bits, at the page's GUARD_EYE
     #[test]
-    fn dist_term_is_the_typescripts_bits() {
+    fn dist_term_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
@@ -680,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn eye_reach_is_the_typescripts_bits() {
+    fn eye_reach_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),

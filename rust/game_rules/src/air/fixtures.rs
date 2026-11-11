@@ -78,7 +78,7 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
             panic!("the lamp '{}' has an owner, and a fixture feeds it: `skipOwner` is the question's, and only the question's own lamps have one", g.tab.light[l].name);
         }
         if g.light_home.rows.len() >= LAMPS {
-            panic!("a level of more than {} lamps on its fixtures got past levelfit", LAMPS);
+            panic!("a level of more than {} lamps on its fixtures got past the level's fit", LAMPS);
         }
         g.tab.light[l].row = Some(g.light_home.rows.len() as f64);
         g.light_home.lamps.push(l);

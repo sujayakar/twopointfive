@@ -22,7 +22,5 @@ pub struct CuesK {
     /// s alert with nobody in his sight, standing, before he says he is still holding · … and with no shot in his ears
     #[k(8.0)] pub still_secs: f64,
     #[k(5.0)] pub still_quiet: f64,
-    /// s after a loud thing outside his room before a man who has not gone says he is staying
-    #[k(2.0)] pub stay_secs: f64,
     #[k(4.0)] pub overheard_gap: f64,
 }

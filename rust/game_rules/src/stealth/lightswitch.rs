@@ -10,7 +10,7 @@ use alloc::{string::String, vec, vec::Vec};
 type Ray = crate::scene_collision::Raycast;
 
 /// A level box's centre, its half size and its flags, by its place in the level's list (`g.col.boxes`).
-fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
+fn level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
 /// Is this fixture one a wall switch works: on the mains and a light of the room.
@@ -20,7 +20,7 @@ fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
     if f.kind == crate::fixtures::FixtureKind::Analytic { return f.light.is_some(); }
     if f.kind != crate::fixtures::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
     let first = f.boxes[0] as usize;
-    let (c, h, _) = seam_level_box(g, first);
+    let (c, h, _) = level_box(g, first);
     h[1] <= h[0] && h[1] <= h[2] && c[1] > 1.5
 }
 
@@ -53,7 +53,7 @@ fn wall_ray(g: &crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::s
 fn solid(g: &Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
-    let (c, half, flags) = seam_level_box(g, h.index as usize);
+    let (c, half, flags) = level_box(g, h.index as usize);
     if js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
     c[1] + half[1] >= WALL_TOP
 }

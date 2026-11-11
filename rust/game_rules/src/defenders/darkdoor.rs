@@ -703,7 +703,7 @@ mod tests {
 
     /// the static here and `lines()` are the same words in the same order
     #[test]
-    fn lines_are_the_skeletons() {
+    fn the_lines_are_the_same_words_in_the_same_order() {
         let t = crate::darkdoor::lines();
         for &(k, say, he, they) in LINES.iter() {
             let row = t.of(k.as_str()).unwrap();
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn a_new_row_is_the_typescripts_literal_not_blank() {
+    fn a_new_row_is_its_own_start_not_blank() {
         let s = fresh_fear();
         assert_eq!((s.door, s.side, s.left, s.armed, s.arm_t), (-1.0, 1.0, -1e9, -1.0, -1e9));
     }

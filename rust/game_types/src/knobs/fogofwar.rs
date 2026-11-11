@@ -49,22 +49,10 @@ pub struct FogK {
     #[k(0.12)] pub flat: f64,
     /// Never seen on a GPU: the levels, the fill and what a never-seen room should look like are the maintainer's to judge
     #[k(1.0)] pub lit: f64,
-    /// THE AIR IS THE PLACE (the picture only; under `full` alone — it rides the sight table): true = the solver's smoke is drawn over floor the team does not see too,
-    /// dimmed with the ground behind it on the screen — a fire's plume, a grenade's cloud (the maintainer, on a fire with no flame in the fog: 'I think we should
-    /// at least show everything in the environment visible at the start of the level all the time?'). What a hidden MAN smokes or fires is not filed with the
-    /// solver at all (a smoke break and a shot ask the fog at the source). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) go by whose they are:
-    /// particles_draw.wgsl. Nothing reads this knob: the picture is told true (game_draw fog.rs). Never seen on a GPU
-    #[k(true)] pub air: bool,
     /// HOW MANY EYES LIFT THE FOG (the fourth of the fog's principles: to see more, get more eyes on it): Sam, the living teammates in list order, then a sticky camera's feed, then a tutorial's
     /// lookout or a step's own eye — as many as this. Five is filled by a squad of four, so a camera that sends is 'drawn, blind' and a lookout has no place. 7 = the room the renderer's
     /// block and its sight table have (render/fogofwar.ts FOG_EYES; `fog_eye_count`: under five is five, over seven is seven). Never seen on a GPU
     #[k(7.0)] pub eyes: f64,
-    /// WHAT OTHERS LEFT BEHIND STAYS AS THE TEAM LAST SAW IT (the third of the fog's principles; the picture alone, under `full`): (1) a lamp the team has in
-    /// another state than it is in keeps its FACE that way too — the fog already lit the room by a lamp put out unseen while its ceiling panel went dark at
-    /// once (Box.fogEmit, which the upload alone reads: the game's Box.emissive is the real lamp's); (2) a case, a chip or a leaf of paper at rest that the
-    /// team has seen lying there stays in the picture when they look away, where it used to be cut and come back. false = both as they were. Never seen on a
-    /// GPU
-    #[k(true)] pub kept: bool,
     /// … a fill added on top of the dimmed frame: this share of `flat`'s level, corner-shaped by `litAo` / `litAoM` (0 = none — a dark room is dark in the fog)
     #[k(0.0)] pub full_fill: f64,
     /// THE FOG'S SOFT EDGE (the maintainer, 10-15, on the pass level: 'fog of war edges shouldn't be so sharp'; the picture only; under `full` alone — it reads the

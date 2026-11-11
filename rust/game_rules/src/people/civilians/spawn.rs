@@ -42,7 +42,7 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
 fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     let most = crate::levelfit::civ_most(g);
     if g.civilians.len() as f64 >= most {
-        let why = format!("more than {} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)", most);
+        let why = format!("more than {} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed", most);
         let said = crate::levelfit::level_too_big(g, &why);
         panic!("{}", said);
     }

@@ -37,7 +37,7 @@ fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> f64 
     if crate::sense::clear_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
 }
 
-/// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
+/// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody.
 fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
     if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || crate::control::man::blind(g, h)
         || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) { return f64::INFINITY; }
@@ -58,7 +58,7 @@ pub(super) fn rescue_flush_holder(g: &mut crate::game::Game, keep: Option<GuardI
     who
 }
 
-/// Rescue's bounds as the shape `inBounds` takes: the same four numbers (ts:108, ts:120 and the rest).
+/// The rescue's bounds as the shape the rooms' question takes: the same four numbers.
 fn plan_bounds(g: &Game) -> Option<crate::scene_level::BreachPlanBounds> {
     crate::rescue::rescue_bounds(g).map(|r| crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 })
 }
@@ -75,7 +75,7 @@ pub(super) fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &
     out
 }
 
-/// May he be sent now? (the closure `free` of ts:136)
+/// May he be sent now?
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
     if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() { return false; }
     if crate::squad::in_bounds(g.pos_of(h), b, None) && in_room { return false; }
@@ -89,7 +89,7 @@ fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds
     at_rest || st == crate::game::GuardState::Patrol || st == crate::game::GuardState::Suspicious || st == crate::game::GuardState::Search
 }
 
-/// One way a man could go: goal, marks on the way, where he walks now, the door it takes him to. (the map of ts:164)
+/// One way a man could go: goal, marks on the way, where he walks now, the door it takes him to.
 fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, Option<V3>, Option<V3>) {
     let via = if goal == Goal::Side { crate::rescue::rescue_side_way(g) } else { Vec::new() };
     let at = match via.first() { Some(p) => Some(*p), None => rescue_flush_point_of(g, goal, alive) };
@@ -179,7 +179,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     g.rescue.flush.next_at = g.time + 1.0;   // nobody free this second: asked again the next
 }
 
-/// That door's floor is in the line of guns his side knows of. (the closure `covered` of ts:167)
+/// That door's floor is in the line of guns his side knows of.
 fn covered(g: &mut Game, h: GuardId, door: Option<V3>) -> bool {
     match door { Some(d) => crate::lanes::lane_covers(g, h, d), None => false }
 }

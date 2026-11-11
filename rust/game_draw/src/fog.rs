@@ -73,7 +73,10 @@ pub fn fill(g: &Game, out: &mut Vec<Fog>, bared: bool) {
     f.flat = m::max(0.0, k.flat) as f32;
     f.full = 1;
     f.full_flat = m::max(0.0, k.flat * k.full_fill) as f32;
+    // THE AIR IS THE PLACE: smoke is drawn over floor the team does not see too, dimmed with the ground behind it (the maintainer, on a fire with no flame in the fog: 'I think we
+    // should at least show everything in the environment visible at the start of the level all the time?'). What a hidden man smokes or fires is not filed at all.
     f.air = 1;
+    // WHAT OTHERS LEFT BEHIND STAYS AS THE TEAM LAST SAW IT: a lamp put out unseen keeps its face, a thing seen lying there stays in the picture.
     f.kept = 1;
     eyes(g, f);
     lamps(g, f);
