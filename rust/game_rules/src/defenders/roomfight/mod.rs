@@ -13,7 +13,7 @@ pub use line::*;
 pub mod operative;
 pub use operative::*;
 pub mod post;
-pub use post::{loose_at, at_post, back_on, def_of, fights_as_he_goes, is_loose, loose, on_leg, on_leg_of, leg_ended, sent_to, run, send, send_by, Leg};
+pub use post::{dropped, station, watched, loose_at, at_post, back_on, def_of, fights_as_he_goes, is_loose, loose, on_leg, on_leg_of, leg_ended, sent_to, run, send, send_by, Leg};
 pub mod rooms;
 pub use rooms::*;
 use crate::game::Game;
@@ -24,7 +24,7 @@ use crate::v3::{self, Quat, V3};
 /// here). What his duty has his gun on (`covers`) is that point, so it moves with it; kept as a copy, equal numbers stand for "the same point".
 /// His fix is not touched: where he thinks his man is, is his own, and no rule makes the watched point his fix any more.
 pub fn def_move_pt(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
-    g.tab.roomfight_def[d].pt = to;
+    let (gd, task, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].task, watched(g, d));
+    g.tab.task[task].watch = Some(to);
     if g.gd[gd].duty.gun == Some(old) { g.gd[gd].duty.gun = Some(to); }
 }

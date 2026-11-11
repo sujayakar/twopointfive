@@ -152,7 +152,7 @@ fn take_aim_at_a_hostage(g: &mut Game, cap: GuardId) {
     }
     let at = chest_of(g, v);
     let def = crate::roomfight::def_of(g, cap);
-    if let Some(d) = def { g.fight.defs.retain(|&x| x != d); }
+    if let Some(d) = def { crate::roomfight::dropped(g, d); }
     let held = g.gd[cap].duty.holds;
     crate::duty::hold(g, cap, false, "rescue");
     if g.gd[cap].script.is_some() {
