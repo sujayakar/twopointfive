@@ -1,19 +1,16 @@
 //! WHAT A HOST IS TOLD OF THE GAME beside what it draws. Reads: no word of the state is written.
 use super::Held;
+use game::handed::CursorNow;
 use game::view::{ActionRow, CursorView, DebriefView, HostNow, KnobRow, RunView, ShownRow, Tally, TallyMan, TickView};
-use game_start::host::{actions, knobs, shown};
+use game_start::host::{actions, field::Laid, knobs, shown};
 
 /// the seat this machine shows
 fn shown_seat(x: &Held) -> game::ids::SeatId { x.g.local_seat.unwrap_or(x.g.seat) }
 pub fn tick_view(x: &Held) -> TickView { game::view::tick_view(&x.g, &game::seats::seat(&x.g, shown_seat(x))) }
 pub fn debrief_view(x: &Held) -> DebriefView { game::view::debrief_view(&x.g, &game::seats::seat(&x.g, shown_seat(x))) }
 pub fn run_view(x: &Held) -> RunView { game::verdict::run_view(&x.g) }
-/// the cursor x y, the picture w h, the camera's view and projection, their inverse
-const CURSOR: usize = 36;
-pub fn cursor_view(x: &Held, seat: Option<u32>, n: Vec<f64>) -> CursorView {
-    assert!(n.len() == CURSOR, "cursor_view: {} numbers, and a cursor is {}", n.len(), CURSOR);
-    let m16 = |at: usize| -> [f32; 16] { std::array::from_fn(|i| n[at + i] as f32) };
-    let now = HostNow { mouse: [n[0], n[1]], client: [n[2], n[3]], view_proj: m16(4), inv_view_proj: m16(20) };
+pub fn cursor_view(x: &Held, seat: Option<u32>, Laid(c): Laid<CursorNow>) -> CursorView {
+    let now = HostNow { mouse: c.mouse, client: c.client, view_proj: c.view_proj.map(|v| v as f32), inv_view_proj: c.inv_view_proj.map(|v| v as f32) };
     let s = seat.and_then(|s| x.g.seats.get(s as usize).copied()).unwrap_or(shown_seat(x));
     game::view::cursor_view(&x.g, &game::seats::seat(&x.g, s), &now)
 }

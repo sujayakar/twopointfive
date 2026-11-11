@@ -6,6 +6,7 @@
 //     the next tick that runs;
 //   - a seat nobody is sitting in holds nothing.
 // Pure data and arithmetic: no clock, no socket, nothing of the game.
+import { SeatInput } from '../draw/input';
 import type { WireCmd } from './wire';
 import { FIRST, heldOf, idleOf, withEdges, NET } from './wire';
 
@@ -26,7 +27,7 @@ export class SeatLine {
     if (t >= next) { if (!this.ahead.has(t)) this.ahead.set(t, c); return; }
     this.late++;
     if (c.p) for (const k of c.p) if (!this.owedP.includes(k)) this.owedP.push(k);
-    if (c.c) this.owedC |= c.c; if (c.w) this.owedW += c.w;
+    this.owedC |= c.n[SeatInput.clicked]; this.owedW += c.n[SeatInput.wheel];
     if (t > this.knownT) { this.known = c; this.knownT = t; }
   }
   /** the record tick `t` runs on for this seat (see the head). `sat` = somebody is connected to the seat */

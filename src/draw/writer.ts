@@ -15,6 +15,8 @@ export class Writer {
   protected doubles(v: ArrayLike<number>): void { this.u32(v.length); const at = this.room(v.length * 8); for (let i = 0; i < v.length; i++) this.d.setFloat64(at + i * 8, v[i], true); }
   protected text(s: string): void { const most = s.length * 3, at = this.room(4 + most), n = enc.encodeInto(s, this.b.subarray(at + 4, at + 4 + most)).written; this.d.setUint32(at, n, true); this.n = at + 4 + n; }
   protected bytes(b: Uint8Array): void { this.u32(b.length); this.put(b); }
+  /** a row, as it lies */
+  protected laid(row: Float64Array): void { this.put(new Uint8Array(row.buffer, row.byteOffset, row.byteLength)); }
   /** what was written once before, again */
   put(b: Uint8Array): void { const at = this.room(b.length); this.b.set(b, at); }
   /** what was written, which is then nothing (the bytes stand until the next write) */
