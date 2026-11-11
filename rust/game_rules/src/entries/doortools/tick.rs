@@ -63,14 +63,7 @@ fn door_tools_can_reach(g: &crate::game::Game, d: DoorId, side: f64, p: V3) -> b
 }
 /// Sam himself beyond the door, in a stun can's reach
 pub(super) fn door_tools_sam_behind(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
-    if crate::condition::down(g, g.pl[g.player].ch) {
-        return false;
-    }
-    if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
-        return false;
-    }
-    let p = g.seat_pos(&crate::seats::here(g));
-    door_tools_can_reach(g, d, side, p)
+    crate::group::player(g).is_some_and(|pl| door_tools_can_reach(g, d, side, g.player_pos(pl)))
 }
 /// is `x` part of this entry, for the can
 fn entry_own(g: &Game, op: DoorOpId, x: GuardId) -> bool {
@@ -96,9 +89,6 @@ fn entry_own(g: &Game, op: DoorOpId, x: GuardId) -> bool {
 /// a living teammate in the can's reach who is no part of this entry
 pub(super) fn door_tools_mate_behind(g: &crate::game::Game, op: DoorOpId) -> Option<GuardId> {
     let d = dop!(g, op).door;
-    if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
-        return None;
-    }
     let side = dop!(g, op).side;
     for x in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if !entry_own(g, op, x) {
@@ -155,8 +145,8 @@ pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::S
         if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.at == crate::orders::At::Stacked) {
             continue;
         }
-        let sam = g.seat_pos(seat);
-        let i = if crate::orders::side_of(g, door, post) == crate::orders::side_of(g, door, sam) { 0 } else { 1 };
+        let lead = crate::group::lead_pos(g, seat);
+        let i = if crate::orders::side_of(g, door, post) == crate::orders::side_of(g, door, lead) { 0 } else { 1 };
         by.get_or_insert_with(door, || [Vec::new(), Vec::new()])[i].push(gd);
     }
     let mut out = Vec::new();

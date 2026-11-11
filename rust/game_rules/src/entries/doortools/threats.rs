@@ -133,18 +133,18 @@ pub(super) fn door_tools_bang_spot(g: &mut crate::game::Game, op: DoorOpId, from
     // ours in a flash: the men this can would blind, not the ones bang() spares
     let word = word_ops(g, &crate::seats::here(g), op);
     let gate = gate_ops(g, op);
-    let sams = crate::orders::squad_orders_sams(&crate::seats::here(g));
     let mut ours: Vec<V3> = Vec::new();
     for x in g.guards.clone() {
-        let mine = if sams { g.team(x).ours() } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) };
+        let mine = crate::group::ours(g, x);
         if !mine || crate::condition::down(g, g.gd[x].ch) { continue; }
         let at = g.pos_of(x);
         if on_entry(g, op, &word, &gate, x) || near_door(g, d, side, at) { continue; }
         ours.push(at);
     }
-    let pl = g.player;
-    let sam_at = g.player_pos(pl);
-    if !(crate::condition::down(g, g.pl[pl].ch) || (sams && near_door(g, d, side, sam_at))) { ours.push(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))); }
+    if let Some(pl) = crate::group::player(g) {
+        let at = g.player_pos(pl);
+        if !near_door(g, d, side, at) { ours.push(at); }
+    }
     let (into_min, throw_m, air_h, flash_m, lit) = (g.k.doortools.bang_into_min, g.k.doortools.thr_throw_m, g.k.doortools.air_h, g.k.doortools.thr_flash_m, g.k.doortools.bang_into_lit);
     // (at, n, sc, deep)
     let mut cands: Vec<(V3, f64, f64, f64)> = Vec::new();
@@ -218,15 +218,13 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     let word = word_ops(g, &crate::seats::here(g), op);
     let gate = gate_ops(g, op);
-    let sams = crate::orders::squad_orders_sams(&crate::seats::here(g));
-    let pl = g.player;
-    let sam_pos = g.player_pos(pl);
-    let sam_ours = sams && near_door(g, d, side, sam_pos);
+    let sam_pos = g.player_pos(g.player);
+    let sam_ours = crate::group::is_seats(g) && near_door(g, d, side, sam_pos);
     let team = match dop!(g, op).threw { Some(th) => g.team(th), None => crate::orders::squad_orders_team(&crate::seats::here(g)) };
     g.tab.item[it].side = Some(team);
     let mut rest: Vec<GuardId> = Vec::new();
     for x in all.iter().copied() {
-        let ours = on_entry(g, op, &word, &gate, x) || ((if sams { g.team(x).ours() } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) }) && { let at = g.pos_of(x); near_door(g, d, side, at) });
+        let ours = on_entry(g, op, &word, &gate, x) || (crate::group::ours(g, x) && { let at = g.pos_of(x); near_door(g, d, side, at) });
         if !ours { rest.push(x); }
     }
     g.guards = rest.clone();
@@ -381,7 +379,7 @@ pub(super) fn door_tools_threat_note(g: &mut crate::game::Game, op: DoorOpId) {
         let (a, to, who) = match (from, to, who) { (Some(a), Some(b), Some(w)) => (a, b, w), _ => continue };
         if !threat_beyond(g, op, a) { continue; }
         let by = match g.guards.iter().copied().find(|x| g.char_id(*x) == who) { Some(x) => x, None => continue };
-        if g.team(by).ours() || crate::condition::down(g, g.gd[by].ch) { continue; }
+        if crate::group::ours(g, by) || crate::condition::down(g, g.gd[by].ch) { continue; }
         let (bx, bz) = (to[0] - a[0], to[2] - a[2]);
         let l2 = js::or(bx * bx + bz * bz, 1e-6);
         for x in dop!(g, op).from.keys() {
