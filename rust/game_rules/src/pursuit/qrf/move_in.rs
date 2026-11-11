@@ -21,26 +21,6 @@ fn way_open(g: &Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
 fn marks_door(g: &Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
     match word(&mk.door) { None => None, Some(d) => crate::doors::doors_by_name(g, d) }
 }
-/// Writes his station, at floor height. Once he has been ordered onto it the station is his script's goal, so the goal creeps with it and no new leg
-/// starts. Returns the station and whether his goal was that very point (asked by value).
-fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
-    let old = *station_of(g, x);
-    let tied = g.gd[x].script.map_or(false, |s| s.goal == Some(old));
-    let st = station_of(g, x);
-    st[0] = want[0];
-    st[1] = 0.0;
-    st[2] = want[2];
-    let st = *st;
-    if tied {
-        if let Some(s) = g.gd[x].script.as_mut() { s.goal = Some(st); }
-        // (… and so does the runner's settle watch: it holds the goal it was made for, which is this station, so a station written here leaves the watch
-        //  standing with its best and its clock. Left behind, every creep would make a fresh watch, and a man who should stand still as "stuck short of his
-        //  mark" would go on easing onto it.)
-        if let Some(mut w) = g.m.squad.settle_watch.get(x).copied() { if w.goal == old { w.goal = st; g.m.squad.settle_watch.set(x, w); } }
-    }
-    (st, tied)
-}
-
 // ---------------------------------------------------------------- the calls
 /// What this call gets: the way in, how many, how long, off the game's own die.
 pub(super) fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
@@ -386,16 +366,12 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     match g.qrf.phase {
         Phase::File => phase_file(g, &el),
         Phase::Fan => if g.qrf.phase_t > ENTRY_HOLD { pick_target(g, &mut el, true); },
-        Phase::Move => phase_move(g, &mut el, dt),
-        Phase::Stack => phase_stack(g, &el),
-        Phase::Breach => phase_breach(g, &mut el),
-        Phase::Bang => phase_bang(g, &el),
-        Phase::Flow => phase_flow(g, &mut el),
+        Phase::Move => phase_move(g, &mut el),
         Phase::Drill => phase_drill(g, &mut el),
         Phase::Called => if g.qrf.phase_t > 1.2 { hold360(g, &el); },
-        Phase::Hold => if g.qrf.phase_t > HOLD360_SECS { pick_target(g, &mut el, false); },
+        Phase::Hold => { do_as_told(g); if g.qrf.phase_t > HOLD360_SECS { pick_target(g, &mut el, false); } }
         Phase::Fight => { phase_fight(g, &mut el); return; }   // the AI has them: no script senses to run
-        Phase::Regroup => if g.qrf.phase_t > 1.5 || el.iter().all(|&x| arrived(g, x)) { pick_target(g, &mut el, true); },
+        Phase::Regroup => { do_as_told(g); if g.qrf.phase_t > 1.5 || on_their_marks(g, &el) { pick_target(g, &mut el, true); } }
         Phase::Landing => {}
     }
     scripted_senses(g, &el, dt);
@@ -777,7 +753,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
     let holds = |p: &crate::scene_level::RoomClearPlan| p.bounds.is_some() && crate::squad::in_bounds(fix, p.bounds, None);
     let mut best: Option<(String, &Vec<crate::scene_level::RoomClearPlan>, f64)> = None;
     for (k, ps) in rooms.iter() {
-        let spent = g.tune.qrf_squad && g.qrf.spent.as_ref().map_or(false, |s| s.room == k && s.fix_t >= g.qrf.fix_t);
+        let spent = g.qrf.spent.as_ref().map_or(false, |s| s.room == k && s.fix_t >= g.qrf.fix_t);
         let is_in = ps.iter().any(|p| holds(p)) && !spent;
         let t = m::max(g.qrf.cleared.get(k.clone()).copied().unwrap_or(-1e9), g.cleared_at.get(k.clone()).copied().unwrap_or(-1e9));
         let recent = g.time - t < RECLEAR_SECS;
@@ -836,7 +812,6 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
     if same && prev_phase == Phase::Move { return; }   // (the walk goes on as it is, and nothing is said twice)
     if same && next.kind == TargetKind::Point && dist_xz(from, next.pos) < 3.0 { g.qrf.phase = Phase::Hold; g.qrf.phase_t = 0.0; return; }
     g.qrf.target = Some(next.clone());
-    start_move(g, el);
     let lead = el[0];
     let text = if next.kind == TargetKind::Room {
         let said = door_said(g, &next.plan.as_ref().unwrap().door);
@@ -852,6 +827,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
     radio(g, Some(lead), &text);
     let what = format!("target:{}:{}{}", next.kind.as_str(), next.room, if sweep { ":sweep" } else { "" });
     note(g, &what);
+    start_move(g, el);
 }
 
 /// The next of the level's named places to walk to: the nearest by the walk from `fix` nobody of theirs has stood on lately.
@@ -905,110 +881,28 @@ pub(super) fn nearest_free(g: &crate::game::Game, p: V3) -> Option<V3> {
 }
 
 // ---------------------------------------------------------------- movement as one element
-/// Where the walk to a room ends: a length past the stack marks along the stack line, away from the door.
-fn approach_end(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> V3 {
-    let s = p.stack;
-    let u = v3::normalize([s[1][0] - s[0][0], 0.0, s[1][2] - s[0][2]]);
-    for k in [1.6, 1.1, 0.6, 0.0] {
-        let q: V3 = [s[0][0] + u[0] * k, 0.0, s[0][2] + u[2] * k];
-        if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, s[0], q) { return q; }
-    }
-    v3::copy(s[0])
-}
-
-/// The point man takes the leg to the target; each man behind walks to one station point of his own, moved under him.
+/// Off to the target: a room, to its door and in by it; a place, all of them by one way.
 fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
-    use crate::character::{Stance, UpperMode};
-    let lead = el[0];
     g.qrf.phase = crate::qrf::Phase::Move;
     g.qrf.phase_t = 0.0;
-    g.qrf.trail = vec![v3::copy(g.pos_of(lead))];
-    g.qrf.station_t = 0.0;
-    g.qrf.point_id = g.char_id(lead);
-    let t = g.qrf.target.clone().unwrap();
-    let goal = if t.kind == crate::qrf::TargetKind::Room { approach_end(g, t.plan.as_ref().unwrap()) } else { t.pos };
-    g.qrf.move_speed = if g.qrf.cue_rush { RUSH_SPEED } else { MOVE_SPEED };
-    g.qrf.cue_rush = false;
-    let speed = g.qrf.move_speed;
-    route(g, lead, &[goal], Some(crate::squad::OrderPatch { speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), stance: Some(Some(Stance::None)), upper: Some(Some(UpperMode::Aim)), aim_at: Some(None), crouch: Some(Some(false)), ..Default::default() }));
-    for (i, &x) in el.iter().enumerate() {
-        if i == 0 { continue; }
+    for &x in el {
         crate::mind::set_state(g, x, crate::game::GuardState::Search, "qrf");
-        let p = g.pos_of(x);
-        let (st, _) = write_station(g, x, p);
         g.qrf.wps.delete(x);
-        let aim = *aim_of(g, x);
-        crate::squad::order(g, x, crate::squad::OrderPatch { goal: Some(Some(st)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), stance: Some(Some(Stance::None)), upper: Some(Some(UpperMode::Aim)), crouch: Some(Some(false)), aim_at: Some(Some(aim)), held: true, ..Default::default() });
+    }
+    let t = g.qrf.target.clone().unwrap();
+    let pace = if g.qrf.cue_rush { RUSH_SPEED } else { MOVE_SPEED };
+    g.qrf.cue_rush = false;
+    if t.kind == crate::qrf::TargetKind::Room {
+        if !start_drill(g, el) { leave_it(g, el, &t.room, &format!("can't get into the {} from here \u{2014} next", t.room)); }
+    } else if told(g, el, &crate::orders::rows::movethere::ORDER, t.pos, Some(pace)).is_some() {
+        hold360(g, el);
     }
 }
 
-/// His aim point, made on first asking: the row itself.
-fn aim_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
-    let p = g.pos_of(m);
-    g.qrf.aim_pts.get_or_insert_with(m, || [p[0], 1.0, p[2] + 1.0])
-}
-
-/// His station, made on first asking: the row itself.
-fn station_of<'g>(g: &'g mut crate::game::Game, m: GuardId) -> &'g mut V3 {
-    let p = g.pos_of(m);
-    g.qrf.stations.get_or_insert_with(m, || v3::copy(p))
-}
-
-/// The element walking: the trail, the stations down the file, the pace, a fresher fix, and arriving.
-fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
-    use crate::character::{Stance, UpperMode};
-    use crate::qrf::TargetKind;
-    let lead = el[0];
+/// The element walking: a fresher fix, and arriving.
+fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     let t = match g.qrf.target.clone() { Some(t) => t, None => { pick_target(g, el, true); return; } };
-    if g.gd[lead].script.is_none() || g.char_id(lead) != g.qrf.point_id { start_move(g, el); return; }   // (the point man died: the new #1 takes the walk up)
-    // the trail the file walks in: a crumb every 0.6 m
-    let lp = g.pos_of(lead);
-    let tail = g.qrf.trail[g.qrf.trail.len() - 1];
-    if dist_xz(tail, lp) > 0.6 {
-        g.qrf.trail.push(v3::copy(lp));
-        if g.qrf.trail.len() > 80 { g.qrf.trail.remove(0); }
-    }
-    g.qrf.station_t -= dt;
-    if g.qrf.station_t <= 0.0 {
-        g.qrf.station_t = STATION_SECS;
-        let lead_ch = g.gd[lead].ch;
-        let fwd = crate::character::character_forward(g, lead_ch);
-        for (k, &x) in el.iter().enumerate() {
-            if k == 0 { continue; }
-            let along = k as f64 * FILE_SPACING;
-            let back = trail_point(&g.qrf.trail, lp, along);
-            let dir = trail_dir(&g.qrf.trail, lp, along).unwrap_or(fwd);
-            let side: f64 = if k == 1 { 1.0 } else if k == 2 { -1.0 } else { 0.0 };
-            let mut want: V3 = [back[0] + dir[2] * FILE_OFFSET * side, 0.0, back[2] - dir[0] * FILE_OFFSET * side];
-            if crate::scene_collision::nav_grid_is_blocked(g, want[0], want[2]) || (side != 0.0 && !crate::scene_collision::nav_grid_walkable(g, back, want)) {
-                want = if crate::scene_collision::nav_grid_is_blocked(g, back[0], back[2]) { nearest_free(g, back).unwrap_or(back) } else { back };
-            }
-            let (st, tied) = write_station(g, x, want);
-            if !tied {   // (a man fresh off another leg is put on his station)
-                let aim = *aim_of(g, x);
-                crate::squad::order(g, x, crate::squad::OrderPatch { goal: Some(Some(st)), face: Some(None), strafe: Some(Some(false)), stance: Some(Some(Stance::None)), upper: Some(Some(UpperMode::Aim)), crouch: Some(Some(false)), aim_at: Some(Some(aim)), held: true, ..Default::default() });
-            }
-            let p = g.pos_of(x);
-            let gap = dist_xz(p, st);
-            let pace = g.qrf.move_speed * (if gap > 3.5 { 1.4 } else if gap > 1.8 { 1.15 } else if gap < 0.5 { 0.75 } else { 1.0 });
-            g.gd[x].script.as_mut().unwrap().speed = Some(pace);
-            // sectors: two and three quarter out ahead, four looks back down the trail every few seconds
-            let yaw_f = m::atan2(dir[0], dir[2]);
-            let yaw = if k == 3 { if m::sin(g.time * 0.9) > 0.3 { yaw_f + m::PI } else { yaw_f } } else { yaw_f + (if k == 1 { -1.0 } else { 1.0 }) };
-            let a = aim_of(g, x);
-            a[0] = p[0] + m::sin(yaw) * 5.0;
-            a[1] = 1.0;
-            a[2] = p[2] + m::cos(yaw) * 5.0;
-            let a = *a;
-            g.gd[x].script.as_mut().unwrap().aim_at = Some(a);
-        }
-        // the point man eases off if the file has stretched
-        let mut stretch: Vec<f64> = vec![0.0];
-        for (i, &x) in el[1..].iter().enumerate() { stretch.push(dist_xz(g.pos_of(x), lp) - (i + 1) as f64 * FILE_SPACING); }
-        let worst = m::max_n(&stretch);
-        let pace = g.qrf.move_speed * (if worst > 5.0 { 0.35 } else if worst > 3.0 { 0.7 } else { 1.0 });
-        g.gd[lead].script.as_mut().unwrap().speed = Some(pace);
-    }
+    do_as_told(g);
     // a fresher fix elsewhere: re-target (not more than every few seconds, and only for a real move of it)
     if let Some(b) = fix_of(g) {
         if b.t > g.qrf.fix_t + 0.5 && dist_xz(b.pos, g.qrf.fix.unwrap_or(b.pos)) > RETARGET_M && g.time - g.qrf.target_at > 3.0 {
@@ -1022,22 +916,7 @@ fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
         if g.qrf.fix_t > g.qrf.target_at && dist_xz(f, t.pos) > RETARGET_M && g.time - g.qrf.target_at > 3.0 && g.qrf.cue_rush { pick_target(g, el, false); return; }
     }
     if g.time - g.qrf.target_at > RETARGET_SECS && g.qrf.phase_t > RETARGET_SECS { pick_target(g, el, true); return; }
-    // there: a room: into the stack; a point: hold all round, then choose again
-    let there = arrived(g, lead) || (dist_xz(lp, g.gd[lead].script.and_then(|s| s.goal).unwrap_or(lp)) < 1.0 && g.gd[lead].speed < 0.2 && g.qrf.phase_t > 2.0);
-    let eta = 60.0;
-    if there || g.qrf.phase_t > eta {
-        if t.kind == TargetKind::Room && dist_xz(lp, t.plan.as_ref().unwrap().stack[0]) < 4.0 {
-            if !(g.tune.qrf_squad && start_drill(g, el)) { start_stack(g, el); }
-        } else if t.kind == TargetKind::Room {
-            let text = format!("can't get into the {} from here — next", t.room);
-            radio(g, Some(lead), &text);
-            let when = g.time - RECLEAR_SECS + 30.0;
-            g.qrf.cleared.set(t.room.clone(), when);
-            hold360(g, el);
-        } else {
-            hold360(g, el);
-        }
-    }
+    if on_their_marks(g, el) || g.qrf.phase_t > MOVE_CAP { hold360(g, el); }   // (there: hold all round, then choose again)
 }
 
 #[cfg(test)]
