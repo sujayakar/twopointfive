@@ -56,11 +56,11 @@ fn child(names: &[String], brk: Option<&str>, pin: bool) -> Came {
     came
 }
 
-/// every job of the list in a child, as many at once as there are cores and at most four, the jobs in the order given; `done` hears each as it comes back
+/// every job of the list in a child, as many at once as there are cores, the jobs in the order given; `done` hears each as it comes back
 fn run_jobs(jobs: Vec<(Vec<String>, Option<&'static str>)>, pin: bool, done: mpsc::Sender<(usize, Came)>) {
     let queue = Arc::new(Mutex::new((0..jobs.len()).collect::<Vec<usize>>().into_iter()));
     let jobs = Arc::new(jobs);
-    for _ in 0..std::thread::available_parallelism().map_or(4, |n| n.get()).min(4) {
+    for _ in 0..std::thread::available_parallelism().map_or(4, |n| n.get()) {
         let (queue, jobs, done) = (queue.clone(), jobs.clone(), done.clone());
         std::thread::spawn(move || loop {
             let Some(k) = queue.lock().unwrap().next() else { return };
