@@ -193,11 +193,11 @@ fn changed(g: &mut crate::game::Game) {
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.
-pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
+pub(super) fn bars_blast(g: &mut crate::game::Game, over: &crate::ask::Over, ev: crate::wallbreak::BlastEvent) {
     if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let took = ::sim::panes::bars_blast(&crate::glassbreak::glass_ctx(g), from, r, built_boxes(g), &g.k);
+    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(&crate::glassbreak::glass_ctx(g), v, from, r, built_boxes(g), &g.k));
     for (i, at) in took {
         let i = i as f64;
         let b = g.col.boxes[i as usize];

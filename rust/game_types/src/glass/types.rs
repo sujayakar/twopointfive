@@ -14,12 +14,6 @@ pub struct GlassState {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NearestOnBox {
-    pub q: V3,
-    pub d: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassImpactOpts {
     pub through: Option<bool>,
 }
