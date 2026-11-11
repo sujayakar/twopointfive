@@ -7,7 +7,7 @@
 //! - A row a host hands over is all doubles (`f64`, `handed`), and its offsets are in doubles.
 //! - A row a shader reads keeps the shader's own rule: three or four numbers begin at a multiple of four words, two at a multiple of two.
 
-/// a type that is nothing but words
+/// a type that is nothing but words, and that every bit pattern is one of: a row handed over is read by its bits (`Laid`)
 pub trait Plain: Copy { const ZERO: Self; }
 impl Plain for f32 { const ZERO: f32 = 0.0; }
 impl Plain for u32 { const ZERO: u32 = 0; }
