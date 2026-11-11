@@ -6,24 +6,31 @@ use alloc::{string::String, vec, vec::Vec};
 row! {
     /// WHAT A SEAT'S HANDS DID IN A TICK, as a player's own machine hands it and as it travels to another's: his keys go beside it, as their codes
     pub struct SeatInput {
-        /// the mouse's buttons held, those that went down, and what the wheel turned
+        /// the mouse's buttons held, a bit each
         pub buttons: f64,
+        /// those that went down in the tick
         pub clicked: f64,
+        /// what the wheel turned
         pub wheel: f64,
-        /// the cursor, and the size of the view it is in, in the page's pixels; and the picture's own size
+        /// the cursor, in the page's pixels
         pub mx: f64,
         pub my: f64,
+        /// the view it is in: its width and height in the page's pixels
         pub w: f64,
         pub h: f64,
+        /// … and in the picture's own
         pub pw: f64,
         pub ph: f64,
-        /// what his camera looks at and from where about it, its lens, and how far it leads his aim
+        /// what his camera looks at
         pub target: [f64; 3],
+        /// from where about it: the turn, the tilt, how far
         pub yaw: f64,
         pub pitch: f64,
         pub distance: f64,
+        /// its lens
         pub fov: f64,
         pub aspect: f64,
+        /// how far it leads his aim
         pub aim_lead: f64,
     }
 }

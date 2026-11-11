@@ -13,8 +13,7 @@ fn a_start_stands_with_what_its_address_says() {
     let level = files::level_text("depot.json");
     let stand = |words: &str| {
         let link = format!("?levelFile=depot.json&roomclear&squad4{words}");
-        let text = |g: Option<game_start::gltf::GltfFile>| g.map_or("", |c| c.text).as_bytes();
-        let h = Handed { level: level.as_bytes(), words: &link, mannequin: a.mannequin.text.as_bytes(), mannequin_bin: a.mannequin.bin.unwrap(), cast: text(a.cast), cast_look: text(a.cast_look), kept: "" };
+        let h = Handed { level: level.as_bytes(), words: &link, mannequin: a.mannequin.text.as_bytes(), mannequin_bin: a.mannequin.bin.unwrap(), cast: a.cast.map_or("", |c| c.text).as_bytes(), cast_look: a.cast_look.map_or("", |c| c.text).as_bytes(), kept: "" };
         stand_handed(&h, &StartOpts { seed: 1, slot: 1, ..Default::default() })
     };
     let plain = stand("");
