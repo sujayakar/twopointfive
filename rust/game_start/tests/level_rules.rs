@@ -205,7 +205,7 @@ fn a_levels_leaves_are_made_of_their_paint() {
 #[test]
 fn a_level_may_have_what_the_game_has_room_for() {
     let c = game::levelfit::level_caps();
-    for (name, most, room) in [("doors", c.doors, game::doors::DOOR_CAP), ("things", c.things, sim::world::MAX_THINGS), ("parts", c.parts, sim::world::MAX_LEAVES), ("lamps", c.lamps, sim::lights::ROWS)] {
+    for (name, most, room) in [("doors", c.doors, game::doors::DOOR_CAP), ("things", c.things, sim::world::MAX_THINGS), ("parts", c.parts, sim::world::MAX_LEAVES), ("lamps", c.lamps, game::fixtures::LAMPS)] {
         assert_eq!(most, room as f64, "{name}");
     }
 }

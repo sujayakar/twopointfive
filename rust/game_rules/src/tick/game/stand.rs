@@ -48,9 +48,9 @@ fn stand_world(g: &mut Game, ids: &[BoxId], n_seats: f64) {
 
 /// the first player, the loose furniture and thrown things, the weather, and the player's own light
 fn stand_player(g: &mut Game, ch: RigId, level: &Level) {
-    let (men, fn2000) = (g.men, g.fn2000);
+    let fn2000 = g.fn2000;
     let spawn = level.player_spawn;
-    g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
+    g.player = crate::game::player_new(g, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
     // loose furniture and thrown things: never collision occluders
     g.props = crate::props::prop_system_new(g, &level.props);
     g.items = crate::throwables::Throwables::blank();
@@ -271,14 +271,14 @@ fn stand_doors(g: &mut Game, level: &Level) {
 
 /// the guards, each with his torch on his route, and the lamps of the racks the errand is at
 fn stand_guards(g: &mut Game, level: &Level) {
-    let (men, rig) = (g.men, g.rig);
+    let rig = g.rig;
     let tints: [V3; 3] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     for (i, &r) in level.routes.iter().enumerate() {
         let id = 10.0 + i as f64;
         let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
         let def = crate::rig_props::torch_light_def(g, &format!("flashlight{}", i), id, fi, f0, f1);
         let fl = crate::render_lights::light_set_add(g, def);
-        let gd = crate::game::guard_new(g, men, rig, id, r, i as i32, fl, tints[i % tints.len()], None);
+        let gd = crate::game::guard_new(g, rig, id, r, i as i32, fl, tints[i % tints.len()], None);
         g.guards.push(gd);
     }
     crate::opening::opening_start(g);   // a man whose route starts on top of the way in is found down his beat instead
@@ -294,7 +294,7 @@ fn stand_glass_and_air(g: &mut Game) {
     crate::winbars::boot_bars(g);
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
-    g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
+    crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
     g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)
 }
 

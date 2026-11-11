@@ -275,14 +275,14 @@ pub fn weather_hear_mask(g: &crate::game::Game, ear: V3) -> f64 {
 pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let (Some(f), Some(_)) = (g.weather.fog_spec, g.weather.kind_now) else { return 1.0 };
     crate::air_dust::air_dust_ready(g);   // (the field stands before it is read: it is built when first asked)
-    let air = &::sim::weather::of_read(g.sim).air;
+    let air = &g.air_dust;
     let mut leak = 0.0;
-    if air.on != 0.0 {
+    if air.on {
         let n = m::min(24.0, m::max(4.0, m::ceil(v3::dist_xz(b, a) / 0.75)));
         let mut i = 0.0;
         while i < n {
             let t = (i + 0.5) / n;
-            leak += air.share_at(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
+            leak += ::sim::air::share_at(air, a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
             i += 1.0;
         }
         return m::exp(-fog_tau(f.sigma, f.h, a, b) * leak / n);

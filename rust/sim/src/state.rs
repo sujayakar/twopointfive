@@ -16,9 +16,6 @@
 //!
 //! WHO HOLDS A SLOT is the host's business (game_face `face_start` deals them, and a moment kept keeps a copy of a block's bytes and `put`s it back: game_rules
 //! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
-use crate::men::Men;
-use crate::lights::Lights;
-use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -37,9 +34,6 @@ const _: () = assert!(size_of::<Head>() == 16);
 #[repr(C, align(16))]
 pub struct State {
     pub head: Head,
-    pub men: Men,
-    pub lights: Lights,
-    pub weather: Weather,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -50,12 +44,9 @@ pub struct Part {
     /// a pool: its first word is how many of its bytes are in use
     pub pool: bool,
 }
-/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools.
-pub const PARTS: [Part; 4] = [
+/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order).
+pub const PARTS: [Part; 1] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
-    Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -70,8 +61,6 @@ const _: () = {
         i += 1;
     }
     assert!(at == LEN);
-    // (a man's columns are whole vectors from a 16-byte boundary: men.rs)
-    assert!(offset_of!(State, men) % 16 == 0);
 };
 
 /// The layout's word: the parts (where, how long, which version) folded. Two builds with the same word lay a block out alike.
