@@ -56,7 +56,7 @@ const cutTexts = new Map<string, string>();
 const cut = async (code: string): Promise<string> => { let t = cutTexts.get(code); if (t === undefined) { const { trimWgsl } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim'); cutTexts.set(code, t = trimWgsl(code, true)); } return t; };
 
 // ======== parse: EVERY TypeScript FILE UNDER tools/ PARSES. `tsconfig.json` covers src/ and tools/qa/tsconfig.json covers tools/qa; tools/blitz, tools/wire, tools/mp,
-// tools/fold and the rest are in neither, so a file there that no gate tool happens to import can be broken and nobody is told (a name imported twice
+// the rest are in neither, so a file there that no gate tool happens to import can be broken and nobody is told (a name imported twice
 // stopped tools/blitz/mission.ts once, and every kept run with it). This reads each such file through the transpiler, which refuses what the runtime
 // would refuse at import: a syntax error, a name declared twice, an import of a name twice. It checks no types.
 function parseSection(): void {
@@ -480,15 +480,15 @@ async function inlineSection(): Promise<void> {
 // EVERY LEVEL ASKS FOR ONE SET OF PROGRAMS (src/render/frame.ts LevelSw, src/render/meshShadows.ts; the kept page that makes it matter: src/gpu/keep.ts).
 // A mission start on the kept page compiles only what the visit has not built, and a text that differs by one constant is a text the visit has not built.
 // What a level raises of the shaders — the weather kinds' reads, the snow, the rows of the snow's look — was nine constants of the scene prelude, and the
-// sizes of the men's mesh were four constants of the mesh shadows' module: the office, a level with its own roofs, a snow level and a level whose men are
+// sizes of the men's mesh were constants of the mesh shadows' module: the office, a level with its own roofs, a snow level and a level whose men are
 // another cast each compiled a part of the set again (the title to a snow level: a third of the programs). They are data now: a word of the frame block
-// and four words of a buffer. Held here, with no browser:
+// and a man's few words of a buffer. Held here, with no browser:
 //   texts     the page's boot recorded under the title's switches and under a snow level's in its weather (`reading` above),
 //             with the shader rows as written and as the page opens: the same module texts, label for label, and the same pipelines
 //   word      the switch still reaches the shaders: the frame block's level word is 0 on the title and every bit of LevelSw on the snow level, the
 //             prelude names each bit once, and writeFrame puts the word where common.wgsl's `levelCfg` reads it
-//   cast      the mesh shadows' module is one text for both casts (their trees differ in nodes, triangles and levels), and the level list's header
-//             carries each cast's own four numbers
+//   cast      the mesh shadows' module is one text for both casts (their men's trees differ in vertices, leaves and steps), and a man's slot carries
+//             his own tree's numbers
 // What it does not say: that a level compiles nothing in a BROWSER (a page check: `JOBS=picture node tools/qa/keeppage-page.cjs` reads the kept page's own
 // count of what each load compiled), or what the branches a level does not take cost a frame on a GPU (never timed).
 async function levelsetSection(): Promise<void> {
@@ -521,21 +521,23 @@ async function levelsetSection(): Promise<void> {
 
     // ---- cast
     const { MeshShadows } = await import(`${ROOT}/src/render/meshShadows.ts`) as typeof import('../../src/render/meshShadows');
+    const { wornTree, MESH_MAX_CHARS } = await import(`${ROOT}/src/render/meshbvh.ts`) as typeof import('../../src/render/meshbvh');
     const { SHADER_TRIM } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
     const built = async (look: boolean) => { const texts: string[] = [], bufs: Uint32Array[] = [], base = fake('device');
       const device = new Proxy(base, { get(t, k) {
         if (k === 'createShaderModule') return (d: { code: string }) => { texts.push(d.code); return { getCompilationInfo: async () => ({ messages: [] }) }; };
         if (k === 'createBuffer') return (d: { label?: string; size: number }) => ({ destroy() { /* */ }, size: d.size, label: d.label });
-        if (k === 'queue') return { writeBuffer(b: { label?: string }, _o: number, data: ArrayBuffer, from = 0, bytes = data.byteLength - from) { if (b.label === 'meshLevels') bufs.push(new Uint32Array(data.slice(from, from + bytes))); } };   // (gpu/device.ts makeBufferWithData: the data's own buffer, its offset, its length)
+        if (k === 'queue') return { writeBuffer(b: { label?: string }, _o: number, data: Uint32Array) { if (b.label === 'meshSlots') bufs.push(data.slice()); } };
         if (k === 'then') return undefined; return t[k]; } });
-      const ch = await characterSet(look), M = new MeshShadows(device as never, ch, fake('jointMats'), fake('charInsts'));
-      return { text: texts[0] ?? '', sizes: [M.bvh.maxDepth + 1, M.bvh.numNodes, M.bvh.numTris, M.triBase], header: bufs.length ? Array.from(bufs[bufs.length - 1].subarray(60, 64)) : [] }; };
+      const ch = await characterSet(look), mask = ch.cast!.variants[0].mask, M = new MeshShadows(device as never, ch, { partsOf: () => mask, moves: new Uint32Array(16), jointMats: fake('jointMats') } as never); await M.init(); M.plan(1); M.encode(fake('encoder'));
+      const part = ch.mesh.part!, t = wornTree(M.bvh, ch.mesh.vertexCount, v => ((mask >>> part[v]) & 1) === 1), slot = bufs[bufs.length - 1];
+      return { text: texts[0] ?? '', sizes: [t.verts.length, t.leaves, t.steps.length - 1, MESH_MAX_CHARS, M.triBase], told: slot ? [slot[0], slot[1], slot[2], slot[9], slot[10]] : [] }; };
     const trimWas = SHADER_TRIM.on; const A = await built(false), L = await built(true); SHADER_TRIM.on = trimWas;
-    if (BREAK) L.text = L.text.replace('const NODE_BASE', `const T_OF_THIS_CAST: u32 = ${L.sizes[2]}u; const NODE_BASE`);   // (the red path: a size written back into the text)
+    if (BREAK) L.text = L.text.replace('const LEAF_PAD', `const T_OF_THIS_CAST: u32 = ${L.sizes[2]}u; const LEAF_PAD`);   // (the red path: a size written back into the text)
     const differ = A.sizes.join() !== L.sizes.join();
-    check(A.text.length > 2000 && A.text === L.text && differ && A.header.join() === A.sizes.join() && L.header.join() === L.sizes.join(),
-      'cast — the mesh shadows\' module is one text for both casts, and each cast\'s own sizes ride in its level list',
-      `first cast: levels, nodes, triangles, corners at ${A.sizes.join(', ')} (its list says ${A.header.join(', ') || 'nothing'}) · the look's: ${L.sizes.join(', ')} (${L.header.join(', ') || 'nothing'}) · the two differ: ${differ} · one text of ${A.text.length} characters: ${A.text === L.text}`); }
+    check(A.text.length > 2000 && A.text === L.text && differ && A.told.join() === A.sizes.join() && L.told.join() === L.sizes.join(),
+      'cast — the mesh shadows\' module is one text for both casts, and a man\'s own sizes ride in his slot',
+      `first cast: vertices, leaves, steps, nodes at, corners at ${A.sizes.join(', ')} (the slot says ${A.told.join(', ') || 'nothing'}) · the look's: ${L.sizes.join(', ')} (${L.told.join(', ') || 'nothing'}) · the two differ: ${differ} · one text of ${A.text.length} characters: ${A.text === L.text}`); }
 }
 
 // ======== rows

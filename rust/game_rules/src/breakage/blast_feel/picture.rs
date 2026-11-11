@@ -27,7 +27,7 @@ fn stages(g: &mut Game) -> &mut Stages { let s: &mut Stages = g.feel.at(); if s.
 fn draw(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 fn seed(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(m::imul(crate::js::to_i32(n), crate::js::to_i32(2654435761.0)) as f64) }
 /// the team's doing, as the blast is
-fn ours(g: &Game, seat: &crate::seats::SeatRef) -> bool { let who = g.ch[g.pl[seat.player].ch].id; crate::fogofwar::fog_of_war_ours_id(g, Some(who)) }
+fn ours(g: &Game, seat: &crate::seats::SeatRef) -> bool { let who = g.seat_id(seat); crate::fogofwar::fog_of_war_ours_id(g, Some(who)) }
 
 /// one record, with a seed of this half's own
 fn emit(g: &mut Game, kind: PKind, pos: V3, dir: V3, count: f64, o: EmitOpts) {
@@ -57,7 +57,7 @@ pub(in crate::breakage) fn feel_starts(g: &mut Game, wall: &crate::wallcharge::W
     { let s = stages(g); s.serial += 2.0; }   // (the report's two draws of this half's counter, so the seeds after them are the ones they would be)
     let open = holed(g, wall);
     let n: V3 = if wall.along_x { [0.0, 0.0, wall.side] } else { [wall.side, 0.0, 0.0] };
-    let th = thick(g, wall);
+    let th = crate::wallcharge::thick(g, wall);
     // the ways out of the wall: back off the face it was set on, and, only through a wall that gave, into the room
     let mut faces = Vec::new();
     if open { let o = crate::wallcharge::wall_pt(g, wall, 0.0, -(th + 0.35), Some(0.0)); faces.push(Face { o, d: v3::scale(n, -1.0), mask: 0.0 }); }

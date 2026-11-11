@@ -8,6 +8,8 @@ import { AIR_ROWS } from './airGrid';
 import { packRoundRows, ROUND_CORE_W } from './round';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
 
+/** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
+export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
 export const BoxFlag = {
   NoPrimary: 1,      // not rasterized into the G-buffer (ceilings, light-only geometry)
   NoShadow: 2,       // ignored by all rays (decals, glow cards)
@@ -67,7 +69,7 @@ export interface Box {
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
   /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
-   *  box does is its word, scene/materials.ts; the wet lot's answer is the row's own `wet`). weather.ts darkens rained-on ground with it. */
+   *  box does is its word, scene/materials.ts, in any weather). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
@@ -355,6 +357,9 @@ export class BoxWorld {
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
+  /** a count of the statics' changes, by whoever mirrors them from elsewhere (draw/world.ts): what was read off them stands while it does. Every row that is
+   *  told, whatever changed it (a load, a flag, a lamp's face), where `geomSerial` counts what a blast does to the level's shape alone. NaN = nobody counts */
+  staticsTold = NaN;
   /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;

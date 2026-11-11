@@ -61,7 +61,6 @@ pub struct StructureData {
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub starts: Option<Vec<crate::scene_scenarios::TeamStart>>,
     pub max_men: Option<f64>,
-    pub way_out: Option<bool>,
     pub dig_in: Option<bool>,
     pub wall_charges: Option<f64>,
     pub squads: Option<Vec<crate::scene_scenarios::SquadData>>,
@@ -282,8 +281,6 @@ pub struct LessonStep {
     pub ring_line: Option<String>,
     pub blow_line: Option<String>,
     pub menu_line: Option<String>,
-    pub page_line: Option<String>,
-    pub flat_line: Option<String>,
     pub done: crate::lesson::LessonTest,
     pub hold: Option<f64>,
     pub settle: Option<f64>,
@@ -310,8 +307,6 @@ impl Default for LessonStep {
             ring_line: None,
             blow_line: None,
             menu_line: None,
-            page_line: None,
-            flat_line: None,
             done: crate::lesson::LessonTest::Any { of: Vec::new() },   // (any of nothing: no deed passes it)
             hold: None,
             settle: None,
@@ -368,7 +363,6 @@ pub struct RailsData {
     pub waits: Option<crate::scene_scenarios::RailsDataWaits>,
     pub lasers: Option<bool>,
     pub orders: Option<Vec<String>>,
-    pub flat_ring: Option<bool>,
     pub rows: Option<Vec<String>>,
 }
 
@@ -491,7 +485,7 @@ pub struct LevelScenariosDoorNamesItem {
 pub struct ScenarioEntry {
     pub id: String,
     pub title: String,
-    pub kind: crate::scene_scenarios::ScenarioEntryKind,
+    pub kind: crate::scene_scenarios::MissionKind,
     /// teammates: the pair or the four (the rescue is the pair's as built); a quiet mission's is nobody or one partner
     pub squad: f64,
     /// which heading of the list it is under (none: by what it is)
@@ -525,8 +519,9 @@ pub struct ScenarioEntry {
     pub squads: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
-pub enum ScenarioEntryKind {
+/// what kind of mission it is. A word for lists, cards and addresses: a rule asks the mission that is up what it brings (`g.staged`)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum MissionKind {
     #[default] Nightbreach,
     Roomclear,
     Rescue,

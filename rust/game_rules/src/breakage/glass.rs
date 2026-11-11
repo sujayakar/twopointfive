@@ -9,17 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 // ---- the box table ----
 
-/// a box's row (Box.* in the TypeScript)
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---- private helpers ----
-
-/// `g.level.boxes[i]`: undefined off the list, as JavaScript's (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript: the box at place i
-fn box_at(g: &Game, i: f64) -> Option<BoxId> {
-    let ix = i as usize;
-    if ix as f64 != i { return None; }
-    g.col.boxes.get(ix).copied()
-}
 
 /// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
 fn box_word(c: V3, hs: V3) -> f64 {
@@ -57,7 +48,7 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
         let mut panes: Vec<f64> = Vec::new();
         for i in 0..g.col.boxes.len() {
             let b = g.col.boxes[i];
-            if glass_flagged(seam_box(g, b).flags) { panes.push(i as f64); }
+            if glass_flagged(g.tab.boxes[b].flags) { panes.push(i as f64); }
         }
         g.m.glass.states = Some(GlassState { panes, seen: JsSet::new(), hits: 0.0, last_hit_t: -100.0, log: Vec::new(), crack_at: -1e9 });
     }
@@ -88,15 +79,15 @@ pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
 }
 
 /// a pane that can craze (thin); solid glass is glass but no sheet
-pub fn is_sheet(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
+pub fn is_sheet(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     if !is_pane(g, b) { return false; }
-    let h = seam_box(g, b.unwrap()).h;
+    let h = g.tab.boxes[b.unwrap()].h;
     m::min(h[0], h[2]) <= THICK_GLASS_HALF
 }
 
 /// the pane's unit normal: the world direction of its thin axis, sign arbitrary
-fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
-    let (yaw, h) = { let row = seam_box(g, b); (row.yaw, row.h) };
+fn pane_normal(g: &crate::game::Game, b: BoxId) -> V3 {
+    let (yaw, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.h) };
     normal_of(yaw, h)
 }
 
@@ -105,7 +96,7 @@ pub(super) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f6
     let serial = g.serial();
     let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() };
     let n = pane_normal(g, b);
-    let (c, h) = { let row = seam_box(g, b); (row.c, row.h) };
+    let (c, h) = { let row = &g.tab.boxes[b]; (row.c, row.h) };
     let off = v3::dot(v3::sub(at, c), n);
     let r = m::min(h[0], h[2]) + g.k.glass.ear_off;
     e.ears = Some([
@@ -116,8 +107,8 @@ pub(super) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f6
 }
 
 /// nearest point of box b (yawed, no rot) to p, and the distance
-fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
-    let (yaw, c, h) = { let row = seam_box(g, b); (row.yaw, row.c, row.h) };
+fn nearest_on_box(g: &crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
+    let (yaw, c, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.c, row.h) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let (dx, dy, dz) = (p[0] - c[0], p[1] - c[1], p[2] - c[2]);
     let lx = v3::clamp(cs * dx - sn * dz, -h[0], h[0]);
@@ -128,8 +119,8 @@ fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::N
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
-pub(super) fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
-    let (c, hs) = { let row = seam_box(g, b); (row.c, row.h) };
+pub(super) fn box_seed(g: &crate::game::Game, b: BoxId) -> f64 {
+    let (c, hs) = { let row = &g.tab.boxes[b]; (row.c, row.h) };
     box_word(c, hs)
 }
 
@@ -139,7 +130,7 @@ fn point_seed(word: f64, p: V3) -> f64 {
 }
 
 /// a 32-bit hash of where a box was hit
-pub fn hit_seed(g: &mut crate::game::Game, b: BoxId, p: V3) -> f64 {
+pub fn hit_seed(g: &crate::game::Game, b: BoxId, p: V3) -> f64 {
     point_seed(box_seed(g, b), p)
 }
 
@@ -153,11 +144,11 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     let cause = cause.unwrap_or(GlassImpactCause::Shot);
     let quiet = quiet.unwrap_or(false);
     let through = opts.and_then(|o| o.through);
-    let bx = box_at(g, pane);
+    let bx = g.box_at(pane);
     let mut res = crate::glassbreak::GlassImpact { pane: is_pane(g, bx), live: false, type_: crate::glasspen::PaneType::Laminated, thickness: 0.0, was_open: false, punched: false, diced: false, released: 0.0, cracked: false };
     if !res.pane { return res; }
     let b = bx.unwrap();
-    let h = seam_box(g, b).h;
+    let h = g.tab.boxes[b].h;
     res.thickness = 2.0 * m::min(h[0], h[2]);
     if m::min(h[0], h[2]) > THICK_GLASS_HALF { return res; }   // thick glass: the round stops, no star, no crack, no event
     // glass breaking first: a blow through a hole stars nothing, a pane that dices takes no star; a blast files its own
@@ -170,12 +161,12 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     glass_state(g);   // made here at the latest, as `const S = glassState(g)`; written below through the row
     let seed = hit_seed(g, b, point);
     let word = js::to_u32(seed);
-    let c = seam_box(g, b).c;
+    let c = g.tab.boxes[b].c;
     let mut n = pane_normal(g, b);
     let flip = match dir { Some(d) => v3::dot(n, d) > 0.0, None => v3::dot(n, v3::sub(point, c)) < 0.0 };
     if flip { n = v3::scale(n, -1.0); }
     if res.live && cause == GlassImpactCause::Shot && !res.diced && res.released == 0.0 {
-        let albedo = seam_box(g, b).albedo;
+        let albedo = g.tab.boxes[b].albedo;
         crate::shards::glass_shards_spall(g, point, n, dir, res.thickness, albedo, seed, Some(through != Some(true)));
     }
     let off = v3::dot(v3::sub(point, c), n);
@@ -230,12 +221,8 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
 }
 
 /// a round (or anything else that stars glass) met pane `bi` = glassImpact at energy 1; false if `bi` is not a pane
-pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>, who: f64, cause: Option<crate::glass::GlassHitCause>, quiet: Option<bool>) -> bool {
-    let cause = match cause.unwrap_or(GlassHitCause::Shot) {
-        GlassHitCause::Shot => GlassImpactCause::Shot,
-        GlassHitCause::Bang => GlassImpactCause::Bang,
-        GlassHitCause::Hand => GlassImpactCause::Hand,
-    };
+pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>, who: f64, cause: Option<crate::glass::GlassImpactCause>, quiet: Option<bool>) -> bool {
+    let cause = cause.unwrap_or(crate::glass::GlassImpactCause::Shot);
     glass_impact(g, bi, hit_p, dir, 1.0, who, Some(cause), quiet, None).pane
 }
 
@@ -243,7 +230,7 @@ pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>,
 pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f64 {
     let mut n = 0.0;
     for bi in glass_panes(g) {
-        let bx = box_at(g, bi);
+        let bx = g.box_at(bi);
         if !is_sheet(g, bx) { continue; }   // solid glass does not craze
         let b = bx.unwrap();
         let near = nearest_on_box(g, b, at);
@@ -251,7 +238,7 @@ pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f
         let q = near.q;
         let word = box_seed(g, b);
         let mut s = js::to_u32(blast_seed(word, at));
-        let (c, h, yaw) = { let row = seam_box(g, b); (row.c, row.h, row.yaw) };
+        let (c, h, yaw) = { let row = &g.tab.boxes[b]; (row.c, row.h, row.yaw) };
         let wide = if h[0] < h[2] { 2 } else { 0 };   // the pane's long horizontal local axis
         let (cs, sn) = (m::cos(yaw), m::sin(yaw));
         let axis: V3 = if wide == 0 { [cs, 0.0, -sn] } else { [sn, 0.0, cs] };
@@ -262,7 +249,7 @@ pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f
             let fv = ((s >> 16) as f64 / 65535.0) * 2.0 - 1.0;
             let anywhere = v3::mad(v3::mad(c, axis, fu * 0.9 * h[wide]), [0.0, 1.0, 0.0], fv * 0.9 * h[1]);   // a point on the pane's face, inside its frame by a tenth
             let p = v3::lerp3(anywhere, q, 0.35);   // pulled a third of the way toward where the blast was nearest
-            glass_hit(g, bi, p, Some(v3::sub(p, at)), who, Some(GlassHitCause::Bang), Some(true));
+            glass_hit(g, bi, p, Some(v3::sub(p, at)), who, Some(crate::glass::GlassImpactCause::Bang), Some(true));
             k += 1.0;
         }
         n += 1.0;
@@ -390,6 +377,6 @@ mod tests {
     #[test]
     fn off_the_list_is_no_box() {
         let mut g = Game::blank();
-        for i in [-1.0, 0.5, f64::NAN, 3.0] { assert_eq!(box_at(&mut g, i), None, "{}", i); }
+        for i in [-1.0, 0.5, f64::NAN, 3.0] { assert_eq!(g.box_at(i), None, "{}", i); }
     }
 }

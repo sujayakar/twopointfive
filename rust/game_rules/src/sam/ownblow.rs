@@ -17,8 +17,8 @@ pub fn blow_tail(key_is: bool, key: &str, sep: Option<&str>) -> String {
 
 /// The nearest free charge of his own, a door's or a wall's.
 fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
-    if g.door_tools.set.is_empty() && g.wall_charge.set.is_empty() { return None; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    if g.sets[g.seat].door_tools.set.is_empty() && g.sets[g.seat].wall_charge.set.is_empty() { return None; }
+    let p = g.player_pos(g.player);
     let d = crate::doortools::door_tools_sam_set(g);
     let w = crate::wallcharge::wall_charge_sam_set(g);
     if d.is_none() && w.is_none() { return None; }
@@ -69,8 +69,8 @@ pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::I
 
 /// game.ts, where this frame's act is read: the row given.
 pub fn own_blow_act(g: &mut crate::game::Game) {
-    let Some(a) = g.act.as_ref() else { return; };
-    if a.kind != crate::game::InteractableKind::Charge || a.verb != Some(crate::game::Verb::Blow) || g.pl[g.player].down { return; }
+    let Some(a) = g.sets[g.seat].act.as_ref() else { return; };
+    if a.kind != crate::game::InteractableKind::Charge || a.verb != Some(crate::game::Verb::Blow) || crate::condition::down(g, g.pl[g.player].ch) { return; }
     let Some(c) = own_set(g) else { return; };
     match c.go {
         OwnSetGo::Door { d } => crate::doortools::door_tools_trigger(g, Some(d)),

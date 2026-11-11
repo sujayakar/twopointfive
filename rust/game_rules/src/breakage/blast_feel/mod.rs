@@ -43,14 +43,13 @@ fn hash_u(n: f64) -> f64 {
 fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0
-fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
-fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
-fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
+fn live(g: &crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+pub(crate) fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands.
-fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
+pub(crate) fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
 /// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height.
-fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let (h, th) = (g.k.wallcharge.height, thick(g, w));
+pub(crate) fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+    let (h, th) = (g.k.wallcharge.height, crate::wallcharge::thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
@@ -65,7 +64,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     let mut found: Option<usize> = None;
     for (i, c) in seen.iter().enumerate() {
         if set.contains(c) { continue; }   // (a charge is its row: the id is the TypeScript's object)
@@ -87,7 +86,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
 /// game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
 /// later stage of its blast are the team's doing: the fog's begin / done round it.
 pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_feel_tick_raw(g, cam);
     crate::fogofwar::fog_of_war_done(g, was);
@@ -101,7 +100,7 @@ fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
         if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; }
         return;
     }
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_feel.state.has(key) && set.is_empty() { if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; } return; }   // (a kick left on the camera by another Game: not this one's to keep)
     if !g.m.blast_feel.loaded { load_feel(g); }
     let time = g.time;
@@ -146,7 +145,7 @@ fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3>
 fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;
-    let ear = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+    let ear = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let d = v3::dist(ear, at);
     let _late = m::min(k.late_max, d / k.c);   // (STAND-IN, the head of this file: the report is played at once, not `late` seconds on)
     let dull = 1.0 / (1.0 + (d / k.dull_m) * (d / k.dull_m));
@@ -156,5 +155,5 @@ fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
     crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));
-    if !g.pl[pl].down && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
+    if !crate::condition::down(g, g.pl[pl].ch) && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
 }

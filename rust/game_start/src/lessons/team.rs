@@ -26,7 +26,7 @@ const IN_TEA: V3 = [10.4, 0.0, 8.6];
 const BY_BUNK: V3 = [26.2, 0.0, 17.5];
 const BLOCK: [&str; 3] = ["Tango 6", "Tango 7", "Tango 8"];
 
-fn near(b: &Bot, p: V3, r: f64) -> bool { b.squad().into_iter().all(|m| { let q = b.man_at(m); game::m::hyp2(q[0] - p[0], q[2] - p[2]) < r }) }
+fn near(b: &Bot, p: V3, r: f64) -> bool { b.squad().into_iter().all(|m| { let q = b.man_at(m); game::v3::dist_xz(q, p) < r }) }
 /// the squad's key on himself: they fall in. Asked of the order book: a tap that gave anything else is a line that lies
 async fn call_in(b: &Bot) {
     for _ in 0..3 {

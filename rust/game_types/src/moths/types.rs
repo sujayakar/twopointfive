@@ -53,10 +53,4 @@ pub struct MOTHS {
     pub albedo: V3,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct MothsStats {
-    pub shown: i32,
-}
-
 pub fn moths() -> crate::moths::MOTHS { crate::moths::MOTHS { max: 12.0, per_lamp: 7.0, r_min: 0.14, r_max: 0.5, below: 0.25, bob: 0.16, omega_min: 2.2, omega_max: 4.6, flap_hz: 9.0, wing: 0.016, gather_secs: 2.5, scatter_secs: 1.2, gale_ms: [3.0, 6.0], rain_max: 0.92, albedo: [0.62, 0.56, 0.42] } }

@@ -13,12 +13,12 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 /// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
-    for (gd, a) in g.orders.asg.iter() {
+    for (gd, a) in g.sets[g.seat].orders.asg.iter() {
         let row = &g.tab.orders_assignment[*a];
         if row.post.is_none() && !men.contains(&gd) { taken.push(row.follow); }
     }
-    let sam = g.ch[g.pl[g.player].ch].pos;
-    let nears: Vec<f64> = men.iter().map(|&m| v3::dist_xz(g.ch[g.gd[m].ch].pos, sam)).collect();
+    let sam = g.player_pos(g.player);
+    let nears: Vec<f64> = men.iter().map(|&m| v3::dist_xz(g.pos_of(m), sam)).collect();
     let pair_ids: Vec<Option<crate::game::PairId>> = men.iter().map(|&m| squad_orders_pair_of(g, m)).collect();
     let many = men.len() > 2;
     let mut sorted: Vec<(GuardId, (f64, f64, Option<crate::game::PairId>))> = Vec::with_capacity(men.len());
@@ -40,7 +40,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let a = SquadOrdersAssignA {
             order: String::from(ORDER.id), post: None, follow: Some(k), face: None,
             stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
-            going: String::from("falling in"), there: String::from("with you"),
+            going: "falling in".into(), there: "with you".into(),
             ..Default::default()
         };
         squad_orders_assign(g, gd, &a);

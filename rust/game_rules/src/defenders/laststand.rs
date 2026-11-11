@@ -1,5 +1,6 @@
 pub use ::game_types::laststand::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -41,8 +42,8 @@ static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
 /// the closures of lines 264, 265, 360, 374, 395, 409 and part 2's: a line naming where its man is has been said
 fn run_then(g: &mut Game, then: LaterThen) {
     match then {
-        LaterThen::MovedFree { d } => { st_of(g).stats.moved += 1.0; name(g, d, None); }
-        LaterThen::MovedAt { d, w } => { st_of(g).stats.moved += 1.0; name_at(g, d, Some(&w)); }
+        LaterThen::MovedFree { d } => {  name(g, d, None); }
+        LaterThen::MovedAt { d, w } => {  name_at(g, d, Some(&w)); }
         LaterThen::NameAt { d, w } => name_at(g, d, w.as_ref()),
         LaterThen::NameAtUnlessFree { d, w } => {
             let free = crate::roomfight::is_loose(g, d);
@@ -51,7 +52,7 @@ fn run_then(g: &mut Game, then: LaterThen) {
     }
 }
 /// the `f` of lines 265, 360, 374, 395: a line's words and its `then`, the place asked now
-fn redo_words(g: &mut Game, redo: &LaterRedo) -> NetRedoRet {
+fn redo_words(g: &Game, redo: &LaterRedo) -> NetRedoRet {
     match *redo {
         LaterRedo::MovedAt { d } => {
             let w = man_spoken(g, d);
@@ -78,7 +79,7 @@ fn line_slot(g: &mut Game, kind: LineKind, vars: Option<&JsMap<String, String>>)
     let (cls, say) = (row.1, row.2);
     let len = say.len() as f64;
     let st = st_of(g);
-    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(crate::math_dice::roll(&mut st.die) * len), len) };
+    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(st.die.roll() * len), len) };
     st.rot.set(kind, js::rem(i + 1.0, len));
     let tpl: &'static str = row.4.or(row.3).unwrap_or(say)[i as usize];
     let empty = JsMap::new();
@@ -101,9 +102,9 @@ fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
 /// JavaScript's truth of an optional string
 fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.is_empty()) }
 /// where this man's body stands
-fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.ch[g.gd[gd].ch].pos }
+fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.pos_of(gd) }
 /// (:230) the place as this man says it, asked now
-fn man_spoken(g: &mut Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
+fn man_spoken(g: &Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
 /// the defenders who are `alive`, in the list's order
 fn up_defs(g: &Game) -> Vec<RoomfightDefId> { let defs = g.fight.defs.clone(); defs.into_iter().filter(|&d| alive(g, d)).collect() }
 /// a line's `vars`
@@ -117,37 +118,25 @@ fn the_word(n: &str) -> String {
 /// a new tally of the endgame
 fn new_stats() -> crate::laststand::StateStats {
     StateStats {
-        t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
-        moved: 0.0,
-        stand_t: f64::NAN, set_t: f64::NAN, lines: 0.0,
+        t0: f64::NAN, checks: 0.0, last_man: 0.0,
+        stand_t: f64::NAN, set_t: f64::NAN,
     }
 }
-
-/// distance on the floor
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// up, and not broken and run: off the net from his shout on
 fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+    !crate::condition::down(g, g.gd[gd].ch) && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// a beat between two numbers, off the state's own die
 fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
-    r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
-}
-
-/// a row of the room fight's log
-fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(gd) => g.gd[gd].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: alloc::format!("[last] {}", what) });
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
+    r[0] + st_of(g).die.roll() * (r[1] - r[0])
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him
 fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+    !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
@@ -157,14 +146,14 @@ fn fit(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 }
 
 /// fit, and nobody of the team in his sight these `quiet` seconds
-fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+fn calm(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit(g, d) && g.time - g.gd[gd].last_seen_t > g.k.laststand.quiet
 }
 
 /// where a point is, by the structure's own rooms
-fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
-    let rooms = match crate::roomclear::room_clear_scenario_structure(g) { Some(s) => s.rooms, None => Vec::new() };
+fn where_(g: &crate::game::Game, p: V3) -> crate::laststand::Where {
+    let rooms = g.level.rooms().to_vec();
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
     for (i, r) in rooms.iter().enumerate() {
@@ -182,7 +171,7 @@ fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
 }
 
 /// where a man says he is: the level's own name for the floor he stands on, only on ground it has no word for 'outside' the nearest room
-fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
+fn spoken(g: &crate::game::Game, p: V3) -> crate::laststand::Spoken {
     let w = where_(g, p);
     if id_truthy(&w.id) { return Spoken { id: w.id, the: w.the, at: w.at, spot: None }; }
     let r = match crate::dialogue::place_in(g, p) {
@@ -190,8 +179,7 @@ fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
         None => return Spoken { id: w.id, the: w.the, at: w.at, spot: None },
     };
     let id = if id_truthy(&r.id) {
-        let structure = crate::roomclear::room_clear_scenario_structure(g);
-        let held = structure.map_or(false, |s| s.rooms.iter().any(|x| Some(x.id.as_str()) == r.id.as_deref()));
+        let held = g.level.rooms().iter().any(|x| Some(x.id.as_str()) == r.id.as_deref());
         if held { r.id.clone() } else { None }
     } else { None };
     let spot = if id.is_some() { None } else {
@@ -202,14 +190,12 @@ fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
 }
 
 /// a line on their net: the strip's row, the list the checks read
-fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, text: &str, cls: f64) {
+fn voice(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let callsign = g.gd[gd].callsign.clone();
     crate::cues::cues_net(g, gd, text, cls);
     let st = st_of(g);
     st.said.push(LastStandSaid { who: callsign, text: String::from(text) });
     if st.said.len() > 200 { st.said.drain(0..50); }
-    st.stats.lines += 1.0;
-    note(g, Some(gd), &alloc::format!("net: {}", text));
 }
 
 /// a line's words with its {names} filled, an unknown name by nothing
@@ -221,7 +207,7 @@ fn fill(tpl: &str, vars: &JsMap<String, String>) -> String {
         let after = &rest[open + 1..];
         let word = after.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).unwrap_or(after.len());
         if word > 0 && after[word..].starts_with('}') {
-            if let Some(v) = vars.get(String::from(&after[..word])) { out.push_str(v); }
+            if let Some(v) = vars.of(&after[..word]) { out.push_str(v); }
             rest = &after[word + 1..];
         } else {
             out.push('{');
@@ -239,7 +225,7 @@ fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind,
     if at > t0 {
         st_of(g).later.push(Later { at, t0, gd, kind, text, cls, then: then.cloned(), tpl: String::from(tpl), redo: redo.cloned() });
     } else {
-        voice(g, gd, kind, &text, cls);
+        voice(g, gd, &text, cls);
         if let Some(t) = then { run_then(g, t.clone()); }
     }
 }
@@ -262,7 +248,7 @@ fn tick_later(g: &mut crate::game::Game) {
         let w = crate::cues::cues_net_wait(g, l.cls);
         if w > 0.0 && g.time - l.t0 < 8.0 { l.at = g.time + w; kept.push(l); continue; }
         if let Some(r) = l.redo.take() { let a = redo_words(g, &r); l.text = fill(&l.tpl, &a.vars); l.then = a.then; }
-        voice(g, l.gd, l.kind, &l.text, l.cls);
+        voice(g, l.gd, &l.text, l.cls);
         if let Some(t) = l.then { run_then(g, t); }
     }
     st_of(g).later = kept;
@@ -300,7 +286,7 @@ fn tick_moved(g: &mut crate::game::Game) {
         let time = g.time;
         let st = st_of(g);
         let said = st.at.get_mut(d).unwrap();
-        if flat(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
+        if dist_xz(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
         let w = spoken(g, p);
         let free = crate::roomfight::is_loose(g, d);
         let now: Option<&str> = match &w.id { Some(id) => Some(id.as_str()), None => w.spot.as_ref().map(|s| s.name.as_str()) };
@@ -334,7 +320,6 @@ fn start_check(g: &mut crate::game::Game) {
     let first = st.stats.checks == 0.0;
     let lone_now = st.lone_said && st.known.len() <= 1;
     st.stats.checks += 1.0;
-    let checks = st.stats.checks;
     let caller_gd = g.tab.roomfight_def[caller].gd;
     if lone_now { net_at(g, caller, LineKind::CheckLoneAt, &LaterRedo::CheckLone { d: caller }); }
     else { net(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None); }
@@ -350,7 +335,6 @@ fn start_check(g: &mut crate::game::Game) {
     }
     let close_at = (match due.last() { Some(x) => x.at, None => g.time + 1.2 }) + pick(g, listen);
     st_of(g).check = Some(Check { caller, close_at, due, got: Vec::new() });
-    note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 
 /// the answers on their beats; at its close what the survivors know of each other. C is st.check, read by its path
@@ -362,7 +346,6 @@ fn tick_check(g: &mut crate::game::Game) {
         let st = st_of(g);
         st.check = None;
         st.next_at = time + 4.0;
-        note(g, Some(caller_gd), "down mid-check");
         return;
     }
     for i in 0..check_of(g).due.len() {
@@ -374,7 +357,6 @@ fn tick_check(g: &mut crate::game::Game) {
         let free = crate::roomfight::is_loose(g, d);
         net_at(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, &LaterRedo::Answer { d, free });
         check_of(g).got.push(d);
-        st_of(g).stats.answers += 1.0;
     }
     if g.time < check_of(g).close_at { return; }
     let (time, every) = (g.time, g.k.laststand.every);
@@ -386,12 +368,10 @@ fn tick_check(g: &mut crate::game::Game) {
     for &d in &got { if alive(g, d) { heard.push(d); } }
     let mut known = JsSet::new();
     for &d in &heard { known.add(d); }
-    let up = up_defs(g).len() as f64;
     let silent: Vec<GuardId> = g.fight.defs.iter().filter(|&&d| !known.has(d)).map(|&d| g.tab.roomfight_def[d].gd).collect();
     let heard_gds: Vec<GuardId> = heard.iter().map(|&d| g.tab.roomfight_def[d].gd).collect();
     let st = st_of(g);
     st.known = known.clone();
-    st.stats.silent += up - known.len() as f64;
     crate::netquiet::net_quiet_closed(g, caller_gd, &silent, &heard_gds);
     let st = st_of(g);
     let mut names = st.named.keys();
@@ -399,8 +379,6 @@ fn tick_check(g: &mut crate::game::Game) {
     for d in names {
         if !known.has(d) { name(g, d, None); }
     }
-    let signs: Vec<String> = known.keys().iter().map(|&d| g.gd[g.tab.roomfight_def[d].gd].callsign.clone()).collect();
-    note(g, Some(caller_gd), &alloc::format!("check closes: {} known up ({})", known.len(), signs.join(", ")));
     if !calm(g, caller) {
         let time = g.time;
         let st = st_of(g);
@@ -483,7 +461,7 @@ mod tests {
 
     #[test]
     fn flat_is_on_the_floor() {
-        assert_eq!(flat([3.0, 9.0, 0.0], [0.0, -2.0, 4.0]), 5.0);
+        assert_eq!(dist_xz([3.0, 9.0, 0.0], [0.0, -2.0, 4.0]), 5.0);
     }
 
 }
@@ -502,17 +480,17 @@ fn fresh_seed(seed: f64, attempt: f64) -> f64 {
 // ---------------------------------------------------------------- the seams with the rest of the game
 
 /// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.
-fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
+fn fresh(g: &crate::game::Game) -> crate::laststand::State {
     let (seed, attempt) = (g.room_clear.seed, g.room_clear.attempt);
-    let mut die = crate::math_dice::die_of(fresh_seed(seed, attempt));
-    for _ in 0..4 { crate::math_dice::roll(&mut die); }
+    let mut die = crate::dice::Die(js::to_u32(fresh_seed(seed, attempt)));
+    for _ in 0..4 { die.roll(); }
     let key = alloc::format!("{}:{}", seed, attempt);
     let kept = match &g.m.laststand.states { Some(was) if was.key == key => Some(was.post.clone()), _ => None };
     let post = match kept {
         Some(p) => p,
         None => {
             let mut p: JsMap<GuardId, String> = JsMap::new();
-            for r in &g.room_clear.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
+            for r in &g.staged.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
             p
         }
     };
@@ -525,29 +503,27 @@ fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     }
 }
 
-/// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.
+/// Once a frame from RoomFight.tick, after the defenders' own ticks.
 pub(super) fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
 }
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.
 fn step_stand(g: &mut crate::game::Game) {
-    if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
+    if g.staged.rooms.is_empty() || g.staged.over { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
-        let all = g.night_breach.hostiles.clone();
+        let all = g.staged.foes.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));
         let mut up = 0;
-        for &h in &all { if g.gd[h].state != crate::game::GuardState::Dead && !g.gd[h].fled { up += 1; } }
+        for &h in &all { if !crate::condition::down(g, g.gd[h].ch) && !g.gd[h].fled { up += 1; } }
         if up as f64 > few || up == 0 { return; }
         let row = fresh(g);
         g.m.laststand.states = Some(row);
         let t = g.time;
         st(g).stats.t0 = t;
-        st(g).stats.up0 = up as f64;
         let first = g.k.laststand.first;
         let at = t + pick(g, first);
         st(g).next_at = at;
-        note(g, None, &alloc::format!("most are down: {} of {} up", up, all.len()));
     }
     let defs = g.fight.defs.clone();
     if !defs.iter().any(|&d| alive(g, d)) { return; }

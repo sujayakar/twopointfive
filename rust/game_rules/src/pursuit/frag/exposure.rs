@@ -1,4 +1,5 @@
 #![allow(unused_imports, unused_variables)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -30,9 +31,9 @@ pub(super) fn hash01(a: f64, b: f64) -> f64 {
 fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let see = match view {
         GlassView::Whole => return fn_(g),
-        GlassView::Blown => crate::glassbreak::GlassBreakSeeThroughView::Blown,
-        GlassView::Wary => crate::glassbreak::GlassBreakSeeThroughView::Wary,
-        GlassView::Counted => crate::glassbreak::GlassBreakSeeThroughView::Counted,
+        GlassView::Blown => crate::glassbreak::GlassBreakViewOfKind::Blown,
+        GlassView::Wary => crate::glassbreak::GlassBreakViewOfKind::Wary,
+        GlassView::Counted => crate::glassbreak::GlassBreakViewOfKind::Counted,
     };
     if !crate::glassbreak::glass_break_live(g) {
         return fn_(g);
@@ -42,9 +43,9 @@ fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst.
-fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
+fn burst_blocked(g: &crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
 /// …of the world as the question takes it
-fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
+fn burst_blocked_over(g: &Game, over: &Over, a: V3, b: V3) -> bool {
     if !crate::glassbreak::glass_break_live(g) {
         return crate::scene_collision::shot_blocked_over(g, over, a, b, None, None);
     }
@@ -78,7 +79,7 @@ pub(super) fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head:
 }
 
 /// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line.
-fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
+fn share_clear(g: &Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
     let mut n = 0.0;
     for &p in pts {
         if !burst_blocked_over(g, over, from, p) {
@@ -89,7 +90,7 @@ fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
 }
 
 /// The leaves a hand grenade bursting at `from` would take off its hinges.
-fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
+fn leaves_for(g: &crate::game::Game, from: V3) -> Vec<BoxId> {
     let opts = crate::destruction::DestructionDoorsForOpts { radius: Some(g.k.frag.destr_m), power: Some(1.0) };
     let doors = crate::destruction::destruction_doors_for(g, from, Some(opts));
     doors.into_iter().map(|d| g.dr[d].box_).collect()
@@ -136,24 +137,12 @@ fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallO
     w
 }
 
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
-/// One side: the same team, or the player and an operative.
-pub(super) fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
-    use crate::teams::Team;
-    a == b || (a == Team::Player && b == Team::Operative) || (a == Team::Operative && b == Team::Player)
-}
-
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian.
 pub(super) fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
         return false;
     }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    g.team(gd).theirs()
 }
 
 /// The points of a lying man a burst is asked for: hips, chest, head, a shin, none under the floor's skin.
@@ -213,8 +202,8 @@ mod tests {
     }
     #[test]
     fn flat_has_the_typescript_s_bits() {
-        assert_eq!(flat([0.1, 5.0, 0.2], [3.3, 9.0, -4.7]).to_bits(), 0x401768ce6d3c11e0);
-        assert_eq!(flat([1e-3, 0.0, 7.25], [1e-3, 0.0, 7.25]).to_bits(), 0);
-        assert_eq!(flat([-12.75, 1.0, 33.125], [8.5, 2.0, -0.0625]).to_bits(), 0x4043b431f0bad27a);
+        assert_eq!(dist_xz([0.1, 5.0, 0.2], [3.3, 9.0, -4.7]).to_bits(), 0x401768ce6d3c11e0);
+        assert_eq!(dist_xz([1e-3, 0.0, 7.25], [1e-3, 0.0, 7.25]).to_bits(), 0);
+        assert_eq!(dist_xz([-12.75, 1.0, 33.125], [8.5, 2.0, -0.0625]).to_bits(), 0x4043b431f0bad27a);
     }
 }

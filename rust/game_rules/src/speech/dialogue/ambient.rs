@@ -18,19 +18,19 @@ fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::A
 
 /// Is the floor one the pairs may talk on?
 fn ambient_live(g: &crate::game::Game) -> bool {
-    if !g.ai_enabled || g.aside || g.puppet.is_some() { return false; }
+    if !g.ai_enabled || g.aside { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
-    if crate::sim_lightshome::mains_active(g) { return false; }
+    if g.light_home.mains.active { return false; }
     let men = crate::seats::men(g);
-    !men.iter().any(|&p| g.pl[p].holding.is_some() || g.pl[p].down)
+    !men.iter().any(|&p| g.pl[p].holding().is_some() || crate::condition::down(g, g.pl[p].ch))
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script.
 fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
-    let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
+    let calm = g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
         && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && !m.hold
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
@@ -54,14 +54,6 @@ fn end_ambient(g: &mut crate::game::Game) {
     s.next = time + crate::dialogue::ambient().cooldown;
     if !r.held[0] { crate::control::set_hold(g, r.a, false, "dialogue"); }
     if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
-}
-
-/// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript.
-pub fn ambient_restart(g: &mut crate::game::Game) {
-    let Some(s) = g.m.dialogue.ambient_by_game.as_mut() else { return; };
-    s.run = None;
-    s.next = -1.0;
-    if !is_office(g) { ambient_state(g).played.clear(); }
 }
 
 /// The line of a pair as it will be said: its `own` wording off the office, else its text.
@@ -105,7 +97,7 @@ fn pair_fits(p: &PairTalk, third: bool, pad: bool, own: bool, played: &JsMap<Str
 
 /// S.played.get(id) ?? 0
 fn played_of(played: &JsMap<String, f64>, id: &str) -> f64 {
-    played.get(String::from(id)).copied().unwrap_or(0.0)
+    played.of(id).copied().unwrap_or(0.0)
 }
 
 /// The one per-frame hook: the handler's radio, then the pairs: advance a conversation under way (or drop it the frame either man stops being a calm patrol), else look for a pair to start one.
@@ -119,7 +111,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let (c, h) = (g.gd[me].ch, g.gd[him].ch);
             let want = crate::character::character_want_body(g, c);
             let (cp, hp) = (g.ch[c].pos, g.ch[h].pos);
-            g.ch[c].body_yaw = v3::approach_angle(want, m::atan2(hp[0] - cp[0], hp[2] - cp[2]), table.face_rate * dt);
+            g.ch[c].body_yaw = v3::approach_angle(want, v3::yaw_to(cp, hp), table.face_rate * dt);
         }
         let time = g.time;
         let Some(r) = ambient_state(g).run.as_mut() else { return; };
@@ -151,19 +143,19 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
     for i in 0..men.len() {
         for j in (i + 1)..men.len() {
             let (a, b) = (men[i], men[j]);
-            let (pa, pb) = (g.ch[g.gd[a].ch].pos, g.ch[g.gd[b].ch].pos);
+            let (pa, pb) = (g.pos_of(a), g.pos_of(b));
             if v3::dist_xz(pa, pb) > table.pair_m { continue; }
             if crate::scene_collision::solid_blocked(g, [pa[0], 1.4, pa[2]], [pb[0], 1.4, pb[2]], None) { continue; }
             let mut third: Option<GuardId> = None;
             for x in g.guards.clone() {
-                if x == a || x == b || g.gd[x].unit.is_some() || g.gd[x].state == crate::game::GuardState::Dead { continue; }
+                if x == a || x == b || g.gd[x].unit.is_some() || crate::condition::down(g, g.gd[x].ch) { continue; }
                 let callsign = g.gd[x].callsign.clone();
                 if !known_down(g, a).has(callsign) { third = Some(x); break; }
             }
             let pad = match crate::devices::devices_pad_near(g, pa) {
                 Some(k) => {
                     let written = g.dr[k.door].def.name.clone();
-                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(g, &written), lock_id: k.def.name.clone() })
+                    Some(AmbientRunPad { code: k.def.code.clone(), door: door_name(&written), lock_id: k.def.name.clone() })
                 }
                 None => None,
             };
@@ -179,13 +171,13 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             js::sort_by(&mut fits, |p, q| {
                 let d = played_of(played, &p.id) - played_of(played, &q.id);
                 if js::truthy(d) { return d; }
-                crate::math_dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, p.id)) - crate::math_dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, q.id))
+                crate::dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, p.id)) - crate::dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, q.id))
             });
             let talk = fits.swap_remove(0);
             let n = played_of(&s.played, &talk.id) + 1.0;
             s.played.set(talk.id.clone(), n);
             s.count += 1.0;
-            let a_opens = js::to_i32(crate::math_dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
+            let a_opens = js::to_i32(crate::dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
             let (opener, other2, held) = if a_opens { (a, b, [hold_a, hold_b]) } else { (b, a, [hold_b, hold_a]) };
             s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0, at: time + 0.3, other, pad, held });
             crate::control::set_hold(g, opener, true, "dialogue");

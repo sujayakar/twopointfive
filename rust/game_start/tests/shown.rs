@@ -107,15 +107,15 @@ fn every_action_runs_and_does_what_it_says() {
         act(&mut p.g, "repair", 0.0, "");
         p.run(0.2);
         // the mains go and come back by the same row
-        let up = game::sim_lightshome::mains_active(&p.g);
+        let up = p.g.light_home.mains.active;
         act(&mut p.g, "mains", 0.0, "");
-        assert_ne!(game::sim_lightshome::mains_active(&p.g), up, "seed {seed}: the mains row trips them");
+        assert_ne!(p.g.light_home.mains.active, up, "seed {seed}: the mains row trips them");
         act(&mut p.g, "mains", 0.0, "");
-        assert_eq!(game::sim_lightshome::mains_active(&p.g), up, "seed {seed}: and restores them");
+        assert_eq!(p.g.light_home.mains.active, up, "seed {seed}: and restores them");
         // the player goes to the cursor
-        p.g.aim_point = [15.0, 0.0, 14.0];
+        p.g.sets[p.g.seat].aim_point = [15.0, 0.0, 14.0];
         act(&mut p.g, "teleport", 0.0, "");
-        let at = p.g.ch[p.g.pl[p.g.player].ch].pos;
+        let at = p.g.player_pos(p.g.player);
         assert_eq!((at[0], at[2]), (15.0, 14.0), "seed {seed}");
         // the camera steps through the men
         let was = p.g.spectate;
@@ -127,7 +127,7 @@ fn every_action_runs_and_does_what_it_says() {
         act(&mut p.g, "extra", 3.0, "");
         assert_eq!(p.g.guards.len(), men + 3, "seed {seed}: three more men stand");
         if game::roomclear::room_clear_scenario_active(&p.g) { assert_eq!(p.g.room_clear.placement.len(), placed + 3, "seed {seed}: the mission's"); }
-        let spots: Vec<[f64; 3]> = p.g.guards[men..].iter().map(|&x| p.g.ch[p.g.gd[x].ch].pos).collect();
+        let spots: Vec<[f64; 3]> = p.g.guards[men..].iter().map(|&x| p.g.pos_of(x)).collect();
         for (i, a) in spots.iter().enumerate() {
             assert!(!game::scene_collision::nav_grid_is_blocked(&p.g, a[0], a[2]), "seed {seed}: on floor a man stands on: {a:?}");
             for b in &spots[..i] { assert!((a[0] - b[0]).hypot(a[2] - b[2]) >= 1.0, "seed {seed}: {a:?} on {b:?}"); }

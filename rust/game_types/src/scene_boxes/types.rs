@@ -1,7 +1,7 @@
 //! The types of `scene_boxes`.
 #![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Box {
@@ -17,13 +17,12 @@ pub struct Box {
     pub rot: Option<Quat>,
     pub dc: Option<V3>,
     pub dh: Option<V3>,
-    pub name: Option<String>,
     pub rough: Option<f64>,
     pub metal: Option<bool>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
     pub aniso: Option<bool>,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub mark_gain: Option<f64>,
     pub fog_emit: Option<[f64; 3]>,
     pub fog_mark: Option<f64>,
@@ -38,6 +37,8 @@ pub struct Box {
     pub round: Option<bool>,
     pub shape: Option<crate::scene_shapes::BoxShape>,
     pub shaped: Option<bool>,
+    /// a wall's stud, left standing where its board went
+    pub stud: bool,
     pub piece: Option<bool>,
     pub of: Option<f64>,
     pub dress: Option<bool>,
@@ -47,79 +48,8 @@ pub struct Box {
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
     pub dynamics: Vec<AnyBoxId>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub undrawn: Option<crate::scene_boxes::BoxWorldUndrawn>,
     pub max_boxes: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub geo_f32: Vec<f32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub geo_u32: Vec<u32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub mat_data: Vec<f32>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub geo_buf: crate::Opaque,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub mat_buf: crate::Opaque,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub cell_start: Vec<u32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub items: Vec<u32>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub cell_buf: crate::Opaque,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub item_buf: crate::Opaque,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub info_buf: crate::Opaque,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    #[is(alloc::vec![0; 640])] pub info_data: Vec<u32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub visible_sent: Vec<u32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    #[is(alloc::vec![0.0; 1920])] pub capsule_data: Vec<f32>,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub capsule_count: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub char_count: f64,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub capsule_buf: crate::Opaque,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub visible: Vec<u32>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub visible_buf: crate::Opaque,
     pub geom_serial: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub cut_on: bool,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    #[is(alloc::vec![0.0; 0])] pub cut_data: Vec<f32>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub device: crate::Opaque,
-    pub glass_open: Option<crate::scene_collision::PaneRule>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BoxWorldUndrawn {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -164,13 +94,12 @@ pub struct MakeBoxP {
     pub rot: Option<Quat>,
     pub dc: Option<V3>,
     pub dh: Option<V3>,
-    pub name: Option<String>,
     pub rough: Option<f64>,
     pub metal: Option<bool>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
     pub aniso: Option<bool>,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub mark_gain: Option<f64>,
     pub fog_emit: Option<[f64; 3]>,
     pub fog_mark: Option<f64>,
@@ -229,16 +158,9 @@ pub struct RayBoxRound {
 
 pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
 
-pub const BOX_WORLD_RS: f64 = 12.0;
-
 pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
 
 pub const SHEET_MASK: f64 = 131083.0;
 
 pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
 
-pub const GEO_STRIDE: f64 = 8.0;
-
-pub const GB_ROWS: f64 = 1152.0;
-
-pub const MAT_STRIDE: f64 = 16.0;

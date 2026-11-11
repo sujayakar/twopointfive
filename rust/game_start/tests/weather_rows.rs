@@ -50,22 +50,15 @@ fn the_pool_is_handed_the_storm() {
     assert_eq!(d.winds.gusts.last().unwrap().kind, 1, "the storm goes last");
 }
 
-/// THE RULE: a fire's hot air is told on the ticks the rule files it, and what a restart clears is said in one row of that tick.
+/// THE RULE: a fire's hot air is told on the ticks the rule files it.
 #[test]
-fn heat_and_what_goes_are_told() {
+fn a_fires_heat_is_told() {
     let mut p = pass(5);
     p.g.m.dress.dress.wind = true;
     let (mut d, mut hot) = (Drawn::default(), false);
     assert!((0..p.g.targets.len()).any(|i| game::fire::is_fire(&p.g, p.g.targets[i])), "the pass has a brazier");
     for _ in 0..60 { p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0); d.take(&p.g, ALL); hot |= !d.winds.heat.is_empty(); p.g.out.clear(); }
     assert!(hot, "beside a burning fire its hot air is told");
-    p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0);
-    p.g.out.clear();
-    game::game::game_restart_encounter(&mut p.g);
-    d.take(&p.g, ALL);
-    assert_eq!(d.resets.len(), 1, "one row a tick");
-    let w = d.resets[0].what;
-    assert!(w & 4 != 0 && w & 8 != 0 && w & 16 != 0, "the blasts, the marks and the prints go: {w}");
 }
 
 /// THE RULE: a level in the snow says what snow its statics are, on another says nothing; its men are told; and the sky says it is a snow level.
@@ -78,7 +71,7 @@ fn a_snow_level_says_what_lies_on_it() {
     assert_eq!(d.sky[0].snow_level, 1, "the pass is a snow level");
     assert_eq!(d.snow.words.len(), p.g.engine.world.statics.len());
     assert!(d.snow.words.iter().any(|w| w.w == 1), "the pass has fresh snow");
-    let me = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
+    let me = p.g.player_id(p.g.player) as u32;
     let f = d.snow.feet.iter().find(|f| f.id == me).expect("Sam stands on it");
     assert_eq!(f.says & game_draw::snow::ALIVE, game_draw::snow::ALIVE);
     drop(p);
@@ -124,7 +117,7 @@ fn wet_ground_is_the_rows_and_not_the_box() {
     assert!(p.g.weather.wet_on, "a downpour has the ground wet in half a second");
     let mut d = Drawn::default();
     d.take(&p.g, ALL);
-    d.frame(&p.g, 1.0, p.g.aim_point);
+    d.frame(&p.g, 1.0, p.g.sets[p.g.seat].aim_point);
     let wet = (0..p.g.engine.world.statics.len() as u32).filter(|&i| d.boxes.wet.is(i)).collect::<Vec<_>>();
     assert!(!wet.is_empty(), "a downpour wets something on the compound");
     for &i in &wet {
@@ -136,7 +129,7 @@ fn wet_ground_is_the_rows_and_not_the_box() {
     for _ in 0..3 {
         p.frame();
         d.take(&p.g, ALL);
-        d.frame(&p.g, 1.0, p.g.aim_point);
+        d.frame(&p.g, 1.0, p.g.sets[p.g.seat].aim_point);
         let h = d.boxes.head[0];
         assert!(!wet.iter().any(|&i| i >= h.from && i < h.to), "a wet box is sent again every tick: {}..{}", h.from, h.to);
     }

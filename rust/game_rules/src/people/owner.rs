@@ -90,7 +90,7 @@ mod tests {
     fn stand() -> (alloc::boxed::Box<Game>, GuardId) {
         let mut g = alloc::boxed::Box::new(Game::blank());
         // a man with no row on the block keeps his numbers on his Character, so this needs no block
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.ch[c].man_kept = Some([0.0; 4]);
         let mut man = crate::game::Guard::blank();
         man.ch = c;
@@ -118,13 +118,13 @@ mod tests {
         claim(g, m, by::RUNNER, 5.0, None);
         assert_eq!(row(g), is(lane | by::RUNNER, 0, 4.0), "the top rule again: its reason, not its time");
         claim(g, m, by::RUNNER, 6.0, Some(1.0));
-        claim(g, m, by::PRESS, 7.0, Some(0.0));
-        assert_eq!(row(g), is(lane | by::RUNNER | by::PRESS, 1, 4.0), "a new rule below the top: the top's reason stands");
+        claim(g, m, by::OUT, 7.0, Some(0.0));
+        assert_eq!(row(g), is(lane | by::RUNNER | by::OUT, 1, 4.0), "a new rule below the top: the top's reason stands");
         release(g, m, by::RUNNER, 8.0);
-        assert_eq!(row(g), is(lane | by::PRESS, 0, 8.0), "the rule below has him from now, at its first reason");
-        claim(g, m, by::WALK, 12.0, Some(1.0));
-        assert_eq!(row(g), is(lane | by::PRESS | by::WALK, 0, 8.0), "a reason given below the top is not written");
-        release(g, m, by::LANE | by::PRESS | by::WALK, 13.0);
+        assert_eq!(row(g), is(lane | by::OUT, 0, 8.0), "the rule below has him from now, at its first reason");
+        claim(g, m, by::NEEDS, 12.0, Some(1.0));
+        assert_eq!(row(g), is(lane | by::OUT | by::NEEDS, 0, 8.0), "a reason given below the top is not written");
+        release(g, m, by::LANE | by::OUT | by::NEEDS, 13.0);
         assert_eq!(row(g), is(at_rest, 0, 13.0));
         assert!(has(g, m, by::SQUAD) && !has(g, m, by::FRAG) && has(g, m, By(!0)));
         release(g, m, by::SQUAD, 14.0);
@@ -146,7 +146,7 @@ mod tests {
             release(g, m, t.by, 2.0);
         }
         g.time = 5.0;
-        g.gd[m].dazzled_until = 6.0;
+        g.cond[g.gd[m].ch].blind_until = 6.0;
         assert!(TASKERS.iter().all(|t| kept(g, m, t.by) == Some("blind")), "nobody takes a man who cannot see");
     }
 }

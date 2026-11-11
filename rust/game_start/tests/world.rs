@@ -8,7 +8,7 @@ use game::orders::OrderTarget;
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
-fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } } }
+fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } } }
 
 // ---------------------------------------------------------------- a round into a wall
 
@@ -26,7 +26,7 @@ fn a_round_through_a_wall_leaves_the_far_hole_then_the_mark_it_wears() {
     // a round fired between two ticks: the marks the next one lays of it, in their order
     let fired = |p: &mut Play, at: [f64; 3]| -> (Vec<Mark>, usize) {
         let (c, had, crossed) = (p.g.pl[p.g.player].ch, mark_set(&p.g).map_or(0, |s| s.serial), p.g.stats.wallpen.crossed);
-        game::combat::fire_weapon(&mut p.g, c, at, true, None);
+        game::combat::fire_weapon(&mut p.g, c, at, None);
         let crossed = (p.g.stats.wallpen.crossed - crossed) as usize;
         p.frame();
         (mark_set(&p.g).map_or(Vec::new(), |s| s.list.iter().filter(|m| m.serial > had && matches!(m.kind, DecalKind::Bullet | DecalKind::Damage)).copied().collect()), crossed)
@@ -59,15 +59,15 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: 3, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.2);
-    for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+    for d in p.g.doors.list.clone() { p.g.dr[d].leaf.locked = false; }
     p.run(0.3);
-    let th = game::workthings::work_things_things(&p.g, &game::seats::here(&p.g)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
+    let th = game::workthings::work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "work", Some(&t), None, None), None, "the order was refused");
     let lines0 = p.said.len();
-    p.until(40.0, |p| game::sim_lightshome::mains_active(&p.g)).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
+    p.until(40.0, |p| p.g.light_home.mains.active).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
     let mut thrown = 1;
-    for _ in 0..300 { let was = game::sim_lightshome::mains_active(&p.g); p.frame(); if !was && game::sim_lightshome::mains_active(&p.g) { thrown += 1; } }
+    for _ in 0..300 { let was = p.g.light_home.mains.active; p.frame(); if !was && p.g.light_home.mains.active { thrown += 1; } }
     assert_eq!(thrown, 1, "the mains go once");
     assert_eq!(p.said[lines0..].iter().filter(|l| l.text == "lights out.").count(), 1, "his own line, once");
 }
@@ -181,7 +181,7 @@ fn a_restart_leaves_no_line_on_anybody() {
     for gd in p.g.guards.clone() { game::game::game_say(&mut p.g, gd, "still talking", None, Some(true)); }
     p.frame();
     assert!(p.view().bubbles.iter().any(|b| b.text == "still talking"), "the staging is wrong: nothing on the HUD");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     assert!(p.g.guards.iter().all(|&gd| p.g.gd[gd].bubble.as_ref().map_or(true, |b| b.text != "still talking")), "a line on a man");
     p.frame();
     assert!(!p.view().bubbles.iter().any(|b| b.text == "still talking"), "a line on the HUD");
@@ -196,7 +196,7 @@ fn won(level: &str, link: &str) -> game::verdict::RunVerdict {
     let at = p.sam_at();
     p.sam_put([at[0] + 2.0, at[1]]);
     p.run(0.1);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
+    for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
     p.run(4.0);
     p.g.verdict.res.clone().unwrap_or_else(|| panic!("no verdict: {}", p.roll()))
 }
@@ -234,8 +234,8 @@ fn sam_going_down_is_the_verdict_down() {
 
 fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
     let rig = p.g.ch[c].rig;
-    let cast = p.g.tab.rig[rig].cast.expect("no cast on this stand");
-    let at = p.g.tab.anim_gltf_cast_info[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
+    let cast = p.g.art.rig[rig].cast.expect("no cast on this stand");
+    let at = p.g.art.cast[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
     (p.g.ch[c].parts as u32) & (1 << at) != 0
 }
 
@@ -246,7 +246,7 @@ fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
 fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
     let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts::default());
     p.run(0.2);
-    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.quiet.ops.iter().map(|&m| p.g.gd[m].ch)).collect();
+    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.staged.team.iter().map(|&m| p.g.gd[m].ch)).collect();
     assert_eq!(team.len(), 2);
     for &c in &team { assert!(!wears(&p, c, "helmet"), "a quiet mission: a helmet"); }
     drop(p);
@@ -269,7 +269,7 @@ fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
 fn a_night_after_the_reel_is_a_fresh_night() {
     let mut p = Play::level("office.json", false, &Opts { seed: 1, ..Default::default() });
     p.run(0.1);
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     let marks: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
     (p.g.aside, p.g.player_invisible) = (true, true);
     p.run(240.0);
@@ -304,17 +304,17 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
             if game::scene_collision::nav_grid_is_blocked(&p.g, from[0], from[1]) { continue; }
             p.sam_put(from);
             p.run(0.2);
-            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], true, None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
+            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], None); p.run(0.1); if p.g.falls.glass.waiting.len() > 0 { fell = true; break 'panes; } }
         }
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");
-    let waiting = game::sim_fallshome::fall_store_waiting(&p.g);
+    let waiting = p.g.falls.glass.waiting.len();
     let kept = game::savestate::control::Moment::of(&p.g);
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
-    assert!(game::sim_fallshome::fall_store_waiting(&p.g) != waiting, "the staging is wrong: nothing landed in two seconds");
-    p.g = kept.stands(p.g.sim);
-    assert_eq!(game::sim_fallshome::fall_store_waiting(&p.g), waiting, "put back: the landings waiting");
+    assert!(p.g.falls.glass.waiting.len() != waiting, "the staging is wrong: nothing landed in two seconds");
+    p.g = kept.laid(p.g.sim);
+    assert_eq!(p.g.falls.glass.waiting.len(), waiting, "put back: the landings waiting");
     for (k, want) in first.iter().enumerate() {
         p.frame();
         let got = p.words();

@@ -5,13 +5,10 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum CueKind {
-    #[default] Stay,
-    Calm,
+    #[default] Calm,
     Cover,
     Flinch,
     Still,
-    Help,
-    StayOurs,
     HuntOver,
     FellBack,
     Planted,
@@ -48,34 +45,24 @@ pub struct Man {
     pub said_t: f64,
     pub again_t: f64,
     pub stood_t: f64,
-    pub moved: Option<crate::cues::ManMoved>,
+    pub moved: Option<crate::roomfight::DefMoveKind>,
     pub from: String,
-    pub noise_t: f64,
-    pub ep: f64,
-    pub rally_at: f64,
     pub covered: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
-pub enum ManMoved {
-    Cover,
-    Fallback,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Cues {
     pub rows: Vec<crate::cues::CueRow>,
-    #[is(crate::cues::CuesStats { heard: 0.0, heard_drawn: 0.0, shouts: 0.0, shouts_drawn: 0.0, cues: 0.0, cue_net: 0.0, cue_drawn: 0.0, dup: 0.0, gap: 0.0, full: 0.0, bumped: 0.0, bumped_young: 0.0, filed: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], drawn: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] })] pub stats: crate::cues::CuesStats,
-    #[is(crate::cues::CuesKinds { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kinds: crate::cues::CuesKinds,
+    #[is(crate::cues::CuesStats { cues: 0.0, dup: 0.0, gap: 0.0, full: 0.0 })] pub stats: crate::cues::CuesStats,
+    #[is(crate::cues::CuesKinds { calm: None, cover: None, flinch: None, still: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kinds: crate::cues::CuesKinds,
     pub log: Vec<crate::cues::CuesLogItem>,
     pub bubbles: JsMap<GuardId, crate::cues::Bubble>,
     pub men: JsMap<GuardId, crate::cues::Man>,
-    pub last_note: Option<crate::roomfight::FightNote>,
     #[is(-1.0)] pub last_t: f64,
     pub said: JsMap<String, f64>,
     pub class_t: Vec<Option<f64>>,
     pub squad_t: Vec<Option<f64>>,
-    #[is(crate::cues::CuesKindT { stay: None, calm: None, cover: None, flinch: None, still: None, help: None, stay_ours: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kind_t: crate::cues::CuesKindT,
+    #[is(crate::cues::CuesKindT { calm: None, cover: None, flinch: None, still: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kind_t: crate::cues::CuesKindT,
     pub n: f64,
     pub squelch_due: bool,
     pub heard_row: Option<crate::cues::CuesHeardRow>,
@@ -85,31 +72,18 @@ pub struct Cues {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesStats {
-    pub heard: f64,
-    pub heard_drawn: f64,
-    pub shouts: f64,
-    pub shouts_drawn: f64,
     pub cues: f64,
-    pub cue_net: f64,
-    pub cue_drawn: f64,
     pub dup: f64,
     pub gap: f64,
     pub full: f64,
-    pub bumped: f64,
-    pub bumped_young: f64,
-    pub filed: Vec<f64>,
-    pub drawn: Vec<f64>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CuesKinds {
-    pub stay: Option<f64>,
     pub calm: Option<f64>,
     pub cover: Option<f64>,
     pub flinch: Option<f64>,
     pub still: Option<f64>,
-    pub help: Option<f64>,
-    pub stay_ours: Option<f64>,
     pub hunt_over: Option<f64>,
     pub fell_back: Option<f64>,
     pub planted: Option<f64>,
@@ -130,13 +104,10 @@ pub struct CuesLogItem {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CuesKindT {
-    pub stay: Option<f64>,
     pub calm: Option<f64>,
     pub cover: Option<f64>,
     pub flinch: Option<f64>,
     pub still: Option<f64>,
-    pub help: Option<f64>,
-    pub stay_ours: Option<f64>,
     pub hunt_over: Option<f64>,
     pub fell_back: Option<f64>,
     pub planted: Option<f64>,
@@ -159,14 +130,11 @@ pub struct CuesHeardRow {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CuesFileKind {
     Heard,
-    Stay,
     Calm,
     Cover,
     Flinch,
     Still,
     Call,
-    Help,
-    StayOurs,
     HuntOver,
     FellBack,
     Planted,

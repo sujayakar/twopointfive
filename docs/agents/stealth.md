@@ -23,7 +23,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `fogofwar/`, `peeksight.rs` | who is an eye, who is seen, what is kept as last seen (`picture.rs`: what the renderer is told); the eye moved by a peek |
 | `quietfog.rs`, `told.rs` | the fog lever's rungs on a quiet mission; how much the player is told |
-| `sense.rs`, `sim_lightshome.rs`, `lighting.rs` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
+| `sense.rs`, `fixtures.rs`, `lighting.rs` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
 | `lightswitch.rs`, `carlamps.rs`, `powerout.rs` | wall switches; a vehicle's lamps; a garrison's answer to the dark (`enemies.md`) |
 | `interact/`, `handring/` | one key and a ring over the rows `build_interactables` lists |
 | `close.rs`, `stalk.rs`, `takedown.rs`, `disarm.rs` | what Sam can do to a man from where he stands; the creep; blows and falls; the gun out of his hand |
@@ -47,7 +47,7 @@ the keys.
 A new effect asks whose it is. The place is live: walls, weather, a lamp's glow, smoke. What the team does always shows (`fog_of_war_ours_id`,
 `fog_of_war_doing`). Everybody else stands as the team last saw him.
 
-**The pass.** `fog_of_war_pass`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
+**The pass.** `fog_of_war_update`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
 teammates not blind, live stuck cameras, then a tutorial step's eye (`rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
 `k.fog.own` a teammate counts only by an ordered lens. Each man off the team, up or down, is asked of them all: a line (`fog_of_war_sees`) through air
 that lets it (`fog_of_war_clear`: `clear_between` at `k.fog.smoke`, as a man's own eyes are held to), and `judge` writes his `Rec`. Places (the lit
@@ -69,13 +69,13 @@ round. Then teammates call what the player has not got (`fog_of_war_tell_calls`)
 (`?cams=`).
 
 **The light meter.** `light_at` sums lamps on six faces of a point with one shadow line each, then sun, sky and lightning. `light_on` takes the
-brighter of chest and head. `game_meter_read` maps it by `game_visibility_of` and eases it into `visibility`, which guards' sight, `lens_gain` and
+brighter of chest and head. `light_meter` maps it by `game_visibility_of` and eases it into `visibility`, which guards' sight, `lens_gain` and
 `close_near_k` read.
 
 **The sound meter** is the player's `noise`: the loudest level he has just made, falling away. A noisy rule raises it where it files its event. Only a
 lesson's step reads it; men hear the events.
 
-**Lights.** A fixture is a row of `sim_lightshome` (`FixtureDef`) and every change goes in by `light_home_in`. `shoot_out` breaks one, if `lamp_live`.
+**Lights.** A fixture is a `Fixture` (`g.tab.fixture`), what the level says of it and how it stands, stepped by `lights_step`. `shoot_out` breaks one, if `lamp_live`.
 A round in the breaker ends the power for good; `breaker_start` and `breaker_tick` throw it by hand, and it can be reset. `set_blackout` sends the
 nearest calm man, unless `power_out_rules` gives the walk to a garrison's party. The jammer is the code's OCP (`ocp`): the right button with the
 pistol up, on what the reticle has (`ocpable`). A flashlight dies, a fixture or device goes dark for `ocp_duration`, a breaker in sight trips.
@@ -85,7 +85,7 @@ room back (`light_switch_tick`, `puts_back`). **Car lamps** are found from the b
 (`dead_lamp`).
 
 **One key and a ring.** `build_interactables` makes the rows (`Interactable`, each with a `Verb`). `update_interact` reads the key: a tap does the
-highlighted row; kept down for `k.handring.hold_secs` it puts up a ring, with the whistle as its last wedge (`whistle_wedge`). What is done is `g.act`
+highlighted row; kept down for `k.handring.hold_secs` it puts up a ring, with the whistle as its last wedge (`whistle_wedge`). What is done is the seat's `act`
 for that frame, read by the rule that owns it.
 
 **Close in.** `close_at` is the one test for rows, clicks and the ready pose. `close_windows` gives a man a rear arc, sides and a front, each with a
@@ -114,7 +114,7 @@ nearest who `can_answer` comes. A second inside `twice_window` is a search; a ma
 send (`sticky_eyes`); `take_cam` takes one back.
 
 **The wand** is kit (`wand_offered`: carried, under the fog, a door `wand_fits`). `start_wand`, then `wand_through`; `wand_eye` is a wedge past the
-leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_key`), his lens sweeping by itself (`mate_wand_eye`).
+leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_frame`), his lens sweeping by itself (`mate_wand_eye`).
 
 **Devices** are level data (`docs/level-format.md`). `update_camera` tests a lens by `eye_contact` and `lens_gain`, then `camera_suspect` (a man sent)
 and `camera_alarm` (the floor up). `update_laser` breaks on a stranger's body or a flying item (`body_breaks`, `laser_trip`). A round, the jammer or
@@ -147,11 +147,11 @@ the mains stop them (`alive`). `sensing` is off under a night breach and a rescu
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/` (`fogofwar.rs`, `close.rs`, `stalk.rs`, `wallsnap.rs`, `whistle.rs`, `attention.rs`, `stickycam.rs`,
-  `wand.rs`, `chronicle.rs`). `?knob.fog.linger=1` turns one. Words: `?wallpress=0`, `?nowallsnap`, `?noleangun`.
+  `wand.rs`, `chronicle.rs`). `?knob.fog.linger=1` turns one. A word: `?wallpress=0`.
 - **A new effect under the fog:** ask whose it is. The team's: `fog_of_war_doing`. Another man's: `fog_of_war_air_hides` at the source, or a place
   kept like `thing_recs`. The place's: nothing to do. No fog exception of its own, and no rule reads `g.fog_picture`.
-- **A new eye:** a `FogEye` in `fog_of_war_pass`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
-- **A new row for Sam:** a `Verb`, a row in `build_interactables` or a `*_rows` call beside it, and the owner reads `g.act`.
+- **A new eye:** a `FogEye` in `teams_eyes`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
+- **A new row for Sam:** a `Verb`, its thing `Offers::add`ed with the row (a file of `player/offers/`, or a `*_rows` call from `around`), and the owner reads the seat's `act`.
 - **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `rust/sim/src/lights.rs`, drawn by
   `device_boxes`.
 - **A price:** `ScoreK`; a new count is a `chron_*` and a `RunCounts` field.
@@ -178,4 +178,3 @@ Native tests in `rust/game_start/tests/`:
 
 - The fog's picture on a GPU: the levels of `dim`, `lit`, `flat` and `edge`, and how a never-seen room should look, are the maintainer's to judge.
 - Whether `attention.rs` and `powerout.rs` read well in play has been checked by numbers only.
-- The knife is dead code: nothing enters the hold's kill, so `kill_out` and a lethal blow cannot happen in play.

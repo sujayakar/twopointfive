@@ -12,7 +12,6 @@ pub enum PaneType {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PenState {
-    pub log: Vec<String>,
     pub rev: f64,
 }
 
@@ -25,12 +24,9 @@ pub struct PaneCross {
     pub dir_in: V3,
     pub dir_out: V3,
     pub e_in: f64,
-    pub turn_deg: f64,
     pub thru: f64,
     pub into: f64,
     pub type_: crate::glasspen::PaneType,
-    pub n: V3,
-    pub cos: f64,
     pub take: f64,
     pub e_out: f64,
     pub hole: bool,
@@ -87,18 +83,5 @@ pub struct GlasspenMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct GlasspenStats {
-    pub crossed: i32,
-    pub spent: i32,
-    pub via_hole: i32,
-    pub via_arm: i32,
-    pub shot_asked: i32,
-    pub shot_through: i32,
-    pub shot_refused: i32,
-    pub shell_joined: i32,
 }
 
-pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
-
-pub const CROSS: f64 = 25.0;
-
-pub const MAX_CROSS: f64 = 16.0;

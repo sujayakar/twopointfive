@@ -39,8 +39,5 @@ pub struct He40Mod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct He40Stats {
-    pub fired: i32,
-    pub bursts: i32,
     pub duds: i32,
-    pub gone: i32,
 }

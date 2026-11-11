@@ -72,13 +72,3 @@ pub struct StalkMod {
     pub state: JsMap<PlayerId, crate::stalk::St>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct StalkStats {
-    pub begun: i32,
-    pub grabs: i32,
-    pub corner: i32,
-    pub out: [i32; 7],
-    pub last: String,
-}
-

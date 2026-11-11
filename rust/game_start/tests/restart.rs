@@ -41,11 +41,11 @@ fn an_evening_keeps_its_switches_and_its_die() {
     p.g.god_mode = true;
     p.g.tune.vis_floor *= 2.0;
     p.run(1.0);
-    for _ in 0..5 { game::math_dice::sim_random(&mut p.g); }   // (the die is ahead of where the first step had it)
-    let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, sim::state::state_read(p.g.sim).dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
+    p.g.dice.n += 5.0;   // (the die is ahead of where the first step had it)
+    let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
     assert!(control::restart(&mut p.g));
     assert!(p.g.god_mode && p.g.tune.vis_floor == floor, "the switches went back with the game");
-    assert!(sim::state::state_read(p.g.sim).dice.n >= rolled, "the die went back with the game");
+    assert!(p.g.dice.n >= rolled, "the die went back with the game");
     assert!(p.g.serial_next >= serial, "a number would be dealt twice");
     assert_eq!(p.g.time, 0.0, "the clock starts over");
     assert_ne!(p.g.mission.serial, run, "it is a new run");
@@ -76,7 +76,7 @@ fn shift_enter_starts_it_over_as_the_step_ends() {
 #[test]
 fn the_key_on_the_first_step_restarts_once() {
     let mut p = pass();
-    let (active, chars) = (game::scenario_run::active_scenario(&p.g), p.g.ch.len());
+    let (active, chars) = (p.g.staged.up, p.g.ch.len());
     p.key_down("ShiftLeft");
     p.key_down("Enter");
     p.frame();
@@ -86,7 +86,7 @@ fn the_key_on_the_first_step_restarts_once() {
     assert!(p.g.time > 0.4, "the clock did not go on: {}", p.g.time);
     p.run(2.0);
     assert!(control::restart(&mut p.g));
-    assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.ch.len()), (active, chars), "the mission did not stand again");
+    assert_eq!((p.g.staged.up, p.g.ch.len()), (active, chars), "the mission did not stand again");
     assert!(p.g.time < 0.1, "the clock did not start over: {}", p.g.time);
 }
 
@@ -96,11 +96,11 @@ fn the_key_on_the_first_step_restarts_once() {
 fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     let mut p = pass();
     p.run(0.5);
-    let (active, guards) = (game::scenario_run::active_scenario(&p.g), p.g.guards.len());
+    let (active, guards) = (p.g.staged.up, p.g.guards.len());
     p.g.ai_enabled = false;
     p.g.tune.teams = false;
     assert!(control::restart(&mut p.g));
-    assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.guards.len()), (active, guards), "the mission did not stand again");
+    assert_eq!((p.g.staged.up, p.g.guards.len()), (active, guards), "the mission did not stand again");
     assert!(!p.g.ai_enabled && !p.g.tune.teams, "the switches went back with the game");
 }
 
@@ -181,15 +181,26 @@ fn every_kind_of_mission_starts_over_as_it_started() {
         let mut p = Play::mission(file, link, &Opts { seed: 3, dress: true, ..Default::default() });
         p.run(1.0);
         let count = |p: &Play| (p.g.guards.len(), p.mates().len(), p.g.civilians.len(), p.g.ch.len(), p.g.doors.list.len(), p.g.engine.world.statics.len(), p.g.engine.lights.lights.len(), p.g.tab.camera.len());
-        let (first, active, host) = (count(&p), game::scenario_run::active_scenario(&p.g), (p.g.host_cam, p.g.host_input));
+        let (first, active, host) = (count(&p), p.g.staged.up, (p.g.host_cam, p.g.host_input));
         assert!(active.is_some(), "{link}: no mission is up");
         p.run(2.0);
         for tries in 1..=2 {
             assert!(control::restart(&mut p.g));
-            assert_eq!(game::scenario_run::active_scenario(&p.g), active, "{link}: try {tries}");
+            assert_eq!(p.g.staged.up, active, "{link}: try {tries}");
             p.run(1.0);
             assert_eq!(count(&p), first, "{link}: try {tries}: (guards, mates, civilians, characters, doors, statics, lights, cameras)");
             assert_eq!((p.g.host_cam, p.g.host_input), host, "{link}: try {tries}");
         }
     }
+}
+
+/// THE RULE: the switches a quiet run took are its own: what stood under them is what the next try finds under it.
+/// A FAILURE MEANS: a restart takes the run's own switches for the player's, and they stay on when the run is over.
+#[test]
+fn a_restart_keeps_what_stood_under_the_runs_own_switches() {
+    let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts { seed: 1, ..Default::default() });
+    let was = p.g.quiet.was.expect("a run with a partner holds the switches");
+    assert!(game::savestate::control::restart(&mut p.g));
+    let again = p.g.quiet.was.expect("the run again holds them");
+    assert_eq!((again.pairup, again.silent, again.silent_start), (was.pairup, was.silent, was.silent_start), "what stood under the run");
 }

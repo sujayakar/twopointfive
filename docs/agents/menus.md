@@ -65,7 +65,6 @@ On the page (`gameKeysBoot`) they stand so:
 | `Digit0` | empty hands | backtick (`SLOT`) |
 | `Backquote` | the debugger, the page's | backslash (`SLOT`) |
 | `KeyQ`, `KeyV`, `KeyT`, `KeyZ`, `KeyL`, `KeyE` | wall hold, whistle, who, selector, light, holster | no key, until the player gives one |
-| `KeyG`, `KeyH` | the old menu's letters | asleep, on no list (`LETTERS`) |
 
 The Space bar is then the camera's (`camKey`), while no row was put on it. Everything drawn names keys through `keyText`, `keyCap`, `capNow` or `keysInLine`: the game writes its
 lines with the build's letters or a code in brackets, and these write what is bound now. `KEY_ACTS` is the rows; `FIXED` is what no row can have.
@@ -77,10 +76,12 @@ the tick; otherwise it is the card. `stopped` is every reason the world holds st
 
 **The HUD works nothing out.** After a tick the host asks `tick_view` for the seat it shows and hands the record to `Overlay.update` and `Bubbles.update`, after the picture is
 drawn, through the camera that drew it. `HudPage` and `pageSay` are the little the page adds. `locked` and `offered` are how a tutorial shuts keys and rows.
-The corner panel is `cornerRows`.
+The corner panel is `cornerRows`. The picture's size in the window is read once, as the frame begins (`host/viewsize.ts`): asked of the canvas after the HUD
+has written the page, it makes the browser lay the page out again.
 
 **The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring.rs` and `interact/`. A tap does the default;
-the key kept down a moment puts the ring up. Let go on a wedge does it; let go in the middle leaves the ring up, and 1 to 5 or a click picks. The whistle is the last wedge of
+the key kept down a moment puts the ring up. Let go on a wedge does it, if it can be done; let go in the middle leaves the ring up, one wedge or five. Then 1 to 5, a click or the key again
+picks, and the back key or the right button puts it away. The whistle is the last wedge of
 his own ring (`whistle_wedge`). The squad's key tapped twice is fall in (`twice`), and Shift with it sends part of the squad.
 
 **The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup.rs`), above the column. On every gun 1 is the selector, 2 the
@@ -122,7 +123,7 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 ## To change it
 
 - **A key:** `KEY_ACTS` for a row, `KEYS` in `options.ts` for its words. Ask the game for a code. `?keybinds=0`, `?qfree=0`, `?camspace=0`, `?slotsetup=0`, `?qonly=0`,
-  `?menuletters=0`, `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
+  `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
 - **A setting:** a `flip`, `seg` or `range` in its tab's branch of `render`, kept by `keep`. One a game holds goes on `OptionsGame` and `settingsOf`, with a command in
   `rust/game_start/src/host/command.rs` and a word in `rust/game_draw/src/view.rs`.
 - **Something a card asks:** a line of `asks!` with the next number, then `bun run tools/draw/gen.ts`.

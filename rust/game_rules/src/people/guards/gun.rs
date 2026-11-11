@@ -9,16 +9,11 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ small private helpers
 
 /// Lends a skip_owner on for one call, keeping it for the next.
-fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&mut Game, f64) -> bool + 'b)>) -> Option<&'a mut (dyn FnMut(&mut Game, f64) -> bool + 'a)> {
+fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&Game, f64) -> bool + 'b)>) -> Option<&'a mut (dyn FnMut(&Game, f64) -> bool + 'a)> {
     match s {
         Some(f) => Some(&mut **f),
         None => None,
     }
-}
-
-/// A gun's row, as a copy: a call on it lends g beside it. Nothing here writes a row.
-fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
 }
 
 // ------------------------------------------------------------ the guards' collision
@@ -44,7 +39,7 @@ pub(super) fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         let mut d = v3::sub(g.ch[c].pos, g.ch[oc].pos);
         d[1] = 0.0;
@@ -85,14 +80,14 @@ fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
 // ------------------------------------------------------------ the light meter
 
 /// THE LIGHT ON A POINT, by which every eye judges how well it is seen: what stands on it (`light_at`), as eyes used to the place see it (`eyes_at`).
-pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> f64 {
+pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> f64 {
     let (e, place) = light_at(g, p, skip_owner, steady_only, leave);
     e * eyes_at(g, place)
 }
 /// How many times brighter than it stands the light of the place about a point is seen by whoever is there (`eyes_at`).
-pub fn eyes_in(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn eyes_in(g: &crate::game::Game, p: V3) -> f64 {
     if crate::hours::exposure(g) >= 1.0 { return 1.0; }
-    let field = crate::scene_collision::window(g, &mut |g: &mut Game| crate::sense::under_roof(g, p));
+    let field = crate::sense::under_roof(g, p);
     eyes_at(g, field.map(|f| f.place))
 }
 /// EYES GET USED TO A PLACE: how many times brighter a place under a roof that holds `place` of light is seen than an hour's light stands at, by whoever is in it: up
@@ -113,23 +108,14 @@ fn eyes_at(g: &crate::game::Game, place: Option<f64>) -> f64 {
 /// WHAT LIGHT STANDS ON A POINT, at the hour's exposure: the best of the six axis faces under every lamp that reaches it (each dimmed by the smoke on its way),
 /// the sun's or the moon's beam and the sky, a stroke of lightning, and what comes round; and, under a roof, how light the place is. `skip_owner` = whose carried lamps are
 /// left out; `steady_only` = what the place lights, with nothing that passes; `leave` = lamps of the level's own left out, by what feeds them.
-pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> (f64, Option<f64>) {
-    let mut skip_owner = skip_owner;
-    let steady_only = steady_only.unwrap_or(false);
-    let leave = leave.unwrap_or(0.0);
-    if crate::scene_collision::standing(g) {
-        light_in(g, p, lend(&mut skip_owner), steady_only, leave)
-    } else {
-        crate::scene_collision::window(g, &mut |g: &mut Game| light_in(g, p, lend(&mut skip_owner), steady_only, leave))
-    }
+pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> (f64, Option<f64>) {
+    light_in(g, p, skip_owner, steady_only.unwrap_or(false), leave.unwrap_or(0.0))
 }
 
 /// The lamps, the sun's beam or the moon's, the stroke, onto six faces, with the sky's under the open sky; the best of them. Under a roof the sky is what the
 /// openings show of it, and with all that comes round it is the field's (sim/glow.rs): its mean with the best face of the beams, or its own best face.
-fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
-    let mut skip_owner = skip_owner;
-    let mut acc: Vec<f64> = vec![0.0; 6];
-    lamps_on(g, p, lend(&mut skip_owner), steady_only, &mut acc, leave);
+fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
+    let mut acc = lamps_on(g, p, skip_owner, steady_only, leave);
     crate::hours::sun_light(g, p, &mut acc);
     let field = crate::sense::under_roof(g, p);
     if field.is_none() || leave != 0.0 { crate::hours::dome_light(g, p, &mut acc); }
@@ -141,7 +127,7 @@ fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(
 }
 
 /// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`).
-fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+fn lamp_asked(g: &crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool) -> bool {
     if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 || g.tab.light[l].kind == 2.0 { return false; }
     if let Some(f) = skip_owner {
         let owner = g.tab.light[l].owner;
@@ -151,21 +137,18 @@ fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn
 }
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
-fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let st = crate::sim_lightshome::light_home_block(g);
-    let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
+fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
-/// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full.
-fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+/// A light question's own lamps, in the list's order, each with how many of the level's rows stand before it; the rows themselves are read where they stand.
+fn own_lamps(g: &Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool) -> Vec<[f64; sim::light::LAMP]> {
     let mut skip_owner = skip_owner;
     let exposure = crate::hours::exposure(g);
+    let mut lamps = Vec::new();
     let mut rows = 0.0;
-    let mut i = 0;
-    while i < g.engine.lights.lights.len() {
-        let l = g.engine.lights.lights[i];
-        i += 1;
+    for &l in &g.engine.lights.lights {
         if let Some(r) = g.tab.light[l].row {
             if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
             rows += 1.0;
@@ -181,57 +164,53 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
             let (dx, dy, dz) = (lp[0] - q[0], lp[1] - q[1], lp[2] - q[2]);
             if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range { continue; }
         }
-        if !crate::scene_collision::lamp(g, lp, range, radius, kind, dir, outer, inner, color, intensity, Some(rows)) { return false; }
+        lamps.push([lp[0], lp[1], lp[2], range, radius, kind, dir[0], dir[1], dir[2], outer, inner, color[0], color[1], color[2], intensity, rows]);
     }
-    true
+    lamps
 }
 
-/// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
-pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
-    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
-    crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
+/// The lamps the light that comes round is swept from: the few of nobody's fixture, and how the rows are read.
+pub fn steady_lamps(g: &Game) -> (Vec<[f64; sim::light::LAMP]>, crate::scene_collision::LampRows) {
+    (own_lamps(g, None, Some(&mut |_: &Game, _: f64| true), true), rows_of(true, 0.0))
 }
 
-/// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
-fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
-    let shade = crate::sense::smoky(g);
-    let rows = rows_of(g, steady_only, leave);
-    crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
-    write_lamps(g, Some(p), skip_owner, steady_only);
-    crate::scene_collision::lamps_on(g, acc);
+/// The lamps' part of the light on a point: the question's own and the level's, summed onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
+fn lamps_on(g: &Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> [f64; 6] {
+    let lamps = own_lamps(g, Some(p), skip_owner, steady_only);
+    crate::scene_collision::lamps_on(g, p, &lamps, crate::sense::smoky(g), rows_of(steady_only, leave))
 }
 
 /// The light on one body, the brighter of his chest and his head: what stands on him, and what eyes used to the place see him by.
 pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let pos = g.ch[c].pos;
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(pos, [0.0, 1.2, 0.0]) };
-    let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(pos, [0.0, 1.6, 0.0]) };
+    let chest = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.2, 0.0]));
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.6, 0.0]));
     let (a, pa) = light_at(g, chest, None, None, None);
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
-/// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility.
-pub(super) fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    let c = g.gd[gd].ch;
+/// The light meter of a man, whoever he is: what stands on him, and how visible it makes him, eased.
+pub fn light_meter(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let [stands, e] = light_on(g, c);
-    g.gd[gd].irradiance = stands;
-    let was = g.gd[gd].visibility;
+    if !e.is_finite() { return; }
     let to = crate::game::game_visibility_of(g, e);
-    g.gd[gd].visibility = v3::damp(was, to, 6.0, dt);
+    let s = &mut g.shown[c];
+    s.irradiance = stands;
+    s.visibility = if s.visibility.is_finite() { v3::damp(s.visibility, to, 6.0, dt) } else { to };
 }
 
 // ------------------------------------------------------------ a unit's foe
 
 /// The closure of acquireFoe: one enemy looked at; the most salient is kept.
-fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &mut Option<crate::game::Foe>, best_rate: &mut f64, cur_visible: &mut bool) {
-    let rate = match f {
-        crate::game::Foe::Player => {
+fn consider(g: &mut Game, gd: GuardId, f: CharId, best: &mut Option<CharId>, best_rate: &mut f64, cur_visible: &mut bool) {
+    let rate = match crate::character::guard_of(g, f) {
+        None => {
             let vis = can_see(g, gd);
             if !vis.visible { return; }
             sight_gain(g, gd, vis.dist)
         }
-        crate::game::Foe::Guard(o) => {
-            let vis = can_see_char(g, gd, ch, false);
+        Some(o) => {
+            let vis = can_see_char(g, gd, f);
             if !vis.visible { return; }
             sight_gain_on(g, gd, o, vis.dist)
         }
@@ -245,60 +224,57 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
 
 /// A unit's foe this frame: off a man who is gone, then on the most salient enemy he can see; a fight his eyes have won ends here.
 pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
-    use crate::game::{Foe, GuardState};
+    use crate::game::GuardState;
     use crate::teams::Team;
-    let cur_man = match g.gd[gd].foe {
-        Some(Foe::Guard(o)) => Some(o),
-        _ => None,
-    };
+    let cur_man = crate::teams::foe_guard(g, gd);
     let (mut lost_man, mut mine) = (false, false);
     let knee = match cur_man {
         Some(o) => crate::rails::rails_down(g, o),
         None => false,
     };
     if let Some(cur) = cur_man {
-        if g.gd[cur].state == GuardState::Dead || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
-            let cur_pos = g.ch[g.gd[cur].ch].pos;
+        if crate::condition::down(g, g.gd[cur].ch) || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
+            let cur_pos = g.pos_of(cur);
             if let Some(lk) = g.gd[gd].last_known {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
-            mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
+            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.char_id(gd) && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
-            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             lost_man = true;
         }
     }
-    let (mut best, mut best_rate, mut cur_visible): (Option<Foe>, f64, bool) = (None, 0.05, false);
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, Team::Player) && !g.pl[g.player].down && !g.player_invisible {
+    let (mut best, mut best_rate, mut cur_visible): (Option<CharId>, f64, bool) = (None, 0.05, false);
+    let team = g.team(gd);
+    if team.theirs() && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
         let ch = g.pl[g.player].ch;
-        consider(g, gd, Foe::Player, ch, &mut best, &mut best_rate, &mut cur_visible);
+        consider(g, gd, ch, &mut best, &mut best_rate, &mut cur_visible);
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let och = g.gd[o].ch;
         if !g.ch[och].alive { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
-            consider(g, gd, Foe::Guard(o), och, &mut best, &mut best_rate, &mut cur_visible);
+        if team.foe_of(g.team(o)) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
+            consider(g, gd, och, &mut best, &mut best_rate, &mut cur_visible);
         }
     }
-    let op = team == Team::Operative;
+    let op = team.ours();
     if cur_visible { return; }
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
             crate::mind::foe(g, gd, Some(b), "guards");
-            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None); }
             return;
         }
     }
-    if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !g.pl[g.player].down {
+    if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !crate::condition::down(g, g.pl[g.player].ch) {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
-        crate::mind::foe(g, gd, Some(Foe::Player), "guards");
+        let c = g.pl[g.player].ch;
+        crate::mind::foe(g, gd, Some(c), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
         if mine { crate::game::game_say(g, gd, "got him!", None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
@@ -307,8 +283,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].drop_path();
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
         let left = enemy_up_on_floor(g, &crate::seats::here(g), team);
@@ -330,17 +305,16 @@ fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams:
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if g.gd[o].state == crate::game::GuardState::Dead { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) { return true; }
+        if crate::condition::down(g, g.gd[o].ch) { continue; }
+        if team.foe_of(g.team(o)) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down
+    team.theirs() && !crate::condition::down(g, g.pl[seat.player].ch)
 }
 
 /// One of his side said it in the last three seconds.
 fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&o| {
-        if o == gd || g.gd[o].team != team { return false; }
+        if o == gd || g.team(o) != team { return false; }
         match g.gd[o].bubble.as_ref() {
             Some(b) => g.time - b.t < 3.0 && (b.text.contains("clear.") || b.text.contains("all of them")),
             None => false,
@@ -351,44 +325,44 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 // ------------------------------------------------------------ the right hand
 
 /// Which rig is in his hands.
-pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
+pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::rig_props::RigWeapon {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
-    let rig = g.m.weapons.weapons.get(def).unwrap().rig;
+    let rig = g.weapon(def).rig;
     if g.gd[gd].carbine || rig == WeaponDefRig::Carbine {
-        crate::guards::RigOf::Carbine
+        crate::rig_props::RigWeapon::Carbine
     } else if rig == WeaponDefRig::Sc20k {
-        crate::guards::RigOf::Sc20k
+        crate::rig_props::RigWeapon::Sc20k
     } else {
-        crate::guards::RigOf::Pistol
+        crate::rig_props::RigWeapon::Pistol
     }
 }
 
 /// Which long gun that is; None = the sidearm.
-pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
+pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     match rig_of(g, gd) {
-        crate::guards::RigOf::Pistol => None,
-        crate::guards::RigOf::Carbine => Some(crate::guards::LongRigOf::Carbine),
-        crate::guards::RigOf::Sc20k => Some(crate::guards::LongRigOf::Sc20k),
+        crate::rig_props::RigWeapon::Pistol => None,
+        crate::rig_props::RigWeapon::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::rig_props::RigWeapon::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
     }
 }
 
 /// What his state has him carry in the gun hand.
-pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
+pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::InHand {
     use crate::game::GuardState;
     let torch = crate::startle::startle_torch(g, gd)
         || ((g.gd[gd].state == GuardState::Patrol || (g.gd[gd].state == GuardState::Suspicious && crate::whistle::whistle_soft(g, gd)))
             && !g.gd[gd].drawn
-            && rig_of(g, gd) == crate::guards::RigOf::Pistol
+            && rig_of(g, gd) == crate::rig_props::RigWeapon::Pistol
             && !crate::kit::kit_pistol(g, gd));
-    if torch { crate::guards::HandCarry::Torch } else { crate::guards::HandCarry::Weapon }
+    if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon }
 }
 
 /// A living man has the gun knocked out of his hand at the grab again: off the floor and in his fist.
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     let dropped = g.gd[gd].dropped;
     if let Some(d) = dropped {
-        if crate::throwables::item_kind(g, d) != crate::throwables::ItemKind::Torch {
+        if g.tab.item[d].kind != crate::throwables::ItemKind::Torch {
             if let Some(i) = g.items.items.iter().position(|&x| x == d) {
                 g.items.items.remove(i);
                 g.gd[gd].dropped = None;
@@ -402,13 +376,9 @@ pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
 pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> {
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].civ.is_some() { return None; }
-    match hand_carry(g, gd) {
-        crate::guards::HandCarry::Torch => {
-            if g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0 { None } else { Some(crate::guards::InHand::Torch) }
-        }
-        crate::guards::HandCarry::Weapon => Some(crate::guards::InHand::Weapon),
-    }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return None; }
+    let carry = hand_carry(g, gd);
+    if carry == crate::guards::InHand::Torch && (g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0) { None } else { Some(carry) }
 }
 
 /// The magazine is empty: he stands there changing it, says so, and the clack plays at him.
@@ -426,8 +396,8 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     crate::character::anim_reload(g, c, None, None);
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
-    let def = def_row(g, w);
-    if !crate::gunreload::feed_starts(g, &def) {
+    let def = g.weapon(g.fa[w].def).clone();
+    if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
     }
@@ -439,8 +409,8 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     let rr = crate::weapons::firearm_reload_row(g, w);
     let before = rr.dur - g.gd[gd].reload_t;
     g.gd[gd].reload_t -= dt;
-    let def = def_row(g, w);
-    let drop = crate::gunreload::feed_drop(g, &def);
+    let def = g.weapon(g.fa[w].def).clone();
+    let drop = crate::gunreload::feed_drop(&def);
     let c = g.gd[gd].ch;
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
@@ -449,7 +419,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     if let Some(out) = rr.out {
         if drop != Some(None) && before < out && rr.dur - g.gd[gd].reload_t >= out {
             let pos = g.ch[c].pos;
-            let h = match g.ch[c].bones.get(crate::character::Bone::HandR) { Some(b) => *b, None => v3::add(pos, [0.0, 1.1, 0.0]) };
+            let h = g.ch[c].bone(crate::character::Bone::HandR).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
             let d = g.ch[c].gun_dir;
             let vel = g.ch[c].vel;
             let (id, yaw) = (g.ch[c].id, g.ch[c].aim_yaw);
@@ -489,14 +459,14 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
         Some(b) => g.time - b.t,
         None => 0.0,
     };
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, cd - since);
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, cd - since);
 }
 
 /// The trigger of a row with a BurstSpec, asked once a frame at the alert branch's fire site.
 pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3, start_ok: bool, round_ok: bool, except: Option<GuardId>) {
     let w = g.gd[gd].weapon;
     let def = g.fa[w].def;
-    let spec = match g.m.weapons.weapons.get(def).unwrap().burst {
+    let spec = match g.weapon(def).burst {
         Some(s) => s,
         None => return,
     };
@@ -505,12 +475,12 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         if g.time - b.t > dt * 1.5 + 1e-6 { burst_end(g, gd, w, BURST_BROKEN_CD); }
     }
     if g.fa[w].burst.is_none() {
-        if !start_ok || g.gd[gd].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
+        if !start_ok || g.arms[g.gd[gd].ch].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
         let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
         let wide = g.tune.suppress_first && opening && {
-            let foe = match crate::teams::foe_char(g, gd) {
+            let foe = match g.gd[gd].foe {
                 Some(f) => f,
                 None => g.pl[g.player].ch,
             };
@@ -566,9 +536,9 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     let opts = if b.off.is_some() {
         crate::combat::FireOpts { spread: Some(0.0), steady: Some(true), ..Default::default() }
     } else {
-        crate::aim::guard_round(g, gd, grow + mods.spread, Some(b.idx == 0.0))
+        crate::aim::guard_round(g, gd, grow + mods.spread)
     };
-    crate::combat::fire_weapon(g, c, aim, false, Some(&opts));
+    crate::combat::fire_weapon(g, c, aim, Some(&opts));
     if b.off.is_none() { crate::aim::note_bore(g, gd, aim); }
     b.idx += 1.0;
     b.left -= 1.0;
@@ -611,8 +581,8 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     if g.ch[c].bones.get(Bone::HandR).is_none() { return None; }
     let mut dir = g.ch[c].gun_dir;
     let rk = rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
-    let torch = hand_carry(g, gd) == HandCarry::Torch;
+    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
+    let torch = hand_carry(g, gd) == crate::guards::InHand::Torch;
     let hangs = torch && g.ch[c].alive && torch_low(g, gd);
     if torch && g.ch[c].alive {
         let low = if hangs { Some(crate::rig_props::TorchCarryDirLow { tan: g.k.torch.low_tan, rate: g.k.torch.low_rate }) } else { None };
@@ -623,40 +593,40 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     } else {
         g.gd[gd].beam_dir = v3::copy(dir);
     }
-    let lens = if rk == RigOf::Sc20k {
-        crate::rig_props::sc20k_light_pose(g, c, None).pos
+    let lens = if rk == crate::rig_props::RigWeapon::Sc20k {
+        crate::rig_props::sc20k_light_pose(g, c).pos
     } else if crate::kit::kit_pistol(g, gd) && weapon_rig_is_pistol(g, gd) {
-        crate::rig_props::rig_light_pose(g, c, None).pos
+        crate::rig_props::rig_light_pose(g, c).pos
     } else {
-        let want = if torch { crate::handwork::SwapHeldHeld::Torch } else { crate::handwork::SwapHeldHeld::Weapon };
-        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::handwork::SwapHeld::Torch);
-        let weapon = if carbine { crate::rig_props::RigTorchPosWeapon::Carbine } else { crate::rig_props::RigTorchPosWeapon::Pistol };
-        crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(crate::rig_props::rig()), Some(weapon))
+        let want = if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon };
+        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::guards::InHand::Torch);
+        let weapon = if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol };
+        crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(weapon))
     };
     g.tab.light[fl].pos = lens;
     g.tab.light[fl].dir = dir;
     if g.gd[gd].fled {
         g.tab.light[fl].enabled = false;
-        return g.ch[c].bones.get(Bone::UpperArmR).copied();
+        return g.ch[c].bone(Bone::UpperArmR);
     }
-    let mut held: Option<V3> = g.ch[c].bones.get(Bone::UpperArmR).copied();
+    let mut held: Option<V3> = g.ch[c].bone(Bone::UpperArmR);
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
-    if g.gd[gd].state == GuardState::Dead || lost_live >= 0.0 {
+    if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {
-            let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
+            let (yaw, tumble) = (g.tab.item[it].yaw, g.tab.item[it].tumble);
             let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
-            let at = crate::throwables::item_pos(g, it);
+            let at = g.tab.item[it].pos;
             g.tab.light[fl].pos = v3::mad(at, hd, 0.1);
             g.tab.light[fl].dir = hd;
             held = Some(at);
         }
     }
-    if g.gd[gd].state != GuardState::Dead && lost_live >= 0.0 {
+    if !crate::condition::down(g, g.gd[gd].ch) && lost_live >= 0.0 {
         if !g.gd[gd].light_lit_at_loss { g.tab.light[fl].enabled = false; return held; }
         sputter(g, fl, g.time - lost_live);
         return held;
     }
-    if g.gd[gd].state == GuardState::Dead && g.time >= g.gd[gd].light_dead_until {
+    if crate::condition::down(g, g.gd[gd].ch) && g.time >= g.gd[gd].light_dead_until {
         if !g.gd[gd].light_lit_at_loss { g.tab.light[fl].enabled = false; return held; }
         let (tl, gl) = (g.gd[gd].torch_lost_at, g.gd[gd].gun_lost_at);
         let lost_at = m::min(m::min(if tl >= 0.0 { tl } else { f64::INFINITY }, if gl >= 0.0 { gl } else { f64::INFINITY }), g.gd[gd].died_at);
@@ -681,7 +651,6 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     }
     if wall_dark(g, gd, held) && g.tab.light[fl].enabled {
         g.tab.light[fl].enabled = false;
-        if let Some(s) = g.m.guards.wall_seen.get_mut(gd) { s.out = Some(true); }
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
@@ -709,15 +678,15 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, &crate::seats::here(g), p)) { return true; }
+            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(&crate::seats::here(g), p)) { return true; }
         }
         return false;
     }
-    in_game_view(g, &crate::seats::here(g), p)
+    in_game_view(&crate::seats::here(g), p)
 }
 
-/// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+/// inView: of the seat this pass is about.
+fn in_game_view(seat: &crate::seats::SeatRef, p: V3) -> bool {
     match seat.view_proj {
         None => false,
         Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),

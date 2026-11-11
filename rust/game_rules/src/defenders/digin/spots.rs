@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -28,9 +29,6 @@ pub(super) fn state_of<'g>(g: &'g mut Game) -> &'g mut crate::digin::St {
 
 // ---------------------------------------------------------------- small things
 
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// A draw from [min, max].
 pub(super) fn pick(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "digin::pick#1", who) * (r[1] - r[0]) }
 
@@ -52,29 +50,20 @@ pub(super) fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice
 /// The point at this height.
 fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
-/// A line in the file's log, capped, and in the fight's.
-pub(super) fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
-    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
-    if g.m.digin.digin_log.len() > 400 {
-        g.m.digin.digin_log.drain(0..150);
-    }
-    crate::roomfight::room_fight_note(g, gd, &alloc::format!("dig-in: {}", what));
-}
-
 // ---------------------------------------------------------------- who can hear it
 
 /// Every player who is up and the living teammates, with their ears.
-pub(super) fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
+pub(super) fn listeners(g: &Game) -> Vec<crate::digin::ListenersItem> {
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !g.pl[pl].down {
+        if !crate::condition::down(g, g.pl[pl].ch) {
             let c = g.pl[pl].ch;
             out.push(crate::digin::ListenersItem { gd: None, head: at(g.ch[c].pos, 1.6), vel: g.ch[c].vel });
         }
     }
     for o in g.fight.ops.iter() {
         let id = g.tab.roomfight_op[*o].gd;
-        if g.gd[id].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[id].ch) {
             let c = g.gd[id].ch;
             out.push(crate::digin::ListenersItem { gd: Some(id), head: at(g.ch[c].pos, 1.6), vel: g.ch[c].vel });
         }
@@ -83,18 +72,18 @@ pub(super) fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
 }
 
 /// The nearest ear a sound of this reach gets to.
-pub(super) fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::HeardBy> {
-    let mut best = None;
+pub(super) fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> bool {
+    let mut heard = false;
     let mut bd = m::INF;
     for l in listeners(g) {
-        if flat(src, l.head) > reach_m { continue; }
+        if dist_xz(src, l.head) > reach_m { continue; }
         let p = crate::weather::hear_path(g, at(src, 1.2), l.head, None);
         if p.path_len < reach_m * p.carry && p.path_len < bd {
             bd = p.path_len;
-            best = Some(crate::digin::HeardBy {  });
+            heard = true;
         }
     }
-    best
+    heard
 }
 
 /// The same by the hearing model's law for door and furniture noise.
@@ -102,7 +91,7 @@ fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::HeardN
     let mut best = None;
     let mut bd = m::INF;
     for l in listeners(g) {
-        if flat(src, l.head) >= 12.0 { continue; }
+        if dist_xz(src, l.head) >= 12.0 { continue; }
         let p = crate::weather::hear_path(g, at(src, 0.5), l.head, None);
         if level * m::max(0.0, 1.0 - p.path_len / 12.0) * p.carry > 0.08 && p.path_len < bd {
             bd = p.path_len;
@@ -128,14 +117,11 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let reach = g.k.digin.shout_m;
-    if heard_by(g, pos, reach).is_some() {
+    if heard_by(g, pos, reach) {
         crate::game::game_say(g, gd, text, None, None);
-        g.stats.digin.shouts += 1;
         cue(g, r, crate::digin::Cue::Shout);
-        log(g, Some(gd), &alloc::format!("shouts (heard): {}", text));
         return true;
     }
-    log(g, Some(gd), &alloc::format!("shouts (nobody to hear it): {}", text));
     false
 }
 
@@ -143,17 +129,11 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
 
 /// A path's length on the floor.
 pub(super) fn path_len(from: V3, path: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut q = from;
-    for w in path {
-        l += flat(q, *w);
-        q = *w;
-    }
-    l
+    crate::places::walk_len(from, path)
 }
 
 /// How far on foot from `a` to `b`; infinity: no way found.
-pub(super) fn way_to(g: &mut Game, a: V3, b: V3) -> f64 {
+pub(super) fn way_to(g: &Game, a: V3, b: V3) -> f64 {
     let p = crate::roomfight::room_fight_free_near(g, a).unwrap_or(a);
     let q = crate::roomfight::room_fight_free_near(g, b).unwrap_or(b);
     match crate::scene_collision::nav_grid_find_path(g, p, q, Some(6000.0), None) {
@@ -172,7 +152,7 @@ pub(super) fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [
     }
     if !l.iter().any(|x| x.is_finite()) {
         for (i, e) in entries.iter().enumerate() {
-            l[i] = flat(e.at, from) * 1.5;
+            l[i] = dist_xz(e.at, from) * 1.5;
         }
     }
     let mut idx: Vec<usize> = (0..l.len()).collect();
@@ -184,12 +164,12 @@ pub(super) fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [
 }
 
 /// One entry's cost for expect_entries: the map's closure at digin.ts:264.
-fn way_round(g: &mut Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight::Entry) -> f64 {
+fn way_round(g: &Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight::Entry) -> f64 {
     let o = match crate::roomfight::room_fight_free_near(g, [e.at[0] + e.out[0] * 1.2, 0.0, e.at[2] + e.out[1] * 1.2]) {
         Some(o) => o,
         None => return m::INF,
     };
-    let mut dear = |g: &mut Game, ix: f64, iz: f64| -> f64 {
+    let mut dear = |g: &Game, ix: f64, iz: f64| -> f64 {
         let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
         if g.tab.roomfight_room[room].cells.has(crate::Num(i)) { 30.0 } else { 1.0 }
     };
@@ -233,7 +213,7 @@ fn spot_side(x: &SpotCtx, p: V3) -> f64 { m::sign(x.n[0] * (p[2] - x.i[2]) - x.n
 
 /// The place's score; `hope`: asking no line, the best it could come to; `bar`: give up below this. score at digin.ts:293.
 fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f64) -> Option<f64> {
-    let d = flat(p, x.i);
+    let d = dist_xz(p, x.i);
     if !self_ && (d < 2.2 || d > 12.0) { return None; }
     let fail = if self_ { Some(-5.0) } else { None };
     if !hope && crate::lanes::lane_covers(g, x.gd, p) { return fail; }
@@ -264,7 +244,7 @@ fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f6
         s = 0.4 * sees + 0.5 * m::max(0.0, 1.0 - m::abs(d - 5.0) / 5.0);
     } else {
         if !hope && crate::scene_collision::segment_blocked(g, at(p, 1.5), x.i, None, None, None) { return fail; }
-        s = 0.9 * m::min(1.0, d / 9.0) + (if flat(p, x.b[1]) > 8.4 { 0.8 } else { 0.0 });
+        s = 0.9 * m::min(1.0, d / 9.0) + (if dist_xz(p, x.b[1]) > 8.4 { 0.8 } else { 0.0 });
     }
     let mut walls = 0.0;
     for a in 0..8 {
@@ -275,7 +255,7 @@ fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f6
     }
     let back = m::min(4.0, walls) * 0.15;
     let cut = bar > -m::INF && !hope;
-    let far = if cut { 0.06 * flat(p, x.pos) } else { 0.0 };
+    let far = if cut { 0.06 * dist_xz(p, x.pos) } else { 0.0 };
     if cut {
         let o = spot_outside(g, x, p, s, true);
         match spot_rest(g, x, p, self_, o, back, true) {
@@ -294,7 +274,7 @@ fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f6
 }
 
 /// Not seen from outside the door: outside at digin.ts:318.
-fn spot_outside(g: &mut Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
+fn spot_outside(g: &Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
     let mut s = s;
     for (k, o) in x.outs.iter().enumerate() {
         if hope || crate::scene_collision::segment_blocked(g, *o, at(p, 1.2), None, None, None) {
@@ -305,10 +285,10 @@ fn spot_outside(g: &mut Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
 }
 
 /// The rest of the sum: rest at digin.ts:319.
-fn spot_rest(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope: bool) -> Option<f64> {
+fn spot_rest(g: &Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope: bool) -> Option<f64> {
     let mut s = s + back;
     for o in x.others.iter() {
-        if flat(p, o.i) < 2.0 {
+        if dist_xz(p, o.i) < 2.0 {
             s -= 1.5;
         } else if x.alone && (hope || !crate::scene_collision::segment_blocked(g, at(p, 1.5), o.i, None, None, None)) {
             s += 0.7;
@@ -316,14 +296,14 @@ fn spot_rest(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, h
         if !hope && !crate::scene_collision::segment_blocked(g, o.o, at(p, 1.2), None, None, None) { s -= 0.5; }
     }
     for mt in x.mates.iter() {
-        if !self_ && flat(p, mt.p) < 1.6 { return None; }
+        if !self_ && dist_xz(p, mt.p) < 1.6 { return None; }
         if mt.entry == x.man_entry && spot_side(x, p) == spot_side(x, mt.p) { s -= 0.6; }
     }
     Some(s)
 }
 
 /// Deep: the middle of the crossing floor he has in his sights from `p`. lookFrom at digin.ts:330.
-fn spot_look(g: &mut Game, x: &SpotCtx, p: V3) -> Option<V3> {
+fn spot_look(g: &Game, x: &SpotCtx, p: V3) -> Option<V3> {
     if !x.deep { return None; }
     let (mut sx, mut sz, mut k) = (0.0, 0.0, 0.0);
     for q in x.k.iter() {
@@ -372,7 +352,7 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
     let mut mates: Vec<Mate> = Vec::new();
     for id in g.fight.defs.clone() {
         let (x_gd, x_room, x_station) = { let x = &g.tab.roomfight_def[id]; (x.gd, x.room, x.station) };
-        if id == d || g.gd[x_gd].state == crate::game::GuardState::Dead || x_room != Some(room) { continue; }
+        if id == d || crate::condition::down(g, g.gd[x_gd].ch) || x_room != Some(room) { continue; }
         let row = state_of(g).men.get(x_gd).copied();
         let p = match row.and_then(|m| m.spot) { Some(s) => s, None => x_station };
         let entry = match row { Some(m) if m.phase != crate::digin::Phase::Idle => m.entry, _ => -1.0 };
@@ -395,7 +375,7 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
         let cell_n = nth;
         nth += 1.0;
         let h = match spot_score(g, &x, p, false, true, -m::INF) { Some(h) => h, None => continue };
-        pre.push(PreCell { p, n: cell_n, hope: h - 0.06 * flat(p, pos) });
+        pre.push(PreCell { p, n: cell_n, hope: h - 0.06 * dist_xz(p, pos) });
     }
     js::sort_by(&mut pre, |a, b| b.hope - a.hope);
     let mut cand: Vec<CandCell> = Vec::new();
@@ -404,7 +384,7 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
     for q in pre.iter() {
         if top.len() >= 5 && q.hope < fifth { break; }
         let s0 = match spot_score(g, &x, q.p, false, false, fifth) { Some(s) => s, None => continue };
-        let s = s0 - 0.06 * flat(q.p, pos);
+        let s = s0 - 0.06 * dist_xz(q.p, pos);
         cand.push(CandCell { p: q.p, s, n: q.n });
         let mut k = top.len();
         while k > 0 && top[k - 1] < s { k -= 1; }
@@ -422,10 +402,10 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
             _ => continue,
         };
         let last = path[path.len() - 1];
-        if flat(last, k.p) > 0.8 || path_len(pos, &path) > 18.0 { continue; }
+        if dist_xz(last, k.p) > 0.8 || path_len(pos, &path) > 18.0 { continue; }
         let mut bad = false;
         for w in path.iter() {
-            if flat(*w, e.at) < 0.9 || !crate::roomfight::room_fight_in_room(g, Some(room), *w) && flat(*w, k.p) > 0.8 {
+            if dist_xz(*w, e.at) < 0.9 || !crate::roomfight::room_fight_in_room(g, Some(room), *w) && dist_xz(*w, k.p) > 0.8 {
                 bad = true;
                 break;
             }
@@ -443,7 +423,7 @@ pub(super) fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) 
     let me = g.tab.roomfight_def[d].gd;
     let mut at_ = 0usize;
     for id in r.men.iter() {
-        if g.gd[*id].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[*id].ch) { continue; }
         if *id == me { return at_ % 2 == 1; }
         at_ += 1;
     }
@@ -475,7 +455,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
     let mut bd = m::INF;
     for p in g.props.props.clone() {
         if state_of(g).used.has(p) || skip.map_or(false, |s| s.has(p)) { continue; }
-        let pp: V3 = [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)];
+        let pp: V3 = [g.tab.props_prop[p].x, 0.0, g.tab.props_prop[p].z];
         if !crate::roomfight::room_fight_in_room(g, room, pp) {
             let inside = match crate::roomfight::room_fight_free_near(g, pp) {
                 Some(q) => crate::roomfight::room_fight_in_room(g, room, q),
@@ -483,8 +463,8 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
             };
             if !inside { continue; }
         }
-        let a = flat(g.ch[c].pos, pp);
-        let b = flat(pp, e.at);
+        let a = dist_xz(g.ch[c].pos, pp);
+        let b = dist_xz(pp, e.at);
         if a > g.k.digin.prop_m || b > g.k.digin.prop_m { continue; }
         if a + b < bd {
             bd = a + b;
@@ -498,7 +478,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
 pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut crate::digin::RoomSt>, thud: Option<bool>) {
     let thud = thud.unwrap_or(false);
     let p = m.prop.unwrap();
-    let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+    let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
     let pos: V3 = [px, 0.3, pz];
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };
@@ -516,7 +496,6 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
         serial,
         ..crate::game::GameEvent::default()
     });
-    g.stats.digin.scrapes += 1;
     let l = match heard_noise(g, pos, level) {
         Some(l) => l,
         None => return,
@@ -526,10 +505,8 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
     if let (Some(by), Some(rm)) = (l.gd, r) {
         if !rm.callout {
             rm.callout = true;
-            g.stats.digin.callouts += 1;
             let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
             crate::game::game_say(g, by, line, Some(true), None);
-            log(g, Some(by), "calls the furniture he hears");
         }
     }
 }
@@ -546,22 +523,17 @@ pub(super) fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &m
     g.dr[door].key_side = side;
     let name = g.dr[door].def.name.clone();
     g.dr[door].lock_id = alloc::format!("wedge:{}", name);
-    crate::doors::door_set_locked(g, door, true);
-    crate::doors::door_set_pick(g, door, 0.0);
+    g.dr[door].leaf.locked = true;
+    g.dr[door].leaf.pick = 0.0;
     r.wedged += 1.0;
-    if !crate::doors::doors_pull_face(g, door, [e.at[0] - e.out[0] * 0.8, 0.0, e.at[2] - e.out[1] * 0.8]) {
-        g.stats.digin.wedged_away += 1;
-    }
-    g.stats.digin.braced += 1;
     scrape(g, gd, m, Some(r), Some(true));
-    log(g, Some(gd), &alloc::format!("wedges {}", name));
 }
 
 /// May this door be wedged.
 pub(super) fn wedgeable(g: &Game, d: DoorId) -> bool {
     !g.dr[d].def.steel.unwrap_or(false)
-        && !crate::doors::door_locked(g, d)
-        && !crate::doors::door_lock_broken(g, d)
+        && !g.dr[d].leaf.locked
+        && !g.dr[d].leaf.lock_broken
         && !g.dr[d].def.locked.unwrap_or(false)
         && crate::devices::devices_pad_of(g, d).is_none()
 }
@@ -578,12 +550,12 @@ pub(super) fn heard_at(g: &Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 
 // ---------------------------------------------------------------- doors (DIGIN.shutOpen is settled off on the page: the rule folds away)
 
 /// The entry his hands are on or he is on his way to.
-pub(super) fn door_of(g: &Game, m: crate::digin::Man) -> f64 {
+pub(super) fn door_of(m: crate::digin::Man) -> f64 {
     if m.brace >= 0.0 { m.brace } else { m.entry }
 }
 
 /// Seconds a hand waits on a pulled leaf.
-fn latch_secs(g: &mut Game) -> f64 { 2.5 }
+fn latch_secs() -> f64 { 2.5 }
 
 /// His hand goes on the leaf: pulled to, the wait begun.
 pub(super) fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) {
@@ -591,20 +563,15 @@ pub(super) fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man
     let c = g.gd[gd].ch;
     let who = g.ch[c].id;
     crate::doors::doors_pull_to(g, d_2, who);
-    g.stats.digin.pulled_to += 1;
     let now = g.time;
     m.phase = crate::digin::Phase::Shut;
-    m.until = now + latch_secs(g);
-    m.hand_t = Some(now);
-    m.pull_t = Some(now);
-    m.pushes = Some(0.0);
-    m.pull_a = Some(m::abs(crate::doors::door_angle(g, d_2)));
-    m.stalls = Some(0.0);
+    m.until = now + latch_secs();
+    m.pull_a = Some(m::abs(g.dr[d_2].leaf.angle));
 }
 
 /// …and stays on it: true = still waiting for the latch. A man with furniture to wedge it with stays while the leaf is still coming home: from wide open that takes about five seconds, and it can be wedged only once it latches. His clock is for a leaf a body has stopped, and for a man who only came to shut it, whose pull finishes without him.
-pub(super) fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
-    !crate::doors::door_latched(g, d_2) && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
+pub(super) fn hand_waits(g: &Game, m: &crate::digin::Man, d_2: DoorId) -> bool {
+    !g.dr[d_2].leaf.latched && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
 }
 
 #[cfg(test)]
@@ -613,7 +580,7 @@ mod tests {
     // the bits from the TypeScript's own lines under bun with EXACT.on
     #[test]
     fn flat_and_path_len_have_the_typescripts_bits() {
-        assert_eq!(flat([1.1, 9.0, 2.3], [-4.7, 0.0, 8.9]).to_bits(), 0x4021929cde1931e6);
+        assert_eq!(dist_xz([1.1, 9.0, 2.3], [-4.7, 0.0, 8.9]).to_bits(), 0x4021929cde1931e6);
         assert_eq!(path_len([0.1, 0.0, 0.2], &[[1.3, 0.0, 2.7], [3.9, 5.0, -1.1], [-2.25, 0.0, 0.7]]).to_bits(), 0x402b92245733eab8);
     }
     #[test]

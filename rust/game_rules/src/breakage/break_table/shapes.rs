@@ -207,7 +207,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     let poly: Vec<P2> = o.iter().map(|p| if long_first { [p[0], p[1]] } else { [p[1], p[0]] }).collect();
     let pr = crate::scene_cut::cut_prism(thin, half_t, &poly);
     if pr.empty { return None; }
-    g.stats.break_table.dropped += pr.dropped as i32;
     if shape != Shape::Lump { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
     let thin = thin as usize;
     let (ua, va) = ((thin + 1) % 3, (thin + 2) % 3);
@@ -244,7 +243,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     all.extend_from_slice(&extra);
     let rr = crate::scene_cut::cut_record(pr.h, &all);
     if rr.empty { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
-    g.stats.break_table.dropped += rr.dropped as i32;
     let f = crate::scene_cut::cut_fit(pr.h, rr.cut.as_deref());
     Some(Shaped { off: [pr.off[0] + f.off[0], pr.off[1] + f.off[1], pr.off[2] + f.off[2]], h: f.h, cut: f.cut })
 }
@@ -309,7 +307,7 @@ fn ragged_planes(rag: &BreakRowRagged, h: V3, faces: &[OpenFace], most: f64, acr
 }
 
 /// RAGGED END: the planes for a standing piece's open faces. The record is not fitted: feet and the nav grid keep the box.
-pub(super) fn ragged_cut(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
+pub(super) fn ragged_cut(g: &crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
     let rag = row.ragged?;
     if faces.is_empty() { return None; }
     let (most, across) = (g.k.breaks.max_standing_planes, g.k.breaks.across_deg);
@@ -338,12 +336,10 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
 /// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.
 pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
-    let (yaw, h, c) = seam_box_numbers(g, b);
+    let (yaw, h, c) = { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) };
     wall_normal_at(yaw, h, c, toward, keep)
 }
 
-/// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
-fn seam_box_numbers(g: &crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
 
 #[cfg(test)]
 mod tests {

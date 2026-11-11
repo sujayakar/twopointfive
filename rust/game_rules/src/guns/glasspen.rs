@@ -8,36 +8,16 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- local helpers
 
-/// `g.level.boxes[bi]`: an index with no box is undefined there, None here. That list and `g.col.boxes` are one array in the TypeScript, and an index is a place in it, not a BoxId
-fn level_box(g: &Game, bi: f64) -> Option<BoxId> {
-    let ix = bi as usize;
-    if ix as f64 != bi { return None; }
-    g.col.boxes.get(ix).copied()
-}
 /// `GLASSPEN.energy[id] ?? GLASSPEN.byClass[cls] ?? GLASSPEN.defaultEnergy`
 fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Option<crate::weapons::WeaponClass>) -> f64 {
-    if let Some(&e) = k.energy.get(String::from(id.as_str())) { return e; }
+    if let Some(&e) = k.energy.of(id.as_str()) { return e; }
     if let Some(c) = cls {
-        if let Some(&e) = k.by_class.get(String::from(c.as_str())) { return e; }
+        if let Some(&e) = k.by_class.of(c.as_str()) { return e; }
     }
     k.default_energy
 }
-/// `g.col.raycast(ro, rd, tmax)` in this file's shape of a hit
-fn cast(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RoundPathSt> {
-    crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| RoundPathSt { t: h.t, index: h.index, n: h.n })
-}
 /// a new state: no log, rev 0
-fn fresh_state() -> PenState { PenState { log: Vec::new(), rev: 0.0 } }
-/// `panesUntouched(g.sim)`: the part's first word. The skeleton's `panes_untouched(b: Opaque)` cannot carry the slot, and the slot is `g.sim`
-fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
-/// `PANE_TYPES[i]`, the module's number for a glass (rust/sim/src/panes.rs ANNEALED, TEMPERED, LAMINATED)
-fn pane_type_word(i: f64) -> PaneType {
-    if i == 1.0 { PaneType::Tempered } else if i == 2.0 { PaneType::Laminated } else { PaneType::Annealed }
-}
-/// the module's scratch as the TypeScript reads it through `f64()`, from its first double (`a = x.sim_scratch() / 8` is 0 here). The last call's answer: read it before the next call
-fn scratch() -> &'static [f64] {
-    unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
-}
+fn fresh_state() -> PenState { PenState { rev: 0.0 } }
 /// the shell rule on one pane's marks, five numbers each: x, y, z, went-through, filed-a-mark
 fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     let (mut marks, mut join) = (0, false);
@@ -66,9 +46,6 @@ fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
 
 // ---------------------------------------------------------------- host work: nothing here on the page's path
 
-/// the switch kept per machine: browser storage, and the rows it wrote are settled
-pub fn load_glass_pen(g: &crate::game::Game) {}
-
 // ---------------------------------------------------------------- the switch, a round's energy
 
 /// a round's energy as it leaves this row's muzzle
@@ -78,7 +55,7 @@ pub fn round_energy(g: &crate::game::Game, def: crate::weapons::WeaponId) -> f64
 }
 
 /// …and of the gun in this man's hands
-fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+fn round_energy_of(g: &crate::game::Game, c_2: CharId) -> f64 {
     if let Some(pl) = crate::seats::man_of(g, Some(c_2)) {
         let gun = match crate::game::player_gun_in_hand(g, pl) { Some(f) => f, None => g.pl[pl].pistol };
         let def = g.fa[gun].def;
@@ -95,7 +72,7 @@ fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// the energy a line-of-fire question about THIS man's gun is asked with
-pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
+pub fn shot_energy(g: &crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
     Some(match def { Some(d) => round_energy(g, d), None => round_energy_of(g, c_2) })
 }
 
@@ -109,14 +86,13 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glasspen::PenSta
 /// the holes go with the stars
 pub fn reset_glass_pen(g: &mut crate::game::Game) {
     if let Some(s) = g.m.glasspen.states.as_mut() {
-        s.log.clear();
         s.rev += 1.0;
     }
-    if !untouched(g) { ::sim::panes::clear_holes(g.sim); }
+    if !crate::glassbreak::glass_break_untouched(g) { ::sim::panes::clear_holes(g.sim); }
 }
 
 /// a number that moves whenever what a round has to pay at any pane may have moved
-pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
+pub fn glass_toll_sig(g: &crate::game::Game) -> f64 {
     let rev = match g.m.glasspen.states.as_ref() { Some(s) => s.rev, None => 0.0 };
     rev * 65537.0 + crate::glassbreak::glass_break_open_sig(g)
 }
@@ -124,29 +100,23 @@ pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
 /// remember a crossing on pane `bi`: the module keeps it, the oldest going past `holes`
 fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
-    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p, &g.k));
+    crate::glassbreak::glass_break_asking(g, |cx, k| ::sim::pen::add_hole(cx.g, js::to_u32(bi), p, k));
 }
 
 // ---------------------------------------------------------------- the toll
 
-/// a crossing as the module lists it (rust/sim/src/pen.rs write_cross; glasspen.ts crossAt)
-fn cross_at(m: &[f64], o: f64, into: f64) -> crate::glasspen::PaneCross {
-    let o = o as usize;
+/// a crossing, as a round's path keeps it
+fn crossing(x: &::sim::pen::Crossing) -> PaneCross {
+    let type_ = match x.t.ty { 1 => PaneType::Tempered, 2 => PaneType::Laminated, _ => PaneType::Annealed };
     PaneCross {
-        type_: pane_type_word(m[o]), n: [m[o + 1], m[o + 2], m[o + 3]], cos: m[o + 4], take: m[o + 5], e_out: m[o + 6], hole: m[o + 7] != 0.0,
-        bi: m[o + 8], t: m[o + 9],
-        at: [m[o + 10], m[o + 11], m[o + 12]], exit: [m[o + 13], m[o + 14], m[o + 15]], dir_in: [m[o + 16], m[o + 17], m[o + 18]], dir_out: [m[o + 19], m[o + 20], m[o + 21]],
-        e_in: m[o + 22], turn_deg: m[o + 23], thru: m[o + 24], into,
+        type_, take: x.t.take, e_out: x.t.e_out, hole: x.t.hole, bi: x.bi as f64, t: x.at_t, at: x.at, exit: x.exit, dir_in: x.dir_in, dir_out: x.dir_out,
+        e_in: x.e_in, thru: x.thru, into: x.into as f64,
     }
 }
 
 /// one pane on a round's flight: what it takes and where the round leaves it, or None: spent in it
-pub(super) fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
-    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<PaneCross> {
-        if ::sim::pen_cross(js::to_u32(bi), o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth as usize, &g.k) == 0 { return None; }
-        let m = scratch();
-        Some(cross_at(m, 0.0, m[CROSS as usize]))
-    })
+pub(super) fn pane_crossing(g: &crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
+    ::sim::pen::pane_crossing(&crate::glassbreak::glass_ctx(g), js::to_u32(bi), o, d, t, e, nth as usize, &g.k).map(|x| crossing(&x))
 }
 
 // ---------------------------------------------------------------- the round's flight
@@ -186,39 +156,25 @@ pub(super) fn commit_crossings(g: &mut crate::game::Game, cross: &[crate::glassp
         if x.t > t_hit + 1e-6 { break; }
         let mark = match shell.as_deref_mut() { Some(s) => shell_mark(g, s, x.bi, x.at, true), None => ShellMark::First };
         if mark == ShellMark::Join {
-            g.stats.glasspen.crossed += 1;
-            g.stats.glasspen.shell_joined += 1;
-            if x.hole { g.stats.glasspen.via_hole += 1; }
             crate::glassbreak::glass_break_widen(g, x.bi, x.at);
             continue;
         }
         pane_impact(g, x.bi, x.at, x.dir_in, x.e_in, who, true, Some(mark == ShellMark::More));
         add_hole(g, x.bi, x.at);
-        g.stats.glasspen.crossed += 1;
-        if x.hole { g.stats.glasspen.via_hole += 1; }
-        let line = format!(
-            "{}s pane {} ({}) crossed{}: energy {} → {}, turned {}°{}",
-            js::to_fixed(g.time, 1), x.bi, x.type_.as_str(), if x.hole { " by its hole" } else { "" }, js::to_fixed(x.e_in, 2), js::to_fixed(x.e_out, 2), js::to_fixed(x.turn_deg, 2),
-            if js::truthy(who) { format!(" (who {})", who) } else { String::new() },
-        );
-        let s = state_of(g);
-        s.log.push(line);
-        if s.log.len() > 24 { s.log.remove(0); }
+        state_of(g);
         crossed_hook(g, x, who);
     }
 }
 
 /// the round stopped in static `bi`: if that is glass it gets the impact call with the energy it arrived with
 pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
-    let b = level_box(g, bi);
+    let b = g.box_at(bi);
     let sheet = crate::glass::is_sheet(g, b);
-    if sheet { g.stats.glasspen.spent += 1; }
     let mark = match shell {
         Some(s) if sheet => shell_mark(g, s, bi, at, false),
         _ => ShellMark::First,
     };
     if mark == ShellMark::Join {
-        g.stats.glasspen.shell_joined += 1;
         let e = energy * g.k.glasspen.fracture_k;
         crate::glassbreak::glass_break_impact(g, bi, at, Some(dir), e, who, Some(false));
         return;
@@ -228,39 +184,22 @@ pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy
 
 /// the muzzle already past the glass: what the panes across the arm left the round, filed at the arm's crossing; None: the old rule stands
 pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
-    let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
+    let from = crate::combat::shoulder(g, c_2);
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
-    let w = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<(f64, Vec<PaneCross>)> {
-        let n = ::sim::pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy, &g.k);
-        if n < 0 { return None; }
-        let m = scratch();
-        let mut cross: Vec<PaneCross> = Vec::new();
-        for i in 0..n { cross.push(cross_at(m, i as f64 * CROSS, -1.0)); }
-        Some((m[::sim::sim_scratch_len() - 1], cross))
-    });
+    let w = ::sim::pen::arm_walk(&crate::glassbreak::glass_ctx(g), from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>()));
     let (e, cross) = w?;
     if cross.is_empty() { return Some(ArmThroughGlass { e: energy, panes: 0.0 }); }
     let id = g.ch[c_2].id;
     commit_crossings(g, &cross, l, id, shell);
-    g.stats.glasspen.via_arm += 1;
     Some(ArmThroughGlass { e, panes: cross.len() as f64 })
 }
 
 /// the line of fire across the panes a segment meets: does a round of `energy` get through every one
-pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool {
+pub fn shot_passes(g: &crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool {
     let energy = energy.unwrap_or(g.k.glasspen.default_energy);
-    g.stats.glasspen.shot_asked += 1;
-    let ok = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> bool {
-        let m = unsafe { core::slice::from_raw_parts_mut(::sim::sim_scratch(), ::sim::sim_scratch_len()) };
-        for k in 0..panes.len() {
-            m[2 * k] = panes[k].bi;
-            m[2 * k + 1] = panes[k].t;
-        }
-        ::sim::pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.len(), energy, &g.k) == 1
-    });
-    if ok { g.stats.glasspen.shot_through += 1; } else { g.stats.glasspen.shot_refused += 1; }
-    ok
+    let list: Vec<(u32, f64)> = panes.iter().map(|p| (js::to_u32(p.bi), p.t)).collect();
+    ::sim::pen::shot_passes(&crate::glassbreak::glass_ctx(g), a, rd, &list, energy, &g.k)
 }
 
 /// glass is not cover: how many of `eyes` have a line of fire to `p` through glass, no door leaf in the way
@@ -287,7 +226,7 @@ pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy:
 }
 
 /// is there standing glass on this line of fire
-pub fn glass_on_line(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub fn glass_on_line(g: &crate::game::Game, a: V3, b: V3) -> bool {
     let mut panes: Vec<crate::scene_collision::SegmentBlockedPanesItem> = Vec::new();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(0.0), Some(&mut panes));
     !panes.is_empty()
@@ -323,33 +262,5 @@ mod tests {
         // far off on the pane: another mark
         assert_eq!(mark_on(&mut mk, [1.0, 0.0, 0.0], false, r2), ShellMark::More);
         assert_eq!(mk.len(), 25);
-    }
-
-    // the module's numbers for a glass and this file's table are one list
-    #[test]
-    fn a_glass_number_is_the_module_s() {
-        assert_eq!(pane_type_word(::sim::panes::ANNEALED as f64), PaneType::Annealed);
-        assert_eq!(pane_type_word(::sim::panes::TEMPERED as f64), PaneType::Tempered);
-        assert_eq!(pane_type_word(::sim::panes::LAMINATED as f64), PaneType::Laminated);
-        let words = pane_types();
-        for i in 0..words.len() { assert_eq!(words[i].as_str(), pane_type_word(i as f64).as_str()); }
-    }
-
-    // the layout this file reads is the one rust/sim writes, field by field, and the sizes agree
-    #[test]
-    fn a_crossing_reads_as_the_module_writes_it() {
-        assert_eq!(CROSS, ::sim::pen::CROSS as f64);
-        assert_eq!(MAX_CROSS, ::sim::pen::MAX_CROSS as f64);
-        let x = ::sim::pen::Crossing {
-            t: ::sim::pen::Toll { ty: ::sim::panes::LAMINATED, n: [1.0, 2.0, 3.0], cos: 4.0, take: 5.0, e_out: 6.0, hole: true },
-            bi: 7, at_t: 8.0, at: [9.0, 10.0, 11.0], exit: [12.0, 13.0, 14.0], dir_in: [15.0, 16.0, 17.0], dir_out: [18.0, 19.0, 20.0], e_in: 21.0, turn_deg: 22.0, thru: 23.0, into: -1,
-        };
-        let mut m = [0.0; 3 + ::sim::pen::CROSS];
-        ::sim::pen::write_cross(&x, &mut m[3..]);
-        let c = cross_at(&m, 3.0, -1.0);
-        assert_eq!(c.type_, PaneType::Laminated);
-        assert_eq!((c.n, c.cos, c.take, c.e_out, c.hole), ([1.0, 2.0, 3.0], 4.0, 5.0, 6.0, true));
-        assert_eq!((c.bi, c.t, c.at, c.exit, c.dir_in, c.dir_out), (7.0, 8.0, [9.0, 10.0, 11.0], [12.0, 13.0, 14.0], [15.0, 16.0, 17.0], [18.0, 19.0, 20.0]));
-        assert_eq!((c.e_in, c.turn_deg, c.thru, c.into), (21.0, 22.0, 23.0, -1.0));
     }
 }

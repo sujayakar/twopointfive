@@ -1,5 +1,4 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the highlight, at the door, again and again. Every row of every card is played here on the kinds of way a level has: a door, a set, a blank wall, an open gap, the quiet picture, the solo night. There is no other game to compare with: a row's marks are what it did, in the game's own books.
-use game::game::GuardState;
 use game::kitstage::{self, light::KIT_VIEW_LOOP as K, walk, KitStage};
 use game::out_events::OutEvent;
 use game_start::json::{self, Json};
@@ -29,7 +28,7 @@ fn stood(level: &str, words: &str) -> Play {
 /// a frame, and what it told the host
 fn frame_out(p: &mut Play) -> Vec<OutEvent> { let h = p.host; game_start::stand::frame(&mut p.g, &h, 1.0 / 60.0) }
 /// the file as team indexes
-fn file(p: &Play) -> Vec<usize> { let team = game::scenario_run::team_of(&p.g); st(p).order.iter().map(|x| team.iter().position(|t| t == x).unwrap()).collect() }
+fn file(p: &Play) -> Vec<usize> { let team = p.g.staged.team.clone(); st(p).order.iter().map(|x| team.iter().position(|t| t == x).unwrap()).collect() }
 /// this man stood `d` m out from his place, this very tick
 fn hold_off(p: &mut Play, x: game::ids::GuardId, d: f64) {
     let (h, n) = { let s = st(p); (walk::home_of(&p.g, s, x).0, s.n) };
@@ -38,16 +37,16 @@ fn hold_off(p: &mut Play, x: game::ids::GuardId, d: f64) {
     p.g.ch[c].vel = [0.0; 3];
 }
 fn st(p: &Play) -> &KitStage { p.g.kit_stage.as_ref().expect("a stage") }
-fn sam(p: &Play) -> [f64; 3] { p.g.ch[p.g.pl[p.g.player].ch].pos }
+fn sam(p: &Play) -> [f64; 3] { p.g.player_pos(p.g.player) }
 fn flat(a: [f64; 3], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[2] - b[1]).powi(2)).sqrt() }
 /// the furthest any man is from where he lives
 fn off_places(p: &Play) -> f64 {
     let s = st(p);
     let mut d = flat(sam(p), s.sam);
-    for &x in &s.order { d = d.max(flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)); }
+    for &x in &s.order { d = d.max(flat(p.g.pos_of(x), walk::home_of(&p.g, s, x).0)); }
     d
 }
-fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| p.g.gd[x].state != GuardState::Dead) && !p.g.pl[p.g.player].down }
+fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| !game::condition::down(&p.g, p.g.gd[x].ch)) && !game::condition::down(&p.g, p.g.pl[p.g.player].ch) }
 
 /// a wall way and a gap way on a small set of a level's own
 fn with_way(level: &str, way: &str, set: &str) -> String {
@@ -155,7 +154,7 @@ fn every_row(level: &str, words: &str, what: &str) -> Vec<String> {
     kitstage::cards(&mut p.g, -1);
     p.run(1.0);
     let rows = game::kit::kit_rows(&mut p.g, 0.0);
-    for r in rows { let f = r.field.as_str(); assert!(game::kitstage::acts::thing(&p.g, f, 0).is_some() || matches!(f, "bare" | "cans"), "{}: Sam's tile {} has no row", what, f); }
+    for r in rows { let f = r.field.as_str(); assert!(game::kitstage::acts::thing(&p.g, f, 0).is_some(), "{}: Sam's tile {} has no row", what, f); }
     for &t in THINGS_SAM { play_row(&mut p, what, 0, t, &mut table); }
     if !st(&p).order.is_empty() {
         for &t in THINGS_MATE { play_row(&mut p, what, 1, t, &mut table); }
@@ -204,7 +203,7 @@ fn a_pick_cuts() {
 fn the_card_switch_walks() {
     let mut p = stood("records.json", "roomclear&squad4");
     let serial = st(&p).a.restages;
-    let team = game::scenario_run::team_of(&p.g);
+    let team = p.g.staged.team.clone();
     for &who in &[1u32, 2, 3, 4, 0] {
         kitstage::open(&mut p.g, who, "");
         let mut t = 0.0;
@@ -213,7 +212,7 @@ fn the_card_switch_walks() {
             p.frame();
             t += 1.0 / 60.0;
             let s = st(&p);
-            let mut at: Vec<[f64; 3]> = s.order.iter().map(|&x| p.g.ch[p.g.gd[x].ch].pos).collect();
+            let mut at: Vec<[f64; 3]> = s.order.iter().map(|&x| p.g.pos_of(x)).collect();
             at.push(sam(&p));
             for i in 0..at.len() { for j in 0..i {
                 let d = ((at[i][0] - at[j][0]).powi(2) + (at[i][2] - at[j][2]).powi(2)).sqrt();
@@ -223,7 +222,7 @@ fn the_card_switch_walks() {
                 let m = team[who as usize - 1];
                 let k = s.order.iter().position(|&x| x == m).unwrap();
                 let place = walk::home_of(&p.g, s, m).0;
-                if flat(p.g.ch[p.g.gd[m].ch].pos, place) <= 0.25 && (k == 0 || (k == 3 && s.four)) { arrived = Some(t); }
+                if flat(p.g.pos_of(m), place) <= 0.25 && (k == 0 || (k == 3 && s.four)) { arrived = Some(t); }
             }
         }
         if who > 0 { assert!(arrived.map_or(false, |t| t <= 5.0), "card {}: his man at the head at {:?} s", who, arrived); }
@@ -240,7 +239,7 @@ fn a_card_changed_is_written_live() {
     use game::kit::{KitWeapon, SuitId, TrimId};
     let mut p = stood("records.json", "roomclear&squad4");
     let serial = st(&p).a.restages;
-    let team = game::scenario_run::team_of(&p.g);
+    let team = p.g.staged.team.clone();
     kitstage::open(&mut p.g, 1, "weapon");
     p.run(4.0);
     let x = team[0];
@@ -275,7 +274,7 @@ fn a_card_changed_is_written_live() {
     // counts: on the pools
     tell(&mut p, &mut |m| m.bangs = 3.0, 1, -1);
     p.frame();
-    assert!(p.g.door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.door_tools.bangs);
+    assert!(p.g.sets[p.g.seat].door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.sets[p.g.seat].door_tools.bangs);
     assert_eq!(st(&p).a.restages, serial, "no restage for any of it");
     // Sam's gun and counts
     kitstage::open(&mut p.g, 0, "weapon");
@@ -312,7 +311,7 @@ fn left_alone(level: &str, words: &str) {
         p.frame();
         let s = st(&p);
         rows = s.a.beat_n;
-        if s.a.beat.is_none() && s.veil_asked.is_none() { most = most.max(s.order.iter().map(|&x| flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)).fold(0.0, f64::max)); }
+        if s.a.beat.is_none() && s.veil_asked.is_none() { most = most.max(s.order.iter().map(|&x| flat(p.g.pos_of(x), walk::home_of(&p.g, s, x).0)).fold(0.0, f64::max)); }
     }
     let s = st(&p);
     assert!(!s.none, "{}: gone", what);
@@ -334,11 +333,11 @@ fn goggles_off_and_on_again_he_wears_them() {
     let under = |p: &mut Play| { kitstage::under(&mut p.g); p.frame(); };
     tell(&mut p, &mut |m| m.nvg = false, 1, -1);
     under(&mut p);
-    let x = game::scenario_run::team_of(&p.g)[0];
+    let x = p.g.staged.team[0];
     assert!(!game::kit::kit_goggles(&p.g, x), "off: he has none");
     tell(&mut p, &mut |m| m.nvg = true, 1, -1);
     under(&mut p);
-    let x = game::scenario_run::team_of(&p.g)[0];
+    let x = p.g.staged.team[0];
     assert!(game::kit::kit_goggles(&p.g, x), "on again: he wears them");
 }
 

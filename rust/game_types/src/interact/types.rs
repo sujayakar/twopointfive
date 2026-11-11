@@ -10,10 +10,6 @@ pub struct EmptyThing {
     pub why: String,
 }
 
-pub const TAP_SECS: f64 = 0.25;
-
-pub const WHEEL_STEP: f64 = 60.0;
-
 pub const RING_BODY_M: f64 = 1.0;
 
 pub const RING_THING_M: f64 = 3.5;

@@ -20,15 +20,15 @@ fn pair_with_body(seed: u32, body: Option<[f64; 2]>) -> ((Play, GuardId, GuardId
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..if body.is_some() { 2 } else { 1 }]);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let t1 = foes[0];
     let lying = body.map(|at| {
         // (stood there for his bones to be there, then dropped)
         let t2 = foes[1];
         for _ in 0..3 { let c = p.g.gd[t2].ch; p.g.ch[c].pos = [at[0], 0.0, at[1]]; p.g.gd[t2].hold = true; p.g.gd[t2].pinned = true; pin(&mut p, t1, GuardState::Patrol, 0.0); p.frame(); }
-        game::combat::kill_guard(&mut p.g, t2, [0.0, 0.0, 1.0], Some(true), None, None, None);
+        game::combat::kill_guard(&mut p.g, t2, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand);
         t2
     });
     pin(&mut p, t1, GuardState::Patrol, 0.0);
@@ -57,7 +57,7 @@ fn the_squad_line_says_low_and_contact_while_they_last() {
         assert_eq!(word(&mut p), "SILENT · low", "seed {s}: a suspicious man 10 m off: {}", p.roll());
         // (his first round in their ears makes it 'SILENT · compromised', silent's own word from then on: 'contact' is what stands until it)
         let mut seen = Vec::new();
-        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(game::game::Foe::Player); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
+        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(p.g.pl[p.g.player].ch); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
         assert!(seen.iter().any(|w| w == "SILENT · contact"), "seed {s}: an alert man has eyes on Sam and the word went {seen:?}: {}", p.roll());
     }
 }
@@ -70,12 +70,12 @@ fn two_seats(seed: u32) -> (Play, GuardId, Vec<Vec<GuardId>>) {
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     let mut men = Vec::new();
     for i in 0..2 {
         let s = p.g.seats[i];
-        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true, None));
+        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true));
         let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, s));
         assert!(!mine.is_empty(), "seed {seed}: seat {i} has no men");
         men.push(mine);
@@ -114,7 +114,7 @@ fn in_a_game_of_two_each_squad_line_says_low_for_its_own_men() {
 fn a_blown_job_finished_by_hand_ends_in_his_own_words() {
     for s in SEEDS {
         let (mut p, m, t1) = pair(s);
-        let at = p.g.ch[p.g.gd[t1].ch].pos;
+        let at = p.g.pos_of(t1);
         let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
         assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "seed {s}: the order on the man was refused");
         let mut n = 0;
@@ -142,7 +142,7 @@ fn the_hold_on_a_body_ends_with_the_hands() {
     let body = [20.4, 18.1];
     let ((mut p, m, t1), t2) = pair_with_body(10, Some(body));
     let t2 = t2.unwrap();
-    let at = p.g.ch[p.g.gd[t1].ch].pos;
+    let at = p.g.pos_of(t1);
     let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "the order on the man was refused");
     let mut n = 0;
@@ -154,7 +154,7 @@ fn the_hold_on_a_body_ends_with_the_hands() {
     let to_body = (body[0] - AISLE_MID[0]).atan2(body[1] - AISLE_MID[1]);
     let turn = |p: &mut Play| { let c = p.g.gd[t1].ch; p.g.ch[c].body_yaw = to_body; p.g.ch[c].aim_yaw = to_body; p.g.gd[t1].hold = true; p.g.gd[t1].pinned = true; };
     for _ in 0..5 { turn(&mut p); p.frame(); assert!(!game::guards::body_seen(&mut p.g, t1, t2, None), "with hands on him he found the body"); }
-    game::combat::kill_guard(&mut p.g, m, [1.0, 0.0, 0.0], Some(false), None, None, None);
+    game::combat::kill_guard(&mut p.g, m, [1.0, 0.0, 0.0], Some(false), None, None, game::game::With::Hand);
     let mut seen = 0;
     for _ in 0..54 { turn(&mut p); p.frame(); assert!(!game::pairorders::pair_gripped(&mut p.g, t1), "the hands are off and the grip stands"); if game::guards::body_seen(&mut p.g, t1, t2, None) { seen += 1; } }
     assert!(seen > 30, "turned to the body with the hands off, he saw it on {seen} frames of 54");
@@ -172,9 +172,9 @@ fn sent_to_a_back(oneeye: bool, at: [f64; 2], yaw: f64) -> (Play, GuardId, Guard
     if oneeye { p.g.k.pairup.on = true; game::pairup::pair_up_apply(&mut p.g, None); }
     p.g.k.silent.on = true;
     p.run(0.5);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let foe = foes[0];
     p.drop_all_but(&foes[..1]);
     for _ in 0..5 { p.pin_man(foe, at, yaw, GuardState::Patrol, 0.0); p.frame(); }
@@ -192,7 +192,7 @@ fn a_way_across_his_eyes_is_waited_on_by_one_eye() {
     for oneeye in [true, false] {
         let west = -std::f64::consts::FRAC_PI_2;
         let (mut p, m, foe) = sent_to_a_back(oneeye, [33.5, 11.3], west);
-        let start = p.g.ch[p.g.gd[m].ch].pos;
+        let start = p.g.pos_of(m);
         let t0 = p.time();
         for _ in 0..60 { p.pin_man(foe, [33.5, 11.3], west, GuardState::Patrol, 0.0); p.frame(); }
         let word = status_of(&mut p, m);
@@ -205,7 +205,7 @@ fn a_way_across_his_eyes_is_waited_on_by_one_eye() {
         }
         assert!(done.is_some(), "switch {oneeye}: he never gave it up");
         assert!(p.lines(m).contains(&"can't get behind him unseen."), "switch {oneeye}: said {:?}", p.lines(m));
-        let end = p.g.ch[p.g.gd[m].ch].pos;
+        let end = p.g.pos_of(m);
         assert!((end[0] - start[0]).hypot(end[2] - start[2]) < 0.5, "switch {oneeye}: he walked {start:?} to {end:?} on a way he could not take");
     }
 }
@@ -224,13 +224,13 @@ fn a_dark_way_round_is_a_way() {
         for _ in 0..(60 * 45) {
             p.pin_man(foe, at, west, GuardState::Patrol, 0.0);
             p.frame();
-            let q = p.g.ch[p.g.gd[m].ch].pos;
+            let q = p.g.pos_of(m);
             if (q[0] - at[0]).hypot(q[2] - at[1]) < 2.6 && q[0] < at[0] { in_front += 1; }
             if game::pairorders::pair_orders_job_of(&p.g, m).map_or(false, |j| j.set) { set = true; break; }
         }
         assert!(set, "switch {oneeye}: he never got there: {} said {:?}", status_of(&mut p, m), p.lines(m));
         assert_eq!(in_front, 0, "switch {oneeye}: frames in front of him inside 2.6 m");
-        let q = p.g.ch[p.g.gd[m].ch].pos;
+        let q = p.g.pos_of(m);
         assert!(q[0] > at[0] && (q[0] - at[0]).hypot(q[2] - at[1]) < 1.6, "switch {oneeye}: set at {q:?}, the man at {at:?}, looking west");
     }
 }
@@ -246,9 +246,9 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let t1 = foes[0];
     p.drop_all_but(&foes[..1]);
     let east = std::f64::consts::FRAC_PI_2;
@@ -263,9 +263,9 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     let mut newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(0);
     let (mut down, mut noises) = (None, Vec::new());
     for _ in 0..(60 * 8) {
-        if p.g.gd[t1].state != GuardState::Dead && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
+        if !game::condition::down(&p.g, p.g.gd[t1].ch) && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
         p.frame();
-        if down.is_none() && p.g.gd[t1].state == GuardState::Dead { down = Some(p.time()); }
+        if down.is_none() && game::condition::down(&p.g, p.g.gd[t1].ch) { down = Some(p.time()); }
         for e in p.g.events.iter().filter(|e| e.serial > newest && e.kind == game::director::EventKind::Prop) { noises.push(*e); }
         newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(newest).max(newest);
         if down.map_or(false, |d| p.time() - d > 3.0) { break; }
@@ -297,8 +297,8 @@ fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::Eve
     p.g.god_mode = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foe = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
-    let at = p.g.ch[p.g.gd[foe].ch].pos;
+    let foe = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
+    let at = p.g.pos_of(foe);
     let yaw = p.g.ch[p.g.gd[foe].ch].body_yaw;
     for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
     let id = who(&p, m, foe);
@@ -315,7 +315,7 @@ fn a_man_hears_the_other_sides_chair_and_door_and_not_his_own() {
     use game::director::EventKind::{Door, Prop};
     for kind in [Prop, Door] {
         let theirs = hears(|p, m, _| p.id_of(m), kind);
-        let sams = hears(|p, _, _| p.g.ch[p.g.pl[p.g.player].ch].id, kind);
+        let sams = hears(|p, _, _| p.g.player_id(p.g.player), kind);
         let nobodys = hears(|_, _, _| 0.0, kind);
         let his_own = hears(|p, _, foe| p.id_of(foe), kind);
         assert!(theirs > 0.05, "{kind:?}: the partner's noise two metres off stirred him {theirs}");
@@ -335,10 +335,10 @@ fn a_low_man_shoves_a_chair_at_half_the_noise() {
         let m = p.mates()[0];
         let c = p.g.gd[m].ch;
         let chair = p.g.props.props.iter().copied().min_by(|&a, &b| {
-            let d = |q| { let (x, z) = (game::props::prop_x(&p.g, q), game::props::prop_z(&p.g, q)); (x - 19.9).hypot(z - 18.2) };
+            let d = |q| { let (x, z) = (p.g.tab.props_prop[q].x, p.g.tab.props_prop[q].z); (x - 19.9).hypot(z - 18.2) };
             d(a).partial_cmp(&d(b)).unwrap()
         }).expect("the office has furniture");
-        let (x, z) = (game::props::prop_x(&p.g, chair), game::props::prop_z(&p.g, chair));
+        let (x, z) = (p.g.tab.props_prop[chair].x, p.g.tab.props_prop[chair].z);
         p.g.ch[c].pos = [x - 0.45, 0.0, z];
         p.g.ch[c].vel = [3.0, 0.0, 0.0];
         p.g.ch[c].anim.crouch = crouch;
@@ -362,10 +362,10 @@ fn in_a_mans_line(seed: u32, mate_x: f64) -> (i32, i32, f64) {
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[1..2]);
     let man = foes[1];
-    game::silent::set_silent(&mut p.g, true, None);
+    game::silent::set_silent(&mut p.g, true);
     let look = |p: &mut Play| p.pin_man(man, [8.5, 11.0], EAST, GuardState::Suspicious, 0.4);
     look(&mut p);
     p.sam_put([15.2, 11.0]);

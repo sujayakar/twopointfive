@@ -32,7 +32,7 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    656  sharpCfg   vec4f              (f[164‥167])  SHARP DIRECT (decoupled resolution): internal size xy, OUTPUT (g-buffer / composite) size zw — z 0 = off: every pass exactly as it was
  *    672  sharpCfgB  vec4f              (f[168‥171])  sharp direct's knob: w = the same-plane weight's k (xyz free)
  *    688  sharpCfgC  vec4f              (f[172‥175])  DECOUPLED JITTER under sharp direct (settings.sharpDecouple): xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px — every internal ↔ output texel map adds it; 0 = the two rasters share one jitter (the sharp path as it was); zw spare
- *    704  rigCfg     vec4f              (f[176‥179])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
+ *    704  rigCfg     vec4f              (f[176‥179])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M) · 256 the mesh in the direct light's rays alone (common.wgsl occluded); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
  *    720  rigCfgB    vec4f              (f[180‥183])  free (the smooth-union and soft-query knobs went 2026-11-07)
  *    736  giCfg      vec4f              (f[184‥187])  four FREE words (the young-history gather rays read them until 2026-11-07; no shader reads them now, the writer below still copies what it is given)
  *    752  weatherE   vec4f              (f[188‥191])  PARTICLE RAIN (src/picture/rain.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
@@ -421,7 +421,7 @@ export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {
 
 export interface SceneBuffers {
   frame: GPUBuffer; boxGeo: GPUBuffer; boxMat: GPUBuffer; gridCells: GPUBuffer; gridItems: GPUBuffer; sceneInfo: GPUBuffer; lights: GPUBuffer; smoke: GPUBuffer; smokeAtlasView: GPUTextureView; lightReach: GPUBuffer; linSamp: GPUSampler; capsules: GPUBuffer;
-  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 32-byte storage buffer of zeros while none is attached (a zero header is an empty tree); ignored when !meshBinding.enabled */
+  /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 128-byte storage buffer of zeros while none is attached (zero headers are empty trees); ignored when !meshBinding.enabled */
   mesh: GPUBuffer;
   /** the smoke's page texture (smoke/smoke.ts; engine.ts has a 1³ stand-in until a solver is attached) */
   smokePage: GPUTextureView;

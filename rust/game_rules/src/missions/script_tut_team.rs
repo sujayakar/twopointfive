@@ -61,18 +61,14 @@ fn zones() -> Vec<TutTeamZone> {
 
 /// c.flag[name] === true (a flag of this script is only ever written true, so its truthy tests read the same)
 fn flag(g: &Game, r: DirectorRunId, name: &str) -> bool {
-    matches!(g.tab.director_run[r].flags.get(String::from(name)), Some(Some(crate::director::Json::Bool(true))))
-}
-/// c.flag[name] = true
-fn set_flag(g: &mut Game, r: DirectorRunId, name: &str) {
-    g.tab.director_run[r].flags.set(String::from(name), Some(crate::director::Json::Bool(true)));
+    matches!(g.tab.director_run[r].flags.of(name), Some(Some(crate::director::Json::Bool(true))))
 }
 /// the four flags a beat that starts clean from a checkpoint sets, in the script's order
 fn set_all_flags(g: &mut Game, r: DirectorRunId) {
-    set_flag(g, r, "broke");
-    set_flag(g, r, "smoke");
-    set_flag(g, r, "through");
-    set_flag(g, r, "pushed");
+    super::script_tut_kit::set_flag_true(g, r, "broke");
+    super::script_tut_kit::set_flag_true(g, r, "smoke");
+    super::script_tut_kit::set_flag_true(g, r, "through");
+    super::script_tut_kit::set_flag_true(g, r, "pushed");
 }
 /// the `stop` a rake or harass was handed
 fn stop_holds(g: &Game, r: DirectorRunId, stop: u16) -> bool {
@@ -88,7 +84,7 @@ fn stop_holds(g: &Game, r: DirectorRunId, stop: u16) -> bool {
 fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> Result<Vec<crate::director::UnitRef>, String> {
     let mut out = Vec::new();
     for (name, at) in POSTS {
-        let mut u = crate::director::director_beat_unit(g, r, name);
+        let mut u = crate::director::director_beat_unit(g, name);
         if u.is_none() && spawn {
             let (rifle, yaw) = {
                 let v = tut_team_vars(g, r);
@@ -105,10 +101,10 @@ fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> 
     Ok(out)
 }
 /// the squad's men on their feet
-fn squad(g: &mut Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
+fn squad(g: &Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for name in SQUAD {
-        if let Some(u) = crate::director::director_beat_unit(g, r, name) {
+        if let Some(u) = crate::director::director_beat_unit(g, name) {
             if crate::director::director_query_alive(g, r, &u) {
                 out.push(u);
             }
@@ -143,24 +139,20 @@ fn mix(g: &mut Game, r: DirectorRunId, a: f64, b: f64) -> f64 {
 fn aim_order(at: V3, hot: bool) -> crate::director::OrderPatch2 {
     crate::director::OrderPatch2 { goal: Some(None), aim_at: Some(Some(crate::director::Place::List(at))), upper: Some(Some(crate::character::UpperMode::Aim)), hot: Some(Some(hot)), ..Default::default() }
 }
-/// c.until(<the id>)
-fn until(id: u32) -> crate::director::Cond {
-    crate::director::director_beat_until(crate::director::CondTest::Script { id }, None)
-}
 /// c.any(c.wait(secs), c.until(<the id>))
 fn wait_or(g: &Game, r: DirectorRunId, secs: f64, id: u32) -> Result<crate::director::Cond, String> {
-    let wait = crate::director::director_beat_wait(g, r, secs, None)?;
-    Ok(crate::director::director_beat_any(vec![wait, until(id)]))
+    let wait = crate::director::director_beat_wait(g, r, secs)?;
+    Ok(crate::director::director_beat_any(vec![wait, super::script_tut_kit::until(id)]))
 }
 /// `c.unit('Red One') ?? squad(c)[0]`, the man who speaks for the squad
-fn speaker(g: &mut Game, r: DirectorRunId) -> Option<crate::director::UnitRef> {
-    match crate::director::director_beat_unit(g, r, "Red One") {
+fn speaker(g: &Game, r: DirectorRunId) -> Option<crate::director::UnitRef> {
+    match crate::director::director_beat_unit(g, "Red One") {
         Some(u) => Some(u),
         None => squad(g, r).into_iter().next(),
     }
 }
 /// hold's closure met
-fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
+fn hold_met(g: &Game, r: DirectorRunId) -> Result<bool, String> {
     let door = tut_team_vars(g, r).bunk_door.clone().unwrap();
     if crate::director::director_query_door(g, &door)?.open {
         return Ok(true);
@@ -173,7 +165,7 @@ fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     Ok(false)
 }
 /// cook's closure met
-fn cook_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
+fn cook_met(g: &Game, r: DirectorRunId) -> Result<bool, String> {
     let (pass, kitchen) = {
         let v = tut_team_vars(g, r);
         (v.pass_door.clone().unwrap(), v.kitchen_door.clone().unwrap())
@@ -218,7 +210,7 @@ pub(super) fn tut_team_define(m: &mut crate::director::Manifest) -> Result<crate
 }
 
 /// the bunkhouse keeps to itself until its door opens or one of the squad is in its room (P.beat 'hold')
-pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHoldFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHoldFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             if hold_met(g, r)? {
@@ -226,7 +218,7 @@ pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             let mut held = Vec::new();
             for name in BUNK_MEN {
-                if let Some(u) = crate::director::director_beat_unit(g, r, name) {
+                if let Some(u) = crate::director::director_beat_unit(g, name) {
                     if crate::director::director_query_alive(g, r, &u) && in_bunk(g, r, &u)? {
                         held.push(u);
                     }
@@ -241,13 +233,13 @@ pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
         }
         1 => {
             f.at = 2;
-            Ok(Some(until(1)))
+            Ok(Some(super::script_tut_kit::until(1)))
         }
         2 => {
             for i in 0..f.held.len() {
                 let u = f.held[i].clone();
                 if crate::director::director_query_alive(g, r, &u) && in_bunk(g, r, &u)? {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                 }
             }
             f.at = 3;
@@ -258,7 +250,7 @@ pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// (P.beat 'hold') 1: met
-pub(super) fn tut_team_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamHoldFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_hold_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => hold_met(g, r),
         _ => Err(String::from("tut-team hold: no such test")),
@@ -266,10 +258,10 @@ pub(super) fn tut_team_hold_test(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// the kitchen's man stays in his kitchen until a door of his room opens or one of the squad is in it (P.beat 'cook')
-pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamCookFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamCookFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
-            let u = match crate::director::director_beat_unit(g, r, COOK) {
+            let u = match crate::director::director_beat_unit(g, COOK) {
                 Some(u) => u,
                 None => return Ok(None),
             };
@@ -286,12 +278,12 @@ pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b:
         }
         1 => {
             f.at = 2;
-            Ok(Some(until(1)))
+            Ok(Some(super::script_tut_kit::until(1)))
         }
         2 => {
             let u = f.u.clone().unwrap();
             if crate::director::director_query_alive(g, r, &u) {
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
             }
             f.at = 3;
             Ok(None)
@@ -301,7 +293,7 @@ pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// (P.beat 'cook') 1: he is down, or met
-pub(super) fn tut_team_cook_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_cook_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => {
             let u = f.u.clone().unwrap();
@@ -327,13 +319,13 @@ pub(super) fn tut_team_ambush_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 crate::director::director_beat_order(g, r, b, &u, &o)?;
             }
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.6, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.6)?))
         }
         1 => {
-            if let Some(red) = crate::director::director_beat_unit(g, r, "Red One") {
-                crate::director::director_beat_say(g, r, b, &red, "Contact front! Roadblock!", Some(true))?;
+            if let Some(red) = crate::director::director_beat_unit(g, "Red One") {
+                crate::director::director_beat_say(g, r, &red, "Contact front! Roadblock!", Some(true))?;
             }
-            crate::director::director_beat_start(g, r, b, "pinned");
+            crate::director::director_beat_start(g, r, "pinned");
             f.sub_rake = Some(Box::new(crate::script_tut_team::TutTeamRakeHelperFrame {
                 zones: zones(),
                 stop: STOP_SMOKE_OR_BROKE,
@@ -348,7 +340,7 @@ pub(super) fn tut_team_ambush_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 Some(sub) => sub,
                 None => return Ok(None),
             };
-            match tut_team_rake_helper_step(g, r, b, &mut sub, got)? {
+            match tut_team_rake_helper_step(g, r, b, &mut sub)? {
                 Some(c) => {
                     f.sub_rake = Some(sub);
                     Ok(Some(c))
@@ -364,7 +356,7 @@ pub(super) fn tut_team_ambush_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// what the men behind the trucks call while they are pinned (P.beat 'pinned')
-pub(super) fn tut_team_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamPinnedFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamPinnedFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
             0 => {
@@ -386,9 +378,9 @@ pub(super) fn tut_team_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, 
                     return Ok(None);
                 }
                 let (who, line) = PINNED[js::rem(f.k, PINNED.len() as f64) as usize];
-                if let Some(u) = crate::director::director_beat_unit(g, r, who) {
+                if let Some(u) = crate::director::director_beat_unit(g, who) {
                     if crate::director::director_query_alive(g, r, &u) {
-                        crate::director::director_beat_say(g, r, b, &u, line, Some(true))?;
+                        crate::director::director_beat_say(g, r, &u, line, Some(true))?;
                     }
                 }
                 f.k += 1.0;
@@ -400,7 +392,7 @@ pub(super) fn tut_team_pinned_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// (P.beat 'pinned') 1: smoke or broke
-pub(super) fn tut_team_pinned_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamPinnedFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_pinned_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "smoke") || flag(g, r, "broke")),
         _ => Err(String::from("tut-team pinned: no such test")),
@@ -408,7 +400,7 @@ pub(super) fn tut_team_pinned_test(g: &crate::game::Game, r: DirectorRunId, b: D
 }
 
 /// the squad's own smoke goes out; more goes out while no order comes (P.beat 'smoke')
-pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
             0 => {
@@ -416,15 +408,15 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
                     f.at = 7;
                     return Ok(None);
                 }
-                set_flag(g, r, "smoke");
-                crate::director::director_beat_start(g, r, b, "ordered");
-                crate::director::director_beat_start(g, r, b, "break");
-                crate::director::director_beat_start(g, r, b, "linger");
+                super::script_tut_kit::set_flag_true(g, r, "smoke");
+                crate::director::director_beat_start(g, r, "ordered");
+                crate::director::director_beat_start(g, r, "break");
+                crate::director::director_beat_start(g, r, "linger");
                 f.at = 1;
-                return Ok(Some(crate::director::director_beat_wait(g, r, 0.4, None)?));
+                return Ok(Some(crate::director::director_beat_wait(g, r, 0.4)?));
             }
             1 => {
-                crate::director::director_beat_start(g, r, b, "blind");
+                crate::director::director_beat_start(g, r, "blind");
                 f.sub_smoke = Some(Box::new(crate::script_tut_team::TutTeamSmokeHelperFrame { again: false, ..Default::default() }));
                 f.at = 2;
             }
@@ -433,15 +425,15 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
                     Some(sub) => sub,
                     None => return Ok(None),
                 };
-                if let Some(c) = tut_team_smoke_helper_step(g, r, b, f, &mut sub, got)? {
+                if let Some(c) = tut_team_smoke_helper_step(g, r, b, &mut sub)? {
                     f.sub_smoke = Some(sub);
                     return Ok(Some(c));
                 }
                 f.at = 3;
-                return Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_UP, None)?));
+                return Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_UP)?));
             }
             3 => {
-                crate::director::director_beat_signal(g, r, b, "done:smoke", None);
+                crate::director::director_beat_signal(g, r, "done:smoke");
                 f.at = 4;
             }
             4 => {
@@ -465,7 +457,7 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
                     Some(sub) => sub,
                     None => return Ok(None),
                 };
-                if let Some(c) = tut_team_smoke_helper_step(g, r, b, f, &mut sub, got)? {
+                if let Some(c) = tut_team_smoke_helper_step(g, r, b, &mut sub)? {
                     f.sub_smoke = Some(sub);
                     return Ok(Some(c));
                 }
@@ -477,7 +469,7 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
 }
 
 /// (P.beat 'smoke') 1: broke
-pub(super) fn tut_team_smoke_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_smoke_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "broke")),
         _ => Err(String::from("tut-team smoke: no such test")),
@@ -485,25 +477,25 @@ pub(super) fn tut_team_smoke_test(g: &crate::game::Game, r: DirectorRunId, b: Di
 }
 
 /// the first order lets the squad go, for the yard (P.beat 'break')
-pub(super) fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamBreakFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamBreakFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(until(1)))
+            Ok(Some(super::script_tut_kit::until(1)))
         }
         1 => {
             f.at = 2;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.25, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.25)?))
         }
         2 => {
             for u in squad(g, r) {
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
             }
             f.at = 3;
             Ok(Some(wait_or(g, r, 2.2, 2)?))
         }
         3 => {
-            set_flag(g, r, "through");
+            super::script_tut_kit::set_flag_true(g, r, "through");
             f.at = 4;
             Ok(None)
         }
@@ -512,7 +504,7 @@ pub(super) fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b
 }
 
 /// (P.beat 'break') 1: broke; 2: every man of the squad in the yard
-pub(super) fn tut_team_break_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamBreakFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_break_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "broke")),
         2 => {
@@ -528,14 +520,14 @@ pub(super) fn tut_team_break_test(g: &mut crate::game::Game, r: DirectorRunId, b
 }
 
 /// the player's first order to the squad breaks them out (P.beat 'ordered')
-pub(super) fn tut_team_ordered_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamOrderedFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_ordered_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamOrderedFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Signal, None, Some(crate::director::EventFilter::OrderSignal))))
+            Ok(Some(crate::director::director_beat_on(g, r, crate::director::EventViewKind::Signal, None, Some(crate::director::EventFilter::OrderSignal))))
         }
         1 => {
-            set_flag(g, r, "broke");
+            super::script_tut_kit::set_flag_true(g, r, "broke");
             f.at = 2;
             Ok(None)
         }
@@ -544,7 +536,7 @@ pub(super) fn tut_team_ordered_step(g: &mut crate::game::Game, r: DirectorRunId,
 }
 
 /// the blind fire into the smoke, until the squad is through (P.beat 'blind')
-pub(super) fn tut_team_blind_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamBlindFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_blind_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamBlindFrame) -> Result<Option<crate::director::Cond>, String> {
     if f.at == 0 {
         f.sub_harass = Some(Box::new(crate::script_tut_team::TutTeamHarassHelperFrame {
             marks: AT_SMOKE.to_vec(),
@@ -558,7 +550,7 @@ pub(super) fn tut_team_blind_step(g: &mut crate::game::Game, r: DirectorRunId, b
         Some(sub) => sub,
         None => return Ok(None),
     };
-    match tut_team_harass_helper_step(g, r, b, &mut sub, got)? {
+    match tut_team_harass_helper_step(g, r, b, &mut sub)? {
         Some(c) => {
             f.sub_harass = Some(sub);
             Ok(Some(c))
@@ -575,7 +567,7 @@ pub(super) fn tut_team_linger_step(g: &mut crate::game::Game, r: DirectorRunId, 
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(until(1)))
+            Ok(Some(super::script_tut_kit::until(1)))
         }
         1 => {
             f.at = 2;
@@ -596,7 +588,7 @@ pub(super) fn tut_team_linger_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 Some(sub) => sub,
                 None => return Ok(None),
             };
-            match tut_team_harass_helper_step(g, r, b, &mut sub, got)? {
+            match tut_team_harass_helper_step(g, r, b, &mut sub)? {
                 Some(c) => {
                     f.sub_harass = Some(sub);
                     Ok(Some(c))
@@ -612,7 +604,7 @@ pub(super) fn tut_team_linger_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// (P.beat 'linger') 1: through or pushed; 2: pushed
-pub(super) fn tut_team_linger_test(g: &crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamLingerFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_linger_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "through") || flag(g, r, "pushed")),
         2 => Ok(flag(g, r, "pushed")),
@@ -621,18 +613,18 @@ pub(super) fn tut_team_linger_test(g: &crate::game::Game, r: DirectorRunId, b: D
 }
 
 /// the roadblock's men come on for the gate one after another, and again while any is on his feet (P.beat 'push')
-pub(super) fn tut_team_push_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamPushFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_push_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamPushFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
             0 => {
                 set_all_flags(g, r);
                 f.at = 1;
-                return Ok(Some(crate::director::director_beat_wait(g, r, 0.8, None)?));
+                return Ok(Some(crate::director::director_beat_wait(g, r, 0.8)?));
             }
             1 => {
                 if let Some(u) = speaker(g, r) {
                     if !block(g, r, b, false)?.is_empty() {
-                        crate::director::director_beat_say(g, r, b, &u, "They're coming for the gate. We've got it.", Some(true))?;
+                        crate::director::director_beat_say(g, r, &u, "They're coming for the gate. We've got it.", Some(true))?;
                     }
                 }
                 f.k = 0.0;
@@ -641,7 +633,7 @@ pub(super) fn tut_team_push_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             // the outer for's test, and its body's head
             2 => {
                 if block(g, r, b, false)?.is_empty() {
-                    crate::director::director_beat_signal(g, r, b, "done:roadblock", None);
+                    crate::director::director_beat_signal(g, r, "done:roadblock");
                     f.at = 7;
                     return Ok(None);
                 }
@@ -682,7 +674,7 @@ pub(super) fn tut_team_push_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             5 => {
                 for u in block(g, r, b, false)? {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                 }
                 f.at = 6;
                 return Ok(Some(wait_or(g, r, 4.0, 3)?));
@@ -714,7 +706,7 @@ pub(super) fn tut_team_push_test(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// the road is quiet; whoever of the roadblock is left is held where he stands (P.beat 'indoors')
-pub(super) fn tut_team_indoors_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamIndoorsFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_indoors_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamIndoorsFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             set_all_flags(g, r);
@@ -722,10 +714,10 @@ pub(super) fn tut_team_indoors_step(g: &mut crate::game::Game, r: DirectorRunId,
                 crate::director::director_beat_order(g, r, b, &u, &aim_order([16.5, 1.1, 21.4], false))?;
             }
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.1, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.1)?))
         }
         1 => {
-            crate::director::director_beat_signal(g, r, b, "done:roadblock", None);
+            crate::director::director_beat_signal(g, r, "done:roadblock");
             f.at = 2;
             Ok(None)
         }
@@ -734,16 +726,16 @@ pub(super) fn tut_team_indoors_step(g: &mut crate::game::Game, r: DirectorRunId,
 }
 
 /// one man says the range is theirs (P.beat 'house')
-pub(super) fn tut_team_house_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHouseFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_house_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamHouseFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             set_all_flags(g, r);
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.6, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.6)?))
         }
         1 => {
             if let Some(u) = speaker(g, r) {
-                crate::director::director_beat_say(g, r, b, &u, "Kitchen's clear. There's one more building across the yard.", Some(true))?;
+                crate::director::director_beat_say(g, r, &u, "Kitchen's clear. There's one more building across the yard.", Some(true))?;
             }
             f.at = 2;
             Ok(None)
@@ -753,16 +745,16 @@ pub(super) fn tut_team_house_step(g: &mut crate::game::Game, r: DirectorRunId, b
 }
 
 /// one man says the station is theirs (P.beat 'out')
-pub(super) fn tut_team_out_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamOutFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_out_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamOutFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             set_all_flags(g, r);
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, 0.4, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, 0.4)?))
         }
         1 => {
             if let Some(u) = speaker(g, r) {
-                crate::director::director_beat_say(g, r, b, &u, "Station's clear.", Some(true))?;
+                crate::director::director_beat_say(g, r, &u, "Station's clear.", Some(true))?;
             }
             f.at = 2;
             Ok(None)
@@ -772,7 +764,7 @@ pub(super) fn tut_team_out_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
 }
 
 /// the roadblock fires in turns, each burst walked over one of `zones`, until `stop` (function* rake)
-fn tut_team_rake_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamRakeHelperFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+fn tut_team_rake_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamRakeHelperFrame) -> Result<Option<crate::director::Cond>, String> {
     let o = f.o.clone().unwrap_or_default();
     loop {
         match f.at {
@@ -810,7 +802,7 @@ fn tut_team_rake_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
                     .collect();
                 if can.is_empty() {
                     f.at = 1;
-                    return Ok(Some(crate::director::director_beat_wait(g, r, 0.05, None)?));
+                    return Ok(Some(crate::director::director_beat_wait(g, r, 0.05)?));
                 }
                 let u = can[pick(g, r, can.len())].clone();
                 let heavy = u.callsign == "Tango 7";
@@ -836,20 +828,18 @@ fn tut_team_rake_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
                     let n = m::min(f.left, if crate::director::director_beat_rand(g, r) < 0.5 { 2.0 } else { 3.0 });
                     f.left -= n;
                     crate::director::director_beat_order(g, r, b, &u, &aim_order(at, true))?;
-                    f.at_2 = at;
-                    f.n = n;
                     f.at = 3;
                     let cadence = if f.heavy { 0.085 } else { 0.11 };
                     return Ok(Some(crate::director::director_beat_burst(g, r, b, &u, crate::director::RunBurstsItemAt::List(at), n, Some(cadence), Some(o.spread))?));
                 }
                 let secs = mix(g, r, o.gap[0], o.gap[1]);
                 f.at = 1;
-                return Ok(Some(crate::director::director_beat_wait(g, r, secs, None)?));
+                return Ok(Some(crate::director::director_beat_wait(g, r, secs)?));
             }
             3 => {
                 let secs = mix(g, r, 0.05, 0.16);
                 f.at = 2;
-                return Ok(Some(crate::director::director_beat_wait(g, r, secs, None)?));
+                return Ok(Some(crate::director::director_beat_wait(g, r, secs)?));
             }
             _ => return Ok(None),
         }
@@ -857,7 +847,7 @@ fn tut_team_rake_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
 }
 
 /// the roadblock fires in turns at `marks` until `stop` (function* harass)
-fn tut_team_harass_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHarassHelperFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+fn tut_team_harass_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamHarassHelperFrame) -> Result<Option<crate::director::Cond>, String> {
     let o = f.o.clone().unwrap_or_default();
     match f.at {
         // the while's test and its body as far as the burst
@@ -882,28 +872,24 @@ fn tut_team_harass_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: D
             let rounds = m::round(o.rounds[0] + crate::director::director_beat_rand(g, r) * (o.rounds[1] - o.rounds[0]));
             let n = rounds * (if heavy { 2.0 } else { 1.0 });
             let cadence = if heavy { 0.085 } else { 0.11 };
-            f.at_2 = at;
-            f.u = Some(u.clone());
-            f.heavy = heavy;
-            f.n = n;
             f.at = 2;
             Ok(Some(crate::director::director_beat_burst(g, r, b, &u, crate::director::RunBurstsItemAt::List(at), n, Some(cadence), Some(o.spread))?))
         }
         2 => {
             let secs = o.gap[0] + crate::director::director_beat_rand(g, r) * (o.gap[1] - o.gap[0]);
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, secs, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, secs)?))
         }
         _ => Ok(None),
     }
 }
 
 /// the helper's closure call: a man calls his can
-fn smoke_call(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) {
+fn smoke_call(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) {
     if let Some(u) = &f.by[i] {
         if crate::director::director_query_alive(g, r, u) {
             let line = SMOKE_CALLS[if f.again { 1 } else { 0 }][i];
-            crate::director::director_beat_radio(g, b, &u.callsign, line);
+            crate::director::director_beat_radio(g, &u.callsign, line);
         }
     }
 }
@@ -918,26 +904,26 @@ fn smoke_toss(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::
 }
 
 /// every can called by the man who throws it, a beat before it leaves his hand (the smoke beat's function* smoke)
-fn tut_team_smoke_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, parent: &mut crate::script_tut_team::TutTeamSmokeFrame, f: &mut crate::script_tut_team::TutTeamSmokeHelperFrame, got: &crate::director::CondResult) -> Result<Option<crate::director::Cond>, String> {
+fn tut_team_smoke_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeHelperFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             let men = squad(g, r);
-            let first = crate::director::director_beat_unit(g, r, "Red Two").or_else(|| men.first().cloned());
-            let second = crate::director::director_beat_unit(g, r, "Blue One").or_else(|| men.get(1).cloned()).or_else(|| men.first().cloned());
+            let first = crate::director::director_beat_unit(g, "Red Two").or_else(|| men.first().cloned());
+            let second = crate::director::director_beat_unit(g, "Blue One").or_else(|| men.get(1).cloned()).or_else(|| men.first().cloned());
             f.by = vec![first, second];
-            smoke_call(g, r, b, f, 0);
+            smoke_call(g, r, f, 0);
             f.at = 1;
-            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_APART, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_APART)?))
         }
         1 => {
-            smoke_call(g, r, b, f, 1);
+            smoke_call(g, r, f, 1);
             f.at = 2;
-            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_CALLED - SMOKE_APART, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_CALLED - SMOKE_APART)?))
         }
         2 => {
             smoke_toss(g, r, b, f, 0)?;
             f.at = 3;
-            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_APART, None)?))
+            Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_APART)?))
         }
         3 => {
             smoke_toss(g, r, b, f, 1)?;

@@ -5,8 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
-
 fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
@@ -15,20 +13,20 @@ fn sstep(a: f64, b: f64, t: f64) -> f64 {
 /// player.ts startGrab, once the hold exists: the gun still in his hand is the disarm's to take.
 pub fn disarm_begin(g: &mut crate::game::Game) {
     let pl = g.player;
-    let Some((gd, variant)) = g.pl[pl].holding.as_ref().map(|h| (h.g, h.variant)) else { return };
+    let Some((gd, variant)) = g.pl[pl].holding().map(|h| (h.g, h.variant)) else { return };
     if crate::guards::in_hand(g, gd) != Some(crate::guards::InHand::Weapon) { return; }
     let def = g.fa[g.gd[gd].weapon].def;
-    let (kind, supp) = { let row = g.m.weapons.weapons.get(def).unwrap(); (row.drop, row.suppressed) };
+    let (kind, supp) = { let row = g.weapon(def); (row.drop, row.suppressed) };
     let at = hand_of(g, gd);
     let yaw = v3::yaw_of(g.ch[g.gd[gd].ch].gun_dir);
     let strip = Strip { t: 0.0, kind, supp, at, item: None, rap: variant == crate::character::HoldVariant::Gun, gone: false, yaw };
     put_strip(g, pl, strip);
-    if leads(g, Some(strip)) { g.pl[pl].catch_due = Some(g.time + g.k.hold.first.catch); }
+    if leads(g, Some(strip)) { g.sets[g.seat].hand.catch_due = Some(g.time + g.k.hold.first.catch); }
 }
 
 /// The grab's first voice: the strip is heard first when the disarm leads. Its rate is pinned.
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
-    let s = g.pl[g.player].holding.as_ref().and_then(|h| h.strip);
+    let s = g.pl[g.player].holding().and_then(|h| h.strip);
     if leads(g, s) { return; }
     crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
@@ -39,7 +37,7 @@ fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
 }
 
 /// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there.
-fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
+fn lead(g: &crate::game::Game, s: crate::disarm::Strip) -> f64 {
     if !leads(g, Some(s)) { return 1.0; }
     let (k_take, k_drop) = (g.k.hold.strip.take, g.k.hold.strip.drop);
     let (f_take, f_drop) = (g.k.hold.first.take, g.k.hold.first.drop);
@@ -58,14 +56,14 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let pl_ch = g.pl[pl].ch;
     // `h` is a copy of the hold: only its guard and phase are read from it, which nothing below writes. `s` is a copy of the move, put back after each write.
-    let h = g.pl[pl].holding.clone();
+    let h = g.pl[pl].holding().cloned();
     let s0 = h.as_ref().and_then(|h| h.strip);
     let mut i = 0;
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
         // a gun in his hand and no hold to carry it for, however that ended, falls from where it is
-        if crate::throwables::item_carried(g, it) == Some(true)
+        if g.tab.item[it].carried == Some(true)
             && Some(it) != s0.and_then(|s| s.item)
             && (g.seats.len() == 1 || !any_man_carries(g, it))
         {
@@ -73,10 +71,10 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     // the catch's voice as the arm lands, or now if the hold or the move ended first: a grab is never silent
-    if let Some(due) = g.pl[pl].catch_due {
+    if let Some(due) = g.sets[g.seat].hand.catch_due {
         let not_grab = match h.as_ref() { Some(h) => h.phase != crate::character::HoldPhase::Grab, None => false };
         if h.is_none() || s0.is_none() || g.time >= due || not_grab {
-            g.pl[pl].catch_due = None;
+            g.sets[g.seat].hand.catch_due = None;
             let c = match h.as_ref() { Some(h) => g.gd[h.g].ch, None => pl_ch };
             let at = v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]);
             crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
@@ -118,7 +116,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
 
 fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
+    let hand = g.ch[c].bone(crate::character::Bone::HandR);
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })
 }
 
@@ -127,7 +125,7 @@ fn long(kind: &str) -> bool { kind == "rifle" }
 /// The gun leaves his hand: an item from here on, his `dropped`, his hands empty; in Sam's hand or, rapped out by the pistol hold, falling.
 /// Its writes go to `s`: the caller holds the move and puts it back in the hold.
 fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
-    let gd = g.pl[pl].holding.as_ref().unwrap().g;
+    let gd = g.pl[pl].holding().unwrap().g;
     let c = g.gd[gd].ch;
     let opts = crate::throwables::ThrowablesSpawnOpts {
         who: Some(g.ch[c].id),
@@ -152,7 +150,7 @@ fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
         let_go(g, it, c, None);
         s.gone = true;
     } else {
-        crate::throwables::item_set_carried(g, it, Some(true));
+        g.tab.item[it].carried = Some(true);
         s.item = Some(it);
         let sam = g.pl[g.player].ch;
         carry(g, s, sam);
@@ -162,21 +160,21 @@ fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
 /// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear.
 fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
-    let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
-    let tip = g.ch[sam].bones.get(crate::character::Bone::FingerR).copied().unwrap_or(w);
+    let Some(w) = g.ch[sam].bone(crate::character::Bone::HandR) else { return };
+    let tip = g.ch[sam].bone(crate::character::Bone::FingerR).unwrap_or(w);
     let d = v3::sub(tip, w);
     let l = v3::len(d);
     let ahead = g.k.hold.strip.hold[if long(s.kind.as_str()) { 1 } else { 0 }];
     let pos = if l > 1e-4 { v3::mad(w, d, ahead / l) } else { v3::copy(w) };
-    crate::throwables::item_set_pos(g, it, pos);
-    crate::throwables::item_set_vel(g, it, [0.0, 0.0, 0.0]);
+    g.tab.item[it].pos = pos;
+    g.tab.item[it].vel = [0.0, 0.0, 0.0];
     let (k_take, k_out, k_drop, pitch) = (g.k.hold.strip.take, g.k.hold.strip.out, g.k.hold.strip.drop, g.k.hold.strip.pitch);
     let u = sstep(k_take, k_out, s.t);
     let v = sstep(k_out, k_drop, s.t);
     let turned = s.yaw - (70.0 * u + 20.0 * v) * DEG;
-    crate::throwables::item_set_heading(g, it, turned);
-    crate::throwables::item_set_yaw(g, it, turned);
-    crate::throwables::item_set_tumble(g, it, lerp(lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG);
+    g.tab.item[it].heading = turned;
+    g.tab.item[it].yaw = turned;
+    g.tab.item[it].tumble = v3::lerp(v3::lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG;
 }
 
 /// Let go of: it falls from where it is with the pair's own motion and a little push out to that man's right; never from inside a wall. The throw's fall is
@@ -185,24 +183,24 @@ fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) 
     let fall = fall.unwrap_or(0.0);
     let y = g.ch[by].body_yaw;
     let by_pos = g.ch[by].pos;
-    let pos = crate::throwables::item_pos(g, it);
+    let pos = g.tab.item[it].pos;
     let from: V3 = [by_pos[0], m::max(0.3, pos[1]), by_pos[2]];
     let d: V3 = [pos[0] - from[0], 0.0, pos[2] - from[2]];
     let l = m::hyp2(d[0], d[2]);
     let mut push = g.k.hold.strip.push[0];
     if l > 1e-3 {
         let dir: V3 = [d[0] / l, 0.0, d[2] / l];
-        let radius = crate::throwables::item_radius(g, it);
+        let radius = g.tab.item[it].radius;
         if let Some(hit) = crate::scene_collision::raycast(g, from, dir, l + radius + 0.05) {
-            crate::throwables::item_set_pos(g, it, v3::mad(from, dir, m::max(0.0, hit.t - radius - 0.03)));
+            g.tab.item[it].pos = v3::mad(from, dir, m::max(0.0, hit.t - radius - 0.03));
             push = 0.0;
         }
     }
-    crate::throwables::item_set_carried(g, it, Some(false));
-    crate::throwables::item_set_settled(g, it, false);
+    g.tab.item[it].carried = Some(false);
+    g.tab.item[it].settled = false;
     let spin = if push > 0.0 { g.k.hold.strip.spin } else { 0.0 };
-    crate::throwables::item_set_spin(g, it, spin);
-    crate::throwables::item_set_tumble_rate(g, it, 0.0);
+    g.tab.item[it].spin = spin;
+    g.tab.item[it].tumble_rate = 0.0;
     let by_vel = g.ch[by].vel;
     let mut down = g.k.hold.strip.push[1];
     let mut vx = by_vel[0] - m::cos(y) * push;
@@ -210,8 +208,8 @@ fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) 
     if fall > 0.0 && push > 0.0 {
         let t = fall;
         let sp = m::hyp2(vx, vz);
-        let p = crate::throwables::item_pos(g, it);
-        let radius = crate::throwables::item_radius(g, it);
+        let p = g.tab.item[it].pos;
+        let radius = g.tab.item[it].radius;
         let wall = if sp > 1e-3 { crate::scene_collision::raycast(g, p, [vx / sp, 0.0, vz / sp], sp * t + radius + 0.08) } else { None };
         if let Some(wall) = wall {
             let k = m::max(0.0, wall.t - radius - 0.08) / (sp * t);
@@ -223,7 +221,7 @@ fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) 
         // below zero it leaves his hand going up a little: a long fall from a low hand is a lob
         if dd > 0.3 { down = m::min(4.0, m::max(-1.5, dd / t - 0.5 * crate::throwables::GRAVITY * t)); }
     }
-    crate::throwables::item_set_vel(g, it, [vx, -down, vz]);
+    g.tab.item[it].vel = [vx, -down, vz];
 }
 
 /// The gun on the floor: one dull knock, the first time it lands, on what it lands on by the face it struck (Item.onBounce).
@@ -234,24 +232,24 @@ pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
     g.tab.item[it].clatters = Some(clatters);
     if clatters > 1.0 { return; }
     let gains = disarm_gain();
-    let rate = if long(crate::throwables::item_kind(g, it).as_str()) { gains.long } else { 1.0 };
+    let rate = if long(g.tab.item[it].kind.as_str()) { gains.long } else { 1.0 };
     crate::audio_iface::game_audio_like_play(g, "gunDown", Some(p), Some(gains.down * m::min(1.0, 0.5 + sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
 /// `S` is one object in the TypeScript, shared with the hold: a copy here, so each write is put back through the table.
 fn put_strip(g: &mut Game, pl: PlayerId, s: Strip) {
-    if let Some(h) = g.pl[pl].holding.as_mut() { h.strip = Some(s); }
+    if let Some(h) = g.pl[pl].holding_mut() { h.strip = Some(s); }
 }
 
 /// `H.strip = undefined`
 fn clear_strip(g: &mut Game, pl: PlayerId) {
-    if let Some(h) = g.pl[pl].holding.as_mut() { h.strip = None; }
+    if let Some(h) = g.pl[pl].holding_mut() { h.strip = None; }
 }
 
 /// `men(g).some(o => o.holding?.strip?.item === it)`
 fn any_man_carries(g: &Game, it: ItemId) -> bool {
     let men = crate::seats::men(g);
-    men.iter().any(|&o| g.pl[o].holding.as_ref().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
+    men.iter().any(|&o| g.pl[o].holding().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
 }
 
 /// DropKind's words are two of crate::throwables::ItemKind's: the gun's own kind of item.
@@ -305,6 +303,6 @@ mod tests {
         assert_eq!(sstep(0.26, 0.35, 0.9), 1.0);
         assert_eq!(sstep(0.25, 0.75, 0.5), 0.5);
         assert!(sstep(0.2, 0.4, 0.21) < 0.05 && sstep(0.2, 0.4, 0.39) > 0.95, "it starts and ends slowly");
-        assert_eq!((lerp(-40.0, 25.0, 0.0), lerp(-40.0, 25.0, 1.0), lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
+        assert_eq!((v3::lerp(-40.0, 25.0, 0.0), v3::lerp(-40.0, 25.0, 1.0), v3::lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
     }
 }

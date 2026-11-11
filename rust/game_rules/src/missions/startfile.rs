@@ -21,19 +21,19 @@ pub(super) fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) 
 
 /// The pass over one seat's squad: the part of teamStartsFallenIn that a seat's view runs.
 fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
-    let up: Vec<GuardId> = men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect();
+    let up: Vec<GuardId> = men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     if up.is_empty() { return 0.0; }
-    let def = match g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
+    let def = match g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
         Some(d) => d,
         None => return 0.0,
     };
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     crate::orders::squad_orders_new_group(g);
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
     if crate::orders::order_issue(g, def, &up, &t, None).is_some() { return 0.0; }
     let mut took = 0.0;
     for &m in &up {
-        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
+        if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), m) {
             if crate::orders::rows::is(g, a, crate::orders::Is::Follows) { took += 1.0; }
         }
     }

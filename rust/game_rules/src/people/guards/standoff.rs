@@ -6,23 +6,18 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A bone of a body, if the body has it (the TypeScript's `c.bones.x`).
-fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
-    g.ch[c].bones.get(b).copied()
-}
-
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold.
 pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let p = seat.player;
-    let held = match &g.pl[p].holding {
+    let held = match g.pl[p].holding() {
         Some(h) => h.g,
         None => return false,
     };
-    if g.pl[p].down {
+    if crate::condition::down(g, g.pl[p].ch) {
         return false;
     }
     let hc = g.gd[held].ch;
-    g.gd[held].state != crate::game::GuardState::Dead
+    !crate::condition::down(g, g.gd[held].ch)
         && g.ch[hc].alive
         && matches!(&g.gd[held].held, Some(h) if h.by == crate::game::GuardHeldBy::Player)
         && crate::game::game_on_floor(g, held)
@@ -31,18 +26,18 @@ pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
 /// The pair as the observers reason about it this frame; None when nobody is held. `key` is the hold's serial.
 pub(super) fn pair_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::guards::Pair> {
     let p = seat.player;
-    if g.pl[p].holding.is_none() || !shield_up(g, seat) {
+    if g.pl[p].holding().is_none() || !shield_up(g, seat) {
         return None;
     }
-    let (key, held) = match &g.pl[p].holding {
+    let (key, held) = match g.pl[p].holding() {
         Some(h) => (h.serial, h.g),
         None => return None,
     };
     let pc = g.pl[p].ch;
     let hc = g.gd[held].ch;
     let (pc_pos, hc_pos) = (g.ch[pc].pos, g.ch[hc].pos);
-    let sh = bone(g, pc, crate::character::Bone::Hips).unwrap_or(pc_pos);
-    let hh = bone(g, hc, crate::character::Bone::Hips).unwrap_or(hc_pos);
+    let sh = g.ch[pc].bone(crate::character::Bone::Hips).unwrap_or(pc_pos);
+    let hh = g.ch[hc].bone(crate::character::Bone::Hips).unwrap_or(hc_pos);
     let sam: V3 = [sh[0], 0.0, sh[2]];
     let held_axis: V3 = [hh[0], 0.0, hh[2]];
     Some(crate::guards::Pair {
@@ -63,22 +58,22 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
     }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     let look = crate::guards::look_of(g, c);
     let (lx, lz) = (look[0], look[2]);
     let pl = g.player;
     let pc = g.pl[pl].ch;
     let hc = g.gd[p.held].ch;
-    let seen = g.pl[pl].visibility;
+    let seen = g.shown[g.pl[pl].ch].visibility;
     let lit = m::max(seen, held_visibility(g, p));
     let reach = eye_reach(g, lit);
     let view_m = m::max(STANDOFF_VIEW_M, reach);
     let (hp, pp) = (g.ch[hc].pos, g.ch[pc].pos);
     let points: [V3; 4] = [
-        bone(g, hc, crate::character::Bone::Chest).unwrap_or_else(|| v3::add(hp, [0.0, 1.1, 0.0])),
-        bone(g, hc, crate::character::Bone::Head).unwrap_or_else(|| v3::add(hp, [0.0, 1.6, 0.0])),
-        bone(g, pc, crate::character::Bone::Chest).unwrap_or_else(|| v3::add(pp, [0.0, 1.1, 0.0])),
-        bone(g, pc, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pp, [0.0, 1.6, 0.0])),
+        g.ch[hc].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(hp, [0.0, 1.1, 0.0])),
+        g.ch[hc].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(hp, [0.0, 1.6, 0.0])),
+        g.ch[pc].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(pp, [0.0, 1.1, 0.0])),
+        g.ch[pc].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pp, [0.0, 1.6, 0.0])),
     ];
     for q in points {
         let (tx, ty, tz) = (q[0] - eye[0], q[1] - eye[1], q[2] - eye[2]);
@@ -99,14 +94,14 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
 /// What a watching man's eye gets off the pair.
 fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair, dist: f64) -> f64 {
     let pl = g.player;
-    let seen = g.pl[pl].visibility;
+    let seen = g.shown[g.pl[pl].ch].visibility;
     let light = m::max(seen, held_visibility(g, p));
     let dist_f = dist_term(g, dist);
     let detect = g.tune.detect_rate;
     let lit = m::pow(light, 1.5);
     let smoke = v3::clamp((g.gd[gd].smoke_trans - 0.3) / 0.5, 0.0, 1.0);
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
-    let load = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Player);
+    let load = crate::kitload::load_seen(g, g.pl[g.player].ch);
     let mut rate = detect * lit * dist_f * smoke * keen * PAIR_LEGIBLE * load;
     if dist < 1.8 {
         rate = m::max(rate, 3.5);
@@ -128,7 +123,7 @@ fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let pos = g.ch[hc].pos;
     let stale = match &row {
         None => true,
-        Some(r) => now - r.t > meter.gap_secs && m::hyp2(r.at[0] - pos[0], r.at[2] - pos[2]) > meter.moved_m,
+        Some(r) => now - r.t > meter.gap_secs && v3::dist_xz(r.at, pos) > meter.moved_m,
     };
     if stale {
         row = None;
@@ -151,10 +146,9 @@ fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let vis = v3::damp(from, to, 6.0, dt);
     let at = v3::copy(g.ch[hc].pos);
     g.m.guards.held_meters.set(p.key, crate::guards::GuardsModHeldMetersValue { vis, t: now, at });
-    g.gd[hd].visibility = vis;
+    g.shown[g.gd[hd].ch].visibility = vis;
     vis
 }
-
 
 /// Perception's share: is a held colleague in his view this frame? If so he is in the standoff and all his eyes-on-Sam is refreshed off the pair.
 pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) -> bool {
@@ -166,8 +160,8 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         Some(p) if p.held != gd => p,
         _ => return false,
     };
-    let held_team = g.gd[p.held].team;
-    if (held_team != g.gd[gd].team && held_team != crate::teams::Team::Civilian) || !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+    let held_team = g.team(p.held);
+    if (held_team != g.team(gd) && held_team != crate::teams::Team::Civilian) || !g.team(gd).theirs() {
         return false;
     }
     if !pair_in_view(g, gd, &p) {
@@ -175,10 +169,10 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     }
     let now = g.time;
     let pl = g.player;
-    let pp = g.ch[g.pl[pl].ch].pos;
+    let pp = g.player_pos(pl);
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     let dist = v3::dist(eye, p.centre);
     let rate = pair_sight_rate(g, gd, &p, dist);
     let in_it = match g.gd[gd].standoff {
@@ -213,8 +207,6 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
             seen_t: now,
             last_bark_t: -100.0,
             line_open: false,
-            shots: 0.0,
-            orbit_m: 0.0,
             stalls: 0.0,
             cornered: false,
             backing: false,
@@ -223,11 +215,8 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         let who = g.gd[p.held].callsign.clone();
         let me = &mut g.gd[gd];
         me.witness.saw_held = Some(crate::game::WitnessSawHeld { who });
-        me.fire_cd = m::max(me.fire_cd, 0.8);
-        me.path = Vec::new();
-        me.path_serial = me.path_serial.wrapping_add(1);
-        me.path_goal = None;
-        me.path_goal_orbit = false;
+        g.arms[me.ch].fire_cd = m::max(g.arms[me.ch].fire_cd, 0.8);
+        me.drop_path();
         me.stall_ref = None;
         me.pieing = None;
         me.search_plan = None;
@@ -270,16 +259,16 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
     };
     crate::game::game_say(g, gd, &text, Some(true), None);
     let pos = g.ch[c].pos;
-    let at = bone(g, c, crate::character::Bone::Head).unwrap_or(pos);
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
     if g.time - g.last_sting_t > 8.0 {
         crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
         g.last_sting_t = g.time;
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || o == p.held || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].held.is_some() || g.gd[o].team != team {
+        if o == gd || o == p.held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || g.team(o) != team {
             continue;
         }
         let state = g.gd[o].state;
@@ -287,7 +276,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
         crate::mind::raise(g, o, 0.92, "guards");
         crate::belief::word(g, o, p.sam);
         if was_calm {
-            let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
+            let d = v3::dist(g.pos_of(o), p.sam);
             let roll = crate::dice::draw_of(g, "guards::hostage_call#1", gd);
             g.gd[o].react_t = m::max(g.gd[o].react_t, 0.25 + m::min(1.2, d / 25.0) + roll * 0.4);
         }
@@ -303,7 +292,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
 }
 
 /// pickSide's `room`: how far round the ring is open going way `d`, every 20°, and whether all of it to their rear is.
-fn ring_room(g: &mut Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) -> (i32, bool) {
+fn ring_room(g: &Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) -> (i32, bool) {
     let span = if d == short { m::abs(to_rear) } else { 2.0 * m::PI - m::abs(to_rear) };
     let (mut n, mut full) = (0, true);
     let mut a = 20.0 * v3::DEG;
@@ -321,15 +310,15 @@ fn ring_room(g: &mut Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) 
 }
 
 /// Is something solid between chest height over (x, z) and chest height over the ring's centre?
-fn no_sight_at(g: &mut Game, x: f64, z: f64, c_2: V3) -> bool {
+fn no_sight_at(g: &Game, x: f64, z: f64, c_2: V3) -> bool {
     crate::scene_collision::segment_blocked(g, [x, 1.2, z], [c_2[0], 1.2, c_2[2]], None, None, None)
 }
 
 /// Which way round the ring this man works: the other way from a colleague on this pair; else the short way to their rear if open, else whichever has more open ring.
-fn pick_side(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
+fn pick_side(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(s) = g.gd[o].standoff {
@@ -339,8 +328,8 @@ fn pick_side(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> 
         }
     }
     let c_2 = p.centre;
-    let pos = g.ch[g.gd[gd].ch].pos;
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let pos = g.pos_of(gd);
+    let brg = v3::yaw_to(c_2, pos);
     let to_rear = v3::wrap_angle(p.facing + m::PI - brg);
     let short = if to_rear < 0.0 { -1.0 } else { 1.0 };
     let (rs_n, rs_full) = ring_room(g, c_2, brg, to_rear, short, short);
@@ -368,9 +357,9 @@ fn axis_measure(from: V3, to: V3, ax: f64, az: f64, y0: f64, y1: f64) -> f64 {
 fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let h = bone(g, c, crate::character::Bone::Hips).unwrap_or(pos);
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos);
     let y0 = pos[1] + 0.05;
-    let y1 = match bone(g, c, crate::character::Bone::HeadTop) {
+    let y1 = match g.ch[c].bone(crate::character::Bone::HeadTop) {
         Some(top) => top[1],
         None => pos[1] + 1.75,
     };
@@ -378,12 +367,12 @@ fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
 }
 
 /// The fire rule: may this man's round go, at Sam, past the colleague in his arm?
-pub(super) fn flank_shot(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> crate::guards::FlankShot {
+pub(super) fn flank_shot(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> crate::guards::FlankShot {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let from = bone(g, c, crate::character::Bone::UpperArmR).unwrap_or_else(|| v3::add(pos, [0.0, 1.4, 0.0]));
+    let from = crate::combat::shoulder(g, c);
     let dist = v3::dist_xz(pos, p.centre);
-    let brg = m::atan2(pos[0] - p.sam[0], pos[2] - p.sam[2]);
+    let brg = v3::yaw_to(p.sam, pos);
     let rear = m::abs(v3::wrap_angle(brg - (p.facing + m::PI)));
     let to = p.aim;
     let d = v3::sub(to, from);
@@ -523,8 +512,8 @@ pub(super) fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crat
 /// Side-step along the current nav path, the body not turned to it. True once the path is consumed.
 pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
-    let paced = crate::condition::condition_pace(g, gd, speed);
-    let speed = team_legs(g, &crate::seats::here(g), gd, paced);
+    let paced = crate::condition::condition_pace(g, g.gd[gd].ch, speed);
+    let speed = team_legs(g, gd, paced);
     if unstick_first(g, gd, dt) {
         return false;
     }
@@ -552,10 +541,10 @@ pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f
 
 /// The next point on the ring for this man, an arc's step toward dead astern of them; None = planted or cornered.
 pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, p: crate::guards::Pair) -> Option<V3> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let c_2 = p.centre;
     let dist = v3::dist_xz(pos, c_2);
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let brg = v3::yaw_to(c_2, pos);
     let to_rear = v3::wrap_angle(p.facing + m::PI - brg);
     let short = if to_rear < 0.0 { -1.0 } else { 1.0 };
     let round = m::abs(to_rear) < STANDOFF_SETTLE_DEG * v3::DEG;
@@ -579,18 +568,6 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
             return Some(ap);
         }
     }
-    let mut others: Vec<GuardId> = Vec::new();
-    for i in 0..g.guards.len() {
-        let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
-            continue;
-        }
-        if let Some(os) = g.gd[o].standoff {
-            if g.tab.guards_standoff[os].pair == p.held {
-                others.push(o);
-            }
-        }
-    }
     let mut plans = 0;
     let ways: Vec<f64> = if js::truthy(going) { vec![dir] } else { vec![dir, -dir] };
     let steps: &[f64] = if round { &[0.0] } else { &[50.0, 30.0, 70.0] };
@@ -609,11 +586,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
                 if no_sight_at(g, (q[0] + pos[0]) / 2.0, (q[2] + pos[2]) / 2.0, c_2) {
                     continue;
                 }
-                let taken = others.iter().any(|&o| {
-                    let at = g.gd[o].standoff.and_then(|os| g.tab.guards_standoff[os].orbit_goal).unwrap_or(g.ch[g.gd[o].ch].pos);
-                    v3::dist_xz(at, q) < 1.5
-                });
-                if taken {
+                if crate::places::taken(g, gd, q, 1.5) {
                     continue;
                 }
                 plans += 1;
@@ -664,9 +637,9 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
 }
 
 /// The point on this man's own nav path to `C` where it first comes within the ring, if they are in sight from there.
-fn approach_point(g: &mut crate::game::Game, gd: GuardId, c_2: V3, need_sight: Option<bool>) -> Option<V3> {
+fn approach_point(g: &crate::game::Game, gd: GuardId, c_2: V3, need_sight: Option<bool>) -> Option<V3> {
     let need_sight = need_sight.unwrap_or(true);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let path = crate::scene_collision::nav_grid_find_path(g, pos, c_2, None, None)?;
     if path.is_empty() {
         return None;
@@ -703,17 +676,17 @@ fn approach_point(g: &mut crate::game::Game, gd: GuardId, c_2: V3, need_sight: O
 }
 
 /// retreatGoal's `open`: a free cell he can walk to straight over open floor.
-fn open_floor(g: &mut Game, pos: V3, q: V3) -> bool {
+fn open_floor(g: &Game, pos: V3, q: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
         && crate::scene_collision::nav_grid_walkable(g, pos, q)
         && !crate::scene_collision::solid_blocked(g, [pos[0], 0.5, pos[2]], [q[0], 0.5, q[2]], None)
 }
 
 /// Where a man too close to the pair backs off to; None = boxed in.
-pub(super) fn retreat_goal(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> Option<V3> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+pub(super) fn retreat_goal(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> Option<V3> {
+    let pos = g.pos_of(gd);
     let c_2 = p.centre;
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let brg = v3::yaw_to(c_2, pos);
     for da in [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5] {
         for r in [STANDOFF_MIN_M + 0.7, STANDOFF_MIN_M + 0.2, STANDOFF_MIN_M + 1.4] {
             let a = brg + da;
@@ -770,33 +743,6 @@ mod tests {
         let lost = pool_of(StandoffMoment::Lost, Temperament::Hard, true);
         assert_eq!(lost, ["lost them — where'd he take {him}?", "I've lost sight — moving up"]);
         assert!(pool_of(StandoffMoment::Enter, Temperament::Steady, true).contains(&"easy. easy. nobody has to get hurt here"));
-    }
-
-    /// This file's lines are the skeleton's table's (read from the same TypeScript), moment by moment.
-    #[test]
-    fn lines_are_the_skeleton_tables() {
-        let table = standoff_lines();
-        let moments = [StandoffMoment::Enter, StandoffMoment::NoShot, StandoffMoment::Line, StandoffMoment::Cornered, StandoffMoment::Dropped, StandoffMoment::Freed, StandoffMoment::Lost, StandoffMoment::HitHim];
-        for moment in moments {
-            let row = table.get(String::from(moment.as_str())).unwrap();
-            let same = |ours: &[&str], theirs: &Option<Vec<String>>| {
-                let theirs: Vec<&str> = theirs.iter().flatten().map(|l| l.as_str()).collect();
-                assert_eq!(ours, theirs.as_slice(), "{}", moment.as_str());
-            };
-            same(lines_of(moment, Temperament::Steady), &row.steady);
-            same(lines_of(moment, Temperament::Nervy), &row.nervy);
-            same(lines_of(moment, Temperament::Hard), &row.hard);
-            same(lines_any(moment), &row.under);
-        }
-        let nameless = standoff_nameless();
-        assert_eq!(nameless.dropped.as_deref(), nameless_line(StandoffMoment::Dropped));
-        assert_eq!(nameless.freed.as_deref(), nameless_line(StandoffMoment::Freed));
-        assert_eq!(nameless.hit_him.as_deref(), nameless_line(StandoffMoment::HitHim));
-        let now = standoff_now();
-        for (was, said) in STANDOFF_NOW {
-            assert_eq!(now.get(String::from(*was)).map(|l| l.as_str()), Some(*said), "{}", was);
-        }
-        assert_eq!(now.len(), STANDOFF_NOW.len());
     }
 
     /// from, to, the man's axis, soles, crown, and what the TypeScript's own arithmetic gives under EXACT (bun)

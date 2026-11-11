@@ -47,55 +47,10 @@ pub struct SwitchHand {
     pub n: V3,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct SwitchRowsRowOver {
-    pub kind: Option<crate::lightswitch::SwitchRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum SwitchRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightswitchMod {
     pub states: Option<crate::lightswitch::St>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct LightswitchStats {
-    pub plates: i32,
-    pub flips: i32,
-    pub guard_on: i32,
-    pub events: i32,
-    pub gone: i32,
 }
 
 pub const WALL_TOP: f64 = 2.2;

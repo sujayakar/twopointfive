@@ -57,7 +57,6 @@ pub struct State {
     pub t: f64,
     pub best: Option<crate::close::CloseOffer>,
     pub mode: Option<GuardId>,
-    pub mode_d: f64,
     pub rmb_t: f64,
 }
 
@@ -71,53 +70,10 @@ pub struct SITCLIP {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum NoteWhat {
-    Grab,
-    Seat,
-    Take,
-    Unseat,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CloseRmb {
     Press,
     Tap,
     Hold,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct CloseRowsRowOver {
-    pub kind: Option<crate::close::CloseRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum CloseRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -149,19 +105,6 @@ pub enum CloseTookWhat {
 pub struct CloseMod {
     pub state: JsMap<PlayerId, crate::close::State>,
     pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct CloseStats {
-    pub takes: [i32; 4],
-    pub grabs: [i32; 4],
-    pub blows: [i32; 2],
-    pub ready_frames: i32,
-    pub mode_frames: i32,
-    pub dark_passes: i32,
-    pub seats: i32,
-    pub unseats: i32,
 }
 
 pub const DEGR: f64 = 0.017453292519943295;

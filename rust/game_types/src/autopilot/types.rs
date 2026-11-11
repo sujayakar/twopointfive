@@ -46,19 +46,4 @@ pub struct AutoEntries {
     pub kept: Option<bool>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct AutopilotStats {
-    pub presses: i32,
-    pub first: i32,
-    pub bang: i32,
-    pub open: i32,
-    pub charge: i32,
-    pub blow: i32,
-    pub word: i32,
-    pub refused: i32,
-    pub shows: i32,
-    pub again: i32,
-}
-
 pub fn restack_lines() -> Vec<String> { alloc::vec![String::from("stacked up."), String::from("we're ready to go.")] }

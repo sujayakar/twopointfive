@@ -57,15 +57,16 @@ export const SWEEP_ROWS: SweepRow[] = [
   { id: 'fogOld', label: 'fog of war: the old pass', custom: 'fogOld', warm: true },   // (the fog pass part's two programs, one picture: old minus new = what the new one saves; skipped on a build with one program)
   { id: 'fogEdge', label: 'fog of war: the hard edge of before', custom: 'fogEdge' },   // (the soft band across each sight edge — rust/game_rules/src/stealth/fogofwar FOG.edge; shaders/fogofwar.wgsl fowEdge: every pixel of the fog pass searches the sight table for the line, for each live eye, both ways — against the hard line it was. All inside the compute pass 'fogofwar': its own column and the union show it, on a page held at the display's rate too. More eyes on the floor, more of it. Skipped on a build from before the soft edge)
   { id: 'rcPeriods', label: 'light cache refreshed over 1,1,2,4 frames (Medium\'s)', set: { rcPeriods: [1, 1, 2, 4] } },
-  { id: 'rcHalfRate', label: 'light cache at half rate', set: { rcHalfRate: true } },
+  { id: 'rcHalfRate', label: 'light cache at half rate', set: { rcHalfRate: true }, or: { label: 'light cache back at full rate', set: { rcHalfRate: false } } },
   { id: 'secMinE', label: 'light cache: no shadow ray under 0.02 W/m²', set: { secMinE: 0.02 } },
   { id: 'held2', label: 'held-light rays 2', set: { heldRays: 2 } },
   { id: 'held0', label: 'held-light rays off', set: { heldRays: 0 } },
-  { id: 'meshNear', label: 'mesh shadows off', set: { meshShadows: false, meshShadowsNear: false } },
+  { id: 'meshNear', label: 'mesh shadows off (over a frozen world: the rays\' share alone, nobody\'s tree is made)', set: { meshShadows: false, meshShadowsNear: false } },
+  { id: 'meshDirect', label: 'mesh shadows in the direct light\'s rays alone', set: { meshShadowsDirect: true }, needs: { meshShadows: true }, or: { label: 'mesh shadows back in every ray near a man', set: { meshShadowsDirect: false } } },
   { id: 'reflect', label: 'reflections off', set: { rtReflect: false } },
   { id: 'sharp', label: 'sharp direct off', set: { sharpDirect: false, sharpDecouple: false, gbaa: false } },
   { id: 'volK', label: 'beams and smoke: 2 lights a step', set: { volLightCap: 2 }, or: { label: 'beams and smoke: 4 lights a step', set: { volLightCap: 4 } } },   // (medium, low and very low run two already: there the row prices high's four)
-  { id: 'volQuarter', label: 'beams and smoke march at quarter size', set: { volQuarter: true }, or: { label: 'beams and smoke march back at full size', set: { volQuarter: false } } },
+  { id: 'volQuarter', label: 'beams and smoke march at quarter size', set: { volQuarter: true }, or: { label: 'beams and smoke march back at half size', set: { volQuarter: false } } },
   { id: 'smoke', label: 'dust and smoke not drawn', custom: 'smoke' },
   { id: 'wxAir', label: 'weather dust in the air: 3 steps a ray', set: { wxAirSteps: 3 } },   // (the dust volume's march, a sun shadow ray a step: this row minus the baseline = most of what the volume costs while a weather is in; nothing moves in clear air)
   { id: 'air', label: 'wind sim off', set: { airSim: false }, needs: { airSim: true }, liveOnly: 'a frozen world steps no air', settleAfterMs: SLOW_SNOW_MS },   // (the air solver's compute pass, timed as 'air': a fixed cost on its own grid, stepped only on a frame with time in it that something reads the air on — today the snow. With it off the snow is flakes on the plain storm wind and wisps in gust patches; when it comes back the wisps and the flakes take seconds to stand as they stood (and under ?snowair=0 a whole first set of grains is filed over the ones still in the ring): the baseline after it waits that out. A build from before the solver has no such setting and skips the row)

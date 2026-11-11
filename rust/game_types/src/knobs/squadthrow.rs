@@ -5,7 +5,6 @@ use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct SquadthrowK {
-    #[k(true)] pub on: bool,
     /// how far a frag runs on past its landing: this × its pace over the floor × the speed it comes down at (squadsmoke.ts squadSmokeRest; a frag is a smaller,
     ///  deader body than a can — throwables.ts FRAG_ITEM; measured headless on the office's floor, throws of 3 m to 12 m: where the fuse found it was a mean
     ///  0.11 m and at most 0.30 m from the spot at 0.04, 0.15 / 0.33 at 0.045, 0.28 / 0.69 at 0.05)

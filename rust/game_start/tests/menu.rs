@@ -78,9 +78,8 @@ fn a_fight_leaves_no_row_twice() {
     }
 }
 
-/// THE RULE: a digit is the first row's that has it. On a wall the fifth is the wall's own; the floor's own fifth row stays on the menu after it, the same row of the table, and
-/// opening the menu adds none.
-/// A FAILURE MEANS: a row is being copied to take its digit off (before: `silent` twice in the table, once with its digit and once without).
+/// THE RULE: a wall's menu is the floor's rows and the wall's own, each the squad's one row of the table, and opening it adds none.
+/// A FAILURE MEANS: a row is being copied to put it on a menu (before: `silent` twice in the table).
 #[test]
 fn a_walls_menu_copies_no_row() {
     for s in SEEDS {
@@ -96,9 +95,8 @@ fn a_walls_menu_copies_no_row() {
             let t = game::orders::squad_orders_target_at(&mut p.g, [12.06, 0.0, 13.78]);
             assert!(matches!(&t, game::orders::OrderTarget::Floor(f) if f.wall.is_some()), "seed {s}: the staging is wrong: the point is on no wall");
             let up: Vec<_> = game::orders::squad_orders_rows_for(&p.g, &game::seats::here(&p.g), &t, None, None);
-            let fifth: Vec<String> = up.iter().filter(|&&d| p.g.tab.orders_order_def[d].key == Some(5.0)).map(|&d| p.g.tab.orders_order_def[d].id.clone()).collect();
-            assert!(fifth.len() > 1 && fifth[0].starts_with("wall"), "seed {s}: the rows with the fifth digit: {fifth:?}, the wall's first");
-            for d in &up { assert!(p.g.orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
+            assert!(up.iter().any(|&d| p.g.tab.orders_order_def[d].id.starts_with("wall")), "seed {s}: the wall's own row is not among them");
+            for d in &up { assert!(p.g.sets[p.g.seat].orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
             p.run(0.3);
         }
         assert_eq!((p.menu_rows(), p.menu()), (rows, menu), "seed {s}: opening a wall's menu changed the table");
@@ -125,15 +123,15 @@ fn the_quick_keys_line_is_the_order_it_gives() {
             p.point_at(at);
             p.run(0.2);
             let line = panel(&p, 0).unwrap_or_else(|| panic!("seed {s}: nothing on the panel on {what}"));
-            assert_eq!(p.g.orders.shown.quick.as_deref(), Some(line.as_str()), "seed {s}: the panel reads what the tick keeps");
+            assert_eq!(p.g.sets[p.g.seat].orders.shown.quick.as_deref(), Some(line.as_str()), "seed {s}: the panel reads what the tick keeps");
             // (what the press takes: the cursor's own target. A teammate under it, with the whole squad addressed, is the squad's: "fall in", on nobody)
             let now = game::view::host_now(&p.g, p.host.input, p.host.cam, p.host.canvas);
             let t = game::orders::hover(&p.g, &game::seats::seat(&p.g, p.g.seats[0]), &now).expect("the key is live");
-            let n = p.g.orders.log.len();
+            let n = p.g.sets[p.g.seat].orders.log.len();
             game::autopilot::auto_quick(&mut p.g, &t);
-            assert!(p.g.orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
-            let id = p.g.orders.log.last().unwrap().order.clone();
-            let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
+            assert!(p.g.sets[p.g.seat].orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
+            let id = p.g.sets[p.g.seat].orders.log.last().unwrap().order.clone();
+            let d = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
             let row = game::orders::squad_orders_label_of(&mut p.g, d, &t);
             assert_eq!(line, line_of(&p, row, &t), "seed {s}: on {what} the key gave '{id}'");
         }
@@ -150,9 +148,10 @@ fn no_quick_line_with_a_menu_up() {
         p.run(0.2);
         assert!(panel(&p, 0).is_some(), "seed {s}: the floor has a line");
         let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
-        game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        game::orders::squad_orders_open(&mut p.g, Some(&t), None);
+        p.ring_over_menu();
         p.run(0.1);
-        assert_eq!(p.g.orders.shown.quick, None, "seed {s}: a menu is up");
+        assert_eq!(p.g.sets[p.g.seat].orders.shown.quick, None, "seed {s}: a menu is up");
         assert_eq!(panel(&p, 0), None, "seed {s}: a menu is up");
     }
 }
@@ -172,7 +171,8 @@ fn each_seat_keeps_its_own_quick_line() {
         }
         // the first player's menu takes his line and leaves the second's
         let t = { let at = p.at(p.mates()[0]); game::orders::squad_orders_target_at(&mut p.g, [at[0] + 1.0, 0.0, at[1]]) };
-        game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        game::orders::squad_orders_open(&mut p.g, Some(&t), None);
+        p.ring_over_menu();
         p.run(0.1);
         assert_eq!(panel(&p, 0), None, "seed {s}: his menu is up");
         assert!(panel(&p, 1).is_some(), "seed {s}: the other player has no menu up");

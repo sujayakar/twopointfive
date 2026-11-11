@@ -9,14 +9,14 @@ use game_start::play::{Opts, Play};
 fn no_half_dark_place_blinds_a_goggled_man() {
     let mut p = Play::mission("test-rooms.json", "?levelFile=test-rooms.json&rescue", &Opts { seed: 1, ..Default::default() });
     p.sam_unhurt();
-    let mate = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team == game::teams::Team::Operative && p.g.gd[gd].unit.is_some()).expect("the pair");
-    let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let mate = p.g.guards.iter().copied().find(|&gd| p.g.team(gd).ours() && p.g.gd[gd].unit.is_some()).expect("the pair");
+    let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let mut seen = Vec::new();
     for k in 0..8 {
         // (five metres short of the spot and looking along the corridor at it, with nobody who can do anything about him)
         let x = 21.6 + k as f64;
         for _ in 0..150 {
-            for &o in &theirs { let until = p.g.time + 5.0; p.g.gd[o].dazzled_until = until; p.man_stands(o, [4.0, 4.0]); }
+            for &o in &theirs { let until = p.g.time + 5.0; p.g.cond[p.g.gd[o].ch].blind_until = until; p.man_stands(o, [4.0, 4.0]); }
             p.man_stands(mate, [x - 5.0, 14.2]);
             let c = p.g.gd[mate].ch;
             (p.g.ch[c].aim_yaw, p.g.ch[c].body_yaw) = (core::f64::consts::FRAC_PI_2, core::f64::consts::FRAC_PI_2);
@@ -24,8 +24,7 @@ fn no_half_dark_place_blinds_a_goggled_man() {
         }
         if !game::nvg::nvg_down(&p.g, mate) { continue; }
         let at = [x, 1.2, 14.2];
-        let (mut place, mut flood) = (0.0, 0.0);
-        game::scene_collision::window(&mut p.g, &mut |g| { place = game::nvg::nvg_place_light(g, at); flood = game::irlight::ir_light_at(g, at, None); });
+        let (place, flood) = (game::nvg::nvg_place_light(&mut p.g, at), game::irlight::ir_light_at(&mut p.g, at, None));
         seen.push((x, place, flood, game::nvg::tube_vis(&p.g, place + flood)));
     }
     assert!(seen.iter().any(|s| s.1 > 0.0028 && s.1 < 0.0104), "the scene: some of the corridor was to be half dark: {seen:.4?}");

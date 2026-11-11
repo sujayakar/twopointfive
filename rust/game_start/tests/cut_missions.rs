@@ -23,7 +23,7 @@ fn the_house_in_the_yard_is_a_plain_room_clear_with_nobody_to_take() {
         let mut p = stood("snatch.json", seed);
         assert!(p.g.civilians.is_empty(), "seed {seed}: somebody unarmed stands in the house");
         assert_eq!(p.view().mission.of, MissionOf::Roomclear, "seed {seed}");
-        let men: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == Team::Hostile).collect();
+        let men: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.team(gd) == Team::Hostile).collect();
         assert!(!men.is_empty() && men.len() <= 8, "seed {seed}: {} men in the house", men.len());
         for gd in men { p.falls(gd, DownBy::Player); }
         assert!(p.until(10.0, |p| p.room_clear_end().is_some()).is_some(), "seed {seed}: the house fell and nothing ended");
@@ -39,12 +39,12 @@ fn the_workshops_are_a_plain_room_clear_with_nothing_to_make_safe() {
         let mut p = stood("defuse.json", seed);
         assert!(p.g.level.scenarios.as_ref().map_or(false, |s| s.room_clear.is_some()), "seed {seed}: no room clear in the file");
         assert_eq!(p.view().mission.of, MissionOf::Roomclear, "seed {seed}");
-        let men: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == Team::Hostile).collect();
+        let men: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.team(gd) == Team::Hostile).collect();
         assert!(!men.is_empty(), "seed {seed}: nobody in the workshops");
         // (the old clock ran 75 seconds and a lost one blew: well past it the floor is not lost)
         p.run(90.0);
         assert_ne!(p.room_clear_end().map(|e| e.0), Some(RoomClearEnd::Wiped), "seed {seed}");
-        for gd in men { if p.g.gd[gd].state != game::game::GuardState::Dead { p.falls(gd, DownBy::Player); } }
+        for gd in men { if !game::condition::down(&p.g, p.g.gd[gd].ch) { p.falls(gd, DownBy::Player); } }
         assert!(p.until(10.0, |p| p.room_clear_end().is_some()).is_some(), "seed {seed}: the house fell and nothing ended");
         assert_eq!(p.room_clear_end().map(|e| e.0), Some(RoomClearEnd::Taken), "seed {seed}");
     }

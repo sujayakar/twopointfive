@@ -19,7 +19,7 @@ fn sleeper(seed: u32) -> (Play, GuardId) {
     p.g.player_invisible = true;
     let m = p.until(120.0, |p| p.g.guards.iter().copied().find(|&m| p.asleep(m) && p.g.gd[m].wait > 30.0).is_some()).map(|_| p.g.guards.iter().copied().find(|&m| p.asleep(m)).unwrap());
     let m = m.unwrap_or_else(|| panic!("seed {seed}: two minutes and nobody slept"));
-    for o in p.g.guards.clone() { if o != m { p.g.gd[o].dazzled_until = 1e9; } }
+    for o in p.g.guards.clone() { if o != m { p.g.cond[p.g.gd[o].ch].blind_until = 1e9; } }
     p.run(1.0);
     (p, m)
 }
@@ -56,7 +56,7 @@ fn a_man_on_a_long_wait_in_the_dark_sleeps_with_his_eyes_shut_and_his_ears_dull(
         p.g.pl[me].crouch = true;
         p.sam_put([at[0] + y.sin() * 2.0, at[2] + y.cos() * 2.0]);
         let mut peak = 0.0f64;
-        for _ in 0..180 { p.g.pl[me].visibility = 1.0; p.frame(); peak = peak.max(p.awareness(m)); }
+        for _ in 0..180 { p.g.shown[p.g.pl[me].ch].visibility = 1.0; p.frame(); peak = peak.max(p.awareness(m)); }
         assert!(p.asleep(m) && peak < 0.05, "seed {s}: lit in front of him: awareness {peak:.2}, asleep {}", p.asleep(m));
         p.sam_put([at[0] + 30.0, at[2]]);
         p.g.player_invisible = true;

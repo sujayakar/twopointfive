@@ -39,7 +39,7 @@ fn has_bearing(s: &str) -> bool {
 }
 
 /// True = this door id is its author's shorthand, not words to say.
-pub fn shorthand_id(g: &crate::game::Game, id_2: &str) -> bool {
+pub fn shorthand_id(id_2: &str) -> bool {
     id_is_shorthand(id_2)
 }
 
@@ -59,12 +59,8 @@ fn bare(s: &str) -> String {
 fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     let mut out: JsMap<String, String> = JsMap::new();
     let ordinals = ordinals();
-    let Some(scenarios) = level.scenarios.as_ref() else { return out };
-    let rooms: &[crate::scene_scenarios::StructureRoom] = match scenarios.room_clear.as_ref() {
-        Some(rc) => &rc.rooms,
-        None => &[],
-    };
-    if rooms.is_empty() || scenarios.lesson.is_some() {
+    let rooms = level.rooms();
+    if rooms.is_empty() || level.lesson().is_some() {
         return out;
     }
     // (id, name), in the file's order
@@ -162,9 +158,6 @@ pub fn name_doors(g: &mut crate::game::Game, office: bool, doors: &[DoorId]) {
         names.clone()
     };
     for (&d, id) in doors.iter().zip(ids.iter()) {
-        if let Some(n) = names.get(id.clone()) {
-            g.m.doornames.said.set(d, n.clone());
-        }
         if let Some(u) = up.get(id.clone()) {
             g.m.doornames.said_up.set(d, u.clone());
         }
@@ -306,7 +299,7 @@ mod tests {
     #[test]
     fn a_door_says_its_written_name_first_and_the_office_says_only_that() {
         let mut g = Game::blank();
-        g.level = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")]), room("ward", &[("hd", "hall")])], vec![row("v1", "the strong door")]);
+        g.level = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")]), room("ward", &[("hd", "hall")])], vec![row("v1", "the strong door")]).into();
         let mut door = |name: &str| {
             let mut d = crate::doors::Door::blank();
             d.def.name = name.to_string();

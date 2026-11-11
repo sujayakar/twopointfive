@@ -30,13 +30,3 @@ pub struct SeenwalkMod {
     pub shared: Option<crate::seenwalk::Shared>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct SeenwalkStats {
-    pub asks: i32,
-    pub blocks: i32,
-    pub lines: i32,
-    pub in_view: i32,
-    pub round: i32,
-}
-

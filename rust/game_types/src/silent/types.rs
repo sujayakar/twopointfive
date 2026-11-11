@@ -3,14 +3,6 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum By {
-    #[default] Start,
-    Order,
-    Tool,
-    Api,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub cast: Vec<GuardId>,
@@ -24,7 +16,6 @@ pub struct State {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSeatsValue {
     pub on: bool,
-    pub go_digit: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -43,14 +34,6 @@ pub struct SilentMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct SilentStats {
-    pub silent: i32,
-    pub loud: i32,
-    pub locked: i32,
-    pub picked: i32,
-    pub booted: i32,
-    pub held: i32,
-    pub held_glass: i32,
-    pub compromised: i32,
     pub tools: i32,
 }
 

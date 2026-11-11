@@ -1,206 +1,21 @@
-//! THE BOX WORLD AS THE MODULE HOLDS IT — the statics a level is made of, the leaves that swing in it, and the grid they are filed in (src/scene/collision.ts
-//! StaticCollision), laid out flat for the systems here that ask it things: the line tests (lines.rs) and the circle against the boxes (collide.rs).
-//!
-//! WHOSE IT IS. While the rules that move a box are TypeScript, a box is a TypeScript object and THAT is the truth: what stands here is a copy, written by
-//! src/scene/boxMirror.ts and proven against the objects at the start of every tick (docs/agents/rust.md). Nothing here is state of
-//! the game: a copy that is thrown away is made again from the objects.
-//!
-//! No allocation: every table is a fixed size, so the module's memory never grows and a view the TypeScript side holds over it never dies. A level too big for
-//! a table is not copied at all (boxMirror.ts says so and the TypeScript answers, as it always did).
+//! WHAT A QUESTION OF THE BOX WORLD STANDS ON: the rows it reads (game_types' boxworld: written by whoever moves a box), its scratch, and the small operations whose answers are the game's own.
+pub use game_types::boxworld::*;
 
-/// worlds the module can hold at once (a game a world: two games stepped in one process each keep theirs)
-pub const WORLDS: usize = 4;
-/// the answer when a question is none this module can judge (a length that is no length of this world's, a pane the host has a rule for, a table too
-/// short): the host asks the TypeScript
+/// the answer when a question is none this module can judge (a length that is no length of this world's, a table too short)
 pub const ASK_HOST: u32 = 0xffff_ffff;
-/// statics a world can hold
-pub const MAX_BOXES: usize = 8192;
-pub const SNOW_PACKED: u8 = 2;
-pub const SNOW_OLD: u8 = 3;
-pub const SNOW_BANK: u8 = 4;
-/// loose boxes in one list of them, and how many lists are kept: the game's own leaves, the leaves a TypeScript question swaps in for itself, and THE FURNITURE'S
-/// PARTS (list THING_SET: every part box of every thing in the level, the things in the order of the furniture's own list, a thing's parts together)
-pub const MAX_LEAVES: usize = 512;
-pub const LEAF_SETS: usize = 3;
-pub const THING_SET: usize = 2;
-/// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
-/// cylinder that holds it), and the words of each IN THE LEVEL NOW, in the furniture's order (its id, where its parts start in list THING_SET, how many)
-pub const MAX_THINGS: usize = 128;
-pub const TH: usize = 4;
-pub const TH_X: usize = 0;
-pub const TH_Z: usize = 1;
-pub const TH_YAW: usize = 2;
-pub const TH_RADIUS: usize = 3;
-pub const TL: usize = 3;
-/// grid cells (W × H), and box entries over all of them
-pub const MAX_CELLS: usize = 16384;
-pub const MAX_ITEMS: usize = 131072;
-/// tilted statics (filed by their yawed footprint alone: lines.rs asks them first)
-pub const MAX_TILTED: usize = 256;
-/// cut records for the statics (a leaf has its own beside its row)
-pub const MAX_CUTS: usize = 1024;
-/// the most planes one box carries
-pub const CUT_PLANES: usize = 8;
 /// panes one line of fire can list
 pub const MAX_PANES: usize = 256;
-/// statics one gather can list (the host's own lists are shorter)
+/// statics one gather can list (the caller's own lists are shorter)
 pub const MAX_LIST: usize = 4096;
-/// PANES OF GLASS THAT ARE NO LONGER WHOLE (glass.rs): a row a pane with anything out of it, on its way out, coming down or gone — written by the side
-/// that still owns the breaking, read by every line and ray here that meets the pane. A pane with no row is
-/// shut everywhere. GD doubles and GW words a row (glass.rs names them).
-pub const MAX_GLASS: usize = 256;
+/// doubles and words of a pane's row in the game's block (glass.rs names them)
 pub const GD: usize = 80;
 pub const GW: usize = 64;
-/// panes a burst's own reckoning of the glass can name (glass.rs, the view): where each gives, four doubles a pane
-pub const MAX_VIEW: usize = 256;
-pub const VD: usize = 4;
-/// `panes_g`: no block (a world of zeros stands in no data segment of the module: 0, not some other number)
-pub const NO_BLOCK: u32 = 0;
 
-/// DOUBLES A BOX: centre, half sizes, cos and sin of its yaw (worked out by the side that owns the maths in place — the same two numbers the TypeScript's own
-/// cache keeps beside the yaw), the yaw itself, the rotation (x y z w), its cut record's place and plane count, and what kind of box it is.
-pub const REC: usize = 16;
-pub const R_C: usize = 0;
-pub const R_H: usize = 3;
-pub const R_COS: usize = 6;
-pub const R_SIN: usize = 7;
-pub const R_YAW: usize = 8;
-pub const R_ROT: usize = 9;
-pub const R_CUT: usize = 13;
-pub const R_CUTN: usize = 14;
-pub const R_KIND: usize = 15;
-/// the kinds (R_KIND, a sum): fully rotated (Box.rot), round (Box.round === true), cut (a cut record with the cut rule on), and a pane of glass a walker
-/// goes through (the host's rule: its answer for this box when the row was last written)
-pub const K_ROT: u32 = 1;
-pub const K_ROUND: u32 = 2;
-pub const K_CUT: u32 = 4;
-pub const K_WALK: u32 = 8;
-/// the kinds that say a box is not a plain upright one (a line or a circle then takes the longer way round it)
-pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
+/// places for what last stopped a line (a power of two)
+pub const LASTS: usize = 1 << 13;
 
-/// the flags of src/scene/boxes.ts BoxFlag that a question here reads
-pub const F_NO_SHADOW: u32 = 2;
-pub const F_GLASS: u32 = 1 << 17;
-
-/// the sheets of glass a level may have
-pub const MAX_SHEETS: usize = 256;
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Sheet {
-    pub bi: u32,
-    pub sky: i32,
-    pub gap: f64,
-}
-
-#[repr(C)]
-pub struct World {
-    pub rec: [f64; MAX_BOXES * REC],
-    pub leaf: [f64; LEAF_SETS * MAX_LEAVES * REC],
-    /// CUT_PLANES × (n.x n.y n.z d) a record: the statics' records, then one a leaf
-    pub cut: [f64; (MAX_CUTS + LEAF_SETS * MAX_LEAVES) * CUT_PLANES * 4],
-    /// the furniture, a thing an id (TH doubles each)
-    pub thing: [f64; MAX_THINGS * TH],
-    /// the panes that are no longer whole, GD doubles a row
-    pub glass: [f64; MAX_GLASS * GD],
-    /// a burst's view of the glass, VD doubles a pane it names
-    pub view: [f64; MAX_VIEW * VD],
-    pub cs: f64,
-    pub flags: [u32; MAX_BOXES],
-    pub leaf_flags: [u32; LEAF_SETS * MAX_LEAVES],
-    /// the grid: cell c holds items[start[c] .. start[c + 1]], in the order they were filed
-    pub start: [u32; MAX_CELLS + 1],
-    pub items: [u32; MAX_ITEMS],
-    /// five a tilted static: its index, then the cells it is filed in (x0 x1 z0 z1)
-    pub tilted: [i32; MAX_TILTED * 5],
-    /// the furniture in the level now, in its own order (TL words each)
-    pub thing_live: [u32; MAX_THINGS * TL],
-    /// …and how many
-    pub things: u32,
-    /// the panes that are no longer whole, GW words a row; which row is static i's (0 = none: the pane is whole; else the row + 1); how many rows
-    pub glass_w: [u32; MAX_GLASS * GW],
-    pub glass_of: [u32; MAX_BOXES],
-    pub glass_n: u32,
-    /// a burst's view: which statics it names, how many, and which kind of view it is (glass.rs VIEW_*)
-    pub view_bi: [u32; MAX_VIEW],
-    pub view_n: u32,
-    pub view_kind: u32,
-    /// WHOSE PANES THESE ARE: the slot of the game's block whose rows a line or a ray here reads where they stand, plus one (panes.rs; set as the copy is stood up,
-    /// let go as it shuts, for a world outlives its game), or NO_BLOCK: the copy's rows above, the rule being the host's
-    pub panes_g: u32,
-    /// THE LEVEL'S SHEETS OF GLASS, ascending, for the rule (panes.rs): which static, which face has the sky, how far it stands on the plan from the nearest door's opening.
-    /// The level's, not the game's: no part of any block, and written with the statics by src/scene/boxMirror.ts
-    pub sheet_n: u32,
-    pub sheets: [Sheet; MAX_SHEETS],
-    /// …and with those, a burst's view is its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it (panes.rs gives)
-    pub view_at: [f64; 6],
-    /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
-    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
-    pub snow: [u8; MAX_BOXES],
-    /// WHAT A STATIC SENDS BACK of the light on it, of 255: its colour by luminance (glow.rs)
-    pub back: [u8; MAX_BOXES],
-    pub w: u32,
-    pub h: u32,
-    pub boxes: u32,
-    pub n_tilted: u32,
-    pub leaves: [u32; LEAF_SETS],
-    /// WHOSE THE ROWS ARE AND OF WHAT MOMENT: one more each time anything of them is written. Who wrote them keeps the number, and a question is refused to
-    /// anybody who holds another (another game of the process, a kept game put back). 0 = nobody's: no rows were written
-    pub stood: u32,
-    /// how many times a static's row was written: whose a table made from the statics is
-    pub wrote: u32,
-}
-
-const BLANK: World = World {
-    rec: [0.0; MAX_BOXES * REC],
-    leaf: [0.0; LEAF_SETS * MAX_LEAVES * REC],
-    cut: [0.0; (MAX_CUTS + LEAF_SETS * MAX_LEAVES) * CUT_PLANES * 4],
-    thing: [0.0; MAX_THINGS * TH],
-    glass: [0.0; MAX_GLASS * GD],
-    view: [0.0; MAX_VIEW * VD],
-    cs: 0.0,
-    flags: [0; MAX_BOXES],
-    leaf_flags: [0; LEAF_SETS * MAX_LEAVES],
-    start: [0; MAX_CELLS + 1],
-    items: [0; MAX_ITEMS],
-    tilted: [0; MAX_TILTED * 5],
-    thing_live: [0; MAX_THINGS * TL],
-    things: 0,
-    glass_w: [0; MAX_GLASS * GW],
-    glass_of: [0; MAX_BOXES],
-    glass_n: 0,
-    view_bi: [0; MAX_VIEW],
-    view_n: 0,
-    view_kind: 0,
-    panes_g: NO_BLOCK,
-    sheet_n: 0,
-    sheets: [Sheet { bi: 0, sky: 0, gap: 0.0 }; MAX_SHEETS],
-    view_at: [0.0; 6],
-    snow: [0; MAX_BOXES],
-    back: [0; MAX_BOXES],
-    w: 0,
-    h: 0,
-    boxes: 0,
-    n_tilted: 0,
-    leaves: [0; LEAF_SETS],
-    stood: 0,
-    wrote: 0,
-};
-static mut ALL: [World; WORLDS] = [BLANK; WORLDS];
-
-/// world `w`, to write (the side that makes the copy; a question reads it: `world_read`)
-#[inline(always)]
-pub fn world(w: usize) -> &'static mut World {
-    unsafe { &mut (*core::ptr::addr_of_mut!(ALL))[if w < WORLDS { w } else { 0 }] }
-}
-/// world `w`, to read
-#[inline(always)]
-pub fn world_read(w: usize) -> &'static World {
-    unsafe { &(*core::ptr::addr_of!(ALL))[if w < WORLDS { w } else { 0 }] }
-}
-
-/// THE SCRATCH OF ONE QUESTION, beside the boxes and no part of them: what it has met already, the cells it walked, the panes and statics it lists. One a
-/// world, for whoever asks (one thread, and no question is asked inside another): so a question READS the boxes (`&World`) and writes nothing that is
-/// anybody's.
+/// THE SCRATCH OF ONE QUESTION, beside the boxes and no part of them: what it has met already, the cells it walked, the panes and statics it lists. One for
+/// whoever asks (one thread, and no question is asked inside another): so a question READS the boxes (`&World`) and writes nothing that is anybody's.
 pub struct Asking {
     /// a box met by this question already (its id), as the TypeScript's `stamp`
     pub stamp: [u32; MAX_BOXES],
@@ -214,14 +29,14 @@ pub struct Asking {
     pub pt: [f64; 2],
     pub stamp_id: u32,
     pub panes: u32,
+    /// what last stopped a line from about here to about there (lines.rs `stopped_by`): a guess, asked first, and never an answer
+    pub last: [u32; LASTS],
 }
-const IDLE: Asking = Asking { stamp: [0; MAX_BOXES], cell_stamp: [0; MAX_CELLS], seg_cells: [0; MAX_CELLS], pane_t: [0.0; MAX_PANES], pane_bi: [0; MAX_PANES], list: [0; MAX_LIST], pt: [0.0; 2], stamp_id: 0, panes: 0 };
-static mut ASKING: [Asking; WORLDS] = [IDLE; WORLDS];
-/// the scratch of a question of world `w`
+const IDLE: Asking = Asking { stamp: [0; MAX_BOXES], cell_stamp: [0; MAX_CELLS], seg_cells: [0; MAX_CELLS], pane_t: [0.0; MAX_PANES], pane_bi: [0; MAX_PANES], list: [0; MAX_LIST], pt: [0.0; 2], stamp_id: 0, panes: 0, last: [0; LASTS] };
+static mut ASKING: Asking = IDLE;
+/// the scratch of the question in hand
 #[inline(always)]
-pub fn asking(w: usize) -> &'static mut Asking {
-    unsafe { &mut (*core::ptr::addr_of_mut!(ASKING))[if w < WORLDS { w } else { 0 }] }
-}
+pub fn asking() -> &'static mut Asking { unsafe { &mut *core::ptr::addr_of_mut!(ASKING) } }
 
 impl Asking {
     /// a fresh id for one question's stamps (the TypeScript's `++stampId`); at the wrap every stamp is wiped so that no old one reads as this question's
@@ -249,44 +64,47 @@ impl Asking {
     }
 }
 
-/// THE WORLD AS A QUESTION TAKES IT: the boxes as they stand, or as they would be. `set` = which list of the leaves stands (−1 none); `but` = leaves of that
-/// list that are let through; `open` = statics that are let through; `extra` = boxes that are not of the level and stand for this question (REC doubles
-/// each; a cut one's planes in `extra_cut`, its record's place there).
-#[derive(Clone, Copy)]
-pub struct Over<'a> {
-    pub set: i32,
-    pub but: &'a [u32],
-    pub open: &'a [u32],
-    pub extra: &'a [f64],
-    pub extra_cut: &'a [f64],
+/// THE STATICS AS A TABLE MADE FROM THEM LAST FOUND THEM: a word of each one's row, and what it takes of the plan (the table's own rectangle of it)
+pub struct Seen {
+    wrote: u64,
+    boxes: usize,
+    word: [u64; MAX_BOXES],
+    at: [[f64; 5]; MAX_BOXES],
 }
-impl Over<'_> {
-    /// the statics, and the leaves of list `set`
-    #[inline(always)]
-    pub const fn with(set: i32) -> Over<'static> {
-        Over { set, but: &[], open: &[], extra: &[], extra_cut: &[] }
+impl Seen {
+    pub const NONE: Self = Seen { wrote: 0, boxes: 0, word: [0; MAX_BOXES], at: [[0.0; 5]; MAX_BOXES] };
+    /// nothing was seen, and there is something to see
+    pub fn empty_of(&self, o: &World) -> bool { self.boxes == 0 && self.wrote != o.wrote }
+    pub fn forget(&mut self) { (self.wrote, self.boxes) = (0, 0); }
+    /// the statics looked at again: `moved` is told the rectangle of every one that is not as it was and how high it reaches, where it stood and where it stands
+    pub fn look(&mut self, o: &World, round: impl Fn(&[f64]) -> [f64; 5], mut moved: impl FnMut([f64; 5])) {
+        if self.wrote == o.wrote { return; }
+        self.wrote = o.wrote;
+        let n = o.boxes();
+        for i in 0..n.max(self.boxes) {
+            let (had, has) = (i < self.boxes, i < n);
+            let word = if has { word_of(o, i) } else { 0 };
+            if had && has && word == self.word[i] { continue; }
+            if had { moved(self.at[i]); }
+            if has {
+                self.at[i] = round(o.row(i));
+                self.word[i] = word;
+                moved(self.at[i]);
+            }
+        }
+        self.boxes = n;
     }
 }
-
-/// how much a table holds, by its number (rows, not bytes)
-pub fn cap(table: u32) -> usize {
-    match table {
-        0 => MAX_BOXES,
-        1 => MAX_LEAVES,
-        2 => MAX_CUTS,
-        3 => MAX_PANES,
-        6 => MAX_CELLS,
-        7 => MAX_ITEMS,
-        8 => MAX_TILTED,
-        10 => WORLDS,
-        11 => LEAF_SETS,
-        13 => MAX_LIST,
-        14 => MAX_THINGS,
-        16 => MAX_GLASS,
-        19 => MAX_VIEW,
-        21 => MAX_BOXES,
-        _ => 0,
+/// a word of static `i`'s row: its sixteen numbers, its planes and its flags (what it sends back is read as it is)
+fn word_of(o: &World, i: usize) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325 ^ o.flags[i] as u64;
+    let r = &o.rec[i * REC..(i + 1) * REC];
+    let planes = if r[R_KIND] as u32 & K_CUT != 0 { &o.cut[r[R_CUT] as usize * CUT_PLANES * 4..][..js_min(r[R_CUTN], CUT_PLANES as f64) as usize * 4] } else { &[] };
+    for v in r.iter().chain(planes) {
+        h = (h ^ v.to_bits()).wrapping_mul(0x9e3779b97f4a7c15);
+        h ^= h >> 29;
     }
+    h
 }
 
 // ---- the TypeScript's own small operations, where the language's differ

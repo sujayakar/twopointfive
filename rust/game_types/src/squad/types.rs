@@ -45,7 +45,6 @@ pub struct RoomClear {
     #[is(crate::squad::RoomClearPhase::Stack)] pub phase: crate::squad::RoomClearPhase,
     #[is(f64::NAN)] pub t_kick: f64,
     #[is(f64::NAN)] pub t_enter: f64,
-    #[is(f64::NAN)] pub t_enter2: f64,
     #[is(f64::NAN)] pub t_search: f64,
     #[is(f64::NAN)] pub t_resolve: f64,
     pub door: Option<DoorId>,
@@ -166,14 +165,6 @@ pub struct BODYLINESCOLD {
     pub corner1: Option<String>,
     pub empty2: Option<String>,
     pub radio1: Option<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum EndGuardScriptState {
-    Patrol,
-    Suspicious,
-    Alert,
-    Search,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

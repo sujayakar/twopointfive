@@ -30,12 +30,12 @@ fn h01(x: f64) -> f64 {
     (x >> 8) as f64 / 16777216.0
 }
 
-fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.sim_lightshome_fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
+fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
 
 /// 1 = a ceiling panel (the full look), 2 = a lamp with a light of its own (sparks only), 0 = not this lane's.
 fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
-    use crate::sim_lightshome::FixtureKind as K;
-    let (interactive, kind, light, n_boxes) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
+    use crate::fixtures::FixtureKind as K;
+    let (interactive, kind, light, n_boxes) = { let f = &g.tab.fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
     if !interactive { return 0.0; }
     if kind == K::Analytic { return if light.is_some() { 2.0 } else { 0.0 }; }
     if kind != K::Emissive || n_boxes == 0 { return 0.0; }
@@ -91,22 +91,20 @@ fn state(g: &mut Game) -> &mut State { g.m.fixture_break.state.as_mut().unwrap()
 fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::fixture_break::Rec {
     let f = g.m.fixture_break.fixlook.clone();
     let sb = if kind == 1.0 { static_box(g, t) } else { None };
-    let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.sim_lightshome_fixture[t].pos };
+    let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.fixture[t].pos };
     let seed = (js::to_i32(m::round(c[0] * 100.0) * 73856093.0) ^ js::to_i32(m::round(c[2] * 100.0) * 19349663.0) ^ js::to_i32(m::round(c[1] * 100.0) * 83492791.0)) as f64;
     let scan = state(g).scan;
     let mut r = Rec { t, born, seed, seen: scan, hinge: c, uh: [1.0, 0.0, 0.0], l: 0.0, w: 0.0, th: 0.0, om: 0.0, rest: 0.0, still: false, hang: Vec::new(), pieces: Vec::new(),
         pop: 0.0, last_slot: -1.0, glass_out: false, tip: c, emits: 0.0, phase: 0.0, fall_at: f64::INFINITY, h0: c, th0: 0.0, t0: 0.0, lie: c, uh0: [1.0, 0.0, 0.0], skew: 0.0, lay: 0.0 };
     let beat = born > -1e8;
     if !beat { r.pop = f.pops.len() as f64; r.glass_out = true; }
-    if beat { g.stats.fixture_break.beats += 1; }
     let Some(sb) = sb else {   // (a lamp has no line of its own: its sparks lean a bearing of its own, not the world's +x)
-        let a = h01(seed + 7.0) * 2.0 * m::PI; r.uh = [m::cos(a), 0.0, m::sin(a)]; g.stats.fixture_break.lamps += 1; return r;
+        let a = h01(seed + 7.0) * 2.0 * m::PI; r.uh = [m::cos(a), 0.0, m::sin(a)];  return r;
     };
     let (bh, byaw) = { let b = &g.tab.boxes[sb]; (b.h, b.yaw) };
     let q = quat::yaw(byaw); let long = bh[0] >= bh[2]; let u = quat::rotate(q, if long { [1.0, 0.0, 0.0] } else { [0.0, 0.0, 1.0] });
     let hanging = state(g).recs.iter().filter(|x| !x.hang.is_empty()).count() as f64;
-    if hanging >= f.max_panels { r.uh = v3::scale(u, if h01(seed + 7.0) < 0.5 { -1.0 } else { 1.0 }); return r; }   // (over the cap: this one sparks along its own line, nothing hangs)
-    g.stats.fixture_break.panels += 1;
+    if hanging >= f.max_panels { r.uh = v3::scale(u, if h01(seed + 7.0) < 0.5 { -1.0 } else { 1.0 }); return r; }   
     let l = 2.0 * (if long { bh[0] } else { bh[2] }); let w = 2.0 * (if long { bh[2] } else { bh[0] }); r.l = l; r.w = w;
     let from = if beat { cause_of(g, c) } else { None }; let dn = match from { Some(p) => v3::dot(u, v3::sub(c, p)), None => 0.0 };
     let side = if m::abs(dn) > 0.05 { m::sign(dn) } else if h01(seed) < 0.5 { -1.0 } else { 1.0 };   // the hinge is the end AWAY from what hit it
@@ -134,7 +132,7 @@ fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::
     let mut mk = |g: &mut Game, h: V3, albedo: V3, rough: Option<f64>| -> FrameBoxId {
         let word = crate::scene_stuff::word_for(g, Some(&albedo), None, None);
         let id = crate::scene_boxes::box_kept(g, crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c, h, albedo: Some(albedo), stuff: word.stuff, does: word.does,
-            flags: Some(LOOK), rot: Some(quat::ident()), name: Some(String::from("fixtureLook")), mkey: Some(key + part), rough, ..Default::default() }));
+            flags: Some(LOOK), rot: Some(quat::ident()), mkey: Some(key + part), rough, ..Default::default() }));
         part += 1.0; id
     };
     r.hang = vec![mk(g, [l / 2.0, 0.02, w / 2.0], f.tray, None), mk(g, [l * 0.15, 0.03, m::min(0.06, w * 0.22)], f.cover, None), mk(g, [l / 2.0 - 0.015, 0.003, w / 2.0 - 0.02], f.face, None),
@@ -235,7 +233,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
     for t in g.targets.clone() {
         let k = match state(g).kind.get(t).copied() { Some(k) => k, None => { let k = kind_of(g, t); state(g).kind.set(t, k); k } };
         if k == 0.0 { continue; }
-        let broken = crate::sim_lightshome::fixture_broken(g, t);
+        let broken = g.tab.fixture[t].broken;
         let was = state(g).prev.get(t).copied(); if was != Some(broken) { state(g).prev.set(t, broken); }
         if let Some(i) = state(g).recs.iter().position(|r| r.t == t) { if broken { state(g).recs[i].seen = scan; } continue; }
         if broken { let n = add(g, t, k, if running && was == Some(false) { now } else { -1e9 }); state(g).recs.push(n); }
@@ -247,7 +245,6 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
         let (keep, gone): (Vec<Rec>, Vec<Rec>) = all.into_iter().partition(|r| r.seen == scan);
         state(g).recs = keep; for r in gone.iter() { let_go(g, r); }
     }
-    let mut boxes = 0;
     for ri in 0..state(g).recs.len() {
         let mut r = state(g).recs[ri].clone();
         let a = now - r.born;
@@ -281,7 +278,6 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
                 let seed = seed_of(&mut r);
                 crate::render_particles::particles_emit(g, PKind::Spark, r.tip, v3::normalize(d), sp.sparks,
                     EmitOpts { speed: f.spark.speed, speed_jit: Some(f.spark.speed_jit), spread: Some(f.spark.spread), life: f.spark.life, life_jit: Some(f.spark.life_jit), size: f.spark.size, seed: Some(seed), ..EmitOpts::default() });
-                g.stats.fixture_break.sparks += sp.sparks as i32;
             }
             if !r.glass_out && a >= f.glass_at && hang { r.glass_out = true;   // born well under the ceiling, in two lots along the fixture
                 for k in [0.3, 0.7] { let seed = seed_of(&mut r);
@@ -311,12 +307,11 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
                 }
             }
             r.pieces[pi] = p;
-            out.push(p.box_.into()); boxes += 1;
+            out.push(p.box_.into());
         }
-        for &b in r.hang.iter() { out.push(b.into()); } boxes += r.hang.len() as i32;
+        for &b in r.hang.iter() { out.push(b.into()); }
         state(g).recs[ri] = r;
     }
-    g.stats.fixture_break.boxes = boxes;
 }
 
 /// the tube's glass

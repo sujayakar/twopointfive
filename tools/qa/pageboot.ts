@@ -61,7 +61,7 @@ export async function pageBoot(setting: string): Promise<Booted> {
       const smoke = new SmokeSystem(engine); engine.setSmoke(smoke.binding);
       const smokeInit = smoke.init();
       engine.setParticles(new Particles(engine.device, engine.sceneLayout));
-      const ch = await characterSet(), chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars.jointMats, chars.charInsts);
+      const ch = await characterSet(), chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars);
       engine.skin = chars; engine.setMeshShadows(shadows);
       await Promise.all([engineInit, smokeInit, engine.particles.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
       engine.warmFirstUse(); await new Promise(r => setTimeout(r, 0));   // (host/drawpage.ts, after the boot's freeze: the programs a pass used to make at its first use — the fog of war's — are asked for behind the start)

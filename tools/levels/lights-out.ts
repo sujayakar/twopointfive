@@ -203,7 +203,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The post's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND, and anything that says RELAY POST from
 // above. So, every piece the kit's own by name: the track kept as soldiers keep one (whitewashed stones down both edges, the lorry's ruts between
 // them), the post's dish on its pole in the north-east corner, the fuel's ground at the shed door and in the cage, the tank's overflow, the cook's ash and

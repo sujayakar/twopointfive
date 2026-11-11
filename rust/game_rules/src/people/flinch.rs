@@ -6,11 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec};
 
-/// A man of the defenders or the night staff, no civilian.
-fn staff(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].civ.is_none() && (g.gd[gd].team == crate::teams::Team::Hostile || g.gd[gd].team == crate::teams::Team::Guard)
-}
-
 /// A man of the room fight's on its own walk carries a script that is not choreography.
 fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == gd)
@@ -32,13 +27,12 @@ pub(super) fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<Gu
     if near < g.k.flinch.least || !hostile { return; }
     match gd {
         Some(man) => { if crate::owner::has(g, man, crate::owner::by::RUNNER) || !free(g, man) { return; } }
-        None => { if g.pl[g.player].down { return; } }
+        None => { if crate::condition::down(g, g.pl[g.player].ch) { return; } }
     }
     let share = duck_share(g.k.flinch.far, g.k.flinch.least, g.k.flinch.full, near);
     let k = share * flinch_scale(g, gd);
     let toward = v3::sub(from, g.ch[c].pos);
     crate::character::anim_flinch_from(g, c, Some(toward), Some(k), Some(true));
-    g.stats.flinch.ducks += 1;
     let id = g.ch[c].id;
     if let Some(last) = g.stats.flinch.last.as_mut() { last.push(id); }
     if let Some(man) = gd {
@@ -62,13 +56,13 @@ fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         None | Some(Some(true)) => return true,
         Some(f) => f,
     };
-    flinch != Some(false) && (g.gd[gd].team == crate::teams::Team::Operative || fight_man(g, gd))
+    flinch != Some(false) && (g.team(gd).ours() || fight_man(g, gd))
 }
 
 /// How much of the duck his training leaves him: a steady defender or night-staff man `steady_k`, anybody else 1.
 pub(super) fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f64 {
     if let Some(man) = gd {
-        if staff(g, man) && !g.gd[man].trained && crate::morale::training_of(g, man) == crate::morale::TrainingOf::Steady {
+        if g.team(man).theirs() && !g.gd[man].trained && crate::morale::training_of(g, man) == crate::morale::TrainingOf::Steady {
             return g.k.flinch.steady_k;
         }
     }
@@ -77,21 +71,21 @@ pub(super) fn flinch_scale(g: &mut crate::game::Game, gd: Option<GuardId>) -> f6
 
 /// Is he a man the run is asked of at all: a green defender or night-staff man, free.
 fn green(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    staff(g, gd) && g.gd[gd].held.is_none() && crate::morale::training_of(g, gd) == crate::morale::TrainingOf::Green
+    g.team(gd).theirs() && g.gd[gd].held.is_none() && crate::morale::training_of(g, gd) == crate::morale::TrainingOf::Green
 }
 
 /// Has he a man of his side by him who still has his gun.
-fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn mate_by(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    let eye = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || !staff(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::owner::has(g, o, crate::owner::by::RUNNER) { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || !g.team(o).theirs() || g.team(o) != g.team(gd) || g.gd[o].held.is_some() || crate::owner::has(g, o, crate::owner::by::RUNNER) { continue; }
         let oc = g.gd[o].ch;
         if v3::dist_xz(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
-            let chest = g.ch[oc].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(g.ch[oc].pos, [0.0, 1.2, 0.0]));
+            let chest = g.ch[oc].bone_or(crate::character::Bone::Chest, 1.2);
             if !crate::scene_collision::segment_blocked(g, eye, chest, None, None, None) { return true; }
         }
     }
@@ -106,7 +100,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
         let gd = g.guards[i];
         i += 1;
         let Some(t) = g.m.flinch.state_of.get(gd).copied() else { continue };
-        if !on || g.gd[gd].state == crate::game::GuardState::Dead || crate::owner::has(g, gd, crate::owner::by::RUNNER) || !green(g, gd) {
+        if !on || crate::condition::down(g, g.gd[gd].ch) || crate::owner::has(g, gd, crate::owner::by::RUNNER) || !green(g, gd) {
             g.m.flinch.state_of.delete(gd);
             continue;
         }
@@ -120,18 +114,12 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
         if let Some(r) = g.m.flinch.state_of.get_mut(gd) { r.under = under; }
         if under < g.k.flinch.break_secs { continue; }
         if !mate_by(g, gd) && crate::runner::runner_break(g, gd) {
-            g.stats.flinch.broke += 1;
             g.m.flinch.state_of.delete(gd);
         } else {
             let again = g.k.flinch.break_secs - g.k.flinch.ask_secs;
             if let Some(r) = g.m.flinch.state_of.get_mut(gd) { r.under = again; }
         }
     }
-}
-
-/// QA: a man's seconds under close fire (0 = none on record).
-fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
-    match g.m.flinch.state_of.get(gd) { Some(t) => t.under, None => 0.0 }
 }
 
 #[cfg(test)]
@@ -163,7 +151,8 @@ mod tests {
     /// A game with one man in the roster, on the blank's own team.
     fn one_man() -> (Box<Game>, GuardId) {
         let mut g = Box::new(Game::blank());
-        let gd = g.gd.push(crate::game::Guard::blank());
+        let ch = crate::character::man_new(&mut g, crate::character::Character::blank());
+        let gd = g.gd.push(crate::game::Guard { ch, ..crate::game::Guard::blank() });
         g.guards.push(gd);
         (g, gd)
     }
@@ -172,7 +161,7 @@ mod tests {
     #[test]
     fn free_follows_the_script() {
         let (mut g, gd) = one_man();
-        g.gd[gd].team = crate::teams::Team::Hostile;
+        g.ch[g.gd[gd].ch].team = crate::teams::Team::Hostile;
         for (flinch, has_script, operative, want) in [
             (None, false, false, true),
             (Some(true), true, false, true),
@@ -181,7 +170,7 @@ mod tests {
             (None, true, true, true),
         ] {
             g.gd[gd].script = if has_script { script(flinch) } else { None };
-            g.gd[gd].team = if operative { crate::teams::Team::Operative } else { crate::teams::Team::Hostile };
+            g.ch[g.gd[gd].ch].team = if operative { crate::teams::Team::Ours } else { crate::teams::Team::Hostile };
             assert_eq!(free(&mut g, gd), want, "{flinch:?} {has_script} {operative}");
         }
     }
@@ -194,10 +183,8 @@ mod tests {
         g.guards.push(other);
         g.tune.suppression = true; g.ai_enabled = false;
         g.m.flinch.state_of.set(gd, FlinchModStateOfValue { under: 1.5, at: 0.0 });
-        assert_eq!(flinch_under(&mut g, gd), 1.5);
         flinch_tick(&mut g, 0.016);
         assert!(g.m.flinch.state_of.get(gd).is_none());
-        assert_eq!(flinch_under(&mut g, gd), 0.0);
     }
 
     /// The page's least travel is inclusive.

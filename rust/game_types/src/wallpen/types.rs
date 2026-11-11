@@ -14,7 +14,6 @@ pub enum ThinStuff {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ThinToll {
-    pub stuff: crate::wallpen::ThinStuff,
     pub take: f64,
     pub e_out: f64,
     pub thru: f64,
@@ -29,10 +28,8 @@ pub struct WallCross {
     pub exit: V3,
     pub dir_in: V3,
     pub dir_out: V3,
-    pub e_in: f64,
     pub n_out: V3,
     pub into: f64,
-    pub stuff: crate::wallpen::ThinStuff,
     pub e_out: f64,
     pub thru: f64,
 }
@@ -71,21 +68,10 @@ pub enum ThinLine2 {
     ThinLine(crate::wallpen::ThinLine),
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct WallpenMod {
-    pub log: Vec<String>,
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct WallpenStats {
     pub crossed: i32,
-    pub leaves: i32,
-    pub spent: i32,
-    pub asked: i32,
-    pub through: i32,
-    pub harder: i32,
 }
 
 pub const EXIT_EPS: f64 = 0.001;

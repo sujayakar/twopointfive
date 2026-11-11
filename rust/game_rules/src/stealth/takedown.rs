@@ -42,10 +42,10 @@ fn fwd_of(yaw: f64) -> V3 {
 }
 
 /// Where on the man each move's hands go, off his bones as they stand: the blow's own point, the free hand's.
-pub fn marks(g: &mut crate::game::Game, by: CharId, vic: CharId, style: crate::character::BlowStyle) -> (V3, Option<V3>) {
+pub fn marks(g: &crate::game::Game, by: CharId, vic: CharId, style: crate::character::BlowStyle) -> (V3, Option<V3>) {
     use crate::character::Bone;
-    let neck = g.ch[vic].bones.get(Bone::Neck).copied();
-    let head = g.ch[vic].bones.get(Bone::Head).copied();
+    let neck = g.ch[vic].bone(Bone::Neck);
+    let head = g.ch[vic].bone(Bone::Head);
     marks_of(g.ch[by].pos, g.ch[by].body_yaw, g.ch[vic].pos, g.ch[vic].body_yaw, neck, head, style)
 }
 
@@ -73,7 +73,7 @@ fn marks_of(by_pos: V3, by_yaw: f64, vic_pos: V3, vic_yaw: f64, neck: Option<V3>
 }
 
 /// No headroom over him: a crouched Sam does not rise into the blow; everybody else stands.
-fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
+fn may_rise(g: &crate::game::Game, by: CharId) -> bool {
     let p = g.player;
     !(by == g.pl[p].ch && g.pl[p].crouch && !crate::player::can_stand(g))
 }
@@ -86,7 +86,6 @@ pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Opti
     let (at, at2) = marks(g, by, vic, style);
     let opts = BlowOpts { hit: None, end: None, live: Some(BlowLive { by, vic, style }), rise: Some(may_rise(g, by)), tail: Some(true) };
     crate::character::anim_blow(g, by, style, at, at2, Some(&opts));
-    g.stats.takedown.blows += 1;
     if style == BlowStyle::Mouth {
         crate::character::anim_taken(g, vic, TakenStyle::Arch, Some(0.12));
     } else if style == BlowStyle::Chop {
@@ -106,7 +105,7 @@ fn fall_way_of(p: V3, yaw: f64, from: Option<V3>, style: crate::character::FallS
     use crate::character::FallStyle;
     let f = fwd_of(yaw);
     let away: V3 = match from {
-        Some(from) if m::hyp2(p[0] - from[0], p[2] - from[2]) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
+        Some(from) if v3::dist_xz(p, from) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
         _ => f,
     };
     if style == FallStyle::Topple {
@@ -146,12 +145,12 @@ fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::Fal
 }
 
 /// Is a line along the fall's way, at height `y` and `len` long, stopped by something solid.
-fn shut(g: &mut Game, p: V3, d: V3, y: f64, len: f64) -> bool {
+fn shut(g: &Game, p: V3, d: V3, y: f64, len: f64) -> bool {
     crate::scene_collision::solid_blocked(g, [p[0], y, p[2]], [p[0] + d[0] * len, y, p[2] + d[2] * len], None)
 }
 
 /// Has the level floor for the whole of him laid `a` further along: three lines, then the strip's volume.
-fn fits(g: &mut Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
+fn fits(g: &Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
     let len = a + LAY_REACH;
     if shut(g, p, d, 0.15, len) || shut(g, p, d, 0.45, len) || shut(g, p, d, 1.1, len) { return false; }
     let mut s = LAY_HALF;
@@ -169,7 +168,7 @@ pub fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::clo
     use crate::close::CloseKind;
     let style = if how == Some(TakeFallHow::Choke) {
         FallStyle::Sink
-    } else if how == Some(TakeFallHow::Whip) || how == Some(TakeFallHow::Kill) {
+    } else if how == Some(TakeFallHow::Whip) {
         FallStyle::Fold
     } else if kind == Some(CloseKind::Seat) {
         FallStyle::Slump
@@ -218,7 +217,6 @@ pub fn partner_fall(g: &mut crate::game::Game, foe: GuardId, front: bool, mate: 
 
 /// Once a frame: the hold's fallback words, and who breathes: every man and civilian out cold.
 pub fn takedown_tick(g: &mut crate::game::Game) {
-    g.m.character.hold_show.kill = true;
     g.m.character.hold_show.beats = true;
     let mut n: i32 = 0;
     for i in 0..g.guards.len() {
@@ -238,7 +236,7 @@ fn breathe_each(g: &mut Game, gd: GuardId, n: &mut i32) {
     let c = g.gd[gd].ch;
     let down_kind = g.gd[gd].down_kind;
     if g.ch[c].ragdoll.is_some()
-        && g.gd[gd].state == GuardState::Dead
+        && crate::condition::down(g, g.gd[gd].ch)
         && (down_kind == Some(DownKind::Struck) || down_kind == Some(DownKind::Choked))
     {
         let k = &g.k.takedown;
@@ -326,11 +324,12 @@ mod tests {
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState, down: Option<crate::game::DownKind>, flat: bool) -> (GuardId, CharId) {
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         if flat { g.ch[c].ragdoll = Some(RagdollId(0)); }
         let mut row = crate::game::Guard::blank();
         row.ch = c;
         row.state = state;
+        g.cond[c].down = state == crate::game::GuardState::Dead;
         row.down_kind = down;
         (g.gd.push(row), c)
     }
@@ -352,7 +351,7 @@ mod tests {
         assert!(g.ch[c_falling].breathe.is_none() && g.ch[c_killed].breathe.is_none());
         assert_eq!(g.ch[c_struck].breathe.unwrap().breath_hz.to_bits(), g.k.takedown.breath_hz.to_bits());
         assert_eq!(g.stats.takedown.breathing, 2);
-        assert!(g.m.character.hold_show.kill && g.m.character.hold_show.beats);
+        assert!(g.m.character.hold_show.beats);
     }
 
     #[test]

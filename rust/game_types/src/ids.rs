@@ -28,15 +28,15 @@ macro_rules! id {
 id! {
     /// Box: g.tab.boxes
     BoxId,
-    /// Clip: g.tab.clip
+    /// Clip: g.art.clip
     ClipId,
-    /// MeshData: g.tab.anim_gltf_mesh_data
+    /// MeshData: g.art.mesh
     AnimGltfMeshDataId,
-    /// CastVariant: g.tab.anim_gltf_cast_variant
+    /// CastVariant: g.art.variant
     AnimGltfCastVariantId,
-    /// CastInfo: g.tab.anim_gltf_cast_info
+    /// CastInfo: g.art.cast
     AnimGltfCastInfoId,
-    /// GltfCharacter: g.tab.rig
+    /// GltfCharacter: g.art.rig
     RigId,
     /// PoseSet: g.tab.pose_set
     PoseSetId,
@@ -46,10 +46,6 @@ id! {
     CharId,
     /// Door: g.dr
     DoorId,
-    /// SlabRow: no table here
-    SlabRowId,
-    /// DriveCols: no table here
-    DriveColsId,
     /// Prop: g.tab.props_prop
     PropId,
     /// Input: g.tab.input
@@ -68,7 +64,7 @@ id! {
     SeatId,
     /// RtLight: g.tab.light
     LightId,
-    /// Fixture: g.tab.sim_lightshome_fixture
+    /// Fixture: g.tab.fixture
     FixtureId,
     /// CameraRt: g.tab.devices_camera_rt
     CameraRtId,
@@ -112,8 +108,6 @@ id! {
     TacticsDangerRecId,
     /// Lane: g.tab.lanes_lane
     LanesLaneId,
-    /// Man: g.tab.pressure_man
-    PressureManId,
     /// StickyCam: g.tab.stickycam_sticky_cam
     StickyCamId,
     /// Region: g.tab.rescueflow_region

@@ -11,6 +11,7 @@
 //!   face_draw_as(h, bared, tube)       a viewer's own picture of a run (Drawn::view_as); from the first call the game keeps what such a picture is made from, tick by tick
 //!   face_draw_hold(h)                  a tick of the host's in which the game was not stepped: what moves stands where the last tick left it
 //!   face_draw_cut(h)                   the picture goes on from where the game stands now, and blends from nothing before it (ticks were stepped that were not drawn)
+//!   face_traffic(h)                    the floors' traffic map at face_out (game_draw::traffic), worked out as it is asked: once, as a level opens
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 
@@ -26,14 +27,10 @@ pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
     super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
 }
-/// before a take: the ways of a game just put back's smoke are asked; and what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy,
-/// which was asked, is proven again by whoever asks next
+/// before a take: the ways of a game just put back's smoke are asked; and what a viewer's picture shows that the game lists nowhere is made of it
 fn watch(x: &mut super::Held, want: u32) {
     if want & game_draw::want::smoke != 0 && x.drawn.smoke.unsaid() { game::sense::smoke_ways(&mut x.g); }
-    let watches = x.drawn.watches();
-    if watches { game::scene_collision::stands(&mut x.g); }
     x.drawn.watch(&x.g);
-    if watches { game::scene_collision::unstand(&mut x.g); }
 }
 /// # Safety
 /// `p` names `n` numbers the host wrote into memory from face_alloc.
@@ -59,6 +56,11 @@ pub extern "C" fn face_draw_as(h: u32, bared: u32, tube: u32) {
 pub extern "C" fn face_draw_hold(h: u32) { super::with(h, |x| x.drawn.hold()); }
 #[no_mangle]
 pub extern "C" fn face_draw_cut(h: u32) { super::with(h, |x| x.drawn.cut()); }
+#[no_mangle]
+pub extern "C" fn face_traffic(h: u32) {
+    let b = super::with_ref(h, |x| game_draw::traffic::map(&x.g));
+    super::out(b);
+}
 #[no_mangle]
 pub extern "C" fn face_draw_name(h: u32, i: usize) {
     let b = super::with(h, |k| k.drawn.events.names.get(i).cloned().unwrap_or_default());

@@ -42,7 +42,7 @@ fn test_faults(p: &Play, t: &LessonTest, out: &mut Vec<String>) {
     use LessonTest as K;
     let g = &p.g;
     match t {
-        K::Target { name, .. } => if !g.targets.iter().any(|&f| g.tab.sim_lightshome_fixture[f].name == *name) { out.push(format!("no light or device named '{}'", name)); },
+        K::Target { name, .. } => if !g.targets.iter().any(|&f| g.tab.fixture[f].name == *name) { out.push(format!("no light or device named '{}'", name)); },
         K::Did { what, .. } => if let Some(foe) = what.split_once("@foe:").map(|x| x.1) { if !g.guards.iter().any(|&x| g.gd[x].callsign == foe) { out.push(format!("no man called '{}' on this floor", foe)); } },
         K::All { of } | K::Any { of } => for x in of { test_faults(p, x, out); },
         _ => {}
@@ -64,7 +64,7 @@ fn each_block_stands_on_its_floor() {
             if steps[..i].iter().any(|x| x.id == s.id) { faults.push(String::from("another step has its id")); }
             if s.cue.is_some() && steps[..i].iter().any(|x| x.cue == s.cue) { faults.push(format!("the cue {:?} is another step's too: a cue starts one beat", s.cue)); }
             if s.line.chars().count() > 96 { faults.push(format!("its line is {} characters: the objective row holds about 96", s.line.chars().count())); }
-            for line in [Some(&s.line), s.setup_line.as_ref(), s.ring_line.as_ref(), s.blow_line.as_ref(), s.menu_line.as_ref(), s.page_line.as_ref(), s.flat_line.as_ref()].into_iter().flatten() {
+            for line in [Some(&s.line), s.setup_line.as_ref(), s.ring_line.as_ref(), s.blow_line.as_ref(), s.menu_line.as_ref()].into_iter().flatten() {
                 for name in line.split('{').skip(1).filter_map(|x| x.split_once('}').map(|y| y.0)) { if !game::lesson::lesson_token(name) { faults.push(format!("{{{}}} is no move's token", name)); } }
             }
             if !s.at.is_none_or(|a| a.iter().all(|v| v.is_finite())) { faults.push(format!("its mark {:?} is nowhere", s.at)); }
@@ -109,7 +109,7 @@ fn a_restart_puts_step_one_back() {
         let of = game::lesson::lesson_data(&p.g).unwrap().steps.len();
         p.frame();
         p.g.lesson.i = 1.0;
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         // (between frames: before the lesson's next tick the step it still holds would be the last run's)
         let first = format!("1/{}", of);
         assert!(game::lesson::lesson_index(&p.g) == 0.0 && p.objective().contains(&first) && !p.view().lesson.is_some_and(|v| v.finished), "{}: straight after a restart, before any frame: step {}, the row {:?}", t.id, game::lesson::lesson_index(&p.g) + 1.0, p.objective());

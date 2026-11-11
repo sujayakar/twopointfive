@@ -6,7 +6,8 @@
 //! through the keys. The beat between a man showing and the first round is rolled on a die of his own.
 //!
 //! He is a script of the one scripted player (`player.rs`).
-use crate::player::{at, flat, Feet, Player, Script, Walk, MOVE, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Feet, Player, Script, Walk, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -18,10 +19,9 @@ use core::future::Future;
 use core::ops::Deref;
 use core::pin::Pin;
 use core::task::{Context, Waker};
-use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::dice::Die;
-use game::game::{Game, GuardState, InteractableKind, Verb};
+use game::game::{Game, InteractableKind, Verb};
 use game::ids::{DoorId, GuardId, RoomfightRoomId, SeatId};
 use game::orders::OrderTarget;
 use game::roomfight::Entry;
@@ -46,6 +46,8 @@ impl End { pub fn as_str(self) -> &'static str { match self { End::Taken => "tak
 
 /// seconds from a man showing to the first round
 const REACT: f64 = 0.6;
+/// he holds his round with a mate this near its line
+const MATE_M: f64 = 0.6;
 
 /// a man as he has been shown to him: first, last, and the beat he needs
 #[derive(Clone, Copy)]
@@ -60,7 +62,7 @@ struct Me {
 impl Deref for Me { type Target = Player; fn deref(&self) -> &Player { &self.p } }
 impl Me {
     /// his teammates still up
-    fn up(&self) -> Vec<GuardId> { self.seen(|g, s| game::orders::squad_orders_squad(g, s).into_iter().filter(|&m| g.gd[m].state != GuardState::Dead).collect()) }
+    fn up(&self) -> Vec<GuardId> { self.seen(|g, s| game::orders::squad_orders_squad(g, s).into_iter().filter(|&m| !game::condition::down(g, g.gd[m].ch)).collect()) }
     /// defenders still up
     fn left(&self) -> Vec<GuardId> { self.ask(left) }
     fn orders(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
@@ -68,7 +70,7 @@ impl Me {
     fn counted(&self, n: usize) -> bool { let given = self.orders() > n; if given { self.given.set(self.given.get() + 1); } given }
     fn ops_on(&self, d: DoorId) -> bool { self.seen(|g, s| s.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].door == d)) }
 
-    async fn quick(&self) { let k = self.ask(|g| g.orders.knobs.quick_key.clone()); self.key(&k).await }
+    async fn quick(&self) { let k = self.ask(|g| g.sets[g.seat].orders.knobs.quick_key.clone()); self.key(&k).await }
 
     async fn go(&self, p: V3, max: f64, stop: impl FnMut() -> bool) -> bool { self.p.go(p, max, stop, Walk::default()).await }
 
@@ -81,7 +83,7 @@ impl Me {
                 let def = &g.tab.roomfight_def[d];
                 let Some(room) = def.room else { continue };
                 let r = &g.tab.roomfight_room[room];
-                if r.entries.is_empty() || r.cells.len() > 500 || g.gd[def.gd].state == GuardState::Dead { continue; }
+                if r.entries.is_empty() || r.cells.len() > 500 || game::condition::down(g, g.gd[def.gd].ch) { continue; }
                 match out.iter_mut().find(|h| h.room == room) { Some(h) => h.men.push(def.gd), None => out.push(Held { room, entries: r.entries.clone(), men: vec![def.gd] }) }
             }
             out
@@ -95,8 +97,8 @@ impl Me {
         let mut post: Option<(f64, V3)> = None;
         for (back, lat) in [(0.9, 4.2), (0.9, -4.2), (0.9, 5.4), (0.9, -5.4), (1.6, 4.8), (1.6, -4.8), (0.9, 3.2), (0.9, -3.2), (2.4, 5.5), (2.4, -5.5)] {
             let Some(p) = self.free(out_pt(e, back, lat)) else { continue };
-            if flat(p, e.at) < 2.8 || flat(p, e.at) > 7.5 || !inn.iter().all(|&q| self.solid(p, q)) { continue; }
-            if self.way_len(gate, p) > flat(gate, p) * 1.5 + 1.0 { continue; }
+            if dist_xz(p, e.at) < 2.8 || dist_xz(p, e.at) > 7.5 || !inn.iter().all(|&q| self.solid(p, q)) { continue; }
+            if self.way_len(gate, p) > dist_xz(gate, p) * 1.5 + 1.0 { continue; }
             let l = self.way_len(me, p);
             if post.is_none_or(|b| l < b.0) { post = Some((l, p)); }
         }
@@ -105,7 +107,7 @@ impl Me {
             for (back, lat) in [(3.4f64, 1.6f64), (3.4, -1.6), (4.4, 1.2), (4.4, -1.2), (2.8, 2.2), (2.8, -2.2), (2.0, 2.8), (2.0, -2.8), (1.3, 3.2), (1.3, -3.2), (5.2, 0.6), (3.6, 0.5), (3.6, -0.5), (2.6, 0.0)] {
                 if lat.abs() < wide { continue; }
                 let Some(p) = self.free(out_pt(e, back, lat)) else { continue };
-                if self.solid(p, gate) || flat(p, e.at) < 2.2 || self.way_len(gate, p) > flat(gate, p) * 1.4 + 0.8 { continue; }
+                if self.solid(p, gate) || dist_xz(p, e.at) < 2.2 || self.way_len(gate, p) > dist_xz(gate, p) * 1.4 + 0.8 { continue; }
                 let l = self.way_len(me, p);
                 if post.is_none_or(|b| l < b.0) { post = Some((l, p)); }
             }
@@ -141,7 +143,7 @@ impl Me {
     async fn enter(&self, d: DoorId, why: &str) -> bool {
         let set = self.cursor_on(d).await && { let t = self.under(); self.seen(|g, s| game::autopilot::auto_pick(g, s, &t, Some(false), None).why == game::autopilot::AutoPickWhy::Set) };
         if !set { return self.quick_on(d, why).await; }
-        let (n, word) = (self.orders(), self.ask(|g| g.orders.knobs.wait_alt.clone()));
+        let (n, word) = (self.orders(), self.ask(|g| g.k.doortools.blow_key.clone()));
         self.key(&word).await;
         self.say(format!("word · {} ({}) → {}", self.name(d), why, self.order_given(n)));
         self.aim_off();
@@ -176,7 +178,7 @@ impl Me {
         self.wait(2.5).await;
         if !self.go(post, 60.0, || false).await { self.say(format!("(he did not reach his post: at {})", at(self.pos()))); }
         if !sent { self.quick_on(d, "stack").await; }
-        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(g, s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
+        self.until(|| { let up = self.up(); self.seen(|g, s| up.iter().all(|&gd| game::orders::squad_orders_of(s, gd).is_some_and(|a| g.tab.orders_assignment[a].arrived))) }, 25.0).await;
         for k in 0..4 {
             if !h.held(self) || self.up().is_empty() { break; }
             if !self.enter(d, if k > 0 { "again" } else { "go in" }).await { self.wait(1.0).await; continue; }
@@ -194,12 +196,12 @@ impl Me {
         self.say(format!("→ {} himself ({} at home)", self.name(d), h.men.len()));
         let face = out_pt(e, 0.9, 0.0);
         self.go(self.free(face).unwrap_or(face), 60.0, || false).await;
-        let shut = || self.ask(|g| game::doors::door_locked(g, d) && !game::doors::door_lock_broken(g, d) && game::doors::door_angle(g, d).abs() < 0.3);
+        let shut = || self.ask(|g| g.dr[d].leaf.locked && !g.dr[d].leaf.lock_broken && g.dr[d].leaf.angle.abs() < 0.3);
         if shut() {
             // (the highlight walked to the boot by its key, as a hand walks it)
             let end = self.t() + 2.0;
             while self.t() < end && shut() {
-                let on = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
+                let on = self.seen(|_, s| s.nearby.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
                 self.down(if on { game::consts::INTERACT_KEY } else { "ArrowDown" });
                 if on { self.until(|| !shut(), 2.5).await; break; }
                 self.ticks(3).await;
@@ -208,7 +210,7 @@ impl Me {
         if let Some(inn) = self.inside(e) { self.go(inn, 20.0, || !h.held(self)).await; }
         for _ in 0..4 {
             let me = self.pos();
-            let Some(m) = h.men.iter().copied().filter(|&m| !self.dead(m)).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me))) else { break };
+            let Some(m) = h.men.iter().copied().filter(|&m| !self.dead(m)).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me))) else { break };
             self.go(self.man_at(m), 8.0, || self.dead(m) || self.target.get().is_some()).await;
             self.until(|| self.target.get().is_none(), 6.0).await;
             self.wait(0.3).await;
@@ -216,7 +218,7 @@ impl Me {
     }
     /// the breaker thrown by a teammate: the quick key on its panel, then the wait for the dark
     async fn breaker(&self) {
-        let dark = || self.ask(|g| game::sim_lightshome::mains_active(g));
+        let dark = || self.ask(|g| g.light_home.mains.active);
         if dark() || self.up().is_empty() { return; }
         let p = self.ask(|g| g.level.breaker.pos);
         if p == [0.0; 3] { return; }
@@ -288,7 +290,7 @@ impl Me {
                 let path: Vec<V3> = core::iter::once([me[0], 0.0, me[2]]).chain(way).chain(core::iter::once([hp[0], 0.0, hp[2]])).collect();
                 let (mut back, mut p) = (5.0, None);
                 for w in path.windows(2).rev() {
-                    let l = flat(w[0], w[1]);
+                    let l = dist_xz(w[0], w[1]);
                     if l >= back { let k = back / if l > 0.0 { l } else { 1.0 }; p = Some([w[1][0] + (w[0][0] - w[1][0]) * k, 0.0, w[1][2] + (w[0][2] - w[1][2]) * k]); break; }
                     back -= l;
                 }
@@ -314,7 +316,7 @@ impl Me {
 struct Held { room: RoomfightRoomId, entries: Vec<Entry>, men: Vec<GuardId> }
 impl Held { fn held(&self, me: &Me) -> bool { self.men.iter().any(|&m| !me.dead(m)) } }
 
-fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.gd[m].team == Team::Hostile && g.gd[m].state != GuardState::Dead).collect() }
+fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.team(m) == Team::Hostile && !game::condition::down(g, g.gd[m].ch)).collect() }
 fn out_pt(e: &Entry, back: f64, lat: f64) -> V3 { [e.at[0] + e.out[0] * back - e.out[1] * lat, 0.0, e.at[2] + e.out[1] * back + e.out[0] * lat] }
 /// a question that costs a search of the floor, asked four times a second and not every tick
 fn slow<'a>(me: &'a Me, mut f: impl FnMut() -> bool + 'a) -> impl FnMut() -> bool + 'a {
@@ -341,7 +343,7 @@ impl HandsOff {
         let me = Rc::new(Me { p: Player::new(seat, Feet::default()), target: Cell::new(None), given: Cell::new(0) });
         let (cap, seed, own) = (plan.cap, plan.seed, me.clone());
         HandsOff {
-            me, script: Box::pin(async move { own.play(&plan).await }), cap, die: Die::new(0xb07u32.wrapping_add(seed.wrapping_mul(131))), shown: Vec::new(), last: None, last_t: -9.0, busy: 0.0, end: None,
+            me, script: Box::pin(async move { own.play(&plan).await }), cap, die: Die(0xb07u32.wrapping_add(seed.wrapping_mul(131))), shown: Vec::new(), last: None, last_t: -9.0, busy: 0.0, end: None,
             shot_at: -9.0, heard: -1.0,
         }
     }
@@ -359,18 +361,16 @@ impl HandsOff {
         self.me.say(format!("ended: {}", end.as_str()));
     }
 
-    /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it. The box world's copy stands (`scene_collision::stands`).
+    /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it.
     pub fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) {
-        cmd.keys.retain(|k| !MOVE.contains(&k.as_str()));
+        cmd.keys.retain(|k| !game::player::WALK_KEYS.contains(&k.as_str()));
         cmd.buttons = (cmd.buttons as u32 & !1) as f64;
         if self.end.is_some() { return; }
-        // (a world he may not ask of ends his scene, and not the game)
-        if WorldAsk::try_of(g).is_err() { return self.stop(End::Spent); }
         for e in g.events.iter().filter(|e| e.time > self.heard) { if matches!(e.kind, game::director::EventKind::GuardShot) || (matches!(e.kind, game::director::EventKind::Shot) && e.loud) { self.shot_at = self.t(); } }
         self.heard = g.time;
         let me = self.me.clone();
         let pl = game::seats::seat(g, me.seat).player;
-        if g.pl[pl].down { return self.stop(End::Sam); }
+        if game::condition::down(g, g.pl[pl].ch) { return self.stop(End::Sam); }
         if g.room_clear.end == Some(game::roomclear::RoomClearEnd::Taken) || (self.t() > 0.0 && left(g).is_empty()) { return self.stop(End::Taken); }
         if self.t() >= self.cap { return self.stop(End::Cap); }
         me.open(g, cmd);
@@ -385,15 +385,14 @@ impl HandsOff {
         let seat = game::seats::seat(g, me.seat);
         let pl = &g.pl[seat.player];
         let pos = g.ch[pl.ch].pos;
-        let chest = |gd: GuardId| { let c = g.gd[gd].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.2, g.ch[c].pos[2]]) };
+        let chest = |gd: GuardId| { let c = g.gd[gd].ch; g.ch[c].bone(game::character::Bone::Chest).unwrap_or([g.ch[c].pos[0], 1.2, g.ch[c].pos[2]]) };
         // (he shoots only a man the fog shows, on the screen, with nothing solid between them and no whole pane, a beat after he shows)
         let eye = [pos[0], 1.45, pos[2]];
         let mut best: Option<(f64, GuardId)> = None;
-        let world = WorldAsk::of(g);
-        for h in g.guards.iter().copied().filter(|&h| g.gd[h].team == Team::Hostile) {
-            if g.gd[h].state == GuardState::Dead { self.shown.retain(|s| s.0 != h); continue; }
-            let (c, d) = (chest(h), flat(pos, g.ch[g.gd[h].ch].pos));
-            if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || world.line(eye, c, Line::Solid) { continue; }
+        for h in g.guards.iter().copied().filter(|&h| g.team(h) == Team::Hostile) {
+            if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
+            let (c, d) = (chest(h), dist_xz(pos, g.pos_of(h)));
+            if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || game::scene_collision::solid_blocked(g, eye, c, None) { continue; }
             let fresh = !self.shown.iter().any(|s| s.0 == h && t - s.1.last <= 1.0);
             if fresh { self.shown.retain(|s| s.0 != h); let need = REACT * (0.75 + 0.5 * self.die.roll()); self.shown.push((h, Shown { first: t, last: t, need })); }
             let s = &mut self.shown.iter_mut().find(|s| s.0 == h).unwrap().1;
@@ -407,7 +406,17 @@ impl HandsOff {
         me.target.set(best);
         me.set_busy(best.is_some());
         me.hands(g, cmd, best.map(chest));
-        if best.is_some() && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
+        // (and not with one of his own in the line)
+        let mate_in_line = best.is_some_and(|h| {
+            let (a, b) = (pos, g.pos_of(h));
+            let l = dist_xz(a, b);
+            me.up().into_iter().any(|m| {
+                let p = g.pos_of(m);
+                let along = ((p[0] - a[0]) * (b[0] - a[0]) + (p[2] - a[2]) * (b[2] - a[2])) / l.max(1e-6);
+                along > 0.0 && along < l && dist_xz(p, [a[0] + (b[0] - a[0]) * along / l, 0.0, a[2] + (b[2] - a[2]) * along / l]) < MATE_M
+            })
+        });
+        if best.is_some() && !mate_in_line && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
         if game::weapons::firearm_rounds_ready(g, pl.rifle) == 0.0 && !game::weapons::firearm_reloading(g, pl.rifle) { me.down("KeyR"); }
     }
 }

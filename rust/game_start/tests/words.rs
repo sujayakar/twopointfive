@@ -34,13 +34,31 @@ fn a_write_moves_the_word_of_its_own_part() {
     assert_eq!(moved(&mut p, |g| g.time += 1.0), ["time"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].hold = !g.gd[gd].hold), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].path.push([1.0, 0.0, 1.0])), ["gd"]);
-    assert_eq!(moved(&mut p, |g| g.k.pressure.memory_secs += 1.0), ["k"]);
+    assert_eq!(moved(&mut p, |g| g.k.pressure.loud_secs += 1.0), ["k"]);
     // (a system's own slot, which only its module can name)
     assert_eq!(moved(&mut p, |g| game::control::set_hold(g, gd, !g.gd[gd].hold, "here")), ["gd", "ctl"]);
     // (a seat's set, of the seat that stands on Game and of the other)
-    assert_eq!(moved(&mut p, |g| g.threat_proximity += 1.0), ["seats.threat_proximity"]);
+    assert_eq!(moved(&mut p, |g| g.sets[g.seat].threat_proximity += 1.0), ["seats.threat_proximity"]);
     let other = p.g.seats[1];
-    assert_eq!(moved(&mut p, |g| game::seats::with_seat(g, other, &mut |g| g.threat_proximity += 1.0)), ["seats.threat_proximity"]);
+    assert_eq!(moved(&mut p, |g| game::seats::with_seat(g, other, &mut |g| g.sets[g.seat].threat_proximity += 1.0)), ["seats.threat_proximity"]);
+}
+
+/// A FAILURE MEANS: a chair or a can nobody is near can stand elsewhere on one machine of a game, and no state word says so.
+#[test]
+fn a_chair_or_a_can_elsewhere_moves_a_word() {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 7, seats: 2, ..Default::default() });
+    let can = game::throwables::throwables_spawn(&mut p.g, game::throwables::ItemKind::Frag, [14.0, 1.0, 21.0], [0.0; 3], None);
+    p.run(3.0);
+    let chair = p.g.props.props[0];
+    let names = game_start::parts::names();
+    for (what, write) in [("chair", &(|p: &mut Play| p.g.tab.props_prop[chair].x += 1e-9) as &dyn Fn(&mut Play)), ("can", &|p: &mut Play| p.g.tab.item[can].vel[0] += 1e-9)] {
+        let before = p.words();
+        let again = p.words();
+        assert!(game_start::parts::differ(&names, &before, &again).is_empty(), "asked twice, the words are the same");
+        write(&mut p);
+        let after = p.words();
+        assert!(!game_start::parts::differ(&names, &before, &after).is_empty(), "{what}: no part's word moved");
+    }
 }
 
 /// A FAILURE MEANS: a word is of where something lies in one process's memory, or of the process's own count: no two processes agree on it.
@@ -67,7 +85,7 @@ fn what_is_a_machines_own_moves_no_word() {
     let (here, other) = (p.g.seats[0], p.g.seats[1]);
     assert!(moved(&mut p, |g| game::seats::show_seat(g, other)).is_empty(), "which seat it shows");
     assert!(moved(&mut p, |g| game::seats::show_seat(g, here)).is_empty());
-    assert!(moved(&mut p, |g| g.out.push(game::out_events::OutEvent::ClearSnowMarks)).is_empty(), "what it told its picture");
+    assert!(moved(&mut p, |g| g.out.push(game::out_events::OutEvent::SmokeCansShut)).is_empty(), "what it told its picture");
     let cam = p.g.host_cam.expect("the host's camera");
     assert!(moved(&mut p, |g| g.tab.camera[cam].yaw += 1.0).is_empty(), "where it looks");
 }

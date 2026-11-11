@@ -26,12 +26,6 @@ pub struct Book {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NextRoom {
-    pub pos: V3,
-    pub face: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct StackRoomProbe {
     pub floor: bool,
 }
@@ -45,25 +39,8 @@ pub struct StackroomMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct StackroomStats {
-    pub asked: i32,
-    pub off: i32,
-    pub other: i32,
-    pub behind: i32,
-    pub rear: i32,
-    pub floor: i32,
-    pub next: i32,
-    pub squeezed: i32,
-    pub lane: i32,
-    pub none: i32,
-    pub kept: i32,
-    pub unled: i32,
-    pub view_asked: i32,
     pub view_in: i32,
     pub view_across: i32,
-    pub view_out: i32,
-    pub view_over: i32,
-    pub view_left: i32,
-    pub view_stood: i32,
 }
 
 pub const ON_LINE: f64 = 0.02;

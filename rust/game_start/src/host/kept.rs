@@ -40,7 +40,7 @@ impl Kept {
                 "hard" => out.difficulty = Some(v.bool().ok_or_else(|| wrong("yes or no"))?),
                 "levers" => for (key, rung) in members(v).ok_or_else(|| wrong("record"))? {
                     let rung = rung.str().ok_or_else(|| wrong("record of words"))?;
-                    if let Some(key) = lever(key) { out.levers.push((key, String::from(rung))); }
+                    if let Some(key) = game::start_list::lever_key(key) { out.levers.push((key, String::from(rung))); }
                 },
                 "cards" => out.cards = Some(String::from(v.str().ok_or_else(|| wrong("text"))?)),
                 "quietFog" => out.quiet_fog = Some(String::from(v.str().ok_or_else(|| wrong("word"))?)),
@@ -55,7 +55,6 @@ impl Kept {
 }
 
 fn members(j: &Json) -> Option<&[(String, Json)]> { if matches!(j, Json::Obj(..)) { Some(j.members()) } else { None } }
-fn lever(key: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == key) }
 
 /// the name the cards are kept under
 pub const KIT: &str = "twopointsix.kit";
@@ -69,7 +68,7 @@ fn fields(j: &Json) -> Option<JsMap<String, KitValue>> {
             Json::Bool(b) => out.set(k.clone(), KitValue::Bool(*b)),
             Json::Num(n) => out.set(k.clone(), KitValue::Num(*n)),
             Json::Str(s) => out.set(k.clone(), KitValue::Text(s.clone())),
-            // (a null or a list is no row's value, but the key is there: a card with no `smoke` at all is one from before the pouches)
+            // (a null or a list is no row's value)
             _ => out.set(k.clone(), KitValue::Num(f64::NAN)),
         };
     }
@@ -83,8 +82,6 @@ pub fn read(g: &mut Game, text: &str) {
     m.hand = None;
     m.loud_you = None;
     m.stealth_you = None;
-    m.kept0 = None;
-    m.kept_wand = Vec::new();
     m.deal_own = false;
     m.team = (m.kit.members.len() - 1) as f64;
     let j = parse(text).unwrap_or(Json::Null);
@@ -97,14 +94,13 @@ pub fn read(g: &mut Game, text: &str) {
     g.m.kit.deal_own = j.get("own").bool() == Some(true);
     let stealth = if j.get("stealth").bool() == Some(true) { j.get("members").at(0) } else { j.get("stealth") };
     if let Some(f) = fields(stealth) { kit::kit_stealth_set(g, Some(&f)); }
-    kit::kit_built_home(g);
     let mut cards = g.m.kit.kit.members.clone();
-    let left = kit::kit_fit_all(g, &mut cards, None, None);
+    let left = kit::kit_fit_all(g, &mut cards);
     g.m.kit.kit.members = cards;
     for (i, what) in left.iter().enumerate() {
         if what.is_empty() { continue; }
         let gunless = i == 0 && g.m.kit.kit.members[0].weapon != KitWeapon::Rifle && what.len() == 1;
-        g.m.kit.kit_note[i] = kit::kit_left_words(g, what, gunless);
+        g.m.kit.kit_note[i] = kit::kit_left_words(what, gunless);
     }
 }
 

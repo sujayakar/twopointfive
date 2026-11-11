@@ -2,7 +2,7 @@
 use super::acts::{actor, ask_veil, row, Leaf};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::types::*;
-use crate::game::{Game, GamePuppet};
+use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use alloc::string::String;
@@ -10,7 +10,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 pub(super) fn flat(a: V3, p: V2) -> f64 { m::hyp2(a[0] - p[0], a[2] - p[1]) }
-pub(super) fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
 pub(super) fn free(g: &Game, p: V2) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[1]) }
 pub(super) fn v2(p: V3) -> V2 { [p[0], p[2]] }
 pub(super) fn v3(p: V2) -> V3 { [p[0], 0.0, p[1]] }
@@ -32,7 +31,7 @@ pub fn home_of(g: &Game, st: &KitStage, x: GuardId) -> (V2, f64) {
 }
 /// the quiet picture: the partner rests on a knee behind Sam
 pub(super) fn low_at(g: &Game, st: &KitStage, x: GuardId) -> bool { st.quiet && st.mate.is_some() && st.order.first() == Some(&x) && actor(g, st) != Some(x) }
-pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.ch[g.gd[x].ch].pos, home_of(g, st, x).0) }
+pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.pos_of(x), home_of(g, st, x).0) }
 pub(super) fn away(g: &Game, st: &KitStage) -> bool { st.order.iter().any(|&x| off_home(g, st, x) > K.home_m) }
 
 /// a teammate to a mark, at a walk, turned to `face`, his gun on `watch` or at the low ready: the squad's own hand-over, which takes him off whatever had him. `strafe`: his chest kept on `face` all the way
@@ -49,7 +48,7 @@ pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>
     a.crouch = Some(crouch);
     crate::orders::squad_orders_assign(g, x, &a);
 }
-fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(g, &crate::seats::here(g), x) }
+fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
 fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.orders_assignment[a].order == "cover") }
 
 pub(super) fn go(g: &Game, st: &mut KitStage, x: GuardId, pts: Vec<V2>, pace: f64, delay: f64, lane: bool) {
@@ -81,8 +80,6 @@ fn homeward(g: &mut Game, st: &mut KitStage, x: GuardId) {
 }
 /// each tick: every man's walk, the order sent again where it is not his
 pub(super) fn walks(g: &mut Game, st: &mut KitStage) {
-    // (a row of Sam's: every order is taken away each step, each man stands where he is and is sent on as it ends)
-    if g.puppet.is_some() { for &x in &st.order { crate::control::set_hold(g, x, true, "kitstage"); } return; }
     let (team, loose, man, none_door) = match st.a.beat.as_ref() { Some(b) => { let r = row(b.row); (r.team, b.loose, b.man, r.door == Leaf::None) } None => (false, false, None, false) };
     if team && !loose { return; }   // (the squad's own order has every man: the wall charge)
     let now = g.time;
@@ -114,14 +111,14 @@ pub(super) fn arriving(g: &Game, st: &KitStage) -> bool {
     let now = g.time;
     if let Some(x) = actor(g, st) { return st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane && now - w.t0 < K.swap_secs); }
     st.order.iter().any(|&x| st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| {
-        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.ch[g.gd[x].ch].pos, *w.pts.last().unwrap()) > K.on_slot + 0.1)
+        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.pos_of(x), *w.pts.last().unwrap()) > K.on_slot + 0.1)
     }))
 }
 /// a hand more than two bodies, so that nobody is shouldered
 const ROOM: f64 = 0.2;
 /// THE CARD SWITCH: no restage, the SAME men walk. The man whose card opened steps out a lane, walks up and cuts in at the head place; the men ahead of his old place each step back one, rearmost first. Sam never moves;
 /// the fourth man (behind Sam, across the door) does not cross it: he steps round Sam's yard side to `act4` and back when his card shuts.
-pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
+pub(super) fn rotate(g: &Game, st: &mut KitStage, who: Option<GuardId>) {
     let (s, n) = (st.s, st.n);
     let pp = |p: V2, a: f64, o: f64| -> V2 { [p[0] + s[0] * a + n[0] * o, p[1] + s[1] * a + n[1] * o] };
     if let Some(&x) = st.order.get(3) {
@@ -154,7 +151,7 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
         let x = st.order[k];
         if was[k] == x { continue; }
         let t = st.spots[k];
-        let p = v2(g.ch[g.gd[x].ch].pos);
+        let p = v2(g.pos_of(x));
         if x == who {
             let a = pp(p, -K.cut_in, lane_out - out_of(st, p));
             let b = pp(t, K.cut_in, K.lane);
@@ -170,12 +167,23 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
     }
 }
 /// Sam walked to a mark, nothing else asked of him
-pub(super) fn sam_goes(g: &mut Game, p: V2) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), ..GamePuppet::default() }); }
-pub(super) fn sam_goes_low(g: &mut Game, p: V2, crouch: bool) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), crouch: if crouch { Some(true) } else { None }, ..GamePuppet::default() }); }
+pub(super) fn sam_goes(st: &mut KitStage, p: V2) { st.a.led = Some(Led { to: Some(p), ..Led::default() }); }
+pub(super) fn sam_goes_low(st: &mut KitStage, p: V2, low: bool) { st.a.led = Some(Led { to: Some(p), low, ..Led::default() }); }
 /// Sam's quiet rows are played from his place: a row cut with him off it left him there for the whole of the next
-pub(super) fn sam_stand(g: &mut Game, st: &KitStage) {
+pub(super) fn sam_stand(g: &Game, st: &mut KitStage) {
     let c = g.pl[g.player].ch;
-    if flat(g.ch[c].pos, st.sam) > K.on_slot { sam_goes(g, st.sam); } else { g.puppet = Some(GamePuppet::default()); }
+    if flat(g.ch[c].pos, st.sam) > K.on_slot { let home = st.sam; sam_goes(st, home); } else { st.a.led = Some(Led::default()); }
+}
+/// HIS KEYS AND HIS HAND FOR THIS TICK, as anybody's who plays a seat: the walk keys toward the place, in the view's own directions, the cursor on the point, and down once
+pub(super) fn sam_hand(g: &mut Game, st: &mut KitStage, cmd: &mut crate::cmd::PlayerCmd) {
+    g.hand_at = st.a.led.and_then(|l| l.at);
+    let Some(led) = st.a.led else { return };
+    let pl = g.player;
+    if led.low && !g.pl[pl].crouch { st.a.press.push("KeyC"); }
+    let Some(to) = led.to else { return };
+    let p = g.player_pos(pl);
+    if flat(p, to) <= 0.1 { return; }
+    for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(alloc::string::String::from(key)); } }
 }
 /// the half step a man takes toward the front of the door for a throw or his light: from where he lives, `metres` at most toward the old post
 pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {
@@ -192,14 +200,14 @@ fn homing_at_hole(g: &Game, st: &mut KitStage) -> bool {
     let (on, act, all) = (K.on_slot + 0.1, actor(g, st), st.a.hole_all);
     let mut men = core::mem::take(&mut st.a.hole_men);
     men.retain(|&x| off_home(g, st, x) > on);
-    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.ch[g.pl[g.player].ch].pos, st.sam) > on);
+    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.player_pos(g.player), st.sam) > on);
     if waiting && st.a.home_t.is_nan() { st.a.home_t = now; }
     if !waiting || now - st.a.home_t >= K.swap_secs + K.home_secs { st.a.hole_all = false; st.a.home_t = f64::NAN; return false; }
     st.a.hole_men = men;
     true
 }
 /// HOME: no row begins with a man far from his place, and a row of Sam's waits for the men on their own legs, `home_secs` at most: then, and at once for a man `far_m` off, the room is staged again under the dissolve, and the row that waited begins at once. A man found off his place again after that is not staged again until he has been seen home. True: the row waits.
-pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
+pub(super) fn homing(g: &Game, st: &mut KitStage) -> bool {
     let now = g.time;
     if st.hole { return homing_at_hole(g, st); }
     if st.a.seated { st.a.seated = false; st.a.home_t = f64::NAN; return false; }
@@ -230,11 +238,11 @@ pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
 fn seat(g: &Game, st: &mut KitStage) { st.a.seat_tried = true; st.a.seated = true; ask_veil(g, st); }
 /// Where the leaf rests is its own business: the quiet picture rests it ajar, eased back there by the host's own hand after a row moved it
 pub(super) fn ease_leaf(g: &mut Game, st: &KitStage, d: DoorId) {
-    let a0 = crate::doors::door_angle(g, d);
+    let a0 = g.dr[d].leaf.angle;
     let da = st.leaf_rest - a0;
     let step = QK.leaf_rate * st.a.step_dt;
-    crate::doors::door_set_latched(g, d, false);
-    crate::doors::door_set_closing(g, d, false);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_angle(g, d, if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step });
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.angle = if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step };
 }

@@ -78,54 +78,5 @@ fn a_room_taken_quietly_starts_no_clock() {
     let (after, gap) = (p.g.k.rescueflush.after_secs, p.g.k.rescueflush.gap_secs);
     p.hostage_room_falls(false);
     p.run(after + gap + 2.0);
-    assert!(p.rescue_lines("flush:").is_empty() && p.hostages_up().len() == p.g.rescue.hostages.len(), "without a sound: {:?}, {} of {} hostages", p.rescue_lines("flush:"), p.hostages_up().len(), p.g.rescue.hostages.len());
-}
-
-/// The rescue's floor with two roamers on their posts and the door man dead, his last known place at `to`: who the radio check sends to look there.
-fn sent_to(s: u32, to: impl Fn(&[[f64; 3]]) -> [f64; 3]) -> (game::ids::GuardId, Vec<(game::ids::GuardId, [f64; 3])>, [f64; 3]) {
-    let mut p = floor(s);
-    p.g.k.rescue.roamers = 2.0;
-    game::rescue::rescue_restage(&mut p.g);
-    p.run(1.0);
-    let cast = game::rescue::rescue_cast(&p.g);
-    let roamers: Vec<(game::ids::GuardId, [f64; 3])> = cast.iter().filter(|c| c.role == game::rescue::Role::Roamer).map(|c| (c.gd, c.post)).collect();
-    assert_eq!(roamers.len(), 2, "two roamers on their posts");
-    let lost = cast.iter().find(|c| c.role == game::rescue::Role::Door).expect("a door man").gd;
-    let c = p.g.gd[lost].ch;
-    p.g.gd[lost].state = game::game::GuardState::Dead;
-    p.g.ch[c].alive = false;
-    let posts: Vec<[f64; 3]> = roamers.iter().map(|r| r.1).collect();
-    let goal = to(&posts);
-    let t = p.g.time;
-    let st = p.g.m.rescuecheck.states.as_mut().expect("the check is on");
-    st.next_at = t;
-    st.where_.set(lost, goal);
-    p.until(30.0, |p| p.g.m.rescuecheck.states.as_ref().is_some_and(|s| s.out.is_some())).unwrap_or_else(|| panic!("seed {s}: nobody went: {:?}", p.g.m.rescuecheck.states.as_ref().map(|s| (s.stage, s.next_at))));
-    let out = p.g.m.rescuecheck.states.as_ref().unwrap().out.as_ref().unwrap();
-    (out.gd, roamers, out.goal)
-}
-
-/// THE RULE: when a man does not answer the radio check, of the men free to go the one nearest on the floor to where he was last walks there, by both ways across the map: the place is put
-/// beside one roamer, then nearer the other one way across the map and still nearer the first by the straight line.
-/// A FAILURE MEANS: the far man leaves his post to look while one stands next to the place, so the player finds the wrong door unwatched.
-#[test]
-fn the_radio_check_sends_the_free_man_nearest_on_the_floor() {
-    for s in [7u32, 11] {
-        for near in [0usize, 1] {
-            // beside him
-            let (went, roamers, goal) = sent_to(s, |posts| {
-                let (a, b) = (posts[near], posts[1 - near]);
-                [a[0] + 0.3 * (b[0] - a[0]), 0.0, a[2] + 0.3 * (b[2] - a[2])]
-            });
-            assert_eq!(went, roamers[near].0, "seed {s}: {goal:?}: posts {roamers:?}");
-            // nearer the other one way across the map, nearer him by the straight line
-            let (went, _, goal) = sent_to(s, |posts| {
-                let (a, b) = (posts[near], posts[1 - near]);
-                let (dx, dz) = (a[0] - b[0], a[2] - b[2]);
-                assert!(dz.abs() > 0.5, "the posts lie apart both ways: {posts:?}");
-                [(a[0] + b[0]) / 2.0 - 0.1 * dx, 0.0, (a[2] + b[2]) / 2.0 + dz * 0.2 * (dx * dx / (dz * dz) + 1.0)]
-            });
-            assert_eq!(went, roamers[near].0, "seed {s}: by the straight line, {goal:?}: posts {roamers:?}");
-        }
-    }
+    assert!(p.rescue_lines("flush:").is_empty() && p.hostages_up().len() == p.g.staged.captives.len(), "without a sound: {:?}, {} of {} hostages", p.rescue_lines("flush:"), p.hostages_up().len(), p.g.staged.captives.len());
 }

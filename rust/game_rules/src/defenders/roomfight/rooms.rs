@@ -1,5 +1,6 @@
 //! THE ROOMS a fight is fought in: which room a place is in, and free floor in it.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -92,10 +93,11 @@ pub(in crate::defenders) fn room_fight_free_near(g: &crate::game::Game, p: V3) -
 }
 
 /// `p` lies outside the rectangle round every room of the level's structure with open sky over it.
-pub(super) fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
+pub(super) fn room_fight_out_of_building(g: &crate::game::Game, p: V3) -> bool {
     let (mut x0, mut x1, mut z0, mut z1) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
     {
-        let rooms = match g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()) { Some(r) if !r.rooms.is_empty() => &r.rooms, _ => return false };
+        let rooms = g.level.rooms();
+        if rooms.is_empty() { return false; }
         for r in rooms { x0 = m::min(x0, r.bounds.x0); x1 = m::max(x1, r.bounds.x1); z0 = m::min(z0, r.bounds.z0); z1 = m::max(z1, r.bounds.z1); }
     }
     if p[0] >= x0 && p[0] <= x1 && p[2] >= z0 && p[2] <= z1 { return false; }
@@ -112,7 +114,7 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 { continue; }
         let f = crate::guards::frame_of(g, d);
         let along = (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz;
         let off = (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz;
@@ -125,13 +127,13 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
 pub(super) fn room_fight_spot_free(g: &crate::game::Game, p: V3, self_: GuardId) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     for pl in crate::seats::men(g) {
-        if !g.pl[pl].down && flat(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }
+        if !crate::condition::down(g, g.pl[pl].ch) && dist_xz(g.player_pos(pl), p) < 0.8 { return false; }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != self_ && g.gd[o].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[o].ch].pos, p) < 0.8 { return false; }
+        if o != self_ && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.pos_of(o), p) < 0.8 { return false; }
     }
     true
 }

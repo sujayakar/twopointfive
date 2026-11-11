@@ -443,7 +443,7 @@ pub struct WornView {
     /// his character's id
     pub man: f64,
     pub goggles: bool,
-    pub big: Option<crate::bigkit::BigCarried>,
+    pub big: Option<crate::kit::BigTool>,
 }
 impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles: false, big: None } } }
 
@@ -485,8 +485,6 @@ pub struct TickView {
     pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
-    /// a quiet mission's words for its room, its holder, its thing and its ways out
-    pub quiet: Option<crate::view::QuietView>,
     /// his own list: what the key would do now, and the things it could be done to
     pub interact: crate::view::InteractView,
     /// the alarm's stage (None: calm)
@@ -750,10 +748,8 @@ pub struct CardView {
     pub who: f64,
     pub changed: bool,
     pub pouches: crate::view::CardPouches,
-    /// the big slot (None: the table gives none)
-    pub big: Option<crate::view::CardPouches>,
-    /// what the squad carries between them (None: no limit, or not one of those who come)
-    pub squad: Option<crate::view::CardPouches>,
+    /// the big slot
+    pub big: crate::view::CardPouches,
     pub load: crate::view::CardLoad,
     pub load_issued: crate::view::CardLoad,
     pub rows: Vec<crate::view::CardRow>,
@@ -864,8 +860,6 @@ pub struct TeamView {
     pub cards: bool,
     /// the mission is played with the kit as issued
     pub as_issued: bool,
-    /// what the squad's pouches hold between them (empty: no limit, or nobody comes)
-    pub squad: String,
     /// what is carried between them
     pub pool: String,
     /// the mission hands out wall charges of its own
@@ -1101,7 +1095,7 @@ pub struct RingWedge {
     pub text: String,
     /// it cannot be given now
     pub off: bool,
-    /// it turns the ring to another page
+    /// it turns the ring to the rest of the rows
     pub opens: bool,
 }
 
@@ -1149,7 +1143,7 @@ pub struct EmptyView {
     pub dist: Option<f64>,
 }
 
-/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`WorldAsk::way`)
+/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`scene_collision::way_host`)
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct PlanWay {
     /// his feet
@@ -1243,16 +1237,6 @@ pub struct PlanView {
     pub others: Vec<crate::view::SeatPlan>,
 }
 
-/// a quiet mission's own words
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct QuietView {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
-}
-
 /// what sort of thing the key is about
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum ThingKind { #[default] Cam, Guard, Breaker, Door, Light, Body, Objective, Held, Wall, Switch, Charge, Cancel }
@@ -1268,10 +1252,6 @@ pub enum AttentionMode { #[default] Go, Look, Lent }
 /// what a floor is, as a man's feet are heard on it
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum FloorWord { #[default] Carpet, Lino, Stone, Tile, Asphalt, Grass }
-
-/// the key that backs out
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
-pub enum BackKey { Tab, #[default] Esc }
 
 /// a line of a row of his list: the key that does it ('' = a line no key gives), by its default name for the page to name as bound
 #[derive(Clone, Debug, Default, ToBytes)]
@@ -1333,12 +1313,8 @@ pub struct InteractView {
     pub rows: Vec<crate::view::ListRow>,
     /// the highlighted row among them (-1: none)
     pub lit: f64,
-    /// how many were left off the end
-    pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
-    /// the panel is the corner's three things (a puppet keeps the list as it was)
-    pub corner: bool,
     /// (None: no thing, or a row about none)
     pub ring: Option<crate::view::ThingRing>,
     pub dots: Vec<crate::view::ThingDot>,
@@ -1423,8 +1399,6 @@ pub struct HudLook {
     pub line_clear: bool,
     /// a tutorial step's mark gives way to a ring over it
     pub mark_clear: bool,
-    /// the key that backs out of the selector
-    pub back: crate::view::BackKey,
 }
 
 /// one man's held attention: a thread from his feet to the place and a ring there

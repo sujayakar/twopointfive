@@ -8,19 +8,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 
-/// `c.bones.<bone> ?? v3.add(c.pos, [0, up, 0])`
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
-}
 /// `c.bones.hips ?? c.pos`
 fn hips_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Hips) {
-        Some(b) => *b,
-        None => g.ch[c].pos,
-    }
+    g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
 }
 /// `c.bones.headTop?.[1] ?? c.pos[1] + 1.75`
 fn crown_of(g: &Game, c: CharId) -> f64 {
@@ -35,30 +25,22 @@ fn with_duty(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut crate::game::GuardBo
 }
 /// is this man out of the reckoning for a colleague's line: gd himself, the dead, the fallen, an enemy (the walks of 700, 716, 798, 801)
 fn no_colleague(g: &Game, gd: GuardId, p: GuardId) -> bool {
-    if p == gd || g.gd[p].state == crate::game::GuardState::Dead { return true; }
+    if p == gd || crate::condition::down(g, g.gd[p].ch) { return true; }
     let c = g.gd[p].ch;
     if !g.ch[c].alive { return true; }
-    let (a, b) = (g.gd[gd].team, g.gd[p].team);
-    crate::teams::is_hostile(g, a, b)
+    let (a, b) = (g.team(gd), g.team(p));
+    a.foe_of(b)
 }
-/// `gd.path = []; gd.pathGoal = null`: a whole write of the path (its serial), and the goal is no longer the standoff's object
-fn clear_path(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
-}
-/// `Box.flags` of a row.
-fn seam_box_flags(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
 // ---------------------------------------------------------------- what a man sees
 
 /// A world point in this man's open view: range, field, nothing solid between; light is not asked.
-pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Option<f64>, half_deg: Option<f64>) -> bool {
+pub fn point_in_view(g: &crate::game::Game, gd: GuardId, p: V3, range: Option<f64>, half_deg: Option<f64>) -> bool {
     let range = range.unwrap_or(12.0);
     let half_deg = half_deg.unwrap_or(60.0);
     if crate::doze::doze_asleep(g, gd) { return false; }
     let c = g.gd[gd].ch;
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let look = crate::guards::look_of(g, c);
     let to = v3::sub(p, eye);
     let l = v3::len(to);
@@ -69,9 +51,9 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
 }
 
 /// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone.
-pub(super) fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
+pub(super) fn light_out_seen(g: &crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
     let c = g.gd[gd].ch;
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let src: V3 = match e.from { Some(f) => f, None => [e.pos[0], 2.4, e.pos[2]] };
     let to = v3::sub(src, eye);
     let l = v3::len(to);
@@ -83,12 +65,12 @@ pub(super) fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::g
 pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game::DownKind, by: crate::game::DownBy) {
     if !g.ai_enabled || by != crate::game::DownBy::Player { return; }
     let vc = g.gd[victim].ch;
-    let at = bone_or(g, vc, crate::character::Bone::Chest, 1.1);
+    let at = g.ch[vc].bone_or(crate::character::Bone::Chest, 1.1);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
+        if o == victim || crate::condition::down(g, g.gd[o].ch) || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
         if (!g.player_invisible && point_in_view(g, o, at, None, None)) || g.gd[o].saw_player_this_frame {
             let kind = match how {
                 crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,
@@ -102,12 +84,12 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
 }
 
 /// What took a man over the alert line just now.
-pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
-    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::guards::AlertCause::Sound; }
-    if g.time - g.gd[gd].sight_t < 1.0 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::guards::AlertCause::Body; }
-    crate::guards::AlertCause::Radio
+pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::game::WitnessAlertedBy {
+    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::game::WitnessAlertedBy::Sound; }
+    if g.time - g.gd[gd].sight_t < 1.0 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::game::WitnessAlertedBy::Body; }
+    crate::game::WitnessAlertedBy::Radio
 }
 
 /// Floor point under a body: its pelvis once the ragdoll has it.
@@ -124,7 +106,7 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if g.gd[o].state == crate::game::GuardState::Dead && g.gd[o].found && v3::dist_xz(body_pos(g, o), p) < r { return Some(o); }
+        if crate::condition::down(g, g.gd[o].ch) && g.gd[o].found && v3::dist_xz(body_pos(g, o), p) < r { return Some(o); }
     }
     None
 }
@@ -132,8 +114,8 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
 /// What a keyed door gives away: its keep kicked out, or standing unlocked.
 pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
-    if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
-    if !crate::doors::door_locked(g, d) { return Some(crate::guards::DoorTamper::Picked); }
+    if g.dr[d].leaf.lock_broken { return Some(crate::guards::DoorTamper::Forced); }
+    if !g.dr[d].leaf.locked { return Some(crate::guards::DoorTamper::Picked); }
     None
 }
 
@@ -141,26 +123,16 @@ pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::Do
 
 /// Where a man stops by a body: `stand` metres short of it, a free cell he can walk to with the body in view.
 fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 {
-    let from = g.ch[g.gd[gd].ch].pos;
+    let from = g.pos_of(gd);
     let reach = crate::scene_collision::nav_grid_find_path(g, from, bp, None, None);
     let foot: V3 = match reach.as_ref().and_then(|r| r.last()) { Some(w) => *w, None => v3::copy(from) };
-    let base = m::atan2(from[0] - bp[0], from[2] - bp[2]);
+    let base = v3::yaw_to(bp, from);
     for da in [0.0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.3, -2.3, m::PI] {
         for r in [stand, stand + 0.5, m::max(1.0, stand - 0.4)] {
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || !crate::scene_collision::nav_grid_walkable(g, foot, p) || crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], [bp[0], 0.4, bp[2]], None, None, None) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
-                if let Some(s) = g.gd[o].body_duty.and_then(|d| d.spot) {
-                    if v3::dist_xz(s, p) < 0.9 { taken = true; break; }
-                }
-            }
-            if !taken { return p; }
+            if !crate::places::taken(g, gd, p, 0.9) { return p; }
         }
     }
     v3::copy(foot)
@@ -168,40 +140,23 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 
 
 /// Where a man widens out to from a body: his arm of a fan dealt round it; None = he lets it go where he stands.
 fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Option<V3> {
-    let from = g.ch[g.gd[gd].ch].pos;
+    let from = g.pos_of(gd);
     let k = g.gd[b].body_fan;
     g.gd[b].body_fan = k + 1.0;
     const ARMS: [f64; 6] = [0.0, 2.1, -2.1, 1.05, -1.05, m::PI];
-    let base = m::atan2(from[0] - bp[0], from[2] - bp[2]) + ARMS[js::rem(k, 6.0) as usize];
+    let base = v3::yaw_to(bp, from) + ARMS[js::rem(k, 6.0) as usize];
     let mut paths = 0;
     for da in [0.0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6] {
         for r in [6.0, 7.5, 5.0, 4.5] {
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
-                if let Some(d) = g.gd[o].body_duty {
-                    if d.stage == crate::game::GuardBodyDutyStage::Fan {
-                        if let Some(s) = d.spot {
-                            if v3::dist_xz(s, p) < 2.5 { taken = true; break; }
-                        }
-                    }
-                }
-            }
-            if taken { continue; }
+            if crate::places::taken(g, gd, p, 2.5) { continue; }
             paths += 1;
             if paths > 12 { return None; }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) { Some(path) if !path.is_empty() => path, _ => continue };
             if v3::dist_xz(path[path.len() - 1], bp) < 4.0 { continue; }
-            let mut l = 0.0;
-            let mut q: V3 = from;
-            for w in path.iter() { l += v3::dist_xz(q, *w); q = *w; }
-            if l < 16.0 { return Some(p); }
+            if crate::places::walk_len(from, &path) < 16.0 { return Some(p); }
         }
     }
     None
@@ -209,7 +164,7 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
 
 /// Movement watchdog: true once he has covered less than half a metre in `secs` seconds.
 pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, secs: f64) -> bool {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let fresh = match g.gd[gd].stall_ref { None => true, Some(r) => v3::dist_xz(p, r) > 0.5 };
     if fresh {
         g.gd[gd].stall_ref = Some(v3::copy(p));
@@ -227,7 +182,7 @@ pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>
     crate::mind::cap(g, gd, 0.8, "guards");
     g.gd[gd].search_plan = None;
     reset_chase(g, gd);
-    clear_path(g, gd);
+    g.gd[gd].drop_path();
     if let Some(b) = bark {
         if !b.is_empty() { crate::game::game_say(g, gd, b, None, None); }   // (`if (bark)`: an empty line is no line)
     }
@@ -251,140 +206,185 @@ pub fn reset_chase(g: &mut crate::game::Game, gd: GuardId) {
     man.line_fail = None;
 }
 
+/// What the stages of a man's part in the found-body script share.
+#[derive(Clone, Copy)]
+struct BodyDuty {
+    gd: GuardId,
+    dt: f64,
+    c: CharId,
+    /// the body
+    b: GuardId,
+    /// where it lies, on the floor
+    bp: V3,
+    d0: crate::game::GuardBodyDuty,
+    /// how far it is from him
+    d_b: f64,
+    see_body: bool,
+    on_body: V3,
+}
+
 /// One frame of a man's part in the found-body script: his move speed and aim point, or None when it no longer applies.
 pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::guards::BodyAftermath> {
-    use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
+    use crate::game::GuardBodyDutyStage as Stage;
     let d0 = g.gd[gd].body_duty.unwrap();
-    let (b, role, stage, c) = (d0.body, d0.role, d0.stage, g.gd[gd].ch);
-    let mut spot = d0.spot;
-    let errand = g.gd[gd].task.is_some() && !(role == Role::Finder && stage != Stage::Fan);
-    if g.gd[gd].hold || errand || !g.ai_enabled || g.gd[b].state != crate::game::GuardState::Dead || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP {
-        g.gd[gd].body_duty = None;
-        return None;
-    }
-    if g.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) {
+    let (b, stage, c) = (d0.body, d0.stage, g.gd[gd].ch);
+    if duty_has_lapsed(g, gd, d0) {
         g.gd[gd].body_duty = None;
         return None;
     }
     let bp = body_pos(g, b);
-    if g.gd[gd].task.is_none() {
-        if let Some(lk) = g.gd[gd].last_known {
-            if v3::dist_xz(lk, spot.unwrap_or(bp)) > 2.5 && v3::dist_xz(lk, bp) > 2.5 {
-                g.gd[gd].body_duty = None;
-                return None;
-            }
-        }
-    }
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let d_b = v3::dist_xz(g.ch[c].pos, bp);
     let see_body = d_b < 8.0 && !crate::scene_collision::segment_blocked(g, eye, [bp[0], 0.4, bp[2]], None, None, None);
     let on_body: V3 = [bp[0], 0.35, bp[2]];
     crate::mind::raise(g, gd, if stage == Stage::Fan { 0.16 } else { 0.3 }, "guards");
-    let mut move_ = 0.0;
-    let mut aim: Option<V3> = None;
-    match stage {
-        Stage::To => {
-            if spot.is_none() {
-                let s = cover_spot(g, gd, bp, if role == Role::Finder { 1.5 } else { 2.1 });
-                spot = Some(s);
-                with_duty(g, gd, |d| d.spot = Some(s));
-                crate::mind::fix(g, gd, Some(v3::copy(s)), "guards");
-                clear_path(g, gd);
-                g.gd[gd].stall_ref = None;
-            }
-            let sp = spot.unwrap();
-            if g.gd[gd].react_t > 0.0 {
-                g.gd[gd].react_t -= dt;
-                g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
-                g.ch[c].vel = [0.0, 0.0, 0.0];
-                aim = Some(if see_body { on_body } else { [bp[0], 1.0, bp[2]] });
-            } else {
-                go_to(g, gd, sp, None);
-                let speed = g.tune.guard_investigate;
-                let arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
-                move_ = g.gd[gd].speed;
-                aim = if see_body { Some(on_body) } else { None };
-                if arrived || (d_b < 2.6 && see_body && v3::dist_xz(g.ch[c].pos, sp) < 1.5) {
-                    with_duty(g, gd, |d| d.t = 0.0);
-                    clear_path(g, gd);
-                    if (arrived && d_b < 3.5) || see_body {
-                        g.gd[b].body_visits += 1.0;
-                        g.gd[b].body_visit_t = g.time;
-                        with_duty(g, gd, |d| d.stage = Stage::Cover);
-                        let radioing = match g.gd[gd].bubble.as_ref() { Some(u) => u.radio && g.time - u.t < 5.0, None => false };
-                        if role != Role::Finder && !g.gd[b].body_remarked && !radioing {
-                            g.gd[b].body_remarked = true;
-                            let line = if crate::game::is_breathing(g, b) {
-                                "…he's out cold. someone did this by hand. — stay sharp"
-                            } else {
-                                "…christ. — stay sharp"
-                            };
-                            crate::game::game_say(g, gd, line, None, None);
-                        }
-                    } else {
-                        with_duty(g, gd, |d| d.stage = Stage::Fan);
-                        let s = fan_spot(g, gd, b, bp);
-                        with_duty(g, gd, |d| d.spot = s);
-                        g.gd[gd].stall_ref = None;
-                        g.gd[gd].search_t = 0.0;
-                        if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
-                    }
-                }
-            }
-        }
-        Stage::Cover => {
-            g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
-            g.ch[c].vel = [0.0, 0.0, 0.0];
-            aim = Some(on_body);
-            let t = d0.t + dt;
-            with_duty(g, gd, |d| d.t = t);
-            let done = if role == Role::Finder {
-                t > 6.0 || (t > 3.0 && g.gd[b].body_visits >= 2.0 && g.time - g.gd[b].body_visit_t > 1.5)
-            } else {
-                t > 1.8
-            };
-            if done {
-                with_duty(g, gd, |d| { d.stage = Stage::Fan; d.t = 0.0; });
-                let s = fan_spot(g, gd, b, bp);
-                with_duty(g, gd, |d| d.spot = s);
-                g.gd[gd].stall_ref = None;
-                g.gd[gd].search_t = 0.0;
-                clear_path(g, gd);
-                if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
-            }
-        }
-        Stage::Fan => {
-            match spot {
-                None => { crate::mind::cap(g, gd, 0.1, "guards"); }
-                Some(sp) => {
-                    let mut arrived = g.gd[gd].search_t > 0.0;
-                    if !arrived {
-                        go_to(g, gd, sp, None);
-                        let speed = g.tune.guard_walk * 1.3;
-                        arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
-                        move_ = g.gd[gd].speed;
-                    }
-                    if !arrived {
-                        g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(g.gd[gd].look_phase * 0.9) * 0.7, 2.0, dt);
-                        g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
-                    } else {
-                        g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
-                        g.ch[c].vel = [0.0, 0.0, 0.0];
-                        g.gd[gd].search_t += dt;
-                        g.gd[gd].sweep = m::sin(g.gd[gd].look_phase * 1.1) * 1.1;
-                        g.ch[c].anim.look_yaw_extra = m::sin(g.gd[gd].look_phase * 1.9) * 0.4;
-                        g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
-                        if g.gd[gd].search_t > 4.0 { crate::mind::cap(g, gd, 0.1, "guards"); }
-                    }
-                }
-            }
+    let w = BodyDuty { gd, dt, c, b, bp, d0, d_b, see_body, on_body };
+    Some(match stage {
+        Stage::To => goes_to_the_body(g, w),
+        Stage::Cover => covers_the_body(g, w),
+        Stage::Fan => fans_out(g, w),
+    })
+}
+
+/// He is posted or sent elsewhere, the body has got up or gone, it has taken too long, or his mind is on something else.
+fn duty_has_lapsed(g: &mut Game, gd: GuardId, d0: crate::game::GuardBodyDuty) -> bool {
+    use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
+    let b = d0.body;
+    let errand = g.gd[gd].task.is_some() && !(d0.role == Role::Finder && d0.stage != Stage::Fan);
+    if g.gd[gd].hold || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
+    if g.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) { return true; }
+    let bp = body_pos(g, b);
+    if g.gd[gd].task.is_none() {
+        if let Some(lk) = g.gd[gd].last_known {
+            if v3::dist_xz(lk, d0.spot.unwrap_or(bp)) > 2.5 && v3::dist_xz(lk, bp) > 2.5 { return true; }
         }
     }
-    Some(crate::guards::BodyAftermath { move_, aim })
+    false
+}
+
+/// Walking to his spot by the body, after his moment; near enough he takes up his place or widens out.
+fn goes_to_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
+    use crate::game::GuardBodyDutyRole as Role;
+    let BodyDuty { gd, dt, c, bp, d0, d_b, see_body, on_body, .. } = w;
+    let sp = match d0.spot {
+        Some(sp) => sp,
+        None => {
+            let s = cover_spot(g, gd, bp, if d0.role == Role::Finder { 1.5 } else { 2.1 });
+            with_duty(g, gd, |d| d.spot = Some(s));
+            crate::mind::fix(g, gd, Some(v3::copy(s)), "guards");
+            g.gd[gd].drop_path();
+            g.gd[gd].stall_ref = None;
+            s
+        }
+    };
+    if g.gd[gd].react_t > 0.0 {
+        g.gd[gd].react_t -= dt;
+        g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+        return crate::guards::BodyAftermath { move_: 0.0, aim: Some(if see_body { on_body } else { [bp[0], 1.0, bp[2]] }) };
+    }
+    go_to(g, gd, sp, None);
+    let speed = g.tune.guard_investigate;
+    let arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
+    let move_ = g.gd[gd].speed;
+    if arrived || (d_b < 2.6 && see_body && v3::dist_xz(g.ch[c].pos, sp) < 1.5) {
+        with_duty(g, gd, |d| d.t = 0.0);
+        g.gd[gd].drop_path();
+        if (arrived && d_b < 3.5) || see_body {
+            stands_by_the_body(g, w);
+        } else {
+            let s = widens_out(g, w);
+            if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
+        }
+    }
+    crate::guards::BodyAftermath { move_, aim: if see_body { Some(on_body) } else { None } }
+}
+
+/// At the body: it counts another visit, and the first man there who did not find it says what he sees, unless he is on the radio.
+fn stands_by_the_body(g: &mut Game, w: BodyDuty) {
+    use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
+    let BodyDuty { gd, b, d0, .. } = w;
+    g.gd[b].body_visits += 1.0;
+    g.gd[b].body_visit_t = g.time;
+    with_duty(g, gd, |d| d.stage = Stage::Cover);
+    let radioing = match g.gd[gd].bubble.as_ref() { Some(u) => u.radio && g.time - u.t < 5.0, None => false };
+    if d0.role != Role::Finder && !g.gd[b].body_remarked && !radioing {
+        g.gd[b].body_remarked = true;
+        let line = if crate::game::is_breathing(g, b) {
+            "…he's out cold. someone did this by hand. — stay sharp"
+        } else {
+            "…christ. — stay sharp"
+        };
+        crate::game::game_say(g, gd, line, None, None);
+    }
+}
+
+/// He goes on to the fan round the body: his arm of it, his search clock from none. The spot, or None: he lets it go where he stands.
+fn widens_out(g: &mut Game, w: BodyDuty) -> Option<V3> {
+    use crate::game::GuardBodyDutyStage as Stage;
+    let BodyDuty { gd, b, bp, .. } = w;
+    with_duty(g, gd, |d| d.stage = Stage::Fan);
+    let s = fan_spot(g, gd, b, bp);
+    with_duty(g, gd, |d| d.spot = s);
+    g.gd[gd].stall_ref = None;
+    g.gd[gd].search_t = 0.0;
+    s
+}
+
+/// Stands over the body, longest the man who found it until somebody else has come, then widens out.
+fn covers_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
+    use crate::game::GuardBodyDutyRole as Role;
+    let BodyDuty { gd, dt, c, b, d0, on_body, .. } = w;
+    g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
+    g.ch[c].vel = [0.0, 0.0, 0.0];
+    let t = d0.t + dt;
+    with_duty(g, gd, |d| d.t = t);
+    let done = if d0.role == Role::Finder {
+        t > 6.0 || (t > 3.0 && g.gd[b].body_visits >= 2.0 && g.time - g.gd[b].body_visit_t > 1.5)
+    } else {
+        t > 1.8
+    };
+    if done {
+        with_duty(g, gd, |d| d.t = 0.0);
+        let s = widens_out(g, w);
+        g.gd[gd].drop_path();
+        if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
+    }
+    crate::guards::BodyAftermath { move_: 0.0, aim: Some(on_body) }
+}
+
+/// Walks out to his arm of the fan looking about him, then stands looking round until he lets it go.
+fn fans_out(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
+    let BodyDuty { gd, dt, c, d0, .. } = w;
+    let mut move_ = 0.0;
+    let Some(sp) = d0.spot else {
+        crate::mind::cap(g, gd, 0.1, "guards");
+        return crate::guards::BodyAftermath { move_, aim: None };
+    };
+    let mut arrived = g.gd[gd].search_t > 0.0;
+    if !arrived {
+        go_to(g, gd, sp, None);
+        let speed = g.tune.guard_walk * 1.3;
+        arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
+        move_ = g.gd[gd].speed;
+    }
+    if !arrived {
+        g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(g.gd[gd].look_phase * 0.9) * 0.7, 2.0, dt);
+        g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
+    } else {
+        g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+        g.gd[gd].search_t += dt;
+        g.gd[gd].sweep = m::sin(g.gd[gd].look_phase * 1.1) * 1.1;
+        g.ch[c].anim.look_yaw_extra = m::sin(g.gd[gd].look_phase * 1.9) * 0.4;
+        g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
+        if g.gd[gd].search_t > 4.0 { crate::mind::cap(g, gd, 0.1, "guards"); }
+    }
+    crate::guards::BodyAftermath { move_, aim: None }
 }
 
 /// The fix a man is left with the frame Sam goes out of sight: led 0.9 s along his way, as far as the floor is open.
-pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
+pub(super) fn lead_fix(g: &crate::game::Game, from: V3, vel: V3) -> V3 {
     let p: V3 = [from[0], 0.0, from[2]];
     let (vx, vz) = (vel[0], vel[2]);
     let sp = m::hyp2(vx, vz);
@@ -392,7 +392,7 @@ pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     let mut shut: Vec<BoxId> = Vec::new();
     let list = g.doors.list.clone();
     for d in list {
-        if crate::doors::door_latched(g, d) { shut.push(g.dr[d].box_); }
+        if g.dr[d].leaf.latched { shut.push(g.dr[d].box_); }
     }
     let rd: V3 = [vx / sp, 0.0, vz / sp];
     let mut fix = p;
@@ -404,7 +404,7 @@ pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
         q[1] = 0.0;
         q[2] = p[2] + vz * s;
         let at: V3 = [q[0], 1.0, q[2]];
-        let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(g, &mut q, 0.15);
+        let mut stop = crate::scene_collision::collide_circle(g, &mut q, 0.15, 0.25, 1.5, Some(1.0)) || crate::scene_collision::clamp_to_world(&mut q, 0.15);
         if !stop {
             for &b in shut.iter() {
                 if crate::scene_boxes::ray_box(g, prev, rd, b.into(), sp * 0.05).is_some() { stop = true; break; }
@@ -423,11 +423,11 @@ pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
     if g.ch[c_2].anim.long_gun {
         if let Some(h) = g.ch[c_2].bones.get(crate::character::Bone::HandR) { return v3::copy(*h); }
     }
-    bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4)
+    crate::combat::shoulder(g, c_2)
 }
 
 /// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end.
-pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
+pub fn clear_shot(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);
     let l = v3::len(d);
@@ -437,7 +437,7 @@ pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
 }
 
 /// A pinned man's one question: his side's rounds have nothing for a pane, and standing glass is the first thing on the line.
-pub(super) fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
+pub(super) fn pane_first(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     if crate::glasspen::shot_energy(g, c_2, None) != Some(0.0) { return false; }
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);
@@ -447,7 +447,7 @@ pub(super) fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool
     if !(h.index < 1e6) { return false; }
     let i = h.index as usize;
     // (the level's list IS col.boxes in the TypeScript, game.ts: the one Rust keeps live is g.col.boxes; `?.` is a place past its end)
-    let flags = match g.col.boxes.get(i).copied() { Some(b) => seam_box_flags(g, b), None => 0.0 };
+    let flags = match g.col.boxes.get(i).copied() { Some(b) => g.tab.boxes[b].flags, None => 0.0 };
     (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
 }
 
@@ -480,13 +480,13 @@ fn line_geom_of(from: V3, to: V3, h: V3, y0: f64, y1: f64, vel: V3) -> Option<cr
 /// The nearest living colleague in this man's intended line of aim, or None.
 pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>) -> Option<GuardId> {
     let c = g.gd[gd].ch;
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
-    let l = m::hyp2(to[0] - from[0], to[2] - from[2]);
+    let from = crate::combat::shoulder(g, c);
+    let l = v3::dist_xz(to, from);
     if l < 0.01 { return None; }
     let t_max = 1.0 + MUZZLE_PAST_M / l;
     let mut best: Option<GuardId> = None;
     let mut bt = m::INF;
-    let near = g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g);
+    let near = g.team(gd).ours() && crate::roomfight::fight_live(g);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -531,7 +531,7 @@ pub fn round_past_colleague(g: &crate::game::Game, gd: GuardId, to: V3, except: 
 
 /// The point MUZZLE_REACH_M out along where his gun is held, or where that line meets the floor.
 pub fn aim_ahead(g: &crate::game::Game, c_2: CharId) -> V3 {
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c_2);
     aim_ahead_of(from, g.ch[c_2].aim_pitch, g.ch[c_2].aim_yaw)
 }
 /// aimAhead's arithmetic
@@ -567,69 +567,10 @@ pub fn muzzle_check(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, dt: 
 /// In a fight, the side-step that opens his line round colleague `o`: under way, none from here, or nobody to step round.
 pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: Option<GuardId>, dt: f64) -> crate::guards::LineStep {
     let c = g.gd[gd].ch;
-    if let Some(ob) = o {
-        if g.time - g.gd[gd].line_bark_t > LINE_BARK_SECS && g.time - g.gd[ob].line_bark_t > LINE_BARK_SECS {
-            let now = g.time;
-            g.gd[ob].line_bark_t = now;
-            g.gd[gd].line_bark_t = now;
-            let oc = g.gd[ob].ch;
-            if m::hyp2(g.ch[oc].vel[0], g.ch[oc].vel[2]) > 0.4 {
-                crate::game::game_say(g, ob, "crossing!", None, None);
-            } else {
-                crate::game::game_say(g, gd, "move — you're in my line", None, None);
-            }
-        }
-    }
-    let f_ = g.gd[gd].line_fail;
-    let pos0 = g.ch[c].pos;
-    let fail_live = match f_ { Some(f) => g.time - f.t < LINE_FAIL_SECS && v3::dist_xz(pos0, f.pos) < LINE_FAIL_M, None => false };
-    let under_way = g.gd[gd].line_side != 0.0 && g.gd[gd].path.len() == 1 && g.gd[gd].path_i == 0 && match g.gd[gd].path_goal { Some(goal) => v3::dist_xz(goal, g.gd[gd].path[0]) < 1e-3, None => false };
-    if under_way {
-        let wp = g.gd[gd].path[0];
-        let (dx, dz) = (wp[0] - pos0[0], wp[2] - pos0[2]);
-        let d = m::hyp2(dx, dz);
-        let back = if g.gd[gd].line_gain >= 0.0 { d - g.gd[gd].line_gain } else { 0.0 };
-        if g.gd[gd].line_step_m > 1e-4 && back > 0.5 * g.gd[gd].line_step_m {
-            g.gd[gd].line_stuck_t += dt;
-        } else {
-            g.gd[gd].line_stuck_t = m::max(0.0, g.gd[gd].line_stuck_t - 2.0 * dt);
-        }
-        if d < 0.05 {
-            clear_path(g, gd);
-            let man = &mut g.gd[gd];
-            man.stall_ref = None;
-            man.line_side = 0.0;
-            man.line_gain = -1.0;
-            man.line_stuck_t = 0.0;
-        } else if g.gd[gd].line_stuck_t > LINE_STUCK_SECS || not_getting_anywhere(g, gd, dt, 1.2) {
-            let side = g.gd[gd].line_side;
-            let bit: i32 = if side < 0.0 { 1 } else if side > 0.0 { 2 } else { 0 };
-            let now = g.time;
-            g.gd[gd].line_fail = Some(match (fail_live, f_) {
-                (true, Some(f)) => crate::game::GuardLineFail { pos: f.pos, sides: (js::to_i32(f.sides) | bit) as f64, t: now },
-                _ => crate::game::GuardLineFail { pos: v3::copy(pos0), sides: bit as f64, t: now },
-            });
-            clear_path(g, gd);
-            let man = &mut g.gd[gd];
-            man.stall_ref = None;
-            man.stuck_n += 1.0;
-            man.line_side = 0.0;
-            man.line_gain = -1.0;
-            man.line_stuck_t = 0.0;
-        } else {
-            let speed = v3::damp(g.gd[gd].speed, g.tune.guard_investigate * v3::clamp(d / 0.45, 0.35, 1.0), 6.0, dt);
-            g.gd[gd].speed = speed;
-            let step = m::min(d, speed * dt);
-            g.ch[c].pos[0] += dx / d * step;
-            g.ch[c].pos[2] += dz / d * step;
-            g.ch[c].vel = [dx / d * speed, 0.0, dz / d * speed];
-            g.gd[gd].line_gain = d - step;
-            g.gd[gd].line_step_m = step;
-            return crate::guards::LineStep::Step;
-        }
-    }
-    let ob = match o { Some(ob) => ob, None => return crate::guards::LineStep::Clear };
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
+    if let Some(ob) = o { calls_out_the_line(g, gd, ob); }
+    if step_goes_on(g, gd, c, dt) { return crate::guards::LineStep::Step; }
+    let Some(ob) = o else { return crate::guards::LineStep::Clear };
+    let from = crate::combat::shoulder(g, c);
     let geom = match line_geom(g, from, aim_at, ob) { Some(x) if !(x.t > 0.97) => x, _ => return crate::guards::LineStep::None };
     let pos = g.ch[c].pos;
     let (dx, dz) = (aim_at[0] - pos[0], aim_at[2] - pos[2]);
@@ -649,51 +590,14 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
         Some(f) if g.time - f.t < LINE_FAIL_SECS && v3::dist_xz(pos, f.pos) < LINE_FAIL_M => js::to_i32(f.sides),
         _ => 0,
     };
-    let radius = g.ch[c].radius;
+    let w = StepLook { gd, ob, aim_at, from, pos, lx, lz, l, radius: g.ch[c].radius };
     for &s in cands.iter() {
-        let mut cand: V3 = [pos[0] + lx * s, 0.0, pos[2] + lz * s];
-        let (mut ox, mut oz) = (lx * s, lz * s);
         if failed & (if s < 0.0 { 1 } else { 2 }) != 0 { continue; }
-        if crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) || !crate::scene_collision::nav_grid_walkable(g, pos, cand) || crate::scene_collision::solid_blocked(g, [pos[0], 0.5, pos[2]], [cand[0], 0.5, cand[2]], None) { continue; }
-        let mut fit: V3 = [cand[0], 0.0, cand[2]];
-        crate::scene_collision::collide_circle(g, &mut fit, radius, 0.2, 1.5, None);
-        if m::hyp2(fit[0] - cand[0], fit[2] - cand[2]) > 0.02 {
-            ox = fit[0] - pos[0];
-            oz = fit[2] - pos[2];
-            let gf = line_geom(g, [from[0] + ox, from[1], from[2] + oz], aim_at, ob);
-            let no_room = match gf { None => true, Some(x) => x.d < x.clear + 0.04 };
-            if no_room || crate::scene_collision::nav_grid_is_blocked(g, fit[0], fit[2]) || m::hyp2(ox, oz) < 0.05 { continue; }
-            cand = [fit[0], 0.0, fit[2]];
-        }
-        let mut other = false;
-        let o2 = ox * ox + oz * oz;
-        let mut i = 0;
-        while i < g.guards.len() {
-            let p = g.guards[i];
-            i += 1;
-            if no_colleague(g, gd, p) { continue; }
-            let q = g.ch[g.gd[p].ch].pos;
-            let u = v3::clamp(((q[0] - pos[0]) * ox + (q[2] - pos[2]) * oz) / o2, 0.0, 1.0);
-            let wd = m::hyp2(pos[0] + ox * u - q[0], pos[2] + oz * u - q[2]);
-            if wd < LINE_WALK_CLEAR_M { other = true; break; }
-        }
-        if other { continue; }
-        let from2: V3 = [from[0] + ox, from[1], from[2] + oz];
-        let mut i = 0;
-        while i < g.guards.len() {
-            let p = g.guards[i];
-            i += 1;
-            if p == ob || no_colleague(g, gd, p) { continue; }
-            if let Some(g2) = line_geom(g, from2, aim_at, p) {
-                if g2.t >= 0.0 && g2.t <= 1.0 + MUZZLE_PAST_M / l && g2.d <= g2.clear + LINE_STEP_MARGIN_M { other = true; break; }
-            }
-        }
-        if other { continue; }
-        crate::game::guard_set_path(g, gd, vec![cand]);
+        let Some(cand) = step_that_opens_it(g, w, s) else { continue };
+        g.gd[gd].set_path(vec![cand]);
         let man = &mut g.gd[gd];
         man.path_i = 0;
-        man.path_goal = Some(v3::copy(cand));
-        man.path_goal_orbit = false;
+        man.set_path_goal(Some(v3::copy(cand)));
         man.stall_ref = None;
         man.line_side = if s < 0.0 { -1.0 } else { 1.0 };
         man.line_gain = -1.0;
@@ -701,6 +605,121 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
         return crate::guards::LineStep::Step;
     }
     crate::guards::LineStep::None
+}
+
+/// Now and then one of them says so: the crossing man, or the man whose line it is.
+fn calls_out_the_line(g: &mut Game, gd: GuardId, ob: GuardId) {
+    if g.time - g.gd[gd].line_bark_t > LINE_BARK_SECS && g.time - g.gd[ob].line_bark_t > LINE_BARK_SECS {
+        let now = g.time;
+        g.gd[ob].line_bark_t = now;
+        g.gd[gd].line_bark_t = now;
+        let oc = g.gd[ob].ch;
+        if m::hyp2(g.ch[oc].vel[0], g.ch[oc].vel[2]) > 0.4 {
+            crate::game::game_say(g, ob, "crossing!", None, None);
+        } else {
+            crate::game::game_say(g, gd, "move — you're in my line", None, None);
+        }
+    }
+}
+
+/// His side-step ends: no path, and his line's clocks back to none.
+fn step_ended(g: &mut Game, gd: GuardId) {
+    g.gd[gd].drop_path();
+    let man = &mut g.gd[gd];
+    man.stall_ref = None;
+    man.line_side = 0.0;
+    man.line_gain = -1.0;
+    man.line_stuck_t = 0.0;
+}
+
+/// A side-step already under way: true while it goes on; it ends done, or given up with that side remembered when it is handed back or gets nowhere.
+fn step_goes_on(g: &mut Game, gd: GuardId, c: CharId, dt: f64) -> bool {
+    let f_ = g.gd[gd].line_fail;
+    let pos0 = g.ch[c].pos;
+    let fail_live = match f_ { Some(f) => g.time - f.t < LINE_FAIL_SECS && v3::dist_xz(pos0, f.pos) < LINE_FAIL_M, None => false };
+    let under_way = g.gd[gd].line_side != 0.0 && g.gd[gd].path.len() == 1 && g.gd[gd].path_i == 0 && match g.gd[gd].path_goal { Some(goal) => v3::dist_xz(goal, g.gd[gd].path[0]) < 1e-3, None => false };
+    if !under_way { return false; }
+    let wp = g.gd[gd].path[0];
+    let (dx, dz) = (wp[0] - pos0[0], wp[2] - pos0[2]);
+    let d = m::hyp2(dx, dz);
+    let back = if g.gd[gd].line_gain >= 0.0 { d - g.gd[gd].line_gain } else { 0.0 };
+    if g.gd[gd].line_step_m > 1e-4 && back > 0.5 * g.gd[gd].line_step_m {
+        g.gd[gd].line_stuck_t += dt;
+    } else {
+        g.gd[gd].line_stuck_t = m::max(0.0, g.gd[gd].line_stuck_t - 2.0 * dt);
+    }
+    if d < 0.05 {
+        step_ended(g, gd);
+        return false;
+    }
+    if g.gd[gd].line_stuck_t > LINE_STUCK_SECS || not_getting_anywhere(g, gd, dt, 1.2) {
+        let side = g.gd[gd].line_side;
+        let bit: i32 = if side < 0.0 { 1 } else if side > 0.0 { 2 } else { 0 };
+        let now = g.time;
+        g.gd[gd].line_fail = Some(match (fail_live, f_) {
+            (true, Some(f)) => crate::game::GuardLineFail { pos: f.pos, sides: (js::to_i32(f.sides) | bit) as f64, t: now },
+            _ => crate::game::GuardLineFail { pos: v3::copy(pos0), sides: bit as f64, t: now },
+        });
+        g.gd[gd].stuck_n += 1.0;
+        step_ended(g, gd);
+        return false;
+    }
+    let speed = v3::damp(g.gd[gd].speed, g.tune.guard_investigate * v3::clamp(d / 0.45, 0.35, 1.0), 6.0, dt);
+    g.gd[gd].speed = speed;
+    let step = m::min(d, speed * dt);
+    g.ch[c].pos[0] += dx / d * step;
+    g.ch[c].pos[2] += dz / d * step;
+    g.ch[c].vel = [dx / d * speed, 0.0, dz / d * speed];
+    g.gd[gd].line_gain = d - step;
+    g.gd[gd].line_step_m = step;
+    true
+}
+
+/// What a new side-step is weighed against.
+#[derive(Clone, Copy)]
+struct StepLook {
+    gd: GuardId,
+    ob: GuardId,
+    aim_at: V3,
+    from: V3,
+    pos: V3,
+    lx: f64,
+    lz: f64,
+    l: f64,
+    radius: f64,
+}
+
+/// Where a side-step of `s` metres would put him, if that floor is free, clear of everybody, and opens his line without closing it on another man.
+fn step_that_opens_it(g: &Game, w: StepLook, s: f64) -> Option<V3> {
+    let StepLook { gd, ob, aim_at, from, pos, lx, lz, l, radius } = w;
+    let mut cand: V3 = [pos[0] + lx * s, 0.0, pos[2] + lz * s];
+    let (mut ox, mut oz) = (lx * s, lz * s);
+    if crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) || !crate::scene_collision::nav_grid_walkable(g, pos, cand) || crate::scene_collision::solid_blocked(g, [pos[0], 0.5, pos[2]], [cand[0], 0.5, cand[2]], None) { return None; }
+    let mut fit: V3 = [cand[0], 0.0, cand[2]];
+    crate::scene_collision::collide_circle(g, &mut fit, radius, 0.2, 1.5, None);
+    if v3::dist_xz(fit, cand) > 0.02 {
+        ox = fit[0] - pos[0];
+        oz = fit[2] - pos[2];
+        let gf = line_geom(g, [from[0] + ox, from[1], from[2] + oz], aim_at, ob);
+        let no_room = match gf { None => true, Some(x) => x.d < x.clear + 0.04 };
+        if no_room || crate::scene_collision::nav_grid_is_blocked(g, fit[0], fit[2]) || m::hyp2(ox, oz) < 0.05 { return None; }
+        cand = [fit[0], 0.0, fit[2]];
+    }
+    let o2 = ox * ox + oz * oz;
+    let walks_into_one = g.guards.iter().any(|&p| {
+        if no_colleague(g, gd, p) { return false; }
+        let q = g.pos_of(p);
+        let u = v3::clamp(((q[0] - pos[0]) * ox + (q[2] - pos[2]) * oz) / o2, 0.0, 1.0);
+        m::hyp2(pos[0] + ox * u - q[0], pos[2] + oz * u - q[2]) < LINE_WALK_CLEAR_M
+    });
+    if walks_into_one { return None; }
+    let from2: V3 = [from[0] + ox, from[1], from[2] + oz];
+    let lines_up_another = g.guards.iter().any(|&p| {
+        if p == ob || no_colleague(g, gd, p) { return false; }
+        line_geom(g, from2, aim_at, p).map_or(false, |g2| g2.t >= 0.0 && g2.t <= 1.0 + MUZZLE_PAST_M / l && g2.d <= g2.clear + LINE_STEP_MARGIN_M)
+    });
+    if lines_up_another { return None; }
+    Some(cand)
 }
 
 #[cfg(test)]
@@ -728,7 +747,7 @@ mod tests {
     /// a game with one man and his body; nothing below reaches another part
     fn one_man() -> (Box<Game>, GuardId, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);

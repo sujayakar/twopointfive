@@ -20,7 +20,6 @@ pub struct FogOfWar {
     pub eyes: Vec<crate::fogofwar::FogEye>,
     pub mates: Vec<CharId>,
     pub hidden_chars: JsSet<CharId>,
-    #[is(crate::fogofwar::FogOfWarStats { frames: 0.0, eyes: 0.0, tested: 0.0, seen: 0.0, hidden: 0.0, smoke_hid: 0.0, by_fire: 0.0 })] pub stats: crate::fogofwar::FogOfWarStats,
     pub fired_n: JsMap<u32, f64>,
     pub fired_at: JsMap<GuardId, f64>,
     pub fire_clock: f64,
@@ -42,8 +41,6 @@ pub struct FogOfWar {
     pub frame_no: f64,
     pub door_from: f64,
     pub door_n: f64,
-    pub call_log: Vec<crate::fogofwar::FogOfWarCallLogItem>,
-    #[is(crate::fogofwar::FogOfWarCallStats { contact: 0.0, heard: 0.0 })] pub call_stats: crate::fogofwar::FogOfWarCallStats,
     pub call_clock: f64,
     #[is(-1000000000.0)] pub last_call: f64,
     pub called_t: JsMap<GuardId, f64>,
@@ -63,21 +60,9 @@ pub struct FogOfWar {
 #[derive(Clone, Debug, Blank)]
 pub struct FogPicture {
     pub face_recs: JsMap<FixtureId, Vec<V3>>,
-    #[is(crate::fogofwar::FogOfWarFullStats { hidden: 0.0, ghosts: 0.0, held: 0.0 })] pub full_stats: crate::fogofwar::FogOfWarFullStats,
     pub viewer: bool,
     pub raw_list: Vec<AnyBoxId>,
     #[is(-1.0)] pub raw_at: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct FogOfWarStats {
-    pub frames: f64,
-    pub eyes: f64,
-    pub tested: f64,
-    pub seen: f64,
-    pub hidden: f64,
-    pub smoke_hid: f64,
-    pub by_fire: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -115,29 +100,6 @@ pub struct FogOfWarThingStats {
     pub tests: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct FogOfWarCallLogItem {
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum FogOfWarCallLogItemKind {
-    #[default] Heard,
-    Contact,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct FogOfWarCallStats {
-    pub contact: f64,
-    pub heard: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FogOfWarFullStats {
-    pub hidden: f64,
-    pub ghosts: f64,
-    pub held: f64,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FogOfWarCallWordsKind {
     Heard,
@@ -168,7 +130,7 @@ pub const FOG_EYES_WAS: f64 = 5.0;
 
 pub const DOOR_EPS: f64 = 0.01;
 
-pub fn thing_bits() -> Vec<f64> { alloc::vec![0.0, 0.0, 4.0, 3.0] }
+pub const THING_BITS: [f64; 4] = [0.0, 0.0, 4.0, 3.0];
 
 pub const THING_TEST: f64 = 7.0;
 

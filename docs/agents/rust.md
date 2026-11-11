@@ -1,7 +1,7 @@
 # Writing Rust in this game
 
 How the Rust is laid out, what it must never do, and how to add to it. A test is `rust/game_start/README.md`, the module as a host loads it is
-`tools/blitz/FACE.md`, dead code is `tools/fold/README.md`.
+`tools/blitz/FACE.md`.
 
 ## What it is for
 
@@ -46,19 +46,25 @@ Each crate is its own cargo workspace and target folder.
 
 - **Tables by id.** `g.ch`, `g.gd`, `g.dr`, `g.pl`, `g.cv`, `g.fa`, and the rest in `g.tab`. An id comes from the `id!` list in `ids.rs`; things name
   each other by id, never by reference. `Tab` only grows, so an id never dangles (`g.tab.frame_boxes` alone deals rows again).
+- **A part of a man.** What any man has is a table by his body (`CharId`), whoever he is: `g.cond[c]` is how he is. Made with him (`man_new`), and asked by a
+  question (`condition::down(g, c)`), never by what kind of man he is (`Character.who`).
 - **A module's state.** `g.m.<module>` (a `Mods` field), or a field of `Game` where many read it. Its numbers are `g.k.<table>`.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
+- **What a game's copies share.** A kept moment is a copy of the game, so what was read once and is not played with stands behind an `Arc`: `g.art`,
+  `g.level`, a piece of furniture's `def`, a box's `marks`, the ray grid. A copy takes the pointer; who writes the level says `Arc::make_mut`. A list that never
+  changes is a function (`sam_lines()`), not a field.
 - **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: doors, falls, props, slabs, items, men, lights, weather, smoke, poses, panes. A number a hot loop keeps from tick to tick
-  must be here; all else is on `Game`. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
-  `sim::state::state_read(g.sim)` and `sim::state::state`, mostly through home modules (`sim_doorshome.rs`).
-- **Copies.** The box world (`rust/sim/src/world.rs`) and the smoke's and air's tables are outside the block, made from the game: never state.
+  of what `rust/sim` steps: men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
+  its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
+  `sim::state::state_read(g.sim)` and `sim::state::state`.
+- **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`) and the smoke's and air's tables (`rust/sim`, outside the block) are made
+  from the game: in no bytes.
 - **A moment** (`Moment`) is `g.clone()` and the block's bytes: a save, a walk of a tape, a recovery. So `Game` clones whole and a block stands in any
   slot.
-- **Seats.** A seat's nineteen things are fields of `Game`, those of the seat that stands there; the others wait in `g.tab.cmd_seat[s].own`
-  (`SeatSet`). In a tick the first seat stands (`on_first_bare`). `with_seat(g, s, &mut |g| …)` changes them over for a pass about another seat. A
-  function holding the game shared takes a `SeatRef` (`seats::seat`, `seats::here`), never `g.orders`. A map kept per seat is keyed by `view_key`.
+- **Seats.** A seat's own things are its row of `g.sets` (`SeatSet`). `g.seat` and `g.player` say which seat a pass is about and its man: in a tick the first
+  (`on_first_bare`), and `with_seat(g, s, &mut |g| …)` moves them for a pass about another. A function holding the game shared takes a `SeatRef` (`seats::seat`,
+  `seats::here`). A map kept per seat is keyed by `view_key`.
 
 ### Derives
 
@@ -90,25 +96,25 @@ A rule holds `g` and no reference across a call, so:
 
 ### Asking the world
 
-The box world is a flat copy of every static, leaf and furniture part, which `sim::lines`, `sim::collide`, `sim::hear`, `sim::nav` and `sim::sight`
-ask by slot. It is proven as a tick opens (`tick_open`) and stands from a tick's end to the next one's start (`tick_shut`).
+The boxes and the rows the loops run over are one thing: `g.tab.boxes` (`game_types/src/boxworld.rs`). It is read as a table of boxes, and a box
+is written by `g.tab.boxes.edit(b)` alone, whose guard writes the box's row as it drops. `world()` is the rows, which `sim::lines`, `sim::collide`,
+`sim::hear`, `sim::nav` and `sim::sight` take.
 
-- **In a tick:** `scene_collision.rs` takes `&mut Game` and pays what the copy owes: `segment_blocked`, `solid_blocked`, `raycast`, `collide_circle`.
-  `Over` (`ask.rs`) asks of the level as it would be, changing nothing, through `segment_blocked_over` and its kind.
-- **Between ticks, shared:** `WorldAsk::of(g)` has `line`, `ray`, `way`, `hear`. It panics by name if the copy does not stand.
-- **One body for both:** a rule takes `impl Asker` and reads the game by `a.game()`.
+- **A question takes the game shared**, in a tick or between two: `segment_blocked`, `solid_blocked`, `raycast`, `collide_circle`, `nav_grid_find_path`
+  (`scene_collision.rs`). `way_priced` is the search whose price remembers something of the game.
+- **`Over`** (`ask.rs`) asks of the level as it would be, changing nothing, through `segment_blocked_over` and its kind.
+- **A host's question** that is no number has no answer, where a rule's panics: `raycast_host`, `way_host`.
 
-A writer of a static says so: `scene_collision::wrote` in a tick, `unstand` between ticks. A build with debug assertions compares every row as the
-next tick opens and panics on a write nobody declared.
+A list is said whole where it is made: `statics`, `leaves`, `things`; the floor's grid by `grid` and then `file`. A build with debug assertions makes every row again as a tick ends and
+compares (`astray`): a native test, never the module.
 
 ### Performance
 
-- **A loop over every man, box, leaf or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
-  layout to be more cache and simd friendly". The head of `rust/sim/src/props.rs` says how: rows dense, a column a number, hot columns together, flags
-  as bits of one `u32`.
-- **`rust/sim` allocates nothing.** Every table has a fixed size (`MAX_BOXES`, a part's `CAP`), and `door_store_new` refuses a level past its cap by
-  name.
-- **Too many arguments for a call** go through a scratch `static mut` (`IO` in `doors.rs`, `PAR` in `items.rs`). Nothing in scratch outlives the call.
+- **A loop over every box, ray or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
+  layout to be more cache and simd friendly". `rust/sim/src/world.rs` is the shape: a row a box, the hot numbers together. A thing with rules of its
+  own is one record with its rules beside it (`props.rs`, `guns/throwables/pool.rs`, `rust/sim/src/falls.rs`): the tick was no slower for it.
+- **A part of a game's block has a fixed size** (`MAX_BOXES`, a part's `CAP`); a level past a cap is refused by name (`doors_new`).
+- **Too many arguments for a call** go through a scratch `static mut` (`ASKING` in `world.rs`). Nothing in scratch outlives the call.
 - **Ask in a batch.** A sight pass hands its eyes over once (`sight_open`, `sight_eye`, `eyes_see`).
 
 ### Build profiles
@@ -131,7 +137,7 @@ dressing (debris, smoke details) and uses relaxed simd and/or gpu". Today no cra
 and neither side may link the other. Inside the rules:
 
 - **Dress rows.** `g.m.dress.dress` is up by the start's flag on the page and the server, and down in a native test unless asked (`Opts.dress`).
-  `wind`, `moths`, `stature`, `fx`, `blast_feel`, `fixtures`, `net` and `cues` guard steps in `game/tick.rs`. Those steps write state, so hosts of one
+  `wind`, `moths`, `stature`, `fx`, `blast_feel`, `fixtures`, `net` and `cues` guard steps in `game/steps.rs`. Those steps write state, so hosts of one
   game must agree.
 - **The picture's own.** A field a host may lack or fill differently is `#[bytes(skip)]`, as `fog_picture`, `mark_set` and `feel` are.
 
@@ -144,17 +150,16 @@ and neither side may link the other. Inside the rules:
 ## To change it
 
 - **A module:** a `pub mod` line in `game_types/src/lib.rs` with its `types.rs`; `pub mod` in its system's
-  `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a line in `step_seats_on_first`; a test.
+  `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a row of `STEPS`; a test.
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
-  A seat's field also goes in `SeatRef` and `swap_set`, and a map per seat in `view_rekey`.
+  A seat's field also goes in `SeatRef`.
 - **A column:** a field of its part in `rust/sim`, inside its size assert. A new part is a `State` field, a `PARTS` row and a `PART_NAMES` name
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
   `game_start/src/host/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
-- **A question:** the walk in `rust/sim`; a `&mut Game` form and a shared form (`line_shared`) in `scene_collision.rs`; a method on `WorldAsk`,
-  and on `Asker` if a rule needs one body; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
+- **A question:** the walk in `rust/sim`, over a `&World`; its call in `scene_collision.rs`, of `&Game`; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
 - **An event.** For the rules: a `GameEvent` on `g.events`, kept half a second. For the host: an arm of `OutEvent`, a function in
   `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `tools/draw/gen.ts` and `src/draw/events.ts`.
 - **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields `f32`, `u32`, `i32` or arrays of them; values, never references),
@@ -168,13 +173,13 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 
 | you see | do |
 |---|---|
-| `f64` for counts and kinds (`box_count`) | Match it in a field others read. A new type uses `bool`, `u32`, an enum, an id. Mending one moves pins: its own commit |
+| `f64` for counts and kinds (`tile_count`) | Match it in a field others read. A new type uses `bool`, `u32`, an enum, an id. Mending one moves pins: its own commit |
 | `JsMap`, `JsSet` | Keep them: the walk's order is play. Use a `Tab` or `Vec` where ids are dense. Swap one only if the pins hold |
 | `Option<f64>` arguments, `js::truthy(x)`, `js::or(x, d)` | Match when calling. A new function takes plain arguments and compares |
 | `c_2`, `g_2`, `weather_set_wet_2`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
-| `&mut Game` on a function that only reads | `tools/fold/readers.sh --soften`, or by hand. A new one takes `&Game` |
+| `&mut Game` on a function that only reads | By hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
-| `Opaque`, `FnField`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
+| `Opaque`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
 
 ## What holds it
 

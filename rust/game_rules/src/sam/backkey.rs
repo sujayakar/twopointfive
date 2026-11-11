@@ -2,16 +2,19 @@ use crate::game::Game;
 use crate::ids::*;
 use alloc::string::String;
 
-/// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`).
+/// THE BACK KEY backs out of what is up: the squad's ring, his own, a verb that is running, the launcher's arc, a gun's setup. Esc is the pause and only the
+/// pause: the page keeps it, and the first tick after a card is handed the one-tick code 'Paused' (as a lost window hands it 'Blur'), which lets go of what a
+/// key or a button held, unsent. A running verb goes on after a pause.
+pub const BACK_KEY: &str = "Tab";
+
+/// It went down this tick: read, not taken.
 pub(super) fn back_hit(g: &crate::game::Game, input: InputId) -> bool {
-    crate::input::input_hit(g, input, "Escape") || crate::input::input_hit(g, input, "Tab")
+    crate::input::input_hit(g, input, BACK_KEY)
 }
 
-/// The back key, taken out of the frame: whoever answers to it, nobody after does. Both codes go, whichever was there.
+/// …and taken out of the frame: whoever answers to it, nobody after does.
 pub fn back_take(g: &mut crate::game::Game, input: InputId) -> bool {
-    let esc = g.tab.input[input].pressed.delete(String::from("Escape"));
-    let tab = g.tab.input[input].pressed.delete(String::from("Tab"));
-    esc || tab
+    g.tab.input[input].pressed.delete(String::from(BACK_KEY))
 }
 
 #[cfg(test)]
@@ -19,23 +22,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn take_empties_both_codes_whichever_was_there() {
+    fn a_press_is_taken_once_and_no_other_with_it() {
         let mut g = Game::blank();
         let mut row = crate::input::Input::blank();
-        for c in ["Escape", "Tab", "KeyE"] { row.pressed.add(String::from(c)); }
+        for c in [BACK_KEY, "KeyE"] { row.pressed.add(String::from(c)); }
         let id: InputId = g.tab.input.push(row);
-        assert!(back_take(&mut g, id));
-        assert!(!g.tab.input[id].pressed.has(String::from("Escape")) && !g.tab.input[id].pressed.has(String::from("Tab")));
-        assert!(g.tab.input[id].pressed.has(String::from("KeyE")));
-        assert!(!back_take(&mut g, id));
-    }
-
-    #[test]
-    fn take_answers_for_tab_alone() {
-        let mut g = Game::blank();
-        let mut row = crate::input::Input::blank();
-        row.pressed.add(String::from("Tab"));
-        let id: InputId = g.tab.input.push(row);
-        assert!(back_take(&mut g, id));
+        assert!(back_hit(&g, id) && back_take(&mut g, id) && !back_take(&mut g, id));
+        assert!(g.tab.input[id].pressed.holds("KeyE"));
     }
 }

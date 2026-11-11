@@ -11,7 +11,7 @@ use core::any::Any;
 use game::game::Game;
 use game::bytes::{ToBytes, W};
 use game::difficulty;
-use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
+use game::kit::{self, CardFor, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
@@ -43,7 +43,7 @@ impl Desk {
         // (what the list knows of the levers: what is kept, then what the address says over it; a lesson's address has neither)
         let q = Query::parse(address);
         if game::scenario_run::lesson_of_address(&q).is_none() {
-            let said = difficulty::levers_now(&self.g).into_iter().filter_map(|l| q.get(&l.param).filter(|w| !w.is_empty()).map(|w| (l.key, String::from(w))));
+            let said = difficulty::levers_now().into_iter().filter_map(|l| q.get(&l.param).filter(|w| !w.is_empty()).map(|w| (l.key, String::from(w))));
             self.list.said(k.levers.iter().cloned().chain(said).map(|(key, rung)| (String::from(key.as_str()), rung)).collect());
         }
         self.kept = kept::write(&mut self.g);
@@ -190,7 +190,7 @@ asks! {
         d.pressed(ok, why, String::new(), Vec::new())
     };
     /// the whole card as issued
-    3 Reset { who: u32 } -> Pressed = |d, who| { let r = kit::kit_preset(&mut d.g, who as f64, KitPreset::Issued); d.pressed(r.ok, r.why, String::new(), Vec::new()) };
+    3 Reset { who: u32 } -> Pressed = |d, who| { let r = kit::kit_reset(&mut d.g, who as f64); d.pressed(r.ok, r.why, String::new(), Vec::new()) };
     /// his card is the copied one
     4 Copy { who: u32 } -> Pressed = |d, who| { let c = kit::kit_shown(&mut d.g, who as f64); d.clip = Some(c); Desk::left(true, String::new()) };
     /// the copied card put on him

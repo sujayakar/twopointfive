@@ -53,8 +53,11 @@ pub struct StartOpts {
     pub dress: bool,
     /// a mission that the address's words ask for and the game refuses is said (`Stood.refused`) and is no stop: for whoever holds the refusals themselves to something (the gate)
     pub may_refuse: bool,
+    /// what the light under the roofs is worked out from is made by the stand. Down: a host that has something else to wait for makes it in slices (game_rules `light_ready`), and a step that
+    /// comes first makes what it wants
+    pub ready: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false, ready: true } } }
 
 pub use game::standing::Host;
 
@@ -77,7 +80,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
     passes::thin_level(g, boxes, &doors);
     passes::bar_level(g, boxes);
-    if g.k.shapes.on { passes::shape_level(g, boxes); }
+    passes::shape_level(g, boxes);
     for &b in boxes.iter() { game::scene_boxes::box_world_add_static(g, b); }
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
@@ -121,11 +124,10 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, no skin
-    g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
+    g.engine.world = game::scene_boxes::box_world_new(&mut g, None);
     game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
-    let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
-    let mut loaded = level::load(&mut g, data, dressing, lived);
+    let mut loaded = level::load(&mut g, data);
     populate_host(&mut g, &mut loaded.boxes);
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     let men = game::standing::Men {
@@ -134,11 +136,10 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
         words: address.as_ref().map(|q| kit.as_ref().map_or_else(|| q.clone(), crate::kit_stage::mission_words)),
         scenario: o.scenario.clone(),
     };
+    // (the seed before the men: what they are dealt is drawn under it)
+    g.dice = game::dice::Draws { seed: o.seed, n: 0.0 };
     // (THE LEVEL AS IT STANDS BEFORE THE MEN: what a restart stands them on again)
     game::savestate::control::keep_level(&mut g, &men);
-    // the die BEFORE the Game is made: its constructor rolls the men's construction dice
-    // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
-    g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
     let why = game::standing::stand_men(&mut g, &men);
     // (a picture of a mission that refused is a picture of nothing, never a stop)
     if let (Some(why), None, false) = (why.as_ref(), kit.as_ref(), o.may_refuse) {
@@ -148,8 +149,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
         }
     }
     if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
-    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
-    game::scene_collision::light_ready(&mut g);
+    if o.ready { game::scene_collision::light_ready(&g, usize::MAX); }
     let host = host_of(&g).expect("the men's lines make the host's rows");
     game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)
     Stood { game: g, host, level: loaded, rig, refused: why }
@@ -163,10 +163,12 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     core::mem::take(&mut g.out)
 }
 /// …the same with what the step told its host still on the game (`g.out`), for a host that draws before it empties the list, as a page does
-pub fn step(g: &mut Game, h: &Host, dt: f64) {
-    game::game::game_update(g, dt, h.input, h.cam, h.canvas);
+pub fn step(g: &mut Game, h: &Host, dt: f64) { step_watched(g, h, dt, &mut |_, _| ()) }
+/// …with `after` told each step of the tick as it ends
+pub fn step_watched(g: &mut Game, h: &Host, dt: f64, after: game::game::Watch) {
+    game::game::game_update_watched(g, dt, h.input, h.cam, h.canvas, after);
     let me = game::game::game_host_seat(g);
-    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+    let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     game::input::input_end_frame(g, h.input);

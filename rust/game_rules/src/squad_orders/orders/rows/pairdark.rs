@@ -16,7 +16,7 @@ pub const ORDER: Row = Row {
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("move there · hold in the dark") }
 
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
-    let at = rows::at(t);
+    let at = t.at();
     let dark = crate::pairorders::pair_orders_dark_spot(g, at);
     let w = squad_orders_reach(g, gd, dark.unwrap_or(at));
     if w.is_some() { return w; }

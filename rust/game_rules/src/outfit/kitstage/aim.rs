@@ -2,7 +2,7 @@
 //! tick toward what the game wrote. A teammate's yaws have the game's own turn weight, at the picture's numbers. And idle life: a man in no row lets his gun wander.
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::types::*;
-use super::walk::{home_of, flat, yaw_to};
+use super::walk::{home_of, flat};
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
@@ -59,7 +59,7 @@ pub(super) fn aim_legs(g: &Game, st: &mut KitStage, b: &mut Beat) -> bool {
 }
 /// his rest direction where he stands: a teammate's place's yaw, Sam's the foot of the door
 pub(super) fn rest_yaw(g: &Game, st: &KitStage, b: &Beat) -> f64 {
-    match b.man { Some(x) => home_of(g, st, x).1, None => yaw_to(g.ch[b.ch_id].pos, st.foot) }
+    match b.man { Some(x) => home_of(g, st, x).1, None => crate::v3::yaw_to(g.ch[b.ch_id].pos, st.foot) }
 }
 /// no quiet row asks more than `max_off` off his rest direction
 pub(super) fn lim(rest: f64, y: f64) -> f64 { rest + clamp(wrap(y - rest), -K.max_off * R, K.max_off * R) }
@@ -99,7 +99,7 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
     if b.man.is_none() && !b.quiet {
         if let Some(sp) = b.spot {
             let from = match b.post { Some(q) => [q[0], 0.0, q[1]], None => p };
-            own(now, &mut st.a.sam_ch, yaw_to(from, sp), K.gun_rate * R, -1.0);
+            own(now, &mut st.a.sam_ch, crate::v3::yaw_to(from, sp), K.gun_rate * R, -1.0);
         }
     }
     let cap = (if b.turn { K.body_rate } else { K.gun_rate }) * R;
@@ -116,7 +116,7 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
                 let face = if b.turn { y } else if a <= K.torso * R { hy } else { hy + m::sign(o) * (a - K.torso * R) };
                 let at: Option<V3> = if b.turn { None } else { Some([p[0] + m::sin(y) * d, b.h_to, p[2] + m::cos(y) * d]) };
                 if let Some(w) = st.a.walks.iter_mut().find(|w| w.man == x) { w.watch = at; w.face = Some(face); }
-                if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), x) {
+                if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
                     let r = &mut g.tab.orders_assignment[a];
                     if r.order == "cover" {
                         r.watch = at; r.face = Some(face);
@@ -126,10 +126,13 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
                 }
             }
             None => {
-                if g.puppet.is_some() {
+                if let Some(mut led) = st.a.led {
                     st.a.sam_h += (b.h_to - st.a.sam_h) * m::min(1.0, dt * 6.0);
                     let h = if b.quiet { st.a.sam_h } else { 1.0 };
-                    g.puppet.as_mut().unwrap().aim = Some([p[0] + m::sin(y) * d, h, p[2] + m::cos(y) * d]);
+                    // (what is thrown goes where his hand is: on its spot, once the can is in it)
+                    let spot = b.spot.filter(|_| b.phase == "throw" && matches!(b.row, Act::ThrowSmoke | Act::ThrowFlash | Act::ThrowFrag));
+                    led.at = Some(spot.unwrap_or([p[0] + m::sin(y) * d, h, p[2] + m::cos(y) * d]));
+                    st.a.led = Some(led);
                 }
             }
         }
@@ -146,7 +149,7 @@ pub(super) fn yaws(g: &mut Game, st: &mut KitStage, dt: f64) {
     if !st.a.sam_at.is_nan() { st.a.aim.want = st.a.sam_at; }
     // (under a loud row's cost ALL of him comes round to the door, at the cost's own rate)
     let t = if !st.a.cost_t.is_nan() { QK.cost.turn } else { 0.0 };
-    if t > 0.0 { st.a.body.want = yaw_to(g.ch[c].pos, st.foot); }
+    if t > 0.0 { st.a.body.want = crate::v3::yaw_to(g.ch[c].pos, st.foot); }
     chan_tick(now, &mut st.a.body, m::max(K.body_rate, t) * R, dt);
     chan_tick(now, &mut st.a.aim, m::max(K.gun_rate, t) * R, dt);
     g.ch[c].body_yaw = st.a.body.v;
@@ -181,7 +184,7 @@ fn scan(g: &Game, st: &mut KitStage, key: Option<GuardId>, i: usize, ok: bool, v
 /// IDLE LIFE: a man who is in no row, on his place, lets his gun wander a few degrees either side of his rest aim: a fixed list of angles and waits, no dice, the game's clock. Nobody's feet move.
 /// Sam at rest is not aimed through his cursor: his rest aim is written to his aim's channel after the step.
 pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
-    let free = g.puppet.is_none() && !st.none;
+    let free = st.a.led.is_none() && !st.none;
     let now = g.time;
     let (b_man, b_team, b_moved, b_sam) = match st.a.beat.as_ref() {
         Some(b) => (b.man, super::acts::row(b.row).team, b.moved.clone(), b.man.is_none()),
@@ -195,7 +198,7 @@ pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
         let p = g.ch[c].pos;
         let was = st.a.scans.iter().find(|s| s.key == Some(x)).map_or(false, |s| s.on);
         let o = wrap(g.ch[c].aim_yaw - hy);
-        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), x);
+        let a = crate::orders::squad_orders_of(&crate::seats::here(g), x);
         let walked = st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| !w.lane && w.k + 1 >= w.pts.len() && now >= w.at);
         let cover = a.map_or(false, |a| g.tab.orders_assignment[a].order == "cover");
         let ok = free && !(busy && (b_man == Some(x) || b_team || b_moved.contains(&x))) && walked && cover && flat(p, hp) <= K.on_slot && !st.a.swaps.iter().any(|w| w.man == x);
@@ -211,7 +214,7 @@ pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
     let rest = !(busy && b_sam && !b_team);
     let ok = free && !(busy && b_sam) && flat(p, st.sam) <= K.on_slot;
     let v = scan(g, st, None, 0, ok, 0.0);
-    let y = yaw_to(p, st.foot) + v;
+    let y = crate::v3::yaw_to(p, st.foot) + v;
     let d = flat(st.foot, [p[0], p[2]]);
     st.a.sam_at = if rest { y } else { f64::NAN };
     if !rest { return; }

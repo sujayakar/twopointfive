@@ -96,10 +96,10 @@ fn the_hut(s: u32, training: Training) -> (Play, GuardId, [f64; 3], [f64; 2]) {
     let w = p.g.dr[d].def.width;
     let men = p.hostiles_by(p.door_at("hut_w"));
     let t = men[0];
-    let inside = game::doors::doors_side(&p.g, d, p.g.ch[p.g.gd[t].ch].pos);
+    let inside = game::doors::doors_side(&p.g, d, p.g.pos_of(t));
     let spot = game::doortools::door_pt(&p.g, d, w / 2.0, 2.4, inside, Some(0.0));
     for (i, &o) in men[1..].iter().enumerate() { p.man_stands(o, [4.8 + (i % 4) as f64 * 0.9, 5.8 + (i / 4) as f64 * 0.9]); p.parked(o); }
-    for &o in p.mates().iter() { p.g.gd[o].dazzled_until = 1e9; }
+    for &o in p.mates().iter() { p.g.cond[p.g.gd[o].ch].blind_until = 1e9; }
     p.man_stands(t, [spot[0], spot[2]]);
     let yard = game::doortools::door_pt(&p.g, d, w / 2.0 + 9.0, 6.0, -inside, Some(0.0));
     p.sam_put([yard[0], yard[2]]);
@@ -107,7 +107,7 @@ fn the_hut(s: u32, training: Training) -> (Play, GuardId, [f64; 3], [f64; 2]) {
     let hole = game::doortools::door_pt(&p.g, d, w / 2.0, p.g.k.he40.standoff + 0.03, -inside, Some(1.0 - p.g.k.frag.lift));
     (p, t, hole, [spot[0], spot[2]])
 }
-fn shell(p: &mut Play, hole: [f64; 3]) { let who = p.g.ch[p.g.pl[p.g.player].ch].id; game::frag::blast(&mut p.g, hole, &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() }); }
+fn shell(p: &mut Play, hole: [f64; 3]) { let who = p.g.player_id(p.g.player); game::frag::blast(&mut p.g, hole, &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() }); }
 
 /// THE RULE: a blast shakes the men it does not hurt, and green men and steady men differently: alone with the lamps burning and the 40 mm on his door a green man is broken; a steady man is not. Alive, either.
 /// A FAILURE MEANS: training counts for nothing, or a blast is only its damage.
@@ -139,7 +139,7 @@ fn a_broken_man_caught_dry_drops_it_and_runs() {
             p.until(4.0, |p| game::morale::rung_now(&mut p.g, t) >= 2.0).unwrap_or_else(|| panic!("seed {s}: the blast did not break him"));
             let d = game::doors::doors_by_name(&p.g, "hut_w").expect("the hut's door");
             let w = p.g.dr[d].def.width;
-            let side = game::doors::doors_side(&p.g, d, p.g.ch[p.g.gd[t].ch].pos);
+            let side = game::doors::doors_side(&p.g, d, p.g.pos_of(t));
             let before = game::doortools::door_pt(&p.g, d, w / 2.0, 0.3, side, Some(0.0));
             p.sam_put([before[0], before[2]]);
             if dry { let gun = p.g.gd[t].weapon; p.g.fa[gun].chamber = 0.0; p.g.fa[gun].mag = Some(0.0); }
@@ -171,17 +171,18 @@ fn a_rifleman_who_has_given_up_runs_no_matter_what_and_drops_both_guns() {
         p.sam_unhurt();
         p.run(0.2);
         let men = p.hostiles();
-        let a = men.iter().copied().find(|&m| p.g.m.weapons.weapons.get(p.g.fa[p.g.gd[m].weapon].def).unwrap().cls != game::weapons::WeaponClass::Pistol).expect("a man with a long gun");
+        let a = men.iter().copied().find(|&m| p.g.weapon(p.g.fa[p.g.gd[m].weapon].def).cls != game::weapons::WeaponClass::Pistol).expect("a man with a long gun");
         for &o in men.iter() { if o != a { p.parked(o); p.man_stands(o, [5.0 + o.0 as f64 % 8.0, 26.0]); } }
         for &o in p.mates().iter() { p.parked(o); }
         p.man_stands(a, [32.0, 4.9]);
-        p.g.gd[a].dazzled_until = 1e9;
+        p.g.cond[p.g.gd[a].ch].blind_until = 1e9;
         p.g.gd[a].heard_up_to = 1e12;
         p.run(0.1);
         p.sam_put([8.6, 13.9]);
         p.run(0.1);
         let door = [33.3, 0.0, 12.0];
-        game::picture::picture_tell(&mut p.g, a, game::picture::Who::Player, door, None);
+        let sam = p.g.pl[p.g.player].ch;
+        game::picture::picture_tell(&mut p.g, a, sam, door, None);
         assert!(game::runner::runner_break(&mut p.g, a), "seed {s}: he would not break");
         let from = p.at(a);
         p.until(25.0, |p| !p.g.guards.contains(&a) || dist(p.at(a), from) > 8.0).unwrap_or_else(|| panic!("seed {s}: 25 s and he has not run: {}", p.why(a)));

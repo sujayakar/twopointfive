@@ -744,7 +744,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     G.skirt('z', 4, 4.3, 16.2, -1); G.skirt('z', 4, 17.3, 23.8, -1);
     G.rubble(1.1, 21.5, 0.4, 5); G.rubble(1.1, 7.2, 0.4, 5); G.rubble(11.6, 27.0, 0.4, 5); G.rubble(31.8, 27.0, 0.4, 6); G.rubble(39.0, 11.2, 0.4, 5);
 
-    // the lived props take their room's name (lived.<room>.<n>): the loader leaves them out with the switch off
+    // the lived props take their room's name (lived.<room>.<n>)
     spans.push([K.props.length, '']);
     for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0], n = 0; i < spans[s + 1][0]; i++, n++) K.props[i].name = `lived.${spans[s][1]}.${K.props[i].kind}${n}`;
   }

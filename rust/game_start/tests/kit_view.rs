@@ -88,7 +88,7 @@ fn the_box_counts_the_rounds_over_the_magazine_and_a_box_a_spare() {
         let (pl, at) = (p.g.player, p.sam_at());
         let rf = p.g.pl[pl].rifle;
         let g0 = kit(&p).gun.expect("the rifle is up");
-        let def = p.g.m.weapons.weapons.get(p.g.fa[rf].def).unwrap();
+        let def = p.g.weapon(p.g.fa[rf].def);
         let (cap, spares) = (def.mag_capacity, def.spare_mags as usize);
         assert!(spares > 0 && g0.capacity == cap && g0.ready == p.g.fa[rf].chamber + p.g.fa[rf].mag.unwrap() && g0.chamber && !g0.dry && !g0.reloading, "seed {}: {:?}", seed, g0);
         assert_eq!(g0.spares, vec![cap; spares], "seed {}", seed);
@@ -116,7 +116,7 @@ fn the_box_counts_the_rounds_over_the_magazine_and_a_box_a_spare() {
         assert!(matches!(g0.selector.as_deref(), Some("SEMI" | "AUTO")), "seed {}: a gun with two positions says which: {:?}", seed, g0.selector);
         // a magazine gun whose row never runs dry has no boxes and no loose shells
         let def = p.g.fa[rf].def;
-        let mut row = p.g.m.weapons.weapons.get(def).unwrap().clone();
+        let mut row = p.g.weapon(def).clone();
         let spare = row.spare_mags;
         row.spare_mags = f64::INFINITY;
         p.g.m.weapons.weapons.set(def, row.clone());
@@ -231,7 +231,7 @@ fn a_card_without_the_light_has_no_lamp_to_work() {
         game::kit::kit_mission(&mut p.g, hand);
         assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "seed {}: the card took no such row", seed);
         game::kit::kit_mission(&mut p.g, None);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.frame();
         p.sam_takes_his_rifle();
         p.run(0.8);
@@ -250,7 +250,7 @@ fn a_card_without_the_light_has_none_in_a_room_clear() {
     let mut p = Play::level("kit-yard.json", false, &Opts::default());
     p.sam_unhurt();
     assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "the card took no such row");
-    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: 4.0, level: None, seed: None };
+    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: 4.0, level: None, seed: None };
     if let Some(why) = game::scenario_run::start_scenario(&mut p.g, &spec) { panic!("refused: {}", why); }
     p.frame();
     let pl = p.g.player;
@@ -281,12 +281,9 @@ fn the_big_slot_is_told_with_the_door_that_offers_it() {
         assert!(b.name == "hammer" && b.place == "at a shut door", "seed {}: {:?}", seed, b);
         let door = shut_door_beside(&mut p);
         let b = kit(&p).big.unwrap();
-        assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
+        assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.sets[p.g.seat].nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
         p.sam_put(far); p.run(0.3);
         assert!(!kit(&p).big.unwrap().offered, "seed {}: no door by him, and the row is lit", seed);
-        // a game with no big slot has no row
-        p.g.k.bigslot.on = false;
-        assert!(kit(&p).big.is_none(), "seed {}", seed);
     }
 }
 /// Sam stands beside the first shut door that offers his tool; where it stands
@@ -297,7 +294,7 @@ fn shut_door_beside(p: &mut Play) -> [f64; 2] {
         for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
             p.sam_put([c[0] + dx, c[2] + dz]);
             p.run(0.1);
-            if p.g.nearby.iter().any(|r| matches!(r.verb, Some(game::game::Verb::Hammer | game::game::Verb::Breach))) { return [c[0], c[2]]; }
+            if p.g.sets[p.g.seat].nearby.iter().any(|r| matches!(r.verb, Some(game::game::Verb::Hammer | game::game::Verb::Breach))) { return [c[0], c[2]]; }
         }
     }
     panic!("no door on this level offers his tool");

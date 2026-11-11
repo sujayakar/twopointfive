@@ -4,7 +4,6 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WallsnapK {
-    #[k(true)] pub on: bool,
     /// ---- the take (seconds = takeBase + takePerM × the glide + takePerTurn × the turn in half turns, within [takeMin, takeMax])
     #[k(0.1)] pub take_base: f64,
     #[k(0.16)] pub take_per_m: f64,
@@ -64,7 +63,6 @@ pub struct WallsnapK {
     /// THE GUN'S SHARE OF THE STEP: leanAlong is measured for his eyes, and the rifle rides a hand's width to his right — round an end on that side it is
     ///  still in the jamb when his head is clear, and its rounds stop in the wood. Up to this much further (m) he steps, by leanGunStep, until the rifle as it
     ///  would lie from there and the first leanClearM of its round's way are clear; never less again until he is back in.
-    ///  0 = leanAlong whichever side the end is on, as it was (?noleangun = 0)
     #[k(0.42)] pub lean_gun: f64,
     #[k(0.06)] pub lean_gun_step: f64,
     /// the cursor must have stayed there this long before he steps out / back (s); once out he stays at least minOut, and afterShot after any round (s)

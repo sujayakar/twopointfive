@@ -19,7 +19,7 @@ fn drawing_a_game_is_no_part_of_it() {
         (0..240).map(|k| {
             if k == 60 { let at = p.sam_at(); game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Frag, [at[0] + 3.0, 0.0, at[1]]); }
             p.g.god_mode = true;
-            p.frame_shown(|p| if draw { let focus = p.g.aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
+            p.frame_shown(|p| if draw { let focus = p.g.sets[p.g.seat].aim_point; d.take(&p.g, ALL); if k % 60 == 0 { game_draw::traffic::map(&p.g); } d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
             p.words()
         }).collect::<Vec<_>>()
     };
@@ -42,10 +42,8 @@ fn watching_a_run_is_no_part_of_it() {
             p.frame();
             if watch {
                 d.view_as(true, Some(true));
-                game::scene_collision::stands(&mut p.g);
                 d.watch(&p.g);
-                game::scene_collision::unstand(&mut p.g);
-                let focus = p.g.aim_point;
+                let focus = p.g.sets[p.g.seat].aim_point;
                 d.take(&p.g, ALL);
                 d.frame(&p.g, 1.0, focus);
                 let (men, own) = (d.men.men.len(), d.boxes.own_ids().count());
@@ -71,8 +69,8 @@ fn a_frame_between_two_ticks_stands_between_them() {
     let mut d = Drawn::default();
     p.key_down("KeyW");
     p.run(0.5);
-    let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
-    let focus = p.g.aim_point;
+    let id = p.g.player_id(p.g.player) as u32;
+    let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     d.frame(&p.g, 1.0, focus);
     let before = man(&d, id).expect("Sam is drawn");
@@ -93,8 +91,8 @@ fn nothing_is_drawn_through_a_cut() {
     let mut d = Drawn::default();
     p.key_down("KeyW");
     p.run(0.5);
-    let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
-    let focus = p.g.aim_point;
+    let id = p.g.player_id(p.g.player) as u32;
+    let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     p.frame_shown(|p| { d.cut(); d.take(&p.g, ALL); d.frame(&p.g, 1.0, focus); });
     let whole = man(&d, id).unwrap();
@@ -176,7 +174,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
     let late = agree(&d, &p, "eight seconds in");
     assert!(late > early, "the scene: the cloud was to grow ({early} of 60 lines hidden, then {late})");
     let mut again = |p: &mut Play, asked: bool| {
-        p.g = then.stands(p.g.sim);
+        p.g = then.laid(p.g.sim);
         d.cut();
         if asked {
             assert!(d.smoke.unsaid());
@@ -210,7 +208,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     assert_eq!(first.len(), 1, "the can's own event");
     let began = game::savestate::control::Moment::of(&p.g);
     // (the tick that began it, put back: as its host keeps it, with nothing left to say)
-    p.g = began.stands(p.g.sim);
+    p.g = began.laid(p.g.sim);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -220,7 +218,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let then = game::savestate::control::Moment::of(&p.g);
     let of = lets(&p);
     p.run(3.0);
-    p.g = then.stands(p.g.sim);
+    p.g = then.laid(p.g.sim);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -259,7 +257,7 @@ fn what_goes_on_is_heard_as_it_stands() {
     step(&mut p, &mut d, 32 * 60);
     assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
     assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
-    p.g = then.stands(p.g.sim);
+    p.g = then.laid(p.g.sim);
     d.cut();
     d.take(&p.g, want::events);
     assert_eq!(heard(&d, "smokeHiss"), at, "put back, and the can is not heard as it stood");
@@ -303,7 +301,7 @@ fn the_smoke_keeps_its_color() {
     p.run(6.0);
     d.take(&p.g, want::smoke);
     assert!(dyes(&d).iter().filter(|w| **w != 0).count() > mixed.iter().filter(|w| **w != 0).count(), "the smoke that spread took its color along: {:x?}", dyes(&d));
-    p.g = then.stands(p.g.sim);
+    p.g = then.laid(p.g.sim);
     d.cut();
     game::sense::smoke_ways(&mut p.g);
     d.take(&p.g, want::smoke);

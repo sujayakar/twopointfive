@@ -31,7 +31,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | file | what it does |
 |---|---|
-| `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
+| `rust/sim/src/layers/` | the layers themselves, a file a family, each pose written in place |
 | `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
 | `rust/sim/src/roles.rs` | the named nodes of a rig a layer reads (its numbers are the game's own tables, by their names) |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
@@ -61,8 +61,10 @@ goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stan
 thigh, shin and foot. `life_layer`'s standing lock and `run_plant` stay under it, because the layers above are posed over their legs. No address word; never seen on a GPU.
 A round and the cursor's ray meet a leg where it is drawn, and a man falls from where his legs are: a change of play, `tests/poses.rs` its check, `missions` before and after.
 
-**A layer** is a function of `layers.rs` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only this
-call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
+**A layer** is a function of `rust/sim/src/layers/` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only
+this call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
+A long one reads as a list of its stages, each a function under it; what a stage hands on to the next is a struct over it (`Throw`, `Feet`). `anim_update_standing` is one too
+(`character/stages.rs`). Vectors are the game's own (`v3`, `quat`).
 
 **A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
 a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
@@ -78,8 +80,8 @@ a held man. Sam and civilians have no turn.
 **The long gun.** A set of springs toward one of `LongStance` (`long_targets`). `anim_long_body` sets the trunk and `anim_long_arms` puts both hands on the grip. A pistol's
 reload is its clip. A long gun plays none: `anim_reload_carry` brings the gun and head round and `anim_reload_arm` works the support hand, by `reload_at` where the game deals it.
 
-**Reactions.** `mv_pre`, `mv_post_body`, `anim_mv_arms` and their neighbours: the carry, recoil, flinch, startle, hit, dazzle, fold, hurt and shaken. `k.moves` has a switch
-for each part (`mv_on`); `k.mv` and `mv2` have the numbers.
+**Reactions.** `mv_pre`, `mv_post_body`, `anim_mv_arms` and their neighbours: the carry, recoil, flinch, startle, hit, dazzle, fold, hurt and shaken. `k.mv` and `mv2`
+have the numbers.
 
 **How he falls.** `character_ragdollize` seeds the points from his pose and his joints' last speed, capped so that a pop in a clip is not momentum. A loud death shoves him one of
 three ways by his own die (`draw_body`). A quiet one with `fall_as` set follows `character_fall_guide`: pins move along a path for each `FallStyle`, and anything else that pins
@@ -104,9 +106,8 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
   starts from `character_want_body`.
 - **A re-bake takes nothing:** no one-frame flag (`kick_hit`), no carry word (`swap_clock`).
 - **No die but his own.** A fall's die is `draw_body`; an outfit and a height come from his id (`hash01`).
-- **The crouch walk is carried level.** "the crouch walk animation looks like waddling" (`steady_layer`, `k.moves.steady`), by the crouch walk's share of the pose alone. A value
-  over 1.5 also raises the pelvis, which shows more of him over cover, so that is not the default.
-- **The rifle sprint stays on the gun.** "sprint animation still has some waddling" (`k.moves.steady_run`), by the sprint's share alone.
+- **The crouch walk is carried level.** "the crouch walk animation looks like waddling" (`steady_layer`, `k.mv.steady`), by the crouch walk's share of the pose alone.
+- **The rifle sprint stays on the gun.** "sprint animation still has some waddling" (`long_body`), by the sprint's share alone.
 - **Run arms come in.** "sprint looks dainty when viewed from the back, maybe should have arms closer in?" (`run_arms`, `k.runarms`).
 - **Sam sprints a pistol at low ready.** "sprinting with pistol animation is weird, should keep two hands on it and at low ready, like rifle sprinting animation" (`run_ready`).
 - **A man who has run breathes hard.** "characters should breathe more forcefully when sprinting (e.g. on snow levels)" (`k.hardbreath`). Effort is ground speed: no stamina exists.
@@ -114,19 +115,18 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
   one (`kit_sling_front`, `k.kitanim.sling`).
 - **A long gun's reload runs the clip's clock and plays no clip,** so whatever asks `anim_reloading` hears the same.
 - **Everyone favors his right when hurt** (`hurt_side`). Only a blast hurts a man (`condition_hurt`). A round kills or knocks out: there are no wounds.
-- **Off by default:** `k.moves.entry`, a teammate's muzzle dipped past a friend's back. It moves the bore, the rounds and the weapon light.
 - **Stature is looks only.** Bones, capsules and boxes stay where the game has them. A player's man is 1, and two bodies that must meet are both 1 (`paired`).
 - **Slots are the contract with the meshes:** the names of `CHAR_SLOTS`, whose order never changes. Another material name stops the load. No file has a texture.
 - **Limits.** 64 joints a man (`JOINT_STRIDE`), 16 men drawn (`MOST`), 8 with mesh shadows (`MESH_MAX_CHARS`), 32 parts to a cast.
 
 ## To change it
 
-- **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
-  `?knob.moves.steady=0` turns one. Tables with no panel stand in `rust/game_types/src/character/types.rs`: statics (`SNEAK`, `CREEP`, `LIFE`, `MV2`) and functions (`stances`,
+- **A number:** `knobs/character.rs` (`hold`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
+  `?knob.mv.steady.roll=0` turns one. Tables with no panel stand in `rust/game_types/src/character/types.rs`: statics (`SNEAK`, `CREEP`, `LIFE`, `MV2`) and functions (`stances`,
   `blend`, `long_reload`).
 - **A number for a layer:** a field of its knob table, read as `tune.kit.close.drift`; one nobody turns is in a static of `character/types.rs` (`LIFE`, `CREEP`).
-- **A new layer:** a `pub fn` in `layers.rs` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing` where it should write over what is
-  under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
+- **A new layer:** a `pub fn` in its family's file of `rust/sim/src/layers/` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing`
+  where it should write over what is under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.
 - **A new clip:** put the animation in `AnimationLibrary_Godot_Standard.gltf`. `gltf.rs` takes every animation by name. For a whole-body clip a rule sets `anim.act` to an `AnimAct`
   with its name. In a layer, call `sample_clip` with `clip_of` and blend under a mask. A clip the game cannot do without goes in `need` in `anim_new`, which panics without it.
@@ -162,5 +162,5 @@ No script of `tools/qa/pages.ts` is this system's own.
 No check looks at a man. A pose is judged by its numbers, by offline renders (`tools/chars/render_cast.py`, the clips and not the layers) or by playing. How the limp reads at
 game size and how the falls look in motion are unseen on a GPU.
 
-Known faults: `k.turn.on` is read by nothing, and `k.moves.on` reaches `layers.rs` but not `mv_on`, so neither switches its whole pass off. The sections of `tools/chars/README.md` after
+Known faults: the sections of `tools/chars/README.md` after
 its file contract name checks that are gone. On the meshes, the shawl lies close as a yoke, short sleeves have a squared cap, and a shirt's hem does not swing.

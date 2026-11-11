@@ -6,15 +6,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FootBook {
     pub shoves: f64,
-    pub stats: crate::debris::FootBookStats,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct FootBookStats {
-    pub kicked: f64,
-    pub off_man: f64,
-    pub walled: f64,
-    pub gave_up: f64,
+    pub stats: crate::debris::DebrisFeetStats,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -22,7 +14,7 @@ pub struct Debris {
     pub list: Vec<DebrisChunkId>,
     #[is(1.0)] pub serial: f64,
     pub frame: f64,
-    #[is(crate::debris::DebrisStats { spawned: 0.0, refused: 0.0, evicted: 0.0, landed: 0.0, peak_live: 0.0, peak_moving: 0.0, kicked: 0.0, told: 0.0 })] pub stats: crate::debris::DebrisStats,
+    #[is(crate::debris::DebrisStats { spawned: 0.0, refused: 0.0, evicted: 0.0, landed: 0.0, told: 0.0 })] pub stats: crate::debris::DebrisStats,
     pub fling: Option<V3>,
     #[is(1.0)] pub serial0: f64,
     pub impulses: f64,
@@ -38,9 +30,6 @@ pub struct DebrisStats {
     pub refused: f64,
     pub evicted: f64,
     pub landed: f64,
-    pub peak_live: f64,
-    pub peak_moving: f64,
-    pub kicked: f64,
     pub told: f64,
 }
 

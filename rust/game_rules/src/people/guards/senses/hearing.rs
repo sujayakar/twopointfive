@@ -95,13 +95,13 @@ fn light_out(g: &mut Game, gd: GuardId, s: &Sound) {
     let &Sound { e, at_e, d_straight, placed, .. } = s;
     let c = g.gd[gd].ch;
     if d_straight < 10.0 && g.gd[gd].awareness < 0.4 && light_out_seen(g, gd, LightOutSeenE { pos: e.pos, from: e.from }) {
-        if e.cause == Some(crate::game::GameEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
+        if e.cause == Some(crate::lighting::LightEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
             let src: V3 = match e.from {
                 Some(f) => f,
                 None => [e.pos[0], 2.4, e.pos[2]],
             };
             let pos = g.ch[c].pos;
-            let eye = crate::guards::seeing::bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+            let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
             let to = v3::sub(src, eye);
             let l = v3::len(to);
             let short_of: V3 = if l > 0.6 { v3::mad(eye, to, (l - 0.4) / l) } else { src };

@@ -1,5 +1,3 @@
-pub use ::game_types::noshove::types;
-pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -8,8 +6,8 @@ use crate::v3::{self, Quat, V3};
 
 /// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's.
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() { return false; }
-    match crate::orders::squad_orders_of(g, seat, gd) {
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
+    match crate::orders::squad_orders_of(seat, gd) {
         Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
     }
@@ -80,7 +78,6 @@ pub fn no_shove_own(g: &mut Game, dx: f64, dz: f64) -> Option<[f64; 2]> {
     let (sx, sz) = (g.pl[p].shoved[0], g.pl[p].shoved[1]);
     let sl = m::hyp2(sx, sz);
     if sl < 1e-9 { return Some([dx, dz]); }
-    g.stats.noshove.not_walked += 1;
     let c = g.pl[p].ch;
     Some(own_step(g.ch[c].pos, sx, sz, sl, g.pl[p].shoved_from))
 }
@@ -114,7 +111,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
         g.ch[c].pos[0] += ux * step;
         g.ch[c].pos[2] += uz * step;
         settle(g, c, s, l1, [x1, z1]);
-        g.stats.noshove.back += 1;
         return false;
     }
     // closing on him inside the ring. A corner of his way under the player is not walked to: the one after it, where that is a straight walk
@@ -141,7 +137,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     let ux = if l0 > 1e-4 { bx / l0 } else { -fx };
     let uz = if l0 > 1e-4 { bz / l0 } else { -fz };
     if let Some(q) = goal {
-        if m::hyp2(q[0] - s[0], q[2] - s[2]) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
+        if v3::dist_xz(q, s) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
     }
     if let Some(q) = corner {
         if under(q, s, ring) { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // a corner under the player that he cannot cut: he waits for it
@@ -152,7 +148,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     if !room(g, c, s, fx, fz, ring, side) {
         side = if room(g, c, s, fx, fz, ring, -side) { -side } else { 0.0 };
     }
-    if side == 0.0 { g.stats.noshove.through += 1; return false; }   // no room either way: he squeezes past, the player unmoved
+    if side == 0.0 {  return false; }   // no room either way: he squeezes past, the player unmoved
     // round: this frame's stride, turned off his line toward that side by how squarely the player is in front of him, and never inside the ring
     let ahead = m::max(0.0, -(ux * fx + uz * fz));
     let dx = fx + fz * side * ahead;
@@ -166,7 +162,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     }
     g.ch[c].pos[0] = s[0] + qx;
     g.ch[c].pos[2] = s[2] + qz;
-    g.stats.noshove.round += 1;
     settle(g, c, s, rad, [x1, z1]);   // (the walls eat the turn: he squeezes past after all)
     false
 }
@@ -178,7 +173,7 @@ fn script_goal(g: &Game, gd: GuardId) -> Option<V3> {
 
 /// The closure `under`: is this point of his way under the player.
 fn under(q: V3, s: V3, ring: f64) -> bool {
-    m::hyp2(q[0] - s[0], q[2] - s[2]) < ring + 0.05
+    v3::dist_xz(q, s) < ring + 0.05
 }
 
 /// The closure `settle`: the walls have their say; left nearer the player than `min` by them, he is put at `back` (true).
@@ -186,7 +181,7 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
     let (mut p, r) = (g.ch[c].pos, g.ch[c].radius);
     crate::scene_collision::collide_circle(g, &mut p, r, 0.2, 1.5, None);
     g.ch[c].pos = p;
-    if m::hyp2(p[0] - s[0], p[2] - s[2]) >= min - 1e-6 { return false; }
+    if v3::dist_xz(p, s) >= min - 1e-6 { return false; }
     g.ch[c].pos[0] = back[0];
     g.ch[c].pos[2] = back[1];
     true
@@ -195,20 +190,19 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
 /// The closure `short`: held off, straight back out to where he may be; his legs stop (a man walking on the spot wakes followPath's stuck side-step). Always true.
 fn short(g: &mut Game, gd: GuardId, c: CharId, s: V3, rad: f64, ux: f64, uz: f64, x0: f64, z0: f64) -> bool {
     let p = g.ch[c].pos;
-    let l = m::hyp2(p[0] - s[0], p[2] - s[2]);
+    let l = v3::dist_xz(p, s);
     let vx = if l > 1e-4 { (p[0] - s[0]) / l } else { ux };
     let vz = if l > 1e-4 { (p[2] - s[2]) / l } else { uz };
     g.ch[c].pos[0] = s[0] + vx * rad;
     g.ch[c].pos[2] = s[2] + vz * rad;
     settle(g, c, s, rad, [x0, z0]);
-    g.stats.noshove.short += 1;
     g.gd[gd].speed = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
     true
 }
 
 /// The closure `room`: has his body the room to pass the player on this side.
-fn room(g: &mut Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
+fn room(g: &Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
     let hit = crate::scene_collision::raycast(g, [s[0], 0.45, s[2]], [fz * side, 0.0, -fx * side], 1.5);
     let t = match hit { Some(h) => h.t, None => 1.5 };
     t >= ring + g.ch[c].radius - 0.05

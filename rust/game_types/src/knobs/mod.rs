@@ -11,7 +11,6 @@ mod air_sim; pub use air_sim::*;
 mod attention; pub use attention::*;
 mod autopilot; pub use autopilot::*;
 mod autoreload; pub use autoreload::*;
-mod backkey; pub use backkey::*;
 mod break_table; pub use break_table::*;
 mod calmtorch; pub use calmtorch::*;
 mod carlamps; pub use carlamps::*;
@@ -78,8 +77,6 @@ mod laststand; pub use laststand::*;
 mod launcher; pub use launcher::*;
 mod lighting; pub use lighting::*;
 mod lightswitch; pub use lightswitch::*;
-mod lived; pub use lived::*;
-mod look; pub use look::*;
 mod morale; pub use morale::*;
 mod needs; pub use needs::*;
 mod netquiet; pub use netquiet::*;
@@ -102,7 +99,6 @@ mod quietfog; pub use quietfog::*;
 mod rails; pub use rails::*;
 mod rearwatch; pub use rearwatch::*;
 mod rescue; pub use rescue::*;
-mod rescuecheck; pub use rescuecheck::*;
 mod rescueend; pub use rescueend::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
@@ -115,12 +111,10 @@ mod savestate; pub use savestate::*;
 mod seats; pub use seats::*;
 mod seenwalk; pub use seenwalk::*;
 mod sense; pub use sense::*;
-mod shapes; pub use shapes::*;
 mod shards; pub use shards::*;
 mod shotgun; pub use shotgun::*;
 mod showwhy; pub use showwhy::*;
 mod silent; pub use silent::*;
-mod skeleton; pub use skeleton::*;
 mod slotsetup; pub use slotsetup::*;
 mod smokebreak; pub use smokebreak::*;
 mod sneak; pub use sneak::*;
@@ -222,7 +216,6 @@ pub struct Knobs {
     pub badge: BadgeK,
     pub ckpt: CkptK,
     pub fog: FogK,
-    pub moves: MovesK,
     pub mv: MvK,
     pub turn: TurnK,
     pub doorpath: DoorpathK,
@@ -290,7 +283,6 @@ pub struct Knobs {
     pub autopilot: AutopilotK,
     pub cmdring: CmdringK,
     pub torch: TorchK,
-    pub backkey: BackkeyK,
     pub morale: MoraleK,
     pub condition: ConditionK,
     pub inhand: InhandK,
@@ -306,11 +298,9 @@ pub struct Knobs {
     pub powerout: PoweroutK,
     pub squaddeal: SquaddealK,
     pub stayask: StayaskK,
-    pub rescuecheck: RescuecheckK,
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflush: RescueflushK,
-    pub posemath: PosemathK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,
     pub seats: SeatsK,
@@ -324,10 +314,7 @@ pub struct Knobs {
     pub squadnet: SquadnetK,
     pub takedown: TakedownK,
     pub stealthpose: StealthposeK,
-    pub look: LookK,
-    pub lived: LivedK,
     pub env: EnvK,
-    pub shapes: ShapesK,
     pub flash: FlashK,
     pub pace: PaceK,
     pub lights: LightsK,
@@ -370,6 +357,5 @@ pub struct Knobs {
     pub seenwalk: SeenwalkK,
     pub holdfire: HoldfireK,
     pub slots: SlotsK,
-    pub destruction: DestructionK,
     pub bigslot: BigslotK,
 }

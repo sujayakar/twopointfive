@@ -19,39 +19,39 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
     use crate::doors::DoorSound;
     if let Some(pl) = crate::seats::man_by_id(g, e.who) { g.pl[pl].noise = m::max(g.pl[pl].noise, e.level); }
     match e.sound {
-        DoorSound::Creak => audio_play(g, "doorCreak", e.pos, 0.5 + 0.5 * e.level / 0.3),
-        DoorSound::Bang => audio_play(g, "doorBang", e.pos, 0.9),
-        DoorSound::Latch => audio_play(g, "doorLatch", e.pos, 0.6),
+        DoorSound::Creak => crate::audio_iface::play_at(g, "doorCreak", e.pos, 0.5 + 0.5 * e.level / 0.3),
+        DoorSound::Bang => crate::audio_iface::play_at(g, "doorBang", e.pos, 0.9),
+        DoorSound::Latch => crate::audio_iface::play_at(g, "doorLatch", e.pos, 0.6),
         DoorSound::Bash => {
             // (under 1: a leaf ripped round by its handle at a run, the same slam, lighter and shorter)
-            if e.level < 1.0 { audio_play_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { audio_play(g, "doorBash", e.pos, 0.9); }
+            if e.level < 1.0 { crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { crate::audio_iface::play_at(g, "doorBash", e.pos, 0.9); }
         }
-        DoorSound::Rattle => audio_play(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
-        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
-        DoorSound::Unlock => audio_play(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
+        DoorSound::Rattle => crate::audio_iface::play_at(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
+        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; crate::audio_iface::play_at_rate(g, "lockPick", e.pos, 0.5, rate); }
+        DoorSound::Unlock => crate::audio_iface::play_at(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
         DoorSound::Kick => {
-            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.9);
-            audio_play(g, "lockBreak", e.pos, 0.95);
+            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.9);
+            crate::audio_iface::play_at(g, "lockBreak", e.pos, 0.95);
             let kicker = match crate::seats::man_by_id(g, e.who) {
                 Some(p) => Some(g.pl[p].ch),
                 None => g.guards.iter().map(|&x| g.gd[x].ch).find(|&c| g.ch[c].id == e.who),
             };
             let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
             crate::particle_fx::kick_dust_fx(g, e.door, from);
-            if crate::doors::door_lock_broken(g, e.door) {
+            if g.dr[e.door].leaf.lock_broken {
                 let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
                 crate::particle_fx::lock_splinter_fx(g, e.door, from);
             }
-            crate::destruction::destruction_thud(g, e.pos, Some(1.2), Some(e.who));
+            crate::destruction::destruction_thud(g, e.pos, Some(1.2));
         }
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
-            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.8);
+            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.8);
         }
         DoorSound::Clang => {
             // a boot on the steel stair door: the ring of it, no keep to splinter
-            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.7);
-            audio_play_rate(g, "stairDoor", e.pos, 0.55, 1.3);
+            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.7);
+            crate::audio_iface::play_at_rate(g, "stairDoor", e.pos, 0.55, 1.3);
         }
     }
     // heard: a kick is its own kind, floor-wide; everything else a 'door' noise with a level, placed at the leaf
@@ -79,13 +79,13 @@ pub(super) fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
         i -= 1;
         let (p, rx, rz) = { let r = &g.rolls[i]; (r.p, r.x, r.z) };
         let here = g.props.props.contains(&p);
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut v = if here && dt > 0.0 { m::hyp2(px - rx, pz - rz) / dt } else { 0.0 };
         if !v.is_finite() { v = 0.0; }
         g.rolls[i].x = px;
         g.rolls[i].z = pz;
         g.rolls[i].k = m::min(1.0, v / voice.full_v);
-        let rolling = crate::props::prop_rolling(g, p);
+        let rolling = g.tab.props_prop[p].rolling;
         if here && rolling && v > voice.min_v {
             g.rolls[i].move_t = g.time;
             if !js::truthy(g.rolls[i].voice) {
@@ -112,10 +112,10 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     let (thud_rate, scrape_rate) = { let t = &g.tab.props_prop[e.prop].tune; (t.thud_rate, t.scrape_rate) };
     let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
-        audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
-        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
+        crate::audio_iface::play_at_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
+        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed));
     } else if !e.rolling {
-        audio_play_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
+        crate::audio_iface::play_at_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
     }
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent {
@@ -128,31 +128,6 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
         serial,
         ..crate::game::GameEvent::default()
     });
-}
-
-/// A fresh shift: every system's memory of the old one goes, the response team first.
-pub(super) fn game_reset_guards(g: &mut crate::game::Game) {
-    crate::powerout::power_out_reset(g);
-    crate::rescuecheck::rescue_check_reset(g);
-    crate::doze::doze_reset(g, None);
-    crate::seats::each_seat(g, &mut |v: &mut Game| {
-        crate::close::close_reset(v);
-        crate::stalk::stalk_reset(v);
-    });
-    crate::roomfight::room_fight_reset(g);
-    crate::cover::cover_reset(g);
-    crate::entrypoints::entry_points_reset(g);
-    crate::cleared::cleared_rooms_reset(g);
-    crate::doorpath::door_path_reset(g);
-    crate::wallreact::wall_react_reset_2(g);
-    crate::coverfire::coverfire_reset(g);
-    crate::doorforce::door_force_reset(g);
-    crate::qrf::reset_qrf(g);
-    crate::guards::reset_guards(g);
-    crate::civilians::reset_civilians(g);
-    crate::tactics::tactics_reset(g);
-    crate::lanes::lanes_reset(g);
-    crate::picture::picture_reset(g);
 }
 
 /// Panel: one level up by hand.
@@ -178,11 +153,11 @@ fn lend_rnd<'a>(rnd: &'a mut Option<&mut dyn FnMut(&mut Game) -> f64>) -> Option
 pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     let mut rnd = rnd;
     let me = g.player;
-    if g.pl[me].down || g.gd[gd].state == crate::game::GuardState::Dead || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
-    let held = match &g.pl[me].holding { Some(h) => Some(h.g), None => None };
+    if crate::condition::down(g, g.pl[me].ch) || crate::condition::down(g, g.gd[gd].ch) || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
+    let held = match g.pl[me].holding() { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf
-        let (a, b) = (g.ch[g.pl[me].ch].pos, g.ch[g.gd[gd].ch].pos);
+        let (a, b) = (g.player_pos(me), g.pos_of(gd));
         if v3::dist_xz(a, b) > crate::dialogue::INTERROGATE_REACH || crate::scene_collision::solid_blocked(g, [a[0], 1.0, a[2]], [b[0], 1.0, b[2]], None) { return None; }
     }
     let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
@@ -195,7 +170,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     if pick.kind == Some(crate::dialogue::IntelKind::Door) {
         crate::player::take_key(g, gd, lend_rnd(&mut rnd));
     } else if pick.kind == Some(crate::dialogue::IntelKind::Code) {
-        let at = g.ch[g.gd[gd].ch].pos;
+        let at = g.pos_of(gd);
         if let Some(k) = crate::devices::devices_pad_near(g, at) {
             let _ = crate::devices::learn_code(g, &k.def.name, crate::devices::LearnCodeHow::Told, Some(gd));
         }
@@ -204,22 +179,9 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
 }
 
 /// Let go of the man in Sam's arm at once, no shove.
-pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldWhy) {
-    let why = match why {
-        crate::game::GameFreeHeldWhy::Shot => crate::player::FreeHeldWhy::Shot,
-        crate::game::GameFreeHeldWhy::Cancel => crate::player::FreeHeldWhy::Cancel,
-    };
+pub fn game_free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
+    let why = why;
     crate::player::free_held(g, why);
-}
-
-/// `g.audio.play(name, pos, gain)`.
-fn audio_play(g: &mut Game, name: &str, pos: V3, gain: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
-}
-
-/// `g.audio.play(name, pos, gain, { rate })`.
-fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
 // ------------------------------------------------------------ the panel's handles and small doors
@@ -241,9 +203,9 @@ pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::t
 pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
     if hit > 1.4 {
-        let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
+        let at = g.ch[c_2].bone(crate::character::Bone::Spine2).unwrap_or(g.ch[c_2].pos);
         crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
-        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15), None);
+        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }
 }
 
@@ -267,56 +229,19 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     for s in seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].pending_throw = None;
-        g.pl[pl].throw_held = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[s].hand.throw_preview = None;
     }
 }
 
 /// Was this fixture's switch on in the level as authored.
-pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { g.tab.fixture[t].authored }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.
 pub fn game_stand_lights(g: &mut crate::game::Game) {
     let list: Vec<LightId> = g.engine.lights.lights.clone();
     let targets: Vec<FixtureId> = g.targets.clone();
-    let beacons: Vec<crate::sim_lightshome::BeaconFact> = g.beacons.iter().map(|b| crate::sim_lightshome::BeaconFact { light: b.light, phase: b.phase, target: b.target }).collect();
-    let cones: Vec<crate::sim_lightshome::LightHomeStandConesItem> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; crate::sim_lightshome::LightHomeStandConesItem { light: r.cone, target: r.target, slot: r.slot } }).collect();
-    crate::sim_lightshome::light_home_stand(g, &list, &targets, &beacons, &cones);
-}
-
-/// The level as authored: every switch back, every door, the marks, the panes, the debris.
-fn game_reset_level_state(g: &mut crate::game::Game) {
-    let targets = g.targets.clone();
-    for t in targets {
-        let a = crate::sim_lightshome::fixture_authored(g, t);
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().on, Some(t), Some(if a { 1.0 } else { 0.0 }), None, None, None);
-    }
-    let doors = g.doors.list.clone();
-    for d in doors { crate::doors::door_reset(g, d); }
-    crate::render_decals::decals_clear(g);
-    crate::glass::reset_glass(g);
-    crate::glasspen::reset_glass_pen(g);
-    crate::winbars::reset_bars(g);
-    crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
-    crate::destruction::destruction_reset(g);
-    crate::shards::glass_shards_reset(g);
-    crate::snow_blast::clear_snow_blast(g);
-    crate::snow_marks::clear_snow_marks(g);
-    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
-    crate::hours::hour_after_reset(g);
-    crate::air_dust::air_dust_reset(g);
-}
-
-/// The clocks the last try left running, as a new Game has them.
-fn game_clean_slate(g: &mut crate::game::Game) {
-    g.alarm.raised_at = -100.0;
-    g.alarm.pos = [0.0, 0.0, 0.0];
-    let seats = g.seats.clone();
-    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.torch_on_t = -100.0); }
-    g.last_sting_t = -100.0;
-    crate::gunwall::gun_wall_fresh(g);
-    crate::seats::each_seat(g, &mut |v: &mut Game| crate::guards::ground_fresh(v));
-    crate::wind::wind_fresh(g);
+    let cones: Vec<(LightId, FixtureId)> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; (r.cone, r.target) }).collect();
+    crate::fixtures::light_home_stand(g, &list, &targets, &cones);
 }
 
 /// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.
@@ -333,93 +258,19 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
         let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
         cut_lens(g, lens, p);
     }
-    g.stats.cleanrestart.cuts += 1;
 }
 
-/// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.
-pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    crate::math_dice::use_dice(g);
-    crate::quiet::quiet_mission_current(g);
-    g.stats.cleanrestart.restarts += 1;
-    crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
-    let seats = g.seats.clone();
-    for &s in &seats {
-        let old = crate::cmd::seat_man(g, s);
-        let light = g.pl[old].light;
-        let c = g.pl[old].ch;
-        crate::sim_men_store::man_leaves(g, c);   // (his row is free for the fresh man)
-        let spawn = g.level.player_spawn;
-        let index = g.tab.cmd_seat[s].index;
-        let at = crate::seats::spot_beside(g, spawn, index);
-        let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
-        crate::seats::with_seat(g, s, &mut |g| {
-            g.player = pl;
-            crate::seats::view_rekey(g, old, pl);   // (what the modules keep for this seat's view stays the seat's: seats.ts SEAT_TABLES)
-            g.pl[pl].light = light;
-            crate::kit::kit_fresh(g);
-            let c = g.pl[pl].ch;
-            crate::character::character_update(g, c, 0.0);   // pose and bones exist before this frame's capsule upload
-        });
-    }
-    crate::cues::cues_reset(g);
-    crate::squadnet::squad_net_reset(g);
-    crate::seats::each_seat(g, &mut |v: &mut Game| { crate::holdfire::hold_fire_reset(v); crate::showwhy::reset_show_why(v); });
-    crate::dialogue::ambient_restart(g);
-    crate::fogofwar::fog_of_war_reset(g);
-    crate::game::game_reset_guards(g);
-    if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
-    game_reset_level_state(g);
-    crate::lightswitch::light_switch_reset(g);
-    crate::props::prop_system_reset(g);
-    for r in g.rolls.iter_mut() { r.voice = 0.0; }
-    g.rolls.clear();
-    g.events.clear();
-    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.use_door = None); }
-    g.called_in = false;
-    g.stood_down = false;
-    // anything still in the air or venting belongs to the encounter that just ended
-    game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    crate::sense::smoke_renew(g);
-    g.engine.host_books = None;
-    for &s in &seats {
-        crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
-    }
-    game_clean_slate(g);
-    crate::devices::devices_reset(g);
-    let t = g.time;
-    g.mission = crate::game::new_mission(t);
-    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
-    g.chronicle = crate::chronicle::Chronicle::blank();
-    crate::director::director_on_encounter_restart(g);
-    crate::nightbreach::night_breach_on_encounter_restart(g);
-    crate::rescue::rescue_on_encounter_restart(g);
-    crate::quiet::quiet_mission_on_encounter_restart(g);
-    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
-    crate::fire::update_fire(g, 0.0);
-}
-
-pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
-    let cause = match cause {
-        crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,
-        crate::game::GameSetBlackoutCause::Ocp => crate::lighting::SetBlackoutCause::Ocp,
-        crate::game::GameSetBlackoutCause::Debug => crate::lighting::SetBlackoutCause::Debug,
-        crate::game::GameSetBlackoutCause::Hand => crate::lighting::SetBlackoutCause::Hand,
-    };
+///
+pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::lighting::SetBlackoutCause) {
+    let cause = cause;
     crate::lighting::set_blackout(g, seconds, cause)
 }
 
 pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
 
 /// `cause` defaults to 'shot' here, as the TypeScript's parameter does.
-pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) {
-    let cause = match cause.unwrap_or(crate::game::GameLightEventCause::Shot) {
-        crate::game::GameLightEventCause::Shot => crate::lighting::LightEventCause::Shot,
-        crate::game::GameLightEventCause::Ocp => crate::lighting::LightEventCause::Ocp,
-    };
+pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::lighting::LightEventCause>, sw_at: Option<V3>) {
+    let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     crate::lighting::light_event(g, t, Some(cause), sw_at)
 }
 
@@ -431,7 +282,11 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 
 /// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.
 pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    crate::math_dice::use_dice(g);
+    game_update_watched(g, dt, input, cam, canvas, &mut |_, _| ())
+}
+
+/// The same tick with `after` told each step as it ends.
+pub fn game_update_watched(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View, after: Watch) {
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
     if g.restart_cut {
@@ -444,24 +299,24 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             }
         }
     }
-    let into = g.cmd_buf.take();
-    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
+    g.cmd_buf.take();
+    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
-        game_step(g, dt, &c);
+        game_step_watched(g, dt, &[c], after);
     } else {
         let seats = g.seats.clone();
         let mut cmds = Vec::with_capacity(seats.len());
         for s in seats {
             if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
         }
-        game_step_seats(g, dt, &cmds);
+        game_step_watched(g, dt, &cmds, after);
     }
-    game_host_after(g, input, cam, canvas);
+    game_host_after(g, input, cam);
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.
-fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId) {
     let me = game_host_seat(g);
     let me_cam = g.tab.cmd_seat[me].cam;
     let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
@@ -469,8 +324,8 @@ fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, can
     g.tab.camera[cam].kick = kick;
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
-    crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
+    crate::seats::with_seat(g, me, &mut |g| g.sets[g.seat].view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input));
 }
 
 /// The tick for a game of one seat.
@@ -484,9 +339,10 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.
 pub(in crate::tick) fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
-    let mut col_own = crate::scene_collision::AsideOwn::default();
-    crate::scene_collision::aside(g, &mut col_own, fn_)
+    let asked = core::mem::replace(&mut g.col.sound.asking, true);   // (no sound's route is kept)
+    let r = fn_(g);
+    g.col.sound.asking = asked;
+    r
 }
 
 /// A lens of the host's to put a record's view on while it asks aside: scratch, in no snapshot.

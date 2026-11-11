@@ -1,14 +1,12 @@
 //! WHAT A HOST IS TOLD OF THE GAME beside what it draws, at face_out: views (their bytes, read on the page by src/view/read.ts) and a few lines of JSON. Reads: no word of the state is written.
-use crate::ask::asked;
 use game::bytes::{ToBytes, W};
 
 fn told(v: &dyn ToBytes) -> Vec<u8> { let mut o = W::new(); v.w(&mut o); o.b }
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
-/// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is
-/// stood first, as for every question of it.
+/// by the host with the table's own reader. A read: no word of the game's state is written and no pass about a seat is opened.
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {
-    super::out(asked(h, |world| { let g = world.shared(); told(&game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat)))) }));
+    super::out(super::with_ref(h, |x| told(&game::view::tick_view(&x.g, &game::seats::seat(&x.g, x.g.local_seat.unwrap_or(x.g.seat))))));
 }
 /// what the end card shows of the run (a DebriefView at face_out): asked once, as the card opens; a read, nothing kept
 #[no_mangle]
@@ -22,7 +20,7 @@ pub extern "C" fn face_run_view(h: u32) {
 }
 /// WHAT A HUD IS TOLD of what the cursor is on (`view::cursor_view`), about a seat by its place in the game's list (−1: the one this machine shows): a `CursorView`'s
 /// bytes at face_out. `p` = 36 doubles the host has as it draws: the cursor (x y), the picture it is in (w h), the camera's view and projection, and their
-/// inverse. Nothing of the game is written (the box world's copy is stood where a writer put it down).
+/// inverse. Nothing of the game is written.
 /// # Safety
 /// `p` names 288 bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -31,14 +29,13 @@ pub unsafe extern "C" fn face_cursor_view(h: u32, seat: i32, p: *const u8) {
     let n = |i: usize| f64::from_le_bytes(b[i * 8..i * 8 + 8].try_into().unwrap());
     let m16 = |at: usize| -> [f32; 16] { std::array::from_fn(|i| n(at + i) as f32) };
     let now = game::view::HostNow { mouse: [n(0), n(1)], client: [n(2), n(3)], view_proj: m16(4), inv_view_proj: m16(20) };
-    super::out(super::with(h, |x| {
-        if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
+    super::out(super::with_ref(h, |x| {
         let g: &super::Game = &x.g;
         let s = if seat >= 0 && (seat as usize) < g.seats.len() { g.seats[seat as usize] } else { g.local_seat.unwrap_or(g.seat) };
         told(&game::view::cursor_view(g, &game::seats::seat(g, s), &now))
     }));
 }
-/// THE MISSION'S VERDICT, for a host with no puppet (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
+/// THE MISSION'S VERDICT, for a host with no picture (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
 /// at face_out as lines (game::verdict::verdict_lines: the end's word, the why, the seconds, the way won, the counts, the men). The game's own tick
 /// latches it: the first end of a run stays. While it is 0 nothing is allocated and face_out is left as it was.
 #[no_mangle]

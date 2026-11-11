@@ -64,7 +64,6 @@ pub struct Flank {
     pub phase: crate::lanes::FlankPhase,
     pub at: V3,
     pub t: f64,
-    pub n: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -171,27 +170,6 @@ pub struct StateDueItem {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateStats {
-    pub lanes: f64,
-    pub known: f64,
-    pub unknown: f64,
-    pub held: f64,
-    pub rerouted: f64,
-    pub backed_out: f64,
-    pub round: f64,
-    pub stuns: f64,
-    pub pushes: f64,
-    pub lapsed: f64,
-    pub peeks: f64,
-    pub peek_there: f64,
-    pub peek_clear: f64,
-    pub peek_lost: f64,
-    pub pins: f64,
-    pub pin_rounds: f64,
-    pub pin_lost: f64,
-    pub sets: f64,
-    pub frags: f64,
-    pub frag_lost: f64,
-    pub frag_kept: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

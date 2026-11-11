@@ -1,6 +1,6 @@
 //! WHAT THE HUD MARKS AND DRAWS OF THE AIM (rust/game_rules/src/tick/view/marks.rs): which men the fog hides from a seat's team, what stands over each man, the last sightings, the grenades and
 //! the cameras, the meters, the ring and the arc. The HUD reads these and works nothing out; a test here holds what it is told to what the game says.
-use game::game::{GuardState, SlotKind, ThrowKind};
+use game::game::{GuardState, SlotKind};
 use game::view::{HeadTone, RingOn, TickView};
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
@@ -103,11 +103,11 @@ fn the_mark_over_a_man_says_what_he_is() {
         assert_eq!(shown(&p, mate), ("".into(), HeadTone::Calm), "seed {}: no '?' over a man of your own", seed);
         set(&mut p, foe, GuardState::Alert, 1.0);
         assert_eq!(shown(&p, foe), ("!".into(), HeadTone::Alert), "seed {}", seed);
-        p.g.tune.aim_model = true; p.g.gd[foe].aim.track = 1.0;
+        p.g.tune.aim_model = true; p.g.arms[p.g.gd[foe].ch].aim.track = 1.0;
         assert_eq!(shown(&p, foe), ("◎!".into(), HeadTone::Alert), "seed {}: he has you lined up", seed);
-        set(&mut p, mate, GuardState::Alert, 1.0); p.g.gd[mate].aim.track = 1.0;
+        set(&mut p, mate, GuardState::Alert, 1.0); p.g.arms[p.g.gd[mate].ch].aim.track = 1.0;
         assert_eq!(shown(&p, mate), ("!".into(), HeadTone::Alert), "seed {}: never the '◎' of a man who has you lined up", seed);
-        p.g.gd[foe].dazzled_until = p.g.time + 5.0;
+        p.g.cond[p.g.gd[foe].ch].blind_until = p.g.time + 5.0;
         assert_eq!(shown(&p, foe).0, "✹◎!", "seed {}: a stun goes in front", seed);
         p.falls(foe, game::game::DownBy::Player);
         assert_eq!(shown(&p, foe), ("✕".into(), HeadTone::Dead), "seed {}", seed);
@@ -134,9 +134,9 @@ fn in_a_game_of_two_each_is_told_of_his_own_blindness_and_his_own_meters() {
         let second = game::seats::seat(&p.g, p.g.seats[1]).player;
         let first = game::seats::seat(&p.g, p.g.seats[0]).player;
         assert!(p.view_of(0).marks.blind == 0.0 && p.view_of(1).marks.blind == 0.0, "seed {}: CONTROL: nobody is blind", seed);
-        p.g.pl[second].dazzled_until = p.g.time + 10.0;
+        p.g.cond[p.g.pl[second].ch].blind_until = p.g.time + 10.0;
         assert_eq!((p.view_of(0).marks.blind, p.view_of(1).marks.blind), (0.0, 1.0), "seed {}: the second man is dazzled", seed);
-        p.g.pl[first].visibility = 0.25; p.g.pl[second].visibility = 0.75;
+        p.g.shown[p.g.pl[first].ch].visibility = 0.25; p.g.shown[p.g.pl[second].ch].visibility = 0.75;
         p.g.pl[first].noise = 0.5; p.g.pl[second].noise = 0.1;
         let (a, b) = (p.view_of(0).marks, p.view_of(1).marks);
         assert_eq!((a.light, a.noise, b.light, b.noise), (0.25, 0.5, 0.75, 0.1), "seed {}", seed);
@@ -162,7 +162,7 @@ fn the_can_comes_to_rest_where_the_view_says() {
         let at = p.sam_at();
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1] + 1.0]);
         let v = p.view().aim.throw.expect("a can in the fist: an arc is up");
-        let (kind, sol) = { let pl = p.g.player; (p.g.pl[pl].held_kind, p.g.pl[pl].throw_preview.clone().unwrap()) };
+        let (kind, sol) = { let pl = p.g.player; (game::player::can_in_hand(&p.g, pl).unwrap(), p.g.sets[p.g.seat].hand.throw_preview.clone().unwrap()) };
         let rest = v.rest.expect("a can comes to rest");
         let own = game::frag::rest_of_throw(&mut *p.g, kind, sol.points[0], sol.v0);
         assert_eq!(rest.at.map(f64::to_bits), own.at.map(f64::to_bits), "seed {}: at {:?} and {:?}", seed, rest.at, own.at);
@@ -209,7 +209,7 @@ fn the_launchers_arc_is_told_whether_it_arms() {
     }
 }
 
-/// A FAILURE MEANS: asking with an arc up writes the game: the rest is the one question of the view that rolls a can, and the reader goes by the copy that stands.
+/// A FAILURE MEANS: asking with an arc up writes the game: the rest is the one question of the view that rolls a can.
 #[test]
 fn asking_with_an_arc_up_writes_nothing() {
     let run = |ask: bool| -> Vec<Vec<u32>> {
@@ -239,9 +239,10 @@ fn in_a_game_of_two_the_ring_and_the_arc_are_the_seats_own() {
         p.g.pl[first].holstered = false;
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1]]);
         assert!(p.view_of(0).aim.throw.is_some() && p.view_of(1).aim.throw.is_none(), "seed {}", seed);
-        // and the second man's is told to him, whoever stands on the game
-        let sol = p.g.pl[first].throw_preview.clone().unwrap();
-        p.g.pl[second].throw_preview = Some(sol); p.g.pl[second].held_kind = ThrowKind::Smoke; p.g.pl[second].throw_held = true;
+        // and the second man's is told to him, whichever seat `g.seat` names
+        let sol = p.g.sets[game::seats::seat_of_man(&p.g, first)].hand.throw_preview.clone().unwrap();
+        let his = game::seats::seat_of_man(&p.g, second);
+        p.g.sets[his].hand.throw_preview = Some(sol); p.g.pl[second].slot = SlotKind::Smoke; p.g.pl[second].holstered = false;
         assert!(p.view_of(1).aim.throw.is_some_and(|t| t.rest.is_some()), "seed {}", seed);
     }
 }
@@ -292,8 +293,8 @@ fn who_wears_what_is_the_games_word() {
         for gd in p.hostiles() { assert!(!worn.iter().any(|w| w.man == p.id_of(gd)), "seed {}: a defender is listed", seed); }
         let pl = p.g.player;
         p.g.pl[pl].big_kit = game::kit::BigKit::Hammer;
-        let sam = p.g.ch[p.g.pl[pl].ch].id;
-        assert!(p.view().worn.iter().any(|w| w.man == sam && w.big == Some(game::bigkit::BigCarried::Hammer)), "seed {}", seed);
+        let sam = p.g.player_id(pl);
+        assert!(p.view().worn.iter().any(|w| w.man == sam && w.big == Some(game::kit::BigTool::Hammer)), "seed {}", seed);
     }
 }
 

@@ -1,5 +1,6 @@
 pub use ::game_types::picture::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -49,43 +50,14 @@ fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut cr
     s.men.get_mut(gd).unwrap()
 }
 
-pub fn picture_reset(g: &mut crate::game::Game) {
-    g.m.picture.states = None;
-}
-
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
-fn floor(p: V3) -> V3 {
-    [p[0], 0.0, p[2]]
-}
-
-fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
-    match w {
-        Who::Player => !g.pl[g.player].down,
-        Who::Guard(o) => g.gd[o].state != crate::game::GuardState::Dead && g.ch[g.gd[o].ch].alive,
-    }
-}
-
-fn pos_of(g: &mut crate::game::Game, w: crate::picture::Who) -> V3 {
-    match w {
-        Who::Player => g.ch[g.pl[g.player].ch].pos,
-        Who::Guard(o) => g.ch[g.gd[o].ch].pos,
-    }
-}
+pub(crate) fn up(g: &crate::game::Game, w: CharId) -> bool { !crate::condition::down(g, w) && g.ch[w].alive }
 
 /// no longer anybody's enemy to place: a unit off the floor, a man who dropped his gun and ran
-fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
-    match w {
-        Who::Player => false,
-        Who::Guard(o) => !g.guards.contains(&o) || g.gd[o].fled,
-    }
-}
+fn gone(g: &crate::game::Game, w: CharId) -> bool { crate::character::guard_of(g, w).is_some_and(|o| !g.guards.contains(&o) || g.gd[o].fled) }
 
 /// can his eye make anything out AT a place it has a line to: near enough, or lit
 fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
-    if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
+    if dist_xz(g.pos_of(gd), p) <= g.k.picture.made_out_m {
         return true;
     }
     let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None);
@@ -94,22 +66,21 @@ fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 
 /// a man who keeps a picture: a living armed man of an AI side
 fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
+    !crate::condition::down(g, g.gd[gd].ch) && g.ch[g.gd[gd].ch].alive && g.team(gd) != crate::teams::Team::Civilian
 }
 
-/// the enemies there are for a side, as a list of men and Sam
-fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> {
+/// the enemies there are for a side: the players' men, then the floor's
+fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<CharId> {
     let mut out = Vec::new();
-    if team != crate::teams::Team::Player && crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
-        out.push(Who::Player);
+    if team.theirs() {
+        out.extend(crate::seats::men(g).into_iter().map(|p| g.pl[p].ch));
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if g.gd[o].civ.is_none() && crate::teams::is_hostile(g, team, ot) {
-            out.push(Who::Guard(o));
+        if team.foe_of(g.team(o)) {
+            out.push(g.gd[o].ch);
         }
     }
     out
@@ -117,21 +88,21 @@ fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<crate::pictur
 
 // ---------------------------------------------------------------- what reaches him
 /// learn with g.time in hand, for a row that lives in `g`
-fn learn_now(time: f64, p: &mut Pic, who: Who, at: V3, t: f64, how: IdeaHow, by: Option<GuardId>) {
+fn learn_now(time: f64, p: &mut Pic, who: CharId, at: V3, t: f64, how: IdeaHow, by: Option<GuardId>) {
     if let Some(i) = p.ideas.get_mut(who) {
-        i.at = floor(at);
+        i.at = crate::v3::on_floor(at);
         i.t = t;
         i.how = how;
         i.by = by;
         i.lost = false;
     } else {
-        p.ideas.set(who, Idea { who, at: floor(at), t, since: time, how, by, lost: false });
+        p.ideas.set(who, Idea { who, at: crate::v3::on_floor(at), t, since: time, how, by, lost: false });
     }
     p.downs.delete(who);
 }
 
 /// `p` is the picture's owner: None = Sam's
-fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
+fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: CharId, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
     let time = g.time;
     learn_now(time, row!(g, p), who, at, t, how, by);
 }
@@ -139,26 +110,26 @@ fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who
 /// one man's look about him, on his row of the table: every enemy his eye has, the place his senses work from, the believed places he sees empty, the men he knows are down
 fn look(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
-    g.stats.picture.looks += 1;
     if g.gd[gd].held.is_some() {
         return;
     }
-    let team = g.gd[gd].team;
-    for who in foes_of(g, team) {
+    for who in foes_of(g, g.team(gd)) {
         if !up(g, who) || gone(g, who) {
             continue;
         }
-        let rate = match who {
-            Who::Player => {
-                let vis = crate::guards::can_see(g, gd);
-                if !vis.visible {
-                    continue;
-                }
-                crate::guards::sight_gain(g, gd, vis.dist)
+        let rate = match crate::character::guard_of(g, who) {
+            None => {
+                // (as that player's own seat has it)
+                let seat = crate::seats::man_of(g, Some(who)).map(|p| crate::seats::seat_of_man(g, p));
+                let seen = crate::seats::on_seat(g, seat, &mut |g: &mut Game| {
+                    let vis = crate::guards::can_see_char(g, gd, who);
+                    if vis.visible { Some(crate::guards::sight_gain(g, gd, vis.dist)) } else { None }
+                });
+                let Some(rate) = seen else { continue };
+                rate
             }
-            Who::Guard(o) => {
-                let c = g.gd[o].ch;
-                let vis = crate::guards::can_see_char(g, gd, c, false);
+            Some(o) => {
+                let vis = crate::guards::can_see_char(g, gd, who);
                 if !vis.visible {
                     continue;
                 }
@@ -166,16 +137,12 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
             }
         };
         if rate > g.k.picture.glimpse {
-            let at = pos_of(g, who);
+            let at = g.ch[who].pos;
             learn(g, Some(gd), who, at, now, IdeaHow::Seen, None);
-            g.stats.picture.seen += 1;
         }
     }
     let forget_secs = g.k.picture.forget_secs;
-    let foe = g.gd[gd].foe.map(|f| match f {
-        crate::game::Foe::Guard(o) => Who::Guard(o),
-        crate::game::Foe::Player => Who::Player,
-    });
+    let foe = g.gd[gd].foe;
     if let (Some(f), true, Some(known)) = (foe, g.gd[gd].script.is_none(), g.gd[gd].last_known) {
         let fix_t = g.gd[gd].fix_t;
         if up(g, f) && !gone(g, f) && now - fix_t < forget_secs {
@@ -185,28 +152,26 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
                 None => true,
                 Some(i) => {
                     let own = i.how == IdeaHow::Seen || i.how == IdeaHow::Heard;
-                    fix_t > i.t + 0.05 && !(i.how == IdeaHow::Seen && now - i.t < 0.5) && (!own || flat(known, i.at) <= heard_m + 2.0 + (fix_t - i.t) * walk_mps * 2.0)
+                    fix_t > i.t + 0.05 && !(i.how == IdeaHow::Seen && now - i.t < 0.5) && (!own || dist_xz(known, i.at) <= heard_m + 2.0 + (fix_t - i.t) * walk_mps * 2.0)
                 }
             };
             if take {
                 learn(g, Some(gd), f, known, m::min(now, fix_t), IdeaHow::Fix, None);
-                g.stats.picture.fixes += 1;
             }
         }
     }
-    let blind = now < g.gd[gd].dazzled_until;
+    let blind = crate::condition::is_blind(g, g.gd[gd].ch);
     let mut at = 0;
     while let Some(who) = pic!(g, gd).ideas.next_key(&mut at) {
         let i = *pic!(g, gd).ideas.get(who).unwrap();
         if now - i.t > forget_secs || gone(g, who) {
             pic!(g, gd).ideas.delete(who);
-            g.stats.picture.forgot += 1;
             continue;
         }
         if !up(g, who) {
-            let (fell, body) = match who {
-                Who::Player => (now, floor(g.ch[g.pl[g.player].ch].pos)),
-                Who::Guard(o) => (g.gd[o].died_at, crate::guards::body_pos(g, o)),
+            let (fell, body) = match crate::character::guard_of(g, who) {
+                None => (now, crate::v3::on_floor(g.ch[who].pos)),
+                Some(o) => (g.gd[o].died_at, crate::guards::body_pos(g, o)),
             };
             if (i.how == IdeaHow::Seen && fell - i.t < 1.0)
                 || (!blind
@@ -216,20 +181,18 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
                 let p = pic!(g, gd);
                 p.ideas.delete(who);
                 p.downs.set(who, now);
-                g.stats.picture.downs += 1;
             }
             continue;
         }
         if !i.lost
             && now - i.t > 1.0
             && !blind
-            && flat(pos_of(g, who), i.at) > 1.2
+            && dist_xz(g.ch[who].pos, i.at) > 1.2
             && crate::guards::point_in_view(g, gd, [i.at[0], 1.1, i.at[2]], Some(14.0), Some(58.0))
             && crate::guards::point_in_view(g, gd, [i.at[0], 0.4, i.at[2]], Some(14.0), Some(58.0))
             && made_out(g, gd, i.at)
         {
             pic!(g, gd).ideas.get_mut(who).unwrap().lost = true;
-            g.stats.picture.lost += 1;
         }
     }
 }
@@ -238,26 +201,22 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
 fn look_sam(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         return;
     }
     let cpos = g.ch[c].pos;
-    let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(cpos, [0.0, 1.65, 0.0]),
-    };
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(cpos, [0.0, 1.65, 0.0]));
     let fwd = crate::character::character_forward(g, c);
-    let thr = crate::guards::team_through(g);
+    let thr = crate::guards::team_through();
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if g.gd[o].civ.is_some() || !crate::teams::is_hostile(g, crate::teams::Team::Player, ot) || !crate::teams::is_hostile(g, ot, crate::teams::Team::Operative) {
+        if !g.team(o).theirs() {
             continue;
         }
-        let who = Who::Guard(o);
-        let q = g.ch[g.gd[o].ch].pos;
+        let who = g.gd[o].ch;
+        let q = g.pos_of(o);
         if !up(g, who) {
             if st!(g).sam.ideas.has(who) && !crate::scene_collision::segment_blocked(g, eye, [q[0], 0.3, q[2]], None, None, None) {
                 let sam = &mut st!(g).sam;
@@ -269,14 +228,14 @@ fn look_sam(g: &mut crate::game::Game) {
         if g.gd[o].fled {
             continue;
         }
-        let d = flat(q, cpos);
+        let d = dist_xz(q, cpos);
         if d > g.k.picture.reach_m {
             continue;
         }
         let shown = if crate::fogofwar::fog_of_war_active(g) {
             !crate::fogofwar::fog_of_war_hidden(g, o)
         } else {
-            d < g.k.picture.made_out_m || ((q[0] - cpos[0]) * fwd[0] + (q[2] - cpos[2]) * fwd[2] > 0.0 && g.gd[o].visibility >= g.k.picture.made_out)
+            d < g.k.picture.made_out_m || ((q[0] - cpos[0]) * fwd[0] + (q[2] - cpos[2]) * fwd[2] > 0.0 && g.shown[g.gd[o].ch].visibility >= g.k.picture.made_out)
         };
         if shown && (!crate::scene_collision::segment_blocked(g, eye, [q[0], 1.1, q[2]], Some(0.02), Some(thr), None) || !crate::scene_collision::segment_blocked(g, eye, [q[0], 1.6, q[2]], Some(0.02), Some(thr), None)) {
             learn(g, None, who, q, now, IdeaHow::Seen, None);
@@ -307,13 +266,13 @@ fn hear(g: &mut crate::game::Game) {
             continue;
         }
         state_of(g).done.add(e.serial);
-        let who = if crate::seats::is_man_id(g, id) {
-            Who::Player
+        let who = if let Some(p) = crate::seats::man_by_id(g, id) {
+            g.pl[p].ch
         } else {
             let mut found = None;
             for &x in g.guards.iter() {
-                if g.ch[g.gd[x].ch].id == id {
-                    found = Some(Who::Guard(x));
+                if g.char_id(x) == id {
+                    found = Some(g.gd[x].ch);
                     break;
                 }
             }
@@ -322,17 +281,13 @@ fn hear(g: &mut crate::game::Game) {
                 None => continue,
             }
         };
-        let team = match who {
-            Who::Player => crate::teams::Team::Player,
-            Who::Guard(o) => g.gd[o].team,
-        };
+        let team = crate::character::guard_of(g, who).map_or(crate::teams::Team::Ours, |o| g.team(o));
         let loud = e.level.unwrap_or(0.0) >= 1.0;
         let mut gi = 0;
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            let gt = g.gd[gd].team;
-            if who == Who::Guard(gd) || !fighter(g, gd) || g.gd[gd].held.is_some() || !crate::teams::is_hostile(g, gt, team) {
+            if who == g.gd[gd].ch || !fighter(g, gd) || g.gd[gd].held.is_some() || !g.team(gd).foe_of(team) {
                 continue;
             }
             let p = pic_of(g, gd, now);
@@ -345,8 +300,8 @@ fn hear(g: &mut crate::game::Game) {
                 continue;
             }
             p.heard.set(who, now);
-            let gpos = g.ch[g.gd[gd].ch].pos;
-            if flat(e.pos, gpos) > (if loud { 80.0 } else { 22.0 }) {
+            let gpos = g.pos_of(gd);
+            if dist_xz(e.pos, gpos) > (if loud { 80.0 } else { 22.0 }) {
                 continue;
             }
             let ear = v3::add(gpos, [0.0, 1.5, 0.0]);
@@ -368,7 +323,6 @@ fn hear(g: &mut crate::game::Game) {
                 }
             }
             learn_now(now, pic_of(g, gd, now), who, at, now, IdeaHow::Heard, None);
-            g.stats.picture.heard += 1;
         }
     }
 }
@@ -392,13 +346,13 @@ fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool
         }
     }
     let ao = match a {
-        None => return g.gd[bo].team == crate::teams::Team::Operative,
+        None => return g.team(bo).ours(),
         Some(ao) => ao,
     };
-    if !fighter(g, ao) || g.gd[ao].held.is_some() || g.gd[ao].team != g.gd[bo].team {
+    if !fighter(g, ao) || g.gd[ao].held.is_some() || g.team(ao) != g.team(bo) {
         return false;
     }
-    if g.gd[ao].team != crate::teams::Team::Hostile {
+    if g.team(ao) != crate::teams::Team::Hostile {
         return true;
     }
     let qa = crate::enemysquads::squad_of(g, ao);
@@ -408,7 +362,7 @@ fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool
             return true;
         }
     }
-    flat(g.ch[g.gd[ao].ch].pos, g.ch[g.gd[bo].ch].pos) <= g.k.picture.shout_m
+    dist_xz(g.pos_of(ao), g.pos_of(bo)) <= g.k.picture.shout_m
 }
 
 /// the calls: what a man has seen or heard for tellSecs reaches his net, and the men he knows are down
@@ -429,7 +383,7 @@ fn tell(g: &mut crate::game::Game) {
             }
         }
         // (a's own lists cannot change in this walk: nobody calls himself)
-        let (a_ideas, a_downs): (Vec<(Who, Idea)>, Vec<(Who, f64)>) = {
+        let (a_ideas, a_downs): (Vec<(CharId, Idea)>, Vec<(CharId, f64)>) = {
             let ap: &mut Pic = row!(g, a);
             (ap.ideas.iter().map(|(k, v)| (k, *v)).collect(), ap.downs.iter().map(|(k, v)| (k, *v)).collect())
         };
@@ -457,7 +411,6 @@ fn tell(g: &mut crate::game::Game) {
                     }
                 }
                 learn_now(now, bp, who, i.at, i.t, IdeaHow::Told, a);
-                g.stats.picture.told += 1;
             }
             for &(who, t) in a_downs.iter() {
                 let bp: &mut Pic = row!(g, b);
@@ -471,7 +424,7 @@ fn tell(g: &mut crate::game::Game) {
 }
 
 /// an idea handed to one man from outside his senses, told, `age` seconds old
-pub fn picture_tell(g: &mut crate::game::Game, gd: GuardId, who: crate::picture::Who, at: V3, age: Option<f64>) {
+pub fn picture_tell(g: &mut crate::game::Game, gd: GuardId, who: CharId, at: V3, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     if !fighter(g, gd) {
         return;
@@ -501,13 +454,13 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
         if !fighter(g, gd) {
             continue;
         }
-        if g.gd[gd].team == crate::teams::Team::Operative {
+        if g.team(gd).ours() {
             ops = true;
         }
         let look_t = pic_of(g, gd, now).look_t;
         if now >= look_t {
             pic!(g, gd).look_t = m::max(look_t + look_secs, now - look_secs);
-            let id = g.ch[g.gd[gd].ch].id;
+            let id = g.char_id(gd);
             let view = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
             crate::seats::with_seat(g, view, &mut |g: &mut Game| look(g, gd));
         }
@@ -587,7 +540,7 @@ fn line_to(g: &mut crate::game::Game, from: V3, p: V3, h: f64) -> bool {
     if !g.m.picture.viewing {
         g.stats.picture.lines += 1;
     }
-    if flat(from, p) > g.k.picture.reach_m {
+    if dist_xz(from, p) > g.k.picture.reach_m {
         return false;
     }
     let e: V3 = [from[0], g.k.picture.eye_h, from[2]];
@@ -728,7 +681,7 @@ pub fn exposed_for(g: &mut crate::game::Game, men: &[GuardId], p: V3, low: Optio
 }
 
 /// knownPlaces's `put`: the freshest word of each man; a same-age word that he is not there holds
-fn known_put(best: &mut JsMap<Who, (V3, f64, bool)>, who: Who, at: V3, t: f64, lost: bool) {
+fn known_put(best: &mut JsMap<CharId, (V3, f64, bool)>, who: CharId, at: V3, t: f64, lost: bool) {
     match best.get_mut(who) {
         Some(j) if !(t > j.1 + 1e-6) => {
             if lost && t >= j.1 - 1e-6 {
@@ -741,7 +694,7 @@ fn known_put(best: &mut JsMap<Who, (V3, f64, bool)>, who: Who, at: V3, t: f64, l
     }
 }
 /// knownPlaces's `of`, over a picture's ideas copied
-fn known_of(g: &mut Game, best: &mut JsMap<Who, (V3, f64, bool)>, ideas: Vec<Idea>, now: f64, max_age: f64) {
+fn known_of(g: &Game, best: &mut JsMap<CharId, (V3, f64, bool)>, ideas: Vec<Idea>, now: f64, max_age: f64) {
     for i in ideas {
         if now - i.t <= max_age && !gone(g, i.who) {
             known_put(best, i.who, i.at, i.t, i.lost);
@@ -753,8 +706,8 @@ fn known_of(g: &mut Game, best: &mut JsMap<Who, (V3, f64, bool)>, ideas: Vec<Ide
 pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) -> Vec<crate::picture::KnownPlacesItem> {
     state_of(g);
     let now = g.time;
-    let squad = men.iter().any(|&gd| g.gd[gd].team == crate::teams::Team::Operative);
-    let mut best: JsMap<Who, (V3, f64, bool)> = JsMap::new();
+    let squad = men.iter().any(|&gd| g.team(gd).ours());
+    let mut best: JsMap<CharId, (V3, f64, bool)> = JsMap::new();
     for &gd in men {
         if fighter(g, gd) {
             if let Some(ideas) = ideas_copy(g, gd) {
@@ -770,13 +723,12 @@ pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) ->
             while i < g.guards.len() {
                 let h = g.guards[i];
                 i += 1;
-                let ht = g.gd[h].team;
-                if g.gd[h].civ.is_some() || !crate::teams::is_hostile(g, crate::teams::Team::Operative, ht) || gone(g, Who::Guard(h)) {
+                if !g.team(h).theirs() || gone(g, g.gd[h].ch) {
                     continue;
                 }
                 if let Some(s) = crate::fogofwar::fog_of_war_sighting(g, h) {
                     if s.age >= 0.0 && s.age <= max_age {
-                        known_put(&mut best, Who::Guard(h), s.at, now - s.age, false);
+                        known_put(&mut best, g.gd[h].ch, s.at, now - s.age, false);
                     }
                 }
             }
@@ -834,7 +786,7 @@ fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Opt
     for ix in -span..=span {
         for iz in -span..=span {
             let q: V3 = [x0 + ix as f64, 0.0, z0 + iz as f64];
-            let d = flat(q, around);
+            let d = dist_xz(q, around);
             if d > r || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
                 continue;
             }
@@ -869,42 +821,41 @@ fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Opt
 
 /// pictureStep's `free`: a straight walk off the place, a stride nearer a believed man at most, a body's room from his own side, the asker's word
 fn step_free(g: &mut Game, q: V3, gd: GuardId, mark: V3, sam: V3, bad: Option<V3>, firm: &[V3], ok: &mut Option<&mut dyn FnMut(&mut Game, V3) -> bool>) -> bool {
-    if flat(q, mark) > 0.05 && !crate::scene_collision::nav_grid_walkable(g, mark, q) {
+    if dist_xz(q, mark) > 0.05 && !crate::scene_collision::nav_grid_walkable(g, mark, q) {
         return false;
     }
-    if flat(q, sam) < 0.9 {
+    if dist_xz(q, sam) < 0.9 {
         return false;
     }
     if let Some(b) = bad {
-        if flat(q, b) < 0.6 {
+        if dist_xz(q, b) < 0.6 {
             return false;
         }
     }
     for &f in firm {
-        let d = flat(q, f);
-        if d < 3.0 || d < flat(mark, f) - 1.0 {
+        let d = dist_xz(q, f);
+        if d < 3.0 || d < dist_xz(mark, f) - 1.0 {
             return false;
         }
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || crate::teams::is_hostile(g, team, ot) {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || team.foe_of(g.team(o)) {
             continue;
         }
-        if flat(g.ch[g.gd[o].ch].pos, q) < 0.8 {
+        if dist_xz(g.pos_of(o), q) < 0.8 {
             return false;
         }
         if let Some(os) = st!(g).men.get(o).and_then(|p| p.step) {
-            if flat(os.at, q) < 0.9 {
+            if dist_xz(os.at, q) < 0.9 {
                 return false;
             }
         }
         if let Some(og) = g.gd[o].script.as_ref().and_then(|s| s.goal) {
-            if flat(og, q) < 0.8 {
+            if dist_xz(og, q) < 0.8 {
                 return false;
             }
         }
@@ -924,6 +875,15 @@ fn step_holds(g: &mut Game, gd: GuardId, at: V3, low: bool) -> bool {
     true
 }
 
+/// What a step asked for is, when he looks at it again.
+enum StepNow {
+    /// his own place is safe again: he goes back to it
+    NotNeeded,
+    Holds,
+    /// he could not get there, or it is in a line itself: another is looked for off the same mark
+    Failed,
+}
+
 /// a step off a place in a known enemy's line, asked every frame of a man on a mark the squad chose; None: his place is his
 pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, busy: Option<bool>) -> Option<crate::picture::PictureStep> {
     let mut ok = ok;
@@ -934,10 +894,44 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
         _ => return None,
     }
     let now = g.time;
-    let (step_at, step_free_at, step_rest, step_after, step_secs, step_m) = {
-        let k = &g.k.picture;
-        (k.step_at, k.step_free, k.step_rest, k.step_after, k.step_secs, k.step_m)
+    if !anything_known_as_he_asks(g, gd, key, now) { return None; }
+    let x = pic!(g, gd).step;
+    if let Some(xs) = x {
+        match step_when_looked_at(g, gd, xs, now) {
+            StepNow::NotNeeded => return None,
+            StepNow::Holds => return Some(PictureStep { at: xs.at, low: xs.low }),
+            StepNow::Failed => mark = xs.mark,
+        }
+    }
+    if !time_to_step(g, gd, mark, now, x.is_none(), busy) { return None; }
+    let bad = pic!(g, gd).step_bad;
+    let sam = g.player_pos(g.player);
+    let step_at = g.k.picture.step_at;
+    let mut firm: Vec<V3> = Vec::new();
+    for i in ideas_copy(g, gd).unwrap_or_default() {
+        if !i.lost && idea_weight(g, i) >= step_at {
+            firm.push(i.at);
+        }
+    }
+    let spots = {
+        let mut free = |g: &mut Game, q: V3| step_free(g, q, gd, mark, sam, bad, &firm, &mut ok);
+        let step_m = g.k.picture.step_m;
+        cover_near(g, gd, mark, step_m, Some(8.0), Some(&mut free))
     };
+    let standing = spots.iter().find(|c| c.stand <= 0.0 && step_holds(g, gd, c.at, false)).copied();
+    let best = standing.or_else(|| spots.iter().find(|c| c.low <= 0.0 && step_holds(g, gd, c.at, true)).copied());
+    let Some(best) = best else {
+        pic!(g, gd).step_next = Some(now + g.k.picture.step_rest);
+        return None;
+    };
+    let low = !(best.stand <= 0.0 && step_holds(g, gd, best.at, false));
+    let at = crate::v3::on_floor(best.at);
+    pic!(g, gd).step = Some(Step { key: Some(key), mark: crate::v3::on_floor(mark), at, low, look_t: now + 0.5, t0: now });
+    Some(PictureStep { at, low })
+}
+
+/// He asks: a gap in his asking or another asker's key ends the step he had; and with no idea of anybody there is nothing to step from (false).
+fn anything_known_as_he_asks(g: &mut Game, gd: GuardId, key: u32, now: f64) -> bool {
     let p = pic!(g, gd);
     let asked = p.step_ask.unwrap_or(-1e9);
     let gap = now - asked > 0.25 || now < asked;
@@ -959,102 +953,70 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
     if p.ideas.is_empty() {
         p.step = None;
         p.step_in = Some(-1.0);
-        return None;
+        return false;
     }
-    let x = p.step;
-    if let Some(xs) = x {
-        if now >= xs.look_t {
-            pic!(g, gd).step.as_mut().unwrap().look_t = now + 0.5;
-            if exposed_at(g, gd, xs.mark, None) < step_free_at {
-                let p = pic!(g, gd);
-                p.step = None;
-                p.step_in = Some(-1.0);
-                p.step_next = Some(now + step_rest);
-                return None;
-            }
-            let off = flat(g.ch[g.gd[gd].ch].pos, xs.at) > 0.6 && now - xs.t0 > step_secs;
-            if off {
-                pic!(g, gd).step_bad = Some(xs.at);
-            }
-            if off || exposed_at(g, gd, xs.at, Some(xs.low)) >= step_at {
-                let p = pic!(g, gd);
-                p.step = None;
-                p.step_in = Some(now - step_after);
-                p.step_next = Some(now);
-                mark = xs.mark;
-            }
+    true
+}
+
+/// Every half second he looks at the step he has: is his own place safe again, could he not get there, is it no good any more.
+fn step_when_looked_at(g: &mut Game, gd: GuardId, xs: Step, now: f64) -> StepNow {
+    if now >= xs.look_t {
+        let (step_at, step_free_at, step_rest, step_after, step_secs) = {
+            let k = &g.k.picture;
+            (k.step_at, k.step_free, k.step_rest, k.step_after, k.step_secs)
+        };
+        pic!(g, gd).step.as_mut().unwrap().look_t = now + 0.5;
+        if exposed_at(g, gd, xs.mark, None) < step_free_at {
+            let p = pic!(g, gd);
+            p.step = None;
+            p.step_in = Some(-1.0);
+            p.step_next = Some(now + step_rest);
+            return StepNow::NotNeeded;
         }
-        if pic!(g, gd).step.is_some() {
-            return Some(PictureStep { at: xs.at, low: xs.low });
+        let off = dist_xz(g.pos_of(gd), xs.at) > 0.6 && now - xs.t0 > step_secs;
+        if off {
+            pic!(g, gd).step_bad = Some(xs.at);
+        }
+        if off || exposed_at(g, gd, xs.at, Some(xs.low)) >= step_at {
+            let p = pic!(g, gd);
+            p.step = None;
+            p.step_in = Some(now - step_after);
+            p.step_next = Some(now);
+            return StepNow::Failed;
         }
     }
+    StepNow::Holds
+}
+
+/// Is it time for him to look for a step: not busy, and his mark has been in a known line for `stepAfter`; it is asked at most every quarter second.
+fn time_to_step(g: &mut Game, gd: GuardId, mark: V3, now: f64, had_none: bool, busy: bool) -> bool {
+    let (step_at, step_after) = (g.k.picture.step_at, g.k.picture.step_after);
     let p = pic!(g, gd);
     if busy {
         p.step_in = Some(-1.0);
-        return None;
+        return false;
     }
-    if p.step_for.map_or(true, |f| flat(f, mark) > 0.4) {
-        p.step_for = Some(floor(mark));
+    if p.step_for.map_or(true, |f| dist_xz(f, mark) > 0.4) {
+        p.step_for = Some(crate::v3::on_floor(mark));
         // (X === P.step here only when he came in with no step: one he had was just cleared, and the count it set stands)
-        if x.is_none() {
+        if had_none {
             p.step_in = Some(-1.0);
         }
     }
     if now < p.step_next.unwrap_or(-1e9) {
-        return None;
+        return false;
     }
     p.step_next = Some(now + 0.25);
     if exposed_at(g, gd, mark, None) < step_at {
         pic!(g, gd).step_in = Some(-1.0);
-        return None;
+        return false;
     }
     let p = pic!(g, gd);
     let si = p.step_in.unwrap_or(-1.0);
     if si < 0.0 || now < si {
         p.step_in = Some(now);
     }
-    if now - p.step_in.unwrap() < step_after {
-        return None;
-    }
-    let bad = p.step_bad;
-    let sam = g.ch[g.pl[g.player].ch].pos;
-    let mut firm: Vec<V3> = Vec::new();
-    for i in ideas_copy(g, gd).unwrap_or_default() {
-        if !i.lost && idea_weight(g, i) >= step_at {
-            firm.push(i.at);
-        }
-    }
-    let spots = {
-        let mut free = |g: &mut Game, q: V3| step_free(g, q, gd, mark, sam, bad, &firm, &mut ok);
-        cover_near(g, gd, mark, step_m, Some(8.0), Some(&mut free))
-    };
-    let mut best: Option<CoverSpot> = None;
-    for c in spots.iter() {
-        if c.stand <= 0.0 && step_holds(g, gd, c.at, false) {
-            best = Some(*c);
-            break;
-        }
-    }
-    if best.is_none() {
-        for c in spots.iter() {
-            if c.low <= 0.0 && step_holds(g, gd, c.at, true) {
-                best = Some(*c);
-                break;
-            }
-        }
-    }
-    let best = match best {
-        Some(b) => b,
-        None => {
-            pic!(g, gd).step_next = Some(now + step_rest);
-            return None;
-        }
-    };
-    let low = !(best.stand <= 0.0 && step_holds(g, gd, best.at, false));
-    let at = floor(best.at);
-    pic!(g, gd).step = Some(Step { key: Some(key), mark: floor(mark), at, low, look_t: now + 0.5, t0: now });
-    g.stats.picture.stepped += 1;
-    Some(PictureStep { at, low })
+    !(now - p.step_in.unwrap() < step_after)
 }
 
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
@@ -1076,7 +1038,7 @@ mod tests {
         k
     }
     fn idea(t: f64, how: IdeaHow, lost: bool) -> Idea {
-        Idea { who: Who::Player, at: [0.0; 3], t, since: t, how, by: None, lost }
+        Idea { who: CharId(0), at: [0.0; 3], t, since: t, how, by: None, lost }
     }
 
     /// the TypeScript's own bits (ideaWeight, ideaReach under EXACT, the page's numbers, g.time 37.3)
@@ -1101,14 +1063,14 @@ mod tests {
     #[test]
     fn learning_again_keeps_since_and_takes_him_off_the_downs() {
         let mut p = Pic::default();
-        p.downs.set(Who::Player, 1.0);
-        learn_now(5.0, &mut p, Who::Player, [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
-        assert!(!p.downs.has(Who::Player));
-        let i = *p.ideas.get(Who::Player).unwrap();
+        p.downs.set(CharId(0), 1.0);
+        learn_now(5.0, &mut p, CharId(0), [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
+        assert!(!p.downs.has(CharId(0)));
+        let i = *p.ideas.get(CharId(0)).unwrap();
         assert_eq!((i.at, i.t, i.since), ([1.0, 0.0, 3.0], 4.0, 5.0));
-        p.ideas.get_mut(Who::Player).unwrap().lost = true;
-        learn_now(9.0, &mut p, Who::Player, [7.0, 2.0, 8.0], 8.0, IdeaHow::Told, None);
-        let i = *p.ideas.get(Who::Player).unwrap();
+        p.ideas.get_mut(CharId(0)).unwrap().lost = true;
+        learn_now(9.0, &mut p, CharId(0), [7.0, 2.0, 8.0], 8.0, IdeaHow::Told, None);
+        let i = *p.ideas.get(CharId(0)).unwrap();
         assert_eq!((i.at, i.t, i.since, i.how, i.lost), ([7.0, 0.0, 8.0], 8.0, 5.0, IdeaHow::Told, false));
     }
 
@@ -1119,26 +1081,26 @@ mod tests {
         g.time = 5.0;
         let gd = GuardId(2);
         pic_of(&mut g, gd, 5.0);
-        learn(&mut g, Some(gd), Who::Player, [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
-        learn(&mut g, None, Who::Guard(gd), [7.0, 2.0, 8.0], 3.0, IdeaHow::Told, Some(gd));
-        let man = *pic_of(&mut g, gd, 5.0).ideas.get(Who::Player).unwrap();
+        learn(&mut g, Some(gd), CharId(0), [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
+        learn(&mut g, None, CharId(1), [7.0, 2.0, 8.0], 3.0, IdeaHow::Told, Some(gd));
+        let man = *pic_of(&mut g, gd, 5.0).ideas.get(CharId(0)).unwrap();
         assert_eq!((man.at, man.t, man.since), ([1.0, 0.0, 3.0], 4.0, 5.0));
-        assert!(pic_of(&mut g, gd, 5.0).ideas.get(Who::Guard(gd)).is_none());
-        let sam = *state_of(&mut g).sam.ideas.get(Who::Guard(gd)).unwrap();
+        assert!(pic_of(&mut g, gd, 5.0).ideas.get(CharId(1)).is_none());
+        let sam = *state_of(&mut g).sam.ideas.get(CharId(1)).unwrap();
         assert_eq!((sam.at, sam.how, sam.by), ([7.0, 0.0, 8.0], IdeaHow::Told, Some(gd)));
-        assert!(state_of(&mut g).sam.ideas.get(Who::Player).is_none());
+        assert!(state_of(&mut g).sam.ideas.get(CharId(0)).is_none());
     }
 
     #[test]
     fn known_places_keeps_the_freshest_word_and_a_same_age_not_there() {
-        let mut best: JsMap<Who, (V3, f64, bool)> = JsMap::new();
-        known_put(&mut best, Who::Player, [1.0, 0.0, 0.0], 5.0, false);
-        known_put(&mut best, Who::Player, [2.0, 0.0, 0.0], 4.0, true);
-        assert_eq!(*best.get(Who::Player).unwrap(), ([1.0, 0.0, 0.0], 5.0, false));
-        known_put(&mut best, Who::Player, [3.0, 0.0, 0.0], 5.0, true);
-        assert_eq!(*best.get(Who::Player).unwrap(), ([1.0, 0.0, 0.0], 5.0, true));
-        known_put(&mut best, Who::Player, [4.0, 0.0, 0.0], 6.0, false);
-        assert_eq!(*best.get(Who::Player).unwrap(), ([4.0, 0.0, 0.0], 6.0, false));
+        let mut best: JsMap<CharId, (V3, f64, bool)> = JsMap::new();
+        known_put(&mut best, CharId(0), [1.0, 0.0, 0.0], 5.0, false);
+        known_put(&mut best, CharId(0), [2.0, 0.0, 0.0], 4.0, true);
+        assert_eq!(*best.get(CharId(0)).unwrap(), ([1.0, 0.0, 0.0], 5.0, false));
+        known_put(&mut best, CharId(0), [3.0, 0.0, 0.0], 5.0, true);
+        assert_eq!(*best.get(CharId(0)).unwrap(), ([1.0, 0.0, 0.0], 5.0, true));
+        known_put(&mut best, CharId(0), [4.0, 0.0, 0.0], 6.0, false);
+        assert_eq!(*best.get(CharId(0)).unwrap(), ([4.0, 0.0, 0.0], 6.0, false));
     }
 
     #[test]
@@ -1149,9 +1111,9 @@ mod tests {
         assert_eq!(state_of(&mut g).sam.owner, None);
         state_of(&mut g).tell_t = 3.0;
         assert_eq!(state_of(&mut g).tell_t, 3.0);
-        pic_of(&mut g, GuardId(4), 10.0).heard.set(Who::Player, 2.0);
+        pic_of(&mut g, GuardId(4), 10.0).heard.set(CharId(0), 2.0);
         let p = pic_of(&mut g, GuardId(4), 99.0);
-        assert_eq!(p.heard.get(Who::Player).copied(), Some(2.0));
+        assert_eq!(p.heard.get(CharId(0)).copied(), Some(2.0));
         assert_eq!(p.owner, Some(GuardId(4)));
         assert_eq!(p.look_t, 10.0);
     }
@@ -1165,7 +1127,7 @@ mod tests {
         let step = |key| Step { key, mark: [1.0, 0.0, 1.0], at: [2.0, 0.0, 2.0], low: true, look_t: 50.0, t0: 9.0 };
         {
             let p = pic_of(&mut g, gd, 10.0);
-            p.ideas.set(Who::Player, idea(9.0, IdeaHow::Seen, false));
+            p.ideas.set(CharId(0), idea(9.0, IdeaHow::Seen, false));
             p.step = Some(step(Some(7)));
             p.step_ask = Some(10.0);
         }
@@ -1205,6 +1167,6 @@ mod tests {
 }
 
 /// For the check and a colleague's shots: one man's idea of one enemy (a copy: no caller writes to it).
-pub(super) fn idea_of(g: &crate::game::Game, gd: GuardId, who: crate::picture::Who) -> Option<crate::picture::Idea> {
+pub(super) fn idea_of(g: &crate::game::Game, gd: GuardId, who: CharId) -> Option<crate::picture::Idea> {
     g.m.picture.states.as_ref()?.men.get(gd)?.ideas.get(who).copied()
 }

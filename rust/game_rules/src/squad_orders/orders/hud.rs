@@ -10,16 +10,16 @@ pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
     if !super::squad_orders_active(g, seat) { return None; }
     let squad = super::squad_orders_squad(g, seat);
     let to = super::squad_orders_recipients(g, seat, None, None);
-    let up = squad.iter().filter(|&&gd| g.gd[gd].state != crate::game::GuardState::Dead).count();
+    let up = squad.iter().filter(|&&gd| !crate::condition::down(g, g.gd[gd].ch)).count();
     let picked = to.len() < up;
     let paired = super::squad_orders_paired(g, seat);
     let mates = squad.iter().map(|&gd| MateLine {
-        man: g.ch[g.gd[gd].ch].id,
+        man: g.char_id(gd),
         name: g.gd[gd].callsign.clone(),
         doing: alloc::format!("{}{}", super::squad_orders_status_of(g, seat, gd), crate::cover::cover_tail(g, gd)),
         addressed: picked && to.contains(&gd),
         pair: if paired { g.gd[gd].unit.as_ref().and_then(|u| u.pair).map(pair_word) } else { None },
-        down: g.gd[gd].state == crate::game::GuardState::Dead,
+        down: crate::condition::down(g, g.gd[gd].ch),
         kit: String::from(crate::kit::kit_line(g, gd)),
     }).collect();
     let notes = super::rows::ROWS.iter().filter_map(|r| r.notes).flat_map(|f| f(g, seat)).collect();

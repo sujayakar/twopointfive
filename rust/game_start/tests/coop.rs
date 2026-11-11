@@ -178,7 +178,7 @@ fn walked(seed: u32, keys: &str, looks: bool) -> (Vec<Vec<u32>>, Vec<(bool, Vec<
     let (seats, canvas) = (p.g.seats.clone(), p.host.canvas);
     let mut cmds: Vec<game::cmd::PlayerCmd> = seats.iter().map(|&s| {
         let (input, cam) = (p.g.tab.cmd_seat[s].input, p.g.tab.cmd_seat[s].cam);
-        game::seats::with_seat(&mut p.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
+        game::seats::with_seat(&mut p.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas))
     }).collect();
     cmds[1].keys = vec![String::from(keys)];
     // (as a record comes off the wire: the eye and the matrices are for the game to work out)

@@ -1,7 +1,7 @@
 //! The types of `scene_level`.
 #![allow(unused_imports)]
 use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 /// which level's script this is, by the level file's name; the body is levels/<name>.script.ts, its define pass called by a match
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -34,7 +34,7 @@ pub struct PropPart {
     pub h: V3,
     pub yaw: f64,
     pub albedo: V3,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
 }
@@ -95,7 +95,7 @@ pub struct BreachPlan {
     pub breach_lines: crate::scene_level::BreachPlanBreachLines,
     pub door: String,
     pub room: Option<String>,
-    pub breach: Option<crate::scene_level::BreachPlanBreach>,
+    pub breach: Option<crate::scene_level::PlanBreach>,
     pub bounds: Option<crate::scene_level::BreachPlanBounds>,
     pub from: Option<[V3; 2]>,
     pub stack: [V3; 2],
@@ -222,12 +222,6 @@ pub struct BreachPlanBreachLines {
     pub radio1: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum BreachPlanBreach {
-    Kick,
-    Open,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreachPlanBounds {
     pub x0: f64,
@@ -256,7 +250,7 @@ pub struct BreachPlanLines {
 pub struct RoomClearPlan {
     pub door: String,
     pub room: Option<String>,
-    pub breach: Option<crate::scene_level::RoomClearPlanBreach>,
+    pub breach: Option<crate::scene_level::PlanBreach>,
     pub bounds: Option<crate::scene_level::BreachPlanBounds>,
     pub from: Option<[V3; 2]>,
     pub stack: [V3; 2],
@@ -310,15 +304,9 @@ impl Default for RoomClearPlan {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum RoomClearPlanBreach {
-    Kick,
-    Open,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
-    pub props: Vec<crate::scene_level::PropDef>,
+    pub props: Vec<Arc<crate::scene_level::PropDef>>,
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub player_spawn: V3,
@@ -341,7 +329,65 @@ pub struct Level {
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
-    pub mission: crate::quiet::QuietMissionAuthoredMission,
+    pub errand: crate::mission::Errand,
+}
+/// a BreachPlan is a RoomClearPlan with more on it: the part of it doorPlan's callers read
+fn plan_of_breach(b: &crate::scene_level::BreachPlan) -> crate::scene_level::RoomClearPlan {
+    crate::scene_level::RoomClearPlan {
+        door: b.door.clone(),
+        room: b.room.clone(),
+        breach: b.breach,
+        bounds: b.bounds,
+        from: b.from,
+        stack: b.stack,
+        stack_face: b.stack_face,
+        stack_side: b.stack_side,
+        stack_aim: b.stack_aim,
+        kick_from: b.kick_from,
+        kick_face: b.kick_face,
+        fling: b.fling,
+        entry: b.entry.clone(),
+        pod_face: b.pod_face,
+        entry_aim: b.entry_aim.clone(),
+        search_path: b.search_path.clone(),
+        search_face: b.search_face,
+        search_aim_walk: b.search_aim_walk.clone(),
+        search_aim_there: b.search_aim_there.clone(),
+        under_aim: b.under_aim.clone(),
+        up_aim: b.up_aim,
+        form_up: b.form_up.clone(),
+        form_face: b.form_face,
+        lines: b.lines.clone(),
+    }
+}
+
+/// WHAT A LEVEL'S FILE SAYS OF ITS FLOOR, whichever mission is played on it.
+impl Level {
+    fn floor(&self) -> Option<&crate::scene_scenarios::StructureData> { self.scenarios.as_ref()?.room_clear.as_ref() }
+    fn own(&self) -> Option<&crate::scene_scenarios::QuietData> { self.scenarios.as_ref()?.quiet.as_ref() }
+    /// its rooms, each with its name, its bounds and its doors (empty: it names none)
+    pub fn rooms(&self) -> &[crate::scene_scenarios::StructureRoom] { self.floor().map_or(&[], |f| &f.rooms) }
+    pub fn room_at(&self, p: V3) -> Option<&crate::scene_scenarios::StructureRoom> {
+        self.rooms().iter().find(|r| { let b = &r.bounds; p[0] > b.x0 && p[0] < b.x1 && p[2] > b.z0 && p[2] < b.z1 })
+    }
+    /// its defenders may dig in
+    pub fn digs_in(&self) -> bool { self.floor().map_or(true, |f| f.dig_in != Some(false)) }
+    /// the room its captives are held in, as its file says it
+    pub fn held_room(&self) -> Option<&crate::scene_scenarios::RescueData> { self.scenarios.as_ref()?.rescue.as_ref() }
+    /// it says its own places: where its staff's needs are answered, and what there is to take
+    pub fn own_places(&self) -> bool { self.own().is_some() }
+    pub fn needs(&self) -> Option<&crate::scene_scenarios::QuietDataNeeds> { self.own()?.needs.as_ref() }
+    /// where the thing to take may lie
+    pub fn spots(&self) -> &[crate::scene_scenarios::QuietSpot] { self.own().map_or(&[], |q| &q.spots) }
+    /// its shift checks in by radio
+    pub fn radio_check(&self) -> bool { self.own().map_or(true, |q| q.radio_check != Some(false)) }
+    /// its own stack-and-enter plan for a door
+    pub fn door_plan(&self, door: &str) -> Option<crate::scene_level::RoomClearPlan> {
+        if let Some(p) = self.clear_plans.as_ref().and_then(|v| v.iter().find(|p| p.door == door)) { return Some(p.clone()); }
+        self.breach.as_ref().filter(|b| b.door == door).map(plan_of_breach)
+    }
+    /// it is a lesson's
+    pub fn lesson(&self) -> Option<&crate::scene_scenarios::LessonData> { self.scenarios.as_ref()?.lesson.as_deref() }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -426,12 +472,6 @@ pub struct CivilianDef {
     pub face: Option<Vec<f64>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum CivilianDefKind {
-    #[default] Cleaner,
-    Worker,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum CivilianTask {
     Bin,
@@ -483,4 +523,16 @@ pub struct PatrolRoute {
     pub wait: Vec<f64>,
     pub weapon: Option<crate::weapons::WeaponId>,
     pub keys: Option<Vec<String>>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum PlanBreach {
+    Kick,
+    Open,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum CivilianDefKind {
+    #[default] Cleaner,
+    Worker,
 }

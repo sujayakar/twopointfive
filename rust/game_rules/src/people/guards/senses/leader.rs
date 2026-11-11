@@ -20,7 +20,7 @@ pub(in crate::people) fn leader(g: &mut Game, gd: GuardId, lvl: f64) {
             g.gd[gd].search_t = 0.0;
             let fix = if crate::scene_collision::nav_grid_walkable(g, lk, side) { side } else { lk };
             crate::mind::fix(g, gd, Some(fix), "guards");
-            clear_path(g, gd);
+            g.gd[gd].drop_path();
         }
     }
 }

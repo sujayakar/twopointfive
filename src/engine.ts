@@ -12,7 +12,7 @@ import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField, powderDrawWord, powderWarm } from './render/powderField';
 import { PlaceField } from './render/placeField';
-import { PlaceMap } from './scene/placePlan';
+import { PlaceMap, type PlaceGap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
@@ -20,7 +20,7 @@ import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, 
 import { buildWallRaster, wallRasterHandOnSteps, rasterRect, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob, type ReachOnly } from './render/reach';
 import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
 import { PLAN_PACE } from './render/planPace';
-import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
+import { MeshShadows } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
 import { Particles } from './render/particles';
@@ -45,6 +45,8 @@ const rcGridKey = (c: RcConfig) => `${c.nx}x${c.ny}x${c.nz}/d${c.d0}/c${c.cascad
 export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the frame's bit that the volumetric pass's dust look asks (smokeDrawWords) */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
 
 const NO_BEAM = (): boolean => false;
+/** no doors' lines: one list, for what is kept of them stands while the list does */
+const NO_GAPS: readonly PlaceGap[] = [];
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
 
@@ -75,6 +77,8 @@ export class Engine {
   gbuffer: GBuffer;
   passes: LightingPasses;
   timer: GpuTimer;
+  /** the canvas's size in the window, by whoever reads it once a frame (host/viewsize.ts); null = the canvas is asked */
+  view: { readonly clientWidth: number; readonly clientHeight: number } | null = null;
   /** the render-target pool the g-buffer and the lighting passes share (render/texpool.ts): a size the adaptive ladder returns to costs no allocation */
   pool: TexturePool;
   sceneLayout: GPUBindGroupLayout;
@@ -178,7 +182,7 @@ export class Engine {
     this.drawWait.calm = PLAN_PACE.calm;
     return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
   }
-  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: rust/game_rules/src/tick/host_api.rs): what the planners have in hand was of the state before, so it is
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back): what the planners have in hand was of the state before, so it is
    *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
    *  stands, and a job in hand is still of it. */
   startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }
@@ -525,9 +529,9 @@ export class Engine {
   get meshShadowsOn(): boolean { return this.settings.meshShadows && this.meshShadowsAvailable && !!this.meshShadows; }
 
   resize() {
-    const canvas = this.gpu.canvas;
+    const canvas = this.gpu.canvas, view = this.view ?? canvas;
     const dpr = window.devicePixelRatio || 1;
-    const cw = Math.max(1, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    const cw = Math.max(1, Math.floor(view.clientWidth * dpr)), ch = Math.max(1, Math.floor(view.clientHeight * dpr));
     // canvas backing store at internal res; browser upscales. Internal height = min(maxInternalHeight, CSS height × dpr) × renderScale: the cap is what ×1.0 means on
     // this window and every step of the scale below it renders fewer pixels (until 08-11 the scale multiplied the window and was THEN capped, so on a HiDPI window —
     // 1440 device px against a 1000-px cap — everything from ×0.70 to ×1.00 rendered the same 1000 rows: a dead zone on the slider and rungs the adaptive ladder
@@ -747,15 +751,15 @@ export class Engine {
     const decalsOn = this.decalsOn;      // FrameFlags.Decals this frame (setting ∧ a list attached ∧ something in it)
     const partOn = this.particlesOn;     // FrameFlags.Particles this frame (setting ∧ a Particles attached): its emits are dealt slots and uploaded now, stepped after the cascades, drawn after the composite
     const rtOn = s.rtReflect;            // RT reflections this frame (frame.rtCfg.w = the divisor, 0 while off) — and Gloss is then held DOWN whatever settings.gloss says (the reflection pass covers the polished floors: rtReflect ⊃ gloss)
-    const rigBits = (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 64 character self-shadow · 128 mesh shadows near-only; the bits under 64 are free — the round cones themselves are unconditional)
+    const rigBits = (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0) | (s.meshShadowsDirect ? 256 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 64 character self-shadow · 128 mesh shadows near-only · 256 in the direct light's rays alone; the bits under 64 are free — the round cones themselves are unconditional)
     this.particles?.prepare(dt, partOn, s.particleBirths);
     const numTransientNow = this.lights.lights.reduce((n, l) => n + ((l.ttl >= 0 || l.transient) && l.enabled ? 1 : 0), 0);   const firstTransientNow = numTransientNow ? this.lights.firstTransientSlot : 0;   // (+ the lowest SLOT holding one, from the upload above — the gather's subtraction loop starts there instead of at slot 0 (frame.p5Cfg.w; 0 when none is alive, so a still's frame block is byte for byte what it was — review R2.2))   // transient (ttl / flagged) lights alive this frame — the gather skips its subtraction loop at 0 (the goggles' infrared lights are NOT among them: steady lights in the tube's picture — lights.ts LightSet.ir)
     this.rc.halfRate = s.rcHalfRate;
     // THE LOOK PROTOTYPE, light keeps to its room (the look panel's row `rooms`; lookConfig.rooms 0 = the cache as it was; DAY AND NIGHT, and the game's light
     // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
     // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
-    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
-    if (lookSides || placeOn) { const t = clock(); this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps); spend(plan, clock() - t); }   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
+    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? NO_GAPS : NO_GAPS;
+    if (lookSides || placeOn) { const t = clock(); this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps, this.world.staticsTold); spend(plan, clock() - t); }   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
     if (lookSides || placeOn) this.wallSides.update(this.world.statics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap, plan); else this.wallSides.drop();   // (the plan's words: the Walls have two sides row's for the cache reads, and the exposure's for a pixel's place whatever that row says, composite.wgsl lookPlaceLevels. Made again only when the map's shape changes)
     const sidesStamp = lookSides || placeOn ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none)
     const lookRoom = lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);
@@ -836,7 +840,7 @@ export class Engine {
     const ts = (n: string) => timer.pass(n);
     this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
-    if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
+    if (meshOn) { if (this.meshShadows!.plan(this.world.charCount)) this.meshShadows!.encode(enc, ts('mesh')); else timer.idle('mesh'); }   // skin + refit the tree of every listed character who has moved from this frame's joint matrices — before the cascades, the first pass that traces
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);

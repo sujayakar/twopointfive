@@ -28,7 +28,7 @@ pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::D
                 if js::truthy(by_script) { return by_script; }
                 let by_shape = played_n(c, &alloc::format!("shape:{}", a.shape.as_str())) - played_n(c, &alloc::format!("shape:{}", b.shape.as_str()));
                 if js::truthy(by_shape) { return by_shape; }
-                crate::math_dice::hash_str(&alloc::format!("{}|{}", c.who, a.id)) - crate::math_dice::hash_str(&alloc::format!("{}|{}", c.who, b.id))
+                crate::dice::hash_str(&alloc::format!("{}|{}", c.who, a.id)) - crate::dice::hash_str(&alloc::format!("{}|{}", c.who, b.id))
             });
             sc = fits.into_iter().next();
         }
@@ -52,12 +52,12 @@ pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::D
 
 /// `Number(played(key))`: 1 if this session has played it and the rotation is on.
 fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
-    let played = SCRIPT_ROTATE && ctx.recent.as_ref().is_some_and(|r| r.has(String::from(key)));
+    let played = SCRIPT_ROTATE && ctx.recent.as_ref().is_some_and(|r| r.holds(key));
     if played { 1.0 } else { 0.0 }
 }
 
 /// Does this script fit the man and the moment, and does every line it would say to him resolve now.
-fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+fn script_fits(g: &crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     if sc.t != ctx.t || !sc.k.contains(&ctx.k) { return false; }
     if let Some(band) = &sc.band { if !band.contains(&ctx.band) { return false; } }
     if let Some(needs) = &sc.needs { if needs.iter().any(|n| !fact(ctx, *n)) { return false; } }
@@ -90,9 +90,9 @@ pub(super) fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKe
     let room = String::from(ctx.tokens.room.as_deref().unwrap_or(""));
     let Some(list) = table.get(room) else { return b; };
     if list.is_empty() { return b; }
-    let i = js::rem(crate::math_dice::hash_str(&alloc::format!("{}|room|{}", ctx.who, sc.id)), list.len() as f64) as usize;
+    let i = js::rem(crate::dice::hash_str(&alloc::format!("{}|room|{}", ctx.who, sc.id)), list.len() as f64) as usize;
     let r = &list[i];
-    Beat { sam: r.sam.clone(), sam_now: None, him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
+    Beat { sam: r.sam.clone(), him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
 }
 
 /// The man's line off a beat for this man; `None` if it does not resolve.
@@ -110,8 +110,8 @@ fn him_raw(b: &Beat, ctx: &DialogueCtx) -> Option<(String, HimOfK)> {
     match &b.him {
         Him::Text(text) => Some((text.clone(), HimOfK::Empty)),
         Him::Arm1(by) => {
-            if let Some(text) = by.get(String::from(ctx.k.as_str())) { return Some((text.clone(), him_k(ctx.k))); }
-            by.get(String::from(ctx.t.as_str())).or_else(|| by.get(String::from("*"))).map(|text| (text.clone(), HimOfK::Empty))
+            if let Some(text) = by.of(ctx.k.as_str()) { return Some((text.clone(), him_k(ctx.k))); }
+            by.of(ctx.t.as_str()).or_else(|| by.of("*")).map(|text| (text.clone(), HimOfK::Empty))
         }
     }
 }

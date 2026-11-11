@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,17 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A number as a Map's key: JavaScript's Map takes −0 and 0 for one key, `Num` compares bits.
-fn num_key(x: f64) -> crate::Num { crate::Num(x + 0.0) }
-
 fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
-
-/// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics.
-pub fn save_sneak(g: &crate::game::Game) {}
 
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at.
 pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let now = g.time;
     match g.m.sneak.leaf_t.get_mut(d) {
         None => { g.m.sneak.leaf_t.set(d, SneakModLeafTValue { a: angle, t: -1e9 }); }
@@ -26,12 +21,6 @@ pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
     }
     let t = g.m.sneak.leaf_t.get(d).unwrap().t;
     now - t < g.k.sneak.door_settle
-}
-
-pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
-/// What he did, newest last.
-pub(super) fn note(g: &crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// The sneak is live for the squad this frame; one read a frame.
@@ -49,32 +38,30 @@ fn sneak_live_now(g: &mut Game) -> bool {
     if !crate::silent::squad_silent(g, &crate::seats::here(g)) { return false; }
     if crate::silent::silent_compromised(g, &crate::seats::here(g)) { return false; }
     let pl = g.player;
-    if g.pl[pl].down { return false; }
-    if crate::pairup::pair_up(g, crate::pairup::PairUpRule::Hunted) && g.k.spotted.on {
+    if crate::condition::down(g, g.pl[pl].ch) { return false; }
+    if crate::pairup::pair_up(g) && g.k.spotted.on {
         let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         for gd in squad {
-            if g.gd[gd].state != crate::game::GuardState::Dead && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught { return false; }
+            if !crate::condition::down(g, g.gd[gd].ch) && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught { return false; }
         }
         return true;
     }
     for &h in g.guards.iter() {
         let r = &g.gd[h];
         if (r.state == crate::game::GuardState::Alert || r.state == crate::game::GuardState::Search)
-            && r.team != crate::teams::Team::Operative
-            && r.team != crate::teams::Team::Civilian { return false; }
+            && !g.ch[r.ch].team.ours()
+            && g.ch[r.ch].team != crate::teams::Team::Civilian { return false; }
     }
     true
 }
 
-pub(super) fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
-
 /// This teammate is under the sneak this frame.
-pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on && mate(g, gd) && sneak_live(g) }
+pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on && g.team(gd).ours() && sneak_live(g) }
 
 /// He is low because Sam is.
 pub fn sneak_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let pl = g.player;
-    g.k.sneak.on && g.pl[pl].crouch && sneaking(g, gd)
+    g.k.sneak.on && crate::unseen::sam_low(g, pl) && sneaking(g, gd)
 }
 
 /// A walk to a mark an order or the level's flow gave him: the pace he keeps to, low.
@@ -89,7 +76,7 @@ pub(in crate::teammates) fn sneak_step(g: &mut crate::game::Game, gd: GuardId) -
 }
 
 /// Is this man walking over where the teammate stands: the man sent to the breaker, or a suspicious man on his way to a sound.
-pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+pub fn sneak_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if crate::workthings::work_coming(g, gd, h) { return true; }
     if !g.k.sneak.on { return false; }
     let (end, goal) = {
@@ -97,7 +84,7 @@ pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool 
         if r.state != crate::game::GuardState::Suspicious || r.task.is_some() || r.body_duty.is_some() || r.hold || r.held.is_some() { return false; }
         match (r.last_known, r.path_goal) { (Some(l), Some(pg)) => (l, pg), _ => return false }
     };
-    if flat(goal, end) > 1.0 { return false; }
+    if dist_xz(goal, end) > 1.0 { return false; }
     if g.gd[h].path_i >= g.gd[h].path.len() { return false; }
     let sight_t = g.gd[h].sight_t;
     if g.time >= sight_t && g.time - sight_t < g.k.spotted.fresh_secs { return false; }
@@ -116,7 +103,6 @@ pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool 
         let qx = a[0] + dx * k;
         let qz = a[2] + dz * k;
         if m::hyp2(p[0] - qx, p[2] - qz) < g.k.sneak.noise_walk_m && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [qx, 0.45, qz], None) {
-            g.stats.sneak.noise_walks += 1;
             return true;
         }
         a = b;
@@ -130,7 +116,7 @@ pub fn sneak_word(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.k.sneak.on { return None; }
     let (mode, why) = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) { Some(mm) => (mm.mode, mm.why), None => return None };
     // (`sneaking`, as the tick's `sneak_tick` last read the sneak live: a HUD's line asks and writes nothing)
-    if !(mate(g, gd) && g.m.sneak.live_at.is_some_and(|l| l.v)) { return None; }
+    if !(g.team(gd).ours() && g.m.sneak.live_at.is_some_and(|l| l.v)) { return None; }
     let word = match mode {
         Mode::Wait => match why {
             Why::Door => "clear of the door",
@@ -154,16 +140,16 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        if h == gd || g.gd[h].state == crate::game::GuardState::Dead { continue; }
-        if !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) { continue; }
+        if h == gd || crate::condition::down(g, g.gd[h].ch) { continue; }
+        if !g.team(h).foe_of(g.team(gd)) { continue; }
         let hc = g.gd[h].ch;
-        if flat(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
+        if dist_xz(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
     }
     out
 }
 
 /// How lit two points are, the brighter, on the meter's own curve.
-pub(super) fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady: Option<bool>) -> f64 {
+pub(super) fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady: Option<bool>) -> f64 {
     let steady = steady.unwrap_or(true);
     let mut own = own;
     let at_a = match own.as_mut() {
@@ -192,7 +178,7 @@ pub(super) fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, l
 /// A defender's eye exactly as guards.ts canSeeChar builds it, its cones `wide` degrees wider.
 fn eye_for(g: &crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
     let c = g.gd[h].ch;
-    let pos = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+    let pos = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let look = crate::guards::look_of(g, c);
     let k = g.k.guard_eye;
     crate::guards::Eye {
@@ -213,9 +199,9 @@ pub(super) fn stand_in(p: V3, low: bool) -> crate::sneak::Target {
 }
 
 /// guards.ts eyeContact asked of what the sneak's eye test takes: a man's own body, or a spot (standIn: alive, never the player, so only `blind` shuts the eye).
-fn ask(g: &mut Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
+fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
     match *pc {
-        Target::Man { c } => crate::guards::eye_contact(g, e, c, false, blind, 1.0, None),
+        Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
             let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
             let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);
@@ -257,8 +243,8 @@ pub(super) fn exposure(g: &mut crate::game::Game, eyes: &[GuardId], c_2: &mut cr
 pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: GuardId) -> crate::sneak::Exp {
     let c = g.gd[gd].ch;
     let low = g.ch[c].anim.crouch > 0.5;
-    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
-    read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
+    let card = crate::kitload::load_seen(g, g.gd[gd].ch);
+    read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.shown[g.gd[gd].ch].visibility, Some(low), Some(card))
 }
 
 /// The eye's rate on a man on a step: guards.ts sightGainOn's arithmetic.
@@ -278,7 +264,7 @@ pub(super) fn eye_gains(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, 
 }
 
 /// Is a man on a spot this lit, this far from this eye, seen as the sneak reads a step.
-fn lit_seen(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
+fn lit_seen(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
     if lit < g.k.sneak.lit_at { return false; }
     eye_gains(g, h, lit, dist, keen, low, card, pad)
 }
@@ -306,7 +292,7 @@ pub(super) fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &mut [c
             if r.visible {
                 let lit = lit_at(g, &mut t[k], true);
                 let next = if t.len() - 1 < k + 1 { t.len() - 1 } else { k + 1 };
-                add += eye_rate(g, h, lit, r.dist, keen, None) * m::max(0.4, flat(t[k].p, t[next].p)) / g.k.sneak.cross_pace;
+                add += eye_rate(g, h, lit, r.dist, keen, None) * m::max(0.4, dist_xz(t[k].p, t[next].p)) / g.k.sneak.cross_pace;
             }
             k += 1;
         }
@@ -323,7 +309,7 @@ fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f6
     let c = g.col.nav.cell;
     let ix = m::floor(x / c);
     let iz = m::floor(z / c);
-    let key = num_key((ix + 4096.0 * iz) * 2.0 + if low { 1.0 } else { 0.0 });
+    let key = crate::Num::of((ix + 4096.0 * iz) * 2.0 + if low { 1.0 } else { 0.0 });
     let t = g.time;
     if let Some(was) = g.m.sneak.cell_lit.as_ref().and_then(|cs| cs.get(key)) {
         if t >= was[1] && t - was[1] < age { return was[0]; }
@@ -338,7 +324,6 @@ fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f6
 
 /// The sneak's eye over any walk by `gd`: every living defender hostile to him and not dazzled, each as guards.ts builds his eye and, where `habit` gives it, as he mostly looks.
 pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> Option<[f64; 2]>>) -> crate::sneak::SneakWalk {
-    g.stats.pairup.eye_asks += 1;
     let mut habit = habit;
     let wide = g.k.sneak.cone_deg * g.k.sneak.skill;
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
@@ -347,7 +332,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        if h == gd || g.gd[h].state == crate::game::GuardState::Dead || !crate::teams::hostile_to(g, h, crate::teams::HostileToO::Guard(gd)) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
+        if h == gd || crate::condition::down(g, g.gd[h].ch) || !g.team(h).foe_of(g.team(gd)) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
         let e = eye_for(g, h, wide);
         let hab = match habit.as_mut() { Some(f) => (*f)(g, h), None => None };
         let mut looks = vec![walk_look(e)];
@@ -356,7 +341,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
         men.push(SneakWalkMan { h, x: e.pos[0], z: e.pos[2], open: crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, looks, line: JsMap::new() });
     }
     let reach = g.k.guard_eye.range + 0.5;
-    let card = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Guard(gd));
+    let card = crate::kitload::load_seen(g, g.gd[gd].ch);
     SneakWalk { by: None, gd, low, keen, card, reach, men, memo: JsMap::new() }
 }
 
@@ -380,7 +365,7 @@ fn kept_of(g: &mut Game, h: GuardId, low: bool, x: f64, z: f64) {
 }
 fn walk_lit_of(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64, age: Option<f64>) -> f64 { lit_cell(g, x, z, w.low, age) }
 /// The cheap part first (reach, and the cone in plan with a little slack), then the eye test's own cone.
-fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
+fn walk_in_cone(g: &Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
     let l = mm.looks[k];
     let e = if wider { l.ew } else { l.e };
     let dx = x - mm.x;
@@ -392,7 +377,7 @@ fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bo
 fn walk_cell(x: f64, z: f64) -> f64 { m::floor(x / 0.25) + 4096.0 * m::floor(z / 0.25) }
 /// The line from a defender to a man on this floor, asked once per defender per quarter-metre: its length, or −1.
 fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Target, fresh: bool) -> f64 {
-    let key = num_key(walk_cell(x, z));
+    let key = crate::Num::of(walk_cell(x, z));
     let h = w.men[q].h;
     if let Some(&v) = w.men[q].line.get(key) { return v; }
     if !fresh {
@@ -409,7 +394,7 @@ fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Tar
 pub fn sneak_walk_watched(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, x: f64, z: f64, wider: Option<bool>) -> bool {
     let w = this;
     let wider = wider.unwrap_or(false);
-    let key = num_key(walk_cell(x, z) * 2.0 + if wider { 1.0 } else { 0.0 });
+    let key = crate::Num::of(walk_cell(x, z) * 2.0 + if wider { 1.0 } else { 0.0 });
     if let Some(&was) = w.memo.get(key) { return was; }
     let mut lit = -1.0;
     let mut r = false;
@@ -439,8 +424,8 @@ pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::Sneak
         let a = pts[j - 1];
         let b = pts[j];
         j += 1;
-        let n = m::max(1.0, m::ceil(flat(a, b) / 0.25));
-        let dt = flat(a, b) / n / m::max(0.3, pace);
+        let n = m::max(1.0, m::ceil(dist_xz(a, b) / 0.25));
+        let dt = dist_xz(a, b) / n / m::max(0.3, pace);
         let mut at = 0.0;
         while at < n {
             at += 1.0;
@@ -459,7 +444,7 @@ pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::Sneak
                         if lit < 0.0 { lit = walk_lit_of(g, w, x, z, Some(0.4)); }
                         let h = w.men[q].h;
                         if !seen_along(g, h, d, w.keen, w.low, Some(w.card), Some(MAP_SHORT), &mut |_| lit) { break; }
-                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, &crate::seats::here(g), crate::kitload::LoadCrossWho::Guard(w.gd));
+                        rate = eye_rate(g, h, lit, d, w.keen, Some(w.low)) * crate::kitload::load_cross(g, g.gd[w.gd].ch);
                     }
                     add[q][k] += rate * dt;
                 }
@@ -491,8 +476,8 @@ mod tests {
 
     #[test]
     fn a_map_key_is_one_for_both_zeroes() {
-        assert!(num_key(-0.0) == num_key(0.0));
-        assert_eq!(num_key(walk_cell(-0.0, -0.0)).0.to_bits(), 0.0f64.to_bits());
+        assert!(crate::Num::of(-0.0) == crate::Num::of(0.0));
+        assert_eq!(crate::Num::of(walk_cell(-0.0, -0.0)).0.to_bits(), 0.0f64.to_bits());
     }
 
     #[test]

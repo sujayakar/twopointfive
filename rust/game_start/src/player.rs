@@ -12,7 +12,6 @@ use core::cell::{Cell, RefCell};
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
-use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::game::{Game, InteractableKind, Verb};
 use game::ids::{DoorId, GuardId, SeatId};
@@ -22,12 +21,10 @@ use game::view::HostNow;
 
 pub type V3 = [f64; 3];
 
-pub const MOVE: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
 /// the mouse's bits in a hand
 pub const LEFT: u32 = 1;
 pub const RIGHT: u32 = 4;
 
-pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub fn at(p: V3) -> String { format!("({:.1}, {:.1})", p[0], p[2]) }
 
 /// HOW A SCRIPT'S FEET WALK: the numbers its author played it with
@@ -111,7 +108,7 @@ impl Player {
     }
     /// what he has asked of his hands, on the hand of this tick. `over`: a point his eyes are on whatever the script says, and his feet stop for it
     pub fn hands(&self, g: &Game, cmd: &mut PlayerCmd, over: Option<V3>) {
-        let pos = g.ch[g.pl[game::seats::seat(g, self.seat).player].ch].pos;
+        let pos = g.seat_pos(&game::seats::seat(g, self.seat));
         let mut ahead = None;
         if let Some(goal) = self.goal.get() {
             let (dx, dz) = (goal[0] - pos[0], goal[2] - pos[2]);
@@ -120,8 +117,7 @@ impl Player {
                 ahead = Some([pos[0] + dx / d * 6.0, 1.1, pos[2] + dz / d * 6.0]);
                 if over.is_none() {
                     let f = self.ahead.get();
-                    let (a, b) = ((dx * f[0] + dz * f[1]) / d, (dx * -f[1] + dz * f[0]) / d);
-                    for (on, k) in [(a > 0.3827, 0), (b < -0.3827, 1), (a < -0.3827, 2), (b > 0.3827, 3)] { if on { cmd.keys.push(String::from(MOVE[k])); } }
+                    for (on, key) in game::player::walk_keys(pos, [goal[0], goal[2]], [f[0], 0.0, f[1]]).into_iter().zip(game::player::WALK_KEYS) { if on { cmd.keys.push(String::from(key)); } }
                 }
             }
             if self.sprint.get() { cmd.keys.push(String::from("ShiftLeft")); }
@@ -156,12 +152,11 @@ impl Player {
         assert!(!g.is_null(), "a scripted player is asked between two hands");
         f(unsafe { &*g })
     }
-    pub fn world<R>(&self, f: impl FnOnce(&WorldAsk) -> R) -> R { self.ask(|g| f(&WorldAsk::of(g))) }
     pub fn seen<R>(&self, f: impl FnOnce(&Game, &game::seats::SeatRef) -> R) -> R { self.ask(|g| f(g, &game::seats::seat(g, self.seat))) }
     pub fn t(&self) -> f64 { self.t.get() }
-    pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
-    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
-    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| g.gd[gd].state == game::game::GuardState::Dead) }
+    pub fn pos(&self) -> V3 { self.seen(|g, s| g.seat_pos(s)) }
+    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.pos_of(gd)) }
+    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| game::condition::down(g, g.gd[gd].ch)) }
     /// a place of the world on the picture, and is it inside the margins of the picture a hand can point at
     pub fn screen(&self, p: V3) -> (f64, f64, bool) {
         let n = self.now.borrow();
@@ -204,7 +199,7 @@ impl Player {
     // ---- his hands
     /// a key goes down for a tick. (The squad's is never pressed twice inside the window of a double press: his second is a second try at an order, never 'fall in')
     pub async fn key(&self, code: &str) {
-        let (quick, twice, secs) = self.ask(|g| (code == g.orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
+        let (quick, twice, secs) = self.ask(|g| (code == g.sets[g.seat].orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
         if quick && twice {
             while self.t.get() < self.quick_at.get() + secs + 0.05 { self.tick().await }
             self.quick_at.set(self.t.get());
@@ -252,38 +247,18 @@ impl Player {
     pub async fn crouch(&self, on: bool) { for _ in 0..3 { if self.seen(|g, s| g.pl[s.player].crouch) == on { break; } self.press("KeyC", 3).await; } }
 
     // ---- his feet
-    /// the nearest place a man may stand, on the asked point's own side of a wall where there is one (scene_collision nav_grid_nearest_free_point, asked of the game shared)
+    /// the nearest place a man may stand, on the asked point's own side of a wall where there is one
     pub fn free(&self, p: V3) -> Option<V3> {
-        self.world(|w| {
-            let g = w.shared();
-            let n = &g.col.nav;
-            if !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return Some([p[0], 0.0, p[2]]); }
-            let mid = |x: f64, z: f64| [(x + 0.5) * n.cell, 0.0, (z + 0.5) * n.cell];
-            let (gx, gz) = (m::floor(p[0] / n.cell).clamp(0.0, n.w - 1.0), m::floor(p[2] / n.cell).clamp(0.0, n.h - 1.0));
-            if n.blocked[(gz * n.w + gx) as usize] == 0 { return Some(mid(gx, gz)); }
-            let (mut fallback, mut extra) = (None, 1);
-            for r in 1..8i32 {
-                for dz in -r..=r { for dx in -r..=r {
-                    if dx.abs().max(dz.abs()) != r { continue; }
-                    let (x, z) = (gx + dx as f64, gz + dz as f64);
-                    if x < 0.0 || z < 0.0 || x >= n.w || z >= n.h || n.blocked[(z * n.w + x) as usize] != 0 { continue; }
-                    let q = mid(x, z);
-                    fallback = fallback.or(Some(q));
-                    if !w.line([p[0], 1.0, p[2]], [q[0], 1.0, q[2]], Line::Solid) { return Some(q); }
-                } }
-                if fallback.is_some() { if extra <= 0 { return fallback; } extra -= 1; }
-            }
-            fallback
-        })
+        self.ask(|g| if game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { game::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) })
     }
-    pub fn way(&self, a: V3, b: V3) -> Option<Vec<V3>> { self.world(|w| w.way(a, b, self.feet.search)) }
+    pub fn way(&self, a: V3, b: V3) -> Option<Vec<V3>> { self.ask(|g| game::scene_collision::way_host(g, a, b, self.feet.search)) }
     pub fn way_len(&self, a: V3, b: V3) -> f64 {
         let Some(w) = self.way(a, b) else { return f64::INFINITY };
         let (mut l, mut q) = (0.0, a);
-        for p in w { l += flat(q, p); q = p; }
-        l + flat(q, b)
+        for p in w { l += game::v3::dist_xz(q, p); q = p; }
+        l + game::v3::dist_xz(q, b)
     }
-    pub fn solid(&self, a: V3, b: V3) -> bool { self.world(|w| w.line([a[0], 1.1, a[2]], [b[0], 1.1, b[2]], Line::Solid)) }
+    pub fn solid(&self, a: V3, b: V3) -> bool { self.ask(|g| game::scene_collision::solid_blocked(g, [a[0], 1.1, a[2]], [b[0], 1.1, b[2]], None)) }
     /// walk to `p`; false: stopped early (`stop`, `max` seconds, or not getting anywhere after fresh ways)
     pub async fn go(&self, p: V3, max: f64, mut stop: impl FnMut() -> bool, o: Walk) -> bool {
         let (mut left, mut again) = (max, 0u32);
@@ -291,10 +266,10 @@ impl Player {
         let gone = |r: bool| { self.goal.set(None); self.sprint.set(false); if feet.eyes_on_way { self.look.set(None); } r };
         'afresh: loop {
             let mut path = self.way(self.pos(), p).unwrap_or_default();
-            if path.last().is_none_or(|&l| flat(l, p) > 0.05) { path.push([p[0], 0.0, p[2]]); }
+            if path.last().is_none_or(|&l| game::v3::dist_xz(l, p) > 0.05) { path.push([p[0], 0.0, p[2]]); }
             if let Some(verb) = o.door {
                 if let Some(d) = self.door_on_way(&path) {
-                    if flat(self.pos(), self.ask(|g| g.dr[d].frame_centre)) < 40.0 {
+                    if game::v3::dist_xz(self.pos(), self.ask(|g| g.dr[d].frame_centre)) < 40.0 {
                         let name = self.name(d);
                         let opening: Pin<Box<dyn Future<Output = bool> + '_>> = Box::pin(self.open_door(d, verb));
                         if !opening.await { self.say(format!("  the door {} would not open", name)); return gone(false); }
@@ -307,12 +282,12 @@ impl Player {
             self.sprint.set(o.sprint);
             for (i, &wp) in path.iter().enumerate() {
                 self.goal.set(Some([wp[0], 0.0, wp[2]]));
-                while flat(self.pos(), wp) > if i == last { o.near } else { feet.corner } {
+                while game::v3::dist_xz(self.pos(), wp) > if i == last { o.near } else { feet.corner } {
                     if feet.eyes_on_way { self.look.set(Some([wp[0], 1.1, wp[2]])); }
                     self.tick().await;
                     if stop() || self.t.get() - t0 > left { return gone(false); }
                     let me = self.pos();
-                    if flat(me, mark) > feet.moved || self.busy.get() { mark = me; mark_t = self.t.get(); }
+                    if game::v3::dist_xz(me, mark) > feet.moved || self.busy.get() { mark = me; mark_t = self.t.get(); }
                     else if self.t.get() - mark_t > feet.stuck {
                         // (a mate in a doorway, a chair, the tip of a leaf: a step to one side, then the other, and a fresh way)
                         if again >= feet.tries { return gone(false); }
@@ -387,9 +362,9 @@ impl Player {
         for _ in 0..60 {
             if let Some(p) = aim { self.aim(p); }
             self.tick().await;
-            let (lit, there) = self.seen(|g, s| {
+            let (lit, there) = self.seen(|_, s| {
                 let rows = &s.nearby;
-                (rows.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
+                (rows.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
             });
             if lit { self.down(game::consts::INTERACT_KEY); self.ticks(2).await; return true; }
             if there { self.down("ArrowDown"); }
@@ -407,7 +382,7 @@ impl Future for Once {
 
 /// WHAT A HOST HANDS A SEAT OVER TO: he writes the hand of the tick about to run
 pub trait Script {
-    /// the hand of the tick about to run: what the host sampled, with his over it. The box world's copy stands (`scene_collision::stands`).
+    /// the hand of the tick about to run: what the host sampled, with his over it
     fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64);
     /// he has nothing more to do
     fn over(&self) -> bool;

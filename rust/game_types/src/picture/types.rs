@@ -9,12 +9,6 @@ pub enum ExposureAsker {
     Ideas { h: f64, rows: Vec<(crate::picture::Idea, f64, Option<Vec<V3>>)> },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
-pub enum Who {
-    Guard(GuardId),
-    Player,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum IdeaHow {
     #[default] Heard,
@@ -25,7 +19,7 @@ pub enum IdeaHow {
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Idea {
-    pub who: crate::picture::Who,
+    pub who: CharId,
     pub at: V3,
     pub t: f64,
     pub since: f64,
@@ -36,7 +30,7 @@ pub struct Idea {
 impl Default for Idea {
     fn default() -> Self {
         Idea {
-            who: crate::picture::Who::Guard(GuardId(0)),
+            who: CharId(0),
             at: [0.0; 3],
             t: 0.0,
             since: 0.0,
@@ -50,9 +44,9 @@ impl Default for Idea {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Pic {
     pub owner: Option<GuardId>,
-    pub ideas: JsMap<crate::picture::Who, crate::picture::Idea>,
-    pub downs: JsMap<crate::picture::Who, f64>,
-    pub heard: JsMap<crate::picture::Who, f64>,
+    pub ideas: JsMap<CharId, crate::picture::Idea>,
+    pub downs: JsMap<CharId, f64>,
+    pub heard: JsMap<CharId, f64>,
     pub look_t: f64,
     pub step: Option<crate::picture::Step>,
     pub step_ask: Option<f64>,
@@ -90,13 +84,13 @@ pub struct CoverSpot {
 
 #[derive(Clone, Copy, Debug)]
 pub struct KnownPlacesItem {
-    pub who: crate::picture::Who,
+    pub who: CharId,
     pub at: V3,
 }
 impl Default for KnownPlacesItem {
     fn default() -> Self {
         KnownPlacesItem {
-            who: crate::picture::Who::Guard(GuardId(0)),
+            who: CharId(0),
             at: [0.0; 3],
         }
     }
@@ -118,23 +112,7 @@ pub struct PictureMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct PictureStats {
-    pub looks: i32,
-    pub seen: i32,
-    pub heard: i32,
-    pub told: i32,
-    pub fixes: i32,
-    pub lost: i32,
-    pub downs: i32,
-    pub forgot: i32,
     pub asks: i32,
     pub lines: i32,
     pub moved: i32,
-    pub shot_placed: i32,
-    pub shot_off: i32,
-    pub shot_kept: i32,
-    pub ran: i32,
-    pub ran_off: i32,
-    pub stepped: i32,
-    pub filed: i32,
-    pub filed_hinge: i32,
 }

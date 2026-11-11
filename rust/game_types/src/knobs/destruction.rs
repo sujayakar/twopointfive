@@ -45,7 +45,7 @@ pub struct ChaosK {
     /// picked on: a charge lifts the leaves within a metre well over a metre and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three
     /// and a half and leaves the ones at four; a round hops the leaf beside it a few centimetres and scoots it a span; a thump twitches what lies within a stride)
     pub imp: ChaosKImp,
-    /// THE LOUD LEVELS (read only with the destruction switch on — destructionSwitch.ts; off, nothing here is consulted). Fixtures die to ANYBODY's rounds and to blasts,
+    /// THE LOUD LEVELS. Fixtures die to ANYBODY's rounds and to blasts,
     /// the panel over a beaten zone goes with the tile beside it, and all of it is capped per encounter so a long fight cannot put the whole floor in the dark.
     pub loud: ChaosKLoud,
     /// A BLAST'S PALL (the maintainer, 10-14: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A charge's dust was the
@@ -131,7 +131,7 @@ pub struct ChaosKImpThud {
     #[k(4.0)] pub per_frame: f64,
 }
 
-/// THE LOUD LEVELS (read only with the destruction switch on — destructionSwitch.ts; off, nothing here is consulted). Fixtures die to ANYBODY's rounds and to blasts,
+/// THE LOUD LEVELS. Fixtures die to ANYBODY's rounds and to blasts,
 /// the panel over a beaten zone goes with the tile beside it, and all of it is capped per encounter so a long fight cannot put the whole floor in the dark.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKLoud {

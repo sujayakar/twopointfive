@@ -22,14 +22,15 @@ import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybi
 import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { Engine } from '../engine';
 import type { AudioEngine } from '../audio/audio';
-import { visitTier, type Quality, type QualityName } from './quality';
+import { TIER_NAME, visitTier, type Quality, type QualityName } from './quality';
+import { RENDER_PASSES } from '../gpu/timer';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 /** WHAT THE SCREEN SETS OF A GAME, whoever holds it: each reads as the game is set now, and is set by being written */
 export interface OptionsGame {
   autosave: boolean; god: boolean; thinks: boolean; ammo: boolean;
-  /** the wall hold's feel is on, and whether walking into a wall takes it */
-  readonly wallFeel: boolean; wallPress: boolean;
+  /** walking into a wall takes it */
+  wallPress: boolean;
   /** the command key tapped twice calls the squad in, now (a tutorial holds it back until a step lists it) */
   readonly fallIn: boolean;
   /** the faint dots on what can be acted on */
@@ -41,10 +42,10 @@ const LS = 'twopointsix.options';
 
 const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'auto',    label: 'Auto',     line: 'Recommended. It measures this GPU for a couple of seconds, picks the tier and resolution that hold a steady frame rate, and keeps trimming as the scene changes. It never picks Ultra.' },
-  { v: 'verylow', label: 'Very low', line: 'This is for integrated graphics. It renders at half resolution, with one shadow ray per light and more temporal reuse. It\'s grainy in the dark, but it plays.' },
-  { v: 'low',     label: 'Low',      line: 'This is for thin laptops. It uses a lower internal resolution and coarser bounce light, with no ray-traced reflections. The light is still fully dynamic and nothing is baked.' },
-  { v: 'medium',  label: 'Medium',   line: 'You get the same lighting, with the bounce light and the beams computed at reduced resolution and fewer shadow rays. Contact shadows are softer, but most people can\'t tell in motion.' },
-  { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
+  { v: 'verylow', label: TIER_NAME.verylow, line: 'This is for integrated graphics. It renders at half resolution, with one shadow ray per light and more temporal reuse. It\'s grainy in the dark, but it plays.' },
+  { v: 'low',     label: TIER_NAME.low,      line: 'This is for thin laptops. It uses a lower internal resolution and coarser bounce light, with no ray-traced reflections. The light is still fully dynamic and nothing is baked.' },
+  { v: 'medium',  label: TIER_NAME.medium,   line: 'You get the same lighting, with the bounce light and the beams computed at reduced resolution and fewer shadow rays. Contact shadows are softer, but most people can\'t tell in motion.' },
+  { v: 'high',    label: TIER_NAME.high,     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
 ];
 
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
@@ -298,6 +299,7 @@ function render(S: Screen) {
     sec(body, 'Quality');
     seg(body, 'Graphics quality', TIERS, cur, v => { if (v === 'auto') quality.setAuto(); else quality.pin(v); }, () => TIERS.find(t => t.v === cur())?.line ?? '');
     const live = el('div', 'op-info'); body.appendChild(live); paints.push(() => { live.textContent = displayNote(); });
+    { const again = () => { if (!live.isConnected) return; live.textContent = displayNote(); setTimeout(again, 400); }; setTimeout(again, 400); }   // (a tier picked here draws its own frames after the click: the line follows them)
     range(body, 'Render resolution', 50, 100, 5, () => Math.round(G.renderScale * 100), v => { const auto = quality.auto; if (auto) quality.pin(quality.current); G.renderScale = v / 100; if (auto) S.paint(); }, v => `${v.toFixed(0)} %`,
       'This is the percentage of the tier\'s full resolution that the scene is rendered at before it\'s upscaled to the window. Edges stay clean down to about 60 %. Under Auto, moving this pins the current tier.');
     flip(body, 'Hold frame rate', () => quality.adaptive, v => { quality.adaptive = v; },
@@ -325,7 +327,7 @@ function render(S: Screen) {
     flip(body, 'Autosave checkpoints', () => game.autosave, v => { game.autosave = v; },
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
     flip(body, 'Interaction hints', () => game.hints, v => { game.hints = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
-    if (game.wallFeel) flip(body, 'Walk into a wall to take it', () => game.wallPress, v => { game.wallPress = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
+    flip(body, 'Walk into a wall to take it', () => game.wallPress, v => { game.wallPress = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — rows on trial, kept by host/findme.ts)
     cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
     sec(body, 'Cheats');
@@ -352,8 +354,8 @@ function render(S: Screen) {
 /** does walking into a wall take it, as it will stand once the boot is over: before a game is handed over, what this machine has kept and the address's words (the boot card
  *  and the keyboard both ask before that) */
 export function walkInNow(): boolean {
-  if (deps) return deps.game.wallFeel && deps.game.wallPress;
-  try { const q = new URLSearchParams(globalThis.location?.search ?? ''); return !q.has('nowallsnap') && (q.has('wallpress') ? q.get('wallpress') !== '0' : kept().wallpress ?? true); } catch { return true; }
+  if (deps) return deps.game.wallPress;
+  try { const q = new URLSearchParams(globalThis.location?.search ?? ''); return q.has('wallpress') ? q.get('wallpress') !== '0' : kept().wallpress ?? true; } catch { return true; }
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
@@ -391,13 +393,14 @@ function controls(body: HTMLElement, host: KeyHost) {
   }
 }
 
-/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, GPU milliseconds and what that is in frames per second */
+/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, and, once the tier has drawn a few frames of its own, the GPU milliseconds of one and what
+ *  that is in frames per second */
 export function displayNote(): string {
   if (!deps) return '';
   const { engine, quality } = deps;
-  const gpu = engine.timer?.unionMs?.() ?? 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
+  const gpu = quality.measured ? engine.timer?.unionMs?.(RENDER_PASSES) ?? 0 : 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
   const res = engine.width && engine.outWidth ? `${engine.width}×${engine.height} rendered → ${engine.outWidth}×${engine.outHeight} shown` : '';
-  const tier = quality.auto ? `Auto is running ${quality.current}${/^(auto|calibrat)/.test(quality.lastChange ?? '') ? ' — ' + quality.lastChange : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
+  const tier = quality.auto ? `Auto is running ${TIER_NAME[quality.current]}.${quality.calibrating ? ' It’s measuring your machine.' : /^calibrat/.test(quality.lastChange ?? '') && quality.calibNote ? ` ${quality.calibNote}` : ''}` : `${TIER_NAME[quality.current]} (pinned)`;
   return [tier, res, gpu > 0.5 ? `GPU ${gpu.toFixed(1)} ms a frame (≈ ${fps.toFixed(0)} fps of headroom)` : ''].filter(Boolean).join(' · ');
 }
 /** Auto's calibration has just settled under an open screen: its line and the tier's button follow */

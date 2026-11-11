@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
+pub mod boxworld;
 pub mod bytes;
 pub mod ids;
 pub mod js;
@@ -19,13 +20,12 @@ pub const M4_IDENTITY: v3::m4::Mat4 = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0
 /// a type a hand decision has yet to name (see the STOP list)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, ToBytes)]
 pub struct Opaque;
-/// a function stored in a field, until a hand decision makes it an enum
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
-pub struct FnField;
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
 impl Num {
+    /// a key that a -0 goes in as 0
+    pub fn of(x: f64) -> Num { Num(x + 0.0) }
     /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN
     fn key(self) -> u64 { if self.0 == 0.0 { 0 } else if self.0.is_nan() { f64::NAN.to_bits() } else { self.0.to_bits() } }
 }
@@ -110,7 +110,6 @@ pub mod furnblast { pub mod types; pub use types::*; }
 pub mod game { pub mod types; pub use types::*; }
 pub mod gear { pub mod types; pub use types::*; }
 pub mod glass { pub mod types; pub use types::*; }
-pub mod glass_pattern { pub mod types; pub use types::*; }
 pub mod glassbreak { pub mod types; pub use types::*; }
 pub mod glasspen { pub mod types; pub use types::*; }
 pub mod guards { pub mod types; pub use types::*; }
@@ -148,9 +147,7 @@ pub mod levelfit { pub mod types; pub use types::*; }
 pub mod lighting { pub mod types; pub use types::*; }
 pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
-pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
-pub mod math_side { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }
 pub mod moths { pub mod types; pub use types::*; }
@@ -158,7 +155,6 @@ pub mod needs { pub mod types; pub use types::*; }
 pub mod netquiet { pub mod types; pub use types::*; }
 pub mod netquietfeed { pub mod types; pub use types::*; }
 pub mod nightbreach { pub mod types; pub use types::*; }
-pub mod noshove { pub mod types; pub use types::*; }
 pub mod nvg { pub mod types; pub use types::*; }
 pub mod opening { pub mod types; pub use types::*; }
 pub mod orders { pub mod types; pub use types::*; }
@@ -170,7 +166,6 @@ pub mod pairorders { pub mod types; pub use types::*; }
 pub mod pairup { pub mod types; pub use types::*; }
 pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
-pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
@@ -190,7 +185,6 @@ pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
-pub mod rescuecheck { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }
 pub mod rescueflush { pub mod types; pub use types::*; }
@@ -207,7 +201,6 @@ pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
 pub mod scene_air_grid { pub mod types; pub use types::*; }
-pub mod scene_box_mirror { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
@@ -242,20 +235,12 @@ pub mod shotgun { pub mod types; pub use types::*; }
 pub mod showwhy { pub mod types; pub use types::*; }
 pub mod shutdoor { pub mod types; pub use types::*; }
 pub mod silent { pub mod types; pub use types::*; }
-pub mod sim_doorshome { pub mod types; pub use types::*; }
-pub mod sim_fallshome { pub mod types; pub use types::*; }
-pub mod sim_itemshome { pub mod types; pub use types::*; }
-pub mod sim_lightshome { pub mod types; pub use types::*; }
-pub mod sim_propshome { pub mod types; pub use types::*; }
-pub mod sim_sim { pub mod types; pub use types::*; }
-pub mod sim_slabshome { pub mod types; pub use types::*; }
-pub mod sim_state { pub mod types; pub use types::*; }
-pub mod sim_weatherhome { pub mod types; pub use types::*; }
+pub mod falls { pub mod types; pub use types::*; }
+pub mod fixtures { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
-pub mod snow_bog { pub mod types; pub use types::*; }
 pub mod sparks { pub mod types; pub use types::*; }
 pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }
@@ -265,7 +250,6 @@ pub mod squadcast { pub mod types; pub use types::*; }
 pub mod squadnet { pub mod types; pub use types::*; }
 pub mod squadsmoke { pub mod types; pub use types::*; }
 pub mod squadthrow { pub mod types; pub use types::*; }
-pub mod stackline { pub mod types; pub use types::*; }
 pub mod stackroom { pub mod types; pub use types::*; }
 pub mod stalk { pub mod types; pub use types::*; }
 pub mod startle { pub mod types; pub use types::*; }

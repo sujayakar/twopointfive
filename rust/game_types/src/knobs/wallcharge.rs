@@ -3,16 +3,8 @@ use crate::{bytes::ToBytes, Words};
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum WallchargeKMenu {
-    #[default] Page,
-    Direct,
-}
-
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct WallchargeK {
-    /// how the menu reaches the row: 'page' = X, 5 'wall tools ▸', 3 — the door charge's own three presses · 'direct' = X, 5
-    #[k(WallchargeKMenu::Page)] pub menu: WallchargeKMenu,
     /// m: how near a wall's footprint the cursor's point must be for the target to be that wall
     #[k(0.06)] pub pick_m: f64,
     /// m: the charge's height on the wall · how near a wall's end it may sit · how far along the wall a spot is slid to find floor on both faces
@@ -124,7 +116,7 @@ pub struct WallshotK {
 ///      the player too (he was blind a second or two), a civilian, and one of ours whatever the team's size (on a team of more than two he was blind a second
 ///      or two; on a team of two he already went down);
 ///    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size (on a team of two he took the defenders' longer stun and fold).
-///  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode, never a puppet. A man with god mode
+///  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode. A man with god mode
 ///  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release. With the safety radius on (the page) the trigger's row names who
 ///  is too close and who is behind the wall before he presses it. No hit points anywhere: nobody takes more or fewer rounds.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

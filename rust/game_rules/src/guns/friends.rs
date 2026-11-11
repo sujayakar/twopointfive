@@ -6,14 +6,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::boxed::Box;
 
-/// The reticle passes this man over: he is not the player's enemy.
-pub fn friend_no_snap(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
-}
-
-/// A man of his own side whose body the cursor's ray should know it landed on.
-pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)
+/// He is not the player's enemy: the reticle passes him over, and the cursor's ray knows it landed on him.
+pub fn friend(g: &crate::game::Game, gd: GuardId) -> bool {
+    !g.team(gd).theirs()
 }
 
 /// Is anybody in a fight, as far as Sam's own gun is concerned.
@@ -24,8 +19,8 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !g.ch[g.gd[gd].ch].alive { continue; }
-        if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+        if crate::condition::down(g, g.gd[gd].ch) || !g.ch[g.gd[gd].ch].alive { continue; }
+        if g.team(gd).theirs() {
             let state = g.gd[gd].state;
             if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search { return true; }
         } else if g.gd[gd].unit.is_some() && g.time - crate::roomfight::room_fight_hot_of(g, gd) < quiet_s {
@@ -36,36 +31,34 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 }
 
 /// The friend nearest along the line Sam's gun is held on, as far as what it is aimed at and `reachM` at most.
-fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+fn friend_in_sams_line(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
+    let from = crate::combat::shoulder(g, c_2);
     let aim_yaw = g.ch[c_2].aim_yaw;
     let (dx, dz) = (m::sin(aim_yaw), m::cos(aim_yaw));
-    let reach = m::min(g.k.friends.reach_m, m::hyp2(g.aim_point[0] - from[0], g.aim_point[2] - from[2]) + g.k.friends.past_m);
+    let reach = m::min(g.k.friends.reach_m, v3::dist_xz(g.sets[g.seat].aim_point, from) + g.k.friends.past_m);
     let mut line = SamsLine { from, dx, dz, reach, best: None, bt: m::INF };
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if !crate::teams::hostile_to(g, o, crate::teams::HostileToO::Player) { ask(g, o, &mut line); }
+        if !g.team(o).theirs() { ask(g, o, &mut line); }
     }
-    if g.rescue.active {
-        let mut i = 0;
-        while i < g.civilians.len() {
-            let o = g.civilians[i];
-            i += 1;
-            if crate::rescue::rescue_is_hostage(g, o) { ask(g, o, &mut line); }
-        }
+    let mut i = 0;
+    while i < g.civilians.len() {
+        let o = g.civilians[i];
+        i += 1;
+        if g.staged.captives.contains(&o) { ask(g, o, &mut line); }
     }
     line.best
 }
 
 /// …or the friend the CURSOR is on, only while the aim is free.
-fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
-    let o = g.aim_friend?;
-    if g.aim_snap.is_some() || g.gd[o].state == crate::game::GuardState::Dead || !g.ch[g.gd[o].ch].alive { return None; }
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
-    let chest = bone_or(g, g.gd[o].ch, crate::character::Bone::Chest, 1.2);
-    if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
+fn friend_under_cursor(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
+    let o = g.sets[g.seat].aim_friend?;
+    if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
+    let from = crate::combat::shoulder(g, c_2);
+    let chest = g.ch[g.gd[o].ch].bone_or(crate::character::Bone::Chest, 1.2);
+    if v3::dist_xz(chest, from) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
 }
 
 /// This frame's answer: is his raised gun down for a friend. `Guard` = the man it is down for, `None` = down inside the beat after he left the line,
@@ -73,21 +66,20 @@ fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64) -> Option<crate::friends::SamOffFriend> {
     let pl = g.player;
     let live = up
-        && !g.puppet.is_some()
         && !g.pl[pl].wall.is_some()
-        && !g.pl[pl].holding.is_some()
-        && !g.pl[pl].dragging.is_some()
+        && !g.pl[pl].holding().is_some()
+        && g.pl[pl].tow.is_none()
         && !friends_in_fight(g, &crate::seats::here(g));
     let o = if live { friend_in_sams_line(g, c_2).or_else(|| friend_under_cursor(g, c_2)) } else { None };
     if o.is_some() {
-        if !g.pl[pl].friend_low { g.stats.friends.lowered += 1; }
-        g.pl[pl].friend_low = true;
-        g.pl[pl].friend_t = g.time;
-    } else if g.pl[pl].friend_low && (!live || !(g.time - g.pl[pl].friend_t >= 0.0 && g.time - g.pl[pl].friend_t <= g.k.friends.up_secs)) {
-        g.pl[pl].friend_low = false;
+        if !g.sets[g.seat].hand.friend_low { g.stats.friends.lowered += 1; }
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
+    } else if g.sets[g.seat].hand.friend_low && (!live || !(g.time - g.sets[g.seat].hand.friend_t >= 0.0 && g.time - g.sets[g.seat].hand.friend_t <= g.k.friends.up_secs)) {
+        g.sets[g.seat].hand.friend_low = false;
     }
-    if g.pl[pl].friend_low { g.stats.friends.lowered_s += dt; }
-    if g.pl[pl].friend_low {
+    if g.sets[g.seat].hand.friend_low { g.stats.friends.lowered_s += dt; }
+    if g.sets[g.seat].hand.friend_low {
         match o {
             Some(o) => Some(crate::friends::SamOffFriend::Guard(o)),
             None => None,
@@ -108,28 +100,20 @@ struct SamsLine {
 }
 
 /// The closure `ask` of friendInSamsLine: one man against the line, the nearest so far kept in `line`.
-fn ask(g: &mut Game, o: GuardId, line: &mut SamsLine) {
+fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
-    if g.gd[o].state == crate::game::GuardState::Dead || !g.ch[c].alive { return; }
-    let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[c].pos };
+    if crate::condition::down(g, g.gd[o].ch) || !g.ch[c].alive { return; }
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let (rx, rz) = (h[0] - line.from[0], h[2] - line.from[2]);
     let t = rx * line.dx + rz * line.dz;
     if t < 0.15 || t > line.reach || t >= line.bt { return; }
     let vel = g.ch[c].vel;
     let clear = g.k.friends.clear_m + m::min(g.k.friends.lead_max_m, g.k.friends.lead_s * m::hyp2(vel[0], vel[2]));
     if m::abs(rx * line.dz - rz * line.dx) > clear { return; }
-    let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
+    let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.2);
     if crate::scene_collision::segment_blocked(g, line.from, chest, None, None, None) { return; }
     line.bt = t;
     line.best = Some(o);
-}
-
-/// `c.bones.<bone> ?? v3.add(c.pos, [0, up, 0])`, by value: nothing here moves it.
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
 }
 
 #[cfg(test)]
@@ -139,7 +123,7 @@ mod tests {
     /// One player, one body, no men: nothing below reaches another part's stub.
     fn lone_player() -> (Box<Game>, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.pl.push(crate::game::Player::blank());
         g.time = 100.0;
         g.pl[g.player].last_fire_t = -10.0;
@@ -161,48 +145,45 @@ mod tests {
     #[test]
     fn a_gun_not_up_is_up_again_at_once() {
         let (mut g, c) = lone_player();
-        let p = g.player;
         assert!(not_lowered(sam_off_friend(&mut g, c, false, 0.016)));
-        assert!(!g.pl[p].friend_low);
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        assert!(!g.sets[g.seat].hand.friend_low);
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         assert!(not_lowered(sam_off_friend(&mut g, c, false, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn the_floor_going_loud_ends_the_beat_at_once() {
         let (mut g, c) = lone_player();
         let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         g.pl[p].last_fire_t = g.time;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn the_beat_runs_out_past_up_secs_and_on_a_clock_gone_back() {
         let (mut g, c) = lone_player();
-        let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time - g.k.friends.up_secs - 0.01;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time - g.k.friends.up_secs - 0.01;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time + 1.0;
+        assert!(!g.sets[g.seat].hand.friend_low);
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time + 1.0;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
-        assert!(!g.pl[p].friend_low);
+        assert!(!g.sets[g.seat].hand.friend_low);
     }
 
     #[test]
     fn inside_the_beat_the_gun_stays_down_for_nobody_and_the_seconds_count() {
         let (mut g, c) = lone_player();
-        let p = g.player;
-        g.pl[p].friend_low = true;
-        g.pl[p].friend_t = g.time;
+        g.sets[g.seat].hand.friend_low = true;
+        g.sets[g.seat].hand.friend_t = g.time;
         assert!(sam_off_friend(&mut g, c, true, 0.25).is_none());
-        assert!(g.pl[p].friend_low);
+        assert!(g.sets[g.seat].hand.friend_low);
         assert_eq!(g.stats.friends.lowered_s, 0.25);
         assert_eq!(g.stats.friends.lowered, 0);
     }

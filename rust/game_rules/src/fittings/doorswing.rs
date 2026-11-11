@@ -21,7 +21,7 @@ struct Given {
 }
 
 /// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.
-fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
+fn side_of(g: &crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     let c = g.dr[d].def.closed_dir;
     let ux = m::cos(c);
     let uz = m::sin(c);
@@ -51,9 +51,6 @@ fn area(r: crate::doorswing::Rect) -> f64 {
 
 /// What roofOver reads of a static: c, h, yaw, flags.
 type BoxNumbers = (V3, V3, f64, f64);
-
-/// A static's numbers by its ID.
-fn seam_box_numbers(g: &Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
 
 /// roofOver's count over the statics' numbers.
 fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
@@ -89,7 +86,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
 fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
-    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
+    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }).collect();
     roof_points(&boxes, &g.dr[d].def, s)
 }
 
@@ -151,7 +148,7 @@ fn floors_flood(comp: &mut [i32], sizes: &mut Vec<f64>, wall: &[u8], w: usize, h
 }
 
 /// The nav cells either face of every door opens on with every doorway shut: per door, the cells reachable off each face.
-fn floors(g: &mut crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
+fn floors(g: &crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
     let (wf, hf, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (w, h) = (wf as usize, hf as usize);
     let mut wall = g.col.nav.blocked.clone();
@@ -221,7 +218,7 @@ fn pe_of(k: usize, na: usize) -> f64 {
     ((k / na) as f64 + 0.5) * LEAF_STEP
 }
 /// leafCut's `free`: a man can stand at grid spot k (asked once). `at` is [cx, ux, nx, cz, uz, nz].
-fn leaf_free(g: &mut Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) -> bool {
+fn leaf_free(g: &Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) -> bool {
     if known[k] < 0 {
         let al = al_of(k, na);
         let pe = pe_of(k, na);
@@ -233,7 +230,7 @@ fn leaf_free(g: &mut Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) 
     known[k] == 1
 }
 /// leafCut's `flood`: what a man reaches from the doorway, past the leaf if one is given; None when the leaf stands on the doorway itself.
-fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64; 6], start: usize, r: f64, leaf: Option<&[f32]>) -> Option<Vec<u8>> {
+fn leaf_flood(g: &Game, known: &mut [i8], n_all: usize, na: usize, at: [f64; 6], start: usize, r: f64, leaf: Option<&[f32]>) -> Option<Vec<u8>> {
     if let Some(l) = leaf {
         if (l[start] as f64) < r {
             return None;
@@ -260,7 +257,7 @@ fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64;
 }
 
 /// How much floor on face `s` of a door (m²) a man reaches the doorway from with no leaf there and not with the leaf open on that face; −1 = nowhere to stand at the doorway.
-fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
+fn leaf_cut(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let stop = if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth };
     if stop < 0.9 {
         return 0.0;
@@ -339,7 +336,7 @@ fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
 }
 
 /// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.
-fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
+fn leaf_swings(g: &crate::game::Game, d: DoorId, s: f64) -> bool {
     let stop = m::min(if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth }, LEAF_REST);
     let c = g.dr[d].def.closed_dir;
     let w = g.dr[d].def.width;
@@ -372,12 +369,10 @@ fn deal(g: &Game, d: DoorId, swing: f64, why: crate::doorswing::SwingWhy, into: 
         swing,
         why,
         into: into.filter(|i| !i.is_empty()).map(String::from),
-        out: None,
-        clear: None,
     })
 }
 /// dealSwings' `toward`: the side of the leaf a rectangle's middle is on.
-fn toward(g: &mut Game, d: DoorId, r: Option<crate::doorswing::Rect>) -> f64 {
+fn toward(g: &Game, d: DoorId, r: Option<crate::doorswing::Rect>) -> f64 {
     match r {
         Some(r) => {
             let c = mid(r);
@@ -394,7 +389,7 @@ fn plan_rect(r: &crate::scene_level::BreachPlanBounds) -> crate::doorswing::Rect
 }
 
 /// dealSwings' `tries`, in order: the first rule that speaks for this door.
-fn first_rule(g: &mut Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::doorswing::FloorsValue>>, d: DoorId, name: &str) -> Option<crate::doorswing::SwingDeal> {
+fn first_rule(g: &Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::doorswing::FloorsValue>>, d: DoorId, name: &str) -> Option<crate::doorswing::SwingDeal> {
     use crate::doorswing::SwingWhy;
     // authored
     if let Some(s) = deal(g, d, g.dr[d].def.swing.unwrap_or(0.0), SwingWhy::Authored, None) {
@@ -480,18 +475,17 @@ fn given_of(g: &Game) -> Given {
             plans.push((p.door.clone(), p.fling, p.room.clone(), p.bounds.as_ref().map(plan_rect)));
         }
     }
-    let scenarios = level.scenarios.as_ref();
-    let rooms = scenarios.and_then(|s| s.room_clear.as_ref()).map_or_else(Vec::new, |r| r.rooms.clone());
-    let rescue = scenarios.and_then(|s| s.rescue.as_ref()).map(|rs| {
+    let rooms = level.rooms().to_vec();
+    let rescue = level.held_room().map(|rs| {
         let bounds = match &rs.room.bounds {
             Some(b) => Some(rect_of(b)),
             None => plans.iter().find(|p| p.0 == rs.room.door).and_then(|p| p.3),
         };
         (rs.room.door.clone(), rs.side.as_ref().map(|x| x.door.clone()), rs.room.name.clone(), bounds)
     });
-    let sr = &level.mission.server_room;
+    let sr = &level.errand.area;
     let server_room = crate::doorswing::Rect { x0: sr.x0, x1: sr.x1, z0: sr.z0, z1: sr.z1 };
-    Given { rooms, plans, rescue, entry_door: level.mission.entry_door.clone(), server_room }
+    Given { rooms, plans, rescue, entry_door: level.errand.door.clone(), server_room }
 }
 
 /// dealSwings' `all`: every door dealt in the list's order, each set on the door before the next is asked.
@@ -509,8 +503,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                 swing: if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 },
                 why: SwingWhy::Wider,
                 into: None,
-                out: None,
-                clear: None,
             },
         };
         let out = if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds {
@@ -519,10 +511,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
         } else {
             None
         };
-        let out_swing = out.as_ref().map_or(0.0, |o| o.swing);
-        if let Some(o) = out {
-            got.out = Some(Box::new(o));
-        }
         let mut clear: Option<crate::doorswing::SwingDeal> = None;
         if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds && got.why != SwingWhy::Plan && got.why != SwingWhy::StandsOpen
             && !js::truthy(g.dr[d].def.angle.unwrap_or(0.0)) && opens(g, d, -got.swing)
@@ -534,16 +522,11 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                     swing: -got.swing,
                     why: SwingWhy::LeafRoom,
                     into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", js::to_fixed(cut, 1))),
-                    out: None,
-                    clear: None,
                 });
             }
         }
         let clear_swing = clear.as_ref().map_or(0.0, |c| c.swing);
-        if let Some(c) = clear {
-            got.clear = Some(Box::new(c));
-        }
-        crate::doors::door_set_swing(g, d, got.swing, Some(out_swing), Some(clear_swing));
+        crate::doors::door_set_swing(g, d, got.swing, Some(clear_swing));
         dealt.push(got);
     }
     dealt
@@ -551,11 +534,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
 
 /// Deal every door of the level its side (Door.setSwing) and say why.
 pub fn deal_swings(g: &mut crate::game::Game) -> Vec<crate::doorswing::SwingDeal> {
-    if !g.doors.list.is_empty() {
-        crate::scene_collision::window(g, &mut |g| deal_all(g))
-    } else {
-        deal_all(g)
-    }
+    deal_all(g)
 }
 
 #[cfg(test)]
@@ -646,15 +625,16 @@ mod tests {
         breach.door = String::from("plan");
         breach.fling = -3.0;
         breach.room = Some(String::from("vault"));
-        g.level.breach = Some(breach);
-        g.level.clear_plans = Some(vec![
+        let level = alloc::sync::Arc::make_mut(&mut g.level);
+        level.breach = Some(breach);
+        level.clear_plans = Some(vec![
             clear_plan("hostages", 0.0, None, Some(crate::scene_level::BreachPlanBounds { x0: 11.0, x1: 13.0, z0: 13.0, z1: 16.0 })),
             clear_plan("stopped", 2.0, Some("nope"), None),
             clear_plan("split", 2.0, None, None),
             clear_plan("split", -2.0, None, None),
         ]);
-        g.level.mission.entry_door = String::from("entry");
-        (g.level.mission.server_room.x0, g.level.mission.server_room.x1, g.level.mission.server_room.z0, g.level.mission.server_room.z1) = (2.0, 4.0, 15.0, 18.0);
+        level.errand.door = String::from("entry");
+        (level.errand.area.x0, level.errand.area.x1, level.errand.area.z0, level.errand.area.z1) = (2.0, 4.0, 15.0, 18.0);
         let mut sc = crate::scene_scenarios::LevelScenarios::default();
         let mut rc = crate::scene_scenarios::StructureData::default();
         rc.rooms = vec![room("b", "big", 11.0, 19.0, 8.0, 16.0, "room"), room("a", "small", 7.0, 9.0, 11.0, 14.0, "room")];
@@ -666,7 +646,7 @@ mod tests {
         side.door = String::from("nobody");
         rs.side = Some(side);
         sc.rescue = Some(rs);
-        g.level.scenarios = Some(sc);
+        level.scenarios = Some(sc);
 
         let want: [(&str, f64, &str, &str, f64); 12] = [
             ( "floor" , -1.0 , "floor" , "360 cells against 740" , -1.0 ),

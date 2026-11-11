@@ -1,14 +1,12 @@
-pub use ::game_types::peeksight::types;
-pub use types::*;
 use crate::game::Game;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.
-pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
+pub(super) fn peek_eye(g: &crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wall?;
-    if !(w.peek > 0.0) || g.pl[pl].down { return None; }
+    if !(w.peek > 0.0) || crate::condition::down(g, g.pl[pl].ch) { return None; }
     let (out, off, turn_deg) = (g.k.peeksight.out, g.k.peeksight.off, g.k.peeksight.turn_deg);
     let e = ease(w.peek);
     let (s, t, n) = (w.peek_dir, w.along, w.n);
@@ -21,9 +19,7 @@ pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) 
             if crate::scene_collision::solid_blocked(g, own.at, lean_at(own.at, t, n, along, inward, mid), None) { hi = mid; } else { lo = mid; }
         }
         reach = m::max(0.0, lo - 0.08);
-        g.stats.peeksight.short += 1;
     }
-    g.stats.peeksight.frames += 1;
     let p = lean_at(own.at, t, n, along, inward, reach);
     if matches!(w.kind, Some(crate::player::WallHoldKind::Stack)) { return Some(eye_at(own, p, own.look)); }
     Some(eye_at(own, p, turned_look(own.look, s, t, n, e, turn_deg)))

@@ -80,8 +80,6 @@ pub const MAX_CELLS_W: f64 = 32.0;
 
 pub const MAX_CELLS_H: f64 = 32.0;
 
-pub const MARK_TABLE_ROWS: f64 = 6144.0;
-
 pub fn res_k() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("fine"), 0.5); t.set(String::from("base"), 1.0); t.set(String::from("coarse"), 2.0); t } }
 
 pub const CELL_CHARS: &str = ".abc";

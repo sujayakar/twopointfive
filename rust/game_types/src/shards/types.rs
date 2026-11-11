@@ -14,49 +14,6 @@ pub struct PaneCrossLike {
     pub hole: bool,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct GlassFragmentLike {
-    pub type_: crate::glasspen::PaneType,
-    pub kind: crate::shards::GlassFragmentLikeKind,
-    pub outline: Vec<V3>,
-    pub centre: V3,
-    pub normal: V3,
-    pub thickness: f64,
-    pub area: f64,
-    pub velocity: V3,
-    pub spin: V3,
-    pub tint: V3,
-    pub grain: f64,
-    pub cause: crate::shards::GlassFragmentLikeCause,
-    pub who: f64,
-    pub seed: f64,
-    pub fall: Option<crate::shards::GlassFragmentLikeFall>,
-    pub landed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeKind {
-    #[default] Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlassFragmentLikeFall {
-    pub t: f64,
-    pub pos: V3,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlateMeta {
     pub gen_: f64,
@@ -86,7 +43,6 @@ pub struct GlassShards {
     pub deferred: Vec<crate::shards::GlassShardsDeferredItem>,
     pub deferred_n: f64,
     pub crunch_n: f64,
-    pub log: Vec<String>,
     pub serial: f64,
 }
 
@@ -134,7 +90,6 @@ pub struct GlassShardsCutPlatesFr {
 #[derive(Clone, Debug, Default)]
 pub struct GlassShardsPlateCut {
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
-    pub dropped: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -159,33 +114,7 @@ pub struct GlassShardsLandingFall {
 pub struct CutPlateBox {
     pub box_: BoxId,
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
-    pub dropped: f64,
     pub poly: Vec<[f64; 2]>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct ShardsStats {
-    pub fragments: i32,
-    pub crossings: i32,
-    pub plates: i32,
-    pub plates_refused: i32,
-    pub cut_plates: i32,
-    pub cut_split: i32,
-    pub cut_dropped: i32,
-    pub crumbled: i32,
-    pub breaks: i32,
-    pub emits: i32,
-    pub born: i32,
-    pub trimmed: i32,
-    pub recs_deferred: i32,
-    pub sounds: i32,
-    pub sounds_merged: i32,
-    pub spalls: i32,
-    pub events: i32,
-    pub crunches: i32,
-    pub peak_live: i32,
-    pub peak_plates: i32,
 }
 
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

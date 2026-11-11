@@ -1,24 +1,22 @@
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::combat::RoundMet;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
+use crate::scene_level_data::PropKindName;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
 
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ------------------------------------------------------------------ small helpers of this part
-
-/// `a | b` of two box flag words, as the language does it
-fn or_bits(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
     let f = crate::scene_boxes::box_flag();
-    or_bits(f.no_primary, f.no_shadow)
+    js::or_bits(f.no_primary, f.no_shadow)
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range
@@ -27,14 +25,13 @@ fn box_at(len: usize, i: f64) -> Option<usize> {
 }
 
 /// a row of LANE_MARK
-fn lane(name: &str) -> LaneMark { *lane_mark().get(String::from(name)).unwrap() }
+fn lane(name: &str) -> LaneMark { *lane_mark().of(name).unwrap() }
 
 /// `for (const fn of [...this.blastListeners]) fn(ev)`, one of them; what a subscriber adds to `ev.res` stays in the event
 fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::BlastEvent) {
     match l {
         BlastListener::Glass => {
-            let n = crate::glassbreak::glass_break_blast(g, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.radius), power: Some(ev.power), who: Some(ev.who) }));
-            ev.res.panes += n;
+            crate::glassbreak::glass_break_blast(g, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.radius), power: Some(ev.power), who: Some(ev.who) }));
         }
         BlastListener::Bars => crate::winbars::bars_blast(g, *ev),
         BlastListener::Snow => { crate::snow_blast::snow_blast_at(g, &ev.at, ev.radius); }
@@ -50,8 +47,6 @@ fn chunk_of(kind: DKind) -> crate::debris::ChunkKind {
     }
 }
 
-fn item_at(g: &Game, i: f64) -> Option<Destructible> { g.destr.items.get(crate::Num(i)).cloned() }
-
 /// the word pallHash hands to hash01
 fn pall_hash_word(at: V3, time: f64, k: f64) -> u32 {
     let a = m::imul(js::to_i32(m::round(at[0] * 64.0)), 73856093);
@@ -62,7 +57,7 @@ fn pall_hash_word(at: V3, time: f64, k: f64) -> u32 {
 }
 
 /// the directions of PALL_DIRS in which something solid stands within `r` of (px, Y, pz): pallEmit's `near`
-fn pall_near(g: &mut Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
+fn pall_near(g: &Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
     let mut out = Vec::new();
     for w in pall_dirs() {
         if crate::scene_collision::solid_blocked(g, [px, y, pz], [px + w[0] * r, y, pz + w[1] * r], None) { out.push(w); }
@@ -72,125 +67,135 @@ fn pall_near(g: &mut Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
 
 // ------------------------------------------------------------------ the translation
 
+/// A round that stopped, as the lane takes it: where and how, how beaten the place is by now, and what it struck.
+struct Blow<'a> {
+    at: V3,
+    dir: V3,
+    n: V3,
+    hit: &'a RoundMet,
+    shooter: CharId,
+    who: f64,
+    /// The heat there, this round's counted.
+    e: f64,
+    chaos: f64,
+    rifle: bool,
+    struck: Struck,
+}
+
+/// What a round struck: its surface, its paint, its box, and what can break there.
+struct Struck {
+    surf: crate::scene_materials::Surf,
+    albedo: V3,
+    box_: Option<BoxId>,
+    item: Option<Destructible>,
+}
+
 /// A round stopped at `hit_p`: decals, a screen killed, paper, bursts and dust, knock-offs, tiles, what lies about, and the wall's share.
-pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
+pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &RoundMet, def: &crate::weapons::WeaponDef) {
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
     if hit.index.is_none() && hit.prop.is_none() { return; }
-    g.stats.destruction.destr_rounds += 1;
     let amount = if loud_now(g) { g.k.chaos.loud.heat_k } else { 1.0 };
     let e = destruction_stoke(g, hit_p, amount, chaos);
     g.destr.any_heat = true;
-    let rifle = def.cls != crate::weapons::WeaponClass::Pistol;
-    let k = if rifle { 1.4 } else { 1.0 };
-    let n = v3::normalize(hit.n);
-    // what was hit
-    let mut surf = crate::scene_materials::Surf::Concrete;
-    let mut albedo: V3 = [0.5, 0.5, 0.5];
-    let mut box_: Option<BoxId> = None;
-    let mut bi = -1.0;
+    let struck = struck(g, hit);
+    let b = Blow { at: hit_p, dir, n: v3::normalize(hit.n), hit, shooter, who: g.ch[shooter].id, e, chaos, rifle: def.cls != crate::weapons::WeaponClass::Pistol, struck };
+    marks(g, &b);
+    kills_screen(g, &b);
+    bursts(g, &b);
+    if e >= g.k.chaos.t_knock { knocks(g, &b); }
+    // the ceiling over a beaten zone
+    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, chaos, Some(false), Some(b.who), None); }
+    // what already lies about the hit is scooted along
+    destruction_impact_impulse(g, hit_p, dir, b.n, chaos, b.who);
+    // wall breaking: the round's work on what it stopped in
+    if let Some(index) = hit.index { crate::wallbreak::wall_break_round(g, b.who, hit_p, dir, index, def, chaos); }
+}
+
+/// A thing of furniture by its kind, a leaf as wood, a static by what it does.
+fn struck(g: &Game, hit: &RoundMet) -> Struck {
+    use crate::scene_materials::{DoesWall, Surf};
+    let of = |surf: Surf, box_: Option<BoxId>, item: Option<Destructible>| Struck { surf, albedo: box_.map_or([0.5, 0.5, 0.5], |b| g.tab.boxes[b].albedo), box_, item };
     if let Some(prop) = hit.prop {
-        surf = match g.tab.props_prop[prop].def.kind {
-            crate::scene_level_data::PropKindName::Chair => crate::scene_materials::Surf::Fabric,
-            crate::scene_level_data::PropKindName::Cardboard => crate::scene_materials::Surf::Cardboard,
-            crate::scene_level_data::PropKindName::Bin => crate::scene_materials::Surf::Metal,
-            _ => crate::scene_materials::Surf::Foliage,
+        let surf = match g.tab.props_prop[prop].def.kind {
+            PropKindName::Chair => Surf::Fabric,
+            PropKindName::Cardboard => Surf::Cardboard,
+            PropKindName::Bin => Surf::Metal,
+            _ => Surf::Foliage,
         };
-        box_ = hit.box_.or_else(|| g.tab.props_prop[prop].boxes.first().copied());
-        if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
-    } else if let Some(index) = hit.index {
-        if index >= 1e6 {
-            surf = crate::scene_materials::Surf::Wood;
-            box_ = box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]);
-            if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
-        } else {
-            bi = index;
-            box_ = box_at(g.col.boxes.len(), bi).map(|k| g.col.boxes[k]);
-            if let Some(b) = box_ {
-                albedo = seam_box(g, b).albedo;
-                let word = seam_box(g, b).does;
-                surf = if crate::scene_materials::does_of(g, word).wall == Some(crate::scene_materials::DoesWall::Screen) { crate::scene_materials::Surf::Fabric } else { crate::particle_fx::surf_at(g, b) };
-            }
+        return of(surf, hit.box_.or_else(|| g.tab.props_prop[prop].boxes.first().copied()), None);
+    }
+    let Some(index) = hit.index else { return of(Surf::Concrete, None, None) };
+    if index >= 1e6 { return of(Surf::Wood, box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]), None); }
+    let box_ = box_at(g.col.boxes.len(), index).map(|k| g.col.boxes[k]);
+    let surf = match box_ {
+        Some(b) if crate::scene_materials::does_of(g, g.tab.boxes[b].does).wall == Some(DoesWall::Screen) => Surf::Fabric,
+        Some(b) => crate::particle_fx::surf_at(g, b),
+        None => Surf::Concrete,
+    };
+    of(surf, box_, if index >= 0.0 { super::index::destruction_item_of(g, index) } else { None })
+}
+
+/// Damage decals by material.
+fn marks(g: &mut Game, b: &Blow) {
+    if b.e < g.k.chaos.t_decal { return; }
+    let Some(box_) = b.struck.box_ else { return };
+    let dynamic = b.hit.prop.is_some() || matches!(b.hit.index, Some(i) if i >= 1e6);
+    destruction_damage_decal(g, b.at, b.n, b.struck.surf, box_, dynamic, b.rifle, b.struck.item.as_ref());
+}
+
+/// A monitor or a TV that took the round.
+fn kills_screen(g: &mut Game, b: &Blow) {
+    let Some(it) = b.struck.item.as_ref().filter(|it| matches!(it.kind, DKind::Screen | DKind::Housing | DKind::Tv)) else { return };
+    let by_player = crate::seats::is_man_id(g, b.who);
+    destruction_kill_screen(g, it, b.at, b.n, by_player);
+}
+
+/// Paper near the hit, or whose air the round crossed; bigger material bursts; dust into the smoke solver.
+fn bursts(g: &mut Game, b: &Blow) {
+    use crate::scene_materials::Surf;
+    let k = if b.rifle { 1.4 } else { 1.0 };
+    let surf = b.struck.surf;
+    if b.e >= g.k.chaos.t_paper {
+        let seg = v3::dist(g.ch[b.shooter].muzzle, b.at);
+        destruction_papers_near(g, b.at, b.dir, b.e, b.chaos, k, seg);
+    }
+    if b.e >= g.k.chaos.t_burst { destruction_burst(g, b.at, b.dir, b.n, surf, b.struck.albedo, b.e, k, b.who, Some(b.hit)); }
+    if b.e >= g.k.chaos.t_puff && matches!(surf, Surf::Drywall | Surf::Concrete | Surf::Wood | Surf::Cardboard | Surf::Fabric) {
+        destruction_dust_puff(g, v3::mad(b.at, b.n, 0.05), b.n, m::min(2.0, 0.7 + 0.2 * b.e), surf);
+    }
+}
+
+/// Knock-offs: the housing on a direct hit, clutter near the hit; a chair a round finds is spun.
+fn knocks(g: &mut Game, b: &Blow) {
+    use crate::debris::ChunkKind;
+    let off = |g: &mut Game, d: &Destructible, kind: ChunkKind| destruction_knock_off(g, d, b.dir, b.chaos, kind, Some(b.who));
+    if let Some(it) = &b.struck.item {
+        match it.kind {
+            DKind::Housing => { off(g, it, ChunkKind::Housing); }
+            DKind::Screen => { if let Some(housing) = it.mate.and_then(|mate| super::index::destruction_item_of(g, mate)) { off(g, &housing, ChunkKind::Housing); } }
+            DKind::Clutter | DKind::Binder => { off(g, it, chunk_of(it.kind)); }
+            _ => {}
         }
     }
-    let item = if bi >= 0.0 { item_at(g, bi) } else { None };
-    // (1) damage decals by material
-    if e >= g.k.chaos.t_decal {
-        if let Some(b) = box_ {
-            let dynamic = hit.prop.is_some() || matches!(hit.index, Some(i) if i >= 1e6);
-            destruction_damage_decal(g, hit_p, n, surf, b, dynamic, rifle, item.as_ref());
-        }
-    }
-    // (2) a monitor / TV that took the round
-    if let Some(it) = &item {
-        if matches!(it.kind, DKind::Screen | DKind::Housing | DKind::Tv) {
-            let id = g.ch[shooter].id;
-            let by_player = crate::seats::is_man_id(g, id);
-            destruction_kill_screen(g, it, hit_p, n, by_player);
-        }
-    }
-    // (3) paper near the hit, or whose air the round crossed
-    if e >= g.k.chaos.t_paper {
-        let seg = v3::dist(g.ch[shooter].muzzle, hit_p);
-        destruction_papers_near(g, hit_p, dir, e, chaos, k, seg);
-    }
-    // (4) bigger material bursts + (5) dust into the smoke solver
-    if e >= g.k.chaos.t_burst {
-        let owner = g.ch[shooter].id;
-        destruction_burst(g, hit_p, dir, n, surf, albedo, e, k, owner, Some(DestructionBurstHit { index: hit.index, prop: hit.prop, box_: hit.box_ }));
-    }
-    if e >= g.k.chaos.t_puff && matches!(surf, crate::scene_materials::Surf::Drywall | crate::scene_materials::Surf::Concrete | crate::scene_materials::Surf::Wood | crate::scene_materials::Surf::Cardboard | crate::scene_materials::Surf::Fabric) {
-        destruction_dust_puff(g, v3::mad(hit_p, n, 0.05), n, m::min(2.0, 0.7 + 0.2 * e), surf);
-    }
-    // (6) knock-offs: the housing on a direct hit, clutter near the hit; a chair a round finds is spun
-    let who = g.ch[shooter].id;
-    if e >= g.k.chaos.t_knock {
-        if let Some(it) = &item {
-            if it.kind == DKind::Housing {
-                destruction_knock_off(g, it, dir, chaos, crate::debris::ChunkKind::Housing, Some(who));
-            } else if it.kind == DKind::Screen {
-                if let Some(mate) = it.mate {
-                    if let Some(hd) = item_at(g, mate) {
-                        destruction_knock_off(g, &hd, dir, chaos, crate::debris::ChunkKind::Housing, Some(who));
-                    }
-                }
-            }
-            if it.kind == DKind::Clutter || it.kind == DKind::Binder {
-                destruction_knock_off(g, it, dir, chaos, chunk_of(it.kind), Some(who));
-            }
-        }
-        destruction_clutter_near(g, hit_p, dir, chaos, who);
-        if let Some(prop) = hit.prop {
-            if g.tab.props_prop[prop].def.kind == crate::scene_level_data::PropKindName::Chair {
-                let w = crate::props::prop_w(g, prop);
-                let sign = if destruction_hash(g) < 0.5 { -1.0 } else { 1.0 };
-                crate::props::prop_set_w(g, prop, w + sign * (4.0 + 5.0 * chaos));
-                crate::props::prop_wake(g, prop);
-                g.stats.destruction.destr_chair_spins += 1;
-            }
-        }
-    }
-    // (7) the ceiling over a beaten zone
-    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, chaos, Some(false), Some(who), None); }
-    // (8) what already lies about the hit is scooted along
-    destruction_impact_impulse(g, hit_p, dir, n, chaos, who);
-    // (9) wall breaking: the round's work on what it stopped in
-    if let Some(index) = hit.index {
-        crate::wallbreak::wall_break_round(g, who, hit_p, dir, index, def, chaos);
-    }
+    destruction_clutter_near(g, b.at, b.dir, b.chaos, b.who);
+    let Some(chair) = b.hit.prop.filter(|&p| g.tab.props_prop[p].def.kind == PropKindName::Chair) else { return };
+    let sign = if destruction_hash(g) < 0.5 { -1.0 } else { 1.0 };
+    g.tab.props_prop[chair].w += sign * (4.0 + 5.0 * b.chaos);
+    crate::props::prop_wake(g, chair);
 }
 
 /// THE BLAST ENTRY POINT: what any charge or grenade calls to break the level where it went off.
 pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
     let opts = opts.unwrap_or_default();
     let who = opts.who;
-    crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts)))
+    crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts))
 }
 
 /// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.
 fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
     let chaos = chaos_of(g);
-    let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, panes: 0.0, opened: 0.0, serial: g.destr.walls.serial };
+    let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, opened: 0.0 };
     if chaos <= 0.0 {
         if opts.chaos != Some(false) { destruction_bang(g, at, opts.who, None, None); }
         return res;
@@ -217,12 +222,11 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
         destruction_pall_burst(g, at, Some(radius / 2.5));
         crate::floormess::mess_burst(g, at, Some(radius / 2.5));
     }
-    res.serial = g.destr.walls.serial;
     res
 }
 
 /// The door leaves a blast here would take off their hinges; nothing is touched.
-pub fn destruction_doors_for(g: &mut crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionDoorsForOpts>) -> Vec<DoorId> {
+pub fn destruction_doors_for(g: &crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionDoorsForOpts>) -> Vec<DoorId> {
     let opts = opts.unwrap_or_default();
     if chaos_of(g) <= 0.0 { return Vec::new(); }
     let tear = opts.radius.unwrap_or(g.k.walls.blast.radius) * opts.power.unwrap_or(1.0) * g.k.walls.blast.door_k;
@@ -245,7 +249,7 @@ pub fn destruction_furn_blast(g: &mut crate::game::Game, at: V3, src: crate::fur
 }
 
 /// The flags static `i` was authored with if this lane has hidden it, else None.
-pub(in crate::breakage) fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
+pub(in crate::breakage) fn destruction_flags0(g: &crate::game::Game, i: f64) -> Option<f64> {
     if let Some(&f) = g.destr.hidden.get(crate::Num(i)) { return Some(f); }
     if let Some(f) = crate::wallbreak::wall_break_flags0(g, i) { return Some(f); }
     crate::winbars::bar_flags0(g, i)
@@ -260,7 +264,7 @@ pub(in crate::breakage) fn destruction_on_blast(g: &mut crate::game::Game, fn_: 
 pub(in crate::breakage) fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let quiet = quiet.unwrap_or(false);
-    let Some(d) = item_at(g, i) else { return false; };
+    let Some(d) = super::index::destruction_item_of(g, i) else { return false; };
     if g.destr.hidden.has(crate::Num(i)) { return true; }
     if quiet {
         if let Some(t) = d.target { destruction_break_target(g, t); }
@@ -287,9 +291,9 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
     while at < g.targets.len() {
         let t = g.targets[at];
         at += 1;
-        if g.tab.sim_lightshome_fixture[t].boxes.iter().any(|&b| b == i) && !crate::sim_lightshome::fixture_broken(g, t) {
+        if g.tab.fixture[t].boxes.iter().any(|&b| b == i) && !g.tab.fixture[t].broken {
             if destruction_break_target(g, t) {
-                let pos = g.tab.sim_lightshome_fixture[t].pos;
+                let pos = g.tab.fixture[t].pos;
                 crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.6), None);
             }
         }
@@ -304,7 +308,6 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
     if !js::truthy(who) { who = crate::consts::NOBODY_ID; }
-    g.stats.destruction.destr_bangs += 1;
     let loud = loud_now(g);
     let pw = if loud { m::max(0.25, m::min(4.0, power)) } else { 1.0 };
     let reach = m::sqrt(pw);
@@ -327,7 +330,7 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     }
     let eye: V3 = [at[0], m::max(at[1] + 0.3, 0.95), at[2]];
     for d in &wide {
-        let c = seam_box(g, d.box_).c;
+        let c = g.tab.boxes[d.box_].c;
         let dd = v3::dist(c, at);
         let over = top_of(g, d.box_);
         if d.kind == DKind::Paper && dd < 2.6 * reach && !crate::scene_collision::solid_blocked(g, eye, over, None) {
@@ -362,14 +365,14 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
             let t = g.targets[at_t];
             at_t += 1;
             let fire = crate::fire::fire_holds(g, t);
-            let pos = g.tab.sim_lightshome_fixture[t].pos;
+            let pos = g.tab.fixture[t].pos;
             if !(fire || destruction_fixture_live(g, t)) || v3::dist(pos, at) > r { continue; }
             let to = v3::sub(pos, eye);
             let len = v3::len(to);
             if len > 0.3 {
                 if let Some(hit) = crate::scene_collision::raycast(g, eye, v3::scale(to, 1.0 / len), len) {
                     // (the first solid thing on the line is the fixture itself, or nothing)
-                    if hit.t < len - 0.06 && !g.tab.sim_lightshome_fixture[t].boxes.iter().any(|&b| b == hit.index) { continue; }
+                    if hit.t < len - 0.06 && !g.tab.fixture[t].boxes.iter().any(|&b| b == hit.index) { continue; }
                 }
             }
             if fire { crate::fire::fire_stir(g, t); } else { destruction_kill_fixture(g, t, at, "blast", Some(true)); }
@@ -383,12 +386,10 @@ fn destruction_bang_impulse(g: &mut crate::game::Game, at: V3, eye: V3, chaos: f
     if !impulses_on(g) { return; }
     let b = g.k.chaos.imp.bang;
     let strength = b.strength * imp_k(g, chaos);
-    g.stats.destruction.destr_imp_bang += 1;
     crate::render_particles::particles_impulse(g, at, b.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(b.up), occlude: Some(true), eye: Some(eye), ..Default::default() }));
     let imp = crate::sheet_model::ImpulseLike { pos: at, radius: b.radius, strength, up: b.up, bias: [0.0, 0.0, 0.0] };
     let mut blocked = |g: &mut Game, p: V3| crate::scene_collision::solid_blocked(g, eye, [p[0], p[1] + 0.05, p[2]], None);
-    let kicked = crate::debris::debris_impulse(g, imp, Some(&mut blocked), Some(who));
-    g.stats.destruction.destr_debris_kicked += kicked as i32;
+    crate::debris::debris_impulse(g, imp, Some(&mut blocked), Some(who));
 }
 
 /// A round stopped in a face of normal `n`: what lies beside the hole jumps and scoots along the round's travel.
@@ -399,26 +400,22 @@ fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: 
     let dn = v3::dot(dir, n);
     let bias: V3 = [(dir[0] - n[0] * dn) * i.bias_k, (dir[1] - n[1] * dn) * i.bias_k, (dir[2] - n[2] * dn) * i.bias_k];
     let at = v3::mad(hit_p, n, 0.03);
-    g.stats.destruction.destr_imp_impact += 1;
     crate::render_particles::particles_impulse(g, at, i.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(i.up), bias: Some(bias), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: i.debris_m, strength, up: i.up, bias };
-        let kicked = crate::debris::debris_impulse(g, imp, None, Some(who));
-        g.stats.destruction.destr_debris_kicked += kicked as i32;
+        crate::debris::debris_impulse(g, imp, None, Some(who));
     }
 }
 
 /// A thump on the floor at `pos`: the litter within a stride twitches.
-pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, who: Option<f64>) {
+pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>) {
     let scale = scale.unwrap_or(1.0);
     if !impulses_on(g) { return; }
     let t = g.k.chaos.imp.thud;
     if g.destr.thuds_this_frame >= t.per_frame {
-        g.stats.destruction.destr_imp_thud_dropped += 1;
         return;
     }
     g.destr.thuds_this_frame += 1.0;
-    g.stats.destruction.destr_imp_thud += 1;
     let chaos = chaos_of(g);
     let strength = t.strength * m::max(0.5, m::min(1.5, scale)) * imp_k(g, chaos);
     let at: V3 = [pos[0], m::min(pos[1], 0.3) + 0.03, pos[2]];
@@ -426,8 +423,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
     if !g.destr.debris.list.is_empty() {
         // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on, as in the TypeScript)
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: t.radius * 0.5, strength, up: t.up, bias: [0.0, 0.0, 0.0] };
-        let kicked = crate::debris::debris_impulse(g, imp, None, None);
-        g.stats.destruction.destr_debris_kicked += kicked as i32;
+        crate::debris::debris_impulse(g, imp, None, None);
     }
 }
 
@@ -435,10 +431,9 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
 fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate::scene_materials::Surf, box_: BoxId, dynamic: bool, rifle: bool, item: Option<&crate::destruction::Destructible>) {
     let is_crack = matches!(item, Some(it) if it.kind == DKind::Screen || it.kind == DKind::Tv);   // (`m === LANE_MARK.crack`)
     let mut mark = if is_crack { lane("crack") } else if surf == crate::scene_materials::Surf::Metal { lane("dent") } else if surf == crate::scene_materials::Surf::Fabric { lane("shred") } else { return; };
-    if js::to_i32(seam_box(g, box_).flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
+    if js::to_i32(g.tab.boxes[box_].flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
     let rj = destruction_hash(g);
-    if !destruction_take(g, DestructionTakeK::Decal) { return; }
-    g.stats.destruction.destr_decals += 1;
+    if !destruction_take(g, crate::destruction::RateCapN::Decal) { return; }
     let attach = if dynamic { Some(box_) } else { None };
     let said = if is_crack { None } else { crate::particle_fx::said_surf(g, Some(box_)) };
     match said {
@@ -460,9 +455,9 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
 
 /// A lit screen's light target out, remembered for reset(). True = a light went out.
 pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) -> bool {
-    if crate::sim_lightshome::fixture_broken(g, t) { return false; }
-    let was_lit = g.tab.sim_lightshome_fixture[t].interactive && (crate::sim_lightshome::fixture_on(g, t) || crate::sim_lightshome::fixture_factor(g, t) > 0.0);
-    crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().break_, Some(t), None, None, None, None);
+    if g.tab.fixture[t].broken { return false; }
+    let was_lit = g.tab.fixture[t].interactive && (g.tab.fixture[t].on || g.tab.fixture[t].factor > 0.0);
+    g.tab.fixture[t].broken = true;
     g.destr.broke.add(t);
     if was_lit { crate::game::game_light_event(g, t, None, None); }
     was_lit
@@ -471,13 +466,13 @@ pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) 
 /// A monitor or TV that took a round: dead, a fizz of sparks.
 fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction::Destructible, hit_p: V3, n: V3, by_player: bool) {
     if let Some(t) = item.target {
-        if !crate::sim_lightshome::fixture_broken(g, t) {
+        if !g.tab.fixture[t].broken {
             let lit = destruction_break_target(g, t);
-            let pos = g.tab.sim_lightshome_fixture[t].pos;
+            let pos = g.tab.fixture[t].pos;
             crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
                 crate::render_lights::light_set_flash(g, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
-                let name = g.tab.sim_lightshome_fixture[t].name.clone();
+                let name = g.tab.fixture[t].name.clone();
                 dlog(g, &alloc::format!("screen {} shot dead", name));
                 if by_player {
                     crate::chronicle::chron_light_shot(g, t);
@@ -485,7 +480,6 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
             }
         }
     }
-    g.stats.destruction.destr_screens += 1;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, 0.3, 0.0])), if item.target.is_some() { 22.0 } else { 8.0 }, crate::render_particles::EmitOpts { speed: 3.5, speed_jit: Some(0.7), spread: Some(1.2), life: 0.45, life_jit: Some(0.5), size: 0.0028, ..Default::default() });
 }
 
@@ -494,8 +488,8 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
     let mut list: Vec<Destructible> = Vec::new();
     for d in destruction_near(g, hit_p, &mut list) {
         if d.kind != DKind::Paper { continue; }
-        let c = seam_box(g, d.box_).c;
-        let h = seam_box(g, d.box_).h;
+        let c = g.tab.boxes[d.box_].c;
+        let h = g.tab.boxes[d.box_].h;
         let dd = m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.5, c[2] - hit_p[2]);
         let mut hit_it = dd < g.k.chaos.paper_reach_m * (0.6 + 0.4 * m::min(1.0, e / 3.0)) && !crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), [c[0], c[1] + h[1] + 0.05, c[2]], None);
         if !hit_it {
@@ -504,7 +498,7 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
             let along = -v3::dot(to, dir);
             if along > 0.0 && along < seg_len {
                 let q = v3::mad(hit_p, dir, -along);
-                if m::hyp2(q[0] - c[0], q[2] - c[2]) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
+                if v3::dist_xz(q, c) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
             }
         }
         if !hit_it { continue; }
@@ -515,13 +509,11 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
 
 /// Hide the stack's box and throw its sheets.
 pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, speed: f64, chaos: f64) -> bool {
-    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Paper) { return false; }
+    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Paper) { return false; }
     destruction_hide(g, d);
-    g.stats.destruction.destr_papers += 1;
     dlog(g, &alloc::format!("paper {} scattered", d.i));
-    let (c, h, albedo) = { let b = seam_box(g, d.box_); (b.c, b.h, b.albedo) };
+    let (c, h, albedo) = { let b = &g.tab.boxes[d.box_]; (b.c, b.h, b.albedo) };
     let count = m::round(g.k.chaos.sheets_per_stack * m::min(1.6, m::max(0.5, (h[0] * h[2]) / (0.11 * 0.15))) * (0.7 + 0.6 * chaos));
-    g.stats.destruction.destr_sheets += count as i32;
     let w = m::min(0.22, m::max(0.12, 2.0 * m::min(h[0], h[2]) * 0.95));
     let asp = m::max(1.0, m::max(h[0], h[2]) / m::max(0.04, m::min(h[0], h[2])));
     let pj = m::max(h[0], h[2]) * 0.8;
@@ -535,26 +527,24 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
 pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destructible) {
     let bits = hidden_bits();
     let b = g.col.boxes[d.i as usize];
-    let f = seam_box(g, b).flags;
+    let f = g.tab.boxes[b].flags;
     g.destr.hidden.set(crate::Num(d.i), f);
-    seam_box(g, b).flags = or_bits(f, bits);
+    g.tab.boxes.edit(b).flags = js::or_bits(f, bits);
     if let (Some(mate), DKind::Housing) = (d.mate, d.kind) {
         let s = g.col.boxes[mate as usize];
         if !g.destr.hidden.has(crate::Num(mate)) {
-            let sf = seam_box(g, s).flags;
+            let sf = g.tab.boxes[s].flags;
             g.destr.hidden.set(crate::Num(mate), sf);
-            seam_box(g, s).flags = or_bits(sf, bits);
+            g.tab.boxes.edit(s).flags = js::or_bits(sf, bits);
         }
     }
-    crate::scene_collision::wrote(g);
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.
-fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<crate::destruction::DestructionBurstHit>) {
-    g.stats.destruction.destr_bursts += 1;
+fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<&RoundMet>) {
     let (mut surf, mut albedo) = (surf, albedo);
     if let Some(h) = hit {
-        let see = crate::particle_fx::hit_look(g, crate::particle_fx::HitLookHit { index: h.index, prop: h.prop, box_: h.box_ });
+        let see = crate::particle_fx::hit_look(g, h);
         if see.solid { return; }
         if see.said {
             surf = if see.surf == crate::scene_materials::Surf::Carpet { crate::scene_materials::Surf::Fabric } else { see.surf };
@@ -589,17 +579,16 @@ fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf:
 
 /// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
-    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
+    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, crate::destruction::RateCapN::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
         return false;
     }
     g.destr.puffs_this_frame += 1.0;
-    g.stats.destruction.destr_puffs += 1;
     let k = g.k.chaos.puff;
     let by_surf = match surf { crate::scene_materials::Surf::Drywall => 1.0, crate::scene_materials::Surf::Concrete => 0.7, crate::scene_materials::Surf::Fabric => 0.35, _ => 0.5 };
     let dens = k.density * by_surf * m::min(2.0, scale);
     let dir = v3::normalize([n[0], n[1] + 0.25, n[2]]);
-    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
     true
@@ -613,11 +602,9 @@ fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) -> boo
     let now = g.time;
     g.destr.pall_at.retain(|&t| now - t < k.window_secs && t <= now);
     if !always && g.destr.pall_at.len() as f64 >= k.per_window {
-        g.stats.destruction.pall_refused += 1;
         return false;
     }
     g.destr.pall_at.push(now);
-    g.stats.destruction.pall_palls += 1;
     true
 }
 
@@ -631,7 +618,6 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
     if crate::smoke_types::smoke_system_like_budget(g) < k.slack {
-        g.stats.destruction.pall_starved += 1;
         return false;
     }
     let mut p: V3 = v3::copy(pos);
@@ -640,7 +626,6 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
         p = [2.0 * from[0] - pos[0], pos[1], 2.0 * from[2] - pos[2]];
         d = [-dir[0], dir[1], -dir[2]];
         if crate::scene_collision::solid_blocked(g, from, p, None) {
-            g.stats.destruction.pall_shut += 1;
             return false;
         }
     }
@@ -662,10 +647,9 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     }
     let ttl = r.ttl * (0.8 + 0.4 * j);
     let density = r.density * gain * m::min(k.max_gain, m::pow(r.radius / radius, 1.5));
-    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
-    g.stats.destruction.pall_emitters += 1;
     true
 }
 
@@ -697,8 +681,7 @@ pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thi
         }
         let count = m::round(w.dust[if near_side { 0 } else { 1 }] * gain);
         if count > 0.0 && took > 0 {
-            let dust = crate::particle_fx::emit_dust(g, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3::normalize([nn[0], 0.25, nn[2]]), count, crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: w.dust_speed, speed_jit: Some(0.7), lift: Some(0.12), life: w.dust_life, life_jit: Some(0.35), size: w.dust_size, size_jit: Some(0.4), pos_jit: Some(0.6), color: Some(v3::scale(tint, 0.8)), ..Default::default() });
-            g.stats.destruction.pall_dust += dust as i32;
+            crate::particle_fx::emit_dust(g, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3::normalize([nn[0], 0.25, nn[2]]), count, crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: w.dust_speed, speed_jit: Some(0.7), lift: Some(0.12), life: w.dust_life, life_jit: Some(0.35), size: w.dust_size, size_jit: Some(0.4), pos_jit: Some(0.6), color: Some(v3::scale(tint, 0.8)), ..Default::default() });
         }
     }
 }
@@ -729,8 +712,7 @@ fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) 
     let jc = destruction_pall_hash(g, at, 201.0);
     if destruction_pall_emit(g, core, c, [c[0], c[1] + 0.45, c[2]], [0.0, 1.0, 0.0], jc, b.smoke, Some(b.core_gain)) { took += 1; }
     if b.dust > 0.0 && took > 0 {
-        let dust = crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
-        g.stats.destruction.pall_dust += dust as i32;
+        crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
     }
 }
 

@@ -5,14 +5,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// The ray a falling thing asks of what it lands on: the `t` of `{ t } | null`. Statics, or the statics and then the props up to the statics' `t`, the props' answer first.
-fn ask(g: &mut Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f64) -> Option<f64> {
-    let st = crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| h.t);
+fn ask(g: &Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f64) -> Option<f64> {
     match world {
-        crate::falling::FallWorld::Statics => st,
-        crate::falling::FallWorld::StaticsAndProps => {
-            let ph = crate::props::prop_system_raycast(g, ro, rd, match st { Some(t) => t, None => tmax }).map(|h| h.t);
-            match ph { Some(t) => Some(t), None => st }
-        }
+        crate::falling::FallWorld::Statics => crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| h.t),
+        crate::falling::FallWorld::StaticsAndProps => crate::props::level_ray(g, ro, rd, tmax).map(|h| h.t),
     }
 }
 
@@ -22,7 +18,7 @@ fn t_of(vy: f64, gravity: f64, h: f64) -> f64 {
 }
 
 /// Where and when something let go at `c` with velocity `v` reaches what is under it, a share `reach_k` of the way sideways.
-pub(super) fn fall_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, reach_k: f64, world: crate::falling::FallWorld) -> crate::falling::FallOf {
+pub(super) fn fall_of(g: &crate::game::Game, c_2: V3, v: V3, gravity: f64, reach_k: f64, world: crate::falling::FallWorld) -> crate::falling::FallOf {
     fall_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity, reach_k)
 }
 
@@ -53,7 +49,7 @@ fn fall_along(ray: &mut dyn FnMut(V3, V3, f64) -> Option<f64>, c_2: V3, v: V3, g
 }
 
 /// The same question asked along the arc, for a thing thrown: when and where it comes to lie.
-pub(super) fn flight_of(g: &mut crate::game::Game, c_2: V3, v: V3, gravity: f64, world: crate::falling::FallWorld) -> crate::falling::FlightOf {
+pub(super) fn flight_of(g: &crate::game::Game, c_2: V3, v: V3, gravity: f64, world: crate::falling::FallWorld) -> crate::falling::FlightOf {
     flight_along(&mut |ro, rd, tmax| ask(g, &world, ro, rd, tmax), c_2, v, gravity)
 }
 

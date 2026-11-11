@@ -8,16 +8,8 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A new tracker: nothing known.
-pub fn entry_points_new(g: &crate::game::Game) -> crate::entrypoints::EntryPoints {
+pub fn entry_points_new() -> crate::entrypoints::EntryPoints {
     EntryPoints::blank()
-}
-
-/// Nothing known: a restart. A point already marked moved stays so, as in the TypeScript.
-pub fn entry_points_reset(g: &mut crate::game::Game) {
-    g.entry.been.clear();
-    g.entry.last = -1.0;
-    g.entry.stats = EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 };
-    g.entry.log.clear();
 }
 
 /// Four times a second: where the squad stands is known ground.
@@ -26,7 +18,7 @@ pub fn entry_points_tick(g: &mut crate::game::Game) {
     if g.entry.last >= 0.0 && m::abs(g.time - g.entry.last) < 0.25 { return; }
     g.entry.last = g.time;
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
-        if g.gd[gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[gd].ch) {
             let c = g.gd[gd].ch;
             let p = g.ch[c].pos;
             entry_points_mark(g, p);
@@ -59,12 +51,12 @@ fn entry_points_mark(g: &mut crate::game::Game, p: V3) {
 }
 
 /// A line from a man at `p` to the face of `o` on side `sg` (its middle, or either third of its width). `open`: leaves out of the way.
-fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
+fn entry_points_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
     let eye: V3 = [p[0], EYE, p[2]];
     let (at, n, half) = opening_shape(g, o);
     for k in [0.0, 0.6, -0.6] {
         let q: V3 = [at[0] + n[1] * half * k + n[0] * sg * 0.3, CHEST, at[2] - n[0] * half * k + n[1] * sg * 0.3];
-        let clear = if open { !crate::roomclear::wall_between(g, eye, q) } else { !crate::scene_collision::segment_blocked(g, eye, q, None, None, None) };
+        let clear = if open { !crate::scene_collision::wall_between(g, eye, q) } else { !crate::scene_collision::segment_blocked(g, eye, q, None, None, None) };
         if clear { return true; }
     }
     false
@@ -106,7 +98,7 @@ pub(super) fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Optio
         for j in [0.0, 0.7, -0.7] {
             let ax = at[0] + n[1] * half * j + n[0] * sg * 0.2;
             let az = at[2] - n[0] * half * j + n[1] * sg * 0.2;
-            if !crate::roomclear::wall_between(g, [ax, EYE, az], to) { seen = true; break; }
+            if !crate::scene_collision::wall_between(g, [ax, EYE, az], to) { seen = true; break; }
         }
         if !seen { continue; }
         best = Some(o);
@@ -141,15 +133,15 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
             while x <= cx + r {
                 let q: V3 = [(x + 0.5) * cs, 0.0, (z + 0.5) * cs];
                 x += 1.0;
-                let dist = m::hyp2(q[0] - pod.pos[0], q[2] - pod.pos[2]);
+                let dist = v3::dist_xz(q, pod.pos);
                 if dist > k.move_m || dist >= bs || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { continue; }
                 let [a, b] = frame(g, q);
                 if b < 0.3 { continue; }
                 if m::abs(a0) > 0.3 && a * a0 < 0.0 { continue; }
                 if m::abs(a) < m::min(m::abs(a0), funnel) { continue; }
-                if out.iter().enumerate().any(|(j, o)| j != i && m::hyp2(o.pos[0] - q[0], o.pos[2] - q[2]) < k.apart) { continue; }
+                if out.iter().enumerate().any(|(j, o)| j != i && v3::dist_xz(o.pos, q) < k.apart) { continue; }
                 if room.is_some() && crate::roomfight::room_fight_room_at(g, q) != room { continue; }
-                if crate::scene_collision::solid_blocked(g, [pod.pos[0], 0.45, pod.pos[2]], [q[0], 0.45, q[2]], None) { continue; }
+                if crate::scene_collision::low_blocked(g, pod.pos, q) { continue; }
                 if entry_points_risk_at(g, q, Some(d), None).is_some() { continue; }
                 if !entry_points_sees(g, q, by, side_of(by_at, by_n, q), true) { continue; }
                 best = Some(q);
@@ -160,51 +152,13 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
         let Some(best) = best else {
             // it stays where it is: its man can at least hold the opening
             if entry_points_sees(g, pod.pos, by, side_of(by_at, by_n, pod.pos), true) {
-                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch), moved: false };
+                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch) };
             }
             continue;
         };
-        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch), moved: true };
-        let line = alloc::format!(
-            "{} · ({}, {}) → ({}, {}) · off {}",
-            g.dr[d].def.name,
-            js::to_fixed(pod.pos[0], 1),
-            js::to_fixed(pod.pos[2], 1),
-            js::to_fixed(best[0], 1),
-            js::to_fixed(best[2], 1),
-            g.tab.cover_opening[by].id
-        );
-        g.entry.log.push(line);
-        if g.entry.log.len() > 60 { g.entry.log.remove(0); }
+        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch) };
     }
     out
-}
-
-/// A search point taken over a better-seeing one by an uncleared opening: it counts as moved.
-pub(super) fn entry_points_swapped(g: &crate::game::Game, pod: &mut crate::entrypoints::Pod) {
-    pod.moved = true;
-}
-
-/// A point an entry has just dealt to a man: the tallies.
-pub(super) fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
-    g.entry.stats.pods += 1.0;
-    let risky = entry_points_risk_at(g, pod.pos, skip, None).is_some();
-    if risky { g.entry.stats.risky += 1.0; }
-    if pod.moved {
-        g.entry.stats.moved += 1.0;
-    } else if risky {
-        g.entry.stats.kept += 1.0;
-    }
-}
-
-/// The tallies in a line.
-fn entry_points_summary(g: &crate::game::Game) -> String {
-    let s = g.entry.stats;
-    let n = g.entry.been.values().filter(|&&v| js::truthy(v)).count();
-    alloc::format!(
-        "entry points: {} dealt · {} by an uncleared opening · {} moved off one · {} with nowhere to go · {} openings known",
-        s.pods, s.risky, s.moved, s.kept, n
-    )
 }
 
 fn opening_shape(g: &Game, o: CoverOpeningId) -> (V3, [f64; 2], f64) {
@@ -229,24 +183,4 @@ mod tests {
         assert_eq!(side_of(at, n, [5.0, 0.0, 1.0]), -1.0);
     }
 
-    /// Bit 1 is the +n side, bit 2 the -n side; `far_known` asks after the side `p` is not on, and `reset` forgets.
-    #[test]
-    fn far_known_reads_the_other_side_and_reset_forgets() {
-        let mut g = Game::blank();
-        let o = g.tab.cover_opening.push(crate::cover::Opening { at: [1.0, 0.0, 2.0], n: [0.0, 1.0], half: 0.5, ..crate::cover::Opening::default() });
-        let (plus, minus): (V3, V3) = ([1.0, 0.0, 3.0], [1.0, 0.0, 1.0]);
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        g.entry.been.set(o, 1.0);
-        assert!(entry_points_far_known(&mut g, o, minus));
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        g.entry.been.set(o, 3.0);
-        assert!(entry_points_far_known(&mut g, o, plus));
-        assert!(entry_points_summary(&mut g).ends_with("· 1 openings known"));
-        g.entry.last = 9.0;
-        g.entry.stats.pods = 4.0;
-        g.entry.log.push(String::from("x"));
-        entry_points_reset(&mut g);
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        assert_eq!((g.entry.last, g.entry.stats.pods, g.entry.log.len()), (-1.0, 0.0, 0));
-    }
 }

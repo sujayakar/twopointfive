@@ -74,7 +74,6 @@ pub enum TargetKind {
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
     pub eta_at: f64,
-    pub set_at: f64,
     pub men: Vec<crate::qrf::PerimeterMenItem>,
     pub spawned: f64,
     pub peeled: f64,
@@ -91,7 +90,6 @@ pub struct PerimeterMenItem {
     pub gd: GuardId,
     pub post: crate::scene_scenarios::ResponsePost,
     pub arrived_at: f64,
-    pub fighting: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -101,9 +99,7 @@ pub struct Qrf {
     #[is(-1.0)] pub requested_at: f64,
     #[is(-1.0)] pub arrive_at: f64,
     #[is(-1.0)] pub deployed_at: f64,
-    pub answered: bool,
     pub said30: bool,
-    pub said10: bool,
     #[is(-100.0)] pub refused_at: f64,
     pub everyone_said: bool,
     pub men: Vec<GuardId>,
@@ -147,8 +143,6 @@ pub struct Qrf {
     pub cast: Option<crate::squadcast::SquadCast>,
     pub op: Option<DoorOpId>,
     pub op_beat: f64,
-    pub drills: f64,
-    pub drills_in: f64,
     pub spent: Option<crate::qrf::QrfSpent>,
     #[is(-1000000000.0)] pub swept_t: f64,
     pub way: f64,
@@ -156,7 +150,7 @@ pub struct Qrf {
     pub marks: Option<crate::qrf::Marks>,
     pub marks_on: bool,
     #[is(-1.0)] pub marks_way: f64,
-    pub word: JsMap<crate::qrf::QrfWordKey, crate::qrf::QrfWordValue>,
+    pub word: JsMap<CharId, crate::qrf::QrfWordValue>,
     #[is(-1000000000.0)] pub word_t: f64,
 }
 
@@ -171,22 +165,10 @@ pub struct QrfSpent {
     pub fix_t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
-pub enum QrfWordKey {
-    Guard(GuardId),
-    Player,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SideOfTeam {
-    Guard,
-    Hostile,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -202,12 +184,6 @@ pub struct BudgetOfArm0 {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BudgetOfArm1 {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BestFix {
-    pub pos: V3,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

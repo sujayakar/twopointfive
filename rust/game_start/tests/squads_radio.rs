@@ -33,7 +33,7 @@ fn a_drop_nobody_saw_is_found_by_the_squads_check() {
         for &o in p.mates().iter() { p.parked(o); }
         let (men, _) = p.squad_men("Yard");
         let (m, _) = loneliest(&p, &men);
-        game::combat::kill_guard(&mut p.g, m, [1.0, 0.0, 0.0], Some(true), None, None, None);
+        game::combat::kill_guard(&mut p.g, m, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand);
         p.run(0.1);
         assert!(first(&p.squad_events("Yard"), What::Contact).is_none(), "seed {s}: contact at the drop, with nobody looking");
         p.until(90.0, |p| first(&p.squad_events("Yard"), What::Contact).is_some()).unwrap_or_else(|| panic!("seed {s}: 90 s and nobody found him: {:?}", p.squad_events("Yard")));

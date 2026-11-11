@@ -64,11 +64,6 @@ pub struct Ahead {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BendA {
-    pub k: usize,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ToolSpot {
     pub pos: V3,
     pub yaw: f64,
@@ -90,21 +85,5 @@ pub struct HandlesideMod {
     pub lined: JsMap<GuardId, crate::handleside::HandlesideModLinedValue>,
     pub faces: JsMap<DoorId, crate::handleside::HandlesideModFacesValue>,
     pub stepped: JsMap<GuardId, f64>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct HandlesideStats {
-    pub bent: i32,
-    pub lined: i32,
-    pub pulls: i32,
-    pub far_pulls: i32,
-    pub no_spot: i32,
-    pub gave_up: i32,
-    pub held: i32,
-    pub tool_walks: i32,
-    pub tool_no_spot: i32,
-    pub tool_nears: i32,
-    pub tool_posts: i32,
 }
 

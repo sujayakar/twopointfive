@@ -6,13 +6,13 @@ use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
 /// What a row has of its own; None: its stand-in fields are the gun.
-pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
+pub fn gun_own(def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()
 }
 
 /// The voice its report is played with.
 pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
-    match gun_own(g, def).and_then(|own| own.voice) {
+    match gun_own(def).and_then(|own| own.voice) {
         Some(voice) => voice,
         None => def.report.voice.clone(),
     }
@@ -20,26 +20,19 @@ pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Strin
 
 /// The flame and the flash's light gain it fires with.
 pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
-    match gun_own(g, def).and_then(|own| own.flame) {
+    match gun_own(def).and_then(|own| own.flame) {
         Some(flame) => flame,
         None => def.muzzle_fx,
     }
 }
 
-/// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.
-fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongModelGripL {
-    let x = x.unwrap_or(0.099);
-    let y = y.unwrap_or(-0.059);
-    LongModelGripL { off: [x, y, z], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }
-}
-
 /// A long gun's model by its id; None: the group draws its own parts.
-pub(super) fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
+pub(super) fn long_model(id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
 /// A hand gun's model by its id.
-pub(super) fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
+pub(super) fn pistol_model(id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 
@@ -70,43 +63,13 @@ pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>,
     Some(l)
 }
 
-/// LONG_MODELS[id], from the skeleton's table.
-fn long_row(id: crate::weapons::GunModelId) -> Option<LongModel> {
-    use crate::weapons::GunModelId as Id;
-    let t = long_models();
-    match id {
-        Id::M870 => t.m870,
-        Id::Mk12 => t.mk12,
-        Id::Mp7 => t.mp7,
-        Id::Mk46 => t.mk46,
-        Id::M1014 => t.m1014,
-        Id::Hk45 => t.hk45,
-        Id::G18 => t.g18,
-    }
-}
-
-/// PISTOL_MODELS[id], from the skeleton's table.
-fn pistol_row(id: crate::weapons::GunModelId) -> Option<PistolModel> {
-    use crate::weapons::GunModelId as Id;
-    let t = pistol_models();
-    match id {
-        Id::M870 => t.m870,
-        Id::Mk12 => t.mk12,
-        Id::Mp7 => t.mp7,
-        Id::Mk46 => t.mk46,
-        Id::M1014 => t.m1014,
-        Id::Hk45 => t.hk45,
-        Id::G18 => t.g18,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::weapons::GunModelId as Id;
     use crate::weapons::{WeaponDef, WeaponId as W};
 
-    fn row(g: &Game, id: W) -> WeaponDef { g.m.weapons.weapons.get(id).unwrap().clone() }
+    fn row(g: &Game, id: W) -> WeaponDef { g.weapon(id).clone() }
 
     /// A FAILURE MEANS: a gun is drawn twice over, or finds no model at all.
     #[test]

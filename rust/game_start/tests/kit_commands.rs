@@ -7,7 +7,7 @@ fn text(o: &mut Vec<u8>, s: &str) { u32s(o, s.len() as u32); o.extend(s.as_bytes
 fn step(p: &mut Play) {
     let (h, g) = (p.host, &mut p.g);
     let me = game::game::game_host_seat(g);
-    let mut c = game::seats::with_seat(g, me, &mut |g| game::cmd::sample_cmd(g, h.input, h.cam, h.canvas, None));
+    let mut c = game::seats::with_seat(g, me, &mut |g| game::cmd::sample_cmd(g, h.input, h.cam, h.canvas));
     c.keys.push(String::from("KeyW"));
     game::game::game_step(g, 1.0 / 60.0, &c);
 }
@@ -15,7 +15,7 @@ fn step(p: &mut Play) {
 #[test]
 fn the_commands_reach_the_stage_and_the_step_holds_it() {
     let mut p = Play::mission("records.json", "?levelFile=records.json&kitview&roomclear&squad4", &Opts { seed: 3, ..Default::default() });
-    let sam = |p: &Play| { let pl = p.g.player; p.g.ch[p.g.pl[pl].ch].pos };
+    let sam = |p: &Play| { let pl = p.g.player; p.g.player_pos(pl) };
     let at = sam(&p);
     // (a key in the seat's hand is dropped: he stands)
     for _ in 0..60 { step(&mut p); }
@@ -57,7 +57,7 @@ fn the_commands_reach_the_stage_and_the_step_holds_it() {
     command::apply(&mut p.g, &b).unwrap();
     step(&mut p);
     assert_eq!((st(&p).who, st(&p).field.as_str()), (2, "bangs"));
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1]);
+    assert_eq!(st(&p).order[0], p.g.staged.team[1]);
     assert_eq!(st(&p).veil, veil);
 
     // 32: the frame

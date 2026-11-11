@@ -48,7 +48,7 @@ export class DrawNet {
     door.wake(this.round);
     if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now); else c.beat(recordOf(N, keys), now); }
     let over = false;
-    const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word(), watch: () => net.watch() }, this.round);
+    const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word() }, this.round);
     const level = this.level; this.level = false;
     if (level) game.show();
     this.ahead = door.look(c.seat >= 0 ? cmds => net.ahead(c.seat, cmds) : null);

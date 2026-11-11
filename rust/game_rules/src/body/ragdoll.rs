@@ -30,12 +30,11 @@ const KNEES: [(usize, usize, usize); 2] = [(10, 12, 14), (11, 13, 15)];
 const NECK_CONE_COS: f64 = 0.5735764363510462;
 
 /// wd.gather(…, this.near): the collision grid's indices of the statics round the body.
-fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn world_gather(g: &Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
-/// `b.c`, `b.h`, `b.yaw` of a box. Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`. Once the rows have a table
-/// this is the row's three fields.
+/// a box's row
 fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     let x = &g.tab.boxes[b];
     (x.c, x.h, x.yaw)
@@ -106,7 +105,7 @@ pub(super) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V
 /// (Ragdoll.point)
 pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
-pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_radius(i: f64) -> f64 { rd_radius(i) }
 /// (Ragdoll.addVelocity)
 pub(super) fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
@@ -149,7 +148,7 @@ pub fn ragdoll_floor_under(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
 }
 
 /// Collision radius of particle i.
-fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+fn rd_radius(i: f64) -> f64 {
     RADIUS[i as usize]
 }
 

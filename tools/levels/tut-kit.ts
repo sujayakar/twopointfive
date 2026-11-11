@@ -424,7 +424,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     //  own charge and frag go off where he is not standing, and the lesson is to see them. The squad's ring is the game's own, every row of it
     //  (no `orders` list): the digits a line names here are the digits the rest of the game has. His own ring's rows are the ones a line teaches: a
     //  door opened and shut by hand, his charge)
-    rails: { allow: ['move', 'sprint', 'crouch', 'wall', 'aim', 'fire', 'reload', 'mode', 'slot:rifle', 'camera', 'zoom'], respawn: 5, fog: false, lasers: false, flatRing: true, waits: { low: true }, rows: OWN_ROWS },
+    rails: { allow: ['move', 'sprint', 'crouch', 'wall', 'aim', 'fire', 'reload', 'mode', 'slot:rifle', 'camera', 'zoom'], respawn: 5, fog: false, lasers: false, waits: { low: true }, rows: OWN_ROWS },
     steps: ([
       // ================= HIS OWN KIT, ALONE =================
       // THE TRUCK COURT: a tap of the interaction key on the thing in front of him
@@ -474,10 +474,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
         explain: { quiet: true, title: 'Light', text: 'Enemies can only fight what they can see. In the dark they\'ll slow down and turn on flashlights.\nYour squad has night vision, so cut the lights and you\'ll own the dark.' } },
       { id: 'nv', line: 'Press [N] to turn on night vision', done: { is: 'flag', flag: 'nv' } },
       // THE BUNK ROOM: the command key HELD is the squad's ring. First only the hold, then the wedge once the ring is up, named by its words with its digit
-      { id: 'door', line: '[X] on the bunk room door', flatLine: 'Pick bang and clear with [4]', menuLine: 'Pick bang and clear with [4]', noTap: 'Keep [B] held down', after: { line: 'They\'re stacking up with a stun grenade ready', word: 'They\'re going in behind the stun grenade', on: ['bangClear'] }, at: BUNK_DOOR, done: TAKEN('bunk', BUNK), hold: 1.5,
+      { id: 'door', line: '[X] on the bunk room door', menuLine: 'Pick bang and clear with [4]', noTap: 'Keep [B] held down', after: { line: 'They\'re stacking up with a stun grenade ready', word: 'They\'re going in behind the stun grenade', on: ['bangClear'] }, at: BUNK_DOOR, done: TAKEN('bunk', BUNK), hold: 1.5,
         explain: { quiet: true, title: 'The squad\'s ring', text: 'A tap of [B] gives your squad the usual order for whatever you\'re pointing at.\n[X] and a ring will come up with everything else they can do there. On a door, they can throw a stun grenade in first.' } },
       // THE FUEL ROOM: a wall charge (a door is where a room expects them, and this one is locked with a gun on it)
-      { id: 'wall', line: '[X] on the wall', flatLine: 'Press [5] for more, then pick the wall charge with [3]', menuLine: 'Press [5] for more, then pick the wall charge with [3]', noTap: 'Keep [B] held down', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, eye: WALL_EYE, at: WALL_MARK,
+      { id: 'wall', line: '[X] on the wall', menuLine: 'Press [5] for more, then pick the wall charge with [3]', noTap: 'Keep [B] held down', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, eye: WALL_EYE, at: WALL_MARK,
         done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, ...TAKEN('fuel', FUEL).of] }, hold: 0.4,
         explain: { quiet: true, title: 'Walls', text: 'The next room\'s door is locked, and the enemy inside is watching it anyway.\nA charge on the wall will get your squad in where nobody\'s waiting.' } },
       { id: 'breach', line: 'Press [F] to blow it', after: { word: 'They\'re going through the wall' }, eye: WALL_EYE, at: WALL_MARK, done: TAKEN('fuel', FUEL), hold: 1.5 },
@@ -485,7 +485,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // their flashlights and get down behind the bags (the script ends the line that has him look once they are set)
       { id: 'lead', line: 'Press [B] on yourself, then lead your squad back out to the court', at: YARD_FROM, done: { is: 'all', of: [{ is: 'near', at: YARD_FROM, r: 1.6 }, { is: 'squad', area: COURT, n: 2 }] } },
       { id: 'lights', line: 'Two more are hiding in the yard, and you can see their flashlights', at: FRAG_AT, done: { is: 'any', of: [{ is: 'cue', name: 'seen' }, DOWN(N.yard)] } },
-      { id: 'throw', line: '[X] on the ground behind the sandbags', flatLine: 'Press [5] for more, then pick the frag with [1]', menuLine: 'Press [5] for more, then pick the frag with [1]', noTap: 'Keep [B] held down', after: { line: 'A teammate is throwing a frag over the sandbags', on: ['fragThere'] }, at: FRAG_AT,
+      { id: 'throw', line: '[X] on the ground behind the sandbags', menuLine: 'Press [5] for more, then pick the frag with [1]', noTap: 'Keep [B] held down', after: { line: 'A teammate is throwing a frag over the sandbags', on: ['fragThere'] }, at: FRAG_AT,
         done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'order:fragThere' }, DOWN(N.yard - 1)] }, DOWN(N.yard)] }, settle: 1.5 },
       { id: 'clear', line: 'Finish off anyone who\'s left', at: FRAG_AT, done: DOWN(N.yard), settle: 1.5 },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),

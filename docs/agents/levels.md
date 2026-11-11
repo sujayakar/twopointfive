@@ -48,8 +48,7 @@ asked for (`json.rs`), is said by its place, and `load` panics with the list. `f
 `level_over` and `stood_over` panic on a level over its room.
 
 **Two tiers at the tail.** A box group `lived.<room>` (or a prop, light or fixture id so named) is furniture; group `dressing` is there only to wreck.
-They come last in their lists, so every other index is the same without them, and the export throws if something kept follows or names one. The game
-leaves them out by `k.lived.on` and `k.destruction.on` (`?knob.lived.on=0`). A level tool always loads the whole file.
+They come last in their lists, and the export throws if something kept follows or names one.
 
 **Rooms and places.** Rooms to take are `scenarios.roomClear.rooms`, with `bounds`, doors and marks. Other named ground is `scenarios.places.areas`,
 and a quiet mission's `spots`. `own_place` (`dialogue/`) answers from those rectangles, so a line says the level's own words. A name has no article; a
@@ -72,7 +71,7 @@ no top belongs between. A drawn-only box (`NoShadow`) meets no ray and no foot.
 **Round and shaped things.** `round` on a box makes it a true cylinder about its own y to every eye, ray and foot; `h[0]` equals `h[2]`, with no
 `yaw`, `rot`, `flags` or `shape`. `shape` keeps the plain box to walk on and cuts the picture and every ray: `round` about x or z (a wheel), `arc` (a
 bowed top), `cut` (planes in the box's own frame), `old`, and `with` (trim nobody meets). `shape_level` makes the record with `cut_record`. A box with
-`rot` takes no shape; one with `markings` or `Glass` takes no form. `form_faults` has the limits, `?shapes=0` stands the plain boxes, and
+`rot` takes no shape; one with `markings` or `Glass` takes no form. `form_faults` has the limits, and
 `tools/levels/lib/carShapes.ts` holds the vehicles'.
 
 **Paint, stuff and does.** A box says two words, and neither comes from the other. `stuff` is how it is drawn (`BoxStuff`). `does` is what it is to a
@@ -85,7 +84,7 @@ else: a mud partition a charge cuts beside a mud shell. `finish` is usually `ski
 `MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
 (`snow_level`).
 
-**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_box` asks only
+**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_among` asks only
 height and size: underside from `ceiling_y` less 0.25 m, top at most 0.45 m over, 0.9 m across or more. A drawn slab in that band stops the rain and
 hides the room. The rain reads `MAX_ROOFS` of them. Open sky is no slab.
 

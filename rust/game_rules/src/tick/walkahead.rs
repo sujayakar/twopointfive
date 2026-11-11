@@ -30,17 +30,16 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         backpedal: g.pl[pl].backpedal,
         speed_sm: g.pl[pl].speed_sm,
         pace: 1.0, // TWOGEARS.on is settled on the page
-        dragging: None,
-        haul: None,
+        tow: None,
         shoved: [0.0, 0.0],
         shoved_t: -1.0,
         shoved_from: [0.0, 0.0],
-        down: g.pl[pl].down,
+        down: crate::condition::down(g, g.pl[pl].ch),
         door_rip_until: g.pl[pl].door_rip_until,
         door_bash_at: g.pl[pl].door_bash_at,
         door_bash_lean: g.pl[pl].door_bash_lean,
     };
-    let mut aim: Option<V3> = Some(g.aim_point);
+    let mut aim: Option<V3> = Some(g.sets[g.seat].aim_point);
     if let Some(p) = path.as_deref_mut() { p.resize(n, [0.0; 3]); }
     if free && n > 0 {
         crate::game::game_aside(g, &mut |g: &mut Game| {
@@ -82,7 +81,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         // his keys, his stance, his stride (updatePlayer's movement block for a man whose legs are his own)
         crate::noshove::no_shove_begin(g, Some(&mut *m));
         let (mut mx, mut mz) = (0.0, 0.0);
-        if !crate::game::player_list_open(g, pl) && !crate::samstun::sam_rooted(g, &crate::seats::here(g), Some(now)) {
+        if !crate::samstun::sam_rooted(g, &crate::seats::here(g), Some(now)) {
             let b = crate::camera::follow_camera_planar_basis(g, cam);
             let way = crate::player::keys_way(b.fwd, b.right, has(&r.keys, "KeyW"), has(&r.keys, "KeyS"), has(&r.keys, "KeyD"), has(&r.keys, "KeyA"));
             mx = way[0];
@@ -91,7 +90,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         let ml = m::hyp2(mx, mz);
         if ml > 0.0 { mx /= ml; mz /= ml; }
         if has(&r.pressed, "KeyC") { crate::player::crouch_key(g, m); }
-        let want_sprint = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), Some(now))
+        let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, Some(now))
             && (has(&r.keys, "ShiftLeft") || has(&r.keys, "ShiftRight"))
             && ml > 0.0;
         crate::player::sprint_stance(g, m, want_sprint, false);

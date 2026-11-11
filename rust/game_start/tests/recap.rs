@@ -334,7 +334,7 @@ fn a_restart_starts_the_record_over() {
         // CONTROL: run on, it is kept.
         assert_eq!(p.recap_deaths().len(), 1, "seed {}", seed);
         assert_eq!(p.recap_lost().len(), 1, "seed {}", seed);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.g.ai_enabled = false;
         p.run(0.5);
         assert!(p.recap_deaths().is_empty() && p.recap_lost().is_empty(), "seed {}: that run's deaths are not this run's: {:?}", seed, p.recap_deaths());
@@ -618,11 +618,10 @@ fn the_recap_moves_nothing_a_rule_reads() {
             p.g.recap = before;
             p.g.cues.bubbles = cues;
             let (serial, seq, t, deaths, calls0) = (p.g.serial_next, p.g.event_seq, p.g.time, p.g.stats.deathrecap.deaths, calls(&p));
-            let die = |p: &Play| { let d = p.g.dice.as_ref().expect("the game has its die"); (game::math_dice::sim_dice_n(d), game::math_dice::sim_dice_s(d)) };
-            let dice = die(&p);
+            let dice = p.g.dice;
             game::deathrecap::recap_tick(&mut p.g);
             assert!(p.g.serial_next == serial && p.g.event_seq == seq && p.g.time == t, "seed {}: it dealt a number", seed);
-            assert_eq!(die(&p), dice, "seed {}: it drew from the die", seed);
+            assert_eq!(p.g.dice, dice, "seed {}: it drew from the die", seed);
             explained += p.g.stats.deathrecap.deaths - deaths;
             said += calls(&p) - calls0;
         }

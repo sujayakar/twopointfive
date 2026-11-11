@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
 use game::out_events::OutEvent as E;
-use game::smoke_types::{SmokeEmitter, SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokePushLattice};
+use game::smoke_types::{SmokeEmitter, SmokeEmitterMode, SmokePush};
 
 /// no number said: the reader's own
 const NONE: f32 = f32::NAN;
@@ -271,12 +271,12 @@ impl Events {
         for (ix, &f) in g.targets.iter().enumerate() {
             if game::fire::is_fire(g, f) && game::fire::burns(g, f) { self.goes("fireBed", ix as u32, game::fire::mouth_of(g, f).pos, g.k.fire.bed, game::fire::heat_of(g, f) * 2.0 / 3.0, [FOREVER; 2], 0.0); }
         }
-        for &i in g.items.items.iter().filter(|&&i| t::item_kind(g, i) == t::ItemKind::Smoke && t::item_fired(g, i) && t::item_emit_t(g, i) > 0.0) {
+        for &i in g.items.items.iter().filter(|&&i| g.tab.item[i].kind == t::ItemKind::Smoke && g.tab.item[i].fired && g.tab.item[i].emit_t > 0.0) {
             // (one let go under other numbers than a can's now: nobody knows how long ago)
-            let (left, all) = (t::item_emit_t(g, i), game::combat::can_params(g).canister_duration);
-            self.goes("smokeHiss", t::item_serial(g, i) as u32, game::v3::add(t::item_pos(g, i), [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
+            let (left, all) = (g.tab.item[i].emit_t, game::combat::can_params(g).canister_duration);
+            self.goes("smokeHiss", g.tab.item[i].serial as u32, game::v3::add(g.tab.item[i].pos, [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
         }
-        let dark = game::sim_lightshome::mains_active(g);
+        let dark = g.light_home.mains.active;
         for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.as_str(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }
     }
     fn goes(&mut self, name: &str, id: u32, at: [f64; 3], gain: f64, hard: f64, [age, left]: [f64; 2], reach: f64) {
@@ -286,7 +286,7 @@ impl Events {
 
     /// a source of smoke, and what it does to the air
     fn source(&mut self, tick: u32, g: &Game, e: &SmokeEmitter) {
-        let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
+        let lattice = match e.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 };
         let air = e.speed != 0.0 || e.push.is_some() || e.expand.is_some();
         let push = if air {
             let serial = self.pushes.len() as u32;
@@ -337,7 +337,7 @@ impl Events {
     fn push(&mut self, tick: u32, p: &SmokePush) {
         let serial = self.pushes.len() as u32;
         let (shape, len) = match (p.line, p.body) { (Some(l), _) if l > 0.0 => (1, l), (_, Some(b)) => (2, b), _ => (0, 0.0) };
-        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
+        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 } });
     }
 }
 
@@ -345,10 +345,10 @@ impl Events {
 fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);
-    let mut x = game::m::max(if game::sim_lightshome::mains_active(g) { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
+    let mut x = game::m::max(if g.light_home.mains.active { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
     for &gd in &g.guards {
         let d = &g.gd[gd];
-        let own = d.team == game::teams::Team::Operative;
+        let own = g.ch[d.ch].team.ours();
         if d.state == S::Dead || (own && d.state != S::Alert) { continue; }
         let s = match d.state {
             _ if d.script.is_some() && g.clearing.is_some() => 0.3,

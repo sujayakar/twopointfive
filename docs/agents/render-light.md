@@ -39,7 +39,8 @@ switching off is exact and immediate. Only the ratio `S / U` is noisy, and only 
 (`restirRays`). A frame takes:
 
 - a **fresh** candidate drawn by its unshadowed weight, with a shadow ray;
-- the **temporal** reservoir at the reprojected pixel, re-traced from here, its confidence cut by how far its target moved and by a per-tile gradient;
+- the **temporal** reservoir at the reprojected pixel, re-traced from here, its confidence cut by how far its target moved and by a per-tile gradient
+  (a lamp whose record is last frame's word for word gives what it gave and is not worked out twice: `SLOT_SAME`);
 - **spatial** taps of neighbors' last reservoirs (`restirSpatial`; `restirSpatialAll` runs them everywhere);
 - **beliefs** per 8×8 tile: a light every ray of the tile found dark leaves the fresh draw and is audited now and then, because a lamp behind the wall
   otherwise turns the floor into coin flips (`restirKnownDark`, `restirAudit`);
@@ -93,8 +94,12 @@ camera, so edges stand still for `gbaa`, which blends across box edges from the 
 drops it first. Over every preset `pictureOpens` lays `MOTION_CALM`: spatial taps everywhere, an extra penumbra ray, and a calmer resolve in motion.
 
 **Men in rays.** Each man is 15 round cones fitted to his mesh (`RigFit`): every ray's test at every tier. On High `MeshShadows` refits a triangle
-tree for the first `MESH_MAX_CHARS` men, and shadow rays from near receivers walk it (`meshShadowsNear`). `charSelfShadow` makes the direct light's
-rays test his own body too.
+tree for the first `MESH_MAX_CHARS` men, and shadow rays from near receivers walk it (`meshShadowsNear`). The tree is of what he wears (`wornTree`: the
+whole mesh's, less the parts he has not on, a ray meeting the same triangles in the same order; held by `cast-probes.ts` castTree), and it is made again
+only in a frame a bone of his moved, he changed his clothes or his slot is another man's (castSkip). Timed on an A10 alone: the pass 0.77 to 0.09 ms
+and the frame 0.5 to 1.5 ms less; the picture is bit for bit what it was on the software adapter. `meshShadowsDirect` (on at High since the
+maintainer picked it from stills; a row of the panel and of F8) leaves the mesh to the direct light's rays alone. `charSelfShadow` makes the direct light's rays test his
+own body too.
 
 **Openings.** `planOpeningsSteps` finds where a level is open to the sky, and each opening is a light of its own, a portal (`lookOpeningLights`): a
 hole blown in a wall lets daylight in, and a man by it throws a shadow. Openings, wall sides and reach masks run in steps under one allowance a frame
@@ -144,7 +149,7 @@ the beliefs. `restartHistories` clears every screen history for when they are wr
 
 Checks (`bun run tools/qa/checks.ts <name>`): `splitrays-check.ts` (the gather's two programs and buffer), `steadybounce-check.ts` (the dice ring),
 `bouncewalls-check.ts` (reads stay on their side), `portal-check.ts` (daylight counted once), `huesplit-check.ts`, `highlights-check.ts`,
-`reflup-check.ts`, `sunglint-check.ts` (reflections and highlights), `perf-probes.ts` (the bounce card's geometry and energy), `sdfrig-probes.ts` (the
+`reflup-check.ts`, `sunglint-check.ts` (reflections and highlights), `lightsame-check.ts` (a lamp as it was), `perf-probes.ts` (the bounce card's geometry and energy), `sdfrig-probes.ts` (the
 round cones), `sweep-ir-check.ts`.
 
 Page script: `wgsl-compile.cjs` (every text compiles); `kernel-stack.cjs` as a tool. There is no native test here: Rust neither draws nor reads this

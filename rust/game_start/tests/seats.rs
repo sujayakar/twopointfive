@@ -1,8 +1,7 @@
 //! A SEAT IS A VALUE (rust/game_types/src/seats/seat_ref.rs). A function that holds the game shared and depends on the seat takes a `SeatRef`,
 //! so it can be asked about ANY seat of a game nobody may write to: not only the one that happens to stand on it.
 //!
-//! Before readers took a seat, the only way to ask about the second player's seat was to stand it on the game (`with_seat`, which writes
-//! nineteen fields over and back); asked on the game as it stood, a reader silently answered for the first seat.
+//! A reader asked about the second player's seat takes that seat; a reader that asks `here` answers for the seat the pass is about, in a tick the first.
 use game::game::Game;
 use game::orders::Who;
 use game::seats::{self, SeatRef};
@@ -11,13 +10,13 @@ use game_start::play::{Opts, Play};
 const SEEDS: [u32; 3] = [5, 6, 7];
 
 /// A handful of readers of one seat: the men an order would go to, where the seat's man is, the wall charge's row on the menu, whether the
-/// seat's squad is whole.
+/// seat's squad is the player's own.
 type Answers = (Vec<game::ids::GuardId>, [f64; 3], String, bool);
 fn answers(g: &Game, seat: &SeatRef) -> Answers {
-    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(g, seat))
+    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_sams(seat))
 }
 
-/// THE RULE: in a game of two players, the readers asked about the second seat while the FIRST stands on the game answer as they do with the
+/// THE RULE: in a game of two players, the readers asked about the second seat while `g.seat` is the FIRST answer as they do with the
 /// second seat stood on it; and the two seats' answers are not the same answers (each has his own man and his own pair).
 /// A FAILURE MEANS: a reader has gone back to reading the game's own fields of a seat's name (it answers for whichever seat stands), or
 /// `seats::seat` no longer finds a kept seat's things.
@@ -28,7 +27,7 @@ fn a_reader_asked_about_the_seat_that_does_not_stand_answers_for_that_seat() {
         p.run(1.0);
         let g = &mut *p.g;
         let (first, second) = (g.seats[0], g.seats[1]);
-        assert_eq!(g.seat, first, "seed {s}: between ticks the first seat stands on the game");
+        assert_eq!(g.seat, first, "seed {s}: between ticks `g.seat` is the first seat");
         let stood = seats::with_seat(g, second, &mut |g| answers(g, &seats::here(g)));
         let asked = answers(g, &seats::seat(g, second));
         assert_eq!(asked, stood, "seed {s}: asked about the second seat with the first standing, the readers do not answer as with the second stood");
@@ -39,13 +38,13 @@ fn a_reader_asked_about_the_seat_that_does_not_stand_answers_for_that_seat() {
     }
 }
 
-/// each row on a seat's menu as it stands: which row of the table, its id, digit, page and targets
+/// each row on a seat's menu as it stands: which row of the table, its id, page and targets
 fn menu_of(g: &Game, seat: &SeatRef) -> Vec<(game::ids::OrdersOrderDefId, String)> {
-    seat.orders.defs.iter().map(|&d| { let r = &g.tab.orders_order_def[d]; (d, format!("{} {:?} {:?} {:?}", r.id, r.key, r.page, r.targets)) }).collect()
+    seat.orders.defs.iter().map(|&d| { let r = &g.tab.orders_order_def[d]; (d, format!("{} {:?} {:?}", r.id, r.page, r.targets)) }).collect()
 }
 
 /// THE RULE: a row of the orders' menu belongs to the seat that lists it. Two players' menus hold no row of the table between them, and what is
-/// written on one seat's rows (a digit dealt, a page, a target that comes with the pairs) is not on the other's.
+/// written on one seat's rows (a page, a target that comes with the pairs) is not on the other's.
 /// A FAILURE MEANS: a row is found by its id alone, so the two menus are one set of rows and one player's menu changes the other's.
 #[test]
 fn a_row_of_the_menu_is_one_seats() {
@@ -57,11 +56,10 @@ fn a_row_of_the_menu_is_one_seats() {
         let theirs = menu_of(&p.g, &seats::seat(&p.g, second));
         let both: Vec<_> = mine.iter().filter(|(d, _)| theirs.iter().any(|(x, _)| x == d)).collect();
         assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
-        // the second seat's fall in is given a target and a digit of its own: the first seat's menu is as it was
+        // the second seat's fall in is given a target of its own: the first seat's menu is as it was
         seats::with_seat(&mut p.g, second, &mut |g| {
-            let d = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
+            let d = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
             g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
-            g.tab.orders_order_def[d].key = None;
             game::orders::squad_orders_register(g, d, None);
         });
         assert_eq!(menu_of(&p.g, &seats::seat(&p.g, first)), mine, "seed {s}: the second seat's menu was written and the first seat's changed");

@@ -61,7 +61,6 @@ pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
     super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
     let mut g = e.image.laid(e.image.game.sim);
     g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
-    game::scene_collision::unstand(&mut g);   // (whatever rows its copy says it wrote were another moment's)
     let n = super::put(super::Held::new(g));
     STOOD_OF.with(|s| { let mut s = s.borrow_mut(); if let Some(of) = s.remove(&h) { s.insert(n, of); } });
     super::with(n, |x| {

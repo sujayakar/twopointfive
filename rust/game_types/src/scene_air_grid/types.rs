@@ -9,4 +9,3 @@ pub fn air_w() -> f64 { crate::m::round((crate::scene_world::world().max[0] - cr
 
 pub fn air_h() -> f64 { crate::m::round((crate::scene_world::world().max[2] - crate::scene_world::world().min[2]) / AIR_CELL) }
 
-pub fn air_rows() -> f64 { crate::m::ceil(air_w() * air_h() / 4.0) }

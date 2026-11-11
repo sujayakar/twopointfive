@@ -29,11 +29,3 @@ pub struct StartleMod {
     pub state_of: JsMap<GuardId, crate::startle::St>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct StartleStats {
-    pub seen: i32,
-    pub given: i32,
-    pub drew: i32,
-    pub ran: i32,
-}

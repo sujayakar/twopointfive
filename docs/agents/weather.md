@@ -11,7 +11,8 @@ What time of day a level stands at, what falls from its sky, what blows through 
 - **Rain is cover for your ears.** Small sounds carry about half as far outdoors, and a downpour drowns more. Gunfire is still placed as in dry air.
 - **Fog and dust are cover for your eyes.** They stand between any eye and what it looks at, for men and cameras alike. Dust comes in at a door you
   open.
-- **Lightning is real light.** Under a picked weather a stroke can show you to a man.
+- **Lightning is real light.** Under a picked weather a stroke can show you to a man. The next stroke's way is read off the storm's own die before it comes
+  (`weather_next_way`), so the picture makes its reach mask ahead (`render/reachKeep.ts coming`). A stroke asked for by hand, or one that comes as the level moves, has its mask made in its own frame.
 - **Snow is a place, not a pick.** A few levels are built for it. It hides nobody and slows nobody. A thrown thing sticks where it lands in deep snow.
   Boots leave prints.
 - Men get wet under open sky and dry slowly. Sam drips and leaves wet prints indoors. An open fire lights its yard, leans in the wind and takes a
@@ -32,10 +33,10 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `fire.rs` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
 | `moths.rs` | moths round the lit yard lamps; dress |
 | `snow_bog.rs`, `render_snow_field.rs` | how deep snow takes a thing that lands; which box is lying snow, by its word |
-| `snow_blast.rs`, `snow_marks.rs` | only what is told to the picture |
+| `snow_blast.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
-Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs`, `bog_of` in `items.rs`, `glow.rs`.
+Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`, `dome.rs`.
 `rust/game_draw/src/` tells the picture: `sky.rs`, `winds.rs`, `fires.rs`, `snow.rs`, `wet.rs`.
 
 The page's half reads those rows and writes nothing back:
@@ -74,21 +75,20 @@ night holds it off (`under_weather`).
 ask one question, `under_roof`.
 
 **The tick** runs `air_dust_update`, `update_fire`, `weather_update`, `update_wetness`, then the dress rows `wind_update` and `moths_update`
-(`step_seats_on_first`). `weather_update` steps strokes and thunder and writes `WeatherFrame`. The storm has its own die (`rnd`), so a stroke moves no
+(`STEPS`). `weather_update` steps strokes and thunder and writes `WeatherFrame`. The storm has its own die (`rnd`), so a stroke moves no
 other roll.
 
 **What moves a rule:**
 
 | what | who reads it | the road |
 |---|---|---|
-| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
-| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `air_trans` over `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
+| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `weather_hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
+| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `weather_air_trans` over `smoke_between`: fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
-| sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
+| sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; which ways from a place reach the sky is `rust/sim/src/dome.rs`, kept by half metre, in no save |
 | the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
 | storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
 | deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
-| the soaked lot | what a round knocks out of it | `surf_at` asks the word's wet row |
 | a fire's lamp | the light meter | a real light, moved by `update_fire` |
 
 Snow, rain and wind do not slow feet: no rule of a man's speed reads them.
@@ -107,7 +107,7 @@ one's speed for the tick (ramps, `vent_due`, gusts off `vnoise`) and hands them 
 Fires and moths read `wind_at`.
 
 **Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
-kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `air_trans` walks that
+kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
 field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
@@ -142,7 +142,7 @@ is made and sets `StoodWith`, the kind locked for that game.
   is never a pick.
 - **Rain drowns small sounds, not loud ones.** A rule that hears asks `hear_path`, never the plain path. The mixer's rain and the ear's mask are one
   number (`rain_bed`).
-- **No kind picked changes no sense.** `hear_mask` and `air_trans` answer exactly 1.
+- **No kind picked changes no sense.** `weather_hear_mask` and `weather_air_trans` answer exactly 1.
 - **A storm is cut by the level's own roofs.** "rain is busted on records office".
 - **Vents are wind.** "for hvac vents, that should model wind which then also influences the smoke solver".
 - **The picture's air is a fluid.** "the nice thing of integrating with the fluid system is that you'll naturally get neat interactions where the wind

@@ -19,14 +19,14 @@ pub enum ItemBounce {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ItemKind {
-    #[default] Pistol,
-    Rifle,
-    Ring,
     Smoke,
+    Mag,
     Flash,
     Frag,
-    Mag,
+    #[default] Pistol,
     Torch,
+    Rifle,
+    Ring,
     Shell,
 }
 
@@ -40,20 +40,46 @@ pub struct ThrowSolution {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Throwables {
+    /// the things in the pool, the oldest first: a full pool gives up the first spent thing in it, the boxes the picture draws are listed in it, the step walks it from the newest down
     pub items: Vec<ItemId>,
-    pub rows: Vec<ItemId>,
-    pub store: crate::sim_itemshome::ItemStore,
     #[is(1.0)] pub serial: f64,
 }
 
+/// a thing thrown or dropped, in the air, in a hand or on the floor
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Item {
-    pub r: f64,
-    pub kept: Option<Vec<f64>>,
+    pub kind: crate::throwables::ItemKind,
+    pub pos: V3,
+    pub vel: V3,
+    pub yaw: f64,
+    pub spin: f64,
+    pub tumble: f64,
+    pub tumble_rate: f64,
+    pub age: f64,
+    pub life: f64,
+    pub radius: f64,
+    pub restitution: f64,
+    pub friction: f64,
+    /// the way it travels
+    pub heading: f64,
+    /// the thing of furniture it lies on: its id plus one (0: none), and that thing's pose as one number
+    pub on: u32,
+    pub on_pose: f64,
+    /// lying at rest
+    pub settled: bool,
+    pub bounces: f64,
+    pub who: f64,
+    pub serial: f64,
+    // other rules' own: the fuse, the seconds of venting left, what a magazine holds
+    pub fuse: f64,
+    pub fired: bool,
+    pub emit_t: f64,
+    pub fill: f64,
+    /// in a hand, placed by whoever carries it; unset is not false to a save file
+    pub carried: Option<bool>,
     pub side: Option<crate::teams::Team>,
     pub on_bounce: Option<crate::throwables::ItemBounce>,
     pub clatters: Option<f64>,
-    pub hand: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -207,11 +233,6 @@ pub struct RIFLEITEMStock {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ThrowablesRay {
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ThrowablesSpawnOpts {
     pub kind: Option<crate::throwables::ItemKind>,
     pub pos: Option<V3>,
@@ -258,3 +279,8 @@ pub fn shell_item() -> crate::throwables::SHELLITEM { crate::throwables::SHELLIT
 pub fn rifle_item() -> crate::throwables::RIFLEITEM { crate::throwables::RIFLEITEM { radius: 0.06, restitution: 0.18, friction: 0.55, prop_share: 0.3, thick: 0.02, receiver: crate::throwables::RIFLEITEMReceiver { z: -0.02, h: [0.018, 0.03, 0.13] }, fore: crate::throwables::RIFLEITEMFore { z: 0.24, h: [0.02, 0.022, 0.13] }, mag: crate::throwables::RIFLEITEMMag { z: 0.06, y: -0.075, h: [0.013, 0.05, 0.03], cant: 0.35 }, stock: crate::throwables::RIFLEITEMStock { z: -0.27, h: [0.008, 0.026, 0.12] }, steel: [0.05, 0.05, 0.055], wood: [0.2, 0.085, 0.05] } }
 
 pub const GRAVITY: f64 = 9.81;
+
+/// the pool's own size: a thirty-third gives one up, but never a can still on its fuse or venting
+pub const ITEM_CAP: f64 = 32.0;
+/// the most it may grow to with those: sixty-four live cans at once is nobody's game, and there the oldest gives way
+pub const ITEM_ROWS: f64 = 64.0;

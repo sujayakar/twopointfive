@@ -9,6 +9,7 @@ use crate::ids::*;
 use crate::V3;
 
 pub mod alert;
+pub use alert::fight_on_the_way;
 pub mod patrol;
 pub mod search;
 pub mod suspicious;

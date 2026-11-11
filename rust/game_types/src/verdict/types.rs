@@ -25,7 +25,6 @@ pub struct Verdict {
     pub fell_at: Vec<f64>,
     pub res: Option<crate::verdict::RunVerdict>,
     #[is(-1.0)] pub card_at: f64,
-    pub kept: Option<crate::verdict::KeptNote>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -55,7 +54,7 @@ pub enum ManState {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunVerdict {
-    pub kind: Option<crate::verdict::RunVerdictKind>,
+    pub kind: Option<crate::scene_scenarios::MissionKind>,
     pub won: bool,
     pub word: String,
     pub why: String,
@@ -69,14 +68,6 @@ pub struct RunVerdict {
     pub foes: crate::verdict::RunVerdictFoes,
     pub hostages: Option<crate::verdict::RunVerdictHostages>,
     pub start: [f64; 2],
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
-pub enum RunVerdictKind {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
@@ -113,9 +104,5 @@ pub struct RunVerdictFoes {
 pub struct RunVerdictHostages {
     pub alive: f64,
     pub of: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNote {
 }
 

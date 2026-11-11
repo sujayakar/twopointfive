@@ -27,7 +27,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `squadthrow/`, `squadsmoke.rs`, `squad40.rs` | frag and stun, smoke, a 40 mm shell on order |
 | `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
 | `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
-| `cover/`, `rearwatch.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
+| `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
 | `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
@@ -38,18 +38,18 @@ block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the gam
 **A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
 under it wins, and a door counts by the doorway the ray looks through.
 
-**The book** is `SquadOrders`, one a seat, read as `g.orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+**The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
 `Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
 `flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
-click steps back. Tab or Esc puts it away.
+click turns back from more, or puts it away. So does Tab.
 
-**The ring is flat** (`squad_orders_flat_rows`): every page's rows in one list, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
+**The ring's rows** (`squad_orders_flat_rows`) are one list: the rows of each tool a listed row opens, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
 tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind
-a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`).
+a last wedge, more.
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
 `can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
@@ -59,7 +59,7 @@ sent together on one way, then one man assents. A refusal is said by the man it 
 fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may
 take his gun or feet, the muzzle drops off Sam, and `order` writes it all. When the last man of a `group` arrives he says "set."
 
-**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_whole`: no key picks a pair), unless the cursor is on one teammate or
+**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_sams`: no key picks a pair), unless the cursor is on one teammate or
 Shift picks a part. `goal_men` decides: the man under the cursor; everyone, on Sam himself; the men already on that door; with nothing going, half
 (`goal_half`: a whole pair if it can, else the nearer men); else the free men; else half of the biggest group. Nobody to spare says so (`GOAL_NONE`).
 `roster_of` makes the team: one or two men are one pair, three or four are Red and Blue (`unit.pair`). `squad_orders_men` is where to ask for men. In
@@ -101,7 +101,7 @@ tap on a door they stand stacked on is answered and moves nobody (`squad_orders_
 
 **How it ends.** Another order replaces it, and a job that finishes hands him a plain hold or the file. A man stopped short of his mark for
 `stuck_secs` takes where he stands as his mark. If that is a metre or more off he says "can't get through." and his group calls no "set."
-`squad_orders_drop` lets go of a dead man or one a drill takes (`nightbreach_owns`). In a fight the AI has him, a posted man pinned to his post
+`squad_orders_drop` lets go of a dead man or one a drill takes (`mission::has`). In a fight the AI has him, a posted man pinned to his post
 (`set_pinned`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
 
 ### The file
@@ -125,7 +125,9 @@ back only by what his own legs closed on him (`no_shove_back`). `walkahead.rs` i
 his order names nothing to watch and no door, on the walk to any mark and on the mark under `Is::LooksAbout` (`cover_eyes_free`), or if it left him
 spare (`cover_spare`). Nearer weighs more, a shut door less, one under Sam's gun or a posted man's little (`sam_k`, `held_k`). A dealt man moves his
 gun and not his feet (`cover_pose_for`). One man steps aside to see through an open door nobody has a line into (`cover_step_deal`), and his mark
-stays.
+stays. A man whose walk takes him into a room with floor nobody has looked over is dealt nothing until he is in: he looks where he goes (`walks_in`).
+A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
+a mark a cell within 11 m of whoever has it in his eyes.
 
 **`rearwatch.rs`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
 (`cover_read_rear`). On an entry of three or more he goes in last (`rear_last`). As the squad leaves a taken room one man keeps its other door, then
@@ -150,7 +152,7 @@ follows last (`room_keep_tick`, `room_kept`, `room_secs`).
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`; `?knob.cmdring.twice_secs=0.6` turns one. Words: `?qtwice=0`, `?goalhalf=0`, `?doorbrisk=0`,
-  `?pacing=0`, `?nosquadthrow`. `?squad=4` is the team's size.
+  `?pacing=0`. `?squad=4` is the team's size.
 - **A new order:** a file in `orders/rows/` with `pub const ORDER: Row`, a line in `rows!` in its `mod.rs`, and its row on the menu: `rows::def` in
   `squad_orders_new`, or `list` from its `frame`. What other rules need to know of it goes in `Is`.
 - **A place on the ring:** `flat_top` and `flat_left` in `cmdring.rs`.
@@ -171,6 +173,7 @@ Native tests in `rust/game_start/tests/`:
 | `throw.rs`, `throw_walk.rs`, `throws.rs`, `squad_smoke.rs` | the throw shown is the one given, a walked throw, a shell, smoke |
 | `rooms_held.rs` | cover keeps its angle, an order under fire stands, shutting a door |
 | `held_team.rs`, `men_by_sam.rs` | the team's pace, going round Sam and a chair |
+| `corners.rs` | a squad that follows looks over the whole room |
 | `held_cover.rs`, `passing.rs`, `taken.rs` | openings dealt, cover on the walk, an order taken away |
 
 `squadkeys-check.ts` (a `tools/qa/checks.ts` row) holds the controls list to the keys.

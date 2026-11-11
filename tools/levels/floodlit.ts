@@ -217,7 +217,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   }
   K.moon(k, undefined, 0.04);                                                       // an overcast night (see the head)
 
-  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A fuel post run by seven men off one generator, and each room is what its men do there: the guard room is where they SLEEP (coats on the wall, boots by
   // the cots, the tea chest and its kettle), the hall is the POST's (fire buckets, the waterproofs by the door they go out of), the radio room has the MAST's
   // spare sections on the wall and the battery crate, the store the SACKS and the bucket, the shed the GENERATOR's (the can crate, a funnel bucket, overalls).

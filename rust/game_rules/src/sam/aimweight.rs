@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
     let pl = g.player;
-    g.puppet.is_none() && !g.pl[pl].down
+    !crate::condition::down(g, g.pl[pl].ch)
 }
 
 /// Does his aim have weight right now.
@@ -20,7 +20,7 @@ pub fn aim_weighs(g: &mut Game) -> bool {
 pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
-        Some(gun) => m::pow(crate::weapons::handling_of(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()), m::max(0.0, g.k.aimweight.heft)),
+        Some(gun) => m::pow(crate::weapons::handling_of(g.weapon(g.fa[gun].def)), m::max(0.0, g.k.aimweight.heft)),
         None => g.k.aimweight.bare,
     };
     m::max(0.5, g.k.aimweight.rate * scale)
@@ -77,7 +77,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     }
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let ap = g.aim_point;
+    let ap = g.sets[g.seat].aim_point;
     let pos = g.ch[c].pos;
     let dx = ap[0] - pos[0];
     let dz = ap[2] - pos[2];
@@ -89,7 +89,6 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
         w.y = ap[1];
     }
     g.pl[pl].aimw.live = true;
-    g.stats.aimweight.steps += 1;
     let mut err = 0.0;
     if d > 0.25 && dt > 0.0 {
         let y0 = g.ch[c].aim_yaw;
@@ -118,7 +117,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
 }
 
 /// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.
-pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
+pub(super) fn aim_weigh_shot(g: &Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
     if !w.live || w.on {
@@ -130,7 +129,6 @@ pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let dz = tgt[2] - pos[2];
     let cs = m::cos(w.err);
     let sn = m::sin(w.err);
-    g.stats.aimweight.off_shots += 1;
     [pos[0] + dx * cs - dz * sn, tgt[1], pos[2] + dz * cs + dx * sn]
 }
 

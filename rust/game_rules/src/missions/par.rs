@@ -30,7 +30,7 @@ pub fn clock(s: f64) -> String { let n = m::max(0.0, m::floor(s)) as u64; format
 pub fn medal_of(d: &ParData, total: f64) -> Medal { let t = m::floor(total); MEDALS.iter().copied().find(|&md| t <= bar(d, md)).unwrap_or(Medal::None) }
 
 /// a run's result against a par: `secs` on the clock, `lost` teammates of `of`
-pub fn par_result(d: &ParData, secs: f64, lost: f64, of: f64) -> ParResult {
+pub fn par_result(d: &ParData, secs: f64, lost: f64) -> ParResult {
     let penalty = lost * d.loss_secs;
     let total = secs + penalty;
     let shown = m::floor(total);
@@ -49,7 +49,6 @@ pub fn par_result(d: &ParData, secs: f64, lost: f64, of: f64) -> ParResult {
 /// the level's par while it is LIVE: the block there, its room clear up, no show running (None = stood down)
 pub fn par_data(g: &Game) -> Option<ParData> {
     let d = g.level.scenarios.as_ref().and_then(|s| s.par)?;
-    if g.puppet.is_some() { return None; }
     if crate::roomclear::room_clear_scenario_active(g) { Some(d) } else { None }
 }
 
@@ -63,14 +62,13 @@ fn par_secs(g: &Game) -> f64 {
     m::max(0.0, t - g.par.t0)
 }
 
-/// teammates down now, of how many
-fn lost(g: &Game) -> (f64, f64) {
-    let ops = &g.night_breach.ops;
-    (ops.iter().filter(|&&o| g.gd[o].state == crate::game::GuardState::Dead).count() as f64, ops.len() as f64)
+/// teammates down now
+fn lost(g: &Game) -> f64 {
+    g.staged.team.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64
 }
 
 /// rounds and throws so far this mission (the mission's own tally and the chronicle's count: both fresh with the mission)
-fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
+pub(super) fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
 
 /// every seat's mark as the clock is armed, in seat order: where its man stands and its log's last row. The first seat's is the staging's own
 /// mark (where the room clear stood him), so a man the staging is still walking to his mark has not "moved"
@@ -78,8 +76,8 @@ fn marks_now(g: &mut Game) -> Vec<ParMark> {
     let start = crate::roomclear::room_clear_scenario_start_at(g);
     let mut out: Vec<ParMark> = Vec::new();
     crate::seats::each_seat(g, &mut |g| {
-        let p = g.ch[g.pl[g.player].ch].pos;
-        out.push(ParMark { origin: p, order0: g.orders.log.last().map(|r| r.serial) });
+        let p = g.player_pos(g.player);
+        out.push(ParMark { origin: p, order0: g.sets[g.seat].orders.log.last().map(|r| r.serial) });
     });
     if let (Some(s), Some(first)) = (start, out.first_mut()) { first.origin = s; }
     out
@@ -90,9 +88,9 @@ fn done_since(g: &mut Game) -> (bool, bool) {
     let (mut moved, mut ordered, mut i) = (false, false, 0usize);
     crate::seats::each_seat(g, &mut |g| {
         if let Some(mk) = g.par.marks.get(i).copied() {
-            let p = g.ch[g.pl[g.player].ch].pos;
-            moved |= m::hyp2(p[0] - mk.origin[0], p[2] - mk.origin[2]) > PAR_START_M;
-            ordered |= g.orders.log.last().map(|r| r.serial) != mk.order0;
+            let p = g.player_pos(g.player);
+            moved |= crate::v3::dist_xz(p, mk.origin) > PAR_START_M;
+            ordered |= g.sets[g.seat].orders.log.last().map(|r| r.serial) != mk.order0;
         }
         i += 1;
     });
@@ -119,8 +117,8 @@ pub fn par_tick(g: &mut Game) {
         g.stats.par.started += 1;
     }
     if g.par.res.is_some() || g.room_clear.end != Some(crate::roomclear::RoomClearEnd::Taken) { return; }
-    let (lost, of) = lost(g);
-    let r = par_result(&d, par_secs(g), lost, of);
+    let lost = lost(g);
+    let r = par_result(&d, par_secs(g), lost);
     g.stats.par.finished += 1;
     g.par.res = Some(r);
 }
@@ -135,7 +133,7 @@ fn par_row(g: &Game) -> String {
     let Some(d) = par_data(g) else { return String::new(); };
     if g.room_clear.end.is_some() { return String::new(); }   // (taken: par_objective words it · wiped: no time)
     if !par_started(g) { return format!("par {} / {} / {} · ", clock(d.gold), clock(d.silver), clock(d.bronze)); }
-    let (lost, _) = lost(g);
+    let lost = lost(g);
     let secs = par_secs(g);
     let total = secs + lost * d.loss_secs;
     let up = MEDALS.iter().copied().find(|&md| m::floor(total) <= bar(&d, md));

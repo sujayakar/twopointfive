@@ -7,19 +7,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// a gun's row (`gun.def`), a copy that can be lent beside `g`
-fn gun_def(g: &Game, gun: FirearmId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(g.fa[gun].def).unwrap().clone()
-}
-
 /// how this row is fed right now; None: a magazine change as it always was
-pub fn feed_of(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::gunreload::FEEDValue> {
-    crate::gunlook::gun_own(g, def).map(|o| feed_by(o.model))
+pub fn feed_of(def: &crate::weapons::WeaponDef) -> Option<crate::gunreload::FEEDValue> {
+    crate::gunlook::gun_own(def).map(|o| feed_by(o.model))
 }
 
 /// how each model is fed
 fn feed_by(m: crate::weapons::GunModelId) -> crate::gunreload::FEEDValue {
-    feed().get(String::from(m.as_str())).unwrap().clone()
+    feed().of(m.as_str()).unwrap().clone()
 }
 
 /// the belt's moments inside a beat
@@ -54,8 +49,8 @@ fn cue(t: f64, sfx: &str, gain: f64, rate: f64) -> FeedCue {
 }
 
 /// what is heard, in order, of a reload of this row on this beat; None: a magazine gun
-fn feed_cues(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef, b: crate::gunreload::FeedBeat, n: f64, port: bool) -> Option<Vec<crate::gunreload::FeedCue>> {
-    let f = feed_of(g, def)?;
+fn feed_cues(def: &crate::weapons::WeaponDef, b: crate::gunreload::FeedBeat, n: f64, port: bool) -> Option<Vec<crate::gunreload::FeedCue>> {
+    let f = feed_of(def)?;
     cues_of(f, b, n, port)
 }
 
@@ -102,7 +97,7 @@ fn put(k: &mut Vec<FeedKey>, t: f64, at: FeedKeyAt, how: FeedKeyHow, grip: f64) 
 }
 
 /// where the support hand is over a reload of this model: its stations, or a magazine gun's own marks
-pub fn feed_path(g: &mut crate::game::Game, model: crate::weapons::GunModelId, b: crate::gunreload::FeedBeat, n: f64, port: bool) -> Option<crate::gunreload::FeedPath> {
+pub fn feed_path(model: crate::weapons::GunModelId, b: crate::gunreload::FeedBeat, n: f64, port: bool) -> Option<crate::gunreload::FeedPath> {
     Some(path_of(model, b, n, port))
 }
 
@@ -184,8 +179,8 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
     let dry = dry.unwrap_or(false);
     let o = match gun {
         Some(id) => {
-            let def = gun_def(g, id);
-            crate::gunlook::gun_own(g, &def)
+            let def = g.weapon(g.fa[id].def).clone();
+            crate::gunlook::gun_own(&def)
         }
         None => None,
     };
@@ -195,7 +190,7 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
     };
     let plain = dry && !crate::weapons::firearm_shell_fed(g, gun);
     let (n, port) = if plain {
-        (gun_def(g, gun).mag_capacity, true)
+        (g.weapon(g.fa[gun].def).mag_capacity, true)
     } else {
         (g.fa[gun].feed_n, g.fa[gun].feed_port)
     };
@@ -206,9 +201,9 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
 }
 
 /// what the player's reload of `gun` on `row` is to sound like and to drop, asked before startReload
-pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
-    let def = gun_def(g, gun);
-    let f = feed_of(g, &def)?;
+pub fn feed_plan(g: &crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
+    let def = g.weapon(g.fa[gun].def).clone();
+    let f = feed_of(&def)?;
     let n = match shells {
         Some(s) => s.n,
         None => {
@@ -221,7 +216,7 @@ pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons:
         Some(s) => s.pull,
         None => g.fa[gun].chamber == 0.0,
     };
-    let cues = feed_cues(g, &def, beat_of(row, pull), n, port);
+    let cues = feed_cues(&def, beat_of(row, pull), n, port);
     let times = match &cues {
         Some(c) => c.iter().map(|q| q.t).collect(),
         None => Vec::new(),
@@ -230,7 +225,7 @@ pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons:
 }
 
 /// feedPlan's `best`: the same sums as startReload's, the fullest spare, as much of it as the gun may hold
-fn plan_best(g: &mut Game, gun: FirearmId, def: &crate::weapons::WeaponDef) -> f64 {
+fn plan_best(g: &Game, gun: FirearmId, def: &crate::weapons::WeaponDef) -> f64 {
     let x = if !g.fa[gun].spare.is_empty() {
         m::max_n(&g.fa[gun].spare)
     } else if crate::weapons::firearm_bottomless(g, gun) {
@@ -247,18 +242,13 @@ fn beat_of(r: crate::weapons::WeaponDefReload, pull: bool) -> crate::gunreload::
     FeedBeat { dur: r.dur, out: r.out.unwrap_or(r.dur), in_: r.in_.unwrap_or(r.dur), rack: r.rack.unwrap_or(r.dur), pull }
 }
 
-/// a made row as a weapon's row, `exact` and all (`ShellRow` is `WeaponDef['reload'] & { exact: true }`: gunreload.ts:162)
-fn reload_of(r: &ShellRow) -> crate::weapons::WeaponDefReload {
-    crate::weapons::WeaponDefReload { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, shell: r.shell, exact: Some(r.exact) }
-}
-
 /// a tube gun's reload as it stands now, by the shell; None: not a tube gun with `reload.shell`
-pub fn shell_plan(g: &mut crate::game::Game, gun: FirearmId, free: Option<bool>, max: Option<f64>) -> Option<crate::gunreload::ShellPlan> {
+pub fn shell_plan(g: &crate::game::Game, gun: FirearmId, free: Option<bool>, max: Option<f64>) -> Option<crate::gunreload::ShellPlan> {
     let free = free.unwrap_or(false);
     let max = max.unwrap_or(f64::INFINITY);
-    let def = gun_def(g, gun);
+    let def = g.weapon(g.fa[gun].def).clone();
     let s = def.reload.shell?;
-    let f = feed_of(g, &def)?;
+    let f = feed_of(&def)?;
     if f.kind != FeedKind::Shells {
         return None;
     }
@@ -285,7 +275,7 @@ fn shell_row(s: ShellRowShell, cap: f64, tube: f64, have: f64, max: f64, port: b
     } else {
         ShellRow { dur: s.bolt, out: Some(s.bolt * 0.05), in_: Some(s.bolt * 0.1), rack: Some(s.bolt * 0.5), shell: None, exact: true }
     };
-    let times = shell_times(beat_of(reload_of(&row), pull), n);
+    let times = shell_times(beat_of(crate::player::shell_row_as_weapon_row(&row), pull), n);
     (row, times, n, pull)
 }
 
@@ -294,9 +284,9 @@ pub fn feed_begin(g: &mut crate::game::Game, gun: FirearmId) -> crate::weapons::
     crate::weapons::firearm_cancel_reload(g, gun);
     let p = match shell_plan(g, gun, Some(true), None) {
         Some(p) if !p.idle => p,
-        _ => return gun_def(g, gun).reload,
+        _ => return g.weapon(g.fa[gun].def).reload,
     };
-    let row = reload_of(&p.row);
+    let row = crate::player::shell_row_as_weapon_row(&p.row);
     crate::weapons::firearm_plan_feed(g, gun, row, &p.times, p.port);
     row
 }
@@ -310,7 +300,7 @@ pub(super) fn feed_play(g: &mut crate::game::Game, at: V3, c_2: &crate::gunreloa
 /// his reload's clock went from `before` to `now`: the sounds of his gun's own feeding that fall between are played at him
 pub fn feed_tick(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::WeaponDef, before: f64, now: f64, vol: Option<f64>, gun: Option<FirearmId>) {
     let vol = vol.unwrap_or(0.7);
-    let Some(f) = feed_of(g, def) else { return };
+    let Some(f) = feed_of(def) else { return };
     if f.kind == FeedKind::Mag || !(now > before) {
         return;
     }
@@ -322,9 +312,9 @@ pub fn feed_tick(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::W
         crate::weapons::firearm_feed_to(g, by, now, None);
         let row = crate::weapons::firearm_reload_row(g, by);
         let (pull, n, port) = (g.fa[by].feed_pull, g.fa[by].feed_n, g.fa[by].feed_port);
-        feed_cues(g, def, beat_of(row, pull), n, port)
+        feed_cues(def, beat_of(row, pull), n, port)
     } else {
-        feed_cues(g, def, beat_of(def.reload, true), def.mag_capacity, true)
+        feed_cues(def, beat_of(def.reload, true), def.mag_capacity, true)
     };
     let Some(cues) = cues else { return };
     for q in &cues {
@@ -336,19 +326,19 @@ pub fn feed_tick(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::W
 }
 
 /// what falls when his beat crosses `out`: the fill it is drawn by; Some(None): nothing falls; None (`undefined`): the row has nothing of its own, the box that always fell
-pub fn feed_drop(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<Option<f64>> {
-    feed_of(g, def).map(|f| f.drop)
+pub fn feed_drop(def: &crate::weapons::WeaponDef) -> Option<Option<f64>> {
+    feed_of(def).map(|f| f.drop)
 }
 
 /// his reload begins: this gun's first sound is its own, on its beat
-pub fn feed_starts(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> bool {
-    matches!(feed_of(g, def), Some(f) if f.kind != FeedKind::Mag)
+pub fn feed_starts(def: &crate::weapons::WeaponDef) -> bool {
+    matches!(feed_of(def), Some(f) if f.kind != FeedKind::Mag)
 }
 
 /// the row's feeding, for the gun that is in his hands
-fn own_of(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::FEEDValue> {
+fn own_of(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::FEEDValue> {
     let d = g.m.weapons.weapons.get(id_2)?.clone();
-    if (d.cls == crate::weapons::WeaponClass::Pistol) != g.ch[c_2].anim.long_gun { feed_of(g, &d) } else { None }
+    if (d.cls == crate::weapons::WeaponClass::Pistol) != g.ch[c_2].anim.long_gun { feed_of(&d) } else { None }
 }
 
 /// the animator's clock as the beat the sums take
@@ -357,7 +347,7 @@ fn clock_beat(b: crate::character::AnimFeedClock) -> FeedBeat {
 }
 
 /// what the drawer shows of a reload under way on this man's gun of row `id_2`
-pub fn reload_show(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::ReloadShow> {
+pub fn reload_show(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::ReloadShow> {
     let f = own_of(g, c_2, id_2)?;
     let b = crate::character::anim_feed_clock(g, c_2)?;
     let t = b.t;
@@ -377,7 +367,7 @@ fn sstep(a: f64, b: f64, x: f64) -> f64 {
 }
 
 /// the thing in his support hand this frame, as one box in the fist, appended to `out`
-pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<AnyBoxId>) {
+pub fn reload_hand_boxes(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut crate::rig_props::Carried) {
     let Some(f) = own_of(g, c_2, id_2) else { return };
     let Some(b) = crate::character::anim_feed_clock(g, c_2) else { return };
     let t = b.t;

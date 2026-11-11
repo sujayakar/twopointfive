@@ -12,9 +12,6 @@ pub(super) fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke
 
 /// BOUNDARY NO-OP (the picture's / the host's):
 
-/// BOUNDARY NO-OP (the picture's / the host's):
-pub fn particles_clear(g: &crate::game::Game) {}
-
 /// THE POOL'S EMIT, the game's half: the record goes to the host's pool as an out event, as the generated boundary sends it (one with nothing to
 /// throw is not sent: the TypeScript returns before it queues). What the event says beside the record:
 ///  · THE ANSWER. A rule reads how many were accepted (blastLook's `first`, the panel's sums): the count the pool takes while its queue has room

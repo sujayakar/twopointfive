@@ -12,13 +12,9 @@ pub struct QuietDeal {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMission {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
     pub squad: f64,
     pub pin: Option<f64>,
     #[is(crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 })] pub deal: crate::quiet::QuietDeal,
-    pub staged: f64,
-    pub log: Vec<String>,
     pub data: Option<crate::scene_scenarios::QuietData>,
     pub authored: Option<crate::quiet::QuietMissionAuthored>,
     pub benched: Vec<GuardId>,
@@ -33,33 +29,7 @@ pub struct QuietMission {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthored {
     pub spawn: V3,
-    pub mission: crate::quiet::QuietMissionAuthoredMission,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMission {
-    pub server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom,
-    pub entry_door: String,
-    pub rack: crate::quiet::QuietMissionAuthoredMissionRack,
-    pub exfil_door: String,
-    pub exfil_x: f64,
-    pub exfil_z: f64,
-    pub exfil_out: Option<[f64; 2]>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMissionServerRoom {
-    pub x0: f64,
-    pub x1: f64,
-    pub z0: f64,
-    pub z1: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct QuietMissionAuthoredMissionRack {
-    pub index: f64,
-    pub front: V3,
-    pub half_w: f64,
+    pub errand: crate::mission::Errand,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -87,27 +57,10 @@ pub struct HolderStand {
     pub inside: bool,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct QuietWords {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMod {
     pub holder: bool,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct QuietStats {
-    pub starts: i32,
-    pub deals: i32,
-    pub mates: i32,
 }
 
 pub const EXIT_HALF_W: f64 = 1.8;
