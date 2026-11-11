@@ -521,7 +521,7 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     // the man he has just walked on from: only the eye loop turns him back
     let gone = match g.tab.roomfight_op[o].pass { Some(p) if p.no_shot.unwrap_or(false) && g.time < p.until => Some(p.h), _ => None };
-    let a = crate::seats::order_of(g, gd);
+    let a = crate::duty::order(g, gd);
     let arc = arc_of_his_hold(g, c, a);
     let on_way_to_door = match a { Some(id) => g.tab.task[id].door.is_some() && !g.tab.task[id].arrived, None => false };
     let s = CueLook { o, gd, c, eye, gone, arc, a, on_way_to_door, look };

@@ -55,7 +55,7 @@ pub fn taken(g: &mut Game, gd: GuardId, p: V3, apart: f64) -> bool {
             || at(g.cond[m.ch].sup.cover)
             || at(m.body_duty.and_then(|d| d.spot))
             || at(m.standoff.and_then(|s| g.tab.guards_standoff[s].orbit_goal)) { return true; }
-        if g.gd[o].unit.is_some() && crate::seats::order_of(g, o).is_some_and(|a| at(g.tab.task[a].post)) { return true; }
+        if g.gd[o].unit.is_some() && crate::duty::order(g, o).is_some_and(|a| at(g.tab.task[a].post)) { return true; }
     }
     false
 }

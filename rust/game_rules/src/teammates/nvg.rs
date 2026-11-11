@@ -127,7 +127,7 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
         }
         read_at(g, p[0], p[2], r <= TUBE_M, true, &mut dim, &mut black);
     }
-    if let Some(a) = crate::seats::order_of(g, gd) {
+    if let Some(a) = crate::duty::order(g, gd) {
         let (post, arrived) = (g.tab.task[a].post, g.tab.task[a].arrived);
         if let Some(post) = post {
             if !arrived && v3::dist_xz(pos, post) < g.k.lights.lit_mark_m {
