@@ -4,15 +4,32 @@ use super::Row4;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use game::js::JsSet;
+use game::rows::words;
 use game::m;
 use game::scene_markings::{mark_key, mark_stats, MarkRes, MarkingDef};
 
 const PER_BOX: usize = 4;
-const TABLE: usize = 6144;
+/// rows of four floats the table has room for
+pub const TABLE: usize = 6144;
 const SLOT_MAX: usize = (1 << 14) - 1;
-const HEAD: usize = 8;
+const HEAD: usize = core::mem::size_of::<MarkHead>() / 16;
 const PER_FLOAT: usize = 12;
 const PER_ROW: usize = 48;
+
+section! {
+    /// a mark's head; its cells follow, twelve to a float
+    pub struct MarkHead {
+        /// where it lies on the face and how many cells it is across and up
+        pub place: [f32; 4],
+        /// its face in the low 3 bits, its cells' size in 2, then: the box's last mark, some of the list emits, its light is an area's, which entries emit (3 bits), which have a colour and
+        /// which a roughness (3 and 3)
+        pub says: f32,
+        /// how much of it each of its three entries covers
+        pub shares: [f32; 3],
+        /// an entry's colour and roughness (under 0: the box's), then what it emits
+        pub pal: [[f32; 4]; 6],
+    }
+}
 
 #[derive(Default)]
 pub struct Marks {
@@ -85,14 +102,15 @@ impl Marks {
             for k in 0..3 { if let Some(p) = mk.pal.get(k) { if p.albedo.is_some() || p.mul.map_or(false, |x| x != 1.0) { says |= 1 << k; } if p.rough.is_some() { says |= 8 << k; } } }
             let lit = self.area_lit.contains(&mark_key(mk));
             let meta = game::scene_markings::face_at(mk.face) as u32 + 8 * res(mk.res) as u32 + 32 * (i + 1 == list.len()) as u32 + 64 * any as u32 + 128 * lit as u32 + 256 * st.emask as u32 + 2048 * says;
-            rows[0].w = [mk.at[0] as f32, mk.at[1] as f32, mk.size[0] as f32, mk.size[1] as f32];
-            rows[1].w = [meta as f32, st.f[0] as f32, st.f[1] as f32, st.f[2] as f32];
+            let f3 = |v: [f64; 3]| v.map(|x| x as f32);
+            let mut head = MarkHead { place: [mk.at[0] as f32, mk.at[1] as f32, mk.size[0] as f32, mk.size[1] as f32], says: meta as f32, shares: f3([st.f[0], st.f[1], st.f[2]]), pal: [[0.0; 4]; 6] };
             for k in 0..3 {
-                let (p, a) = (mk.pal.get(k), st.alb[k]);
-                let e = p.and_then(|p| p.emit).unwrap_or([0.0; 3]);
-                rows[2 + k * 2].w = [a[0] as f32, a[1] as f32, a[2] as f32, p.and_then(|p| p.rough).unwrap_or(-1.0) as f32];
-                rows[3 + k * 2].w = [e[0] as f32, e[1] as f32, e[2] as f32, 0.0];
+                let (p, a) = (mk.pal.get(k), f3(st.alb[k]));
+                let e = f3(p.and_then(|p| p.emit).unwrap_or([0.0; 3]));
+                head.pal[2 * k] = [a[0], a[1], a[2], p.and_then(|p| p.rough).unwrap_or(-1.0) as f32];
+                head.pal[2 * k + 1] = [e[0], e[1], e[2], 0.0];
             }
+            for (row, w) in rows.iter_mut().zip(words(&head).chunks_exact(4)) { row.w = core::array::from_fn(|i| f32::from_bits(w[i])); }
             let (w, h) = (mk.size[0] as usize, mk.size[1] as usize);
             let mut words = [0u32; 4 * ((32 * 32 + PER_ROW - 1) / PER_ROW)];
             for j in 0..h {

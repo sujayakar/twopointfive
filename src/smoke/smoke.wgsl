@@ -471,18 +471,16 @@ fn sourceExpansion(k: Bk, Pw: vec3f) -> f32 {
 }
 
 // ------------------------------------------------------------------ link: neighbours, who reaches this brick, and — new or dirtied — its obstacles
-struct BoxGeoS { c: vec3f, rot: u32, h: vec3f, flags: u32 };
-@group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeoS>;
+@group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeo>;
 @group(2) @binding(2) var<storage, read> sgridCells: array<u32>;
 @group(2) @binding(3) var<storage, read> sgridItems: array<u32>;
-struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
-@group(2) @binding(4) var<uniform> sscene: SceneInfoS;
+@group(2) @binding(4) var<uniform> sscene: SceneInfo;
 struct SealS { info: vec4u, boxes: array<vec4f, 64> };   // ≤ 32 sealing door leaves: (c, cos yaw), (h, sin yaw)
 @group(2) @binding(5) var<uniform> sseal: SealS;
 @group(2) @binding(11) var<storage, read> boxMat: array<vec4f>;   // the box world's material buffer, for the panes' rows behind it alone
 
-fn insideBox(p: vec3f, b: BoxGeoS) -> bool {
-  let cs = unpack2x16float(b.rot);
+fn insideBox(p: vec3f, b: BoxGeo) -> bool {
+  let cs = boxGeoRot(b);
   let d = p - b.c;
   let l = vec3f(cs.x * d.x - cs.y * d.z, d.y, cs.y * d.x + cs.x * d.z);
   return all(abs(l) <= b.h + vec3f(0.01));

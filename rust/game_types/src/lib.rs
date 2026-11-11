@@ -8,6 +8,8 @@ pub use game_derive::{Blank, Words};
 pub mod boxworld;
 pub mod bytes;
 pub mod crosses;
+#[macro_use]
+pub mod rows;
 pub mod ids;
 pub mod js;
 pub mod query;

@@ -22,7 +22,6 @@ export const MAX_MARKS_PER_BOX = 4;
 export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; 
 /** GPU table: vec4f rows in the tail of BoxWorld.matBuf; a record = MARK_HEAD_ROWS header rows + ceil(W·H / 48) cell rows (12 cells a float, exact small integers) */
 export const MARK_HEAD_ROWS = 8;  export const CELLS_PER_ROW = 48;
-export const MARK_TABLE_ROWS = 6144;   // 96 KB of table (the office packs ≈ 1.5k rows)
 export const MARK_SLOT_MAX = (1 << 14) - 1;   // the 1-based first-record ROW in the flags word's top 14 bits
 
 export type MarkFace = '+x' | '-x' | '+y' | '-y' | '+z' | '-z';

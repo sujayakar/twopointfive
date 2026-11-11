@@ -5,7 +5,7 @@
 //!
 //! To add a section: a file beside this one with its `section!` and its `fill`, a line in `sections!` below, then `half`.
 //!
-//! - A field is a word or a run of words: `f32`, `u32`, `i32`, or an array of one. So a row has no padding and lies as it is declared.
+//! - What a row's field may be: `game_types::rows`.
 //! - A row whose only reader is the GPU is written here as the GPU reads it: the page hands the rows over and packs nothing.
 //! - A row holds values, never a reference into the game: what it says of another row is that row's place in its own section, or a key that means one
 //!   thing for as long as the thing stands.
@@ -14,39 +14,10 @@ extern crate alloc;
 use alloc::{string::String, vec::Vec};
 use game::game::Game;
 
-/// a type that is nothing but words
-pub trait Words: Copy { const ZERO: Self; }
-impl Words for f32 { const ZERO: f32 = 0.0; }
-impl Words for u32 { const ZERO: u32 = 0; }
-impl Words for i32 { const ZERO: i32 = 0; }
-impl<T: Words, const N: usize> Words for [T; N] { const ZERO: [T; N] = [T::ZERO; N]; }
+pub use game::rows::{Row, RowTable};
 
-/// a row of a section: its fields in their order, as the page's offsets are made from them, and what is said of each (which no module carries: only the program that
-/// writes the page's half reads it)
-pub trait Row: Copy {
-    const NAME: &'static str;
-    const FIELDS: &'static [(&'static str, &'static str)];
-    const DOC: &'static [&'static str];
-    const DOCS: &'static [&'static [&'static str]];
-    const ZERO: Self;
-}
-/// a row as a table
-pub struct RowTable { pub name: &'static str, pub doc: &'static [&'static str], pub fields: &'static [(&'static str, &'static str)], pub docs: &'static [&'static [&'static str]] }
-const fn row_table<T: Row>() -> RowTable { RowTable { name: T::NAME, doc: T::DOC, fields: T::FIELDS, docs: T::DOCS } }
-
-/// A SECTION'S ROW, declared: the struct as it lies in memory and the names its offsets are made from
-macro_rules! section {
-    ($(#[doc = $d:expr])* pub struct $name:ident { $($(#[doc = $fd:expr])* pub $f:ident: $t:ty,)* }) => {
-        $(#[doc = $d])* #[repr(C)] #[derive(Clone, Copy, Debug, PartialEq)] pub struct $name { $($(#[doc = $fd])* pub $f: $t,)* }
-        impl crate::Row for $name {
-            const NAME: &'static str = stringify!($name);
-            const FIELDS: &'static [(&'static str, &'static str)] = &[$((stringify!($f), stringify!($t)),)*];
-            const DOC: &'static [&'static str] = &[$($d),*];
-            const DOCS: &'static [&'static [&'static str]] = &[$(&[$($fd),*],)*];
-            const ZERO: Self = $name { $($f: <$t as crate::Words>::ZERO,)* };
-        }
-    };
-}
+/// A SECTION'S ROW, declared (`game_types::rows`)
+macro_rules! section { ($($t:tt)*) => { game::row! { $($t)* } }; }
 
 /// AN EVENT'S ROW, declared: a section's, behind the id that names it. The tick it happened in, its kind (which section it is in) and its place among its kind in
 /// that tick: the same id whenever that tick is run, so a host plays it once, and one that does not come again un-happened.
@@ -74,13 +45,14 @@ macro_rules! sections {
         /// where each section lies, in their order: its address and how many rows
         fn table(d: &Drawn, out: &mut Vec<u32>) { out.clear(); $({ let v: &Vec<$t> = &d.$($at).+; out.push(v.as_ptr() as usize as u32); out.push(v.len() as u32); })* }
         /// each section by its name, with its row: what the page's offsets are written from (game_start/src/bin/half)
-        pub fn sections() -> Vec<(&'static str, RowTable)> { alloc::vec![$((stringify!($name), row_table::<$t>())),*] }
+        pub fn sections() -> Vec<(&'static str, RowTable)> { alloc::vec![$((stringify!($name), game::rows::table::<$t>())),*] }
         /// the declarations as text, a line a section: what the page's offsets were written from is held to it as the module is loaded
         pub fn layout() -> String {
             let mut s = String::from("want");
             for g in GROUPS { s.push(' '); s.push_str(g); }
             s.push('\n');
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
+            s.push_str(&gpu::text());
             s
         }
     };
@@ -92,6 +64,7 @@ pub mod dust;
 pub mod events;
 pub mod fires;
 pub mod fog;
+pub mod gpu;
 pub mod lead;
 pub mod watched;
 pub mod lights;
@@ -121,7 +94,7 @@ sections! {
     marks: boxes::Row4 = boxes.marks.rows;
     cells: boxes::Word = boxes.grid.cells;
     items: boxes::Word = boxes.grid.items;
-    info: boxes::Word = boxes.grid.info;
+    info: boxes::Info = boxes.grid.info;
     panes: boxes::Row4 = boxes.glass.cells;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
