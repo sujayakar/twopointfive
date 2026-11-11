@@ -48,7 +48,11 @@ pub fn station(g: &Game, d: RoomfightDefId) -> V3 { g.tab.task[g.tab.roomfight_d
 /// what he watches from it
 pub fn watched(g: &Game, d: RoomfightDefId) -> V3 { g.tab.task[g.tab.roomfight_def[d].task].watch.unwrap_or_default() }
 /// this floor is his to hold from now
-pub(super) fn holds_at(g: &mut Game, d: RoomfightDefId, at: V3) { let task = g.tab.roomfight_def[d].task; g.tab.task[task].post = Some(at); }
+pub(super) fn holds_at(g: &mut Game, d: RoomfightDefId, at: V3) {
+    let (gd, task) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].task);
+    g.tab.task[task].post = Some(at);
+    g.gd[gd].duty.task = Some(task);
+}
 
 /// He is no man of the room fight's any more: its row of him goes, and the post with it.
 pub fn dropped(g: &mut Game, d: RoomfightDefId) {
@@ -159,6 +163,14 @@ pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {
 }
 
 /// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix.
+/// HIS SQUAD'S ORDERS HAVE HIS LEGS from now, off his post if he was on it.
+pub fn told(g: &mut Game, d: RoomfightDefId) {
+    let left = if at_post(g, d) { Some(post_now(g, d)) } else { g.tab.roomfight_def[d].leg.left.take() };
+    let row = &mut g.tab.roomfight_def[d];
+    row.mode = DefMode::Told;
+    row.leg.left = left;
+}
+
 /// LET LOOSE AT A PLACE: roused, the fight there his fix.
 pub fn loose_at(g: &mut Game, d: RoomfightDefId, at: V3) {
     let gd = g.tab.roomfight_def[d].gd;

@@ -119,6 +119,8 @@ pub enum DefMode {
     #[default] Hold,
     Move,
     Free,
+    /// his squad's orders have his legs
+    Told,
 }
 
 /// The leg a defender is on, or was on last (roomfight/post.rs).

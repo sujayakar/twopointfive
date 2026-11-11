@@ -95,6 +95,7 @@ pub static STEPS: &[Run] = &[
     World(("pairs", |g, t| crate::pairorders::pair_orders_tick(g, t.dt))),
     Seats(&[("spotted", |g, _| crate::spotted::spotted_tick(g))]),
     Seats(&[("squad orders", |g, _| crate::orders::squad_orders_tick(g))]),
+    World(("their orders", |g, t| crate::group::groups_tick(g, t.dt))),
     World(("door paths", |g, t| crate::doorpath::door_path_tick(g, t.dt))),
     World(("power out", |g, t| crate::powerout::power_out_tick(g, t.dt))),
     World(("room fight", |g, t| crate::roomfight::room_fight_tick(g, t.dt))),

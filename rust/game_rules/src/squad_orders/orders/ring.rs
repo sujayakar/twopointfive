@@ -592,7 +592,7 @@ pub fn squad_orders_sam_stopped(seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// A man's order goes, and with it the pin the fight seam put on him.
-pub(super) fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
+pub fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
     let his = g.groups[g.group].orders.asg.get(gd).copied();
     g.groups[g.group].orders.asg.delete(gd);
     crate::duty::done(g, gd, his);
