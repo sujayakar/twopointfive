@@ -13,7 +13,7 @@ pub fn stack_room_fix(g: &mut Game, d: DoorId, side: f64, posts: Option<&[StackP
     for p in posts { bad.push(!on_floor(g, &f, p.pos) || anothers(g, d, p.pos)); }
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
     let w = g.dr[d].def.width;
-    let (jamb_out, jamb_past, gap) = { let k = &g.sets[g.seat].orders.knobs; (k.jamb_out, k.jamb_past, k.file_gap) };
+    let (jamb_out, jamb_past, gap) = { let k = &g.groups[g.group].orders.knobs; (k.jamb_out, k.jamb_past, k.file_gap) };
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     let x = Face { d, side, f: &f, w, c: g.dr[d].frame_centre, th: g.dr[d].def.closed_dir, front, min_m: min_m.unwrap_or(0.0), jamb_out, jamb_past, gap };
     let mut out = posts.to_vec();

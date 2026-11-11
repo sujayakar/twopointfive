@@ -19,7 +19,7 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
             return format!("blow the charge{}", crate::doortools::door_tools_close_words(g, c));
         }
     }
-    format!("breach with a charge · {} left", g.sets[g.seat].door_tools.charges)
+    format!("breach with a charge · {} left", g.groups[g.group].tools.charges)
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
@@ -30,8 +30,8 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. a charge won't cut it."))); }
     let open = crate::doortools::door_tools_known_open(g, x.door);
     if open { return Err(Some(String::from("it's open."))); }
-    if g.sets[g.seat].door_tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
-    let ops = g.sets[g.seat].door_tools.ops.clone();
+    if g.groups[g.group].tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
+    let ops = g.groups[g.group].tools.ops.clone();
     if ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.kind == crate::doortools::DoorToolKind::Charge && op.door == x.door && op.phase == crate::doortools::Phase::Place }) { return Err(Some(String::from("already on it."))); }
     fits(crate::doortools::door_tools_standoff_fits(g, men, t, None))
 }

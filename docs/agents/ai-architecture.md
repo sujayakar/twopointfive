@@ -187,8 +187,7 @@ Agreed and not built. Assume none of it.
 - **The whole list in bands:** incapable, staged, reflex, scripted, close, task, initiative, routine, with his script, fight, search and patrol as
   rules in it, and the room fight's `Def` and `Op` as taskers and rules.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door.
-- **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. A
-  squad's knowledge is one record of contacts.
+- **A squad as a value:** an enemy squad a `Group` (`group.rs`) too, with a lead, and its knowledge one record of contacts.
 - **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen

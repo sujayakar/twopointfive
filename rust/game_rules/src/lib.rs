@@ -28,7 +28,7 @@ pub use missions::{breach, director, lesson, mission, nightbreach, opening, par,
 pub mod speech;
 pub use speech::{chronicle, cues, deathrecap, dialogue, doornames, showwhy, squadnet, told};
 pub mod squad_orders;
-pub use squad_orders::{cmdring, holdfire, orders, pairorders, pairup, planmode, ringlone, seenwalk, shutdoor, squad, squad40, squadcast, squadsmoke, squadthrow, stayask, wandorder, workstow, workthings};
+pub use squad_orders::{cmdring, holdfire, orders, pairorders, pairup, planmode, ringlone, seenwalk, shutdoor, squad, squad40, group, squadsmoke, squadthrow, stayask, wandorder, workstow, workthings};
 pub mod entries;
 pub use entries::{autopilot, bigkit, doorpath, doortools, entrypoints, roomfit, roomread, stackline, stackroom, wallcharge, wand};
 pub mod teammates;

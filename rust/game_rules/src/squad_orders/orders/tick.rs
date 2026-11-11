@@ -19,7 +19,7 @@ fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: Ta
 pub fn squad_orders_tick(g: &mut crate::game::Game) {
     squad_orders_sync(g);
     crate::fireline::fire_line_tick(g);
-    if g.sets[g.seat].orders.asg.is_empty() { return; }
+    if g.groups[g.group].orders.asg.is_empty() { return; }
     if !squad_orders_active(g, &crate::seats::here(g)) { squad_orders_clear(g, None); return; }
     crate::sneak::sneak_tick(g);
     let mates: Vec<GuardId> = if squad_orders_big(g, &crate::seats::here(g)) { squad_orders_men(g, &crate::seats::here(g), None, None) } else { Vec::new() };
@@ -27,8 +27,8 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
     note_sams_walk(g, &followers);
     // a live walk of the map: a man dropped here, or re-assigned by his order's own tick, leaves it or stays in it as he should
     let mut at = 0usize;
-    while let Some(gd) = g.sets[g.seat].orders.asg.next_key(&mut at) {
-        let a = *g.sets[g.seat].orders.asg.get(gd).unwrap();
+    while let Some(gd) = g.groups[g.group].orders.asg.next_key(&mut at) {
+        let a = *g.groups[g.group].orders.asg.get(gd).unwrap();
         man_on_his_order(g, gd, a, &mates, &followers);
     }
     say_set(g);
@@ -37,7 +37,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
 /// The men falling in, in file order and numbered from the front.
 fn the_file(g: &mut Game) -> Vec<GuardId> {
     let mut file: Vec<(GuardId, TaskId)> = Vec::new();
-    for (gd, &a) in g.sets[g.seat].orders.asg.iter() { if g.tab.task[a].post.is_none() { file.push((gd, a)); } }
+    for (gd, &a) in g.groups[g.group].orders.asg.iter() { if g.tab.task[a].post.is_none() { file.push((gd, a)); } }
     js::sort_by(&mut file, |x, y| g.tab.task[x.1].follow - g.tab.task[y.1].follow);
     for (i, x) in file.iter().enumerate() { g.tab.task[x.1].follow = i as f64; }
     file.iter().map(|x| x.0).collect()
@@ -46,12 +46,12 @@ fn the_file(g: &mut Game) -> Vec<GuardId> {
 /// Sam's trail, pace and heading, while anybody follows him; nobody following, they are forgotten.
 fn note_sams_walk(g: &mut Game, followers: &[GuardId]) {
     if followers.is_empty() {
-        g.sets[g.seat].orders.trail.clear(); g.sets[g.seat].orders.sam_t = -1.0; g.sets[g.seat].orders.sam_v = 0.0;
+        g.groups[g.group].orders.trail.clear(); g.groups[g.group].orders.sam_t = -1.0; g.groups[g.group].orders.sam_v = 0.0;
         return;
     }
     let sp = g.player_pos(g.player);
     squad_orders_crumb(g, sp, followers);
-    let (sam_t, sam_p) = (g.sets[g.seat].orders.sam_t, g.sets[g.seat].orders.sam_p);
+    let (sam_t, sam_p) = (g.groups[g.group].orders.sam_t, g.groups[g.group].orders.sam_p);
     let step = if sam_t >= 0.0 { dist_xz(sp, sam_p) } else { 0.0 };
     let el = g.time - sam_t;
     let own = if sam_t >= 0.0 { crate::noshove::no_shove_own(g, sp[0] - sam_p[0], sp[2] - sam_p[2]) } else { None };
@@ -59,10 +59,10 @@ fn note_sams_walk(g: &mut Game, followers: &[GuardId]) {
         let ox = match own { Some(o) => o[0], None => sp[0] - sam_p[0] };
         let oz = match own { Some(o) => o[1], None => sp[2] - sam_p[2] };
         let st = if own.is_some() { m::hyp2(ox, oz) } else { step };
-        g.sets[g.seat].orders.sam_v += (st / el - g.sets[g.seat].orders.sam_v) * 0.25;
-        if st > 1e-3 { g.sets[g.seat].orders.sam_dir[0] = ox / st; g.sets[g.seat].orders.sam_dir[2] = oz / st; }
+        g.groups[g.group].orders.sam_v += (st / el - g.groups[g.group].orders.sam_v) * 0.25;
+        if st > 1e-3 { g.groups[g.group].orders.sam_dir[0] = ox / st; g.groups[g.group].orders.sam_dir[2] = oz / st; }
     }
-    g.sets[g.seat].orders.sam_p[0] = sp[0]; g.sets[g.seat].orders.sam_p[2] = sp[2]; g.sets[g.seat].orders.sam_t = g.time;
+    g.groups[g.group].orders.sam_p[0] = sp[0]; g.groups[g.group].orders.sam_p[2] = sp[2]; g.groups[g.group].orders.sam_t = g.time;
 }
 
 /// One man's frame: down or taken by a drill he loses his order; the fight may have him; else his order's own tick, his feet, how he carries himself, and all of it told to him.
@@ -72,7 +72,7 @@ fn man_on_his_order(g: &mut Game, gd: GuardId, a: TaskId, mates: &[GuardId], fol
     through_his_door(g, gd, a);
     if fight_has_him(g, gd, a) { return; }
     if g.tab.task[a].yield_t >= 0.0 { back_on_his_order(g, gd, a); }
-    if g.sets[g.seat].orders.ours.delete(gd) { crate::duty::pin(g, gd, false, "orders"); }
+    if g.groups[g.group].orders.ours.delete(gd) { crate::duty::pin(g, gd, false, "orders"); }
     if order_sent_him_elsewhere(g, gd, a) { return; }   // (his new order's turn is next frame)
     let order_id = g.tab.task[a].order.clone();   // (a row's tick may rewrite his Task)
     let feet = if g.tab.task[a].post.is_none() { falls_in(g, gd, a, followers) } else { walks_to_his_mark(g, gd, a, &order_id) };
@@ -105,7 +105,7 @@ fn fight_has_him(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
     if g.tab.task[a].yield_t < 0.0 {
         g.tab.task[a].yield_t = g.time;
     }
-    if g.tab.task[a].post.is_some() { crate::duty::pin(g, gd, true, "orders"); g.sets[g.seat].orders.ours.add(gd); }
+    if g.tab.task[a].post.is_some() { crate::duty::pin(g, gd, true, "orders"); g.groups[g.group].orders.ours.add(gd); }
     let hot = g.gd[gd].reload_t >= 0.0
         || g.time - m::max(m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_shot_t), g.tab.task[a].yield_t) < g.k.orders.cold_secs;
     if hot { return true; }
@@ -135,10 +135,10 @@ fn back_on_his_order(g: &mut Game, gd: GuardId, a: TaskId) {
 /// His order's own tick, if it has one, which may rewrite his Task. True: it gave him another.
 fn order_sent_him_elsewhere(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
     let order_id = g.tab.task[a].order.clone();
-    let def = g.sets[g.seat].orders.defs.iter().copied().find(|&x| g.tab.orders_order_def[x].id == order_id);
+    let def = g.groups[g.group].orders.defs.iter().copied().find(|&x| g.tab.orders_order_def[x].id == order_id);
     let Some(d) = def else { return false };
     order_tick(g, d, gd, a);
-    g.sets[g.seat].orders.asg.get(gd).copied() != Some(a)
+    g.groups[g.group].orders.asg.get(gd).copied() != Some(a)
 }
 
 /// What his walk comes to this frame, for how he is posed and what he is told.
@@ -189,7 +189,7 @@ fn falls_in(g: &mut Game, gd: GuardId, a: TaskId, followers: &[GuardId]) -> Feet
         squad_orders_rest_clear(g, gd, a, place, pl.slot, pl.stopped);
     }
     let d = walk_left(g, a, &pl, &stand);
-    let sam_v = g.sets[g.seat].orders.sam_v;
+    let sam_v = g.groups[g.group].orders.sam_v;
     let speed = follow_speed(g, gd, &pl, &stand, d);
     let mut f = Feet { d, speed, face: None, s_goal: None, low: false, stepping: pl.aside.is_some(), keep: false, must: false };
     let must_step = quiet_gait(g, gd, &pl, sam_v, &mut f);
@@ -334,7 +334,7 @@ fn walk_left(g: &Game, a: TaskId, pl: &FilePlace, stand: &Stand) -> f64 {
 
 /// Brisk out of Sam's way, onto a step at the settling pace, else the team's pace or Sam's own plus what closes the gap.
 fn follow_speed(g: &mut Game, gd: GuardId, pl: &FilePlace, stand: &Stand, d: f64) -> f64 {
-    let sam_v = g.sets[g.seat].orders.sam_v;
+    let sam_v = g.groups[g.group].orders.sam_v;
     let (brisk, onto, walk, run, gain) = (g.k.orders.brisk, g.k.orders.onto, g.k.orders.walk, g.k.orders.run, g.k.orders.gain);
     if pl.aside.is_some() { return brisk; }
     if stand.step.is_some() { return onto; }
@@ -600,7 +600,7 @@ fn back_pedal_watchdog(g: &mut Game, gd: GuardId, a: TaskId, look: &mut Carriage
     let q = g.pos_of(gd);
     let wp = g.gd[gd].path.get(g.gd[gd].path_i).copied();
     let t = g.time;
-    let mut w = match g.sets[g.seat].orders.back_fix.get(a) { Some(x) => *x, None => SquadOrdersBackFixValue { plain: -1.0, path: -1.0 } };
+    let mut w = match g.groups[g.group].orders.back_fix.get(a) { Some(x) => *x, None => SquadOrdersBackFixValue { plain: -1.0, path: -1.0 } };
     if let Some(wp) = wp {
         if t - w.path > 1.0 && crate::scene_collision::low_blocked(g, q, wp) {
             let man = &mut g.gd[gd];
@@ -609,7 +609,7 @@ fn back_pedal_watchdog(g: &mut Game, gd: GuardId, a: TaskId, look: &mut Carriage
         }
     }
     if t - g.tab.task[a].moved_t > 1.0 { w.plain = t + 3.0; }
-    g.sets[g.seat].orders.back_fix.set(a, w);
+    g.groups[g.group].orders.back_fix.set(a, w);
     if w.plain > t { look.strafe = false; look.face = None; }
 }
 
@@ -695,23 +695,23 @@ fn tell_him(g: &mut Game, gd: GuardId, a: TaskId, legs: &Legs, look: &Carriage) 
 /// 'set.': once, from the last man on, when everybody the order sent is on his mark.
 fn say_set(g: &mut Game) {
     let mut at = 0usize;
-    while let Some(k) = g.sets[g.seat].orders.asg.next_key(&mut at) {
-        let a = *g.sets[g.seat].orders.asg.get(k).unwrap();
+    while let Some(k) = g.groups[g.group].orders.asg.next_key(&mut at) {
+        let a = *g.groups[g.group].orders.asg.get(k).unwrap();
         let line = match &g.tab.task[a].set_line { Some(s) if !s.is_empty() => s.clone(), _ => continue };
         if g.tab.task[a].set_said || !g.tab.task[a].arrived { continue; }
         let group = g.tab.task[a].group;
         let Some(last) = last_man_on(g, group) else { continue };
         // (one of them said "can't get through": the group is not where it was sent, and nobody calls it set)
-        let short = g.sets[g.seat].orders.asg.values().any(|&b| { let bb = &g.tab.task[b]; bb.group == group && bb.there.at == crate::orders::At::StoppedShort });
+        let short = g.groups[g.group].orders.asg.values().any(|&b| { let bb = &g.tab.task[b]; bb.group == group && bb.there.at == crate::orders::At::StoppedShort });
         if !short { crate::game::game_say(g, last, &line, None, None); }
-        for (_, &b) in g.sets[g.seat].orders.asg.iter() { if g.tab.task[b].group == group { g.tab.task[b].set_said = true; } }
+        for (_, &b) in g.groups[g.group].orders.asg.iter() { if g.tab.task[b].group == group { g.tab.task[b].set_said = true; } }
     }
 }
 
 /// The last man of the group onto his mark, when all of them are and none has a door still to try.
 fn last_man_on(g: &Game, group: f64) -> Option<GuardId> {
     let (mut last, mut last_t) = (None, f64::NEG_INFINITY);
-    for (o, &b) in g.sets[g.seat].orders.asg.iter() {
+    for (o, &b) in g.groups[g.group].orders.asg.iter() {
         let bb = &g.tab.task[b];
         if bb.group == group {
             if !bb.arrived || bb.tries.is_some() { return None; }
@@ -739,15 +739,15 @@ fn aside_held(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3>
 /// Where a follower stands to let Sam through: Sam walking AT him; None: not in the way, or no clear spot.
 fn squad_orders_aside(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let (sam, p) = (g.player_pos(g.player), g.pos_of(gd));
-    if g.sets[g.seat].orders.sam_v < 0.3 { return aside_held(g, &crate::seats::here(g), gd); }
-    let dir = g.sets[g.seat].orders.sam_dir;
+    if g.groups[g.group].orders.sam_v < 0.3 { return aside_held(g, &crate::seats::here(g), gd); }
+    let dir = g.groups[g.group].orders.sam_dir;
     let (mx, mz) = (p[0] - sam[0], p[2] - sam[2]);
     let ahead = mx * dir[0] + mz * dir[2];
     let off = mx * dir[2] - mz * dir[0];
     if ahead <= 0.0 || ahead > g.k.orders.aside_m || m::abs(off) > g.k.orders.aside_lane { return aside_held(g, &crate::seats::here(g), gd); }
     // (ORDERS.asideClear: the side he is already stepping to stays his first side)
     let own = if off >= 0.0 { 1.0 } else { -1.0 };
-    let first = match g.sets[g.seat].orders.aside_mem.get(gd) {
+    let first = match g.groups[g.group].orders.aside_mem.get(gd) {
         Some(was) if was.side.map_or(false, js::truthy) && g.time >= was.t && g.time - was.t <= g.k.orders.aside_hold => was.side.unwrap(),
         _ => own,
     };
@@ -759,7 +759,7 @@ fn squad_orders_aside(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
                 && !(squad_orders_in_frame(g, q) || crate::doorway::doorway_stand(g, q))
             {
                 let t = g.time;
-                g.sets[g.seat].orders.aside_mem.set(gd, SquadOrdersAsideMemValue { q, t, dir: [dir[0], 0.0, dir[2]], side: Some(side) });
+                g.groups[g.group].orders.aside_mem.set(gd, SquadOrdersAsideMemValue { q, t, dir: [dir[0], 0.0, dir[2]], side: Some(side) });
                 return Some(q);
             }
         }
@@ -769,17 +769,17 @@ fn squad_orders_aside(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
 
 /// Sam's trail: a crumb every `crumb` metres he has moved, `trailM` metres of it kept, newest last.
 fn squad_orders_crumb(g: &mut crate::game::Game, p: V3, men: &[GuardId]) {
-    if let Some(&last) = g.sets[g.seat].orders.trail.last() { if dist_xz(last, p) > 3.0 { g.sets[g.seat].orders.trail.clear(); } }   // (a teleport)
-    if g.sets[g.seat].orders.trail.is_empty() {   // no trail yet: 'behind him' is the side his men are on
+    if let Some(&last) = g.groups[g.group].orders.trail.last() { if dist_xz(last, p) > 3.0 { g.groups[g.group].orders.trail.clear(); } }   // (a teleport)
+    if g.groups[g.group].orders.trail.is_empty() {   // no trail yet: 'behind him' is the side his men are on
         let (mut cx, mut cz) = (0.0, 0.0);
         for &gd in men { let q = g.pos_of(gd); cx += q[0] - p[0]; cz += q[2] - p[2]; }
         let l = m::hyp2(cx, cz);
         let yaw = g.ch[g.pl[g.player].ch].body_yaw;
-        g.sets[g.seat].orders.back = if l > 0.3 { [cx / l, 0.0, cz / l] } else { [-m::sin(yaw), 0.0, -m::cos(yaw)] };
+        g.groups[g.group].orders.back = if l > 0.3 { [cx / l, 0.0, cz / l] } else { [-m::sin(yaw), 0.0, -m::cos(yaw)] };
     }
     let k_crumb = g.k.orders.crumb;
     let k_trail = g.k.orders.trail_m;
-    let t = &mut g.sets[g.seat].orders.trail;
+    let t = &mut g.groups[g.group].orders.trail;
     if t.is_empty() || dist_xz(t[t.len() - 1], p) >= k_crumb { t.push([p[0], 0.0, p[2]]); }
     let mut len = 0.0;
     for i in (1..t.len()).rev() {
@@ -841,20 +841,20 @@ fn rest_others(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Vec<V3> {
 fn squad_orders_rest_clear(g: &mut crate::game::Game, gd: GuardId, a: TaskId, place: V3, trail: V3, stopped: bool) {
     let (p, t) = (g.pos_of(gd), g.time);
     let apart = g.k.doormanners.apart;
-    if !g.sets[g.seat].orders.rest_of.has(a) {
-        g.sets[g.seat].orders.rest_of.set(a, SquadOrdersRestOfValue { x: p[0], z: p[2], t, step: None, until: 0.0, from: [0.0, 0.0, 0.0], n: 0.0, hold: None, hold_for: [0.0, 0.0, 0.0] });
+    if !g.groups[g.group].orders.rest_of.has(a) {
+        g.groups[g.group].orders.rest_of.set(a, SquadOrdersRestOfValue { x: p[0], z: p[2], t, step: None, until: 0.0, from: [0.0, 0.0, 0.0], n: 0.0, hold: None, hold_for: [0.0, 0.0, 0.0] });
     }
     {
-        let r = g.sets[g.seat].orders.rest_of.get_mut(a).unwrap();
+        let r = g.groups[g.group].orders.rest_of.get_mut(a).unwrap();
         if m::hyp2(p[0] - r.x, p[2] - r.z) > 0.2 { r.x = p[0]; r.z = p[2]; r.t = t; }
     }
     if !g.tab.task[a].via.is_empty() {
-        let r = g.sets[g.seat].orders.rest_of.get_mut(a).unwrap();
+        let r = g.groups[g.group].orders.rest_of.get_mut(a).unwrap();
         r.step = None; r.hold = None;
         return;
     }
     {
-        let r = g.sets[g.seat].orders.rest_of.get_mut(a).unwrap();
+        let r = g.groups[g.group].orders.rest_of.get_mut(a).unwrap();
         if let Some(step) = r.step {
             if t > r.until || dist_xz(trail, r.from) > 1.0 { r.step = None; r.t = t; }
             else { g.tab.task[a].goal = step; return; }   // (the same point every frame: one leg)
@@ -864,39 +864,39 @@ fn squad_orders_rest_clear(g: &mut crate::game::Game, gd: GuardId, a: TaskId, pl
     }
     let goal = g.tab.task[a].goal;
     if stopped && (squad_orders_in_frame(g, goal) || crate::doorway::doorway_stand(g, goal)) {
-        if let Some(h) = g.sets[g.seat].orders.rest_of.get(a).unwrap().hold { g.tab.task[a].goal = h; return; }   // (dealt once for where the file stands)
+        if let Some(h) = g.groups[g.group].orders.rest_of.get(a).unwrap().hold { g.tab.task[a].goal = h; return; }   // (dealt once for where the file stands)
         let others = rest_others(g, &crate::seats::here(g), gd);
         let q = if !rest_bad(g, place) && others.iter().all(|&o| dist_xz(o, place) >= apart) { Some(place) }
             else { crate::doorway::doorway_clear_near(g, goal, &mut |g: &mut Game, x: V3| rest_bad(g, x), Some(&others), Some(apart), Some(p)) };
         if let Some(q) = q {
             g.tab.task[a].goal = q;
-            let r = g.sets[g.seat].orders.rest_of.get_mut(a).unwrap();
+            let r = g.groups[g.group].orders.rest_of.get_mut(a).unwrap();
             r.hold = Some(q); r.hold_for = [trail[0], 0.0, trail[2]];
         }
         return;
     }
-    if crate::doorway::door_gate_stopped(g, gd) { g.sets[g.seat].orders.rest_of.get_mut(a).unwrap().t = t; return; }   // (short of a frame for a man in it)
-    let (rt, rn) = { let r = g.sets[g.seat].orders.rest_of.get(a).unwrap(); (r.t, r.n) };
+    if crate::doorway::door_gate_stopped(g, gd) { g.groups[g.group].orders.rest_of.get_mut(a).unwrap().t = t; return; }   // (short of a frame for a man in it)
+    let (rt, rn) = { let r = g.groups[g.group].orders.rest_of.get(a).unwrap(); (r.t, r.n) };
     if t - rt >= g.k.doormanners.rest_secs * (1.0 + rn) && dist_xz(p, goal) < 1.0 && crate::doorway::doorway_stand(g, p) {   // (at rest by his place)
         let others = rest_others(g, &crate::seats::here(g), gd);
         let sam = g.player_pos(g.player);
         let q = crate::doorway::doorway_clear_near(g, p, &mut |g: &mut Game, x: V3| rest_bad(g, x), Some(&others), Some(apart), Some(sam));
         if let Some(q) = q {
             {
-                let r = g.sets[g.seat].orders.rest_of.get_mut(a).unwrap();
+                let r = g.groups[g.group].orders.rest_of.get_mut(a).unwrap();
                 r.step = Some(q); r.until = t + 4.0; r.from = [trail[0], 0.0, trail[2]]; r.n = m::min(r.n + 1.0, 4.0);
             }
             g.tab.task[a].goal = q;
-        } else { g.sets[g.seat].orders.rest_of.get_mut(a).unwrap().t = t; }
+        } else { g.groups[g.group].orders.rest_of.get_mut(a).unwrap().t = t; }
     }
 }
 
 /// The seconds of one order's walk the PASS gate's holds may keep its stuck clocks from running.
 fn squad_orders_held_wait(g: &mut crate::game::Game, a: TaskId) -> bool {
     let t = g.time;
-    if !g.sets[g.seat].orders.held_of.has(a) { g.sets[g.seat].orders.held_of.set(a, SquadOrdersHeldOfValue { last: t, total: 0.0 }); }
+    if !g.groups[g.group].orders.held_of.has(a) { g.groups[g.group].orders.held_of.set(a, SquadOrdersHeldOfValue { last: t, total: 0.0 }); }
     let cap = g.k.doormanners.held_cap;
-    let h = g.sets[g.seat].orders.held_of.get_mut(a).unwrap();
+    let h = g.groups[g.group].orders.held_of.get_mut(a).unwrap();
     h.total += m::min(m::max(t - h.last, 0.0), 0.1);
     h.last = t;
     h.total <= cap
@@ -907,9 +907,9 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: TaskId, d:
     let p = g.pos_of(gd);
     let post = match g.tab.task[a].post { Some(q) => q, None => return false };
     if d < 1.0 || !crate::doorway::doorway_stand(g, p) { return false; }   // (a stride from his mark he has as good as made it)
-    if !g.sets[g.seat].orders.short_of.has(a) { g.sets[g.seat].orders.short_of.set(a, SquadOrdersShortOfValue { x: p[0], z: p[2], n: 0.0, k: 0.0 }); }
+    if !g.groups[g.group].orders.short_of.has(a) { g.groups[g.group].orders.short_of.set(a, SquadOrdersShortOfValue { x: p[0], z: p[2], n: 0.0, k: 0.0 }); }
     let first = {
-        let r = g.sets[g.seat].orders.short_of.get_mut(a).unwrap();
+        let r = g.groups[g.group].orders.short_of.get_mut(a).unwrap();
         if r.k >= 2.0 { return false; }   // (his mark has been moved for him twice on this order: the old rule ends it)
         if m::hyp2(p[0] - r.x, p[2] - r.z) > 1.0 { r.n = 0.0; }
         r.x = p[0]; r.z = p[2];
@@ -923,7 +923,7 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: TaskId, d:
         return true;
     }
     let mut taken: Vec<V3> = vec![squad_orders_sam_stood(g, &crate::seats::here(g))];
-    for (o, &b) in g.sets[g.seat].orders.asg.iter() {
+    for (o, &b) in g.groups[g.group].orders.asg.iter() {
         if o != gd && !crate::condition::down(g, g.gd[o].ch) {
             taken.push(g.pos_of(o));
             if let Some(q) = g.tab.task[b].post { taken.push(q); }
@@ -934,7 +934,7 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: TaskId, d:
     let apart = g.k.doormanners.apart;
     let q = crate::doorway::doorway_clear_near(g, p, &mut |g: &mut Game, x: V3| squad_orders_in_frame(g, x) || crate::doorway::doorway_stand(g, x), Some(&taken), Some(apart), Some(face));
     let q = match q { Some(q) => q, None => return false };
-    g.sets[g.seat].orders.short_of.get_mut(a).unwrap().k += 1.0;
+    g.groups[g.group].orders.short_of.get_mut(a).unwrap().k += 1.0;
     g.tab.task[a].there = crate::orders::Doing::new(crate::orders::At::StoppedShort, "stopped short");
     crate::game::game_say(g, gd, "can't get through.", None, None);
     let now = g.time;
@@ -946,10 +946,10 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: TaskId, d:
 /// Sam stopped: how much further back along the trail the `follow`-th place stands so that it and every place ahead of it is clear of a doorway.
 fn squad_orders_clear_back(g: &mut crate::game::Game, follow: f64) -> f64 {
     if !(g.k.orders.off_door > 0.0) { return 0.0; }
-    if g.sets[g.seat].orders.clear_t != g.time { g.sets[g.seat].orders.clear_t = g.time; g.sets[g.seat].orders.clear_by.clear(); }
-    let mut i = g.sets[g.seat].orders.clear_by.len();
+    if g.groups[g.group].orders.clear_t != g.time { g.groups[g.group].orders.clear_t = g.time; g.groups[g.group].orders.clear_by.clear(); }
+    let mut i = g.groups[g.group].orders.clear_by.len();
     while (i as f64) <= follow {
-        let mut e = if i > 0 { g.sets[g.seat].orders.clear_by[i - 1] } else { 0.0 };
+        let mut e = if i > 0 { g.groups[g.group].orders.clear_by[i - 1] } else { 0.0 };
         let base = squad_orders_back_of(g, i as f64);
         for _ in 0..8 {
             let q = squad_orders_slot(g, base + e);
@@ -958,10 +958,10 @@ fn squad_orders_clear_back(g: &mut crate::game::Game, follow: f64) -> f64 {
             if dist_xz(q, further) < 0.01 { break; }   // (ORDERS.backEnd: the trail and the floor behind it have run out)
             e += 0.3;
         }
-        g.sets[g.seat].orders.clear_by.push(e);
+        g.groups[g.group].orders.clear_by.push(e);
         i += 1;
     }
-    g.sets[g.seat].orders.clear_by[follow as usize]
+    g.groups[g.group].orders.clear_by[follow as usize]
 }
 
 /// A follower's place in the file, in metres back along the trail.
@@ -973,7 +973,7 @@ fn squad_orders_back_of(g: &crate::game::Game, follow: f64) -> f64 {
 
 /// The way they came: the point `extra` metres further back along Sam's trail than this follower's own place. None: he is not following.
 pub fn squad_orders_trail_back(g: &crate::game::Game, gd: GuardId, extra: f64) -> Option<V3> {
-    let a = *g.sets[g.seat].orders.asg.get(gd)?;
+    let a = *g.groups[g.group].orders.asg.get(gd)?;
     if g.tab.task[a].post.is_some() { return None; }
     let follow = g.tab.task[a].follow;
     let back = squad_orders_back_of(g, follow) + extra;
@@ -1020,20 +1020,20 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: TaskId, sl
     let k = g.k.orders.file_apart;
     let (sam, p) = (g.player_pos(g.player), g.pos_of(gd));
     let mut t = squad_orders_ahead(g, &crate::seats::here(g), gd, a);
-    for (o, &b) in g.sets[g.seat].orders.asg.iter() {
+    for (o, &b) in g.groups[g.group].orders.asg.iter() {
         let bb = &g.tab.task[b];
         if o != gd && !crate::condition::down(g, g.gd[o].ch) && bb.post.is_some() { t.push(bb.goal); }
     }
     let mut any = false;
     for &q in t.iter() { if dist_xz(q, slot) < k && !crate::scene_collision::low_blocked(g, q, slot) { any = true; break; } }
     if !any { return None; }
-    if let Some(&row) = g.sets[g.seat].orders.apart_of.get(a) {
+    if let Some(&row) = g.groups[g.group].orders.apart_of.get(a) {
         if dist_xz(row.at, slot) < 0.5 {
             if let Some(q) = row.q {
                 if (row.short.unwrap_or(false) || apart_clear(&t, q, row.m)) && !apart_bad(g, q) { return Some(q); }
             } else if m::abs(g.time - row.t) < 1.0 {
                 let q = match apart_short(g, p, slot, &t, k) { Some(q) => q, None => return apart_hold(g, p, sam, slot, &t, k) };
-                let r = g.sets[g.seat].orders.apart_of.get_mut(a).unwrap();
+                let r = g.groups[g.group].orders.apart_of.get_mut(a).unwrap();
                 r.q = Some(q); r.short = Some(true);
                 return Some(q);
             }
@@ -1051,7 +1051,7 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: TaskId, sl
     }
     if q.is_none() { q = apart_short(g, p, slot, &t, k); stop = q.is_some(); }
     let now = g.time;
-    g.sets[g.seat].orders.apart_of.set(a, SquadOrdersApartOfValue { at: [slot[0], 0.0, slot[2]], q, t: now, m: by, short: Some(stop) });
+    g.groups[g.group].orders.apart_of.set(a, SquadOrdersApartOfValue { at: [slot[0], 0.0, slot[2]], q, t: now, m: by, short: Some(stop) });
     match q { Some(q) => Some(q), None => apart_hold(g, p, sam, slot, &t, k) }
 }
 
@@ -1075,9 +1075,9 @@ fn squad_orders_slot(g: &crate::game::Game, back: f64) -> V3 {
     let sam = g.player_pos(g.player);
     let mut prev: V3 = [sam[0], 0.0, sam[2]];
     let mut left = back;
-    let mut dir: V3 = g.sets[g.seat].orders.back;
-    for i in (0..g.sets[g.seat].orders.trail.len()).rev() {
-        let ti = g.sets[g.seat].orders.trail[i];
+    let mut dir: V3 = g.groups[g.group].orders.back;
+    for i in (0..g.groups[g.group].orders.trail.len()).rev() {
+        let ti = g.groups[g.group].orders.trail[i];
         let seg = dist_xz(prev, ti);
         if seg < 1e-4 { continue; }
         let sd: V3 = [(ti[0] - prev[0]) / seg, 0.0, (ti[2] - prev[2]) / seg];
@@ -1152,7 +1152,7 @@ mod tests {
             assert!(squad_orders_held_wait(g, a));
             g.time = 11.0;
             assert!(squad_orders_held_wait(g, a));
-            assert_eq!(g.sets[g.seat].orders.held_of.get(a).unwrap().total, 0.1);
+            assert_eq!(g.groups[g.group].orders.held_of.get(a).unwrap().total, 0.1);
             g.time = 12.0;
             assert!(!squad_orders_held_wait(g, a));
         });
@@ -1164,13 +1164,13 @@ mod tests {
         run(|g| {
             g.k.orders.crumb = 0.4;
             g.k.orders.trail_m = 1.0;
-            g.sets[g.seat].orders.trail = vec![[0.0, 0.0, 0.0]];
+            g.groups[g.group].orders.trail = vec![[0.0, 0.0, 0.0]];
             squad_orders_crumb(g, [0.3, 1.5, 0.0], &[]);   // short of a crumb: nothing
-            assert_eq!(g.sets[g.seat].orders.trail.len(), 1);
+            assert_eq!(g.groups[g.group].orders.trail.len(), 1);
             for i in 1..6 { squad_orders_crumb(g, [0.5 * i as f64, 1.5, 0.0], &[]); }
             // (the walk back from the newest passes 1 m at the third crumb, and one crumb past it is kept)
-            assert_eq!(g.sets[g.seat].orders.trail.iter().map(|q| q[0]).collect::<Vec<_>>(), vec![1.0, 1.5, 2.0, 2.5]);
-            assert_eq!(g.sets[g.seat].orders.trail[0][1], 0.0);   // (on the floor, whatever his height)
+            assert_eq!(g.groups[g.group].orders.trail.iter().map(|q| q[0]).collect::<Vec<_>>(), vec![1.0, 1.5, 2.0, 2.5]);
+            assert_eq!(g.groups[g.group].orders.trail[0][1], 0.0);   // (on the floor, whatever his height)
         });
     }
 }
