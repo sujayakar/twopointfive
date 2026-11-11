@@ -277,6 +277,7 @@ pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
         let side = crate::orders::side_of(g, door, at);
         door_tools_test(g, door, side, gd, true);
     }
+    if !crate::group::is_seats(g) { return; }   // (the rest is what the player's own hands have found)
     let mut j = 0;
     while j < g.sets[g.seat].nearby.len() {
         let (kind_door, door, reach, verb) = { let it = &g.sets[g.seat].nearby[j]; (matches!(it.kind, crate::game::InteractableKind::Door), it.door, it.in_reach, it.verb) };
@@ -831,7 +832,7 @@ pub(super) fn door_tools_crosses_open(g: &crate::game::Game, d: DoorId, side: f6
 fn others_of(g: &Game, op: DoorOpId) -> Vec<V3> {
     let mut out = vec![crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))];
     for x in g.guards.clone() {
-        let ours = if crate::orders::squad_orders_sams(&crate::seats::here(g)) { g.team(x).ours() } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) };
+        let ours = crate::group::ours(g, x);
         if ours && !crate::condition::down(g, g.gd[x].ch) && !g.tab.doortools_door_op[op].men.contains(&x) { out.push(g.pos_of(x)); }
     }
     out

@@ -190,7 +190,7 @@ pub(super) fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, poo
     let (buddy_m, buddy_pair_m) = (g.k.doortools.buddy_m, g.k.doortools.buddy_pair_m);
     away_said(g, "", false);
     let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| m != gd && !crate::condition::down(g, g.gd[m].ch)).collect();
-    let sam: Vec<V3> = if crate::condition::down(g, g.pl[g.player].ch) { Vec::new() } else { vec![crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))] };
+    let sam: Vec<V3> = crate::group::player(g).map(|_| crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))).into_iter().collect();
     let own = mate_of(g, &squad, gd, gd);
     let mut mate: Option<GuardId> = None;
     if pair.is_some() || !reach(g, &squad, buddy_m, &sam, p, walks) {
