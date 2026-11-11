@@ -194,7 +194,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.team(gd).ours()
         && crate::roomfight::fight_live(g)
-        && crate::seats::order_of(g, gd).is_some()
+        && crate::duty::order(g, gd).is_some()
 }
 
 /// stands this floor point lit by the place's steady lights
