@@ -57,8 +57,9 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
  *  SCALE_STEP past the tier's own start up to 1.0; at 1.0 with the union still under `divisorRoom` × the budget, the lossy divisors in a fixed order (the gather ⅓ → ½, then the volumetrics
  *  ¼ → ½) — with ≥ `climbGap` s between climbs. A window over `backoff` × the
  *  budget or under `backoffFps` with a climb standing UNDOES the last step at once and remembers the rung that failed for `failSecs` (no oscillation); the plain ladder's cut / preset logic
- *  runs on top as ever. Every step is one the pool + history resampling (passes.ts) make cheap. Off = the ladder as it was, byte for byte. */
-export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
+ *  runs on top as ever. A rung is priced at the HEAVIEST the last `heavySecs` have shown, not at the calm it is taken in: a lull before a fight is half the fight, and a rung that only fits the
+ *  lull is taken off again in the fight, with the frames it cost; so nothing climbs before `knowSecs` of play have been seen. Every step is one the pool + history resampling (passes.ts) make cheap. Off = the ladder as it was, byte for byte. */
+export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60, knowSecs: 45, heavySecs: 180 };
 /** one rung the climb has taken, newest last (undone in reverse) */
 type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
 /** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
@@ -676,6 +677,7 @@ export class Quality {
     const avg = B.hold ? avgT : this.acc / this.frames; this.acc = 0; this.frames = 0; this.maxDt = 0;   // (an aim judges the window without its one longest frame: a hitch a second is not a frame rate — it cuts under 3.5 %, where as-now's 45 has 25 % to absorb one)
     const unionAvg = this.unionN ? this.unionAcc / this.unionN : 0; const unsureRaw = this.unsureAcc && !this.unionN; this.unionAcc = 0; this.unionN = 0; this.unsureAcc = false;
     this.unsureRun = unsureRaw ? this.unsureRun + 1 : 0; const unsure = unsureRaw && this.unsureRun < 10;   // (ten windows running without a fresh readback = the timer has stalled for good this session: from there the window counts as BLIND — the rate-only rules — rather than 'no verdict' for ever)
+    if (unionAvg > 0) this.loadSeen(unionAvg);
     this.lastUnion = +unionAvg.toFixed(2); this.lastFps = +(1 / avg).toFixed(1);
     for (const [k, t] of this.failed) { if (t <= this.clock) this.failed.delete(k); }
     const S = this.engine.settings;
@@ -794,7 +796,7 @@ export class Quality {
       else if (climbOn && unionAvg > 0 && !autoWantsPreset && !sharpFits) {   // (SHARP SHED: room that fits sharp direct back is its room first, auto's block below)   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
         const roomyNow = avg < 1 / B.cruisingFps && unionAvg < CLIMB.headroom * budget;   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the headroom itself is read off the GPU union, never off the rate)
         this.roomy = roomyNow ? this.roomy + 1 : 0;   // (never reached in an unsure window: unionAvg is 0 then and this branch is skipped — the count simply waits)
-        if (this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { const step = this.nextRung(S.renderScale, unionAvg < CLIMB.divisorRoom * budget); if (step) { this.climb(step, unionAvg, B); this.roomy = 0; } }
+        if (this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { const step = this.nextRung(S.renderScale, unionAvg < CLIMB.divisorRoom * budget); if (step && this.heavyFits(step, CLIMB.backoff * budget)) { this.climb(step, unionAvg, B); this.roomy = 0; } }
       }
       if (this.auto) { try { localStorage.setItem(LS_SCALE, String(Math.min(this.maxScale, S.renderScale))); } catch { /* */ } }   // (a climbed scale is this session's finding, re-earned next visit: what is remembered stays within the tier's own range)
     }
@@ -892,6 +894,16 @@ export class Quality {
     if (S.gatherThird && !this.failed.has('gather')) return { kind: 'gather' };
     if (S.volQuarter && !this.failed.has('vol')) return { kind: 'vol' };
     return null;
+  }
+  /** the load of the windows of the last CLIMB.heavySecs: when, and the union over what the cost model says of the picture it was read on (so a window read at another size or preset still prices this one) */
+  private load: { at: number; k: number }[] = [];
+  private loadSeen(unionAvg: number) { this.load.push({ at: this.clock, k: unionAvg / Math.max(0.1, this.costAt(this.livePreset(this.current as QualityName))) }); while (this.load.length && this.load[0].at < this.clock - CLIMB.heavySecs) this.load.shift(); }
+  /** would this rung fit `band` ms in the heaviest of what has been seen? (the second heaviest window: one alone is a resize or a hitch) */
+  private heavyFits(step: ClimbStep, band: number): boolean {
+    if (this.load.length < CLIMB.knowSecs || !(this.current in COST)) return false;
+    const live = this.livePreset(this.current as QualityName), up: Preset = step.kind === 'scale' ? { ...live, scale: step.to } : step.kind === 'gather' ? { ...live, lossy: { ...live.lossy, gatherThird: false } } : { ...live, lossy: { ...live.lossy, volQuarter: false } };
+    let first = 0, second = 0; for (const { k } of this.load) if (k > first) { second = first; first = k; } else if (k > second) second = k;
+    return second * this.costAt(up) <= band;
   }
   private climb(step: ClimbStep, unionAvg: number, B: Bands = AS_NOW) {
     const S = this.engine.settings;
