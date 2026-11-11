@@ -149,7 +149,8 @@ export class PerfSweep {
   get progress(): string { return this.active ? `${this.at + 1}/${this.plan.length}` : this.last; }
   /** the segment under way is past its settle: its frames from here are the ones that count (a caller pricing the rows as they go: ui/bench.ts) */
   get settled(): boolean { return this.active && !this.warming && this.at >= 0 && performance.now() - this.segT0 >= this.segSettle && this.segFrames >= this.opts.settleFrames; }
-  /** the row flipped right now ('base' between two flips, '' while warming up or with no sweep on) — what a script watching the page keys on */
+  /** …and what that flip does, in the row's own words (a row that already stands at its flipped value is put back instead, and is named for that) · the row flipped right now ('base' between two flips, '' while warming up or with no sweep on) — what a script watching the page keys on */
+  get words(): string { return this.plan[this.at]?.armed?.label ?? ''; }
   get flipped(): string { return !this.active || this.warming || this.at < 0 ? '' : this.plan[this.at]?.armed?.row.id ?? 'base'; }
   toggle(live = false): void { if (this.active) this.stop('F8'); else this.start({ live }); }
 
