@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers
 
-/// the row `list[i]` reads in a list of `len`: None where the TypeScript reads undefined, a negative or fractional `i` included
+/// the row `list[i]` reads in a list of `len`: None past its end and for a negative or fractional `i`
 fn row_of(i: f64, len: usize) -> Option<usize> {
     let u = i as usize;
     if i >= 0.0 && u as f64 == i && u < len { Some(u) } else { None }
@@ -65,7 +65,7 @@ fn scatter(seed: f64, a: f64, d: V3) -> V3 {
     ])
 }
 
-// ---------------------------------------------------------------- the skeleton's functions
+// ---------------------------------------------------------------- the module's functions
 
 /// The thin level axis of a box in the world.
 fn thin_n(g: &crate::game::Game, b: BoxId) -> V3 {

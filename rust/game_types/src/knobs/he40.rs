@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// Every number of the round's flight and of what a dud does (the blast's numbers are frag.ts FRAG's: one blast).
+/// Every number of the round's flight and of what a dud does (the blast's are the `frag` table's: one blast).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct He40K {
     /// muzzle speed (m/s: the 40×46 mm low-velocity round), gravity, air drag (/s), contact radius (m), seconds of flight before it is simply gone (a round sent

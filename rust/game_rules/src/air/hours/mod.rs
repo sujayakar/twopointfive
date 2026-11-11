@@ -378,7 +378,7 @@ fn reach_fresh(g: &mut Game, to_sun: V3) {
     g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_ };
 }
 
-/// What a question of the sky's ways is of (sim/dome.rs).
+/// What a question of the sky's ways reads: the boxes, the casters, the way to the sun, the knobs.
 fn under(g: &Game) -> ::sim::dome::Under<'_> {
     let r = &g.m.hours.reach;
     ::sim::dome::Under { w: g.tab.boxes.world(), casters: casters(&r.box_), to_sun: r.to_sun, tune: &g.k }
@@ -393,7 +393,7 @@ fn sun_of(g: &Game, st: &Sky) -> f64 {
     }
 }
 
-/// The sky as the light under a roof is worked out from it (sim/glow.rs).
+/// The sky as the light under a roof is worked out from it.
 pub fn sky_now(g: &crate::game::Game) -> ::sim::glow::Sky {
     let st = sky_in_force(g);
     ::sim::glow::Sky { to_sun: st.to_sun, sun: sun_of(g, &st), zenith: sky_lum(g, 1.0, st.dome), horizon: sky_lum(g, 0.0, st.dome) }
@@ -477,12 +477,10 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
     row.peak_intensity = x;
 }
 
-// ---------------------------------------------------------------- seams: what the skeleton still lacks
-
 
 #[cfg(test)]
 mod tests {
-    /// the night's haze is the one the TypeScript ships
+    /// the night's haze is the one src/settings.ts gives
     #[test]
     fn the_nights_haze_is_the_shipped_one() {
         let text = include_str!("../../../../../src/settings.ts");
@@ -492,7 +490,7 @@ mod tests {
     }
 
     use super::*;
-    // the TypeScript's own bits: bun, with EXACT.on, off src/game/hours.ts and its ray code
+    // pinned bits
     const SUN_SOFT: &[(u64, u64, u64)] = &[
     (0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000),
     (0x3fa999999999999a, 0x3fefffc4ae7f7f16, 0x0000000000000000),
@@ -619,7 +617,6 @@ mod tests {
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
     }
-    // the words checked against the TypeScript's own functions under bun
     #[test]
     fn hour_words_are_read_as_the_typescript_reads_them() {
         assert_eq!(hour_id_of(Some("MidDay")), HourId::Midday);

@@ -8,8 +8,6 @@ use crate::scene_level_data::PropKindName;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
-
 
 // ------------------------------------------------------------------ small helpers of this part
 
@@ -258,7 +256,7 @@ pub(in crate::breakage) fn destruction_flags0(g: &crate::game::Game, i: f64) -> 
     crate::winbars::bar_flags0(g, i)
 }
 
-/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)
+/// Be told of every blast.
 pub(in crate::breakage) fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) {
     g.destr.blast_listeners.push(fn_);
 }
@@ -424,7 +422,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>) 
     let at: V3 = [pos[0], m::min(pos[1], 0.3) + 0.03, pos[2]];
     crate::render_particles::particles_impulse(g, at, t.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(t.up), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
-        // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on, as in the TypeScript)
+        // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on)
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: t.radius * 0.5, strength, up: t.up, bias: [0.0, 0.0, 0.0] };
         crate::debris::debris_impulse(g, imp, None, None);
     }

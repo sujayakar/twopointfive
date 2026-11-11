@@ -628,7 +628,7 @@ pub fn nav_grid_is_blocked(g: &crate::game::Game, wx: f64, wz: f64) -> bool {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let (x, z) = (m::floor(wx / cell), m::floor(wz / cell));
     if x < 0.0 || z < 0.0 || x >= nw || z >= nh { return true; }
-    // (a point that is no number: every comparison above is false, and the TypeScript's table reads undefined, which is not 1)
+    // (a point that is no number: every comparison above is false, and it is not blocked)
     if x != x || z != z { return false; }
     g.col.nav.blocked[(z * nw + x) as usize] == 1
 }

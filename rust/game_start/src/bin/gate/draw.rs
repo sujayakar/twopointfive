@@ -21,6 +21,7 @@
 //!   marks     a list's rows are dealt as each list is first met, so a box's slot differs (and `HISTORY` masks what says the slot)
 //!   decals    a build leaves the rows of a list that was longer behind its end
 use crate::rows::{Flags, RUN_SECS, SEED};
+use game::rows::words;
 use game_draw::boxes::{Cut, Geo, Mat, Row4, Word};
 use game_draw::{want, Drawn, Row};
 use game_start::hand::act;
@@ -38,7 +39,7 @@ const MOMENT: (usize, usize) = (18, 20);
 /// when the look is said a second time
 const LOOK_AGAIN: usize = 600;
 
-/// THE PAGE'S LOOK: src/draw/look.ts `lookNumbers` run once under bun as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
+/// THE PAGE'S LOOK, written out: what src/draw/look.ts `lookNumbers` gives (nothing here asks it again) as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
 /// on), with the one number a preset decides, the mirrors, as High has it.
 const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
     26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,
@@ -82,7 +83,7 @@ impl Mirror {
         let (st, n, from, to) = (h.statics as usize, h.count as usize, h.from as usize, h.to as usize);
         if to > from {
             self.carried += 1;
-            if self.list == Some((h.statics, h.serial)) && self.moved_unsaid.is_none() { self.moved_unsaid = (from..to).find(|&i| self.geo.rows.get(i).is_some_and(|was| was.w[..7] != d.boxes.geo[i].w[..7])); }
+            if self.list == Some((h.statics, h.serial)) && self.moved_unsaid.is_none() { self.moved_unsaid = (from..to).find(|&i| self.geo.rows.get(i).is_some_and(|was| words(was)[..7] != words(&d.boxes.geo[i])[..7])); }
             if !(skip && self.carried > 1) { self.geo.send(&d.boxes.geo, from, to - from); self.mat.send(&d.boxes.mat, from, to - from); }
         }
         self.list = Some((h.statics, h.serial));
@@ -101,10 +102,10 @@ impl Mirror {
     /// the first table that is not `d`'s: its name and first row. `opened`: `d` is a host that has just opened, and what is a table's history is left out (the file's head says which)
     fn differs(&mut self, d: &Drawn, opened: bool) -> Option<(&'static str, usize)> {
         let h = d.boxes.head[0];
-        if let Some(i) = if opened { self.geo.first_as(&d.boxes.geo, |a, b| a.w[..7] == b.w[..7] && a.w[7] & HISTORY == b.w[7] & HISTORY) } else { self.geo.first_differ(&d.boxes.geo) } { return Some(("geo", i)); }
+        if let Some(i) = if opened { self.geo.first_as(&d.boxes.geo, |a, b| words(a)[..7] == words(b)[..7] && a.flags & HISTORY == b.flags & HISTORY) } else { self.geo.first_differ(&d.boxes.geo) } { return Some(("geo", i)); }
         if let Some(i) = self.mat.first_differ(&d.boxes.mat) { return Some(("mat", i)); }
         if self.cut.rows.len() < d.boxes.cut.len() { self.cut.rows.resize(d.boxes.cut.len(), Cut::ZERO); }
-        if let Some(i) = (0..h.count as usize).find(|&i| d.boxes.geo[i].w[7] & (ROUND | CUT) != 0 && !same(&self.cut.rows[i], &d.boxes.cut[i])) { return Some(("cut", i)); }
+        if let Some(i) = (0..h.count as usize).find(|&i| d.boxes.geo[i].flags & (ROUND | CUT) != 0 && !same(&self.cut.rows[i], &d.boxes.cut[i])) { return Some(("cut", i)); }
         if !opened {
             if let Some(i) = self.marks.first_differ(&d.boxes.marks.rows) { return Some(("marks", i)); }
             if let Some(i) = self.decals.first_differ(&d.marks.words) { return Some(("decal words", i)); }
@@ -177,7 +178,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
             fresh.look(&PAGE_LOOK);
             fresh.take(&p.g, want::boxes | want::smoke | want::sky);
             fresh.frame(&p.g, 1.0, focus);
-            if f.breaks("opened") { fresh.boxes.geo[0].w[0] ^= 1; }
+            if f.breaks("opened") { fresh.boxes.geo[0].c[0] += 1.0; }
             if e.is_none() { if let Some((table, r)) = mirror.differs(&fresh, true) { e = Some(format!("frame {}: {} row {} is another for a host that has just opened", i + 1, table, r)); } }
         });
         over = !seen;

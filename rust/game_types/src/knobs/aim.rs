@@ -81,9 +81,9 @@ pub struct AimKPlayer {
     #[k(14.0)] pub light_snap_px: f64,
 }
 
-/// A TRAINED man's edge (Guard.trained — the response team, game/qrf.ts; nobody else carries it, so the staff's numbers are the numbers above to the letter):
-///  he lines up in settleK × the settle time (so his first round comes that much sooner past his reaction beat), his hands are spreadK × his row's cone, and
-///  qrf.ts caps his reaction beats at reactCap seconds (a dazzle or a ring in the body still roots him its full length).
+/// A TRAINED man's edge (a guard's `trained`: the response team, and a man a mission marks; a man with a fight row of his own goes by that, the rest by the numbers above): he lines up in
+///  `settle_k` × the settle time (so his first round comes that much sooner past his reaction beat), his hands are `spread_k` × his row's cone, and the response
+///  team's reaction beats are capped at `react_cap` seconds on the hunt (a dazzle or a fold still roots him its full length).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct TrainedK {
     #[k(0.6)] pub settle_k: f64,

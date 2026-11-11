@@ -1,6 +1,6 @@
 //! WHAT A PANE IS TO A ROUND: what a sheet takes from a round crossing it, how the round turns, where it
 //! leaves, the flight over panes, and the through-holes rounds have left. One rule for a round and for a line-of-fire question: a man fires through a pane exactly
-//! when his round would get through it. Statement for statement with the rule it replaced. What a round does next and what it files is the caller's.
+//! when his round would get through it. What a round does next and what it files is the caller's.
 //!
 //! WHAT IS STATE. The holes (panes.rs `Hole`): a part of the panes' run in the game's block, a row a pane a round has been through.
 use game_types::knobs::Knobs;
@@ -216,7 +216,7 @@ fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) ->
     any
 }
 /// The walk of a man's arm whose muzzle is already past the glass: the energy left and the panes it took, in order (none and in a hole: `energy`). None: something a
-/// round stops in is across the arm (the old rule stands).
+/// round stops in is across the arm.
 pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, tune: &Knobs) -> Option<(f64, Vec<Crossing>)> {
     let dd = [muzzle[0] - from[0], muzzle[1] - from[1], muzzle[2] - from[2]];
     let len = hypot3(dd[0], dd[1], dd[2]);

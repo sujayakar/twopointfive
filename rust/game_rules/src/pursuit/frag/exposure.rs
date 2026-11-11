@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
-/// the flee script frag.ts lent for the frame, as the run left it, put back in the book it came from: the first live grenade's book
+/// the flee script frag_flee lent for the frame, as the run left it, put back in the book it came from: the first live grenade's book
 /// that has a script for him, as frag_flee finds it.
 pub fn frag_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     let Some(ran) = ran else { return };
@@ -182,7 +182,7 @@ pub fn blast(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    // bits from the TypeScript under bun with EXACT.on
+    // the pinned bits of hash01
     #[test]
     fn hash01_has_the_typescript_s_bits() {
         let rows: [(f64, f64, u64); 9] = [

@@ -111,7 +111,7 @@ fn merged_assign(kind: &str, door: DoorId, a: &crate::doortools::DoorToolsAssign
     }
 }
 
-/// which dealt post a man's spot from `pair` is: the first not yet given with that place (the TypeScript finds the post by its array's identity)
+/// which dealt post a man's spot from `pair` is: the first not yet given with that place
 fn post_at(posts: &[crate::orders::StackPost], used: &mut [bool], p: V3) -> crate::orders::StackPost {
     let i = posts.iter().enumerate().position(|(i, x)| !used[i] && x.pos == p).unwrap();
     used[i] = true;

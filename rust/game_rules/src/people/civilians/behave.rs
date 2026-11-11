@@ -1018,7 +1018,7 @@ fn flee(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
     let evac = g.cv[cv].state == CivState::Evacuate;
     g.ch[c].anim.act = None;
     g.ch[c].anim.look_yaw_extra = 0.0;
-    // `t` is a copy of C.target, the object it names in the TypeScript: a write to it goes to both
+    // `t` is a copy of the target: a write to it goes to both
     let mut t = match g.cv[cv].target.clone() {
         Some(t) => t,
         None => match pick_target(g, gd, Some(PickTargetOpts { exits_only: Some(evac) })) {

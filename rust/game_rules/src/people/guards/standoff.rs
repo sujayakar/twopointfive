@@ -745,7 +745,7 @@ mod tests {
         assert!(pool_of(StandoffMoment::Enter, Temperament::Steady, true).contains(&"easy. easy. nobody has to get hurt here"));
     }
 
-    /// from, to, the man's axis, soles, crown, and what the TypeScript's own arithmetic gives under EXACT (bun)
+    /// from, to, the man's axis, soles, crown, and the pinned bits
     const AXIS_CASES: [(V3, V3, f64, f64, f64, f64, u64); 3] = [
         ([1.1, 1.43, -2.7], [3.3, 1.42, 0.9], 2.13, -0.77, 0.05, 1.75, 0x3fc0528470dade40),
         ([-4.2, 0.3, 7.9], [-4.2, 2.6, 7.9], -3.61, 8.2, 0.55, 2.2, 0x3fe6a417e13e32c0),

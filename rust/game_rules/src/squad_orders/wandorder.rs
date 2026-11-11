@@ -1,4 +1,4 @@
-//! src/game/wandorder.ts lines 1 to 185: a teammate looks under a shut door with the optical wand, on the player's order only.
+//! A teammate looks under a shut door with the optical wand, on the player's order only.
 
 pub use ::game_types::wandorder::types;
 pub use types::*;
@@ -12,7 +12,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// This view's row for `gd`, a copy (`states.get(g)?.jobs.get(gd)`). The TypeScript's `J` is the row itself: `put_job` after a write, `lens_out` included.
+/// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.
 fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {
     let k = crate::seats::view_key(g, seat);
     g.m.wandorder.states.get(k).and_then(|st| st.jobs.get(gd).copied())
@@ -26,7 +26,7 @@ fn put_job(g: &mut Game, gd: GuardId, j: Job) {
     }
 }
 
-/// Is there a fog to look into. (wandorder.ts live; WAND.on and WAND.mate are settled on)
+/// Is there a fog to look into.
 fn live(g: &crate::game::Game) -> bool {
     crate::fogofwar::fog_of_war_active(g)
 }
@@ -147,7 +147,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
             },
         );
     } else {
-        // (`p` and `face` are read here: in the TypeScript `p` is his live position, and the calls above do not move him)
+        // (`p` and `face` are read here: the calls above do not move him)
         let p = g.ch[c].pos;
         let face = g.ch[c].body_yaw;
         crate::orders::squad_orders_assign(
@@ -168,7 +168,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
     }
 }
 
-/// Gives the one man the look, and opens his job. `Issue::Arm1(())` is the TypeScript's `void`; it never returns words.
+/// Gives the one man the look, and opens his job. It never returns words: `Issue::Arm1(())`.
 pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
     let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };

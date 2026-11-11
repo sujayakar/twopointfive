@@ -23,7 +23,7 @@ pub(super) fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> 
     let rate = if g.ch[c].anim.creep { dt / gait_in } else { -dt / gait_out };
     g.ch[c].anim.cr_t = v3::clamp(g.ch[c].anim.cr_t + rate, 0.0, 1.0);
     let pp = g.ch[c].anim.life.prev_pos;
-    let p0 = g.ch[c].pos;   // posIn is Character.pos itself (character.ts:4419 keeps the array, not a copy)
+    let p0 = g.ch[c].pos;
     let d = if pp[0].is_finite() { v3::dist_xz(p0, pp) } else { 0.0 };
     let a = &mut g.ch[c].anim;
     a.cr_v = if dt > 0.0 && d <= 0.5 { m::min(d / dt, 8.0) } else { 0.0 };
@@ -375,7 +375,7 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 
 /// The controller's world placement to the model space the layers pose in: a point.
 pub(super) fn anim_to_model_p(g: &crate::game::Game, c: CharId, wp: V3) -> V3 {
-    let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
+    let p0 = crate::character::anim_pos_in(g, c);   // (the place handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 

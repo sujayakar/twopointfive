@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-queue.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-queue: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_queue::types;
 pub use types::*;
@@ -35,7 +35,6 @@ const GATES_INSIDE: u32 = 0;
 const GATES_ONE: u32 = 1;
 const GATES_OPEN: u32 = 2;
 
-/// (tut-queue.script.ts D.mark with a literal and no yaw)
 fn mark(m: &mut crate::director::Manifest, id: &str, pos: V3) -> crate::director::MarkRef {
     crate::director::manifest_mark(m, id, Some(pos), None)
 }
@@ -113,7 +112,7 @@ fn is_open(g: &Game, d: &crate::director::DoorRef) -> Result<bool, String> {
     Ok(s.open || s.broken)
 }
 
-/// The hall's men still standing, m before n (tut-queue.script.ts gun's up)
+/// The hall's men still standing, m before n
 fn up(g: &Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame) -> Vec<crate::director::UnitRef> {
     let mut l = Vec::new();
     for u in [&f.m, &f.n] {
@@ -130,7 +129,6 @@ fn until_back() -> crate::director::Cond {
 fn until_front() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_FRONT })
 }
-/// (tut-queue.script.ts gun's too)
 fn too() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: GUN_TOO })
 }
@@ -322,7 +320,6 @@ pub(super) fn tut_queue_gun_test(g: &crate::game::Game, r: DirectorRunId, f: &cr
     }
 }
 
-/// `men.filter(u => q.alive(u) && !q.routed(u))` (tut-queue.script.ts gates' left)
 fn left(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
     let mut l = Vec::new();
     for u in men {
@@ -331,12 +328,11 @@ fn left(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<cra
     l
 }
 
-/// (tut-queue.script.ts gates' one)
 fn one() -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id: GATES_ONE })
 }
 
-/// Are they all down or fled, or is the last one now running? (tut-queue.script.ts gates' broke)
+/// Are they all down or fled, or is the last one now running?
 fn broke(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame) -> Result<bool, String> {
     let l = left(g, r, &f.men);
     if l.is_empty() { return Ok(true); }
@@ -348,7 +344,7 @@ fn broke(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::s
     Ok(false)
 }
 
-/// Each pair walks in by its gate, the man nearer it taking the farther mark. (tut-queue.script.ts gates' walk)
+/// Each pair walks in by its gate, the man nearer it taking the farther mark.
 fn walk(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, us: &[Option<crate::director::UnitRef>], gate: [f64; 2], inn: &[crate::director::MarkRef], at: &crate::director::MarkRef) -> Result<(), String> {
     let mut chosen: Vec<(crate::director::UnitRef, f64)> = Vec::new();
     for u in us {
@@ -372,7 +368,7 @@ fn walk(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, us: &[Option<crat
     Ok(())
 }
 
-/// Men nobody has shot walk on into the open. (tut-queue.script.ts gates' on)
+/// Men nobody has shot walk on into the open.
 fn walk_on(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, men: &[crate::director::UnitRef], us: &[Option<crate::director::UnitRef>], to: &[crate::director::MarkRef], at: &crate::director::MarkRef) -> Result<(), String> {
     let mut chosen: Vec<crate::director::UnitRef> = Vec::new();
     for u in us.iter().flatten() {

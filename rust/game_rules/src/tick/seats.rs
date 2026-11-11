@@ -16,8 +16,7 @@ pub const CAST_KEY: PlayerId = PlayerId(u32::MAX);
 /// is this call inside a seat's view, and not on the bare tick. with_seat raises Game.view_depth for the length of its call
 fn in_view(g: &crate::game::Game) -> bool { g.view_depth > 0 }
 
-/// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat the pass is about, or CAST_KEY inside a second cast.
-/// (seats.ts SEAT_TABLES key by the view; the bridge writes a view's key as `view.player`, export.ts:83)
+/// which row of a table kept per view this pass reads: the man of the seat the pass is about, or CAST_KEY inside a second cast.
 pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
     if g.in_cast { CAST_KEY } else { seat.player }
 }
@@ -50,7 +49,7 @@ pub fn show_seat(g: &mut crate::game::Game, seat: SeatId) {
     stand_on(g, seat);
 }
 
-/// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat and no view open (seats.ts seatsStand: inside a tick `g.seat` answers the FIRST seat). Where another seat was
+/// THE BARE GAME FOR THE LENGTH OF A TICK: the first seat and no view open (inside a tick `g.seat` answers the FIRST seat). Where another seat was
 /// shown (a host that shows the second player), it comes back after.
 pub(super) fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
     let from = g.seat;
@@ -73,9 +72,7 @@ pub fn budget_with_seats(g: &crate::game::Game, for_one: f64) -> f64 { for_one -
 /// A staging stands its team first and then as many of its defenders, in the order of their marks, as this leaves (a game of one: all of them).
 pub fn floor_room(g: &crate::game::Game) -> f64 { crate::guards::MAX_SKINNED - seat_count(g) - g.guards.len() as f64 }
 
-// ---------------------------------------------------------------- the seams: what skeleton 5 still does not have
-
-/// seats.ts:213 `rawGame(g) !== g` with the pass about the first seat: a pass over his view and a pass over the bare Game look alike here
+/// with the pass about the first seat: is it over his view? A pass over his view and a pass over the bare Game look alike but for `in_view`
 fn seam_in_first_seat_view(g: &Game) -> bool { crate::seats::in_view(g) }
 
 // ---------------------------------------------------------------- small helpers

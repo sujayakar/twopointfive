@@ -56,7 +56,7 @@ pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64) -> bool {
         if left { (role(THIGH_L), role(SHIN_L), role(FOOT_L), role(THIGH_R), role(SHIN_R), role(FOOT_R)) } else { (role(THIGH_R), role(SHIN_R), role(FOOT_R), role(THIGH_L), role(SHIN_L), role(FOOT_L)) };
     let (fs, fsr, fp, fpr) = if left { (f_l, f_rl, f_r, f_rr) } else { (f_r, f_rr, f_l, f_rl) };
     let (ks, kp, kpr) = if left { (k_l, k_r, k_rr) } else { (k_r, k_l, k_rl) };
-    // pC.copy(pA)
+    // the pose copied
     if !ask_blend(g, at, at, 1.0, false, at_c, n) {
         return false;
     }
@@ -929,5 +929,5 @@ fn on_the_hilt(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands
         }
     }
 }
-/// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is refused by name as the game loads)
+/// how many keys of a knife blow a call may hand over (game_types KNIFE_KEYS_MAX: a longer blow is refused by name as the game loads)
 const KNIFE_KEYS: usize = 4;

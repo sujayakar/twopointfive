@@ -31,7 +31,7 @@ export function loadMap(name: string): any { const data = parseLevelData(readFil
 const SQUAD_COLOURS = ['#ff6b6b', '#ffb347', '#c792ea', '#5ad1c8', '#f78fb3', '#9bd35a'];
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** squad-format.md's default: a squad wedges every door of its rooms except one that joins two of its own rooms */
+/** docs/level-format.md's default: a squad wedges every door of its rooms except one that joins two of its own rooms */
 export function barricadeOf(sq: any, rooms: any[]): string[] {
   if (Array.isArray(sq.barricade)) return sq.barricade;
   const mine = rooms.filter(r => (sq.rooms ?? []).includes(r.id)); const count = new Map<string, number>();

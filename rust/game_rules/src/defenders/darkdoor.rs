@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 type Pool = &'static [&'static str];
-/// (kind, say, he, they), in the order the TypeScript's `LINES` writes them. A pool the TypeScript leaves out is empty here: `?? []` of it.
+/// (kind, say, he, they). A pool that a kind does not have is empty.
 static LINES: [(crate::darkdoor::LineKind, Pool, Pool, Pool); 6] = [
     (LineKind::Call, &["I'm not going in there alone. get up here.", "not in there. not on my own — get up here!"], &["he could be anywhere in that. somebody get up here."], &["they could be anywhere in that. somebody get up here."]),
     (LineKind::Self_, &["no. not in there. not on my own.", "pitch black. no. not alone.", "not a chance. not by myself."], &[], &[]),
@@ -98,11 +98,11 @@ fn can_come(g: &crate::game::Game, o: GuardId) -> bool {
     match g.m.darkdoor.state_of.get(o) { None => true, Some(so) => so.act == DarkDoorAct::None }
 }
 
-/// his row, made if he has none.   (darkdoor.ts mind; the skeleton's signature hands nothing back: `fear` below is the row)
+/// his row, made if he has none; `fear` below hands it back
 fn mind(g: &mut crate::game::Game, gd: GuardId) {
     g.m.darkdoor.state_of.get_or_insert_with(gd, fresh_fear);
 }
-/// `mind`'s answer in the TypeScript: his row itself, made if he has none. Use it for a few lines and let it go before a call that takes `g`.
+/// his row itself, made if he has none. Use it for a few lines and let it go before a call that takes `g`.
 fn fear<'g>(g: &'g mut Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear {
     g.m.darkdoor.state_of.get_or_insert_with(gd, fresh_fear)
 }
@@ -701,7 +701,7 @@ fn lose(g: &mut crate::game::Game, gd: GuardId) {
 mod tests {
     use super::*;
 
-    /// the static here and the skeleton's `lines()` are the same words in the same order
+    /// the static here and `lines()` are the same words in the same order
     #[test]
     fn lines_are_the_skeletons() {
         let t = crate::darkdoor::lines();

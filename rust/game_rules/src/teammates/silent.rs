@@ -7,7 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// a state as the TypeScript's literal makes it
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
 }
@@ -201,7 +200,7 @@ pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// `only` of the posture's two rows: the whole squad, whoever was addressed
 pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
 
-/// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are
+/// the posture's two rows on the menu: made anew at each call
 fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
     let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
         targets: targets(),

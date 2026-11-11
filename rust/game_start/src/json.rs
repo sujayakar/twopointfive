@@ -1,5 +1,5 @@
-//! A JSON reader: text in, a tree of values out. A level file and the character's files are JSON, and the start reads them as the TypeScript start
-//! reads a parsed object: by key, in the file's order. Numbers are read by the core library's decimal reader, which rounds as the language's own
+//! A JSON reader: text in, a tree of values out. A level file and the character's files are JSON, and the start reads them
+//! by key, in the file's order. Numbers are read by the core library's decimal reader, which rounds as a page's
 //! `JSON.parse` does (to the nearest double), so a number here is the number there to the bit.
 //!
 //! AN OBJECT REMEMBERS WHICH OF ITS MEMBERS WERE ASKED FOR (`get`, `has`, `members`; `skip_all` for what is passed by on purpose). So whoever has

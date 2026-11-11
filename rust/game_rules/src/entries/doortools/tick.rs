@@ -998,7 +998,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
         }
     }
 }
-/// one order's turn in the tick (doortools.ts tick, `for (const op of [...this.ops])`)
+/// one order's turn in the tick
 fn tick_op(g: &mut Game, op: DoorOpId) {
     let mut men = Vec::new();
     for gd in dop!(g, op).men.clone() {

@@ -1,6 +1,4 @@
 // THE KEPT REPLAYS, on a page: this browser's store of them (one connection a page) and what is kept, in a line. Shared by the game page (host/drawpage.ts hands it to the backend's sync, src/cloud/tapes.ts) and the replay viewer, which lists it. Nothing here sends or downloads anything.
-// (This file was `dumpui.ts`, the hand-over: every kept replay as one downloaded file. That was taken out on 2026-10-27 — a hosted build's backend reads the
-// store by itself. The viewer's 'Download with notes' went the same day: no file leaves a page.)
 import type { KeptStore, KeptSummary } from './keepstore';
 import { browserStore, keptSummary } from './keepstore';
 

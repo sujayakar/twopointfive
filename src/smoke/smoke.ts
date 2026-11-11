@@ -12,7 +12,7 @@ import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
-import { glassOpenWgsl, lookConfig } from '../render/frame';
+import { glassOpenWgsl, lookConfig, rowsWgsl } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
 // WIND (rust/game_rules/src/air/wind.rs): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
@@ -160,7 +160,7 @@ export class SmokeSystem implements SmokeSystemLike {
     this.gArgs = device.createBindGroup({ layout: this.gArgsL, entries: [buf(6, this.argsBuf)] });
     this.gPub = device.createBindGroup({ layout: this.gPubL, entries: [{ binding: 7, resource: this.atlas.createView() }, { binding: 8, resource: this.page.createView() }] });
     this.gBox = device.createBindGroup({ layout: this.gBoxL, entries: [buf(9, this.domBuf), buf(10, this.statBuf)] });
-    this.mod = makeShader(device, wgslWorldConsts() + glassOpenWgsl() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
+    this.mod = makeShader(device, wgslWorldConsts() + rowsWgsl() + glassOpenWgsl() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
     this.binding = { uniform: this.domBuf, atlasView: this.atlas.createView(), count: 0, pageView: this.page.createView(), encode: (enc, ts) => this.encode(enc, ts) };
   }
 

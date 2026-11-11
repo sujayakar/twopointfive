@@ -19,7 +19,7 @@ pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<c
     Ok(manifest)
 }
 
-/// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
+/// the define pass of the level this names; its verbs are the manifest_* and program_* below
 fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.
@@ -71,7 +71,7 @@ pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, nam
     Ok(())
 }
 
-/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
+/// arithmetic on places, at the path a script writes: `director::util`.
 pub mod util {
     pub use crate::v3::{dist_xz, yaw_to};
 }

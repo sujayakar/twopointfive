@@ -20,11 +20,11 @@ fn mains(g: &Game) -> (bool, bool) {
 }
 /// `v.join(',')`, only ever compared with another such key
 fn join_v3(p: V3) -> String { format!("{},{},{}", p[0], p[1], p[2]) }
-/// J is one object in TypeScript: what a body wrote on its copy goes to the row, if there still is one
+/// what a body wrote on its copy of the job goes to the row, if there still is one
 fn put_job(g: &mut Game, gd: GuardId, j: &Job) {
     if let Some(r) = g.sets[g.seat].work.jobs.get_mut(gd) { r.t0 = j.t0; r.last_t = j.last_t; }
 }
-/// a floor target standing on the thing; a new object each asking, so serial 0: orders.ts:937 stamps the one a menu keeps
+/// a floor target standing on the thing; a new one each asking, so serial 0: opening a menu stamps the one it keeps
 fn thing_target(th: WorkThing) -> crate::orders::OrderTargetFloor {
     crate::orders::OrderTargetFloor { at: th.stand.unwrap_or([th.face[0], 0.0, th.face[2]]), wall: None, thing: Some(th), serial: 0 }
 }
@@ -85,7 +85,7 @@ pub fn sam_panel_point(g: &crate::game::Game, from: V3) -> Option<V3> {
     Some([face[0] + n[0] * 0.05, face[1], face[2] + n[2] * 0.05])
 }
 
-/// lighting.ts's 'check the breaker' errand, read off the panel, asked again every second. None: the fixed offsets.
+/// The 'check the breaker' errand, read off the panel, asked again every second. None: the fixed offsets.
 pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::BreakerErrand> {
     let bp = g.level.breaker.pos;
     let key = join_v3(bp);

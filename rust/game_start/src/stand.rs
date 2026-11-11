@@ -1,5 +1,4 @@
-//! THE START: a level file and the character's files in, a `Game` the tick can run out. `src/host/standup.ts standGame` on a host with no picture
-//! , in its order:
+//! THE START: a level file and the character's files in, a `Game` the tick can run out, in this order:
 //!
 //!   the block of rust/sim the game stands in, zeroed under the layout's word
 //!   the character's rows
@@ -11,7 +10,7 @@
 //!   the state that still moves, at home in the block
 //!   the host's own Input and camera, the camera on the level's spawn
 //!
-//! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, later a host.
+//! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, a host.
 use crate::gltf::{self, GltfFile};
 use crate::json::Json;
 use crate::{level, passes};
@@ -70,7 +69,7 @@ pub struct Stood {
     pub refused: Option<String>,
 }
 
-/// a block for a game that had none: zeros under the layout's word (state.ts born; a slot another game stood in is that game's no more)
+/// a block for a game that had none: zeros under the layout's word (a slot another game stood in is that game's no more)
 fn born(slot: usize) {
     sim::state::put(slot, &[]);
 }
@@ -121,7 +120,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
-    // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
+    // the rows that only dress the picture, as this host has them (up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, no skin
     g.engine.world = game::scene_boxes::box_world_new(&mut g, None);

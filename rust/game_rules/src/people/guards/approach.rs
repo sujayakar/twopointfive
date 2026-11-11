@@ -409,7 +409,7 @@ pub fn chase_fix(g: &mut crate::game::Game, gd: GuardId, dt: f64, pace: f64) -> 
 mod tests {
     use super::*;
 
-    // The expected bits are the TypeScript's own: guards.ts frameOf / crossesDoor under bun with EXACT.on.
+    // The expected bits are pinned.
     #[test]
     fn frame_is_the_typescripts() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);

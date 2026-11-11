@@ -27,7 +27,7 @@ pub struct FollowCamera {
     pub pin: Option<crate::camera::FollowCameraPin>,
     pub before_pin: Option<crate::camera::FollowCameraBeforePin>,
     pub kick: Option<V3>,
-    /// INVENTED: bumped by every whole write of desired, for Seat.takeCut
+    /// bumped by every whole write of desired: the page's view reads it (`cuts`)
     pub desired_serial: u32,
 }
 

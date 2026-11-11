@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// What a new State holds: the TypeScript's own literal.
+/// What a new State holds.
 fn fresh_state() -> crate::close::State {
     crate::close::State { t: -1.0, best: None, mode: None, rmb_t: -1.0 }
 }
@@ -579,7 +579,7 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
         _ => return,
     }
     let mut at = 0;
-    // A live walk: closeUnseat deletes the row the walk stands on, as under the TypeScript's `for … of` over a Map.
+    // A live walk: `close_unseat` deletes the row the walk stands on.
     while let Some(gd) = g.m.close.seated.as_ref().and_then(|seated| seated.next_key(&mut at)) {
         let Some(st) = g.m.close.seated.as_ref().and_then(|seated| seated.get(gd).copied()) else { continue };
         if !g.guards.contains(&gd) || !calm(g, gd) {

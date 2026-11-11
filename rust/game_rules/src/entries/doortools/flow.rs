@@ -446,14 +446,14 @@ fn sent_on(g: &mut Game, op: DoorOpId, dead: &Dead, gd: GuardId, c: MoveCand, ma
     door_tools_beat(g, op, &said);
 }
 
-/// the points of domination for a door taken from `side`, with entrypoints.ts's say
+/// the points of domination for a door taken from `side`, as `entry_points_clear_of` leaves them
 pub(super) fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let w = g.dr[d].def.width;
     let were = door_tools_pods_as_were(g, d, side, n);
     crate::entrypoints::entry_points_clear_of(g, d, &were, &mut |g: &mut Game, p: V3| [along_of(g, d, p) - w / 2.0, -off_of(g, d, p, side)])
 }
 
-/// the points before entrypoints.ts looks at them
+/// the points before `entry_points_clear_of` looks at them
 pub fn door_tools_pods_as_were(g: &crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let n = n.unwrap_or(2.0);
     let mut out = door_tools_pods2(g, d, side);
@@ -671,7 +671,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
             if let Some(post) = post { if arrived && off_of(g, door, post, side) < 0.0 { taken.push(post); } }
         }
     }
-    // (by index: the TypeScript tells a point from another by the object)
+    // (by index: two points may hold the same numbers)
     let clear: Vec<usize> = (0..pods.len()).filter(|&i| !taken.iter().any(|&q| dist_xz(q, pods[i].pos) < pod_apart)).collect();
     if clear.len() as f64 >= n { return clear.iter().map(|&i| pods[i]).collect(); }
     let mut out: Vec<crate::entrypoints::Pod> = clear.iter().map(|&i| pods[i]).collect();

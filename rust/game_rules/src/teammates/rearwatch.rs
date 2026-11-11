@@ -62,7 +62,6 @@ fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
 /// This view's book, made if it is not yet.
 fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    // (the literal in the TypeScript is all empty: the same as zeroed)
     g.m.rearwatch.books.get_or_insert_with(key, Book::default)
 }
 
@@ -899,9 +898,9 @@ fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     crate::places::walk_len(a, &path) + dist_xz(path.last().copied().unwrap_or(a), b)
 }
 
-/// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book.
+/// the fall-in leg: this man's feet stay where they are, in his seat's book.
 pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    // (viewOf: his seat's book; a cast is one book, its own)
+    // (view_of: his seat's book; a cast is one book, its own)
     let key = if g.in_cast {
         crate::seats::view_key(g, seat_ref)
     } else {
@@ -957,7 +956,7 @@ pub fn rear_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, front: V3) -> 
     }
 }
 
-/// cover.ts deal(): the way this man is pinned to.
+/// the way this man is pinned to.
 pub(super) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let key = crate::seats::view_key(g, seat);
     let b = g.m.rearwatch.books.get(key)?;
@@ -967,7 +966,7 @@ pub(super) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, g
     }
 }
 
-/// doortools.ts enter(): the turn the men go in by, with the rear man put last.
+/// the turn the men go in by, with the rear man put last.
 pub fn rear_last(g: &crate::game::Game, op: DoorOpId, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 {
         return turn.to_vec();
@@ -984,7 +983,7 @@ pub fn rear_last(g: &crate::game::Game, op: DoorOpId, turn: &[GuardId], first: G
     out
 }
 
-/// doortools.ts firstIn(): the man of this order pinned on a way behind and held on it through the entry.
+/// the man of this order pinned on a way behind and held on it through the entry.
 pub fn rear_watcher(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId) -> Option<GuardId> {
     if !carries(g, op) {
         return None;
@@ -1005,7 +1004,7 @@ mod tests {
 
     #[test]
     fn a_log_line_time_prints_as_to_fixed_does_under_bun() {
-        // (each right-hand side is what (x).toFixed(1) prints under bun: the case that differs from the formatter is the exact tie at .25)
+        // (the case that differs from Rust's own formatter is the exact tie at .25)
         for (x, s) in [(0.25, "0.3"), (1.25, "1.3"), (0.75, "0.8"), (1.75, "1.8"), (0.35, "0.3"), (0.05, "0.1"), (2.5, "2.5"), (0.0, "0.0"), (12.34, "12.3")] {
             assert_eq!(js::to_fixed(x, 1), s);
         }

@@ -31,7 +31,7 @@ pub(in crate::entries) fn in_anothers_blast(g: &Game, seat: &crate::seats::SeatR
 }
 /// op.word && op.kind !== 'bangClear'
 fn on_word(g: &Game, op: DoorOpId) -> bool { let o = &g.tab.doortools_door_op[op]; o.word.is_some() && o.kind != DoorToolKind::BangClear }
-/// Write through op.kick if it is still there (a TypeScript write to a kick some call has since dropped is lost: so here).
+/// Write through op.kick if it is still there: a write to a kick some call has dropped is lost.
 fn with_kick(g: &mut Game, op: DoorOpId, f: impl FnOnce(&mut DoorToolsDoneItemKick)) { if let Some(k) = g.tab.doortools_door_op[op].kick.as_mut() { f(k); } }
 fn with_gun(g: &mut Game, op: DoorOpId, f: impl FnOnce(&mut DoorToolsDoneItemKickGun)) { with_kick(g, op, |k| if let Some(x) = k.gun.as_mut() { f(x); }); }
 
@@ -827,7 +827,7 @@ pub(super) fn door_tools_new_lead(g: &mut crate::game::Game, op: DoorOpId) {
     }
 }
 
-/// The stack for this module's entries: orders.ts's marks, each `tuck` further along the wall where the floor allows.
+/// The stack for this module's entries: the squad orders' marks, each `tuck` further along the wall where the floor allows.
 pub fn door_tools_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     crate::orders::squad_orders_own_mark_first(g, d, side, men, &mut |g: &mut Game| door_tools_stack_tucked(g, d, side, men, ignore))
@@ -840,7 +840,7 @@ fn tucked_in(g: &Game, own: &[V3], sam: V3, p: &crate::orders::StackPost, q: V3)
         || (!p.lead && crate::doorway::doorway_stand(g, q) && !crate::doorway::doorway_stand(g, p.pos))
 }
 
-/// orders.ts's marks with the tuck applied: three or more tuck as files, the far man first.
+/// The squad orders' marks with the tuck applied: three or more tuck as files, the far man first.
 fn door_tools_stack_tucked(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
     let posts = crate::orders::squad_orders_stack_posts(g, d, side, men, Some(ignore))?;
     let sam = crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g));

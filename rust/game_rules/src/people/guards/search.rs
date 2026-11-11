@@ -472,7 +472,7 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
     let dc = door_cells(g);
     let mut sx = m::floor(from[0] / cs);
     let mut sz = m::floor(from[2] / cs);
-    // (a NaN passes the bounds test in TypeScript and then reaches nothing: all Infinity, as here)
+    // (a NaN reaches nothing: all Infinity)
     if sx.is_nan() || sz.is_nan() || sx < 0.0 || sz < 0.0 || sx >= w || sz >= h {
         return FloodFrom { secs, metres };
     }
@@ -736,7 +736,7 @@ pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits under EXACT, for one beam
+    /// pinned bits, for one beam
     #[test]
     fn beam_fan_bits() {
         const WANT: [[u64; 3]; 7] = [

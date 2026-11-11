@@ -63,7 +63,7 @@ pub struct MoraleK {
     #[k(70.0)] pub hold_max: f64,
     #[k(crate::morale::Nerve::Normal)] pub nerve: crate::morale::Nerve,
     pub nerve_k: MoraleKNerveK,
-    /// how the dark is read (inTheDark): 'place' = where he STANDS; 'watch' = darkfoe.ts's reading of the floor he is WATCHING, where DARKFOE.on (held off: see inTheDark)
+    /// how the dark is read (`in_the_dark`): 'place' = where he STANDS; 'watch' = `dark_foe_blind`, the floor he is WATCHING
     #[k(MoraleKDarkRead::Place)] pub dark_read: MoraleKDarkRead,
 }
 

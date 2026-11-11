@@ -209,27 +209,27 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
     let rig0 = out.len();
     crate::combat::hand_props(g, &mut out);
     g.fog_of_war.rig_from = rig0 as f64; g.fog_of_war.rig_to = out.len() as f64;
-    // (game.ts:1816, whole and in its order: last row first, its box on the frame's list, then its time; with the DRESS row down a host that draws nothing
+    // (last row first, its box on the frame's list, then its time; with the dress row `fx` down a host that draws nothing
     //  keeps no list of them and no row's time is stepped)
     if g.m.dress.dress.fx {
         let mut i = g.fx.len();
         while i > 0 { i -= 1; out.push(g.fx[i].box_.into()); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
     } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
-    // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
+    // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX. The box is a row of the table, so as the fx row
     //  goes its box joins the frame's rows, and the next listing frees it once it is on no list: box_world_listed. Most fx rows live one frame
-    //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)
-    // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
+    //  (a charge's slab being placed, a stack's marker), so without this every such frame would leave a row for good.)
+    // (his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
     if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
     crate::tracers::tracers_update(g, dt, &mut out);
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
-    // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
+    // (spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
     crate::particle_fx::update_particle_fx(g);
     for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
-    // (game.ts:1824: the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
+    // (the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
     if g.m.dress.dress.blast_feel { for &s in seats.iter() { let cam = g.tab.cmd_seat[s].cam; in_seat(g, s, |g| crate::blast_feel::blast_feel_tick(g, cam)); } }
-    // (game.ts:1825: a fixture that broke, LAST in the list: keyed boxes of the frame's list, fixture_break's own head)
+    // (a fixture that broke, LAST in the list: keyed boxes of the frame's list, fixture_break's own head)
     if g.m.dress.dress.fixtures { crate::fixture_break::fixture_break_boxes(g, &mut out, dt); }
     g.dyn_boxes = out;
     statured
@@ -237,7 +237,7 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
 
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world
 pub(super) fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId]) {
-    game_draw_men(g, all);   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
+    game_draw_men(g, all);
     let mut list = core::mem::take(&mut g.dyn_boxes);
     crate::fogofwar::picture::keep_raw(g, &list);
     let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);

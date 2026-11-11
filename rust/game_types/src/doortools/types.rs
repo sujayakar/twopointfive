@@ -417,7 +417,7 @@ pub struct DoorOp {
     pub last_tossed: Option<f64>,
     pub other: Option<JsMap<DoorId, crate::doortools::DoorToolsDoneItemOtherValue>>,
     pub threat: Option<crate::doortools::DoorToolsDoneItemThreat>,
-    /// INVENTED by a review: see the proposals
+    /// why it ended (`door_tools_end`); None while it runs
     pub ended: Option<crate::doortools::Ended>,
 }
 

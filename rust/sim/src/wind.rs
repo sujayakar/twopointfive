@@ -1,9 +1,12 @@
-//! THE AIR AS ONE FIELD — src/game/wind.ts's arithmetic: a diffuser's jet, the storm outdoors between the roofs, and the noise off the clock that gusts them. Pure
-//! functions of a point, statement for statement, and the numbers of the field's shape: one home for them, here (`WIND_FIELD` in wind.ts reads them through
-//! `wind_shape`, and render/shaders/wind_field.wgsl carries the same ones: tools/qa/wind-probes.ts compares). Who blows when (the sources, the master, the machine's
-//! own settings) is the frame's dressing step and stays TypeScript; only `Wind.stormDrift`'s share reaches a rule, through the smoke grid.
+//! THE AIR AS ONE FIELD: a diffuser's jet, the storm outdoors between the roofs, and the noise off the clock that gusts them. Pure functions of a point, and nothing is kept.
 //!
-//! exp and the lengths are the game's own, so these are the game's answers wherever EXACT.on, as every sense's are.
+//! THE NUMBERS OF THE FIELD'S SHAPE HAVE ONE HOME, here (`SHAPE`: game_rules air/wind.rs and game_draw winds.rs read them by place), but for the shader, whose copy has to be
+//! kept the same by hand (src/render/shaders/wind_field.wgsl).
+//!
+//! Who blows when (the sources, the master, the machine's own settings) is the frame's dressing step (game_rules air/wind.rs). Only the storm's drift reaches a rule, through
+//! the smoke grid.
+//!
+//! exp and the lengths are the game's own (rust/maths).
 use crate::maths::{exp, hypot2, hypot3};
 use crate::world::{js_max, js_min, or_one, smoothstep};
 
@@ -19,7 +22,7 @@ pub const STORM_GAIN: f64 = 0.45;
 pub const STORM_FULL_AT: f64 = 2.5;
 pub const CUT_K: f64 = 2.5;
 pub const CORE_K: f64 = 0.4;
-/// `WIND_FIELD` by place: the order wind.ts names them in
+/// the numbers by place, as `WIND_FIELD` in game_rules air/wind.rs reads them
 pub const SHAPE: [f64; 10] = [DEFLECT_H, DEFLECT_LOSS, SUPPORT_SIGMA, STORM_TOP, STORM_LEE, STORM_LOW, STORM_GAIN, STORM_FULL_AT, CUT_K, CORE_K];
 
 /// The jet's air at `p`
@@ -138,7 +141,7 @@ fn hash01(x: u32) -> f64 {
 pub fn vnoise(seed: u32, x: f64) -> f64 {
     let i = prim::floor(x);
     let f = x - i;
-    let lat = i as i64 as u32;   // (Math.imul takes its arguments modulo 2³²)
+    let lat = i as i64 as u32;   // (the multiply takes its arguments modulo 2³²)
     let a = hash01(seed ^ lat.wrapping_mul(2654435761)) * 2.0 - 1.0;
     let b = hash01(seed ^ lat.wrapping_add(1).wrapping_mul(2654435761)) * 2.0 - 1.0;
     let t = f * f * (3.0 - 2.0 * f);

@@ -21,7 +21,7 @@ pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     }
 }
 
-/// This visit's own word against one part: the address and the environment are the host's, so here it is what the TypeScript answers with neither a page nor a process.
+/// This visit's own word against one part: the address and the environment are the host's, so here there is none.
 fn put_back() -> bool {
     false
 }

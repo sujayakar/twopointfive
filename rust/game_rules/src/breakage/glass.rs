@@ -12,12 +12,12 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 // ---- private helpers ----
 
-/// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
+/// the seed's word of a box's centre and half sizes
 fn box_word(c: V3, hs: V3) -> f64 {
     ::sim::panes_box_seed(c[0], c[1], c[2], hs[0], hs[1], hs[2]) as f64
 }
 
-/// the thin axis's world direction of a box of this turn and these half sizes (glass.ts:79 paneNormal, with the box read)
+/// the thin axis's world direction of a box of this turn and these half sizes
 fn normal_of(yaw: f64, h: V3) -> V3 {
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     if h[0] < h[2] { [cs, 0.0, -sn] } else { [sn, 0.0, cs] }
@@ -267,8 +267,6 @@ pub fn update_glass(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    // Every expected value below is the TypeScript's own, under bun with EXACT.on.
-
     #[test]
     fn point_and_blast_seeds_are_the_typescript_s() {
         let cases: [(f64, V3, f64, f64); 6] = [
@@ -298,7 +296,7 @@ mod tests {
         for (s, next) in cases { assert_eq!(blast_step(s), next, "{}", s); }
     }
 
-    // bun's own values for four boxes: two sheets, a solid pane, a box that is no glass.
+    // pinned values for four boxes: two sheets, a solid pane, a box that is no glass.
     const FOUR: [(V3, V3, f64, f64); 4] = [
         ([1.2345, 1.5, -3.25], [0.02, 1.5, 2.0], 0.0, 131072.0),
         ([10.0, 0.4, 7.777], [1.1, 0.4, 0.05], 0.7, 131074.0),

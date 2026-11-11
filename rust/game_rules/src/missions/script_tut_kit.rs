@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-kit.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-kit: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_kit::types;
 pub use types::*;
@@ -138,7 +138,7 @@ fn release_if_alive(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &c
     Ok(())
 }
 
-/// a beat that only waits and says a line: tut-kit.script.ts:153-158
+/// a beat that only waits and says a line
 fn wait_then_radio(g: &mut Game, r: DirectorRunId, at: &mut u16, secs: f64, names: &[&str], line: &str) -> Result<Option<crate::director::Cond>, String> {
     if *at == 0 {
         *at = 1;
@@ -148,7 +148,7 @@ fn wait_then_radio(g: &mut Game, r: DirectorRunId, at: &mut u16, secs: f64, name
     Ok(None)
 }
 
-/// a beat that sets a flag and gives a frame: tut-kit.script.ts:102-104
+/// a beat that sets a flag and gives a frame
 fn flag_then_frame(g: &mut Game, r: DirectorRunId, at: &mut u16, set: &mut dyn FnMut(&mut Game)) -> Result<Option<crate::director::Cond>, String> {
     if *at == 0 {
         set(g);

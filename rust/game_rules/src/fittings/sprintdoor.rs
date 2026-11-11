@@ -127,7 +127,6 @@ mod tests {
         std::thread::Builder::new().stack_size(1 << 30).spawn(f).unwrap().join().unwrap();
     }
 
-    // Bits from the TypeScript's own functions under bun with EXACT.on.
     #[test]
     fn head_matches_the_typescript() {
         let rows: [(f64, u64); 9] = [

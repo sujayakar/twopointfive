@@ -14,11 +14,11 @@
 //! (`end`), and a full table still knows every clip it holds.
 //!
 //! A TRACK is one node's translation, rotation or scale over time: `keys` times, then `keys × comps` values (3, or 4 for a rotation), singles as the
-//! file's Float32Arrays hold them (single.rs), one after another in `pool`.
+//! file holds them (single.rs), one after another in `pool`.
 //!
 //! WHERE A SAMPLE'S TIME FALLS AMONG A TRACK'S KEYS depends on the track's times alone, and a clip's tracks share theirs (the game's rig: 159 tracks a clip
 //! on two sets of times). So `end` gives every track the number of its LINE — the first track of the clip with the same times, single for single — and a
-//! sample finds its place on a line once (`Place`), where the TypeScript searches each track: the same place, so the same numbers.
+//! sample finds its place on a line once (`Place`), not on each track.
 use crate::single::{get, S};
 use crate::skeleton::{MAX_NODES, NODE};
 use crate::world::{js_max, js_min};
@@ -72,7 +72,7 @@ const UNSET: u32 = 0;
 const FIRST: u32 = 1;
 const LAST: u32 = 2;
 const BETWEEN: u32 = 3;
-/// skeleton.ts sampleClip's own steps for one track's times: the ends, the search, the fraction
+/// a sample's steps for one track's times: the ends, the search, the fraction
 #[inline(always)]
 fn place(pool: &[S], times: usize, n: usize, t: f64) -> Place {
     if n == 1 || t <= get(pool, times) {

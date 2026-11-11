@@ -1,12 +1,10 @@
-//! THE FOG OF WAR'S SIGHT PASS — src/game/fogofwar.ts: which of the team's eyes has a line to a man (his chest, and his head behind a blocked chest) or to a
-//! point (a body where it lies). The rule is the TypeScript's, statement for statement (inField, lineToMan, eyeOnBody, sightBlocked); what moves here is the
-//! loop over the eyes and the lines it asks, so a man is one question to the module where he was two lines an eye.
+//! THE FOG OF WAR'S SIGHT PASS: which of the team's eyes has a line to a man (his chest, and his head behind a blocked chest) or to a
+//! point (a body where it lies). A man is one question here, whatever lines it takes.
 //!
-//! The eyes are written by the host as the pass opens (a row an eye: where it is, where it looks, and its field as the host worked it out) and are scratch
-//! of that pass: nothing here is kept from one update to the next.
+//! THE ORDER. The host writes the eyes as the pass opens (game_rules scene_collision `sight_eye`: a row an eye: where it is, where it looks, and its field as the host worked
+//! it out), then asks `see` as often as it likes. The eyes are scratch of that pass: nothing here is kept from one update to the next.
 //!
-//! The lengths are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math`; under an
-//! engine's maths the host asks the TypeScript, whose lengths are that engine's.
+//! The lengths are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
 use crate::lines;
@@ -26,7 +24,7 @@ const E_FULL: usize = 8;
 
 static mut EYES: [f64; MAX_EYES * EYE] = [0.0; MAX_EYES * EYE];
 
-/// where world `w`'s eyes are written (a byte address)
+/// where the eyes are written (a byte address)
 pub fn eyes_addr() -> usize {
     core::ptr::addr_of!(EYES) as usize
 }
@@ -52,7 +50,7 @@ pub const KIND_MAN: u32 = 1;
 pub const KIND_ALIVE: u32 = 2;
 
 /// THE EYES WITH A LINE. `order` names `n` eyes four bits each, in the order to try them; the trying stops at the `want`-th eye with a line. A LIVING MAN
-/// (KIND_MAN; KIND_ALIVE if he is alive): `a` his chest, `b` his head (lineToMan). Otherwise `a` is a point and `b` is not read (eyeOnBody). `through` must
+/// (KIND_MAN; KIND_ALIVE if he is alive): `a` his chest, `b` his head. Otherwise `a` is a point and `b` is not read. `through` must
 /// carry the glass flag (the fog's own lines pass glass: nothing is listed). The answer: how many have a line in the top four bits, and those eyes four bits
 /// each in the order found; or ASK_HOST.
 #[allow(clippy::too_many_arguments)]

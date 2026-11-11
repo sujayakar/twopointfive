@@ -42,7 +42,7 @@ pub struct Rescue {
     pub server_out: Option<V3>,
     pub ending: crate::rescueend::RescueEnd,
     pub flush: crate::rescueflush::RescueFlush,
-    /// INVENTED by a review: see the proposals
+    /// dealt with each new `noise`: a defender holds the one he last answered (`noise0`)
     pub noise_serial: Option<u32>,
 }
 

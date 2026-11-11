@@ -128,7 +128,7 @@ pub(super) fn kit_default(g: &crate::game::Game, i: f64) -> crate::kit::MemberKi
     issued_card(g, i)
 }
 
-/// The weapons.ts row a card names.
+/// The weapon row a card names.
 pub(in crate::outfit) fn kit_gun(g: &crate::game::Game, m: &crate::kit::MemberKit) -> crate::weapons::WeaponId {
     if m.weapon == KitWeapon::Pistol {
         return crate::gunslots::pick_row(g, &m.secondary, m.side_can).unwrap_or(crate::weapons::WeaponId::Fiveseven);

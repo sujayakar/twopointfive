@@ -1,6 +1,8 @@
 //! WHAT FALLS, AND WHAT IT LEAVES: the landings scheduled for things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves there), and the
 //! litter: square metres of broken glass in each half-metre cell of the floor, which makes a footfall louder and is ground down by it. This is the gameplay half of what breaks: the plates,
 //! the chunks and the spray a player sees read none of it.
+//!
+//! IT KEEPS NOTHING HERE. The state is `Falls`, on the game, and every call is handed it. A landing goes in by `schedule` and comes out by `due`, in the order of its list, which is play.
 pub use game_types::falls::types::*;
 use crate::world::js_min;
 use alloc::{vec, vec::Vec};

@@ -1,12 +1,12 @@
-// ---- GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs + rust/game_rules/src/breakage/glass_pattern.rs; the scene's shaders call it inside `if (GLASS_BREAK)`, the prelude const; the smoke's solver (smoke/smoke.wgsl solidAt) where it bakes a pane): per
+// ---- GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs + rust/sim/src/glass.rs; the scene's shaders call it inside `if (GLASS_BREAK)`, the prelude const; the smoke's solver (smoke/smoke.wgsl solidAt) where it bakes a pane): per
 // SceneInfo.glass slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
 // rust/game_rules/src/breakage/glassbreak.rs fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
 // pane's local x spans it / 1 = local z, damage 0‥1), row 1 = (hu, hv, type, 0), row 2 = the dice wave (the blow's u, v, the open threshold on a clump's key, grain), row 3 = (dice cols, rows, seed, 0),
 // then 4 rows per site: (u, v, rot, ring-zone radius) · (radials, 24-bit seed, energy, merge share) · the four rho · the open-piece masks (bands 0 | 1 << 12, 2 | 3 << 12,
-// 4 | 5 << 12, 6). The functions below are rust/game_rules/src/breakage/glass_pattern.rs's statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
+// 4 | 5 << 12, 6). The functions below are the rules' own (rust/sim/src/glass.rs, pattern.rs) statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
 // s+1; band 0 the crater, 1‥2 the ring pieces between the chords, 3‥6 the daggers: near / far of the sector's left and right half), territories are the power diagram of the
 // sites — and a piece whose bit is set has fallen out: every ray then passes that part of the pane as if no glass were there (view, mirror, light), which is the hole; the CPU's
-// raycast / segment tests ask rust/game_rules/src/breakage/glassbreak.rs open_at, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
+// raycast / segment tests ask rust/sim/src/glass.rs open, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
 const GB_STRIDE: u32 = 36u;
 const GB_HDR: u32 = 4u;
 const GP_ANG_JIT: f32 = 0.6;
@@ -24,14 +24,14 @@ const GP_DICE_JIT: f32 = 0.6;
 const GP_DICE_DELAY: f32 = 1.4;
 const GP_TAU: f32 = 6.283185307179586;
 struct GbSite { c: vec2f, rot: f32, rz: f32, n: u32, seed: u32, e: f32, merge: f32, rho: vec4f, m: vec4f };
-fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[GB_BASE + k * GB_STRIDE + r]; }
+fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[PANE_BASE + k * GB_STRIDE + r]; }
 fn gbHeader(k: u32) -> vec4f { return gbRow(k, 0u); }
 fn gbSiteLoad(k: u32, i: u32) -> GbSite {
   let o = GB_HDR + i * 4u; let a = gbRow(k, o); let b = gbRow(k, o + 1u);
   var S: GbSite; S.c = a.xy; S.rot = a.z; S.rz = a.w; S.n = clamp(u32(b.x + 0.5), 3u, 12u); S.seed = u32(b.y); S.e = b.z; S.merge = b.w; S.rho = gbRow(k, o + 2u); S.m = gbRow(k, o + 3u);
   return S;
 }
-/** rust/game_rules/src/breakage/glass_pattern.rs gp_hash: (seed, a, b) → 24 bits */
+/** rust/sim/src/glass.rs hash: (seed, a, b) → 24 bits */
 fn gpHash(seed: u32, a: u32, b: u32) -> u32 {
   var h = seed ^ ((a + 1u) * 0x9E3779B1u) ^ ((b + 1u) * 0x85EBCA77u);
   h = (h ^ (h >> 15u)) * 0x2C1B3C6Du;
@@ -94,7 +94,7 @@ fn gbPieceOpen(S: GbSite, s: u32, b: u32) -> bool {
 }
 /** pane-local point (glassTrace's frame: Rᵀ·(X − c)) → the record's (u, v) */
 fn gbUV(k: u32, lp: vec3f) -> vec2f { return select(vec2f(lp.x, lp.y), vec2f(lp.z, lp.y), gbHeader(k).z > 0.5); }
-/** the centre of dice clump (c, r) of pane k (rust/game_rules/src/breakage/glass_pattern.rs gp_dice_centre): its lattice cell's centre, jittered */
+/** the centre of dice clump (c, r) of pane k (rust/sim/src/pattern.rs Dice::centre): its lattice cell's centre, jittered */
 fn gbClumpCentre(hh: vec2f, g: vec2f, seed: u32, c: u32, r: u32) -> vec2f {
   return -hh + (vec2f(f32(c), f32(r)) + 0.5 + GP_DICE_JIT * (vec2f(gpJit(seed, c, r), gpJit(seed ^ 0x5bd1e9u, c, r)) - 0.5)) * 2.0 * hh / g;
 }

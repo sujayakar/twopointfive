@@ -51,7 +51,7 @@ fn end_dist(g: &crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f
     if crate::scene_collision::solid_blocked(g, [p[0], 0.5, p[2]], [mp[0], 0.5, mp[2]], None) { m::INF } else { v3::dist_xz(mp, p) }
 }
 
-/// player.ts bodyDist's extra term: the reach to a body's HEAD end.
+/// The reach to a body's HEAD end.
 pub(super) fn body_grip_dist(g: &crate::game::Game, gd: GuardId, within: f64) -> f64 {
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
@@ -61,7 +61,7 @@ pub(super) fn body_grip_dist(g: &crate::game::Game, gd: GuardId, within: f64) ->
     end_dist(g, gd, crate::hands::HaulEnd::Head)
 }
 
-/// player.ts toggleDrag, the body just taken: which end, which hand has which limb, the move's first beat.
+/// the body just taken: which end, which hand has which limb, the move's first beat.
 pub(super) fn haul_begin(g: &mut crate::game::Game, gd: GuardId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -305,7 +305,7 @@ pub(super) fn haul_pins(g: &mut crate::game::Game, dt: f64) -> bool {
         },
         _ => { g.ch[c].anim.haul = None; return false; }
     };
-    // `h` is the player's own in the TypeScript: this copy goes back to g.pl[pl].haul before anything reads it
+    // this copy of `h` goes back to the player's row before anything reads it
     h.t += dt;
     let (p_l, p_r) = (pt(g, rc, h.i_l), pt(g, rc, h.i_r));
     if h.carry.is_some() && h.phase == P::Reach {

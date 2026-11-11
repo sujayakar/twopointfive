@@ -9,8 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
-// ---------------------------------------------------------------- what the TypeScript's language and closures gave
-/// `g.col.nav.findPath(a, b, maxIter, pen)` at a price this file holds as a value
+// ---------------------------------------------------------------- small helpers
+/// a nav path at a price this file holds as a value
 fn find_path(g: &Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::LanePenalty>) -> Option<Vec<V3>> {
     match pen {
         Some(p) => { let mut price = |_: &Game, ix: f64, iz: f64| lane_penalty_at(p, ix, iz); crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), Some(&mut price)) }
@@ -23,7 +23,7 @@ fn cell_mid(cell: f64, w: f64, i: f64) -> V3 { [(js::rem(i, w) + 0.5) * cell, 0.
 fn goal_of(g: &Game, gd: GuardId) -> Option<V3> { g.gd[gd].script.as_ref().and_then(|s| s.goal) }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
 fn aim_at(g: &mut Game, gd: GuardId, at: V3) { crate::squad::order(g, gd, crate::squad::OrderPatch { aim_at: Some(Some(at)), ..Default::default() }); }
-/// `st.lanes.find(x => x.id === id)`
+/// the lane with this id
 fn lane_by_id(g: &mut Game, id: f64) -> Option<LanesLaneId> {
     let mut i = 0;
     while i < s(g).lanes.len() {
@@ -942,7 +942,7 @@ fn put_fire(g: &mut Game, gd: GuardId, fr: crate::lanes::PeekFire) {
     if let Some(r) = s(g).peek.get_mut(gd) { r.fire = Some(fr); }
 }
 
-/// he has shouted and frag.ts's wind-up has his arm (half a second past its time at the most)
+/// he has shouted and the grenade's wind-up has his arm (half a second past its time at the most)
 pub(super) fn winding(g: &crate::game::Game, gd: GuardId, f: crate::lanes::PeekFrag) -> bool {
     f.at.is_some() && crate::frag::frag_winding(g, gd) && g.time < f.until + 0.5
 }

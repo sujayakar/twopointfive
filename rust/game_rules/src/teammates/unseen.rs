@@ -137,7 +137,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
         }
     }
     let Some(gd) = who else { return };
-    g.m.unseen.states.get_mut(pl).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it, as the TypeScript's would
+    g.m.unseen.states.get_mut(pl).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it
     g.stats.unseen.cues += 1;
     let sam = g.player;
     let low = sam_low(g, sam) || on_wall(g, sam);
@@ -279,7 +279,7 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
     None
 }
 
-// ------------------------------------------------------------ the posture's seams (silent.ts asks each beside its own rule)
+// ------------------------------------------------------------ the posture's questions (the silent rule asks each beside its own)
 
 /// the most his legs may be asked for; None: no cap of this file's
 pub(super) fn unseen_pace(g: &mut Game, gd: GuardId) -> Option<f64> {

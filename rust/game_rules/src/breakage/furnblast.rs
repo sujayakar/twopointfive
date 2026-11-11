@@ -8,14 +8,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// INVENTED, for FURN_BREAK[cls]: the row of a class, owned, so a caller can hold it across a call that takes g. Nothing writes the table.
+/// The row of a class, owned, so a caller can hold it across a call that takes g. Nothing writes the table.
 pub fn furn_break_row(cls: crate::scene_materials::BreakClass) -> crate::furnblast::BreakRow { crate::furnblast::furn_break().into_iter().find(|e| e.0 == cls).unwrap().1 }
 
 use crate::Num;
 use crate::scene_materials::{BreakClass, Does, Surf};
 use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, WallBreakNoteC};
-
-// ---------------------------------------------------------------- the one seam left (notes.md, ## Skeleton)
 
 // ---------------------------------------------------------------- small readers
 /// the box at index `i` of the level's list, if there is one
@@ -311,7 +309,6 @@ pub(super) fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::fur
     pushable_in(g, at, k, who, &origins, &mut budget);
     let mut mb = g.k.furn.mouth.chunks;
     for r in mouths { mouth_in(g, at, who, r, &mut mb); }
-    // (toFixed rounds a half up, where `{:.1}` rounds it to even: 14.25 reads "14.3" in the TypeScript's line)
 }
 /// the level's fixed furniture: judged whole against the level as it stands, then broken nearest first
 fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut f64) {
@@ -538,7 +535,7 @@ fn furniture_fragments(g: &mut crate::game::Game, b: BoxId, row: &crate::furnbla
 /// the props: thrown and spun through their own solver; one beside the charge comes apart
 fn pushable_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut f64) {
     let throw_m = g.k.furn.throw_m * k; let break_m = g.k.furn.prop_break_m * k;
-    let list = g.props.props.clone();   // (the TypeScript walks a copy too: breakProp takes one off the list)
+    let list = g.props.props.clone();   // (a copy: break_prop takes one off the list)
     for p in list {
         let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let (radius, height, mass) = { let r = &g.tab.props_prop[p]; (r.radius, r.height, r.mass) };
@@ -572,7 +569,7 @@ fn break_prop_in(g: &mut Game, p: PropId, at: V3, fall: f64, who: f64, budget: &
     crate::props::prop_system_remove(g, p);  
     crate::scene_collision::sound_paths_invalidate(g);
 }
-/// under a roof? (furnblast.ts Furniture.roofed; index()'s own closure is the same test)
+/// under a roof?
 fn furniture_roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let i = match &g.reach_interior { Some(i) => i, None => return true };
     let w = crate::scene_world::world();

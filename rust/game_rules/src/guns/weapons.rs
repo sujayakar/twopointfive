@@ -381,7 +381,7 @@ pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
                     crate::gunreload::feed_play(g, at, &cue, None);
                 }
             }
-            // (the TypeScript's `cue?.(cueI++)` moves nothing with no `cue` and would spin for ever: no caller gives cues without one)
+            // (a cue with nothing to play it would never move on: no caller gives cues without these events)
             _ => break,
         }
     }

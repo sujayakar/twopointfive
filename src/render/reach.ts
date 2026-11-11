@@ -28,7 +28,7 @@
 // one-cell dilation ring (REACH_OPTS.ring) keeps every one of them at level 1 — but on this level 47 % of each mask's footprint was then
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
-// arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
+// arcs. Turning it back on wants restir.wgsl to tell level 1 from the levels over it: there every level over 0 is a full candidate.
 import { whole } from './steps';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box, type PlanBox } from '../scene/boxes';

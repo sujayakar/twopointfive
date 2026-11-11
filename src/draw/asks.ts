@@ -1,4 +1,4 @@
-// Written by tools/draw/gen.ts from rust/game_start/src/host/desk.rs. To change an ask, change it there.
+// Written by the program `half` (rust/game_start/src/bin/half) from rust/game_start/src/host/desk.rs. To change an ask, change it there.
 import { Writer } from './writer';
 import { readBriefView, readCardView, readMissionsView, readPressed, readSheetView, readShortView, readStartView, readTeamView, type BriefView, type CardView, type MissionsView, type Pressed, type SheetView, type ShortView, type StartView, type TeamView } from '../view/read';
 

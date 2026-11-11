@@ -39,7 +39,7 @@ pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::D
             let recent = ctx.recent.as_mut().unwrap();
             recent.set(script_key.clone(), time);
             recent.set(shape_key.clone(), time);
-            // ctx.recent IS recentByGame in the TypeScript (gather, :633); here it is a copy, so the game's own table is written too.
+            // ctx.recent is a copy of the game's table, so the game's own table is written too.
             if let Some(table) = g.m.dialogue.recent_by_game.as_mut() {
                 table.set(script_key, time);
                 table.set(shape_key, time);
@@ -156,7 +156,7 @@ fn fact(ctx: &DialogueCtx, n: Need) -> bool {
     row == Some(true)
 }
 
-/// `sc.beats[s]`. A stage past the table throws in the TypeScript (`b.room` of undefined), and panics here.
+/// `sc.beats[s]`. A stage past the table panics.
 fn script_beat(sc: &Script, s: StageKey) -> &Beat {
     match s {
         StageKey::X => &sc.beats.x,

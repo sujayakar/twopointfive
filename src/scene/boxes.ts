@@ -1,12 +1,12 @@
 // Box scene representation, GPU packing and the 2D (XZ) uniform grid used by all ray queries.
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
-import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
-import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT } from './cut';
+import { makeBuffer } from '../gpu/device';
+import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP } from './cut';
 import type { BoxShape } from './shapes';
-import { AIR_ROWS } from './airGrid';
-import { packRoundRows, ROUND_CORE_W } from './round';
-import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
+import { BoxMat, Capsule } from '../draw/gpu';
+import { Cap, Geo, Info } from '../draw/sections';
+import type { MarkingDef } from './markings';
 
 /** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
 export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
@@ -36,18 +36,10 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
-/** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
-export const MAX_GLASS = 32;
-/** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
- *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
-export const BOX_ROUND_BIT = 8;
 
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
-/** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
- *  them, kept by the engine: how many frames have been drawn is the picture's business and no part of the world's state */
-export interface DrawWait { calm: number; still: number }
 /** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
  *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
  *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
@@ -161,13 +153,6 @@ export interface Box {
    *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (rust/game_rules/src/breakage/debris, DEBRIS.dress). */
   dress?: boolean;
 }
-/** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
- *  rig props on a character (owner << 8 | ordinal this frame; the owner-0 lasers stay unkeyed), devices (ordinal over the frame's device boxes), staging / QA boxes
- *  (`test`; `ring` reserved — the launcher's rings stay on the index rule). Two boxes with one key in a frame = the last registered wins; the index space needs
- *  maxBoxes ≤ 65534 (the visible word keeps 1 + index in 16 bits, 0xFFFF = new).
- *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
- *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
-export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (rust/game_rules/src/breakage/debris), keyed off their serial · look: what a broken wall looks like where it broke (rust/game_rules/src/breakage/edge_look.rs: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (rust/game_rules/src/breakage/wallskin.rs: the authored static × 16 + piece)
 
 /** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
  *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
@@ -177,22 +162,10 @@ export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec
     marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
-/** IS THIS PIECE OF TRIM DRAWN (scene/shapes.ts: `piece`, said by the static `of`)? While the box that says it is: trim has no life of its own, so nothing
- *  that hides a box (a round, a blast, a wall coming down, a checkpoint putting any of them back) hides, files or restores its trim — the picture asks the
- *  box, here, where the world lists what it draws. A piece's own flags never change. */
-export const trimDrawn = (all: readonly Box[], t: Box): boolean => t.of === undefined || !(all[t.of].flags & BoxFlag.NoPrimary);
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
   const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
   for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
   return b;
-}
-/** a COPY of a box to change (a drawn twin, a ghost, a grown hull): every field of the original in boxOf's order, so the one layout — a spread (`{ ...b, h }`) is a
- *  layout of its own on the engines */
-export function copyBox(b: Box): Box {
-  return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
-    rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, does: b.does, cutCoreStuff: b.cutCoreStuff,
-  } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
 /** WHOEVER COPIES A BOX'S PAINT COPIES ITS WORDS (Box.stuff and Box.does: a piece broken off a thing is made of what the thing is, to the eye and to the
@@ -211,9 +184,6 @@ export function glassDark(b: Box): number {
   if (!SOLIDGLASS.on || b.marks !== undefined || !solidGlassBox(b)) return -1;
   const a = b.albedo; return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] > SOLIDGLASS.lum ? SOLIDGLASS.lum : -1;
 }
-/** THE COLOUR A BOX IS SENT IN, channel c (render-only, the one place: the packed albedo, the folded secondary albedo's base and the static slice's
- *  compare): its own × its wetness (Box.wetK), and for a thing of solid glass the neutral dark × its wetness. `albedo` itself is never touched. */
-export const sentAlbedo = (b: Box, c: 0 | 1 | 2, dark = glassDark(b)): number => (dark >= 0 ? dark : b.albedo[c]) * (b.wetK ?? 1);
 /** The finish as the one f32 the GPU gets (boxMat[3i+1].w): roughness clamped to 0‥1, + 2 if metal, + 4 if anisotropic — three plain floats' worth in
  *  disjoint ranges, so common.wgsl boxFinish() peels them off with two compares (no bit tricks on a float the driver may renormalise). */
 export function matWord(b: Box): number {
@@ -221,292 +191,85 @@ export function matWord(b: Box): number {
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 
-export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
-/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
- *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by glass_open.wgsl glassCellOpen and composite's crack drawing only under the prelude
- *  const GLASS_BREAK (render/frame.ts glassBreakConfig; glassOpenWgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
- *  is not a different frame. */
-export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
-export const MAT_STRIDE = 16; // words (64 B): albedo.rgb cutHeight | emissive.rgb finish (matWord: roughness + metal + aniso — was the owner, which no shader read from here: boxOwner() takes it from the geo flags) | rotation quaternion xyzw (= yaw for ordinary boxes, the full 3D rotation for boxes with Box.rot; raster and rays both use it) | SECONDARY albedo.rgb (= albedo unless markings are folded in — common.wgsl boxAlbedoSec: what gather / cascade / probe hits read) + markGain (× the emission of the box's emissive markings)
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): rows of four floats a listed pane has in boxMat (boxmat.wgsl PANE_BASE; rust/game_draw boxes/glass.rs is their one
+ *  writer, glass_open.wgsl their reader): zero = whole */
+export const GB_STRIDE = 36;
 
-// f32 -> f16 bits (round-to-nearest), for pack2x16float on the CPU.
-const f16Scratch = new Float32Array(1); const u32Scratch = new Uint32Array(f16Scratch.buffer);
-function f16bits(v: number): number {
-  f16Scratch[0] = v; const x = u32Scratch[0];
-  const sign = (x >>> 16) & 0x8000; let exp = ((x >>> 23) & 0xff) - 127 + 15; let mant = x & 0x7fffff;
-  if (exp <= 0) { if (exp < -10) return sign; mant |= 0x800000; const shift = 14 - exp; let r = mant >>> shift; if ((mant >>> (shift - 1)) & 1) r++; return sign | r; }
-  if (exp >= 31) return sign | 0x7c00;
-  let r = sign | (exp << 10) | (mant >>> 13); if (mant & 0x1000) r++; return r;
-}
-export const pack2x16f = (a: number, b: number) => (f16bits(a) | (f16bits(b) << 16)) >>> 0;
-/** the value an f16 bit pattern denotes (what unpack2x16float hands the shader) */
-function f16value(bits: number): number {
-  const s = bits & 0x8000 ? -1 : 1, e = (bits >> 10) & 31, m = bits & 1023;
-  return e === 0 ? s * m * 5.9604644775390625e-8 : e === 31 ? (m ? NaN : s * Infinity) : s * (1 + m / 1024) * Math.pow(2, e - 15);
-}
-
+/** THE BOX WORLD'S TABLES ON THE DEVICE, and what the picture's own plans ask of a static. The rows are the module's (rust/game_draw boxes): draw/world.ts hands them
+ *  over as they lie and packs nothing. What is the page's own here is the men's proxies, which are fitted to the rig. */
 export class BoxWorld {
+  /** the statics and the doors' leaves, as a plan reads them (PlanBox) */
   statics: Box[] = [];
   dynamics: Box[] = [];
-  /** PICTURE ONLY, the renderer's own: dynamic boxes left out of the RASTER this frame (still packed, still what every reader of the list sees, never written) — the squad's
-   *  weapon lasers while composite draws them as light in the air (engine.ts ← passes.setBeams, settings.beamAir). null = none, the list drawn as ever. */
-  hidePrimary: Set<Box> | null = null;
-  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (rust/game_rules/src/breakage/wallskin.rs: the paint on a holed wall, drawn as its standing pieces instead): a static
-   *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
-   *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
-  undrawn: { has(i: number): boolean } | null = null;
-  /** MOTION IDENTITY (Box.mkey): on = a keyed dynamic box hands the g-buffer the index its key had LAST frame in the top 16 bits of its `visible` word (upload();
-   *  gbuffer.wgsl vsBox reads its previous transform there); off = every word is the bare index and the vertex stage index-matches as it always did — mirrored from
-   *  engine.settings.motionIds each frame. `mkeyPrev` = key → index in last frame's combined list. */
-  motionIds = true;
-  private mkeyPrev = new Map<number, number>(); private mkeyCur = new Map<number, number>();
-  /** how the last upload's dynamics were matched: keyed and found / keyed but new / unkeyed (index rule) */
-  mkeyStats = { matched: 0, fresh: 0, unkeyed: 0 };
-  /** Combined list uploaded this frame (statics first, then dynamics). */
-  all: Box[] = [];
-  /** how many boxes were uploaded this frame */
-  get count(): number { return this.all.length; }
-  maxBoxes: number;
-  geoData: ArrayBuffer; geoF32: Float32Array; geoU32: Uint32Array;
-  matData: Float32Array;
+  /** how many boxes were uploaded this frame (none here: a tool's world is empty, the page's is draw/world.ts) */
+  get count(): number { return 0; }
+  readonly maxBoxes = WORLD.maxBoxes;
   geoBuf: GPUBuffer; matBuf: GPUBuffer;
-  // grid — cellStart holds two regions in ONE buffer: [0, W*H] the plain per-cell start offsets into `items` (what the flag-off tracer and the
-  // smoke obstacle bake read, unchanged), then from GRID_CB = W*H+1 two words per cell for the fast traversal (common.wgsl): heightMask24 | cheby<<24
-  // and start24 | min(count,255)<<24. `items` likewise: [0, itemCount) plain box indices, [itemCount, 2*itemCount) index | qmin<<16 | qmax<<24.
-  cellStart: Uint32Array; // (gridW*gridH + 1) + 2*gridW*gridH
-  items: Uint32Array; itemCount = 0;
+  // grid: cells hold two regions in ONE buffer: [0, W*H] the plain per-cell start offsets into `items` (what the flag-off tracer and the smoke obstacle bake read), then from
+  // GRID_CB = W*H+1 two words per cell for the fast traversal (common.wgsl): heightMask24 | cheby<<24 and start24 | min(count,255)<<24. `items` likewise: [0, itemCount) plain
+  // box indices, [itemCount, 2*itemCount) index | qmin<<16 | qmax<<24.
   cellBuf: GPUBuffer; itemBuf: GPUBuffer;
-  globals: number[] = []; // indices of huge boxes tested once per ray
-  /** occupancy of the last grid build: empty cells, mean look-ahead (Chebyshev distance to the nearest occupied cell) over the empty ones, busiest cell,
-   *  and the registration slack handed to the tracer (metres a traced box may reach past the cells it is registered in; see buildGrid) */
-  gridStats = { cells: WORLD.gridW * WORLD.gridH, empty: 0, meanSkip: 0, maxPerCell: 0, slack: 0 };
-  private gridRanges = new Int32Array(0);                                   // per box this build: x0, x1, z0, z1 (cells; x0 < 0 = not in the grid), qmin, qmax (quantised padded height extent)
-  private gridFill = new Uint32Array(WORLD.gridW * WORLD.gridH);            // running offsets while scattering items
-  private gridMask = new Uint32Array(WORLD.gridW * WORLD.gridH);            // per cell: 24-slice height occupancy
-  private gridDist = new Uint8Array(WORLD.gridW * WORLD.gridH);             // per cell: Chebyshev distance to the nearest occupied cell (0 = occupied), clamped to 255
-  /** EVERY MAN DRAWN HAS HIS PROXIES: the list holds as many characters as the skinning draws (anim/characters.ts MAX_CHARS). It held eight, and a ninth man on the floor
-   *  threw no shadow, stood in no mirror and bounced no light (seen on a thirteen-man mission: two defenders by a window with no shadow beside a stove pipe that had one).
-   *  The mesh trees still hold MESH_MAX_CHARS (render/meshbvh.ts): past them a man is his round cones to every ray (common.wgsl meshShadowT / meshClosest). */
+  /** the registration slack handed to the tracer (metres a traced box may reach past the cells it is registered in: rust/game_draw boxes/grid.rs) */
+  slack = 0;
+  /** EVERY MAN DRAWN HAS HIS PROXIES: the list holds as many characters as the skinning draws (anim/characters.ts MAX_CHARS). The mesh trees still hold MESH_MAX_CHARS
+   *  (render/meshbvh.ts): past them a man is his round cones to every ray (common.wgsl meshShadowT / meshClosest). */
   static readonly MAX_CAST = 16;
-  /** …and how many of them a frame's list takes: all of them, or — ?allproxies=0 in the page, host/drawpage.ts — the eight it took before, so the ninth man drawn is
-   *  again without a shadow. The list's own room (MAX_CAST, the info block's layout) does not move with it. */
+  /** …and how many of them a frame's list takes: all of them, or (?allproxies=0 in the page, host/drawpage.ts) the eight it took before. The list's own room (MAX_CAST, the
+   *  info block's layout) does not move with it. */
   static castCap = BoxWorld.MAX_CAST;
   static readonly CAPS_PER_CHAR = 15; static readonly MAX_CAPSULES = BoxWorld.MAX_CAST * BoxWorld.CAPS_PER_CHAR;
-  // word offsets in infoData (struct SceneInfo): the character bounds, then the globals' height pairs, the grid vec4, the globals' bounds, the glass block
-  static readonly INFO_BOUNDS = 24; static readonly INFO_GLOBALS_Y = BoxWorld.INFO_BOUNDS + BoxWorld.MAX_CAST * 4; static readonly INFO_GRID = BoxWorld.INFO_GLOBALS_Y + 32; static readonly INFO_GLOBALS_B = BoxWorld.INFO_GRID + 4;
-  static readonly GLASS_WORD = BoxWorld.INFO_GLOBALS_B + 128;   // word offset of glassInfo in infoData (the panes follow at +4)
-  infoBuf: GPUBuffer; infoData = new Uint32Array(BoxWorld.GLASS_WORD + 4 + MAX_GLASS * 12); infoF32 = new Float32Array(this.infoData.buffer);   // struct SceneInfo in common.wgsl: header, 16 global indices, capsule header, MAX_CAST character bounds, 16 global (ymin, ymax) pairs, grid vec4 (x = registration slack), 16 global bounds (min.xyz _, max.xyz _), glassInfo vec4u (x = pane count), MAX_GLASS panes × 3 vec4f
-  /** GLASS (experiment): false = every Glass box is skipped outright — no pane list, and (as always) no grid entry / no raster: an empty opening, the level as it
-   *  was before panes were authored. Mirrored from engine.settings.glass each frame. */
-  glassEnabled = true;
-  /** where the camera looks (XZ used): panes are listed nearest-first from here and the list is cut at MAX_GLASS */
-  glassFocus: Vec3 = [20, 0, 14];
-  /** the panes uploaded this frame, in SceneInfo order (indices into `all` = statics): for the panel, the probes and the CPU shatter code's bookkeeping */
+  /** the scene's block (struct SceneInfo): the module's but for the men's proxies */
+  infoBuf: GPUBuffer; infoData = new Uint32Array(Info.row); infoF32 = new Float32Array(this.infoData.buffer);
+  /** the panes uploaded this frame, in SceneInfo order (indices into `statics`) */
   glassList: number[] = [];
-  /** static box indices carrying BoxFlag.Glass (intact or broken), rebuilt when statics change — the game's shatter / restore / 'break all' walk this */
+  /** static box indices carrying BoxFlag.Glass (intact or broken) */
   glassStatics: number[] = [];
-  private glassScratch: { i: number; d: number }[] = []; private glassStaticsN = -1;
-  /** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): fills slot k's GB_STRIDE rows for static `staticIndex` into `dst` at float offset `off` (returns false = the pane is whole: zeros);
-   *  null = no such system attached. Consulted by packGlass every frame in SceneInfo order; the table is uploaded only while any pane has something to say (and once more
-   *  when the last goes whole so the rows read zero again). */
-  glassCellFill: ((staticIndex: number, dst: Float32Array, off: number) => boolean) | null = null;
-  private gbData = new Float32Array(GB_ROWS * 4); private gbLive = false;
-  /** the cell table as last uploaded, bit for bit (packGlass writes the buffer only when the freshly filled table differs from it) */
-  private gbSent = new Uint32Array(GB_ROWS * 4); private gbBits = new Uint32Array(this.gbData.buffer);
-  /** how many statics' geo + mat rows the last WHOLE write of the two buffers covered (−1 = none yet): upload() writes only the dynamics' tail while they still stand */
-  private rowsStatN = -1;
-  /** the visible list as last uploaded, word for word */
-  private visibleSent: Uint32Array;
-  /** How far (m) each global's uploaded bounds (SceneInfo.globalsB, the FLAG_GRID_SLABS reject) stand outside the box the GPU traces, on top of the
-   *  registration slack: ~100× every float difference between this f64 build and the tracer's f32 slab test (argument above traceClosest in
-   *  common.wgsl), and still under the 1–2 cm every ray origin is lifted off its surface — which is what lets a ray leaving the floor skip the floor. */
-  static readonly GLOBAL_PAD = 0.005;
-  /** …and the same 5 mm is all FLAG_GRID_SLABS keeps of WORLD.gridYPad when it judges a cell's height span: the packed items carry the full 4 cm against
-   *  float differences that total < 0.4 mm (tallied in the same place), so the shader hands gridYPad − ITEM_PAD_KEEP of it back at lookup time
-   *  (SceneInfo.grid.y) without the packed data changing — enough that a ray lifted 1–2 cm off a desk, a floor finish or a wall top stops re-testing the
-   *  very surface it left in its first cell. */
-  static readonly ITEM_PAD_KEEP = 0.005;
   // character proxies (see struct Capsule in common.wgsl — traced as ROUND CONES; the record and these members keep their old name): 8 floats each
-  // (MAX_CAST, CAPS_PER_CHAR, MAX_CAPSULES and the info block's word offsets: by infoData, above)
-  capsuleData = new Float32Array(BoxWorld.MAX_CAPSULES * 8); capsuleU32 = new Uint32Array(this.capsuleData.buffer); capsuleCount = 0; charCount = 0;
+  capsuleData = new Float32Array(BoxWorld.MAX_CAPSULES * Capsule.row); capsuleU32 = new Uint32Array(this.capsuleData.buffer); capsuleCount = 0; charCount = 0;
   capsuleBuf: GPUBuffer;
   /** The SDF CHARACTER RIG's fit (render/sdfrig.ts; the engine writes it from its attached fit each frame before upload): with it set, upload() turns the frame's list into the rig —
    *  slot i's radius becomes the fitted r0[i], the fitted r1[i] rides in the top byte of the record's misc word (millimetres; RB_QUANT), and each character's cull sphere is fitted to
-   *  his cones (+ kPad for the smooth union's bulge). null = no fit attached: the list exactly as addCharacterCapsules wrote it (hand radii, no r1 byte — sdfrig.wgsl coneRb then
-   *  reads r again, an untapered cone — and the game's 1.5 m spheres). */
+   *  his cones (+ kPad for the smooth union's bulge). null = no fit attached: the list exactly as addCapsuleRows wrote it (no r1 byte — sdfrig.wgsl coneRb then
+   *  reads r again, an untapered cone). */
   rig: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> } | null = null;
   static readonly RB_QUANT = 0.001;   // = render/sdfrig.ts RB_QUANT (shaders/sdfrig.wgsl coneRb decodes it)
-  visible: Uint32Array; visibleCount = 0; visibleBuf: GPUBuffer;
-  /** THE STATICS ARE DRAWN FROM THE TOP DOWN. The camera looks down, so what stands higher is nearly always nearer: drawn first, it takes the depth and
-   *  what lies under it (the floor under a desk, the ground slab under the floor) fails the depth test before it is shaded, whatever it is made of.
-   *  AND NO FACE CHANGES HANDS. Where two boxes' faces lie in one plane the depth test keeps the first drawn, which was always the earlier box in the list
-   *  (a plinth running across a pier's foot stays the plinth's). So a box is never drawn before an earlier box it shares such a face with (rankStatics):
-   *  only boxes that cannot tie are put in another order. `drawTop[i]` = static i's top as it is drawn (a single float); `drawRank[i]` = its place in the
-   *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
-   *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
-   *  as they did.
-   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 7 ms of the
-   *  frame a wall is blown. Given a `DrawWait` (upload's second word: the engine's, and its count of still packs is the engine's to keep, not this
-   *  world's), a stale order is made again only on a drawn pack, once the statics have stood still for `calm` drawn packs; until then THE STATICS ARE
-   *  DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by: the picture is the same, and only the work of shading what is then
-   *  hidden comes back for those frames (and for as long as a static changes more often than that). `drawWaits` (the engine sets it with the pace) =
-   *  a pack with no draw after it never makes the order either. With neither (a tool, a check, `?planpace=old`): at once, on the pack that finds it
-   *  stale, as ever. `drawAskedUndrawn`: a pack with no draw after it found a change (the next drawn pack starts the wait again for it). Two words of
-   *  the picture's are in this world's state for it, `drawWaits` and that one; neither is a count of frames. */
-  private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
-  drawWaits = false; private drawAskedUndrawn = false;
-  staticsDirty = true;
-  /** a count of the statics' changes, by whoever mirrors them from elsewhere (draw/world.ts): what was read off them stands while it does. Every row that is
-   *  told, whatever changed it (a load, a flag, a lamp's face), where `geomSerial` counts what a blast does to the level's shape alone. NaN = nobody counts */
-  staticsTold = NaN;
-  /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
-   *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
-  geomSerial = 0;
-  // ---- THE STATIC SLICE, PACKED ONCE: the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
-  // the marking slot lookup a box — for words that never change. Now every static's PACK INPUTS (centre, yaw, halves, flags, owner, albedo, emissive, cutHeight, the finish, the
-  // marking gain, the rotation, the marking list's identity + length) are shadowed per INDEX in `statShadow`, and a box whose inputs read equal to its shadow keeps the words it
-  // packed before (the geo / mat arrays are written only by this class); anything else — a hidden static, a dimmed fixture, a moved editor box, a replaced Box object with other
-  // values — is repacked on the spot. Writers need raise no flag: the compare IS the truth (~25 field reads a box, a few µs for the office). What is not per box is an EPOCH:
-  // the marking table's state (a list registered / repacked / the table reset) and the markings switch — `packEpoch` bumps and every static repacks. Bytes: identical by
-  // construction (the pack is a pure function of the shadowed inputs).
-  private static readonly SS = 24;   // shadow floats per static: c0 c1 c2 yaw h0 h1 h2 flags owner a0 a1 a2 e0 e1 e2 cutHeight matWord markGain hasRot r0 r1 r2 r3 marksLen
-  private statShadow = new Float64Array(0);
-  private statShadowMarks: (MarkingDef[] | undefined)[] = [];
-  private statMarked = new Uint8Array(0);   // per static: it counted toward markStatsInfo.boxes when last packed
-  private statShadowN = 0;                  // statics the shadow covers (0 = nothing packed yet)
-  private packEpoch = 0; private statEpoch = -1; private statMarksOn = true;
-  /** the trace grid (buildGrid: cells / items / globals / SceneInfo's grid rows) — false = not built and not uploaded (the native host: its RT walks its own BLAS and reads none of
-   *  it; the smoke obstacle bake reads region A once per change — its caller sets this); the CPU raycast has its own static grid (rayGrid) and works either way. Default true. */
-  gridEnabled = true;
-  // the static half of the trace grid, cached: per static its cell range + quantised height (as buildGrid computes them), the mask bits, its global-ness and its slack, rebuilt only
-  // when a static's pack inputs changed (the shadow above says so) — buildGrid then scatters statics from the cache and computes dynamics as before
-  private gridStatRanges = new Int32Array(0);   // per static: x0 x1 z0 z1 qmin qmax (x0 −1 = not in the grid; −2 = a global)
-  private gridStatBits = new Uint32Array(0);
-  private gridStatSlack = 0; private gridStatN = -1; private gridStatGlobals: number[] = []; private gridDynBits = new Uint32Array(1);
-  // … and the statics' own scatter (per cell: how many statics are registered in it, their slice bits OR-ed), made with that cache: a build starts from a copy of these two
-  private gridStatCounts = new Uint32Array(WORLD.gridW * WORLD.gridH); private gridStatMask = new Uint32Array(WORLD.gridW * WORLD.gridH);
-  // THE LAST BUILD'S DYNAMIC HALF: per dynamic x0 x1 z0 z1 qmin qmax bits (x0 −1 = not in the grid) + the globals list + the list's length. A frame whose statics' cache stands and
-  // whose dynamics register exactly as these did would build the same cells and items word for word — it builds nothing and writes neither buffer (gridLiveN −1 = no build stands)
-  private gridLast = new Int32Array(0); private gridLastGlobals: number[] = []; private gridLiveN = -1;
-  /** how many frames' trace grids were built, and how many were found standing (QA / the panel) */
-  gridBuilds = { built: 0, kept: 0 };
-  // ---- MARKINGS (scene/markings.ts): the table of packed records lives in the TAIL of matBuf, from vec4 row maxBoxes × MAT_STRIDE / 4 (common.wgsl MARK_BASE) —
-  // no new binding: every shader that has the scene group can read a box's markings. A box's list is registered on first upload (deduplicated by CONTENT +
-  // albedo + size, so every carton of a size shares one set of records — 'identical on every instance of a kind' literally), its first record's 1-based
-  // slot rides in bits 18‥31 of the GPU flags word, and its area-averaged albedo goes to the 4th mat row for the secondary rays. `markingsEnabled` off =
-  // slot 0 everywhere and the secondary albedo = the albedo: byte for byte the frame without markings.
-  markingsEnabled = true;
-  /** the base texel (m) the records were packed at; setMarkingTexel() repacks the table when the setting moves */
-  markingTexel = MARKING_TEXEL;
-  markData = new Float32Array(MARK_TABLE_ROWS * 4); markRows = 0; private markDirty = false;   // the table (vec4 rows) and how many rows are taken
-  private markByKey = new Map<string, { slot: number; n: number; rows: number; sec: Vec3; anyEmit: boolean; marks: MarkingDef[]; base: Vec3; h: Vec3 }>();
-  private markOfBox = new WeakMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
-  markStatsInfo = { lists: 0, records: 0, rows: 0, boxes: 0, dropped: 0, uploads: 0 };
-  // ---- CUT BOXES (scene/cut.ts): under the switch (latched here at construction — the shaders were compiled from the same value) a box with a cut record raises
-  // BOX_CUT_BIT in its GPU flags word and its planes are packed into the CUT TABLE, a third tail region of matBuf after the marking and glass tables: CUT_STRIDE vec4
-  // rows per box INDEX (common.wgsl CUT_BASE + bi × CUT_STRIDE: the planes, then the core colour's row), uploaded over the index range packed this frame. Cut boxes are listed AFTER the plain ones in
-  // `visible` ([visibleCount, visibleCount + visibleCutCount)): the g-buffer draws them with its cut pipeline. Switch off = none of it exists: no bit, no table, no
-  // second list — the words and the buffer of the build without it.
-  readonly cutOn: boolean;
-  private cutData = new Float32Array(0);
-  private cutLo = 1 << 30; private cutHi = -1; private cutLoD = 1 << 30; private cutHiD = -1; private cutSplit = 0;   // the rows packed this frame, as two index ranges: the statics' (below cutSplit) and the dynamics'
-  /** how many of this frame's visible boxes are cut (they follow the plain ones in `visible`) */
-  visibleCutCount = 0;
-  /** how many of those — the FIRST ones of the cut list — a ray can meet (not NoShadow); the picture-only ones behind them are glass plates */
-  visibleCutTraced = 0;
-  /** how many boxes of the last upload carry a record AND can be met by a ray (not NoShadow: a glass plate is picture only) */
+  /** the boxes drawn this frame, the plain ones first and then the cut; of the cut, the first `visibleCutTraced` a ray can meet (the picture-only ones behind them are glass plates) */
+  visibleCount = 0; visibleCutCount = 0; visibleCutTraced = 0; visibleBuf: GPUBuffer;
+  /** how many boxes of the last upload carry a cut record AND can be met by a ray (not NoShadow: a glass plate is picture only) */
   cutTraced = 0;
-  private cutVisible = new Uint32Array(0);
-  private statShadowCut: (CutPlane[] | undefined)[] = [];
+  /** a count of the statics' changes: what was read off them stands while it does. Every row that is told, whatever changed it (a load, a flag, a lamp's face), where
+   *  `geomSerial` counts what a blast does to the level's shape alone */
+  staticsTold = 0;
+  geomSerial = 0;
+  /** CUT BOXES (scene/cut.ts): latched at construction (the shaders were compiled from the same value) */
+  readonly cutOn = cutConfig.on;
 
-  constructor(protected device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
-    this.maxBoxes = maxBoxes;
-    if (maxBoxes !== WORLD.maxBoxes) throw new Error('BoxWorld: maxBoxes must be WORLD.maxBoxes (the shaders place the marking table after that many mat rows)');
-    this.geoData = new ArrayBuffer(maxBoxes * GEO_STRIDE * 4); this.geoF32 = new Float32Array(this.geoData); this.geoU32 = new Uint32Array(this.geoData);
-    this.matData = new Float32Array(maxBoxes * MAT_STRIDE);
-    const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
-    this.geoBuf = makeBuffer(device, maxBoxes * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
-    this.cutOn = cutConfig.on;
-    if (this.cutOn) this.cutData = new Float32Array(maxBoxes * CUT_STRIDE * 4);
-    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
+  constructor(protected device: GPUDevice) {
+    const n = this.maxBoxes, S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, cells = WORLD.gridW * WORLD.gridH;
+    this.geoBuf = makeBuffer(device, n * Geo.row * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
+    this.matBuf = makeBuffer(device, (this.cutOn ? BoxMat.rows : BoxMat.cut) * 16, S | GPUBufferUsage.COPY_SRC, 'boxMat');   // the material rows, and the tables behind them (a page that cuts nothing has no cut planes)
     if (WORLD.gridW + WORLD.gridH > 96) throw new Error('trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay ≤ 96 for that cap to be unreachable');
-    if (maxBoxes > 65536 || maxBoxes * WORLD.gridW * WORLD.gridH >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
-    this.cellStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1 + 2 * WORLD.gridW * WORLD.gridH);
-    this.items = new Uint32Array(65536);
-    this.cellBuf = makeBuffer(device, this.cellStart.byteLength, S, 'gridCells');
-    this.itemBuf = makeBuffer(device, this.items.byteLength, S, 'gridItems');
+    if (n > 65536 || n * cells >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
+    this.cellBuf = makeBuffer(device, (cells + 1 + 2 * cells) * 4, S, 'gridCells');
+    this.itemBuf = makeBuffer(device, 65536 * 4, S, 'gridItems');
     this.infoBuf = makeBuffer(device, this.infoData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'sceneInfo');
     this.capsuleBuf = makeBuffer(device, this.capsuleData.byteLength, S, 'capsules');
-    this.visible = new Uint32Array(maxBoxes); this.visibleSent = new Uint32Array(maxBoxes);
-    this.visibleBuf = makeBuffer(device, this.visible.byteLength, S, 'visibleBoxes');
+    this.visibleBuf = makeBuffer(device, n * 4, S, 'visibleBoxes');
   }
+  /** the frame's rows handed to the device */
+  upload(): void {}
 
-  // ---- markings ----
-  /** The 1-based slot of the first record of box b's marking list (0 = none / table full), registering the list on first sight; also caches the box's
-   *  secondary albedo. Keyed by the list's content + the box's albedo + size, so identical objects share records. */
-  private markSlotOf(b: Box): { slot: number; sec: Vec3 } {
-    const marks = b.marks!; const cached = this.markOfBox.get(b);
-    if (cached && cached.marks === marks && cached.a0 === b.albedo[0] && cached.a1 === b.albedo[1] && cached.a2 === b.albedo[2]) return cached;
-    const key = `${JSON.stringify(marks)}|${b.albedo.join(',')}|${b.h.join(',')}`;
-    let ent = this.markByKey.get(key);
-    if (!ent) {
-      const n = Math.min(marks.length, MAX_MARKS_PER_BOX);
-      let rows = 0; for (let k = 0; k < n; k++) rows += markRecordRows(marks[k]);
-      if (this.markRows + rows > MARK_TABLE_ROWS || this.markRows + 1 > MARK_SLOT_MAX) { this.markStatsInfo.dropped++; ent = { slot: 0, n: 0, rows: 0, sec: [b.albedo[0], b.albedo[1], b.albedo[2]], anyEmit: false, marks, base: [b.albedo[0], b.albedo[1], b.albedo[2]], h: [b.h[0], b.h[1], b.h[2]] }; }
-      else {
-        const first = this.markRows; this.markRows += rows;
-        ent = { slot: first + 1, n, rows, sec: [0, 0, 0], anyEmit: false, marks, base: [b.albedo[0], b.albedo[1], b.albedo[2]], h: [b.h[0], b.h[1], b.h[2]] };
-        this.packList(ent); this.markStatsInfo.lists++; this.markStatsInfo.records += n; this.markStatsInfo.rows = this.markRows;
-      }
-      this.markByKey.set(key, ent);
-    }
-    const out = { key, slot: ent.slot, sec: ent.sec, a0: b.albedo[0], a1: b.albedo[1], a2: b.albedo[2], marks };
-    this.markOfBox.set(b, out); return out;
-  }
-  private packList(ent: { slot: number; n: number; sec: Vec3; anyEmit: boolean; marks: MarkingDef[]; base: Vec3; h: Vec3 }) {
-    let row = ent.slot - 1; const n = ent.n;
-    const stats = ent.marks.slice(0, n).map(m => markStats(m, ent.base, this.markingTexel));
-    const anyEmit = stats.some(st => st.emask !== 0);
-    for (let k = 0; k < n; k++) { const m = ent.marks[k]; packMarking(this.markData, row, m, stats[k], k === n - 1, anyEmit, AREA_LIT_MARKS.has(m)); row += markRecordRows(m); }
-    const sec = secondaryAlbedo(ent.base, ent.h, ent.marks.slice(0, n), this.markingTexel); ent.sec[0] = sec[0]; ent.sec[1] = sec[1]; ent.sec[2] = sec[2]; ent.anyEmit = anyEmit;
-    this.markDirty = true;
-  }
-  /** FORGET WHAT WAS SENT. The next upload packs and writes every static, the visible list, the
-   *  glass table, the marking table and both grids whole. Reads nothing of the simulation and changes none of it. */
-  forgetSent() { this.packEpoch++; this.visibleSent.fill(0xffffffff); this.gbSent.fill(0xffffffff); this.gbLive = true; this.markDirty = true; this.gridLiveN = -1; this.rowsStatN = -1; }
-  /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (rust/game_rules/src/tick/game registers the lights after the first upload) */
-  repackMarkings(texel = this.markingTexel) { this.markingTexel = texel; for (const ent of this.markByKey.values()) if (ent.slot) this.packList(ent); this.packEpoch++; }   // (every static repacks: the secondary albedos may have moved)
-
-  /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each via addCharacterCapsules(). */
+  /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each. */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
-  /** caps: array of [ax,ay,az, r, bx,by,bz] (exactly CAPS_PER_CHAR entries; pad with zero-radius), bound = [cx,cy,cz,radius]. */
-  addCharacterCapsules(owner: number, albedo: Vec3 | Vec3[], caps: number[][], bound: [number, number, number, number]) {
-    if (this.charCount >= BoxWorld.castCap) return;
-    // (one colour for the whole man, or — character materials, render/charMaterials.ts proxyAlbedos — one per record in caps' order)
-    const perCap = Array.isArray(albedo[0]) ? albedo as Vec3[] : null;
-    const pack = (a: Vec3) => ((Math.round(Math.min(1, Math.max(0, a[0])) * 31) & 31) << 11) | ((Math.round(Math.min(1, Math.max(0, a[1])) * 63) & 63) << 5) | (Math.round(Math.min(1, Math.max(0, a[2])) * 31) & 31);
-    const one = albedo as Vec3;
-    const rgb565 = perCap ? 0 : ((Math.round(one[0] * 31) & 31) << 11) | ((Math.round(one[1] * 63) & 63) << 5) | (Math.round(one[2] * 31) & 31);
-    const misc = ((owner & 0xff) | (rgb565 << 8)) >>> 0;
-    const base = this.charCount * BoxWorld.CAPS_PER_CHAR;
-    for (let i = 0; i < BoxWorld.CAPS_PER_CHAR; i++) {
-      const c = caps[i] ?? [0, -100, 0, 0, 0, -100, 0]; const o = (base + i) * 8;
-      this.capsuleData[o] = c[0]; this.capsuleData[o + 1] = c[1]; this.capsuleData[o + 2] = c[2]; this.capsuleData[o + 3] = c[3];
-      this.capsuleData[o + 4] = c[4]; this.capsuleData[o + 5] = c[5]; this.capsuleData[o + 6] = c[6]; this.capsuleU32[o + 7] = perCap ? ((owner & 0xff) | (pack(perCap[i] ?? perCap[0]) << 8)) >>> 0 : misc;
-    }
-    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
-    this.charCount++; this.capsuleCount = this.charCount * BoxWorld.CAPS_PER_CHAR;
-  }
   /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
   addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
     if (this.charCount >= BoxWorld.castCap) return;
     const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
-    for (let i = 0; i < N; i++) { const o = (base + i) * 8, s = at + i * 8, c = colours[i] ?? colours[0];
-      for (let k = 0; k < 7; k++) D[o + k] = f[s + k];
+    for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];
+      for (let k = 0; k < 3; k++) { D[o + Capsule.a + k] = f[s + Cap.a + k]; D[o + Capsule.b + k] = f[s + Cap.b + k]; } D[o + Capsule.r] = f[s + Cap.r];
       const r = Math.round(Math.min(1, Math.max(0, c[0])) * 31) & 31, g = Math.round(Math.min(1, Math.max(0, c[1])) * 63) & 63, l = Math.round(Math.min(1, Math.max(0, c[2])) * 31) & 31;
-      this.capsuleU32[o + 7] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
-    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
+      this.capsuleU32[o + Capsule.misc] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
+    const bo = Info.charBounds + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
     this.charCount++; this.capsuleCount = this.charCount * N;
   }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
@@ -515,23 +278,23 @@ export class BoxWorld {
   protected applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
     const D = this.capsuleData, U = this.capsuleU32, N = BoxWorld.CAPS_PER_CHAR;
     for (let c = 0; c < this.charCount; c++) {
-      const rig = base.byOwner?.get(U[c * N * 8 + 7] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
+      const rig = base.byOwner?.get(U[c * N * Capsule.row + Capsule.misc] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
       let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
       for (let i = 0; i < N; i++) {
-        const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;   // (a padding record: nothing to fit, never hit)
+        const o = (c * N + i) * Capsule.row; if (!(D[o + Capsule.r] > 0)) continue;   // (a padding record: nothing to fit, never hit)
         const r0 = rig.r0[i], r1 = rig.r1[i];
-        D[o + 3] = r0; U[o + 7] = ((U[o + 7] & 0x00ffffff) | (Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))) << 24)) >>> 0;
+        D[o + Capsule.r] = r0; U[o + Capsule.misc] = ((U[o + Capsule.misc] & 0x00ffffff) | (Math.max(1, Math.min(255, Math.round(r1 / BoxWorld.RB_QUANT))) << 24)) >>> 0;
         const r = Math.max(r0, r1);
-        x0 = Math.min(x0, D[o] - r, D[o + 4] - r); y0 = Math.min(y0, D[o + 1] - r, D[o + 5] - r); z0 = Math.min(z0, D[o + 2] - r, D[o + 6] - r);
-        x1 = Math.max(x1, D[o] + r, D[o + 4] + r); y1 = Math.max(y1, D[o + 1] + r, D[o + 5] + r); z1 = Math.max(z1, D[o + 2] + r, D[o + 6] + r);
+        x0 = Math.min(x0, D[o + Capsule.a] - r, D[o + Capsule.b] - r); y0 = Math.min(y0, D[o + Capsule.a + 1] - r, D[o + Capsule.b + 1] - r); z0 = Math.min(z0, D[o + Capsule.a + 2] - r, D[o + Capsule.b + 2] - r);
+        x1 = Math.max(x1, D[o + Capsule.a] + r, D[o + Capsule.b] + r); y1 = Math.max(y1, D[o + Capsule.a + 1] + r, D[o + Capsule.b + 1] + r); z1 = Math.max(z1, D[o + Capsule.a + 2] + r, D[o + Capsule.b + 2] + r);
       }
       if (x0 > x1) continue;
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2; let rad = 0;
       for (let i = 0; i < N; i++) {
-        const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;
-        rad = Math.max(rad, Math.hypot(D[o] - cx, D[o + 1] - cy, D[o + 2] - cz) + D[o + 3], Math.hypot(D[o + 4] - cx, D[o + 5] - cy, D[o + 6] - cz) + rig.r1[i]);
+        const o = (c * N + i) * Capsule.row; if (!(D[o + Capsule.r] > 0)) continue;
+        rad = Math.max(rad, Math.hypot(D[o + Capsule.a] - cx, D[o + Capsule.a + 1] - cy, D[o + Capsule.a + 2] - cz) + D[o + Capsule.r], Math.hypot(D[o + Capsule.b] - cx, D[o + Capsule.b + 1] - cy, D[o + Capsule.b + 2] - cz) + rig.r1[i]);
       }
-      const bo = BoxWorld.INFO_BOUNDS + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
+      const bo = Info.charBounds + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
     }
   }
 
@@ -544,429 +307,11 @@ export class BoxWorld {
     const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw));
     return [cs * b.h[0] + sn * b.h[2], sn * b.h[0] + cs * b.h[2]];
   }
-  /** THE ORDER THE STATICS ARE DRAWN IN (drawRank). Tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box
-   *  it shares a face's plane with. Two faces share a plane when they look the same way, lie within `TIE_PLANE` of one plane and their bounds lie over one
-   *  another by more than `TIE_PATCH`: those are the faces whose depths the depth test cannot tell apart, where the first drawn is kept. Held to the list's
-   *  order, each is won by the box that always won it. A box that waits takes the turn of the latest box it waits for (and comes after it), never an
-   *  earlier one, so the low wide things (floors, the ground) still come last.
-   *  ONE RULE FOR EVERY BOX: a face is its plane (the unit normal and how far along it) and its bounds in the world, whatever the box's turn or tilt, so
-   *  there is no frame to match and no bin to fall either side of. The faces are sorted by how far along their normals they lie and each is asked only of
-   *  those within TIE_PLANE of it. Bounds for a turned face are wider than the face: that only ever asks a box to wait that need not.
-   *  Faces that look down are not asked (the camera never sees one). A CUTAWAY box is asked as it is drawn: stopped at its cutHeight. */
-  private rankStatics(nStat: number) {
-    const all = this.all, top = this.drawTop, ord = this.drawSlot.subarray(0, nStat);
-    for (let i = 0; i < nStat; i++) ord[i] = i;
-    ord.sort((a, b) => top[b] - top[a] || a - b);
-    const turn = new Uint32Array(nStat); for (let r = 0; r < nStat; r++) turn[ord[r]] = r;   // a static's turn by its top alone
-    // every face that can be seen: FW numbers each: box, along, normal xyz, bounds lo xyz, bounds hi xyz
-    const FW = 11, F: number[] = [], X: Vec3 = [1, 0, 0], Y: Vec3 = [0, 1, 0], Z: Vec3 = [0, 0, 1];
-    for (let i = 0; i < nStat; i++) {
-      const b = all[i]; if (b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) continue;
-      const c = b.c, rot = b.rot; let ax: Vec3, ay: Vec3, az: Vec3;
-      if (rot) { ax = quat.rotate(rot, X); ay = quat.rotate(rot, Y); az = quat.rotate(rot, Z); }
-      else if (b.yaw === 0) { ax = X; ay = Y; az = Z; }
-      else { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); ax = [cs, 0, -sn]; ay = Y; az = [sn, 0, cs]; }   // (the box's own x and z in the world: rayBox's world-to-local, turned back)
-      const cut = !rot && (b.flags & BoxFlag.Cutaway) !== 0 && b.cutHeight < c[1] + b.h[1];   // (drawn only below its cutHeight: its top is there, and its sides stop there)
-      const hy = cut ? Math.max(0, (b.cutHeight - (c[1] - b.h[1])) / 2) : b.h[1], cy = cut ? c[1] - b.h[1] + hy : c[1];
-      const A = [ax, ay, az], H = [b.h[0], hy, b.h[2]];
-      for (let u = 0; u < 3; u++) for (let sg = -1; sg <= 1; sg += 2) {
-        const n = A[u]; if (n[1] * sg < -0.5) continue;
-        const v = A[(u + 1) % 3], w = A[(u + 2) % 3], hv = H[(u + 1) % 3], hw = H[(u + 2) % 3];
-        const mx = c[0] + sg * H[u] * n[0], my = cy + sg * H[u] * n[1], mz = c[2] + sg * H[u] * n[2];
-        const ex = Math.abs(v[0]) * hv + Math.abs(w[0]) * hw, ey = Math.abs(v[1]) * hv + Math.abs(w[1]) * hw, ez = Math.abs(v[2]) * hv + Math.abs(w[2]) * hw;
-        F.push(i, sg * (n[0] * mx + n[1] * my + n[2] * mz), sg * n[0], sg * n[1], sg * n[2], mx - ex, my - ey, mz - ez, mx + ex, my + ey, mz + ez);
-      }
-    }
-    // who waits for whom: a later box for each earlier one whose face it shares
-    const at = new Uint32Array(F.length / FW); for (let k = 0; k < at.length; k++) at[k] = k * FW; at.sort((p, q) => F[p + 1] - F[q + 1]);
-    const after: number[][] = [], PLANE = BoxWorld.TIE_PLANE, PATCH = BoxWorld.TIE_PATCH; let ties = 0;
-    for (let m = 0; m < at.length; m++) { const p = at[m], far = F[p + 1] + PLANE;
-      for (let k = m + 1; k < at.length && F[at[k] + 1] <= far; k++) { const q = at[k];
-        if (F[p] === F[q] || F[p + 2] * F[q + 2] + F[p + 3] * F[q + 3] + F[p + 4] * F[q + 4] < 1 - 1e-9) continue;   // (the same box, or not looking the same way)
-        let over = 0, apart = false;
-        for (let d = 0; d < 3; d++) { const o = Math.min(F[p + 8 + d], F[q + 8 + d]) - Math.max(F[p + 5 + d], F[q + 5 + d]); if (o > PATCH) over++; else if (o < -PLANE) apart = true; }
-        if (apart || over < 2) continue;
-        const first = Math.min(F[p], F[q]), then = Math.max(F[p], F[q]); (after[first] ??= []).push(then); ties++; } }
-    const rank = this.drawRank; this.drawTies = ties; this.drawRanked++;
-    if (ties === 0) { rank.set(turn); return; }
-    // a box takes the turn of the latest box it waits for. Every wait is for an earlier box, so walked in the list's order each box's turn is settled
-    // before those that wait for it are told; then by turn, and by the list between a box and those that took its turn
-    for (let i = 0; i < nStat; i++) { const l = after[i]; if (l !== undefined) for (let k = 0; k < l.length; k++) if (turn[l[k]] < turn[i]) turn[l[k]] = turn[i]; }
-    for (let i = 0; i < nStat; i++) ord[i] = i;
-    ord.sort((a, b) => turn[a] - turn[b] || a - b);
-    for (let r = 0; r < nStat; r++) rank[ord[r]] = r;
-  }
-  /** two faces are in one plane when they lie this near along their normal (m). The depth buffer (near 0.5 m, single floats) tells surfaces about
-   *  0.05 mm apart at the camera's usual 21 m and about 0.2 mm at its farthest 40 m; nearer than that, the first drawn is what is seen. */
-  static readonly TIE_PLANE = 0.00025;
-  /** and when their bounds lie over one another by more than this, two ways (m): a hair, so that faces which only meet at an edge are not a tie */
-  static readonly TIE_PATCH = 0.0005;
-  /** how many times a box waits for an earlier one in the order as last made, and how many times the order has been made (a check reads both) */
-  drawTies = 0; drawRanked = 0;
   /** World Y half extent (yawed boxes: h.y; fully rotated ones: the |R|·h row, like footprint()). */
   static heightExtent(b: Box): number {
     if (!b.rot) return b.h[1];
     const ax = quat.rotate(b.rot, [1, 0, 0]), ay = quat.rotate(b.rot, [0, 1, 0]), az = quat.rotate(b.rot, [0, 0, 1]);
     return Math.abs(ax[1]) * b.h[0] + Math.abs(ay[1]) * b.h[1] + Math.abs(az[1]) * b.h[2];
-  }
-  /** The height quantiser the traversal's y-cull uses (GRID_YQ* in world.ts / common.wgsl): floor((y − y0)·s) clamped to [0, levels−1]. */
-  static yLevel(y: number): number {
-    const q = Math.floor((y - WORLD.gridY0) * (WORLD.gridYLevels / (WORLD.gridY1 - WORLD.gridY0)));
-    return q < 0 ? 0 : q > WORLD.gridYLevels - 1 ? WORLD.gridYLevels - 1 : q;
-  }
-
-  /** THE LIST: the combined list as of now (`all`: an index's box) and the glass statics' list. Returns the statics' count. Nothing is written to the GPU. */
-  private list(): number {
-    const all = this.all; all.length = 0;
-    for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
-    if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
-    const nStat = this.statics.length;
-    if (this.staticsDirty || this.glassStaticsN !== nStat) { this.glassStatics.length = 0; for (let i = 0; i < nStat; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = nStat; }
-    return nStat;
-  }
-  /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
-   *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
-   *  pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false, wait: DrawWait | null = null) {
-    const nStat = this.list(); const all = this.all;
-    let nv = 0, marked = 0, asked = false;
-    const marksOn = this.markingsEnabled;
-    let matched = 0, fresh = 0, unkeyed = 0;
-    // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
-    const SS = BoxWorld.SS; let staticsChanged = false;
-    if (this.drawTop.length < this.maxBoxes) { this.drawTop = new Float32Array(this.maxBoxes); this.drawRank = new Uint32Array(this.maxBoxes); this.drawSlot = new Uint32Array(this.maxBoxes); this.drawRankN = -1; }
-    if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
-    const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
-    const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
-    const cutOn = this.cutOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
-    let np = Math.max(this.cutVisible.length, cutOn ? this.maxBoxes : 0);   // (the cut list is filled from both ends: traceable boxes from the front, picture-only ones from the back)
-    if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
-    const cv = this.cutVisible, und = this.undrawn;
-    for (let i = 0; i < nStat; i++) {
-      const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
-      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd), ml = marks === undefined ? -1 : marks.length;
-      if (!forceAll && S[so] === c[0] && S[so + 1] === c[1] && S[so + 2] === c[2] && S[so + 3] === b.yaw && S[so + 4] === h[0] && S[so + 5] === h[1] && S[so + 6] === h[2]
-        && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === a0 && S[so + 10] === a1 && S[so + 11] === a2 && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
-        && S[so + 15] === b.cutHeight && S[so + 16] === mw && S[so + 17] === mg && S[so + 23] === ml && SM[i] === marks && (!cutOn || SC[i] === b.cut)
-        && (rot ? S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3] : S[so + 18] === 0)) {
-        if (SK[i]) marked++;
-      } else {
-        staticsChanged = true;
-        this.drawTop[i] = !rot && (b.flags & BoxFlag.Cutaway) && b.cutHeight < c[1] + h[1] ? Math.fround(b.cutHeight) : Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1]));
-        if (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2] || S[so + 15] !== b.cutHeight
-          || ((S[so + 7] ^ b.flags) & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Cutaway)) !== 0
-          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) { this.drawRankN = -1; asked = true; }   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
-        SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
-        S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
-        S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
-        if (rot) { S[so + 18] = 1; S[so + 19] = rot[0]; S[so + 20] = rot[1]; S[so + 21] = rot[2]; S[so + 22] = rot[3]; } else { S[so + 18] = 0; S[so + 19] = 0; S[so + 20] = 0; S[so + 21] = 0; S[so + 22] = 0; }
-        S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
-      }
-      if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b)) && !(und !== null && und.has(i))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn; `undrawn` leaves a box out)
-        if (cutOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
-        else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
-      }
-    }
-    if (this.drawRankN !== nStat) {
-      if (this.drawRankN >= 0 || this.statShadowN !== nStat) asked = true;   // (the list grew or shrank: that is a change too)
-      this.drawRankN = -1;
-      let now = !(between && this.drawWaits);
-      if (between) { if (wait !== null) now = false; if (!now && asked) this.drawAskedUndrawn = true; }
-      else { if (wait !== null) { if (asked || this.drawAskedUndrawn) wait.still = 0; else wait.still++; now = wait.still >= wait.calm; } this.drawAskedUndrawn = false; }
-      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; if (wait !== null) wait.still = 0; }   // (the count starts from nothing each time the order is made: a change this pack could not say it saw, an upload that threw part way, then waits its full time)
-    }
-    if (nv > 0 && this.drawRankN === nStat) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
-      for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
-      for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
-    this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
-    if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
-    // ---- dynamics: packed every frame, as ever
-    const hide = this.hidePrimary;
-    for (let i = nStat; i < all.length; i++) {
-      const b = all[i];
-      if (this.packBox(i, b.dc ? BoxWorld.drawnOf(b) : b, marksOn)) marked++;
-      if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && !(hide !== null && hide.has(b))) {   // a pane is never rasterised: the G-buffer holds what stands BEHIND it and composite lays the glass over that (composite.wgsl)
-        // MOTION IDENTITY: the word's top 16 bits = where the g-buffer finds this box's PREVIOUS transform — 0 = the index rule as before (statics; unkeyed dynamics; the switch off),
-        // 0xFFFF = a keyed box new this frame (nothing to reproject: it did not move), else 1 + the index its key had last frame (gbuffer.wgsl vsBox)
-        let pslot = 0;
-        if (this.motionIds && b.mkey !== undefined) { const pi = this.mkeyPrev.get(b.mkey); if (pi === undefined) { pslot = 0xFFFF; fresh++; } else { pslot = pi + 1; matched++; } this.mkeyCur.set(b.mkey, i); }
-        else unkeyed++;
-        if (cutOn && b.round === true) cv[--np] = i | (pslot << 16);
-        else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i | (pslot << 16); else cv[nc++] = i | (pslot << 16); } else this.visible[nv++] = i | (pslot << 16);
-      } else if (this.motionIds && b.mkey !== undefined) this.mkeyCur.set(b.mkey, i);
-    }
-    if (between) this.mkeyCur.clear();
-    else { const t = this.mkeyPrev; this.mkeyPrev = this.mkeyCur; this.mkeyCur = t; t.clear(); this.mkeyStats.matched = matched; this.mkeyStats.fresh = fresh; this.mkeyStats.unkeyed = unkeyed; }
-    this.visibleCount = nv; this.markStatsInfo.boxes = marked;
-    this.visibleCutTraced = nc; this.cutTraced = nct;
-    if (cutOn) { for (let k = 0; k < nc; k++) this.visible[nv + k] = cv[k]; for (let k = np; k < cv.length; k++) this.visible[nv + nc++] = cv[k]; }   // CUT BOXES: the cut list rides behind the plain one in `visible` — the traceable ones first, then the picture-only ones
-    this.visibleCutCount = nc;
-    const q = this.device.queue;
-    // the statics' rows are on the GPU already unless a static was (re)packed since they were last written whole (upload's shadow above) — then only the dynamics' tail goes up,
-    // and the two buffers read exactly as a whole write would have left them
-    if (forceAll || staticsChanged || this.rowsStatN !== nStat) {
-      q.writeBuffer(this.geoBuf, 0, this.geoData, 0, all.length * GEO_STRIDE * 4);
-      q.writeBuffer(this.matBuf, 0, this.matData.buffer, 0, all.length * MAT_STRIDE * 4);
-      this.rowsStatN = nStat;
-    } else if (all.length > nStat) {
-      q.writeBuffer(this.geoBuf, nStat * GEO_STRIDE * 4, this.geoData, nStat * GEO_STRIDE * 4, (all.length - nStat) * GEO_STRIDE * 4);
-      q.writeBuffer(this.matBuf, nStat * MAT_STRIDE * 4, this.matData.buffer, nStat * MAT_STRIDE * 4, (all.length - nStat) * MAT_STRIDE * 4);
-    }
-    if (this.markDirty) { q.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4, this.markData.buffer, 0, Math.max(1, this.markRows) * 16); this.markDirty = false; this.markStatsInfo.uploads++; }   // the marking table (its tail region), only when a list was registered / repacked
-    writeWordsIfChanged(this.device, this.visibleBuf, 0, this.visible, this.visibleSent, nv + nc);   // (the visible list is index words: the same until a box comes, goes or changes its flags; CUT BOXES: the cut list rides behind it)
-    if (cutOn) {   // CUT BOXES: the rows packed this frame — the statics that changed and the dynamics, a range each (a re-cut wall far below the debris uploads its own rows, not everything between)
-      const base = this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16;   // (the cut table is boxMat's LAST region: after the weather's air grid)
-      if (this.cutHi >= this.cutLo) { const o = this.cutLo * CUT_STRIDE * 16; q.writeBuffer(this.matBuf, base + o, this.cutData.buffer, o, (this.cutHi - this.cutLo + 1) * CUT_STRIDE * 16); this.cutLo = 1 << 30; this.cutHi = -1; }
-      if (this.cutHiD >= this.cutLoD) { const o = this.cutLoD * CUT_STRIDE * 16; q.writeBuffer(this.matBuf, base + o, this.cutData.buffer, o, (this.cutHiD - this.cutLoD + 1) * CUT_STRIDE * 16); this.cutLoD = 1 << 30; this.cutHiD = -1; }
-    }
-    this.packGlass();
-    this.buildGrid();
-    this.packBehind = false;
-  }
-  /** THE LIST WITHOUT THE PACK, for a tick that nothing is drawn after: between two ticks the cursor's ray, a laser's dot and a device's beam read `all` and the raycast's grid and nothing of the pack.
-   *  The rows on the GPU and the visible list are then BEHIND the list until the next
-   *  upload(): engine.ts packs before every draw, and a GPU pass that reads the rows with no draw before it asks ensurePacked() first. */
-  relist() { this.list(); this.packBehind = true; }
-  /** the rows on the device are an older list's (a relist since the last pack) */
-  private packBehind = false;
-  /** for a GPU pass that reads the box rows, the grid or the info block with NO DRAW before it (the smoke solver stepped alone, a shader run by a tool): packs if
-   *  a relist has left the device behind the list, and is nothing otherwise */
-  ensurePacked() { if (this.packBehind) this.upload(true); }
-  /** THE LOOK'S WORD FOR A BOX (the look page's material maps; render/gbuffer.ts lookWordOf, set by the engine on that page): a small whole number that rides above
-   *  the finish in the box's mat word (8 × it; common.wgsl boxLook reads it, boxFinish takes it off): what the box is made of, whether it is one that moves (`moves`:
-   *  packed past the statics), and a number of its own. Asked at every pack of the box. null (every other page) = the word as it ever was.
-   *  Set it with setStuffOf: the statics are packed only when one of their shadowed inputs moves, and this is not one of them. */
-  stuffOf: ((b: Box, moves: boolean) => number) | null = null;
-  /** … and for an old break's cut faces (Box.cutOld): the stuff of its core, packed with the cut's record (cut.ts packCut). null = none packed, as ever. */
-  coreStuffOf: ((b: Box) => number) | null = null;
-  setStuffOf(f: ((b: Box, moves: boolean) => number) | null, core: ((b: Box) => number) | null) { this.stuffOf = f; this.coreStuffOf = core; this.packEpoch++; }
-  /** a dynamic box as the GPU gets it when the game draws it somewhere else than the simulation has it (Box.dc / dh): a copy at the drawn centre and size */
-  private static drawnOf(b: Box): Box { const o = copyBox(b); o.c = b.dc!; o.h = b.dh ?? b.h; return o; }
-  /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */
-  private packBox(i: number, b: Box, marksOn: boolean): boolean {
-    const gf = this.geoF32, gu = this.geoU32, mf = this.matData; const o = i * GEO_STRIDE; let marked = false;
-    const round = this.cutOn && b.round === true;   // (round wins over a cut record, here as in rayBox and lineBox: nothing gives a round box one)
-    let flags = (b.flags & (this.cutOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
-    const em = b.fogEmit ?? b.emissive;   // (the picture's emission: Box.fogEmit)
-    if (em[0] + em[1] + em[2] > 0) flags |= BoxFlag.Emissive;
-    const wk = b.wetK ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd);   // (render-only: Box.wetK, and solid glass's dark — sentAlbedo; a marked face is never glass's dark, so `wk` alone is the marks' factor)
-    let s0 = a0, s1 = a1, s2a = a2;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
-    if (marksOn && b.marks !== undefined && b.marks.length > 0 && !b.rot) {   // (a tilted box never carries markings: the face frame assumes yaw only)
-      const mk = this.markSlotOf(b);
-      if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
-    }
-    const cutRows = round || (this.cutOn && b.cut !== undefined && b.cut.length > 0);
-    if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox — or, in a program compiled with the cut rule, this prism by the cut test: ROUND_AS_CUT)
-      const q = i * CUT_STRIDE * 4; packRoundRows(this.cutData, q, b.h[0]); this.cutData[q + 32] = 0; this.cutData[q + 33] = 0; this.cutData[q + 34] = 0; this.cutData[q + 35] = ROUND_CORE_W;
-    } else if (cutRows) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
-      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc, b.cutOld && this.coreStuffOf ? this.coreStuffOf(b) : 0);
-    }
-    if (cutRows) { if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; } }
-    gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
-    gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
-    const m = i * MAT_STRIDE;
-    mf[m] = a0; mf[m + 1] = a1; mf[m + 2] = a2; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit && !(b.mkey !== undefined && b.mkey >>> 24 === MKEY.skin >>> 24)) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
-      // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — rust/game_rules/src/breakage/wallskin.rs)
-    if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
-    else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
-    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (rust/game_rules/src/air/lighting.rs drives it with the switchable's supply)
-    return marked;
-  }
-
-  /** SceneInfo.glass: every static Glass pane, nearest to glassFocus first, at most MAX_GLASS — three vec4f each: (c.xyz, cos yaw), (h.xyz, sin yaw),
-   *  (tint rgb = albedo, box index). glassInfo.x = the count (0 with glassEnabled off: the shaders then never loop). Written into infoData; buildGrid uploads it. */
-  // (GLASS_WORD, the word offset of glassInfo in infoData with the panes at +4: by infoData, above)
-  private packGlass() {
-    const info = this.infoData, f = this.infoF32, W0 = BoxWorld.GLASS_WORD; const list = this.glassList; list.length = 0;
-    if (this.glassEnabled) {
-      const sc = this.glassScratch; sc.length = 0; const fx = this.glassFocus[0], fz = this.glassFocus[2];
-      for (const i of this.glassStatics) { const b = this.statics[i]; sc.push({ i, d: (b.c[0] - fx) ** 2 + (b.c[2] - fz) ** 2 }); }
-      sc.sort((a, b) => a.d - b.d);   // nearest the look-at first (composite / fgather find the on-screen ones early; the cut at MAX_GLASS drops the farthest)
-      for (let k = 0; k < Math.min(MAX_GLASS, sc.length); k++) list.push(sc[k].i);
-    }
-    info[W0] = list.length; info[W0 + 1] = list.length; info[W0 + 2] = 0; info[W0 + 3] = 0;
-    for (let k = 0; k < list.length; k++) {
-      const b = this.statics[list[k]]; const o = W0 + 4 + k * 12;
-      f[o] = b.c[0]; f[o + 1] = b.c[1]; f[o + 2] = b.c[2]; f[o + 3] = Math.cos(b.yaw);
-      f[o + 4] = b.h[0]; f[o + 5] = b.h[1]; f[o + 6] = b.h[2]; f[o + 7] = Math.sin(b.yaw);
-      f[o + 8] = b.albedo[0]; f[o + 9] = b.albedo[1]; f[o + 10] = b.albedo[2]; f[o + 11] = list[k];
-    }
-    // GLASS BREAKING: the per-slot cell table (only with a system attached; uploaded while any pane carries impacts, and once more when the last goes whole so the rows read zero again)
-    if (this.glassCellFill) {
-      const gb = this.gbData; gb.fill(0); let any = false;
-      for (let k = 0; k < list.length; k++) if (this.glassCellFill(list[k], gb, k * GB_STRIDE * 4)) any = true;
-      if (any || this.gbLive) {   // (… and only when the table is not what the buffer already holds: a broken pane's rows stand still between blows, and the list's order between camera moves)
-        const now = this.gbBits, sent = this.gbSent; let same = true;
-        for (let w = 0; w < now.length; w++) if (now[w] !== sent[w]) { same = false; break; }
-        if (!same) { this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16, gb.buffer, 0, gb.byteLength); sent.set(now); }
-      }
-      this.gbLive = any;
-    }
-  }
-
-  /** the trace-grid registration of one box (buildGrid's per-box arithmetic, verbatim): its cell range + quantised padded height into `ranges` at r, the mask bits, and its
-   *  contribution to the registration slack; −1 = out of the grid / no cells / a pane / NoShadow, −2 = it wants to be a GLOBAL (the caller decides by the 16 cap) */
-  private gridRegister(i: number, b: Box, ranges: Int32Array, r: number, bitsOut: Uint32Array, bi: number, canGlobal: boolean): number {
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, pad = WORLD.gridYPad;
-    if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) { ranges[r] = -1; return 0; }   // (a pane is never in the trace grid, on or off, intact or broken: no traced ray meets glass — SceneInfo.glass is where the shaders find it)
-    const [ex, ez] = BoxWorld.footprint(b);
-    let slack = 0;
-    if (!b.rot) {
-      const rot = this.geoU32[i * GEO_STRIDE + 3]; const c = Math.abs(f16value(rot & 0xffff)), s = Math.abs(f16value(rot >>> 16));
-      if (c !== 0 && s !== 0) { const det = c * c + s * s; slack = Math.max(slack, (c * b.h[0] + s * b.h[2]) / det - ex, (s * b.h[0] + c * b.h[2]) / det - ez); }   // (axis-aligned: c, s ∈ {0, 1} exactly, no slack)
-    }
-    let x0 = Math.floor((b.c[0] - ex) / cs), x1 = Math.floor((b.c[0] + ex) / cs);
-    let z0 = Math.floor((b.c[2] - ez) / cs), z1 = Math.floor((b.c[2] + ez) / cs);
-    x0 = Math.max(0, x0); z0 = Math.max(0, z0); x1 = Math.min(W - 1, x1); z1 = Math.min(H - 1, z1);
-    if (x1 < x0 || z1 < z0) { ranges[r] = -1; return slack; }
-    const area = (x1 - x0 + 1) * (z1 - z0 + 1);
-    if (area > 96 && canGlobal) { ranges[r] = -2; return slack; }
-    ranges[r] = x0; ranges[r + 1] = x1; ranges[r + 2] = z0; ranges[r + 3] = z1;
-    // padded, quantised height extent (the y-cull compares these against the ray's remaining height span; the pad covers every rounding
-    // difference between this f64 build and the tracer's f32 arithmetic many times over) and the 24 coarse slices it touches
-    const ey = BoxWorld.heightExtent(b);
-    const qmin = BoxWorld.yLevel(b.c[1] - ey - pad), qmax = BoxWorld.yLevel(b.c[1] + ey + pad);
-    ranges[r + 4] = qmin; ranges[r + 5] = qmax;
-    const s0 = Math.floor(qmin / 10), s1 = Math.floor(qmax / 10);
-    bitsOut[bi] = ((0xffffff >>> (23 - (s1 - s0))) << s0) >>> 0;
-    return slack;
-  }
-
-  private buildGrid() {
-    const W = WORLD.gridW, H = WORLD.gridH, N = W * H, CB = N + 1;
-    const all = this.all; const nStat = this.statics.length;
-    if (!this.gridEnabled) { this.gridLiveN = -1; this.finishInfo(0); return; }
-    const counts = this.cellStart;
-    const mask = this.gridMask;
-    this.globals.length = 0;
-    if (this.gridRanges.length < all.length * 6) this.gridRanges = new Int32Array(Math.max(all.length, this.maxBoxes) * 6);
-    const ranges = this.gridRanges; // per DYNAMIC box: x0,x1,z0,z1 (cell coords; x0 = -1 → not in the grid), qmin, qmax (the statics' are gridStatRanges)
-    // Registration slack: how far (m) the box the GPU actually traces can reach outside the footprint it is registered with. Yawed boxes are
-    // intersected with the f16 cos/sin packed above — not quite orthonormal — so their traced outline is the footprint scaled by up to
-    // ~1 + 2⁻¹⁰ (millimetres on a car); measured here per build from the very bits the shader unpacks. Plus WORLD.gridJitter for the f32
-    // rounding of centres, half sizes and ray-relative offsets. The height cull looks this far back across the cell line it just crossed
-    // (common.wgsl gridCell callers), which is what keeps it exact for a ray grazing such a sliver.
-    // ---- the statics' half, from the cache (rebuilt when any static's pack inputs moved — upload's shadow — or the count changed): the same words gridRegister
-    //      would compute this frame, since nothing they depend on changed; the globals among them come first (index order), as they always did
-    let same = this.gridLiveN === all.length;
-    this.gridLiveN = -1;   // (no build stands until this one is whole on the GPU, or found to be the standing one: an upload that throws part way leaves the next frame a full build)
-    if (this.gridStatN !== nStat) {
-      if (this.gridStatRanges.length < nStat * 6) { this.gridStatRanges = new Int32Array(Math.max(nStat, this.maxBoxes) * 6); this.gridStatBits = new Uint32Array(Math.max(nStat, this.maxBoxes)); }
-      const SR = this.gridStatRanges, SB = this.gridStatBits, SG = this.gridStatGlobals; SG.length = 0; let sl = 0;
-      for (let i = 0; i < nStat; i++) { sl = Math.max(sl, this.gridRegister(i, all[i], SR, i * 6, SB, i, SG.length < 16)); if (SR[i * 6] === -2) { SG.push(i); SR[i * 6] = -1; } }
-      this.gridStatSlack = sl; this.gridStatN = nStat;
-      const SC = this.gridStatCounts, SK = this.gridStatMask; SC.fill(0); SK.fill(0);
-      for (let i = 0; i < nStat; i++) {
-        const r = i * 6; const x0 = SR[r]; if (x0 < 0) continue;
-        const x1 = SR[r + 1], z0 = SR[r + 2], z1 = SR[r + 3]; const bits = SB[i];
-        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { SC[z * W + x]++; SK[z * W + x] |= bits; }
-      }
-      same = false;
-    }
-    let slack = this.gridStatSlack;
-    const SR = this.gridStatRanges;
-    for (const gi of this.gridStatGlobals) this.globals.push(gi);
-    // ---- the dynamics, registered afresh every frame — and held against the last build's (gridLast): cell range, height levels and slice bits per box, and who is a global
-    const nDyn = all.length - nStat;
-    if (this.gridDynBits.length < nDyn) this.gridDynBits = new Uint32Array(Math.max(nDyn, this.maxBoxes));
-    if (this.gridLast.length < nDyn * 7) { this.gridLast = new Int32Array(Math.max(nDyn, this.maxBoxes) * 7); same = false; }
-    const dynBits = this.gridDynBits, L = this.gridLast;
-    for (let i = nStat; i < all.length; i++) {
-      const b = all[i]; const r = i * 6, d = i - nStat, l = d * 7;
-      slack = Math.max(slack, this.gridRegister(i, b.dc ? BoxWorld.drawnOf(b) : b, ranges, r, dynBits, d, this.globals.length < 16));
-      const x0 = ranges[r]; if (x0 === -2) { this.globals.push(i); ranges[r] = -1; }
-      if (ranges[r] < 0) { if (L[l] !== -1) { same = false; L[l] = -1; } continue; }
-      const bits = dynBits[d] | 0;
-      if (L[l] !== x0 || L[l + 1] !== ranges[r + 1] || L[l + 2] !== ranges[r + 2] || L[l + 3] !== ranges[r + 3] || L[l + 4] !== ranges[r + 4] || L[l + 5] !== ranges[r + 5] || L[l + 6] !== bits) {
-        same = false; L[l] = x0; L[l + 1] = ranges[r + 1]; L[l + 2] = ranges[r + 2]; L[l + 3] = ranges[r + 3]; L[l + 4] = ranges[r + 4]; L[l + 5] = ranges[r + 5]; L[l + 6] = bits;
-      }
-    }
-    { const G = this.globals, LG = this.gridLastGlobals;
-      if (LG.length !== G.length) same = false; else for (let k = 0; k < G.length; k++) if (LG[k] !== G[k]) { same = false; break; }
-      if (!same) { LG.length = G.length; for (let k = 0; k < G.length; k++) LG[k] = G[k]; } }
-    if (same) {   // the grid the two buffers hold IS this frame's: only the info block (slack, globals' bounds, the capsules) is this frame's own
-      this.gridLiveN = all.length; this.gridStats.slack = slack + WORLD.gridJitter; this.gridBuilds.kept++;
-      this.finishInfo(this.itemCount);
-      return;
-    }
-    this.gridBuilds.built++;
-    counts.set(this.gridStatCounts); counts[N] = 0; mask.set(this.gridStatMask);
-    for (let i = nStat; i < all.length; i++) {
-      const r = i * 6; const x0 = ranges[r]; if (x0 < 0) continue;
-      const x1 = ranges[r + 1], z0 = ranges[r + 2], z1 = ranges[r + 3]; const bits = dynBits[i - nStat];
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { counts[z * W + x]++; mask[z * W + x] |= bits; }
-    }
-    // exclusive prefix sum -> starts (region A: plain, read by the flag-off tracer and the smoke obstacle bake)
-    let sum = 0; let maxPer = 0; for (let c = 0; c < N; c++) { const n = counts[c]; if (n > maxPer) maxPer = n; counts[c] = sum; sum += n; } counts[N] = sum;
-    if (2 * sum > this.items.length) { this.items = new Uint32Array(Math.max(2 * sum, this.items.length * 2)); this.itemBuf.destroy(); this.itemBuf = makeBuffer(this.device, this.items.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'gridItems'); }
-    const fill = this.gridFill; fill.fill(0); // running offsets
-    const items = this.items;
-    for (let i = 0; i < all.length; i++) {   // (index order: the statics from their cache, then the dynamics)
-      const R = i < nStat ? SR : ranges;
-      const r = i * 6; const x0 = R[r]; if (x0 < 0) continue; const x1 = R[r + 1], z0 = R[r + 2], z1 = R[r + 3];
-      const packed = (i | (R[r + 4] << 16) | (R[r + 5] << 24)) >>> 0;   // region B item: index16 | qmin8 | qmax8 (levels ≤ 239 fit a byte)
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const c = z * W + x; const k = counts[c] + fill[c]++; items[k] = i; items[sum + k] = packed; }
-    }
-    this.itemCount = sum;
-    // Chebyshev distance of every cell to the nearest occupied one (two-pass 8-neighbour chamfer: exact for the chessboard metric). An empty cell at
-    // distance d lets the DDA take its next d−1 steps without touching memory: any cell within d−1 king moves is empty as well.
-    const dist = this.gridDist;
-    for (let c = 0; c < N; c++) dist[c] = counts[c + 1] > counts[c] ? 0 : 255;
-    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
-      const c = z * W + x; let d = dist[c]; if (d === 0) continue;
-      if (x > 0) d = Math.min(d, dist[c - 1] + 1);
-      if (z > 0) { d = Math.min(d, dist[c - W] + 1); if (x > 0) d = Math.min(d, dist[c - W - 1] + 1); if (x < W - 1) d = Math.min(d, dist[c - W + 1] + 1); }
-      dist[c] = d;
-    }
-    for (let z = H - 1; z >= 0; z--) for (let x = W - 1; x >= 0; x--) {
-      const c = z * W + x; let d = dist[c]; if (d === 0) continue;
-      if (x < W - 1) d = Math.min(d, dist[c + 1] + 1);
-      if (z < H - 1) { d = Math.min(d, dist[c + W] + 1); if (x < W - 1) d = Math.min(d, dist[c + W + 1] + 1); if (x > 0) d = Math.min(d, dist[c + W - 1] + 1); }
-      dist[c] = d;
-    }
-    // region B: two words per cell for the fast traversal
-    let empty = 0, skipSum = 0;
-    for (let c = 0; c < N; c++) {
-      const n = counts[c + 1] - counts[c]; const d = dist[c];
-      if (d > 0) { empty++; skipSum += d; }
-      counts[CB + 2 * c] = (mask[c] | (d << 24)) >>> 0;
-      counts[CB + 2 * c + 1] = (counts[c] | (Math.min(n, 255) << 24)) >>> 0;   // count 255 = "long cell": the shader reads the end from region A instead
-    }
-    this.gridStats.empty = empty; this.gridStats.meanSkip = empty ? skipSum / empty : 0; this.gridStats.maxPerCell = maxPer; this.gridStats.slack = slack + WORLD.gridJitter;
-    this.finishInfo(sum);
-    const q = this.device.queue;
-    q.writeBuffer(this.cellBuf, 0, this.cellStart);
-    q.writeBuffer(this.itemBuf, 0, this.items.buffer, 0, Math.max(4, 2 * sum * 4));
-    this.gridLiveN = all.length;
-  }
-  /** SceneInfo's header / globals rows / capsule words + the rig fit + the capsule and info uploads — the part of buildGrid that is not the grid (runs with gridEnabled off too:
-   *  then no globals, an itemsB of 0, and the cell / item buffers untouched) */
-  private finishInfo(sum: number) {
-    const W = WORLD.gridW, H = WORLD.gridH, pad = WORLD.gridYPad, all = this.all;
-    if (!this.gridEnabled) { this.globals.length = 0; this.itemCount = 0; this.gridStats.empty = 0; this.gridStats.meanSkip = 0; this.gridStats.maxPerCell = 0; this.gridStats.slack = WORLD.gridJitter; }
-    const info = this.infoData; info[0] = all.length; info[1] = this.globals.length; info[2] = W; info[3] = H;
-    const infoF = this.infoF32;
-    { const go = BoxWorld.INFO_GRID; infoF[go] = this.gridStats.slack; infoF[go + 1] = pad - BoxWorld.ITEM_PAD_KEEP; infoF[go + 2] = 0; infoF[go + 3] = 0; }   // SceneInfo.grid: x = registration slack (m), y = how much tighter than the packed extents FLAG_GRID_SLABS judges a cell's height span at each end (m)
-    const gpad = BoxWorld.GLOBAL_PAD + this.gridStats.slack;
-    for (let i = 0; i < 16; i++) {
-      const gi = this.globals[i]; info[4 + i] = gi ?? 0;
-      const yo = BoxWorld.INFO_GLOBALS_Y + 2 * i, bo = BoxWorld.INFO_GLOBALS_B + 8 * i;   // globalsY pair, globalsB min/max vec4s
-      if (gi === undefined) { infoF[yo] = 0; infoF[yo + 1] = 0; infoF.fill(0, bo, bo + 8); continue; }
-      const g = all[gi]; const ey = BoxWorld.heightExtent(g); const [ex, ez] = BoxWorld.footprint(g);
-      infoF[yo] = g.c[1] - ey - pad; infoF[yo + 1] = g.c[1] + ey + pad;   // globalsY: the same padded height extent per global, in metres (the tracer skips a global the ray's heights never reach)
-      // globalsB: the global's world bounds on all three axes, GLOBAL_PAD + slack proud of the traced box — the FLAG_GRID_SLABS reject skips a global the
-      // ray's segment [ro, ro + rd·tmax] cannot touch in x, y or z (floors under a ray that leaves the floor, the corridor / break-room finishes for rays
-      // that never cross them, the ceiling for exterior rays), where globalsY's 4 cm still had every ray off the floor test all four floor slabs
-      infoF[bo] = g.c[0] - ex - gpad; infoF[bo + 1] = g.c[1] - ey - gpad; infoF[bo + 2] = g.c[2] - ez - gpad; infoF[bo + 3] = 0;
-      infoF[bo + 4] = g.c[0] + ex + gpad; infoF[bo + 5] = g.c[1] + ey + gpad; infoF[bo + 6] = g.c[2] + ez + gpad; infoF[bo + 7] = 0;
-    }
-    info[20] = this.capsuleCount; info[21] = this.charCount; info[22] = BoxWorld.CAPS_PER_CHAR; info[23] = sum;   // [23] = itemsB: where the packed copies of the items start
-    if (this.rig) this.applyRig(this.rig);   // the SDF character rig: fitted radii / r1 bytes / cull spheres over the game's list (idempotent — a render with no game step re-applies it to the same records)
-    this.device.queue.writeBuffer(this.capsuleBuf, 0, this.capsuleData.buffer, 0, Math.max(32, this.capsuleCount * 32));
-    this.device.queue.writeBuffer(this.infoBuf, 0, info);
   }
 }
 

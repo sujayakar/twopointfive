@@ -54,7 +54,7 @@ fn turned_look(own_look: V3, s: f64, t: V3, n: V3, e: f64, turn_deg: f64) -> V3 
     [t[0] * cs - n[0] * sn, 0.0, t[2] * cs - n[2] * sn]
 }
 
-/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent, as the TypeScript's literal leaves them.
+/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent.
 fn eye_at(own: crate::fogofwar::FogEye, p: V3, look: V3) -> crate::fogofwar::FogEye {
     crate::fogofwar::FogEye { id: own.id, pos: p, look, at: p, fov: None, near: None, wand: None }
 }

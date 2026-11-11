@@ -59,7 +59,7 @@ pub(super) fn gun_point(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
 /// A report that reaches him outside his ears and eyes places his belief.
 pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let now = g.time;
-    crate::mind::fix(g, gd, Some(at), "belief"); // a fresh object in the TypeScript: always a new fix
+    crate::mind::fix(g, gd, Some(at), "belief"); // always a new fix
     g.gd[gd].word_t = now;
 }
 

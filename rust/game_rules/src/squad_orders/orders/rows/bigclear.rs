@@ -17,7 +17,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     format!("{} and clear", crate::doortools::door_tools_big_word(g, t, &men).as_str())
 }
 
-/// doortools.ts:931-936 (SHOTGUN.on, SILENT.toolsLoud and DOORTOOLS.testDoor are on on the page: the silent refusal is not on its path)
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let OrderTarget::Door(x) = t else { return Err(None) };
     if crate::doortools::is_open(g, x.door) { return Err(Some(String::from("it's open."))); }

@@ -1,7 +1,7 @@
 //! The standing pieces of one wall: the ragged edges round what is open of it, and what its frame leaves hanging there.
 use super::*;
 
-/// how far a point of a ragged edge may stand out, by its place along the edge (the TypeScript's `reach` closures)
+/// how far a point of a ragged edge may stand out, by its place along the edge
 #[derive(Clone, Copy)]
 enum Reach { Flat(f64), Arch { lo: f64, hi: f64 } }
 impl Reach { fn at(self, t: f64) -> f64 { match self { Reach::Flat(r) => r, Reach::Arch { lo, hi } => lo + (hi - lo) * m::pow(m::max(0.0, t - 0.3) / 0.7, 1.5) } } }

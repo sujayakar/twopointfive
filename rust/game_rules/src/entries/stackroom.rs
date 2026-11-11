@@ -266,7 +266,7 @@ fn on_wall(th: f64, side: f64, hand: f64) -> (f64, f64) {
     (m::atan2(fx, fz), if nx * fz - nz * fx >= 0.0 { 1.0 } else { -1.0 })
 }
 
-/// the floor of a face as the rule reads it (rearwatch.ts asks it, as do the QA tools)
+/// the floor of a face as the rule reads it (the rear watch asks it)
 pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::stackroom::StackRoomProbe {
     let f = floor_of(g, d, side);
     crate::stackroom::StackRoomProbe {

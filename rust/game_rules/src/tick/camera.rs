@@ -92,7 +92,7 @@ pub(super) fn rebuild(c: &mut FollowCamera) {
     c.view = v3::m4::look_at(c.pos, c.target, [0.0, 1.0, 0.0]);
     c.proj = v3::m4::perspective(c.fov, c.aspect, c.near, c.far);
     c.view_proj = v3::m4::mul(&c.proj, &c.view);
-    // (a singular matrix leaves the old inverse, as the TypeScript's `out` does)
+    // (a singular matrix leaves the old inverse)
     if let Some(i) = v3::m4::invert(&c.view_proj) {
         c.inv_view_proj = i;
     }
@@ -168,7 +168,6 @@ fn planar_basis(c: &FollowCamera) -> FollowCameraPlanarBasis {
     FollowCameraPlanarBasis { fwd: f, right: [-f[2], 0.0, f[0]] }
 }
 
-/// Every number below is the TypeScript's own, under EXACT.on, on the same camera.
 #[cfg(test)]
 mod tests {
     use super::*;

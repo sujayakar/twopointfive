@@ -32,7 +32,7 @@ pub struct BlowLive { pub by: CharId, pub vic: CharId, pub style: BlowStyle }
 /// THE TRUNK'S PATH IN A GUIDED FALL: the pelvis led over [p0, p1], the turn over [n0, n1]
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Led { pub pv: V3, pub p_t: V3, pub v_t: V3, pub p0: f64, pub p1: f64, pub n0: f64, pub n1: f64, pub v0n: V3 }
-/// `frame` of a guided fall, by the fall's kind (the closures of character.ts's guided fall, with what they captured)
+/// `frame` of a guided fall, by the fall's kind: what its pins read
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FallFrame {
     /// 'fold' and 'sink': onto his knees, then laid on his front
@@ -715,7 +715,7 @@ pub struct Anim {
     pub hd_busy: bool,
     pub big_buf: Option<crate::anim_skeleton::Pose>,
     pub big_under: bool,
-    /// INVENTED by a review: see the proposals
+    /// the place the animator was handed at the last update, once the body's own has been replaced; POS_IN_IS_POS while the two are one
     pub pos_in: V3,
 }
 
@@ -1263,9 +1263,9 @@ pub struct FallGuide {
     pub end: f64,
     pub pins: Vec<crate::character::GuidePin>,
     pub release: Option<crate::character::FallRelease>,
-    /// INVENTED: what the pins' closures shared
+    /// what the pins read
     pub frame: crate::character::FallFrame,
-    /// INVENTED: the head pin's nod
+    /// the head pin's nod
     pub nod: crate::character::FallNod,
 }
 impl Default for FallGuide {
@@ -1366,9 +1366,9 @@ pub struct Character {
     #[is(crate::character::Who::Guard(GuardId(0)))] pub who: crate::character::Who,
     /// whose man he is
     pub team: crate::teams::Team,
-    /// INVENTED: his row of the block's men (ManCols.r). None (0xffffffff) once he has left, or for a man of no game
+    /// his row of the block's men. None (0xffffffff) once he has left, or for a man of no game
     #[is(0xffffffff)] pub man_row: u32,
-    /// INVENTED: owner, rank, reason, since of a man with no row: the numbers he took with him (manLeaves)
+    /// owner, rank, reason, since of a man with no row: the numbers he took with him (`man_leaves`)
     pub man_kept: Option<[f64; 4]>,
 }
 

@@ -267,7 +267,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     None
 }
 
-/// bodyInView's test of one body: in range, in the cone (none with `around`), a clear line, light enough. `around`: None is the TypeScript's false, a number how far round his feet a body is plain.
+/// One body's test: in range, in the cone (none with `around`), a clear line, light enough. `around`: None keeps the cone, a number is how far round his feet a body is plain.
 pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Option<f64>) -> bool {
     if crate::pairorders::pair_grip_body(g, gd) || crate::doze::doze_asleep(g, gd) {
         return false;
@@ -356,7 +356,7 @@ pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64
 mod tests {
     use super::*;
 
-    /// The bits are the TypeScript's own: motionFactor and playerGroundVel under EXACT.on, bun, this part's guards.ts, the same frames.
+    /// Pinned bits of the motion factor and the player's ground velocity, on the same frames.
     #[test]
     fn ground_track_and_motion_match_the_typescript() {
         let eye: V3 = [3.25, 0.0, -1.5];

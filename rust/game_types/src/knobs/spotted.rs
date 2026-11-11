@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct SpottedK {
-    /// THE switch (off = the build as it was; ?spotted on the URL, SPOTTED=1 in the harness's environment, Tab ▸ Sandbox ▸ Spotted)
+    /// THE switch: off here, raised by the pair-up rule
     #[k(false)] pub on: bool,
     /// ---- suspicious
     /// … and still (following only), while Sam is within `leashM`

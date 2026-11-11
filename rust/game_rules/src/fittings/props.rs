@@ -17,7 +17,6 @@ use prim::sqrt;
 pub use ::game_types::props::types;
 pub use types::*;
 
-/// the one target of the TypeScript's stored `emit`, called by name
 #[inline]
 fn emit(g: &mut Game, e: PropEvent) {
     crate::game::game_on_prop_event(g, e);
@@ -960,7 +959,7 @@ mod tests {
 
     #[test]
     fn against_the_typescripts_own_bits() {
-        // bun, EXACT.on: 1.7 * (5 / Math.hypot(1.7, 9.3)), 9.3 * (…), Math.cos(0.7), Math.sin(0.7)
+        // the pinned bits of 1.7 * (5 / hypot(1.7, 9.3)), 9.3 * (…), cos(0.7), sin(0.7)
         let mut p = at_rest();
         (p.vx, p.vz) = (1.7, 9.3);
         clamp_vel(&mut p);
