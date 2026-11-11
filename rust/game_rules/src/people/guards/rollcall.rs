@@ -599,8 +599,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
     if rooms.is_empty() {
         return false;
     }
-    let mut c = crate::squad::clearing_new(g, &rooms, a, b);
-    c.serial = g.serial();
+    let c = crate::squad::clearing_new(g, &rooms, a, b);
     g.clearing = Some(c);
     true
 }
