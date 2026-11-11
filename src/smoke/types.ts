@@ -79,7 +79,7 @@ export interface SmokeSystemLike {
   /** every can venting stops venting now, what it has let out left in the air (the game's `SmokeCansShut`) */
   shutCans?(): void;
   /** something solid within r of c stopped being solid (or came back): the bricks there re-bake their obstacle field — the destruction lane hiding a static it knocked off */
-  obstaclesChanged?(c: Vec3, r: number): void;
+  obstaclesChanged?(lo: Vec3, hi: Vec3): void;
   /** this frame's WIND (rust/game_rules/src/air/wind.rs, called once a frame at the end of Game.update; an empty list = still air): the solver's forces step relaxes the air of every
    *  brick a source's bound overlaps toward the source's analytic field inside its support (smoke/wind_force.wgsl) with the per-particle-kind knobs the list
    *  carries ignored. It never makes, keeps alive or retires a brick — wind only bends smoke that is already there. `relax` = the rate (1/s) at the jet's core. */
