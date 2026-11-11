@@ -96,27 +96,29 @@ fn going_in(g: &Game, e: &Entry) -> bool {
     op.crossed.len() > 0 || matches!(op.phase, P::Enter | P::Toss | P::Fuse | P::Wait)
 }
 
-/// A man who meets one of them on the way, short of the door, stops and fights him; the others go on.
+/// A man who sees one of them on the way, short of the door, fights him from where he is, as a man sent by himself does; the others go on.
 fn those_who_met_them(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
     let e = g.tab.enemysquads_squad[q].entries[i].clone();
     if going_in(g, &e) { return; }
     let door = g.dr[g.tab.doortools_door_op[e.op].door].frame_centre;
     for &x in &e.men {
-        if !alive(g, x) || dist_xz(g.pos_of(x), door) < AT_DOOR_M { continue; }
-        if let Some(d) = def_of(g, x) { crate::roomfight::stopped_by_a_foe(g, d); }
+        if !alive(g, x) || !g.gd[x].saw_foe_this_frame || dist_xz(g.pos_of(x), door) < AT_DOOR_M { continue; }
+        if let (Some(d), Some(f)) = (def_of(g, x), g.gd[x].foe) { let at = g.ch[f].pos; crate::roomfight::loose_at(g, d, at); }
     }
 }
 
-/// A man another rule has taken (a covered lane on his way, a door to brace) is off it.
+/// A man another rule has taken (a covered lane on his way, a door to brace), one in somebody's arm and one who is down are off it.
 fn taken_off(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
     let id = g.tab.enemysquads_squad[q].group;
     let told = |g: &Game, x: GuardId| def_of(g, x).is_some_and(|d| g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Told);
-    let off: Vec<GuardId> = g.tab.enemysquads_squad[q].entries[i].men.iter().copied().filter(|&x| alive(g, x) && !told(g, x)).collect();
+    let men = g.tab.enemysquads_squad[q].entries[i].men.clone();
+    let off: Vec<GuardId> = men.into_iter().filter(|&x| !alive(g, x) || g.gd[x].held.is_some() || !told(g, x)).collect();
     if off.is_empty() { return; }
     crate::group::with(g, id, |g| for &x in &off { crate::orders::squad_orders_drop(g, x); });
     let s = &mut g.tab.enemysquads_squad[q];
     s.entries[i].men.retain(|x| !off.contains(x));
     s.sent.retain(|r| !off.contains(&r.gd) || r.phase != SentPhase::Told);
+    for x in off { if g.gd[x].held.is_some() && told(g, x) { crate::roomfight::loose(g, x, "squads"); } }
 }
 
 /// Said once, by the first of them who can, as the door goes.
