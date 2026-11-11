@@ -8,9 +8,11 @@
   "include": [
     "./**/*.ts",
     "../mp/**/*.ts",
+    "../draw/**/*.ts",
     "../levels/**/*.ts",
     "../level-export.ts",
     "./types/**/*.d.ts",
     "../../types/**/*.d.ts"
-  ]
+  ],
+  "exclude": ["../draw/held.ts", "../draw/unused.ts"]
 }

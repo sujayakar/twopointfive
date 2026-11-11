@@ -126,8 +126,8 @@ compares (`astray`): a native test, never the module.
 ### When it panics
 
 The module aborts, so a host sees a trap; `hook` has kept the words with file and line (`face_panic_ptr`). `with` took the game out for the call, so
-that game is gone; other games and every save stand. `guarded` in `src/host/drawgame.ts` turns the trap into `GameLost` and refuses all calls but
-those in `STILL`. The card offers `face_recover`: the newest save or the run's first step. So use let-else for what
+that game is gone; other games and every save stand. `src/draw/wire.ts` turns the trap into what its host throws (`GameLost`, in `src/host/drawgame.ts`), and
+a lost game is refused every call that holds one (`HOLDS`). The card offers `face_recover`: the newest save or the run's first step. So use let-else for what
 may be absent, and panic only on what must never happen, in words that name the thing.
 
 ### Gameplay and dressing

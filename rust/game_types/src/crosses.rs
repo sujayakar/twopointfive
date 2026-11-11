@@ -1,6 +1,7 @@
 //! WHAT A TYPE IS, SAID BY ITSELF: the shape of what crosses to a page, for the program that writes the page's half (`game_start/src/bin/half`) and for the stamp both
 //! halves are held to. A type that crosses as its bytes (`ToBytes`) derives `Crosses`, and nothing else lists its fields. What does not derive it cannot cross: a row's id does
 //! not, for one, so a man is told by his character's number and a door by its name.
+use crate::bytes::{ToBytes, W};
 use alloc::{boxed::Box, string::String, vec::Vec};
 pub use game_derive::Crosses;
 
@@ -51,6 +52,7 @@ pub trait Crosses { fn ty(t: &mut Types) -> Ty; }
 
 macro_rules! numbers { ($($t:ident)*) => { $(impl Crosses for $t { fn ty(_: &mut Types) -> Ty { Ty::Number(stringify!($t)) } })* } }
 numbers!(f64 f32 u32 usize i32 u16 i16 u8 i8);
+impl Crosses for () { fn ty(_: &mut Types) -> Ty { Ty::Row(Vec::new()) } }
 impl Crosses for bool { fn ty(_: &mut Types) -> Ty { Ty::YesNo } }
 impl Crosses for String { fn ty(_: &mut Types) -> Ty { Ty::Text } }
 impl Crosses for str { fn ty(_: &mut Types) -> Ty { Ty::Text } }
@@ -62,6 +64,24 @@ impl<T: Crosses, const N: usize> Crosses for [T; N] {
 }
 impl<A: Crosses, B: Crosses> Crosses for (A, B) { fn ty(t: &mut Types) -> Ty { Ty::Row(alloc::vec![A::ty(t), B::ty(t)]) } }
 impl<A: Crosses, B: Crosses, C: Crosses> Crosses for (A, B, C) { fn ty(t: &mut Types) -> Ty { Ty::Row(alloc::vec![A::ty(t), B::ty(t), C::ty(t)]) } }
+
+/// WHAT A CALL ANSWERS WITH, as bytes: what crosses, or words why it will not
+pub trait Answer {
+    const REFUSES: bool;
+    fn ty(t: &mut Types) -> Ty;
+    fn told(&self, o: &mut W) -> bool;
+}
+impl<T: Crosses + ToBytes> Answer for T {
+    const REFUSES: bool = false;
+    fn ty(t: &mut Types) -> Ty { T::ty(t) }
+    fn told(&self, o: &mut W) -> bool { self.w(o); true }
+}
+/// (the words go as they are, with no length before them)
+impl<T: Crosses + ToBytes> Answer for Result<T, String> {
+    const REFUSES: bool = true;
+    fn ty(t: &mut Types) -> Ty { T::ty(t) }
+    fn told(&self, o: &mut W) -> bool { match self { Ok(a) => { a.w(o); true } Err(why) => { o.b.extend_from_slice(why.as_bytes()); false } } }
+}
 
 /// something asked for by its number, with fields: a command, an ask
 pub struct Asked {

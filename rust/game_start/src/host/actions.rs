@@ -4,6 +4,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 use game::game::{Game};
 use game::m;
 use game::teams::Team;
+use game::view::{ActionKind, ActionRow};
 
 /// how a row is drawn and what it hands its action
 pub enum Takes {
@@ -19,6 +20,19 @@ pub enum Takes {
     Reload { word: &'static str, picks: &'static [&'static str] },
 }
 pub struct Action { pub name: &'static str, pub label: &'static str, pub section: &'static str, pub title: &'static str, pub takes: Takes, pub run: fn(&mut Game, f64, &str) }
+impl Action {
+    /// its row of the panel, as the game stands
+    pub fn told(&self, g: &Game) -> ActionRow {
+        let r = ActionRow { name: self.name, label: self.label, section: self.section, title: self.title, kind: ActionKind::Press, words: Vec::new(), now: String::new(), lo: 0.0, hi: 0.0, step: 0.0, start: 0.0, word: "" };
+        match self.takes {
+            Takes::Press => r,
+            Takes::Each(all) => ActionRow { kind: ActionKind::Each, words: all(g), ..r },
+            Takes::Choice(all, now) => ActionRow { kind: ActionKind::Choice, words: all(g), now: now(g), ..r },
+            Takes::Count { lo, hi, step, start } => ActionRow { kind: ActionKind::Count, lo, hi, step, start, ..r },
+            Takes::Reload { word, picks } => ActionRow { kind: ActionKind::Reload, word, words: picks.iter().map(|w| String::from(*w)).collect(), ..r },
+        }
+    }
+}
 
 /// (a pick of "as it is" takes the word off the address)
 const WEATHERS: &[&str] = &["as it is", "clear", "overcast", "rain", "downpour", "fog", "dust"];

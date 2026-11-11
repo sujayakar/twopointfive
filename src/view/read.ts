@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half): THE VIEW, READ, the types an answer is of (rust/game_types/src/view and what they name) and their bytes, as plain values. To change one, change it there.
 import type { Vec3 } from '../math/vec';
 
-class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
+export class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
   float64(): number { const v = this.dv.getFloat64(this.p, true); this.p += 8; return v; }
   float32(): number { const v = this.dv.getFloat32(this.p, true); this.p += 4; return v; }
   uint32(): number { const v = this.dv.getUint32(this.p, true); this.p += 4; return v; }
@@ -12,10 +12,19 @@ class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = 
   int8(): number { const v = this.dv.getInt8(this.p); this.p += 1; return v; }
   bool(): boolean { return this.b[this.p++] !== 0; }
   str(): string { const n = this.uint32(), s = DEC.decode(this.b.subarray(this.p, this.p + n)); this.p += n; return s; }
+  /** a list of numbers as an array of its own */
+  run<T>(A: { new (b: ArrayBuffer): T; readonly BYTES_PER_ELEMENT: number }): T { const n = this.uint32() * A.BYTES_PER_ELEMENT, at = this.b.byteOffset + this.p; this.p += n; return new A((this.b.buffer as ArrayBuffer).slice(at, at + n)); }
   list<T>(f: () => T): T[] { const n = this.uint32(), o: T[] = []; for (let i = 0; i < n; i++) o.push(f()); return o; }
   word<T>(W: readonly T[], of: string): T { const k = this.uint16(); if (k >= W.length) throw new Error(`the view: no such word of ${of} (${k})`); return W[k]; } }
 const DEC = new TextDecoder();
 
+export type HandsEnd = 'taken' | 'sam' | 'cap' | 'spent';
+const HandsEndWords: readonly HandsEnd[] = ['taken', 'sam', 'cap', 'spent'];
+function readHandsEndIn(I: In): HandsEnd { return I.word(HandsEndWords, 'HandsEnd'); }
+export interface HandsSaid { t: number; end: HandsEnd | null; given: number; shotAt: number; up: number; of: number; left: number }
+export function readHandsSaidIn(I: In): HandsSaid { return { t: I.float64(), end: I.bool() ? readHandsEndIn(I) : null, given: I.uint32(), shotAt: I.float64(), up: I.uint32(), of: I.uint32(), left: I.uint32() }; }
+export interface AheadView { id: number; down: boolean; at: Vec3; yaw: number; wall: [number, number] | null; near: number; free: boolean; pos: Vec3; aimYaw: number; follow: Vec3; aim: Vec3 | null; path: Vec3[] }
+export function readAheadViewIn(I: In): AheadView { return { id: I.float64(), down: I.bool(), at: [I.float64(), I.float64(), I.float64()], yaw: I.float64(), wall: I.bool() ? [I.float64(), I.float64()] : null, near: I.float64(), free: I.bool(), pos: [I.float64(), I.float64(), I.float64()], aimYaw: I.float64(), follow: [I.float64(), I.float64(), I.float64()], aim: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, path: I.list(() => [I.float64(), I.float64(), I.float64()]) }; }
 export type MissionOf = 'stages' | 'script' | 'lesson' | 'roomclear' | 'rescue' | 'nightbreach';
 const MissionOfWords: readonly MissionOf[] = ['stages', 'script', 'lesson', 'roomclear', 'rescue', 'nightbreach'];
 function readMissionOfIn(I: In): MissionOf { return I.word(MissionOfWords, 'MissionOf'); }
@@ -182,8 +191,7 @@ function readAttentionModeIn(I: In): AttentionMode { return I.word(AttentionMode
 export interface AttentionLine { man: number; at: Vec3; left: number; mode: AttentionMode; ending: boolean; worn: boolean; walking: boolean; hidden: boolean; walks: boolean; own: Vec3[] | null }
 function readAttentionLineIn(I: In): AttentionLine { return { man: I.float64(), at: [I.float64(), I.float64(), I.float64()], left: I.float64(), mode: readAttentionModeIn(I), ending: I.bool(), worn: I.bool(), walking: I.bool(), hidden: I.bool(), walks: I.bool(), own: I.bool() ? I.list(() => [I.float64(), I.float64(), I.float64()]) : null }; }
 export interface TickView { mission: MissionView; lesson: LessonView | null; radio: RadioRow[]; bubbles: BubbleView[]; me: number; place: string; kit: KitView; marks: MarksView; aim: AimView; worn: WornView[]; squad: SquadView | null; corner: Note[]; throws: ThrowLine[]; ring: RingView | null; hand: HandRingView | null; empty: EmptyView | null; plan: PlanView; live: boolean; interact: InteractView; alarm: AlarmView | null; stage: Stage; look: HudLook; attention: AttentionLine[] }
-function readTickViewIn(I: In): TickView { return { mission: readMissionViewIn(I), lesson: I.bool() ? readLessonViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str(), kit: readKitViewIn(I), marks: readMarksViewIn(I), aim: readAimViewIn(I), worn: I.list(() => readWornViewIn(I)), squad: I.bool() ? readSquadViewIn(I) : null, corner: I.list(() => readNoteIn(I)), throws: I.list(() => readThrowLineIn(I)), ring: I.bool() ? readRingViewIn(I) : null, hand: I.bool() ? readHandRingViewIn(I) : null, empty: I.bool() ? readEmptyViewIn(I) : null, plan: readPlanViewIn(I), live: I.bool(), interact: readInteractViewIn(I), alarm: I.bool() ? readAlarmViewIn(I) : null, stage: readStageIn(I), look: readHudLookIn(I), attention: I.list(() => readAttentionLineIn(I)) }; }
-export function readTickView(b: Uint8Array): TickView { const I = new In(b), r = readTickViewIn(I); if (I.p !== b.length) throw new Error(`the view: TickView is ${b.length} bytes and ${I.p} were read`); return r; }
+export function readTickViewIn(I: In): TickView { return { mission: readMissionViewIn(I), lesson: I.bool() ? readLessonViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str(), kit: readKitViewIn(I), marks: readMarksViewIn(I), aim: readAimViewIn(I), worn: I.list(() => readWornViewIn(I)), squad: I.bool() ? readSquadViewIn(I) : null, corner: I.list(() => readNoteIn(I)), throws: I.list(() => readThrowLineIn(I)), ring: I.bool() ? readRingViewIn(I) : null, hand: I.bool() ? readHandRingViewIn(I) : null, empty: I.bool() ? readEmptyViewIn(I) : null, plan: readPlanViewIn(I), live: I.bool(), interact: readInteractViewIn(I), alarm: I.bool() ? readAlarmViewIn(I) : null, stage: readStageIn(I), look: readHudLookIn(I), attention: I.list(() => readAttentionLineIn(I)) }; }
 export type UnderKind = 'floor' | 'door' | 'none' | 'foe';
 const UnderKindWords: readonly UnderKind[] = ['floor', 'door', 'none', 'foe'];
 function readUnderKindIn(I: In): UnderKind { return I.word(UnderKindWords, 'UnderKind'); }
@@ -197,8 +205,7 @@ function readWorkThingIn(I: In): WorkThing { return { kind: readWorkThingKindIn(
 export interface Under { kind: UnderKind; at: Vec3; door: string | null; side: number; man: number; wall: UnderWall | null; thing: WorkThing | null }
 function readUnderIn(I: In): Under { return { kind: readUnderKindIn(I), at: [I.float64(), I.float64(), I.float64()], door: I.bool() ? I.str() : null, side: I.float64(), man: I.float64(), wall: I.bool() ? readUnderWallIn(I) : null, thing: I.bool() ? readWorkThingIn(I) : null }; }
 export interface CursorView { under: Under | null }
-function readCursorViewIn(I: In): CursorView { return { under: I.bool() ? readUnderIn(I) : null }; }
-export function readCursorView(b: Uint8Array): CursorView { const I = new In(b), r = readCursorViewIn(I); if (I.p !== b.length) throw new Error(`the view: CursorView is ${b.length} bytes and ${I.p} were read`); return r; }
+export function readCursorViewIn(I: In): CursorView { return { under: I.bool() ? readUnderIn(I) : null }; }
 export interface RunCounts { elapsed: number; stage: string; done: boolean; failed: boolean; sandbox: boolean; blackout: boolean; seen: number; seenUp: number; alarms: number; esc1: number; esc2: number; bodies: number; kills: number; kos: number; shots: number; shotsNearMen: number; lightsShot: number; ocps: number; kicked: number; picked: number; keys: number; intel: number; questioned: number; roster: number; hits: number; down: boolean; loads: number; thrown: number; grabs: number; dropped: number; devices: number; civSeen: number; civReported: number; civComplied: number; civKo: number; civKilled: number }
 function readRunCountsIn(I: In): RunCounts { return { elapsed: I.float64(), stage: I.str(), done: I.bool(), failed: I.bool(), sandbox: I.bool(), blackout: I.bool(), seen: I.float64(), seenUp: I.float64(), alarms: I.float64(), esc1: I.float64(), esc2: I.float64(), bodies: I.float64(), kills: I.float64(), kos: I.float64(), shots: I.float64(), shotsNearMen: I.float64(), lightsShot: I.float64(), ocps: I.float64(), kicked: I.float64(), picked: I.float64(), keys: I.float64(), intel: I.float64(), questioned: I.float64(), roster: I.float64(), hits: I.float64(), down: I.bool(), loads: I.float64(), thrown: I.float64(), grabs: I.float64(), dropped: I.float64(), devices: I.float64(), civSeen: I.float64(), civReported: I.float64(), civComplied: I.float64(), civKo: I.float64(), civKilled: I.float64() }; }
 export interface ScoreLine { label: string; pts: number }
@@ -239,14 +246,92 @@ function readRecapTakeIn(I: In): RecapTake { return { death: readRecapDeathIn(I)
 export interface DeathRecap { takes: RecapTake[]; main: number }
 function readDeathRecapIn(I: In): DeathRecap { return { takes: I.list(() => readRecapTakeIn(I)), main: I.float64() }; }
 export interface DebriefView { debrief: Debrief; rows: DebriefRow[]; dropped: number; path: number[]; recap: DeathRecap | null }
-function readDebriefViewIn(I: In): DebriefView { return { debrief: readDebriefIn(I), rows: I.list(() => readDebriefRowIn(I)), dropped: I.float64(), path: I.list(() => I.float32()), recap: I.bool() ? readDeathRecapIn(I) : null }; }
-export function readDebriefView(b: Uint8Array): DebriefView { const I = new In(b), r = readDebriefViewIn(I); if (I.p !== b.length) throw new Error(`the view: DebriefView is ${b.length} bytes and ${I.p} were read`); return r; }
+export function readDebriefViewIn(I: In): DebriefView { return { debrief: readDebriefIn(I), rows: I.list(() => readDebriefRowIn(I)), dropped: I.float64(), path: I.list(() => I.float32()), recap: I.bool() ? readDeathRecapIn(I) : null }; }
+export type MissionKind = 'nightbreach' | 'roomclear' | 'rescue' | 'quiet';
+const MissionKindWords: readonly MissionKind[] = ['nightbreach', 'roomclear', 'rescue', 'quiet'];
+function readMissionKindIn(I: In): MissionKind { return I.word(MissionKindWords, 'MissionKind'); }
 export type Approach = 'doors' | 'quiet' | 'walls' | 'dark';
 const ApproachWords: readonly Approach[] = ['doors', 'quiet', 'walls', 'dark'];
 function readApproachIn(I: In): Approach { return I.word(ApproachWords, 'Approach'); }
+export type OutlineHue = 'you' | 'purple' | 'red' | 'blue';
+const OutlineHueWords: readonly OutlineHue[] = ['you', 'purple', 'red', 'blue'];
+function readOutlineHueIn(I: In): OutlineHue { return I.word(OutlineHueWords, 'OutlineHue'); }
+export type ManState = 'dead' | 'out' | 'up';
+const ManStateWords: readonly ManState[] = ['dead', 'out', 'up'];
+function readManStateIn(I: In): ManState { return I.word(ManStateWords, 'ManState'); }
+export interface VerdictMan { id: number; name: string; tone: OutlineHue | null; human: boolean; state: ManState; downAt: number; downRoom: string; downBy: string; downPos: [number, number] | null; drops: number[]; path: number[] }
+function readVerdictManIn(I: In): VerdictMan { return { id: I.float64(), name: I.str(), tone: I.bool() ? readOutlineHueIn(I) : null, human: I.bool(), state: readManStateIn(I), downAt: I.float64(), downRoom: I.str(), downBy: I.str(), downPos: I.bool() ? [I.float64(), I.float64()] : null, drops: I.list(() => I.float64()), path: I.list(() => I.float64()) }; }
+export interface RunVerdictFoes { down: number; of: number; fell: number[] }
+function readRunVerdictFoesIn(I: In): RunVerdictFoes { return { down: I.float64(), of: I.float64(), fell: I.list(() => I.float64()) }; }
+export interface RunVerdictHostages { alive: number; of: number }
+function readRunVerdictHostagesIn(I: In): RunVerdictHostages { return { alive: I.float64(), of: I.float64() }; }
+export interface RunVerdict { kind: MissionKind | null; won: boolean; word: string; why: string; secs: number; approach: Approach | null; void: boolean; clean: boolean; men: VerdictMan[]; lost: number; of: number; foes: RunVerdictFoes; hostages: RunVerdictHostages | null; start: [number, number] }
+function readRunVerdictIn(I: In): RunVerdict { return { kind: I.bool() ? readMissionKindIn(I) : null, won: I.bool(), word: I.str(), why: I.str(), secs: I.float64(), approach: I.bool() ? readApproachIn(I) : null, void: I.bool(), clean: I.bool(), men: I.list(() => readVerdictManIn(I)), lost: I.float64(), of: I.float64(), foes: readRunVerdictFoesIn(I), hostages: I.bool() ? readRunVerdictHostagesIn(I) : null, start: [I.float64(), I.float64()] }; }
+export type Medal = 'none' | 'gold' | 'silver' | 'bronze';
+const MedalWords: readonly Medal[] = ['none', 'gold', 'silver', 'bronze'];
+function readMedalIn(I: In): Medal { return I.word(MedalWords, 'Medal'); }
+export interface ParLine { medal: Medal; line: string }
+function readParLineIn(I: In): ParLine { return { medal: readMedalIn(I), line: I.str() }; }
+export interface RunMark { glyph: string; cls: string; x: number; z: number; title: string }
+function readRunMarkIn(I: In): RunMark { return { glyph: I.str(), cls: I.str(), x: I.float64(), z: I.float64(), title: I.str() }; }
+export interface WalkedFloor { w: number; h: number; cell: number; rows: string }
+function readWalkedFloorIn(I: In): WalkedFloor { return { w: I.uint32(), h: I.uint32(), cell: I.float64(), rows: I.str() }; }
+export interface EndView { verdict: RunVerdict | null; par: ParLine | null; holder: string; marks: RunMark[]; floor: WalkedFloor }
+export function readEndViewIn(I: In): EndView { return { verdict: I.bool() ? readRunVerdictIn(I) : null, par: I.bool() ? readParLineIn(I) : null, holder: I.str(), marks: I.list(() => readRunMarkIn(I)), floor: readWalkedFloorIn(I) }; }
 export interface RunView { begun: boolean; over: boolean; void: boolean; lesson: boolean; mission: string; level: string; won: boolean; way: Approach | null; clean: boolean; secs: number; course: string; par: number | null }
-function readRunViewIn(I: In): RunView { return { begun: I.bool(), over: I.bool(), void: I.bool(), lesson: I.bool(), mission: I.str(), level: I.str(), won: I.bool(), way: I.bool() ? readApproachIn(I) : null, clean: I.bool(), secs: I.float64(), course: I.str(), par: I.bool() ? I.float64() : null }; }
-export function readRunView(b: Uint8Array): RunView { const I = new In(b), r = readRunViewIn(I); if (I.p !== b.length) throw new Error(`the view: RunView is ${b.length} bytes and ${I.p} were read`); return r; }
+export function readRunViewIn(I: In): RunView { return { begun: I.bool(), over: I.bool(), void: I.bool(), lesson: I.bool(), mission: I.str(), level: I.str(), won: I.bool(), way: I.bool() ? readApproachIn(I) : null, clean: I.bool(), secs: I.float64(), course: I.str(), par: I.bool() ? I.float64() : null }; }
+export interface OutcomeView { won: boolean; word: string; why: string; secs: number; approach: Approach | null; lost: number; of: number; foesDown: number; foesOf: number; hostages: RunVerdictHostages | null; void: boolean; clean: boolean }
+export function readOutcomeViewIn(I: In): OutcomeView { return { won: I.bool(), word: I.str(), why: I.str(), secs: I.float64(), approach: I.bool() ? readApproachIn(I) : null, lost: I.float64(), of: I.float64(), foesDown: I.float64(), foesOf: I.float64(), hostages: I.bool() ? readRunVerdictHostagesIn(I) : null, void: I.bool(), clean: I.bool() }; }
+export interface FloorView { bounds: [number, number, number, number]; boxes: number[] }
+export function readFloorViewIn(I: In): FloorView { return { bounds: [I.float64(), I.float64(), I.float64(), I.float64()], boxes: I.list(() => I.float64()) }; }
+export type MapKind = 'player' | 'man' | 'civ';
+const MapKindWords: readonly MapKind[] = ['player', 'man', 'civ'];
+function readMapKindIn(I: In): MapKind { return I.word(MapKindWords, 'MapKind'); }
+export interface MapMan { id: number; x: number; z: number; aim: number; team: string; kind: MapKind; down: boolean; name: string; state: string }
+function readMapManIn(I: In): MapMan { return { id: I.float64(), x: I.float64(), z: I.float64(), aim: I.float64(), team: I.str(), kind: readMapKindIn(I), down: I.bool(), name: I.str(), state: I.str() }; }
+export interface MapDoor { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean; name: string }
+function readMapDoorIn(I: In): MapDoor { return { hx: I.float64(), hz: I.float64(), ux: I.float64(), uz: I.float64(), width: I.float64(), locked: I.bool(), broken: I.bool(), off: I.bool(), name: I.str() }; }
+export interface MapView { men: MapMan[]; doors: MapDoor[] }
+export function readMapViewIn(I: In): MapView { return { men: I.list(() => readMapManIn(I)), doors: I.list(() => readMapDoorIn(I)) }; }
+export type GuardState = 'patrol' | 'suspicious' | 'alert' | 'search' | 'dead';
+const GuardStateWords: readonly GuardState[] = ['patrol', 'suspicious', 'alert', 'search', 'dead'];
+function readGuardStateIn(I: In): GuardState { return I.word(GuardStateWords, 'GuardState'); }
+export interface TallyMan { state: GuardState; lit: boolean }
+function readTallyManIn(I: In): TallyMan { return { state: readGuardStateIn(I), lit: I.bool() }; }
+export type QrfState = 'idle' | 'requested' | 'inbound' | 'arriving' | 'deployed';
+const QrfStateWords: readonly QrfState[] = ['idle', 'requested', 'inbound', 'arriving', 'deployed'];
+function readQrfStateIn(I: In): QrfState { return I.word(QrfStateWords, 'QrfState'); }
+export type MissionStage = 'drive' | 'infiltrate' | 'exfil' | 'done' | 'failed';
+const MissionStageWords: readonly MissionStage[] = ['drive', 'infiltrate', 'exfil', 'done', 'failed'];
+function readMissionStageIn(I: In): MissionStage { return I.word(MissionStageWords, 'MissionStage'); }
+export interface MissionStats { qrfWho: string | null; elapsed: number; alerts: number; spotted: number; bodies: number; shots: number; kills: number; knockouts: number; keys: number; blackout: boolean; sandbox: boolean; qrf: number; qrfAt: number }
+function readMissionStatsIn(I: In): MissionStats { return { qrfWho: I.bool() ? I.str() : null, elapsed: I.float64(), alerts: I.float64(), spotted: I.float64(), bodies: I.float64(), shots: I.float64(), kills: I.float64(), knockouts: I.float64(), keys: I.float64(), blackout: I.bool(), sandbox: I.bool(), qrf: I.float64(), qrfAt: I.float64() }; }
+export interface Tally { men: TallyMan[]; qrf: QrfState; escalation: number; autosaves: number; manual: number; loads: number; stage: MissionStage; alarm: boolean; alerts: number; clear: boolean; kind: MissionKind | null; stats: MissionStats }
+export function readTallyIn(I: In): Tally { return { men: I.list(() => readTallyManIn(I)), qrf: readQrfStateIn(I), escalation: I.float64(), autosaves: I.float64(), manual: I.float64(), loads: I.float64(), stage: readMissionStageIn(I), alarm: I.bool(), alerts: I.float64(), clear: I.bool(), kind: I.bool() ? readMissionKindIn(I) : null, stats: readMissionStatsIn(I) }; }
+export interface KnobRow { name: string; yes: boolean; value: number }
+export function readKnobRowIn(I: In): KnobRow { return { name: I.str(), yes: I.bool(), value: I.float64() }; }
+export interface ShownRow { name: string; label: string; section: string; title: string; lo: number; hi: number; step: number; scale: number; def: number; kept: boolean; adv: boolean }
+export function readShownRowIn(I: In): ShownRow { return { name: I.str(), label: I.str(), section: I.str(), title: I.str(), lo: I.float64(), hi: I.float64(), step: I.float64(), scale: I.float64(), def: I.float64(), kept: I.bool(), adv: I.bool() }; }
+export type ActionKind = 'press' | 'each' | 'choice' | 'count' | 'reload';
+const ActionKindWords: readonly ActionKind[] = ['press', 'each', 'choice', 'count', 'reload'];
+function readActionKindIn(I: In): ActionKind { return I.word(ActionKindWords, 'ActionKind'); }
+export interface ActionRow { name: string; label: string; section: string; title: string; kind: ActionKind; words: string[]; now: string; lo: number; hi: number; step: number; start: number; word: string }
+export function readActionRowIn(I: In): ActionRow { return { name: I.str(), label: I.str(), section: I.str(), title: I.str(), kind: readActionKindIn(I), words: I.list(() => I.str()), now: I.str(), lo: I.float64(), hi: I.float64(), step: I.float64(), start: I.float64(), word: I.str() }; }
+export interface Met { t: number; n: Vec3 }
+export function readMetIn(I: In): Met { return { t: I.float64(), n: [I.float64(), I.float64(), I.float64()] }; }
+export interface SoundPath { direct: boolean; routed: boolean; pathLen: number; via: Vec3; apparent: Vec3; muffle: number; carry: number }
+export function readSoundPathIn(I: In): SoundPath { return { direct: I.bool(), routed: I.bool(), pathLen: I.float64(), via: [I.float64(), I.float64(), I.float64()], apparent: [I.float64(), I.float64(), I.float64()], muffle: I.float64(), carry: I.float64() }; }
+export type SlotInfoSlot = 'auto' | 'manual';
+const SlotInfoSlotWords: readonly SlotInfoSlot[] = ['auto', 'manual'];
+function readSlotInfoSlotIn(I: In): SlotInfoSlot { return I.word(SlotInfoSlotWords, 'SlotInfoSlot'); }
+export interface SaveRow { key: string; label: string; slot: SlotInfoSlot; regret: boolean; missionT: number; savedAt: number }
+function readSaveRowIn(I: In): SaveRow { return { key: I.str(), label: I.str(), slot: readSlotInfoSlotIn(I), regret: I.bool(), missionT: I.float64(), savedAt: I.float64() }; }
+export interface SavesView { elapsed: number; hand: boolean; offer: string; rows: SaveRow[] }
+export function readSavesViewIn(I: In): SavesView { return { elapsed: I.float64(), hand: I.bool(), offer: I.str(), rows: I.list(() => readSaveRowIn(I)) }; }
+export interface SavesTold { tag: string; lines: string[] }
+export function readSavesToldIn(I: In): SavesTold { return { tag: I.str(), lines: I.list(() => I.str()) }; }
+export interface Recovered { game: number; label: string }
+export function readRecoveredIn(I: In): Recovered { return { game: I.uint32(), label: I.str() }; }
 export interface CardPouches { used: number; total: number }
 function readCardPouchesIn(I: In): CardPouches { return { used: I.float64(), total: I.float64() }; }
 export interface CardLoad { mob: number; con: number }

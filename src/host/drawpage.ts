@@ -86,7 +86,8 @@ import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
 import { ViewSize } from './viewsize';
-import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
+import { Face } from '../draw/face';
+import { Desk, desk, setDesk } from '../view/desk';
 import type { BriefView } from '../view/read';
 import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
@@ -148,7 +149,7 @@ async function main(): Promise<void> {
   // ---- the game's module
   const faceP = fetchFace(say).then(face => { MODULE.name = face.name ?? '';
     // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
-    setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
+    setDesk(new Desk(new Face(face.exports), (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
     desk().machine(machineKept(), location.search); return face; });
   faceP.catch(() => { /* told where it is awaited, below */ });
   // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked

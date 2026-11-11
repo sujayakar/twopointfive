@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { faceHere } from '../blitz/face-build.ts';
-import { characterFiles } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 import { DrawGame, type Start } from '../../src/host/drawgame';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { DrawPlay } from '../../src/host/drawplay';

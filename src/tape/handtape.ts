@@ -7,6 +7,8 @@
 // A hand is kept as it was handed (src/draw/hand.ts), its matrices too, and never made again from a camera: a walk is exact in any browser. A step carries only
 // the numbers that moved since the step before, each as four bytes where four hold it.
 
+import type { HandsOffPlan } from '../host/benchScenes';
+
 /** `version`: a tape of another one is refused */
 export const HANDTAPE = { magic: 0x31485054, version: 2 };
 const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7, FIGURES = 8;
@@ -35,7 +37,7 @@ export function figuresPart(a: TapeFigures, b: TapeFigures): string | null {
 /** ticks between two marks */
 export const MARKS = { every: 60 };
 export type TapeRow = { kind: 'step'; tick: number; dt: number; hand: Float64Array; keys: string } | { kind: 'order'; tick: number; bytes: Uint8Array }
-  | { kind: 'hands'; tick: number; plan: Uint8Array } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
+  | { kind: 'hands'; tick: number; plan: HandsOffPlan | null } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
 
 /** FNV-1a over bytes (a part's hash) */
 export function hashOf(b: Uint8Array): number { let h = 0x811c9dc5; for (let i = 0; i < b.length; i++) h = Math.imul(h ^ b[i], 0x01000193); return h >>> 0; }
@@ -82,7 +84,7 @@ export class HandTape {
   /** commands the game took, at the next step or between two */
   order(bytes: Uint8Array): void { if (!this.over) { this.u8(ORDER); this.bytes(bytes); } }
   /** a hands-off player took the seat, or with no plan gave it back */
-  hands(plan: Uint8Array): void { if (!this.over) { this.u8(HANDS); this.bytes(plan); } }
+  hands(plan: HandsOffPlan | null): void { if (!this.over) { this.u8(HANDS); this.text(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); } }
   mark(m: TapeMark): void { if (this.over) return; this.u8(MARK); this.u32(m.tick); this.f64(m.die); this.u32(m.parts); this.u8(m.state === null ? 0 : 1); if (m.state !== null) this.u32(m.state); }
   figures(f: TapeFigures): void {
     if (this.over) return; this.u8(FIGURES); this.u32(f.tick); this.u32(f.shots); this.u32(f.men.length); this.room(f.men.length * 13);
@@ -150,7 +152,7 @@ export class HandWalk {
   private row(): TapeRow {
     const kind = this.u8(), tick = this.ticks;
     if (kind === ORDER) return { kind: 'order', tick, bytes: this.bytes() };
-    if (kind === HANDS) return { kind: 'hands', tick, plan: this.bytes() };
+    if (kind === HANDS) { const said = this.text(), [seed, cap, breaker, ...route] = said.split('\n'); return { kind: 'hands', tick, plan: said ? { seed: Number(seed), cap: Number(cap), breaker: breaker !== '0', route } : null }; }
     if (kind === MARK) { const at = this.u32(), die = this.f64(), parts = this.u32(); return { kind: 'mark', mark: { tick: at, die, parts, state: this.u8() ? this.u32() : null } }; }
     if (kind === FIGURES) { const f: TapeFigures = { tick: this.u32(), shots: this.u32(), men: [] }; for (let n = this.u32(); n > 0; n--) f.men.push({ id: this.u32(), x: this.f32(), z: this.f32(), down: this.u8() === 1 }); return { kind: 'figures', figures: f }; }
     if (kind === TRY) return { kind: 'try', tick };

@@ -1,6 +1,6 @@
 //! The types of `game`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -102,7 +102,7 @@ pub enum SlotKind {
     Frag,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words, Crosses)]
 pub enum GuardState {
     #[default] Patrol,
     Suspicious,
@@ -222,7 +222,7 @@ pub struct WitnessSawHeld {
     pub who: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum MissionStage {
     #[default] Drive,
     Infiltrate,
@@ -246,7 +246,7 @@ pub struct Mission {
     pub serial: u32,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct MissionStats {
     pub qrf_who: Option<String>,
     pub elapsed: f64,

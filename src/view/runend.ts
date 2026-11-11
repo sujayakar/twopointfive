@@ -1,37 +1,11 @@
 // WHAT A CARD OF A RUN IS DRAWN FROM (ui/debrief.ts), whichever page holds the run: how it ended, what this machine kept of it, the debrief's own record, and the floor its map is of. Nothing here imports the game.
 import type { DebriefView } from './debriefview';
+import type { Approach, RunMark, RunVerdict, VerdictMan } from './read';
+export type { Approach, RunVerdict, VerdictMan };
 
 /** m:ss */
 export function clock(s: number): string { const n = Math.max(0, Math.floor(s)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; }
 
-/** the way a run was won, read off the run */
-export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';
-export type ManState = 'up' | 'out' | 'dead';
-export type ManTone = 'you' | 'purple' | 'red' | 'blue' | null;
-
-/** one man of the team at the run's end. Times are seconds from the try's start; `path` is x, z, t triples sampled as he walked. */
-export interface VerdictMan {
-  id: number; name: string; tone: ManTone; human: boolean;
-  state: ManState; downAt: number; downRoom: string; downBy: string; downPos: [number, number] | null;
-  drops: number[]; path: number[];
-}
-export interface RunVerdict {
-  kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet' | null;
-  won: boolean; word: string; why: string;
-  /** seconds from the try's start to the end */
-  secs: number;
-  approach: Approach | null;
-  /** a cheat was on during the try: nothing of it is kept */
-  void: boolean;
-  /** nobody of the team was lost */
-  clean: boolean;
-  men: VerdictMan[]; lost: number; of: number;
-  /** the defenders: how many went down of how many, and where (x, z pairs) */
-  foes: { down: number; of: number; fell: number[] };
-  hostages: { alive: number; of: number } | null;
-  /** where the team started (the map's mark) */
-  start: [number, number];
-}
 /** the page's note to the card: which try of the streak this was (0 = not a counted try), the ways won on this mission so far */
 export interface KeptNote { streak: number; fresh: boolean; gold: boolean; ways: Partial<Record<Approach, { first: boolean; clean: boolean }>>; /** a Training lesson's run: nothing is kept of it and the card grades nothing — no ways, no tries */ lesson?: boolean }
 
@@ -47,8 +21,6 @@ export function verdictLine(R: RunVerdict, kept: KeptNote | null = null): string
   return parts.join(' · ');
 }
 
-/** a mark of the map: where he came in, what he came for, the ways out */
-export interface RunMark { glyph: string; cls: string; x: number; z: number; title: string }
 export interface RunEnd {
   view: DebriefView;
   verdict: RunVerdict | null; kept: KeptNote | null;

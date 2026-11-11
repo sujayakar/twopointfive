@@ -1,6 +1,6 @@
 //! The types of `savestate`.
 #![allow(unused_imports)]
-use crate::{Blank, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
@@ -14,7 +14,7 @@ pub struct SlotInfo {
     pub regret: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, ToBytes, Words, Crosses)]
 pub enum SlotInfoSlot {
     #[default] Auto,
     Manual,

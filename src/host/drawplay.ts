@@ -1,4 +1,5 @@
 // A TAPE WALKED (tape/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
+import type { MomentNo } from '../draw/face';
 import { HAND } from '../draw/hand';
 import { ANOTHER, HandWalk, TapeRefused, figuresPart, type TapeFigures, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
 import { GameLost, partsOf, type DrawGame, type Start } from './drawgame';
@@ -26,7 +27,7 @@ export class DrawPlay {
   words: Parted | null = null;
   /** the walk was lost to a panic, as the run may have been (`ends`) */
   lost: GameLost | null = null;
-  private rows: HandWalk; private moments = new Map<number, { k: number; place: TapePlace }>();
+  private rows: HandWalk; private moments = new Map<number, { k: MomentNo; place: TapePlace }>();
 
   /** `same`: it was played on this very module */
   constructor(readonly game: DrawGame, bytes: Uint8Array, private same = true) {
