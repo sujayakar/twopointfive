@@ -45,7 +45,7 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
     g.m.showwhy.states.get_or_insert_with(key, || State { after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
 
-/// The row `st` of the TypeScript, by its key; the tick made it before anything here runs.
+/// His row of the table, by its key; the tick made it before anything here runs.
 fn st_row(g: &mut Game, pl: PlayerId) -> &mut crate::showwhy::State {
     g.m.showwhy.states.get_mut(pl).unwrap()
 }

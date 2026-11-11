@@ -25,7 +25,7 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
 /** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS (rust/sim/src/state.rs): STATE = the games' blocks, the one place a game keeps anything from one
- *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/tick/sim_state.rs) · SCRATCH = written and read inside one call · COPY = the host's own
+ *  call to the next (a moment of the game carries the block whole: rust/game_rules/src/tick/savestate/control.rs) · SCRATCH = written and read inside one call · COPY = the host's own
  *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
@@ -55,7 +55,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world and asked again wherever a static row or a leaf moved (always what a fresh ask gives)',
-  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against',
+  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against', 'sim/src/bricks.rs PANES': 'COPY · the panes open somewhere that FACES was last asked against',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and whether that state\'s faces were asked',
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',

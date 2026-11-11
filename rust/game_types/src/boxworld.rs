@@ -90,6 +90,8 @@ pub struct Thing {
 pub const VIEW_NONE: u32 = 0;
 pub const VIEW_BLOWN: u32 = 1;
 pub const VIEW_GIVES: u32 = 2;
+/// which view, its numbers, and the panes a burst meets (`World.view`, `view_at`, `view_met`)
+pub type View = (u32, [f64; 6], Vec<(u32, [f64; 3])>);
 
 /// THE ROWS, as the loops read them.
 #[derive(Clone, Debug, Default)]
@@ -129,6 +131,8 @@ pub struct World {
     /// the view of the glass a judgment in hand takes (VIEW_*), and its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it
     pub view: u32,
     pub view_at: [f64; 6],
+    /// …and the panes a burst there has a line to, each with the point it meets (a view of what it would break alone)
+    pub view_met: Vec<(u32, [f64; 3])>,
     /// which writing of a static's row this is: no two alike in a process, so a table made from the statics is told by it
     pub wrote: u64,
     /// …and of how one stands (its place, its size, its turn), for a table that is made of that alone
@@ -407,7 +411,11 @@ impl Boxes {
     /// the game stands in this slot: its panes are there
     pub fn stand_in(&mut self, slot: usize) { if let Some(g) = &mut self.rows.panes { *g = slot } }
     /// the view of the glass the judgment in hand takes
-    pub fn view(&mut self, kind: u32, at: [f64; 6]) { (self.rows.view, self.rows.view_at) = (kind, at); }
+    /// → the one that was
+    pub fn view(&mut self, (kind, at, met): View) -> View {
+        let w = &mut self.rows;
+        (core::mem::replace(&mut w.view, kind), core::mem::replace(&mut w.view_at, at), core::mem::replace(&mut w.view_met, met))
+    }
 
     /// THE CHECK, against the lists as the game has them (a thing's id, its parts, where it stands): the first box that is in a list and not in its place here, or whose row is not
     /// the box as it stands, by what it is and its place

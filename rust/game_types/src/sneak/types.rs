@@ -82,19 +82,19 @@ pub struct Exp {
 #[derive(Clone, Debug, Default)]
 pub struct SneakWalk {
     pub by: Option<GuardId>,
-    /// INVENTED by a review: see the proposals
+    /// the man who walks
     pub gd: GuardId,
-    /// INVENTED by a review: see the proposals
+    /// he goes crouched
     pub low: bool,
-    /// INVENTED by a review: see the proposals
+    /// how keen the defenders' eyes are: `guards::KEEN` once the alarm is up, else 1
     pub keen: f64,
-    /// INVENTED by a review: see the proposals
+    /// how his load shows (`kitload::load_seen`)
     pub card: f64,
-    /// INVENTED by a review: see the proposals
+    /// how far an eye is asked: the guards' range and half a meter
     pub reach: f64,
-    /// INVENTED by a review: see the proposals
+    /// the defenders who could see him: his foes, up, not blind and awake
     pub men: Vec<crate::sneak::SneakWalkMan>,
-    /// INVENTED by a review: see the proposals
+    /// what each cell has answered, plain and wider (`sneak_walk_watched`)
     pub memo: JsMap<crate::Num, bool>,
 }
 
@@ -180,12 +180,12 @@ pub fn none() -> crate::sneak::Exp { crate::sneak::Exp { seen: false, watched: f
 
 pub const MAP_SHORT: f64 = 0.05;
 
-/// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body
+/// what the eye test is asked about: a spot a man could stand on, or a man's own body
 #[derive(Clone, Copy, Debug)]
 pub enum Target { Spot { chest: V3, head: V3 }, Man { c: CharId } }
-/// INVENTED: one defender in a SneakWalk. His `kept` lines stay in g.m.sneak.kept_lines, read by his id
+/// one defender in a SneakWalk. His `kept` lines stay in g.m.sneak.kept_lines, read by his id
 #[derive(Clone, Debug)]
 pub struct SneakWalkMan { pub h: GuardId, pub x: f64, pub z: f64, pub open: crate::guards::Eye, pub looks: Vec<crate::sneak::SneakWalkLook>, pub line: JsMap<crate::Num, f64> }
-/// INVENTED: one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER
+/// one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER
 #[derive(Clone, Copy, Debug)]
 pub struct SneakWalkLook { pub e: crate::guards::Eye, pub ew: crate::guards::Eye, pub lx: f64, pub lz: f64 }

@@ -51,7 +51,7 @@ fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f6
     let t = v3::clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2, 0.0, t_max);
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < g.k.coverfire.lane + g.k.coverfire.cone_k * t * l
 }
-/// writes through his chew's row, if he still has one (in the TypeScript the object lives on whether the row holds it or not)
+/// writes through his chew's row, if he still has one
 fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     let row = g.m.coverfire.states.as_mut().and_then(|s| s.men.get_mut(gd)).and_then(|m| m.chew.as_mut());
     if let Some(cw) = row { f(cw); }

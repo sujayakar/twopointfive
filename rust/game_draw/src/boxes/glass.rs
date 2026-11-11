@@ -1,7 +1,7 @@
 //! THE PANES: every static of glass, nearest to where the view looks first and as many as the info block holds, and behind each what is broken of it (the cells
-//! a round or a blast took out: game/glassbreak.ts `fill` is the layout).
-use super::grid::{MAX_PANES, PANES};
-use super::{pack, Row4, Word};
+//! a round or a blast took out).
+use super::grid::MAX_PANES;
+use super::{pack, Info, Row4};
 use alloc::vec::Vec;
 use game::game::Game;
 use game::m;
@@ -10,8 +10,8 @@ use game::m;
 const HEAD: usize = 4;
 const SITE: usize = 4;
 const SITES: usize = 8;
-const ROWS: usize = HEAD + SITES * SITE;
-// glassbreak.ts's places in a pane's row (rust/sim panes.rs Row.d and Row.w)
+pub const ROWS: usize = HEAD + SITES * SITE;
+// places in a pane's row (rust/sim panes.rs Row.d and Row.w)
 const D_SITE: usize = 9;
 const D_DICE: usize = 72;
 const W_FLAGS: usize = 1;
@@ -45,22 +45,19 @@ impl Glass {
         self.panes.clear();
         for (i, &b) in g.engine.world.statics[..n].iter().enumerate() { if pack::flags(&g.tab.boxes[b]) & pack::GLASS != 0 { self.panes.push(i as u32); } }
     }
-    pub fn frame(&mut self, g: &Game, focus: [f64; 3], info: &mut [Word], on: bool) {
+    pub fn frame(&mut self, g: &Game, focus: [f64; 3], info: &mut Info, on: bool) {
         let st = &g.engine.world.statics;
         self.near.clear();
         if on { for &i in &self.panes { let c = g.tab.boxes[st[i as usize]].c; self.near.push(((c[0] - focus[0]) * (c[0] - focus[0]) + (c[2] - focus[2]) * (c[2] - focus[2]), i)); } }
         self.near.sort_by(|a, b| a.0.total_cmp(&b.0));
         self.near.truncate(MAX_PANES);
-        let f = |v: f64| Word { w: (v as f32).to_bits() };
-        info[PANES].w = self.near.len() as u32;
-        info[PANES + 1].w = self.near.len() as u32;
+        (info.glass_info[0], info.glass_info[1]) = (self.near.len() as u32, self.near.len() as u32);
         for (k, &(_, i)) in self.near.iter().enumerate() {
             let b = &g.tab.boxes[st[i as usize]];
-            let o = PANES + 4 + k * 12;
-            for j in 0..3 { info[o + j] = f(b.c[j]); info[o + 4 + j] = f(b.h[j]); info[o + 8 + j] = f(b.albedo[j]); }
-            info[o + 3] = f(m::cos(b.yaw));
-            info[o + 7] = f(m::sin(b.yaw));
-            info[o + 11] = f(i as f64);
+            let row = |v: [f64; 3], w: f64| [v[0] as f32, v[1] as f32, v[2] as f32, w as f32];
+            info.glass[3 * k] = row(b.c, m::cos(b.yaw));
+            info.glass[3 * k + 1] = row(b.h, m::sin(b.yaw));
+            info.glass[3 * k + 2] = row(b.albedo, i as f64);
         }
         self.cells.clear();
         self.cells.resize(MAX_PANES * ROWS, Row4 { w: [0.0; 4] });

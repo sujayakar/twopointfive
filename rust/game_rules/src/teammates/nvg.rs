@@ -328,7 +328,7 @@ pub fn nvg_sight(g: &mut crate::game::Game, viewer: GuardId, o: GuardId) -> f64 
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits under EXACT (bun, nvg.ts:109 and 110 with albedo 0.3, re-run on the snapshot): exposure, gain, E, k, sig
+    /// the pinned bits of the tube curve at albedo 0.3: exposure, gain, E, k, sig
     #[test]
     fn the_tube_curve_gives_the_typescripts_bits() {
         let rows: [(f64, f64, f64, u64, u64); 6] = [

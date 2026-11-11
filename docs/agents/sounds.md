@@ -134,7 +134,7 @@ the recorded picture. On a voice built from instruments the card lists its layer
   it), then the rule's call. A name not in the table plays nothing and says nothing. `bun run tools/qa/checks.ts sound`, then
   `node tools/draw/sound-tapes.cjs --cover`, which says what no replay reaches and what was asked for that is no row.
 - **Another take:** a row of `TAKES` in `sfxAlt.ts`. An older voice back: a name in `WAS_IN_GAME`.
-- **Something new to say of a sound:** an arm of `PlayOpts`, `play_opts`, `OutPlayOpts`, the `Sound` row, `tools/draw/gen.ts`, then the reading in
+- **Something new to say of a sound:** an arm of `PlayOpts`, `play_opts`, `OutPlayOpts`, the `Sound` row, `half`, then the reading in
   `src/draw/events.ts`. Rebuild with `bun run tools/blitz/face-build.ts`.
 - **A floor:** `floor()` in `rust/game_types/src/floor/` for the rules, `FLOOR` in `floors.ts` for sample and brightness. Change both; nothing compares them.
 - **A piece:** a `Piece` in `pieces.ts`, added to `PIECES`.

@@ -1,5 +1,5 @@
-// Shared by the two direct-light estimators (direct.wgsl = the leader/tail path, restir.wgsl = ReSTIR DI): the tile-culling reach test, the glass
-// helpers, the per-lane rng and the one emitter shadow-ray sampler. Moved out of direct.wgsl verbatim (renderer v3 Phase 2a) — passes.ts prepends it to both.
+// Shared by the direct-light estimator (restir.wgsl) and sharp direct (sharp_direct.wgsl): the tile-culling reach test, the glass
+// helpers, the per-lane rng and the one emitter shadow-ray sampler. passes.ts prepends it to both.
 const GLASS_DIR_REACH: f32 = 8.0;             // how far toward a directional light (the moon, the sun) a pane may stand and still tint it: indoors the ray has left through the glazing or met the ceiling well inside this
 fn glassPairMask(li: Light, mn: vec3f, mx: vec3f) -> u32 {
   var lm = lightGlassMask(li);   // the panes this light can reach at all (CPU, per frame, riding in the light's own record): usually none, so no pane is even looked at

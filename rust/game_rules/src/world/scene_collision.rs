@@ -252,7 +252,7 @@ pub fn clamp_to_world(p: &mut V3, r: f64) -> bool {
 // ---- lines
 
 /// the world as a question takes it, in the loops' own words, for the question `f`
-fn over_lent<R>(g: &Game, over: &Over, f: impl FnOnce(&sim::world::Over) -> R) -> R {
+pub(crate) fn over_lent<R>(g: &Game, over: &Over, f: impl FnOnce(&sim::world::Over) -> R) -> R {
     let leaves = over.leaves != Leaves::None;
     if over.plain() { return f(&sim::world::Over::with(true)); }
     let but: Vec<u32> = match &over.leaves { Leaves::But(l) => (0..g.col.dynamic_boxes.len() as u32).filter(|&i| l.contains(&g.col.dynamic_boxes[i as usize])).collect(), _ => Vec::new() };
@@ -306,6 +306,12 @@ pub fn segment_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, through: Opt
 /// …of the world as the question takes it
 pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>) -> bool {
     line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), None)
+}
+
+/// the sheets of glass a blast at `at` has a line to within `radius`, each with the point it meets
+pub fn panes_met(g: &Game, over: &Over, at: V3, radius: f64) -> Vec<(u32, V3)> {
+    let w = world(g);
+    over_lent(g, over, |v| w.sheets.iter().filter_map(|s| sim::panes::blast_meets(w, v, s.bi as usize, at, radius, &g.k).map(|q| (s.bi, q))).collect())
 }
 
 /// segmentBlocked with nothing passed: the solid test.
@@ -462,8 +468,8 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
 /// a tick with no step of the grid in it: some of what the light of the next ones is worked out from is made ahead, no state
 pub fn grid_ahead(g: &Game) { if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::ahead(g.sim, world(g), &g.k); } }
 
-/// What the light under a roof is worked out from is made as a game stands, behind the loading, and not in its first step: the statics' lines, no state.
-pub fn light_ready(g: &Game) { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, &g.k); }
+/// What the light under a roof is worked out from is made behind the loading, `most` lines of it, and not in the first step: the statics' lines, no state. → is all of it made
+pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
 
 // ---- how a sound reaches a listener
 
@@ -622,7 +628,7 @@ pub fn nav_grid_is_blocked(g: &crate::game::Game, wx: f64, wz: f64) -> bool {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let (x, z) = (m::floor(wx / cell), m::floor(wz / cell));
     if x < 0.0 || z < 0.0 || x >= nw || z >= nh { return true; }
-    // (a point that is no number: every comparison above is false, and the TypeScript's table reads undefined, which is not 1)
+    // (a point that is no number: every comparison above is false, and it is not blocked)
     if x != x || z != z { return false; }
     g.col.nav.blocked[(z * nw + x) as usize] == 1
 }

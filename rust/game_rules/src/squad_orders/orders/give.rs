@@ -43,7 +43,6 @@ fn menu_target_of(m: &Menu) -> OrderTarget {
         (t, _) => t.clone(),
     }
 }
-// ---- what skeleton 5 still cannot reach ----
 // ---- an order's functions, called through its row (orders/rows/) ----
 /// `d.label(t)`
 fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
@@ -512,9 +511,9 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
     let target: OrderTarget = match target { Some(x) => x.clone(), None => { let a = g.sets[g.seat].aim_point; squad_orders_target_at(g, a) } };
     if !squad_orders_active(g, &crate::seats::here(g)) || crate::condition::down(g, g.pl[g.player].ch) { return false; }
     let rows = squad_orders_flat_rows(g, &crate::seats::here(g), &target, part);
-    // (THE MENU'S OWN TARGET IS KNOWN BY IDENTITY: wallcharge.ts keptFor asks `M.target === t` before it keeps a walk for the open menu. A floor target
-    //  carries a serial for that, and this is where the one a menu keeps is dealt; the rows above were asked before there was this menu, as in the
-    //  TypeScript, so they are not kept. Without it no walk of an open menu was ever kept: the same answers, worked again at every re-read.)
+    // (THE MENU'S OWN TARGET IS KNOWN BY ITS SERIAL: a wall charge keeps a walk for the open menu only for that very target. A floor target
+    //  carries a serial for that, and this is where the one a menu keeps is dealt; the rows above were asked before there was this menu,
+    //  so they are not kept. Without it no walk of an open menu would ever be kept: the same answers, worked again at every re-read.)
     let mut target = target;
     if let OrderTarget::Floor(f) = &mut target { if f.serial == 0 { f.serial = g.serial(); } }
     g.sets[g.seat].orders.menu = Some(Menu {

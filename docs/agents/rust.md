@@ -161,9 +161,9 @@ and neither side may link the other. Inside the rules:
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
 - **A question:** the walk in `rust/sim`, over a `&World`; its call in `scene_collision.rs`, of `&Game`; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
 - **An event.** For the rules: a `GameEvent` on `g.events`, kept half a second. For the host: an arm of `OutEvent`, a function in
-  `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `tools/draw/gen.ts` and `src/draw/events.ts`.
-- **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields `f32`, `u32`, `i32` or arrays of them; values, never references),
-  a line in `sections!`, `tools/draw/gen.ts`, a reader in `src/draw/`.
+  `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `half` and `src/draw/events.ts`.
+- **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields by `game_types::rows`; values, never references),
+  a line in `sections!`, `half`, a reader in `src/draw/`.
 - **A call of the face:** `#[no_mangle] pub extern "C" fn` in its file of `game_face/src/` and on that file's head list, using `with` or `with_ref`,
   answering by `out`. `Face` is untyped, so a wrong name in the page fails only when called.
 
@@ -183,7 +183,7 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 
 ## What holds it
 
-- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `bun run tools/draw/gen.ts --check`: the page's
+- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `half --check` (`rust/game_start`, `cargo run --profile gate --bin half`): the page's
   offsets.
 - `gate`: the rows `again` (a second run in one process), `save` and `load` (a `Moment` put back) and `draw`. `tools/draw/play-check.ts` panics a game
   in the module and recovers it.

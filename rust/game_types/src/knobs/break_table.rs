@@ -32,14 +32,14 @@ pub struct BreaksK {
     /// the KINKED metal panel (the one "bent" a cut box can draw: two halves of one plate meeting on a fold): the angle between the halves (deg), how far the fold
     ///  may turn off square (deg) and sit off the middle (share of the half length), the shortest plate that kinks (half length, m), and the gap between two (s: one a blast)
     pub kink: BreaksKKink,
-    /// FURNITURE'S STEEL (furnblast.ts hands a cabinet over as what it is — sheet steel on a frame — not as the block its paint reads as): the sheet's half thickness
-    ///  (m); the shallow fold every torn-off sheet carries (deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
-    ///  crease `dent` m deep at one end running out toward the other, never deeper than `dentMost` of the side it bites; and stands OPEN where its door was: that face's
+    /// FURNITURE'S STEEL (a cabinet painted as steel goes to the table as what it is — sheet steel on a frame — not as one solid block): the sheet's half thickness
+    ///  (m); the shallow fold every torn-off sheet carries (`kink`, deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
+    ///  crease `dent` m deep at one end running out toward the other, never deeper than `dent_most` of the side it bites; and stands OPEN where its door was: that face's
     ///  frame `rim` m wide stands `lip` m back from the dark panel it holds (the paint × `inside`)
     pub steel: BreaksKSteel,
     /// the uprights a plasterboard partition keeps where fire has opened a run of it above a standing sill (one static stand-in each): half width along the wall
     ///  (m), its depth as a share of the wall's, its metal
-    /// (`does`, scene/materials.ts: what its grey was to a round until 11-05, a light thing that puffs like plaster. Nobody chose it: a stud is steel)
+    /// (`foot`: how far below the sill it starts, m; `does`: what a round makes of it)
     pub stud: BreaksKStud,
 }
 
@@ -74,9 +74,9 @@ pub struct BreaksKKink {
     #[k(0.5)] pub gap_secs: f64,
 }
 
-/// FURNITURE'S STEEL (furnblast.ts hands a cabinet over as what it is — sheet steel on a frame — not as the block its paint reads as): the sheet's half thickness
-///  (m); the shallow fold every torn-off sheet carries (deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
-///  crease `dent` m deep at one end running out toward the other, never deeper than `dentMost` of the side it bites; and stands OPEN where its door was: that face's
+/// FURNITURE'S STEEL (a cabinet painted as steel goes to the table as what it is — sheet steel on a frame — not as one solid block): the sheet's half thickness
+///  (m); the shallow fold every torn-off sheet carries (`kink`, deg between its halves); a carcass that goes over whole is DENTED along `dents` of its edges, each a
+///  crease `dent` m deep at one end running out toward the other, never deeper than `dent_most` of the side it bites; and stands OPEN where its door was: that face's
 ///  frame `rim` m wide stands `lip` m back from the dark panel it holds (the paint × `inside`)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct BreaksKSteel {
@@ -94,11 +94,11 @@ pub struct BreaksKSteel {
 ///  (m), its depth as a share of the wall's, its metal
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct BreaksKStud {
-    /// (`does`, scene/materials.ts: what its grey was to a round until 11-05, a light thing that puffs like plaster. Nobody chose it: a stud is steel)
     #[k(0.02)] pub half: f64,
     #[k(0.7)] pub depth_k: f64,
     #[k(0.13)] pub foot: f64,
     #[k([0.56, 0.57, 0.6])] pub albedo: V3,
     #[k(0.35)] pub rough: f64,
+    /// the light grey's row: a light thing that puffs like plaster, though a stud is steel
     #[k(crate::scene_materials::DoesWord::UnnamedLightGrey)] pub does: crate::scene_materials::DoesWord,
 }

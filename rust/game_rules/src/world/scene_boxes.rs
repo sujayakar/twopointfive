@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, sync::Arc, vec, vec::Vec};
 
-// THE BOX TABLES' MAKERS. Invented by the skeleton, so they have no TypeScript line: written here. A box of the world is a row of `g.tab.boxes` and is never
+// THE BOX TABLES' MAKERS. A box of the world is a row of `g.tab.boxes` and is never
 // dealt again, so its number is the same on every host. A box of the frame, or one its maker keeps a while, is a row of `g.tab.frame_boxes`: a row is freed by
 // the tick's own listing, not by a host's drawing, but a freed row is dealt again: it names a box only while its holder holds it.
 
@@ -48,11 +48,11 @@ fn boxes_frame_reset(g: &mut Game) {
 pub fn box_kept(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     match g.box_frame_free.pop() { Some(id) => { g.tab.frame_boxes[id] = b; id } None => g.tab.frame_boxes.push(b) }
 }
-/// The holder of a kept box has dropped it (the TypeScript drops the object). The frame's list or the engine's may still name it, so it is not free at
+/// The holder of a kept box has dropped it. The frame's list or the engine's may still name it, so it is not free at
 /// once: it joins the frame's rows, and the next listing frees it once it is on no list (`box_world_listed`).
 pub fn box_let_go(g: &mut Game, id: FrameBoxId) { g.box_frame_rows.push(id); }
 
-/// makeBox for a box pushed straight onto the frame's list: a row for this frame (boxes.ts makeBox, where its caller keeps nothing of it)
+/// makeBox for a box pushed straight onto the frame's list: a row for this frame, of which its caller keeps nothing
 pub fn make_box_frame(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> FrameBoxId { let b = crate::scene_boxes::make_box_value(p); box_frame(g, b) }
 /// makeBox for a box its maker keeps until it hands it to `box_let_go` (one that stands by a short timer on `g.fx`)
 pub fn make_box_kept(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> FrameBoxId { let b = crate::scene_boxes::make_box_value(p); box_kept(g, b) }
@@ -301,7 +301,7 @@ fn ray_walk(g: &Game, r: &RayGrid, near: &mut Nearest, ro: V3, rd: V3, skip_flag
     loop {
         if t_enter > near.best { return; }
         let c = cz * w_ + cx;
-        // (a NaN origin leaves the cell NaN: the TypeScript's array reads give undefined and no candidate)
+        // (a NaN origin leaves the cell NaN: no candidate)
         if c == c {
             let c = c as usize;
             let (s, e) = (r.start[c] as usize, r.start[c + 1] as usize);
@@ -553,7 +553,7 @@ mod tests {
         fnv(fnv(h, b as u32), (b >> 32) as u32)
     }
 
-    /// the same world as /tmp/p_scene_boxes_01_bits.ts builds, to the draw
+    /// the world the pinned bits are of, draw for draw
     fn world(g: &mut Game, x: &mut Lcg) {
         g.engine.world = crate::scene_boxes::BoxWorld::blank();
         g.engine.world.max_boxes = 4096.0;
@@ -610,13 +610,12 @@ mod tests {
         h
     }
 
-    /// raycast through the grid, the brute force and the tests of every shape, against the TypeScript's own bits (bun, EXACT on)
+    /// raycast through the grid, the brute force and the tests of every shape, against pinned bits
     #[test]
     fn raycast_matches_the_typescripts_bits() {
         let mut g = Game::blank();
         let mut x = Lcg(12345);
         world(&mut g, &mut x);
-        // no list yet: no grid, as in the TypeScript before an upload
         assert_eq!(box_world_list(&mut g), 200.0);
         assert!(box_world_at(&g, 219).is_some() && box_world_at(&g, 220).is_none());
         let mut seen = 2166136261u32;
@@ -653,6 +652,71 @@ mod tests {
         box_world_list(&mut g);
         let mut x7 = Lcg(777);
         assert_eq!(rays(&mut g, &mut x7), brute, "a static taken out: brute force against a grid made afresh");
+    }
+
+    /// the ray as it is said: the statics of the cells round each half metre of it, in order, each once; the nearest entered and of two as near the first come on
+    fn ray_by_the_half_metre(g: &Game, list: &[BoxId], ro: V3, rd: V3, tmax: f64) -> (f64, i32) {
+        let w = g.tab.boxes.world();
+        let (mut met, mut asked, steps) = ((tmax, -1), vec![false; list.len()], m::ceil(tmax / 0.5) + 1.0);
+        for i in 0..=steps as usize {
+            let t = (i as f64 / steps) * tmax;
+            if t > met.0 + 1.5 { break; }
+            let (x, z) = (m::floor((ro[0] + rd[0] * t) / w.cs), m::floor((ro[2] + rd[2] * t) / w.cs));
+            for (cx, cz) in [-1.0, 0.0, 1.0].into_iter().flat_map(|dz| [-1.0, 0.0, 1.0].map(|dx| (x + dx, z + dz))) {
+                if !(cx >= 0.0 && cz >= 0.0 && cx < w.w as f64 && cz < w.h as f64) { continue; }
+                let c = cz as usize * w.w as usize + cx as usize;
+                for &b in &w.items[w.start[c] as usize..w.start[c + 1] as usize] {
+                    if core::mem::replace(&mut asked[b as usize], true) || js::to_i32(g.tab.boxes[list[b as usize]].flags) & js::to_i32(box_flag().no_shadow) != 0 { continue; }
+                    if let Some(r) = ray_box(g, ro, rd, list[b as usize].into(), met.0) { if r.t < met.0 { met = (r.t, b as i32); } }
+                }
+            }
+        }
+        met
+    }
+
+    /// THE RAY THE RULES ASK (sim lines.rs) passes over cells and boxes it need not ask: its answer is the nearest, and of two as near the same one, however it went about it. Among them boxes with
+    /// a face in one plane, tilted ones, some that stand over the level's edge, and rays from outside it.
+    #[test]
+    fn a_ray_among_the_rows_meets_what_the_half_metres_meet() {
+        let mut g = Game::blank();
+        let mut x = Lcg(4242);
+        world(&mut g, &mut x);
+        let mut list = g.engine.world.statics.clone();
+        for i in 0..80 {
+            let mut b = g.tab.boxes[list[i]].clone();
+            let up = i % 3;
+            b.c[up] += b.h[up] * (x.r() - 0.5);
+            list.push(crate::scene_boxes::box_new(&mut g, b));
+        }
+        g.col = crate::scene_collision::new(&mut g, &list);
+        let (mut met, mut tied) = (0, 0);
+        for j in 0..8000 {
+            let ro = if j % 8 == 0 { [x.r() * 50.0 - 5.0, x.r() * 3.0, x.r() * 38.0 - 5.0] } else { [x.r() * 40.0, x.r() * 3.0, x.r() * 28.0] };
+            let mut rd = [x.r() * 2.0 - 1.0, x.r() * 2.0 - 1.0, x.r() * 2.0 - 1.0];
+            if j % 7 == 0 { rd[1] = 0.0; }
+            if j % 11 == 0 { rd[0] = 0.0; }
+            if j % 13 == 0 { rd = [0.0, if j % 2 == 0 { 1.0 } else { -1.0 }, 0.0]; }
+            if j % 17 == 0 { rd = [1e-200, -1.0, 0.0]; }
+            let len = m::hyp3(rd[0], rd[1], rd[2]);
+            for v in &mut rd { *v /= len; }
+            let tmax = if j % 5 == 0 { 3.0 } else { 60.0 };
+            let mut out = [0.0; 4];
+            let got = sim::lines::ray(g.tab.boxes.world(), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, false, false, &mut out, &g.k);
+            let want = ray_by_the_half_metre(&g, &list, ro, rd, tmax);
+            assert_eq!(got.max(-1), want.1, "ray {j} from {ro:?} along {rd:?} for {tmax}");
+            if got < 0 { continue; }
+            assert_eq!(out[0].to_bits(), want.0.to_bits(), "ray {j} from {ro:?} along {rd:?} for {tmax}: {got}");
+            met += 1;
+            for (i, &b) in list.iter().enumerate() {
+                let Some(r) = ray_box(&g, ro, rd, b.into(), tmax) else { continue };
+                tied += (i as i32 != got && r.t == want.0) as u32;
+                // (a tilted one is met where the walk comes by the cells it is filed in, and what stands past the edge is in no cell)
+                let plain = g.tab.boxes[b].rot.is_none() && js::to_i32(g.tab.boxes[b].flags) & js::to_i32(box_flag().no_shadow) == 0;
+                let at = [ro[0] + rd[0] * r.t, ro[2] + rd[2] * r.t];
+                assert!(!plain || r.t >= want.0 || !(at[0] >= 0.0 && at[0] < 40.0 && at[1] >= 0.0 && at[1] < 28.0), "ray {j} from {ro:?} along {rd:?}: {i} is nearer than {got}");
+            }
+        }
+        assert!(met > 3000 && tied > 100, "{met} rays met anything, {tied} met two at one place");
     }
 
     #[test]

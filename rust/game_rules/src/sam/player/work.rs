@@ -100,7 +100,7 @@ pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game) {
 pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    // The TypeScript's W outlives a stop (its object is only dropped from pl.wanding), so a local copy written back while he still has the look does the same.
+    // A local copy: it outlives a stop, and is written back only while he still has the look.
     let mut w = g.pl[pl].wanding().copied().unwrap();
     let d = w.door;
     let pos = g.ch[c].pos;
@@ -236,7 +236,7 @@ pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crat
     pose_gun_light(g);
 }
 
-/// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript: the write goes to that owner, by the kind of work.
+/// Moves the work's spot by (dx, dz). The spot is held by the verb's owner: the write goes to that owner, by the kind of work.
 fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork::SamWorkKind, dx: f64, dz: f64) {
     let at = match kind {
         crate::handwork::SamWorkKind::Wall => g.pl[pl].wall_work_mut().map(|s| &mut s.at),
@@ -345,7 +345,7 @@ fn side_kick_spot(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::p
 pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    // `spot` stays the same object in the TypeScript even if pl.kick is cleared under the walk: what it is read for below is taken here.
+    // pl.kick may be cleared under the walk: what is read from it below is taken here.
     let k = g.pl[pl].kick().unwrap();
     let (d, spot_at, spot_yaw) = (k.door, k.spot, k.yaw);
     let run = k.run.unwrap_or(false);

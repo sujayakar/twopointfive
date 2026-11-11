@@ -8,7 +8,7 @@ use crate::m;
 use crate::boxworld::{MAX_BOXES, MAX_CELLS, MAX_CUTS, MAX_ITEMS, MAX_LEAVES, MAX_SHEETS, MAX_THINGS, MAX_TILTED};
 use alloc::{string::String, vec, vec::Vec};
 
-// ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
+// ---- the terms of the count: called by the bodies below
 
 /// Men a game holds at once, at most.
 fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
@@ -125,7 +125,7 @@ fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
     n
 }
 
-/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast. Written here on the Stood's own lists: posehome.ts's two functions have no other caller and are still stubs.
+/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast.
 fn man_singles_of(g: &Game, s: &crate::levelfit::Stood) -> f64 {
     let (Some(guards), Some(civilians)) = (&s.guards, &s.civilians) else { return 0.0 };
     if s.seats.is_none() || s.player.is_none() { return 0.0; }
@@ -210,7 +210,7 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
     rows
 }
 
-// ---- the functions translated code calls
+// ---- the functions the rest of the game calls
 
 /// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.
 pub fn civ_most(g: &crate::game::Game) -> f64 {

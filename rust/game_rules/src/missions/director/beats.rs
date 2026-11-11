@@ -5,9 +5,7 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-// ---- what the by-hand scripts call: the verbs of a level script, which are closures of the TypeScript's D, P, c and q objects. No TypeScript function has these names.
-
-/// INVENTED: B.fn(ctx) at director.ts:586: the beat's frame before its first step. Body by hand, with the nine scripts
+/// the beat's frame before its first step
 pub(super) fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) -> crate::director::BeatFrame {
     use crate::scene_level::LevelScriptFn as S; use crate::director::BeatFrame as F;
     match (script, beat) {
@@ -65,7 +63,7 @@ pub(super) fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &
         _ => F::Spent,
     }
 }
-/// INVENTED: it.next(b.result) at director.ts:608: one step, reading g.tab.director_live_beat[b].result. Err = it threw (resume fails the beat), Ok(None) = it returned, Ok(Some) = it yielded. Body by hand, with the nine scripts
+/// one step of the beat, reading its `result`. Err = it failed (the caller fails the beat), Ok(None) = it finished, Ok(Some) = it waits on that
 pub(super) fn beat_next(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId) -> Result<Option<crate::director::Cond>, String> {
     use crate::director::BeatFrame as F;
     let got = g.tab.director_live_beat[b].result.clone();
@@ -156,7 +154,7 @@ pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: Director
     out
 }
 
-/// INVENTED: what q.door answers; `swing` is D.swing, DOORWAY.oneWay being settled true on the page
+/// what a script's question about a door answers
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
 
@@ -168,7 +166,7 @@ pub mod util {
 
 }
 
-/// INVENTED: the define pass of the level this names (the script's `script(D)`), its locals left on the manifest
+/// the define pass of the level this names, its locals left on the manifest
 pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
     use crate::scene_level::LevelScriptFn as S; use crate::director::ScriptVars as V;
     m.vars = match script {
@@ -183,7 +181,7 @@ pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut c
     Ok(())
 }
 
-/// INVENTED: the script of the level of this name, as scene/levelScripts.ts LEVEL_SCRIPTS hangs it (each script file is levels/<name>.script.ts)
+/// the script of the level of this name
 pub fn level_script_of(name: &str) -> Option<crate::scene_level::LevelScriptFn> {
     use crate::scene_level::LevelScriptFn as S;
     match name {

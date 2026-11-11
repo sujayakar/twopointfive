@@ -36,14 +36,14 @@ pub(crate) fn has_over(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
-/// O.ov.aimAt IS O.aim and s.over IS O.ov in the TypeScript: after a write to either, the script's copy follows
+/// the script keeps a copy of the op's overlay, whose aim_at is the op's aim: after a write to either, the copy follows
 pub(super) fn over_follow(g: &mut Game, o: RoomfightOpId) {
     let over = over_of(g, o);
     let gd = g.tab.roomfight_op[o].gd;
     if let Some(s) = g.gd[gd].script.as_mut() { if s.over.is_some() { s.over = Some(over); } }
 }
 
-/// the script's copy of O.ov (OpOv and GuardScriptOver are one object in the TypeScript; its aimAt is O.aim)
+/// the script's copy of the op's overlay; its aim_at is the op's aim
 pub(super) fn over_of(g: &Game, o: RoomfightOpId) -> crate::game::GuardScriptOver {
     let (aim, ov) = (g.tab.roomfight_op[o].aim, g.tab.roomfight_op[o].ov);
     crate::game::GuardScriptOver { aim_at: aim, face: ov.face, walk: ov.walk }
@@ -332,7 +332,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     if let Some(to) = tracked(g, o, h, dt, speed, dist, brg, sk) { fires(g, o, h, to, dt, speed, dist, sk); }
 }
 
-/// THE TRACK (aim.ts's law, this side's K): whether a round may go now, and at what point of him
+/// THE TRACK (the aim law, this side's K): whether a round may go now, and at what point of him
 fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist: f64, brg: f64, sk: &FightSkill) -> Option<V3> {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -872,7 +872,7 @@ mod tests {
     }
     fn at_bearing(a: f64) -> V3 { [m::sin(a) * 5.0, 0.0, m::cos(a) * 5.0] }
 
-    /// `s.over` IS `O.ov` and its aimAt IS O.aim in the TypeScript: what the runner reads must follow every write of `point`.
+    /// The script's overlay and its aim_at are copies of the op's: what the runner reads must follow every write of `point`.
     #[test]
     fn the_scripts_overlay_follows_the_op() {
         let (mut g, gd, o) = man_with_overlay();

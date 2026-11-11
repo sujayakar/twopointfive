@@ -1,20 +1,21 @@
-//! THE LINE TESTS THROUGH THE BOX WORLD — is the segment a → b blocked by a static or a leaf (src/scene/collision.ts segmentBlocked, segmentBlockedDynamic and
-//! what they call: dynamicHit, segClear, rayBoxHits, lineBox; src/scene/boxes.ts rayBoxRot / rayBoxRound / rayBoxCut; src/scene/cut.ts cutClip).
+//! THE LINE TESTS THROUGH THE BOX WORLD: is the segment a → b blocked by a static or a leaf (`blocked`, `leaves_blocked`, and from two ends `sight_line`, `solid_line`,
+//! `leaf_line`), over the rows of the box world.
 //!
-//! STATEMENT FOR STATEMENT: the same cells walked in the same order, the same boxes met in the same order, the same slab arithmetic on the same doubles. The
-//! TypeScript says WHY each line is what it is (the embedded origin, the pad, which cells matter); this file only has to be it. tools/qa/rust-check.ts holds
-//! the two together: every question a mission asks answered by both, and the missions themselves played both ways.
+//! IT KEEPS NOTHING OF A GAME. A question reads the rows and writes only the scratch of one question (world.rs `Asking`: what it has met, the cells it walked, the panes it
+//! lists, and a guess at what stops it first, never an answer). No question is asked inside another.
 //!
-//! THE RAY (collision.ts raycast, and boxes.ts rayBox whole: where a ray first enters anything, how far along, and the face it enters by) is here too: the
-//! same leaves first, the same cells in the same half-metre steps, the nearest entry kept. Every rule of the things that flies something through a level
+//! THE ORDER IS PART OF THE ANSWER: the cells are walked in a written order, the boxes met in that order, the slab arithmetic done on the same doubles in the same order. The
+//! panes a line lists, a pane's hit and a ray's nearest entry all hang on it, so changing it changes the game.
+//!
+//! THE RAY (`ray`: where a ray first enters anything, how far along, and the face it enters by) is here too: the
+//! leaves first, the cells in half-metre steps, the nearest entry kept. Every rule that flies something through a level
 //! asks it (a torn leaf, a thrown can, a round).
 //!
-//! WHETHER A PANE IS OPEN where a line or a ray meets it is answered here (panes.rs, over the rows of every pane that is no longer whole): a line that
-//! crosses a hole is not stopped by the pane, and a ray flies on through it to what stands beyond, as the TypeScript's own walks do pane by pane.
+//! WHETHER A PANE IS OPEN where a line or a ray meets it is answered here (glass.rs, over the rows of every pane that is no longer whole): a line that
+//! crosses a hole is not stopped by the pane, and a ray flies on through it to what stands beyond.
 //!
-//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line. The module asks
-//! nobody (it imports nothing): for a line of fire the walk LISTS the glass the line crosses that is not open there — which pane, and where the line
-//! enters it — and goes on; the host judges the list when the walk is back.
+//! What is not here is whether a round gets through the panes on its line (pen.rs). For a line of fire the walk LISTS the glass the line crosses that is not open
+//! there (which pane, and where the line enters it) and goes on; the caller judges the list when the walk is back.
 
 use game_types::knobs::Knobs;
 use crate::glass;
@@ -53,7 +54,7 @@ fn inv_or(d: f64) -> f64 {
     1.0 / (if d != 0.0 && d == d { d } else { 1e-20 })
 }
 
-/// one slab of rayBox: the interval cut down by the pair of faces at ±h along an axis; false = nothing left
+/// one slab of a ray against a box: the interval cut down by the pair of faces at ±h along an axis; false = nothing left
 #[inline(always)]
 fn slab(h: f64, o: f64, inv: f64, t0: &mut f64, t1: &mut f64, entered: &mut bool) -> bool {
     let mut ta = (-h - o) * inv;
@@ -99,7 +100,7 @@ fn unrotate(b: &[f64], vx: f64, vy: f64, vz: f64) -> (f64, f64, f64) {
     let (tx, ty, tz) = (2.0 * (qy * vz - qz * vy), 2.0 * (qz * vx - qx * vz), 2.0 * (qx * vy - qy * vx));
     (vx + qw * tx + (qy * tz - qz * ty), vy + qw * ty + (qz * tx - qx * tz), vz + qw * tz + (qx * ty - qy * tx))
 }
-/// the ray in the box's own frame, as rayBoxRound and rayBoxCut put it there (rotated, or turned by the yaw)
+/// the ray in the box's own frame, as the round and the cut walks want it (rotated, or turned by the yaw)
 #[inline(always)]
 fn to_local(a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> (f64, f64, f64, f64, f64, f64) {
     let (px, py, pz) = (a0 - b[R_C], a1 - b[R_C + 1], a2 - b[R_C + 2]);
@@ -153,7 +154,7 @@ fn planes_of<'a>(cut: &'a [f64], b: &[f64]) -> (&'a [f64], usize) {
     (&cut[at..at + CUT_PLANES * 4], b[R_CUTN] as usize)
 }
 
-/// boxes.ts rayBox for a box that is not a plain yawed one (round, cut or rotated): where the ray enters it, if it does within tmax (ray_box_n's answer
+/// a ray against a box that is not a plain yawed one (round, cut or rotated): where the ray enters it, if it does within tmax (ray_box_n's answer
 /// without the face: one walk of each shape in this file)
 fn ray_box_t(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<f64> {
     ray_box_n(cut, a0, a1, a2, r0, r1, r2, b, tmax).map(|h| h.0)
@@ -271,7 +272,7 @@ fn dynamic_hit(o: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
 /// a box the question added
 const EXTRA: u32 = u32::MAX;
 
-/// collision.ts segmentBlockedDynamic, past its length: is the segment crossed by a leaf carrying every flag of `need`
+/// is the segment crossed by a leaf carrying every flag of `need`
 pub fn leaves_blocked(w: &World, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32) -> bool {
     leaves_blocked_over(w, &Over::with(true), a0, a1, a2, b0, b1, b2, len, need)
 }
@@ -285,9 +286,9 @@ fn leaves_blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, 
 
 /// what the walk was asked beside the segment
 pub const ASK_GLASS: u32 = 1; // the game has a rule for an open pane (glass.rs): glass crossed where it is open is not in the way
-pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, in the order the old walk comes on it
+pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, in the order the walk comes on it
 
-/// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along (collision.ts segmentBlocked's three statements for one): 0 = the line goes on (the
+/// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along: 0 = the line goes on (the
 /// pane is open there by the game's rule, or it is a line of fire and the pane is noted for the penetration rule) · −1 = the pane stops it · −2 = the
 /// list of panes is full
 #[inline]
@@ -309,9 +310,8 @@ fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0
     }
 }
 
-/// collision.ts segmentBlocked, past its length (`len` = the host's own length of b − a, at least 1e-4 and finite): −1 = something solid is in the way ·
+/// IS THE LINE BLOCKED (`len` = the host's own length of b − a, at least 1e-4 and finite): −1 = something solid is in the way ·
 /// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless it is a line of fire) · −2 = more glass than the list holds
-/// (the host asks its own walk instead)
 pub fn blocked(w: &World, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, leaves: bool, ask: u32, tune: &Knobs) -> i32 {
     blocked_over(w, &Over::with(leaves), a0, a1, a2, b0, b1, b2, len, shrink, through, ask, tune)
 }
@@ -377,7 +377,7 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
     if said < 2 {
         return said;
     }
-    // (the order of one pane is no order; of more it is the old walk's)
+    // (the order of one pane is no order; of more it is the walk's)
     seg.id = s.ask();
     s.panes = 0;
     let n = seg.cells_round(s, 0, false);
@@ -739,8 +739,8 @@ pub fn man_hidden(w: &World, leaves: bool, through: u32, e0: f64, e1: f64, e2: f
         said => said,
     }
 }
-/// collision.ts segmentBlocked(a, b, 0.02, through) for a line that PASSES glass (`through` carries the glass flag, so no pane is ever the host's to judge):
-/// the length is the game's own, worked out here. None = not a line this module walks (a length that is no length of this world's): the host asks its own.
+/// a line that PASSES glass (`through` carries the glass flag, so no pane is ever the host's to judge):
+/// the length is the game's own, worked out here. None = not a line this module walks (a length that is no length of this world's).
 #[inline]
 pub fn sight_line(w: &World, leaves: bool, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
@@ -749,8 +749,8 @@ pub fn sight_line(w: &World, leaves: bool, through: u32, a0: f64, a1: f64, a2: f
     };
     Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, leaves, 0, tune) == -1)
 }
-/// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the game has a rule for an open pane. None = a line too
-/// long to be a line of this world: the host's to judge.
+/// the same line with nothing passed. `ask` = ASK_GLASS where the game has a rule for an open pane. None = a line too
+/// long to be a line of this world.
 #[inline]
 pub fn solid_line(w: &World, leaves: bool, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     solid_over(w, &Over::with(leaves), ask, a0, a1, a2, b0, b1, b2, tune)
@@ -768,7 +768,7 @@ pub fn solid_over(w: &World, v: &Over, ask: u32, a0: f64, a1: f64, a2: f64, b0: 
         _ => None,
     }
 }
-/// collision.ts segmentBlockedDynamic(a, b, need) from its two ends
+/// `leaves_blocked` from its two ends
 #[inline]
 pub fn leaf_line(w: &World, need: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
@@ -780,7 +780,7 @@ pub fn leaf_line(w: &World, need: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f
 
 // ---- THE RAY: the nearest thing along it, how far, and the face it is entered by
 
-/// one slab of rayBox with the face it enters by: the interval cut down by the faces at ±h along axis `k`; the entry's axis and sign kept. false = nothing left
+/// one slab of a ray against a box with the face it enters by: the interval cut down by the faces at ±h along axis `k`; the entry's axis and sign kept. false = nothing left
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn slab_n(h: f64, o: f64, inv: f64, t0: &mut f64, t1: &mut f64, axis: &mut i32, sgn: &mut f64, k: i32) -> bool {
@@ -818,7 +818,7 @@ fn out_of(b: &[f64], l0: f64, l1: f64, l2: f64) -> (f64, f64, f64) {
         (cs * l0 + sn * l2, l1, -sn * l0 + cs * l2)
     }
 }
-/// the unit vector of axis `k`, times `sgn` (the other two the literal zeros the TypeScript writes)
+/// the unit vector of axis `k`, times `sgn` (the other two plain zeros, never −0)
 #[inline(always)]
 fn face_of(axis: i32, sgn: f64) -> (f64, f64, f64) {
     (if axis == 0 { sgn } else { 0.0 }, if axis == 1 { sgn } else { 0.0 }, if axis == 2 { sgn } else { 0.0 })
@@ -835,7 +835,7 @@ fn slabs_n(b: &[f64], (ox, oy, oz, dx, dy, dz): Local, tmax: f64) -> Option<(f64
         && slab_n(b[R_H + 2], oz, inv_or(dz), &mut t0, &mut t1, &mut axis, &mut sgn, 2);
     if left { Some((t0, t1, axis, sgn)) } else { None }
 }
-/// rayBoxRound: where, and the normal in the box's frame; face 0 = none entered (the origin is inside), 1 = an end, 2 = the side
+/// a round box: where, and the normal in the box's frame; face 0 = none entered (the origin is inside), 1 = an end, 2 = the side
 fn round_n(b: &[f64], (ox, oy, oz, dx, dy, dz): Local, tmax: f64) -> Option<(f64, (f64, f64, f64))> {
     let (rr, hy) = (b[R_H], b[R_H + 1]);
     let (mut t0, mut t1, mut face, mut sgn) = (0.0, tmax, -1i32, 0.0);
@@ -876,7 +876,7 @@ fn round_n(b: &[f64], (ox, oy, oz, dx, dy, dz): Local, tmax: f64) -> Option<(f64
     let il = 1.0 / (if len != 0.0 && len == len { len } else { 1.0 });
     Some((t0, (hx * il, 0.0, hz * il)))
 }
-/// rayBoxCut, the same
+/// a cut box, the same
 fn cut_n(cut: &[f64], b: &[f64], l: Local, tmax: f64) -> Option<(f64, (f64, f64, f64))> {
     let (t0, t1, axis, sgn) = slabs_n(b, l, tmax)?;
     let (planes, n) = planes_of(cut, b);
@@ -887,8 +887,8 @@ fn cut_n(cut: &[f64], b: &[f64], l: Local, tmax: f64) -> Option<(f64, (f64, f64,
     }
     if axis < 0 { None } else { Some((c0, face_of(axis, sgn))) }
 }
-/// boxes.ts rayBox, whole (a round box, a cut one, then any other, rotated or yawed): where the ray enters the box within tmax and the normal of the
-/// face it enters by. None = it does not, or it starts inside (the rule rayBox documents).
+/// A RAY AGAINST A BOX (a round box, a cut one, then any other, rotated or yawed): where the ray enters the box within tmax and the normal of the
+/// face it enters by. None = it does not, or it starts inside.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
     let kind = b[R_KIND] as u32;
@@ -911,7 +911,7 @@ pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
 /// the ray's answer when nothing is met, and when the host must answer it itself (a ray that is not a number)
 pub const RAY_NONE: i32 = -1;
 pub const RAY_HOST: i32 = -2;
-/// what a leaf's index is offset by in the answer (collision.ts raycast: index ≥ 1e6 = a dynamic occluder)
+/// what a leaf's index is offset by in the answer (index ≥ 1e6 = a leaf)
 pub const RAY_LEAF: i32 = 1_000_000;
 /// …and a box the question added
 pub const RAY_EXTRA: i32 = 2_000_000;
@@ -926,7 +926,7 @@ pub fn ray(w: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax
     ray_over(w, &Over::with(leaves), a0, a1, a2, r0, r1, r2, tmax, ask, out, tune)
 }
 /// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
-/// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
+/// itself). The leaves keep their own indices in the answer.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_but(w: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, but: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     let one = [but as u32];
@@ -1209,8 +1209,8 @@ impl Ray<'_> {
     }
 }
 
-/// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it. A RAY OF NO LENGTH
-/// MEETS NOTHING, as collision.ts raycast says it once for both walks; one that is no number has no answer (RAY_HOST: the rule writes nothing and says
+/// A RAY ASKED BY A RULE (a slab off its hinges, a thrown thing). A RAY OF NO LENGTH
+/// MEETS NOTHING; one that is no number has no answer (RAY_HOST: the rule writes nothing and says
 /// so, and the host names the mistake). `but` and `ask` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the
 /// leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]

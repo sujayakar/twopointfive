@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::string::String;
 
-/// A new Input with every field initialised and no listeners: the harness's, the replayer's, a seat's, a native host's.
+/// A new Input with every field initialised and no listeners: a seat's, a host's.
 pub fn input_detached(g: &mut Game) -> InputId {
     g.tab.input.push(Input::blank())
 }

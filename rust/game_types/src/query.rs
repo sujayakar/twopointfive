@@ -1,7 +1,7 @@
 //! AN ADDRESS'S WORDS: the part of a page's address after the `?`, as the game reads it (`?levelFile=depot.json&roomclear&squad4`).
 //!
 //! The page starts a mission from these words (`scenario_run::start_from_query`: the mission, the team's size, the hour, the weather, the fog, a
-//! quiet mission's rung and cameras), and every reader of them in the TypeScript takes the browser's `URLSearchParams`. This is that type in plain
+//! quiet mission's rung and cameras). This is the browser's `URLSearchParams` in plain
 //! Rust: the browser's rules for reading the text (`application/x-www-form-urlencoded`), the four calls the game makes on it (`has`, `get`, `set`,
 //! `delete`), and the two ways the game reads a word as a number (`Number(text)`, `parseFloat(text)`). A host hands the address's text across
 //! once and the game reads its words here; nothing of the browser is needed.
@@ -92,7 +92,7 @@ fn encode(s: &str, out: &mut String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// each line was read off the browser's own `URLSearchParams` (bun's is the same one): the text, then `name=value` of every word in order
+    /// each line: the text, then `name=value` of every word in order, as the browser's `URLSearchParams` reads them
     #[test]
     fn reads_an_address_as_the_browser_does() {
         let words = |t: &str| Query::parse(t).words().iter().map(|(k, v)| alloc::format!("{}={}", k, v)).collect::<Vec<_>>().join("|");

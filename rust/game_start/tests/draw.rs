@@ -19,7 +19,7 @@ fn drawing_a_game_is_no_part_of_it() {
         (0..240).map(|k| {
             if k == 60 { let at = p.sam_at(); game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Frag, [at[0] + 3.0, 0.0, at[1]]); }
             p.g.god_mode = true;
-            p.frame_shown(|p| if draw { let focus = p.g.sets[p.g.seat].aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
+            p.frame_shown(|p| if draw { let focus = p.g.sets[p.g.seat].aim_point; d.take(&p.g, ALL); if k % 60 == 0 { game_draw::traffic::map(&p.g); } d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
             p.words()
         }).collect::<Vec<_>>()
     };

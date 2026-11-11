@@ -3,7 +3,7 @@
 //!
 //!   face_networked(h)                  once, as the game is stood: every seat is another machine's, so a record's view is worked out again from its pose on
 //!                                      every machine alike
-//!   face_record(h, seat, p, n, keys, kn)   A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: `RECORD` numbers (`n` bytes; src/net/record.ts says them in the same
+//!   face_record(h, seat, p, n, keys, kn)   A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: `RECORD` numbers (`n` bytes; src/net/modgame.ts writes them in the same
 //!                                      order) and its keys' codes as text, those held and, after a line feed, those that went down. It is no hand: the host's
 //!                                      own camera is not moved by it. Of a seat that has both, what was handed last is stepped.
 //!   face_ahead(h, seat, p, n, keys, kn)    WHERE THE SEAT'S MAN WOULD BE after records the game has not had (game::walkahead), at face_out as `AHEAD` numbers and

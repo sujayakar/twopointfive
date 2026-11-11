@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The lane's knobs (Tab ▸ Weather ▸ wind rows; persisted with tune.wind).
+/// The lane's knobs.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WindK {
     /// tune.wind's default: the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)

@@ -13,7 +13,7 @@ use prim::floor;
 
 pub type Pt = (f64, f64);
 /// the most corners one polygon is held with: a frame's four, and one each for the seven other sites, two radials, a chord, a snap (a dice's cell: a clump's
-/// twenty-four neighbours at most, of which glassPattern.ts counts twelve as ever standing)
+/// twenty-four neighbours at most)
 pub const MAX_PTS: usize = 32;
 /// the most corners one piece of a site has, by the same count (4 + 7 + 2 + 1 + 1)
 pub const PIECE_PTS: usize = 20;
@@ -146,7 +146,7 @@ fn region(d: &[f64], ns: usize, i: usize, hu: f64, hv: f64) -> Poly {
     g
 }
 
-/// one piece of a pane (glassPattern.ts GpFrag, but for its neighbours, which `neighbours` works out)
+/// one piece of a pane (but for its neighbours, which `across` works out)
 #[derive(Clone, Copy)]
 pub struct Frag {
     pub fid: u32,
@@ -178,7 +178,7 @@ impl Frag {
     }
 }
 
-/// what gpFragments' `add` measures of a polygon; None = no area (a ring zone hanging over the frame, a snap past the frame)
+/// what a piece's making measures of a polygon; None = no area (a ring zone hanging over the frame, a snap past the frame)
 fn measure(fid: u32, i: usize, s: i32, b: u32, g: &Poly) -> Option<Frag> {
     if g.n < 3 {
         return None;
@@ -258,7 +258,7 @@ pub struct Held {
 static mut CACHE: [Held; CACHED] = unsafe { core::mem::zeroed() };
 static mut CLOCK: u32 = 0;
 
-/// THE PIECES OF A PANE (gpFragments, bands 0‥2 always and the daggers once it has run), in the order the TypeScript made them: `d` and `w` are its row
+/// THE PIECES OF A PANE (bands 0‥2 always and the daggers once it has run), in a written order: `d` and `w` are its row
 pub fn frags_of(d: &[f64], w: &[u32], hu: f64, hv: f64) -> &'static Held {
     let ns = (w[GW_FLAGS] >> 8) as usize;
     let run = w[GW_FLAGS] & crate::glass::G_RUN != 0;
@@ -374,7 +374,7 @@ fn add(c: &mut Held, i: usize, s: i32, b: u32, g: &Poly) {
     }
 }
 
-// ---- what lies across each crack (the second half of gpFragments: asked only by the support rule)
+// ---- what lies across each crack (asked only by the support rule)
 /// the most neighbours the pieces of one pane can list between them: every edge of every piece at six points, and as many made symmetric
 const MAX_NB: usize = MAX_FRAGS * PIECE_PTS * NB_SAMPLES * 2;
 #[derive(Clone, Copy)]
@@ -416,7 +416,7 @@ impl Lists {
         self.tail[k] = self.used;
     }
 }
-/// gpFragments' neighbours for the pieces `h`, in the order the TypeScript's lists hold them
+/// the neighbours of the pieces `h`, each list in a written order
 pub fn across(h: &Held, d: &[f64], w: &[u32]) -> Across {
     let mut l = unsafe { Lists { nbs: &mut *core::ptr::addr_of_mut!(NBS), head: &mut *core::ptr::addr_of_mut!(NB_HEAD), tail: &mut *core::ptr::addr_of_mut!(NB_TAIL), used: 0 } };
     for (k, f) in h.list().iter().enumerate() {
@@ -500,7 +500,7 @@ fn says_back(l: &mut Lists, o: usize, me: i32, at: usize) {
 }
 
 // ---- a crater's outline, and a polygon's measure
-/// gpHull: Andrew's chain, anticlockwise (`pts` is sorted here, as the TypeScript sorts its copy). → how many corners in `out`
+/// Andrew's chain, anticlockwise (`pts` is sorted here). → how many corners in `out`
 pub fn hull(pts: &mut [Pt], out: &mut [Pt]) -> usize {
     let n = pts.len();
     // (by u, then v: two corners that compare alike are the same point)
@@ -542,7 +542,7 @@ pub fn hull(pts: &mut [Pt], out: &mut [Pt]) -> usize {
     out[nl..nl + nu].copy_from_slice(&up[..nu]);
     nl + nu
 }
-/// gpClipRect: a polygon with no frame of its own, held to the pane
+/// a polygon with no frame of its own, held to the pane
 pub fn clip_rect(pts: &[Pt], hu: f64, hv: f64) -> Poly {
     let mut g = NO_POLY;
     g.n = pts.len();
@@ -552,7 +552,7 @@ pub fn clip_rect(pts: &[Pt], hu: f64, hv: f64) -> Poly {
     g = clip(&g, 0.0, 1.0, hv);
     clip(&g, -1.0, 0.0, hu)
 }
-/// gpPolyArea: its area (never below nought) and its centre
+/// its area (never below nought) and its centre
 pub fn poly_area(p: &[Pt]) -> (f64, f64, f64) {
     let n = p.len();
     let (mut area, mut cx, mut cy) = (0.0, 0.0, 0.0);
@@ -589,20 +589,19 @@ pub struct Dice {
 const DICE_JIT: f64 = 0.6;
 const DICE_DELAY: f64 = 1.4;
 impl Dice {
-    /// gpDiceCentre
     #[inline]
     pub fn centre(&self, c: u32, r: u32) -> Pt {
         let (du, dv) = (2.0 * self.hu / self.cols as f64, 2.0 * self.hv / self.rows as f64);
         (-self.hu + (c as f64 + 0.5 + DICE_JIT * (crate::glass::jit(self.seed, c, r) - 0.5)) * du, -self.hv + (r as f64 + 0.5 + DICE_JIT * (crate::glass::jit(self.seed ^ 0x005b_d1e9, c, r) - 0.5)) * dv)
     }
-    /// gpDiceKey: metres from the blow to its centre, shuffled by a hashed share of a cell
+    /// metres from the blow to its centre, shuffled by a hashed share of a cell
     #[inline]
     pub fn key(&self, c: u32, r: u32) -> f64 {
         let p = self.centre(c, r);
         let cell = js_min(2.0 * self.hu / self.cols as f64, 2.0 * self.hv / self.rows as f64);
         hypot2(p.0 - self.u, p.1 - self.v) + DICE_DELAY * cell * crate::glass::jit(self.seed ^ 0x003c_6ef3, c, r)
     }
-    /// gpDiceClump: the clump (u, v) belongs to, r × cols + c
+    /// the clump (u, v) belongs to, r × cols + c
     pub fn clump(&self, u: f64, v: f64) -> u32 {
         let (cols, rows) = (self.cols as f64, self.rows as f64);
         let c0 = js_max(0.0, js_min(cols - 1.0, floor((u + self.hu) / (2.0 * self.hu) * cols))) as u32;
@@ -627,7 +626,7 @@ impl Dice {
         }
         best
     }
-    /// gpDicePoly: clump (c, r)'s outline. → how many corners in `out`
+    /// clump (c, r)'s outline. → how many corners in `out`
     pub fn poly(&self, c: u32, r: u32, out: &mut [Pt; MAX_PTS]) -> usize {
         let (du, dv) = (2.0 * self.hu / self.cols as f64, 2.0 * self.hv / self.rows as f64);
         let a = self.centre(c, r);
@@ -669,7 +668,7 @@ impl Dice {
     }
 }
 
-/// THE MOST CLUMPS A SHEET MAY COME DOWN IN (a sheet of more is refused as its level loads, by name: src/game/levelfit.ts): the order they let go in is worked out
+/// THE MOST CLUMPS A SHEET MAY COME DOWN IN (a sheet of more is refused as its level loads, by name: game_rules levelfit.rs): the order they let go in is worked out
 /// whole when it is first asked for
 pub const MAX_CLUMPS: usize = 8192;
 #[derive(Clone, Copy)]
@@ -687,7 +686,7 @@ struct Order {
     list: [Clump; MAX_CLUMPS],
 }
 static mut ORDER: [Order; ORDERS] = unsafe { core::mem::zeroed() };
-/// THE CLUMPS OF A PANE COMING DOWN, in the order they let go (startDice's sort: by key, then by number): held against what they were made from, as a pane's pieces are
+/// THE CLUMPS OF A PANE COMING DOWN, in the order they let go (by key, then by number): held against what they were made from, as a pane's pieces are
 pub fn order_of(d: &Dice) -> &'static [Clump] {
     let all = unsafe { &mut *core::ptr::addr_of_mut!(ORDER) };
     let clock = unsafe { &mut *core::ptr::addr_of_mut!(CLOCK) };

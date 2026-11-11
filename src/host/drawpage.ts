@@ -1,6 +1,6 @@
 // THE GAME'S PAGE (index.html), which draws a game it does not hold. The game is the Rust module's (host/drawgame.ts): started from the
-// level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). Nothing this
-// page's bundle holds is the game's TypeScript: tools/draw/ban.ts stops the build on an import of it.
+// level's file and the address's words, handed what the player did, stepped, and drawn from what each tick leaves to be drawn (src/draw). No rule of
+// play is in this page's bundle: tools/draw/ban.ts stops the build on an import from where one could stand.
 import { kitPicture } from './kitguard';   // (FIRST: in the Team & kit picture's window it makes the stores read-only before any module below reads or writes one)
 import { PIPE_QUEUE, gpuStory, initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
 import { Engine } from '../engine';
@@ -165,6 +165,9 @@ async function main(): Promise<void> {
   const tBoot = performance.now();
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
+  // (the device is asked for while the files come and the game is made: nothing of it is the game's)
+  if (kitPicture) PIPE_QUEUE.later = false;   // (the picture waits for every program: it is shown once, and nothing of it may change as one comes)
+  gpuStory.stage = 'while loading'; const tAsked = performance.now(), gpuP = initGpu(canvas, { retry: !(kitPicture || q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: !kitPicture, keeper: keep.keeper, seat: keep.seat }); gpuP.then(() => boot.span('gpuAsked', tAsked), () => { /* awaited below */ });
   boot.expose();
   const face = await faceP;
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
@@ -203,9 +206,7 @@ async function main(): Promise<void> {
   glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
-  if (kitPicture) PIPE_QUEUE.later = false;   // (the picture waits for every program: it is shown once, and nothing of it may change as one comes)
-  const tGpu = performance.now();
-  const gpu = await initGpu(canvas, { retry: !(kitPicture || q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: !kitPicture, keeper: keep.keeper, seat: keep.seat });   // (the module's game has stood by now)
+  const tGpu = performance.now(), gpu = await gpuP; D.fresh();   // (the title is live meanwhile, and its desk may have grown the memory)
   if (kitPicture) void gpu.device.lost.then(kitNone);
   if (q.get('framecap') === '0') FRAMECAP.on = false;
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
@@ -214,7 +215,7 @@ async function main(): Promise<void> {
   urlFlagsOnEngine(engine); pictureSolves(q, engine, smoke);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
-  const decals = new DrawDecals(engine.device, D); engine.setDecals(decals); trafficFrom(engine.gbuffer, D);
+  const decals = new DrawDecals(engine.device, D); engine.setDecals(decals);
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => { gpuStory.stage = `while compiling shaders, ${pipelineProgress.done} of ${pipelineProgress.total}`; say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`); };
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -229,7 +230,8 @@ async function main(): Promise<void> {
   const group = (name: string): void => { boot.span('pipelines_' + name, tPipe); }, timed = <T>(name: string, p: Promise<T>): Promise<T> => p.then(v => { group(name); return v; });
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
-  // (while the programs compile: the ticks a run begins with, still, with an order given at the nearest doors, walking and firing)
+  // (while the programs compile: what the first step and the first frame want of the level, then the ticks a run begins with, still, with an order given at the nearest doors, walking and firing)
+  const tReady = performance.now(); await game.ready(nextTask); trafficFrom(engine.gbuffer, game.traffic()); boot.span('levelReady', tReady);
   if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
     const { men: who, doors } = game.map(), me = who.find(m => m.kind === 'player'), off = (d: { hx: number; hz: number }): number => me ? Math.hypot(d.hx - me.x, d.hz - me.z) : 0;
@@ -397,7 +399,7 @@ async function main(): Promise<void> {
     if (!drawn) { input.endFrame(); if (still) thaw = true; return; }
     { if (reel.live) { ear[0] = cam.target[0]; ear[1] = cam.target[1] + 1.6; ear[2] = cam.target[2]; } else { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; } audio.setListener(ear, cam.forward); audio.update(dt, time); audio.scoreMenu = title;
       D.fresh(); const h = D.at[Section.heard]; if (audio.music) audio.music.intensity = D.f[h + Heard.tension]; }
-    for (const s of world.stale) smoke.obstaclesChanged(s.c, s.r);   // (what stands is another thing there: the last frame's rows say where)
+    for (const s of world.stale) smoke.obstaclesChanged(s.lo, s.hi);   // (what stands is another thing there: the last frame's rows say where)
     world.stale.length = 0; smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);

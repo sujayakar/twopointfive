@@ -78,11 +78,11 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     `mud's paint, no word: ${said(cls(a))} · saying wood: ${said(cls(b))} · mud wall dry ${said(before)}, wet ${said(wet)}, pink ${said(pink)} · still in the code: ${gone.join(', ') || 'none'} · in a shader: ${shader.join(', ') || 'none'}`); }
 
 // 6. the page: the look's word is made from the boxes alone, and the two words that gave the colour rule back are no longer the look page's
-{ const main = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8'), wired = main.includes('this.world.setStuffOf(lookWordOf(), lookCoreOf())') && !/setStuffOf\(lookWordOf\(\)\)/.test(main);
+{ const main = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8') + readFileSync(`${ROOT}/src/engine.ts`, 'utf8');
   const core = lookCoreOf(), cut = makeBox({ c: [0, 1, 0], h: [1, 1, 0.2], albedo: [0.4, 0.4, 0.4], stuff: 'block' }); const own = core(cut); cut.cutCoreStuff = 'slab'; const other = core(cut); cut.cutCoreStuff = 'plain' as any; const none = core(cut);
-  check(wired && !lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main) && own === lookStuffOf('block') && other === lookStuffOf('slab') && none === 0,
-    '6 the page makes the look\'s word from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',
-    `wired ${wired} · look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')} · an old cut: ${said(own)}, with a core of slab ${said(other)}, of plain ${said(none)}`); }
+  check(!lookPageWord('names', '0') && !lookPageWord('words', '0') && !/q\.get\('names'\)|q\.get\('words'\)|q\.has\('surf'\)/.test(main) && own === lookStuffOf('block') && other === lookStuffOf('slab') && none === 0,
+    '6 the look\'s word is made from what each box says, with no rows and no paint handed over; `?names=0`, `?words=0` and `?surf` are read nowhere; an old break\'s cut faces are the stuff of its box, or of its core where the box says one',
+    `look page words: names ${lookPageWord('names', '0')}, words ${lookPageWord('words', '0')} · an old cut: ${said(own)}, with a core of slab ${said(other)}, of plain ${said(none)}`); }
 
 // 7. a box says its own word: over its row's, through the level file and back, on a loose prop's part too; a row may say one (what cannot be said is refused: rust/game_start/tests/level_faults.rs)
 { const D = dataOf('library-hall.json') as any, bi = D.boxes.findIndex((b: any) => b.material === 'concrete' && b.stuff === undefined), wi = D.boxes.findIndex((b: any) => b.material === 'wood' && b.flags === undefined && b.stuff === undefined), fi = D.boxes.findIndex((b: any) => b.material !== undefined && b.flags !== undefined && b.stuff === undefined), pi = D.props.findIndex((p: any) => p.kind === 'chair'), ii = D.boxes.findIndex((b: any) => b.albedo !== undefined && b.stuff === undefined);

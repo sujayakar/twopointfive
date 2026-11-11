@@ -641,7 +641,7 @@ fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, 
     row.said.add(l.id.clone());
     let n = row.said_n.get(l.id.clone()).copied().unwrap_or(0.0) + 1.0;
     row.said_n.set(l.id.clone(), n);
-    // ctx.recent is the game's table in the TypeScript: here a copy, so the write goes to both
+    // ctx.recent is a copy of the game's table, so the write goes to both
     if let Some(rec) = ctx.recent.as_mut() {
         rec.set(l.id.clone(), ctx.time);
         g.m.dialogue.recent_by_game.get_or_insert_with(JsMap::new).set(l.id.clone(), ctx.time);
@@ -665,7 +665,7 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
     let player = g.player;
     let holds_him = g.pl[player].holding().map_or(false, |h| h.g == gd);
     if let Some(after) = pick.after.as_ref().filter(|a| !a.is_empty()) {
-        // (`.length` of the TypeScript counts UTF-16 units: '…' and '—' are one, three bytes here)
+        // (the cap counts UTF-16 units: '…' and '—' are one each, not three bytes)
         if holds_him && after.encode_utf16().count() as f64 <= SAM_MAX_CHARS {
             let id = alloc::format!("{}+", pick.id);
             g.pl[player].holding_mut().unwrap().after = Some(crate::player::HoldAfter { text: after.clone() });

@@ -9,12 +9,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// the script runner.ts lent for the frame, as the run left it, put back on his row (conventions 4; see morale's b_01).
+/// the script lent for the frame, as the run left it, put back on his row.
 pub(super) fn runner_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(r)) = (ran, g.m.runner.state_of.get_mut(gd)) { r.script = ran; }
 }
 
-/// the man's own row of `stateOf`: every `S` of the TypeScript is that row, reached by its key
+/// the man's own row of `state_of`
 macro_rules! run {
     ($g:expr, $gd:expr) => {
         $g.m.runner.state_of.get_mut($gd).unwrap()
@@ -23,7 +23,7 @@ macro_rules! run {
 
 // ---- the lines
 
-/// one kind's row of the skeleton's table
+/// one kind's row of the table
 fn lines_of(kind: LineKind) -> LINESValue {
     lines().of(kind.as_str()).unwrap().clone()
 }
@@ -129,7 +129,7 @@ fn lost(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::morale::morale_of(g, gd).map_or(false, |x| x.green) && crate::morale::saw_leader_fall(g, gd).is_finite()
 }
 
-/// the shout: from here his body is this file's, and morale.ts's sequence is over
+/// the shout: from here his body is this file's, and morale's sequence is over
 fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     let c = g.gd[gd].ch;
     let at = v3::copy(g.ch[c].pos);
@@ -300,11 +300,8 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
         r.at = v3::copy(pos);
         r.stall = 0.0;
     }
-    // (`S.goal = v3.copy(goal)` is a NEW ARRAY, and his script's goal is that object from the next drive on: the settle watch squad.ts:81 keeps for
-    //  the goal OBJECT it was made for (`w.goal !== s.goal`) is made again at its next read, even where the route is to the same spot. Here the watch is
-    //  asked by value, so only a watch that holds THESE numbers would be taken for this goal's: that one goes. Any other stays as the TypeScript's
-    //  stale row stays, and the next read replaces it. STAND-IN by value: with the same numbers the TypeScript keeps a stale row until that read and
-    //  this side has none; it belongs to the identity device.)
+    // (A new goal leaves any settle watch of his stale. The watch is asked by value, so only a watch that holds THESE numbers would be taken for this goal's:
+    //  that one goes. Any other stays, and the next read replaces it.)
     if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == goal) { g.m.squad.settle_watch.delete(gd); }
     let mut free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
@@ -532,7 +529,7 @@ fn pose(g: &mut crate::game::Game, gd: GuardId) {
     if fled { r.script.light = Some(false); }
 }
 
-/// once a frame, after morale.ts's tick: the ripe men are asked for the enemy in their eyes, every man in a run takes a step
+/// once a frame, after morale's tick: the ripe men are asked for the enemy in their eyes, every man in a run takes a step
 pub fn runner_tick(g: &mut crate::game::Game, dt: f64) {
     let mut i = g.guards.len();
     while i > 0 {   // (backwards: a man gone leaves the list under it)
@@ -834,7 +831,7 @@ pub fn runner_mute(g: &crate::game::Game, gd: GuardId) -> bool { let rule = crat
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits, under bun with EXACT on
+    /// pinned bits
     #[test]
     fn flat_and_path_len_have_the_typescripts_bits() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);

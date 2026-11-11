@@ -123,7 +123,7 @@ fn wet_ground_is_the_rows_and_not_the_box() {
     for &i in &wet {
         let b = &p.g.tab.boxes[p.g.engine.world.statics[i as usize]];
         let m = &d.boxes.mat[i as usize];
-        if b.metal != Some(true) && b.wet_k.is_none() { assert!((m.w[0] as f64 - b.albedo[0] * 0.5).abs() < 1e-5, "box {i} is sent darker: {} of {}", m.w[0], b.albedo[0]); }
+        if b.metal != Some(true) && b.wet_k.is_none() { assert!((m.albedo[0] as f64 - b.albedo[0] * 0.5).abs() < 1e-5, "box {i} is sent darker: {} of {}", m.albedo[0], b.albedo[0]); }
     }
     // (a wet box whose game box did not move is not packed again: it is told as one row of a tick's changes only when it changed)
     for _ in 0..3 {

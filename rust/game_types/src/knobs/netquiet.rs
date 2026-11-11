@@ -2,16 +2,16 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The shocks are morale.ts dread, 0‥1, before its nerve and cap: `unanswered` / `heardIt` a mate who does not answer (the asker / a man who heard the check), `body` / `bodyTold` a body found (the finder / the men told), `fallSeen` / `fallUnseen` a mate seen to
-/// fall with / without an enemy in view, all × `steadyK` for a steady man — and ONE dead man is one shock to one man: the largest of the three, not their sum. Seconds: `askBeat` / `bodyBeat` from the event to the line, `barkSecs` the least between two of one man's
-/// lines from this file (`sayHold` how long a line owed waits for that, or for a man to be out of his eyes, before it is dropped), `shooterSecs` how fresh a sighting makes the shooter 'in view', `whipShift` / `whipSecs` the whip's start and length, `whipHold` the
-/// least a whip stays on one noise, `lastBeat` from the last man's line to his first step, `calmSecs` with nobody in his eyes before he starts (and roused before he asks the net himself), `alertSecs` with nothing seen or heard before a last man low on his spot
-/// stops being 'alert' (he keeps the spot and the crouch), `giveUp` how long he waits for the room fight to hand him back before the act is dropped. `whipTurn` / `whipTurnBroken` rad/s; metres: `whipM` the furthest noise he whips to, `whipNearM` how near the place
-/// his EARS put a noise its true source must be (with a clear line to it) for him to look at the source itself, `bodyM` how far he knows a man lying in his view, `mateM` a living mate this near and he is not alone; `arcDeg` the arc every entry should sit in;
-/// `eyeDeg` the half-cone of a man's eyes (the floor's own number — guards.ts GUARD_EYE.halfDeg; the check holds the two equal) and `eyeSlack` the margin inside it he keeps his doors; `crouch` how far down he goes, 0‥1 — HALF: measured on the floor's eye, a man
+/// The shocks are the morale rule's dread, 0‥1, before its nerve and cap: `unanswered` / `heard_it` a mate who does not answer (the asker / a man who heard the check), `body` / `body_told` a body found (the finder / the men told), `fall_seen` / `fall_unseen` a mate seen to
+/// fall with / without an enemy in view, all × `steady_k` for a steady man — and ONE dead man is one shock to one man: the largest of the three, not their sum. Seconds: `ask_beat` / `body_beat` from the event to the line, `bark_secs` the least between two of one man's
+/// lines from this file (`say_hold` how long a line owed waits for that, or for a man to be out of his eyes, before it is dropped), `shooter_secs` how fresh a sighting makes the shooter 'in view', `whip_shift` / `whip_secs` the whip's start and length, `whip_hold` the
+/// least a whip stays on one noise, `last_beat` from the last man's line to his first step, `calm_secs` with nobody in his eyes before he starts (and roused before he asks the net himself), `alert_secs` with nothing seen or heard before a last man low on his spot
+/// stops being 'alert' (he keeps the spot and the crouch), `give_up` how long he waits for the room fight to hand him back before the act is dropped. `whip_turn` / `whip_turn_broken` rad/s; metres: `whip_m` the furthest noise he whips to, `whip_near_m` how near the place
+/// his EARS put a noise its true source must be (with a clear line to it) for him to look at the source itself, `body_m` how far he knows a man lying in his view, `mate_m` a living mate this near and he is not alone; `arc_deg` the arc every entry should sit in;
+/// `eye_deg` the half-cone of a man's eyes (the floor's own number, `guard_eye.half_deg`) and `eye_slack` the margin inside it he keeps his doors; `crouch` how far down he goes, 0‥1 — HALF: measured on the floor's eye, a man
 /// fully down on his gun (1) looks 48° round from his aim through a cone 26° either way in plan, so past the near field he loses the very man he aims at; at 0.5 it is 42° and 47°, at 0.4 41° and 49°: what he aims at stays in his eyes, with a margin; `wary` the
-/// awareness he does not fall under, low on his spot, once he is no longer alert (the floor's 'suspicious' line is 0.3; 0 = he calms right down, as a man his squad has calmed does); `backSpeed` m/s; `maxM` the furthest he walks for the spot; `doorM` the nearest he
-/// sits to a door; `eyeM` his eye that far down; `stayM` how much better than where he stands a spot must score to be walked to. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
+/// awareness he does not fall under, low on his spot, once he is no longer alert (the floor's 'suspicious' line is 0.3; 0 = he calms right down, as a man his squad has calmed does); `back_speed` m/s; `max_m` the furthest he walks for the spot; `door_m` the nearest he
+/// sits to a door; `eye_m` his eye that far down; `stay_m` how much better than where he stands a spot must score to be walked to. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct NetquietK {
     #[k(0.12)] pub unanswered: f64,

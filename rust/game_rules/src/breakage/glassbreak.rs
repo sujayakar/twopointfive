@@ -1,4 +1,4 @@
-//! src/game/glassbreak.ts lines 219 to 584: the class GlassBreak, thin over rust/sim's panes.rs
+//! Glass breaking, thin over rust/sim's panes.rs.
 
 pub use ::game_types::glassbreak::types;
 pub use types::*;
@@ -14,17 +14,18 @@ pub fn glass_break_live(g: &crate::game::Game) -> bool {
     g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
 }
 
+use crate::ask::Over;
 use ::sim::panes::{self, Ctx};
 use crate::glasspen::PaneType;
 use ::sim::world::{Sheet, VIEW_BLOWN, VIEW_GIVES, VIEW_NONE};
 use crate::Num;
 
-// ---------------------------------------------------------------- what the TypeScript reads off an array by a number
-/// TYPES[t], panes.rs's word for a glass; a word off the list reads laminated (the `??` of impact: no other caller can meet one)
+// ---------------------------------------------------------------- a glass's word and its number
+/// a glass's number as panes.rs's word for it; a number off the list reads laminated (only impact can meet one)
 fn type_word(t: u32) -> PaneType {
     match t { 0 => PaneType::Annealed, 1 => PaneType::Tempered, _ => PaneType::Laminated }
 }
-/// TYPES.indexOf(t)
+/// a glass's word as its number
 fn type_index(t: PaneType) -> u32 {
     match t { PaneType::Annealed => 0, PaneType::Tempered => 1, PaneType::Laminated => 2 }
 }
@@ -280,8 +281,9 @@ pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     glass_break_asking(g, |cx, k| panes::widen(cx, js::to_u32(bi), x, k)) as f64
 }
 
-/// A BLAST at `at`: every sheet in reach takes it by type and by k = power × (1 − d / radius); the panes it changed
-pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 {
+/// A BLAST at `at`, in the world as it takes it: every sheet in reach that it has a line to (panes.rs `blast_meets`, asked of them all before any breaks) takes it by type
+/// and by k = power × (1 − d / radius); the panes it changed
+pub fn glass_break_blast(g: &mut crate::game::Game, over: &Over, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 {
     let opts = opts.unwrap_or_default();
     if !glass_break_live(g) { return 0.0; }
     let radius = opts.radius.unwrap_or(g.k.glassbreak.blast_m);
@@ -289,9 +291,10 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
     let who = opts.who.unwrap_or(0.0);
     let mut changed = 0.0;
     if radius > 0.0 && power > 0.0 {
+        let met = crate::scene_collision::panes_met(g, over, at, radius);
         let arrival = glass_break_asking(g, |cx, _| panes::blast_begin(cx, at));
-        for i in 0..g.tab.boxes.world().sheets.len() {
-            if glass_break_asking(g, |cx, k| panes::blast_sheet(cx, arrival, i, at, radius, power, who, k)) { changed += 1.0; }
+        for pane in met {
+            if glass_break_asking(g, |cx, k| panes::blast_sheet(cx, arrival, pane, at, radius, power, who, k)) { changed += 1.0; }
         }
     }
     changed
@@ -300,24 +303,24 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
 /// a stun charge went off at `at`: a blast at bangPower
 pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
     let opts = GlassBlastOpts { radius: Some(g.k.glassbreak.blast_m), power: Some(g.k.glassbreak.bang_power), who: Some(who) };
-    glass_break_blast(g, at, Some(opts))
+    glass_break_blast(g, &Over::OWN, at, Some(opts))
 }
 
 // ---------------------------------------------------------------- a burst's view of the glass
-/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass
-pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakViewOfKind, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass, in the world as the question takes it
+pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, over: &Over, view: crate::glassbreak::GlassBreakViewOfKind, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let kind = view;
-    let was = g.glass_break.view_of.take();
-    g.glass_break.view_of = Some(GlassBreakViewOf { kind, from, size });
-    glass_viewed(g);
+    let was = g.glass_break.view_of.replace(GlassBreakViewOf { kind, from, size });
+    let shown = glass_viewed(g, over);
     let out = fn_(g);
     g.glass_break.view_of = was;
-    glass_viewed(g);
+    g.tab.boxes.view(shown);
     out
 }
 
-/// the box world is told the view in hand, as numbers: which view, the burst's point, reach and power, whether a man counts on it
-fn glass_viewed(g: &mut Game) {
+/// the box world is told the view in hand, as numbers: which view, the burst's point, reach and power, whether a man counts on it; and which panes such a burst meets.
+/// → the view it had
+fn glass_viewed(g: &mut Game, over: &Over) -> ::sim::world::View {
     let (kind, at) = match g.glass_break.view_of {
         None => (VIEW_NONE, [0.0; 6]),
         Some(v) => (
@@ -325,7 +328,8 @@ fn glass_viewed(g: &mut Game) {
             [v.from[0], v.from[1], v.from[2], v.size.radius.unwrap_or(g.k.glassbreak.blast_m), v.size.power.unwrap_or(1.0), if v.kind == GlassBreakViewOfKind::Counted { 1.0 } else { 0.0 }],
         ),
     };
-    g.tab.boxes.view(kind, at);
+    let met = if kind == VIEW_GIVES { crate::scene_collision::panes_met(g, over, [at[0], at[1], at[2]], at[3]) } else { Vec::new() };
+    g.tab.boxes.view((kind, at, met))
 }
 
 /// the rule's whole answer at a point: a piece out, or the view in hand counts the glass there out
@@ -422,7 +426,7 @@ fn glass_break_update_gusts(g: &mut crate::game::Game) {
 fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to_i32(key), js::to_i32(2654435761.0))) as u32 as f64 }
 
 // ---------------------------------------------------------------- queries
-/// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
+/// nothing of a pane's is in the block: the panes part's first word, `used`
 pub(crate) fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
@@ -472,12 +476,12 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
     fn blank() -> Box<Game> { Box::new(Game::blank()) }
-    // the TypeScript's own result, from bun: (0x61A55 ^ Math.imul(key, 2654435761)) >>> 0
+    // pinned: (0x61A55 ^ imul(key, 2654435761)) >>> 0
     #[test]
     fn the_gust_seed_is_the_typescripts() {
         assert_eq!(seed_mix_gust(3735928559.0).to_bits(), 0x41e397dc0d400000);
     }
-    // TYPES of the TypeScript, panes.rs ANNEALED, TEMPERED, LAMINATED: the skeleton's PaneType lists its words in another order
+    // panes.rs's ANNEALED, TEMPERED, LAMINATED: `PaneType` lists its words in another order
     #[test]
     fn a_glass_word_is_the_modules() {
         for (t, want) in [(panes::ANNEALED, PaneType::Annealed), (panes::TEMPERED, PaneType::Tempered), (panes::LAMINATED, PaneType::Laminated)] {
@@ -490,14 +494,14 @@ mod tests {
     #[test]
     fn a_view_is_its_numbers() {
         let mut g = blank();
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         assert_eq!(g.tab.boxes.world().view, VIEW_NONE);
         g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Counted, from: [1.0, 2.0, 3.0], size: GlassBlastOpts { radius: Some(5.0), power: None, who: None } });
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         let v = g.tab.boxes.world();
         assert_eq!((v.view, v.view_at), (VIEW_GIVES, [1.0, 2.0, 3.0, 5.0, 1.0, 1.0]));
         g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Blown, from: [0.0, 0.0, 0.0], size: GlassBlastOpts::default() });
-        glass_viewed(&mut g);
+        glass_viewed(&mut g, &Over::OWN);
         let v = g.tab.boxes.world();
         assert_eq!((v.view, v.view_at[3], v.view_at[5]), (VIEW_BLOWN, g.k.glassbreak.blast_m, 0.0));
     }
@@ -523,7 +527,7 @@ mod tests {
         assert_eq!(normal_on(yaw, 0.0), [0.0, 0.0, 1.0]);
         assert_eq!(normal_on(yaw, 2.0), [1.0, 0.0, -0.0]);
     }
-    // off the list, negative, fractional, NaN: undefined in the TypeScript
+    // off the list, negative, fractional, NaN: none
     #[test]
     fn a_box_off_the_list_is_none() {
         let g = blank();

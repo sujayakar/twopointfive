@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The knobs (Tab ▸ Sandbox ▸ Fog of war, __fow.knobs; read every frame).
+/// The knobs, read every frame.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct FogK {
     /// how far down the unseen floor and walls are pushed: radiance × this …
@@ -14,10 +14,10 @@ pub struct FogK {
     #[k(360.0)] pub fov_deg: f64,
     /// with a wedge: inside this many metres he sees all round regardless
     #[k(2.0)] pub near_m: f64,
-    /// THE CONE (hard's fog: difficulty.ts setDifficulty writes this row from HARD.cone with the level; ?fogcone / ?fogcone=0 for a visit; the Tab row flips it
-    ///  live): every eye sees a wedge of `coneDeg` about where he looks with `coneNearM` all round him, in place of fovDeg / nearM. false = as it was
+    /// THE CONE (hard's fog: the difficulty's fog lever writes this row): every eye sees a wedge of `cone_deg` about where he looks with
+    ///  `cone_near_m` all round him, in place of `fov_deg` / `near_m`
     #[k(false)] pub cone: bool,
-    /// … the wedge, degrees in plan (a man's two eyes together take in about 120°; the defenders' own cone is 116° — guards.ts GUARD_EYE)
+    /// … the wedge, degrees in plan (a man's two eyes together take in about 120°; the defenders' own cone is 116°: `guard_eye`)
     #[k(120.0)] pub cone_deg: f64,
     /// … and the all-round near field, metres (a man knows what is at his shoulder)
     #[k(1.5)] pub cone_near_m: f64,
@@ -32,7 +32,7 @@ pub struct FogK {
     #[k(10.0)] pub call_secs: f64,
     #[k(3.0)] pub call_gap: f64,
     #[k(3.0)] pub call_known: f64,
-    /// the air along the line (smoke, and a picked weather's fog and dust): transmittance under this and the man is lost in it (the guards' own bar — guards.ts eyeContact; 0 = the air hides nobody)
+    /// the air along the line (smoke, and a picked weather's fog and dust): transmittance under this and the man is lost in it (the guards' own bar, `eye_contact`; 0 = the air hides nobody)
     #[k(0.3)] pub smoke: f64,
     /// seconds a man stays drawn after the last frame somebody saw him
     #[k(0.25)] pub linger: f64,
@@ -50,15 +50,14 @@ pub struct FogK {
     /// Never seen on a GPU: the levels, the fill and what a never-seen room should look like are the maintainer's to judge
     #[k(1.0)] pub lit: f64,
     /// THE AIR IS THE PLACE (the picture only; under `full` alone — it rides the sight table): true = the solver's smoke is drawn over floor the team does not see too,
-    /// dimmed with the ground behind it on the screen — a fire's plume, a grenade's cloud (the maintainer, 10-23, on a fire with no flame in the fog: 'I think we should
-    /// at least show everything in the environment visible at the start of the level all the time?'). What a hidden MAN breathes, smokes or fires is not filed with the
-    /// solver at all (snowBreath.ts, smokebreak.ts and combat.ts ask the fog at the source — airHides below), and a hidden light still gives a plume nothing
-    /// (lightFogK). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) are `ours`'s, below: particles_draw.wgsl. false = the march takes no
-    /// density over unseen floor, as it was (common.wgsl fogSmoke). Never seen on a GPU
+    /// dimmed with the ground behind it on the screen — a fire's plume, a grenade's cloud (the maintainer, on a fire with no flame in the fog: 'I think we should
+    /// at least show everything in the environment visible at the start of the level all the time?'). What a hidden MAN smokes or fires is not filed with the
+    /// solver at all (a smoke break and a shot ask the fog at the source). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) go by whose they are:
+    /// particles_draw.wgsl. Nothing reads this knob: the picture is told true (game_draw fog.rs). Never seen on a GPU
     #[k(true)] pub air: bool,
     /// HOW MANY EYES LIFT THE FOG (the fourth of the fog's principles: to see more, get more eyes on it): Sam, the living teammates in list order, then a sticky camera's feed, then a tutorial's
-    /// lookout or a step's own eye — as many as this. 5 until 10-24: a squad of four filled it, so a camera that sent was 'drawn, blind' and a lookout had no place. 7 = the room the renderer's
-    /// block and its sight table have (render/fogofwar.ts FOG_EYES; fogEyeCount below: under five is five, over seven is seven). Never seen on a GPU
+    /// lookout or a step's own eye — as many as this. Five is filled by a squad of four, so a camera that sends is 'drawn, blind' and a lookout has no place. 7 = the room the renderer's
+    /// block and its sight table have (render/fogofwar.ts FOG_EYES; `fog_eye_count`: under five is five, over seven is seven). Never seen on a GPU
     #[k(7.0)] pub eyes: f64,
     /// WHAT OTHERS LEFT BEHIND STAYS AS THE TEAM LAST SAW IT (the third of the fog's principles; the picture alone, under `full`): (1) a lamp the team has in
     /// another state than it is in keeps its FACE that way too — the fog already lit the room by a lamp put out unseen while its ceiling panel went dark at
@@ -81,7 +80,7 @@ pub struct FogK {
     /// … a lamp that would add less than this, as displayed, at a pixel is not traced (one under twice it is faded in: no line where a lamp's reach ends)
     #[k(0.006)] pub lit_cut: f64,
     /// WHERE HE WAS LAST SEEN: a living enemy who has gone out of the team's sight keeps a fading '?' on the spot he was last seen at for this many seconds
-    ///  (the HUD's alone: the Rust game's fog_of_war_last_seen, game.view.marks.seen — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (told.ts: a few seconds on
-    ///  Standard, longer on Guided, none on Bare or with that lever off, which is no mark, as it was); turned up, this is the seconds on every rung
+    ///  (the HUD's alone: `fog_of_war_last_seen`, `view.marks.seen` — nothing in the game reads it). 0 (as it ships) = the 'you're told' lever decides (`told.standard` seconds on
+    ///  Standard, `told.guided` on Guided, none on Bare or with that lever off); turned up, this is the seconds on every rung
     #[k(0.0)] pub last_seen: f64,
 }

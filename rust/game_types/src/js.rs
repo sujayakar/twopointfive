@@ -1,6 +1,6 @@
-//! WHAT THE TYPESCRIPT LEANS ON OF ITS LANGUAGE, kept as it was: a Map and a Set that remember the order their keys were first set (the game
-//! walks them, and the order is play), the integer conversions, the stable sort. A translated file uses these wherever the TypeScript's result
-//! depends on the language's own behaviour.
+//! WHAT THE GAME KEEPS OF JAVASCRIPT'S RULES: a Map and a Set that remember the order their keys were first set (the game
+//! walks them, and the order is play), the integer conversions, the stable sort. Code uses these wherever a result
+//! depends on those rules.
 use alloc::vec::Vec;
 use core::borrow::Borrow;
 use core::hash::{Hash, Hasher};
@@ -327,7 +327,7 @@ pub fn sort_by<T>(v: &mut [T], mut cmp: impl FnMut(&T, &T) -> f64) {
     });
 }
 
-/// `x.toFixed(digits)`: the decimal of the double's EXACT value, rounded half up at `digits` places (a tie goes to the larger number, as
+/// `x.toFixed(digits)`: the decimal of the double's exact value, rounded half up at `digits` places (a tie goes to the larger number, as
 /// the language says; `format!("{:.1}")` rounds a tie to even and so differs at 0.25). `digits` 0 to 20, as JavaScript's.
 pub fn to_fixed(x: f64, digits: u32) -> alloc::string::String {
     use alloc::string::{String, ToString};
@@ -575,7 +575,7 @@ mod tests {
 
     use super::*;
     use alloc::string::String;
-    /// each row: the text, JavaScript's `Number(text)` and `parseFloat(text)` of it as the language prints them (read off bun)
+    /// each row: the text, JavaScript's `Number(text)` and `parseFloat(text)` of it as the language prints them
     #[test]
     fn reads_a_word_as_a_number_as_the_language_does() {
         let rows: [(&str, &str, &str); 32] = [("2", "2", "2"), (" 2 ", "2", "2"), ("", "0", "NaN"), ("  ", "0", "NaN"), ("2.5", "2.5", "2.5"), (".5", "0.5", "0.5"), ("5.", "5", "5"), ("-3", "-3", "-3"),
@@ -722,7 +722,7 @@ mod tests {
     }
     #[test]
     fn to_fixed_is_javascripts() {
-        // (the double's bits, digits, what bun printed for x.toFixed(digits))
+        // (the double's bits, digits, x.toFixed(digits))
         let cases: &[(u64, u32, &str)] = &[
             (0x0, 0, "0"),
             (0x0, 1, "0.0"),

@@ -142,7 +142,7 @@ pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef
     if seat_ref.orders.cast.is_some() { return g.qrf.men.contains(&gd); }
     if !g.team(gd).ours() { return false; }
     let seat = seat_ref.id;
-    crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one: seats.ts)
+    crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one)
 }
 
 /// The player is one of these men's own.
@@ -469,14 +469,14 @@ pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &m
         if !crate::condition::down(g, g.gd[gd].ch) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
-    let fo = squad_orders_people_near(g, seat, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
+    let fo = squad_orders_people_near(g, seat, at);   // (a man of the other side nearer the point than a door, a teammate or Sam himself)
     if let Some((foe, fd)) = fo {
         if !(door.is_some() && dd < fd) && !(man.is_some() && dm < fd) && !(ds < self_m && ds < fd) {
             let fp = g.pos_of(foe);
             return OrderTarget::Foe(OrderTargetFoe { at: [fp[0], 0.0, fp[2]], foe });
         }
     }
-    let wk = crate::workthings::work_near(g, seat, at);   // (workthings.ts: a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
+    let wk = crate::workthings::work_near(g, seat, at);   // (a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
     if let Some(wk) = wk {
         if !(door.is_some() && dd < wk.d) && !(man.is_some() && dm < wk.d) && !(ds < self_m && ds < wk.d) { return wk.target; }
     }
@@ -492,10 +492,10 @@ pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &m
     }
     if ds < self_m { return OrderTarget::None(OrderTargetNone { at, man: None }); }
     let base = match squad_orders_free_spot(g, seat, at) {
-        Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None, serial: 0 }),   // (serial 0: no menu's yet; orders.ts:937 stamps the one a menu keeps)
+        Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None, serial: 0 }),   // (serial 0: no menu's yet; opening a menu stamps the one it keeps)
         None => OrderTarget::None(OrderTargetNone { at, man: None }),
     };
-    crate::wallcharge::wall_target(g, seat, at, &base, asked)   // (wallcharge.ts: a floor target under a wall carries the wall)
+    crate::wallcharge::wall_target(g, seat, at, &base, asked)   // (a floor target under a wall carries the wall)
 }
 
 /// How far along the ray it crosses one door's doorway rectangle, nearer than `bt` and with nothing of the scene short of the frame line

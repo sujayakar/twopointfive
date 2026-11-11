@@ -46,7 +46,7 @@ export class DrawNet {
   tick(input: HandInput, cam: HandCamera, canvas: HandCanvas, off: boolean, after: () => void): boolean {
     const { door, game, net } = this, c = door.client, now = performance.now(), N = game.numbersOf(), keys = sampleHand(N, input, cam, canvas), seat = Math.max(0, c.seat);
     door.wake(this.round);
-    if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now); else c.beat(recordOf(N, keys), now); }
+    if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now, !off); else c.beat(recordOf(N, keys), now); }
     let over = false;
     const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word() }, this.round);
     const level = this.level; this.level = false;

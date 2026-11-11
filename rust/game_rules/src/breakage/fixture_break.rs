@@ -3,12 +3,11 @@
 //! lead's glow. "Picture only: nothing play asks about" by its rays; but every piece is a KEYED box of the frame's list (MKEY.test + 0x5000 + …), and
 //! the fog of war keeps a record of every keyed loose thing of that list and caps its records, the frame's room is budgeted with them in it, and the
 //! look reads the box world (a ray down, the furniture's footprints, sight lines to where it will lie) and this frame's hearing events. So the lane
-//! runs here, under its DRESS row, as it runs in the TypeScript.
+//! runs here, under its dress row.
 //!
-//! THE PARTICLES (the lead's sparks, the tube's glass, the splinters a landing throws) go to the host's pool where it has one (`gpu_fx`, the
-//! TypeScript's own `if (P)`), each with a seed of the fixture's own (`seed_of`, which counts on `Rec.emits`); a host with none gets none and the
-//! count stays, as there.
-//! The module's state is `g.m.fixture_break.state` (the TypeScript's SideMap by the game); `by` (a Map by the target) is the record's own `t`.
+//! THE PARTICLES (the lead's sparks, the tube's glass, the splinters a landing throws) go out as `particles_emit` events,
+//! each with a seed of the fixture's own (`seed_of`, which counts on `Rec.emits`); the count is kept whether or not a host draws them.
+//! The module's state is `g.m.fixture_break.state`; a record's target is its own `t`.
 
 pub use ::game_types::fixture_break::types;
 pub use types::*;
@@ -216,7 +215,7 @@ fn seed_of(r: &mut crate::fixture_break::Rec) -> f64 {
     if x == 0 { 1.0 } else { x as f64 }
 }
 
-/// Once a frame (game.ts, with the other dynamic boxes): notice fixtures that broke or were repaired, move what is moving, hand the frame the look's
+/// Once a frame (with the other dynamic boxes): notice fixtures that broke or were repaired, move what is moving, hand the frame the look's
 /// boxes.
 pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, dt: f64) {
     let f = g.m.fixture_break.fixlook.clone();
@@ -317,5 +316,5 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
 /// the tube's glass
 const GLASS: V3 = [0.88, 0.92, 0.92];
 use crate::render_particles::{EmitOpts, PKind};
-/// a record dropped (the fixture repaired, the clock jumped): its boxes are let go, as the TypeScript drops the objects
+/// a record dropped (the fixture repaired, the clock jumped): its boxes are let go
 fn let_go(g: &mut Game, r: &Rec) { for &b in r.hang.iter() { crate::scene_boxes::box_let_go(g, b); } for p in r.pieces.iter() { crate::scene_boxes::box_let_go(g, p.box_); } }

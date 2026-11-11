@@ -384,7 +384,7 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    /// (id + salt) * 0.6180339887 and its frac, printed by the TypeScript under EXACT.
+    /// the pinned bits of (id + salt) * 0.6180339887 and its frac
     #[test]
     fn frac_has_the_typescripts_bits() {
         for (id, salt, whole, part) in [

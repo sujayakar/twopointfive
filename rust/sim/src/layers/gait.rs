@@ -227,7 +227,7 @@ pub fn stance_body(g: usize, an: &Anim, w: f64, speed: f64, stand: f64) -> bool 
     })
     .unwrap_or(false)
 }
-/// CharacterAnimator.jogShape — the run clip as the game shows it: its bounce flattened toward the mean by phase, and at a jog its stride warped shorter at
+/// the run clip as the game shows it: its bounce flattened toward the mean by phase, and at a jog its stride warped shorter at
 /// the feet about the gait's middle. `a`: 0 ph · the clip's pelvis height at the two samples about the phase: 1, 2 · 3 its mean · 4 runK · 5 jogMid
 fn jog_shape(g: usize, at: usize, an: &Anim, ph: f64) -> bool {
     let i0 = (floor(ph * 64.0) as i32 & 63) as usize;
@@ -253,7 +253,7 @@ fn jog_shape(g: usize, at: usize, an: &Anim, ph: f64) -> bool {
     })
     .unwrap_or(false)
 }
-/// CharacterAnimator.sprintShape — the sprint clip as the game shows it: its stride warped at the ankles about the gait's middle, heights eased half way with
+/// the sprint clip as the game shows it: its stride warped at the ankles about the gait's middle, heights eased half way with
 /// it about the ankles' floor, never an ankle so low its toe goes through the floor. `a`: 0 sprintMid · 1 sprintFloorY
 fn sprint_shape(g: usize, at: usize, an: &Anim) -> bool {
     let (mid, y0) = (an.sprint_mid, an.sprint_floor_y);
@@ -283,11 +283,11 @@ fn sprint_shape(g: usize, at: usize, an: &Anim) -> bool {
     })
     .unwrap_or(false)
 }
-/// a clip sampled into a pose as it stands (sampleClip with no copy first: the nodes the clip does not write keep what the pose held)
+/// a clip sampled into a pose as it stands (with no copy first: the nodes the clip does not write keep what the pose held)
 fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64) -> bool {
     clip >= 0.0 && ask_sample(g, at, nodes, clip as usize, t, true)
 }
-/// CharacterAnimator.sampleJog — the jog clip at phase `ph` (its time `t`), its SEAM closed: the clip's last key is not its first, and each joint that
+/// the jog clip at phase `ph` (its time `t`), its SEAM closed: the clip's last key is not its first, and each joint that
 /// jumps there is carried half the jump back at the cycle's end and half forward at its start (the rig's table JOG_SEAM, six numbers a joint: its
 /// node · 0 an origin, 1 a rotation · the jump: an offset, or an axis and, last, its angle)
 fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64) -> bool {
@@ -593,7 +593,7 @@ fn turn_step(w: f64, err: f64, w_max: f64, acc: f64, dt: f64) -> (f64, f64) {
         (d, nw)
     }
 }
-/// TURN: bodyYaw and aimYaw as his AI left them are where he WANTS to face; he comes round to them as a mass (his feet the short way round, the gun about his
+/// TURN: `body_yaw` and `aim_yaw` as his AI left them are where he WANTS to face; he comes round to them as a mass (his feet the short way round, the gun about his
 /// waist through his front), and the two are rewritten with where he has got to. A rule of the character's and not of his pose.
 pub fn turn_weigh(ch: &mut Character, dt: f64, tune: &Knobs) {
     let (px, pz, body_yaw, aim_yaw) = (ch.pos[0], ch.pos[2], ch.body_yaw, ch.aim_yaw);

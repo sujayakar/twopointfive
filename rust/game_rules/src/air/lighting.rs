@@ -84,11 +84,11 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// The mains' clocks and everything that goes with them, each tick, then the rows onto the lamps. The boxes' paint is the picture's.
 pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
     let mut near: Option<GuardId> = None;
-    // the lights' mend (blitz/lights.md): no gate outside the walk, breaker_reset_near holds it
+    // no gate outside the walk: breaker_reset_near holds it
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
-        // no break: the LAST guard that qualifies wins (blitz/lights.md trap 5)
+        // no break: the LAST guard that qualifies wins
         if breaker_reset_near(g, gd) && their_mains(g, gd) && !crate::workthings::work_not_his(g, gd) {
             near = Some(gd);
         }

@@ -42,8 +42,8 @@ pub struct HourDefSky {
     pub horizon: V3,
 }
 
-/// WHERE THE SKY'S LIGHT ON THE LEVEL IS ASKED OF (sim/dome.rs): the box its statics stand in, kept until one is written or the sun (or the
-/// moon) stands elsewhere. Made again from the world, so it is no state: it is on no wire and in no word
+/// WHERE THE SKY'S LIGHT ON THE LEVEL IS ASKED OF (rust/sim/src/dome.rs): the box its statics stand in, kept until one is written or the sun (or the
+/// moon) stands elsewhere. Made again from the world, so it is no state and in no bytes
 #[derive(Clone, Debug)]
 pub struct SkyReach {
     /// which writing of the statics these were asked at

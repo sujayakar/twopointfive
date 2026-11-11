@@ -43,8 +43,10 @@ pub struct Opts {
     pub dress: bool,
     /// a mission the game refuses is said (`Play.refused`) and no stop
     pub may_refuse: bool,
+    /// what the first step wants of the light under the roofs is made by the stand (`StartOpts.ready`); down, the step makes it
+    pub ready: bool,
 }
-impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 1, dress: false, may_refuse: false } } }
+impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 1, dress: false, may_refuse: false, ready: true } } }
 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
@@ -100,7 +102,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
+    let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ready: o.ready, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, legs: None, refused, spoke: Vec::new(), _one: one };

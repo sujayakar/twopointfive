@@ -1,4 +1,5 @@
 //! THE MEN'S COLUMNS, as a rule here reads them. A man is a row: `state(g).men.<column>[row]`; the game writes the columns in these same bytes, with no copy.
+//! `Men` is a part of the game's block (state.rs), and a rule is handed only its slot.
 use core::mem::{offset_of, size_of};
 
 /// rows of each column

@@ -171,16 +171,17 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
         before: None, torn: Vec::new(),
     };
     if spec.fx != Some(false) { seen_and_heard(g, &b); }
-    // the glass first: nothing reaches it after the men are judged through it
-    if g.k.frag.glass_power > 0.0 {
-        let o = crate::glassbreak::GlassBlastOpts { radius: Some(g.k.frag.glass_m), power: Some(g.k.frag.glass_power), who: Some(b.who) };
-        crate::glassbreak::glass_break_blast(g, b.from, Some(o));
+    // the glass it has a line to as things stand goes first, for the men's lines before anything else broke; what it opens lets the same blow through to more, before they are judged
+    let glass = [g.k.frag.glass_m, g.k.frag.glass_power];
+    if glass[1] > 0.0 {
+        let o = crate::glassbreak::GlassBlastOpts { radius: Some(glass[0]), power: Some(glass[1]), who: Some(b.who) };
+        crate::glassbreak::glass_break_blast(g, &Over::OWN, b.from, Some(o));
     }
     crate::glassbreak::glass_break_bang(g, [b.from[0], m::max(0.3, b.from[1]), b.from[2]], b.who);
     let hung: Vec<DoorId> = g.doors.list.iter().copied().filter(|&d| !g.dr[d].leaf.off).collect();
     if crate::destruction::chaos_of(g) > 0.0 { b.before = Some(lines_before(g, &b)); }
     let (radius, power) = match spec.destr { Some(d) => (d.radius, d.power), None => (None, None) };
-    crate::destruction::destruction_blast(g, b.from, Some(crate::wallbreak::BlastOpts { who: Some(b.who), radius, power, ..Default::default() }));
+    crate::destruction::destruction_blast(g, b.from, Some(crate::wallbreak::BlastOpts { who: Some(b.who), radius, power, glass: Some(glass).filter(|o| o[1] > 0.0), ..Default::default() }));
     b.torn = torn_leaves(g, &hung);
     let ev_serial = g.serial();
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: b.from, time: g.time, loud: true, level: Some(2.0), who: Some(b.who), frag: Some(true), serial: ev_serial, ..Default::default() });
@@ -869,7 +870,6 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own bits, under EXACT
     #[test]
     fn leaf_dist_bits() {
         let l = vec![vec![1.25, -3.5, 2.1, -2.7], vec![0.3, 0.7, 0.3, 1.9]];

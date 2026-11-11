@@ -1,9 +1,9 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
 import { GpuTimer } from './gpu/timer';
-import { BoxWorld, planBoxes, type Box, type DrawWait } from './scene/boxes';
-import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, lookConfig } from './render/frame';
-import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
+import { BoxWorld, planBoxes, type Box } from './scene/boxes';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, meshBinding, WeatherFrame, noWeather, lookConfig } from './render/frame';
+import { GBuffer, SkinnedDrawable, lookAmounts } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
 import { LightingPasses, type FireRecord } from './render/passes';
@@ -172,15 +172,13 @@ export class Engine {
   /** the openings being found again and the walls being read again, a little a frame (render/steps.ts, render/planPace.ts): what was last planned serves
    *  until it is whole. `openJobKey` = the boxes' key (openingsKey) as the job took them. */
   private openJob = new Steps<{ plan: Opening[]; walls: OpenWalls; changed: boolean; rect: Rect4 | null }>(); private openJobKey = NaN;
-  /** THE PLANNERS' PACE (render/planPace.ts): the wait for a stale draw order (scene/boxes.ts upload), and the drawn frames left in which every plan is
-   *  made at once whatever the pace: a page's first frames, and after the level has been put back to another state under the picture (startPlansOver:
+  /** THE PLANNERS' PACE (render/planPace.ts): the drawn frames left in which every plan is made at once whatever the pace: a page's first frames, and after the level has been put back to another state under the picture (startPlansOver:
    *  a restart, a save put back). The level then is not the one the plans in use were made for. */
-  private drawWait: DrawWait = { calm: 0, still: 0 }; private planFresh = LOOK_OPENINGS.settle + 2;
-  /** this drawn frame's allowance of planning and its wait for the draw order (null = at once): render's first words on the pace, and a check's */
-  private framePace(): { plan: Pace; wait: DrawWait | null } {
+  private planFresh = LOOK_OPENINGS.settle + 2;
+  /** this drawn frame's allowance of planning: render's first words on the pace, and a check's */
+  private framePace(): Pace {
     const on = PLAN_PACE.on && this.planFresh <= 0; if (this.planFresh > 0) this.planFresh--;
-    this.drawWait.calm = PLAN_PACE.calm;
-    return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
+    return on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE;
   }
   /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back): what the planners have in hand was of the state before, so it is
    *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
@@ -369,13 +367,12 @@ export class Engine {
   constructor(public gpu: Gpu, rcCfg: RcConfig = defaultRcConfig, world?: (device: GPUDevice) => BoxWorld) {
     const device = this.device = gpu.device;
     const maxStorage = device.limits.maxStorageBuffersPerShaderStage;
-    if (maxStorage < 9) reachBinding.storage = false;   // the per-light reach rows: storage by default (measured cheaper), the uniform binding when this adapter cannot afford a 9th storage buffer in the compute stage — decided HERE so every Engine user gets the same fallback
-    if (maxStorage < 8) throw new Error(`This GPU / browser exposes ${maxStorage} storage buffers per shader stage; the renderer needs 8 (scene group 6 + the cascade trace's / light probe's 2) — the WebGPU default, which every core (non-compatibility-mode) adapter provides.`);   // (readable on the #fatal card instead of a pipeline-creation failure deep in the pass graph; the per-light reach masks ride in a uniform to keep this at 8 — frame.ts binding 12)
-    // the mesh-shadow trees want one more read-only storage slot in the scene group: 6 + reach (1 if storage) + mesh 1, plus the cascade trace's / probe's 2 in
-    // their own group, must fit the per-stage limit — 10 with the reach rows in storage, which is exactly what Chrome offers on Metal. Where it does not fit the
+    if (maxStorage < 9) throw new Error(`This GPU / browser exposes ${maxStorage} storage buffers per shader stage; the renderer needs 9 (scene group 7 + the cascade trace's / light probe's 2; the smoke's link 9).`);   // (readable on the start card, not a validation error)
+    // the mesh-shadow trees want one more read-only storage slot in the scene group: 7 + mesh 1, plus the cascade trace's / probe's 2 in
+    // their own group, must fit the per-stage limit — 10, which is exactly what Chrome offers on Metal. Where it does not fit the
     // binding is left out of the layout altogether (a stub meshLoad() in the prelude) and the experiment is unavailable rather than costing the reach rows their
     // measured storage path. Decided once, here, before any scene pipeline is compiled.
-    meshBinding.enabled = 6 + (reachBinding.storage ? 1 : 0) + 1 + 2 <= maxStorage;
+    meshBinding.enabled = 7 + 1 + 2 <= maxStorage;
     this.meshShadowsAvailable = meshBinding.enabled;
     this.timer = new GpuTimer(device, gpu.hasTimestamps);
     this.sceneLayout = createSceneLayout(device);
@@ -383,7 +380,6 @@ export class Engine {
     this.fogSightStand = device.createBuffer({ label: 'fogSightStand', size: FOG_SIGHT_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });   // (zeros: 'no table written' — but for the list of thin statics, which the sight table's own pass reads here: render/fogofwar.ts FogSight.stand)
     this.fogSight.stand = this.fogSightStand;
     this.world = world?.(device) ?? new BoxWorld(device); this.fogSight.world = this.world;
-    this.world.setStuffOf(lookWordOf(), lookCoreOf());   // (THE LOOK's material maps: a box is drawn as what it SAYS it is made of, its own word or its material row's, put on it when the level was loaded or the box was made: scene/stuff.ts. No colour is asked, so rain on a slab changes nothing here. Set here and nowhere else)
     this.lights = new LightSet(device);
     this.reach = new ReachKeep(this.world, this.lights);
     this.frameBuf = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frame');
@@ -654,7 +650,7 @@ export class Engine {
     { const S = this.settings, refl = S.beamReflect && S.rtReflect, air = S.beamAir && S.debugView === 0;   // (a debug view shows the boxes: the air look is added in the composite only)
       // how much of a beam the AIR shows (0.4 ≈ the old box's brightness under the tube): a little in clear indoor air, more by the haze, most in rain — smoke is read per pixel in the shader
       const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity * lookConfig.air / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
-      this.world.hidePrimary = this.passes.setBeams((refl || air) && this.beams ? this.beams.list ?? this.world.dynamics : null, this.beams?.is ?? NO_BEAM, this.viewFocus, { reflect: refl, air: air ? this.beams?.airOf ?? null : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0, coats: Math.max(0, Math.min(1, lookConfig.pressed)) });
+      this.passes.setBeams((refl || air) && this.beams ? this.beams.list ?? this.world.dynamics : null, this.beams?.is ?? NO_BEAM, this.viewFocus, { reflect: refl, air: air ? this.beams?.airOf ?? null : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0, coats: Math.max(0, Math.min(1, lookConfig.pressed)) });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
     this.passes.setFireLook(this.fireLook);
     this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (rust/game_rules/src/air/fire.rs), behind the beams in the same uniform
@@ -707,18 +703,13 @@ export class Engine {
     let camMot = 0;
     if (taauOn && !camStill) camMot = Math.max(0, Math.min(1, (px - 0.125) / 0.375));   // 0 at ≤ ⅛ px / frame … 1 at ≥ ½ (taau.wgsl MOTION_PX's ramp)
     const t0 = performance.now();
-    this.world.glassEnabled = this.settings.glass; this.world.glassFocus = cam.focus;   // (the pane list is nearest-to-the-look-at first, and empty with the experiment off)
-    this.world.markingsEnabled = this.settings.markings;   // markings: off = every box uploads slot 0 and its plain albedo in the secondary row (the frame as it was)
     this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD, byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
-    this.world.motionIds = this.settings.motionIds !== false;   // motion identity: keyed dynamic boxes hand the g-buffer last frame's index of their key (off = the bare index, the old rule)
-    { const mt = Math.max(0.005, Math.min(0.2, this.settings.markingTexel)); if (this.settings.markings && mt !== this.world.markingTexel) this.world.repackMarkings(mt); }   // the base texel moved (the review page's A/B): every list repacked at the new lattice
     // THE PLANNERS' PACE (render/planPace.ts, render/steps.ts): this frame's allowance of planning, between the order the statics are drawn in (made
     // whole, on a drawn frame once they have stood still: its time is taken off the allowance), the openings and the wall sides (each a job in steps,
     // a step at least every frame), and the place map (drawn at once, its time taken off too). At once for all of them with the pace off, and for the
     // few frames after the picture has started over.
-    const { plan, wait } = this.framePace();
-    this.world.drawWaits = PLAN_PACE.on;   // (under the pace a pack with no draw after it never makes the order, on the frames at once too)
-    { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, wait); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
+    const plan = this.framePace();
+    this.world.upload();
     this.lightMasks(plan);   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one; and THE LOOK PROTOTYPE's opening lights, each opening to the sky a light of its own, scene/openings.ts, whose masks are decided in the same step)
     const hourExp = lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon);   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
@@ -812,7 +803,7 @@ export class Engine {
       matCfg: [Math.max(0, s.rtGlints), Math.max(0, s.rtStrength), 60, Math.max(0, Math.min(1, s.detail))],   // .w = the g-buffer's detail-layer amount (0 = fsBox as it was)
       p5Cfg: [0, 0, 0, firstTransientNow],   // (.x‥.z free: the resampling gather's and the reflection twin's bits until 2026-11-07; .w = the first transient light's slot)
       jitter: [this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]],
-      markCfg: [s.markings ? this.world.markingTexel : 0, Math.max(0, Math.min(1, s.markingContrast)), Math.max(0, s.markingEmissive), s.markingReflect ? (s.markingReflPattern === false ? -1 : 1) * (1 + Math.max(0, Math.min(4, s.markingReflCone))) : 0],   // markings: .x 0 = off everywhere; .w 0 = not at reflection hits, else ±(1 + the traced-hit cone's lobe share) — negative = the analytic highlight left uniform (markings.wgsl markConeK / reflect.wgsl)
+      markCfg: [s.markings ? Math.max(0.005, Math.min(0.2, s.markingTexel)) : 0, Math.max(0, Math.min(1, s.markingContrast)), Math.max(0, s.markingEmissive), s.markingReflect ? (s.markingReflPattern === false ? -1 : 1) * (1 + Math.max(0, Math.min(4, s.markingReflCone))) : 0],   // markings: .x 0 = off everywhere; .w 0 = not at reflection hits, else ±(1 + the traced-hit cone's lobe share) — negative = the analytic highlight left uniform (markings.wgsl markConeK / reflect.wgsl)
       sharpCfg: this.sharpOn ? [this.width, this.height, this.outWidth, this.outHeight] : [0, 0, 0, 0],   // sharp direct: the two sizes every twin kernel maps between (z 0 = off: every pass as it was)
       sharpCfgB: [0, 0, 0, Math.max(1e-4, s.sharpPlaneK)],   // its knob (w = the same-plane k; xyz free)
       sharpCfgC: [decouple ? this.jitter[0] : 0, decouple ? this.jitter[1] : 0,   // DECOUPLED JITTER: what every internal ↔ output texel map adds under it (0 = one raster jitter, the sharp path as it was)

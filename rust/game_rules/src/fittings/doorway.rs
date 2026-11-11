@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn leaf_cuts_as_the_typescript() {
-        // (width, angle, along, perp, answer): behindLeaf's lines (doorway.ts:231-234, not exported: copied to a script) run under bun with EXACT.on
+        // (width, angle, along, perp, answer)
         for (w, a, al, pe, want) in LEAF { assert_eq!(leaf_cuts(*w, *a, *al, *pe), *want, "{w} {a} {al} {pe}"); }
     }
     #[test]

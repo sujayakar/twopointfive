@@ -30,7 +30,7 @@ fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos)
 }
 
-/// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts:361 tacticsPenalty, the closure it returns)
+/// what the penalty charges for stepping into cell (ix, iz)
 pub fn tactics_penalty_price(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {
     let TacticsPenalty::Cells { w, door_idx, door_mult, avoid } = p;
     let i = crate::Num(iz * *w + ix);
@@ -439,7 +439,7 @@ fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactic
     let cs = g.col.nav.cell;
     let (w_cells, h_cells) = (g.col.nav.w, g.col.nav.h);
     let mut best = cand;
-    let mut best_is_cand = true; // (the TypeScript's `best !== cand` is of the object, not its numbers)
+    let mut best_is_cand = true; // (whether `best` is still the candidate itself, not whether their numbers match)
     let mut bw = walls_about(g, cand);
     let mut bd = 0.0;
     let r = m::ceil(LONE_COVER_R / cs) as i64;
@@ -571,7 +571,7 @@ fn move_lone_row(g: &mut Game, gd: GuardId, mut l: Lone, dt: f64) -> Option<TacM
     out
 }
 
-/// guards.ts, the alert branch with a fix and no eyes on his man: his role, else the lone man's angle, else null = the chase
+/// the alert branch with a fix and no eyes on his man: his role, else the lone man's angle, else None = the chase
 pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::tactics::TacMove> {
     if !tactics_on(g) || g.gd[gd].last_known.is_none() || g.gd[gd].pinned || g.gd[gd].hold {
         return None;
@@ -803,7 +803,7 @@ pub(super) fn entry_legs(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64,
 pub(super) fn step_gate(g: &mut crate::game::Game, gd: GuardId, gate: &mut crate::tactics::Gate, dt: f64, target: V3, speed: f64, face: Option<f64>) -> bool {
     let c = g.gd[gd].ch;
     let speed = crate::condition::condition_pace(g, g.gd[gd].ch, speed);
-    // (the TypeScript asks `pathFor !== target` of the array; every caller hands a held point, so its numbers say the same)
+    // (asked by value: every caller hands a held point, so equal numbers are the same point)
     if gate.path.is_none() || gate.path_for != Some(target) {
         let from = g.ch[c].pos;
         let mut path = crate::scene_collision::nav_grid_find_path(g, from, target, None, None).unwrap_or_else(|| vec![v3::copy(target)]);
@@ -1052,7 +1052,7 @@ fn near_jamb(g: &Game, gd: GuardId, d: DoorId, side: f64) -> f64 {
     if crate::handleside::latch_first(g, d, stack) { width } else { 0.0 }
 }
 
-/// guards.ts followPath, first thing: true = the gate has this man's feet this frame. The gate is lent to runGate and written back.
+/// first thing in following a path: true = the gate has this man's feet this frame. The gate is lent to `run_gate` and written back.
 pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     if !tactics_on(g) {
         return false;

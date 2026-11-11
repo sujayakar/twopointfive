@@ -149,11 +149,10 @@ fn a_storm_is_cut_by_the_levels_own_roofs() {
 fn the_traffic_map_is_worn_where_the_level_is_walked() {
     for level in ["pass.json", "compound.json"] {
         let p = Play::level(level, false, &Opts::default());
-        let mut t = game_draw::traffic::Traffic::default();
-        t.take(&p.g);
+        let map = game_draw::traffic::map(&p.g);
         let w = game::scene_world::world();
         let wide = (w.grid_w * w.grid_cell * 8.0) as usize;
-        let worn = |x: f64, z: f64| -> u32 { let i = (z * 8.0) as usize * wide + (x * 8.0) as usize; (t.words[i / 2].w >> (i % 2 * 16)) & 255 };
+        let worn = |x: f64, z: f64| -> u8 { map[((z * 8.0) as usize * wide + (x * 8.0) as usize) * 2] };
         let ways = game_draw::traffic::ways(&p.g);
         assert!(ways.list.len() >= 10, "{level}: {} ways", ways.list.len());
         let mut near: Vec<[f64; 2]> = vec![];

@@ -6,10 +6,10 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::{string::String, vec::Vec};
 
-// cast.ts WHOLE but castWear (the viewer's). Triaged dress, but dress.ts says "what each WEARS is still dealt: his kit is placed off it": Character.parts feeds
+// What each man wears is part of the game and not only of the picture, because his kit is placed off it: a cast's parts feed
 // packside's boxes, which are in the frame's list. No die is drawn.
 
-/// Of a cast's defenders, the ones dressed for a building.   (cast.ts officeDress; the memo by the parts array's identity is not kept: a pure function of `parts`)
+/// Of a cast's defenders, the ones dressed for a building.
 fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) -> Vec<AnimGltfCastVariantId> {
     let field = field_parts();
     let mut bits: u32 = 0;
@@ -65,7 +65,7 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
 pub fn sneak_suit(g: &Game, c_2: CharId) -> bool {
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
-        Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)
+        Some(asked) => asked.map(|_| true),   // (a suit asked for stands over the mission; None inside it = no mission)
         None => g.staged.up.map(|_| g.staged.facts.unseen),
     };
     if k == Some(false) { return false; }

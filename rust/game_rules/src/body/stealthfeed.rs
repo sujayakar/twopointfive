@@ -19,7 +19,7 @@ pub fn stealth_feed(g: &mut crate::game::Game) {
         || crate::handwork::sam_work(g).is_some();
     let f = g.ch[c].anim.stealth.get_or_insert(crate::stealthpose::StealthFeed { free: false, cable: false });
     f.cable = cable;
-    // kit_in_hand only when the tests before it pass, and after the row above is written, as the TypeScript's && has it
+    // kit_in_hand only when the tests before it pass, and after the row above is written
     let free = !taken
         && !wanding
         && crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none()

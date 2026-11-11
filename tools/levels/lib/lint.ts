@@ -12,7 +12,10 @@ import { loadLevel } from './levelLoad';
 import { Box, BoxFlag, rayBox } from '../../../src/scene/boxes';
 import { WORLD } from '../../../src/scene/world';
 import type { Level } from './level';
-import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from '../../../src/scene/markings';
+import { MarkingDef, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from '../../../src/scene/markings';
+import { BoxMat } from '../../../src/draw/gpu';
+/** rows the marking table has room for */
+const MARK_TABLE_ROWS = BoxMat.pane - BoxMat.mark;
 
 export type Severity = 'error' | 'warn' | 'info';
 export interface Finding { severity: Severity; code: string; message: string; ids: string[] }

@@ -21,7 +21,7 @@ macro_rules! back_as {
     }};
 }
 
-/// a walk read as the Lent it extends (the TypeScript passes the same object)
+/// a walk read as the Lent it extends
 fn walk_lent(w: &Walk) -> Lent {
     Lent { mates: w.mates.clone(), gd: w.gd, t: w.t.clone(), a: w.a, home: w.home, home_yaw: w.home_yaw, back: w.back.clone().map(|b| back_as!(b, LentBack)) }
 }

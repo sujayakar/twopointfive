@@ -31,7 +31,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     crate::pairorders::watch_issue(g, men, t)
 }
 
-/// (pairorders.ts:232 the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him)
+/// the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him
 fn tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let h = match g.tab.orders_assignment[a].foe { Some(h) => h, None => return };
     if crate::condition::down(g, g.gd[h].ch) || !g.guards.contains(&h) { crate::pairorders::pair_orders_stand(g, gd, "holding", None); return; }

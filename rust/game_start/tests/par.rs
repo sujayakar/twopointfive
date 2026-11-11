@@ -1,6 +1,6 @@
 //! THE PAR CLOCK IS THE GAME'S (rust/game_rules/src/missions/par.rs): a real level with a `scenarios.par` block, its room clear stood by the Rust start, and
 //! the clock read off the game's own record. Each test holds one rule over three seeds beside a control that differs in the one thing the rule is
-//! about. Before the tick kept the clock, the page's TypeScript did, on its copy of the game: nothing here could have been asked of the game at all.
+//! about.
 use game::game::DownBy;
 use game::orders::Who;
 use game::par::{Medal, PAR_START_M};

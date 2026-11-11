@@ -158,7 +158,7 @@ fn player_caught(g: &mut Game, b: &Blow, near: f64) -> f64 {
     }
     if crate::condition::down(g, c) { return 0.0; }
     if near > 0.0 { player_rocked(g, pl, near, b.xz); }
-    // (samstun.ts: the blast does to the player what it does to a teammate standing there)
+    // (the blast does to the player what it does to a teammate standing there)
     let p = g.player_pos(pl);
     if b.beyond(g, p) {
         if b.far(p) < g.k.doortools.stun_m && b.through(g, p) { let secs = g.k.wallshot.ours_secs; crate::samstun::dazzle_player(g, secs, b.inn); }

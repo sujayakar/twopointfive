@@ -81,8 +81,10 @@ export class NetClient {
    *  waits for the other seat, and before its first live tick is heard, nothing is sent. */
   beat(cmd: WireCmd | null, now: number): void { if (cmd) this.out(cmd, now); }
   /** the host's hands are off (a card is up over its game, its tab is hidden): one record that holds nothing and says so (wire.ts restOf), so the server
-   *  does not hold the seat's last keys down for as long as that lasts. Nothing is sent when nothing was held */
-  rest(now: number): void { const l = this.last; if (l && (l.k.length || l.b)) this.out(restOf(l), now, true); }
+   *  does not hold the seat's last keys down for as long as that lasts, and a ring that stood with no key down is put away. `held`: only if something was held (a page that catches up) */
+  rest(now: number, held = false): void { const l = this.last; if (l && !this.off && (!held || l.k.length || l.b)) this.out(restOf(l), now, true); }
+  /** the last record sent took the hands off */
+  private off = false;
   /** the last record sent */
   private last: WireCmd | null = null;
   /** `must`: a record that is never held back for the beat's pace (the hands coming off: the host may not beat again for as long as that lasts) */
@@ -93,7 +95,7 @@ export class NetClient {
     if (t > due + NET.burst && !must) { this.holds++; if (w.p) for (const k of w.p) if (!this.carry.p.includes(k)) this.carry.p.push(k); this.carry.c |= w.c ?? 0; this.carry.w += w.w ?? 0; return; }
     if (this.sent && t > this.sendTick) this.skips += t - this.sendTick;
     if (!this.sent || t > this.sendTick + NET.burst) this.settle = t;   // (the sending begins, or begins again after a gap: notes about ticks before this one are not about these records)
-    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.send(netText({ k: 'in', t, c: w }));
+    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.off = must; this.send(netText({ k: 'in', t, c: w }));
   }
 
   /** step the host's game through confirmed ticks, at most `max` of them; answers how many it stepped */

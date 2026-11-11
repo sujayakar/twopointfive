@@ -223,7 +223,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     let mut held: JsSet<String> = JsSet::new();
     for k in keys { held.add(k); }
     g.gd[id].keys = held;
-    // a row the table does not hold panics here, as the TypeScript's throws
+    // a row the table does not hold panics here
     let row = g.weapon(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).clone();
     let w = crate::weapons::firearm_new(g, &row);
     g.gd[id].weapon = w;

@@ -17,7 +17,7 @@ macro_rules! st {
     };
 }
 
-/// A new game's state: the TypeScript's own literal, whose clocks are not zero.
+/// A new game's state, whose clocks are not zero.
 pub(super) fn fresh() -> crate::lanes::State {
     State { said_t: -100.0, t: -1.0, ..State::default() }
 }

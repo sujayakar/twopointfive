@@ -14,8 +14,8 @@ pub struct HardK {
 }
 
 /// WHAT HARD IS ON ONE LEVEL beside the table above: rows of the press written over hard's while the game stands on that level's structure (the name of its
-///  `scenarios.roomClear` block), so a rule measured on one level leaves every other level's hard as it was, run for run. roomclear.ts start() says where the
-///  game stands (`difficultyHere`); the row the card shows still reads hard there, since `tablesOf` carries these.
+///  `scenarios.roomClear` block), so a rule measured on one level leaves every other level's hard as it was, run for run. The room clear's start says where the
+///  game stands (`difficulty_here`); the row the card shows still reads hard there, since `tables_of` carries these.
 ///  The block: A STUN CHARGE EACH. Step three of the order the maintainer set (smarter enemies, then where they start, then kit, then more of them): the first two were
 ///  measured there and neither showed.
 #[derive(Clone, Debug, ToBytes, Knobs)]

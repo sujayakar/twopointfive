@@ -4,15 +4,15 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-/// The knobs (__orders.knobs).
+/// The knobs.
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct OrdersK {
     /// press: who the orders go to — gold → red → blue for a squad in pairs (all → each man for the one pair) · on a teammate under the cursor: that man
     #[k(String::from("KeyT"))] pub who_key: String,
     /// press: the target's own first order at once, no menu (RoN's 'issue default command') — move there on floor, stack up on a door, fall in on nothing.
     ///  THE CODE the game asks for, as every recording and tape holds it. The KEY that gives it on the page's board is Q (host/keymap.ts `qCmd`; the
-    ///  maintainer, 10-21, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
-    ///  the quick tap should be exactly the same as B"): the board moved, this read did not
+    ///  maintainer, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
+    ///  the quick tap should be exactly the same as B"): the board says which key, this read says which code
     #[k(String::from("KeyB"))] pub quick_key: String,
     /// the open menu's men, door face and why-nots are re-read this often (game seconds; a path search per man per row each time)
     #[k(1.0)] pub refresh_secs: f64,
@@ -37,8 +37,8 @@ pub struct OrdersK {
     #[k(0.4)] pub crumb: f64,
     #[k(10.0)] pub trail_m: f64,
     /// fall in's pace: Sam's own speed plus `gain` × how far the man is off his place, between the walk and `run` — which is no run: the most a teammate's legs
-    ///  are asked for, so a Sam who sprints (4.7) leaves his file behind and it closes up at its own pace when he stops (it was 4.7: the file
-    ///  sprinted with him) — no gear changes in view. With teampace.ts on the pace is teamFollow's: a share of his walk, and a run while he runs
+    ///  are asked for, so a Sam who sprints (4.7) leaves his file behind and it closes up at its own pace when he stops
+    ///  — no gear changes in view. Where `team_follow` answers the pace is its own: a share of his walk, and a run while he runs
     #[k(2.2)] pub run: f64,
     #[k(1.5)] pub walk: f64,
     #[k(1.5)] pub gain: f64,
@@ -77,7 +77,7 @@ pub struct OrdersK {
     #[k(2.0)] pub brisk: f64,
     #[k(1.8)] pub brisk_in: f64,
     #[k(1.3)] pub onto: f64,
-    /// THROUGH A DOOR (doortools.ts: a man's leg from the stack to his point of domination): the one leg taken at the team's full pace, all the way onto the
+    /// THROUGH A DOOR (a man's leg from the stack to his point of domination): the one leg taken at the team's full pace, all the way onto the
     ///  point — a deliberate stack, then a committed entry
     #[k(2.2)] pub entry: f64,
     /// move there, to the pair: the gap between the two spots

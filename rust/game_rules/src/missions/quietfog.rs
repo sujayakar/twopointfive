@@ -5,7 +5,7 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{string::String, vec::Vec};
 
-/// The rung a word names, if it names one: the narrowing `isRung` gives the TypeScript.
+/// The rung a word names, if it names one.
 fn rung_of(v: Option<&str>) -> Option<QuietRung> {
     [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| Some(r.as_str()) == v)
 }

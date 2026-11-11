@@ -9,10 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 macro_rules! o { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op] } }
 macro_rules! thr { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as_mut().unwrap() } }
 
-// ---- seams: each waits on the skeleton (notes.md, ## Skeleton)
-/// detonateStun(g, it, true) with nobody on its list: the guards' list is emptied round the call and put back as it was, so the stun's blast finds no man
-/// to judge (who it hurts is decided by the caller, by which side of the door he is on). A man added to the emptied list during the call would be lost with it,
-/// as in the TypeScript's `finally { g.guards = all }`.
+/// `detonate_stun` with nobody on its list: the guards' list is emptied around the call and put back as it was, so the stun's blast finds no man
+/// to judge (who it hurts is decided by the caller, by which side of the door he is on). A man added to the emptied list during the call would be lost with it.
 fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) {
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
@@ -138,7 +136,7 @@ fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: 
     true
 }
 
-/// flash-blind (combat.ts detonateStun's own rule for a man with the charge in his open view)
+/// flash-blind (`detonate_stun`'s own rule for a man with the charge in his open view)
 fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
     let c = g.gd[gd].ch;
     crate::condition::dazzled(g, gd, secs, at, Some(at), "doortools");

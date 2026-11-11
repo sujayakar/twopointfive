@@ -47,7 +47,7 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> bool {
     }
     code
 }
-/// LC of character.ts: the long gun's channels, in the order the animator keeps them
+/// the long gun's channels, in the order the animator keeps them
 const LC_SIDE: usize = 0;
 const LC_UP: usize = 1;
 const LC_FWD: usize = 2;

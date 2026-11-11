@@ -11,13 +11,13 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
-/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
+/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (ten in a game of one).
 pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { crate::seats::budget_with_seats(g, SQUAD4_BUDGET) }
 
-/// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
-/// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
-/// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
-/// one: that wants the row's place kept beside `applied`, which the generated type has no field for.
+/// Is this start the one `applied` already, asked of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
+/// whole, by value. Another start with the same place for Sam is ANOTHER start and writes the knobs again (a knob moved by hand
+/// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field read as
+/// one: telling them apart would want the row's place kept beside `applied`.
 pub(crate) fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
     a.sam == b.sam && a.sam_yaw == b.sam_yaw && a.ops == b.ops && a.ops_yaw == b.ops_yaw
 }
@@ -34,7 +34,7 @@ fn in_his_book(g: &mut Game, gd: GuardId) -> bool {
     crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(&crate::seats::here(v), gd))
 }
 
-/// Teammate i's mark; Err is the TypeScript's throw.
+/// Teammate i's mark; Err where neither the level's team start nor its breach plan has one.
 fn mark_of(
     own: Option<&crate::scene_scenarios::TeamStart>,
     plan: Option<&crate::scene_level::BreachPlan>,
@@ -48,7 +48,7 @@ fn mark_of(
     own.or(from).or(stack).or(start).ok_or_else(|| format!("no mark for teammate {} (the level's team start, or its breach plan)", i + 1))
 }
 
-/// The search of standBy; Err is the TypeScript's throw.
+/// The search for a place to stand by the lead; Err where it finds none.
 fn stand_by_checked(g: &Game, lead: V3, taken: &[V3], yaw: f64) -> Result<V3, String> {
     let mut best: Option<V3> = None;
     let mut bs = f64::INFINITY;

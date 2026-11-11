@@ -13,7 +13,7 @@ pub(in crate::breakage) fn shards_live(g: &crate::game::Game) -> bool {
     g.tune.glass_shards && crate::glassbreak::glass_break_live(g)
 }
 
-/// `x >>> 0`, as the number it is in the TypeScript.
+/// `x` wrapped to an unsigned word, as a number.
 pub(super) fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }
@@ -44,8 +44,6 @@ fn spray(speed: f64, speed_jit: f64, spread: f64, life: f64, life_jit: f64, size
 }
 fn to_sched(f: GlassShardsFallOf) -> GlassShardsScheduleFall { GlassShardsScheduleFall { t: f.t, pos: f.pos } }
 fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandingFall { t: f.t, pos: f.pos } }
-
-// ---- what the skeleton still cannot do
 
 /// The shards' books.
 pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
@@ -456,7 +454,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
     glass_shards_emit(g, v3::add(bc, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], nf, spray(0.9 + 0.35 * speed, 0.85, 1.35, fine_life, 0.4, fine_size, 0.6, 1.4, 45.0, 1.0, bh[long] * 0.7, None, meta.tint), xor_u32(meta.seed, 0x5A78 as f64));
 }
 
-/// `g.level.boxes[bi]?.albedo ?? the pale default`. That list and `g.col.boxes` are one array in the TypeScript; off the list (a negative, fractional or NaN index) is undefined
+/// The albedo of the level's box `bi`, or the pale default off the list (a negative, fractional or NaN index).
 fn level_box_albedo(g: &Game, bi: f64) -> V3 {
     let ix = bi as usize;
     let row = if ix as f64 == bi { g.col.boxes.get(ix).copied() } else { None };

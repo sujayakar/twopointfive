@@ -53,19 +53,20 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
 //  doubling per repeat — the one memory apply() does not clear.)
 /** THE HEADROOM-AWARE CLIMB (settings.ladderClimb): frame RATE alone cannot see headroom past the display's refresh — a machine presenting 60 fps with the GPU
  *  busy 9 ms of every 16.7 sits at its tier's starting scale for ever. With GPU timings the ladder can: over 1-s windows in which the frame rate held the display rate (≥ LADDER.restoreFps) AND
- *  the UNION of the compute passes' GPU intervals stayed under `headroom` × the frame budget (1000 / budgetFps ms), for `windows` windows running, it takes ONE step up — the render scale by
- *  SCALE_STEP past the tier's own start up to 1.0; at 1.0 with the union still under `divisorRoom` × the budget, the lossy divisors in a fixed order (the gather ⅓ → ½, then the volumetrics
- *  ¼ → ½) — with ≥ `climbGap` s between climbs. A window over `backoff` × the
+ *  the UNION of the compute passes' GPU intervals left room for A FIGHT at the step it would take — `fight` × the union, priced at that step by the cost model, still under `backoff` × the frame
+ *  budget (1000 / budgetFps ms) — for `windows` windows running, it takes that ONE step up: the render scale by SCALE_STEP past the tier's own start up to 1.0, then the lossy divisors in a fixed
+ *  order (the gather ⅓ → ½, then the volumetrics ¼ → ½), with ≥ `climbGap` s between climbs. (A step is taken in a lull and paid for in the fight after it, which costs 1.0 to 2.0 times the lull over the
+ *  fourteen levels: a step that fits the lull alone is taken off again in the fight, with the frames it cost.) A window over `backoff` × the
  *  budget or under `backoffFps` with a climb standing UNDOES the last step at once and remembers the rung that failed for `failSecs` (no oscillation); the plain ladder's cut / preset logic
  *  runs on top as ever. Every step is one the pool + history resampling (passes.ts) make cheap. Off = the ladder as it was, byte for byte. */
-export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
+export const CLIMB = { budgetFps: 60, fight: 2, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
 /** one rung the climb has taken, newest last (undone in reverse) */
 type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
 /** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
  *  above and no line below takes another road — the ladder byte for byte as it was (aims at a 60 Hz budget, spends headroom on resolution, cuts only under 45 fps). N > 0 = HOLD N fps (never more
  *  than the display has been seen to show — Quality.displayHz; AIM_DISPLAY = that rate itself): the climb, the cut and the preset hop all work to N.
  *    · the GPU budget is U = 1000 / N − overheadMs (what a frame costs past the compute union: raster passes, CPU, present — the 1.67 ms PLAN_BUDGET_MS always implied at 60); the climb's bands
- *      keep their SHARE of it (headroom ⅔ U, back-off 8⁄9 U, a hop must fit hopFits × U, the boot plan fits U), so hold 60 climbs exactly as today does;
+ *      keep their SHARE of it (back-off 8⁄9 U, a hop must fit hopFits × U, the boot plan fits U), so hold 60 climbs exactly as today does;
  *    · the CUT is firm: two 1-s windows under `cut` × N with the GPU the limit → the scale goes straight to what the cost model says lands on `aim` × N (below the tier's start too, to the floor),
  *      and two windows with the union over the back-off band take one step off BEFORE the rate shows it; a preset drops when that has run out of road (the same floor / deep-cut rule);
  *    · pixels come back on the union's room, not on a frame rate a display at N can never exceed — a step at a time while the union priced at the next step stays `restore` of the way to the
@@ -789,12 +790,12 @@ export class Quality {
           this.lastChange = `hold ${B.target.toFixed(0)} ↑ scale ${to.toFixed(2)} (${timed ? pacedNow ? `${(1 / avg).toFixed(0)} fps with the GPU at ${unionAvg.toFixed(1)} ms: frame pacing, not load — the frame has the room` : `gpu ∪ ${unionAvg.toFixed(1)} ms, room under its ${(CLIMB.backoff * budget).toFixed(1)} band` : `${(1 / avg).toFixed(0)} fps`})`;
         }
       }
-      // THE CLIMB itself: display rate held AND the GPU under the headroom band for CLIMB.windows windows running, the last climb long enough ago → one rung up (scale → its top, then the
-      // divisors), skipping rungs that failed lately
+      // THE CLIMB itself: display rate held AND room for a fight at the next rung (scale → its top, then the divisors; none that failed lately) for CLIMB.windows windows running, the last climb long
+      // enough ago → that rung up
       else if (climbOn && unionAvg > 0 && !autoWantsPreset && !sharpFits) {   // (SHARP SHED: room that fits sharp direct back is its room first, auto's block below)   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
-        const roomyNow = avg < 1 / B.cruisingFps && unionAvg < CLIMB.headroom * budget;   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the headroom itself is read off the GPU union, never off the rate)
+        const step = this.nextRung(S.renderScale), roomyNow = avg < 1 / B.cruisingFps && !!step && this.fightFits(step, unionAvg, CLIMB.backoff * budget);   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the room itself is read off the GPU union, never off the rate)
         this.roomy = roomyNow ? this.roomy + 1 : 0;   // (never reached in an unsure window: unionAvg is 0 then and this branch is skipped — the count simply waits)
-        if (this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { const step = this.nextRung(S.renderScale, unionAvg < CLIMB.divisorRoom * budget); if (step) { this.climb(step, unionAvg, B); this.roomy = 0; } }
+        if (step && this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { this.climb(step, unionAvg, B); this.roomy = 0; }
       }
       if (this.auto) { try { localStorage.setItem(LS_SCALE, String(Math.min(this.maxScale, S.renderScale))); } catch { /* */ } }   // (a climbed scale is this session's finding, re-earned next visit: what is remembered stays within the tier's own range)
     }
@@ -884,14 +885,18 @@ export class Quality {
    *  has nothing to decouple, so sharp direct, its decoupled jitter and GBAA all switch off — the '1.0 + TAA' picture measured worse on every column than 0.9 + C3j
    *  (why ultra starts at 0.9); the divisor rungs come after 0.95 instead */
   private scaleTop(): number { const S = this.engine.settings; return (S.sharpDirect || this.shed) && S.taau !== false ? +(1.0 - SCALE_STEP).toFixed(2) : 1.0; }   // (SHARP SHED: shed is not gone — the size it comes back at is kept)
-  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2), passing over rungs that failed lately; `divisorsToo` = the union leaves CLIMB.divisorRoom (the divisor rungs cost more than a scale step); null = nothing left to spend on */
-  private nextRung(scale: number, divisorsToo: boolean): ClimbStep | null {
+  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2), passing over rungs that failed lately; null = nothing left to spend on */
+  private nextRung(scale: number): ClimbStep | null {
     const S = this.engine.settings; const topScale = this.scaleTop();
     if (scale < topScale - 1e-3) { const to = +Math.min(topScale, snapDown(scale + 1e-6) + SCALE_STEP).toFixed(2); const step: ClimbStep = { kind: 'scale', from: scale, to }; return this.failed.has(rungKey(step)) ? null : step; }   // (a failed scale rung blocks the ones above it too: no leap-frogging a ceiling that just cost frames)
-    if (!divisorsToo) return null;
     if (S.gatherThird && !this.failed.has('gather')) return { kind: 'gather' };
     if (S.volQuarter && !this.failed.has('vol')) return { kind: 'vol' };
     return null;
+  }
+  /** would a fight still fit `band` ms with this rung taken: CLIMB.fight times this window's union, priced at the rung by the cost model */
+  private fightFits(step: ClimbStep, unionAvg: number, band: number): boolean {
+    const live = this.livePreset(this.current as QualityName), up: Preset = step.kind === 'scale' ? { ...live, scale: step.to } : { ...live, lossy: { ...live.lossy, ...(step.kind === 'gather' ? { gatherThird: false } : { volQuarter: false }) } };
+    return CLIMB.fight * unionAvg * this.costAt(up) / Math.max(0.1, this.costAt(live)) <= band;
   }
   private climb(step: ClimbStep, unionAvg: number, B: Bands = AS_NOW) {
     const S = this.engine.settings;

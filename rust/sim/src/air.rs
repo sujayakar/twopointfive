@@ -1,6 +1,11 @@
-//! THE WEATHER'S DUST IN THE ROOMS — src/game/airDust.ts's field: the share of the open air's density at each half metre of the plan, what the men's eyes read along a
-//! line (weather.rs air_trans), carried through the openings between cells and settling back to the roof's leak. Statement for statement, the field and its openings a
-//! part of the weather's table. What the picture takes (a copy for the renderer, sent when it has moved enough) stays TypeScript and reads this.
+//! THE WEATHER'S DUST IN THE ROOMS: the share of the open air's density at each half metre of the plan, what the men's eyes read along a line (game_rules air/weather.rs
+//! air_trans), carried through the openings between cells and settling back to the roof's leak. What the picture takes (a copy, sent when it has moved enough) is made outside
+//! this crate and reads this.
+//!
+//! WHAT IS STATE. `Air`, a part of the weather's table in the game's block (weather.rs): the switch, the leak, the field, and which edges no static stands across.
+//! WHAT A CALL IS HANDED. The block's slot and stamp and the roofs in force (lib.rs `air_*`), and for a step the box world and the knobs.
+//! THE ORDER. `begin`, then `clear` where there is no weather or `seed` where there is; `settle` once where the switch is on, so the level opens with the dust in its open
+//! doorways; then `update` a tick.
 //!
 //! An opening between two cells is asked of the statics alone (three heights, both ways), and of the door leaves as rectangles, re-read whenever a leaf has moved.
 //!
@@ -14,7 +19,7 @@ use crate::world::{js_abs, js_ceil, js_max, js_min, K_ROT, REC, R_C, R_H, R_KIND
 use core::mem::size_of;
 use prim::floor;
 
-/// the plan: scene/airGrid.ts's half-metre cells over the 40 × 28 m world (the host holds its own numbers to these as it stands up: airDust.ts)
+/// the plan: half-metre cells over the 40 × 28 m world (the host holds its own numbers to these as it stands up: game_rules air/air_dust.rs)
 pub const AIR_W: usize = 80;
 pub const AIR_H: usize = 56;
 pub const AIR_CELL: f64 = 0.5;
@@ -144,7 +149,7 @@ fn or_zero(x: f64) -> f64 {
 
 
 impl Air {
-    /// airDust.ts build's head: its switch, nothing owed, no opening known yet
+    /// a build's head: its switch, nothing owed, no opening known yet
     pub fn begin(&mut self, p: &mut Plan, on: bool) {
         self.on = if on { 1.0 } else { 0.0 };
         self.acc = 0.0;
@@ -318,7 +323,7 @@ impl Air {
         *open_out = open;
         moved
     }
-    /// airDust.ts build, once the roofs have been asked: the field from nothing. `roofed` answers for a cell's centre.
+    /// once the roofs have been asked: the field from nothing. `roofed` answers for a cell's centre.
     pub fn seed(&mut self, p: &mut Plan, leak: f64, roofed: impl Fn(f64, f64) -> bool) {
         self.leak = leak;
         let (nc, ne) = p.make(roofed);
@@ -365,7 +370,7 @@ impl Air {
     }
 }
 
-/// Math.round of a number a leaf's place makes, as a word (ToInt32 of it)
+/// a number a leaf's place makes, rounded half up, as a word (wrapping to 32 bits)
 #[inline(always)]
 fn js_round(x: f64) -> i32 {
     floor(x + 0.5) as i64 as i32

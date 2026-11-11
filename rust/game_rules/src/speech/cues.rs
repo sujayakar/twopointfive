@@ -255,10 +255,10 @@ fn file_done(g: &mut Game, drawn: bool, why: &str) -> bool {
     drawn
 }
 
-/// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.
+/// One row for the strip, or not; `raw` is always drawn. `class_t`, the gate's clock, is read by the last stand through `cues_net_wait`.
 fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
     let t = g.time;
-    prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
+    prune_rows(g);
     let c = cls as usize;
     // (the same words from another man are the same news)
     let words: &str = if kind == CuesFileKind::Raw || who.is_empty() { text } else {
@@ -569,7 +569,7 @@ fn cues_squad_voice(g: &crate::game::Game, squad: EnemysquadsSquadId, by: Option
 
 // ---------------------------------------------------------------- once a frame, after everybody has moved
 
-/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
+/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `cues_file`, so it moves the clock the last stand waits on.
 pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     let t = g.time;
     if !g.fight.live { return; }

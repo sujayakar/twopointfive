@@ -1,8 +1,7 @@
-//! WHERE A PANE OF GLASS IS OPEN — the one question every line and ray of this module asks of a pane it meets (src/game/glassbreak.ts openAt, goingAt and
-//! the reckoning a burst makes of glass it has not broken yet; src/game/glassPattern.ts gpClassify and gpDiceClump, the geometry under them).
+//! WHERE A PANE OF GLASS IS OPEN: the one question every line and ray of this module asks of a pane it meets (`open`), and the geometry under it: which piece of a pane a
+//! point is in (`classify_row`, `dice_out`).
 //!
-//! STATEMENT FOR STATEMENT with the TypeScript: the same hashes, the same bearings and chords worked out by the same maths (maths.rs), the same compares.
-//! tools/qa/glass-ident.ts holds the two together over panes broken by a game.
+//! The hashes, the bearings and the chords are worked out by the game's own maths (rust/maths), so every machine finds the same piece at the same point.
 //!
 //! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes`. A pane with no row is whole: shut
 //! everywhere.
@@ -15,7 +14,7 @@
 //!
 //! A BURST'S VIEW. A blast judges its own lines by glass as it is to a burst: what the blast has just taken is no glass to its
 //! fragments (VIEW_BLOWN, answered here from the pieces queued to leave), and a man reckoning a burst that has not happened counts out the panes it
-//! would break (VIEW_GIVES: panes.rs `gives`, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
+//! would break (VIEW_GIVES: panes.rs `gives`, of the panes it meets, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
 //! judgment and is none at every other time.
 
 use game_types::knobs::Knobs;
@@ -53,7 +52,7 @@ pub const G_GONE: u32 = 1;
 pub const G_DICE: u32 = 2;
 pub const G_RUN: u32 = 4;
 
-// ---- glassPattern.ts, its numbers
+// ---- the fracture pattern's numbers
 const MAX_SECTORS: u32 = 12;
 const FRAGS_PER_SITE: u32 = 84;
 const ANG_JIT: f64 = 0.6;
@@ -66,11 +65,11 @@ const CUT_LO: f64 = 0.9;
 const CUT_SPAN: f64 = 1.0;
 const CUT_TILT: f64 = 0.9;
 const PI: f64 = core::f64::consts::PI;
-/// gpClassify's answers that are no piece: no site on the pane · the uncut sheet past chord 2 of a pane that has not run
+/// `classify_row`'s answers that are no piece: no site on the pane · the uncut sheet past chord 2 of a pane that has not run
 const NO_SITE: i32 = -1;
 const REMAINDER: i32 = -2;
 
-/// gpHash: (seed, a, b) → 24 bits
+/// (seed, a, b) → 24 bits
 #[inline]
 fn hash(seed: u32, a: u32, b: u32) -> u32 {
     let mut h = seed ^ a.wrapping_add(1).wrapping_mul(0x9E37_79B1) ^ b.wrapping_add(1).wrapping_mul(0x85EB_CA77);
@@ -78,13 +77,12 @@ fn hash(seed: u32, a: u32, b: u32) -> u32 {
     h = (h ^ (h >> 12)).wrapping_mul(0x297A_2D39);
     (h ^ (h >> 15)) >> 8
 }
-/// gpJit
 #[inline]
 pub fn jit(seed: u32, a: u32, b: u32) -> f64 {
     hash(seed, a, b) as f64 / 16777216.0
 }
 
-/// one site of a row (glassPattern.ts GpSite, the fields a piece is found by)
+/// one site of a row: the fields a piece is found by
 pub struct Site<'a> {
     pub d: &'a [f64],
     pub n: i32,
@@ -96,41 +94,39 @@ impl Site<'_> {
     fn wrap(&self, k: i32) -> u32 {
         (((k % self.n) + self.n) % self.n) as u32
     }
-    /// gpBound: where radial k sits, in sectors
+    /// where radial k sits, in sectors
     #[inline]
     fn bound(&self, k: i32) -> f64 {
         k as f64 + ANG_JIT * (jit(self.seed, self.wrap(k), 7) - 0.5)
     }
-    /// gpAngle
     #[inline]
     pub fn angle(&self, k: i32) -> f64 {
         self.d[S_ROT] + 2.0 * PI * self.bound(k) / self.n as f64
     }
-    /// gpRho: the radius at which chord b meets radial k
+    /// the radius at which chord b meets radial k
     #[inline]
     fn rho(&self, k: i32, b: u32) -> f64 {
         self.d[S_RHO + b as usize] * (RHO_LO + RHO_SPAN * jit(self.seed, self.wrap(k), b))
     }
-    /// gpChordPt
     #[inline]
     pub fn chord(&self, k: i32, b: u32) -> (f64, f64) {
         let a = self.angle(k);
         let r = self.rho(k, b);
         (self.d[S_U] + r * cos(a), self.d[S_V] + r * sin(a))
     }
-    /// gpMerged: sector s has no middle chord
+    /// sector s has no middle chord
     #[inline]
     pub fn merged(&self, s: i32) -> bool {
         jit(self.seed, s as u32, 21) < self.d[S_MERGE]
     }
-    /// gpSplit: where sector s's branch crack sits, in sectors
+    /// where sector s's branch crack sits, in sectors
     #[inline]
     pub fn split(&self, s: i32) -> f64 {
         let b0 = self.bound(s);
         let b1 = self.bound(s + 1);
         b0 + (b1 - b0) * (SPLIT_LO + SPLIT_SPAN * jit(self.seed, s as u32, 23))
     }
-    /// gpCut: the snap across half h of sector s (a point on it, its unit normal away from the site); None = this dagger runs unbroken
+    /// the snap across half h of sector s (a point on it, its unit normal away from the site); None = this dagger runs unbroken
     pub fn cut(&self, s: i32, h: u32) -> Option<(f64, f64, f64, f64)> {
         if jit(self.seed, s as u32, 27 + h) < CUT_NONE {
             return None;
@@ -142,7 +138,7 @@ impl Site<'_> {
         let an = am + (jit(self.seed, s as u32, 29 + h) - 0.5) * CUT_TILT;
         Some((self.d[S_U] + rc * cos(am), self.d[S_V] + rc * sin(am), cos(an), sin(an)))
     }
-    /// gpSector: the sector of (u, v) round the site, and its place across the fan
+    /// the sector of (u, v) round the site, and its place across the fan
     fn sector(&self, u: f64, v: f64) -> (i32, f64) {
         let n = self.n;
         let nf = n as f64;
@@ -157,7 +153,6 @@ impl Site<'_> {
         }
         (s0, t)
     }
-    /// gpSectorBand
     fn sector_band(&self, u: f64, v: f64) -> (i32, u32) {
         let (s, t) = self.sector(u, v);
         if !beyond(self.chord(s, 0), self.chord(s + 1, 0), u, v) {
@@ -189,7 +184,7 @@ fn beyond(a: (f64, f64), b: (f64, f64), u: f64, v: f64) -> bool {
 pub fn site_of<'a>(d: &'a [f64], w: &[u32], i: usize) -> Site<'a> {
     Site { d: &d[i * G_SITE..i * G_SITE + G_SITE], n: w[GW_N + i] as i32, seed: w[GW_SEED + i] }
 }
-/// gpClassify: the piece (u, v) is in — its id, REMAINDER or NO_SITE
+/// the piece (u, v) is in — its id, REMAINDER or NO_SITE
 pub fn classify_row(d: &[f64], w: &[u32], u: f64, v: f64) -> i32 {
     let n = (w[GW_FLAGS] >> 8) as usize;
     let (mut best, mut bd) = (usize::MAX, f64::INFINITY);
@@ -258,7 +253,7 @@ pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool 
         return true;
     }
     match o.view {
-        // goingAt: the piece there is queued to leave, or it is a crater's wedge and one of its crater is
+        // the piece there is queued to leave, or it is a crater's wedge and one of its crater is
         VIEW_BLOWN => fid >= 0 && (bit(w, GW_GOING, fid as u32) || ((fid as u32 % FRAGS_PER_SITE) / MAX_SECTORS == 0 && w[GW_CRATER] >> (fid as u32 / FRAGS_PER_SITE) & 1 != 0)),
         _ => gives(),
     }

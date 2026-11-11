@@ -22,6 +22,6 @@ pub struct PlanK {
     /// the quiet pair's man waiting on the mark: the key (and, with `keyLit` off, its bar) is this far ahead of his feet, metres
     #[k(0.55)] pub pair_bar_m: f64,
     /// A GAME OF SEVERAL PLAYERS: another player's squad's plan is drawn on this page this much as strong as the page's own (ui/planfloor.ts
-    ///  plansToDraw); 0 = not asked for, the page as it was. A guess: nobody has seen it on a GPU. Picture only
+    ///  plansToDraw); 0 = not asked for. A guess: nobody has seen it on a GPU. Picture only
     #[k(0.45)] pub others: f64,
 }

@@ -32,7 +32,6 @@ fn sam_stopped(g: &mut Game, gd: GuardId) -> bool {
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(&crate::seats::here(g)))
 }
 
-/// (cover.ts:306,484 `rearPinOf(viewOf(g, gd), gd)`)
 fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     let seat = crate::seats::view_of(g, gd);
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::rearwatch::rear_pin_of(g, &crate::seats::here(g), gd))
@@ -428,7 +427,7 @@ fn add(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, o: CoverOpeningId, ki
     Some(live.len() - 1)
 }
 
-/// A rear opening's point has moved: the jobs on it hold that very point in the TypeScript (J.to is o.at), and it moves under them.
+/// A rear opening's point has moved: the jobs on it keep a copy, so each is written anew.
 fn rear_moved(g: &mut Game, r: CoverOpeningId) {
     let at = g.tab.cover_opening[r].at;
     for (_, j) in g.cover.jobs.iter_mut() { if j.o == r { j.to = at; } }
@@ -1161,7 +1160,7 @@ fn cover_turn_out(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<C
     o.aim[0] = pos[0] + m::sin(by) * 3.0;
     o.aim[2] = pos[2] + m::cos(by) * 3.0;
     let aim = o.aim;
-    if ours { g.gd[gd].script.as_mut().unwrap().aim_at = Some(aim); }   // (the script holds that very point in the TypeScript)
+    if ours { g.gd[gd].script.as_mut().unwrap().aim_at = Some(aim); }
     let face = cover_way_of(g, gd);
     Some(CoverTurnOut { at: aim, face: Some(face), strafe: true })
 }
@@ -1258,7 +1257,7 @@ pub fn cover_pose_for(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Opti
     j.aim[0] = p[0] + m::sin(j.yaw) * j.r;
     j.aim[1] = v3::damp(j.aim[1], to[1], k.swing, dt);
     j.aim[2] = p[2] + m::cos(j.yaw) * j.r;
-    if ours { g.gd[gd].script.as_mut().unwrap().aim_at = Some(j.aim); }   // (the script holds that very point in the TypeScript)
+    if ours { g.gd[gd].script.as_mut().unwrap().aim_at = Some(j.aim); }
     j.off = false;
     if still {
         j.back = false;

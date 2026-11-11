@@ -387,7 +387,7 @@ pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction:
     }
 }
 
-/// The RUBBLE table as Debris.feet's knobs: the TypeScript hands the table itself.
+/// The rubble table as the debris's foot knobs.
 fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
     let r = &g.k.rubble;
     crate::debris::FootKnobs {
@@ -512,7 +512,7 @@ fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
 pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::debris::debris_boxes(g, out);
     crate::edge_look::edge_look_boxes(g, out);
-    crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)
+    crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint)
 }
 
 /// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.

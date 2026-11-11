@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// WHICH OF THE THREE A GUN IS: a Pistol's and a Rifle's own rows are fields of the one Firearm (g.fa)
 #[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
 pub enum GunKind { Plain, Pistol, Rifle }
-/// WHAT A RELOAD TELLS ITS OWNER AS IT GOES (weapons.ts ReloadEvents, callbacks in the TypeScript: player.ts:362 and :381 are the only callers that give any). The body matches on it at each stage
+/// WHAT A RELOAD TELLS ITS OWNER AS IT GOES: only the player's sidearm and rifle give any. The body matches on it at each stage
 #[derive(Clone, Debug, ToBytes)]
 pub enum ReloadEvents {
     None,
@@ -15,7 +15,7 @@ pub enum ReloadEvents {
     /// the rifle's: as the sidearm's at its own rates, or `own`'s sounds at the cues
     Rifle { ch: CharId, feed: Option<FeedPlan> },
 }
-/// what gunreload.ts feedPlan returns: own sounds at the cues, their times, what an empty one leaving the gun is drawn as
+/// what `gunreload::feed_plan` answers, as a reload's events hold it: own sounds at the cues, what an empty one leaving the gun is drawn as
 #[derive(Clone, Debug, ToBytes)]
 pub struct FeedPlan { pub cues: Option<Vec<FeedCue>>,  pub drop: Option<f64> }
 #[derive(Clone, Debug, ToBytes)]
@@ -108,7 +108,7 @@ pub struct WeaponDefReload {
     pub in_: Option<f64>,
     pub rack: Option<f64>,
     pub shell: Option<crate::gunreload::ShellRowShell>,
-    /// INVENTED by a review: see the proposals
+    /// `out`, `in_` and `rack` are the beat's times as they stand: `rl_beat_keys` works none of its own
     pub exact: Option<bool>,
 }
 
@@ -241,7 +241,7 @@ pub struct Firearm {
     pub auto_idx: f64,
     pub auto_since: f64,
     #[is(crate::weapons::WeaponId::Fiveseven)] pub def: crate::weapons::WeaponId,
-    /// which of the three a gun is (TypeScript: the classes Firearm, Pistol, Rifle)
+    /// which of the three a gun is
     #[is(crate::weapons::GunKind::Plain)] pub kind: crate::weapons::GunKind,
     /// Pistol and Rifle
     pub light_on: bool,

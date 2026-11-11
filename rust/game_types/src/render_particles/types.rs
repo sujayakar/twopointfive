@@ -1,10 +1,10 @@
 //! The types of `render_particles`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// how an emit's particles are born; absent on a record reads as Cone (:471)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Words)]
 pub enum EmitShape {
     Cone,
     Burst,
@@ -13,7 +13,7 @@ pub enum EmitShape {
     RainDisc,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Words)]
 pub enum PKind {
     #[default] Rain,
     Dust,
