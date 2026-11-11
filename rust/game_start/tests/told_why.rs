@@ -164,7 +164,7 @@ fn a_code_learnt_is_sams_own_line_and_not_with_a_man_in_his_arm() {
         p.run(0.05);
         game::player::start_grab(&mut p.g, m, None);
         p.run(1.4);
-        assert!(p.g.pl[me].holding.is_some(), "seed {s}: the staging: she is not in his arm");
+        assert!(p.g.pl[me].holding().is_some(), "seed {s}: the staging: she is not in his arm");
         let before = sams_line(&p);
         assert!(game::devices::devices_overhear_said(&mut p.g, m, "pad_side"), "seed {s}");
         p.frame();
@@ -244,7 +244,7 @@ fn an_order_its_row_refuses_is_said_by_a_man_asked() {
         let mut p = yard_two(s);
         let (sam, men2) = (p.sam_at(), p.men());
         let _ = men;
-        let def = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "hold").expect("the row");
+        let def = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "hold").expect("the row");
         let row = game::orders::Row { issue: no_room_for_it, ..*p.g.tab.orders_order_def[def].row };
         p.g.tab.orders_order_def[def].row = Box::leak(Box::new(row));
         assert_eq!(p.try_order("hold", sam, Who::All).as_deref(), Some("can't hold it here."), "seed {s}");
@@ -367,7 +367,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = rescue(s, 2, 30.0);
         let men = p.men();
-        p.g.door_tools.bangs = 0.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 0.0;
         p.tap("KeyF");
         p.frame();
         assert!(said_by_one_of(&p, &men, none), "seed {s}: the rescue: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
@@ -375,7 +375,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = rescue(s, 2, 30.0);
         let men = p.men();
-        p.g.door_tools.bangs = 1.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 1.0;
         let b = game::rescue::rescue_from_bounds(&p.g).expect("the staging: the side door's room");   // (Sam in the side door's room: one man goes round by it)
         let mid = [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0];
         p.sam_put(mid);
@@ -388,7 +388,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
 
         let mut p = night(s, "2");
         let men = p.men();
-        p.g.door_tools.bangs = 0.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 0.0;
         sends_in(&mut p, s);
         p.frame();
         assert!(said_by_one_of(&p, &men, none), "seed {s}: the breach: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
@@ -462,7 +462,7 @@ fn a_charge_off_its_door_is_said_by_who_set_it() {
         p.run(0.2);
         let d = p.door("west-yard");
         let c = p.g.tab.doortools_set_charge.push(game::doortools::SetCharge { door: d, side: 1.0, by: String::from(game::ownblow::SAM_BY) });
-        p.g.door_tools.set.push(c);
+        p.g.sets[p.g.seat].door_tools.set.push(c);
         p.run(0.1);
         let men = p.men();
         let at = p.sam_at();
@@ -478,7 +478,7 @@ fn a_charge_off_its_door_is_said_by_who_set_it() {
         p.run(0.2);
         let d = p.door("west-yard");
         let c = p.g.tab.doortools_set_charge.push(game::doortools::SetCharge { door: d, side: 1.0, by: String::from(game::ownblow::SAM_BY) });
-        p.g.door_tools.set.push(c);
+        p.g.sets[p.g.seat].door_tools.set.push(c);
         for m in p.men() { p.falls(m, DownBy::Guard); }
         p.frame();
         p.leaf_put_open(d, 1.2);
@@ -538,7 +538,7 @@ fn the_wall_key_with_no_wall_says_why() {
     p.run(0.1);
     game::game::game_toggle_drag(&mut p.g, Some(m));
     p.run(0.2);
-    assert!(p.g.pl[p.g.player].dragging.is_some(), "the staging: he is not dragging");
+    assert!(p.g.pl[p.g.player].dragging().is_some(), "the staging: he is not dragging");
     p.tap("KeyQ");
     assert_eq!(word(&p).as_deref(), Some("your hands are full"));
 }
@@ -576,7 +576,7 @@ fn a_civilian_put_down_is_said_by_a_teammate() {
         let mut p = quiet_with_a_partner(s);
         let m = p.g.civilians[0];
         let men = p.men();
-        let cid = p.g.gd[m].civ.unwrap();
+        let _cid = p.g.gd[m].civ.unwrap();
         p.falls_as(m, DownKind::Struck, true, DownBy::Player);
         p.frame();
         assert!(said_by_one_of(&p, &men, "civilian's out. still breathing."), "seed {s}: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
@@ -618,5 +618,35 @@ fn a_slot_key_on_a_wall_says_what_comes_out_when_he_leaves() {
         assert_eq!(word(&p).as_deref(), Some("it'll stay holstered when you leave the wall"), "seed {s}");
         p.tap("KeyE");
         assert!(word(&p).is_some_and(|w| w.ends_with(" comes out when you leave the wall")), "seed {s}");
+    }
+}
+
+/// THE RULE: the pair run for the door and go over to stacking on it once the lead is within 3.2 m of his mark, on the floor: however high the mark is written and whichever way he comes at it.
+/// A FAILURE MEANS: the pair stop to stack in the wrong room, or run on until the drill's clock gives up, and the go comes long after the player gave it.
+#[test]
+fn the_pair_stack_when_the_lead_is_near_his_mark_on_the_floor() {
+    for s in SEEDS {
+        for high in [0.0, 3.0] {
+            let mut p = night(s, "2");
+            let drill = |p: &Play| p.g.night_breach.drill.as_ref().expect("the drill").clone();
+            let d = drill(&p);
+            p.g.night_breach.drill.as_mut().unwrap().plan.stack[0][1] += high;
+            let (lead, mark) = (p.g.gd[d.a].ch, d.plan.stack[0]);
+            let far = |p: &Play| game::v3::dist_xz(p.g.ch[lead].pos, mark);
+            let start = far(&p);
+            assert!(start > 3.2, "seed {s}: he starts away from his mark: {start}");
+            f(&mut p);
+            let t0 = p.time();
+            let phase = |p: &Play| p.g.night_breach.drill.as_ref().unwrap().phase;
+            let mut last = far(&p);
+            while phase(&p) == game::breach::Phase::Wait || phase(&p) == game::breach::Phase::Approach {
+                assert!(p.time() - t0 < 30.0, "seed {s}: no stack");
+                last = far(&p);
+                p.frame();
+            }
+            assert!(far(&p) < 3.2, "seed {s}, mark {high} m up: stacks {} m from his mark", far(&p));
+            assert!(last >= 3.0, "seed {s}, mark {high} m up: he was already {last} m off a frame before");
+            assert!(p.time() - t0 < 15.0, "seed {s}, mark {high} m up: only the clock let them stack");
+        }
     }
 }

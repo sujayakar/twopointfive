@@ -12,16 +12,6 @@ pub enum Why {
     Hurt,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowWhyStats {
-    pub waves: i32,
-    pub squeezes: i32,
-    pub fists: i32,
-    pub ways: i32,
-    pub lines: i32,
-    pub holds: i32,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Owed {
     pub text: String,
@@ -68,20 +58,10 @@ pub struct OpMemTurnsItem {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
-    pub stats: crate::showwhy::ShowWhyStats,
     pub after_you_t: f64,
     pub keep_say_t: f64,
     pub line_say_t: f64,
     pub t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SHOWWHYLINES {
-    pub line: String,
-    pub door: String,
-    pub hurt: String,
-    pub lag: String,
-    pub keep: String,
 }
 
 /// the state this module keeps at its top level
@@ -91,5 +71,3 @@ pub struct ShowwhyMod {
     pub op_mem: JsMap<DoorOpId, crate::showwhy::OpMem>,
     pub states: JsMap<PlayerId, crate::showwhy::State>,
 }
-
-pub fn showwhy_lines() -> crate::showwhy::SHOWWHYLINES { crate::showwhy::SHOWWHYLINES { line: String::from("you're in my line."), door: String::from("after you."), hurt: String::from("I'm hit."), lag: String::from("I can't keep up."), keep: String::from("I've got this door.") } }

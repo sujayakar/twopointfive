@@ -3,7 +3,7 @@
 //!   face_hand(h, seat, p, pn, keys, n) WHAT A PLAYER DID, for the next step: `HAND` numbers (`pn` bytes; src/draw/hand.ts says them in the same order) and his keys' codes as
 //!                                      text, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with
 //!                                      nothing pressed.
-//!   face_commands(h, p, n) -> 1 | 0    WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (game_run::command), done in its order.
+//!   face_commands(h, p, n) -> 1 | 0    WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (game_start::host::command), done in its order.
 //!                                      0 = a number no command has (said at face_out)
 //!   face_hands_off(h, seat, p, n) · face_hands_said(h) · face_hands_trace(h)   nobody's hands are on a seat (game_start hands_off): his plan, how he stands, his timeline
 
@@ -35,9 +35,6 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
         }
         let mut cmd = cmd;
         if x.hands.as_ref().is_some_and(|h| h.0 == seat) {
-            // (he asks of the box world: its copy stands, as for any question between two ticks)
-            if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
-            game::scene_box_mirror::box_mirror_things(&mut x.g);
             if let Some((_, h)) = &mut x.hands { h.hand(&x.g, &mut cmd, 1.0 / 60.0); }
         }
         x.hand_over(seat, cmd);
@@ -49,7 +46,7 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
 pub unsafe extern "C" fn face_commands(h: u32, p: *const u8, n: usize) -> u32 {
     let b = super::bytes(p, n);
     // (a restart done between two ticks: the picture of the game before it is not blended into this one's)
-    match super::with(h, |x| { let done = game_run::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
+    match super::with(h, |x| { let done = game_start::host::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 /// NOBODY'S HANDS ARE ON A SEAT (game_start hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
 /// first, then doors by name to take first. An empty plan: the seat is the host's again.
@@ -73,7 +70,7 @@ pub extern "C" fn face_hands_said(h: u32) {
         let squad = game::orders::squad_orders_squad(g, &game::seats::seat(g, g.seats[*seat]));
         let up = squad.iter().filter(|&&m| g.gd[m].state != game::game::GuardState::Dead).count();
         format!("{{\"t\":{},\"end\":{},\"given\":{},\"shotAt\":{},\"up\":{},\"of\":{},\"left\":{}}}", p.t(), p.end().map_or(String::from("null"), |e| format!("\"{}\"", e.as_str())), p.given(), p.shot_at(), up, squad.len(),
-            g.guards.iter().filter(|&&m| g.gd[m].team == game::teams::Team::Hostile && g.gd[m].state != game::game::GuardState::Dead).count())
+            g.guards.iter().filter(|&&m| g.team(m) == game::teams::Team::Hostile && g.gd[m].state != game::game::GuardState::Dead).count())
     } });
     super::out(s.into_bytes());
 }

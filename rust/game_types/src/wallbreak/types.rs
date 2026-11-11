@@ -38,15 +38,6 @@ pub struct LevelChange {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum LevelChangeCause {
-    #[default] Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BlastOpts {
     pub radius: Option<f64>,
@@ -55,6 +46,8 @@ pub struct BlastOpts {
     pub chaos: Option<bool>,
     pub breach: Option<f64>,
     pub hung: Option<crate::wallbreak::BlastOptsHung>,
+    /// how far it reaches glass and how hard, if not as it reaches the rest
+    pub glass: Option<[f64; 2]>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -78,18 +71,16 @@ pub struct BlastResult {
     pub walls: f64,
     pub cover: f64,
     pub doors: f64,
-    pub panes: f64,
     pub opened: f64,
-    pub serial: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BlastEvent {
     pub at: V3,
     pub radius: f64,
-    pub power: f64,
     pub who: f64,
-    pub res: crate::wallbreak::BlastResult,
+    /// how far it reaches glass and how hard
+    pub glass: [f64; 2],
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -139,7 +130,6 @@ pub struct WallBreak {
     pub room: crate::levelfit::BreakRoom,
     pub shell_gaps: JsSet<crate::Num>,
     pub hung_now: Option<crate::wallbreak::WallBreakHungNow>,
-    pub hung_gone: JsMap<crate::Num, f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -200,27 +190,13 @@ pub struct WallBreakPlanOfItem {
     pub d: f64,
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct WallbreakMod {
-    pub wall_log: Vec<String>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WallbreakStats {
-    pub rounds: i32,
-    pub ports: i32,
-    pub holes: i32,
-    pub cover_cells: i32,
-    pub cover_dead: i32,
-    pub blasts: i32,
-    pub refused: i32,
-    pub falls: i32,
-    pub floating: i32,
-    pub chunks: i32,
-    pub chunks_demoted: i32,
-    pub nav_opened: i32,
-}
-
 pub const HIDE: f64 = 3.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum LevelChangeCause {
+    #[default] Blast,
+    Fire,
+    Load,
+    Reset,
+    Collapse,
+}

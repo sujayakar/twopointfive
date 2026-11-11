@@ -35,11 +35,7 @@ fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> crate::
 /// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino.
 pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     let l = &g.level;
-    if l.surfaces.is_none() && l.scenarios.as_ref().map_or(false, |s| s.quiet.is_some()) {
-        FloorMat::Lino
-    } else {
-        floor_at(pos, l.surfaces.as_ref())
-    }
+    if l.surfaces.is_none() && l.own_places() { FloorMat::Lino } else { floor_at(pos, l.surfaces.as_ref()) }
 }
 
 /// What the hearing model has under a point, as a HUD says it (None: the floors are all one).
@@ -73,7 +69,6 @@ mod tests {
         SurfacesDataZonesItem { mat, x0, z0, x1, z1 }
     }
 
-    // Expected values printed by the TypeScript's own floorAt under bun.
     #[test]
     fn the_offices_map() {
         use FloorMat::*;
@@ -85,7 +80,7 @@ mod tests {
         for &(x, z, want) in cases { assert_eq!(floor_at([x, 7.0, z], None), want, "{} {}", x, z); }
     }
 
-    // tread's lookup: every material has its row, with floor.ts's numbers.
+    // tread's lookup: every material has its row.
     #[test]
     fn every_material_has_its_row() {
         use FloorMat::*;

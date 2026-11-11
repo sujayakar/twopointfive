@@ -14,7 +14,6 @@ pub struct PairOrders {
     pub dark_memo: JsMap<String, crate::pairorders::PairOrdersDarkMemoValue>,
     pub ways: JsMap<GuardId, crate::pairorders::PairOrdersWaysValue>,
     pub seated: bool,
-    pub go_seated: bool,
     pub hands_was: bool,
 }
 
@@ -39,7 +38,6 @@ pub struct Job {
     pub seen_t: f64,
     pub force: bool,
     pub cue_t: f64,
-    pub cue_by: Option<GuardId>,
     pub cued: bool,
     pub back_said: Option<bool>,
     pub back_t: Option<f64>,
@@ -81,7 +79,7 @@ pub struct PairOrdersWaysValue {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairordersModPAIRLOGItem {
     pub what: String,
-    /// INVENTED: g.serial() at the push: lesson.ts:113 holds a row as a cursor by identity
+    /// dealt at the push: the lesson holds a row as a cursor by it
     pub serial: u32,
 }
 
@@ -109,16 +107,6 @@ pub struct PairordersMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct PairordersStats {
-    pub given: i32,
     pub marks: i32,
-    pub taken: i32,
-    pub blown: i32,
-    pub called: i32,
-    pub cancelled: i32,
-    pub held: i32,
-    pub dark: i32,
-    pub lit: i32,
-    pub watched: i32,
-    pub anyway: i32,
 }
 

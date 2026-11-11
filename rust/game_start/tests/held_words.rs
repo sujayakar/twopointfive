@@ -44,23 +44,28 @@ fn no_row_says_how_many_are_inside() {
     assert!(bad_sentence("Two sentries who watch each other.", Some(3.0)).is_none(), "the control: a part of the puzzle is kept");
 }
 
-/// THE RULE: no digit above 5 on a menu: every row the orders table registers, for a pair and for a four, is on a digit from 1 to 5 or on a key of its own. The control: the rows are there at all.
+/// THE RULE: no digit above 5 on a menu: the squad's ring has five wedges, and the rest of its rows are a digit further on.
 /// A FAILURE MEANS: an order sits on a key the left hand cannot reach.
 #[test]
-fn every_order_row_is_on_a_digit_up_to_five_or_a_key_of_its_own() {
-    assert_eq!(game::orders::ORDER_DIGITS, 5.0);
+fn the_ring_has_no_wedge_above_five() {
+    let mut sc = Scene::new("yard");
+    sc.room("west", 10.0, 10.0, 18.0, 16.0);
+    sc.door("west-yard", Axis::X, 16.0, 13.4).door("west-side", Axis::Z, 10.0, 13.0);
+    sc.moon();
+    sc.team([14.0, 23.5], std::f64::consts::PI, &[[13.0, 21.5], [15.0, 21.5]]);
+    sc.defender("west", [12.25, 12.25], "west-yard");
     for squad in [2, 4] {
-        let mut sc = Scene::new("yard");
-        sc.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
-        sc.door("west-yard", Axis::X, 16.0, 13.4).door("east-yard", Axis::X, 16.0, 21.4).door("between", Axis::Z, 18.0, 12.4);
-        sc.moon();
-        sc.team([14.0, 23.5], std::f64::consts::PI, &[[13.0, 21.5], [15.0, 21.5], [13.0, 22.5], [15.0, 22.5]]);
-        sc.defender("west", [12.25, 12.25], "west-yard").defender("east", [24.25, 12.25], "east-yard");
-        let p = Play::scene(&sc, &Opts { seed: 1, squad, ..Default::default() });
-        let rows = p.order_keys();
-        assert!(rows.len() > 5, "squad {squad}: only {} rows", rows.len());
-        let bad: Vec<_> = rows.iter().filter(|(_, k, hot)| !(k.is_some_and(|d| (1.0..=5.0).contains(&d) && d.fract() == 0.0) || (k.is_none() && *hot))).collect();
-        assert!(bad.is_empty(), "squad {squad}: rows on no digit from 1 to 5 and no key: {bad:?}");
+        let mut p = Play::scene(&sc, &Opts { seed: 1, squad, ..Default::default() });
+        p.run(0.2);
+        for at in [[13.4, 16.0], [16.0, 14.0], [14.0, 23.5]] {
+            let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
+            assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None), "squad {squad}: no menu on {at:?}");
+            p.ring_over_menu();
+            p.frame();
+            let keys: Vec<f64> = p.view_of(0).ring.expect("the ring is up").wedges.iter().map(|w| w.key).collect();
+            assert!(!keys.is_empty() && keys.iter().all(|&k| (1.0..=5.0).contains(&k)), "squad {squad}: on {at:?} the wedges are {keys:?}");
+            game::orders::squad_orders_close(&mut p.g);
+        }
     }
 }
 

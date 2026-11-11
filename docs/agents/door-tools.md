@@ -5,8 +5,8 @@ What the squad does at a door on order: where each man stands, how the door gets
 
 ## What the player gets
 
-- On a door the ring offers stack up, the wand and a page of door tools: open and clear, bang and clear, a charge, frag and clear on G, clear from outside, and
-  on H a hammer or breaching shotgun if somebody carries one.
+- On a door the ring offers stack up, the wand and a page of door tools: open and clear, bang and clear, a charge, frag and clear, clear from outside, and
+  a hammer or breaching shotgun if somebody carries one.
 - A **stack** is the men on their marks at a **jamb**, the wall beside the frame. F, **the word**, sends a stacked team through by plain open and clear.
 - A door found locked stops the order at the handle. The man says what he found, and the same row then says kick or pick.
 - A bang goes off in the air inside, and nobody crosses until the blind burst has run dry. A charge waits for the player to blow it.
@@ -18,7 +18,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | module | what it does |
 |---|---|
-| `doortools/` | the orders: `DoorOp` and its phases, the counts, the word, Sam's own charge. Most numbers: `DoortoolsK` |
+| `doortools/` | the orders: `DoorOp` and its phases, the counts, the word and its key (`tick/`), the steps (`steps.rs`, a threshold's `steps/`), the other doors (`other.rs`). Numbers: `DoortoolsK` |
 | `orders/rows/` | one file a row (`openclear.rs`, `bangclear.rs`, `charge.rs`, `fragclear.rs`, `bigclear.rs`, `threshold.rs`, `go.rs`, `stack.rs`): label, `valid`, `issue` |
 | `orders/` | `squad_orders_stack_posts` and the marks behind it, `squad_orders_pair` (who takes which mark), `squad_orders_assign` |
 | `stackroom.rs`, `stackline.rs` | marks kept on the door's own face, in no other door's way; `stack_line_pace`, a man slowing in view of an open door |
@@ -28,14 +28,14 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `entrypoints.rs` | which openings the squad has been beyond; `entry_points_clear_of` moves a point off an uncleared one |
 | `roomread.rs`, `roomfit.rs` | the space round a spot; marks for the move-there order and what a rear man can watch. A door order does not use them |
 | `rearwatch.rs` | who keeps the way behind a stack (`rear_watch_tick`); a taken room's other door as the squad leaves (`room_keep_tick`) |
-| `wandorder.rs` | the wand on order: its row is `wand.rs`, on V (`stealth.md`) |
+| `wandorder.rs` | the wand on order: its row is `wand.rs` (`stealth.md`) |
 
 Other systems use the same machine through `door_tools_order`: `rescue/` starts its doors on a `DoorGate`, `qrf/` runs a response team with its own counts. The page has no
 rule here: the ring and its marks come through `view/`, and `door_tools_draw_charge` shows a set charge.
 
 ## How it works
 
-**An order** is a `DoorOp` row in `g.tab.doortools_door_op`, listed in `g.door_tools.ops`; each seat has its own `door_tools`. It holds the door, the face, its men, a
+**An order** is a `DoorOp` row in `g.tab.doortools_door_op`, listed in the seat's `door_tools.ops`; each seat has its own `door_tools`. It holds the door, the face, its men, a
 lead, each man's mark (`post`) and his current assignment (`mine`). `tick_op` drops any man whose assignment is no longer the one the order gave him, so any
 other order takes a man off by being given. It moves its men with `door_tools_assign`. Each step logs a beat (`door_tools_beat`), which tests read.
 
@@ -87,7 +87,7 @@ such a door as the squad falls in.
 
 **From outside** (`door_tools_to_threshold`; row `threshold.rs`). The lead and the far man take the jambs and the rest are rear men. Only the lead cuts the opening, and he
 leans (`door_tools_pie_set`, `thr_pie_arc`). When it has gone quiet (`thr_min`, `thr_quiet`, `thr_cap`) he says "holding on the door." The rows then read go in, or bang then
-go in (`door_tools_threshold_then`). The word steps in with no can unless `door_tools_then_on_word` asked for one, and waits for the cut (`door_tools_cuts_owe`). Stepping in
+go in (`door_tools_threshold_then`). The word steps in with no can and waits for the cut (`door_tools_cuts_owe`). Stepping in
 uses `door_tools_shallow_pods`, and the room's other doors are held after (`door_tools_hold_doors`). An order with hold off goes on by itself and may throw first
 (`door_tools_can_first`); the ring always gives hold, so that path is the response team's.
 
@@ -163,5 +163,4 @@ Native tests in `rust/game_start/tests/`:
 
 ## Not seen
 
-All of this is held by numbers. How a stack or a thrown can looks has to be judged on a GPU. The `Outside` kind with `Phase::Slice` and `Phase::Held`, and the
-`held` row's page with `thrWord`, cannot be reached from the ring.
+All of this is held by numbers. How a stack or a thrown can looks has to be judged on a GPU.

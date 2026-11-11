@@ -25,7 +25,6 @@ pub struct Need {
     pub level: f64,
     pub fill_min: f64,
     pub wp: f64,
-    pub trip_m: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -46,13 +45,11 @@ pub struct Trip {
     pub left_at: f64,
     pub arrived_at: f64,
     pub dwell_until: f64,
-    pub back_at: f64,
     pub wp: f64,
     pub out_yaw: f64,
     pub watched: bool,
     pub told: bool,
     pub partner: Option<GuardId>,
-    pub radio: bool,
     pub reply_at: f64,
     pub replied: bool,
     pub necked: bool,
@@ -96,22 +93,6 @@ pub struct DeparturePoint {
 pub struct NeedsMod {
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct NeedsStats {
-    pub dealt: i32,
-    pub scheduled: i32,
-    pub forced: i32,
-    pub departed: i32,
-    pub arrived: i32,
-    pub completed: i32,
-    pub cancelled: i32,
-    pub radioed: i32,
-    pub told: i32,
-    pub replies: i32,
-    pub stuck: i32,
 }
 
 pub fn need_kinds() -> Vec<crate::needs::NeedKind> { alloc::vec![crate::needs::NeedKind::Coffee, crate::needs::NeedKind::Smoke, crate::needs::NeedKind::Water, crate::needs::NeedKind::Stretch] }

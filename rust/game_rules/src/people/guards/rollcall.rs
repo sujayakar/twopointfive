@@ -12,31 +12,16 @@ use crate::teams::Team;
 
 // ---- small readers
 
-/// `g.audio.play(name, at, vol)`
-fn play(g: &mut Game, name: &str, at: V3, vol: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), None);
-}
-/// `g.audio.play(name, at, vol, { rate })`
-fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-}
-/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the book on Game with one book, his seat's otherwise, asked inside that seat.
+/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the first seat's book with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
-}
-/// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
-fn no_path(d: &mut crate::game::Guard) {
-    d.path = Vec::new();
-    d.path_serial = d.path_serial.wrapping_add(1);
-    d.path_goal = None;
-    d.path_goal_orbit = false;
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
 }
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => g.ch[c].pos }
+    g.ch[c].bone(Bone::Head).unwrap_or(g.ch[c].pos)
 }
 /// `g.level.routes[gd.routeI]`'s points, if that route exists
 fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
@@ -44,13 +29,13 @@ fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
 }
 /// `g.level.routes[M.routeI]?.points[0] ?? M.char.pos`
 fn post_of(g: &Game, m: GuardId) -> V3 {
-    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.ch[g.gd[m].ch].pos }
+    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.pos_of(m) }
 }
 
 /// His head, or where it would be.
 fn head_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
+    g.ch[c].bone_or(Bone::Head, 1.7)
 }
 
 /// A man says something: a bubble over his head, and a log row if it went over the radio or is out of sight.
@@ -82,7 +67,7 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
 /// The next of the lines he said in one frame comes up once the one showing has been up for a moment.
 pub(super) fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].bubble_next.is_empty() { return; }
-    if g.gd[gd].state == crate::game::GuardState::Dead { g.gd[gd].bubble_next.clear(); return; }
+    if crate::condition::down(g, g.gd[gd].ch) { g.gd[gd].bubble_next.clear(); return; }
     let (now, showing) = (g.time, g.gd[gd].bubble.as_ref().map_or(0.0, |b| b.t));
     if now - showing < BUBBLE_TURN { return; }
     let mut line = g.gd[gd].bubble_next.remove(0);
@@ -90,56 +75,6 @@ pub(super) fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].bubble = Some(line);
 }
 const BUBBLE_TURN: f64 = 1.0;
-
-/// Fresh guards at the start of their routes; spawned units are not stood up again.
-pub fn reset_guards(g: &mut crate::game::Game) {
-    for pl in crate::seats::men(g) {
-        g.pl[pl].dragging = None;
-        g.pl[pl].takedown = None;
-        g.pl[pl].holding = None;
-        let c = g.pl[pl].ch;
-        g.ch[c].anim.hold_pose = None;
-    }
-    let old = g.guards.clone();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { release_unit(g, gd); }
-    }
-    end_engagement(g, EndEngagementOutcome::Reset);
-    let old = g.guards.clone();
-    let mut fresh: Vec<(f64, RouteId, i32, LightId, V3)> = Vec::new();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { continue; }
-        let c = g.gd[gd].ch;
-        fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i, g.gd[gd].flashlight, g.ch[c].tint));
-    }
-    for &gd in &old {
-        let c = g.gd[gd].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
-    let mut shift: Vec<GuardId> = Vec::with_capacity(fresh.len());
-    let (men, rig) = (g.men, g.rig);
-    for (id, route, route_i, fl, tint) in fresh { shift.push(crate::game::guard_new(g, men, rig, id, route, route_i, fl, tint, None)); }
-    g.guards = shift.clone();
-    for gd in shift {
-        let c = g.gd[gd].ch;
-        crate::character::character_update(g, c, 0.0);
-    }
-    crate::opening::opening_start(g);
-    crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().fix, None, Some(0.0), None, None, None);
-    crate::seats::each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
-    g.escalation = 0.0;
-    g.escalation_t = -1.0;
-    g.alarm.episode = false;
-    g.alarm.placed = false;
-    g.alarm.apart_t = 0.0;
-    g.clearing = None;
-    g.cleared_at.clear();
-    let r = rollcall_state(g);
-    r.stage = RollcallStage::Idle;
-    r.next_at = -1.0;
-    r.caller = None;
-    r.missing = None;
-}
 
 // ---- alarm escalation
 
@@ -164,10 +99,10 @@ fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) ->
             if off_net(g, gd)
                 || Some(gd) == except
                 || (pass == 0 && (g.gd[gd].state == GuardState::Alert || crate::doze::doze_asleep(g, gd)))
-                || g.gd[gd].team != Team::Guard
+                || g.team(gd) != Team::Guard
                 || g.gd[gd].unit.is_some()
             { continue; }
-            let d = match pos { Some(p) => v3::dist(g.ch[g.gd[gd].ch].pos, p), None => 0.0 };
+            let d = match pos { Some(p) => v3::dist(g.pos_of(gd), p), None => 0.0 };
             if d < bd { bd = d; best = Some(gd); }
         }
         pass += 1;
@@ -224,7 +159,7 @@ pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<Guard
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, &line, Some(true), None);
         let at = head_or_pos(g, sp);
-        play(g, "radio", at, 0.7);
+        crate::audio_iface::play_at(g, "radio", at, 0.7);
     }
     if lvl >= 2.0 {
         assign_lockdown(g, prev >= 2.0, except);
@@ -243,7 +178,7 @@ pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<Guard
 
 /// A man who cannot answer the net: down, or held with Sam's arm across his throat.
 pub fn off_net(g: &crate::game::Game, x: GuardId) -> bool {
-    g.gd[x].state == GuardState::Dead || g.gd[x].held.is_some()
+    crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some()
 }
 /// The net's radio-check state for this game, made on first touch; the row itself.
 pub fn rollcall_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::guards::Rollcall {
@@ -264,7 +199,7 @@ fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
             || g.gd[x].state == GuardState::Alert
             || g.gd[x].script.is_some()
             || matches!(&g.gd[x].body_duty, Some(b) if b.stage != GuardBodyDutyStage::Fan)
-            || g.gd[x].team != Team::Guard
+            || g.team(x) != Team::Guard
             || crate::doze::doze_asleep(g, x)
         { continue; }
         let r = if g.gd[x].state == GuardState::Patrol { 2 } else { 1 };
@@ -274,28 +209,28 @@ fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
 }
 /// Somebody already out walking this man's route.
 pub fn checker_for(g: &crate::game::Game, m: GuardId) -> Option<GuardId> {
-    g.guards.iter().copied().find(|&x| g.gd[x].state != GuardState::Dead && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(k)) if k.who == m))
+    g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(k)) if k.who == m))
 }
 /// A silent man is being looked for right now: the floor's alarm level holds meanwhile.
 fn still_looking(g: &mut crate::game::Game) -> bool {
     rollcall_state(g).stage == RollcallStage::Asked
-        || g.guards.iter().any(|&x| g.gd[x].state != GuardState::Dead && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(_))))
+        || g.guards.iter().any(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(_))))
 }
 /// calm, free of orders, errands and bodies, and of Sam's arm
 fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     let d = &g.gd[x];
-    x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && d.team == Team::Guard
+    x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
-    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.ch[g.gd[m].ch].pos] };
+    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.pos_of(m)] };
     if let Some(p) = prefer { if checker_free(g, p, m) { return Some(p); } }
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
     for &x in &g.guards {
         if !checker_free(g, x, m) { continue; }
         let mut d = f64::INFINITY;
-        let at = g.ch[g.gd[x].ch].pos;
+        let at = g.pos_of(x);
         for &p in &pts { d = m::min(d, v3::dist_xz(p, at)); }
         if d < bd { bd = d; best = Some(x); }
     }
@@ -306,7 +241,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     let pts = route_points(g, m).unwrap_or_default();
     let mut i0 = 0usize;
     let mut bd = f64::INFINITY;
-    let me = g.ch[g.gd[gd].ch].pos;
+    let me = g.pos_of(gd);
     for (i, &p) in pts.iter().enumerate() {
         let d = v3::dist_xz(p, me);
         if d < bd { bd = d; i0 = i; }
@@ -318,12 +253,12 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     crate::mind::raise(g, gd, 0.42, "guards");
     if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "guards"); g.gd[gd].react_t = 0.8; }
     g.gd[gd].search_t = 0.0;
-    no_path(&mut g.gd[gd]);
+    g.gd[gd].drop_path();
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None);
     let at = head_or_pos(g, gd);
-    play_rate(g, "radio", at, 0.5, 1.05);
+    crate::audio_iface::play_at_rate(g, "radio", at, 0.5, 1.05);
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.
 pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
@@ -331,7 +266,7 @@ pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
     let who = k.who;
     if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) {
         g.gd[gd].task = None;
-        if g.gd[who].found && g.gd[who].state == GuardState::Dead && g.guards.contains(&who) && g.gd[gd].body_duty.is_none() {
+        if g.gd[who].found && crate::condition::down(g, g.gd[who].ch) && g.guards.contains(&who) && g.gd[gd].body_duty.is_none() {
             let t0 = g.time;
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
             let body = body_pos(g, who);
@@ -339,7 +274,7 @@ pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
             crate::mind::raise(g, gd, 0.45, "guards");
             g.gd[gd].react_t = 0.5;
             g.gd[gd].search_t = 0.0;
-            no_path(&mut g.gd[gd]);
+            g.gd[gd].drop_path();
         }
         return;
     }
@@ -364,13 +299,13 @@ pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
     }
     crate::mind::fix(g, gd, Some(v3::copy(pos)), "guards");
     g.gd[gd].search_t = 0.0;
-    no_path(&mut g.gd[gd]);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if left == m::floor(pts.len() as f64 / 2.0) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);
         crate::game::game_say(g, gd, &line, Some(true), None);
         let at = head_or_pos(g, gd);
-        play_rate(g, "radio", at, 0.4, 1.05);
+        crate::audio_iface::play_at_rate(g, "radio", at, 0.4, 1.05);
     }
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.
@@ -385,7 +320,7 @@ fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: boo
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    play(g, "radio", at, 0.7);
+    crate::audio_iface::play_at(g, "radio", at, 0.7);
     if !g.gd[m].missing_raised {
         g.gd[m].missing_raised = true;
         let post = post_of(g, m);
@@ -403,7 +338,7 @@ fn caller_ok(g: &Game, x: Option<GuardId>) -> bool {
         Some(x) => !off_net(g, x) && g.gd[x].state != GuardState::Alert && g.gd[x].script.is_none() && g.guards.contains(&x),
     }
 }
-fn silent(g: &mut Game, x: GuardId) -> bool {
+fn silent(g: &Game, x: GuardId) -> bool {
     off_net(g, x) && !g.gd[x].found && checker_for(g, x).is_none()
 }
 /// The check is over for now: idle, the next one on its clock.
@@ -414,186 +349,160 @@ fn rollcall_idle(g: &mut Game) {
     r.next_at = next;
 }
 /// Once a frame: the radio check's clock and its short exchange.
-fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
-    if g.aside || !g.ai_enabled {
-        let r = rollcall_state(g);
-        r.stage = RollcallStage::Idle;
-        r.next_at = -1.0;
-        return;
-    }
-    if g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()).and_then(|q| q.radio_check) == Some(false) {
+fn update_rollcall(g: &mut crate::game::Game) {
+    if g.aside || !g.ai_enabled || !g.level.radio_check() {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
         r.next_at = -1.0;
         return;
     }
     if rollcall_state(g).next_at < 0.0 {
-        let next = g.time + rollcall_interval(g);
-        rollcall_state(g).next_at = next;
+        next_check_on_its_clock(g);
     }
-    let staff: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.gd[x].team == Team::Guard).collect();
-    let living: Vec<GuardId> = staff.iter().copied().filter(|&x| g.gd[x].state != GuardState::Dead).collect();
+    let staff: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.team(x) == Team::Guard).collect();
     match rollcall_state(g).stage {
-        RollcallStage::Idle => {
-            if escalation_of(g) >= 1.0 {
-                let soon = g.time + ROLLCALL_ALARMED_SECS * (1.0 + ROLLCALL_JITTER);
-                let r = rollcall_state(g);
-                r.next_at = m::min(r.next_at, soon);
-            }
-            if g.time < rollcall_state(g).next_at { return; }
-            if living.is_empty() || crate::seats::all_down(g) {
-                let next = g.time + rollcall_interval(g);
-                rollcall_state(g).next_at = next;
-                return;
-            }
-            if g.alarm.episode
-                || living.iter().any(|&x| g.gd[x].state == GuardState::Alert)
-                || matches!(&g.clearing, Some(c) if c.stage != crate::squad::ClearStage::Done)
-                || g.time - g.alarm.raised_at < ROLLCALL_QUIET_AFTER_SECS
-            {
-                let next = g.time + ROLLCALL_BUSY_RETRY_SECS;
-                rollcall_state(g).next_at = next;
-                return;
-            }
-            let caller = match radio_caller(g) {
-                Some(c) => c,
-                None => {
-                    let next = g.time + ROLLCALL_BUSY_RETRY_SECS;
-                    rollcall_state(g).next_at = next;
-                    return;
-                }
-            };
-            let mut news = false;
-            for &x in &staff {
-                if x != caller && (!off_net(g, x) || (!g.gd[x].found && !g.gd[x].missing_raised && checker_for(g, x).is_none())) { news = true; break; }
-            }
-            if !news {
-                let next = g.time + rollcall_interval(g);
-                rollcall_state(g).next_at = next;
-                return;
-            }
-            let now = g.time;
-            let r = rollcall_state(g);
-            r.stage = RollcallStage::Called;
-            r.t0 = now;
-            r.caller = Some(caller);
-            r.missing = None;
-            r.answered = false;
-            r.checks += 1.0;
-            crate::game::game_say(g, caller, "radio check — sound off", Some(true), None);
-            let at = head_or_pos(g, caller);
-            play(g, "radio", at, 0.5);
-        }
-        RollcallStage::Called => {
-            let el = g.time - rollcall_state(g).t0;
-            if !rollcall_state(g).answered && el >= ROLLCALL_ANSWER_SECS {
-                rollcall_state(g).answered = true;
-                let caller = rollcall_state(g).caller;
-                let mut answers: Vec<String> = Vec::new();
-                for &x in &staff {
-                    if Some(x) != caller && !off_net(g, x) { answers.push(format!("…{}.", g.gd[x].callsign)); }
-                }
-                if !answers.is_empty() {
-                    let line = answers.join(" ");
-                    crate::cues::cues_radio(g, &line);
-                }
-                let mut missing: Option<GuardId> = None;
-                for &x in &staff {
-                    if silent(g, x) && !g.gd[x].missing_raised { missing = Some(x); break; }
-                }
-                if missing.is_none() {
-                    for &x in &staff {
-                        if silent(g, x) { missing = Some(x); break; }
-                    }
-                }
-                rollcall_state(g).missing = missing;
-                if missing.is_none() { rollcall_idle(g); }
-                return;
-            }
-            let missing = rollcall_state(g).missing;
-            if let (Some(who), true) = (missing, el >= ROLLCALL_ASK_SECS) {
-                let caller = rollcall_state(g).caller;
-                if !caller_ok(g, caller) {
-                    let c = radio_caller(g);
-                    rollcall_state(g).caller = c;
-                }
-                if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) { rollcall_idle(g); return; }
-                let caller = rollcall_state(g).caller;
-                if g.gd[who].missing_raised {
-                    if let Some(c) = caller {
-                        let line = format!("and still nothing from {} — keep looking for him", g.gd[who].callsign);
-                        crate::game::game_say(g, c, &line, Some(true), None);
-                        let at = head_or_pos(g, c);
-                        play(g, "radio", at, 0.5);
-                    }
-                    rollcall_idle(g);
-                    return;
-                }
-                if let Some(c) = caller {
-                    let cs = g.gd[who].callsign.clone();
-                    let line = format!("{}? … {}, sound off", cs, cs);
-                    crate::game::game_say(g, c, &line, Some(true), None);
-                    let at = head_or_pos(g, c);
-                    play(g, "radio", at, 0.55);
-                }
-                crate::netquiet::net_quiet_asked(g, caller, who, &staff);
-                if g.gd[who].missed_at < 0.0 { g.gd[who].missed_at = g.time; }
-                rollcall_state(g).stage = RollcallStage::Asked;
-            }
-        }
-        RollcallStage::Asked => {
-            let missing = rollcall_state(g).missing;
-            let el = g.time - rollcall_state(g).t0;
-            let who = match missing {
-                Some(w) if off_net(g, w) && !g.gd[w].found && g.guards.contains(&w) && checker_for(g, w).is_none() => w,
-                _ => { rollcall_idle(g); return; }
-            };
-            if el < ROLLCALL_SEND_SECS { return; }
-            let caller = rollcall_state(g).caller;
-            if !caller_ok(g, caller) {
-                let c = radio_caller(g);
-                rollcall_state(g).caller = c;
-            }
-            let checker = match pick_checker(g, who, None) {
-                Some(c) => c,
-                None => {
-                    if el > ROLLCALL_SEND_GIVEUP_SECS {
-                        let next = g.time + ROLLCALL_BUSY_RETRY_SECS;
-                        let r = rollcall_state(g);
-                        r.stage = RollcallStage::Idle;
-                        r.next_at = next;
-                    }
-                    return;
-                }
-            };
-            let caller = rollcall_state(g).caller;
-            let cs = g.gd[who].callsign.clone();
-            if let Some(c) = caller {
-                if c != checker {
-                    let line = format!("nothing from {}. {}, go walk his route and check on him", cs, g.gd[checker].callsign);
-                    crate::game::game_say(g, c, &line, Some(true), None);
-                    let at = head_or_pos(g, c);
-                    play(g, "radio", at, 0.55);
-                }
-            }
-            let line = if caller == Some(checker) {
-                format!("nothing from {} — going to walk his route and check on him", cs)
-            } else {
-                format!("copy — going to check on {}", cs)
-            };
-            send_check_on(g, checker, who, &line);
-            rollcall_idle(g);
-        }
+        RollcallStage::Idle => check_when_due(g, &staff),
+        RollcallStage::Called => wait_for_answers(g, &staff),
+        RollcallStage::Asked => send_somebody(g),
     }
+}
+/// The next check comes on the ordinary clock.
+fn next_check_on_its_clock(g: &mut Game) {
+    let next = g.time + rollcall_interval(g);
+    rollcall_state(g).next_at = next;
+}
+/// The next check is only put off a little: the net was busy.
+fn next_check_soon(g: &mut Game) {
+    let next = g.time + ROLLCALL_BUSY_RETRY_SECS;
+    rollcall_state(g).next_at = next;
+}
+/// A man keys his radio to say a line of the check.
+fn on_the_radio(g: &mut Game, c: GuardId, line: &str, vol: f64) {
+    crate::game::game_say(g, c, line, Some(true), None);
+    let at = head_or_pos(g, c);
+    crate::audio_iface::play_at(g, "radio", at, vol);
+}
+/// Nobody calls the check while a fight or a clearing is on, or just after an alarm.
+fn net_too_busy(g: &Game, living: &[GuardId]) -> bool {
+    g.alarm.episode
+        || living.iter().any(|&x| g.gd[x].state == GuardState::Alert)
+        || matches!(&g.clearing, Some(c) if c.stage != crate::squad::ClearStage::Done)
+        || g.time - g.alarm.raised_at < ROLLCALL_QUIET_AFTER_SECS
+}
+/// Between checks: an alarm brings the next one nearer, and when it is due somebody calls it if there is anybody to hear from.
+fn check_when_due(g: &mut Game, staff: &[GuardId]) {
+    if escalation_of(g) >= 1.0 {
+        let soon = g.time + ROLLCALL_ALARMED_SECS * (1.0 + ROLLCALL_JITTER);
+        let r = rollcall_state(g);
+        r.next_at = m::min(r.next_at, soon);
+    }
+    if g.time < rollcall_state(g).next_at { return; }
+    let living: Vec<GuardId> = staff.iter().copied().filter(|&x| !crate::condition::down(g, g.gd[x].ch)).collect();
+    if living.is_empty() || crate::seats::all_down(g) { return next_check_on_its_clock(g); }
+    if net_too_busy(g, &living) { return next_check_soon(g); }
+    let Some(caller) = radio_caller(g) else { return next_check_soon(g) };
+    let news = staff.iter().any(|&x| x != caller && (!off_net(g, x) || (!g.gd[x].found && !g.gd[x].missing_raised && checker_for(g, x).is_none())));
+    if !news { return next_check_on_its_clock(g); }
+    let now = g.time;
+    let r = rollcall_state(g);
+    r.stage = RollcallStage::Called;
+    r.t0 = now;
+    r.caller = Some(caller);
+    r.missing = None;
+    r.answered = false;
+    r.checks += 1.0;
+    on_the_radio(g, caller, "radio check — sound off", 0.5);
+}
+/// The check has been called: first the answers come in, then, if one man stayed silent, the caller asks for him.
+fn wait_for_answers(g: &mut Game, staff: &[GuardId]) {
+    let el = g.time - rollcall_state(g).t0;
+    if !rollcall_state(g).answered && el >= ROLLCALL_ANSWER_SECS {
+        return answers_come_in(g, staff);
+    }
+    if let (Some(who), true) = (rollcall_state(g).missing, el >= ROLLCALL_ASK_SECS) {
+        ask_for_him(g, who, staff);
+    }
+}
+/// Everybody on the net answers, and the man who did not is noted: first one not yet raised as missing, else first at all.
+fn answers_come_in(g: &mut Game, staff: &[GuardId]) {
+    rollcall_state(g).answered = true;
+    let caller = rollcall_state(g).caller;
+    let answers: Vec<String> = staff.iter().filter(|&&x| Some(x) != caller && !off_net(g, x)).map(|&x| format!("…{}.", g.gd[x].callsign)).collect();
+    if !answers.is_empty() {
+        let line = answers.join(" ");
+        crate::cues::cues_radio(g, &line);
+    }
+    let unraised = staff.iter().copied().find(|&x| silent(g, x) && !g.gd[x].missing_raised);
+    let missing = unraised.or_else(|| staff.iter().copied().find(|&x| silent(g, x)));
+    rollcall_state(g).missing = missing;
+    if missing.is_none() { rollcall_idle(g); }
+}
+/// A caller who can no longer call is replaced by whoever can, or nobody.
+fn keep_a_caller(g: &mut Game) {
+    let caller = rollcall_state(g).caller;
+    if !caller_ok(g, caller) {
+        let c = radio_caller(g);
+        rollcall_state(g).caller = c;
+    }
+}
+/// The caller asks for the silent man by name, unless he has turned up; one already raised as missing only gets a word and the check ends.
+fn ask_for_him(g: &mut Game, who: GuardId, staff: &[GuardId]) {
+    keep_a_caller(g);
+    if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) { return rollcall_idle(g); }
+    let caller = rollcall_state(g).caller;
+    if g.gd[who].missing_raised {
+        if let Some(c) = caller {
+            let line = format!("and still nothing from {} — keep looking for him", g.gd[who].callsign);
+            on_the_radio(g, c, &line, 0.5);
+        }
+        return rollcall_idle(g);
+    }
+    if let Some(c) = caller {
+        let cs = g.gd[who].callsign.clone();
+        let line = format!("{}? … {}, sound off", cs, cs);
+        on_the_radio(g, c, &line, 0.55);
+    }
+    crate::netquiet::net_quiet_asked(g, caller, who, staff);
+    if g.gd[who].missed_at < 0.0 { g.gd[who].missed_at = g.time; }
+    rollcall_state(g).stage = RollcallStage::Asked;
+}
+/// He was asked for and nothing came back: once its time has come somebody is sent to walk his route, and with nobody free for long the check gives up.
+fn send_somebody(g: &mut Game) {
+    let el = g.time - rollcall_state(g).t0;
+    let Some(who) = rollcall_state(g).missing.filter(|&w| off_net(g, w) && !g.gd[w].found && g.guards.contains(&w) && checker_for(g, w).is_none()) else {
+        return rollcall_idle(g);
+    };
+    if el < ROLLCALL_SEND_SECS { return; }
+    keep_a_caller(g);
+    let Some(checker) = pick_checker(g, who, None) else {
+        if el > ROLLCALL_SEND_GIVEUP_SECS {
+            next_check_soon(g);
+            rollcall_state(g).stage = RollcallStage::Idle;
+        }
+        return;
+    };
+    let caller = rollcall_state(g).caller;
+    let cs = g.gd[who].callsign.clone();
+    if let Some(c) = caller.filter(|&c| c != checker) {
+        let line = format!("nothing from {}. {}, go walk his route and check on him", cs, g.gd[checker].callsign);
+        on_the_radio(g, c, &line, 0.55);
+    }
+    let line = if caller == Some(checker) {
+        format!("nothing from {} — going to walk his route and check on him", cs)
+    } else {
+        format!("copy — going to check on {}", cs)
+    };
+    send_check_on(g, checker, who, &line);
+    rollcall_idle(g);
 }
 /// Lockdown follower, each frame on patrol: when he last had his leader in plain sight, and what he does about losing him.
 pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
     let l = match g.gd[gd].leader { Some(l) => l, None => return };
     let c = g.gd[gd].ch;
     let lc = g.gd[l].ch;
-    let eye = match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
-    let at = if g.gd[l].state != GuardState::Dead {
-        match g.ch[lc].bones.get(Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[lc].pos, [0.0, 1.1, 0.0]) }
+    let eye = g.ch[c].bone_or(Bone::Head, 1.65);
+    let at = if !crate::condition::down(g, g.gd[l].ch) {
+        g.ch[lc].bone_or(Bone::Chest, 1.1)
     } else {
         v3::add(body_pos(g, l), [0.0, 0.4, 0.0])
     };
@@ -613,13 +522,13 @@ pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
         crate::game::game_say(g, gd, &ask, Some(true), None);
         let answer = format!("{} — on me, close up", me);
         crate::game::game_say(g, l, &answer, Some(true), None);
-        play(g, "radio", eye, 0.5);
+        crate::audio_iface::play_at(g, "radio", eye, 0.5);
         return;
     }
     if rollcall_state(g).stage != RollcallStage::Idle || g.gd[l].found || checker_for(g, l).is_some() { return; }
     let line = format!("{}? …I've lost {} — he was just ahead of me. {}, sound off", him, him, him);
     crate::game::game_say(g, gd, &line, Some(true), None);
-    play(g, "radio", eye, 0.6);
+    crate::audio_iface::play_at(g, "radio", eye, 0.6);
     if g.gd[l].missed_at < 0.0 { g.gd[l].missed_at = g.time; }
     let now = g.time;
     let r = rollcall_state(g);
@@ -653,9 +562,9 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
     }
     let mut pair: (Option<GuardId>, Option<GuardId>) = (None, None);
     for &gd in &g.guards {
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].held.is_some() { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { continue; }
         if let Some(l) = g.gd[gd].leader {
-            if g.gd[l].state != GuardState::Dead && g.gd[l].held.is_none() { pair = (Some(l), Some(gd)); }
+            if !crate::condition::down(g, g.gd[l].ch) && g.gd[l].held.is_none() { pair = (Some(l), Some(gd)); }
         }
     }
     let (a, b) = pair;
@@ -663,20 +572,20 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
         Some(a) => a,
         None => {
             let alive: Vec<GuardId> = g.guards.iter().copied()
-                .filter(|&x| g.gd[x].state != GuardState::Dead && g.gd[x].held.is_none() && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none())
+                .filter(|&x| !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && g.team(x) == Team::Guard && g.gd[x].unit.is_none())
                 .collect();
             if alive.len() != 1 { return false; }
             alive[0]
         }
     };
-    let at = if g.alarm.placed { g.alarm.pos } else { g.ch[g.gd[a].ch].pos };
+    let at = if g.alarm.placed { g.alarm.pos } else { g.pos_of(a) };
     let mut by_room: JsMap<String, RoomRow> = JsMap::default();
     for p in g.level.clear_plans.clone().unwrap_or_default() {
         let d = match crate::doors::doors_by_name(g, &p.door) { Some(d) => d, None => continue };
         let k = match &p.room { Some(r) => r.clone(), None => p.door.clone() };
         let dist = v3::dist(g.dr[d].frame_centre, at);
         let tampered = door_tamper(g, d) == Some(DoorTamper::Forced)
-            || (g.dr[d].def.locked == Some(true) && crate::doors::door_noticed(g, d) && g.time - crate::doors::door_noticed_t(g, d) < TAMPER_MEMORY_SECS);
+            || (g.dr[d].def.locked == Some(true) && g.dr[d].leaf.noticed && g.time - g.dr[d].leaf.noticed_t < TAMPER_MEMORY_SECS);
         let inside = match p.bounds.clone() { Some(b) => crate::squad::in_bounds(at, Some(b), None), None => false };
         let r = by_room.get_or_insert_with(k, || RoomRow { plans: Vec::new(), d: f64::INFINITY, tampered: false, inside: false });
         r.plans.push(p);
@@ -704,7 +613,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
 
 /// Panel: 'clear nearest room now': the fix where the player stands, the floor locked down if it was not.
 pub fn force_clear(g: &mut crate::game::Game) {
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     g.alarm.pos[0] = p[0];
     g.alarm.pos[1] = 0.0;
     g.alarm.pos[2] = p[2];
@@ -729,13 +638,13 @@ fn step_down_escalation(g: &mut crate::game::Game) {
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, if lvl >= 1.0 { "ease off — singles, back on your routes; weapons stay out" } else { "stand down, back to normal" }, Some(true), None);
         let at = head_or_pos(g, sp);
-        play_rate(g, "radio", at, 0.6, 0.95);
+        crate::audio_iface::play_at_rate(g, "radio", at, 0.6, 0.95);
     }
 }
 
 /// Once a frame after the guards: the alarm episode, stepping down, the lockdown duties.
 pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
-    update_rollcall(g, dt);
+    update_rollcall(g);
     crate::dialogue::update_ambient(g, dt);
     tick_engagement(g);
     let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);
@@ -743,7 +652,7 @@ pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].team != Team::Guard { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.team(gd) != Team::Guard { continue; }
         living += 1.0;
         if g.gd[gd].state == GuardState::Alert {
             any_alert = true;
@@ -767,7 +676,7 @@ pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
 
 /// A man the floor knows is dead.
 fn known_dead(g: &Game, x: GuardId) -> bool {
-    g.gd[x].state == GuardState::Dead && (g.gd[x].found || g.alarm.episode || g.gd[x].missed_at >= 0.0)
+    crate::condition::down(g, g.gd[x].ch) && (g.gd[x].found || g.alarm.episode || g.gd[x].missed_at >= 0.0)
 }
 
 /// Keep the lockdown duties dealt, as far as the men know.
@@ -778,7 +687,7 @@ fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() { continue; }
+        if g.team(gd) != Team::Guard || g.gd[gd].unit.is_some() { continue; }
         if g.gd[gd].held.is_some() {
             if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].leader = None; g.gd[gd].post = None; }
             continue;
@@ -798,7 +707,7 @@ fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
         follower.is_some() || postman.is_some()
     };
     if let Some(fo) = follower {
-        if !redo && g.gd[fo].state != GuardState::Dead {
+        if !redo && !crate::condition::down(g, g.gd[fo].ch) {
             let l = g.gd[fo].leader.unwrap();
             let calm = g.gd[fo].state == GuardState::Patrol && g.gd[l].state == GuardState::Patrol;
             let (fc, lc) = (g.gd[fo].ch, g.gd[l].ch);

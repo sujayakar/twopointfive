@@ -3,7 +3,7 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what stackRoomBookKeep took, to put the room rule's book back once after an ask made only to be looked at. Forget: there was no book, so drop it. Back: forget the floors and doorway cells read since; floors marks which faces of which doors had been read (a floor is never rewritten once read, so marking is the same as the TypeScript's copied pairs, without cloning every Floor's W*H cells on each trial). sig and doors: if the book no longer has them it was rebuilt during the ask, and the TypeScript's restored old book would be rebuilt empty at the next bookOf, so set books to None
+/// what `stack_room_book_keep` took, to put the room rule's book back once after an ask made only to be looked at. Forget: there was no book, so drop it. Back: forget the floors and doorway cells read since; floors marks which faces of which doors had been read (a floor is never rewritten once read, so the marks will do, without cloning every Floor's W*H cells on each trial). sig and doors: if the book no longer has them it was rebuilt during the ask, and the old one put back would be rebuilt empty at the next `book_of`, so set books to None
 #[derive(Clone, Debug)]
 pub enum StackRoomBookKeep {
     Forget,
@@ -26,12 +26,6 @@ pub struct Book {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NextRoom {
-    pub pos: V3,
-    pub face: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct StackRoomProbe {
     pub floor: bool,
 }
@@ -45,25 +39,8 @@ pub struct StackroomMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct StackroomStats {
-    pub asked: i32,
-    pub off: i32,
-    pub other: i32,
-    pub behind: i32,
-    pub rear: i32,
-    pub floor: i32,
-    pub next: i32,
-    pub squeezed: i32,
-    pub lane: i32,
-    pub none: i32,
-    pub kept: i32,
-    pub unled: i32,
-    pub view_asked: i32,
     pub view_in: i32,
     pub view_across: i32,
-    pub view_out: i32,
-    pub view_over: i32,
-    pub view_left: i32,
-    pub view_stood: i32,
 }
 
 pub const ON_LINE: f64 = 0.02;

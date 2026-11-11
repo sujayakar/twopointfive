@@ -23,7 +23,7 @@ In `rust/game_rules/src/`, with types and tables under the same names in `rust/g
 |---|---|
 | `guards/rollcall.rs` | `say`: the one way a man speaks; `guards/gun.rs` has `bubble_secs` |
 | `dialogue/` | the held man and Sam: `gather`, `pick_line`, `script_for`, `pick_sam_line`; places (`place_name`, `is_office`); `tick_radio`; `update_ambient` |
-| `cues.rs` | the strip's rows (`cues_file`, `radio_rows`), each line as a HUD is told it (`bubbles_view`), the defenders' cues (`cues_tick`, `cues_note`) |
+| `cues.rs` | the strip's rows (`cues_file`, `radio_rows`), each line as a HUD is told it (`bubbles_view`), the defenders' cues (`cues_tick`, `cues_man_did`, `cues_squad_word`) |
 | `squadnet.rs` | the click, "… is down.", a lead's call at the end of an entry (`room_call`, `plain_call`), a quick pick's reason (`why_words`) |
 | `doornames.rs` | the name a door is said by (`name_doors`, `door_said_name`, `shorthand_id`) |
 | `netquiet/` | its speech is `speak`: a man calling a name that does not answer |
@@ -38,8 +38,8 @@ Who says what, and where the words are:
 
 | who | lines | when |
 |---|---|---|
-| a man in Sam's arm | `lines`, `scripts`, `intel_text_table` in `game_types/src/dialogue/types.rs` | each press of the key |
-| Sam | `sam_lines` on the game's table, a script's own beats | before each answer, `sam_key_line_for` as he takes a key, `sam_remark_for` as the pistol comes up |
+| a man in Sam's arm | `lines`, `scripts` in `game_types/src/dialogue/types.rs`, `intel_text` in `game_rules/src/speech/dialogue/lines.rs` | each press of the key |
+| Sam | `sam_lines()`, a script's own beats | before each answer, `sam_key_line_for` as he takes a key, `sam_remark_for` as the pistol comes up |
 | two calm guards | `ambient_pairs` | `update_ambient`, on a floor with no alarm |
 | staff about their rounds | `needs_lines_table`, and lines in `guards/` | a coffee, a smoke, a call for a missing man |
 | the handler and Sam | `handler_lines` | `handler_beat`, the office night only |
@@ -67,7 +67,8 @@ is a line that came in `radio: `: control, the staff's net and the handler. A cl
 its worst row. A squad's word ("Bravo: …", `squad_word`) outranks a man's in its class. Each part of that is a knob in `CuesK`.
 
 **A defender's line reaches the strip three ways:** `say` on the radio calls `cues_heard`, `cues_net` is a line that is telling only, and `cues_cue` is one of the kinds in
-`cues.rs`. All of them need a room fight to be on (`fight_live`, and `cues_tick` returns without one). `cues_tick` watches each defender and `cues_note` reads the fight's log, in the man's words.
+`cues.rs`. All of them need a room fight to be on (`fight_live`, and `cues_tick` returns without one). `cues_tick` watches each defender
+and hears the tick's news (`tell_news`: what a man has done, what a squad has decided), in the man's words.
 
 **What the player hears and what is only shown.** Lines are text. The sounds around them are these: `radio` as the defenders' squelch, as the team's higher click and as a teammate's lower "down"
 click; `murmur` when Sam remarks; `heldProtest` from a hostage or a man in Sam's arm. A shout (`is_shout`: the writer put a bang in it) that `cues_overheard` carries by `hear_path` to an ear
@@ -105,7 +106,7 @@ token (`expand`) fills a name, and a line whose token has no value cannot be sai
 | Sam | `SAM_RECENT_SECS` on `SamMemory`, then the whole list but the last |
 | a script | the fewest played first, of the script and of its shape, on the game's `recent` table |
 | a pair | `played`, the fewest first, a pair's talk once only off the office |
-| a cue | `man_secs` for one man, `kind_gap` for the floor, `again_secs` for a "still here" |
+| a cue | `man_secs` for one man, `gap_of` for the floor, `again_secs` for a "still here" |
 | a hostage | never the line over her head; `murmur_at` spaces them |
 | attention, a net call | a pool and a die, never the one he used last (`line`); a net call by kind, on a die (`speak`) |
 | the handler | each beat once a run (`done`), and five seconds between beats; a beat with no quiet moment in twenty is dropped |
@@ -133,9 +134,8 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 
 ## To change it
 
-- **Reword a line:** find its words (`rust/game_types/src/dialogue/types.rs` holds most tables, the rest are in the module that says them). Read `writing.md` first. A reword fails the pin of
-  its table at the foot of the module (`lines_match_the_typescript`, `script_lines_are_the_typescripts`, `beats_rows_are_the_typescripts`, `handler_pools_are_the_typescripts`,
-  `pairs_are_the_typescripts`): change the pin with it. The words are in the game's state and `bubble_secs` times them, so `gate`'s pins can move too.
+- **Reword a line:** find its words (`rust/game_types/src/dialogue/types.rs` holds most tables, the rest are in the module that says them). Read `writing.md` first.
+  The words are in the game's state and `bubble_secs` times them, so `gate`'s pins can move.
 - **Words only for one kind of place:** the `away`, `bare`, `guide` and `now` fields of a row; `own` on a pair's line; `h_now` on the handler's. Add no new branch where a line is read.
 - **A new line for a held man:** a `Line` in `lines` with `k`, `t`, `s` and `needs` (a `Need`, then its fact in `gather` and `hold_fact`). A new token: `Token`, `DialogueCtxTokens`, and the
   table in `ctx_tokens_map`.

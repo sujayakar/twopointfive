@@ -4,7 +4,7 @@ use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// bodyHit's contact: what decides a round whose origin is already inside the man. `true` is the parameter's None. Entering = false: the entering hit only. Muzzle = fireWeapon's test. LegCrown = a later leg through glass, ro[1] <= headTop's height (or pos + 1.8). Flight = a ring or a 40 mm round, ro[1] < headTop's height (or pos + 1.75) + radius
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum BodyHitContact {
     Entering,
     Muzzle { st0_t: Option<f64>, muzzle: V3, glass_arm: bool, shooter: CharId },
@@ -20,10 +20,20 @@ pub struct FireOpts {
     pub blind: Option<bool>,
 }
 
+/// what of the level a round came to: a static or a leaf by its index, or a loose thing by its box
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RoundMet {
+    pub n: V3,
+    pub index: Option<f64>,
+    pub prop: Option<PropId>,
+    pub box_: Option<BoxId>,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AcrossArm {
     pub index: f64,
     pub at: V3,
+    pub d: V3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -69,4 +79,3 @@ pub fn solid_scratch() -> Vec<i32> { alloc::vec![0; 64] }
 
 pub const GUN_ITEM_LIFE: f64 = 240.0;
 
-pub fn hand_ord() -> Vec<u16> { alloc::vec![0; 256] }

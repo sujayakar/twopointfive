@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec, vec::Vec};
 
-/// INVENTED, for BREAK[mat]: the row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
+/// The row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
 pub(super) fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
 
 type P2 = [f64; 2];
@@ -207,7 +207,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     let poly: Vec<P2> = o.iter().map(|p| if long_first { [p[0], p[1]] } else { [p[1], p[0]] }).collect();
     let pr = crate::scene_cut::cut_prism(thin, half_t, &poly);
     if pr.empty { return None; }
-    g.stats.break_table.dropped += pr.dropped as i32;
     if shape != Shape::Lump { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
     let thin = thin as usize;
     let (ua, va) = ((thin + 1) % 3, (thin + 2) % 3);
@@ -244,7 +243,6 @@ pub(super) fn shape_box(g: &mut crate::game::Game, shape: crate::break_table::Sh
     all.extend_from_slice(&extra);
     let rr = crate::scene_cut::cut_record(pr.h, &all);
     if rr.empty { return Some(Shaped { off: pr.off, h: pr.h, cut: pr.cut }); }
-    g.stats.break_table.dropped += rr.dropped as i32;
     let f = crate::scene_cut::cut_fit(pr.h, rr.cut.as_deref());
     Some(Shaped { off: [pr.off[0] + f.off[0], pr.off[1] + f.off[1], pr.off[2] + f.off[2]], h: f.h, cut: f.cut })
 }
@@ -309,7 +307,7 @@ fn ragged_planes(rag: &BreakRowRagged, h: V3, faces: &[OpenFace], most: f64, acr
 }
 
 /// RAGGED END: the planes for a standing piece's open faces. The record is not fitted: feet and the nav grid keep the box.
-pub(super) fn ragged_cut(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
+pub(super) fn ragged_cut(g: &crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
     let rag = row.ragged?;
     if faces.is_empty() { return None; }
     let (most, across) = (g.k.breaks.max_standing_planes, g.k.breaks.across_deg);
@@ -338,111 +336,145 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
 /// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.
 pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
-    let (yaw, h, c) = seam_box_numbers(g, b);
+    let (yaw, h, c) = { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) };
     wall_normal_at(yaw, h, c, toward, keep)
 }
 
-/// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
-fn seam_box_numbers(g: &crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // FNV of the doubles' bits, from the TypeScript under EXACT (the outlines and wallNormal as exported or pasted; raggedCut's body pasted, up to its cutRecord; BREAK itself).
-    const SLAB: u64 = 0xba975fe2df4b41d3;
-    const WEDGE: u64 = 0x6dcd936e502ad9f8;
-    const SNAPPED: u64 = 0xbcb4561af1ee2bea;
-    const STRIP: u64 = 0xc704568e5d7fcc04;
-    const OUTLINE: u64 = 0x0271d81e5c36523c;
-    const WALL: u64 = 0x49add9f7ce54aa50;
-    const RAGGED: u64 = 0xd985aa2a8a03a242;
-    struct Fold(u64);
-    impl Fold {
-        fn new() -> Self { Fold(0xcbf29ce484222325) }
-        fn f(&mut self, x: f64) { assert!(x == x); self.0 = (self.0 ^ x.to_bits()).wrapping_mul(0x100000001b3); }
-        fn pts(&mut self, o: &[P2]) { self.f(o.len() as f64); for p in o { self.f(p[0]); self.f(p[1]); } }
-    }
-    /// `BREAK[mat]`, off the skeleton's rows (the test below holds them to the TypeScript's bits)
-    fn break_row(mat: Mat) -> &'static BreakRow { &break_().iter().find(|(k, _)| *k == mat).unwrap().1 }
     fn stream(seed: f64) -> impl FnMut() -> f64 { let mut x = seed; move || { x = js::rem(x + 0.6180339887498949, 1.0); x } }
     fn ln(i: usize) -> f64 { 0.1 + 0.03 * i as f64 }
     fn sn(i: usize) -> f64 { 0.05 + 0.011 * i as f64 }
     fn seed(i: usize) -> f64 { i as f64 * 0.037 }
-    /// debris.ts hash01 (the skeleton's is a stub here)
-    fn hash(x: f64) -> f64 {
-        let mut v = (js::to_i32(x) ^ (0x9E3779B9u32 as i32)) as u32;
-        v = v.wrapping_mul(0x85EBCA6B);
-        v ^= v >> 13;
-        v = v.wrapping_mul(0xC2B2AE35);
-        v ^= v >> 16;
-        (v >> 8) as f64 / 16777216.0
+    /// the area with its winding's sign
+    fn area(o: &[P2]) -> f64 {
+        let mut a = 0.0;
+        for i in 0..o.len() { let q = o[(i + 1) % o.len()]; a += o[i][0] * q[1] - q[0] * o[i][1]; }
+        a / 2.0
     }
 
+    /// A cut box is made from its outline. A failure means a piece that is bigger than the hole it came from, turned inside out, or next to nothing.
     #[test]
-    fn outlines_match_the_typescript_bits() {
-        let mut h = Fold::new();
-        for i in 0..120 { h.pts(&slab_outline(ln(i), sn(i), (i % 6) as f64, &mut stream(seed(i)))); }
-        assert_eq!(h.0, SLAB);
-        let mut h = Fold::new();
-        for i in 0..120 { h.pts(&wedge_outline(ln(i), sn(i), &mut stream(seed(i)), Some(i % 2 == 1))); }
-        assert_eq!(h.0, WEDGE);
-        let mut h = Fold::new();
-        for i in 0..120 { h.pts(&snapped_outline(ln(i), sn(i), &mut stream(seed(i)))); }
-        assert_eq!(h.0, SNAPPED);
-        let mut h = Fold::new();
-        for i in 0..120 { h.pts(&strip_outline(ln(i), sn(i), &mut stream(seed(i)))); }
-        assert_eq!(h.0, STRIP);
-        let sh = [Shape::Slab, Shape::Lump, Shape::Panel, Shape::Wedge, Shape::Snapped, Shape::Strip];
+    fn every_piece_stays_in_its_rectangle_and_winds_one_way() {
         let row = break_row(Mat::Plasterboard);
-        let mut h = Fold::new();
-        for i in 0..120 { h.pts(&outline_of(sh[i % 6], ln(i), sn(i), row, &mut stream(seed(i)), i % 3 == 0)); }
-        assert_eq!(h.0, OUTLINE);
-    }
-
-    #[test]
-    fn wall_normal_matches_the_typescript_bits() {
-        let mut f = Fold::new();
-        for i in 0..80usize {
-            let x = i as f64;
-            let yaw = x * 0.31 - 6.0;
-            let h: V3 = if i % 2 == 1 { [0.1, 1.0, 2.0] } else { [2.0, 1.0, 0.1] };
-            let c: V3 = [x * 0.13, 0.7 + x * 0.01, -x * 0.21];
-            let (cs, sn) = (m::cos(yaw), m::sin(yaw));
-            let toward: V3 = if i % 5 == 0 { [0.0, 0.0, 0.0] }
-                else if i % 5 == 1 { if h[0] <= h[2] { [2.0 * sn, 0.0, 2.0 * cs] } else { [2.0 * cs, 0.0, -2.0 * sn] } }
-                else { [(i % 7) as f64 - 3.0, 0.0, (i % 11) as f64 - 5.0] };
-            let n = wall_normal_at(yaw, h, c, toward, if i % 3 == 0 { 0.3 } else { 0.0 });
-            f.f(n[0]); f.f(n[1]); f.f(n[2]);
-        }
-        assert_eq!(f.0, WALL);
-    }
-
-    fn face(axis: f64, sign: f64, lat: &[f64], seed: f64, lo: Option<f64>) -> OpenFace {
-        OpenFace { axis, sign, lat: lat.to_vec(), seed, lo }
-    }
-
-    #[test]
-    fn ragged_planes_match_the_typescript_bits() {
-        let mut f = Fold::new();
-        for mat in [Mat::Plasterboard, Mat::Wood, Mat::Fabric, Mat::Cardboard] {
-            let rag = break_row(mat).ragged.unwrap();
-            for i in 0..100usize {
-                let x = i as f64;
-                let h: V3 = [0.1 + x * 0.01, 1.2, 0.5 + x * 0.02];
-                let sd = x * 7349.0 + 131.0;
-                let faces = match i % 4 {
-                    0 => vec![face(0.0, 1.0, &[1.0, 2.0], sd, None)],
-                    1 => vec![face(0.0, -1.0, &[1.0, 2.0], sd, None), face(2.0, 1.0, &[1.0, 0.0], sd + 17.0, None)],
-                    2 => vec![face(0.0, 1.0, &[1.0], sd, Some(-0.3 + x * 0.005))],
-                    _ => vec![face(1.0, 1.0, &[2.0, 0.0], sd, None), face(0.0, 1.0, &[1.0, 2.0], sd + 5.0, None), face(2.0, -1.0, &[1.0, 0.0], sd + 9.0, None)],
-                };
-                let p = ragged_planes(&rag, h, &faces, 4.0, [35.0, 55.0], &hash);
-                f.f(p.len() as f64);
-                for q in &p { f.f(q.n[0]); f.f(q.n[1]); f.f(q.n[2]); f.f(q.d); }
+        for shape in [Shape::Slab, Shape::Lump, Shape::Panel, Shape::Wedge, Shape::Snapped, Shape::Strip] {
+            for i in 0..120 {
+                let (l, s) = (ln(i), sn(i));
+                let o = outline_of(shape, l, s, row, &mut stream(seed(i)), i % 3 == 0);
+                assert!(o.iter().all(|p| p[0].abs() <= l + 1e-9 && p[1].abs() <= s + 1e-9), "{i}: {o:?}");
+                assert!(area(&o) > 0.05 * 4.0 * l * s && area(&o) <= 4.0 * l * s + 1e-9, "{i}: {}", area(&o));
             }
         }
-        assert_eq!(f.0, RAGGED);
     }
 
+    #[test]
+    fn a_slab_loses_the_corners_it_tears() {
+        let (l, s) = (0.5, 0.2);
+        assert_eq!(area(&slab_outline(l, s, 0.0, &mut stream(0.3))), 4.0 * l * s);
+        for tears in [1.0, 2.0, 3.0, 4.0] {
+            for i in 0..60 {
+                let o = slab_outline(l, s, tears, &mut stream(seed(i)));
+                assert!(area(&o) < 4.0 * l * s, "{tears} {i}");
+                assert!(o.len() > 4 && o.len() <= 4 + tears as usize, "a torn corner is two points: {tears} {i} {}", o.len());
+            }
+        }
+    }
+
+    #[test]
+    fn the_two_halves_of_a_wedge_make_the_whole_rectangle() {
+        for i in 0..60 {
+            let (l, s) = (ln(i), sn(i));
+            let (a, b) = (wedge_outline(l, s, &mut stream(seed(i)), Some(false)), wedge_outline(l, s, &mut stream(seed(i)), Some(true)));
+            assert!((area(&a) + area(&b) - 4.0 * l * s).abs() < 1e-9, "{i}");
+        }
+    }
+
+    #[test]
+    fn a_snapped_piece_is_broken_at_its_far_end_and_a_strip_closes_toward_it() {
+        for i in 0..60 {
+            let (l, s) = (ln(i), sn(i));
+            let o = snapped_outline(l, s, &mut stream(seed(i)));
+            assert!(!(o.contains(&[l, -s]) && o.contains(&[l, s])), "the far end has lost a corner: {o:?}");
+            let o = strip_outline(l, s, &mut stream(seed(i)));
+            let (low, high) = (o[1][1], o[2][1]);
+            assert!(low > -s && high < s && low < high, "both long sides close and do not meet: {o:?}");
+            let most = 2.0 * l * m::tan(8.0 * RAD);
+            assert!(low + s <= most + 1e-9 && s - high <= most + 1e-9, "a splinter, not a wedge: {o:?}");
+        }
+    }
+
+    /// `h` is a thing's half sizes along its axes; a face that is open is where it broke. The rest stands, and feet and the nav grid keep the box.
+    fn ragged_of(mat: Mat, i: usize) -> (V3, Vec<OpenFace>, f64, BreakRowRagged, Vec<crate::scene_cut::CutPlane>) {
+        let face = |axis: f64, sign: f64, lat: &[f64], seed: f64, lo: Option<f64>| OpenFace { axis, sign, lat: lat.to_vec(), seed, lo };
+        let x = i as f64;
+        let h: V3 = [0.1 + x * 0.01, 1.2, 0.5 + x * 0.02];
+        let sd = x * 7349.0 + 131.0;
+        let faces = match i % 4 {
+            0 => vec![face(0.0, 1.0, &[1.0, 2.0], sd, None)],
+            1 => vec![face(0.0, -1.0, &[1.0, 2.0], sd, None), face(2.0, 1.0, &[1.0, 0.0], sd + 17.0, None)],
+            2 => vec![face(0.0, 1.0, &[1.0], sd, Some(-0.3 + x * 0.005))],
+            _ => vec![face(1.0, 1.0, &[2.0, 0.0], sd, None), face(0.0, 1.0, &[1.0, 2.0], sd + 5.0, None), face(2.0, -1.0, &[1.0, 0.0], sd + 9.0, None)],
+        };
+        let rag = break_row(mat).ragged.unwrap();
+        let most = 4.0;
+        let p = ragged_planes(&rag, h, &faces, most, [35.0, 55.0], &crate::debris::hash01);
+        (h, faces, most, rag, p)
+    }
+
+    /// A failure means a wall's broken end is cut deeper than its row says, a thing is cut in two, or one open face takes all the planes and the next gets none.
+    #[test]
+    fn a_ragged_end_bites_no_deeper_than_its_row_and_each_open_face_has_its_share() {
+        for mat in [Mat::Plasterboard, Mat::Wood, Mat::Fabric, Mat::Cardboard] {
+            for i in 0..100 {
+                let (h, faces, most, rag, p) = ragged_of(mat, i);
+                let share = m::max(1.0, m::floor(most / faces.len() as f64)) as usize;
+                assert!(!p.is_empty() && p.len() as f64 <= most && p.len() <= share * faces.len(), "{i}: {}", p.len());
+                for q in &p {
+                    assert!((v3::len(q.n) - 1.0).abs() < 1e-12);
+                    assert!(q.d > 0.0, "{i}: the middle of the thing stands");
+                    // some open face owns it: the plane leaves everything short of the row's bite under that face alone
+                    let owned = faces.iter().any(|f| {
+                        let a = f.axis as usize;
+                        let deep = f.sign * (h[a] - rag.bite);
+                        let reach: f64 = (0..3).filter(|k| *k != a).map(|k| (q.n[k] * h[k]).abs()).sum();
+                        q.n[a] * f.sign > 0.0 && q.n[a] * deep + reach <= q.d + 1e-9
+                    });
+                    assert!(owned, "{i}: {:?} {}", q.n, q.d);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn along_the_grain_a_board_splits_on_its_long_side() {
+        let rag = break_row(Mat::Wood).ragged.unwrap();
+        assert_eq!(rag.grain, Some(true));
+        for lat in [[1.0, 2.0], [2.0, 1.0]] {
+            let f = OpenFace { axis: 0.0, sign: 1.0, lat: lat.to_vec(), seed: 131.0, lo: None };
+            let p = ragged_planes(&rag, [0.1, 0.4, 1.2], &[f], 4.0, [35.0, 55.0], &crate::debris::hash01);
+            assert_eq!(p.len(), 1, "one plane, as a board splits");
+            assert!(p[0].n[2] != 0.0 && p[0].n[1] == 0.0, "{:?}", p[0].n);
+        }
+    }
+
+    /// Which way a wall's pieces go. A failure means a blast throws a wall toward the blast, or a wall hit along its own plane breaks all one way.
+    #[test]
+    fn a_wall_s_normal_is_on_the_side_it_is_pushed_toward() {
+        let near = |a: V3, b: V3| assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-12), "{a:?} {b:?}");
+        let (thin_x, thin_z, c): (V3, V3, V3) = ([0.1, 1.0, 2.0], [2.0, 1.0, 0.1], [0.0, 0.0, 0.0]);
+        near(wall_normal_at(0.0, thin_x, c, [3.0, 0.0, 1.0], 0.0), [1.0, 0.0, 0.0]);
+        near(wall_normal_at(0.0, thin_x, c, [-3.0, 0.0, 1.0], 0.0), [-1.0, 0.0, 0.0]);
+        near(wall_normal_at(0.0, thin_z, c, [0.0, 0.0, -2.0], 0.0), [0.0, 0.0, -1.0]);
+        near(wall_normal_at(m::PI / 2.0, thin_x, c, [0.0, 0.0, -2.0], 0.0), [0.0, 0.0, -1.0]);    // the wall turned a quarter
+        near(wall_normal_at(0.0, thin_x, c, [0.0, 0.0, 0.0], 0.5), [1.0, 0.0, 0.0]);              // pushed nowhere: its own normal
+        let n = 1.0 / m::hyp2(1.3, 0.4);
+        near(wall_normal_at(0.0, thin_x, c, [3.0, 0.0, 4.0], 0.5), [1.3 * n, 0.0, 0.4 * n]);      // half of the push mixed back in
+        // pushed along its own plane: the cells take sides by where they are
+        near(wall_normal_at(0.0, thin_x, [0.25, 0.0, 0.0], [0.0, 0.0, 5.0], 0.0), [1.0, 0.0, 0.0]);
+        near(wall_normal_at(0.0, thin_x, [0.5, 0.0, 0.0], [0.0, 0.0, 5.0], 0.0), [-1.0, 0.0, 0.0]);
+        near(wall_normal_at(0.0, thin_x, [0.5, 0.0, 0.0], [0.02, 0.0, 5.0], 0.0), [1.0, 0.0, 0.0]);    // a little off it is a side
+    }
 }

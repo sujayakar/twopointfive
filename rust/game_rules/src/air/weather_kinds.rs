@@ -143,11 +143,6 @@ pub(super) fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
     })
 }
 
-/// Optical depth of the fog along a → b, before any roof: the module's.
-fn fog_tau(f: crate::weather_kinds::FogSpec, a: V3, b: V3) -> f64 {
-    ::sim::weather::fog_tau(f.sigma, f.h, a, b)
-}
-
 /// A roof's footprint in 32 bits, rounded outward; 0 = none.
 pub(super) fn pack_rect(r: Option<[f64; 4]>) -> f64 {
     let r = match r {
@@ -165,7 +160,7 @@ pub(super) fn unpack_rect(w: f64) -> [f64; 4] {
     [(w & 255) as f64 * ROOF_Q, ((w >> 8) & 255) as f64 * ROOF_Q, ((w >> 16) & 255) as f64 * ROOF_Q, (w >> 24) as f64 * ROOF_Q]
 }
 
-/// The kind a query names, if any. (weatherKinds.ts weatherOfSearch, of words already read)
+/// The kind a query names, if any.
 pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
 #[cfg(test)]
@@ -178,9 +173,8 @@ mod tests {
     fn bits(v: &[f64]) -> Vec<u64> {
         v.iter().map(|x| x.to_bits()).collect()
     }
-    const SEGS: [(V3, V3); 3] = [([1.0, 0.5, 2.0], [30.25, 1.75, -4.0]), ([0.0, 3.0, 0.0], [0.0, 3.001, 0.5]), ([-2.0, -1.0, 4.0], [7.0, 12.0, 9.0])];
 
-    /// The TypeScript's own words and bits, under bun with EXACT on.
+    /// Pinned words and bits.
     #[test]
     fn fog_words_and_depths() {
         let rows: [(WeatherKind, f64, f64, f64, [u64; 7], [u64; 3], u64); 3] = [
@@ -211,10 +205,6 @@ mod tests {
             assert_eq!(fog_glow_word(w, 0.1), down);
             let u = unpack_fog(w).unwrap();
             assert_eq!(bits(&[u.sigma, u.h, u.leak, u.tint[0], u.tint[1], u.tint[2], u.gain]), un);
-            for (i, (a, b)) in SEGS.iter().enumerate() {
-                assert_eq!(fog_tau(f, *a, *b).to_bits(), taus[i]);
-            }
-            assert_eq!(fog_tau(FogSpec { h: 0.0, ..f }, SEGS[0].0, SEGS[0].1).to_bits(), flat);
         }
         assert_eq!(pack_fog(None), 0.0);
         assert!(unpack_fog(0.0).is_none());

@@ -137,7 +137,7 @@ export interface Level {
   civilians?: CivilianDef[];
   /** authored volumes (LevelData volumes[] — the editor's V tool): the level script's onEnter triggers test them (rust/game_rules/src/missions/director); absent = the level authors none */
   volumes?: VolumeDef[];
-  /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
+  /** named marks (`marks[]`: the end of a `scenarios.walked` way, or a script's place) */
   marks?: MarkDef[];
   /** what the playtest SCENARIOS take from this level (lib/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
@@ -160,5 +160,7 @@ export interface Level {
    *  to leave by and the x past which you are outside it. */
   mission: { serverRoom: { x0: number; x1: number; z0: number; z1: number }; entryDoor: string; rack: { index: number; front: Vec3; halfW: number }; exfilDoor: string; exfilX: number; exfilZ: number;
     /** the way OUT through the exit, a unit vector on the floor (dx, dz): past (exfilX, exfilZ) going this way is out. Absent = east, [1, 0] — the office's */
-    exfilOut?: [number, number] };
+    exfilOut?: [number, number];
+    /** what they are called, where the level names them: the room, the thing, what it is in, the way out */
+    names?: { place?: string; thing?: string; holder?: string; out?: string } };
 }

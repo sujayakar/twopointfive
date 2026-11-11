@@ -77,9 +77,8 @@ fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     let at = [11.2, 1.2, 15.2];
     let lit = round(&mut p, at);
     assert!(lit > 0.01, "a lit room's corner has light off its walls ({lit})");
-    let bulb = p.g.targets.clone().into_iter().find(|&t| game::sim_lightshome::fixture_on(&mut p.g, t)).expect("the bulb");
-    let on = game::sim_lightshome::light_in().on;
-    game::sim_lightshome::light_home_in(&mut p.g, on, Some(bulb), Some(0.0), None, None, None);
+    let bulb = p.g.targets.clone().into_iter().find(|&t| p.g.tab.fixture[t].on).expect("the bulb");
+    p.g.tab.fixture[bulb].on = false;
     let mut most = 0;
     for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept()[0]); }
     let left = round(&mut p, at);
@@ -88,7 +87,7 @@ fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     assert!(most as f64 <= (nx * nz / 8.0).ceil(), "a step swept {most} of the level's {} metres", nx * nz);
 }
 /// The light at a point under a roof that comes round: the mean of the six faces.
-fn round(p: &mut Play, at: [f64; 3]) -> f64 { game::scene_collision::window(&mut p.g, &mut |g| game::sense::under_roof(g, at)).expect("a point under a roof").mean }
+fn round(p: &mut Play, at: [f64; 3]) -> f64 { game::sense::under_roof(&p.g, at).expect("a point under a roof").mean }
 fn light(p: &mut Play, at: [f64; 3]) -> f64 { game::guards::light_at(&mut p.g, at, None, None, None).0 }
 fn seen(p: &mut Play, at: [f64; 3]) -> f64 { let e = game::guards::light_estimate_at(&mut p.g, at, None, None, None); game::game::game_visibility_of(&mut p.g, e) }
 fn door(p: &Play, name: &str) -> game::ids::DoorId { game::doors::doors_by_name(&p.g, name).expect("the door") }
@@ -111,7 +110,7 @@ fn by_day_a_room_is_lit_by_what_it_is_open_to() {
     let c = p.g.dr[yard].frame_centre;
     game::doors::doors_kick_in(&mut p.g, yard, [c[0], 0.0, c[2] + 1.0], 0.0, None);
     p.run(20.0);
-    assert!(game::doors::door_angle(&p.g, yard).abs() > 0.8, "the scene: the door to the yard was to stand open");
+    assert!(p.g.dr[yard].leaf.angle.abs() > 0.8, "the scene: the door to the yard was to stand open");
     let open = [light(&mut p, near), light(&mut p, deep), light(&mut p, behind)];
     assert!(open[0] > 0.3, "by the open door at noon {open:?}");
     assert!(open[1] > 0.01 && open[1] < 0.4 * open[0], "the far corner of the room with the open door {open:?}");
@@ -154,8 +153,7 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     let c = p.g.dr[yard].frame_centre;
     game::doors::doors_kick_in(&mut p.g, yard, [c[0], 0.0, c[2] + 1.0], 0.0, None);
     p.run(0.35);   // (the leaf is swinging, and the sweep is half way round)
-    for b in p.g.engine.world.statics.clone() { p.g.tab.boxes[b].albedo = [0.05, 0.05, 0.05]; }   // (and all of it is painted: a lamp breaks, a lot is soaked)
-    game::scene_collision::wrote(&mut p.g);
+    for b in p.g.engine.world.statics.clone() { p.g.tab.boxes.edit(b).albedo = [0.05, 0.05, 0.05]; }   // (and all of it is painted: a lamp breaks, a lot is soaked)
     p.run(0.2);
     let (kept, block) = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
     let field = |p: &Play| -> Vec<u64> { sim::state::state_read(p.g.sim).smoke.st[sim::bricks::O_GLOW_MAX..sim::bricks::O_RHO].iter().map(|v| v.to_bits()).collect() };
@@ -165,7 +163,6 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     sim::state::put(slot, &block);
     p.g = kept.clone();
     game::game::stand_in(&mut p.g, slot);
-    p.g.col.mirror.put_backs = -1.0;
     p.run(4.0);
     let got = field(&p);
     let parts = want.iter().zip(&got).filter(|(a, b)| a != b).count();
@@ -191,7 +188,7 @@ fn smoke_hides_a_lit_man_from_a_guard() {
     can(&mut p, [15.5, 0.2, 13.0], 30.0);
     // (the sentry is held blind while the smoke fills the room between them)
     let post = p.guard("post");
-    for _ in 0..360 { p.g.gd[post].dazzled_until = p.g.time + 0.1; p.frame(); }
+    for _ in 0..360 { p.g.cond[p.g.gd[post].ch].blind_until = p.g.time + 0.1; p.frame(); }
     let eye = { let a = p.at(post); [a[0], 1.65, a[1]] };
     let sam = { let a = p.sam_at(); [a[0], 1.2, a[1]] };
     assert!(through(&mut p, eye, sam) < 0.05, "the scene: six seconds on, {:.3} of the light comes through the smoke", through(&mut p, eye, sam));
@@ -261,8 +258,7 @@ fn a_game_put_back_has_no_smoke_of_the_try_before() {
             sim::state::put(slot, &block);
             p.g = kept.clone();
             game::game::stand_in(&mut p.g, slot);
-            p.g.col.mirror.put_backs = -1.0;
-            p.run(0.3);
+                    p.run(0.3);
             assert!(through(&mut p, a, b) == 1.0, "try {n}: {:.3} of the light comes through a room with nothing let out in it", through(&mut p, a, b));
         }
         can(&mut p, at, 20.0);
@@ -313,7 +309,7 @@ fn asking_the_light_writes_nothing() {
                     let at = p.sam_at();
                     for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
                         let q = [at[0] + d[0], 1.0, at[1] + d[1]];
-                        let owner = [p.g.ch[p.g.pl[p.g.player].ch].id as f64];
+                        let owner = [p.g.player_id(p.g.player) as f64];
                         assert!(game::sense::light_asked(&mut p.g, q, if i % 3 == 0 { &owner } else { &[] }, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).is_finite());
                     }
                 }
@@ -325,52 +321,6 @@ fn asking_the_light_writes_nothing() {
         for (s, (a, b)) in never.iter().zip(always.iter()).enumerate() {
             let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
             assert!(parts.is_empty(), "seed {}: after {} s the asked game differs in parts {:?}", seed, s + 1, parts);
-        }
-    }
-}
-
-/// A FAILURE MEANS: the light asked when the box world's copy does not stand answers something else, or moves the game, or dies. A host reaches this whenever no tick has
-/// run since its copy was put down: a state read in, a page's write by path, a rule called from outside a tick. The copy that question stands is not the game's state, so
-/// the asked game runs on word for word with the one whose copy was stood first. Controls: each way of losing the copy is first seen refused, and a lit and a dark place answer apart.
-#[test]
-fn the_light_is_the_same_when_the_copy_had_to_be_stood() {
-    use game::ask::WorldAsk;
-    let losses: [(&str, fn(&mut game::game::Game)); 2] = [
-        ("put down", |g| game::scene_collision::unstand(g)),
-        ("owing a write", |g| game::scene_collision::wrote(g)),
-    ];
-    for seed in [1u32, 2, 3] {
-        for (how, lose) in losses {
-            // `lost` false: the copy is stood again before the questions, so every one of them finds it standing
-            let run = |lost: bool| -> (Vec<u64>, Vec<Vec<u32>>) {
-                let mut p = Play::level("killhouse.json", true, &Opts { seed, ..Default::default() });
-                p.run(1.0);
-                let (at, owner) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id as f64);
-                let mut answers = Vec::new();
-                for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
-                    lose(&mut p.g);
-                    if lost {
-                        assert!(WorldAsk::try_of(&p.g).is_err(), "seed {seed}, {how}: the staging is wrong, the copy still answers");
-                    } else {
-                        game::scene_collision::stands(&mut p.g);
-                        assert!(WorldAsk::try_of(&p.g).is_ok(), "seed {seed}, {how}: the control's copy stands");
-                    }
-                    let q = [at[0] + d[0], 1.0, at[1] + d[1]];
-                    let owners: &[f64] = if i % 3 == 0 { &[owner] } else { &[] };
-                    answers.push(game::sense::light_asked(&mut p.g, q, owners, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).to_bits());
-                    assert!(WorldAsk::try_of(&p.g).is_ok(), "seed {seed}, {how}: the question left no copy for the next");
-                }
-                let mut after = Vec::new();
-                for _ in 0..2 { p.run(1.0); after.push(p.words()); }
-                (answers, after)
-            };
-            let (control, lost) = (run(false), run(true));
-            assert!(control.0.iter().any(|v| *v != control.0[0]), "seed {seed}, {how}: every place answers alike: the question holds nothing");
-            assert_eq!(control.0, lost.0, "seed {seed}, {how}: the answers (their bits) differ");
-            for (s, (a, b)) in control.1.iter().zip(lost.1.iter()).enumerate() {
-                let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
-                assert!(parts.is_empty(), "seed {seed}, {how}: {} s on, the asked game differs in parts {:?}", s + 1, parts);
-            }
         }
     }
 }

@@ -48,10 +48,23 @@ pub struct CameraRt {
     pub index: f64,
     #[is(FixtureId(0))] pub target: FixtureId,
     #[is(LightId(0))] pub cone: LightId,
-    pub slot: f64,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub st: crate::Opaque,
+    /// its lens's yaw at rest, the two it pans between, and how long a sweep is
+    pub rest: f64,
+    pub sweep: Option<[f64; 2]>,
+    pub period: f64,
+    pub pitch: f64,
+    /// where in its sweep it is, and the lens's yaw this frame
+    pub phase: f64,
+    pub yaw: f64,
+    /// the integrator: lit-seconds of him in the picture
+    pub seen: f64,
+    /// the picture has him this frame, and where it last had him
+    pub saw: bool,
+    pub last_seen: Option<V3>,
+    pub state: crate::fixtures::CameraState,
+    #[is(-100.0)] pub reported_at: f64,
+    /// a dead one has been called in, once per death
+    pub dead: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -60,10 +73,13 @@ pub struct LaserRt {
     #[is(FixtureId(0))] pub target: FixtureId,
     pub dir: V3,
     pub len: f64,
-    pub slot: f64,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub st: crate::Opaque,
+    /// how far the beam is drawn this frame
+    pub cut: f64,
+    #[is(-100.0)] pub last_trip_at: f64,
+    pub trips: u32,
+    /// something is breaking it right now
+    pub held: bool,
+    pub dead: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -73,19 +89,12 @@ pub struct KeypadRt {
     pub n: V3,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DeviceLogRow {
-}
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Devices {
     pub cameras: Vec<CameraRtId>,
     pub lasers: Vec<LaserRtId>,
     pub keypads: Vec<crate::devices::KeypadRt>,
     pub pad_by_door: JsMap<DoorId, crate::devices::KeypadRt>,
-    pub log: Vec<crate::devices::DeviceLogRow>,
-    pub seq: f64,
-    pub radio_count: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -102,10 +111,6 @@ pub struct CONE {
 pub struct ERRAND {
     pub awareness: f64,
     pub react_t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DevicesNoteR {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

@@ -12,6 +12,7 @@ check(GPU_LOST.on === true, 'the switch ships on');
 check(lostAct('destroyed', false, null, now, true, on) === 'quiet', "a device the browser calls 'destroyed' (the page's own end) says nothing");
 check(lostAct('unknown', true, null, now, true, on) === 'quiet', 'a loss while the page is leaving says nothing, whatever the reason');
 check(lostAct(undefined, true, null, now, true, on) === 'quiet', '… and with no reason given');
+check(lostAct('unknown', false, null, now, true, on, 0, true) === 'quiet', 'a loss behind a red card that is up (the game would not start, with the device asked for already): the card stands and nothing loads again');
 check(lostAct('unknown', false, null, now, true, on) === 'reload', 'a real loss with no retry behind it loads the page again');
 check(lostAct(undefined, false, null, now, true, on) === 'reload', '… and so does one the browser gives no reason for');
 check(lostAct('unknown', false, now - 5_000, now, true, on) === 'card', 'a second loss five seconds after a retry is the card');

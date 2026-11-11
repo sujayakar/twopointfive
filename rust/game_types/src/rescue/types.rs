@@ -5,10 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Rescue {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
-    pub hostiles: Vec<GuardId>,
-    pub hostages: Vec<GuardId>,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
     pub entry: Option<crate::rescue::Entry>,
     pub staged: f64,
@@ -16,7 +12,6 @@ pub struct Rescue {
     pub resolve: f64,
     #[is(35.0)] pub resolve_secs: f64,
     #[is(f64::NAN)] pub t0: f64,
-    pub door_orders: f64,
     pub blind_rounds: f64,
     pub result: Option<crate::rescue::RescueResult>,
     pub defs: JsMap<GuardId, crate::rescue::Def>,
@@ -47,7 +42,7 @@ pub struct Rescue {
     pub server_out: Option<V3>,
     pub ending: crate::rescueend::RescueEnd,
     pub flush: crate::rescueflush::RescueFlush,
-    /// INVENTED by a review: see the proposals
+    /// dealt with each new `noise`: a defender holds the one he last answered (`noise0`)
     pub noise_serial: Option<u32>,
 }
 
@@ -68,7 +63,7 @@ pub struct EntryOpsItem {
     pub side: bool,
     pub seen: f64,
     pub kicked: bool,
-    pub ended: Option<String>,
+    pub ended: Option<crate::doortools::Ended>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -82,13 +77,6 @@ pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
     pub why: String,
-    pub hostages: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum RescueResultState {
-    #[default] Lost,
-    Rescued,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -125,7 +113,6 @@ pub enum Role {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefMark {
-    pub pos: V3,
     pub aim_at: V3,
 }
 
@@ -162,17 +149,7 @@ pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
     pub face: Option<f64>,
     pub watch: Option<V3>,
-    pub there: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueState {
-    Lost,
-    Off,
-    Rescued,
-    Staged,
-    Secured,
-    Running,
+    pub there: crate::orders::Doing,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -200,12 +177,6 @@ pub struct RescuePick {
     pub side: Vec<GuardId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueEndState {
-    Lost,
-    Rescued,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RescueObjective {
     pub text: String,
@@ -218,10 +189,14 @@ pub struct RescueMod {
     #[is({ let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 
-pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
-
 pub const SEARCH_RATE: f64 = 1.3;
 
 pub const SEARCH_HALF: f64 = 1.75;
 
 pub const CREW_SEEN: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum RescueResultState {
+    #[default] Lost,
+    Rescued,
+}

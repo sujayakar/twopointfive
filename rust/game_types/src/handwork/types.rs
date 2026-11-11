@@ -59,43 +59,10 @@ pub struct TeamWorkHandH {
     pub w: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TeamWorkHandKind {
-    Take,
-    Lever,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LeverStand {
     pub yaw: f64,
     pub speed: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapFeedHeld {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapHeldHeld {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapHeld {
-    Torch,
-    Weapon,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct HandworkStats {
-    pub work: i32,
-    pub radio: i32,
-    pub swaps: i32,
-    pub levers: i32,
 }
 
 pub const WORK_TURN: f64 = 10.0;

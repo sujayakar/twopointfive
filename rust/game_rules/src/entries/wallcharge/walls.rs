@@ -6,9 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A box's row (Box.* in the TypeScript).
-fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box { &g.tab.boxes[b] }
-
 /// How near a point passes a line on the floor, a to b.
 pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
     let dx = b[0] - a[0];
@@ -19,13 +16,13 @@ pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
 }
 
 /// The wall's thickness.
-pub(super) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
-    let h = seam_box(g, w.box_).h;
+pub(crate) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
+    let h = g.tab.boxes[w.box_].h;
     2.0 * (if w.along_x { h[2] } else { h[0] })
 }
 
 /// Where the charge sits: on the near face, at the charge's height.
-pub(super) fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
+pub(super) fn charge_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
     let height = g.k.wallcharge.height;
     wall_pt(g, w, 0.0, FACE, Some(height))
 }
@@ -33,7 +30,7 @@ pub(super) fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSp
 /// A point by the wall: `du` along it from the charge, `off` out from the charge's face (the far face is at −thick), at height y.
 pub fn wall_pt(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
-    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (c, h) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     wall_pt_of(c, h, w, du, off, y)
 }
 
@@ -49,7 +46,7 @@ pub(super) fn wall_n(w: &crate::wallcharge::WallSpot) -> V3 {
 
 /// Metres out from the charge's face (negative: in the wall, or past it).
 pub(super) fn wall_off(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
-    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (c, h) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     wall_off_of(c, h, w, p)
 }
 
@@ -69,7 +66,7 @@ pub(super) fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::
 }
 
 /// Is the wall charge live in this game right now: the walls' switch, chaos above 0.
-pub(super) fn wall_charge_on(g: &crate::game::Game) -> bool {
+pub(crate) fn wall_charge_on(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
@@ -78,7 +75,6 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
     if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) {
         return n;
     }
-    let world = crate::ask::WorldAsk::of(g);
     let (c, h) = { let x = &g.tab.boxes[g.col.boxes[index as usize]]; (x.c, x.h) };
     let along_x = h[0] >= h[2];
     let hu = if along_x { h[0] } else { h[2] };
@@ -91,7 +87,7 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
             for &t in &sky_along {
                 let d = sg * (ht + off);
                 let p: V3 = if along_x { [c[0] + t * hu, 1.5, c[2] + d] } else { [c[0] + d, 1.5, c[2] + t * hu] };
-                if !world.line(p, [p[0], SKY_TOP, p[2]], crate::ask::Line::Solid) {
+                if !crate::scene_collision::solid_blocked(g, p, [p[0], SKY_TOP, p[2]], None) {
                     sky += 1;
                 }
             }
@@ -105,7 +101,6 @@ fn sky_faces_of(g: &Game, index: f64) -> f64 {
 
 /// Is structure static `index` an outer wall a charge cuts: not steel, thin enough, long enough, adoptable, the sky over one face or both.
 pub fn outer_wall(g: &mut crate::game::Game, index: f64) -> bool {
-    crate::scene_collision::stands(g);
     let mut asked = Vec::new();
     let r = outer_wall_of(g, index, &mut asked);
     sky_kept(g, asked);
@@ -137,13 +132,12 @@ fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
 
 /// Is the charge's own side indoors: a roof over the floor at its foot, by nine upward rays off the charge's face.
 fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let world = crate::ask::WorldAsk::of(g);
     let sky_off = sky_off();
     let mut roof = 0;
     for &off in &sky_off {
         for du in [-1.0, 0.0, 1.0] {
             let p = wall_pt(g, w, du, off, Some(1.5));
-            if world.line(p, [p[0], SKY_TOP, p[2]], crate::ask::Line::Solid) {
+            if crate::scene_collision::solid_blocked(g, p, [p[0], SKY_TOP, p[2]], None) {
                 roof += 1;
             }
         }
@@ -152,17 +146,11 @@ fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> 
 }
 
 /// The safety radius at a place: how far the squad stands off, and how far the blast reaches on its own side.
-pub(super) fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
+pub(super) fn safe_radius(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     let indoors = charge_indoors_of(g, w);
     let i = if indoors { 1 } else { 0 };
     crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i] }
 }
-/// …for a rule that holds the game: the copy of the boxes stood first
-pub(super) fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
-    crate::scene_collision::stands(g);
-    safe_radius_of(g, w)
-}
-
 /// The room a hole in `w` at `du` opens into (0: none): the first room a point beyond the far face stands in, a pace to either hand.
 pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, t: f64) -> f64 {
     let mut d = 0.45;
@@ -181,14 +169,13 @@ pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::Wall
 
 /// The wall at a point: the full-height unrotated wall whose footprint the point is on, a partition or structure with the word for what it is.
 pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<crate::wallcharge::WallSpot> {
-    let from = from.unwrap_or_else(|| g.ch[g.pl[g.player].ch].pos);
-    crate::scene_collision::stands(g);
+    let from = from.unwrap_or_else(|| g.player_pos(g.player));
     let mut asked = Vec::new();
     let r = wall_at_of(g, at, from, &mut asked);
     sky_kept(g, asked);
     r
 }
-/// …asked of the game shared, the copy of the boxes standing
+/// …asked of the game shared
 fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option<crate::wallcharge::WallSpot> {
     let n = m::min(g.destr.walls.authored, g.col.boxes.len() as f64) as usize;
     let f = crate::scene_boxes::box_flag();
@@ -199,14 +186,12 @@ fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option
         let index = i as f64;
         let b = g.col.boxes[i];
         let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
-        let dx = m::max_n(&[c[0] - h[0] - at[0], 0.0, at[0] - c[0] - h[0]]);
-        if dx > bd {
+        let off = |k: usize| [c[k] - h[k] - at[k], at[k] - c[k] - h[k]];
+        let (x, z) = (off(0), off(2));
+        if x[0] > bd || x[1] > bd || z[0] > bd || z[1] > bd {
             continue;
         }
-        let dz = m::max_n(&[c[2] - h[2] - at[2], 0.0, at[2] - c[2] - h[2]]);
-        if dz > bd {
-            continue;
-        }
+        let (dx, dz) = (m::max_n(&[x[0], 0.0, x[1]]), m::max_n(&[z[0], 0.0, z[1]]));
         let bb = crate::wallbreak::wall_break_breakable_at(g, index);
         let passed = match &bb {
             Some(x) => x.kind != crate::wallbreak::BKind::Wall,
@@ -285,43 +270,34 @@ pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, 
     if !wall_charge_on(g) {
         return base.clone();
     }
-    match wall_at_of(g, at, g.ch[g.pl[seat.player].ch].pos, asked) {
+    match wall_at_of(g, at, g.seat_pos(seat), asked) {
         Some(w) => crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor { wall: Some(w), ..floor.clone() }),
         None => base.clone(),
     }
 }
 
-/// The rows of a wall's menu: the floor's, 'wall tools ▸' on the fifth digit, and the wall tools' own page. The floor's own fifth row comes after it: a digit is the first row's that has it.
+/// The rows on a wall: the floor's, and the wall's own.
 pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
     let crate::orders::OrderTarget::Floor(floor) = t else { return rows.to_vec() };
     if floor.wall.is_none() || !wall_charge_on(g) || !seat.wall_charge.seated {
         return rows.to_vec();
     }
-    let direct = g.k.wallcharge.menu == crate::knobs::WallchargeKMenu::Direct;
     let (row, opener) = (seat.wall_charge.row, seat.wall_charge.opener);
     let Some(page) = page else {
-        let (fifth, mut out): (Vec<_>, Vec<_>) = rows.iter().copied().partition(|&d| g.tab.orders_order_def[d].key == Some(5.0));
-        out.push(if direct { row } else { opener });
-        out.extend(fifth);
+        let mut out = rows.to_vec();
+        out.push(opener);
         return out;
     };
-    if page == WALL_PAGE && !direct { vec![row] } else { rows.to_vec() }
+    if page == WALL_PAGE { vec![row] } else { rows.to_vec() }
 }
 
-/// Sam's own row at the foot of a partition his cursor is on.
-pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    wall_charge_sam_rows(g, p, busy, row, offer);
-}
-
-/// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.
+/// The module and its two rows.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
-    wc.knobs = g.k.wallcharge.clone();
     wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         opens: Some(String::from(WALL_PAGE)),
-        key: Some(5.0),
         ..crate::orders::OrderDef::default()
     }));
     wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {
@@ -341,19 +317,13 @@ mod tests {
         crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::default() }
     }
 
-    /// bits from the TypeScript's own line under bun with EXACT.on
+    /// A mate on the line of fire from a blown wall. A failure means a man past the end of the line counts as on it.
     #[test]
-    fn near_seg_has_the_typescripts_bits() {
-        let rows: [(V3, V3, V3, u64); 5] = [
-            ([1.3, 0.0, 2.7], [0.1, 0.0, 0.2], [5.9, 0.0, -3.3], 0x40062f4726276cc9),
-            ([-7.25, 1.0, 3.125], [0.1, 0.0, 0.2], [0.1, 0.0, 0.2], 0x401fa47d26daf9af),
-            ([9.1, 0.0, 9.2], [0.0, 0.0, 0.0], [1.1, 0.0, 0.7], 0x40275861532b8544),
-            ([-4.4, 0.0, 0.3], [-3.3, 0.0, 1.7], [2.2, 0.0, -6.6], 0x3ffb0b672582b9e9),
-            ([0.2, 0.0, 0.4], [0.0, 0.0, 0.0], [0.4, 0.0, 0.8], 0x0000000000000000),
-        ];
-        for (q, a, b, bits) in rows {
-            assert_eq!(near_seg(q, a, b).to_bits(), bits);
-        }
+    fn a_point_is_off_a_line_only_as_far_as_the_line_goes() {
+        let (a, b): (V3, V3) = ([0.0, 0.0, 0.0], [4.0, 0.0, 0.0]);
+        assert_eq!(near_seg([2.0, 1.0, 0.5], a, b), 0.5);
+        assert_eq!(near_seg([7.0, 0.0, 4.0], a, b), 5.0);
+        assert_eq!(near_seg([3.0, 0.0, 4.0], a, a), 5.0);
     }
 
     #[test]

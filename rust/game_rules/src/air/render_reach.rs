@@ -17,7 +17,7 @@ pub fn build_interior_cells(g: &crate::game::Game, statics: &[BoxId]) -> Vec<u8>
         let x1 = m::min(w - 1.0, m::floor(bc[0] + bh[0] - world.min[0] - 1e-6));
         let z0 = m::max(0.0, m::floor(bc[2] - bh[2] - world.min[2]));
         let z1 = m::min(h - 1.0, m::floor(bc[2] + bh[2] - world.min[2] - 1e-6));
-        // doubles as in the TypeScript: a NaN bound runs no cell, a slab wholly off the grid neither
+        // doubles: a NaN bound runs no cell, a slab wholly off the grid neither
         let mut z = z0;
         while z <= z1 {
             let mut x = x0;

@@ -1,8 +1,9 @@
-//! HOLD: is this build the same game as that one? Natively, with no page, no TypeScript and no wire (README.md, "Hold").
+//! HOLD: is this build the same game as that one? Natively, with no page and no wire (README.md, "Hold").
 //!
 //!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…     play, and keep what the game was after every frame
 //!   hold check DIR [--but PART,…]                                                 play the same again on this build, and compare
 //!   hold draw DIR [as keep]                                                       play, DRAW every frame, and say what it cost and whether it changed anything
+//!   hold steps DIR [--write] [as keep]                                            play, and say what each step of the tick cost and which parts of the game it wrote (`--write`: into steps.txt)
 //!
 //! `keep` stands each level by the Rust start (`:clear` starts a room clear on it; a mission's id of the game's list stands that mission), plays it for N seconds (90) under each HAND and each
 //! seed (1), and writes for every frame the state's words (game::state_words: every part of the game that a host does not hand in)
@@ -19,7 +20,7 @@
 //!   order ID WHERE all|red|blue         the menu's own call: an order's id ("move", "stack", "fallIn") on what stands at WHERE
 //!   fire WHERE                          Sam's rifle comes up, the cursor goes to WHERE, one round
 //!   frag WHERE | flash WHERE            a live can lands at WHERE
-//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `door` (the door nearest that
+//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `ahead` (four metres on toward him from the squad's first man), `door` (the door nearest that
 //! man: the way to him; with nobody left, the door nearest Sam), `opendoor` (the same of the doors that stand open), `sam`, or `X,Z`.
 //! A line that cannot be done (nobody is left, the menu refuses the order) is counted and the run goes on; a line that was NEVER done on
 //! a floor is named in that run's line with the game's own reason, so a hand is not trusted there for what it only names.
@@ -39,9 +40,10 @@
 use game_start::hand::{act, hands_dir, others, read_hand};
 use game_start::parts;
 use game_start::play::{Opts, Play};
+use game_start::steps::{self, Steps};
 use std::io::{Read, Write};
 
-/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, whose defenders are in no squad, and four quiet nights)
+/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, and four quiet nights)
 const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
     "hostage-rescue", "rescue-consulate", "rescue-registry", "night-breach", "bazaar-quiet", "lights-out-two", "quiet-crossing-two", "police-post-quiet"];
@@ -52,8 +54,10 @@ impl Run {
     fn tag(&self) -> String { format!("{}{}.{}.{}", self.level, if self.clear { "-clear" } else { "" }, self.hand, self.seed) }
     fn line(&self) -> String { format!("{} {} {} {} {}", self.level, if self.clear { "clear" } else { "plain" }, self.hand, self.seed, self.secs) }
     /// stood: a mission of the game's list by its id, on its own link as a click on its row stands it; or a level by its name, its room clear with it if it says so
-    fn stand(&self) -> Play {
-        let o = Opts { seed: self.seed, ..Default::default() };
+    fn stand(&self) -> Play { self.stand_as(false) }
+    /// …with the dressing rows up, as a page stands a game
+    fn stand_as(&self, dress: bool) -> Play {
+        let o = Opts { seed: self.seed, dress, ..Default::default() };
         if let Some(e) = game::scene_scenario_list::all_missions().iter().find(|e| e.id == self.level) {
             return Play::mission(e.level.as_deref().unwrap_or("office.json"), &game::scene_scenario_list::pick_search(e, ""), &o);
         }
@@ -100,7 +104,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
             let us = t.elapsed().as_secs_f64() * 1e6;
             cost[i].0 += us;
             cost[i].1 = cost[i].1.max(us);
-            let focus = p.g.aim_point;
+            let focus = p.g.sets[p.g.seat].aim_point;
             let t = std::time::Instant::now();
             d[i].frame(&p.g, 0.5, focus);
             d[i].frame(&p.g, 1.0, focus);
@@ -193,9 +197,24 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     Ok(format!("{} frames · {} of the hand's lines done, {} could not be{never} · {} others standing of {} men · {} lines said · {}{note}", frames, done, undone, up, p.g.guards.len(), p.said.len(), game::control::control_tally(&p.g)))
 }
 
+/// ONE RUN BY ITS STEPS, in this process: for each step of the tick its microseconds a frame, its worst, and the parts it was seen to write (asked every eighth frame: it is slow to ask)
+fn stepped(dir: &str, r: &Run) -> Result<String, String> {
+    let frames = (r.secs * 60.0).round() as usize;
+    let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
+    let mut p = r.stand_as(true);
+    p.g.god_mode = hand.unhurt;
+    let mut steps = Steps::new();
+    let mut next = 0;
+    for k in 0..frames {
+        while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
+        steps.frame(&mut p, k % 8 == 0);
+    }
+    Ok(steps.steps.iter().map(|s| format!("step\t{}\t{:.2}\t{:.0}\t{}.", s.name, steps.mean(s), s.worst, steps.wrote(s).map(|p| format!("{p} ")).collect::<String>())).collect::<Vec<_>>().join("\n"))
+}
+
 fn main() {
     let a: Vec<String> = std::env::args().collect();
-    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…\nhold check DIR [--but PART,…]\nhold draw DIR [as keep]"); std::process::exit(64) };
+    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…\nhold check DIR [--but PART,…]\nhold draw DIR [as keep]\nhold steps DIR [--write] [as keep]"); std::process::exit(64) };
     let (Some(verb), Some(dir)) = (a.get(1).map(|s| s.as_str()), a.get(2)) else { usage() };
     // (a child of this tool: one run, in a process of its own)
     if verb == "one" {
@@ -203,12 +222,13 @@ fn main() {
         let but: Vec<String> = a.get(5).map(|s| s.split(',').filter(|x| !x.is_empty()).map(String::from).collect()).unwrap_or_default();
         let dir = dir.clone();
         // (the start's frames are deep: a thread with room)
-        let draw = a[3] == "draw";
-        let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || if draw { drawn(&dir, &r) } else { one(&dir, &r, check, &but) }).unwrap();
+        let verb = a[3].clone();
+        let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || match verb.as_str() { "draw" => drawn(&dir, &r), "steps" => stepped(&dir, &r), _ => one(&dir, &r, check, &but) }).unwrap();
         match h.join() { Ok(Ok(line)) => { println!("{}", line); return; } Ok(Err(why)) => { println!("{}", why); std::process::exit(1); } Err(_) => std::process::exit(2) }
     }
     // (`check`'s own words: the parts left out of the comparison on purpose)
     let mut but: Vec<String> = Vec::new();
+    let mut write = false;
     if verb == "check" {
         let mut i = 3;
         while i < a.len() {
@@ -218,7 +238,7 @@ fn main() {
         }
     }
     let runs: Vec<Run> = match verb {
-        "keep" | "draw" => {
+        "keep" | "draw" | "steps" => {
             let (mut hands, mut seeds, mut levels, mut secs) = (Vec::new(), Vec::new(), Vec::new(), 90.0);
             let mut i = 3;
             while i < a.len() {
@@ -226,6 +246,7 @@ fn main() {
                     "--hand" => { hands.push(a.get(i + 1).cloned().unwrap_or_else(|| usage())); i += 1; }
                     "--seed" => { seeds.push(a.get(i + 1).and_then(|s| s.parse::<u32>().ok()).unwrap_or_else(|| usage())); i += 1; }
                     "--secs" => { secs = a.get(i + 1).and_then(|s| s.parse::<f64>().ok()).unwrap_or_else(|| usage()); i += 1; }
+                    "--write" if verb == "steps" => write = true,
                     l if !l.starts_with("--") => levels.push(l.to_string()),
                     _ => usage(),
                 }
@@ -239,7 +260,7 @@ fn main() {
             if seeds.is_empty() { seeds.push(1); }
             if levels.is_empty() { levels = DEFAULT_LEVELS.iter().map(|s| s.to_string()).collect(); }
             std::fs::create_dir_all(dir).unwrap();
-            if verb == "draw" && std::path::Path::new(&format!("{}/runs.txt", dir)).exists() { eprintln!("{} holds kept runs: draw into a folder of its own", dir); std::process::exit(64); }
+            if verb != "keep" && std::path::Path::new(&format!("{}/runs.txt", dir)).exists() { eprintln!("{} holds kept runs: draw into a folder of its own", dir); std::process::exit(64); }
             // a hand is copied into DIR under its name, so that `check` plays the hand that was kept whatever the file says by then
             let mut names = Vec::new();
             for h in &hands {
@@ -266,6 +287,7 @@ fn main() {
     let jobs = std::thread::available_parallelism().map_or(4, |n| n.get()).min(4);
     let (mut bad, mut i) = (0, 0);
     let mut good: Vec<usize> = Vec::new();
+    let mut table: Vec<(String, f64, f64, Vec<String>)> = Vec::new();
     while i < runs.len() {
         let batch: Vec<(usize, std::process::Child)> = (i..runs.len().min(i + jobs)).map(|k| (k, std::process::Command::new(&me).arg("one").arg(dir).arg(verb).arg(runs[k].line()).arg(but.join(",")).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped()).spawn().unwrap())).collect();
         for (k, c) in batch {
@@ -276,13 +298,27 @@ fn main() {
                 Some(1) => { bad += 1; said }
                 _ => { bad += 1; format!("STOPPED: {}", String::from_utf8_lossy(&o.stderr).lines().filter(|l| !l.trim().is_empty()).take(3).collect::<Vec<_>>().join(" | ")) }
             };
+            let (rows, line) = line.split_once("step\t").map_or((String::new(), line.clone()), |_| (line.clone(), String::from("stepped")));
+            for row in rows.lines() {
+                let w: Vec<&str> = row.split('\t').collect();
+                let i = match table.iter().position(|s| s.0 == w[1]) { Some(i) => i, None => { table.push((w[1].into(), 0.0, 0.0, Vec::new())); table.len() - 1 } };
+                let s = &mut table[i];
+                s.1 += w[2].parse::<f64>().unwrap();
+                s.2 = s.2.max(w[3].parse().unwrap());
+                for part in w[4].split_whitespace().filter(|x| *x != ".") { if !s.3.iter().any(|x| x == part) { s.3.push(part.into()); } }
+            }
             println!("{:<34} {}", runs[k].tag(), line);
         }
         i += jobs;
     }
     // (a run that could not be played is not in the list `check` plays: a level that does not stand as asked is said once, here)
     if verb == "keep" { std::fs::write(format!("{}/runs.txt", dir), good.iter().map(|&k| runs[k].line() + "\n").collect::<String>()).unwrap(); }
-    let what = if verb == "draw" { String::from("drawn, and none of them another game for it") } else if verb != "check" { String::from("kept") } else if but.is_empty() { String::from("the same after every frame") } else { format!("the same after every frame in every part but {}", but.join(", ")) };
+    if write { steps::write_file(&table.iter().map(|(n, _, _, p)| (n.clone(), { let mut p = p.clone(); p.sort(); p })).collect::<Vec<_>>()); }
+    for (name, us, worst, parts) in &mut table {
+        parts.sort();
+        println!("{:<20} {:>8.1} us a frame, {:>6.0} at worst · {}", name, *us / good.len().max(1) as f64, worst, parts.join(" "));
+    }
+    let what = if verb == "steps" { String::from("stepped") } else if verb == "draw" { String::from("drawn, and none of them another game for it") } else if verb != "check" { String::from("kept") } else if but.is_empty() { String::from("the same after every frame") } else { format!("the same after every frame in every part but {}", but.join(", ")) };
     println!("hold {}: {} of {} runs {}", verb, runs.len() - bad, runs.len(), what);
     std::process::exit(if bad > 0 { 1 } else { 0 });
 }

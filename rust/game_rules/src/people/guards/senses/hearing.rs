@@ -42,7 +42,7 @@ pub fn hearing_check(g: &mut Game, gd: GuardId, ear: Option<f64>, eyes: Option<b
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
     let dull = keen * ear;
     let c = g.gd[gd].ch;
-    // By live index: a line said or a rule called on the way may file an event, and it is walked as the TypeScript's for … of walks it.
+    // By live index: a line said or a rule called on the way may file an event, and that one is walked too.
     let mut next = 0;
     while next < g.events.len() {
         let at_e = next;
@@ -95,13 +95,13 @@ fn light_out(g: &mut Game, gd: GuardId, s: &Sound) {
     let &Sound { e, at_e, d_straight, placed, .. } = s;
     let c = g.gd[gd].ch;
     if d_straight < 10.0 && g.gd[gd].awareness < 0.4 && light_out_seen(g, gd, LightOutSeenE { pos: e.pos, from: e.from }) {
-        if e.cause == Some(crate::game::GameEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
+        if e.cause == Some(crate::lighting::LightEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
             let src: V3 = match e.from {
                 Some(f) => f,
                 None => [e.pos[0], 2.4, e.pos[2]],
             };
             let pos = g.ch[c].pos;
-            let eye = crate::guards::seeing::bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+            let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
             let to = v3::sub(src, eye);
             let l = v3::len(to);
             let short_of: V3 = if l > 0.6 { v3::mad(eye, to, (l - 0.4) / l) } else { src };
@@ -313,7 +313,7 @@ fn was_calm(g: &Game, gd: GuardId) -> bool {
     st == crate::game::GuardState::Patrol || st == crate::game::GuardState::Suspicious
 }
 
-/// hearingCheck's `small`: what reached him and counted goes in his memory, and attention.ts is told which small thing it was.
+/// What reached him and counted goes in his memory, and the attention rule is told which small thing it was.
 fn small(g: &mut Game, gd: GuardId, cur: &crate::game::GameEvent, where_: V3) {
     let now = g.time;
     let h = &mut g.gd[gd].witness.heard;

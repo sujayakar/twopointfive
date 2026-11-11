@@ -108,6 +108,7 @@ sections! {
     panes: boxes::Row4 = boxes.glass.cells;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
+    coming: lights::Coming = lights.coming;
     men: men::Man = men.men;
     insts: men::Inst = men.insts;
     bones: men::Bones = men.bones;
@@ -139,7 +140,6 @@ sections! {
     door_boxes: boxes::Leaf = winds.leaves;
     open_panes: boxes::Word = winds.open;
     resets: resets::Reset = resets;
-    traffic: boxes::Word = traffic.words;
     dust: dust::DustLook = dust;
     feet: snow::Foot = snow.feet;
     things: snow::Thing = snow.things;
@@ -165,7 +165,6 @@ pub struct Drawn {
     pub doorways: Vec<doorways::Doorway>,
     pub events: events::Events,
     pub marks: marks::Marks,
-    pub traffic: traffic::Traffic,
     pub dust: Vec<dust::DustLook>,
     pub rims: Vec<rims::Rim>,
     tick: Option<u32>,
@@ -186,7 +185,7 @@ pub struct Drawn {
     pub lead: lead::Lead,
     /// the picture is a tube's, whatever the run's was
     tube: Option<bool>,
-    watched: Vec<watched::Watched>,
+    watched: Vec<game::rig_props::CarriedBox>,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
@@ -209,7 +208,7 @@ impl Drawn {
         if want & want::men != 0 { self.men.take(g, over || again && self.had & want::men != 0); }
         if want & want::rims != 0 { rims::fill(g, &mut self.rims); }
         if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
-        if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); self.traffic.take(g); }
+        if want & want::level_look != 0 { self.dust.clear(); dust::fill(g, &mut self.dust); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table, self.men.bared); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         if want & want::snow != 0 { self.snow.take(g); }
@@ -255,12 +254,12 @@ impl Drawn {
 pub fn tick(g: &Game) -> u32 { game::m::round(g.time * 60.0) as u32 }
 /// where the picture looks: the host's camera, or its man where it has none
 pub fn looks_at(g: &Game) -> [f64; 3] {
-    match g.host_cam { Some(c) => g.tab.camera[c].target, None => g.ch[g.pl[game::seats::host_man(g)].ch].pos }
+    match g.host_cam { Some(c) => g.tab.camera[c].target, None => g.player_pos(game::seats::host_man(g)) }
 }
 /// what the picture leaves out of a fire's embers and hot air: anything further from where it looks than it would ever show
 pub fn far_for_a_fire(g: &Game, p: [f64; 3]) -> bool {
     let f = looks_at(g);
-    !(game::m::hyp2(p[0] - f[0], p[2] - f[2]) < g.k.fire.ember_r)
+    !(game::v3::dist_xz(p, f) < g.k.fire.ember_r)
 }
 
 /// the short way round from one angle to another

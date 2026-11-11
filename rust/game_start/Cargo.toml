@@ -1,6 +1,6 @@
-# THE GAME'S OWN START, IN RUST: a level file's text and the character's files in, a `Game` the tick can run out, with nothing made by TypeScript
+# THE GAME'S OWN START, IN RUST: a level file's text and the character's files in, a `Game` the tick can run out
 # (README.md). The scene builder for tests is its front: a scene of a few lines is written as a level file and stood by the same start.
-# Its own workspace, like game, game_run and game_face; it builds into rust/game_start/target (ignored).
+# Its own workspace, like game and game_face; it builds into rust/game_start/target (ignored).
 [workspace]
 
 [package]

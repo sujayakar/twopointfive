@@ -34,7 +34,7 @@ pub struct Hold {
     pub ears: f64,
     pub noises: f64,
     pub yaw: Option<f64>,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
+    /// dealt when a hold starts
     pub serial: u32,
 }
 
@@ -95,13 +95,8 @@ pub struct AttentionMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct AttentionStats {
-    pub taken: i32,
-    pub looks: i32,
-    pub lent: i32,
     pub released: i32,
     pub broken: i32,
-    pub spent: i32,
-    pub worn: i32,
 }
 
 pub const STALE: f64 = 0.25;

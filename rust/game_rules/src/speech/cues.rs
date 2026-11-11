@@ -4,6 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
+use crate::roomfight::{Did, News, Word};
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
@@ -28,34 +29,29 @@ static CLASSES: &[(&[Pat], f64)] = &[
     (&[Pat::In("lock the doors"), Pat::In("on the doors"), Pat::In("back on our doors"), Pat::In("stay on your doors"), Pat::In("digging in"), Pat::In("getting ready"), Pat::In("ready for them"), Pat::In("room ready"), Pat::In("staying on my door"), Pat::In("holding my room"), Pat::In("staying on my post"), Pat::In("holding my post"), Pat::In("let them come"), Pat::In("not coming out"), Pat::In("holding my corner"), Pat::In("holding here"), Pat::In("i've got this door"), Pat::In("on my own")], 3.0),
 ];
 
-/// A kind's row of LINES (WORDS.on and WORDS.guide are settled on: `guide`, else `now`, else `say`).
+/// A kind's lines and how they rank on the net.
 struct Line {
     kind: CueKind,
     cls: f64,
     say: &'static [&'static str],
-    now: Option<&'static [&'static str]>,
-    guide: Option<&'static [&'static str]>,
 }
-/// The new lines, in the written order.
+/// The lines, in the written order.
 static LINES: &[Line] = &[
-    Line { kind: CueKind::Help, cls: 1.0, say: &["moving to the fight — {the}", "they're hit {at} — moving to them"], now: None, guide: None },
-    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
-    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"], now: None, guide: None },
-    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"], now: None, guide: None },
-    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"], now: None, guide: None },
-    Line { kind: CueKind::StayOurs, cls: 3.0, say: &["they're hit {at} — staying on my door", "shots {at} — staying on my door"], now: Some(&["they're hit {at} — staying on my post", "that was {at} — staying on my post"]), guide: None },
-    Line { kind: CueKind::Stay, cls: 3.0, say: &["shots {at} — holding my room", "heard that, {the} — holding my room"], now: Some(&["that was {at} — holding my post", "heard that, {the} — holding my post"]), guide: None },
-    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"], now: None, guide: None },
-    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. Wait for my word!"], now: Some(&["{sq}: hold — let them come in. wait for my word!"]), guide: Some(&["{sq}: hold — let them come in. wait for my call!"]) },
-    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. Wait for my word!"], now: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my word!"]), guide: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my call!"]) },
-    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"], now: None, guide: None },
-    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"], now: None, guide: None },
-    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"], now: None, guide: None },
-    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on this door"], now: Some(&["they're still out there — holding {the}", "still out there — staying on my post"]), guide: None },
-    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"], now: None, guide: None },
-    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"], now: None, guide: None },
+    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"] },
+    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"] },
+    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"] },
+    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"] },
+    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"] },
+    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"] },
+    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"] },
+    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. wait for my call!"] },
+    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. wait for my call!"] },
+    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"] },
+    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"] },
+    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"] },
+    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on my post"] },
+    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"] },
+    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"] },
 ];
 fn line_of(k: CueKind) -> &'static Line {
     LINES.iter().find(|l| l.kind == k).unwrap()
@@ -68,17 +64,12 @@ fn gap_of(k: CueKind) -> f64 {
         CueKind::HuntOver => 4.0,
         CueKind::Calm => 4.0,
         CueKind::Still => 6.0,
-        CueKind::Stay => 3.0,
-        CueKind::StayOurs => 3.0,
         _ => 0.0,
     }
 }
 
 // ---------------------------------------------------------------- the file's regular expressions, by hand
 
-fn word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
 /// the prefix test of a case-blind pattern (bytes: JavaScript's /i folds no non-ASCII letter onto an ASCII one, and the only non-ASCII in a pattern is the dash)
 fn has_head_blind(hay: &[u8], needle: &[u8]) -> bool {
     hay.len() >= needle.len() && hay[..needle.len()].eq_ignore_ascii_case(needle)
@@ -90,7 +81,7 @@ fn pat_hits(p: &Pat, text: &[u8]) -> bool {
     match p {
         Pat::In(s) => has_blind(text, s.as_bytes()),
         Pat::Head(s) => has_head_blind(text, s.as_bytes()),
-        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(word_byte),
+        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(js::is_word),
     }
 }
 /// `/^[A-Z][a-z]{1,11}: /`: a row under a squad's name, not a man's callsign.
@@ -109,10 +100,10 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
     while i < b.len() {
         if b[i] == b'{' {
             let mut j = i + 1;
-            while j < b.len() && word_byte(b[j]) { j += 1; }
+            while j < b.len() && js::is_word(b[j]) { j += 1; }
             if j > i + 1 && j < b.len() && b[j] == b'}' {
                 out.push_str(&line[from..i]);
-                if let Some(v) = vars.and_then(|m| m.get(String::from(&line[i + 1..j]))) { out.push_str(v); }
+                if let Some(v) = vars.and_then(|m| m.of(&line[i + 1..j])) { out.push_str(v); }
                 i = j + 1;
                 from = i;
                 continue;
@@ -122,34 +113,6 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
     }
     out.push_str(&line[from..]);
     out
-}
-/// `\s` as the language has it
-fn js_space(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
-}
-#[derive(Clone, Copy, PartialEq)]
-enum SquadSaid { Hears, Stays, Quiet }
-/// The squad's name, what it did, and whose call it heard, of
-/// `/^\[squads\] (\S+) (hears of them \((\S+?)'s call\)|hears of them|stays on its doors|quiet:)/`.
-fn squads_note(what: &str) -> Option<(&str, SquadSaid, Option<&str>)> {
-    let rest = what.strip_prefix("[squads] ")?;
-    let end = rest.find(js_space)?;
-    if end == 0 { return None; }
-    let (name, rest) = rest.split_at(end);
-    let rest = rest.strip_prefix(' ')?;   // (\S+ cannot give a character back and still meet a space)
-    if let Some(call) = rest.strip_prefix("hears of them (") {
-        // \S+?: the shortest run of at least one non-space that the words follow
-        let mut chars = call.char_indices();
-        while let Some((_, c)) = chars.next() {
-            if js_space(c) { break; }
-            let at = chars.as_str();
-            if at.starts_with("'s call)") { return Some((name, SquadSaid::Hears, Some(&call[..call.len() - at.len()]))); }
-        }
-    }
-    if rest.starts_with("hears of them") { return Some((name, SquadSaid::Hears, None)); }
-    if rest.starts_with("stays on its doors") { return Some((name, SquadSaid::Stays, None)); }
-    if rest.starts_with("quiet:") { return Some((name, SquadSaid::Quiet, None)); }
-    None
 }
 /// A read of the sparse `classT` / `squadT`: past the end or a hole is None.
 fn sparse_get(v: &[Option<f64>], i: usize) -> Option<f64> {
@@ -162,13 +125,10 @@ fn sparse_set(v: &mut Vec<Option<f64>>, i: usize, x: f64) {
 /// `kindT[kind]`, the place of a kind's clock.
 fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -185,13 +145,10 @@ fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
 /// `kinds[kind]`, the place of a kind's tally.
 fn kinds_of(v: &mut CuesKinds, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -212,13 +169,10 @@ fn tail_from(len: usize, n: f64) -> usize {
 }
 fn file_kind(k: CueKind) -> CuesFileKind {
     match k {
-        CueKind::Stay => CuesFileKind::Stay,
         CueKind::Calm => CuesFileKind::Calm,
         CueKind::Cover => CuesFileKind::Cover,
         CueKind::Flinch => CuesFileKind::Flinch,
         CueKind::Still => CuesFileKind::Still,
-        CueKind::Help => CuesFileKind::Help,
-        CueKind::StayOurs => CuesFileKind::StayOurs,
         CueKind::HuntOver => CuesFileKind::HuntOver,
         CueKind::FellBack => CuesFileKind::FellBack,
         CueKind::Planted => CuesFileKind::Planted,
@@ -245,9 +199,9 @@ pub fn cue_class(text: &str) -> f64 {
 }
 
 /// A kind's lines as they are said now.
-fn said(g: &mut crate::game::Game, k: crate::cues::CueKind) -> Vec<String> {
+fn said(k: crate::cues::CueKind) -> Vec<String> {
     let l = line_of(k);
-    l.guide.or(l.now).unwrap_or(l.say).iter().map(|s| String::from(*s)).collect()
+    l.say.iter().map(|s| String::from(*s)).collect()
 }
 
 /// A line is shouted when its writer put an exclamation mark in it.
@@ -255,42 +209,18 @@ fn is_shout(text: &str) -> bool {
     text.contains('!')
 }
 
-/// Every new line's words, for the QA probe.
-fn cue_lines(g: &mut crate::game::Game) -> Vec<crate::cues::CueLinesItem> {
-    let mut out = Vec::new();
-    for l in LINES {
-        for text in said(g, l.kind) { out.push(CueLinesItem { kind: l.kind, cls: l.cls, text }); }
-    }
-    out
-}
-
 /// The tallies as a new encounter has them.
 fn new_stats() -> crate::cues::CuesStats {
     CuesStats {
-        heard: 0.0,
-        heard_drawn: 0.0,
-        shouts: 0.0,
-        shouts_drawn: 0.0,
         cues: 0.0,
-        cue_net: 0.0,
-        cue_drawn: 0.0,
         dup: 0.0,
         gap: 0.0,
         full: 0.0,
-        bumped: 0.0,
-        bumped_young: 0.0,
-        filed: vec![0.0; 7],
-        drawn: vec![0.0; 7],
     }
 }
 
-/// The distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// A new Cues: the field initialisers, nothing more.
-pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
+pub fn cues_new() -> crate::cues::Cues {
     Cues::blank()
 }
 
@@ -302,7 +232,6 @@ pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.rows.clear();
     g.cues.bubbles = JsMap::new();
     g.cues.men = JsMap::new();
-    g.cues.last_note = None;
     g.cues.said.clear();
     g.cues.class_t.clear();
     g.cues.squad_t.clear();
@@ -320,19 +249,17 @@ fn prune_rows(g: &mut Game) {
 }
 
 /// `done` of `file`: tally, log, answer.
-fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFileKind, drawn: bool, why: &str) -> bool {
-    if drawn { g.cues.stats.drawn[cls as usize] += 1.0; }
+fn file_done(g: &mut Game, drawn: bool, why: &str) -> bool {
     g.cues.log.push(CuesLogItem { why: String::from(why) });
     if g.cues.log.len() > 400 { g.cues.log.drain(0..100); }
     drawn
 }
 
-/// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.
+/// One row for the strip, or not; `raw` is always drawn. `class_t`, the gate's clock, is read by the last stand through `cues_net_wait`.
 fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
     let t = g.time;
-    prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
+    prune_rows(g);
     let c = cls as usize;
-    g.cues.stats.filed[c] += 1.0;
     // (the same words from another man are the same news)
     let words: &str = if kind == CuesFileKind::Raw || who.is_empty() { text } else {
         match text.strip_prefix(who).and_then(|r| r.strip_prefix(": ")) { Some(r) => r, None => text }
@@ -341,15 +268,15 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     let rank = cls * 2.0 + (if squad { 0.0 } else { 1.0 });
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t >= at && t - at < secs);
     if cls > 0.0 {
-        if within(g.cues.said.get(String::from(words)).copied(), g.k.cues.dup_secs) {
+        if within(g.cues.said.of(words).copied(), g.k.cues.dup_secs) {
             g.cues.stats.dup += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "dup");
+            return file_done(g, false, "dup");
         }
         let gap = g.k.cues.gaps.get(c).copied().unwrap_or(0.0);   // (a squad's word waits only on another squad's; with the strip nearly empty nobody waits)
         let clock = if squad { sparse_get(&g.cues.squad_t, c) } else { sparse_get(&g.cues.class_t, c) };
         if g.cues.rows.len() as f64 >= g.k.cues.rows - 1.0 && within(clock, gap) {
             g.cues.stats.gap += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "gap");
+            return file_done(g, false, "gap");
         }
     }
     if g.cues.rows.len() as f64 >= g.k.cues.rows {   // the strip is full: whose place does it take?
@@ -374,11 +301,9 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
         }
         if no_room {
             g.cues.stats.full += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "full");
+            return file_done(g, false, "full");
         }
-        if t - g.cues.rows[v].t < 1.5 { g.cues.stats.bumped_young += 1.0; }
         g.cues.rows.remove(v);
-        g.cues.stats.bumped += 1.0;
     }
     if cls > 0.0 { g.cues.squelch_due = true; }   // (a row that arrives is heard arriving: tick, once a frame)
     g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank });
@@ -394,7 +319,7 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
         }
         g.cues.said.pack();
     }
-    file_done(g, t, text, cls, who, kind, true, "")
+    file_done(g, true, "")
 }
 
 /// A row in the first class with no man's name on it: control, the handler, the staff's net.
@@ -409,10 +334,9 @@ fn net_row(callsign: &str, text: &str) -> String {
 
 /// A unit's line went out on his side's net: the strip gets it.
 pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
-    if g.gd[gd].team != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
-    g.cues.stats.heard += 1.0;
+    if g.team(gd) != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
     let callsign = g.gd[gd].callsign.clone();
-    if cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard);
 }
 
 /// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).
@@ -420,9 +344,8 @@ pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
     if !crate::roomfight::fight_live(g) { return; }
-    g.cues.stats.heard += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    if cues_file(g, &net_row(&callsign, text), cls, &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, text), cls, &callsign, CuesFileKind::Heard);
 }
 
 /// A teammate calls what the fog hides: a bubble, and a row in the first class. Whether the strip drew it.
@@ -434,33 +357,32 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 }
 
 /// Every ear of the team's a shout could reach.
-fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
+fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !g.pl[pl].down { out.push(at(g.ch[g.pl[pl].ch].pos)); }
+        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.player_pos(pl))); }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         let c = g.gd[o].ch;
-        if g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
+        if g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
     }
     out
 }
 
 /// `done` of `overheard`.
-fn heard_done(g: &Game, t: f64, text: &str, why: &str) -> bool {
+fn heard_done(why: &str) -> bool {
     why.is_empty()
 }
 
 /// A hidden defender's shout that an ear of the team's really gets: a row of its own, his words alone. Whether the strip drew it.
 pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     let t = g.time;
-    if !is_shout(text) || g.gd[gd].state == crate::game::GuardState::Dead { return false; }
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
+    if !is_shout(text) || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.team(gd).theirs() || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if let Some(s) = g.cues.shout_t {
         if t < s {   // (the clock went back: a checkpoint loaded)
             g.cues.shout_t = None;
@@ -468,28 +390,26 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
             g.cues.heard_said.clear();
         }
     }
-    g.cues.stats.shouts += 1.0;
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t - at < secs);
-    if within(g.cues.heard_said.get(String::from(text)).copied(), g.k.cues.dup_secs) { return heard_done(g, t, text, "dup"); }
-    if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done(g, t, text, "gap"); }
+    if within(g.cues.heard_said.of(text).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
+    if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
-    if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done(g, t, text, "full"); }
-    let p = g.ch[g.gd[gd].ch].pos;
+    if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }
+    let p = g.pos_of(gd);
     let mouth: V3 = [p[0], p[1] + 1.2, p[2]];
     let reach = g.k.digin.shout_m;
     let mut reached = false;
     for ear in cues_ears(g) {
-        if flat(mouth, ear) > reach { continue; }
+        if v3::dist_xz(mouth, ear) > reach { continue; }
         let h = crate::weather::hear_path(g, mouth, ear, Some(false));
         if h.path_len < reach * h.carry { reached = true; break; }
     }
-    if !reached { return heard_done(g, t, text, "far"); }
+    if !reached { return heard_done("far"); }
     if g.cues.heard_said.len() > 64 { g.cues.heard_said.clear(); }
     g.cues.heard_row = Some(CuesHeardRow { t, text: String::from(text) });
     g.cues.heard_said.set(String::from(text), t);
     g.cues.shout_t = Some(t);
-    g.cues.stats.shouts_drawn += 1.0;
-    heard_done(g, t, text, "")
+    heard_done("")
 }
 
 /// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).
@@ -533,7 +453,7 @@ fn bubble_tone(g: &crate::game::Game, gd: GuardId) -> crate::view::BubbleTone {
     }
     match m.state {
         S::Alert => T::Alert,
-        S::Suspicious | S::Search if m.team != crate::teams::Team::Operative => T::Sus,
+        S::Suspicious | S::Search if !g.ch[m.ch].team.ours() => T::Sus,
         _ => T::Calm,
     }
 }
@@ -549,7 +469,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     for &gd in g.guards.iter().chain(g.civilians.iter()) {
         let Some(b) = cues_bubble_of(g, gd) else { continue; };
         let m = &g.gd[gd];
-        if !up(b.t, b.dur) || m.state == crate::game::GuardState::Dead { continue; }
+        if !up(b.t, b.dur) || g.cond[m.ch].down { continue; }
         if m.civ.map_or(false, |c| g.cv[c].state == crate::civilians::CivState::Gone) { continue; }
         let hidden = crate::fogofwar::fog_of_war_hidden(g, gd);
         let place = if !crate::orders::squad_orders_mine(g, seat, gd) {
@@ -563,7 +483,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         out.push(BubbleView { man: None, text: r.text.clone(), edge: r.text.clone(), age: t - r.t, dur: r.dur, radio: false, tone: BubbleTone::Alert, place: BubblePlace::OverOrEdge, at: r.at });
     }
     let me = &g.pl[seat.player];
-    if let Some(b) = me.bubble.as_ref().filter(|b| !me.down && up(b.t, b.dur)) {
+    if let Some(b) = me.bubble.as_ref().filter(|b| !g.cond[me.ch].down && up(b.t, b.dur)) {
         let c = &g.ch[me.ch];
         out.push(BubbleView { man: Some(c.id), text: b.text.clone(), edge: b.text.clone(), age: t - b.t, dur: b.dur, radio: b.radio, tone: BubbleTone::Own, place: BubblePlace::Over, at: c.pos });
     }
@@ -589,7 +509,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 /// His row of `men`, made the first time he is asked after: the row itself.
 fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
-        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
+        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), covered: false };
         g.cues.men.set(gd, row);
     }
     g.cues.men.get_mut(gd).unwrap()
@@ -599,17 +519,17 @@ fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cue
 fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, vars: Option<&JsMap<String, String>>) -> bool {
     let t = g.time;
     let said_t = cues_man(g, gd).said_t;
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || t < g.gd[gd].dazzled_until || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || crate::condition::is_blind(g, g.gd[gd].ch) || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
     let own = g.gd[gd].bubble.as_ref().is_some_and(|b| t >= b.t && t - b.t < 1.5);   // he has just said something of his own: that was his word on it,
-    if own && !matches!(kind, CueKind::Help | CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
+    if own && !matches!(kind, CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
     if cues_kind_busy(g, kind) { return false; }   // (the floor has just heard this from somebody)
     *kind_t_of(&mut g.cues.kind_t, kind) = Some(t);
     let cls = line_of(kind).cls;
-    let say = said(g, kind);
+    let say = said(kind);
     let n = g.cues.n;
     g.cues.n += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    let pick = js::rem(crate::math_dice::hash_str(&callsign) + n, say.len() as f64) as usize;
+    let pick = js::rem(crate::dice::hash_str(&callsign) + n, say.len() as f64) as usize;
     let text = fill(&say[pick], vars);
     cues_man(g, gd).said_t = t;
     g.cues.stats.cues += 1.0;
@@ -617,8 +537,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     *tally = Some(tally.unwrap_or(0.0) + 1.0);
     if !own { g.cues.bubbles.set(gd, Bubble { text: text.clone(), t, dur: crate::guards::bubble_secs(&text), radio: cls > 0.0 }); }
     if cls == 0.0 { return true; }
-    g.cues.stats.cue_net += 1.0;
-    if cues_file(g, &net_row(&callsign, &text), cls, &callsign, file_kind(kind)) { g.cues.stats.cue_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, &text), cls, &callsign, file_kind(kind));
     true
 }
 
@@ -633,43 +552,35 @@ fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool
 
 /// Can he speak for his squad?
 fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
-    let t = g.time;
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && t >= g.gd[gd].dazzled_until && t >= g.gd[gd].stagger_until && !crate::runner::runner_mute(g, gd)
+    !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::condition::is_blind(g, g.gd[gd].ch) && !crate::condition::is_folded(g, g.gd[gd].ch) && !crate::runner::runner_mute(g, gd)
 }
 
-/// Who says a squad's word: the man the note names, else one holding, else the first fit.
-fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
-    let mut men = Vec::new();
-    for m in crate::enemysquads::squad_men(g, name) {
-        if cues_fit(g, m) { men.push(m); }
-    }
-    if men.is_empty() { return None; }
-    if let Some(&m) = men.iter().find(|&&m| g.gd[m].callsign == by) { return Some(m); }
+/// The men of a squad who can speak for it.
+fn cues_voices(g: &crate::game::Game, squad: EnemysquadsSquadId) -> Vec<GuardId> {
+    g.tab.enemysquads_squad[squad].men.iter().copied().filter(|&m| cues_fit(g, m)).collect()
+}
+/// Who says a squad's word: the man the news names, else one holding, else the first fit.
+fn cues_squad_voice(g: &crate::game::Game, squad: EnemysquadsSquadId, by: Option<GuardId>) -> Option<GuardId> {
+    let men = cues_voices(g, squad);
+    if let Some(m) = by.filter(|m| men.contains(m)) { return Some(m); }
     let holding = men.iter().copied().find(|&m| g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == m && crate::roomfight::at_post(g, d)));
-    Some(holding.unwrap_or(men[0]))
+    holding.or(men.first().copied())
 }
 
 // ---------------------------------------------------------------- once a frame, after everybody has moved
 
-/// Read the fight's notes and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
-pub fn cues_tick(g: &mut crate::game::Game) {
+/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `cues_file`, so it moves the clock the last stand waits on.
+pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     let t = g.time;
     if !g.fight.live { return; }
     if t < g.cues.last_t { cues_reset(g); }
     g.cues.last_t = t;
-    // 1 · what the fight's modules noted this frame
-    // (lastNote is a kept copy, found again by its three fields, last match first; not found = from the start, as after the log is emptied)
-    let mut i = match &g.cues.last_note {
-        Some(n) => g.fight.log.iter().rposition(|x| x.t == n.t && x.who == n.who && x.what == n.what).map_or(0, |at| at + 1),
-        None => 0,
-    };
-    while i < g.fight.log.len() {
-        g.cues.last_note = Some(g.fight.log[i].clone());
-        if t - g.fight.log[i].t <= 0.5 {
-            let (who, what) = (g.fight.log[i].who.clone(), g.fight.log[i].what.clone());
-            cues_note(g, &who, &what);
+    // 1 · what the fight's men and squads did this tick
+    for &n in news {
+        match n {
+            News::Man(gd, did) => cues_man_did(g, gd, did),
+            News::Squad(squad, by, word) => cues_squad_word(g, squad, by, word),
         }
-        i += 1;
     }
     // 2 · each defender as he now stands
     let mut di = 0;
@@ -685,51 +596,32 @@ pub fn cues_tick(g: &mut crate::game::Game) {
         let sight = t - g.gd[gd].last_seen_t;
         let still = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]) < 0.3;
         let hold = crate::roomfight::at_post(g, d);
-        let on_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
+        let on_player = crate::teams::foe_is_player(g, gd);
         let faced_down = |g: &Game| -> Option<PlayerId> {
             let f = crate::seats::faced_man(g, gd);
-            if g.pl[f].down { Some(f) } else { None }
+            if crate::condition::down(g, g.pl[f].ch) { Some(f) } else { None }
         };
         if state == crate::game::GuardState::Patrol && cues_man(g, gd).state != crate::game::GuardState::Patrol && hold && t - cues_man(g, gd).stood_t > 15.0 {
             if cues_cue(g, gd, CueKind::Calm, None) { cues_man(g, gd).stood_t = t; }
         } else if on_player && faced_down(g).is_some() && state == crate::game::GuardState::Alert && !cues_man(g, gd).covered && still && {
             let f = crate::seats::faced_man(g, gd);
-            flat(g.ch[c].pos, g.ch[g.pl[f].ch].pos) < 3.5
+            v3::dist_xz(g.ch[c].pos, g.player_pos(f)) < 3.5
         } {
             let f = crate::seats::faced_man(g, gd);
-            let p = g.ch[g.pl[f].ch].pos;
+            let p = g.player_pos(f);
             let at = cues_at(g, p);
             // (said, or a man beside him has just said it for both)
             if cues_cue(g, gd, CueKind::Cover, Some(&at_vars(&at))) || cues_kind_busy(g, CueKind::Cover) { cues_man(g, gd).covered = true; }
         } else if state == crate::game::GuardState::Alert && hold && still && sight > g.k.cues.still_secs && t - cues_man(g, gd).alert_t > g.k.cues.still_secs
             && t - g.gd[gd].witness.heard.last_shot_t > g.k.cues.still_quiet && t - cues_man(g, gd).again_t > g.k.cues.again_secs
-            && !(on_player && faced_down(g).is_some()) && !crate::rescue::rescue_crew_hides(g, gd)
+            && !(on_player && faced_down(g).is_some()) && !crate::mission::lies_in_wait(g, gd)
         {
             let p = g.ch[c].pos;
             let at = cues_at(g, p);
             if cues_cue(g, gd, CueKind::Still, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
         }
-        // a loud thing outside his room, and he has not gone: the dice said stay (rallyAt drawn again), or nobody of his side is posted where it came from
-        let (noise_at, noise_out, noise_t, d_rally) = { let row = &g.tab.roomfight_def[d]; (row.noise_at, row.noise_out, row.noise_t, row.rally_at) };
-        if noise_at.is_some() && noise_out && noise_t > cues_man(g, gd).noise_t && cues_man(g, gd).ep < 0.0 && hold { cues_man(g, gd).ep = noise_t; }
-        if cues_man(g, gd).ep >= 0.0 {
-            let m_rally = cues_man(g, gd).rally_at;
-            let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
-            if !hold || t - noise_t > 6.0 {
-                cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
-                && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
-            {
-                let at = cues_at(g, noise_at.unwrap());
-                if cues_cue(g, gd, if drawn_again { CueKind::StayOurs } else { CueKind::Stay }, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
-                cues_man(g, gd).ep = -1.0;
-            }
-        }
-        // (read again: pressKeepsHome above can have written the def's rallyAt to NaN)
-        let (now, rally_now) = (g.gd[gd].state, g.tab.roomfight_def[d].rally_at);
+        let now = g.gd[gd].state;
         let M = cues_man(g, gd);
-        M.noise_t = noise_t;
-        M.rally_at = rally_now;
         M.state = now;
     }
     if g.cues.squelch_due {
@@ -739,97 +631,71 @@ pub fn cues_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// `{sq}` and, where a squad heard another's call, `{ally}`.
-fn squad_vars(sq: &str, ally: Option<&str>) -> JsMap<String, String> {
-    let mut v = JsMap::new();
-    v.set(String::from("sq"), String::from(sq));
-    if let Some(a) = ally { v.set(String::from("ally"), String::from(a)); }
-    v
-}
-
-/// One note of the fight's log, in the words of the man it is about.
-fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
-    let d = if who == "-" { None } else {
-        g.fight.defs.iter().copied().find(|&d| { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].callsign == who && g.gd[gd].state != crate::game::GuardState::Dead })
+/// A squad's word, in the words of a man of it. `{sq}` is its name and `{ally}` whose call it heard.
+fn cues_squad_word(g: &mut crate::game::Game, squad: EnemysquadsSquadId, by: Option<GuardId>, word: Word) {
+    let Some(v) = cues_squad_voice(g, squad, by) else { return };
+    let name = |q: EnemysquadsSquadId| g.tab.enemysquads_squad[q].name.clone();
+    let mut vars = JsMap::new();
+    vars.set(String::from("sq"), name(squad));
+    let mut voices = vec![v];
+    let kind = match word {
+        Word::Hears { ally, waits } => {
+            if let Some(a) = ally { vars.set(String::from("ally"), name(a)); }
+            // (a drilled garrison holding on purpose is the tell that its word comes late: if its voice has just spoken, the next man of the squad says it)
+            if waits { voices.extend(cues_voices(g, squad).into_iter().filter(|&m| m != v)); }
+            match (ally.is_some(), waits) {
+                (false, false) => CueKind::SquadHears,
+                (true, false) => CueKind::SquadCopies,
+                (false, true) => CueKind::SquadWaits,
+                (true, true) => CueKind::SquadCopiesWaits,
+            }
+        }
+        Word::Stays => CueKind::SquadStays,
+        Word::Quiet => CueKind::SquadQuiet,
     };
-    if let Some((name, said_word, ally)) = squads_note(what) {
-        let Some(v) = cues_squad_voice(g, name, who) else { return; };
-        if said_word == SquadSaid::Hears {
-            let vars = squad_vars(name, Some(ally.unwrap_or("")));
-            if !what.contains("), holds:") {
-                cues_cue(g, v, if ally.is_some() { CueKind::SquadCopies } else { CueKind::SquadHears }, Some(&vars));
-            } else {
-                // (a drilled garrison holding on purpose is the tell that its word comes late: if its voice has just spoken, the next man of the squad says it)
-                let mut voices = vec![v];
-                for x in crate::enemysquads::squad_men(g, name) {
-                    if x != v && cues_fit(g, x) { voices.push(x); }
-                }
-                for m in voices {
-                    if cues_cue(g, m, if ally.is_some() { CueKind::SquadCopiesWaits } else { CueKind::SquadWaits }, Some(&vars)) { break; }
-                }
-            }
-        } else {
-            cues_cue(g, v, if said_word == SquadSaid::Stays { CueKind::SquadStays } else { CueKind::SquadQuiet }, Some(&squad_vars(name, None)));
-        }
-        return;
-    }
-    let Some(d) = d else { return; };
-    let gd = g.tab.roomfight_def[d].gd;
-    cues_man(g, gd);
-    let c = g.gd[gd].ch;
-    if what.starts_with("goes to the fight next door") {
-        let p = g.tab.roomfight_def[d].noise_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
-        let at = cues_at(g, p);
-        cues_cue(g, gd, CueKind::Help, Some(&at_vars(&at)));
-    } else if what.starts_with("holds where he ended up") {
-        if g.time - cues_man(g, gd).stood_t > 15.0 {
-            let p = g.ch[c].pos;
-            let at = cues_at(g, p);
-            if cues_cue(g, gd, CueKind::HuntOver, Some(&at_vars(&at))) { cues_man(g, gd).stood_t = g.time; }
-        }
-    } else if what.starts_with("falls back through") || what.starts_with("falls back to his squad") {
-        cues_man(g, gd).moved = Some(ManMoved::Fallback);
-        let station = g.tab.roomfight_def[d].station;
-        let from = crate::dialogue::place_name(g, station);
-        cues_man(g, gd).from = from.clone();
-        cues_man(g, gd).said_t = -100.0;
-        let mut vars = JsMap::new();
-        vars.set(String::from("the"), from);
-        cues_cue(g, gd, CueKind::FellBack, Some(&vars));
-    } else if what.starts_with("takes cover") {
-        cues_man(g, gd).moved = Some(ManMoved::Cover);
-    } else if what.starts_with("plants (") {
-        if cues_man(g, gd).moved == Some(ManMoved::Fallback) && !what.starts_with("plants (contact)") {
-            let p = g.ch[c].pos;
-            let h = cues_at(g, p);
-            let floor = g.time - g.k.cues.man_secs;
-            let row = cues_man(g, gd);
-            row.said_t = m::min(row.said_t, floor);
-            let kind = if h.the == row.from { CueKind::PinnedIn } else { CueKind::Planted };
-            cues_cue(g, gd, kind, Some(&at_vars(&h)));
-        }
-        cues_man(g, gd).moved = None;
-    } else if what.starts_with("surprised ") {
-        cues_cue(g, gd, CueKind::Surprised, None);
-    } else if what.starts_with("flinches:") {
-        cues_cue(g, gd, CueKind::Flinch, None);
-    } else if what.contains("stays to keep his room") {
-        let noise_at = g.tab.roomfight_def[d].noise_at;
-        if g.time - cues_man(g, gd).again_t > g.k.cues.again_secs {
-            if let Some(p) = noise_at {
-                let at = cues_at(g, p);
-                if cues_cue(g, gd, CueKind::StayOurs, Some(&at_vars(&at))) { cues_man(g, gd).again_t = g.time; }
-            }
-        }
+    for m in voices {
+        if cues_cue(g, m, kind, Some(&vars)) { break; }
     }
 }
 
-/// The panel's line.
-fn cues_summary(g: &crate::game::Game) -> String {
-    let S = &g.cues.stats;
-    let (drawn, of) = (S.heard_drawn + S.cue_drawn, S.heard + S.cue_net);
-    let held = if js::truthy(S.dup + S.gap + S.full) { alloc::format!(" · held back: {} said already, {} too soon, {} outranked", js::num_str(S.dup), js::num_str(S.gap), js::num_str(S.full)) } else { String::new() };
-    alloc::format!("{} of {} net lines drawn · {} new lines{}", js::num_str(drawn), js::num_str(of), js::num_str(S.cues), held)
+/// What a defender has done, in his own words.
+fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
+    let Some(d) = crate::roomfight::def_of(g, gd) else { return };
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
+    cues_man(g, gd);
+    let p = g.pos_of(gd);
+    match did {
+        Did::HoldsWhereHeIs => {
+            if g.time - cues_man(g, gd).stood_t > 15.0 {
+                let at = cues_at(g, p);
+                if cues_cue(g, gd, CueKind::HuntOver, Some(&at_vars(&at))) { cues_man(g, gd).stood_t = g.time; }
+            }
+        }
+        Did::FallsBack => {
+            cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Fallback);
+            let station = g.tab.roomfight_def[d].station;
+            let from = crate::dialogue::place_name(g, station);
+            cues_man(g, gd).from = from.clone();
+            cues_man(g, gd).said_t = -100.0;
+            let mut vars = JsMap::new();
+            vars.set(String::from("the"), from);
+            cues_cue(g, gd, CueKind::FellBack, Some(&vars));
+        }
+        Did::TakesCover => cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Cover),
+        Did::Plants { fighting } => {
+            if cues_man(g, gd).moved == Some(crate::roomfight::DefMoveKind::Fallback) && !fighting {
+                let h = cues_at(g, p);
+                let floor = g.time - g.k.cues.man_secs;
+                let row = cues_man(g, gd);
+                row.said_t = m::min(row.said_t, floor);
+                let kind = if h.the == row.from { CueKind::PinnedIn } else { CueKind::Planted };
+                cues_cue(g, gd, kind, Some(&at_vars(&h)));
+            }
+            cues_man(g, gd).moved = None;
+        }
+        Did::Surprised => { cues_cue(g, gd, CueKind::Surprised, None); }
+        Did::Flinches => { cues_cue(g, gd, CueKind::Flinch, None); }
+    }
 }
 
 /// THE RADIO STRIP, oldest first: the rows alive on the net, and at most one shout that reached an ear, only in a place no other row wants.
@@ -852,303 +718,179 @@ pub fn radio_rows(g: &crate::game::Game) -> Vec<crate::view::RadioRow> {
 mod tests {
     use super::*;
 
+    /// A line filed at time t by the man it is under.
+    fn heard(g: &mut Game, t: f64, who: &str, words: &str, cls: f64) -> (bool, String) {
+        g.time = t;
+        let drawn = cues_file(g, &alloc::format!("{}: {}", who, words), cls, who, CuesFileKind::Heard);
+        (drawn, g.cues.log.last().unwrap().why.clone())
+    }
+    fn rows(g: &Game) -> Vec<&str> { g.cues.rows.iter().map(|r| r.text.as_str()).collect() }
+
+    /// A FAILURE MEANS: a squad's word is filed as a man's, or a man's callsign reads as a squad: the row is written twice over or waits on the wrong clock.
     #[test]
-    fn squad_word_is_the_regexp() {
-        for (s, want) in [("Bravo: copy", true), ("Ab: x", true), ("A: x", false), ("Tango 4: x", false), ("bravo: x", false), ("Abcdefghijkl: x", true), ("Abcdefghijklm: x", false), ("Bravo:x", false), ("Bravo: ", true), ("Bravo:", false), ("", false)] {
-            assert_eq!(squad_word(s), want, "{}", s);
-        }
+    fn a_row_under_one_capitalised_word_is_a_squads_and_a_callsign_is_not() {
+        for s in ["Bravo: copy", "Ab: x", "Abcdefghijkl: x"] { assert!(squad_word(s), "{}", s); }
+        for s in ["Tango 4: x", "bravo: x", "Bravo:x", "A: x", "Abcdefghijklm: x", "moving to the fight"] { assert!(!squad_word(s), "{}", s); }
+        assert_eq!(net_row("Tango 4", "Bravo: copy"), "Bravo: copy");
+        assert_eq!(net_row("Tango 4", "on my way"), "Tango 4: on my way");
     }
 
+    /// A FAILURE MEANS: a player reads "{at}" on the strip.
     #[test]
-    fn fill_replaces_words_only() {
+    fn a_cue_fills_its_places_and_a_place_nobody_named_says_nothing() {
         let mut v = JsMap::new();
         v.set(String::from("at"), String::from("in the mess"));
-        assert_eq!(fill("shots {at} — {nope}{ x} {} {at", Some(&v)), "shots in the mess — { x} {} {at");
+        assert_eq!(fill("shots {at} — holding{nope}", Some(&v)), "shots in the mess — holding");
         assert_eq!(fill("the door—!", None), "the door—!");
     }
 
+    /// A FAILURE MEANS: a written line ranks otherwise on the net than its own row says: a retreat is outranked by chatter, or chatter takes a retreat's place.
     #[test]
-    fn squad_notes_are_the_regexp() {
-        assert!(squads_note("[squads] Bravo hears of them (Alpha's call), holds: 4 s") == Some(("Bravo", SquadSaid::Hears, Some("Alpha"))));
-        assert!(squads_note("[squads] Bravo hears of them") == Some(("Bravo", SquadSaid::Hears, None)));
-        assert!(squads_note("[squads] Bravo hears of them (Al pha's call)") == Some(("Bravo", SquadSaid::Hears, None)));
-        assert!(squads_note("[squads] Bravo hears of them ('s call)") == Some(("Bravo", SquadSaid::Hears, None)));
-        assert!(squads_note("[squads] Bravo hears of them (''s call)") == Some(("Bravo", SquadSaid::Hears, Some("'"))));
-        assert!(squads_note("[squads] Bravo stays on its doors") == Some(("Bravo", SquadSaid::Stays, None)));
-        assert!(squads_note("[squads] Bravo quiet: 3") == Some(("Bravo", SquadSaid::Quiet, None)));
-        assert!(squads_note("[squads] Bravo  quiet:").is_none());
-        assert!(squads_note("[squads]  Bravo quiet:").is_none());
-        assert!(squads_note("[squads] Bravo sends a pair").is_none());
-        assert!(squads_note("holds where he ended up").is_none());
+    fn a_lines_words_rank_it_as_its_row_does() {
+        for l in LINES.iter().filter(|l| l.cls > 0.0) {
+            for text in l.say { assert_eq!(cue_class(text), l.cls, "{}", text); }
+        }
     }
 
+    /// A FAILURE MEANS: the net's lines change rank: the first words that match decide, the case does not, a word at the head must be that word, and what matches nothing is the net knowing something.
     #[test]
-    fn cue_class_is_the_regexps() {
-        for (s, want) in [
-            ("moving to the fight — {the}", 1.0),
-            ("they're hit {at} — moving to them", 1.0),
-            ("lost them — holding {the}", 2.0),
-            ("lost them — staying {at}", 2.0),
-            ("quiet now — staying put", 2.0),
-            ("standing down — holding here", 2.0),
-            ("one of them down {at} — covering him", 2.0),
-            ("{sq}: gone quiet here — still holding", 2.0),
-            ("they're hit {at} — staying on my door", 3.0),
-            ("shots {at} — staying on my door", 3.0),
-            ("shots {at} — holding my room", 3.0),
-            ("heard that, {the} — holding my room", 3.0),
-            ("{sq}: still on the doors — nobody goes", 3.0),
-            ("{sq}: heard that — stand by", 4.0),
-            ("{sq}: copy, {ally} — stand by", 4.0),
-            ("{sq}: hold — let them come in. Wait for my word!", 3.0),
-            ("{sq}: copy, {ally} — hold, let them come in. Wait for my word!", 3.0),
-            ("{the} is lost — falling back", 5.0),
-            ("falling back — {the} is lost", 5.0),
-            ("fell back — set {at}", 5.0),
-            ("can't get out — fell back to cover {at}", 5.0),
-            ("they're still out there — holding {the}", 6.0),
-            ("still out there — staying on this door", 6.0),
-            ("behind—!", 4.0),
-            ("there—!", 4.0),
-            ("the door—!", 4.0),
-            ("set", 1.0),
-            ("SET up the door", 1.0),
-            ("settle down", 4.0),
-            ("set-up", 1.0),
-            ("set_up", 4.0),
-            ("set up", 1.0),
-            ("reset the door", 4.0),
-            ("Moving!", 1.0),
-            ("moving", 4.0),
-            ("moving! now", 1.0),
-            ("not moving!", 4.0),
-            ("I'M COMING TO YOU", 5.0),
-            ("i'm coming to you, hold", 5.0),
-            ("Fall back!", 5.0),
-            ("falling back", 5.0),
-            ("fallback", 4.0),
-            ("fall  back", 4.0),
-            ("GO GO GO", 1.0),
-            ("go — go", 1.0),
-            ("go - go", 4.0),
-            ("GO, GO", 1.0),
-            ("locked down. box him in", 1.0),
-            ("locked downx box him in", 4.0),
-            ("not answering — going back", 2.0),
-            ("not answering - going back", 4.0),
-            ("moved on — after them", 1.0),
-            ("coming in — i see", 1.0),
-            ("covering — move", 1.0),
-            ("still out there", 6.0),
+    fn a_radio_line_ranks_by_its_first_matching_words() {
+        for (text, cls) in [
+            ("the mess is lost — getting ready", 5.0),   // a retreat, whatever else it says
             ("They Are Still Out There", 6.0),
             ("hold where you are", 2.0),
-            ("on my own", 3.0),
             ("I've got this door", 3.0),
-            ("nothing special", 4.0),
-            ("", 4.0),
+            ("GO GO GO", 1.0),
+            ("set up the door", 1.0),
+            ("settle down", 4.0),                        // "set" only as a word
+            ("reset the door", 4.0),                     // and only at the head
+            ("Moving!", 1.0),
+            ("not moving!", 4.0),
             ("contact left!", 4.0),
-            ("Bravo: copy, Alpha — stand by", 4.0),
-            ("is lost", 5.0),
-            ("with you", 1.0),
-            ("hit the others", 1.0),
-            ("é set", 4.0),
-            ("ſet", 4.0),
-            ("ſet up", 4.0),
-            ("ıs lost", 4.0),
-            ("K", 4.0),
-            ("pushing", 1.0),
-            ("two on this room", 1.0),
-            ("the mess is lost — getting ready", 5.0),
         ] {
-            assert_eq!(cue_class(s), want, "{}", s);
+            assert_eq!(cue_class(text), cls, "{}", text);
         }
     }
 
+    /// A FAILURE MEANS: one kind of cue hushes another (a man standing down silences the man who has lost them), or the floor says one kind over itself.
     #[test]
-    fn every_line_as_said_has_its_place_for_place_count() {
-        let mut seen = 0;
-        for l in LINES {
-            seen += 1;
-            if let Some(n) = l.now { assert_eq!(n.len(), l.say.len()); }
-            if let Some(n) = l.guide { assert_eq!(n.len(), l.say.len()); }
-        }
-        assert_eq!(seen, 18);
+    fn a_kind_waits_only_on_itself_and_only_for_its_gap() {
+        let mut game = Game::blank();
+        let g = &mut game;
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Calm) = Some(10.0);
+        g.time = 13.9;
+        assert!(cues_kind_busy(g, CueKind::Calm));
+        assert!(!cues_kind_busy(g, CueKind::HuntOver));
+        g.time = 14.0;
+        assert!(!cues_kind_busy(g, CueKind::Calm));
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Flinch) = Some(14.0);
+        assert!(!cues_kind_busy(g, CueKind::Flinch), "a shout at the door has no gap");
+        g.time = 9.0;   // (the clock went back: a checkpoint loaded)
+        assert!(!cues_kind_busy(g, CueKind::Calm));
     }
 
+    /// A FAILURE MEANS: the strip tells one piece of news twice in ten seconds because another man said it, or holds a line back from a net that has not said it for longer.
     #[test]
-    fn the_tables_are_the_skeletons() {
-        let t = crate::cues::lines();
-        assert_eq!(t.len(), LINES.len());
-        let strs = |v: &[&str]| v.iter().map(|s| String::from(*s)).collect::<Vec<String>>();
-        for l in LINES {
-            let row = t.get(String::from(l.kind.as_str())).unwrap();
-            assert_eq!(row.cls, l.cls);
-            assert_eq!(row.say, strs(l.say));
-            assert_eq!(row.now, l.now.map(strs));
-            assert_eq!(row.guide, l.guide.map(strs));
-        }
-        let want = crate::cues::kind_gap();
-        for (k, w) in [(CueKind::Stay, want.stay), (CueKind::Calm, want.calm), (CueKind::Cover, want.cover), (CueKind::Still, want.still), (CueKind::StayOurs, want.stay_ours), (CueKind::HuntOver, want.hunt_over), (CueKind::Help, want.help), (CueKind::Flinch, want.flinch)] {
-            assert_eq!(gap_of(k), w.unwrap_or(0.0), "{}", k.as_str());
-        }
-        let c = crate::cues::classes();
-        assert_eq!(c.len(), CLASSES.len());
-        for (row, (pats, cls)) in c.iter().zip(CLASSES) {
-            assert_eq!(row.3, *cls);
-            for p in row.0.iter().chain(row.1).chain(row.2) {
-                assert!(pats.iter().any(|q| match q { Pat::In(s) | Pat::Head(s) | Pat::HeadWord(s) => s == p }), "{}", p);
-            }
-            assert_eq!(pats.len(), row.0.len() + row.1.len() + row.2.len());
-        }
+    fn the_same_words_from_another_man_wait_out_the_dup_time() {
+        let mut game = Game::blank();
+        let g = &mut game;
+        let dup = g.k.cues.dup_secs;
+        assert_eq!(heard(g, 1.0, "Tango 1", "on my way", 1.0), (true, String::new()));
+        assert_eq!(heard(g, 1.5, "Tango 2", "on my way", 1.0), (false, String::from("dup")));
+        assert_eq!(heard(g, 1.0 + dup, "Tango 2", "on my way", 1.0), (true, String::new()));
     }
 
+    /// A FAILURE MEANS: laststand's men wait on a clock the strip does not keep, or a class talks over the net once the strip is nearly full.
     #[test]
-    fn the_readers_are_the_typescripts() {
-        // (bun, while they had TypeScript: Cues, adopt, stripRows, summary and cueLines with WORDS.on, WORDS.guide and CUES.overheard up)
+    fn a_class_waits_its_gap_only_with_the_strip_nearly_full_and_the_wait_is_told() {
+        let mut game = Game::blank();
+        let g = &mut game;
+        let gap = g.k.cues.gaps[1];
+        assert_eq!(cues_net_wait(g, 1.0), 0.0, "nothing said yet");
+        assert!(heard(g, 1.0, "Tango 1", "on my way", 1.0).0);
+        assert!((cues_net_wait(g, 1.0) - (gap + 0.05)).abs() < 1e-9);
+        assert_eq!(cues_net_wait(g, 2.0), 0.0, "another class has its own clock");
+        assert!(heard(g, 1.1, "Tango 2", "pushing", 1.0).0, "one row up: nobody waits");
+        assert_eq!(heard(g, 1.2, "Tango 3", "moving around", 1.0), (false, String::from("gap")));
+        g.time = 1.1 + gap + 0.05;
+        assert_eq!(cues_net_wait(g, 1.0), 0.0);
+        assert!(heard(g, 1.1 + gap + 0.05, "Tango 3", "moving around", 1.0).0, "the wait told is enough");
+        g.time = 0.5;   // (the clock went back)
+        assert_eq!(cues_net_wait(g, 1.0), 0.0);
+    }
+
+    /// A FAILURE MEANS: a squad's word is held back by a man's chatter of its class, or two squads talk over each other.
+    #[test]
+    fn a_squads_word_waits_only_on_another_squads() {
+        let mut game = Game::blank();
+        let g = &mut game;
+        heard(g, 1.0, "Tango 1", "on my way", 1.0);
+        heard(g, 1.1, "Tango 2", "pushing", 1.0);
+        g.time = 1.2;
+        assert!(cues_file(g, "Bravo: moving up", 1.0, "Tango 3", CuesFileKind::Heard), "two men just spoke: not a squad");
+        g.cues.rows.remove(0);
+        assert!(!cues_file(g, "Charlie: coming to you", 1.0, "Tango 4", CuesFileKind::Heard));
+        assert_eq!(g.cues.log.last().unwrap().why, "gap");
+    }
+
+    /// A FAILURE MEANS: one class holds the whole strip, a line is bumped before it could be read, or a worse line takes a better row's place.
+    #[test]
+    fn a_full_strip_takes_a_place_from_a_class_over_its_share_then_its_own_then_the_worst() {
+        // three rows of one class, over its share of two: its oldest goes for any other class
+        let mut game = Game::blank();
+        let g = &mut game;
+        heard(g, 1.0, "T1", "on my way", 1.0);
+        heard(g, 1.1, "T2", "pushing", 1.0);
+        heard(g, 2.4, "T3", "moving around", 1.0);
+        assert!(heard(g, 2.5, "T4", "lost them", 2.0).0);
+        assert_eq!(rows(g), ["T2: pushing", "T3: moving around", "T4: lost them"]);
+        // its own class has its share: the older of those, but not before it has been read
+        let mut game = Game::blank();
+        let g = &mut game;
+        heard(g, 0.0, "T1", "on my way", 1.0);
+        heard(g, 0.5, "T2", "pushing", 1.0);
+        heard(g, 1.0, "T3", "lost them", 2.0);
+        assert_eq!(heard(g, 2.0, "T4", "moving around", 1.0), (false, String::from("full")));
+        assert!(heard(g, g.k.cues.min_show, "T4", "moving around", 1.0).0);
+        assert_eq!(rows(g), ["T2: pushing", "T3: lost them", "T4: moving around"]);
+        // else the worst row, and only for a better line
+        let mut game = Game::blank();
+        let g = &mut game;
+        heard(g, 0.0, "T1", "on my way", 1.0);
+        heard(g, 0.1, "T2", "lost them", 2.0);
+        heard(g, 0.2, "T3", "holding my post", 3.0);
+        assert_eq!(heard(g, 0.3, "T4", "still out there", 6.0), (false, String::from("full")));
+        assert!(heard(g, 3.2, "T5", "quiet now", 2.0).0);
+        assert_eq!(rows(g), ["T1: on my way", "T2: lost them", "T5: quiet now"]);
+    }
+
+    /// A FAILURE MEANS: control's word to all is lost to the fight's chatter, or the chatter bumps it off.
+    #[test]
+    fn controls_lines_are_always_drawn_and_a_mans_line_never_takes_their_place() {
+        let mut game = Game::blank();
+        let g = &mut game;
+        g.time = 1.0;
+        heard(g, 1.0, "T1", "on my way", 1.0);
+        heard(g, 1.1, "T2", "lost them", 2.0);
+        heard(g, 1.2, "T3", "holding my post", 3.0);
+        g.time = 1.3;
+        for _ in 0..3 { assert!(cues_file(g, "control to all", 0.0, "", CuesFileKind::Raw)); }
+        assert_eq!(rows(g), ["control to all", "control to all", "control to all"]);
+        assert_eq!(heard(g, 3.0, "T4", "pushing", 1.0), (false, String::from("full")));
+    }
+
+    /// A FAILURE MEANS: the strip reads out of order, shows a row of a future the clock went back from, or a shout that has had its time.
+    #[test]
+    fn the_strip_reads_oldest_first_with_a_shout_in_its_place() {
         let mut game = Game::blank();
         let g = &mut game;
         g.time = 20.0;
-        let cue = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 0.0, rank: 1.0 };
-        g.cues.rows = vec![cue(3.0, "b"), cue(15.0, "c"), cue(16.0, "d")];
-        fn strip(g: &mut Game) -> Vec<(String, f64)> { radio_rows(g).into_iter().map(|r| (alloc::format!("{}: {}", if r.kind == crate::view::RadioKind::Heard { "heard" } else { "radio" }, r.text), g.time - r.age)).collect() }
-        fn want(v: &[(&str, f64)]) -> Vec<(String, f64)> { v.iter().map(|r| (String::from(r.0), r.1)).collect() }
-        assert_eq!(strip(g), want(&[("radio: c", 15.0), ("radio: d", 16.0)]));
         let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0 };
+        let strip = |g: &Game| radio_rows(g).into_iter().map(|r| r.text).collect::<Vec<_>>();
         g.cues.rows = vec![row(14.0, "p"), row(18.0, "q"), row(21.0, "future")];
         g.cues.heard_row = Some(CuesHeardRow { t: 16.0, text: String::from("find them!") });
-        assert_eq!(strip(g), want(&[("radio: p", 14.0), ("heard: find them!", 16.0), ("radio: q", 18.0)]));
+        assert_eq!(strip(g), ["p", "find them!", "q"]);
         g.cues.heard_row = Some(CuesHeardRow { t: 11.0, text: String::from("old!") });
-        assert_eq!(strip(g), want(&[("radio: p", 14.0), ("radio: q", 18.0)]));
-        assert_eq!(cues_summary(g), "0 of 0 net lines drawn · 0 new lines");
-        let S = &mut g.cues.stats;
-        (S.heard, S.heard_drawn, S.cue_net, S.cue_drawn, S.cues, S.dup, S.gap, S.full) = (41.0, 10.0, 3.0, 2.0, 9.0, 1.0, 2.0, 3.0);
-        assert_eq!(cues_summary(g), "12 of 44 net lines drawn · 9 new lines · held back: 1 said already, 2 too soon, 3 outranked");
-        let lines = cue_lines(g);
-        assert_eq!(lines.len(), 26);
-        assert_eq!((lines[0].kind, lines[0].cls, lines[0].text.as_str()), (CueKind::Help, 1.0, "moving to the fight — {the}"));
-        let last = &lines[25];
-        assert_eq!((last.kind, last.cls, last.text.as_str()), (CueKind::Flinch, 0.0, "the door—!"));
-        let w = lines.iter().find(|l| l.kind == CueKind::SquadWaits).unwrap();
-        assert_eq!((w.cls, w.text.as_str()), (3.0, "{sq}: hold — let them come in. wait for my call!"));
-    }
-
-    #[test]
-    fn a_kinds_clock_and_tally_are_its_own() {
-        let mut v = CuesKindT::default();
-        *kind_t_of(&mut v, CueKind::StayOurs) = Some(1.0);
-        assert_eq!(v.stay, None);
-        assert_eq!(v.stay_ours, Some(1.0));
-        let mut k = CuesKinds::default();
-        *kinds_of(&mut k, CueKind::Surprised) = Some(2.0);
-        assert_eq!(k.surprised, Some(2.0));
-        assert_eq!(k.squad_quiet, None);
-        assert_eq!((tail_from(5, 3.0), tail_from(2, 3.0), tail_from(5, 0.0)), (2, 0, 0));
-    }
-
-    #[test]
-    fn the_strip_files_as_the_typescript_does() {
-        // (rows generated by the TypeScript's own Cues class under bun)
-        let mut game = Game::blank();
-        let g = &mut game;
-        for (t, text, cls, who, kind, want, why, rows, wait1) in [
-            (0.05, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", true, "", vec!["Tango 1: moving to the fight"] as Vec<&str>, 1.25),
-            (4.15, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", true, "", vec!["Tango 1: moving to the fight", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (4.2, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", false, "dup", vec!["Tango 1: moving to the fight", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (6.8, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", false, "dup", vec!["Tango 1: moving to the fight", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (9.4, "Tango 4: the mess is lost", 5.0, "Tango 4", "heard", true, "", vec!["Bravo: gone quiet here", "Tango 4: the mess is lost"] as Vec<&str>, 0.0),
-            (9.65, "control to all", 0.0, "", "raw", true, "", vec!["Bravo: gone quiet here", "Tango 4: the mess is lost", "control to all"] as Vec<&str>, 0.0),
-            (10.35, "Tango 5: still out there", 6.0, "Tango 5", "heard", false, "full", vec!["Bravo: gone quiet here", "Tango 4: the mess is lost", "control to all"] as Vec<&str>, 0.0),
-            (12.95, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", true, "", vec!["Tango 4: the mess is lost", "control to all", "Tango 2: moving to the fight"] as Vec<&str>, 1.25),
-            (15.55, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (15.6, "Sam: contact left!", 1.0, "Sam", "call", false, "gap", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 1.200000000000001),
-            (15.6, "Tango 6: lost them", 2.0, "Tango 6", "heard", false, "full", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 1.200000000000001),
-            (16.9, "Charlie: pushing", 1.0, "Tango 9", "heard", false, "dup", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (16.95, "Tango 5: still out there", 6.0, "Tango 5", "heard", false, "full", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (17.65, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["control to all", "Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (17.7, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Tango 2: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (17.75, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", true, "", vec!["Tango 2: moving to the fight", "Charlie: pushing", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (18.0, "Tango 8: on my way", 1.0, "Tango 8", "heard", true, "", vec!["Charlie: pushing", "Bravo: gone quiet here", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (18.0, "Tango 2: quiet now", 2.0, "Tango 2", "heard", false, "gap", vec!["Charlie: pushing", "Bravo: gone quiet here", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (18.05, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Charlie: pushing", "Bravo: gone quiet here", "Tango 8: on my way"] as Vec<&str>, 1.1999999999999993),
-            (18.3, "Sam: contact left!", 1.0, "Sam", "call", true, "", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (18.55, "Tango 7: moving around", 1.0, "Tango 7", "heard", false, "gap", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 1.0),
-            (18.8, "Tango 7: moving around", 1.0, "Tango 7", "heard", false, "gap", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.75),
-            (19.5, "Tango 3: holding my post", 3.0, "Tango 3", "heard", false, "full", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.05000000000000071),
-            (20.8, "Alpha: on the doors", 3.0, "Tango 1", "heard", false, "full", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.0),
-            (23.4, "Bravo: copy, Alpha — stand by", 4.0, "Tango 3", "heard", false, "full", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.0),
-            (24.1, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", false, "dup", vec!["Bravo: gone quiet here", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.0),
-            (28.2, "Bravo: copy, Alpha — stand by", 4.0, "Tango 3", "heard", true, "", vec!["Bravo: copy, Alpha — stand by"] as Vec<&str>, 0.0),
-            (30.8, "Tango 6: lost them", 2.0, "Tango 6", "heard", true, "", vec!["Bravo: copy, Alpha — stand by", "Tango 6: lost them"] as Vec<&str>, 0.0),
-            (31.05, "Tango 3: holding my post", 3.0, "Tango 3", "heard", true, "", vec!["Bravo: copy, Alpha — stand by", "Tango 6: lost them", "Tango 3: holding my post"] as Vec<&str>, 0.0),
-            (35.15, "Tango 8: on my way", 1.0, "Tango 8", "heard", true, "", vec!["Tango 6: lost them", "Tango 3: holding my post", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (35.4, "Tango 7: moving around", 1.0, "Tango 7", "heard", false, "gap", vec!["Tango 6: lost them", "Tango 3: holding my post", "Tango 8: on my way"] as Vec<&str>, 1.0),
-            (35.4, "Sam: contact left!", 1.0, "Sam", "call", true, "", vec!["Tango 6: lost them", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (35.4, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", false, "gap", vec!["Tango 6: lost them", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (36.1, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "gap", vec!["Tango 6: lost them", "Tango 8: on my way", "Sam: contact left!"] as Vec<&str>, 0.5499999999999972),
-            (40.2, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", true, "", vec!["Tango 8: on my way", "Sam: contact left!", "Tango 1: moving to the fight"] as Vec<&str>, 1.25),
-            (40.9, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["Sam: contact left!", "Tango 1: moving to the fight", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (45.0, "Sam: contact left!", 1.0, "Sam", "call", false, "dup", vec!["Tango 1: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (45.7, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Tango 1: moving to the fight", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (45.95, "Tango 6: lost them", 2.0, "Tango 6", "heard", true, "", vec!["Tango 1: moving to the fight", "Charlie: pushing", "Tango 6: lost them"] as Vec<&str>, 0.0),
-            (48.55, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", false, "dup", vec!["Charlie: pushing", "Tango 6: lost them"] as Vec<&str>, 0.0),
-            (49.25, "Tango 6: lost them", 2.0, "Tango 6", "heard", false, "dup", vec!["Tango 6: lost them"] as Vec<&str>, 0.0),
-            (49.3, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", true, "", vec!["Tango 6: lost them", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (50.6, "Bravo: copy, Alpha — stand by", 4.0, "Tango 3", "heard", true, "", vec!["Tango 6: lost them", "Bravo: gone quiet here", "Bravo: copy, Alpha — stand by"] as Vec<&str>, 0.0),
-            (50.65, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", true, "", vec!["Tango 6: lost them", "Bravo: gone quiet here", "Tango 1: moving to the fight"] as Vec<&str>, 1.25),
-            (50.9, "Tango 4: the mess is lost", 5.0, "Tango 4", "heard", false, "full", vec!["Tango 6: lost them", "Bravo: gone quiet here", "Tango 1: moving to the fight"] as Vec<&str>, 1.0),
-            (52.2, "Tango 1: moving to the fight", 1.0, "Tango 1", "heard", false, "dup", vec!["Tango 6: lost them", "Bravo: gone quiet here", "Tango 1: moving to the fight"] as Vec<&str>, 0.0),
-            (52.25, "Sam: contact left!", 1.0, "Sam", "call", true, "", vec!["Bravo: gone quiet here", "Tango 1: moving to the fight", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (52.25, "Charlie: pushing", 1.0, "Tango 9", "heard", false, "gap", vec!["Bravo: gone quiet here", "Tango 1: moving to the fight", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (52.5, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Bravo: gone quiet here", "Tango 1: moving to the fight", "Sam: contact left!"] as Vec<&str>, 1.0),
-            (53.8, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Bravo: gone quiet here", "Tango 1: moving to the fight", "Sam: contact left!"] as Vec<&str>, 0.0),
-            (57.9, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", false, "dup", vec!["Tango 1: moving to the fight", "Sam: contact left!"] as Vec<&str>, 0.0),
-            (57.9, "Tango 2: quiet now", 2.0, "Tango 2", "heard", true, "", vec!["Tango 1: moving to the fight", "Sam: contact left!", "Tango 2: quiet now"] as Vec<&str>, 0.0),
-            (57.9, "Tango 2: quiet now", 2.0, "Tango 2", "heard", false, "dup", vec!["Tango 1: moving to the fight", "Sam: contact left!", "Tango 2: quiet now"] as Vec<&str>, 0.0),
-            (58.15, "Tango 8: on my way", 1.0, "Tango 8", "heard", true, "", vec!["Sam: contact left!", "Tango 2: quiet now", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (58.15, "Tango 2: quiet now", 2.0, "Tango 2", "heard", false, "dup", vec!["Sam: contact left!", "Tango 2: quiet now", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (58.2, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["Tango 2: quiet now", "Tango 8: on my way", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (58.25, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", false, "dup", vec!["Tango 2: quiet now", "Tango 8: on my way", "Charlie: pushing"] as Vec<&str>, 1.2000000000000028),
-            (58.95, "Charlie: pushing", 1.0, "Tango 9", "heard", false, "dup", vec!["Tango 2: quiet now", "Tango 8: on my way", "Charlie: pushing"] as Vec<&str>, 0.5),
-            (59.65, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Tango 2: quiet now", "Tango 8: on my way", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (63.75, "Sam: contact left!", 1.0, "Sam", "call", true, "", vec!["Tango 2: quiet now", "Charlie: pushing", "Sam: contact left!"] as Vec<&str>, 1.25),
-            (67.85, "Charlie: pushing", 1.0, "Tango 9", "heard", false, "dup", vec!["Sam: contact left!"] as Vec<&str>, 0.0),
-            (70.45, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["Sam: contact left!", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (74.55, "Tango 6: lost them", 2.0, "Tango 6", "heard", true, "", vec!["Charlie: pushing", "Tango 6: lost them"] as Vec<&str>, 0.0),
-            (75.85, "control to all", 0.0, "", "raw", true, "", vec!["Charlie: pushing", "Tango 6: lost them", "control to all"] as Vec<&str>, 0.0),
-            (79.95, "Alpha: on the doors", 3.0, "Tango 1", "heard", true, "", vec!["Tango 6: lost them", "control to all", "Alpha: on the doors"] as Vec<&str>, 0.0),
-            (80.0, "Alpha: on the doors", 3.0, "Tango 1", "heard", false, "dup", vec!["Tango 6: lost them", "control to all", "Alpha: on the doors"] as Vec<&str>, 0.0),
-            (80.7, "Tango 6: lost them", 2.0, "Tango 6", "heard", false, "dup", vec!["Tango 6: lost them", "control to all", "Alpha: on the doors"] as Vec<&str>, 0.0),
-            (83.3, "Alpha: on the doors", 3.0, "Tango 1", "heard", false, "dup", vec!["control to all", "Alpha: on the doors"] as Vec<&str>, 0.0),
-            (83.3, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["control to all", "Alpha: on the doors", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (83.55, "Tango 3: holding my post", 3.0, "Tango 3", "heard", false, "full", vec!["control to all", "Alpha: on the doors", "Charlie: pushing"] as Vec<&str>, 1.0),
-            (83.55, "Sam: contact left!", 1.0, "Sam", "call", false, "gap", vec!["control to all", "Alpha: on the doors", "Charlie: pushing"] as Vec<&str>, 1.0),
-            (83.55, "Tango 8: on my way", 1.0, "Tango 8", "heard", false, "gap", vec!["control to all", "Alpha: on the doors", "Charlie: pushing"] as Vec<&str>, 1.0),
-            (84.25, "Tango 6: lost them", 2.0, "Tango 6", "heard", false, "dup", vec!["Alpha: on the doors", "Charlie: pushing"] as Vec<&str>, 0.29999999999999716),
-            (86.85, "Tango 8: on my way", 1.0, "Tango 8", "heard", true, "", vec!["Alpha: on the doors", "Charlie: pushing", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (89.45, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", true, "", vec!["Charlie: pushing", "Tango 8: on my way", "Tango 2: moving to the fight"] as Vec<&str>, 1.25),
-            (89.5, "Tango 2: moving to the fight", 1.0, "Tango 2", "heard", false, "dup", vec!["Charlie: pushing", "Tango 8: on my way", "Tango 2: moving to the fight"] as Vec<&str>, 1.2000000000000028),
-            (93.6, "Tango 8: on my way", 1.0, "Tango 8", "heard", false, "dup", vec!["Tango 8: on my way", "Tango 2: moving to the fight"] as Vec<&str>, 0.0),
-            (93.85, "Tango 5: still out there", 6.0, "Tango 5", "heard", true, "", vec!["Tango 8: on my way", "Tango 2: moving to the fight", "Tango 5: still out there"] as Vec<&str>, 0.0),
-            (93.85, "Tango 6: lost them", 2.0, "Tango 6", "heard", true, "", vec!["Tango 8: on my way", "Tango 2: moving to the fight", "Tango 6: lost them"] as Vec<&str>, 0.0),
-            (95.15, "control to all", 0.0, "", "raw", true, "", vec!["Tango 2: moving to the fight", "Tango 6: lost them", "control to all"] as Vec<&str>, 0.0),
-            (95.4, "Tango 4: the mess is lost", 5.0, "Tango 4", "heard", false, "full", vec!["Tango 2: moving to the fight", "Tango 6: lost them", "control to all"] as Vec<&str>, 0.0),
-            (95.45, "Tango 2: quiet now", 2.0, "Tango 2", "heard", false, "gap", vec!["Tango 2: moving to the fight", "Tango 6: lost them", "control to all"] as Vec<&str>, 0.0),
-            (99.55, "Bravo: gone quiet here", 2.0, "Tango 3", "heard", true, "", vec!["Tango 6: lost them", "control to all", "Bravo: gone quiet here"] as Vec<&str>, 0.0),
-            (103.65, "Bravo: copy, Alpha — stand by", 4.0, "Tango 3", "heard", true, "", vec!["Bravo: gone quiet here", "Bravo: copy, Alpha — stand by"] as Vec<&str>, 0.0),
-            (103.9, "Tango 7: moving around", 1.0, "Tango 7", "heard", true, "", vec!["Bravo: gone quiet here", "Bravo: copy, Alpha — stand by", "Tango 7: moving around"] as Vec<&str>, 1.25),
-            (105.2, "Charlie: pushing", 1.0, "Tango 9", "heard", true, "", vec!["Bravo: gone quiet here", "Tango 7: moving around", "Charlie: pushing"] as Vec<&str>, 1.25),
-            (109.3, "Tango 7: moving around", 1.0, "Tango 7", "heard", false, "dup", vec!["Tango 7: moving around", "Charlie: pushing"] as Vec<&str>, 0.0),
-            (109.3, "Tango 8: on my way", 1.0, "Tango 8", "heard", true, "", vec!["Tango 7: moving around", "Charlie: pushing", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (109.3, "Bravo: copy, Alpha — stand by", 4.0, "Tango 3", "heard", false, "dup", vec!["Tango 7: moving around", "Charlie: pushing", "Tango 8: on my way"] as Vec<&str>, 1.25),
-            (110.0, "control to all", 0.0, "", "raw", true, "", vec!["Charlie: pushing", "Tango 8: on my way", "control to all"] as Vec<&str>, 0.5499999999999972),
-        ] {
-            g.time = t;
-            let kind = match kind { "raw" => CuesFileKind::Raw, "call" => CuesFileKind::Call, _ => CuesFileKind::Heard };
-            assert_eq!(cues_file(g, text, cls, who, kind), want, "{} at {}", text, t);
-            assert_eq!(g.cues.log.last().unwrap().why, why, "{} at {}", text, t);
-            let got: Vec<&str> = g.cues.rows.iter().map(|r| r.text.as_str()).collect();
-            assert_eq!(got, rows, "{} at {}", text, t);
-            assert_eq!(cues_net_wait(g, 1.0).to_bits(), f64::to_bits(wait1), "{} at {}", text, t);
-        }
+        assert_eq!(strip(g), ["p", "q"]);
     }
 }

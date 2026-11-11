@@ -105,3 +105,33 @@ fn no_takedown_through_a_thin_wall() {
         p.until(4.0, |p| !p.up(man)).unwrap_or_else(|| panic!("seed {s}: the control: on his side of the wall the blow did not land"));
     }
 }
+
+/// THE RULE: Sam's head turns to a man close in front of where he aims, and not to one behind it. The man and the aim are put just either side of the compass's seam, so their two yaws read as nearly a
+/// whole turn apart unless the angle is brought back.
+/// CONTROL: the same man with Sam aiming the other way: his head stays his own.
+/// A FAILURE MEANS: Sam looks at nobody when he faces one way of the map, or stares over his shoulder.
+#[test]
+fn sams_head_turns_to_a_man_in_front_of_his_aim_whichever_way_he_faces() {
+    for s in [1u32, 2, 3] {
+        let mut sc = Scene::new("sam-looks");
+        sc.room("room", 10.0, 6.0, 22.0, 18.0).door("south", Axis::X, 18.0, 20.0).bulb_off(16.0, 14.0);
+        sc.sentry("man", [16.2, 10.0], [16.2, 9.0]).sam(16.0, 14.0);
+        let mut p = Play::scene(&sc, &seed(s));
+        p.sam_a_ghost();
+        p.sam_unhurt();
+        let man = p.guard("man");
+        let looking = |p: &Play| { let c = p.g.pl[p.g.player].ch; p.g.ch[c].anim.watch_k > 0.0 };
+        // CONTROL
+        p.point_at([16.0, 17.9]);
+        p.run(0.5);
+        assert!(!looking(&p), "seed {s}: he looks round at a man behind his aim");
+        // his aim a hair on the far side of the seam from the man
+        p.point_at([15.8, 10.0]);
+        p.run(0.5);
+        let c = p.g.pl[p.g.player].ch;
+        let (aim, q, me) = (p.g.ch[c].aim_yaw, p.at(man), p.sam_at());
+        let bearing = (q[0] - me[0]).atan2(q[1] - me[1]);
+        assert!((aim - bearing).abs() > 5.0, "seed {s}: the two yaws lie either side of the seam: aim {aim}, the man {bearing}");
+        assert!(looking(&p), "seed {s}: no look at a man right in front of him");
+    }
+}

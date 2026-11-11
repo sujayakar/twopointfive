@@ -92,42 +92,6 @@ pub struct ParticleFxModDUSTLOOK {
     pub ambient: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct STUFFSURF {
-    pub carpet: Option<String>,
-    pub grass: Option<String>,
-    pub rubber: Option<String>,
-    pub metal: Option<String>,
-    pub glass: Option<String>,
-    pub wood: Option<String>,
-    pub plastic: Option<String>,
-    pub fabric: Option<String>,
-    pub steel: Option<String>,
-    pub enamel: Option<String>,
-    pub tarmac: Option<String>,
-    pub mud_wall: Option<String>,
-    pub plaster: Option<String>,
-    pub block: Option<String>,
-    pub earth: Option<String>,
-    pub gravel: Option<String>,
-    pub slab: Option<String>,
-    pub sheet: Option<String>,
-    pub cloth: Option<String>,
-    pub paint: Option<String>,
-    pub veneer: Option<String>,
-    pub carpaint: Option<String>,
-    pub stucco: Option<String>,
-    pub skim: Option<String>,
-    pub gloss_block: Option<String>,
-    pub board_concrete: Option<String>,
-    pub cast_panel: Option<String>,
-    pub paver: Option<String>,
-    pub brushed: Option<String>,
-    pub louvre: Option<String>,
-    pub plain: Option<String>,
-    pub waits: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SOLIDGLASSCRACK {
     pub look: f64,
@@ -195,26 +159,11 @@ pub struct CASINGS {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct HitLookHit {
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct HitLook {
     pub surf: crate::scene_materials::Surf,
     pub albedo: V3,
     pub solid: bool,
     pub said: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ImpactFxHit {
-    pub n: V3,
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -238,12 +187,6 @@ pub struct EmberFxO {
     pub life: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PendingTinksItem {
-    pub t: f64,
-    pub pos: V3,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ParticleFxMod {
@@ -252,12 +195,6 @@ pub struct ParticleFxMod {
     #[is(crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 })] pub pfx: crate::particle_fx::ParticleFxModPFX,
     pub state: Option<crate::particle_fx::FxState>,
 }
-
-pub fn prop_surf() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("chair"), String::from("fabric")); t.set(String::from("cardboard"), String::from("cardboard")); t.set(String::from("bin"), String::from("metal")); t.set(String::from("plant"), String::from("foliage")); t } }
-
-pub fn stuff_surf() -> crate::particle_fx::STUFFSURF { crate::particle_fx::STUFFSURF { carpet: Some(String::from("carpet")), grass: None, rubber: Some(String::from("plastic")), metal: Some(String::from("metal")), glass: Some(String::from("glass")), wood: Some(String::from("wood")), plastic: Some(String::from("plastic")), fabric: Some(String::from("fabric")), steel: Some(String::from("metal")), enamel: None, tarmac: Some(String::from("concrete")), mud_wall: Some(String::from("concrete")), plaster: Some(String::from("drywall")), block: Some(String::from("concrete")), earth: None, gravel: None, slab: Some(String::from("concrete")), sheet: Some(String::from("metal")), cloth: Some(String::from("carpet")), paint: None, veneer: Some(String::from("wood")), carpaint: Some(String::from("metal")), stucco: Some(String::from("concrete")), skim: Some(String::from("drywall")), gloss_block: Some(String::from("concrete")), board_concrete: Some(String::from("concrete")), cast_panel: Some(String::from("concrete")), paver: Some(String::from("concrete")), brushed: Some(String::from("metal")), louvre: Some(String::from("metal")), plain: None, waits: None } }
-
-pub fn hit_stuffs() -> Vec<String> { alloc::vec![String::from("carpaint"), String::from("steel"), String::from("metal"), String::from("sheet"), String::from("brushed"), String::from("louvre"), String::from("glass"), String::from("rubber"), String::from("plastic"), String::from("wood"), String::from("veneer"), String::from("fabric"), String::from("cloth"), String::from("carpet"), String::from("plaster"), String::from("skim"), String::from("stucco"), String::from("mud wall"), String::from("block"), String::from("gloss block"), String::from("board concrete"), String::from("cast panel"), String::from("slab"), String::from("paver"), String::from("tarmac")] }
 
 pub const SOLID_GLASS_CHIPS: f64 = 3.0;
 

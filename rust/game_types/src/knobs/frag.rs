@@ -8,16 +8,14 @@ use game_derive::Knobs;
 ///  stagger: seconds folded, [nearest, farthest]. lift: how far over the resting grenade the burst is judged from (a casing on the floor throws its fragments up
 ///  and out — a 5 cm door sill is no cover). Reaction: seeM / hearM = how far off a man can notice it (a line of sight to it / its clatter by the sound's own
 ///  path); react = seconds before he acts on it [trained, not], + up to reactJit; shoutM = how far his 'grenade!' carries to his own side; fleeM = men in its line
-///  inside this move; runSpeed = a defender's legs (teammates keep their own cap — unless teampace.ts lets a man run from a blast). on = the item exists at all (false: digit 5 says so).
+///  inside this move; runSpeed = a defender's legs (teammates keep their own cap, unless `team_blast_pace` lets a man run from a blast).
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct FragK {
     #[k(2.0)] pub issue: f64,
     #[k(3.0)] pub fuse: f64,
     #[k(2.4)] pub order_fuse: f64,
-    /// the squad's: how many it carries per run (doortools.ts counts them like its bangs), the key of the door tools' 'frag and clear' row (no digit: the
-    ///  page's five are taken), how far inside the frame line a teammate throws it
+    /// the squad's: how many it carries per run (the squad's pool counts them like its bangs), how far inside the frame line a teammate throws it
     #[k(2.0)] pub squad: f64,
-    #[k(String::from("KeyG"))] pub order_key: String,
     #[k(3.4)] pub order_in: f64,
     #[k(4.0)] pub lethal_m: f64,
     #[k(8.0)] pub wound_m: f64,

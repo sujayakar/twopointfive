@@ -1,25 +1,26 @@
-//! A CIRCLE AGAINST THE BOX WORLD — a body's footprint pushed out of the statics, and which statics it touches (src/scene/collision.ts collideCircle,
-//! circleTouches, gather), over the module's copy of the boxes (world.rs).
+//! A CIRCLE AGAINST THE BOX WORLD: a body's footprint pushed out of the statics (`circle`), and which statics it touches (`touches`), over the box world's rows.
 //!
-//! STATEMENT FOR STATEMENT, as lines.rs is: the same cells in the same order, a box met once a pass, the same pushes added in the same order — a body pushed
-//! out of two boxes ends where the TypeScript leaves it, to the bit. tools/qa/rust-check.ts holds the two together.
+//! IT KEEPS NOTHING. An answer is left in the question's scratch (world.rs `asking`: `pt`, `list`), for the caller to read before it asks anything else.
 //!
-//! What is not here: whether a broken pane can be walked through is a rule of the TypeScript's; the copy carries its answer for each
-//! pane as it stood when the copy was last compared (K_WALK), and the rule says so when it changes one.
+//! THE ORDER IS PART OF THE ANSWER: the same cells in the same order, a box met once a pass, the pushes added in the order met. A body pushed out of two boxes ends where
+//! that order leaves it, so it is play, and changing it changes the game.
+//!
+//! What is not here: whether a broken pane can be walked through is a rule of the game's; a pane's row carries its answer
+//! (K_WALK), written as the rule changes it.
 
 use crate::world::*;
 use prim::{floor, sqrt};
 
-/// collision.ts gather's test of one static: is it out of the question (wholly above or below the span, hidden at runtime, a pane walked through)
+/// the gather's test of one static: is it out of the question (wholly above or below the span, hidden at runtime, a pane walked through)
 #[inline(always)]
 fn passed(b: &[f64], fl: u32, y0: f64, y1: f64) -> bool {
     b[R_C + 1] + b[R_H + 1] < y0 || b[R_C + 1] - b[R_H + 1] > y1 || fl & F_NO_SHADOW != 0 || (b[R_KIND] as u32) & K_WALK != 0
 }
 
-/// collision.ts collideCircle (its span's foot already lifted by the host: footBand): the circle of radius `r` at (px, pz) pushed out of the statics that
+/// the circle of radius `r` at (px, pz), its span's foot already lifted by the host, pushed out of the statics that
 /// overlap [y0, y1]. Where it ends is left in `pt`; 1 = it touched something.
-pub fn circle(w: usize, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: u32) -> u32 {
-    let (o, s) = (world_read(w), asking(w));
+pub fn circle(w: &World, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: u32) -> u32 {
+    let (o, s) = (w, asking());
     let (mut p0, mut p2) = (px, pz);
     let mut touched = false;
     let (cs, wm, hm) = (o.cs, o.w as f64 - 1.0, o.h as f64 - 1.0);
@@ -113,8 +114,8 @@ pub fn circle(w: usize, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: 
 
 /// The statics filed under the rectangle [x0, x1] × [z0, z1] that overlap [y0, y1], once each, into `list` — as many as `cap` (the
 /// host's own list's length). Returns how many.
-pub fn gather(w: usize, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, cap: usize) -> usize {
-    let (o, s) = (world_read(w), asking(w));
+pub fn gather(w: &World, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, cap: usize) -> usize {
+    let (o, s) = (w, asking());
     let cap = if cap > MAX_LIST { MAX_LIST } else { cap };
     let id = s.ask();
     let mut n = 0usize;
@@ -149,10 +150,10 @@ pub fn gather(w: usize, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, ca
     n
 }
 
-/// collision.ts circleTouches (its span's foot already lifted by the host): the statics a circle of radius `r` at (x, z) touches, at the front of `list`.
+/// the statics a circle of radius `r` at (x, z), its span's foot already lifted by the host, touches, at the front of `list`.
 /// −1 = the host's list could not hold what was gathered; else (how many touch) × 65536 + (how many were gathered: the host's list holds those past the
 /// touching ones as the gather left them, and so must its copy).
-pub fn touches(w: usize, x: f64, z: f64, r: f64, y0: f64, y1: f64, cap: usize) -> i32 {
+pub fn touches(w: &World, x: f64, z: f64, r: f64, y0: f64, y1: f64, cap: usize) -> i32 {
     if cap > MAX_LIST {
         return -2;
     }
@@ -160,7 +161,7 @@ pub fn touches(w: usize, x: f64, z: f64, r: f64, y0: f64, y1: f64, cap: usize) -
     if n >= cap {
         return -1;
     }
-    let (o, s) = (world_read(w), asking(w));
+    let (o, s) = (w, asking());
     let mut k = 0usize;
     for j in 0..n {
         let bi = s.list[j] as usize;

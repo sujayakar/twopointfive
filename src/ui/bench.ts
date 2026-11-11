@@ -4,7 +4,7 @@
 // game's own keys and cursor, the game's own camera) on a seed that names the deal and the dice. A level is a page load, so a run is one page per scene: the page
 // hands its lines to the next through the tab's own session store (the page's half: host/drawpage.ts) and this module plays ONE page's part — a LEG (BenchLeg):
 //   1. waits, the world held still, while auto quality finishes measuring the machine; on the FIRST page it then times that picture AS THE PAGE OPENED;
-//   2. THE SCENE, live, auto quality doing what it does in play: frames a second over the whole of it. On every page but the last that is the page's part: its
+//   2. THE SCENE, live, at the size and tier the page opened on (nothing adapts while it measures): frames a second over the whole of it. On every page but the last that is the page's part: its
 //      line is handed on and the next scene's page loads;
 //   3. on the LAST page, at the scene's heavy moment (rounds in the air, smoke up) the world is HELD STILL where it stands and that one picture is timed as it
 //      stood, then under each preset of auto's ladder from the bottom up — stopping where one runs under eight frames a second, the ones above it would only be
@@ -21,9 +21,10 @@
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
 import { reportError, reportWarning } from '../cloud/report';
-import { AUTO_LADDER, visitTier, type Quality, type QualityName } from './quality';
+import { AUTO_LADDER, tierWords, visitTier, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
-import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
+import { PRESENT_PASSES } from '../gpu/timer';
+import type { SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel } from './shaderrows';
 import { pageRoom } from '../host/pace';
@@ -95,7 +96,7 @@ export interface BenchStep {
    *  ran the g-buffer beside a compute pass. Under sharp direct the pass draws at the OUTPUT size (and its downsample is not stamped), so it follows the
    *  line's quality row, not its 'drawn at': hold it only against a line with the same rows. */
   gbuf?: number;
-  /** the heaviest GPU passes, ms each (their sum overstates the frame: the GPU runs passes side by side) */
+  /** the heaviest GPU passes, ms each (those that draw to the display or after it left out: their stamps hold the wait for it. Their sum overstates the frame: the GPU runs passes side by side) */
   top?: [string, number][];
   /** not measured, and why */
   skipped?: string;
@@ -134,7 +135,6 @@ const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [..
 const r1 = (v: number) => +v.toFixed(1);
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
-const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high' };
 
 /** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
 export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';
@@ -152,7 +152,7 @@ export function benchStats(frames: PerfFrame[], top = 0): BenchLine {
     gpu: unions.length ? r1(median(unions)) : null, ...(gbufs.some(u => u > 0) ? { gbuf: +midMean(gbufs).toFixed(2) } : {}), cpu: r1(median(frames.map(f => f.cpu.update + f.cpu.render + f.cpu.other))) };
   if (top > 0) {
     const by = new Map<string, number[]>(); for (const f of frames) for (const k of Object.keys(f.gpu)) { let l = by.get(k); if (!l) by.set(k, l = []); l.push(f.gpu[k]); }
-    const rows = [...by].map(([k, l]) => [k, +median(l).toFixed(2)] as [string, number]).filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, top);
+    const rows = [...by].map(([k, l]) => [k, +median(l).toFixed(2)] as [string, number]).filter(r => r[1] > 0 && !PRESENT_PASSES.includes(r[0])).sort((a, b) => b[1] - a[1]).slice(0, top);
     if (rows.length) out.top = rows;
   }
   return out;
@@ -195,7 +195,7 @@ export function benchReport(r: BenchResult): string {
   L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'g-buf ms', 'page ms'));   // (GPU ms = the compute passes; the g-buffer's own time stands beside it, BenchStep.gbuf)
   for (const s of r.steps) {
     if (s.skipped) { L.push(`${s.label.padEnd(22)}not run: ${s.skipped}`); continue; }
-    L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
+    L.push(cols(s.label, `${tierWords(s.quality)} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
   }
   if (r.steps.some(s => typeof s.gbuf === 'number')) L.push('', GBUF_SAID);
   { const ends = (r.scenes ?? []).filter(s => s.end).map(s => `${s.id} ${s.end}`); if (ends.length) { L.push(''); row('floors', ends.join(' · ')); } }   // (how each fight went: two machines' numbers are of the same fight only where these agree)
@@ -329,7 +329,7 @@ export interface BenchScene {
   said?(): string;
 }
 /** the F8 sweep, as the benchmark drives it (the page's PerfSweep) */
-export interface BenchSweep { start(o: Partial<SweepOpts>): string; active(): boolean; flipped(): string; progress(): string; stop(why: string): void;
+export interface BenchSweep { start(o: Partial<SweepOpts>): string; active(): boolean; flipped(): string; words(): string; progress(): string; stop(why: string): void;
   /** the segment under way is past its own settle (a slow row's is seconds). A sweep that cannot say: the first two fifths of each segment are left out */
   settled?(): boolean }
 export interface BenchDeps {
@@ -357,7 +357,7 @@ export interface BenchDeps {
 
 type State = 'idle' | 'waiting' | 'opened' | 'scene' | 'held' | 'sweep' | 'tail';
 interface Phase { id: string; preset: QualityName | null }
-interface Win { id: string; gpu: number | null; ms: number }
+interface Win { id: string; label: string; gpu: number | null; ms: number }
 
 export class Bench {
   state: State = 'idle';
@@ -373,7 +373,7 @@ export class Bench {
   private sceneMs = 0; private sceneFrom: [number, number][] = []; private heavyAt = -1; private skip = new Set<number>(); private query = '';
   /** this page's part of a run over a set (null: the run is this page's alone) · the scene was played · where its line goes among the steps */
   private leg: BenchLeg | null = null; private played = false; private sceneAt = 0; private scenes: BenchSceneRun[] = []; private boot0: BenchBoot | null | undefined;
-  private wins: Win[] = []; private winId = ''; private winFrom = 0; private winFirst = -1; private wasSettled = false;
+  private wins: Win[] = []; private winId = ''; private winLabel = ''; private winFrom = 0; private winFirst = -1; private wasSettled = false;
   private machine: BenchMachine | null = null; private back: (() => void) | null = null; private setPreset: ((p: QualityName) => void) | null = null;
   private keys: ((e: KeyboardEvent) => void) | null = null;
   /** the card of a run over pages is up */
@@ -449,7 +449,7 @@ export class Bench {
       case 'sweep': {
         const W = this.deps.sweep!, id = W.active() ? W.flipped() : '';
         if (this.wasSettled && this.winFirst < 0) this.winFirst = this.rec.frameCount - 1;   // (the frame just recorded was drawn under what stood at the last tick)
-        if (id !== this.winId) { this.winClose(); this.winId = id; this.winFrom = this.rec.frameCount; }
+        if (id !== this.winId) { this.winClose(); this.winId = id; this.winLabel = W.words(); this.winFrom = this.rec.frameCount; }
         this.wasSettled = W.active() && !!W.settled?.();
         if (!W.active()) { this.sweeping = false; this.featuresOf(); this.resume(); return; }
         if (full) { this.finish('the recording was full', false); return; }
@@ -463,14 +463,14 @@ export class Bench {
   /** the last page of a set, or a run that is one page's */
   private get lastLeg(): boolean { return !this.leg || this.leg.index >= this.leg.of - 1; }
   private say(frac: number): void { const L = this.leg; this.deps.view?.progress(`Benchmark ${Math.round(100 * (L ? (L.index + frac) / L.of : frac))} % · Esc stops`); }
-  private labelOf(ph: Phase): string { return ph.preset ? PRESET_LABEL[ph.preset] ?? ph.preset : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
+  private labelOf(ph: Phase): string { return ph.preset ? tierWords(ph.preset) : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
 
   // ---- a timed window on a picture held still (the opening picture; the scene's heavy moment as it stood and under each preset)
   private next(): void {
     this.at++;
     const ph = this.plan[this.at];
     if (!ph) { if (this.state === 'opened') this.scene(); else this.sweep(); return; }
-    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${ph.preset}: ${String(e).slice(0, 80)})`, false); return; }
+    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${tierWords(ph.preset)}: ${String(e).slice(0, 80)})`, false); return; }
     this.segT0 = performance.now(); this.segFrames = 0; this.measuring = false; this.retries = 0;
     this.say(this.state === 'opened' ? 0.02 : 0.4 + 0.2 * this.at / this.plan.length);
   }
@@ -522,7 +522,7 @@ export class Bench {
     if (!fr.length) return;
     const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
     this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
-    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${fr[0].preset} at its start, ${l.preset} at its end`);
+    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${tierWords(fr[0].preset)} at its start, ${tierWords(l.preset)} at its end`);
   }
   /** not the last page of a set: this page's lines go on to the next scene's page (true: handed on — the veil stays up over the load) */
   private handOn(): boolean {
@@ -578,7 +578,7 @@ export class Bench {
     const first = this.winFirst; this.winFirst = -1; this.wasSettled = false;
     if (!this.winId) return;
     const all = this.framesOf(this.winFrom, this.rec.frameCount), fr = this.deps.sweep?.settled ? (first >= 0 ? this.framesOf(first, this.rec.frameCount) : []) : all.slice(Math.floor(all.length * 0.4));
-    if (fr.length) { const s = benchStats(fr); this.wins.push({ id: this.winId, gpu: s.gpu, ms: s.ms }); }
+    if (fr.length) { const s = benchStats(fr); this.wins.push({ id: this.winId, label: this.winLabel, gpu: s.gpu, ms: s.ms }); }
   }
   /** each flipped segment against the two baselines beside it */
   private featuresOf(): void {
@@ -588,7 +588,7 @@ export class Bench {
       const near = [W[i - 1], W[i + 1]].filter(b => b && b.id === 'base'); if (!near.length) continue;
       const mean = (f: (b: Win) => number | null) => { const v = near.map(f).filter((x): x is number => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
       const bg = mean(b => b.gpu), bm = mean(b => b.ms)!;
-      out.push({ id: w.id, label: SWEEP_ROWS.find(r => r.id === w.id)?.label ?? w.id, gpu: bg !== null && w.gpu !== null ? +(bg - w.gpu).toFixed(2) : null, ms: +(bm - w.ms).toFixed(2) });
+      out.push({ id: w.id, label: w.label || w.id, gpu: bg !== null && w.gpu !== null ? +(bg - w.gpu).toFixed(2) : null, ms: +(bm - w.ms).toFixed(2) });
     }
     if (out.length) this.features = out;
   }

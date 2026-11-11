@@ -1,6 +1,6 @@
 //! WHAT THE GAME OFFERS AND WHAT IT THEN DOES, on three places the old checks read as faults.
 //!
-//! Two of them are held here as they are: a keypad door's entry rows (`door_tools_stackable`) and Sam's wall row (`wall_charge_sam_rows`). The
+//! Two of them are held here as they are: a keypad door's entry rows (`door_tools_stackable`) and Sam's wall row (`wall_charge_rows`). The
 //! third was a fault: a defender bringing furniture to a door standing open let the brace go with his hand on the leaf (`digin::hand_waits`).
 use game::orders::{squad_orders_give, squad_orders_target_at, squad_orders_why_not, OrderTarget};
 use game_start::play::{Opts, Play};
@@ -22,15 +22,15 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.g.god_mode = true;
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
-    if let Some(n) = charges { p.g.door_tools.charges = n; }
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } }
+    if let Some(n) = charges { p.g.sets[p.g.seat].door_tools.charges = n; }
+    for gd in p.g.guards.clone() { if !p.g.team(gd).ours() && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
-    game::doors::door_set_locked(&mut p.g, office, false);
+    p.g.dr[office].leaf.locked = false;
     let d = game::doors::doors_by_name(&p.g, "server_manager").unwrap();
     let c = p.g.dr[d].frame_centre;
     let at = [c[0] + 2.0, 0.0, c[2]];
-    if !game::doors::doors_pull_face(&mut p.g, d, at) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None, None); }
+    if !game::doors::doors_pull_face(&mut p.g, d, at) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None); }
     p.sam_put([at[0], at[2]]);
     p.run(1.0);
     (p, d, c)
@@ -55,8 +55,8 @@ fn a_keypad_door_is_tried_then_greyed_in_the_words_it_was_refused_in() {
         assert_eq!(squad_orders_give(&mut p.g, "openClear", Some(&t), None, None), None, "a live row was refused");
         p.until(60.0, |p| p.said.iter().any(|l| l.text == words)).unwrap_or_else(|| panic!("a minute and the lead has not said {words:?}: {}", p.roll()));
         p.run(0.5);
-        assert!(p.g.door_tools.ops.is_empty(), "he said it and the order goes on");
-        assert!(game::doors::door_locked(&mut p.g, d), "the door gave");
+        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty(), "he said it and the order goes on");
+        assert!(p.g.dr[d].leaf.locked, "the door gave");
         let t = squad_orders_target_at(&mut p.g, [c[0], 0.0, c[2]]);
         for id in ["openClear", "bangClear"] { assert_eq!(row(&mut p, id, &t).as_deref(), Some(words), "{id}: known shut now, and the row is not grey in his words"); }
         assert_eq!(squad_orders_give(&mut p.g, "openClear", Some(&t), None, None).as_deref(), Some(words), "the order is not refused in the row's words");
@@ -71,13 +71,13 @@ fn bunk(seed: u32) -> (Play, game::ids::RoomfightDefId, game::ids::DoorId) {
     let mut p = Play::mission("compound.json", &format!("?levelFile=compound.json&roomclear={seed}&squad4"), &Opts { seed, ..Default::default() });
     p.g.god_mode = true;
     p.run(1.0);
-    let man = p.g.room_clear.rooms.iter().find(|r| r.def.id == "bunk").unwrap().defenders[0];
+    let man = p.g.staged.rooms.iter().find(|r| r.def.id == "bunk").unwrap().defenders[0];
     let def = p.g.fight.defs.iter().copied().find(|&d| p.g.tab.roomfight_def[d].gd == man).unwrap();
     let room = p.g.tab.roomfight_def[def].room.unwrap();
     let e = p.g.tab.roomfight_room[room].entries.iter().copied().find(|e| p.g.dr[e.door].def.name == "a_s").unwrap();
     let swing = game::doors::door_swing(&mut p.g, e.door);
-    game::doors::door_set_latched(&mut p.g, e.door, false);
-    game::doors::door_set_angle(&mut p.g, e.door, swing * (1.5 + 0.3 * nudge(seed, 0)));
+    p.g.dr[e.door].leaf.latched = false;
+    p.g.dr[e.door].leaf.angle = swing * (1.5 + 0.3 * nudge(seed, 0));
     assert!(game::digin::dig_in_order(&mut p.g, def, [e.at[0] + e.out[0] * 8.0, 0.0, e.at[2] + e.out[1] * 8.0], 0.0), "seed {seed}: he was not free to be told");
     (p, def, e.door)
 }
@@ -91,8 +91,8 @@ fn wedged(p: &Play, door: game::ids::DoorId) -> bool { p.g.m.digin.states.as_ref
 fn a_defender_stays_with_a_closing_door_and_wedges_it() {
     for s in SEEDS {
         let (mut p, _, door) = bunk(s);
-        p.until(30.0, |p| wedged(p, door)).unwrap_or_else(|| panic!("seed {s}: 30 s and {} is not wedged: {:?}", p.g.dr[door].def.name, p.g.m.digin.digin_log.iter().map(|l| l.what.clone()).collect::<Vec<_>>()));
-        assert!(game::doors::door_locked(&mut p.g, door), "seed {s}: wedged and not locked");
+        p.until(30.0, |p| wedged(p, door)).unwrap_or_else(|| panic!("seed {s}: 30 s and {} is not wedged", p.g.dr[door].def.name));
+        assert!(p.g.dr[door].leaf.locked, "seed {s}: wedged and not locked");
     }
 }
 
@@ -103,17 +103,17 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
         let (mut p, def, door) = bunk(s);
         let c = p.g.dr[door].frame_centre;
         let man = p.g.tab.roomfight_def[def].gd;
-        let mate = p.g.guards.iter().copied().find(|&gd| gd != man && p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd)).unwrap();
-        let mut put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
+        let mate = p.g.guards.iter().copied().find(|&gd| gd != man && !p.g.team(gd).ours() && p.up(gd)).unwrap();
+        let put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
         let shut = |p: &Play| phase(p, def) == game::digin::Phase::Shut;
         let mut n = 0;
         while !shut(&p) && n < 30 * 60 { put(&mut p); p.frame(); n += 1; }
-        assert!(shut(&p), "seed {s}: 30 s and his hand never went on the leaf: {:?}", p.g.m.digin.digin_log.iter().map(|l| l.what.clone()).collect::<Vec<_>>());
+        assert!(shut(&p), "seed {s}: 30 s and his hand never went on the leaf");
         let him = p.g.m.digin.states.as_ref().unwrap().men.get(man).unwrap();
         assert!(him.brace >= 0.0 && him.prop.is_some(), "seed {s}: the staging is wrong: he has no furniture to wedge it with");
         let on = p.time();
         while shut(&p) && p.time() < on + 8.0 { put(&mut p); p.frame(); }
-        assert!(!shut(&p), "seed {s}: 8 s on, he still has his hand on a leaf that a body has stopped (angle {:.2})", game::doors::door_angle(&mut p.g, door));
+        assert!(!shut(&p), "seed {s}: 8 s on, he still has his hand on a leaf that a body has stopped (angle {:.2})", p.g.dr[door].leaf.angle);
         assert!(!wedged(&p, door), "seed {s}: a door with a man in its doorway was wedged");
     }
 }
@@ -129,7 +129,7 @@ fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
     for (level, index, u, side) in [("block.json", 115, 10.44, -1.0), ("block.json", 115, 11.19, -1.0), ("depot.json", 9, 10.48, -1.0), ("pass.json", 16, 29.05, -1.0), ("pass.json", 41, 14.22, 1.0), ("mousehole.json", 36, 13.05, 1.0)] {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 7, ..Default::default() });
         p.g.god_mode = true;
-        for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative { p.g.gd[gd].hold = true; p.g.gd[gd].pinned = true; } }
+        for gd in p.g.guards.clone() { if !p.g.team(gd).ours() { p.g.gd[gd].hold = true; p.g.gd[gd].pinned = true; } }
         p.run(0.5);
         let (c, h) = { let b = &p.g.tab.boxes[p.g.col.boxes[index]]; (b.c, b.h) };
         let along_x = h[0] >= h[2];
@@ -145,9 +145,9 @@ fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
         p.sam_put([spot[0], spot[2]]);
         let top = if along_x { [u, c[1] + h[1], c[2]] } else { [c[0], c[1] + h[1], u] };
         for _ in 0..90 { p.cursor_on(top); p.frame(); }
-        let rows: Vec<String> = p.g.nearby.iter().map(|r| format!("{:?}:{:?}", r.kind, r.verb)).collect();
-        assert!(rows.iter().any(|r| r == "Wall:Some(Charge)"), "{level} static {index} u {u}: no row for the charge, with Sam at {:?} and the cursor at {:?}: {rows:?}", p.sam_at(), p.g.aim_point);
-        let o = p.g.wall_charge.offered.clone().unwrap();
+        let rows: Vec<String> = p.g.sets[p.g.seat].nearby.iter().map(|r| format!("{:?}:{:?}", r.kind, r.verb)).collect();
+        assert!(rows.iter().any(|r| r == "Wall:Some(Charge)"), "{level} static {index} u {u}: no row for the charge, with Sam at {:?} and the cursor at {:?}: {rows:?}", p.sam_at(), p.g.sets[p.g.seat].aim_point);
+        let o = p.g.sets[p.g.seat].wall_charge.offered.clone().unwrap();
         assert!(o.index == index as f64 && (o.u - u).abs() < 0.02, "{level} static {index} u {u}: the row is for wall {} u {}", o.index, o.u);
     }
 }
@@ -174,7 +174,7 @@ fn a_can_up_behind_a_man_offers_the_grab() {
         p.g.pl[me].slot = game::game::SlotKind::Smoke;
         p.pin_man(a, at, east, state, aware);
         p.frame();
-        let row = p.g.nearby.iter().find(|r| r.guard == Some(a)).map(|r| r.line2.clone()).unwrap_or_default();
+        let row = p.g.sets[p.g.seat].nearby.iter().find(|r| r.guard == Some(a)).map(|r| r.line2.clone()).unwrap_or_default();
         assert!(row.contains("grab him") && row.contains("holster for the knockout") && !row.contains("from behind"), "{state:?}: the row is '{row}'");
     }
 }

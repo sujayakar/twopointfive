@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -32,18 +33,10 @@ fn fresh() -> crate::tactics::TState {
     }
 }
 
-/// A man's body's position.
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    g.ch[g.gd[gd].ch].pos
-}
-
 /// `m.path = []; m.pathGoal = null; m.stallRef = null`: a fresh leg; a whole new path is a new serial, and the standoff's point is no longer his goal.
 fn fresh_leg(g: &mut Game, m: GuardId) {
     let o = &mut g.gd[m];
-    o.path = Vec::new();
-    o.path_serial = o.path_serial.wrapping_add(1);
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 
@@ -59,23 +52,13 @@ pub fn give_stuns(g: &mut crate::game::Game, gd: GuardId, n: f64) {
 }
 
 /// The stun charges on a man.
-pub fn stuns_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn stuns_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.tactics.kit.get(gd) { Some(k) => k.stuns, None => 0.0 }
 }
 
 /// Is any of it live: the switch on, the AI on.
 pub(super) fn tactics_on(g: &crate::game::Game) -> bool {
     g.tune.tactics && g.ai_enabled
-}
-
-/// Distance over the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
-/// The bearing of p about C.
-fn bearing_of(p: V3, c_2: V3) -> f64 {
-    m::atan2(p[0] - c_2[0], p[2] - c_2[2])
 }
 
 /// Two bearings' difference in degrees.
@@ -86,7 +69,7 @@ fn deg_apart(a: f64, b: f64) -> f64 {
 /// A free man the tactics may move: alive, in the list, not held / choreographed / on his marks / pinned, not in the standoff.
 pub(super) fn free_man(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
-    o.state != crate::game::GuardState::Dead && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
+    !g.cond[o.ch].down && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
 }
 
 /// Eyes on his man lately: he is fighting or chasing by sight, not working a fix.
@@ -95,19 +78,10 @@ pub(super) fn in_contact(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Pinned by fire or flinching under it.
-pub(super) fn suppressed(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let sup = &g.gd[gd].sup;
+pub(super) fn suppressed(g: &crate::game::Game, gd: GuardId) -> bool {
+    let sup = &g.cond[g.gd[gd].ch].sup;
     sup.latched || sup.down_t > 0.0 || sup.v >= g.k.suppression.flinch
 }
-
-/// The length of a route over the floor.
-fn path_len(from: V3, path: &[V3]) -> f64 {
-    let mut len = 0.0;
-    let mut q = from;
-    for &w in path { len += flat(q, w); q = w; }
-    len
-}
-
 /// Points every `step` metres along from → path (the start and the very end included).
 pub(super) fn sample_path(from: V3, path: &[V3], step: Option<f64>) -> Vec<V3> {
     let step = step.unwrap_or(0.3);
@@ -115,7 +89,7 @@ pub(super) fn sample_path(from: V3, path: &[V3], step: Option<f64>) -> Vec<V3> {
     let mut carry = 0.0;
     let mut a = from;
     for &b in path {
-        let l = flat(a, b);
+        let l = dist_xz(a, b);
         if l < 1e-6 { a = b; continue; }
         let mut d = step - carry;
         while d <= l {
@@ -126,7 +100,7 @@ pub(super) fn sample_path(from: V3, path: &[V3], step: Option<f64>) -> Vec<V3> {
         a = b;
     }
     let last = if !path.is_empty() { path[path.len() - 1] } else { from };
-    if flat(out[out.len() - 1], last) > 1e-3 { out.push([last[0], 0.0, last[2]]); }
+    if dist_xz(out[out.len() - 1], last) > 1e-3 { out.push([last[0], 0.0, last[2]]); }
     out
 }
 
@@ -169,9 +143,9 @@ fn sector_cells(g: &crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: 
         let mut x = x0;
         while x <= x1 {
             let p: V3 = [(x + 0.5) * cs, 0.0, (z + 0.5) * cs];
-            let d = flat(p, c_2);
+            let d = dist_xz(p, c_2);
             let i = crate::scene_collision::nav_grid_idx(g, x, z);
-            if !(d > r || d < 0.75 || g.col.nav.blocked[i as usize] != 0) && deg_apart(bearing_of(p, c_2), bearing) < half_deg {
+            if !(d > r || d < 0.75 || g.col.nav.blocked[i as usize] != 0) && deg_apart(v3::yaw_to(c_2, p), bearing) < half_deg {
                 out.add(crate::Num(i));
             }
             x += 1.0;
@@ -183,31 +157,31 @@ fn sector_cells(g: &crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: 
 
 /// The bearing about T at which a walk from → path last comes INTO T's R-disc (his own bearing if he already stands inside it).
 fn entry_bearing(t: V3, from: V3, path: &[V3], r: f64) -> f64 {
-    if flat(from, t) <= r { return bearing_of(from, t); }
+    if dist_xz(from, t) <= r { return v3::yaw_to(t, from); }
     let s = sample_path(from, path, Some(0.25));
-    let mut b = bearing_of(s[s.len() - 1], t);
+    let mut b = v3::yaw_to(t, s[s.len() - 1]);
     let mut i = 0;
     while i + 1 < s.len() {
-        if flat(s[i], t) > r && flat(s[i + 1], t) <= r { b = bearing_of(s[i], t); }
+        if dist_xz(s[i], t) > r && dist_xz(s[i + 1], t) <= r { b = v3::yaw_to(t, s[i]); }
         i += 1;
     }
     b
 }
 
 /// The line of FIRE from a man stood at p to the fix area at T, chest to chest height.
-pub(super) fn los_open(g: &mut crate::game::Game, p: V3, t: V3, team: crate::teams::Team) -> bool {
+pub(super) fn los_open(g: &crate::game::Game, p: V3, t: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, [p[0], 1.15, p[2]], [t[0], 1.0, t[2]], Some(0.02), None)
 }
 
 /// The last point along from → path still COVERED from T before the line opens for good on the way in, at least `min_from_t` off T.
-fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64, team: crate::teams::Team) -> Option<V3> {
+fn last_cover_point(g: &crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64) -> Option<V3> {
     let s = sample_path(from, path, Some(0.3));
     let mut los: Vec<bool> = Vec::with_capacity(s.len());
-    for &p in &s { los.push(los_open(g, p, t, team)); }
+    for &p in &s { los.push(los_open(g, p, t)); }
     let mut i = s.len() as isize - 2;
     while i >= 0 {
         let u = i as usize;
-        if !los[u] && los[u + 1] && flat(s[u], t) >= min_from_t { return Some(s[u.saturating_sub(1)]); }
+        if !los[u] && los[u + 1] && dist_xz(s[u], t) >= min_from_t { return Some(s[u.saturating_sub(1)]); }
         i -= 1;
     }
     None
@@ -216,12 +190,12 @@ fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min
 /// The point along from → path where `rem` metres of it remain (the path's end if it is shorter).
 pub(super) fn point_short_of_end(from: V3, path: &[V3], rem: f64) -> V3 {
     let s = sample_path(from, path, Some(0.25));
-    let total = path_len(from, path);
+    let total = crate::places::walk_len(from, path);
     let want = m::max(0.0, total - rem);
     let mut acc = 0.0;
     let mut i = 1;
     while i < s.len() {
-        acc += flat(s[i - 1], s[i]);
+        acc += dist_xz(s[i - 1], s[i]);
         if acc >= want { return s[i]; }
         i += 1;
     }
@@ -262,7 +236,7 @@ fn door_near(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<DoorId> {
     let mut best = None;
     let mut bd = r;
     for &d in &g.doors.list {
-        let dd = flat(g.dr[d].frame_centre, p);
+        let dd = dist_xz(g.dr[d].frame_centre, p);
         if dd < bd { bd = dd; best = Some(d); }
     }
     best
@@ -316,7 +290,6 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
         if r.until <= now {
             r.t0 = now;
             r.banged = false;
-            r.entered = false;
             r.called = false;
             r.summoned = None;
             g.stats.tactics.dangers += 1;
@@ -326,15 +299,10 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
         if let Some(v) = victim { if !v.is_empty() { r.victim = Some(String::from(v)); } }
         return id;
     }
-    let id = g.tab.tactics_danger_rec.push(crate::tactics::DangerRec { door: d, team, until, t0: now, why, victim: victim.map(String::from), banged: false, entered: false, called: false, summoned: None });
+    let id = g.tab.tactics_danger_rec.push(crate::tactics::DangerRec { door: d, team, until, t0: now, why, victim: victim.map(String::from), banged: false, called: false, summoned: None });
     s(g).danger.push(id);
     g.stats.tactics.dangers += 1;
     id
-}
-
-/// A restart's clean slate: everything this game's tactics held goes.
-pub fn tactics_reset(g: &mut crate::game::Game) {
-    g.m.tactics.states = None;
 }
 
 /// Has this man taken this doorway as a drill already inside its current danger.
@@ -344,11 +312,6 @@ pub(super) fn cleared_for(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> 
         Some(&t) => t > now,
         None => false,
     }
-}
-
-/// QA / panel: clearedFor without building the state.
-fn tactics_cleared(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
-    g.m.tactics.states.is_some() && cleared_for(g, gd, d)
 }
 
 /// Note that this man has taken this doorway, until `until`.
@@ -362,19 +325,16 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
     let c = g.gd[victim].ch;
     let pos = g.ch[c].pos;
     let Some(d) = door_near(g, pos, None) else { return; };
-    let at = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(pos, [0.0, 1.1, 0.0]),
-    };
-    let team = g.gd[victim].team;
+    let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
+    let team = g.team(victim);
     let mut seen = false;
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         if o != victim
-            && g.gd[o].state != crate::game::GuardState::Dead
-            && g.gd[o].team == team
+            && !crate::condition::down(g, g.gd[o].ch)
+            && g.team(o) == team
             && g.gd[o].held.is_none()
             && !crate::control::man::blind(g, o)
             && crate::guards::point_in_view(g, o, at, Some(16.0), Some(60.0))
@@ -394,7 +354,7 @@ pub fn tactics_body_found(g: &mut crate::game::Game, finder: GuardId, body: Guar
     if !tactics_on(g) { return; }
     let at = crate::guards::body_pos(g, body);
     if let Some(d) = door_near(g, at, None) {
-        let team = g.gd[finder].team;
+        let team = g.team(finder);
         let who = g.gd[body].callsign.clone();
         mark_danger(g, d, team, crate::tactics::DangerWhy::Body, Some(&who));
     }
@@ -406,8 +366,7 @@ pub fn body_duty_blocked(g: &mut crate::game::Game, gd: GuardId, body: GuardId) 
     let at = crate::guards::body_pos(g, body);
     match door_near(g, at, None) {
         Some(d) => {
-            let team = g.gd[gd].team;
-            danger_at(g, d, team).is_some()
+            danger_at(g, d, g.team(gd)).is_some()
         }
         None => false,
     }
@@ -427,7 +386,7 @@ pub(super) fn scan_rounds(g: &mut crate::game::Game) {
         if seen.has(e.serial) { continue; }
         seen.add(e.serial);
         let shooter = if e.kind == crate::director::EventKind::Shot {
-            crate::teams::Team::Player
+            crate::teams::Team::Ours
         } else {
             crate::teams::team_of_id(g, e.who.unwrap_or(-1.0))
         };
@@ -440,10 +399,10 @@ pub(super) fn scan_rounds(g: &mut crate::game::Game) {
             while oi < g.guards.len() {
                 let o = g.guards[oi];
                 oi += 1;
-                let team = g.gd[o].team;
-                if !crate::teams::is_hostile(g, shooter, team) || g.gd[o].held.is_some() { continue; }
-                if g.gd[o].state == crate::game::GuardState::Dead && !(g.gd[o].died_at >= e.time - 1e-6) { continue; }
-                if dist_to_segment(pos_of(g, o), x.at, to) <= ROUND_AT_M {
+                let team = g.team(o);
+                if !shooter.foe_of(team) || g.gd[o].held.is_some() { continue; }
+                if crate::condition::down(g, g.gd[o].ch) && !(g.gd[o].died_at >= e.time - 1e-6) { continue; }
+                if dist_to_segment(g.pos_of(o), x.at, to) <= ROUND_AT_M {
                     mark_danger(g, d, team, crate::tactics::DangerWhy::Rounds, None);
                 }
             }
@@ -462,10 +421,10 @@ fn dist_to_segment(p: V3, a: V3, b: V3) -> f64 {
 
 /// The per-cell multiplier this man's plan pays from here to `goal`, or None = plain A*.
 pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Option<crate::tactics::TacticsPenalty> {
-    if !tactics_on(g) || g.gd[gd].script.is_some() || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
+    if !tactics_on(g) || g.gd[gd].script.is_some() || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let role = s(g).roles.get(gd).copied();
     let avoid = role.and_then(|r| g.tab.tactics_role[r].avoid.clone());
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut recs: Vec<DoorId> = Vec::new();
     for r in danger_doors(g, Some(team)) {
         let door = g.tab.tactics_danger_rec[r].door;
@@ -484,26 +443,12 @@ pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Opti
             if recs.contains(d) { cells.add(i); }
         }
         door_idx = Some(cells);
-        let from = pos_of(g, gd);
+        let from = g.pos_of(gd);
         let plain = crate::scene_collision::nav_grid_find_path(g, from, goal, None, None);
-        let l = match &plain { Some(p) => path_len(pos_of(g, gd), p), None => 10.0 };
+        let l = match &plain { Some(p) => crate::places::walk_len(g.pos_of(gd), p), None => 10.0 };
         door_mult = m::max(DOOR_COST_MIN, 1.0 + 1.5 * l);
     }
     Some(crate::tactics::TacticsPenalty::Cells { w, door_idx, door_mult, avoid })
-}
-
-/// The roster's role of a man, if any, for the panel / soak / probes.
-fn tactics_role_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
-    let st = g.m.tactics.states.as_ref()?;
-    if let Some(&r) = st.roles.get(gd) { return Some(String::from(g.tab.tactics_role[r].kind.as_str())); }
-    if let Some(x) = st.gates.get(gd) { return Some(format!("door:{}", x.role.as_str())); }
-    if let Some(l) = st.lone.get(gd) { if !l.released { return Some(String::from("lone")); } }
-    None
-}
-
-/// His role.
-fn role_record(g: &crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> {
-    g.m.tactics.states.as_ref()?.roles.get(gd).copied()
 }
 
 /// The live plans.
@@ -517,30 +462,24 @@ fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &st
     let mut since = f64::INFINITY;
     let members = g.tab.tactics_plan[plan].members.clone();
     for o in members {
-        let t = match crate::pressure::look_since(g, o) {
-            Some(t) => Some(t),
-            None => crate::enemysquads::squad_look_since(g, o),
-        };
-        let Some(t) = t else {
-            let moving = crate::words::wg(g, &"going around", &"moving round");
-            return format!("{} — coming at {} from {}", moving, who, place);
+        let Some(t) = crate::enemysquads::squad_look_since(g, o) else {
+            return format!("going around — coming at {} from {}", who, place);
         };
         since = m::min(since, t);
     }
     let team = g.tab.tactics_plan[plan].team;
-    let seen = g.guards.iter().any(|&o| g.gd[o].team == team && g.gd[o].last_seen_t > since);
-    let moving = crate::words::wg(g, &"going around", &"moving round");
+    let seen = g.guards.iter().any(|&o| g.team(o) == team && g.gd[o].last_seen_t > since);
     if seen {
-        format!("{} — coming at {} from {}", moving, who, place)
+        format!("going around — coming at {} from {}", who, place)
     } else {
-        format!("{} — coming in from {}", moving, place)
+        format!("going around — coming in from {}", place)
     }
 }
 
 /// A role as dealt, a new row.
-fn mk(g: &mut Game, plan: TacticsPlanId, kind: crate::tactics::RoleKind, hold_at: Option<V3>, route: Vec<V3>, len: f64, bearing: f64, av: Option<JsSet<crate::Num>>) -> TacticsRoleId {
+fn mk(g: &mut Game, plan: TacticsPlanId, kind: crate::tactics::RoleKind, hold_at: Option<V3>, bearing: f64, av: Option<JsSet<crate::Num>>) -> TacticsRoleId {
     let t0 = g.time;
-    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, bearing, avoid: av, set: false, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
+    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, bearing, avoid: av, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
 }
 
 /// His side's dangerous doorways priced in, no avoid-set, made once a man; the roster's own delete / set kept as it was (it moves him to the map's end).
@@ -555,149 +494,169 @@ fn danger_only(g: &mut Game, gd: GuardId, t: V3, pens: &mut JsMap<GuardId, Optio
 }
 
 /// Deal roles to `men` over the nav grid toward `target`, register the plan and return it; None if fewer than two have a route.
-pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: V3, why: Option<&str>, prefer: Option<GuardId>) -> Option<TacticsPlanId> {
-    let why = why.unwrap_or("formed");
+pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: V3, prefer: Option<GuardId>) -> Option<TacticsPlanId> {
     s(g);
-    let team = g.gd[men[0]].team;
+    let team = g.team(men[0]);
     let t_pt: V3 = [target[0], 0.0, target[2]];
-    // any old plan these men were in goes
-    for &m in men {
-        let Some(r) = s(g).roles.get(m).copied() else { continue; };
-        let old = g.tab.tactics_role[r].plan;
-        if g.tab.tactics_plan[old].phase != crate::tactics::PlanPhase::Done {
-            let said = format!("re-dealt ({})", why);
-            end_plan(g, old, &said, Some(false));
-        }
-    }
+    end_their_old_plans(g, men);
     let mut pens: JsMap<GuardId, Option<crate::tactics::TacticsPenalty>> = JsMap::new();
-    let mut routes: Vec<(GuardId, Vec<V3>, f64)> = Vec::new();
-    for &m in men {
-        let from = pos_of(g, m);
-        let base = danger_only(g, m, t_pt, &mut pens);
-        let path = match &base {
-            Some(p) => {
-                let mut price = |_g: &mut Game, ix: f64, iz: f64| pen_at(p, ix, iz);
-                crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), Some(&mut price))
-            }
-            None => crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), None),
-        };
-        if let Some(path) = path {
-            let len = path_len(pos_of(g, m), &path);
-            if len.is_finite() { routes.push((m, path, len)); }
-        }
-    }
+    let mut routes = routes_to(g, men, t_pt, &mut pens);
     if routes.len() < 2 {
         let now = g.time;
         s(g).deal_fail_t = now;
         return None;
     }
-    js::sort_by(&mut routes, |a, b| a.2 - b.2);
-    if let Some(pref) = prefer {
-        if let Some(i) = routes.iter().position(|r| r.0 == pref) {
-            if i > 0 { let r = routes.remove(i); routes.insert(0, r); }
+    js::sort_by(&mut routes, |a, b| a.len - b.len);
+    if let Some(pref) = prefer { his_route_first(&mut routes, pref); }
+    let front = front_of(g, &routes[0], t_pt);
+    let plan = new_plan(g, team, t_pt, &routes);
+    deal_presser(g, plan, &routes[0], &front);
+    for r in routes.iter().skip(1) { deal_flanker_or_second(g, plan, r, &front, &mut pens); }
+    let dealt = g.tab.tactics_plan[plan].roles.keys();
+    on_the_roster(g, plan, &dealt);
+    s(g).plans.push(plan);
+    flankers_say_so(g, plan, &dealt, t_pt);
+    Some(plan)
+}
+
+/// A man's way to the target and how long it is.
+struct Route { man: GuardId, path: Vec<V3>, len: f64 }
+
+/// What the shortest route leaves the others: the target, how long that route is, the bearing it comes in on, and the ground a flank keeps off.
+struct Front { target: V3, len: f64, bearing: f64, avoid: JsSet<crate::Num> }
+
+/// Any old plan these men were in goes.
+fn end_their_old_plans(g: &mut Game, men: &[GuardId]) {
+    for &m in men {
+        let Some(r) = s(g).roles.get(m).copied() else { continue; };
+        let old = g.tab.tactics_role[r].plan;
+        if g.tab.tactics_plan[old].phase != crate::tactics::PlanPhase::Done {
+            end_plan(g, old, Some(false));
         }
     }
-    let (p0_gd, p0_path, p0_len) = routes[0].clone();
-    let p0_pos = pos_of(g, p0_gd);
-    let corridor = cells_of_path(g, p0_pos, &p0_path, CORRIDOR_DILATE);
-    let p_bear = entry_bearing(t_pt, p0_pos, &p0_path, DISC_M);
-    let sector = sector_cells(g, t_pt, p_bear, SECTOR_M, FLANK_MIN_DEG);
-    let mut avoid = corridor.clone();
-    for c in sector.iter() { avoid.add(c); }
+}
+
+/// The men who have a way there of a finite length, in the order given, with their side's dangerous doorways priced in.
+fn routes_to(g: &mut Game, men: &[GuardId], t: V3, pens: &mut JsMap<GuardId, Option<crate::tactics::TacticsPenalty>>) -> Vec<Route> {
+    let mut routes = Vec::new();
+    for &man in men {
+        let from = g.pos_of(man);
+        let base = danger_only(g, man, t, pens);
+        let path = match &base {
+            Some(p) => {
+                let mut price = |_g: &Game, ix: f64, iz: f64| pen_at(p, ix, iz);
+                crate::scene_collision::nav_grid_find_path(g, from, t, Some(6000.0), Some(&mut price))
+            }
+            None => crate::scene_collision::nav_grid_find_path(g, from, t, Some(6000.0), None),
+        };
+        let Some(path) = path else { continue };
+        let len = crate::places::walk_len(from, &path);
+        if len.is_finite() { routes.push(Route { man, path, len }); }
+    }
+    routes
+}
+
+/// The man asked for leads, whatever the length of his route.
+fn his_route_first(routes: &mut Vec<Route>, man: GuardId) {
+    if let Some(i) = routes.iter().position(|r| r.man == man) {
+        if i > 0 { let r = routes.remove(i); routes.insert(0, r); }
+    }
+}
+
+/// The ground around the first route and the sector it comes in by, dear to a flank.
+fn front_of(g: &Game, lead: &Route, t: V3) -> Front {
+    let pos = g.pos_of(lead.man);
+    let mut avoid = cells_of_path(g, pos, &lead.path, CORRIDOR_DILATE);
+    let bearing = entry_bearing(t, pos, &lead.path, DISC_M);
+    for c in sector_cells(g, t, bearing, SECTOR_M, FLANK_MIN_DEG).iter() { avoid.add(c); }
+    Front { target: t, len: lead.len, bearing, avoid }
+}
+
+/// A new plan of these men, its roles still to deal.
+fn new_plan(g: &mut Game, team: crate::teams::Team, t: V3, routes: &[Route]) -> TacticsPlanId {
     let now = g.time;
-    let id = {
-        let st = s(g);
-        st.plan_serial += 1.0;
-        st.plan_serial
-    };
-    let plan = g.tab.tactics_plan.push(crate::tactics::Plan {
+    s(g).plan_serial += 1.0;
+    g.tab.tactics_plan.push(crate::tactics::Plan {
         team,
-        target: t_pt,
+        target: t,
         t0: now,
         replanned_at: now,
-        members: routes.iter().map(|r| r.0).collect(),
+        members: routes.iter().map(|r| r.man).collect(),
         roles: JsMap::new(),
         phase: crate::tactics::PlanPhase::Approach,
-        go_t: -1.0,
         first_arrive_t: -1.0,
         last_radio_t: -100.0,
         contact: false,
-    });
-    // the presser: up the short route to the last corner that still hides him (else the disc's edge)
-    let p0_team = g.gd[p0_gd].team;
-    let p_hold = match last_cover_point(g, p0_pos, &p0_path, t_pt, 1.0, p0_team) {
-        Some(p) => p,
-        None => point_short_of_end(p0_pos, &p0_path, DISC_M),
+    })
+}
+
+/// The presser: up the short route to the last corner that still hides him (else the disc's edge).
+fn deal_presser(g: &mut Game, plan: TacticsPlanId, lead: &Route, front: &Front) {
+    let pos = g.pos_of(lead.man);
+    let hold = last_cover_point(g, pos, &lead.path, front.target, 1.0).unwrap_or_else(|| point_short_of_end(pos, &lead.path, DISC_M));
+    let role = mk(g, plan, crate::tactics::RoleKind::Presser, Some(hold), front.bearing, None);
+    g.tab.tactics_plan[plan].roles.set(lead.man, role);
+}
+
+/// The others: a flank if the dear-corridor search finds a way in from the other side inside the ratio, else a second presser.
+fn deal_flanker_or_second(g: &mut Game, plan: TacticsPlanId, r: &Route, front: &Front, pens: &mut JsMap<GuardId, Option<crate::tactics::TacticsPenalty>>) {
+    let from = g.pos_of(r.man);
+    let base = danger_only(g, r.man, front.target, pens);
+    let role = if let Some((path, bearing)) = flank_way(g, from, &base, r.len, front) {
+        let set_at = last_cover_point(g, from, &path, front.target, 1.0).unwrap_or_else(|| point_short_of_end(from, &path, DISC_M + 0.5));
+        mk(g, plan, crate::tactics::RoleKind::Flanker, Some(set_at), bearing, Some(front.avoid.clone()))
+    } else {
+        mk(g, plan, crate::tactics::RoleKind::Second, None, front.bearing, None)
     };
-    let role = mk(g, plan, crate::tactics::RoleKind::Presser, Some(p_hold), p0_path.clone(), p0_len, p_bear, None);
-    g.tab.tactics_plan[plan].roles.set(p0_gd, role);
-    // the others: a flank if the dear-corridor search finds a way in from the other side inside the ratio, else a second presser
+    g.tab.tactics_plan[plan].roles.set(r.man, role);
+}
+
+/// The way round the dear ground and the bearing it comes in on, if it is not too long and comes in from far enough to the side.
+fn flank_way(g: &Game, from: V3, base: &Option<crate::tactics::TacticsPenalty>, r_len: f64, front: &Front) -> Option<(Vec<V3>, f64)> {
     let w = g.col.nav.w;
-    for r in routes.iter().skip(1) {
-        let (r_gd, r_path, r_len) = (r.0, &r.1, r.2);
-        let from = pos_of(g, r_gd);
-        let base = danger_only(g, r_gd, t_pt, &mut pens);
-        let fp = {
-            let mut price = |_g: &mut Game, ix: f64, iz: f64| {
-                let b = match &base { Some(p) => pen_at(p, ix, iz), None => 1.0 };
-                m::max(b, if avoid.has(crate::Num(iz * w + ix)) { CORRIDOR_COST } else { 1.0 })
-            };
-            crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), Some(&mut price))
-        };
-        let flen = match &fp { Some(p) => path_len(from, p), None => f64::INFINITY };
-        let f_bear = match &fp { Some(p) => entry_bearing(t_pt, from, p, DISC_M), None => p_bear };
-        let apart = deg_apart(f_bear, p_bear);
-        let flank = match fp {
-            Some(p) if flen <= FLANK_MAX_RATIO * m::max(p0_len, r_len) && apart >= FLANK_MIN_DEG - 0.5 => Some(p),
-            _ => None,
-        };
-        if let Some(p) = flank {
-            let r_team = g.gd[r_gd].team;
-            let set_at = match last_cover_point(g, from, &p, t_pt, 1.0, r_team) {
-                Some(q) => q,
-                None => point_short_of_end(from, &p, DISC_M + 0.5),
-            };
-            let role = mk(g, plan, crate::tactics::RoleKind::Flanker, Some(set_at), p, flen, f_bear, Some(avoid.clone()));
-            g.tab.tactics_plan[plan].roles.set(r_gd, role);
-            g.stats.tactics.flankers += 1;
-        } else {
-            let role = mk(g, plan, crate::tactics::RoleKind::Second, None, r_path.clone(), r_len, p_bear, None);
-            g.tab.tactics_plan[plan].roles.set(r_gd, role);
-            g.stats.tactics.seconds += 1;
-        }
-    }
-    // a fresh leg for everybody: goTo plans it with the new costs
-    let dealt = g.tab.tactics_plan[plan].roles.keys();
-    for &m in &dealt {
-        let role = *g.tab.tactics_plan[plan].roles.get(m).unwrap();
+    let mut price = |_g: &Game, ix: f64, iz: f64| {
+        let b = match base { Some(p) => pen_at(p, ix, iz), None => 1.0 };
+        m::max(b, if front.avoid.has(crate::Num(iz * w + ix)) { CORRIDOR_COST } else { 1.0 })
+    };
+    let path = crate::scene_collision::nav_grid_find_path(g, from, front.target, Some(6000.0), Some(&mut price))?;
+    let len = crate::places::walk_len(from, &path);
+    let bearing = entry_bearing(front.target, from, &path, DISC_M);
+    let short_enough = len <= FLANK_MAX_RATIO * m::max(front.len, r_len);
+    let wide_enough = deg_apart(bearing, front.bearing) >= FLANK_MIN_DEG - 0.5;
+    (short_enough && wide_enough).then_some((path, bearing))
+}
+
+/// Each man takes his role and a fresh leg: goTo plans it with the new costs.
+fn on_the_roster(g: &mut Game, plan: TacticsPlanId, dealt: &[GuardId]) {
+    for &man in dealt {
+        let role = *g.tab.tactics_plan[plan].roles.get(man).unwrap();
         let st = s(g);
-        st.roles.set(m, role);
-        st.lone.delete(m);
-        fresh_leg(g, m);
+        st.roles.set(man, role);
+        st.lone.delete(man);
+        fresh_leg(g, man);
     }
-    s(g).plans.push(plan);
-    g.stats.tactics.plans += 1;
-    if why != "formed" { g.stats.tactics.replans += 1; }
-    // the flanker says so (radio: the debrief hears it)
-    for &m in &dealt {
-        let role = *g.tab.tactics_plan[plan].roles.get(m).unwrap();
+}
+
+/// The flanker says so (radio: the debrief hears it).
+fn flankers_say_so(g: &mut Game, plan: TacticsPlanId, dealt: &[GuardId], t: V3) {
+    for &man in dealt {
+        let role = *g.tab.tactics_plan[plan].roles.get(man).unwrap();
         let (kind, said, hold) = {
             let r = &g.tab.tactics_role[role];
             (r.kind, r.said_moving, r.hold_at)
         };
         if kind != crate::tactics::RoleKind::Flanker || said { continue; }
         g.tab.tactics_role[role].said_moving = true;
-        let place = crate::dialogue::place_name(g, hold.unwrap_or(t_pt));
-        let text = flank_call(g, plan, m, &place);
-        crate::game::game_say(g, m, &text, Some(true), None);
+        let place = crate::dialogue::place_name(g, hold.unwrap_or(t));
+        let text = flank_call(g, plan, man, &place);
+        crate::game::game_say(g, man, &text, Some(true), None);
         let now = g.time;
         g.tab.tactics_plan[plan].last_radio_t = now;
     }
-    Some(plan)
 }
 
 /// Dissolve a plan: its roles come off the roster (the men chase / search as they always did from where they stand).
-pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, why: &str, reset_men: Option<bool>) {
+pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, reset_men: Option<bool>) {
     let reset_men = reset_men.unwrap_or(true);
     s(g);
     if g.tab.tactics_plan[plan].phase == crate::tactics::PlanPhase::Done { return; }
@@ -706,7 +665,7 @@ pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, why: &str
         let r = g.tab.tactics_plan[plan].roles.get(m).copied();
         if s(g).roles.get(m).copied() != r { continue; }
         s(g).roles.delete(m);
-        if reset_men && g.gd[m].state != crate::game::GuardState::Dead {
+        if reset_men && !crate::condition::down(g, g.gd[m].ch) {
             fresh_leg(g, m);
             crate::guards::reset_chase(g, m);
         }
@@ -735,7 +694,6 @@ mod tests {
     const FROM: V3 = [0.3, 1.0, 0.7];
     const T: V3 = [11.0, 0.0, 3.0];
 
-    // printed by bun with EXACT.on from a verbatim copy of tactics.ts:166-168, 177-189, 211-216, 231-235, 336-340
     const FLAT: u64 = 0x4025e3890c1ed489u64;
     const BEARING: u64 = 0xbffc853be4bcdd19u64;
     const DEG_APART: u64 = 0x403039aec352e85fu64;
@@ -748,10 +706,10 @@ mod tests {
 
     #[test]
     fn the_typescripts_own_bits() {
-        assert_eq!(flat(FROM, T).to_bits(), FLAT);
-        assert_eq!(bearing_of(FROM, T).to_bits(), BEARING);
+        assert_eq!(dist_xz(FROM, T).to_bits(), FLAT);
+        assert_eq!(v3::yaw_to(T, FROM).to_bits(), BEARING);
         assert_eq!(deg_apart(2.9, -3.1).to_bits(), DEG_APART);
-        assert_eq!(path_len(FROM, &PATH).to_bits(), PATH_LEN);
+        assert_eq!(crate::places::walk_len(FROM, &PATH).to_bits(), PATH_LEN);
         let s: Vec<f64> = sample_path(FROM, &PATH, None).iter().flat_map(|p| [p[0], p[1], p[2]]).collect();
         assert_eq!(bits(&s), SAMPLE.to_vec());
         assert_eq!(entry_bearing(T, FROM, &PATH, 4.0).to_bits(), ENTRY);
@@ -814,11 +772,11 @@ mod tests {
         assert_eq!(g.tab.tactics_danger_rec[r].t0, 10.0);
         assert_eq!(g.stats.tactics.dangers, 1);
         // the other side has a row of its own, and the readers tell them apart
-        let other = mark_danger(&mut g, d, Team::Player, DangerWhy::Press, None);
+        let other = mark_danger(&mut g, d, Team::Ours, DangerWhy::Drop, None);
         assert_ne!(other, r);
         assert_eq!(danger_at(&mut g, d, Team::Guard), Some(r));
         assert_eq!(danger_at(&mut g, DoorId(4), Team::Guard), None);
-        assert_eq!(danger_doors(&mut g, Some(Team::Player)), vec![other]);
+        assert_eq!(danger_doors(&mut g, Some(Team::Ours)), vec![other]);
         assert_eq!(danger_doors(&mut g, None), vec![r, other]);
         // run out: not live, and a new mark starts it over in the same row
         g.time = 100.0;
@@ -841,9 +799,9 @@ mod tests {
         let new = g.tab.tactics_plan.push(Plan::default());
         g.tab.tactics_plan[old].phase = PlanPhase::Approach;
         g.tab.tactics_plan[new].phase = PlanPhase::Approach;
-        let ra = mk(&mut g, old, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);
-        let rb_old = mk(&mut g, old, RoleKind::Second, None, Vec::new(), 0.0, 0.0, None);
-        let rb_new = mk(&mut g, new, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);
+        let ra = mk(&mut g, old, RoleKind::Presser, None, 0.0, None);
+        let rb_old = mk(&mut g, old, RoleKind::Second, None, 0.0, None);
+        let rb_new = mk(&mut g, new, RoleKind::Presser, None, 0.0, None);
         g.tab.tactics_plan[old].roles.set(a, ra);
         g.tab.tactics_plan[old].roles.set(b, rb_old);
         g.tab.tactics_plan[new].roles.set(b, rb_new);
@@ -854,16 +812,14 @@ mod tests {
             st.plans.push(old);
             st.plans.push(new);
         }
-        end_plan(&mut g, old, "test", Some(false));
+        end_plan(&mut g, old, Some(false));
         assert_eq!(g.tab.tactics_plan[old].phase, PlanPhase::Done);
         assert_eq!(s(&mut g).roles.get(a).copied(), None);
         assert_eq!(s(&mut g).roles.get(b).copied(), Some(rb_new));
         assert_eq!(plans_of(&mut g), vec![new]);
-        assert_eq!(role_record(&mut g, b), Some(rb_new));
-        assert_eq!(tactics_role_of(&mut g, b).as_deref(), Some("presser"));
         // already done: nothing moves
         s(&mut g).roles.set(a, ra);
-        end_plan(&mut g, old, "again", Some(false));
+        end_plan(&mut g, old, Some(false));
         assert_eq!(s(&mut g).roles.get(a).copied(), Some(ra));
     }
 
@@ -871,10 +827,8 @@ mod tests {
     fn a_doorway_taken_stays_taken_until_its_time() {
         let mut g = Game::blank();
         g.time = 5.0;
-        assert!(!tactics_cleared(&mut g, GuardId(0), DoorId(1)));
         assert!(g.m.tactics.states.is_none());
         set_cleared(&mut g, GuardId(0), DoorId(1), 8.0);
-        assert!(tactics_cleared(&mut g, GuardId(0), DoorId(1)));
         assert!(!cleared_for(&mut g, GuardId(0), DoorId(2)));
         assert!(!cleared_for(&mut g, GuardId(1), DoorId(1)));
         g.time = 8.0;

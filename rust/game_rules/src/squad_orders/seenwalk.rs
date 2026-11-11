@@ -18,10 +18,10 @@ fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        doors.push_str(&js::num_str(crate::doors::door_angle(g, d)));
-        if crate::doors::door_latched(g, d) { doors.push('l'); }
-        if crate::doors::door_locked(g, d) { doors.push('k'); }
-        if crate::doors::door_off(g, d) { doors.push('o'); }
+        doors.push_str(&js::num_str(g.dr[d].leaf.angle));
+        if g.dr[d].leaf.latched { doors.push('l'); }
+        if g.dr[d].leaf.locked { doors.push('k'); }
+        if g.dr[d].leaf.off { doors.push('o'); }
         doors.push(',');
         i += 1;
     }
@@ -50,15 +50,9 @@ fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     g.m.seenwalk.shared.as_mut().unwrap()
 }
 
-/// Nothing kept: a restart, a checkpoint loaded.
-pub fn seen_reset(g: &mut crate::game::Game) {
-    g.m.seenwalk.shared = None;
-}
-
 /// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.
 pub(super) fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
     let all = shared_of(g).eyes.clone();
-    g.stats.seenwalk.asks += 1;
     if all.is_empty() { return None; }
     let (mut x0, mut x1, mut z0, mut z1) = (from[0], from[0], from[2], from[2]);
     for b in base {
@@ -93,14 +87,13 @@ pub(super) fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::
         return v;
     }
     let mut v = 1.0;
-    g.stats.seenwalk.blocks += 1;
     // (the block's own point: its first free cell in a fixed order, so that its price does not hang on which cell was asked first)
     let (mut px, mut pz) = (f64::NAN, f64::NAN);
     let mut k: i32 = 0;
     while k < 4 && px.is_nan() {
         let (cx, cz) = (bx * 2.0 + (k & 1) as f64, bz * 2.0 + (k >> 1) as f64);
         if cx < g.col.nav.w && cz < g.col.nav.h {
-            // (off the grid's low edge the TypeScript reads undefined from the typed array, which is not 1)
+            // (off the grid's low edge there is no cell, which is not 1)
             let at = crate::scene_collision::nav_grid_idx(g, cx, cz);
             let cell = if at >= 0.0 { g.col.nav.blocked.get(at as usize).copied() } else { None };
             if cell != Some(1) {
@@ -110,13 +103,12 @@ pub(super) fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::
         }
         k += 1;
     }
-    if !px.is_nan() && crate::cleared::cleared_rooms_known_at(g, [px, 0.0, pz]) {   // (floor inside an unknown room is cleared.ts's own price)
+    if !px.is_nan() && crate::cleared::cleared_rooms_known_at(g, [px, 0.0, pz]) {   // (floor inside an unknown room has the cleared rooms' own price)
         let lit = crate::calmtorch::place_light(g, px, pz);
         if lit >= g.k.seenwalk.lit_at {
             let (reach, head): (f64, V3) = (crate::guards::eye_reach(g, lit), [px, 1.5, pz]);
             for e in eyes {
                 if m::hyp2(e.x - px, e.z - pz) > reach { continue; }
-                g.stats.seenwalk.lines += 1;
                 let eye_y = g.k.seenwalk.eye_y;
                 if !crate::scene_collision::segment_blocked(g, [e.x, eye_y, e.z], head, None, None, None) {
                     v = g.k.seenwalk.dear;

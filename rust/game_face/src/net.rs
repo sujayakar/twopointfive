@@ -3,7 +3,7 @@
 //!
 //!   face_networked(h)                  once, as the game is stood: every seat is another machine's, so a record's view is worked out again from its pose on
 //!                                      every machine alike
-//!   face_record(h, seat, p, n, keys, kn)   A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: `RECORD` numbers (`n` bytes; src/net/record.ts says them in the same
+//!   face_record(h, seat, p, n, keys, kn)   A SEAT'S RECORD FOR THE NEXT STEP, as it travelled: `RECORD` numbers (`n` bytes; src/net/modgame.ts writes them in the same
 //!                                      order) and its keys' codes as text, those held and, after a line feed, those that went down. It is no hand: the host's
 //!                                      own camera is not moved by it. Of a seat that has both, what was handed last is stepped.
 //!   face_ahead(h, seat, p, n, keys, kn)    WHERE THE SEAT'S MAN WOULD BE after records the game has not had (game::walkahead), at face_out as `AHEAD` numbers and
@@ -59,9 +59,6 @@ pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize
     let r = records(p, n, keys, kn);
     let a = super::with(h, |x| {
         if seat >= x.g.seats.len() { return None; }
-        // (it asks of the box world: its copy stands, as for any question between two ticks)
-        if game::ask::WorldAsk::try_of(&x.g).is_err() { game::scene_collision::stands(&mut x.g); }
-        game::scene_box_mirror::box_mirror_things(&mut x.g);
         let s = x.g.seats[seat];
         let mut path = Vec::new();
         let a = game::walkahead::walk_ahead(&mut x.g, s, &r, 1.0 / 60.0, Some(&mut path));
@@ -71,8 +68,8 @@ pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize
         let c = &g.ch[pl.ch];
         let wall = pl.wall.as_ref().map(|w| w.n);
         let others = g.guards.iter().chain(g.civilians.iter()).map(|&gd| g.gd[gd].ch).chain(g.seats.iter().map(|&s| g.pl[game::seats::seat(g, s).player].ch));
-        let near = others.filter(|&o| o != pl.ch).map(|o| { let p = g.ch[o].pos; game::m::hyp2(p[0] - c.pos[0], p[2] - c.pos[2]) }).fold(f64::INFINITY, f64::min);
-        let mut o: Vec<f64> = vec![c.id, yes(pl.down), c.pos[0], c.pos[1], c.pos[2], c.aim_yaw];
+        let near = others.filter(|&o| o != pl.ch).map(|o| { let p = g.ch[o].pos; game::v3::dist_xz(p, c.pos) }).fold(f64::INFINITY, f64::min);
+        let mut o: Vec<f64> = vec![c.id, yes(game::condition::down(g, pl.ch)), c.pos[0], c.pos[1], c.pos[2], c.aim_yaw];
         o.extend([yes(wall.is_some()), wall.map_or(0.0, |n| n[0]), wall.map_or(0.0, |n| n[2]), near]);
         o.extend([yes(a.free), a.pos[0], a.pos[1], a.pos[2], a.aim_yaw, a.follow[0], a.follow[1], a.follow[2]]);
         let at = a.aim.unwrap_or([0.0; 3]);

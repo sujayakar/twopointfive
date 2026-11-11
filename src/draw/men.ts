@@ -24,7 +24,7 @@ export class DrawMen {
 
   from(queue: GPUQueue): void {
     const D = this.D, f = D.f, u = D.u, n = D.n[Section.men], W = this.world, mats = this.materials();
-    this.chars.drawn(n);
+    this.chars.drawn(n, u, D.at[Section.bones]);
     D.send(queue, this.chars.charInsts, Section.insts, Inst.row); D.send(queue, this.chars.jointMats, Section.bones, Bones.row);
     W.resetCapsules();
     for (let i = 0; i < n; i++) { const o = D.at[Section.men] + i * Man.row, L = this.lookOf(o, mats);

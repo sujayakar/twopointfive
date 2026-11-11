@@ -1,17 +1,14 @@
-//! THE FOG OF WAR'S SIGHT PASS — src/game/fogofwar.ts: which of the team's eyes has a line to a man (his chest, and his head behind a blocked chest) or to a
-//! point (a body where it lies). The rule is the TypeScript's, statement for statement (inField, lineToMan, eyeOnBody, sightBlocked); what moves here is the
-//! loop over the eyes and the lines it asks, so a man is one question to the module where he was two lines an eye.
+//! THE FOG OF WAR'S SIGHT PASS: which of the team's eyes has a line to a man (his chest, and his head behind a blocked chest) or to a
+//! point (a body where it lies). A man is one question here, whatever lines it takes.
 //!
-//! The eyes are written by the host as the pass opens (a row an eye: where it is, where it looks, and its field as the host worked it out) and are scratch
-//! of that pass: nothing here is kept from one update to the next.
+//! THE ORDER. The host writes the eyes as the pass opens (game_rules scene_collision `sight_eye`: a row an eye: where it is, where it looks, and its field as the host worked
+//! it out), then asks `see` as often as it likes. The eyes are scratch of that pass: nothing here is kept from one update to the next.
 //!
-//! The lengths are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math`; under an
-//! engine's maths the host asks the TypeScript, whose lengths are that engine's.
+//! The lengths are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::hypot2;
-use crate::world::WORLDS;
 
 /// eyes a pass can hold (the game's own cap is seven)
 pub const MAX_EYES: usize = 15;
@@ -25,14 +22,14 @@ const E_COS: usize = 6;
 const E_NEAR: usize = 7;
 const E_FULL: usize = 8;
 
-static mut EYES: [[f64; MAX_EYES * EYE]; WORLDS] = [[0.0; MAX_EYES * EYE]; WORLDS];
+static mut EYES: [f64; MAX_EYES * EYE] = [0.0; MAX_EYES * EYE];
 
-/// where world `w`'s eyes are written (a byte address)
-pub fn eyes_addr(w: usize) -> usize {
-    (unsafe { &(*core::ptr::addr_of!(EYES))[if w < WORLDS { w } else { 0 }] }).as_ptr() as usize
+/// where the eyes are written (a byte address)
+pub fn eyes_addr() -> usize {
+    core::ptr::addr_of!(EYES) as usize
 }
 
-pub use crate::world::ASK_HOST;
+pub use crate::world::{ASK_HOST, World};
 
 /// Is the point inside the eye's field (in plan)
 #[inline]
@@ -53,12 +50,12 @@ pub const KIND_MAN: u32 = 1;
 pub const KIND_ALIVE: u32 = 2;
 
 /// THE EYES WITH A LINE. `order` names `n` eyes four bits each, in the order to try them; the trying stops at the `want`-th eye with a line. A LIVING MAN
-/// (KIND_MAN; KIND_ALIVE if he is alive): `a` his chest, `b` his head (lineToMan). Otherwise `a` is a point and `b` is not read (eyeOnBody). `through` must
+/// (KIND_MAN; KIND_ALIVE if he is alive): `a` his chest, `b` his head. Otherwise `a` is a point and `b` is not read. `through` must
 /// carry the glass flag (the fog's own lines pass glass: nothing is listed). The answer: how many have a line in the top four bits, and those eyes four bits
 /// each in the order found; or ASK_HOST.
 #[allow(clippy::too_many_arguments)]
-pub fn see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> u32 {
-    let eyes = unsafe { &(*core::ptr::addr_of!(EYES))[if w < WORLDS { w } else { 0 }] };
+pub fn see(w: &World, order: u32, n: u32, want: u32, kind: u32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> u32 {
+    let eyes = unsafe { &*core::ptr::addr_of!(EYES) };
     let n = if n > 7 { 7 } else { n };
     let (mut out, mut found) = (0u32, 0u32);
     if want == 0 {
@@ -80,13 +77,13 @@ pub fn see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through
             } else if kind & KIND_ALIVE == 0 {
                 false
             } else {
-                match lines::man_hidden(w, set, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2, b0, b1, b2, tune) {
+                match lines::man_hidden(w, true, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2, b0, b1, b2, tune) {
                     None => return ASK_HOST,
                     Some(hidden) => !hidden,
                 }
             }
         } else {
-            match lines::sight_line(w, set, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2, tune) {
+            match lines::sight_line(w, true, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2, tune) {
                 None => return ASK_HOST,
                 Some(blocked) => !blocked,
             }

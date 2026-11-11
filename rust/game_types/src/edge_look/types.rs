@@ -55,7 +55,7 @@ pub struct EdgeLook {
     pub blasted: JsMap<crate::Num, Vec<[f64; 2]>>,
     pub todo: Vec<crate::edge_look::EdgeLookTodoItem>,
     pub held: bool,
-    #[is(crate::debris::FootBook { shoves: 0.0, stats: crate::debris::FootBookStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } })] pub foot_book: crate::debris::FootBook,
+    #[is(crate::debris::FootBook { shoves: 0.0, stats: crate::debris::DebrisFeetStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } })] pub foot_book: crate::debris::FootBook,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -135,18 +135,6 @@ pub struct EdgeLookModEDGEScorch {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct EdgeLookMod {
     #[is(crate::edge_look::EdgeLookModEDGE { on: true, max_decor: 480.0, per_wall: 150.0, max_rubble: 520.0, box_slack: 160.0, port_out: 0.25, hole_out: 0.12, hole_top: 0.6, sill_hole: 0.26, sill_port: 0.14, run_k: 0.27, lintel_port: 0.42, lintel_hole: 0.44, lintel_odds: 0.85, lintel_cut: 0.52, per_upper: 9.0, per_sill: 6.0, per_cover: 2.0, spread: 4.0, throw_fire: 0.8, throw_blast: 0.9, blast: crate::edge_look::EdgeLookModEDGEBlast { more: 2.0, lumps: 0.62, slabs: 0.3, slab_k: 1.7, flung: 0.1, near_k: 0.7, flake_k: 2.0 }, cut_heap: crate::edge_look::EdgeLookModEDGECutHeap { slabs: 0.07, slab: [0.15, 0.34], slab_t: 0.03, smalls: 0.42, small: [0.35, 0.6], tone: 0.22, core_paper: 0.45, core_tone: 0.3 }, scorch: crate::edge_look::EdgeLookModEDGEScorch { near: 1.3, far: 1.0, floor: 1.3, soot_near: 1.0, soot_far: 0.75, soot_floor: 0.5, rim: 0.95, soot_rim: 0.85 }, scorch_decals: true })] pub edge: crate::edge_look::EdgeLookModEDGE,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct EdgeLookStats {
-    pub decor: i32,
-    pub rubble: i32,
-    pub flying: i32,
-    pub scorch: i32,
-    pub shed: i32,
-    pub capped: i32,
-    pub rebuilds: i32,
 }
 
 pub const MKEY_LOOK: f64 = 150994944.0;

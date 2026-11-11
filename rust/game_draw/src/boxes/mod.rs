@@ -225,7 +225,7 @@ impl Boxes {
     pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
-    pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[crate::watched::Watched]) {
+    pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[game::rig_props::CarriedBox]) {
         let w = &g.engine.world;
         let (st, all) = (&w.statics, &g.tab.boxes);
         if self.marks.texel == 0.0 { self.marks.texel = self.look.texel; }
@@ -283,7 +283,7 @@ impl Boxes {
         let bare = self.look.bared && g.fog_picture.viewer;
         let mut list: Vec<(AnyBoxId, &Box, Option<game::thinline::Thin>)> = (if bare { raw } else { &w.dynamics }).iter().filter(|id| night || !ir.has(**id)).map(|&id| (id, &g.tab[id], thin.get(id).copied())).collect();
         // (a box of no list has a number no box of the game has)
-        list.extend(watched.iter().enumerate().filter(|(_, x)| night || !x.line).map(|(k, x)| (AnyBoxId::Frame(game::ids::FrameBoxId(u32::MAX - 1 - k as u32)), &x.b, x.thin)));
+        list.extend(watched.iter().enumerate().filter(|(_, x)| night || !x.ir).map(|(k, x)| (AnyBoxId::Frame(game::ids::FrameBoxId(u32::MAX - 1 - k as u32)), &x.b, x.thin)));
         list.truncate(MAX - n);
         let total = n + list.len();
         self.geo.resize(total, Geo::ZERO);

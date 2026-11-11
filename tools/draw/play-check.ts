@@ -40,7 +40,7 @@ for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.len
     game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed: 5 });
     { const o = D.at[Section.view]; cam.target = [D.f[o + View.follow], D.f[o + View.follow + 1], D.f[o + View.follow + 2]]; cam.rebuild(); }
     // the ticks a page plays and throws away before the first: the game that plays is the game that was started
-    at = 'the ticks thrown away'; let cold = true; { const was = game.mark(true), t0 = performance.now(); await game.warm(36, (N, i) => { input.keys.clear(); if (i >= 12) input.keys.add('KeyW'); input.buttons = i >= 24 ? 1 : 0; return sampleHand(N, input, cam, canvas); }, async () => { /* */ }); input.keys.clear(); input.buttons = 0; const is = game.mark(true);
+    at = 'the ticks thrown away'; let cold = true; { const was = game.mark(), t0 = performance.now(); await game.warm(36, (N, i) => { input.keys.clear(); if (i >= 12) input.keys.add('KeyW'); input.buttons = i >= 24 ? 1 : 0; return sampleHand(N, input, cam, canvas); }, async () => { /* */ }); input.keys.clear(); input.buttons = 0; const is = game.mark();
       cold = JSON.stringify(was) === JSON.stringify(is) && game.ticks === 0; const which = stood(); run(1, 'the first tick'); cold &&= stood() === which; warmMs = Math.max(warmMs, performance.now() - t0); }
     game.commands.god(1);
     run(60, 'a second standing');
@@ -65,13 +65,13 @@ for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.len
   } catch (e) { line(false, `${m.id}: stopped in ${at}`, String((e as Error)?.message ?? e).slice(0, 400)); }
   try { if (game.h) game.X.face_drop(game.h); } catch { /* lost to its panic */ }
 }
-// WHAT IS COMMANDED BEFORE A GAME IS MADE is what it is staged by: a hard one's tables are another's than a standard one's, and a standard one's are its own again
-if (!only.length) { const tables = (f: (g: DrawGame) => void): string => { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X; f(g);
-    g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', mannequin, mannequinBin, cast, castLook, seed: 5 });
+// WHAT A MACHINE KEEPS is what a game is staged by: a hard one's tables are another's than a standard one's, and a standard one's are its own again
+if (!only.length) { const tables = (kept: string): string => { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X;
+    g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', kept, mannequin, mannequinBin, cast, castLook, seed: 5 });
     X.face_state_words(g.h); const p = X.face_out_ptr() >>> 0, w = new Uint32Array(g.memory.buffer.slice(p, p + (X.face_out_len() >>> 0))), off: string[] = [];
     for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); off.push(`${new TextDecoder().decode(new Uint8Array(g.memory.buffer, X.face_out_ptr() >>> 0, X.face_out_len() >>> 0))} ${w[i]}`); }
     X.face_drop(g.h); return off.filter(x => /^k /.test(x)).join(); };
-  const standard = tables(() => { }), hard = tables(g => g.commands.difficulty(1)), lever = tables(g => g.commands.lever('ai', 'hard')), refused = tables(g => g.commands.lever('ai', 'nonsense')), after = tables(() => { });
+  const standard = tables(''), hard = tables('{"hard":true}'), lever = tables('{"levers":{"ai":"hard"}}'), refused = tables('{"levers":{"ai":"nonsense"}}'), after = tables('');
   line(standard === after && standard === refused && hard !== standard && lever !== standard && lever !== hard, 'hard, and one lever of it, are what a game is staged by; a word that is no rung is nothing, and the next game is its own'); }
 // A KNOB BY ITS NAME: every one turned to what it is turned to is no change, one turned is another game, and turned back it is the same again
 if (!only.length) { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X;

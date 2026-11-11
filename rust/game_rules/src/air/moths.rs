@@ -2,7 +2,7 @@
 //! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT, whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
 //! the frame's list (MKEY.test + 0x4000 + i), and the fog of war keeps a record of every keyed loose thing of that list and caps its records, the
 //! frame's room is budgeted with them in it, and the men's kit starts behind them in the list (`rig_from`). So the tick reads what this lane writes,
-//! and the lane runs here, under its DRESS row, as it runs in the TypeScript.
+//! and the lane runs here, under its dress row.
 
 pub use ::game_types::moths::types;
 pub use types::*;
@@ -29,10 +29,10 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - 
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
     let k = moths(); let mut out = Moths::blank();
     for t in g.targets.clone() {
-        let (kind, group, light) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.kind, f.group.clone(), f.light) };
+        let (kind, group, light) = { let f = &g.tab.fixture[t]; (f.kind, f.group.clone(), f.light) };
         let Some(l) = light else { continue; };
         let (lk, lp) = { let x = &g.tab.light[l]; (x.kind, x.pos) };
-        if kind == crate::sim_lightshome::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
+        if kind == crate::fixtures::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
     }
     let fl = crate::scene_boxes::box_flag();
     let mut i = 0.0;
@@ -62,11 +62,11 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
     let k = moths();
     let on = g.tune.moths;
-    let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { crate::weather::weather_rain_rate(g) } } else { 0.0 };   // (no moths at a lamp in falling snow)
+    let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { g.weather.rain_rate } } else { 0.0 };   // (no moths at a lamp in falling snow)
     // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
     for li in 0..g.moths.lamps.len() {
         let (t, l, head, act) = { let x = &g.moths.lamps[li]; (x.target, x.light, x.head, x.act) };
-        let lit = on && crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t) && g.tab.light[l].enabled;
+        let lit = on && g.tab.fixture[t].factor > 0.05 && !g.tab.fixture[t].broken && g.tab.light[l].enabled;
         let mut a = if lit { 1.0 } else { 0.0 };
         if a > 0.0 {
             let wv = crate::wind::wind_at(g, head, None);
@@ -76,14 +76,14 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
         let rate = if a > act { 1.0 / k.gather_secs } else { 1.0 / k.scatter_secs };
         g.moths.lamps[li].act = act + m::max(-rate * dt, m::min(rate * dt, a - act));
     }
-    let t = g.time; let mut shown = 0;
+    let t = g.time;
     // who flies where: each lamp's QUOTA is its share of the dozen by pull; a moth over its lamp's quota scatters, and one away out of sight whose lamp
     // has no place for it goes over to the lamp with the most places unfilled: every move happens while the moth is invisible
     let n_l = g.moths.lamps.len();
     let mut sum_act = 0.0; for x in g.moths.lamps.iter() { sum_act += x.act; }
     let quota: Vec<f64> = g.moths.lamps.iter().map(|x| if sum_act > 1e-6 { m::min(k.per_lamp, x.act * k.max / m::max(1.0, sum_act)) } else { 0.0 }).collect();
     let mut held: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { held[mo.lamp as usize] += 1.0; }
-    // (the TypeScript's `rankOf` is a Map by the moth: here by its place in the pool)
+    // (each moth's rank among its lamp's, by its place in the pool)
     let mut rank_of: Vec<f64> = Vec::with_capacity(g.moths.moths.len());
     { let mut seen: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { rank_of.push(seen[mo.lamp as usize]); seen[mo.lamp as usize] += 1.0; } }
     for i in 0..g.moths.moths.len() {
@@ -102,7 +102,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
         let rate = if target > mo.shown { 1.0 / k.gather_secs } else { 1.0 / k.scatter_secs };
         mo.shown += m::max(-rate * dt, m::min(rate * dt, target - mo.shown));
         g.moths.moths[i].shown = mo.shown;
-        if mo.shown <= 0.01 { g.tab.boxes[mo.box_].c = [0.0, -50.0, 0.0]; continue; }
+        if mo.shown <= 0.01 { g.tab.boxes.edit(mo.box_).c = [0.0, -50.0, 0.0]; continue; }
         // the orbit: round the head at its own rate, radius breathing, bobbing under the lens, and every dartT a half-second dart in at the lens and out again
         let th = mo.ph + mo.omega * t + 0.6 * m::sin(t * 0.7 * mo.wob + mo.bob_ph);
         let dart_x = js::rem(t + mo.dart_ph, mo.dart_t) / 0.55; let dart = if dart_x < 1.0 { m::sin(dart_x * m::PI) } else { 0.0 };
@@ -113,11 +113,9 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
         let c: V3 = [orbit[0] + mo.away[0] * off, orbit[1] + mo.away[1] * off, orbit[2] + mo.away[2] * off];
         let heading = -(th + m::sign(mo.omega) * m::PI / 2.0);   // tangent to the orbit (Box yaw convention: local +X → (cos yaw, −sin yaw))
         let roll = 0.9 * m::sin((t * k.flap_hz + mo.flap_ph) * 6.283);   // the flutter: the wings' plane rocking fast
-        let bx = &mut g.tab.boxes[mo.box_];
+        let mut bx = g.tab.boxes.edit(mo.box_);
         bx.c = c; bx.yaw = 0.0; bx.rot = Some(quat::mul(quat::yaw(heading), quat::axis_angle([1.0, 0.0, 0.0], roll)));
-        shown += 1;
     }
-    g.stats.moths.shown = shown;
 }
 
 /// The moths' boxes into the frame's dynamic list (only the ones about).

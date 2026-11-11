@@ -1,31 +1,45 @@
-//! THE GAME'S DIE as a value a state can hold: the same stream as rust/sim's (it rolls rust/sim's own function), with the derives a cloned
-//! state needs. `simRandom()` in the TypeScript is `g.dice.roll()` here; a die kept on a record (`Civ.dice`) is this type too.
+//! THE DICE. Every draw of a game is keyed: a fixed function of its seed and of who asks what when (`Keyed`). A die kept on a record (`Civ.dice`, a squad's) is a word of its own, and
+//! moves with nobody else's.
 use crate::bytes::ToBytes;
-use maths::dice::Dice;
 use alloc::vec::Vec;
 
+/// A DIE ON A RECORD, its whole state one word: mulberry32
 #[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
-pub struct Die {
-    /// draws taken off it
-    pub n: f64,
-    /// the mulberry32 word
-    pub s: u32,
-}
+pub struct Die(pub u32);
 impl Die {
-    pub const fn new(seed: u32) -> Die {
-        Die { n: 0.0, s: seed }
-    }
     /// one draw, uniform in [0, 1)
     pub fn roll(&mut self) -> f64 {
-        let mut d = Dice { n: self.n, s: self.s, spare: 0 };
-        let r = maths::dice::roll(&mut d);
-        self.n = d.n;
-        self.s = d.s;
-        r
+        let a = self.0.wrapping_add(0x6D2B79F5);
+        self.0 = a;
+        let mut t = (a ^ (a >> 15)).wrapping_mul(1 | a);
+        t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t)) ^ t;
+        ((t ^ (t >> 14)) as f64) / 4294967296.0
+    }
+    /// what the draw after the next `n` will be
+    pub fn ahead(mut self, n: u32) -> f64 {
+        for _ in 0..n { self.roll(); }
+        self.roll()
     }
 }
 
-/// KEYED DRAWS. The game's one die is a single sequence: a draw added anywhere moves every draw after it, for every man. A keyed draw is a
+/// what a name is dealt by: FNV-1a, 32 bit, over its UTF-16 code units
+pub fn hash_str(s: &str) -> f64 {
+    let mut h: u32 = 0x811c9dc5;
+    for c in s.encode_utf16() {
+        h ^= c as u32;
+        h = h.wrapping_mul(0x01000193);
+    }
+    h as f64
+}
+
+/// THE GAME'S OWN DRAWS: the seed they are keyed by, and how many it has taken (what two machines of a game, or two plays of a run, are compared by first)
+#[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
+pub struct Draws {
+    pub seed: u32,
+    pub n: f64,
+}
+
+/// KEYED DRAWS. One die for a whole game is a single sequence: a draw added anywhere moves every draw after it, for every man. A keyed draw is a
 /// fixed function of the game's seed, of the SITE that asks (its name: "guards::alert#1"), of the MAN it is about (0: nobody, the world's
 /// own), of the tick's clock, and of how many times that site has drawn for that man this tick. So a rule's draws do not depend on what any
 /// other rule or any other man drew, and a rule added tomorrow re-deals nothing but itself. (`draw` below and its forms by a man's id.)
@@ -71,18 +85,3 @@ pub fn keyed(seed: u32, key: u64, time: f64, nth: u32) -> f64 {
     (stir(x) >> 11) as f64 / 9_007_199_254_740_992.0
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    /// A thousand draws folded to one word. tools/qa/dice-check.ts folds the same thousand of src/math/dice.ts to the same word.
-    #[test]
-    fn the_keyed_draw_is_the_pages() {
-        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-        for i in 0..1000u32 {
-            let v = keyed(i.wrapping_mul(2_654_435_761), key_of(&alloc::format!("m::f#{i}"), i % 37), i as f64 / 60.0, i % 5);
-            assert!((0.0..1.0).contains(&v));
-            h = (h ^ v.to_bits()).wrapping_mul(0x0000_0100_0000_01b3);
-        }
-        assert_eq!(h, 0x698f_1e04_1d58_8223, "{h:#x}");
-    }
-}

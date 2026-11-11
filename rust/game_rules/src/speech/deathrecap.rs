@@ -46,24 +46,23 @@ struct OnFloor { ch: CharId, down: bool, gd: Option<GuardId>, pl: Option<PlayerI
 
 fn on_floor(g: &Game) -> Vec<OnFloor> {
     let mut out = Vec::with_capacity(g.guards.len() + g.seats.len() + 8);
-    for pl in crate::seats::men(g) { out.push(OnFloor { ch: g.pl[pl].ch, down: g.pl[pl].down, gd: None, pl: Some(pl) }); }
-    let guard = |g: &Game, gd: GuardId| OnFloor { ch: g.gd[gd].ch, down: g.gd[gd].state == GuardState::Dead, gd: Some(gd), pl: None };
+    for pl in crate::seats::men(g) { out.push(OnFloor { ch: g.pl[pl].ch, down: crate::condition::down(g, g.pl[pl].ch), gd: None, pl: Some(pl) }); }
+    let guard = |g: &Game, gd: GuardId| OnFloor { ch: g.gd[gd].ch, down: crate::condition::down(g, g.gd[gd].ch), gd: Some(gd), pl: None };
     for &gd in g.guards.iter() { out.push(guard(g, gd)); }
     for gd in crate::civilians::civilians_shown(g) { out.push(guard(g, gd)); }
     out
 }
 
 fn xz(p: V3) -> [f64; 2] { [p[0], p[2]] }
-fn head_of(g: &Game, c: CharId) -> V3 { match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) } }
-fn squad_up(g: &Game, gd: GuardId) -> bool { g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].state != GuardState::Dead }
+fn head_of(g: &Game, c: CharId) -> V3 { g.ch[c].bone_or(Bone::Head, 1.65) }
 
 /// the man, as a take names him
 fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
     let id = g.ch[man.ch].id;
     match (man.gd, man.pl) {
         (Some(gd), _) => {
-            let (civ, team) = (g.gd[gd].civ.is_some(), g.gd[gd].team);
-            RecapMan { id, name: g.gd[gd].callsign.clone(), side: String::from(if civ { "civilian" } else { team.as_str() }), kind: if civ { RecapManKind::Civ } else { RecapManKind::Man } }
+            let team = g.team(gd);
+            RecapMan { id, name: g.gd[gd].callsign.clone(), side: String::from(team.as_str()), kind: if team == crate::teams::Team::Civilian { RecapManKind::Civ } else { RecapManKind::Man } }
         }
         (None, pl) => RecapMan { id, name: match pl { Some(p) => crate::seats::player_name(g, p), None => String::from("Player") }, side: String::from("player"), kind: RecapManKind::Player },
     }
@@ -71,9 +70,6 @@ fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
 
 /// Whose deaths are explained: the players', their teammates', the people they came for.
 fn ours(side: &str) -> bool { side == "player" || side == "operative" || side == "civilian" }
-
-/// somebody plays: no puppet
-fn live(g: &Game) -> bool { g.puppet.is_none() }
 
 /// A GAME IS BEING KEPT (a checkpoint, by value or as bytes: the same either way): the copy has no record, and the next tick starts one from the floor as it is.
 pub fn recap_left_behind(g: &mut Game) { g.recap = Recap::blank(); }
@@ -88,9 +84,8 @@ fn this_run(g: &mut Game) {
 /// game's to say: the tick reads the answer off the man himself. `was_down`: a round into a man on the floor is not the round that put him there, and must not replace it.
 pub fn recap_round(g: &mut Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) {
     let Some(victim) = victim else { return; };
-    if was_down || !live(g) { return; }
+    if was_down { return; }
     this_run(g);
-    g.stats.deathrecap.rounds += 1;
     let (id, by, by_at, t) = (g.ch[victim].id, g.ch[shooter].id, xz(g.ch[shooter].pos), g.time);
     g.recap.rounds.set(Num(id), Round { t, by, by_at, from: xz(muzzle), to: xz(hit), weapon: crate::gear::plain_short(def), blind: blind.unwrap_or(false), loud: def.report.level >= 1.0 });
 }
@@ -148,7 +143,7 @@ fn sample(g: &mut Game, floor: &[OnFloor]) {
     }
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_off(g, d) { f.doors.extend_from_slice(&[f32::NAN, f32::NAN]); continue; }
+        if g.dr[d].leaf.off { f.doors.extend_from_slice(&[f32::NAN, f32::NAN]); continue; }
         let u = crate::doors::door_dir(g, d);
         f.doors.extend_from_slice(&[u[0] as f32, u[1] as f32]);
     }
@@ -205,7 +200,6 @@ pub fn recap_tick(g: &mut Game) {
     this_run(g);
     g.recap.all_down = crate::seats::all_down(g);
     // (not watching: whoever goes down meanwhile is not a death seen, and the next look starts from the floor as it is)
-    if !live(g) { g.recap.primed = false; return; }
     let now = g.time;
     g.recap.last_t = now;
     read_events(g);
@@ -269,7 +263,7 @@ fn eighth(dx: f64, dz: f64) -> Option<[f64; 2]> {
 }
 
 /// a line from a man still up to one going down (the room fight's own 'man down' test, with a reach): blind men see nothing
-fn line_to(g: &mut Game, c: CharId, at: [f64; 2]) -> bool {
+fn line_to(g: &Game, c: CharId, at: [f64; 2]) -> bool {
     let p = g.ch[c].pos;
     if m::hyp2(p[0] - at[0], p[2] - at[1]) > g.k.recap.live_see_m { return false; }
     let h = head_of(g, c);
@@ -278,7 +272,7 @@ fn line_to(g: &mut Game, c: CharId, at: [f64; 2]) -> bool {
 
 /// could these ears have it: the sound model's own rule (a clear line, or over the furniture, else the walk round at the path's length, a shut leaf across it
 /// muffling it hard), without its cache
-fn ear(g: &mut Game, c: CharId, a: V3) -> bool {
+fn ear(g: &Game, c: CharId, a: V3) -> bool {
     let reach = g.k.recap.live_hear_m;
     let h = head_of(g, c);
     let b = [h[0], m::max(h[1], 0.9), h[2]];
@@ -293,11 +287,11 @@ fn ear(g: &mut Game, c: CharId, a: V3) -> bool {
     let (mut len, mut door, mut pa) = (0.0, false, [b[0], 1.0, b[2]]);
     for q in path {
         let pb = [q[0], 1.0, q[2]];
-        len += m::hyp2(pb[0] - pa[0], pb[2] - pa[2]);
+        len += v3::dist_xz(pb, pa);
         if !door && crate::scene_collision::segment_blocked_dynamic(g, pa, pb, Some(seal)) { door = true; }
         pa = pb;
     }
-    let path_len = m::max(len + m::hyp2(a[0] - pa[0], a[2] - pa[2]), straight);
+    let path_len = m::max(len + v3::dist_xz(a, pa), straight);
     path_len <= reach * (if door { 0.32 } else { 0.72 })
 }
 
@@ -306,16 +300,16 @@ fn heard(g: &mut Game, src: V3) -> bool {
     let a = [src[0], m::max(src[1], 0.9), src[2]];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if squad_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
+        if crate::lesson::operative_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
     }
     for pl in crate::seats::men_up(g) { let c = g.pl[pl].ch; if ear(g, c, a) { return true; } }
     false
 }
 
 /// did this player's man see him go down: a line, and where the fog is a cone (hard) inside the wedge he looks down or at his shoulder
-fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
+fn player_sees(g: &Game, pl: PlayerId, at: [f64; 2]) -> bool {
     let c = g.pl[pl].ch;
-    if g.pl[pl].down || g.time < g.pl[pl].dazzled_until || !line_to(g, c, at) { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) || crate::condition::is_blind(g, g.pl[pl].ch) || !line_to(g, c, at) { return false; }
     if !g.k.fog.cone { return true; }
     let p = g.ch[c].pos;
     let (dx, dz) = (at[0] - p[0], at[1] - p[2]);
@@ -328,7 +322,7 @@ fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
 /// the side of the player's man a way lies on, in the words of the fog's own calls (asked of a point a long way off along it)
 fn side_word(g: &Game, pl: PlayerId, u: [f64; 2]) -> String {
     use crate::close::CloseId;
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     match crate::fogofwar::fog_of_war_side_of(g, [p[0] + u[0] * 50.0, 0.0, p[2] + u[1] * 50.0]) {
         CloseId::Front => String::from("from the front"),
         CloseId::Behind => String::from("from behind us"),
@@ -352,7 +346,7 @@ fn witness(g: &mut Game) {
             if g.recap.lost[i].saw.is_none() {
                 for j in 0..g.guards.len() {
                     let gd = g.guards[j];
-                    if !squad_up(g, gd) || now < g.gd[gd].dazzled_until { continue; }
+                    if !crate::lesson::operative_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let c = g.gd[gd].ch;
                     if line_to(g, c, at) { g.recap.lost[i].saw = Some(gd); break; }
                 }
@@ -360,9 +354,9 @@ fn witness(g: &mut Game) {
             for &p in &men { if !g.recap.lost[i].players_saw.contains(&p) && player_sees(g, p, at) { g.recap.lost[i].players_saw.push(p); } }
         }
         if age < k.live_beat { continue; }
-        let by = g.recap.lost[i].saw.filter(|&gd| squad_up(g, gd));   // (a witness who has gone down himself since tells nobody)
-        let pl_down = g.pl[pl].down;
-        let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !g.pl[p].down);   // (…and a player who has gone down since tells nobody either)
+        let by = g.recap.lost[i].saw.filter(|&gd| crate::lesson::operative_up(g, gd));   // (a witness who has gone down himself since tells nobody)
+        let pl_down = crate::condition::down(g, g.pl[pl].ch);
+        let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !crate::condition::down(g, g.pl[p].ch));   // (…and a player who has gone down since tells nobody either)
         if by.is_none() && !player_saw && !g.recap.lost[i].heard {
             if age > k.live_saw_secs { g.recap.lost[i].done = true; }
             continue;
@@ -371,10 +365,9 @@ fn witness(g: &mut Game) {
         g.recap.lost[i].done = true;
         g.recap.lost_live[i].known_at = now;
         g.recap.lost_live[i].from = src;
-        g.stats.deathrecap.known += 1;
         let (Some(u), Some(by)) = (src, by) else { continue; };
         if player_saw || pl_down { continue; }
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         if m::hyp2(p[0] - at[0], p[2] - at[1]) > k.live_side_m { continue; }
         // (no cue of the cues' own is up over him: a contact call outranks this; his own 'man down.' is followed by it)
         let shown = crate::cues::cues_bubble_of(g, by);

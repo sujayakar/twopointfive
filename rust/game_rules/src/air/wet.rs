@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// A man's own bookkeeping, as wet.ts memOf makes it the first time he is asked for.
+/// A man's own bookkeeping, made the first time he is asked for.
 fn mem_at(g: &mut Game, c: CharId) -> crate::wet::WetMem {
     if !g.m.wet.mem.has(c) {
         g.m.wet.mem.set(c, crate::wet::WetMem { sky_t: -1.0, open: true, prints_left: 0.0, last_out_wet_t: -1e9, drip_acc: 0.0 });
@@ -23,61 +23,71 @@ fn head_at(g: &Game, c: CharId) -> f64 {
     if ch.ragdoll.is_some() { m::max(0.3, head.unwrap_or(0.3)) } else { head.unwrap_or(ch.pos[1] + 1.6) }
 }
 
-/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. The rule is rust/sim's `weather::wet_step`, a man's coat handed in and
-/// back. A man's coat is the picture's, but the call is the game's: it stands the rule's copy of the box world (`rule_open`), asks the roofs and may cast the
-/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host.
+/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. Sam's drips and prints after it (samAftermath) tell the host.
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        // everyCharacter: Sam (every seat's man), then the guards, living or not
-        let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
-        all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
-        for c in all {
-            let mem = mem_at(g, c);
-            let head = head_at(g, c);
-            let ch = &g.ch[c];
-            let mut coat = [0.0f64; ::sim::weather::M_LEN];
-            coat[::sim::weather::M_WET] = ch.wet;
-            coat[::sim::weather::M_BEADS] = ch.beads;
-            coat[::sim::weather::M_RAIN] = ch.wet_rain;
-            coat[::sim::weather::M_LINE] = ch.wet_line;
-            coat[::sim::weather::M_SKY_T] = mem.sky_t;
-            coat[::sim::weather::M_OPEN] = if mem.open { 1.0 } else { 0.0 };
-            ::sim::weather::wet_step(::sim::weather::of(g.sim), w, set, ask, g.time, dt, ch.pos[0], ch.pos[2], head, &mut coat, &g.k);
-            if coat[::sim::weather::M_ASKED] != 0.0 { g.stats.wet.sky_tests += 1; }
-            let ch = &mut g.ch[c];
-            ch.wet = coat[::sim::weather::M_WET];
-            ch.beads = coat[::sim::weather::M_BEADS];
-            ch.wet_rain = coat[::sim::weather::M_RAIN];
-            ch.wet_line = coat[::sim::weather::M_LINE];
-            let m = g.m.wet.mem.get_mut(c).unwrap();
-            m.sky_t = coat[::sim::weather::M_SKY_T];
-            m.open = coat[::sim::weather::M_OPEN] != 0.0;
-        }
-    });
+    // everyCharacter: Sam (every seat's man), then the guards, living or not
+    let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
+    all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
+    for c in all {
+        let mem = mem_at(g, c);
+        let head = head_at(g, c);
+        wet_step(g, c, head, mem, dt);
+    }
     crate::seats::each_seat(g, &mut |v: &mut Game| sam_aftermath(v, dt));
 }
 
-/// is `c` standing under the open sky: the module's rule, his sky's memory handed in and back (it holds a quarter of a second a man).
+/// how high a sky's ray goes, how far round him a forearm is, and how long an answer of the sky holds
+const SKY_TOP: f64 = 9.0;
+const SKY_RING: f64 = 0.35;
+const WET_SKY_SECS: f64 = 0.25;
+const SKY_OFFSETS: [[f64; 2]; 5] = [[0.0, 0.0], [SKY_RING, 0.0], [-SKY_RING, 0.0], [0.0, SKY_RING], [0.0, -SKY_RING]];
+
+/// Is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of a second a man.
+fn open_sky(g: &Game, c: CharId, head: f64, mem: &mut WetMem) -> bool {
+    let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
+    if ::sim::weather::under_any(&g.weather.roof_rects, x, z) { return false; }
+    let time = g.time;
+    if time - mem.sky_t >= WET_SKY_SECS || mem.sky_t < 0.0 || time < mem.sky_t {
+        mem.sky_t = time;
+        let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(g.tab.boxes.world(), true, ::sim::lines::ASK_GLASS, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
+        mem.open = covered < 3;
+    }
+    mem.open
+}
+
+/// One man soaked or dried by this tick's weather.
+fn wet_step(g: &mut Game, c: CharId, head: f64, mem: WetMem, dt: f64) {
+    let rain = m::max(0.0, g.weather.rain_now);
+    let mut mem = mem;
+    let wetting = rain > 0.001 && open_sky(g, c, head, &mut mem);
+    *g.m.wet.mem.get_mut(c).unwrap() = mem;
+    let (k, ch) = (&g.k.wet, &mut g.ch[c]);
+    let runoff = m::max(k.bead_runoff_secs, 0.1);
+    if wetting {
+        ch.wet_line = f64::INFINITY;
+        let soak = k.soak_per_sec;
+        ch.wet = v3::clamp(ch.wet + soak * (0.4 + 0.6 * rain) * dt, 0.0, 1.0);
+        let beads_to = v3::clamp(0.35 + 0.65 * rain, 0.0, 1.0);
+        ch.beads = if ch.beads < beads_to { m::min(beads_to, ch.beads + 3.0 * soak * (0.4 + 0.6 * rain) * dt) } else { m::max(beads_to, ch.beads - dt / runoff) };
+        ch.wet_rain = ch.wet_rain + (rain - ch.wet_rain) * m::min(1.0, dt * 2.0);
+    } else {
+        ch.wet = v3::clamp(ch.wet - k.dry_per_sec * dt, 0.0, 1.0);
+        ch.beads = v3::clamp(ch.beads - dt / runoff, 0.0, 1.0);
+    }
+    if ch.wet <= 0.0 && ch.beads <= 0.0 { (ch.wet_rain, ch.wet_line) = (0.0, f64::INFINITY); }
+}
+
+/// is `c` standing under the open sky, by his sky's memory.
 fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     let mem = mem_at(g, c);
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        let head = head_at(g, c);
-        let (mut sky_t, mut open) = (mem.sky_t, if mem.open { 1.0 } else { 0.0 });
-        let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-        let (is_open, asked) = ::sim::weather::open_sky(::sim::weather::of(g.sim), w, set, ask, g.time, x, z, head, &mut sky_t, &mut open, &g.k);
-        if asked { g.stats.wet.sky_tests += 1; }
-        let m = g.m.wet.mem.get_mut(c).unwrap();
-        m.sky_t = sky_t;
-        m.open = open != 0.0;
-        is_open
-    })
+    let head = head_at(g, c);
+    let mut mem = mem;
+    let open = open_sky(g, c, head, &mut mem);
+    *g.m.wet.mem.get_mut(c).unwrap() = mem;
+    open
 }
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
@@ -86,7 +96,7 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     mem_at(g, c);
-    let raining = m::max(0.0, ::sim::weather::of_read(g.sim).rain_now) > 0.001 && open_sky_of(g, c);
+    let raining = m::max(0.0, g.weather.rain_now) > 0.001 && open_sky_of(g, c);
     if raining {
         if g.ch[c].wet > 0.5 {
             let (prints, now) = (g.k.wet.prints, g.time);
@@ -96,7 +106,7 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
         }
         return;
     }
-    let (beads, wet, down, now, secs) = (g.ch[c].beads, g.ch[c].wet, g.pl[pl].down, g.time, g.k.wet.drip_secs);
+    let (beads, wet, down, now, secs) = (g.ch[c].beads, g.ch[c].wet, crate::condition::down(g, g.pl[pl].ch), g.time, g.k.wet.drip_secs);
     let last = g.m.wet.mem.get(c).unwrap().last_out_wet_t;
     if beads > 0.02 && wet > 0.3 && now - last < secs && !down {
         let mut acc = g.m.wet.mem.get(c).unwrap().drip_acc + dt * (2.0 + 10.0 * beads);
@@ -110,12 +120,12 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
 /// where a drop leaves him, dealt in turn
 const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::Head, crate::character::Bone::Hips, crate::character::Bone::Hips];
 
-/// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript.
+/// One drop off him: from a hand, the chin or the hem of the jacket.
 fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];
-    let Some(b) = g.ch[c_2].bones.get(k).copied() else { return; };
+    let Some(b) = g.ch[c_2].bone(k) else { return; };
     let j = g.m.wet.drip_n * 0.618034;
     let down = match k { crate::character::Bone::Head => -0.12, crate::character::Bone::Hips => -0.05, _ => -0.06 };
     let off: V3 = [m::cos(j * 6.2831853) * 0.09, down, m::sin(j * 6.2831853) * 0.09];
@@ -133,7 +143,6 @@ fn drip(g: &mut crate::game::Game, c_2: CharId) {
         color: Some([0.42, 0.47, 0.55]),
         ..crate::render_particles::EmitOpts::default()
     });
-    g.stats.wet.drips += 1;
 }
 
 /// A footfall of Sam's: if he has come in wet, a print under the foot that landed, fainter each step. The foot ahead along his motion wins over `left_hint`
@@ -144,8 +153,8 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     let c = g.pl[pl].ch;
     let prints_left = mem_at(g, c).prints_left;
     if prints_left <= 0.0 || g.ch[c].wet < 0.15 { return; }
-    if m::max(0.0, ::sim::weather::of_read(g.sim).rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
-    let bone = |g: &Game, b: Bone| g.ch[c].bones.get(b).copied();
+    if m::max(0.0, g.weather.rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
+    let bone = |g: &Game, b: Bone| g.ch[c].bone(b);
     let mut left = left_hint;
     if let (Some(fl), Some(fr)) = (bone(g, Bone::FootL), bone(g, Bone::FootR)) {
         let vel = g.ch[c].vel;

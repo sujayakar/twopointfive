@@ -1,6 +1,6 @@
 // A TAPE OF A RUN (src/tape/handtape.ts), with no page: missions played on the module as the page plays them, by a hands-off player and by a hand that does anything, with
-// saves, a load, a restart, knobs turned, the panel's actions, an address's words and every question a page asks between two ticks, and each tape walked on another game that is asked nothing: the die, the parts and the
-// whole state are what they were at every mark and at the end. The size is said.
+// saves, a load, a restart, knobs turned, the panel's actions, an address's words and every question a page asks between two ticks, and each tape walked on another game that is asked nothing: the die, the block and
+// every part are what they were at every mark and at the end. The size is said.
 //   bun run tools/draw/tape-check.ts [mission id…] [--secs 30]      exit 0 · 1 and each that parted, with the tick · 2 no such mission
 //   TAPE_BREAK=1 …      one step of the tape is not walked: every walk must part
 import { readFileSync } from 'node:fs';
@@ -37,8 +37,7 @@ for (const m of LISTED) { if (only.length && !only.includes(m.id)) continue;
     try {
       // ── played, with a page's questions between its ticks
       const g = stand(), D = g.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
-      const T = g.tape = new HandTape(HAND.count), S: Start = { level: bytes(file), words: how === 'anything' ? `${words}&qtwice=0&firelean=0` : words, mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
-      if (how === 'anything') g.commands.difficulty(1);
+      const T = g.tape = new HandTape(HAND.count), S: Start = { level: bytes(file), words: how === 'anything' ? `${words}&qtwice=0&firelean=0` : words, kept: how === 'anything' ? '{"hard":true}' : '', mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
       g.start(S);
       const follow = (): [number, number, number] => { const o = D.at[Section.view] + View.follow; return [D.f[o], D.f[o + 1], D.f[o + 2]]; };
       cam.aspect = 1280 / 720; cam.target = follow(); cam.rebuild();
@@ -57,14 +56,14 @@ for (const m of LISTED) { if (only.length && !only.includes(m.id)) continue;
         input.pressed.clear(); input.clicked = 0; const o = D.at[Section.view] + View.aim; cam.step(1 / 60, follow(), [D.f[o], D.f[o + 1], D.f[o + 2]]);
         if (i % 3 === 0) { g.frame(0.5, cam.target); D.fresh(); g.frame(1, cam.target); } D.fresh();
         if (i % 7 === 0) { g.view(); g.cursor(input, cam, canvas); } if (i % 60 === 0) { g.verdict(); g.saves(); g.tally(); g.run(); } if (i % 600 === 0) g.debrief();
-        if (i % MARKS.whole === 0) T.mark(g.mark(true)); }
-      const done = g.tally(), end = g.mark(true); T.end('the check stopped');
+        if (i % MARKS.every === 0) T.mark(g.mark()); }
+      const done = g.tally(), end = g.mark(); T.end('the check stopped');
 
       // ── walked, by a game that is asked nothing
       const b = T.whole(), w = stand(), P = new DrawPlay(w, b), feed = w.feed.bind(w); if (BREAK) w.feed = (row, seen) => { if (row.kind !== 'step' || row.tick !== 600) feed(row, seen); else w.ticks++; };
       P.start({ mannequin, mannequinBin, cast, castLook }); const t0 = performance.now();
       while (P.tick(false) && !P.parted) at = `the walk's tick ${P.at}`;
-      const ms = performance.now() - t0, last = w.mark(true), bad = P.parted ? [`at tick ${P.parted.tick}: ${P.parted.why}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
+      const ms = performance.now() - t0, last = w.mark(), bad = P.parted ? [`at tick ${P.parted.tick}: ${P.parted.why}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
       const gz = gzipSync(b).length - gzipSync(S.level).length, wrong = bad.length || g.lost || w.lost || P.at !== SECS * 60 || (how === 'anything' && SECS > 25 && !P.tries.includes(1500) && !P.tries.includes(1499));
       if (wrong) fails++;
       console.log(`- ${wrong ? 'FAIL' : 'PASS'} — ${m.id}, ${how}: ${P.at} ticks walked in ${(ms / 1000).toFixed(1)} s, ${(gz / 1024 / SECS * 60).toFixed(0)} KB a minute packed, ${done.manual} saved by hand, ${done.autosaves} by itself, ${done.loads} loaded, ${P.tries.length} begun again${bad.length ? `\n    ${bad.slice(0, 3).join(' · ')}` : ''}`);

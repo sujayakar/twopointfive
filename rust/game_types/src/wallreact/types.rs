@@ -15,7 +15,7 @@ pub struct Breach {
     pub half: f64,
     pub into: Option<WallreactBreachId>,
     pub walk: bool,
-    pub cause: crate::wallreact::BreachCause,
+    pub cause: crate::wallbreak::LevelChangeCause,
     pub who: f64,
     pub blast_by: Option<f64>,
     pub ops: f64,
@@ -23,15 +23,6 @@ pub struct Breach {
     pub said: JsSet<crate::teams::Team>,
     pub tell: Vec<crate::wallreact::BreachTellItem>,
     pub opening: Option<CoverOpeningId>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum BreachCause {
-    #[default] Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -82,12 +73,6 @@ pub struct WallReact {
     pub unsub: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum WallReactHeadGd {
-    Guard(GuardId),
-    Sam,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactManKnowsHow {
     Heard,
@@ -120,59 +105,19 @@ pub struct WallReactAsksArm1 {
     pub threat: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallReactReconsider {
-    Fine,
-    Moved,
-    Later,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum WallReactReconsider10 {
-    Fine,
-    Moved,
-    Later,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallReactShift {
-    Fine,
-    Moved,
-    Later,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallReactOpMove {
-    Fine,
-    Moved,
-    Later,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallreactMod {
-    pub wallreact_log: Vec<String>,
     pub wall_react: crate::wallreact::WallReact,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WallreactStats {
-    pub rows: i32,
-    pub breaches: i32,
-    pub merged: i32,
-    pub learned_ops: i32,
-    pub learned_men: i32,
-    pub told: i32,
-    pub moved_def: i32,
-    pub moved_ai: i32,
-    pub moved_op: i32,
-    pub no_cover: i32,
-    pub watches: i32,
-    pub replans: i32,
-    pub openings: i32,
 }
 
 pub const EYE: f64 = 1.55;
 
 pub const CHEST: f64 = 1.1;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+pub enum Reconsidered {
+    Fine,
+    Moved,
+    Later,
+}

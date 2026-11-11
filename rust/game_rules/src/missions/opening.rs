@@ -1,5 +1,6 @@
 pub use ::game_types::opening::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -17,26 +18,15 @@ fn read_url(g: &mut crate::game::Game) {
     g.m.opening.url_read = true;
 }
 
-/// Length on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// Metres by walking a → b over the nav grid; infinity if there is no way.
-fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn way_len(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     let p = if crate::scene_collision::nav_grid_is_blocked(g, a[0], a[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]).unwrap_or(a) } else { a };
     let q = if crate::scene_collision::nav_grid_is_blocked(g, b[0], b[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, b[0], b[2]).unwrap_or(b) } else { b };
     let path = match crate::scene_collision::nav_grid_find_path(g, p, q, Some(8000.0), None) {
         Some(path) => path,
         None => return f64::INFINITY,
     };
-    let mut l = 0.0;
-    let mut at = p;
-    for w in path {
-        l += flat(at, w);
-        at = w;
-    }
-    l + flat(at, q)
+    crate::places::walk_len(p, &path) + dist_xz(path.last().copied().unwrap_or(p), q)
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route.
@@ -56,7 +46,7 @@ fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening
 }
 
 /// The first walkable point along his route at least the clear radius from the spawn by walking.
-fn find_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
+fn find_spot(g: &crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
     let route = g.gd[gd].route;
     let pts = g.tab.route[route].points.clone();
     let n = pts.len();
@@ -76,7 +66,7 @@ fn find_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::F
         while k + 1 < leg.len() {
             let p = leg[k];
             let q = leg[k + 1];
-            let l = flat(p, q);
+            let l = dist_xz(p, q);
             if l < 1e-6 {
                 k += 1;
                 continue;
@@ -109,7 +99,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
+        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.team(gd) != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
             continue;
         }
         if !g.m.opening.born.has(gd) {
@@ -125,7 +115,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
             || g.gd[gd].wp != 0
             || g.gd[gd].hold
             || g.gd[gd].script.is_some()
-            || flat(g.ch[c].pos, g.tab.route[g.gd[gd].route].points[0]) > 0.6
+            || dist_xz(g.ch[c].pos, g.tab.route[g.gd[gd].route].points[0]) > 0.6
         {
             continue;
         }
@@ -140,9 +130,9 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         g.gd[gd].last_pos = v3::copy(at.pos);
         g.gd[gd].wp = at.wp as usize;
         g.gd[gd].wait = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
+        g.gd[gd].set_path(Vec::new());
         g.gd[gd].path_i = 0;
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].set_path_goal(None);
         crate::character::character_update(g, c, 0.0); // bones where he now stands, before anything reads them this frame
         moved += 1.0;
     }
@@ -153,33 +143,13 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
 mod tests {
     use super::*;
 
-    // The expected bits are the TypeScript's own, under bun with EXACT.on = true.
+    /// A FAILURE MEANS: the guard the fair start moves is put off his own route, or off the floor: a place along a leg lies between its ends, at its share, at height nothing.
     #[test]
-    fn flat_matches_the_typescript_bits() {
-        assert_eq!(flat([3.1, 0.0, 4.7], [-0.3, 0.0, 9.21]).to_bits(), 0x40169791dc4b67b8);
-        assert_eq!(flat([12.5, 0.0, -7.25], [12.5, 0.0, -7.25]).to_bits(), 0);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 0.0, 1e-9]).to_bits(), 0x3fd21a18513d04d3);
-    }
-
-    #[test]
-    fn walking_a_leg_matches_the_typescript_bits() {
-        let (p, q): (V3, V3) = ([1.3, 0.0, -2.7], [8.9, 0.0, 4.1]);
-        let l = flat(p, q);
-        assert_eq!(l.to_bits(), 0x402465655f122ff6);
-        let want: [(usize, u64, u64, u64); 3] = [
-            (0, 0x3fe0000000000000, 0x3ffac30de0b68c0d, 0xc002eecd540f5841),
-            (7, 0x4010000000000000, 0x40111fb55b06b1b4, 0xbfa0cddb51e3b3c0),
-            (14, 0x401e000000000000, 0x401b8ea73ddfc065, 0x4002685e79803aa2),
-        ];
-        let (mut n, mut s) = (0, 0.5);
-        while s <= l {
-            let at = leg_point(p, q, s, l);
-            for w in want.iter().filter(|w| w.0 == n) {
-                assert_eq!((s.to_bits(), at[0].to_bits(), at[2].to_bits()), (w.1, w.2, w.3));
-            }
-            n += 1;
-            s += 0.5;
-        }
-        assert_eq!(n, 20);
+    fn a_place_along_a_leg_lies_on_it_on_the_floor() {
+        let (p, q): (V3, V3) = ([1.0, 2.0, -2.0], [4.0, 3.0, 2.0]);
+        let l = dist_xz(p, q);
+        assert_eq!(leg_point(p, q, 0.0, l), [1.0, 0.0, -2.0]);
+        assert_eq!(leg_point(p, q, l, l), [4.0, 0.0, 2.0]);
+        assert_eq!(leg_point(p, q, l / 2.0, l), [2.5, 0.0, 0.0]);
     }
 }

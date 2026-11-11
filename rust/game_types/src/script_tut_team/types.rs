@@ -1,4 +1,4 @@
-//! The frames of levels/tut-team.script.ts, written by the skeleton's program from the checker. Never edited by hand: a local a body wants across a yield that is not here is a question for the program.
+//! The frames of the tut-team level's script (rust/game_rules/src/missions/script_tut_team.rs): where each beat stands, and the locals that live across a yield.
 #![allow(unused_imports, unused_variables, unused_mut)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -135,10 +135,6 @@ pub struct TutTeamRakeHelperFrame {
     pub heavy: bool,
     /// left: a yield separates its declaration from a use
     pub left: f64,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// n: a yield separates its declaration from a use
-    pub n: f64,
 }
 
 ///  the helper generator harass: where it stands, and what lives across a yield
@@ -152,14 +148,6 @@ pub struct TutTeamHarassHelperFrame {
     pub stop: u16,
     /// o: a parameter
     pub o: Option<crate::script_tut_team::TutTeamHarassHelperO>,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// u: a yield separates its declaration from a use
-    pub u: Option<crate::director::UnitRef>,
-    /// heavy: a yield separates its declaration from a use
-    pub heavy: bool,
-    /// n: a yield separates its declaration from a use
-    pub n: f64,
 }
 
 ///  the helper generator smoke, inside the beat 'smoke': where it stands, and what lives across a yield

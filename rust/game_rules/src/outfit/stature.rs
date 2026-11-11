@@ -2,10 +2,10 @@
 //! STATURE: the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
 //! capsules and every box a ray meets are untouched. What it writes that the tick's own state holds: `Box.dc / dh` of the boxes bolted to a man
 //! (rows of the frame's list, where the picture is to draw them) and the near end of his weapon laser (a box of the frame's list made from the
-//! DRAWN muzzle). Those are fields and boxes of the game's own tables, so they are written here, under the DRESS row, as the TypeScript writes them.
+//! DRAWN muzzle). Those are fields and boxes of the game's own tables, so they are written here, under the dress row `stature`.
 //!
 //! LEFT TO THE PICTURE'S SIDE: the joint palette, the shadow proxies and the round-cone fit as drawn (`drawn_joints`, `drawn_capsules`, `drawn_fit`):
-//! what the renderer is HANDED, which the Rust tick hands nobody.
+//! what the renderer is HANDED, which the tick hands nobody.
 
 pub use ::game_types::stature::types;
 pub use types::*;
@@ -27,24 +27,23 @@ fn hash01(n: f64) -> f64 {
 
 /// The man's own stature (1 for a player's man, and for everybody with no cast loaded).
 fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
-    if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
+    if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
-    let name = g.tab.anim_gltf_cast_variant[v].name.clone();
-    let s = stature().get(name).copied().unwrap_or(1.0) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
+    let s = variant_stature(&g.art.variant[v].name) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
     m::round(m::min(t.max, m::max(t.min, s)) * 1000.0) / 1000.0
 }
 
 /// Two bodies that must meet: he is in a player's arm, or is the body one hauls.
 fn paired(g: &crate::game::Game, c_2: CharId) -> bool {
-    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging { if g.gd[d].ch == c_2 { return true; } } }
+    for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging() { if g.gd[d].ch == c_2 { return true; } } }
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     match rec { Some(r) => g.gd[r].held.is_some(), None => false }
 }
 
 /// Once a frame, before anything of the men is drawn: every man's scale for this frame. False with no cast loaded.
 pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool {
-    if g.tab.rig[g.rig].cast.is_none() { return false; }
+    if g.art.rig[g.rig].cast.is_none() { return false; }
     for &c in men {
         let want = if paired(g, c) { 1.0 } else { stature_base(g, c) };
         match g.m.stature.shown.get(c).copied() {
@@ -78,12 +77,12 @@ pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId
         let owner = g.tab[b].owner;
         let c = if any && js::truthy(owner) { g.m.stature.by_id[(js::to_i32(owner) & 0xff) as usize] } else { None };
         let Some(c) = c else {   // (a box that outlives the frame, a row of Game.fx, whose man is back at 1)
-            let x = &mut g.tab[b]; if x.dc.is_some() { x.dc = None; x.dh = None; }
+            if g.tab[b].dc.is_some() { let mut x = g.tab.edit(b); x.dc = None; x.dh = None; }
             continue;
         };
         let s = stature_of(g, c); let (bc, bh) = { let x = &g.tab[b]; (x.c, x.h) };
         let dc = drawn_point(g, c, bc, Some(s));
-        let x = &mut g.tab[b]; x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
+        let mut x = g.tab.edit(b); x.dc = Some(dc); x.dh = Some([bh[0] * s, bh[1] * s, bh[2] * s]);
     }
     if any { for x in g.m.stature.by_id.iter_mut() { *x = None; } }
 }

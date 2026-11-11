@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Know {
-    pub who: crate::game::Foe,
+    pub who: CharId,
     pub at: V3,
     pub y0: f64,
     pub v: [f64; 2],
@@ -15,7 +15,7 @@ pub struct Know {
 impl Default for Know {
     fn default() -> Self {
         Know {
-            who: crate::game::Foe::Guard(GuardId(0)),
+            who: CharId(0),
             at: [0.0; 3],
             y0: 0.0,
             v: [0.0; 2],
@@ -28,8 +28,9 @@ impl Default for Know {
 #[derive(Clone, Debug, ToBytes)]
 pub struct Chew {
     pub id: f64,
-    pub kind: String,
-    pub who: crate::game::Foe,
+    /// none: his rounds go through it, nothing breaks
+    pub kind: Option<crate::wallbreak::BKind>,
+    pub who: CharId,
     pub to: V3,
     pub hit: V3,
     pub h0: V3,
@@ -51,8 +52,8 @@ impl Default for Chew {
     fn default() -> Self {
         Chew {
             id: 0.0,
-            kind: String::new(),
-            who: crate::game::Foe::Guard(GuardId(0)),
+            kind: None,
+            who: CharId(0),
             to: [0.0; 3],
             hit: [0.0; 3],
             h0: [0.0; 3],
@@ -118,14 +119,12 @@ pub struct StateStats {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateByIdValue {
-    pub landed: f64,
-    pub gave: f64,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Ask {
     pub id: f64,
-    pub kind: String,
+    pub kind: Option<crate::wallbreak::BKind>,
     pub hit: V3,
     pub rounds: f64,
     pub layers: f64,
@@ -162,7 +161,7 @@ pub enum Ask2 {
 
 #[derive(Clone, Debug, Default)]
 pub struct CoverfireOn {
-    pub kind: String,
+    pub kind: Option<crate::wallbreak::BKind>,
     pub fired: f64,
 }
 

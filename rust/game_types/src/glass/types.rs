@@ -14,28 +14,8 @@ pub struct GlassState {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct NearestOnBox {
-    pub q: V3,
-    pub d: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassImpactCause {
-    Shot,
-    Bang,
-    Hand,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassImpactOpts {
     pub through: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassHitCause {
-    Shot,
-    Bang,
-    Hand,
 }
 
 /// the state this module keeps at its top level
@@ -45,3 +25,10 @@ pub struct GlassMod {
 }
 
 pub const THICK_GLASS_HALF: f64 = 0.05;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum GlassImpactCause {
+    Shot,
+    Bang,
+    Hand,
+}

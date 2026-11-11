@@ -12,7 +12,7 @@ A ruling that stands on a system's own page is there and not here.
 - "weird that the men are covered in snow, shouldn't happen": `lookMan` puts no snow on a man, and "let's also remove the snow on boots" took the cake off too.
 - "we also need to get away from the pixel art textures": a man's camouflage is the print on the bolt (`manCamo2`), never noise cut at a level.
 - "we don't need to go full hyperrealistic but we should sell it more": a car's body is the `carpaint` stuff in `lookTex.ts`, and no more than that.
-- "i don't think we need the NVG to glow in the dark": `goggles_boxes` builds the tubes from `goggle_part`, with nothing lit.
+- "i don't think we need the NVG to glow in the dark": `goggles_boxes` builds the tubes from parts with nothing lit.
 - "shooting metal shouldn't have particle debris, maybe just sparks?": `hit_look` gives `Metal` no chips.
 - "for most glass we do want to simulate the fractures -- I think props like cars should be an exception": solid glass cracks and throws `SOLID_GLASS_CHIPS`.
 
@@ -28,7 +28,7 @@ A ruling that stands on a system's own page is there and not here.
 - "we should just remove the max one wall charge per squad limitation": a man's slots are the only limit (`slot_max`), and no count runs across the squad.
 - "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more like swat)": the game refuses a file whose card has the key.
 - "attachments like silencer should be per gun": `suppressed` for the long gun and `side_can` for the sidearm, on `MemberKit`.
-- "ideally rifle attachments should be hierarchical under the rifle": the card's rows are a tree (`tree_up`, `kittree`).
+- "ideally rifle attachments should be hierarchical under the rifle": the card's rows are a tree (`kit_rows`, `kittree`).
 - "sponge should show up, should only be part of stealth builds by default": `issued` cards carry no `rings`.
 - "not sure it makes sense to have "mission's" for equipment. that should just be defaults. and if we want to have required equipment, that should just be a constraint
   on the stuff you pick.": a quiet mission starts from your own stored card if it fits (`stealth_card`).
@@ -68,7 +68,7 @@ A ruling that stands on a system's own page is there and not here.
 
 - "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are": `picture.rs`, told by `picture_tell`, never
   from the truth.
-- "effectively just a health system ... but with very high lethality": one model for everybody, `condition_of`.
+- "effectively just a health system ... but with very high lethality": one model for everybody, `condition.rs`.
 - "both quiet and maybe even some loud": a response team on a loud level is a `raid` in the level file.
 
 ## Fog of war
@@ -85,6 +85,8 @@ A ruling that stands on a system's own page is there and not here.
 - "setting up the optical wand should be faster. pretty much just the time for the animation and none of the waiting time with the spinner (which we can probably just
   remove)": `quick_secs`, never before `quick_down`.
 - "should be able to use night vision with wand": `nv_key` runs while `wanding`.
+- "they should probably keep whatever was happening before (like if we were sneaking before they shouldn't stand up)", of the squad when Sam kneels to the
+  wand or a lock: `kneel`, `sam_low`.
 - "having the hands up just doesn't look cool": the creep's arms hang low and go out only by `wide_by`.
 - "sam springs into action for the final grab ... you really want a disarm and then a grab, right?": the strip goes first (`leads`).
 - "sprinting straight into a wall should snap to cover": `wall_ran_on`.

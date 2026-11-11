@@ -99,6 +99,7 @@ Playwright's clicks hang on the software adapter: click by script.
 | `held.ts`, `unused.ts` | what the pages are built from and what holds the other files; declarations nothing uses (`TS_LIB` or the vendored compiler) |
 | `play-check.ts` | every mission on the module: started, stepped, drawn, saved, loaded, lost to a planted panic, restarted |
 | `hands-check.ts`, `net-check.ts`, `keep-check.ts` | the benchmark's scenes played hands-off; a game of two on the page's half; a run kept in beats |
+| `reach-check.ts` | storms on six levels: no reach mask made in the frame that shows its light, and the bytes as made whole (`REACH_BREAK`) |
 | `tape-check.ts`, `walk-check.ts`, `walk.ts` | a tape walked on another game is the run, at every mark and after a seek; one tape read and walked here |
 
 **The address.** A plain address opens the title (`startPageWanted`). A mission is a page load of its own words, read by the game (`Query`) and by the page.
@@ -110,7 +111,7 @@ Playwright's clicks hang on the software adapter: click by script.
 | `?seed=7`, `?quality=verylow`, `?mute`, `?hud` | the die (no word, a random one); a fixed preset; silence; the numbers on screen |
 | `?hard`, `?nofow`, `?noweather`, `?hour=` | difficulty; no fog of war; no weather; the hour |
 | `?cards=0`, `?loadbrief=0`, `?nokit`, `?noreplay`, `?cloud=0`, `?downloads=1` | no card waits; no brief; not this machine's kit cards; no tape; nothing sent; files also download |
-| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_run/src/words.rs` |
+| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_start/src/host/words.rs` |
 | `?playtape=`, `?at=`, `?bench` | a tape's page and the tick to seek to; the benchmark |
 | `?keeppage=0`, `?keeppage=1` | the shell that keeps the GPU device. A driven or `?paused` page is whole. A player's Chrome has the game in the frame `kept-page`, hooks on its `contentWindow` |
 
@@ -137,8 +138,8 @@ mode, enemies that don't think and unlimited ammunition.
 none. In `rust/game_rules/src/tick/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while
 anybody is alert, searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
 
-What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineBefore`, `machineAfter`). A fresh Playwright
-context has none of it, and a person's browser may. An address word wins over what is kept.
+What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineKept`, `machineAfter`). A fresh Playwright
+context has none of it, and a person's browser may. An address word wins over what is kept (`rust/game_start/src/host/mod.rs`, `lay`), on a native start too.
 
 ## Rules that hold
 

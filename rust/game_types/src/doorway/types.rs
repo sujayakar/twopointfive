@@ -36,9 +36,6 @@ pub struct St {
 pub struct DoorwayModSTACKOWN {
     pub leaf: f64,
     pub mark: f64,
-    pub fur: f64,
-    pub back: f64,
-    pub queue: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -83,25 +80,14 @@ pub struct Through {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorwayMod {
-    #[is(crate::doorway::DoorwayModSTACKOWN { leaf: 0.0, mark: 0.0, fur: 0.0, back: 0.0, queue: 0.0 })] pub stack_own: crate::doorway::DoorwayModSTACKOWN,
+    #[is(crate::doorway::DoorwayModSTACKOWN { leaf: 0.0, mark: 0.0 })] pub stack_own: crate::doorway::DoorwayModSTACKOWN,
     pub states: JsMap<GuardId, crate::doorway::St>,
 }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct DoorwayStats {
-    pub held: i32,
-    pub aside: i32,
-    pub passed: i32,
-    pub stepped: i32,
-    pub round: i32,
-    pub rest: i32,
     pub marks: i32,
-    pub covered: i32,
-    pub step_cover: i32,
-    pub step_glass: i32,
-    pub round_own: i32,
-    pub leaf_stall: i32,
 }
 
 pub const ROUND_PACE: f64 = 0.5;

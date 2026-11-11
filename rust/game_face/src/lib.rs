@@ -1,5 +1,5 @@
 //! THE FACE OF THE GAME: one wasm module a host (the page, the server, a tool) loads, hands a start to, steps a tick at a time, draws and asks. Nothing here decides anything: the game is the
-//! crate `game`, what a host does round a step is `game_run`, what is drawn is `game_draw`.
+//! crate `game`, what a host does round a step is `game_start::host`, what is drawn is `game_draw`.
 //!
 //! C ABI: a pointer and a length are `usize`, a game's number `u32`, a flag `u32`. Each file says its own exports.
 //!
@@ -12,6 +12,7 @@
 //!
 //! a game (as many at once as rust/sim has slots)
 //!   face_start(p, n, slot, seed, seats, flags) -> h   a game from a level file's text, the address's words, the character's files and the host's commands (game_start `handed`)
+//!   face_ready(h, lines) -> more              what the first step wants and such a start leaves, some of it: the light under the roofs (1: there is more)
 //!   face_drop(h) · face_slot(h) -> slot       the game and its slot are free again · which of rust/sim's slots it stands in
 //!   face_show_seat(h, seat)                   which seat this machine shows
 //!   face_step(h, dt, flags)                   ONE TICK of every seat on what was handed (hand.rs, net.rs). Flags: 8 SAVES, the save controller's turn
@@ -152,7 +153,7 @@ pub extern "C" fn face_out_len() -> usize {
 /// A GAME STARTED HERE, by the game's own start (rust/game_start `stand`), from what the host hands in one run of bytes (`handed.rs`: the level
 /// file's text, the address's words, the character's files). No state crosses.
 /// `slot`: the slot of rust/sim to stand in, whose block is made anew; below 0 = a free one. `flags`: 1 = the rows that dress the picture are
-/// up (a page). Answers the game, or 0 where no slot is free.
+/// up (a page), 2 = the host makes what `face_ready` makes. Answers the game, or 0 where no slot is free.
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
@@ -160,9 +161,15 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     hook();
     let slot = if slot < 0 { match free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
-    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let stood = game_start::handed::stand_handed(bytes(p, n), &o, &mut |g, words, b| if let Err(why) = game_run::words::at_start(g, words, b) { panic!("face_start: {why}") });
+    let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ready: flags & 2 == 0, ..Default::default() };
+    let stood = game_start::handed::stand_handed(bytes(p, n), &o);
     put(Held::new(stood.game))
+}
+/// WHAT THE FIRST STEP WANTS AND SUCH A START LEAVES: the table of the light under the roofs, some lines of it (game_rules `light_ready`). A step that finds it wanting makes the rest.
+/// Answers 1 while there is more.
+#[no_mangle]
+pub extern "C" fn face_ready(h: u32, lines: u32) -> u32 {
+    with_ref(h, |x| !game::scene_collision::light_ready(&x.g, lines as usize) as u32)
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
@@ -209,7 +216,7 @@ pub extern "C" fn face_state_words(h: u32) {
 }
 #[no_mangle]
 pub extern "C" fn face_die_n(h: u32) -> f64 {
-    with(h, |x| sim::state::state(x.g.sim).dice.n)
+    with_ref(h, |x| x.g.dice.n)
 }
 #[no_mangle]
 pub extern "C" fn face_parts() -> usize {

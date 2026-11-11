@@ -66,7 +66,7 @@ export interface RenderSettings {
   dnShadowIters: number; dnShadowCap: number; dnShadowClampK: number; dnShadowSigmaL: number; dnShadowPrior: boolean; dnShadowLitAlike: boolean; dnShadowOccl: boolean; dnShadowMoveCap: number; dnShadowMoveThresh: number; dnShadowJump: number;
   dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number;
   // the runtime quality ladder's HEADROOM-AWARE CLIMB (ui/quality.ts Quality.sample): with adaptive resolution on and the GPU measurably idle (presented at the display rate AND the compute passes'
-  // union under CLIMB.headroom of the frame budget for CLIMB.window s) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
+  // union with room for a fight of CLIMB.fight times it, CLIMB.windows s running) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
   // volumetrics ¼ → ½). Off = the ladder as it was.
   ladderClimb: boolean;
   /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
@@ -114,7 +114,7 @@ export interface RenderSettings {
   capColor: [number, number, number, number]; // section cap tint (rgb) + albedo mix
   nvAmount: number; nvGain: number; hitFlash: number;
   // ---- ReSTIR DI, the direct-light estimator (render/shaders/restir.wgsl; the header there is its description): one reservoir per pixel per emitter class, temporal + spatial
-  // reuse, a fixed shadow-ray budget per pixel whatever the light count. The only estimator since 2026-11-07 (the leader / tail one, direct.wgsl, and its switch went) ----
+  // reuse, a fixed shadow-ray budget per pixel whatever the light count ----
   restirRays: number;          // shadow rays per pixel per frame, 2‥6: 2 = each class alternates re-trace / fresh candidate on a flipping checkerboard · 3 = both temporal samples re-traced +
                                // one fresh candidate alternating between the classes · 4 = re-trace + fresh for both · 5 = + a final visibility ray when spatial reuse picks a neighbour's
                                // sample (spatial reuse then runs everywhere, unbiased) · 6 = + a second fresh candidate per class (presets: ultra 4 · high 4 · medium 4 · low 3 · verylow 2)
@@ -187,7 +187,8 @@ export interface RenderSettings {
   glassIor: number;            // its index of refraction (1.5 = soda-lime glass; 1.33 water; 1.0 = no bending — the absorption law stays the refracting one)
   meshShadowsNear: boolean;    // mesh shadows for NEAR receivers only (frame.rigCfg bit 128; the HIGH preset's form — quality.ts Preset.mesh 'near'): a shadow ray tests a man's MESH only when it starts within 0.6 m of his cull sphere
                                // (the floor at his boots, the man beside him, his own pixels), his round cones otherwise — the contact seam closed for a bounded cost; false = every ray walks the mesh (ultra)
-  meshShadows: boolean;        // mesh-traced character shadows (the ultra experiment): every shadow ray tests characters against their skinned triangle mesh — per character a refit BVH over the shared mannequin topology, re-skinned + refit in two small compute dispatches a frame (render/meshShadows.ts, 'mesh' in the HUD) — instead of the 15 round-cone proxies, so limbs, hands, feet and the head cast their real silhouettes and the proxies' over-occlusion (~17 % of what the old capsules blocked; the fitted cones halved that) goes; primary visibility and closest-hit shading are untouched. Inert unless engine.meshShadowsAvailable (adapter storage-buffer budget, frame.ts meshBinding). FrameFlags.MeshShadows; off = the proxy path bit for bit
+  meshShadowsDirect: boolean;  // mesh shadows in the DIRECT LIGHT'S RAYS alone (frame.rigCfg bit 256; off: every ray that asks what stands in its way): the light cache's, the gather's, the reflections', the beams' and the particles' rays meet a man's round cones wherever they are (common.wgsl occluded), as the far ones do already
+  meshShadows: boolean;        // mesh-traced character shadows (the ultra experiment): every shadow ray tests characters against their skinned triangle mesh — per character a refit BVH over the shared mannequin topology, re-skinned + refit in three small compute dispatches a frame he moves in (render/meshShadows.ts, 'mesh' in the HUD) — instead of the 15 round-cone proxies, so limbs, hands, feet and the head cast their real silhouettes and the proxies' over-occlusion (~17 % of what the old capsules blocked; the fitted cones halved that) goes; primary visibility and closest-hit shading are untouched. Inert unless engine.meshShadowsAvailable (adapter storage-buffer budget, frame.ts meshBinding). FrameFlags.MeshShadows; off = the proxy path bit for bit
   gbaa: boolean;               // GBAA (image-quality program C3; render/shaders/gbaa.wgsl, the g-buffer's `edge` target): single-frame GEOMETRIC edge anti-aliasing — every composite pixel an analytic box edge crosses is
                                // blended with its neighbour across the edge by the far side's exact coverage, before the resolve; no history, no jitter needed for the box edges (pair with taauPhases 0 =
                                // jitter off, the TAA reduced to a noise pass). Under the TAAU path only (debug views / TAAU off bypass it). Default off (the presets place it)
@@ -289,6 +290,7 @@ export const defaultSettings = (): RenderSettings => ({
   torchBounceCards: false,     // default off until the presets place it (quality.ts); Tab ▸ Indirect light
   gloss: false,
   decals: true,                // decals (E1): bullet holes, scorches, scuffs, chips in the g-buffer's fragment stage — on by default (Tab ▸ Renderer — decals; ?nodecals)
+  meshShadowsDirect: false,    // (quality.ts apply writes it: high on, the rest have no mesh)
   meshShadowsNear: false,      // (quality.ts apply writes it with meshShadows: high = near-only, ultra = every ray)
   meshShadows: false,          // mesh-traced character shadows: the ULTRA preset switches it on (every ray) and HIGH in its near-only form, every other preset off (quality.ts apply); ?meshShadows / the Tab row flip it by hand until the preset next changes; Tab ▸ Direct light, the pause menu's trade-offs, or ?meshShadows
   gbaa: false,                 // GBAA off (Tab ▸ Frame; the image-quality program's per-tier configs place it with taauPhases 0)

@@ -39,15 +39,14 @@ fn fix_is_sight(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Where his own eyes have the man, for the rules that ask only that of a man on a post.
-fn eyes_fix(g: &crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
+fn eyes_fix(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
     if fix_is_sight(g, gd) { Some(lk) } else { None }
 }
 
 /// The same, asked of a defender by his row of the room fight.
-pub fn eyes_fix_def(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> Option<V3> {
-    let pt = g.tab.roomfight_def[d].pt;
-    eyes_fix(g, gd, pt)
+pub fn eyes_fix_def(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
+    eyes_fix(g, gd)
 }
 
 /// Where his gun goes with no man to shoot at: his eyes this very tick, else his duty, else his belief.
@@ -60,7 +59,7 @@ pub(super) fn gun_point(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
 /// A report that reaches him outside his ears and eyes places his belief.
 pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let now = g.time;
-    crate::mind::fix(g, gd, Some(at), "belief"); // a fresh object in the TypeScript: always a new fix
+    crate::mind::fix(g, gd, Some(at), "belief"); // always a new fix
     g.gd[gd].word_t = now;
 }
 
@@ -98,15 +97,14 @@ mod tests {
     #[test]
     fn eyes_fix_asks_where_it_came_from() {
         let (mut g, gd) = stand();
-        let pt = [5.0, 0.0, 5.0];
-        assert_eq!(eyes_fix(&mut g, gd, pt), None);
+        assert_eq!(eyes_fix(&mut g, gd), None);
         g.gd[gd].sight_pos = [1.0, 7.0, 1.0];
         g.gd[gd].last_known = Some([1.005, 0.0, 1.0]); // height does not count
-        assert_eq!(eyes_fix(&mut g, gd, pt), Some([1.005, 0.0, 1.0]));
+        assert_eq!(eyes_fix(&mut g, gd), Some([1.005, 0.0, 1.0]));
         g.gd[gd].last_known = Some([3.0, 0.0, 3.0]); // a noise or a word
-        assert_eq!(eyes_fix(&mut g, gd, pt), None);
+        assert_eq!(eyes_fix(&mut g, gd), None);
         g.gd[gd].led_at = Some([3.0, 0.0, 3.0]); // where he worked out the man had gone
-        assert_eq!(eyes_fix(&mut g, gd, pt), Some([3.0, 0.0, 3.0]));
+        assert_eq!(eyes_fix(&mut g, gd), Some([3.0, 0.0, 3.0]));
     }
 
     #[test]

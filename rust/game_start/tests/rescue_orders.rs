@@ -103,3 +103,35 @@ fn the_last_man_covers_each_opening_of_the_corridor() {
         assert!(flow.is_empty(), "seed {s}: the control: nothing was walked past: {flow:?}");
     }
 }
+
+/// THE RULE: a man of the team who stands in the room with his order done and nobody in his eye pans across it, to both sides of its middle, the short way round. The room's middle lies straight along
+/// the seam of the compass from where he stands, so the room's two sides read as nearly a whole turn apart unless the angle is brought back.
+/// A FAILURE MEANS: a man on one side of the hostage room sweeps only half of it and leaves the other half dark.
+#[test]
+fn a_man_searching_the_room_pans_to_both_sides_of_its_middle() {
+    let mut p = stood(7, 30.0);
+    p.tap("KeyF");
+    p.run(0.2);
+    let man = p.men()[0];
+    let room = game::rescue::rescue_bounds(&p.g).expect("a hostage room");
+    let middle = [(room.x0 + room.x1) / 2.0, (room.z0 + room.z1) / 2.0];
+    let at = [middle[0], room.z1 - 0.6];
+    let seat = game::seats::here(&p.g);
+    let a = game::orders::squad_orders_of(&seat, man).expect("on the bang and clear");
+    let mid_yaw = (middle[0] - at[0]).atan2(middle[1] - at[1]);
+    let (mut least, mut most) = (0.0f64, 0.0f64);
+    for _ in 0..360 {
+        // he has come in and stands at his post; the door's tools and the room's fight have let him go
+        let c = p.g.gd[man].ch;
+        game::character::pos_replace(&mut p.g, c, [at[0], 0.0, at[1]]);
+        p.g.tab.orders_assignment[a].post = Some([at[0], 0.0, at[1]]);
+        p.g.sets[p.g.seat].door_tools.ops.clear();
+        let fight = p.g.fight.ops.clone();
+        p.g.fight.ops = fight.into_iter().filter(|&o| p.g.tab.roomfight_op[o].gd != man).collect();
+        p.frame();
+        if p.g.tab.orders_assignment[a].search != Some(true) { continue; }
+        let off = game::v3::wrap_angle(p.g.tab.orders_assignment[a].face.unwrap() - mid_yaw);
+        (least, most) = (least.min(off), most.max(off));
+    }
+    assert!(least < -0.5 && most > 0.5, "he panned from {least:.2} to {most:.2} round the room's middle");
+}

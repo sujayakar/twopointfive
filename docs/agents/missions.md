@@ -19,14 +19,14 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
-| `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
-| `scenario_run.rs` | the one way from an address to a staged game; what is up; quit |
-| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none |
+| `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_start/src/host/desk.rs`) answers the page |
+| `scenario_run.rs` | the one way from an address to a staged game; its row of the list |
+| `roomclear.rs`, `squaddeal.rs` | rooms, marks and the two ends; squads cut along a house whose file names none, or from the rooms men stand in |
 | `nightbreach.rs`, `breach.rs` | the staging a room clear stands on; F's drill |
 | `rescue/`, `rescueend.rs` | a rescue's cast, F's entry, the captor's clock; the hostages led, and the win |
-| `rescueflow.rs`, `rescuecheck.rs`, `rescueflush.rs` | who covers the openings Sam runs past; their radio check; the men left coming for the hostages |
-| `quiet.rs`, `quietfog.rs`, `takecheck.rs` | a quiet mission's deal and partner, its fog lever, whether anybody is told the thing is gone |
-| `mission.rs` | the stealth stages, the run's counts, the one objective line (`objective`) |
+| `rescueflow.rs`, `rescueflush.rs` | who covers the openings Sam runs past; the men left coming for the hostages |
+| `quiet.rs`, `quietfog.rs` | a quiet mission's deal and partner, its fog lever |
+| `mission.rs` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, end; a rule asks it and never the kind), the stealth stages, `objective` |
 | `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
 | `lesson.rs`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
@@ -52,7 +52,7 @@ place it (`group_of`). `?pick=compound` goes to that short-list row, and Next on
 | Quiet, as two | `lights-out-two` |
 
 **The one path.** `start_at_address` → `start_from_query`: the row's hour (`row_settings`), fog, weather, `spec_of`, then `start_scenario`, which calls the kind's own start. A refusal comes
-back in words and leaves the plain floor. Each tick, `step_seats_on_first` runs `rails_gate` first, then `director_tick`, the four kinds' ticks, and later `update_mission`, `par_tick`,
+back in words and leaves the plain floor. Each tick, `STEPS` runs `rails_gate` first, then `director_tick`, the four kinds' ticks, and later `update_mission`, `par_tick`,
 `lesson_tick` and `rails_tick`. `verdict_tick` follows the whole step.
 
 **Room clear** is the night breach's staging on the level's own layout: `room_clear_scenario_start` calls `night_breach_start`. `StructureData` holds the rooms (bounds, doors, `garrison`,
@@ -66,16 +66,18 @@ held again. **Taken:** nobody holds and `response_up` is false. **Wiped:** every
 learns of the assault. F is the entry on the hostage room (`rescue_order_door`). The room held is only "secured". **Won** (`rescue_end_won`): nobody of theirs left for `clear_secs`, or every
 living hostage within `out_m` of the team's start, having been led (`rescue_end_word`). **Lost** (`rescue_outcome`): all hostages dead, one hit by your own fire, or Sam down.
 
-**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_before_restart` writes the deal into `g.level.mission` and benches the routes not manned. The stages run
+**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_deal` writes the deal into `g.level.errand` before the men are made;
+`quiet_mission_off_shift` benches the routes not manned. The stages run
 in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; walking off, sprinting or hauling a body lets go), Exfil, Done past any exit (`out_now`). Every player down is
-Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
+Failed. Where the spot is `wired` (`Errand` `told`), a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
 
 **How it ended** (`ended` in `verdict.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.
 The objective line is one read, first speaker wins: script, lesson, room clear with its par, rescue, night breach, stages.
 
-**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/sam/player/update.rs`). Inside
-`game_restart_encounter`, the first act is the quiet deal and the last is each scenario's staging again. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
+**Starting over.** Enter while down loads this run's newest checkpoint if there is one, else restarts; Shift+Enter always restarts (`rust/game_rules/src/sam/player/update.rs`). A restart
+stands the mission by the stand's own lines (`standing::stand_men`): the quiet deal comes before the men, who read it, and each scenario stages once on the men
+it finds. A tutorial step with `checkpoint` keeps one as it comes up (`checkpoints_keep`). A save
 carries the quiet deal, the lesson's step and a script's place in its beat.
 
 **Deals and ways in.** Every try starts the same. `k.roomclear.seed` is 0, which `place_defenders` reads as each room's first `garrison` marks in file order; `?roomclear=3` shuffles them off that
@@ -121,14 +123,14 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
   `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. The gate's `played` rows, `missions.rs` and `coop.rs` find a room clear themselves (`room_clear_files`).
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
-  a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
+- **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
+  a line in `mission_tick`, and its staging in its own start.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
 
 ## What holds it
 
-Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
+Native tests in `rust/game_start/tests/`:
 
 | file | what it holds |
 |---|---|
@@ -140,7 +142,7 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 | `response_team.rs`, `last_men.rs` | what calls the team and its clock; when the last few count as down |
 | `restarts.rs`, `endcard.rs`, `debrief.rs` | a restart equals a fresh staging; the end card comes once, with its record |
 | `does_and_stages.rs`, `owes.rs`, `hands_off.rs` | every file that names a mission stages it; what a whole run owes; a room clear with nobody at the keys |
-| `desk.rs`, `program_moment.rs` (game_run) | the list and sheet as the page has them; a checkpoint in the middle of a beat changes nothing |
+| `desk.rs`, `program_moment.rs` | the list and sheet as the page has them; a checkpoint in the middle of a beat changes nothing |
 
 `gate long` adds a `played` row for each staged mission and a `lesson` row for each tutorial; the quick `gate` has `par` and `start` rows. `missions` plays the room clears under a dull commander, and
 `missions diff BEFORE AFTER` compares builds. `levels second-way`, `stands`, `walked` and `stacks` ask what a level owes. Checks: `mystery-check.ts`, `writing-check.ts`. Page scripts:
@@ -149,5 +151,5 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 ## Not seen
 
 - **The other ways in** have stood only natively: nobody has played one on a GPU.
-- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level.
+- **Left over:** `rails.sky` is on no level.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

@@ -21,7 +21,7 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
 }
 
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
-    let at = rows::at(t);
+    let at = t.at();
     squad_orders_reach(g, gd, at)
 }
 

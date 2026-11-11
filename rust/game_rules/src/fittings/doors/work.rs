@@ -6,64 +6,63 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name.
+/// A door's sound, heard and played.
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
-/// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
 fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
 
 /// How far a leaf stands open the way a shove would send it; one-way, simply how far open.
-pub fn doors_open_for(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
-    m::abs(door_angle(g, d))
+pub fn doors_open_for(g: &crate::game::Game, d: DoorId) -> f64 {
+    m::abs(g.dr[d].leaf.angle)
 }
 
 /// Pull a leaf to from wherever it stands: a stiff sprung close the latch catches.
 pub fn doors_pull_to(g: &mut crate::game::Game, d: DoorId, who: f64) {
-    if door_latched(g, d) || door_off(g, d) { return; }
-    door_set_closing(g, d, true);
-    door_set_swept(g, d, false);
-    let vel = -m::sign(door_angle(g, d)) * 1.2;
-    door_set_vel(g, d, vel);
-    door_set_last_who(g, d, who);
+    if g.dr[d].leaf.latched || g.dr[d].leaf.off { return; }
+    g.dr[d].leaf.closing = true;
+    g.dr[d].leaf.swept = false;
+    let vel = -m::sign(g.dr[d].leaf.angle) * 1.2;
+    g.dr[d].leaf.vel = vel;
+    g.dr[d].leaf.last_who = who;
 }
 
 /// A leaf pulled to and still on its way home. A body in its way, or a hand on it, stops that within a moment; the slowest it swings on its own before it latches is about 0.01 rad/s.
 pub fn doors_coming_home(g: &crate::game::Game, d: DoorId) -> bool {
-    door_closing(g, d) && door_vel(g, d) * door_angle(g, d) < 0.0 && m::abs(door_vel(g, d)) > 0.005
+    g.dr[d].leaf.closing && g.dr[d].leaf.vel * g.dr[d].leaf.angle < 0.0 && m::abs(g.dr[d].leaf.vel) > 0.005
 }
 
 /// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.
 pub(in crate::fittings) fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
     let quiet = quiet.unwrap_or(false);
-    if door_off(g, d) { return; }
-    if door_latched(g, d) || door_rests_to(g, d) {
-        door_set_latched(g, d, false);
-        if door_creak_armed(g, d) {
+    if g.dr[d].leaf.off { return; }
+    if g.dr[d].leaf.latched || door_rests_to(g, d) {
+        g.dr[d].leaf.latched = false;
+        if g.dr[d].leaf.creak_armed {
             let pos = door_pos(g, d);
             emit(g, d, crate::doors::DoorSound::Creak, pos, who, if quiet { 0.12 } else { 0.3 });
-            door_set_creak_armed(g, d, false);
+            g.dr[d].leaf.creak_armed = false;
         }
     }
-    door_set_closing(g, d, false);
-    door_set_swept(g, d, false);
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.swept = false;
     let swing = door_swing(g, d);
-    let vel = swing * m::max(door_vel(g, d) * door_swing(g, d), if quiet { PULL_VEL_QUIET } else { PULL_VEL });
-    door_set_vel(g, d, vel);
-    door_set_pull_t(g, d, PULL_SECS);
-    let quiet_t = m::min(door_quiet_t(g, d), -1.0);
-    door_set_quiet_t(g, d, quiet_t);
-    door_set_last_who(g, d, who);
+    let vel = swing * m::max(g.dr[d].leaf.vel * door_swing(g, d), if quiet { PULL_VEL_QUIET } else { PULL_VEL });
+    g.dr[d].leaf.vel = vel;
+    g.dr[d].leaf.pull_t = PULL_SECS;
+    let quiet_t = m::min(g.dr[d].leaf.quiet_t, -1.0);
+    g.dr[d].leaf.quiet_t = quiet_t;
+    g.dr[d].leaf.last_who = who;
 }
 
 /// Try the lever against the bolt: a clack, and the marker's flash, which is also the rate limit.
 pub fn doors_rattle(g: &mut crate::game::Game, d: DoorId, who: f64, level: Option<f64>) {
     let level = level.unwrap_or(0.12);
-    if door_rattle_t(g, d) > 0.0 || door_off(g, d) { return; }
-    door_set_rattle_t(g, d, 0.6);
-    door_set_last_who(g, d, who);
+    if g.dr[d].leaf.rattle_t > 0.0 || g.dr[d].leaf.off { return; }
+    g.dr[d].leaf.rattle_t = 0.6;
+    g.dr[d].leaf.last_who = who;
     let pos = door_pos(g, d);
     emit(g, d, crate::doors::DoorSound::Rattle, pos, who, level);
 }
@@ -135,33 +134,33 @@ fn pick_gap(n: f64) -> f64 {
 
 /// One frame of working the lock. True on the frame it opens, and for a lock already open.
 pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bool {
-    if !door_locked(g, d) { return true; }
+    if !g.dr[d].leaf.locked { return true; }
     if g.dr[d].def.steel.unwrap_or(false) { return false; }
-    if door_pick(g, d) == 0.0 {
-        door_set_pick_clock(g, d, 0.3);
-    } else if door_pick_idle(g, d) > 0.15 {
-        let clock = m::min(door_pick_clock(g, d), 0.3);
-        door_set_pick_clock(g, d, clock);
+    if g.dr[d].leaf.pick == 0.0 {
+        g.dr[d].leaf.pick_clock = 0.3;
+    } else if g.dr[d].leaf.pick_idle > 0.15 {
+        let clock = m::min(g.dr[d].leaf.pick_clock, 0.3);
+        g.dr[d].leaf.pick_clock = clock;
     }
-    door_set_picking(g, d, true);
-    door_set_last_who(g, d, who);
-    door_set_quiet_t(g, d, 0.0);
-    let pick = m::min(1.0, door_pick(g, d) + dt / DOORS_PICK_SECS);
-    door_set_pick(g, d, pick);
-    let clock = door_pick_clock(g, d) - dt;
-    door_set_pick_clock(g, d, clock);
-    if door_pick_clock(g, d) <= 0.0 {
-        let n = door_pick_n(g, d) + 1.0;
-        door_set_pick_n(g, d, n);
-        door_set_pick_clock(g, d, pick_gap(n));
+    g.dr[d].leaf.picking = true;
+    g.dr[d].leaf.last_who = who;
+    g.dr[d].leaf.quiet_t = 0.0;
+    let pick = m::min(1.0, g.dr[d].leaf.pick + dt / DOORS_PICK_SECS);
+    g.dr[d].leaf.pick = pick;
+    let clock = g.dr[d].leaf.pick_clock - dt;
+    g.dr[d].leaf.pick_clock = clock;
+    if g.dr[d].leaf.pick_clock <= 0.0 {
+        let n = g.dr[d].leaf.pick_n + 1.0;
+        g.dr[d].leaf.pick_n = n;
+        g.dr[d].leaf.pick_clock = pick_gap(n);
         let pos = door_pos(g, d);
         emit(g, d, crate::doors::DoorSound::Pick, pos, who, DOORS_PICK_LEVEL);
     }
-    if door_pick(g, d) < 1.0 { return false; }
-    door_set_locked(g, d, false);
-    door_set_pick(g, d, 0.0);
-    door_set_picking(g, d, false);
-    door_set_noticed(g, d, false);
+    if g.dr[d].leaf.pick < 1.0 { return false; }
+    g.dr[d].leaf.locked = false;
+    g.dr[d].leaf.pick = 0.0;
+    g.dr[d].leaf.picking = false;
+    g.dr[d].leaf.noticed = false;
     let pos = door_pos(g, d);
     emit(g, d, crate::doors::DoorSound::Unlock, pos, who, DOORS_UNLOCK_LEVEL);
     true
@@ -170,40 +169,40 @@ pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bo
 /// A boot beside the lock, or (`lock`) what destroys the lock itself. Returns whether the door gave.
 pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, lock: Option<bool>) -> bool {
     let lock = lock.unwrap_or(false);
-    if door_off(g, d) { return false; }
+    if g.dr[d].leaf.off { return false; }
     if g.dr[d].def.steel.unwrap_or(false) {
-        door_set_rattle_t(g, d, 0.6);
-        door_set_last_who(g, d, who);
+        g.dr[d].leaf.rattle_t = 0.6;
+        g.dr[d].leaf.last_who = who;
         let pos = door_pos(g, d);
         emit(g, d, crate::doors::DoorSound::Clang, pos, who, 1.0);
         return false;
     }
     let held = doors_boot_holds(g, d, from);
     if held && !lock {
-        door_set_rattle_t(g, d, 0.6);
-        door_set_last_who(g, d, who);
+        g.dr[d].leaf.rattle_t = 0.6;
+        g.dr[d].leaf.last_who = who;
         let pos = door_pos(g, d);
         emit(g, d, crate::doors::DoorSound::Thud, pos, who, 1.0);
         return false;
     }
-    if !door_lock_broken(g, d) { door_set_noticed(g, d, false); }
-    door_set_locked(g, d, false);
-    door_set_lock_broken(g, d, true);
-    door_set_pick(g, d, 0.0);
-    door_set_latched(g, d, false);
-    door_set_closing(g, d, false);
-    door_set_swept(g, d, false);
-    door_set_quiet_t(g, d, -0.5);
-    door_set_last_who(g, d, who);
-    door_set_creak_armed(g, d, false);
+    if !g.dr[d].leaf.lock_broken { g.dr[d].leaf.noticed = false; }
+    g.dr[d].leaf.locked = false;
+    g.dr[d].leaf.lock_broken = true;
+    g.dr[d].leaf.pick = 0.0;
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.swept = false;
+    g.dr[d].leaf.quiet_t = -0.5;
+    g.dr[d].leaf.last_who = who;
+    g.dr[d].leaf.creak_armed = false;
     if held {
         // the lock destroyed from the face it opens toward: nothing drove the leaf
-    } else if m::abs(door_angle(g, d)) < 1.4 {
+    } else if m::abs(g.dr[d].leaf.angle) < 1.4 {
         let vel = -doors_side(g, d, from) * 9.0;
-        door_set_vel(g, d, vel);
-        door_set_since_bash(g, d, 0.0);
-        if { let dir = m::sign(door_vel(g, d)); doors_opening(g, d, dir) } {
-            let vel = door_vel(g, d);
+        g.dr[d].leaf.vel = vel;
+        g.dr[d].leaf.since_bash = 0.0;
+        if m::sign(g.dr[d].leaf.vel) == door_swing(g, d) {
+            let vel = g.dr[d].leaf.vel;
             doors_driven(g, d, who, vel, crate::doors::DoorDriveKind::Boot, false, 0.0);
         }
     }
@@ -222,16 +221,13 @@ pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::Do
     emit(g, d, sound, pos, who, level);
 }
 
-/// The subscriber game.ts:1208 hangs on the doors: a torn leaf is a row in the destruction's change feed.
-fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCause) {
+/// A torn leaf is a row in the destruction's change feed.
+fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::wallbreak::LevelChangeCause) {
     let c = g.dr[d].frame_centre;
     let r = g.dr[d].def.width / 2.0 + 0.1;
     let row = crate::wallbreak::WallBreakNoteC {
         kind: crate::wallbreak::LevelChangeKind::Door,
-        cause: match cause {
-            crate::doors::DoorsTornCause::Blast => crate::wallbreak::LevelChangeCause::Blast,
-            crate::doors::DoorsTornCause::Fire => crate::wallbreak::LevelChangeCause::Fire,
-        },
+        cause: cause,
         id: g.doors.list.iter().position(|x| *x == d).map_or(-1.0, |i| i as f64),
         pos: [c[0], c[1], c[2]],
         rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r],
@@ -243,8 +239,8 @@ fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCa
 }
 
 /// Told of every leaf that comes off, by whatever road, on the frame it leaves its frame.
-pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) {
-    torn_feed(g, d, who, cause.unwrap_or(crate::doors::DoorsTornCause::Blast));
+pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::wallbreak::LevelChangeCause>) {
+    torn_feed(g, d, who, cause.unwrap_or(crate::wallbreak::LevelChangeCause::Blast));
 }
 
 /// The first of `dists` out from the door's middle on `side` that has floor.
@@ -283,7 +279,7 @@ fn thread_door(hinge: [f64; 2], closed_dir: f64, width: f64, prev: V3, p: V3, fr
 }
 
 /// Insert approach and exit points where a path crosses a doorway, so men take doors head-on and clear the swung leaf before turning.
-pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_free: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> bool>) -> Vec<V3> {
+pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_free: Option<&mut dyn FnMut(&crate::game::Game, f64, f64) -> bool>) -> Vec<V3> {
     if path.is_empty() { return Vec::new(); }
     let mut is_free = is_free;
     let mut out: Vec<V3> = Vec::new();
@@ -321,11 +317,72 @@ pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }
 
+/// Hold-to-crack: ease a near-closed leaf open silently, up to `max_angle`.
+pub fn doors_crack(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, dt: f64, keys: Option<&JsSet<String>>, rate: Option<f64>, max_angle: Option<f64>) {
+    let rate = rate.unwrap_or(0.55);
+    let max_angle = max_angle.unwrap_or(0.6);
+    if g.dr[d].leaf.off || doors_locked_out(g, d, from, keys) {
+        return;
+    }
+    let [hx, hz] = g.dr[d].def.hinge;
+    let u = door_dir(g, d);
+    let (px, pz) = (from[0] - hx, from[2] - hz);
+    let perp = u[0] * pz - u[1] * px;
+    let sgn = door_swing(g, d);
+    if (if perp >= 0.0 { 1.0 } else { -1.0 }) == door_swing(g, d) {
+        let pull = g.dr[d].leaf.pull_t;
+        g.dr[d].leaf.pull_t = m::max(pull, 0.3);
+    }
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.quiet_t = -1.5;
+    g.dr[d].leaf.last_who = who;
+    let a = g.dr[d].leaf.angle;
+    if m::abs(a) < max_angle {
+        let to = a + sgn * rate * dt;
+        let (lo, hi) = (door_min_a(g, d), door_max_a(g, d));
+        g.dr[d].leaf.angle = v3::clamp(to, lo, hi);
+    }
+}
+
+/// A tap on F: closed, it swings open away from the user; open, it is pulled to; locked against him, the rattle or his key's clack.
+pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys: Option<&JsSet<String>>) {
+    if g.dr[d].leaf.off {
+        return;
+    }
+    if doors_locked_out(g, d, from, keys) {
+        doors_rattle(g, d, who, None);
+        return;
+    }
+    if doors_key_opens(g, d, from, keys) {
+        let pos = door_pos(g, d);
+        doors_sound(g, d, DoorSound::Unlock, pos, who, DOORS_KEY_LEVEL);
+    }
+    let [hx, hz] = g.dr[d].def.hinge;
+    let u = door_dir(g, d);
+    let (px, pz) = (from[0] - hx, from[2] - hz);
+    let perp = u[0] * pz - u[1] * px;
+    if door_is_closed(g, d) {
+        let sgn = if perp >= 0.0 { -1.0 } else { 1.0 };
+        g.dr[d].leaf.latched = false;
+        g.dr[d].leaf.closing = false;
+        let v = sgn * (if sgn != door_swing(g, d) { PULL_VEL } else { 3.2 });
+        g.dr[d].leaf.vel = v;
+        g.dr[d].leaf.quiet_t = -1.0;
+        let pos = door_pos(g, d);
+        doors_sound(g, d, DoorSound::Creak, pos, who, 0.2);
+    } else {
+        doors_pull_to(g, d, who);
+    }
+    g.dr[d].leaf.last_who = who;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // every number below is the TypeScript's own, printed under bun with EXACT.on from doors.ts on a fresh `new Doors`
+    // every number below is pinned
     const A: ([f64; 2], f64, f64) = ([1.25, -3.5], 0.7, 0.95);
     const C: ([f64; 2], f64, f64) = ([-1.0, -0.8], 0.7, 0.95);
     const U_A: [u64; 2] = [0x3fe87996529f9d92, 0x3fe49d6e694619b8];

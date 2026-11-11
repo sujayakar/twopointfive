@@ -14,7 +14,7 @@ const line = (ok: boolean, what: string, why = ''): void => { if (!ok) fails++; 
 const same = (a: Uint8Array | null, b: Uint8Array): boolean => !!a && a.length === b.length && a.every((v, i) => v === b[i]);
 let n = 1; const roll = (): number => { n = Math.imul(n ^ n >>> 15, n | 1); n ^= n + Math.imul(n ^ n >>> 7, n | 61); return ((n ^ n >>> 14) >>> 0) / 4294967296; };
 const hand = new Float64Array(HAND.count);
-const begun = (): HandTape => { const t = new HandTape(HAND.count); t.start({ build: 'b', levelName: 'a level', level: new Uint8Array(5000).map(() => roll() * 256), words: '?seed=1', parts: [], seed: 1, seats: 1, flags: 1, commands: new Uint8Array(0) }); return t; };
+const begun = (): HandTape => { const t = new HandTape(HAND.count); t.start({ build: 'b', levelName: 'a level', level: new Uint8Array(5000).map(() => roll() * 256), words: '?seed=1', parts: [], seed: 1, seats: 1, flags: 1, kept: '' }); return t; };
 const played = (t: HandTape, ticks: number): void => { for (let i = 0; i < ticks; i++) { for (let k = 0; k < HAND.count; k++) if (roll() < 0.7) hand[k] = roll() < 0.5 ? Math.fround(roll()) : roll(); t.step(1 / 60, hand, roll() < 0.05 ? 'KeyW\n' : '\n'); } };
 const keeper = (t: HandTape, store: ReturnType<typeof memoryStore>, sid: string): ReplayKeeper => { const src = handSource(() => t);
   return new ReplayKeeper(BREAK ? { again: src.again, since: () => { const p = src.since(); return p && { ...p, line: (s, q, a) => p.line(s, q, a).replace(/"from":([1-9]\d*)/, (_m, f) => `"from":${Number(f) + 1}`) }; } } : src, { sid, store, played: () => t.ticks > 0, budget: async () => 1e9, head: () => ({ level: { file: 'office.json', scenario: 'a mission' }, hands: 1, url: '?x' }) }); };

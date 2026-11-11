@@ -38,7 +38,7 @@ const MOMENT: (usize, usize) = (18, 20);
 /// when the look is said a second time
 const LOOK_AGAIN: usize = 600;
 
-/// THE PAGE'S LOOK: src/draw/look.ts `lookNumbers` run once under bun as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
+/// THE PAGE'S LOOK, written out: what src/draw/look.ts `lookNumbers` gives (nothing here asks it again) as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
 /// on), with the one number a preset decides, the mirrors, as High has it.
 const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
     26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,
@@ -137,7 +137,7 @@ fn heads(d: &Drawn) -> Result<(), String> {
 pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
     let t = Instant::now();
     let (mut p, hand) = crate::rows::stand_run(k, SEED);
-    if f.breaks("told") { game::math_dice::sim_random(&mut p.g); }
+    if f.breaks("told") { p.g.dice.n += 1.0; }
     let mut d = Drawn::default();
     d.look(&PAGE_LOOK);
     let mut mirror = Mirror::default();
@@ -151,7 +151,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         if i == MOMENT.1 * 60 && !back {
             // (as the page's `hold` does: the game whole again of that moment, and nothing drawn through it)
             let (m, n, cursor) = kept.take().expect("the moment was kept");
-            p.g = m.stands(p.g.sim);
+            p.g = m.laid(p.g.sim);
             (next, p.cursor, back, i, over) = (n, cursor, true, MOMENT.0 * 60, false);
             d.cut();
         }
@@ -163,7 +163,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         p.frame_shown(|p| {
             if over { d.over(&p.g, u32::MAX); } else { d.take(&p.g, u32::MAX); }
             if !seen { return; }
-            let focus = p.g.aim_point;
+            let focus = p.g.sets[p.g.seat].aim_point;
             for at in [0.5, 1.0] {
                 d.frame(&p.g, at, focus);
                 mirror.upload(&d, f.breaks("mark"));

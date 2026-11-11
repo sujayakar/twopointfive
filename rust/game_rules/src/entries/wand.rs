@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 
 /// A door the wand goes under: shut home, on its hinges, not the steel fire door.
 pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && m::abs(crate::doors::door_angle(g, d)) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
+    !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
 }
 
 /// Is 'look under it' on this door's rows for this player.
@@ -21,7 +21,7 @@ fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
 }
 
 /// Is the lens through this step, for a man the caller has found planted. `t` went with the old feed.
-pub fn wand_through(g: &crate::game::Game, t: f64, age: f64, crouch: f64, squat: Option<bool>) -> bool {
+pub fn wand_through(g: &crate::game::Game, age: f64, crouch: f64, squat: Option<bool>) -> bool {
     age >= wand_feed_secs(g, squat) - 1e-6 && crouch >= g.k.wand.quick_down
 }
 
@@ -52,16 +52,16 @@ fn lens_at(hinge: [f64; 2], u: [f64; 2], w: f64, side: f64, past_m: f64, eye_y: 
 
 /// Turn the lens of this player's look toward the frame's aim point, at its rate, inside its stops.
 pub fn wand_turn(g: &mut crate::game::Game, pl: PlayerId, aim: V3, dt: f64) {
-    let Some(w) = g.pl[pl].wanding else { return };
+    let Some(w) = g.pl[pl].wanding().copied() else { return };
     let l = wand_lens(g, w.door, w.side);
     let max = wand_pan_max(g);
     let pan = turned(w.pan, l, aim, max, g.k.wand.pan_rate, dt);
-    if let Some(held) = g.pl[pl].wanding.as_mut() { held.pan = pan; }
+    if let Some(held) = g.pl[pl].wanding_mut() { held.pan = pan; }
 }
 
 /// wandTurn's arithmetic: the pan after this step.
 fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, dt: f64) -> f64 {
-    let mut want = m::atan2(aim[0] - l.pos[0], aim[2] - l.pos[2]) - l.yaw;
+    let mut want = v3::yaw_to(l.pos, aim) - l.yaw;
     want = m::atan2(m::sin(want), m::cos(want));
     want = m::max(-max, m::min(max, want));
     let step = pan_rate * dt;
@@ -72,8 +72,8 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
 /// The lens as one of the fog's eyes, or None while nobody is looking.
 pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::fogofwar::FogEye> {
     let pl = seat.player;
-    let w = g.pl[pl].wanding?;
-    if !w.live || g.pl[pl].down { return None; }
+    let w = g.pl[pl].wanding().copied()?;
+    if !w.live || crate::condition::down(g, g.pl[pl].ch) { return None; }
     let l = wand_lens(g, w.door, w.side);
     let a = l.yaw + w.pan;
     let fov = wand_fov(g);
@@ -81,10 +81,10 @@ pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<c
     Some(crate::fogofwar::FogEye { id: g.ch[c].id, pos: l.pos, look: [m::sin(a), 0.0, m::cos(a)], at: l.pos, fov: Some(fov), near: Some(0.0), wand: Some(true) })
 }
 
-/// The look let go of with nothing said; player.ts stopWand is the worded way out.
+/// The look let go of; `stop_wand` does this and stops him where he kneels.
 pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
-    if g.pl[pl].wanding.is_none() { return; }
-    g.pl[pl].wanding = None;
+    if g.pl[pl].wanding().is_none() { return; }
+    g.pl[pl].wanding_over();
     let c = g.pl[pl].ch;
     g.ch[c].anim.lockpick = false;
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.wand.stow_secs);
@@ -94,31 +94,32 @@ pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
 mod tests {
     use super::*;
 
-    // Bits printed by src/game/wand.ts itself under bun with EXACT.on.
-    fn b(x: u64) -> f64 { f64::from_bits(x) }
-    const U_A: [u64; 2] = [0x3fe87996529f9d92, 0x3fe49d6e694619b8]; // cos 0.7, sin 0.7
-    const PAST_M: f64 = 0.22;
-    const EYE_Y: f64 = 0.1;
-    const PAN_RATE: f64 = 1.6;
-
-    fn door_a(side: f64) -> crate::wand::WandLens { lens_at([3.25, -7.5], [b(U_A[0]), b(U_A[1])], 0.95 * 0.5, side, PAST_M, EYE_Y) }
-    fn door_b(side: f64) -> crate::wand::WandLens { lens_at([-11.125, 2.0625], [-0.6, 0.8], 1.2 * 0.5, side, PAST_M, EYE_Y) }
-    fn bits(l: crate::wand::WandLens) -> [u64; 4] { [l.pos[0].to_bits(), l.pos[1].to_bits(), l.pos[2].to_bits(), l.yaw.to_bits()] }
-
+    /// A failure means the lens comes up on the man's own side of the door, or looks back at him.
     #[test]
-    fn the_lens_has_the_typescripts_bits() {
-        assert_eq!(bits(door_a(1.0)), [0x400e0a4c155c91e2, 0x3fb999999999999a, 0xc01d72f4c738b50c, 0x40038861baaa937e]);
-        assert_eq!(bits(door_a(-1.0)), [0x400bc5c79e42f056, 0x3fb999999999999a, 0xc01c1a594f7a2b1a, 0xbfe6666666666666]);
-        assert_eq!(bits(door_b(1.0)), [0xc0269e353f7ced91, 0x3fb999999999999a, 0x400565604189374c, 0x3fedac670561bb50]);
-        assert_eq!(bits(door_b(-1.0)), [0xc027526e978d4fdf, 0x3fb999999999999a, 0x400348b439581062, 0xc001b6e192ebbe44]);
+    fn the_lens_goes_under_the_leaf_s_middle_and_looks_out_the_far_side() {
+        // a door along +x from (2, 3), half a metre to its middle
+        let l = |side: f64| lens_at([2.0, 3.0], [1.0, 0.0], 0.5, side, 0.22, 0.1);
+        assert_eq!(l(-1.0).pos, [2.5, 0.1, 3.22]);    // he is on the -1 face: it comes out on +z
+        assert_eq!(l(-1.0).yaw, 0.0);                 // and looks along +z
+        assert_eq!(l(1.0).pos, [2.5, 0.1, 2.78]);
+        assert_eq!(m::abs(l(1.0).yaw), m::PI);
     }
 
+    /// A failure means the view swings at once, past its stops, or the long way round.
     #[test]
-    fn the_turn_has_the_typescripts_bits() {
-        let max = m::max(0.0, 90.0 - 90.0 * 0.5 - 10.0) * m::PI / 180.0;
-        assert_eq!(turned(0.0, door_a(1.0), [9.0, 0.0, 4.0], max, PAN_RATE, 1.0 / 60.0).to_bits(), 0xbf9b4e81b4e81b4f);
-        assert_eq!(turned(0.3, door_a(-1.0), [-20.0, 1.0, -3.0], max, PAN_RATE, 1.0 / 60.0).to_bits(), 0x3fd17e4b17e4b17e);
-        assert_eq!(turned(-0.2, door_b(1.0), [40.0, 0.0, 40.0], max, PAN_RATE, 0.5).to_bits(), 0x3f8ddba57d757380);
-        assert_eq!(turned(0.61, door_b(-1.0), [-11.0, 0.0, 2.0], max, PAN_RATE, 1.0 / 120.0).to_bits(), 0x3fe317e4b17e4b18);
+    fn the_lens_turns_toward_the_aim_at_its_rate_inside_its_stops() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        let square = crate::wand::WandLens { pos: [0.0, 0.1, 0.0], yaw: 0.0 };
+        let (max, rate) = (0.5, 1.6);
+        let (right, left) = ([10.0, 0.0, 10.0], [-10.0, 0.0, 10.0]);
+        near(turned(0.0, square, right, max, rate, 1.0 / 60.0), rate / 60.0);    // a step's worth
+        near(turned(0.0, square, left, max, rate, 1.0 / 60.0), -rate / 60.0);
+        near(turned(0.0, square, right, max, rate, 1.0), max);                   // the aim is past the stop: it stops there
+        near(turned(0.49, square, [0.0, 0.0, 5.0], max, rate, 1.0), 0.0);        // and comes back square
+        near(turned(0.6, square, right, max, rate, 1.0 / 60.0), max);            // a stop that closed in on it holds it
+        // the aim just across the back of a lens that looks nearly behind: the short way
+        let back = crate::wand::WandLens { pos: [0.0, 0.1, 0.0], yaw: 3.0 };
+        let t = -3.0_f64;
+        near(turned(0.0, back, [m::sin(t) * 5.0, 0.0, m::cos(t) * 5.0], max, rate, 1.0), 2.0 * m::PI - 6.0);
     }
 }

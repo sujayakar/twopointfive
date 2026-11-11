@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,20 +18,6 @@ fn clip_line(text: &str) -> String {
     s
 }
 
-fn team_of(side: crate::qrf::SideOfTeam) -> crate::teams::Team {
-    match side {
-        crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard,
-        crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile,
-    }
-}
-
-fn word_key(who: crate::picture::Who) -> crate::qrf::QrfWordKey {
-    match who {
-        crate::picture::Who::Guard(x) => crate::qrf::QrfWordKey::Guard(x),
-        crate::picture::Who::Player => crate::qrf::QrfWordKey::Player,
-    }
-}
-
 // ---------------------------------------------------------------- the level's own team
 
 /// This level's block, if it has one.
@@ -40,33 +27,32 @@ pub(super) fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenario
 
 /// A squad's room clear under way on a level whose block carries `raid`.
 pub(super) fn raid(g: &crate::game::Game) -> bool {
-    if !g.night_breach.active || g.rescue.active { return false; }
-    response_of(g).map_or(false, |r| r.raid.is_some())
+    g.staged.facts.raid && response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
 /// The raid is over: the room clear ended.
 pub(super) fn raid_over(g: &crate::game::Game) -> bool {
-    g.room_clear.end.is_some()
+    g.staged.over
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.
-pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
-    if raid(g) { crate::qrf::SideOfTeam::Hostile } else { crate::qrf::SideOfTeam::Guard }
+pub(super) fn side_of_team(g: &crate::game::Game) -> crate::teams::Team {
+    if raid(g) { crate::teams::Team::Hostile } else { crate::teams::Team::Guard }
 }
 
 /// A raid: the men who can call it in.
 pub(super) fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
-        Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
+        Some(id) => match g.staged.rooms.iter().find(|r| r.def.id == *id) {
             Some(room) => room.defenders.clone(),
             None => Vec::new(),
         },
-        None => g.night_breach.hostiles.clone(),
+        None => g.staged.foes.clone(),
     };
     let mut out = Vec::new();
     for x in of {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && !crate::owner::has(g, x, crate::owner::by::RUNNER) && g.guards.contains(&x) {
+        if !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && !crate::owner::has(g, x, crate::owner::by::RUNNER) && g.guards.contains(&x) {
             out.push(x);
         }
     }
@@ -86,7 +72,7 @@ pub(super) fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
 pub fn response_up(g: &crate::game::Game) -> bool {
     if !raid(g) { return false; }
     if g.qrf.state != crate::qrf::QrfState::Arriving && g.qrf.state != crate::qrf::QrfState::Deployed { return false; }
-    g.qrf.men.iter().any(|&m| g.gd[m].state != crate::game::GuardState::Dead && g.guards.contains(&m))
+    g.qrf.men.iter().any(|&m| !crate::condition::down(g, g.gd[m].ch) && g.guards.contains(&m))
 }
 
 /// The team's name on the net.
@@ -127,7 +113,7 @@ pub(super) fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
 pub(super) fn room_for(g: &crate::game::Game) -> f64 {
     let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
-        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.night_breach.hostiles.len() as f64 - g.qrf.men.len() as f64)
+        m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.staged.foes.len() as f64 - g.qrf.men.len() as f64)
     } else {
         n
     }
@@ -156,11 +142,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 // ---------------------------------------------------------------- knobs kept per machine
 
 // ---------------------------------------------------------------- small shared helpers
-
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
 
 /// A row of the response's log, which keeps its last 150 to 200.
 pub(super) fn note(g: &mut crate::game::Game, what: &str) {
@@ -197,7 +178,7 @@ pub(super) fn door_said(g: &crate::game::Game, name: &str) -> String {
 /// A response man's radio line: his bubble, and the strip's row under his callsign.
 pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) {
     let x = match gd {
-        Some(x) if g.gd[x].state != crate::game::GuardState::Dead => x,
+        Some(x) if !crate::condition::down(g, g.gd[x].ch) => x,
         _ => { control(g, text); return; }
     };
     let dur = crate::guards::bubble_secs(text);
@@ -206,7 +187,7 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     let line = alloc::format!("{} — {}", g.gd[x].callsign, text);
     crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
-    let at = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
@@ -217,7 +198,7 @@ fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     let mut br = -1;
     for &x in &g.guards {
         let m = &g.gd[x];
-        if m.unit.is_some() || m.team != crate::teams::Team::Guard || m.state == crate::game::GuardState::Dead || m.held.is_some() { continue; }
+        if m.unit.is_some() || g.ch[m.ch].team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
         let r = if m.state == crate::game::GuardState::Alert { 0 } else if m.state == crate::game::GuardState::Patrol { 2 } else { 1 };
         if r > br { br = r; best = Some(x); }
     }
@@ -229,17 +210,17 @@ pub(super) fn bodies_found(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &x in &g.guards {
         let m = &g.gd[x];
-        if m.unit.is_none() && m.state == crate::game::GuardState::Dead && m.found { n += 1.0; }
+        if m.unit.is_none() && g.cond[m.ch].down && m.found { n += 1.0; }
     }
     n
 }
 
 /// The run is Sam's to answer for.
-pub(super) fn live(g: &mut crate::game::Game) -> bool {
+pub(super) fn live(g: &crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
+    g.ai_enabled && !crate::seats::all_down(g) && !g.staged.facts.fight && has_response(g)
 }
 
 /// This level has a response team.
@@ -262,13 +243,13 @@ pub(super) fn response_here(g: &crate::game::Game) -> bool {
 
 /// The element's living men on the floor.
 pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
-    g.qrf.men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead && g.guards.contains(&m)).collect()
+    g.qrf.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch) && g.guards.contains(&m)).collect()
 }
 
 /// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
-    let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
+    let side = side_of_team(g);
+    if g.team(x) != side || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
@@ -283,14 +264,14 @@ pub(super) fn read_net(g: &mut crate::game::Game) {
             if i.how == crate::picture::IdeaHow::Fix { continue; }
             if i.how != crate::picture::IdeaHow::Told && g.time - i.since < g.k.picture.tell_secs { continue; }
             if i.lost { continue; }
-            let key = word_key(i.who);
+            let key = i.who;
             let newer = match g.qrf.word.get(key) { None => true, Some(w) => i.t > w.t + 1e-6 };
             if newer { g.qrf.word.set(key, crate::qrf::QrfWordValue { at: i.at, t: i.t }); }
         }
     }
     for who in g.qrf.word.keys() {
-        if let crate::qrf::QrfWordKey::Guard(x) = who {
-            if g.gd[x].state == crate::game::GuardState::Dead || !g.guards.contains(&x) { g.qrf.word.delete(who); }
+        if let Some(x) = crate::character::guard_of(g, who) {
+            if crate::condition::down(g, who) || !g.guards.contains(&x) { g.qrf.word.delete(who); }
         }
     }
 }
@@ -333,24 +314,6 @@ pub(super) fn brief(g: &crate::game::Game) -> String {
 
 // ---------------------------------------------------------------- the trigger and the telegraph
 
-/// Every man of the response, element then perimeter.
-fn all_men(g: &Game) -> Vec<GuardId> {
-    let mut men = g.qrf.men.clone();
-    if let Some(p) = &g.qrf.perim { men.extend(p.men.iter().map(|m| m.gd)); }
-    men
-}
-
-/// The response back to a fresh one; the men handed back to their ordinary heads.
-pub fn reset_qrf(g: &mut crate::game::Game) {
-    drop_drill(g);
-    for m in all_men(g) {
-        if g.gd[m].script.is_some() && g.guards.contains(&m) {
-            crate::squad::end_guard_script(g, m, Some(crate::squad::EndGuardScriptState::Patrol));
-        }
-    }
-    g.qrf = crate::qrf::Qrf::blank();
-}
-
 /// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.
 pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> bool {
     let m0 = marks_of(g);
@@ -391,9 +354,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
     g.qrf.reason = Some(reason);
     g.qrf.requested_at = g.time;
     g.qrf.arrive_at = g.time + m::max(12.0, d.eta);
-    g.qrf.answered = false;
     g.qrf.said30 = false;
-    g.qrf.said10 = false;
     let rd = raid(g);
     let sp = if rd {
         match raid_voice(g) { Some(x) => Some(x), None => callers(g).first().copied() }
@@ -427,9 +388,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.
 pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| dist_xz(g.player_pos(pl), p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && dist_xz(g.pos_of(x), p) < clear_m { return false; }
     }
     true
 }

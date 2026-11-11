@@ -11,17 +11,14 @@ pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) { 
 
 pub fn checkpoints_keep(g: &mut crate::game::Game, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsKeep(crate::out_events::OutCheckpointsKeep { label: String::from(label) })); }
 
-/// BOUNDARY NO-OP (the picture's / the host's):
-pub fn save_store_remove(g: &crate::game::Game, key: &str) {}
-
 /// BOUNDARY: the host writes the machine's storage (localStorage) here. No store on this side: false, the interface's "nothing was stored".
-pub fn save_store_set(g: &crate::game::Game, key: &str, val: &str) -> bool { false }
+pub fn save_store_set() -> bool { false }
 
 /// Load asked for inside a step: a save in memory waits for the end of this update, anything else is a file's load.
 pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<String> {
-    let run = match g.saves.shelf.m.get(String::from(key)) {
+    let run = match g.saves.shelf.m.of(key) {
         Some(e) => e.info.run_id.clone(),
-        None => return load_off_shelf(g, key),
+        None => return load_off_shelf(),
     };
     if let Some(why) = mem_no(g, &run) { return Some(why); }
     g.saves.due = Some(String::from(key));
@@ -31,13 +28,12 @@ pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<
 /// Why a save in memory will not go back. `e.snap.game !== g` has no row: MemSave holds no snapshot and the shelf lives on this game.
 pub(super) fn mem_no(g: &Game, run: &str) -> Option<String> {
     if run != g.saves.run_id { return Some(String::from("made in another run")); }
-    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     None
 }
 
 /// Checkpoints.load of a key not on the shelf. A file's save is the host's: its store is not on
 /// this side, and a key with nothing behind it is "gone". The host that keeps saves hands them over on the shelf.
-fn load_off_shelf(g: &Game, key: &str) -> Option<String> {
+fn load_off_shelf() -> Option<String> {
     Some(String::from("that checkpoint is gone"))
 }
 

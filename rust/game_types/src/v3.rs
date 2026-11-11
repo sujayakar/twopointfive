@@ -1,9 +1,9 @@
-//! THE BASE EVERYTHING ELSE USES: vectors, quaternions, the scalar helpers and the matrices (src/math/vec.ts). Faithful to the bit: the same order of
-//! operations as the TypeScript, operand for operand, on the game's own maths (`crate::m`). Nothing here reassociates, factors or simplifies, even
+//! THE BASE EVERYTHING ELSE USES: vectors, quaternions, the scalar helpers and the matrices. The order of operations is part of the answer: it runs
+//! on the game's own maths (`crate::m`), and nothing here reassociates, factors or simplifies, even
 //! where an operand is a literal 0 or 1: a signed zero comes out differently.
 //!
-//! `v3.foo` is `v3::foo`, `quat.foo` is `v3::quat::foo`, `m4.foo` is `v3::m4::foo`. One name moved, because the scalar `lerp` holds the name here:
-//! `v3.lerp` is `v3::lerp3`. Everything takes and gives vectors by value (they are Copy), so a caller can pass `g.ch[c].pos` and still hold `g`.
+//! The vectors' functions are `v3::foo`, the quaternions' `v3::quat::foo`, the matrices' `v3::m4::foo`. The scalar `lerp` holds the plain name here, so the vectors' is
+//! `v3::lerp3`. Everything takes and gives vectors by value (they are Copy), so a caller can pass `g.ch[c].pos` and still hold `g`.
 use crate::js;
 use crate::m;
 
@@ -58,8 +58,7 @@ pub fn damp(a: f64, b: f64, rate: f64, dt: f64) -> f64 {
 pub fn make(x: Option<f64>, y: Option<f64>, z: Option<f64>) -> V3 {
     [x.unwrap_or(0.0), y.unwrap_or(0.0), z.unwrap_or(0.0)]
 }
-///  A vector is a value here, so this is `a`; it stays so that a line translates letter for letter. Where the TypeScript copied to
-/// break a share there is nothing to break; where it did NOT copy and two holders share one vector, see the conventions' ALIASING.
+/// A vector is a value here, so this is `a`.
 #[inline]
 pub fn copy(a: V3) -> V3 {
     a
@@ -101,6 +100,21 @@ pub fn len(a: V3) -> f64 {
 pub fn dist(a: V3, b: V3) -> f64 {
     hyp3(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 }
+/// The place on the floor under (or over) a point.
+#[inline]
+pub fn on_floor(a: V3) -> V3 {
+    [a[0], 0.0, a[2]]
+}
+/// How far a colour sends light back.
+#[inline]
+pub fn lum(c: V3) -> f64 {
+    0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+/// What is left over a whole number.
+#[inline]
+pub fn frac(x: f64) -> f64 {
+    x - m::floor(x)
+}
 /// How far apart on the floor.
 #[inline]
 pub fn dist_xz(a: V3, b: V3) -> f64 {
@@ -122,7 +136,7 @@ pub fn normalize(a: V3) -> V3 {
     let l = or_one(hyp3(a[0], a[1], a[2]));
     [a[0] / l, a[1] / l, a[2] / l]
 }
-/// (vec.ts v3.lerp: the scalar `lerp` holds the plain name in this module)
+/// the vectors' lerp: the scalar `lerp` holds the plain name in this module
 #[inline]
 pub fn lerp3(a: V3, b: V3, t: f64) -> V3 {
     [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
@@ -241,21 +255,20 @@ pub mod quat {
 
 /// Matrices, column-major: only those the simulation's folders call.
 ///
-/// A `Mat4` STORES singles because the TypeScript's is a Float32Array; THE ARITHMETIC IS IN DOUBLES and each result is rounded once as it is stored,
-/// as a Float32Array does. Working in `f32` would round at every step and give other bits, so every read here is widened (`wide`) and every write
+/// A `Mat4` STORES singles; THE ARITHMETIC IS IN DOUBLES and each result is rounded once as it is stored.
+/// Working in `f32` would round at every step and give other bits, so every read here is widened (`wide`) and every write
 /// narrowed (`as f32`). A caller reading a cell writes `m[12] as f64`; the compiler refuses `m[12] * x` with an `f64`, which is the point of `f32` here.
 ///
-/// The TypeScript's `out` parameter is gone: each function RETURNS the matrix. All of them write all sixteen cells and read their inputs in an order
-/// that makes `out === a` and `out === b` harmless, so a value gives what the TypeScript gives for any sharing, and a caller holds no `&mut` into `g`.
+/// Each function RETURNS the matrix, so a caller holds no `&mut` into `g`.
 pub mod m4 {
     use super::{or_one, Quat, V3};
     use crate::m;
 
     pub type Mat4 = [f32; 16];
 
-    /// every cell as the double the TypeScript reads
+    /// every cell as a double
     #[inline]
-    fn wide(a: &Mat4) -> [f64; 16] {
+    pub fn wide(a: &Mat4) -> [f64; 16] {
         let mut d = [0.0; 16];
         let mut i = 0;
         while i < 16 {
@@ -279,15 +292,19 @@ pub mod m4 {
         *a
     }
     /// `a × b`.
+    #[inline]
     pub fn mul(a: &Mat4, b: &Mat4) -> Mat4 {
-        let [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = wide(a);
+        mul_wide(&wide(a), b)
+    }
+    /// `a × b` of an `a` that many are multiplied by, widened once.
+    #[inline]
+    pub fn mul_wide(a: &[f64; 16], b: &Mat4) -> Mat4 {
         let mut out = [0.0; 16];
-        for i in 0..4 {
-            let (b0, b1, b2, b3) = (b[i * 4] as f64, b[i * 4 + 1] as f64, b[i * 4 + 2] as f64, b[i * 4 + 3] as f64);
-            out[i * 4] = (b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30) as f32;
-            out[i * 4 + 1] = (b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31) as f32;
-            out[i * 4 + 2] = (b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32) as f32;
-            out[i * 4 + 3] = (b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33) as f32;
+        for (o, b) in out.chunks_exact_mut(4).zip(b.chunks_exact(4)) {
+            let (b0, b1, b2, b3) = (b[0] as f64, b[1] as f64, b[2] as f64, b[3] as f64);
+            for k in 0..4 {
+                o[k] = (b0 * a[k] + b1 * a[4 + k] + b2 * a[8 + k] + b3 * a[12 + k]) as f32;
+            }
         }
         out
     }
@@ -332,7 +349,7 @@ pub mod m4 {
     pub fn get_translation(m: &Mat4) -> V3 {
         [m[12] as f64, m[13] as f64, m[14] as f64]
     }
-    /// `None` where the determinant is 0 or NaN; the TypeScript then leaves `out` as it was, so the caller keeps its old matrix.
+    /// `None` where the determinant is 0 or NaN, and the caller keeps its old matrix.
     pub fn invert(a: &Mat4) -> Option<Mat4> {
         let [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = wide(a);
         let (b00, b01, b02, b03) = (a00 * a11 - a01 * a10, a00 * a12 - a02 * a10, a00 * a13 - a03 * a10, a01 * a12 - a02 * a11);
@@ -400,8 +417,8 @@ pub mod m4 {
 
 #[cfg(test)]
 mod tests {
-    //! Every expected value is the TypeScript's own bits: src/math/vec.ts run under bun with the game's maths installed (`EXACT.on = true`, as
-    //! src/sim/sim.ts mathsUp does), printed as hex. A NaN is any NaN: its sign and payload are not something the language fixes.
+    //! Every expected value is the pinned bits of the answer, under the game's maths, as hex.
+    //! A NaN is any NaN: its sign and payload are not something the language fixes.
     use super::m4::Mat4;
     use super::{m4, quat};
     fn same(got: f64, want: u64) -> bool {
@@ -437,7 +454,7 @@ mod tests {
     }
     #[test]
     fn the_scalar_lerp_and_the_vector_lerp_are_both_here() {
-        // (the one name that moved: `v3.lerp` is `lerp3`)
+        // (the scalar's name is `lerp`, the vectors' `lerp3`)
         one(super::lerp(1.0, 3.0, 0.5), 0x4000000000000000);
         many(&super::lerp3([1.0, 1.0, 1.0], [3.0, 3.0, 3.0], 0.5), &[0x4000000000000000, 0x4000000000000000, 0x4000000000000000]);
     }

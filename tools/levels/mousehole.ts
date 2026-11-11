@@ -205,7 +205,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 8.88, 33.12, EXT, ext);                                               // north: blank, on the dark yard — the first hole
   K.wallX(k, 19, 8.88, 33.12, EXT, ext, [win(11.6, 13.6), win(19.0, 21.0)]);          // south: the corridor's two windows onto the lot. A metre clear of the duty room's door, so the camera's own side of the building does not hide that doorway
-  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/teammates/cleared.rs), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
+  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/teammates/cleared), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
   K.wallZ(k, 33, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'fire_exit', 'z', 33, 8.6, { exterior: true, steel: true, locked: true })]);   // east: the duty room's fire exit — steel, locked on its inside face (from the east side it opens to a hand: the second way in)
   K.grp(k, 'walls.interior');
   const iw = C.wall;
@@ -287,8 +287,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
-  // all out with the switch off, and then this is the clinic above, box for box). The three rooms and the duty room are furnished by the level itself; what
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // The three rooms and the duty room are furnished by the level itself; what
   // had nothing was the ground round the building, which from above is most of the picture. So the lived things are the clinic's OUTSIDE, laid with the look's
   // own kit (lib/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
   // sheets in, the side its generator is fuelled on, the lot the patients wait on.

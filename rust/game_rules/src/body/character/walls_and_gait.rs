@@ -11,22 +11,22 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// pose.at: where a pose stands in its game's pool, as a layer of rust/sim takes it
 fn at(pose: crate::anim_skeleton::Pose) -> usize { pose.at as usize }
 /// SIGNAL_DUR[kind]
-fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn signal_dur_of(kind: SignalKind) -> f64 { *crate::character::signal_dur().of(kind.as_str()).unwrap() }
 /// TELL_DUR[kind]
-fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String::from(kind.as_str())).unwrap() }
+pub(super) fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().of(kind.as_str()).unwrap() }
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 
-// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers.rs gives)
+// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers gives)
 
 // ---- the crouch's lay
 
 /// the crouch over the stand pose: its numbers onto the bench and the layer
 pub(super) fn anim_crouch_laid_ask(g: &mut crate::game::Game, c: CharId, ph: f64, w_move: f64, crouch_pose: f64) {
     let (idle, fwd) = (clip_of(g, c, "Crouch_Idle_Loop"), clip_of(g, c, "Crouch_Fwd_Loop"));
-    let (idle_t, fwd_t) = (g.ch[c].anim.idle_t, ph * g.tab.clip[fwd].duration);
+    let (idle_t, fwd_t) = (g.ch[c].anim.idle_t, ph * g.art.clip[fwd].duration);
     let (idle, fwd) = (clip_at(g, c, idle, idle_t), clip_at(g, c, fwd, fwd_t));
-    anim_layer(g, c, |s, an, k| ::sim::layers::crouch_pose(s, an, w_move, crouch_pose, idle, fwd, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::crouch_pose(s, an, w_move, crouch_pose, idle, fwd));
 }
 /// a clip of his at `t` seconds, as a layer is handed one
 pub(super) fn clip_at(g: &mut Game, c: CharId, clip: ClipId, t: f64) -> ::sim::layers::At {
@@ -36,27 +36,6 @@ pub(super) fn clip_at(g: &mut Game, c: CharId, clip: ClipId, t: f64) -> ::sim::l
 /// RUNARMS: the run's own arms carried close
 pub(super) fn anim_run_arms(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64, ws: f64) { anim_layer(g, c, |s, _, k| ::sim::layers::run_arms(s, at(pose), w, ws, k)); }
 
-/// the sum of a run clip's stances from its toes, with no animator in it
-fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<AnimStanceOf> {
-    let mm = ty[0].len();
-    let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
-    for k in 0..ty.len() {
-        let ys = &ty[k];
-        let lo = m::min_n(ys) + 0.02;
-        let (mut sx, mut cx, mut n) = (0.0, 0.0, 0);
-        for i in 0..mm {
-            if ys[i] <= lo && tz[k][(i + 1) % mm] < tz[k][(i + mm - 1) % mm] {
-                sx += m::sin(2.0 * m::PI * i as f64 / mm as f64);
-                cx += m::cos(2.0 * m::PI * i as f64 / mm as f64);
-                n += 1;
-            }
-        }
-        cs.push(if n != 0 { js::rem(m::atan2(sx, cx) / (2.0 * m::PI) + 1.0, 1.0) } else { m::NAN });
-    }
-    if !cs[0].is_finite() || !cs[1].is_finite() { return None; }
-    let cc = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
-    Some(AnimStanceOf { c: cc, c_l: cs[0], c_r: cs[1] })
-}
 /// SOFT_KNEE: each leg re-solved with its reach eased below full extension
 pub(super) fn anim_soft_knees(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64) { anim_layer(g, c, |s, _, _| ::sim::layers::soft_knees(s, at(pose), w)); }
 
@@ -71,6 +50,12 @@ pub(super) fn anim_life_layer(g: &mut crate::game::Game, c: CharId, dt: f64, s: 
     anim_layer(g, c, |slot, an, k| ::sim::layers::life_layer(slot, an, dt, s, crouch_pose, w, w_f, p0, k));
 }
 
+/// the rule of a foot, over the finished pose
+pub(super) fn anim_feet_last(g: &mut crate::game::Game, c: CharId, dt: f64, s: f64, w_f: f64, own: f64) {
+    let p0 = g.ch[c].pos;
+    anim_layer(g, c, |slot, an, _| ::sim::layers::feet_last(slot, an, dt, s, w_f, own, p0));
+}
+
 /// deliberate movement's body and, if they are in, its arms
 pub(super) fn anim_sneak_layer(g: &mut crate::game::Game, c: CharId, dl: f64, pace: f64, soft: f64, arms_in: f64, surge: f64, dsh: Option<f64>) {
     let dsh = dsh.unwrap_or(0.0);
@@ -82,7 +67,7 @@ fn anim_sneak_body(g: &mut crate::game::Game, c: CharId, dl: f64, pace: f64, sof
     anim_layer(g, c, |s, an, k| ::sim::layers::sneak_body(s, an, dl, pace, soft, surge, dsh, k));
 }
 /// …and its arms
-fn anim_sneak_arms(g: &mut crate::game::Game, c: CharId, arms_in: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::sneak_arms(s, an, arms_in, k)); }
+fn anim_sneak_arms(g: &mut crate::game::Game, c: CharId, arms_in: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::sneak_arms(s, an, arms_in)); }
 
 /// MOVES.steady: the crouch walk's waddle taken out; the cycle's own mean is measured once off the clip
 pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, base: Option<f64>, sunk: Option<f64>) {
@@ -90,18 +75,17 @@ pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, ba
     if g.ch[c].anim.steady_mean.is_none() {
         let (thigh_l, thigh_r, hips) = { let nd = &g.ch[c].anim.nodes; (nd.thigh_l, nd.thigh_r, nd.hips) };
         let clip = clip_of(g, c, "Crouch_Fwd_Loop");
-        let dur = g.tab.clip[clip].duration;
+        let dur = g.art.clip[clip].duration;
         let nn = 24.0;
         let (mut roll, mut x) = (0.0, 0.0);
         let mut i = 0.0;
         while i < nn {
-            let (p, list, singles) = (g.ch[c].anim.p_upper, g.ch[c].anim.fk_legs.clone(), g.k.posemath.singles);
-            crate::anim_skeleton::sample_clip(g, clip, i / nn * dur, true, p, singles);
-            anim_fk_part(g, c, p, &list);
-            let fk = &g.ch[c].anim.fk;
-            let (a, b) = (fk.pos[thigh_l], fk.pos[thigh_r]);
+            let (rig, p) = (g.ch[c].anim.rig, g.ch[c].anim.p_upper);
+            crate::anim_skeleton::sample_clip(g, clip, i / nn * dur, true, p);
+            let at = |i| crate::anim_skeleton::pose_node(g, rig, p, i).1;
+            let (a, b) = (at(thigh_l), at(thigh_r));
             roll += m::atan2(a[1] - b[1], a[0] - b[0]);
-            x += fk.pos[hips][0];
+            x += at(hips)[0];
             i += 1.0;
         }
         g.ch[c].anim.steady_mean = Some([roll / nn, x / nn]);
@@ -111,7 +95,7 @@ pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, ba
 }
 
 /// both arms onto the pistol
-pub(super) fn anim_carry_arms(g: &mut crate::game::Game, c: CharId, w: f64, kick_t: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::carry_arms(s, an, w, kick_t, k)); }
+pub(super) fn anim_carry_arms(g: &mut crate::game::Game, c: CharId, w: f64, kick_t: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::carry_arms(s, an, w, kick_t)); }
 
 // ---- the long gun
 
@@ -183,7 +167,7 @@ pub(super) fn anim_long_body(g: &mut crate::game::Game, c: CharId, w: f64, run: 
     let (run, sprint) = (run.unwrap_or(0.0), sprint.unwrap_or(0.0));
     if w < 0.003 { return; }
     let ch = anim_lg_channels(g, c);
-    anim_layer(g, c, |s, an, k| ::sim::layers::long_body(s, an, w, run, sprint, &ch, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::long_body(s, an, w, run, sprint, &ch));
 }
 /// the long gun, arms
 pub(super) fn anim_long_arms(g: &mut crate::game::Game, c: CharId, w: f64, kick_t: f64, dt: f64, yield_door: bool, keep: bool) {
@@ -202,25 +186,25 @@ pub(super) fn anim_wall_body(g: &mut crate::game::Game, c: CharId, w: f64) {
 }
 
 /// the wall hold, arms
-pub(super) fn anim_wall_arms(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::wall_arms(s, an, w, k)); }
+pub(super) fn anim_wall_arms(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::wall_arms(s, an, w)); }
 
-/// A layer over his animation: his rig on the bench, the layer, what it ran forward read back.
-pub(super) fn anim_layer(g: &mut crate::game::Game, c: CharId, layer: impl FnOnce(usize, &mut Anim, &crate::knobs::Knobs) -> u32) {
+/// A layer over his animation: his rig on the bench, and the layer.
+pub(super) fn anim_layer(g: &mut crate::game::Game, c: CharId, layer: impl FnOnce(usize, &mut Anim, &crate::knobs::Knobs) -> bool) {
     let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
-    let code = layer(slot, &mut g.ch[c].anim, &g.k);
-    crate::anim_skeleton::layer_ran(g, code as f64, c);
+    let ran = layer(slot, &mut g.ch[c].anim, &g.k);
+    crate::anim_skeleton::layer_ran(g, ran, c);
 }
 
 // ---- the kick, signals, a smoke, the goggles, a tell
 
 /// the kick, body half
-pub(super) fn anim_kick_body(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::kick_body(s, an, t, w, k)); }
+pub(super) fn anim_kick_body(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::kick_body(s, an, t, w)); }
 
 /// left-hand signals
 pub(super) fn anim_signal_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     let kind = g.ch[c].anim.sig_kind;
     let dur = signal_dur_of(kind);
-    anim_layer(g, c, |s, an, k| ::sim::layers::signal_layer(s, an, t, kind, dur, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::signal_layer(s, an, t, kind, dur));
 }
 
 /// a smoke's arm, its clock
@@ -235,7 +219,7 @@ pub(super) fn anim_smoke_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
     anim_smoke_pose(g, c);
 }
 /// the smoke's arm itself
-fn anim_smoke_pose(g: &mut crate::game::Game, c: CharId) { anim_layer(g, c, |s, an, k| ::sim::layers::smoke_pose(s, an, k)); }
+fn anim_smoke_pose(g: &mut crate::game::Game, c: CharId) { anim_layer(g, c, |s, an, _| ::sim::layers::smoke_pose(s, an)); }
 
 /// KIT.nv: one frame of a goggle flip
 pub(super) fn anim_nv_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
@@ -282,50 +266,14 @@ fn twq(y: f64, p: f64) -> Quat {
 }
 /// the head joint's rotation on `pose` as it will be DRAWN
 fn anim_nv_head(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose) -> Quat {
-    // (the fk stands out of g for the call: pose_fk_run takes both)
-    let mut fk = core::mem::replace(&mut g.ch[c].anim.fk, crate::anim_skeleton::PoseFK::blank());
-    crate::anim_skeleton::pose_fk_run(g, &mut fk, pose);
-    g.ch[c].anim.fk = fk;
     let a = &g.ch[c].anim;
-    let tw = a.nv_tw;
-    v3::quat::mul(twq(tw[2], tw[3]), v3::quat::mul(twq(tw[0], tw[1]), a.fk.rot[a.nodes.head]))
+    let (tw, head) = (a.nv_tw, crate::anim_skeleton::pose_node(g, a.rig, pose, a.nodes.head).0);
+    v3::quat::mul(twq(tw[2], tw[3]), v3::quat::mul(twq(tw[0], tw[1]), head))
 }
 
 /// the idle tells
 pub(super) fn anim_tell_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     let kind = g.ch[c].anim.tell_k;
     let (watch, dur) = (kind == TellKind::Watch, tell_dur_of(kind));
-    anim_layer(g, c, |s, an, k| ::sim::layers::tell_layer(s, an, t, watch, dur, k));
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// stanceOf's arithmetic against the bits the TypeScript prints under EXACT
-    #[test]
-    fn stance_of_bits() {
-        let n = 37;
-        let mut ty = vec![vec![0.0; n], vec![0.0; n]];
-        let mut tz = vec![vec![0.0; n], vec![0.0; n]];
-        for i in 0..n {
-            let p = i as f64 / n as f64;
-            ty[0][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * p + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 1.0);
-            tz[0][i] = -0.2 * m::cos(2.0 * m::PI * p + 0.3);
-            ty[1][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * (p + 0.52) + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 2.0);
-            tz[1][i] = -0.2 * m::cos(2.0 * m::PI * (p + 0.52) + 0.3);
-        }
-        let s = stance_of(&ty, &tz).unwrap();
-        assert_eq!(s.c.to_bits(), 0x3fcacf914c1bacf8);
-        assert_eq!(s.c_l.to_bits(), 0x3fe759f22983759f);
-        assert_eq!(s.c_r.to_bits(), 0x3fc83759f2298370);
-    }
-
-    /// a foot that never qualifies is None
-    #[test]
-    fn stance_of_none() {
-        let ty = vec![vec![0.0, 0.0, 0.0, 0.0], vec![0.0, 0.0, 0.0, 0.0]];
-        let tz = vec![vec![1.0, 1.0, 1.0, 1.0], vec![1.0, 1.0, 1.0, 1.0]];
-        assert!(stance_of(&ty, &tz).is_none());
-    }
+    anim_layer(g, c, |s, an, _| ::sim::layers::tell_layer(s, an, t, watch, dur));
 }

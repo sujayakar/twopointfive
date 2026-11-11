@@ -6,14 +6,14 @@ use crate::m;
 use alloc::boxed::Box;
 
 /// A charge is going on by your own hands.
-fn sam_job(g: &mut crate::game::Game) -> bool {
+fn sam_job(g: &crate::game::Game) -> bool {
     crate::doortools::door_tools_sam_job(g, &crate::seats::here(g)).is_some() || crate::wallcharge::wall_charge_sam_job(g).is_some()
 }
 
 /// Head of the player's frame: a job begun puts away what is in his hand, a job over brings it back.
 pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut crate::game::Game, bool)) {
     let pl = g.player;
-    let job = g.puppet.is_none() && sam_job(g);
+    let job = sam_job(g);
     let Some(s) = g.pl[pl].work_stow else {
         if !job { return; }
         let mut owed = false;
@@ -24,7 +24,6 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
         if drew {
             holster(g, true);
             crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
-            g.stats.workstow.sam_down += 1;
         }
         return;
     };
@@ -38,21 +37,18 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
     g.pl[pl].work_stow = None;
     if !s.drew || !g.pl[pl].holstered { return; }
     let p = &g.pl[pl];
-    if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.picking.is_some() || p.wanding.is_some() {
-        g.stats.workstow.sam_kept += 1;
+    if g.cond[p.ch].down || p.hands_full() {
         return;
     }
     if let Some(w) = g.pl[pl].wall.as_mut() {
         if w.kind != Some(crate::player::WallHoldKind::Stack) {
             w.drawn = true;
-            g.stats.workstow.sam_kept += 1;
             return;
         }
     }
     holster(g, false);
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.workstow.sam_up);
     crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
-    g.stats.workstow.sam_up += 1;
 }
 
 /// The thing is still on its way out of his hand: the job's clock has not started.
@@ -66,7 +62,7 @@ pub fn mate_stow_lead(g: &crate::game::Game) -> f64 { g.k.workstow.mate_down }
 
 /// Once a frame of a teammate's two-handed job, by its owner: his gun is out of his hands.
 pub fn mate_stow(g: &mut crate::game::Game, gd: GuardId) {
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     match g.gd[gd].work_stow.as_mut() {
         Some(s) if s.up_t < 0.0 => s.fed = true,
         _ => {
@@ -80,7 +76,7 @@ pub fn mate_stow(g: &mut crate::game::Game, gd: GuardId) {
 pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].work_stow.is_none() { return; }
     let c = g.gd[gd].ch;
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         g.gd[gd].work_stow = None;
         g.ch[c].anim.stowed = false;
         return;
@@ -100,13 +96,13 @@ pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
     }
     let hang = stow_hang(g, gd);
     g.ch[c].anim.stowed = hang;
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, if up_t < 0.0 { mate_up } else { up_t - now });
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, if up_t < 0.0 { mate_up } else { up_t - now });
 }
 
 /// His gun is drawn out of his hands this frame (hung on its sling, or on his thigh).
 pub fn stow_hang(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].work_stow {
-        Some(s) => g.gd[gd].state != crate::game::GuardState::Dead
+        Some(s) => !crate::condition::down(g, g.gd[gd].ch)
             && (s.up_t < 0.0 || s.up_t - g.time > g.k.workstow.mate_up * (1.0 - g.k.workstow.show)),
         None => false,
     }
@@ -117,7 +113,6 @@ pub fn stow_fired(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     g.gd[gd].work_stow = None;
     g.ch[c].anim.stowed = false;
-    g.stats.workstow.mate_fired += 1;
 }
 
 /// The fight has him: the job is dropped and waits, for `fightCap` at most at a stretch.
@@ -140,7 +135,7 @@ mod tests {
 
     fn man() -> (Box<Game>, GuardId, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut guard = crate::game::Guard::blank();
         guard.ch = c;
         let gd = g.gd.push(guard);
@@ -152,13 +147,13 @@ mod tests {
     fn a_mates_job_runs_its_beats() {
         let (mut g, gd, c) = man();
         g.time = 10.0;
-        g.gd[gd].fire_cd = 0.0;
+        g.arms[g.gd[gd].ch].fire_cd = 0.0;
         mate_stow(&mut g, gd);
         assert_eq!(g.stats.workstow.mate_down, 1);
         mate_stow_tick(&mut g, gd);
         assert!(g.ch[c].anim.stowed);
         assert_eq!(g.gd[gd].work_stow.unwrap().fed, false);
-        assert_eq!(g.gd[gd].fire_cd, g.k.workstow.mate_up);
+        assert_eq!(g.arms[g.gd[gd].ch].fire_cd, g.k.workstow.mate_up);
 
         // fed again: the same stow, no second count
         mate_stow(&mut g, gd);
@@ -175,10 +170,10 @@ mod tests {
 
         // past `show` of the way up it is drawn in his hands, with the fire clock still held
         g.time = up - g.k.workstow.mate_up * (1.0 - g.k.workstow.show);
-        g.gd[gd].fire_cd = 0.0;
+        g.arms[g.gd[gd].ch].fire_cd = 0.0;
         mate_stow_tick(&mut g, gd);
         assert!(!g.ch[c].anim.stowed);
-        assert_eq!(g.gd[gd].fire_cd, up - g.time);
+        assert_eq!(g.arms[g.gd[gd].ch].fire_cd, up - g.time);
 
         // up
         g.time = up;
@@ -199,7 +194,7 @@ mod tests {
         assert_eq!(g.stats.workstow.mate_down, 1);
 
         g.ch[c].anim.stowed = true;
-        g.gd[gd].state = crate::game::GuardState::Dead;
+        g.cond[c].down = true;
         assert!(!stow_hang(&mut g, gd));
         mate_stow(&mut g, gd);
         assert_eq!(g.stats.workstow.mate_down, 1);
@@ -225,7 +220,7 @@ mod tests {
         assert!(!stow_fight(&mut g, gd, Some(crate::workstow::StowFightA { yield_t: -1.0 }), &mut op));
         assert_eq!(op.stow_off_t, None);
 
-        g.gd[gd].dazzled_until = 101.0;
+        g.cond[g.gd[gd].ch].blind_until = 101.0;
         assert_eq!(stow_fight(&mut g, gd, None, &mut op), 0.0 < cap);
         assert_eq!(op.stow_off_t, Some(100.0));
     }

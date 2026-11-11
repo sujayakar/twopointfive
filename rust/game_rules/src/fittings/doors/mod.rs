@@ -1,7 +1,5 @@
 pub use ::game_types::doors::types;
 pub use types::*;
-pub mod slab;
-pub use slab::*;
 pub mod leaf;
 pub use leaf::*;
 pub mod step;

@@ -13,7 +13,6 @@ const can = (x: number) => `<path d="M${x} 9h12a1.6 1.6 0 0 1 1.6 1.6v16.8A1.6 1
 const SMOKE = can(25) + '<path d="M23.4 14h15.2v2.4H23.4z" fill="#0c0b09" opacity="0.55"/>';
 const STUN = can(25) + [13, 18, 23].map(y => [27, 31, 35].map(x => `<circle cx="${x}" cy="${y}" r="1.25" fill="#0c0b09" opacity="0.6"/>`).join('')).join('');
 const FRAG = '<circle cx="31" cy="19.5" r="9.5"/><path d="M27.6 5h6.8v5.4h-6.8z"/>' + line('M34.4 6.4l7 2.4v10', 1.4) + '<circle cx="22.4" cy="7.6" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/>';
-const CANS = can(16) + can(36);
 const SUPPRESSOR = '<path d="M14 11h40a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z"/><path d="M6 13.6h6v4.8H6z" opacity="0.7"/>' + [22, 30, 38, 46].map(x => `<path d="M${x} 11h1.4v10H${x}z" fill="#0c0b09" opacity="0.5"/>`).join('');
 const LIGHT = '<path d="M10 12h24l8-3h3v14h-3l-8-3H10z"/><path d="M14 20h8v4h-8z" opacity="0.7"/>' + line('M49 11l6-3M50 16h8M49 21l6 3', 1.5);
 const NVG = '<path d="M11 10h15a2 2 0 0 1 2 2v2h8v-2a2 2 0 0 1 2-2h15a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H38a2 2 0 0 1-2-2v-3h-8v3a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z"/><path d="M28.6 3h6.8v8h-6.8z" opacity="0.7"/><circle cx="18.5" cy="17" r="3.6" fill="#0c0b09" opacity="0.55"/><circle cx="45.5" cy="17" r="3.6" fill="#0c0b09" opacity="0.55"/>';
@@ -27,7 +26,7 @@ const CAM = '<path d="M12 6h4v20h-4z" opacity="0.6"/><path d="M16 9h15a3 3 0 0 1
 
 // (the sponge round — rust/game_types/src/knobs/kittree.rs: the 40 mm slug with its foam nose, where the grenade's is one dark piece)
 const SPONGE = '<path d="M19 9h14v14H19z"/><path d="M33 9h3c4.6 0 8 3.2 8 7s-3.4 7-8 7h-3z" opacity="0.55"/><path d="M15 8h3v16h-3z" opacity="0.6"/>';
-const BY_FIELD: Record<string, string> = { rings: SPONGE, sideCan: SUPPRESSOR, cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, suit: SUIT, trim: TRIM };
+const BY_FIELD: Record<string, string> = { rings: SPONGE, sideCan: SUPPRESSOR, cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, suit: SUIT, trim: TRIM };
 const BY_GUN: Record<string, string> = { rifle: RIFLE, pistol: PISTOL, shotgun: SHOTGUN };
 // THE GUNS WITH A LOOK OF THEIR OWN (keyed by the pick's id, which is also its row's id): each drawn as itself, the suppressor it always wears already on it.
 const dark = (d: string, o = 0.5) => `<path d="${d}" fill="#0c0b09" opacity="${o}"/>`;
@@ -56,7 +55,7 @@ const GUN_CAN: Record<string, string> = {
   rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
   pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',
 };
-// (the big slot's row — rust/game_rules/src/outfit/kit BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
+// (the big slot's row — rust/game_rules/src/outfit/kit — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
 const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3.6l1.4 1.5-1.4 1.5H16z" opacity="0.7"/><path d="M9 18h2.6v-1H52v1c3 0 5.4.8 8 2.6l-1 1.8c-2.4-1.2-4.4-1.8-7-1.8H9z"/><path d="M26 16.4h14v3.6H26z" fill="#0c0b09" opacity="0.4"/>';
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
 const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL };

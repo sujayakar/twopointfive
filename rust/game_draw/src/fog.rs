@@ -4,7 +4,7 @@ use crate::Row;
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
-use game::{fogofwar, js, m, seats, sim_lightshome};
+use game::{fogofwar, js, m, seats};
 
 const DEG: f64 = core::f64::consts::PI / 180.0;
 /// eyes the fog's programs take
@@ -110,23 +110,23 @@ fn lamps(g: &Game, f: &mut Fog) {
     f.lit_cut = m::max(0.0, k.lit_cut) as f32;
     f.lit_ao = m::min(1.0, m::max(0.0, k.lit_ao)) as f32;
     f.lit_ao_m = m::max(0.0, k.lit_ao_m) as f32;
-    let me = g.ch[g.pl[seats::host_man(g)].ch].pos;
+    let me = g.player_pos(seats::host_man(g));
     let mut pick: Vec<(LightId, f64, f64)> = Vec::with_capacity(LIGHTS);
     let mut take = |l: LightId, strength: f64, far: bool| if strength > 0.0 {
         let row = &g.tab.light[l];
-        pick.push((l, strength, if far { -1.0 } else { m::max(0.0, m::hyp2(row.pos[0] - me[0], row.pos[2] - me[2]) - row.range) }));
+        pick.push((l, strength, if far { -1.0 } else { m::max(0.0, game::v3::dist_xz(row.pos, me) - row.range) }));
     };
     for &l in &g.engine.lights.lights {
         let row = &g.tab.light[l];
         if row.kind == 2.0 && row.ttl < 0.0 && row.transient != Some(true) && row.enabled { take(l, row.intensity, true); }
     }
-    let down = sim_lightshome::mains_active(g);
+    let down = g.light_home.mains.active;
     for &t in &g.targets {
-        let row = &g.tab.sim_lightshome_fixture[t];
+        let row = &g.tab.fixture[t];
         // (no record = the team has not met it yet: as it stands)
         let known = match g.fog_of_war.lamp_recs.get(t) { Some(lit) => *lit, None => fogofwar::fog_of_war_lamp_lit(g, t) };
         if !known || (row.mains && down) { continue; }
-        if let Some(l) = row.light { take(l, match g.tab.light[l].steady { Some(ref s) => s.intensity, None => sim_lightshome::fixture_base_intensity(g, t) }, false); }
+        if let Some(l) = row.light { take(l, match g.tab.light[l].steady { Some(ref s) => s.intensity, None => g.tab.fixture[t].base_intensity }, false); }
         for al in row.area_lights.iter().flatten() { take(al.light, al.base, false); }
     }
     if pick.len() > LIGHTS {

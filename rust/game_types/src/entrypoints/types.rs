@@ -8,24 +8,12 @@ pub struct Pod {
     pub pos: V3,
     pub face: f64,
     pub watch: Option<V3>,
-    /// INVENTED: this point was moved off an opening or swapped in, read by dealt for the tallies (:172)
-    pub moved: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct EntryPoints {
     pub been: JsMap<CoverOpeningId, f64>,
     #[is(-1.0)] pub last: f64,
-    #[is(crate::entrypoints::EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 })] pub stats: crate::entrypoints::EntryPointsStats,
-    pub log: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct EntryPointsStats {
-    pub pods: f64,
-    pub risky: f64,
-    pub moved: f64,
-    pub kept: f64,
 }
 
 pub const EYE: f64 = 1.55;

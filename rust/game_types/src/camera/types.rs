@@ -27,14 +27,7 @@ pub struct FollowCamera {
     pub pin: Option<crate::camera::FollowCameraPin>,
     pub before_pin: Option<crate::camera::FollowCameraBeforePin>,
     pub kick: Option<V3>,
-    pub kick_held: Option<V3>,
-    pub kick_drawn: Option<crate::v3::m4::Mat4>,
-    #[is(crate::M4_IDENTITY)] pub kick_vp: crate::v3::m4::Mat4,
-    pub draw_held: Option<crate::camera::FollowCameraDrawHeld>,
-    #[is(crate::M4_IDENTITY)] pub draw_vp: crate::v3::m4::Mat4,
-    pub auto_yaw_t: f64,
-    pub yaw_goal: Option<f64>,
-    /// INVENTED: bumped by every whole write of desired, for Seat.takeCut
+    /// bumped by every whole write of desired: the page's view reads it (`cuts`)
     pub desired_serial: u32,
 }
 
@@ -55,27 +48,11 @@ pub struct FollowCameraBeforePin {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct FollowCameraDrawHeld {
-    pub target: V3,
-    pub yaw: f64,
-    pub pitch: f64,
-    pub distance: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraSetPinP {
     pub look: V3,
     pub yaw: f64,
     pub pitch: f64,
     pub dist: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FollowCameraDrawInP {
-    pub target: V3,
-    pub yaw: f64,
-    pub pitch: f64,
-    pub distance: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

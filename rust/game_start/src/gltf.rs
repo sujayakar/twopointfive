@@ -1,9 +1,10 @@
 //! THE CHARACTER FROM ITS FILES: the mannequin (its skeleton, skin, mesh and clips) and, where a cast file is given, the cast's meshes over it.
-//! `src/anim/gltf.ts` `loadGltfCharacter` and `loadGltfCast`, line for line, with the files' bytes handed in (the start reads no file itself).
-//! The rows go where the game keeps them: `g.tab.rig`, `g.tab.clip`, `g.tab.anim_gltf_mesh_data`, `g.tab.anim_gltf_cast_info` / `_cast_variant`.
+//! The files' bytes are handed in: the start reads no file itself.
+//! The rows go where the game keeps them: `g.art.rig`, `g.art.clip`, `g.art.mesh`, `g.art.cast` / `_cast_variant`.
 use crate::json::{self, Json};
 use alloc::{string::String, vec, vec::Vec};
 use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, SkinData, Track};
+use alloc::sync::Arc;
 use game::game::Game;
 use game::ids::*;
 use game::js::JsMap;
@@ -15,7 +16,6 @@ pub struct GltfFile<'a> { pub text: &'a str, pub bin: Option<&'a [u8]> }
 
 /// the material slots a cast face is assigned to
 pub const SLOT_NAMES: [&str; 11] = ["skin", "cloth_uniform", "cloth_plain", "webbing", "boot", "helmet", "metal_dark", "rubber", "lens", "accent", "eye"];
-pub const CAST_PART_STEP: f64 = 16.0;
 pub const CAST_MAX_PARTS: usize = 32;
 
 enum Data { F32(Vec<f32>), U8(Vec<u8>), U16(Vec<u16>), U32(Vec<u32>) }
@@ -38,7 +38,7 @@ fn base64(t: &[u8]) -> Vec<u8> {
     out
 }
 
-/// (gltf.ts openGltf: the text parsed, every buffer as bytes)
+/// the text parsed, every buffer as bytes
 fn open(f: GltfFile) -> Open {
     let g = json::parse(f.text).unwrap_or_else(|e| panic!("gltf: {}", e));
     let mut bins: Vec<Vec<u8>> = Vec::new();
@@ -51,7 +51,7 @@ fn open(f: GltfFile) -> Open {
 }
 
 impl Open {
-    /// accessor `i` as a tightly packed array (gltf.ts readAccessor: a byte stride is honoured)
+    /// accessor `i` as a tightly packed array (a byte stride is honored)
     fn accessor(&self, i: f64) -> Accessor {
         let a = self.g.get("accessors").at(i as usize);
         let bv = self.g.get("bufferViews").at(a.get("bufferView").num().expect("gltf: an accessor's view") as usize);
@@ -122,12 +122,11 @@ fn load_base(f: GltfFile) -> Base {
     let mut md = MeshData {
         positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4],
         joints: if joints_are_u16 { MeshDataJoints::Uint16Array(vec![0; vcount * 4]) } else { MeshDataJoints::Uint8Array(vec![0; vcount * 4]) },
-        mat_sel: vec![0.0; vcount], indices: vec![0; icount], vertex_count: vcount as f64,
+        vertex_count: vcount as f64,
         bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: None,
         mat_index: Some(vec![0; vcount]),
     };
     let (mut vo, mut io) = (0usize, 0usize);
-    let mat0 = prims.first().map(|p| p.mat);
     for p in prims {
         let n = p.pos.count;
         let (pos, nrm) = (p.pos.data.f32(), p.nrm.data.f32());
@@ -141,13 +140,11 @@ fn load_base(f: GltfFile) -> Base {
             let v = vo + k;
             md.weights[v * 4] = (a / s) as f32; md.weights[v * 4 + 1] = (b / s) as f32; md.weights[v * 4 + 2] = (c / s) as f32; md.weights[v * 4 + 3] = (d / s) as f32;
             for c2 in 0..4 { let j = p.jn.data.get(k * 4 + c2); match &mut md.joints { MeshDataJoints::Uint16Array(a) => a[v * 4 + c2] = j as u16, MeshDataJoints::Uint8Array(a) => a[v * 4 + c2] = j as u8 } }
-            md.mat_sel[v] = if Some(p.mat) == mat0 { 0.0 } else { 1.0 };
             md.mat_index.as_mut().unwrap()[v] = p.material;
             let (x, y, z) = (md.positions[v * 3] as f64, md.positions[v * 3 + 1] as f64, md.positions[v * 3 + 2] as f64);
             md.bbox_min = [game::m::min(md.bbox_min[0], x), game::m::min(md.bbox_min[1], y), game::m::min(md.bbox_min[2], z)];
             md.bbox_max = [game::m::max(md.bbox_max[0], x), game::m::max(md.bbox_max[1], y), game::m::max(md.bbox_max[2], z)];
         }
-        for k in 0..p.idx.count { md.indices[io + k] = (p.idx.data.get(k) as usize + vo) as u32; }
         vo += n; io += p.idx.count;
     }
 
@@ -210,8 +207,8 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
         }
     }
     let mut md = MeshData {
-        positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4], joints: MeshDataJoints::Uint8Array(vec![0; vcount * 4]), mat_sel: vec![0.0; vcount],
-        indices: vec![0; icount], vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
+        positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4], joints: MeshDataJoints::Uint8Array(vec![0; vcount * 4]),
+        vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
         mat_index: None,
     };
     let (mut vo, mut io) = (0usize, 0usize);
@@ -233,11 +230,10 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
             if !(sum > 0.0) { panic!("cast: part '{}' has a vertex with no weight", parts[p.part]); }
             // (`md.weights[i] /= sum`: the single read back, divided as a double, stored as a single)
             for c in 0..4 { md.weights[v * 4 + c] = (md.weights[v * 4 + c] as f64 / sum) as f32; }
-            md.mat_sel[v] = (p.slot + CAST_PART_STEP * p.part as f64) as f32;
             md.part.as_mut().unwrap()[v] = p.part as u8;
             for c in 0..3 { let x = md.positions[v * 3 + c] as f64; if !x.is_finite() { panic!("cast: part '{}' has a non-finite position", parts[p.part]); } md.bbox_min[c] = game::m::min(md.bbox_min[c], x); md.bbox_max[c] = game::m::max(md.bbox_max[c], x); }
         }
-        for k in 0..p.idx.count { let ix = p.idx.data.get(k) as usize; if ix >= n { panic!("cast: part '{}' indexes past its vertices", parts[p.part]); } md.indices[io + k] = (ix + vo) as u32; }
+        for k in 0..p.idx.count { let ix = p.idx.data.get(k) as usize; if ix >= n { panic!("cast: part '{}' indexes past its vertices", parts[p.part]); }  }
         vo += n; io += p.idx.count;
     }
     let decl = g.get("extras").get("cast").get("variants");
@@ -259,20 +255,23 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
 }
 
 /// THE CHARACTER A GAME STANDS ON, as rows of `g`: the mannequin, or with `cast` the cast's meshes over its skeleton, skin and clips
-/// (gltf.ts loadCharacterSet, but a cast off its contract is refused here and not passed over: a test should not stand on another mesh
+/// (a cast off its contract is refused here and not passed over: a test should not stand on another mesh
 /// than it asked for). Answers the character's row.
 pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> RigId {
     let base = load_base(mannequin);
     let dressed = cast.map(|c| load_cast(c, &base));
+    let art = Arc::make_mut(&mut g.art);
     let mut clips: JsMap<String, ClipId> = JsMap::new();
-    for c in base.clips { let name = c.name.clone(); let id = g.tab.clip.push(c); clips.set(name, id); }
+    for c in base.clips { let name = c.name.clone(); let id = art.clip.push(c); clips.set(name, id); }
     let (mesh, cast) = match dressed {
-        None => (g.tab.anim_gltf_mesh_data.push(base.mesh), None),
+        None => (art.mesh.push(base.mesh), None),
         Some((md, parts, variants)) => {
-            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| g.tab.anim_gltf_cast_variant.push(v)).collect();
-            (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, variants })))
+            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| art.variant.push(v)).collect();
+            (art.mesh.push(md), Some(art.cast.push(CastInfo { parts, variants })))
         }
     };
-    g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
+    let mut rig = GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, back: None };
+    rig.back = game::packside::back_of(art, &rig);
+    art.rig.push(rig)
 }
 

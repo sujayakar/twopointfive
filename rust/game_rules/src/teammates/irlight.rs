@@ -7,10 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// ?irpower and ?irnear read the address, which is the host's: with no page the TypeScript does nothing, and so does this.
-pub fn ir_flags(g: &crate::game::Game) {}
-
-/// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds.
+/// The kit's row, made if there is none: nothing but empty lists.
 fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
     g.m.irlight.kits.get_or_insert_with(Kit::default)
 }
@@ -51,10 +48,7 @@ fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
 fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
     let pos = g.ch[c_2].pos;
     let yaw = g.ch[c_2].aim_yaw;
-    let head = match g.ch[c_2].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(pos, [0.0, HEAD_Y, 0.0]),
-    };
+    let head = g.ch[c_2].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, HEAD_Y, 0.0]));
     let fx = m::sin(yaw);
     let fz = m::cos(yaw);
     let dn = m::sin(g.k.irlight.dip * v3::DEG);
@@ -195,15 +189,6 @@ fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 {
     k
 }
 
-/// (QA) how far a carrier's light stands turned down this frame: 1 not at all, or no reading of his this frame.
-fn ir_near_of(g: &crate::game::Game, key: f64) -> f64 {
-    let s = g.m.irlight.kits.as_ref().and_then(|kit| kit.near.get(crate::Num(key)).copied());
-    match s {
-        Some(s) if s.t == g.time => s.k,
-        _ => 1.0,
-    }
-}
-
 /// His reading is over.
 fn drop(g: &mut crate::game::Game, key: f64) {
     kit_of(g).need.delete(crate::Num(key));
@@ -279,7 +264,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
     for gd in kit_of(g).men.keys() {
         if !g.guards.contains(&gd) {
             kit_of(g).men.delete(gd);
-            let id = g.ch[g.gd[gd].ch].id;
+            let id = g.char_id(gd);
             drop(g, id);
         }
     }
@@ -289,7 +274,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
         i += 1;
         let c = g.gd[gd].ch;
         let id = g.ch[c].id;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::nvg::nvg_down(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || !crate::nvg::nvg_down(g, gd) {
             let had = kit_of(g).men.get(gd).copied();
             out(g, had);
             drop(g, id);
@@ -311,7 +296,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
 }
 
 /// The infrared light at a point, W/m² as the light meter would report it if it read infrared. `skip`: a carrier's own light is not asked.
-pub fn ir_light_at(g: &mut crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
+pub fn ir_light_at(g: &crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
     let mut total = 0.0;
     let mut i = 0;
     while i < g.engine.lights.ir.len() {
@@ -372,10 +357,7 @@ pub(super) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
     }
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let at = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(b) => *b,
-        None => [pos[0], pos[1] + 1.2, pos[2]],
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or([pos[0], pos[1] + 1.2, pos[2]]);
     let id = g.ch[c].id;
     let e = ir_light_at(g, at, Some(id));
     kit_of(g).seen.set(o, crate::irlight::KitSeenValue { t: now, e });
@@ -384,7 +366,7 @@ pub(super) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
 
 /// Would his own illuminator show him a standing man at `p`, if he looked that way with a clear line?
 pub fn ir_shows_at(g: &crate::game::Game, m: GuardId, p: V3) -> bool {
-    let at = g.ch[g.gd[m].ch].pos;
+    let at = g.pos_of(m);
     let dx = p[0] - at[0];
     let dz = p[2] - at[2];
     let d2 = m::max(dx * dx + dz * dz, 0.25);
@@ -413,7 +395,7 @@ mod tests {
         crate::render_lights::RtLight { pos, dir, intensity, radius, owner, range, outer_deg, inner_deg, enabled, ..crate::render_lights::RtLight::default() }
     }
 
-    /// irLightAt's sums against the TypeScript's own bits (irlight.ts under bun, EXACT on). Every lens stands too near the point to ask the world (tmax <= 0.05).
+    /// The pinned bits of ir_light_at's sums. Every lens stands too near the point to ask the world (tmax <= 0.05).
     #[test]
     fn ir_light_at_has_the_typescripts_bits() {
         let mut g = Game::blank();
@@ -434,7 +416,7 @@ mod tests {
         assert_eq!(ir_light_at(&mut g, p, Some(11.0)).to_bits(), 0x407ce08afd1d7c50);
     }
 
-    /// a new lamp holds the TypeScript literal's values and the knobs' shape; `out` writes the row it is given, and with no lamp does nothing
+    /// a new lamp holds these values and the knobs' shape; `out` writes the row it is given, and with no lamp does nothing
     #[test]
     fn lamp_and_out_write_the_row() {
         let mut g = Game::blank();
@@ -460,9 +442,6 @@ mod tests {
         assert!(g.m.irlight.kits.is_none());
         let now = g.time;
         kit_of(&mut g).near.set(crate::Num(5.0), KitNearValue { t: now, k: 0.25 });
-        assert_eq!(ir_near_of(&mut g, 5.0), 0.25);
-        assert_eq!(ir_near_of(&mut g, 6.0), 1.0);
         g.time = now + 1.0;
-        assert_eq!(ir_near_of(&mut g, 5.0), 1.0);
     }
 }

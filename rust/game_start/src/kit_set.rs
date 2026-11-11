@@ -25,7 +25,8 @@ use crate::json::{self, Json};
 use crate::kit_plan::{self, Planned, Way, PlanBox, PlanOpts, PlanSet, V2, V3};
 use game::kitstage::KIT_PLAN;
 use game::query::Query;
-use game::scene_scenario_list::{kind_of, ScenarioSpecKind};
+use game::scene_scenario_list::kind_of;
+use game::scene_scenarios::MissionKind;
 
 /// the stand-ins' names and numbers (the head)
 pub struct KitSetNumbers {
@@ -68,7 +69,7 @@ pub fn set_of(data: &Json, way: usize) -> Option<SetOf<'_>> {
 pub fn set_query(q: &Query) -> Query {
     let mut o = q.clone();
     let kind = kind_of(q);
-    let quiet = kind == Some(ScenarioSpecKind::Quiet);
+    let quiet = kind == Some(MissionKind::Quiet);
     if quiet || kind.is_none() {
         let t = js_trim(q.get("squad").unwrap_or(""));
         let n = if quiet && t.len() == 1 && matches!(t.as_bytes()[0], b'1'..=b'4') { "1" } else { "0" };
@@ -85,7 +86,7 @@ pub enum QuietKind { Quiet, Solo }
 /// WHICH QUIET KIND a mission's link is: a quiet mission, alone or as two; a link that names no mission (the solo night); none: a loud one. Read off the link and never off the scenario that is up: a set
 /// way's picture is staged as a room clear (`set_query` strips the words), so the game's own quiet is off there.
 pub fn quiet_kind(q: &Query) -> Option<QuietKind> {
-    match kind_of(q) { Some(ScenarioSpecKind::Quiet) => Some(QuietKind::Quiet), None => Some(QuietKind::Solo), Some(_) => None }
+    match kind_of(q) { Some(MissionKind::Quiet) => Some(QuietKind::Quiet), None => Some(QuietKind::Solo), Some(_) => None }
 }
 /// what a set's men wear: `suit` the sneaking suit's word (none: Sam alone in it, as the plain night has him), `sling` where the rifle goes
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -175,7 +176,6 @@ pub fn set_level(data: &Json, way: usize) -> Cow<'_, Json> {
     let room_clear = json::obj(rc);
     let stub = |id: &str, k: f64| json::obj(vec![("id", json::s(id)), ("c", json::nums(&[far[0] + k * 4.0 * K.stub, K.sunk, far[1]])), ("h", json::nums(&[K.stub, K.stub, K.stub])), ("albedo", json::nums(&[0.0, 0.0, 0.0])), ("flags", json::arr(vec![json::s("NoPrimary"), json::s("NoShadow")]))]);
     let lights: Vec<Json> = data.get("lights").items().iter().filter(|l| l.get("kind").str() == Some("dir")).chain(t.get("lights").items().iter()).cloned().collect();
-    let lit: Vec<&str> = lights.iter().filter_map(|l| l.get("id").str()).collect();
     let materials = data.get("materials");
     let mut boxes: Vec<Json> = t.get("boxes").items().iter().map(|b| set_paint(b, materials)).collect();
     boxes.push(stub(K.panel, 0.0));

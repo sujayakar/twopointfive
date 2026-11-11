@@ -12,7 +12,7 @@ fn part_bit(i: usize) -> f64 {
 
 /// A part's bit by name, 0 where the cast has no such part.
 fn named_bit(g: &Game, cast: AnimGltfCastInfoId, n: &str) -> f64 {
-    match g.tab.anim_gltf_cast_info[cast].parts.iter().position(|p| p == n) {
+    match g.art.cast[cast].parts.iter().position(|p| p == n) {
         Some(i) => part_bit(i),
         None => 0.0,
     }
@@ -43,7 +43,7 @@ pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64)
         Some(b) => b,
         None => {
             let mut b = 0.0;
-            for (i, n) in g.tab.anim_gltf_cast_info[cast].parts.iter().enumerate() {
+            for (i, n) in g.art.cast[cast].parts.iter().enumerate() {
                 if n == "helmet" || n.starts_with("kit_") {
                     b = (js::to_i32(b) | js::to_i32(part_bit(i))) as u32 as f64;
                 }
@@ -59,8 +59,8 @@ pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64)
 /// The variants of the cast worn by `side`, in the cast's order.
 fn variants_of(g: &Game, cast: AnimGltfCastInfoId, side: CastSide) -> Vec<AnimGltfCastVariantId> {
     let mut v = Vec::new();
-    for &x in g.tab.anim_gltf_cast_info[cast].variants.iter() {
-        if g.tab.anim_gltf_cast_variant[x].side == side {
+    for &x in g.art.cast[cast].variants.iter() {
+        if g.art.variant[x].side == side {
             v.push(x);
         }
     }
@@ -79,7 +79,7 @@ pub fn cast_side(g: &crate::game::Game, cast: AnimGltfCastInfoId, side: crate::a
             return d;
         }
     }
-    g.tab.anim_gltf_cast_info[cast].variants.clone()
+    g.art.cast[cast].variants.clone()
 }
 
 #[cfg(test)]
@@ -89,108 +89,57 @@ mod tests {
     fn make_cast(g: &mut Game, parts: &[&str]) -> AnimGltfCastInfoId {
         let mut c = CastInfo::default();
         c.parts = parts.iter().map(|p| String::from(*p)).collect();
-        g.tab.anim_gltf_cast_info.push(c)
+        alloc::sync::Arc::make_mut(&mut g.art).cast.push(c)
     }
 
     fn make_variant(g: &mut Game, cast: AnimGltfCastInfoId, name: &str, side: CastSide) -> AnimGltfCastVariantId {
         let mut v = CastVariant::default();
         v.name = String::from(name);
         v.side = side;
-        let id = g.tab.anim_gltf_cast_variant.push(v);
-        g.tab.anim_gltf_cast_info[cast].variants.push(id);
+        let id = alloc::sync::Arc::make_mut(&mut g.art).variant.push(v);
+        alloc::sync::Arc::make_mut(&mut g.art).cast[cast].variants.push(id);
         id
     }
 
-    /// The TypeScript's own bits under bun: (cast, mask, castGoggles boxes, castGoggles no boxes, castSuit).
-    const BITS: &[(&str, f64, u64, u64, u64)] = &[
-        ("parts", 0.0, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000),
-        ("parts", 1.0, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000),
-        ("parts", 2.0, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000),
-        ("parts", 3.0, 0x3ff0000000000000, 0x4008000000000000, 0x3ff0000000000000),
-        ("parts", 18.0, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000),
-        ("parts", 127.0, 0x405b400000000000, 0x405bc00000000000, 0x4040800000000000),
-        ("parts", 4294967295.0, 0x41effffffda00000, 0x41effffffde00000, 0x41effffff4200000),
-        ("parts", 2147483648.0, 0x41e0000000000000, 0x41e0000000000000, 0x41e0000000000000),
-        ("parts", 2147483649.0, 0x41e0000000200000, 0x41e0000000200000, 0x41e0000000200000),
-        ("parts", 3221225473.0, 0x41e8000000200000, 0x41e8000000200000, 0x41e8000000200000),
-        ("parts", -1.0, 0x41effffffda00000, 0x41effffffde00000, 0x41effffff4200000),
-        ("parts", 4294967298.0, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000),
-        ("up_only", 0.0, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000),
-        ("up_only", 1.0, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000),
-        ("up_only", 2.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-        ("up_only", 3.0, 0x4000000000000000, 0x4008000000000000, 0x4000000000000000),
-        ("up_only", 18.0, 0x4032000000000000, 0x4032000000000000, 0x4032000000000000),
-        ("up_only", 127.0, 0x405f800000000000, 0x405fc00000000000, 0x405f800000000000),
-        ("up_only", 4294967295.0, 0x41efffffffc00000, 0x41efffffffe00000, 0x41efffffffc00000),
-        ("up_only", 2147483648.0, 0x41e0000000000000, 0x41e0000000000000, 0x41e0000000000000),
-        ("up_only", 2147483649.0, 0x41e0000000000000, 0x41e0000000200000, 0x41e0000000000000),
-        ("up_only", 3221225473.0, 0x41e8000000000000, 0x41e8000000200000, 0x41e8000000000000),
-        ("up_only", -1.0, 0x41efffffffc00000, 0x41efffffffe00000, 0x41efffffffc00000),
-        ("up_only", 4294967298.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-        ("down_only", 0.0, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000),
-        ("down_only", 1.0, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000),
-        ("down_only", 2.0, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000),
-        ("down_only", 3.0, 0x3ff0000000000000, 0x4008000000000000, 0x3ff0000000000000),
-        ("down_only", 18.0, 0x4030000000000000, 0x4032000000000000, 0x4030000000000000),
-        ("down_only", 127.0, 0x405f400000000000, 0x405fc00000000000, 0x405f400000000000),
-        ("down_only", 4294967295.0, 0x41efffffffa00000, 0x41efffffffe00000, 0x41efffffffa00000),
-        ("down_only", 2147483648.0, 0x41e0000000000000, 0x41e0000000000000, 0x41e0000000000000),
-        ("down_only", 2147483649.0, 0x41e0000000200000, 0x41e0000000200000, 0x41e0000000200000),
-        ("down_only", 3221225473.0, 0x41e8000000200000, 0x41e8000000200000, 0x41e8000000200000),
-        ("down_only", -1.0, 0x41efffffffa00000, 0x41efffffffe00000, 0x41efffffffa00000),
-        ("down_only", 4294967298.0, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000),
-        ("none", 0.0, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000),
-        ("none", 1.0, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000),
-        ("none", 2.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-        ("none", 3.0, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000),
-        ("none", 18.0, 0x4032000000000000, 0x4032000000000000, 0x4032000000000000),
-        ("none", 127.0, 0x405fc00000000000, 0x405fc00000000000, 0x405fc00000000000),
-        ("none", 4294967295.0, 0x41efffffffe00000, 0x41efffffffe00000, 0x41efffffffe00000),
-        ("none", 2147483648.0, 0x41e0000000000000, 0x41e0000000000000, 0x41e0000000000000),
-        ("none", 2147483649.0, 0x41e0000000200000, 0x41e0000000200000, 0x41e0000000200000),
-        ("none", 3221225473.0, 0x41e8000000200000, 0x41e8000000200000, 0x41e8000000200000),
-        ("none", -1.0, 0x41efffffffe00000, 0x41efffffffe00000, 0x41efffffffe00000),
-        ("none", 4294967298.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-        ("p32", 0.0, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000),
-        ("p32", 1.0, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000),
-        ("p32", 2.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-        ("p32", 3.0, 0x4008000000000000, 0x4008000000000000, 0x4008000000000000),
-        ("p32", 18.0, 0x4032000000000000, 0x4032000000000000, 0x4032000000000000),
-        ("p32", 127.0, 0x405fc00000000000, 0x405fc00000000000, 0x405fc00000000000),
-        ("p32", 4294967295.0, 0x41dfffffffc00000, 0x41efffffffe00000, 0x41bfffffff000000),
-        ("p32", 2147483648.0, 0x0000000000000000, 0x41e0000000000000, 0x0000000000000000),
-        ("p32", 2147483649.0, 0x3ff0000000000000, 0x41e0000000200000, 0x3ff0000000000000),
-        ("p32", 3221225473.0, 0x41d0000000400000, 0x41e8000000200000, 0x3ff0000000000000),
-        ("p32", -1.0, 0x41dfffffffc00000, 0x41efffffffe00000, 0x41bfffffff000000),
-        ("p32", 4294967298.0, 0x4000000000000000, 0x4000000000000000, 0x4000000000000000),
-    ];
+    /// A cast with both pairs of mesh goggles, a helmet and two bits of kit. Each part's bit is its place's power of two.
+    const PARTS: &[&str] = &["shirt", "nvg_up", "helmet", "kit_radio", "nvg_down", "vest", "kit_ram"];
+    const SHIRT: f64 = 1.0;
+    const UP: f64 = 2.0;
+    const DOWN: f64 = 16.0;
 
     #[test]
-    fn masks_match_the_typescripts_bits() {
+    fn under_the_box_goggles_he_wears_no_mesh_pair_and_without_them_the_pair_goes_up_on_the_mount() {
         let mut g = Game::blank();
-        let p32: Vec<String> = (0..32)
-            .map(|i| match i {
-                31 => String::from("nvg_up"),
-                30 => String::from("helmet"),
-                29 => String::from("kit_x"),
-                _ => format!("p{}", i),
-            })
-            .collect();
-        let p32: Vec<&str> = p32.iter().map(|s| s.as_str()).collect();
-        let casts = [
-            ("parts", make_cast(&mut g, &["shirt", "nvg_up", "helmet", "kit_radio", "nvg_down", "vest", "kit_ram"])),
-            ("up_only", make_cast(&mut g, &["nvg_up", "a"])),
-            ("down_only", make_cast(&mut g, &["a", "nvg_down"])),
-            ("none", make_cast(&mut g, &["a", "b"])),
-            ("p32", make_cast(&mut g, &p32)),
-        ];
-        assert_eq!(BITS.len(), 60);
-        for &(name, mask, boxes, no_boxes, suit) in BITS {
-            let cast = casts.iter().find(|c| c.0 == name).unwrap().1;
-            assert_eq!(cast_goggles(&mut g, cast, mask, true).to_bits(), boxes, "{} {} boxes", name, mask);
-            assert_eq!(cast_goggles(&mut g, cast, mask, false).to_bits(), no_boxes, "{} {} no boxes", name, mask);
-            assert_eq!(cast_suit(&mut g, cast, mask).to_bits(), suit, "{} {} suit", name, mask);
+        let cast = make_cast(&mut g, PARTS);
+        for boxes in [true, false] { assert_eq!(cast_goggles(&mut g, cast, SHIRT, boxes), SHIRT, "a man with no goggles stays as he is"); }
+        for pair in [UP, DOWN, UP + DOWN] {
+            assert_eq!(cast_goggles(&mut g, cast, SHIRT + pair, true), SHIRT);
+            assert_eq!(cast_goggles(&mut g, cast, SHIRT + pair, false), SHIRT + UP);
         }
+        // a cast with no raised pair keeps the one it has, and a cast with no goggles has nothing to change
+        let only_down = make_cast(&mut g, &["a", "nvg_down"]);
+        assert_eq!(cast_goggles(&mut g, only_down, 3.0, false), 3.0);
+        assert_eq!(cast_goggles(&mut g, only_down, 3.0, true), 1.0);
+        let none = make_cast(&mut g, &["a", "b"]);
+        assert_eq!(cast_goggles(&mut g, none, 3.0, true), 3.0);
+    }
+
+    #[test]
+    fn the_sneaking_suit_is_his_clothes_with_no_helmet_no_kit_and_no_goggles() {
+        let mut g = Game::blank();
+        let cast = make_cast(&mut g, PARTS);
+        assert_eq!(cast_suit(&mut g, cast, 127.0), SHIRT + 32.0);
+    }
+
+    #[test]
+    fn the_last_part_a_mask_can_hold_is_a_part_like_any_other() {
+        let mut g = Game::blank();
+        let parts: Vec<String> = (0..32).map(|i| if i == 31 { String::from("nvg_up") } else { format!("p{}", i) }).collect();
+        let parts: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
+        let cast = make_cast(&mut g, &parts);
+        let top = 2147483648.0;
+        assert_eq!(cast_goggles(&mut g, cast, 1.0 + top, false), 1.0 + top, "a high bit reads as a whole number, never as a negative one");
+        assert_eq!(cast_goggles(&mut g, cast, 1.0 + top, true), 1.0);
     }
 
     #[test]

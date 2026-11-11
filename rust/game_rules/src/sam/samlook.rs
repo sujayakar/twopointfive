@@ -18,15 +18,10 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// An angle brought into -pi..pi.
-fn wrap(a: f64) -> f64 {
-    m::atan2(m::sin(a), m::cos(a))
-}
-
 /// His head is his own to turn.
 fn free(g: &mut crate::game::Game) -> bool {
     let pl = &g.pl[g.player];
-    !pl.down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && g.puppet.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
+    !g.cond[pl.ch].down && !pl.sprinting && !pl.planted() && pl.wall.is_none() && pl.tow.is_none() && pl.door_move().is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
 }
 
 /// A man who is onto him, or has him in view this moment with his notice risen.
@@ -37,16 +32,16 @@ fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.
-fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
+fn reach(g: &crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     if !crate::close::close_subject(g, gd) { return f64::INFINITY; }
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
-    let q = g.ch[g.gd[gd].ch].pos;
+    let q = g.pos_of(gd);
     let dx = q[0] - p[0];
     let dz = q[2] - p[2];
     let d = m::hyp2(dx, dz);
     if d > max_m || d < 0.15 { return f64::INFINITY; }
-    if deg < 180.0 && m::abs(wrap(m::atan2(dx, dz) - g.ch[c].aim_yaw)) > deg * m::PI / 180.0 { return f64::INFINITY; }
+    if deg < 180.0 && m::abs(v3::wrap_angle(m::atan2(dx, dz) - g.ch[c].aim_yaw)) > deg * m::PI / 180.0 { return f64::INFINITY; }
     if crate::scene_collision::solid_blocked(g, [p[0], p[1] + 1.2, p[2]], [q[0], q[1] + 1.4, q[2]], None) { return f64::INFINITY; }
     d
 }
@@ -83,15 +78,15 @@ fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.
-fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+fn slip_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }
     let slip_from = g.k.samlook.slip_from;
     let d = reach(g, gd, slip_from, 180.0);
     if !(d < slip_from) { return 0.0; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let c = g.gd[gd].ch;
     let q = g.ch[c].pos;
-    let nose = m::cos(wrap(m::atan2(p[0] - q[0], p[2] - q[2]) - g.ch[c].body_yaw));
+    let nose = m::cos(v3::yaw_to(q, p) - g.ch[c].body_yaw);
     let k = g.k.samlook;
     (1.0 - smooth(k.slip_by, k.slip_from, d)) * smooth(k.back_cos[0], k.back_cos[1], nose)
 }
@@ -104,7 +99,7 @@ fn slips(g: &mut crate::game::Game) -> bool {
 /// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.
 fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     if !slips(g) { return None; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let (mut vx, mut vz, mut top) = (0.0, 0.0, 0.0);
     let mut i = 0;
     while i < g.guards.len() {
@@ -112,7 +107,7 @@ fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
         i += 1;
         let k = slip_of(g, gd);
         if k <= 0.0 { continue; }
-        let q = g.ch[g.gd[gd].ch].pos;
+        let q = g.pos_of(gd);
         let dx = q[0] - p[0];
         let dz = q[2] - p[2];
         let l = js::or(m::hyp2(dx, dz), 1.0);
@@ -128,7 +123,7 @@ fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
 
 /// A point `up` metres over a man's feet.
 fn head_of(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
-    let q = g.ch[g.gd[gd].ch].pos;
+    let q = g.pos_of(gd);
     [q[0], q[1] + up, q[2]]
 }
 
@@ -145,7 +140,7 @@ pub fn sam_look_step(g: &mut crate::game::Game) {
         let p = g.ch[c].pos;
         let gc = g.gd[gd].ch;
         let q = g.ch[gc].pos;
-        let d = m::hyp2(q[0] - p[0], q[2] - p[2]);
+        let d = v3::dist_xz(q, p);
         let at = match g.ch[gc].bones.get(crate::character::Bone::Head) {
             Some(h) => [h[0], h[1], h[2]],
             None => head_of(g, gd, 1.6),
@@ -171,32 +166,12 @@ pub fn sam_look_step(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    /// The TypeScript's own bits, under EXACT.on.
+    /// What a guard makes of a man goes by this ramp: nothing short of it, all past it, and only ever up between.
     #[test]
-    fn smooth_matches_the_typescript() {
-        for (a, b, x, bits) in [
-            (1.2, 2.6, 1.7, 0x3fd2a8ad278e8dcdu64),
-            (1.2, 2.6, 0.3, 0x0000000000000000),
-            (1.2, 2.6, 9.0, 0x3ff0000000000000),
-            (-0.45, -0.1, -0.3137, 0x3fd58ee4de63e278),
-            (5.5, 8.0, 6.123456789, 0x3fc3e9435f4062f6),
-        ] {
-            assert_eq!(smooth(a, b, x).to_bits(), bits);
-        }
-        assert!(smooth(5.6, 5.6, 5.6).is_nan());
-    }
-
-    #[test]
-    fn wrap_matches_the_typescript() {
-        for (a, bits) in [
-            (0.1, 0x3fb999999999999au64),
-            (3.5, 0xc00643f6a8885a30),
-            (-7.25, 0xbfeef0255dde973d),
-            (100.125, 0xbfd9fb54442d1848),
-            (m::PI, 0x400921fb54442d18),
-            (-m::PI, 0xc00921fb54442d18),
-        ] {
-            assert_eq!(wrap(a).to_bits(), bits);
-        }
-    }
-}
+    fn the_ramp_is_flat_past_both_ends_and_rises_between() {
+        assert_eq!((smooth(1.2, 2.6, 0.3), smooth(1.2, 2.6, 9.0)), (0.0, 1.0));
+        assert!((smooth(1.0, 3.0, 2.0) - 0.5).abs() < 1e-12);
+        assert!(smooth(1.0, 3.0, 1.2) < 0.05, "it starts gently: {}", smooth(1.0, 3.0, 1.2));
+        assert!(smooth(1.0, 3.0, 1.5) < smooth(1.0, 3.0, 2.5));
+        assert!(smooth(-0.45, -0.1, -0.3) > 0.0 && smooth(-0.45, -0.1, -0.3) < 1.0);
+    }}

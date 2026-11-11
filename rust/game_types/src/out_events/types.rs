@@ -11,7 +11,6 @@ pub enum OutEvent {
     GameAudioLikeFootstep(crate::out_events::OutGameAudioLikeFootstep),
     GameAudioLikePlay(crate::out_events::OutGameAudioLikePlay),
     GameAudioLikeRain(crate::out_events::OutGameAudioLikeRain),
-    HostApiRestartPicture(crate::out_events::OutHostApiRestartPicture),
     ParticlesEmit(crate::out_events::OutParticlesEmit),
     ParticlesImpulse(crate::out_events::OutParticlesImpulse),
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
@@ -19,9 +18,6 @@ pub enum OutEvent {
     SmokeCansShut,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
-    ClearSnowBlast,
-    ClearSnowMarks,
-    ClearSnowTracks,
     SnowBlast(crate::out_events::OutSnowBlast),
     SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound),
 }
@@ -65,10 +61,6 @@ pub struct OutGameAudioLikePlay {
 #[derive(Clone, Debug)]
 pub struct OutGameAudioLikeRain {
     pub level: f64,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutHostApiRestartPicture {
 }
 
 #[derive(Clone, Debug)]
@@ -184,7 +176,6 @@ pub struct OutSnowBlast {
     pub radius: f64,
 }
 
-/// (audio_iface.ts PlayOpts: an object with some of these)
 #[derive(Clone, Debug, Default)]
 pub struct OutPlayOpts {
     pub rate: Option<f64>,

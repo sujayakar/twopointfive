@@ -76,7 +76,7 @@ fn the_key_tapped_twice_is_not_the_lessons() {
 /// the two door fights taken, the squad called and stood in the yard's ring, the first gate's step up
 fn in_the_yard(s: u32) -> Play {
     let mut p = the_lesson(s);
-    for m in p.g.guards.clone() { if p.g.gd[m].team != game::teams::Team::Operative && p.up(m) && ["Tango 1", "Tango 2", "Tango 3", "Tango 4"].contains(&p.callsign(m).as_str()) { p.falls(m, DownBy::Player); } }
+    for m in p.g.guards.clone() { if !p.g.team(m).ours() && p.up(m) && ["Tango 1", "Tango 2", "Tango 3", "Tango 4"].contains(&p.callsign(m).as_str()) { p.falls(m, DownBy::Player); } }
     stand(&mut p, [28.4, 0.0, 16.0]);
     p.until(60.0, |p| up(p) == "call").unwrap_or_else(|| panic!("seed {s}: the call's step never came: '{}'", up(&p)));
     let f = p.sam_at();

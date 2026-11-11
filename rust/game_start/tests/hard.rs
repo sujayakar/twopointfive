@@ -1,4 +1,4 @@
-//! A MISSION'S ADDRESS NAMES ITS DIFFICULTY, AND A NATIVE START READS IT: `&hard` on a link stands a hard
+//! A MISSION'S ADDRESS NAMES ITS DIFFICULTY, AND A NATIVE START READS IT (`host::lay`): `&hard` on a link stands a hard
 //! game, where a page stands one. Before, every host but a page stood such a link on standard, to the man. Each test holds one rule over three seeds beside a control that differs in the
 //! one word the rule is about.
 use game::difficulty::{difficulty_now, DifficultyNow};
@@ -34,7 +34,7 @@ fn after_a_shot(words: &str, seed: u32) -> Vec<[f64; 2]> {
     p.sam_fires_at([at[0] + 2.0, at[1]], 0.3);
     p.run(20.0);
     // (the list's own order, dead men too: `hostiles` sorts by who is nearest, which is what is being compared)
-    p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile).map(|gd| p.at(gd)).collect()
+    p.g.guards.iter().copied().filter(|&gd| p.g.team(gd) == game::teams::Team::Hostile).map(|gd| p.at(gd)).collect()
 }
 
 /// A FAILURE MEANS: the tables read hard and the men do not play it: nobody of the floor goes anywhere else than he goes on standard. The control is the standard game played twice, which

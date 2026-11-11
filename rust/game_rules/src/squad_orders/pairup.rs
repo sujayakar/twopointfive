@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 
 /// A rule is in force: the switch, and its own row (settled on, on the page).
-pub fn pair_up(g: &crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
+pub fn pair_up(g: &crate::game::Game) -> bool {
     g.k.pairup.on
 }
 
@@ -11,20 +11,18 @@ pub fn pair_up(g: &crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
 pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     let off = off.unwrap_or(false);
     if g.k.pairup.on {
-        if !put_back("pairorders") { g.k.pair.on = true; }
-        if !put_back("sneak") { g.k.sneak.on = true; }
-        if !put_back("spotted") { g.k.spotted.on = true; }
+        if !put_back() { g.k.pair.on = true; }
+        if !put_back() { g.k.sneak.on = true; }
+        if !put_back() { g.k.spotted.on = true; }
     } else if off {
         g.k.spotted.on = false;
         g.k.sneak.on = false;
         g.k.pair.on = false;
-        crate::sneak::save_sneak(g);
-        crate::spotted::save_spotted(g);
     }
 }
 
-/// This visit's own word against one part: the address and the environment are the host's, so here it is what the TypeScript answers with neither a page nor a process.
-fn put_back(name: &str) -> bool {
+/// This visit's own word against one part: the address and the environment are the host's, so here there is none.
+fn put_back() -> bool {
     false
 }
 
@@ -32,14 +30,13 @@ fn put_back(name: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// The expected values in these two are what pairUp and pairUpApply gave under bun for the same switches.
     #[test]
     fn a_rule_is_in_force_only_under_the_switch() {
         let g = &mut Game::blank();
         g.k.pairup.on = false;
-        assert!(!pair_up(g, PairUpRule::OneEye));
+        assert!(!pair_up(g));
         g.k.pairup.on = true;
-        assert!(pair_up(g, PairUpRule::Hands));
+        assert!(pair_up(g));
     }
 
     #[test]

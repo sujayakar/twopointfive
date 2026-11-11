@@ -5,54 +5,40 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::string::String;
 
-/// A new Input with every field initialised and no listeners: the harness's, the replayer's, a seat's, a native host's.
+/// A new Input with every field initialised and no listeners: a seat's, a host's.
 pub fn input_detached(g: &mut Game) -> InputId {
-    input_new(g, None)
-}
-
-/// The field initialisers. A real `el`'s sink and listeners are the host's: the row holds neither.
-fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
+
 /// Is this key held?
 pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].keys.has(String::from(code))
+    g.tab.input[id].keys.holds(code)
 }
 
 /// Did this key go down this frame?
 pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].pressed.has(String::from(code))
+    g.tab.input[id].pressed.holds(code)
 }
 
 /// Left button held.
 pub fn input_lmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 1)
+    js::has_bits(g.tab.input[id].buttons, 1)
 }
 
 /// Right button held.
 pub fn input_rmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 4)
+    js::has_bits(g.tab.input[id].buttons, 4)
 }
 
 /// Left button went down this frame.
 pub fn input_lmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 1)
+    js::has_bits(g.tab.input[id].clicked, 1)
 }
 
 /// Right button went down this frame.
 pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 4)
-}
-
-/// Middle button held.
-fn input_mmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 2)
-}
-
-/// Middle button went down this frame.
-fn input_mmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 2)
+    js::has_bits(g.tab.input[id].clicked, 4)
 }
 
 /// The drawn frame is over: every one-frame edge and travel goes.
@@ -60,25 +46,7 @@ pub fn input_end_frame(g: &mut Game, id: InputId) {
     end_frame(&mut g.tab.input[id])
 }
 
-/// Between two game ticks of one drawn frame: the first tick's edges go; what is held stays held, and the camera's travel stays.
-fn input_end_tick(g: &mut Game, id: InputId) {
-    end_tick(&mut g.tab.input[id])
-}
-
-/// `(word & mask) !== 0` on a JavaScript number
-fn bit(word: f64, mask: i32) -> bool {
-    (js::to_i32(word) & mask) != 0
-}
-
 fn end_frame(i: &mut Input) {
-    i.pressed.clear();
-    i.clicked = 0.0;
-    i.wheel = 0.0;
-    i.wheel_ctrl = 0.0;
-    i.orbit_dx = 0.0;
-}
-
-fn end_tick(i: &mut Input) {
     i.pressed.clear();
     i.clicked = 0.0;
     i.wheel = 0.0;
@@ -92,36 +60,17 @@ mod tests {
         String::from(x)
     }
 
+    /// A press lasts a frame; what is held is held.
     #[test]
-    fn a_button_word_reads_as_int32() {
-        assert!(bit(5.0, 1) && bit(5.0, 4) && !bit(5.0, 2));
-        assert!(!bit(0.0, 1) && !bit(f64::NAN, 1));
-        assert!(bit(4294967297.0, 1)); // 2^32 + 1: ToInt32 wraps it to 1
-        assert!(bit(-1.0, 4));
-        assert!(bit(1.5, 1)); // truncates
-    }
-
-    #[test]
-    fn a_tick_keeps_the_frames_camera_travel_and_a_frame_does_not() {
+    fn a_frames_presses_and_travel_go_with_it_and_what_is_held_stays() {
         let mut i = Input::blank();
-        let dirty = |i: &mut Input| {
-            i.keys.add(s("KeyW"));
-            i.pressed.add(s("KeyW"));
-            i.buttons = 1.0;
-            i.clicked = 1.0;
-            i.wheel = 3.0;
-            i.wheel_ctrl = 4.0;
-            i.orbit_dx = 5.0;
-        };
-        dirty(&mut i);
-        end_tick(&mut i);
-        assert!(i.pressed.is_empty() && i.clicked == 0.0 && i.wheel == 0.0);
-        assert!(i.wheel_ctrl == 4.0 && i.orbit_dx == 5.0);
-        assert!(i.keys.has(s("KeyW")) && i.buttons == 1.0);
-        dirty(&mut i);
+        i.keys.add(s("KeyW"));
+        i.pressed.add(s("KeyW"));
+        i.buttons = 1.0;
+        i.clicked = 1.0;
+        i.wheel = 3.0;
         end_frame(&mut i);
         assert!(i.pressed.is_empty() && i.clicked == 0.0 && i.wheel == 0.0);
-        assert!(i.wheel_ctrl == 0.0 && i.orbit_dx == 0.0);
         assert!(i.keys.has(s("KeyW")) && i.buttons == 1.0);
     }
 
@@ -129,17 +78,15 @@ mod tests {
     fn each_input_is_its_own_row_and_the_methods_read_that_row() {
         let mut g = Game::blank();
         let a = input_detached(&mut g);
-        let b = input_new(&mut g, None);
+        let b = input_detached(&mut g);
         assert_ne!(a, b);
         g.tab.input[a].keys.add(s("KeyW"));
         g.tab.input[a].pressed.add(s("KeyE"));
-        g.tab.input[a].buttons = 5.0;
-        g.tab.input[a].clicked = 2.0;
+        g.tab.input[a].buttons = 5.0;   // left and right
+        g.tab.input[a].clicked = 4.0;   // right
         assert!(input_down(&mut g, a, "KeyW") && input_hit(&mut g, a, "KeyE"));
-        assert!(input_lmb(&mut g, a) && input_rmb(&mut g, a) && !input_mmb(&mut g, a));
-        assert!(input_mmb_hit(&mut g, a) && !input_lmb_hit(&mut g, a) && !input_rmb_hit(&mut g, a));
+        assert!(input_lmb(&mut g, a) && input_rmb(&mut g, a));
+        assert!(input_rmb_hit(&mut g, a) && !input_lmb_hit(&mut g, a));
         assert!(!input_down(&mut g, b, "KeyW") && !input_hit(&mut g, b, "KeyE") && !input_lmb(&mut g, b));
-        input_end_tick(&mut g, a);
-        assert!(!input_hit(&mut g, a, "KeyE") && input_down(&mut g, a, "KeyW"));
     }
 }

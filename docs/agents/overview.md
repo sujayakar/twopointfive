@@ -30,11 +30,12 @@ with no module at all.
 ## One tick
 
 1. **The hand.** `src/draw/hand.ts` samples keys, mouse and camera; `face_hand` takes it. What a player or a panel does that is no input
-   (a setting, a kit, an order from a card) goes as a command: `src/draw/commands.ts`, read by `rust/game_run/src/command.rs`.
-2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one list of calls in order,
-   `step_seats_on_first` in `rust/game_rules/src/tick/game/tick.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
+   (a setting, a kit, an order from a card) goes as a command: `src/draw/commands.ts`, read by `rust/game_start/src/host/command.rs`.
+2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one table of steps in order,
+   `STEPS` in `rust/game_rules/src/tick/game/steps.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
    on one man, then every man (`update_guard`), doors, furniture, destruction, air, lights, fire, devices, weather, items, glass, the fog,
-   the drawn bodies, the light meter. A new system is a line in that list.
+   the drawn bodies, the light meter. A new system is a row of it. `rust/game_start/steps.txt` says which
+   parts of the game each row writes, and the gate holds it to that; `hold steps` says what each costs.
 3. **What is drawn.** `rust/game_draw` fills sections: flat rows of numbers, one run a kind (men, lights, boxes, marks, fog, smoke, sky, view).
    Filling takes the game shared, so drawing cannot change it. `tools/draw/gen.ts` makes the page's offsets from the same declaration.
 4. **What is told.** The HUD's record comes from `rust/game_rules/src/tick/view/`, sounds and one-shot effects from
@@ -67,7 +68,7 @@ Never seen on a GPU.
 | `rust/game_rules/` | the rules, a folder a system; its crate name is `game` |
 | `rust/sim/` | the world's hot loops on flat columns: lines and collision, light, fog, sound, smoke, doors, furniture, glass, weather, poses |
 | `rust/game_draw/` | what the picture is told |
-| `rust/game_run/` | what a host does round a step: commands, the panel's knobs, the cards before a game, address words (`rust/game_run/src/words.rs`) |
+| `rust/game_start/src/host/` | what a host does round a step: commands, the panel's knobs, the cards before a game, address words (`words.rs`) |
 | `rust/game_start/` | a game from a level file, and the native tests, the gate and the level tool |
 | `rust/game_face/` | the module's face: the calls a host makes, with each file's own calls at its head |
 | `rust/game_derive/`, `rust/maths/`, `rust/prim/` | a declaration's bytes, knobs, words and start; the game's own maths and die; the four operations the core library lacks |
@@ -125,7 +126,7 @@ models and animations. `STYLE.md` is the look as rules, `docs/level-format.md` t
 - **A rule:** its module in `rust/game_rules/src/`, its numbers as `#[k(value)]` beside their fields, and a native test that fails without it
   (`rust/game_start/README.md` has a ten-line example). It lands on.
 - **Something new to draw:** a section in `rust/game_draw/src/`, then `tools/draw/gen.ts`, then a reader in `src/draw/`.
-- **A command or a setting:** `rust/game_run/src/command.rs`, then `tools/draw/gen.ts`.
+- **A command or a setting:** `rust/game_start/src/host/command.rs`, then `tools/draw/gen.ts`.
 - **A level:** its generator under `tools/levels/`, then `tools/levels/export.ts`.
 - After Rust changes a page needs the module built: `bun run tools/blitz/face-build.ts`. The dev server serves the one it finds.
 

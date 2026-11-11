@@ -60,7 +60,7 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
     p.key_down("KeyC"); p.frame(); p.key_up("KeyC");
     p.frame();
     game::player::start_grab(&mut p.g, k, None);
-    p.until(1.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
+    p.until(1.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
     p.g.gd[n].script = Some(game::game::GuardScript::default());
     p.g.gd[r].unit = Some(game::game::UnitInfo { light: true, pair: None, seat: None });
     game::mission::send_rack_check(&mut p.g);
@@ -92,7 +92,7 @@ fn pistol_at_the_far_wall(p: &mut Play) {
     p.run(0.7);
     let c = p.g.pl[pl].ch;
     let at = p.sam_at();
-    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], true, None);
+    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], None);
     p.run(0.05);
 }
 
@@ -205,11 +205,11 @@ fn a_door_put_back_forgets_who_touched_it() {
         let mut p = Play::scene(&sc, &seed(s));
         p.run(0.1);
         let d = game::doors::doors_by_name(&p.g, "d").unwrap();
-        let (at, who) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id);
+        let (at, who) = (p.sam_at(), p.g.player_id(p.g.player));
         game::doors::doors_use(&mut p.g, d, [at[0], 0.0, at[1]], who, None);
         p.run(0.3);
-        assert!(game::doors::door_last_who(&p.g, d) == who && !game::doors::door_latched(&p.g, d), "seed {s}: used by Sam: last who {}, latched {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == who && !p.g.dr[d].leaf.latched, "seed {s}: used by Sam: last who {}, latched {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched);
         game::doors::door_reset(&mut p.g, d);
-        assert!(game::doors::door_last_who(&p.g, d) == -1.0 && game::doors::door_latched(&p.g, d) && game::doors::door_angle(&p.g, d).abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d), game::doors::door_angle(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == -1.0 && p.g.dr[d].leaf.latched && p.g.dr[d].leaf.angle.abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched, p.g.dr[d].leaf.angle);
     }
 }

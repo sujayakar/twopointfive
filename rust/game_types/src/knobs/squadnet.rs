@@ -10,7 +10,7 @@ pub struct SquadnetK {
     #[k(true)] pub edge: bool,
     /// how far inside the view's border such a line is kept, as a share of the view's shorter side
     #[k(0.04)] pub edge_in: f64,
-    /// the click a line from off the screen arrives with (gain; 0 = silent), pitched up off the defenders' net's own squelch (cues.ts plays the same voice at rate 1)
+    /// the click a line from off the screen arrives with (gain; 0 = silent), pitched up off the defenders' net's own squelch (the same voice, at rate 1)
     #[k(0.3)] pub click: f64,
     #[k(1.3)] pub click_rate: f64,
     /// a teammate down: the same click, louder and pitched down (gain; rate)

@@ -9,8 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 type Data = JsMap<String, Option<ChronEventDataValue>>;
 
 /// A field of a row: absent and undefined are one.
-fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
-    d.get(String::from(k)).and_then(|v| v.as_ref())
+pub(super) fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
+    d.of(k).and_then(|v| v.as_ref())
 }
 
 /// `String(d.k)` and `${d.k}`: a missing field writes 'undefined'.
@@ -38,7 +38,7 @@ fn is(d: &Data, k: &str, word: &str) -> bool {
     matches!(field(d, k), Some(ChronEventDataValue::Text(s)) if s == word)
 }
 
-/// `Number(d.k)`. A text field is read as a decimal only: no writer puts text in the fields asked (notes, Traps).
+/// `Number(d.k)`. A text field is read as a decimal only: no writer puts text in the fields asked.
 fn number(d: &Data, k: &str) -> f64 {
     match field(d, k) {
         None => f64::NAN,
@@ -76,10 +76,10 @@ fn stage_words(d: &Data) -> String {
 }
 
 /// How a man was put out, in a row's words.
-fn put_out_how(g: &Game, d: &Data) -> String {
+fn put_out_how(d: &Data) -> String {
     if is(d, "method", "choke") { String::from("choked out") }
     else if is(d, "method", "whip") { String::from("pistol-whipped") }
-    else if is(d, "method", "ring") { crate::gear::gear_text(g, "a ring to the head") }
+    else if is(d, "method", "ring") { crate::gear::gear_text("a ring to the head") }
     else if is(d, "method", "charge") { String::from("the wall charge") }
     else { String::from("the takedown") }
 }
@@ -90,320 +90,213 @@ pub fn alarm_down(e: &crate::chronicle::ChronEvent) -> bool { e.kind == ChronKin
 /// A row's words: the debrief card's timeline.
 pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;
-    let n = js::or(number(d, "n"), 1.0);
     let s = |k: &str| text(d, k);
     let when = |k: &str, then: String| if on(d, k) { then } else { String::new() };
+    let sent = || when("sent", format!(" — {} sent", s("sent")));
+    let gun = || crate::gear::gear_text(&s("weapon"));
     match e.kind {
         ChronKind::Objective => s("text"),
         ChronKind::Spotted => format!("SPOTTED by {}{}", s("by"), if number(d, "lvl") >= 1.0 { " — and the floor was already up" } else { "" }),
         ChronKind::Contact => format!("{}: CONTACT — {}", s("who"), word_or_own(&cause(), d, "cause")),
-        ChronKind::Heard => {
-            let k = js::or(number(d, "k"), 1.0);
-            let react = s("react");
-            let verb = if k > 1.0 {
-                String::from(if react == "alerted" { "alerted" } else if react == "investigates" { "investigate" } else { "prick up their ears" })
-            } else if react == "pricks up" {
-                String::from("pricks up his ears")
-            } else {
-                react
-            };
-            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
-            let more = if k > 3.0 { format!(" +{}", js::num_str(k - 3.0)) } else { String::new() };
-            format!("heard: {}{} · {}{} {}", s("what"), times, s("by"), more, verb)
-        }
+        ChronKind::Heard => heard_text(d),
         ChronKind::Lost => format!("{} lost you — searching", s("who")),
         ChronKind::Calm => format!("{} gives up the search", s("who")),
-        ChronKind::Alarm => {
-            if on(d, "up") {
-                let why = when("cause", format!(" — {}", word_or_own(&cause(), d, "cause")));
-                format!("ALARM ▲ {}{}", stage_words(d), why)
-            } else {
-                format!("alarm ▼ {}", stage_words(d))
-            }
-        }
+        ChronKind::Alarm if on(d, "up") => format!("ALARM ▲ {}{}", stage_words(d), when("cause", format!(" — {}", word_or_own(&cause(), d, "cause")))),
+        ChronKind::Alarm => format!("alarm ▼ {}", stage_words(d)),
         ChronKind::Radio => format!("{} (radio): “{}”", s("who"), s("text")),
-        ChronKind::Shot => {
-            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
-            let weapon = crate::gear::gear_text(g, &s("weapon"));
-            let into = if is(d, "into", "geometry") {
-                String::from("into the scenery")
-            } else if s("into").starts_with("past ") {
-                s("into")
-            } else {
-                format!("into {}", s("into"))
-            };
-            format!("fired{} ({}) — {}", times, weapon, into)
-        }
+        ChronKind::Shot => format!("fired{} ({}) — {}", times(d), gun(), shot_into(&s("into"))),
         ChronKind::LightShot => format!("shot out {}", s("name")),
         ChronKind::Ocp => format!("OCP → {}", s("what")),
-        ChronKind::Blackout => String::from(
-            if is(d, "cause", "shot") { "shot the breaker — mains gone for good" }
-            else if is(d, "cause", "hand") { "threw the breaker by hand" }
-            else { "OCP → the breaker: mains tripped" },
-        ),
-        ChronKind::Thrown => {
-            if is(d, "kind", "cam") { String::from("placed a sticky camera") }
-            else if is(d, "kind", "he40") { String::from("fired a 40 mm grenade") }
-            else if is(d, "kind", "frag") { String::from("threw a frag grenade") }
-            else { format!("threw a {} canister", if is(d, "kind", "flash") { "stun" } else { "smoke" }) }
-        }
+        ChronKind::Blackout => String::from(match s("cause").as_str() { "shot" => "shot the breaker — mains gone for good", "hand" => "threw the breaker by hand", _ => "OCP → the breaker: mains tripped" }),
+        ChronKind::Thrown => String::from(match s("kind").as_str() {
+            "cam" => "placed a sticky camera",
+            "he40" => "fired a 40 mm grenade",
+            "frag" => "threw a frag grenade",
+            "flash" => "threw a stun canister",
+            _ => "threw a smoke canister",
+        }),
         ChronKind::Grab => format!("grabbed {} from behind", s("who")),
-        ChronKind::Interrogated => {
-            let gave = word_or_own(&intel(), d, "gave");
-            if on(d, "civilian") {
-                let rest = if on(d, "gave") {
-                    format!("{} gave up {}", if field(d, "she").is_some() { s("she") } else { String::from("she") }, gave)
-                } else {
-                    format!("nothing more in {}", if field(d, "her").is_some() { s("her") } else { String::from("her") })
-                };
-                format!("questioned {} — {}", s("who"), rest)
-            } else {
-                let rest = if on(d, "gave") {
-                    format!("he gave up {}", gave)
-                } else {
-                    String::from(if number(d, "stage") >= 4.0 { "nothing left in him" } else { "nothing useful yet" })
-                };
-                format!("questioned {} — {}", s("who"), rest)
-            }
-        }
+        ChronKind::Interrogated => format!("questioned {} — {}", s("who"), if on(d, "civilian") { civilian_gave(d) } else { man_gave(d) }),
         ChronKind::KeyTaken => format!("took {}'s key", s("who")),
-        ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(g, d)),
-        ChronKind::Kill => {
-            if is(d, "weapon", "knife") {
-                format!("{} killed — the knife", s("who"))
-            } else if on(d, "blast") {
-                format!("{} killed — {}", s("who"), crate::gear::gear_text(g, &s("weapon")))
-            } else {
-                format!("{} shot dead ({})", s("who"), crate::gear::gear_text(g, &s("weapon")))
-            }
-        }
-        ChronKind::BodyFound => {
-            let how = if on(d, "breathing") { "out cold" } else { "dead" };
-            format!("{} found {} {}{}", s("by"), s("who"), how, if on(d, "civilian") { " — the floor goes up hard" } else { "" })
-        }
-        ChronKind::DoorKicked => match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-            Some(w) => format!("kicked in the {}", w),
-            None => format!("kicked in the {} door", s("door")),
-        },
-        ChronKind::LockPicked => match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-            Some(w) => format!("picked the lock on the {}", w),
-            None => format!("picked the {} door's lock", s("door")),
-        },
+        ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(d)),
+        ChronKind::Kill if is(d, "weapon", "knife") => format!("{} killed — the knife", s("who")),
+        ChronKind::Kill if on(d, "blast") => format!("{} killed — {}", s("who"), gun()),
+        ChronKind::Kill => format!("{} shot dead ({})", s("who"), gun()),
+        ChronKind::BodyFound => format!("{} found {} {}{}", s("by"), s("who"), if on(d, "breathing") { "out cold" } else { "dead" }, if on(d, "civilian") { " — the floor goes up hard" } else { "" }),
+        ChronKind::DoorKicked => door_named(g, d).map_or_else(|| format!("kicked in the {} door", s("door")), |w| format!("kicked in the {w}")),
+        ChronKind::LockPicked => door_named(g, d).map_or_else(|| format!("picked the {} door's lock", s("door")), |w| format!("picked the lock on the {w}")),
         ChronKind::Hit => format!("hit{}", when("by", format!(" — {}'s round", s("by")))),
-        ChronKind::Down => {
-            let by = s("by");
-            let whose = if by.ends_with("charge") { by } else { format!("{}'s round", by) };
-            format!("DOWN{}", when("by", format!(" — {}", whose)))
-        }
-        ChronKind::NeedBreak => {
-            if is(d, "what", "left") {
-                let to = if on(d, "own") {
-                    format!("{} ({})", word_or_own(&need_short(), d, "kind"), s("to"))
-                } else {
-                    word_or_own(&need_words(), d, "kind")
-                };
-                format!("{} left his route — {}", s("who"), to)
-            } else if is(d, "what", "back") {
-                format!("{} back on his route ({} s away)", s("who"), s("away"))
-            } else {
-                format!("{}'s {} break broken off ({})", s("who"), s("kind"), s("why"))
-            }
-        }
-        ChronKind::CivilianSpotted => {
-            let what = match civ_cause().get(s("cause")) {
-                Some(w) => w.clone(),
-                None => String::from("saw you"),
-            };
-            format!("{} {}", s("who"), what)
-        }
-        ChronKind::CivilianReported => {
-            if is(d, "how", "phone") {
-                format!("{} rang it in — {}{}", s("who"), word_or_own(&civ_cause(), d, "cause"), when("sent", format!(" — {} sent", s("sent"))))
-            } else if is(d, "how", "outside") {
-                format!("{} got out and control rang the floor{}", s("who"), when("sent", format!(" — {} sent", s("sent"))))
-            } else {
-                format!("{} told {} — {}{}", s("who"), s("to"), word_or_own(&civ_cause(), d, "cause"), if is(d, "how", "found") { " (he found her hiding)" } else { "" })
-            }
-        }
+        ChronKind::Down => format!("DOWN{}", when("by", format!(" — {}{}", s("by"), if s("by").ends_with("charge") { "" } else { "'s round" }))),
+        ChronKind::NeedBreak => need_text(d),
+        ChronKind::CivilianSpotted => format!("{} {}", s("who"), civ_cause().get(s("cause")).map_or("saw you", |w| w)),
+        ChronKind::CivilianReported => match s("how").as_str() {
+            "phone" => format!("{} rang it in — {}{}", s("who"), word_or_own(&civ_cause(), d, "cause"), sent()),
+            "outside" => format!("{} got out and control rang the floor{}", s("who"), sent()),
+            how => format!("{} told {} — {}{}", s("who"), s("to"), word_or_own(&civ_cause(), d, "cause"), if how == "found" { " (he found her hiding)" } else { "" }),
+        },
         ChronKind::CivilianComplied => format!("told {} to stay down — and let her go", s("who")),
-        ChronKind::CivilianKO => format!("{} (the {}) out cold — {} — a CIVILIAN", s("who"), s("label"), put_out_how(g, d)),
-        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), crate::gear::gear_text(g, &s("weapon"))),
+        ChronKind::CivilianKO => format!("{} (the {}) out cold — {} — a CIVILIAN", s("who"), s("label"), put_out_how(d)),
+        ChronKind::CivilianKilled => format!("{} (the {}) KILLED ({}) — a civilian", s("who"), s("label"), gun()),
         ChronKind::CameraSpotted => format!("camera {} called you in{}", s("n"), when("sent", format!(" — {} sent to look", s("sent")))),
         ChronKind::CameraAlarm => format!("camera {} had you long enough — the floor goes up", s("n")),
-        ChronKind::LaserTripped => {
-            let by = if is(d, "by", "player") {
-                String::from("broke")
-            } else if is(d, "by", "body") {
-                String::from("the body you hauled broke")
-            } else {
-                format!("a thrown {} broke", if is(d, "by", "flash") { String::from("stun") } else { s("by") })
-            };
-            format!("{} the {} beam{}", by, e.room, when("sent", format!(" — {} sent", s("sent"))))
-        }
+        ChronKind::LaserTripped => format!("{} the {} beam{}", beam_broken_by(&s("by")), e.room, sent()),
         ChronKind::DeviceDown => format!("{} shot dead{}", s("device").replace('_', " "), when("sent", format!(" — {} sent to it", s("sent")))),
-        ChronKind::CodeLearned => {
-            let code = match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
-                Some(w) => format!("code to the {}", w),
-                None => format!("{} code", s("door").replace('_', " ")),
-            };
-            if is(d, "how", "told") {
-                format!("{} gave up the {}", s("from"), code)
-            } else {
-                format!("overheard the {}{}", code, when("from", format!(" ({})", s("from"))))
-            }
-        }
-        ChronKind::CodeEntered => {
-            let name = match door_written(g, &s("door")) {
-                Some(w) => w,
-                None => format!("{} door", s("door").replace('_', " ")),
-            };
-            format!("keyed the code — the {}", name)
-        }
+        ChronKind::CodeLearned if is(d, "how", "told") => format!("{} gave up the {}", s("from"), code_of(g, d)),
+        ChronKind::CodeLearned => format!("overheard the {}{}", code_of(g, d), when("from", format!(" ({})", s("from")))),
+        ChronKind::CodeEntered => format!("keyed the code — the {}", door_written(g, &s("door")).unwrap_or_else(|| format!("{} door", s("door").replace('_', " ")))),
         ChronKind::Checkpoint => format!("checkpoint {}{}", if is(d, "what", "load") { "loaded" } else { "saved" }, when("label", format!(" ({})", s("label")))),
     }
+}
+/// " ×3" of what came three times
+fn times(d: &Data) -> String {
+    let n = js::or(number(d, "n"), 1.0);
+    if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() }
+}
+/// the door's written name, where it has one
+fn door_named(g: &crate::game::Game, d: &Data) -> Option<String> { door_written(g, &text(d, "door")).filter(|w| !w.is_empty()) }
+fn code_of(g: &crate::game::Game, d: &Data) -> String {
+    door_named(g, d).map_or_else(|| format!("{} code", text(d, "door").replace('_', " ")), |w| format!("code to the {w}"))
+}
+fn heard_text(d: &Data) -> String {
+    let (k, react) = (js::or(number(d, "k"), 1.0), text(d, "react"));
+    let verb = match react.as_str() {
+        "alerted" if k > 1.0 => "alerted",
+        "investigates" if k > 1.0 => "investigate",
+        _ if k > 1.0 => "prick up their ears",
+        "pricks up" => "pricks up his ears",
+        own => own,
+    };
+    let more = if k > 3.0 { format!(" +{}", js::num_str(k - 3.0)) } else { String::new() };
+    format!("heard: {}{} · {}{} {}", text(d, "what"), times(d), text(d, "by"), more, verb)
+}
+fn shot_into(into: &str) -> String {
+    if into == "geometry" { String::from("into the scenery") } else if into.starts_with("past ") { String::from(into) } else { format!("into {into}") }
+}
+fn civilian_gave(d: &Data) -> String {
+    let word = |k: &str| if field(d, k).is_some() { text(d, k) } else { String::from(k) };
+    if on(d, "gave") { format!("{} gave up {}", word("she"), word_or_own(&intel(), d, "gave")) } else { format!("nothing more in {}", word("her")) }
+}
+fn man_gave(d: &Data) -> String {
+    if on(d, "gave") { format!("he gave up {}", word_or_own(&intel(), d, "gave")) }
+    else { String::from(if number(d, "stage") >= 4.0 { "nothing left in him" } else { "nothing useful yet" }) }
+}
+fn need_text(d: &Data) -> String {
+    let s = |k: &str| text(d, k);
+    match s("what").as_str() {
+        "left" if on(d, "own") => format!("{} left his route — {} ({})", s("who"), word_or_own(&need_short(), d, "kind"), s("to")),
+        "left" => format!("{} left his route — {}", s("who"), word_or_own(&need_words(), d, "kind")),
+        "back" => format!("{} back on his route ({} s away)", s("who"), s("away")),
+        _ => format!("{}'s {} break broken off ({})", s("who"), s("kind"), s("why")),
+    }
+}
+fn beam_broken_by(by: &str) -> String {
+    match by { "player" => String::from("broke"), "body" => String::from("the body you hauled broke"), _ => format!("a thrown {} broke", if by == "flash" { "stun" } else { by }) }
 }
 
 #[cfg(test)]
 mod tests {
-    //! Expected strings printed by the TypeScript's own eventText, pinned and String(x) under bun. Rows that reach gear_text or a door's name are
-    //! left out: those are other parts' stubs here.
     use super::*;
     use ChronEventDataValue::{Bool as B, Num as N};
 
     #[allow(non_snake_case)]
     fn T(s: &str) -> ChronEventDataValue { ChronEventDataValue::Text(String::from(s)) }
 
-    fn row(kind: ChronKind, room: &str, fields: Vec<(&str, ChronEventDataValue)>) -> ChronEvent {
+    /// What the debrief's timeline reads for a row of this kind in this room with these fields.
+    fn says(kind: ChronKind, fields: Vec<(&str, ChronEventDataValue)>) -> String {
         let mut e = ChronEvent::default();
         e.kind = kind;
-        e.room = String::from(room);
+        e.room = String::from("vault");
         for (k, v) in fields { e.data.set(String::from(k), Some(v)); }
-        e
+        event_text(&Game::blank(), &e)
     }
 
+    /// A FAILURE MEANS: the timeline says "Ivan investigates" of four men, or does not say the sound came three times.
     #[test]
-    fn rows_read_as_the_typescript_words_them() {
-        let mut g = Game::blank();
-        let rows: Vec<(ChronKind, &str, Vec<(&str, ChronEventDataValue)>, &str)> = vec![
-        (ChronKind::Objective, "hall", vec![("text", T("the drive is out"))], "the drive is out"),
-        (ChronKind::Objective, "hall", vec![], "undefined"),
-        (ChronKind::Spotted, "hall", vec![("by", T("Kowalski")), ("lvl", N(0.0))], "SPOTTED by Kowalski"),
-        (ChronKind::Spotted, "hall", vec![("by", T("Kowalski")), ("lvl", N(1.0))], "SPOTTED by Kowalski — and the floor was already up"),
-        (ChronKind::Spotted, "hall", vec![], "SPOTTED by undefined"),
-        (ChronKind::Contact, "hall", vec![("who", T("Kowalski")), ("cause", T("sight"))], "Kowalski: CONTACT — eyes on you"),
-        (ChronKind::Contact, "hall", vec![("who", T("Kowalski")), ("cause", T("mystery"))], "Kowalski: CONTACT — mystery"),
-        (ChronKind::Contact, "hall", vec![("who", T("Kowalski"))], "Kowalski: CONTACT — undefined"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(1.0)), ("n", N(1.0)), ("react", T("pricks up"))], "heard: a door · Ivan pricks up his ears"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(1.0)), ("n", N(3.0)), ("react", T("investigates"))], "heard: a door ×3 · Ivan investigates"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(2.0)), ("n", N(1.0)), ("react", T("alerted"))], "heard: a door · Ivan alerted"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(3.0)), ("n", N(1.0)), ("react", T("investigates"))], "heard: a door · Ivan investigate"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(5.0)), ("n", N(2.0)), ("react", T("pricks up"))], "heard: a door ×2 · Ivan +2 prick up their ears"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(0.0)), ("n", N(0.0)), ("react", T("x"))], "heard: a door · Ivan x"),
-        (ChronKind::Heard, "hall", vec![("what", T("a door")), ("by", T("Ivan")), ("k", T("4")), ("n", T("2")), ("react", T("x"))], "heard: a door ×2 · Ivan +1 prick up their ears"),
-        (ChronKind::Lost, "hall", vec![("who", T("A"))], "A lost you — searching"),
-        (ChronKind::Calm, "hall", vec![("who", T("A"))], "A gives up the search"),
-        (ChronKind::Alarm, "hall", vec![("stage", N(1.0)), ("up", B(true)), ("cause", T("body"))], "ALARM ▲ heightened — a body"),
-        (ChronKind::Alarm, "hall", vec![("stage", N(2.0)), ("up", B(true)), ("cause", T(""))], "ALARM ▲ lockdown"),
-        (ChronKind::Alarm, "hall", vec![("stage", N(7.0)), ("up", B(true)), ("cause", T("odd"))], "ALARM ▲ 7 — odd"),
-        (ChronKind::Alarm, "hall", vec![("stage", N(0.0)), ("up", B(false)), ("cause", T(""))], "alarm ▼ calm"),
-        (ChronKind::Alarm, "hall", vec![("stage", N(1.5)), ("up", B(false))], "alarm ▼ 1.5"),
-        (ChronKind::Alarm, "hall", vec![("up", B(false))], "alarm ▼ undefined"),
-        (ChronKind::Radio, "hall", vec![("who", T("A")), ("text", T("moving"))], "A (radio): “moving”"),
-        (ChronKind::LightShot, "hall", vec![("name", T("the lamp"))], "shot out the lamp"),
-        (ChronKind::Ocp, "hall", vec![("what", T("a torch"))], "OCP → a torch"),
-        (ChronKind::Blackout, "hall", vec![("cause", T("shot"))], "shot the breaker — mains gone for good"),
-        (ChronKind::Blackout, "hall", vec![("cause", T("hand"))], "threw the breaker by hand"),
-        (ChronKind::Blackout, "hall", vec![("cause", T("ocp"))], "OCP → the breaker: mains tripped"),
-        (ChronKind::Thrown, "hall", vec![("kind", T("cam"))], "placed a sticky camera"),
-        (ChronKind::Thrown, "hall", vec![("kind", T("he40"))], "fired a 40 mm grenade"),
-        (ChronKind::Thrown, "hall", vec![("kind", T("frag"))], "threw a frag grenade"),
-        (ChronKind::Thrown, "hall", vec![("kind", T("flash"))], "threw a stun canister"),
-        (ChronKind::Thrown, "hall", vec![("kind", T("smoke"))], "threw a smoke canister"),
-        (ChronKind::Grab, "hall", vec![("who", T("A"))], "grabbed A from behind"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("civilian", B(true)), ("gave", T("code")), ("she", T("he"))], "questioned A — he gave up a door code"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("civilian", B(true)), ("gave", T("code"))], "questioned A — she gave up a door code"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("civilian", B(true)), ("gave", T("")), ("her", T("him"))], "questioned A — nothing more in him"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("civilian", B(true)), ("gave", T(""))], "questioned A — nothing more in her"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("odd")), ("stage", N(2.0))], "questioned A — he gave up odd"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("routes")), ("stage", N(2.0))], "questioned A — he gave up a colleague's route"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("")), ("stage", N(4.0))], "questioned A — nothing left in him"),
-        (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("")), ("stage", N(3.0))], "questioned A — nothing useful yet"),
-        (ChronKind::KeyTaken, "hall", vec![("who", T("A"))], "took A's key"),
-        (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("choke"))], "A out cold — choked out"),
-        (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("whip"))], "A out cold — pistol-whipped"),
-        (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("charge"))], "A out cold — the wall charge"),
-        (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("hand"))], "A out cold — the takedown"),
-        (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("knife"))], "A killed — the knife"),
-        (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("the wall charge")), ("blast", B(true))], "A killed — the wall charge"),
-        (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B")), ("breathing", B(true)), ("civilian", B(true))], "A found B out cold — the floor goes up hard"),
-        (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B"))], "A found B dead"),
-        (ChronKind::Hit, "hall", vec![("by", T("A"))], "hit — A's round"),
-        (ChronKind::Hit, "hall", vec![], "hit"),
-        (ChronKind::Down, "hall", vec![("by", T("A"))], "DOWN — A's round"),
-        (ChronKind::Down, "hall", vec![("by", T("the wall charge"))], "DOWN — the wall charge"),
-        (ChronKind::Down, "hall", vec![], "DOWN"),
-        (ChronKind::NeedBreak, "hall", vec![("what", T("left")), ("who", T("A")), ("kind", T("coffee"))], "A left his route — a coffee at the break-room counter"),
-        (ChronKind::NeedBreak, "hall", vec![("what", T("left")), ("who", T("A")), ("kind", T("odd"))], "A left his route — odd"),
-        (ChronKind::NeedBreak, "hall", vec![("what", T("left")), ("who", T("A")), ("kind", T("smoke")), ("own", B(true)), ("to", T("the terrace"))], "A left his route — a smoke (the terrace)"),
-        (ChronKind::NeedBreak, "hall", vec![("what", T("back")), ("who", T("A")), ("away", N(12.5))], "A back on his route (12.5 s away)"),
-        (ChronKind::NeedBreak, "hall", vec![("what", T("broken")), ("who", T("A")), ("kind", T("water")), ("why", T("alarm"))], "A's water break broken off (alarm)"),
-        (ChronKind::CivilianSpotted, "hall", vec![("who", T("A")), ("cause", T("gun"))], "A saw you, gun in hand"),
-        (ChronKind::CivilianSpotted, "hall", vec![("who", T("A")), ("cause", T("odd"))], "A saw you"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("phone")), ("cause", T("bang")), ("sent", N(2.0))], "A rang it in — heard a stun charge — 2 sent"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("phone")), ("cause", T("odd"))], "A rang it in — odd"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("outside")), ("sent", N(0.0))], "A got out and control rang the floor"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("outside")), ("sent", N(3.0))], "A got out and control rang the floor — 3 sent"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("told")), ("to", T("B")), ("cause", T("noise"))], "A told B — a crash beside her"),
-        (ChronKind::CivilianReported, "hall", vec![("who", T("A")), ("how", T("found")), ("to", T("B")), ("cause", T("scream"))], "A told B — heard the screaming (he found her hiding)"),
-        (ChronKind::CivilianComplied, "hall", vec![("who", T("A"))], "told A to stay down — and let her go"),
-        (ChronKind::CivilianKO, "hall", vec![("who", T("A")), ("label", T("clerk")), ("method", T("choke"))], "A (the clerk) out cold — choked out — a CIVILIAN"),
-        (ChronKind::CivilianKO, "hall", vec![("who", T("A")), ("label", T("clerk")), ("method", T("charge"))], "A (the clerk) out cold — the wall charge — a CIVILIAN"),
-        (ChronKind::CivilianKO, "hall", vec![("who", T("A")), ("label", T("clerk")), ("method", T("hand"))], "A (the clerk) out cold — the takedown — a CIVILIAN"),
-        (ChronKind::CameraSpotted, "hall", vec![("n", N(3.0)), ("sent", N(2.0))], "camera 3 called you in — 2 sent to look"),
-        (ChronKind::CameraSpotted, "hall", vec![("n", N(3.0))], "camera 3 called you in"),
-        (ChronKind::CameraAlarm, "hall", vec![("n", N(1.0))], "camera 1 had you long enough — the floor goes up"),
-        (ChronKind::LaserTripped, "vault", vec![("by", T("player"))], "broke the vault beam"),
-        (ChronKind::LaserTripped, "vault", vec![("by", T("body")), ("sent", N(1.0))], "the body you hauled broke the vault beam — 1 sent"),
-        (ChronKind::LaserTripped, "vault", vec![("by", T("flash"))], "a thrown stun broke the vault beam"),
-        (ChronKind::LaserTripped, "vault", vec![("by", T("smoke")), ("sent", N(2.0))], "a thrown smoke broke the vault beam — 2 sent"),
-        (ChronKind::DeviceDown, "hall", vec![("device", T("camera_two")), ("sent", N(2.0))], "camera two shot dead — 2 sent to it"),
-        (ChronKind::DeviceDown, "hall", vec![("device", T("a_b_c"))], "a b c shot dead"),
-        (ChronKind::Checkpoint, "hall", vec![("what", T("load")), ("label", T("gate"))], "checkpoint loaded (gate)"),
-        (ChronKind::Checkpoint, "hall", vec![("what", T("save"))], "checkpoint saved"),
-        ];
-        for (kind, room, fields, want) in rows {
-            assert_eq!(event_text(&g, &row(kind, room, fields)), want);
-        }
+    fn a_sound_heard_is_told_with_how_often_and_how_many() {
+        let heard = |k: f64, n: f64, react: &str| says(ChronKind::Heard, vec![("what", T("a door")), ("by", T("Ivan")), ("k", N(k)), ("n", N(n)), ("react", T(react))]);
+        assert_eq!(heard(1.0, 1.0, "pricks up"), "heard: a door · Ivan pricks up his ears");
+        assert_eq!(heard(1.0, 3.0, "investigates"), "heard: a door ×3 · Ivan investigates");
+        assert_eq!(heard(3.0, 1.0, "investigates"), "heard: a door · Ivan investigate");
+        assert_eq!(heard(5.0, 2.0, "pricks up"), "heard: a door ×2 · Ivan +2 prick up their ears");
     }
 
+    /// A FAILURE MEANS: the player cannot read how the floor went up and came down.
     #[test]
-    fn numbers_write_as_javascript_writes_them() {
-        let rows: Vec<(f64, &str)> = vec![
-        (f64::from_bits(0x0), "0"),
-        (f64::from_bits(0x8000000000000000), "0"),
-        (f64::from_bits(0x3ff0000000000000), "1"),
-        (f64::from_bits(0xbff0000000000000), "-1"),
-        (f64::from_bits(0x4029000000000000), "12.5"),
-        (f64::from_bits(0x3fb999999999999a), "0.1"),
-        (f64::from_bits(0x3fd5555555555555), "0.3333333333333333"),
-        (f64::from_bits(0x4059000000000000), "100"),
-        (f64::from_bits(0x419d6f3454000000), "123456789"),
-        (f64::from_bits(0x4415af1d78b58c40), "100000000000000000000"),
-        (f64::from_bits(0x444b1ae4d6e2ef50), "1e+21"),
-        (f64::from_bits(0x4454542ba12a337c), "1.5e+21"),
-        (f64::from_bits(0x45246a317b18cbde), "1.234e+25"),
-        (f64::from_bits(0x3eb0c6f7a0b5ed8d), "0.000001"),
-        (f64::from_bits(0x3eb92a737110e454), "0.0000015"),
-        (f64::from_bits(0x3e7ad7f29abcaf48), "1e-7"),
-        (f64::from_bits(0x3e80c6f7a0b5ed8d), "1.25e-7"),
-        (f64::from_bits(0xbe25798ee2308c3a), "-2.5e-9"),
-        (f64::from_bits(0x1), "5e-324"),
-        (f64::from_bits(0x7fefffffffffffff), "1.7976931348623157e+308"),
-        (f64::from_bits(0x7ff8000000000000), "NaN"),
-        (f64::from_bits(0x7ff0000000000000), "Infinity"),
-        (f64::from_bits(0xfff0000000000000), "-Infinity"),
-        ];
-        for (x, want) in rows { assert_eq!(js::num_str(x), want); }
+    fn the_alarm_is_told_by_its_stage_going_up_with_the_cause() {
+        let alarm = |stage: f64, up: bool, cause: &str| says(ChronKind::Alarm, vec![("stage", N(stage)), ("up", B(up)), ("cause", T(cause))]);
+        assert_eq!(alarm(1.0, true, "body"), "ALARM ▲ heightened — a body");
+        assert_eq!(alarm(2.0, true, ""), "ALARM ▲ lockdown");
+        assert_eq!(alarm(0.0, false, ""), "alarm ▼ calm");
     }
 
+    /// A FAILURE MEANS: a guard's questioning reads as a civilian's, or "nothing left" before a man has been pressed.
+    #[test]
+    fn a_questioning_is_told_by_what_he_gave_and_how_far_it_went() {
+        let q = |f: Vec<(&str, ChronEventDataValue)>| says(ChronKind::Interrogated, f);
+        assert_eq!(q(vec![("who", T("A")), ("gave", T("routes")), ("stage", N(2.0))]), "questioned A — he gave up a colleague's route");
+        assert_eq!(q(vec![("who", T("A")), ("gave", T("")), ("stage", N(3.0))]), "questioned A — nothing useful yet");
+        assert_eq!(q(vec![("who", T("A")), ("gave", T("")), ("stage", N(4.0))]), "questioned A — nothing left in him");
+        assert_eq!(q(vec![("who", T("A")), ("civilian", B(true)), ("gave", T("code"))]), "questioned A — she gave up a door code");
+        assert_eq!(q(vec![("who", T("A")), ("civilian", B(true)), ("gave", T("")), ("her", T("him"))]), "questioned A — nothing more in him");
+    }
+
+    /// A FAILURE MEANS: the timeline misnames what put a man down or who went down by what.
+    #[test]
+    fn a_man_out_or_down_is_told_by_what_did_it() {
+        assert_eq!(says(ChronKind::Ko, vec![("who", T("A")), ("method", T("choke"))]), "A out cold — choked out");
+        assert_eq!(says(ChronKind::Ko, vec![("who", T("A")), ("method", T("hand"))]), "A out cold — the takedown");
+        assert_eq!(says(ChronKind::CivilianKO, vec![("who", T("A")), ("label", T("clerk")), ("method", T("charge"))]), "A (the clerk) out cold — the wall charge — a CIVILIAN");
+        assert_eq!(says(ChronKind::Kill, vec![("who", T("A")), ("weapon", T("knife"))]), "A killed — the knife");
+        assert_eq!(says(ChronKind::Kill, vec![("who", T("A")), ("weapon", T("the wall charge")), ("blast", B(true))]), "A killed — the wall charge");
+        assert_eq!(says(ChronKind::Down, vec![("by", T("A"))]), "DOWN — A's round");
+        assert_eq!(says(ChronKind::Down, vec![("by", T("the wall charge"))]), "DOWN — the wall charge");
+        assert_eq!(says(ChronKind::Down, vec![]), "DOWN");
+        assert_eq!(says(ChronKind::Hit, vec![]), "hit");
+        assert_eq!(says(ChronKind::BodyFound, vec![("by", T("A")), ("who", T("B")), ("breathing", B(true)), ("civilian", B(true))]), "A found B out cold — the floor goes up hard");
+        assert_eq!(says(ChronKind::BodyFound, vec![("by", T("A")), ("who", T("B"))]), "A found B dead");
+    }
+
+    /// A FAILURE MEANS: the player is not told how a civilian gave him away, or how many that sent.
+    #[test]
+    fn a_civilians_report_is_told_by_how_it_got_out() {
+        let r = |f: Vec<(&str, ChronEventDataValue)>| says(ChronKind::CivilianReported, f);
+        assert_eq!(r(vec![("who", T("A")), ("how", T("phone")), ("cause", T("bang")), ("sent", N(2.0))]), "A rang it in — heard a stun charge — 2 sent");
+        assert_eq!(r(vec![("who", T("A")), ("how", T("outside")), ("sent", N(0.0))]), "A got out and control rang the floor");
+        assert_eq!(r(vec![("who", T("A")), ("how", T("told")), ("to", T("B")), ("cause", T("noise"))]), "A told B — a crash beside her");
+        assert_eq!(r(vec![("who", T("A")), ("how", T("found")), ("to", T("B")), ("cause", T("scream"))]), "A told B — heard the screaming (he found her hiding)");
+        assert_eq!(says(ChronKind::CivilianSpotted, vec![("who", T("A")), ("cause", T("gun"))]), "A saw you, gun in hand");
+        assert_eq!(says(ChronKind::CivilianSpotted, vec![("who", T("A")), ("cause", T("odd"))]), "A saw you");
+    }
+
+    /// A FAILURE MEANS: the player is blamed for a beam his body or his canister broke, and the row loses the room.
+    #[test]
+    fn a_beam_is_told_by_what_broke_it_in_its_room() {
+        let by = |by: &str| says(ChronKind::LaserTripped, vec![("by", T(by))]);
+        assert_eq!(by("player"), "broke the vault beam");
+        assert_eq!(by("body"), "the body you hauled broke the vault beam");
+        assert_eq!(by("flash"), "a thrown stun broke the vault beam");
+        assert_eq!(says(ChronKind::LaserTripped, vec![("by", T("smoke")), ("sent", N(2.0))]), "a thrown smoke broke the vault beam — 2 sent");
+    }
+
+    /// A FAILURE MEANS: the timeline loses why a man left his post: a need is said in words, a room he walked to in brackets.
+    #[test]
+    fn a_mans_break_is_told_from_leaving_to_coming_back() {
+        let need = |f: Vec<(&str, ChronEventDataValue)>| says(ChronKind::NeedBreak, f);
+        assert_eq!(need(vec![("what", T("left")), ("who", T("A")), ("kind", T("coffee"))]), "A left his route — a coffee at the break-room counter");
+        assert_eq!(need(vec![("what", T("left")), ("who", T("A")), ("kind", T("smoke")), ("own", B(true)), ("to", T("the terrace"))]), "A left his route — a smoke (the terrace)");
+        assert_eq!(need(vec![("what", T("back")), ("who", T("A")), ("away", N(12.5))]), "A back on his route (12.5 s away)");
+        assert_eq!(need(vec![("what", T("broken")), ("who", T("A")), ("kind", T("water")), ("why", T("alarm"))]), "A's water break broken off (alarm)");
+    }
+
+    /// A FAILURE MEANS: a thrown thing, a device's id or a checkpoint reads wrong on the card.
+    #[test]
+    fn a_thing_used_is_told_by_its_own_word() {
+        assert_eq!(says(ChronKind::Thrown, vec![("kind", T("cam"))]), "placed a sticky camera");
+        assert_eq!(says(ChronKind::Thrown, vec![("kind", T("flash"))]), "threw a stun canister");
+        assert_eq!(says(ChronKind::Thrown, vec![("kind", T("smoke"))]), "threw a smoke canister");
+        assert_eq!(says(ChronKind::Blackout, vec![("cause", T("shot"))]), "shot the breaker — mains gone for good");
+        assert_eq!(says(ChronKind::DeviceDown, vec![("device", T("camera_two")), ("sent", N(2.0))]), "camera two shot dead — 2 sent to it");
+        assert_eq!(says(ChronKind::Checkpoint, vec![("what", T("load")), ("label", T("gate"))]), "checkpoint loaded (gate)");
+        assert_eq!(says(ChronKind::Checkpoint, vec![("what", T("save"))]), "checkpoint saved");
+    }
 }

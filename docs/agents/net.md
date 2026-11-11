@@ -53,16 +53,15 @@ more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody se
 `lead.rs` draws him there. Only his walk and aim are ahead: his rounds, doors, orders and pose, and every other man, are the
 confirmed tick's. Where his legs are not his own (`free` false) or he is down, he is drawn where the game has him. A correction eases off by `FORESEE.ease`; past `FORESEE.snap` it is a cut.
 
-**The words keep two machines honest.** The alarm is the state word (`foldWord`): the die's count and the hash of each part of the game's block, chained, sent
-every `NET.wordEvery` ticks. It leaves out a seat's aim, a man's mind and an order book, so a difference there rings only once it moves something. The first word
-that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. Beside it goes the word of every part (`foldWhole`
-over `state_words`), counted and never an alarm. `MP_WORDS` and `words-diff.ts` name the part.
+**The words keep two machines honest.** The alarm is the state word (`foldWord`), sent every `NET.wordEvery` ticks: every part of the game (`state_words`), chained
+on the die's count and the block's parts of every tick between. What a machine may honestly differ in is in no part: its field says so (`#[bytes(skip)]`). The first
+word that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. `MP_WORDS` and `words-diff.ts` name the part.
 
 **A record is checked as it is stepped.** `face_networked` marks every seat `remote`, so `check_cmd` keeps the look-at within `reach` of his man and works the view's
 matrices out again from the pose on every machine.
 
-**Seats in the rules.** One seat's own things are the `SeatSet`, which stands on `Game` while a pass is about that seat; the others wait in their seat's row.
-`with_seat` changes them over for a pass, `each_seat` passes over all, and a tick stands the first seat whichever this machine shows (`show_seat`).
+**Seats in the rules.** One seat's own things are the `SeatSet`, its row of `g.sets`; `g.seat` names the seat a pass is about.
+`with_seat` moves it for a pass, `each_seat` passes over all, and a tick is about the first seat whichever this machine shows (`show_seat`).
 A reader that holds the game shared takes a `SeatRef` (`seat`, `here`), so it can answer for any seat.
 
 **Each player's own:** his man, hands, lens, aim, what he hovers and works, his book of orders, door tools and wall charges. His teammates: `deal_seats` cuts the
@@ -81,7 +80,8 @@ old one is told.
 
 **The lobby.** One door: `Lobby.seat`. `games:join` gives an open seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
 same one). It waits for the server's address and the page goes to `?net=…&netgame=…&netkey=…`. The link is `?join=<code>`. The host hands over the mission's address with
-`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and his settings as commands (`HOSTED`). Not carried: his kit (both play the kit as issued).
+`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and what his machine keeps (`NetStart.kept`, `HOSTED`). Not carried: his kit (both play the
+kit as issued) and the panel's kept rows and picks.
 
 **The control plane** (`cloud/convex/games.ts`). `games:make` counts a runner's live games and writes the new one in one mutation, so the cap holds. Servers beat to
 `/mp/heartbeat`, and `reap` ends a game whose server never answered, went silent, sat idle or grew too old. A runner answers four calls (`cloud/convex/runners.ts`);
@@ -109,7 +109,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 
 - **A number:** `NET`, `NETDOOR`, `FORESEE`, `COOP`. **A message:** `src/net/wire.ts`, then `NetServer.message` or `NetClient.message`.
 - **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
-- **Something per player:** a field of `SeatSet`, in `swap_set`, `set_of_game`, `SeatRef` and both of its makers. A rule that reads it takes `seat: &SeatRef`.
+- **Something per player:** a field of `SeatSet`, and of `SeatRef` and its maker. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
 - **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.
 - **Try it on one machine:** `cd cloud && npm ci` once, `bun run dev`, two windows of the page. With no backend, `bun run tools/mp/lan.ts` prints an address for each

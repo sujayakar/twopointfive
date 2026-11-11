@@ -3,7 +3,7 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
+/// what a civilian has given up on: a man, or a CivSpot of the level by its place in the level's list
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
@@ -60,7 +60,6 @@ pub struct CivTarget {
     pub guard: Option<GuardId>,
     pub spot: Option<crate::civilians::CivSpot>,
     pub pos: V3,
-    pub name: String,
     pub plan_pos: V3,
 }
 
@@ -80,7 +79,6 @@ pub struct Civ {
     pub her: String,
     pub state: crate::civilians::CivState,
     pub state_at: f64,
-    pub task_t: f64,
     pub rise_t: f64,
     pub seated: bool,
     pub settle_t: f64,
@@ -89,7 +87,6 @@ pub struct Civ {
     pub shrug_at: f64,
     pub cause: Option<crate::civilians::CivCause>,
     pub cause_pos: Option<V3>,
-    pub cause_at: f64,
     pub armed: bool,
     pub alarm_n: f64,
     pub seen_at: f64,
@@ -118,13 +115,11 @@ pub struct Civ {
     pub scream_at: f64,
     pub whimper_at: f64,
     pub greet_at: f64,
-    pub last_line_at: f64,
     pub told: JsMap<GuardId, f64>,
     pub known_bodies: JsSet<GuardId>,
     pub intel_n: usize,
     pub vis: f64,
     pub dice: crate::dice::Die,
-    pub log: Vec<String>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -166,17 +161,11 @@ pub struct CivSpots {
 #[derive(Clone, Debug, Default)]
 pub struct SpawnHostageDef {
     pub name: String,
-    pub kind: crate::civilians::SpawnHostageDefKind,
+    pub kind: crate::scene_level::CivilianDefKind,
     pub tint: V3,
     pub tint2: Option<V3>,
     pub pos: V3,
     pub face: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum SpawnHostageDefKind {
-    #[default] Cleaner,
-    Worker,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -189,12 +178,6 @@ pub struct LaterP {
     pub lvl: Option<f64>,
     pub o: Option<GuardId>,
     pub cv: GuardId,
-}
-
-#[derive(Clone, Debug)]
-pub enum InViewVp {
-    Array(Vec<f64>),
-    Float32Array(Vec<f32>),
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -251,24 +234,8 @@ pub struct CiviliansMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct CiviliansStats {
-    pub spawned: i32,
-    pub startled: i32,
-    pub alarmed: i32,
-    pub fled: i32,
-    pub reports: i32,
     pub phoned: i32,
-    pub outside_calls: i32,
-    pub cowered: i32,
-    pub complied: i32,
-    pub ko: i32,
-    pub killed: i32,
     pub found: i32,
-    pub found_down: i32,
-    pub evacuated: i32,
-    pub greetings: i32,
-    pub refled: i32,
-    pub noticed: i32,
-    pub sam_seen: i32,
 }
 
 pub fn civ_spots_table() -> crate::civilians::CivSpots { crate::civilians::CivSpots { phones: alloc::vec![crate::civilians::CivSpot { name: String::from("the reception phone"), pos: [8.9, 0.0, 13.8], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the break-room phone"), pos: [34.6, 0.0, 16.2], face: 1.5707963267948966 }], exits: alloc::vec![crate::civilians::CivSpot { name: String::from("the fire exit"), pos: [38.2, 0.0, 23.2], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the outside door"), pos: [34.0, 0.0, 25.0], face: 1.5707963267948966 }] } }

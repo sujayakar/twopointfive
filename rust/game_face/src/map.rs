@@ -6,7 +6,7 @@ const NO_SHADOW: u32 = game_draw::boxes::NO_SHADOW;
 const GLASS: u32 = game_draw::boxes::GLASS;
 
 fn r2(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
-use game_run::kept::text;
+use game_start::host::kept::text;
 
 /// {bounds: [x0, z0, x1, z1], boxes: [x, z, half width, half depth, yaw in degrees, kind …]}: every solid thing between knee and head height (0 a wall, 1 low, 2 glass)
 #[no_mangle]
@@ -37,7 +37,7 @@ pub extern "C" fn face_map(h: u32) {
     let s = super::with_ref(h, |x| {
         let g = &x.g;
         let men: Vec<String> = game_start::figures::men(g).iter().map(|m| { let c = &g.ch[m.ch]; format!("{{\"id\":{},\"x\":{},\"z\":{},\"aim\":{},\"team\":{},\"kind\":{},\"down\":{},\"name\":{},\"state\":{}}}", c.id, r2(c.pos[0]), r2(c.pos[2]), r2(c.aim_yaw), text(&m.team), text(m.kind), m.down, text(&m.name), text(&m.state)) }).collect();
-        let doors: Vec<String> = g.doors.list.iter().map(|&d| { let (f, u) = (&g.dr[d].def, game::doors::door_dir(g, d)); format!("{{\"hx\":{},\"hz\":{},\"ux\":{},\"uz\":{},\"width\":{},\"locked\":{},\"broken\":{},\"off\":{},\"name\":{}}}", r2(f.hinge[0]), r2(f.hinge[1]), r2(u[0]), r2(u[1]), r2(f.width), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d), text(&f.name)) }).collect();
+        let doors: Vec<String> = g.doors.list.iter().map(|&d| { let (f, u) = (&g.dr[d].def, game::doors::door_dir(g, d)); format!("{{\"hx\":{},\"hz\":{},\"ux\":{},\"uz\":{},\"width\":{},\"locked\":{},\"broken\":{},\"off\":{},\"name\":{}}}", r2(f.hinge[0]), r2(f.hinge[1]), r2(u[0]), r2(u[1]), r2(f.width), g.dr[d].leaf.locked, g.dr[d].leaf.lock_broken, g.dr[d].leaf.off, text(&f.name)) }).collect();
         format!("{{\"men\":[{}],\"doors\":[{}]}}", men.join(","), doors.join(","))
     });
     super::out(s.into_bytes());

@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- small private helpers ----
 
-/// a joint of `bones` that the TypeScript reads as there (undefined would throw at its first use)
+/// a joint of `bones` that must be there
 fn bone(g: &Game, id: CharId, k: Bone) -> V3 { *g.ch[id].bones.get(k).unwrap() }
 /// the Bone a string key names
 fn bone_of(name: &str) -> Option<Bone> { BONE_ORDER.iter().copied().find(|b| b.as_str() == name) }
@@ -20,35 +20,40 @@ fn ov_set(ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, i: usize, o:
 }
 /// skel.nodePos(node)
 fn node_pos(g: &Game, id: CharId, node: usize) -> V3 { crate::anim_skeleton::skeleton_instance_node_pos(&g.ch[id].skel, node as f64) }
-/// skel.update(pose, world, twists?, ov), the skeleton and the twists out of `g` while `g` is lent: the update reads neither through g
-fn skel_update(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twisted: bool, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+/// His skeleton out of `g` while `g` is lent, with the twists of his pose if they are laid on: the run forward reads neither through `g`.
+fn skel_lent(g: &mut Game, id: CharId, twisted: bool, f: impl FnOnce(&Game, &mut crate::anim_skeleton::SkeletonInstance, Option<&[crate::anim_skeleton::TwistSpec]>)) {
     let mut sk = core::mem::replace(&mut g.ch[id].skel, crate::anim_skeleton::SkeletonInstance::blank());
     if twisted {
         let tw = core::mem::take(&mut g.ch[id].anim.twists);
-        crate::anim_skeleton::skeleton_instance_update(g, &mut sk, pose, world, Some(&tw), ov);
+        f(g, &mut sk, Some(&tw));
         g.ch[id].anim.twists = tw;
     } else {
-        crate::anim_skeleton::skeleton_instance_update(g, &mut sk, pose, world, None, ov);
+        f(g, &mut sk, None);
     }
     g.ch[id].skel = sk;
 }
-/// skel.update(pose, world, anim.twists)
-fn skel_pose_twisted(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
-    let world = g.ch[id].world;
-    skel_update(g, id, pose, &world, true, None);
+/// A pose of his run forward to be read and no further: another is drawn.
+fn skel_read_pose(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
+    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_forward(g, sk, pose, tw, None));
 }
 /// skel.update(anim.pose, world, anim.twists, ov)
 fn skel_anim_pose(g: &mut Game, id: CharId, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let (pose, world) = (g.ch[id].anim.pose, g.ch[id].world);
-    skel_update(g, id, pose, &world, true, ov);
+    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_update(g, sk, pose, &world, tw, ov));
 }
-/// skel.update(rd.pose, world, null, rd.ov)
-fn skel_rag_pose(g: &mut Game, id: CharId) {
-    let world = g.ch[id].world;
+/// The fallen man's pose run forward under his rag's overrides.
+fn skel_rag_run(g: &mut Game, id: CharId) {
     let rd = g.ch[id].rd.take().unwrap();
-    skel_update(g, id, rd.pose, &world, false, Some(&rd.ov));
+    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_forward(g, sk, rd.pose, None, Some(&rd.ov)));
     g.ch[id].rd = Some(rd);
 }
+/// …where he lies.
+fn skel_rag_pose(g: &mut Game, id: CharId) {
+    skel_rag_run(g, id);
+    skel_lies(g, id);
+}
+/// What was run forward last is drawn where he lies.
+fn skel_lies(g: &mut Game, id: CharId) { g.ch[id].skel.world = g.ch[id].world; }
 fn same_kind(a: &crate::inhand::InHandWord, b: &crate::inhand::InHandWord) -> bool { core::mem::discriminant(a) == core::mem::discriminant(b) }
 
 /// RAG_LIMBS with each row's name read as its node (`n[k]`): [node, parent row (−1 = the rigid trunk), from-particle, to-particle] (ts:4262)
@@ -65,9 +70,27 @@ fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
 }
 // ---- construction and the plain frames ----
 
+/// The man of the floor behind this body; a player's is none.
+pub fn guard_of(g: &crate::game::Game, c: CharId) -> Option<GuardId> {
+    match g.ch[c].who { crate::character::Who::Guard(gd) => Some(gd), crate::character::Who::Player(_) => None }
+}
+
+/// Is a player's hand on this man.
+pub fn is_player(g: &crate::game::Game, c: CharId) -> bool { matches!(g.ch[c].who, crate::character::Who::Player(_)) }
+
+/// A man stands: his body, and a row of each part a man has.
+pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> CharId {
+    let c = g.ch.push(body);
+    g.cond.push(crate::condition::Cond::blank());
+    g.load.push(None);
+    g.shown.push(crate::guards::Shown::default());
+    g.arms.push(crate::aim::Arms::blank());
+    c
+}
+
 /// A body: his columns, his animator, his skeleton, and the rest pose's frames. `who` stays blank: the owner writes it. (Character.constructor)
 pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::CharacterDesc) -> CharId {
-    let id = g.ch.push(Character::blank());
+    let id = crate::character::man_new(g, Character::blank());
     if d.men.is_some() { crate::sim_men_store::stand_man(g, id); } // standMan(this, d.men ?? loneMen()): a man of no game has no row of the block (ts:4356)
     g.ch[id].rig = ch;
     g.ch[id].id = d.id; g.ch[id].tint = d.tint; g.ch[id].tint2 = d.tint2; g.ch[id].pos = v3::copy(d.pos); g.ch[id].body_yaw = d.yaw; g.ch[id].aim_yaw = d.yaw;
@@ -77,11 +100,11 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
     let sk = crate::anim_skeleton::skeleton_instance_new(g, ch);
     g.ch[id].skel = sk;
     // rest-pose chest rotation for "facing" extraction
-    let nodes = g.tab.rig[ch].nodes.len();
+    let nodes = g.art.rig[ch].nodes.len();
     let rp = crate::anim_skeleton::pose_new(g, nodes);
     crate::anim_skeleton::rest_pose(g, ch, rp);
     let origin = v3::m4::create();
-    skel_update(g, id, rp, &origin, false, None);
+    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_update(g, sk, rp, &origin, None, None));
     crate::anim_skeleton::pose_done(g, rp);   // (the scratch is dropped)
     let n = g.ch[id].anim.nodes;
     g.ch[id].rest_chest_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.spine3]);
@@ -185,7 +208,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
         c.anim.aim_yaw_offset = v3::clamp(v3::wrap_angle(c.aim_yaw - c.body_yaw), -1.9, 1.9);
         c.anim.aim_pitch = c.aim_pitch;
         c.anim.body_yaw_in = c.body_yaw;
-        c.anim.pos_in = POS_IN_IS_POS;   // (`this.anim.posIn = this.pos`: the animator holds the body's own array again)
+        c.anim.pos_in = POS_IN_IS_POS;   // (the animator holds the body's own place again)
     }
     anim_update(g, id, dt);
     let (pos, by) = (g.ch[id].pos, g.ch[id].body_yaw);
@@ -195,7 +218,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     match g.ch[id].anim.hand_pre {
         Some(hp) => {
             let world = g.ch[id].world;
-            skel_pose_twisted(g, id, hp);
+            skel_read_pose(g, id, hp);
             let (a, b) = (node_pos(g, id, n.hand_r), node_pos(g, id, n.middle1_r));
             g.ch[id].gun_hand = Some([v3::m4::transform_point(&world, a), v3::m4::transform_point(&world, b)]);
         }
@@ -206,7 +229,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if dt > 1e-5 { g.ch[id].prev_sim = g.ch[id].sim_bones.clone(); }
     match pre {
         Some(pre) => {
-            skel_pose_twisted(g, id, pre);
+            skel_read_pose(g, id, pre);
             let mut m: JsMap<Bone, V3> = JsMap::new();
             character_joints(g, id, &mut m);
             g.ch[id].sim_bones = Some(m);
@@ -411,7 +434,7 @@ pub fn character_joint_under(g: &crate::game::Game, id: CharId, name: &str) -> O
     let k = bone_of(name)?;
     let c = &g.ch[id];
     if let Some(v) = c.sim_bones.as_ref().and_then(|m| m.get(k)) { return Some(*v); }
-    c.bones.get(k).copied()
+    c.bone(k)
 }
 /// The world-space joints off the skeleton's current globals, into `b`. (Character.joints)
 fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
@@ -515,12 +538,12 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     let twist = (crate::dice::draw_body(g, "character::character_ragdollize#2", id) - 0.5) * (if quiet { 0.8 } else { 1.6 });
     let h = v3::normalize([dir[0], 0.0, dir[2]]);
     let pitch_axis: V3 = [h[2], 0.0, -h[0]];
-    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };   // (the one extra draw only with the switch on)
+    let fall = if !quiet { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };
     use_shove(g, id, rag, &rg, quiet, fall, f, h, j, twist, pitch_axis);
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death
     let rig = g.ch[id].rig;
-    let nodes = g.tab.rig[rig].nodes.len();
+    let nodes = g.art.rig[rig].nodes.len();
     let pose = crate::anim_skeleton::pose_new(g, nodes);
     let drawn = g.ch[id].anim.pose;
     crate::anim_skeleton::pose_copy(g, pose, drawn);
@@ -610,8 +633,33 @@ fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
             rd.ov[node].as_mut().unwrap().rot = rot;
         }
     }
-    skel_rag_pose(g, id);
+    skel_rag_run(g, id);
+    rag_toes_over_the_floor(g, id, rag_id, &n);
+    skel_lies(g, id);
     character_read_bones(g, id, dt);
+}
+
+/// A fallen man's foot whose toe the pose would put under his floor is turned at the ankle until it is not. The rag has no toe: what is drawn past its ankle is this.
+fn rag_toes_over_the_floor(g: &mut Game, id: CharId, rag_id: RagdollId, n: &AnimNodes) {
+    let rg = crate::ragdoll::rag();
+    let ground = g.ch[id].pos[1];
+    // (what last frame turned is looked at afresh, on what the rag has done since)
+    let rd = g.ch[id].rd.as_mut().unwrap();
+    let (was_l, was_r) = (rd.ov[n.foot_l].take(), rd.ov[n.foot_r].take());
+    if was_l.is_some() || was_r.is_some() { skel_rag_run(g, id); }
+    for (foot, toe, ank) in [(n.foot_l, n.toe_l, rg.ank_l), (n.foot_r, n.toe_r, rg.ank_r)] {
+        let (a, t) = (node_pos(g, id, foot), node_pos(g, id, toe));
+        let v = v3::sub(t, a);
+        let (l, flat) = (v3::len(v), m::hyp2(v[0], v[2]));
+        let want = crate::ragdoll::ragdoll_floor_under(&g.tab.ragdoll[rag_id], ank) + crate::character::TOE_FLOOR_Y - ground - a[1];
+        if v[1] >= want || l < 1e-6 { continue; }
+        let up = m::min(want, 0.95 * l);
+        let out = m::sqrt(l * l - up * up) / m::max(flat, 1e-6);
+        let q = v3::quat::from_to(v3::normalize(v), v3::normalize([v[0] * out, up, v[2] * out]));
+        let rot = v3::quat::mul(q, g.ch[id].skel.global_rot[foot]);   // (all of it in his model, as the skeleton holds it)
+        g.ch[id].rd.as_mut().unwrap().ov[foot] = Some(crate::anim_skeleton::NodeOverride { rot, pos: None });
+        skel_rag_run(g, id);
+    }
 }
 
 /// a particle's place (fallGuide's P)
@@ -699,7 +747,7 @@ fn fall_guide_of(rag: &crate::ragdoll::Ragdoll, rg: &crate::ragdoll::RAG, kind: 
     let pv = part_at(rag, rg.pelvis); let nk = part_at(rag, rg.neck);
     let v0 = v3::sub(nk, pv); let v0n = v3::normalize(v0);
     let away: V3 = match from {
-        Some(fr) if m::hyp2(pv[0] - fr[0], pv[2] - fr[2]) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
+        Some(fr) if v3::dist_xz(pv, fr) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
         _ => h,
     };
     let sd: V3 = [f[2] * side, 0.0, -f[0] * side]; let nod_ax: V3 = [f[2], 0.0, -f[0]];   // (up × f: a turn about it takes the top of a thing toward his front)
@@ -920,13 +968,13 @@ pub fn character_inside_body(g: &crate::game::Game, id: CharId, p: V3, crown_pad
     if !c.alive { return false; }
     let top = (match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 }) + crown_pad;
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     if p[1] > bot && p[1] < top && m::hyp2(p[0] - cx, p[2] - cz) < 0.28 { return true; }
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let cb = m::min(hips[1], chest[1]) - 0.12;
-            if p[1] > cb && p[1] < top && m::hyp2(p[0] - chest[0], p[2] - chest[2]) < 0.25 { return true; }
+            if p[1] > cb && p[1] < top && v3::dist_xz(p, chest) < 0.25 { return true; }
         }
     }
     false
@@ -937,11 +985,11 @@ pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax
     if !c.alive { return -1.0; }
     let top = match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 };
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     let mut t = column_entry(ro, rd, tmax, cx, cz, 0.28, bot, top);
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let tc = column_entry(ro, rd, tmax, chest[0], chest[2], 0.25, m::min(hips[1], chest[1]) - 0.12, top);
             if tc >= 0.0 && (t < 0.0 || tc < t) { t = tc; }
         }
@@ -952,77 +1000,145 @@ pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits of the TypeScript's own Character.prototype.fallGuide, on a still body: x[i] = (0.1 + i·0.03, 0.2 + i·0.1, −0.3 + i·0.017), run under bun with EXACT.on
-    fn guide(kind: FallStyle, ahead: f64) -> (crate::ragdoll::Ragdoll, FallGuide) {
+    const DT: f64 = 1.0 / 60.0;
+    const F: V3 = [0.6, 0.0, 0.8];     // the way he faces
+    const H: V3 = [-0.8, 0.0, 0.6];    // the way the blow pushes him
+    const R: crate::ragdoll::RAG = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
+
+    /// A man standing still at (2, 0, 3), facing F: every particle where it would be.
+    fn stood() -> crate::ragdoll::Ragdoll {
+        let side: V3 = [F[2], 0.0, -F[0]];
+        let at = |s: f64, y: f64, f: f64| -> [f64; 3] { [2.0 + side[0] * s + F[0] * f, y, 3.0 + side[2] * s + F[2] * f] };
+        let parts: [(f64, [f64; 3]); 16] = [
+            (R.pelvis, at(0.0, 0.95, 0.0)), (R.spine, at(0.0, 1.2, 0.0)), (R.neck, at(0.0, 1.5, 0.0)), (R.head, at(0.0, 1.66, 0.02)), (R.sho_l, at(-0.2, 1.42, 0.0)), (R.sho_r, at(0.2, 1.42, 0.0)),
+            (6.0, at(-0.25, 1.15, 0.0)), (7.0, at(0.25, 1.15, 0.0)), (R.hand_l, at(-0.25, 0.9, 0.05)), (R.hand_r, at(0.25, 0.9, 0.05)), (R.hip_l, at(-0.1, 0.9, 0.0)), (R.hip_r, at(0.1, 0.9, 0.0)),
+            (R.knee_l, at(-0.11, 0.5, 0.03)), (R.knee_r, at(0.11, 0.5, 0.03)), (R.ank_l, at(-0.12, 0.08, 0.0)), (R.ank_r, at(0.12, 0.08, 0.0)),
+        ];
         let mut rag = crate::ragdoll::Ragdoll::blank();
         rag.x = vec![0.0; 48];
-        for i in 0..16 { let n = i as f64; rag.x[i * 3] = 0.1 + n * 0.03; rag.x[i * 3 + 1] = 0.2 + n * 0.1; rag.x[i * 3 + 2] = -0.3 + n * 0.017; }
-        let rg = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
-        let gd = fall_guide_of(&rag, &rg, kind, [0.6, 0.0, 0.8], [-0.8, 0.0, 0.6], 0.97, -1.0, None, 1.0, ahead);
-        (rag, gd)
+        for (i, p) in parts { for c in 0..3 { rag.x[i as usize * 3 + c] = p[c]; } }
+        rag
     }
-    fn check(kind: FallStyle, ahead: f64, end: u64, n: usize, rows: &[(f64, usize, f64, [u64; 3])]) {
-        let (rag, mut gd) = guide(kind, ahead);
-        assert_eq!(gd.end.to_bits(), end);
-        assert_eq!(gd.pins.len(), n);
+    fn guide(rag: &crate::ragdoll::Ragdoll, kind: FallStyle, room: f64, ahead: f64) -> FallGuide { fall_guide_of(rag, &R, kind, F, H, 0.97, -1.0, None, room, ahead) }
+    /// a particle's pin at `t`: the last of its pins that holds at that time
+    fn pin(rag: &crate::ragdoll::Ragdoll, gd: &mut FallGuide, i: f64, t: f64) -> V3 {
         let (fr, nd) = (gd.frame, gd.nod);
-        for (t, k, i, want) in rows {
-            let q = &mut gd.pins[*k];
-            assert_eq!(q.i, *i);
-            let p = pin_at(&rag, &fr, &nd, &mut q.at, *t);
-            assert_eq!([p[0].to_bits(), p[1].to_bits(), p[2].to_bits()], *want, "t {} pin {}", t, k);
+        let q = gd.pins.iter_mut().rev().find(|q| q.i == i).unwrap_or_else(|| panic!("no pin on {i}"));
+        pin_at(rag, &fr, &nd, &mut q.at, t)
+    }
+    const KINDS: [FallStyle; 5] = [FallStyle::Fold, FallStyle::Sink, FallStyle::Cut, FallStyle::Topple, FallStyle::Slump];
+
+    /// A fall is led from where he stands, and the pins do not jump on the way down.
+    /// A FAILURE MEANS: a man hit snaps to another pose before he falls.
+    #[test]
+    fn a_fall_starts_where_he_stands_and_nothing_jumps_on_the_way_down() {
+        let rag = stood();
+        for kind in KINDS {
+            let mut gd = guide(&rag, kind, 1.0, 0.0);
+            let (fr, nd, end) = (gd.frame, gd.nod, gd.end);
+            assert!(end > 0.2 && end < 2.0, "{kind:?} takes {end} s");
+            for q in gd.pins.iter_mut() {
+                if q.t0 > 0.0 { continue; }
+                let p = pin_at(&rag, &fr, &nd, &mut q.at, 0.0);
+                assert!(v3::dist(p, part_at(&rag, q.i)) < 1e-6, "{kind:?}: pin {} starts {} m off him", q.i, v3::dist(p, part_at(&rag, q.i)));
+            }
+            for q in gd.pins.iter_mut() {
+                let mut t = q.t0;
+                let mut last = pin_at(&rag, &fr, &nd, &mut q.at, t);
+                while t + DT < q.off {
+                    t += DT;
+                    let p = pin_at(&rag, &fr, &nd, &mut q.at, t);
+                    assert!(v3::dist(p, last) < 0.2, "{kind:?}: pin {} jumps {} m at {t}", q.i, v3::dist(p, last));
+                    last = p;
+                }
+            }
         }
     }
+
+    /// Onto his knees and down on his front, carried on by what was pushing him when he was held.
     #[test]
-    fn topple_as_the_typescript() {
-        check(FallStyle::Topple, 0.0, 0x3fd51b71758e2197, 10, &[
-            (0.1, 0, 0.0, [0x3fa069fc88a1a470, 0x3fc694ae6d7f97f9, 0xbfc0b16e27990d6a]),
-            (0.1, 7, 3.0, [0x3fc1f86ed349ba17, 0x3fddfcf0946fa087, 0xbfb6342864caa890]),
-            (0.1, 9, 15.0, [0x3fe1a9ecbccef1bb, 0x3ffb333333333333, 0xbfa9e64ef3aae021]),
-            (0.25, 0, 0.0, [0x3fc50752f6f23788, 0xbf930ad212da6ae4, 0x3fd58b948ff6735a]),
-            (0.25, 7, 3.0, [0x3fc3f092e6db6b0e, 0x3fd2ee3942ee693a, 0x3fd4f3cbb402f3e2]),
-            (0.9, 9, 15.0, [0x3fe1645a1cac0830, 0x3ffb333333333333, 0xbfb189374bc6a7ef]),
-        ]);
+    fn a_man_who_sinks_ends_flat_on_his_front_with_his_limbs_laid_by_him() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Sink, 1.0, 0.0);
+        let end = gd.end;
+        let (pv0, pv) = (part_at(&rag, R.pelvis), pin(&rag, &mut gd, R.pelvis, end));
+        assert!(m::abs(pv[1] - 0.135) < 1e-6, "his hips lie on the floor: {}", pv[1]);
+        assert!(pin(&rag, &mut gd, R.head, end)[1] < 0.5, "and his head: {}", pin(&rag, &mut gd, R.head, end)[1]);
+        let forward = v3::dot(v3::sub(pv, pv0), F);
+        assert!(forward > 0.0 && forward < 0.3, "he goes down where he was, a little forward: {forward}");
+        let neck = pin(&rag, &mut gd, R.neck, end);
+        assert!(v3::dot(v3::sub(neck, pv), F) > 0.3, "with his head the way he faced");
+        let mid = pin(&rag, &mut gd, R.pelvis, 0.05 + 0.56 * 0.97);
+        assert!(mid[1] < 0.5, "he is on his knees before he lies down: {}", mid[1]);
+        for (i, y) in [(R.knee_l, 0.07), (R.ank_r, 0.06), (R.hand_l, 0.05)] { assert!(m::abs(pin(&rag, &mut gd, i, end + 1.0)[1] - y) < 1e-6, "limb {i} lies on the floor"); }
+        // carried on, by the whole distance; and a tight spot lays no limbs out
+        let mut on = guide(&rag, FallStyle::Sink, 1.0, 0.5);
+        let on_end = on.end;
+        let further = v3::dot(v3::sub(pin(&rag, &mut on, R.pelvis, on_end), pv), F);
+        assert!(m::abs(further - 0.5) < 1e-6, "{further}");
+        let tight = guide(&rag, FallStyle::Sink, 0.2, 0.0);
+        assert!(tight.pins.len() < gd.pins.len(), "a tight spot lays no limbs out");
     }
+
+    /// Thrown over from his heels: he goes the way he was pushed, and his feet stay where they stood.
     #[test]
-    fn sink_as_the_typescript() {
-        check(FallStyle::Sink, 0.5, 0x3ff17dbf487fcb93, 14, &[
-            (0.1, 0, 0.0, [0x3fbada78edfa4c3b, 0x3fca44bb60339278, 0xbfd2c83e1712f7a8]),
-            (0.25, 7, 3.0, [0x3fd1f4b75576894c, 0x3fe12476d049d44e, 0xbfbf2c7f360fb80e]),
-            (0.5, 13, 9.0, [0x3fd7ae147ae147ae, 0x3ff199999999999a, 0xbfc2d0e560418936]),
-            (0.9, 0, 0.0, [0x3fd4de4142e8de56, 0x3fc82c55342fc593, 0x3fc068bac4a86935]),
-            (0.9, 7, 3.0, [0x3fe04fb157ea554b, 0x3fcbac743e3fa3c8, 0x3fd895f79331efd1]),
-            (0.9, 13, 9.0, [0x3fe7bf02e25cfd74, 0x3fd348b927d947e4, 0x3fe444284589586c]),
-        ]);
+    fn a_man_who_topples_goes_over_his_heels_the_way_he_was_pushed() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Topple, 1.0, 0.0);
+        let end = gd.end;
+        let (pv0, pv) = (part_at(&rag, R.pelvis), pin(&rag, &mut gd, R.pelvis, end));
+        let along = v3::dot(v3::sub(pv, pv0), H);
+        assert!(along > 0.3, "his hips go with the push: {along}");
+        assert!(pv[1] < pv0[1] - 0.1, "and down: {}", pv[1]);
+        let heels = |p: V3, q: V3| -> V3 { [(p[0] + q[0]) / 2.0, 0.0, (p[2] + q[2]) / 2.0] };
+        let stood_at = heels(part_at(&rag, R.ank_l), part_at(&rag, R.ank_r));
+        let (l, r) = (pin(&rag, &mut gd, R.ank_l, end), pin(&rag, &mut gd, R.ank_r, end));
+        assert!(v3::dist(heels(l, r), stood_at) < 1e-6, "his feet turn under him and stay where they stood");
+        assert!(m::abs(l[1] - part_at(&rag, R.ank_l)[1]) < 1e-6, "on the floor");
     }
+
+    /// Where he stands, the trunk folding forward over his hips: what happens next is the ragdoll's.
     #[test]
-    fn slump_as_the_typescript() {
-        check(FallStyle::Slump, 0.0, 0x3fe29fbe76c8b439, 8, &[
-            (0.1, 0, 0.0, [0x3fb999999999999a, 0x3fc999999999999a, 0xbfd3333333333333]),
-            (0.1, 7, 3.0, [0x3fcac1490664cc02, 0x3fdf0d003fb8e444, 0xbfcc0dfc19d04358]),
-            (0.5, 7, 3.0, [0x3fd132e2b382f6be, 0x3fd5937e51984e14, 0xbfb3c5c791d4cdc5]),
-            (0.9, 7, 3.0, [0x3fd143b7034bc990, 0x3fd4f12061d607ed, 0xbfb27b50b645cee7]),
-        ]);
+    fn a_man_who_slumps_folds_forward_where_he_stands() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Slump, 1.0, 0.0);
+        let end = gd.end;
+        assert_eq!(pin(&rag, &mut gd, R.pelvis, end), part_at(&rag, R.pelvis));
+        let neck = pin(&rag, &mut gd, R.neck, end);
+        assert!(v3::dot(v3::sub(neck, part_at(&rag, R.pelvis)), F) > 0.3, "his neck comes forward: {neck:?}");
+        assert!(neck[1] < part_at(&rag, R.neck)[1] - 0.1, "and down: {neck:?}");
+    }
+
+    /// Both hands up to the throat in the beat he stands, then the fall away from what cut him.
+    #[test]
+    fn a_man_cut_stands_a_beat_with_his_hands_at_his_throat() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Cut, 1.0, 0.0);
+        let pv0 = part_at(&rag, R.pelvis);
+        let beat = 0.2;
+        assert!(v3::dist(pin(&rag, &mut gd, R.pelvis, beat), pv0) < 0.05, "he is still up: {:?}", pin(&rag, &mut gd, R.pelvis, beat));
+        let neck = pin(&rag, &mut gd, R.neck, beat);
+        for i in [R.hand_l, R.hand_r] { assert!(v3::dist(pin(&rag, &mut gd, i, beat), neck) < 0.15, "hand {i}"); }
+        let end = gd.end;
+        assert!(pin(&rag, &mut gd, R.pelvis, end)[1] < 0.3, "and then he is sitting on the floor");
     }
 }
 
 
-// ---- the animator's place: `anim.posIn = this.pos` is a REFERENCE to the body's position array
+// ---- the animator's place: `anim.pos_in` and the body's `pos`
 //
-// The TypeScript hands the animator the body's own `pos` array at every Character.update. Until the next update the animator reads THAT ARRAY: it
-// sees a write made in place (the collision's push, a door's shove), and it does NOT see a new array put in `pos`'s place (`c.pos = v3.mad(…)`, the
-// step of every man who walks; a snap, a lerp onto a spot): from the first such replacement of a tick to that tick's Character.update, `posIn` is
-// where the body stood before it. kitanim.ts asks in that window (kitSwap's `toModelP(shown.r)`: where the hands are, in the model's space), so a
+// The animator is handed the body's own position at every character update. Until the next update it reads THAT: it
+// sees a write made in place (the collision's push, a door's shove), and it does NOT see a replacement (`pos_replace`, the
+// step of every man who walks; a snap, a lerp onto a spot): from the first replacement of a tick to that tick's character update, `pos_in` is
+// where the body stood before it. A kit swap asks in that window (`anim_kit_swap`, `anim_to_model_p`: where the hands are, in the model's space), so a
 // man who changes guns while he walks starts the errand a step back.
 //
-// STAND-IN for a serial on the position (the types are generated): `Anim.pos_in` holds POS_IN_IS_POS while the animator's array IS the body's, and
-// the body's place as it was from the first replacement on. It belongs in a `pos_serial` on Character with the serial the animator was handed
-// (the device asked for a goal: a value with the serial of the object it is).
+// `Anim.pos_in` holds POS_IN_IS_POS while the animator's place is the body's, and the body's place as it was from the first replacement on.
 
-/// `anim.pos_in` while the animator's array is the body's own
+/// `anim.pos_in` while the animator's place is the body's own
 pub const POS_IN_IS_POS: V3 = [f64::NAN, f64::NAN, f64::NAN];
 
-/// A NEW ARRAY in `pos`'s place (the TypeScript's `c.pos = <a fresh array>`): the animator keeps the one it was handed.
+/// A replacement of `pos`: the animator keeps the place it was handed.
 pub fn pos_replace(g: &mut crate::game::Game, c: CharId, to: V3) {
     let ch = &mut g.ch[c];
     if ch.anim.pos_in[0].is_nan() { ch.anim.pos_in = ch.pos; }

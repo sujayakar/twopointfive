@@ -9,41 +9,30 @@ use crate::guards::behave::{Acts, Sensed};
 use crate::guards::senses::Saw;
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- small helpers: the TypeScript's own repeated phrases
+// ---- small helpers
 
 /// `c.bones.head ?? v3.add(c.pos, [0, 1.65, 0])`
 pub(crate) fn eye_of_char(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head).copied() {
-        Some(h) => h,
-        None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Head, 1.65)
 }
 /// `c.bones.head ?? c.pos`
 pub(crate) fn head_or_pos(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head).copied() {
+    match g.ch[c].bone(crate::character::Bone::Head) {
         Some(h) => h,
         None => g.ch[c].pos,
     }
-}
-/// `gd.path = []; gd.pathGoal = null;`: a whole write of both, so their identity words move with them.
-pub(crate) fn clear_path(g: &mut Game, gd: GuardId) {
-    let m = &mut g.gd[gd];
-    m.path = Vec::new();
-    m.path_serial = m.path_serial.wrapping_add(1);
-    m.path_goal = None;
-    m.path_goal_orbit = false;
 }
 /// `gd.speed = damp(gd.speed, 0, rate, dt)`
 pub(crate) fn brake(g: &mut Game, gd: GuardId, rate: f64, dt: f64) {
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, rate, dt);
 }
-/// `const own = gd.script; gd.script = lent; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own;`
-/// Gives back what the run left in the lent script: its lender reads that (conventions 4, an object lent), and its `<module>_script_ran` puts it home.
+/// Runs his script with `lent` in its place: no pieing, the aim cleared, his own put back after.
+/// Gives back what the run left in the lent script: its lender reads that, and its `<module>_script_ran` puts it home.
 fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt: f64) -> Option<crate::game::GuardScript> {
     let own = g.gd[gd].script.take();
     g.gd[gd].script = Some(lent);
     g.gd[gd].pieing = None;
-    crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+    crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
     crate::squad::run_guard_script(g, gd, dt);
     core::mem::replace(&mut g.gd[gd].script, own)
 }
@@ -73,8 +62,8 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         g.m.guards.unstick_legs.delete(gd);
         unstick_begin(g, gd);
     }
-    let staff = g.gd[gd].team == crate::teams::Team::Guard;
-    if !staff { unit_light_meter(g, gd, dt); }
+    let staff = g.team(gd) == crate::teams::Team::Guard;
+    if !staff { let c = g.gd[gd].ch; light_meter(g, c, dt); }
     let sense = crate::guards::senses::sense(g, gd, dt, staff);
     hands(g, gd, dt);
     if lent(g, gd, dt) {
@@ -99,7 +88,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
         m.muzzle_down = false; m.pieing = None; m.search_plan = None; m.held = None; m.standoff = None; m.speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.ch[c].anim.speed = 0.0;
-        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         crate::character::character_update(g, c, dt);
         crate::game::game_body_thud(g, c);
         attach_flashlight(g, gd, Some(dt));
@@ -111,9 +100,9 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.body_duty = None; m.standoff = None; m.muzzle_down = false; m.saw_player_this_frame = false;
         }
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
-        crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+        crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         crate::character::character_update(g, c, dt);
         attach_flashlight(g, gd, Some(dt));
         let prev_phase = g.gd[gd].step_phase;
@@ -155,10 +144,11 @@ fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     }
     if g.gd[gd].script.is_some() {
         crate::control::record(g, gd, crate::control::Holder::Script);
+        let fights = crate::roomfight::fights_as_he_goes(g, gd);   // (he keeps his line on his man)
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
-            crate::aim::aim_state_clear(&mut m.aim);
+            if !fights { crate::aim::aim_state_clear(&mut g.arms[m.ch].aim); }
             let s = m.script.as_ref().unwrap();
             let drawn = s.over.is_some() || s.upper.clone().unwrap_or(UpperMode::Aim) == UpperMode::Aim;
             m.drawn = drawn;
@@ -179,7 +169,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         reset_chase(g, gd);
         crate::mind::set_state(g, gd, St::Alert, "guards");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.35);
-        g.gd[gd].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
+        g.arms[g.gd[gd].ch].fire_cd = 0.6 + crate::dice::draw_of(g, "guards::alertness#1", gd) * 0.4;
         let now = g.time;
         let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 1.0, None => false };
         if g.gd[gd].standoff.is_none() && !radio_recent {
@@ -192,12 +182,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.last_sting_t = g.time;
         }
         if g.ai_enabled {
-            let by = match alert_cause(g, gd, seen) {
-                crate::guards::AlertCause::Body => crate::game::WitnessAlertedBy::Body,
-                crate::guards::AlertCause::Radio => crate::game::WitnessAlertedBy::Radio,
-                crate::guards::AlertCause::Sound => crate::game::WitnessAlertedBy::Sound,
-                crate::guards::AlertCause::Sight => crate::game::WitnessAlertedBy::Sight,
-            };
+            let by = alert_cause(g, gd, seen);
             g.gd[gd].witness.alerted_by = Some(by);
             g.gd[gd].witness.alert_t = g.time;
         }
@@ -211,7 +196,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.gd[gd].react_t = 0.5 + crate::dice::draw_of(g, "guards::alertness#2", gd) * 0.5;
         } else {
             g.gd[gd].react_t = 0.9;
-            if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
+            if !g.team(gd).ours() && !crate::attention::attention_again(g, gd) {
                 crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);
@@ -220,7 +205,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
     }
     crate::startle::startle_sight(g, gd, prev, seen);
     if prev != g.gd[gd].state {
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         if g.gd[gd].state != St::Suspicious { g.gd[gd].body_duty = None; }
     }
@@ -230,9 +215,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
     let now = g.time;
     crate::game::guard_track_fix(g, gd, now);
     let dazzled = crate::control::man::blind(g, gd);
-    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].dazzled_until - g.time); }
+    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.cond[g.gd[gd].ch].blind_until - g.time); }
     let staggered = crate::control::man::staggered(g, gd);
-    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].stagger_until - g.time); }
+    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.cond[g.gd[gd].ch].fold_until - g.time); }
     { let st = crate::startle::startle_left(g, gd); if st > 0.0 { g.gd[gd].react_t = m::max(g.gd[gd].react_t, st); } }
     crate::aim::track_guard(g, gd, dt);
     let (p0x, p0z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
@@ -254,10 +239,10 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     let Acts { move_speed, mut upper, aim_at, mut crouch, mut duck, .. } = acts;
     if let Some(a) = aim_at {
         let pos = g.ch[c].pos;
-        let yaw_to = m::atan2(a[0] - pos[0], a[2] - pos[2]);
+        let yaw_to = v3::yaw_to(pos, a);
         g.ch[c].aim_yaw = v3::approach_angle(g.ch[c].aim_yaw, yaw_to, 6.0 * dt);
         let gun_y = pos[1] + 1.4;
-        let hd = m::hyp2(a[0] - pos[0], a[2] - pos[2]);
+        let hd = v3::dist_xz(a, pos);
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, m::atan2(a[1] - gun_y, m::max(hd, 0.5)), 5.0, dt);
         let off = v3::wrap_angle(g.ch[c].aim_yaw - g.ch[c].body_yaw);
         if move_speed < 0.3 && m::abs(off) > 0.5 { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, g.ch[c].aim_yaw, 5.0 * dt); }
@@ -267,7 +252,7 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     collide_guard(g, gd, p0x, p0z);
     if crate::startle::startle_gun_down(g, gd) {
         upper = UpperMode::None;
-        duck = duck || hand_carry(g, gd) != crate::guards::HandCarry::Torch;
+        duck = duck || hand_carry(g, gd) != crate::guards::InHand::Torch;
     }
     let is_aim = upper == UpperMode::Aim;
     if g.gd[gd].muzzle_eval_t != g.time {

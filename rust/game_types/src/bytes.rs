@@ -26,7 +26,8 @@ impl<T: ToBytes + ?Sized> ToBytes for &T { fn w(&self, o: &mut W) { (**self).w(o
 impl<T: ToBytes + ?Sized> ToBytes for Box<T> { fn w(&self, o: &mut W) { (**self).w(o) } }
 impl<T: ToBytes + ?Sized> ToBytes for alloc::sync::Arc<T> { fn w(&self, o: &mut W) { (**self).w(o) } }
 impl<T: ToBytes> ToBytes for Option<T> { fn w(&self, o: &mut W) { match self { None => o.b.push(0), Some(x) => { o.b.push(1); x.w(o) } } } }
-impl<T: ToBytes> ToBytes for Vec<T> { fn w(&self, o: &mut W) { self.len().w(o); for x in self { x.w(o) } } }
+impl<T: ToBytes> ToBytes for [T] { fn w(&self, o: &mut W) { self.len().w(o); for x in self { x.w(o) } } }
+impl<T: ToBytes> ToBytes for Vec<T> { fn w(&self, o: &mut W) { self.as_slice().w(o) } }
 impl<T: ToBytes> ToBytes for VecDeque<T> { fn w(&self, o: &mut W) { self.len().w(o); for x in self { x.w(o) } } }
 impl<T: ToBytes, const N: usize> ToBytes for [T; N] { fn w(&self, o: &mut W) { for x in self { x.w(o) } } }
 impl<A: ToBytes, B: ToBytes> ToBytes for (A, B) { fn w(&self, o: &mut W) { self.0.w(o); self.1.w(o) } }

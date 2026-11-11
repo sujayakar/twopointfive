@@ -22,12 +22,12 @@ fn charge_set(level: &str, link: &str, seed: u32, wall: [f64; 3], sam: [f64; 2])
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);   // (the mission's own issue: the squad brings charges)
     // (the house is taken: this is about what a blast leaves, and a squad shot on its way to the wall sets nothing. One stays so that the mission runs on)
     let hostiles: Vec<game::ids::GuardId> = hostiles(&p);
-    for &gd in hostiles.iter().skip(1) { game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None); }
+    for &gd in hostiles.iter().skip(1) { game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand); }
     p.sam_put(sam);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, wall, None) { panic!("seed {seed}: the wall charge was refused: {why}"); }
-    p.until(90.0, |p| !p.g.wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
-    let c = p.g.wall_charge.set[0];
+    p.until(90.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     (p, c)
 }
 
@@ -82,7 +82,7 @@ fn a_mud_wall_goes_off_as_mud() {
                 assert!(whiter(x.albedo, paint) < 0.02, "seed {s}: the hole's edge shows {:?}, whiter than the wall's mud {paint:?}", x.albedo);
             }
         }
-        let studs = p.g.tab.boxes.iter().filter(|(_, b)| b.name.as_deref() == Some("stud")).count();
+        let studs = p.g.tab.boxes.iter().filter(|(_, b)| b.stud).count();
         assert_eq!(studs, 0, "seed {s}: a mud wall has no studs to leave standing");
     }
 }
@@ -111,7 +111,7 @@ fn man_down_facing(p: &mut Play, at: [f64; 2], yaw: Option<f64>) -> game::ids::G
     p.g.ch[c].pos = [at[0], 0.0, at[1]];
     if let Some(yaw) = yaw { (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw); }   // (how he falls is the scene's: whichever way he was looking, or the way a check turned him)
     p.frame();
-    game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None);
+    game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, game::game::With::Hand);
     p.run(3.0);   // (he falls, and is still)
     gd
 }
@@ -119,7 +119,7 @@ fn man_down_facing(p: &mut Play, at: [f64; 2], yaw: Option<f64>) -> game::ids::G
 fn lying_on(p: &Play, gd: game::ids::GuardId) -> Vec<String> {
     let c = p.g.gd[gd].ch;
     let bones = [game::character::Bone::Hips, game::character::Bone::Chest, game::character::Bone::Head, game::character::Bone::ShinL, game::character::Bone::ShinR];
-    let spots: Vec<[f64; 3]> = bones.iter().filter_map(|&k| p.g.ch[c].bones.get(k).copied()).collect();
+    let spots: Vec<[f64; 3]> = bones.iter().filter_map(|&k| p.g.ch[c].bone(k)).collect();
     assert_eq!(spots.len(), bones.len(), "he has bones");
     let mut out = Vec::new();
     for b in lying(p) {
@@ -157,7 +157,7 @@ fn a_piece_does_not_come_to_rest_on_a_man_down() {
 #[test]
 fn a_piece_does_not_come_to_rest_on_a_man_at_the_walls_foot() {
     let mut bad = Vec::new();
-    for s in [1, 4, 8, 9] {
+    for s in [1, 4, 8, 9, 21] {
         for yaw in [core::f64::consts::FRAC_PI_2, -core::f64::consts::FRAC_PI_2] {
             let (mut p, c) = pass(s);
             let gd = man_down_facing(&mut p, [20.9, 9.0], Some(yaw));

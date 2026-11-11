@@ -52,7 +52,7 @@ fn the_missions_line_is_the_one_that_is_up_and_as_things_stand() {
         let mut q = Play::level("kit-yard.json", false, &Opts { seed, ..Default::default() });
         q.frame();
         let v = q.view().mission;
-        assert!(v.of == MissionOf::Stages && v.text == "objective ▸ reach the server room", "seed {}: {:?}", seed, v);
+        assert!(v.of == MissionOf::Stages && v.text == "objective ▸ reach the marked room", "seed {}: {:?}", seed, v);
     }
 }
 

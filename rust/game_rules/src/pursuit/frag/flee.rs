@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::ask::Over;
 use crate::game::Game;
@@ -14,7 +15,7 @@ fn find_way(g: &mut Game, a: V3, b: V3, nodes: f64, who: Option<GuardId>) -> Opt
         None => None,
     };
     match pen {
-        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(&l, ix, iz))),
+        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(&l, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), None),
     }
 }
@@ -77,10 +78,6 @@ fn away(at: V3, feet: V3) -> V3 {
     let l = m::hyp2(d[0], d[2]);
     if l > 1e-3 { v3::normalize([d[0] / l, 0.45, d[2] / l]) } else { [0.0, 1.0, 0.0] }
 }
-/// `char.bones.<bone> ?? char.pos + [0, up, 0]`
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
-}
 /// who the kill is down to, as blastRaw says it
 fn down_by(b: &Burst) -> crate::game::DownBy {
     if b.mine { crate::game::DownBy::Player } else if js::truthy(b.who) { crate::game::DownBy::Guard } else { crate::game::DownBy::World }
@@ -93,11 +90,11 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let d = v3::dist(b.from, pts[0]);
     let j = judge_at(g, b, id, d, Shows::Lying(&pts));
     if j.r != Some(BlastResult::Killed) && !(j.r == Some(BlastResult::Wounded) && j.d <= b.lethal) { return; }
-    let (callsign, team) = (g.gd[gd].callsign.clone(), g.gd[gd].team);
-    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed, behind: None });
+    let (callsign, team) = (g.gd[gd].callsign.clone(), g.team(gd));
+    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed });
     rep.killed += 1.0;
     rep.finished += 1.0;
-    if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
+    if b.side == team && js::truthy(b.who) { g.stats.frag.own += 1; }
     let dir = away(b.at, pts[0]);
     let fresh = g.gd[gd].died_at == g.time;
     let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
@@ -129,14 +126,13 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
 fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].down { return; }
-    let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
+    if crate::condition::down(g, g.pl[pl].ch) { return; }
+    let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let (feet, id) = (g.ch[c].pos, g.ch[c].id);
     let j = judge(g, b, feet, head, id);
     let Some(r) = j.r else { return };
     rep.player = Some(r);
-    let behind = if r == BlastResult::Stunned { j.behind } else { None };
-    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r, behind });
+    rep.hits.push(BlastHit { id, team: crate::teams::Team::Ours, exposed: j.e, result: r });
     if r == BlastResult::Killed {
         if g.god_mode {
             rep.player = Some(BlastResult::Wounded);
@@ -145,191 +141,166 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             crate::combat::hit_player(g, dir);
             g.pl[pl].hit_flash = 1.0;
             let mut by: Option<String> = None;
-            for x in g.guards.clone() { if g.ch[g.gd[x].ch].id == b.who { by = Some(g.gd[x].callsign.clone()); break; } }
+            for x in g.guards.clone() { if g.char_id(x) == b.who { by = Some(g.gd[x].callsign.clone()); break; } }
             let by = by.unwrap_or_else(|| if b.mine { String::from("his own grenade") } else { b.name.clone() });
             crate::chronicle::chron_hit(g, Some(&by));
-            if !g.pl[pl].down { rep.player = Some(BlastResult::Wounded); }
         }
     }
-    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, &crate::condition::Man::Player(pl)); }
+    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, c); }
     if rep.player == Some(BlastResult::Wounded) || rep.player == Some(BlastResult::Stunned) {
         let st = g.k.frag.stagger;
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
-        g.pl[pl].stagger_until = m::max(g.pl[pl].stagger_until, g.time + secs);
         let along = away(b.at, g.ch[c].pos);
-        crate::character::anim_hit_from(g, c, Some(along));
-        g.pl[pl].hit_flash = 1.0;
-        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, secs);
-        g.pl[pl].sup.v = m::max(g.pl[pl].sup.v, 1.0);
-        g.pl[pl].sup.kick = m::max(g.pl[pl].sup.kick, 1.0);
-        crate::samstun::fold_cancels(g);
-        if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
-        if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
-        g.pl[pl].throw_held = false;
+        crate::samstun::stagger_player(g, secs, along);
+        crate::deed::shaken_off(g, pl);
         g.pl[pl].pending_throw = None;
-        g.stats.frag.sam_stunned += 1;
     }
 }
 
 /// The burst itself, in its order: flash and sound, glass, lines before the break, destruction, torn leaves, the men, the books.
 pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -> crate::frag::BlastReport {
     let lethal = spec.lethal_m.unwrap_or(g.k.frag.lethal_m);
-    let wound = m::max(lethal, spec.wound_m.unwrap_or(g.k.frag.wound_m));
-    let serial = match spec.serial { Some(s) => s, None => m::floor(g.time * 1000.0) };
-    let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
-    let name: String = match &spec.name { Some(n) => n.clone(), None => String::from("frag grenade") };
-    let mut rep = BlastReport { at: v3::copy(at), hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
-    let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
-    let mine = crate::seats::is_man_id(g, spec.who);
-    if spec.fx != Some(false) {
-        let seed = g.fx_seed;
-        g.fx_seed += 1.0;
-        let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
-        let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) };
-        let l = crate::effects::spawn_burst(g, from, seed, Some(o));
-        crate::particle_fx::bang_fx(g, from);
-        let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
-        let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(spec.who));
-        if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
-        crate::audio_iface::game_audio_like_play(g, "stunBang", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
-        crate::marks::bang_scorch(g, from);
-        let ears = crate::seats::host_man(g);
-        let eye = bone_or(g, g.pl[ears].ch, crate::character::Bone::Head, 1.6);
-        if !g.pl[ears].down && v3::dist(eye, from) < wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
-            crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / wound, 0.2, 0.7)), None);
-        }
+    let mut b = Burst {
+        at, lethal, who: spec.who,
+        from: [at[0], at[1] + g.k.frag.lift, at[2]],
+        wound: m::max(lethal, spec.wound_m.unwrap_or(g.k.frag.wound_m)),
+        serial: spec.serial.unwrap_or_else(|| m::floor(g.time * 1000.0)),
+        side: if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard },
+        mine: crate::seats::is_man_id(g, spec.who),
+        name: spec.name.clone().unwrap_or_else(|| String::from("frag grenade")),
+        before: None, torn: Vec::new(),
+    };
+    if spec.fx != Some(false) { seen_and_heard(g, &b); }
+    // the glass it has a line to as things stand goes first, for the men's lines before anything else broke; what it opens lets the same blow through to more, before they are judged
+    let glass = [g.k.frag.glass_m, g.k.frag.glass_power];
+    if glass[1] > 0.0 {
+        let o = crate::glassbreak::GlassBlastOpts { radius: Some(glass[0]), power: Some(glass[1]), who: Some(b.who) };
+        crate::glassbreak::glass_break_blast(g, &Over::OWN, b.from, Some(o));
     }
-    // the glass first: nothing reaches it after the men are judged through it
-    if g.k.frag.glass_power > 0.0 {
-        let o = crate::glassbreak::GlassBlastOpts { radius: Some(g.k.frag.glass_m), power: Some(g.k.frag.glass_power), who: Some(spec.who) };
-        crate::glassbreak::glass_break_blast(g, from, Some(o));
-    }
-    crate::glassbreak::glass_break_bang(g, [from[0], m::max(0.3, from[1]), from[2]], spec.who);
-    let list = g.doors.list.clone();
-    let mut hung: Vec<DoorId> = Vec::new();
-    for d in list { if !crate::doors::door_off(g, d) { hung.push(d); } }
-    // what the burst had a line to before it broke anything
-    let mut before: Option<JsMap<crate::Num, f64>> = None;
-    if crate::destruction::chaos_of(g) > 0.0 {
-        let mut map: JsMap<crate::Num, f64> = JsMap::new();
-        let mut all = g.guards.clone();
-        all.extend(crate::civilians::civilians_shown(g));
-        for gd in all {
-            if g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].god {
-                let c = g.gd[gd].ch;
-                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
-                if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
-            }
-        }
-        for gd in g.guards.clone() {
-            if down_asked(g, gd) {
-                let pts = lying(g, gd);
-                if v3::dist(from, pts[0]) <= wound { let e = lying_shows(g, from, &pts, GlassView::Blown); let id = g.ch[g.gd[gd].ch].id; map.set(crate::Num(id), e); }
-            }
-        }
-        for pl in crate::seats::men(g) {
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.6), g.ch[c].id);
-                if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
-            }
-        }
-        before = Some(map);
-    }
+    crate::glassbreak::glass_break_bang(g, [b.from[0], m::max(0.3, b.from[1]), b.from[2]], b.who);
+    let hung: Vec<DoorId> = g.doors.list.iter().copied().filter(|&d| !g.dr[d].leaf.off).collect();
+    if crate::destruction::chaos_of(g) > 0.0 { b.before = Some(lines_before(g, &b)); }
     let (radius, power) = match spec.destr { Some(d) => (d.radius, d.power), None => (None, None) };
-    crate::destruction::destruction_blast(g, from, Some(crate::wallbreak::BlastOpts { who: Some(spec.who), radius, power, ..Default::default() }));
-    // the leaves this burst (and this tick's others) took off: asked again with them out
-    let fresh_book = match &g.m.frag.torn { Some(t) => t.time != g.time, None => true };
-    if fresh_book { g.m.frag.torn = Some(FragModTORNValue { time: g.time, doors: Vec::new() }); }
-    for d in hung {
-        if crate::doors::door_off(g, d) {
-            let t = g.m.frag.torn.as_mut().unwrap();
-            if !t.doors.contains(&d) { t.doors.push(d); }
-        }
-    }
-    let rows: Vec<DoorId> = g.m.frag.torn.as_ref().unwrap().doors.clone();
-    let mut torn: Vec<BoxId> = Vec::new();
-    for d in rows { if crate::doors::door_off(g, d) { torn.push(g.dr[d].box_); } }
+    crate::destruction::destruction_blast(g, b.from, Some(crate::wallbreak::BlastOpts { who: Some(b.who), radius, power, glass: Some(glass).filter(|o| o[1] > 0.0), ..Default::default() }));
+    b.torn = torn_leaves(g, &hung);
     let ev_serial = g.serial();
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: v3::copy(from), time: g.time, loud: true, level: Some(2.0), who: Some(spec.who), frag: Some(true), serial: ev_serial, ..Default::default() });
-    let b = Burst { at, from, lethal, wound, serial, who: spec.who, side, mine, name, before, torn };
-    // who it touches
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: b.from, time: g.time, loud: true, level: Some(2.0), who: Some(b.who), frag: Some(true), serial: ev_serial, ..Default::default() });
+    let mut rep = BlastReport { at, hits: Vec::new(), killed: 0.0, finished: 0.0, player: None };
     let mut all = g.guards.clone();
     all.extend(crate::civilians::civilians_shown(g));
     for gd in all {
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].god {
-            if down_asked(g, gd) { finish(g, &b, &mut rep, gd); }
-            continue;
-        }
-        let c = g.gd[gd].ch;
-        let (pos, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
-        let j = judge(g, &b, pos, head, id);
-        let Some(r) = j.r else { continue };
-        let team = g.gd[gd].team;
-        rep.hits.push(BlastHit { id, team, exposed: j.e, result: r, behind: if r == BlastResult::Stunned { j.behind } else { None } });
-        if r == BlastResult::Shielded { rep.shielded += 1.0; continue; }
-        if same_side(side, team) && js::truthy(spec.who) { g.stats.frag.own += 1; }
-        if r == BlastResult::Stunned { rep.stunned += 1.0; }
-        if r == BlastResult::Killed {
-            rep.killed += 1.0;
-            let line = alloc::format!("{} down — the {}", g.gd[gd].callsign, b.name);
-            let dir = away(at, g.ch[c].pos);
-            // (on the thrower's seat, the debrief's row naming what went off)
-            let thrower = crate::seats::seat_of_id(g, spec.who);
-            crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard_by(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line), Some(&b.name)));
-            if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
-        } else {
-            if r == BlastResult::Wounded { rep.wounded += 1.0; }
-            if g.gd[gd].civ.is_none() {
-                let u = v3::clamp(j.d / wound, 0.0, 1.0);
-                let st = g.k.frag.stagger;
-                let secs = v3::lerp(st[0], st[1], u);
-                let time = g.time;
-                let w = g.gd[gd].weapon;
-                let man = &mut g.gd[gd];
-                man.stagger_until = m::max(man.stagger_until, time + secs);
-                man.react_t = m::max(man.react_t, secs);
-                g.fa[w].burst = None;
-                crate::mind::raise(g, gd, 0.92, "frag");
-                if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-                crate::game::guard_set_path(g, gd, Vec::new());
-                g.gd[gd].path_goal = None;
-                g.gd[gd].path_goal_orbit = false;
-                g.gd[gd].speed = 0.0;
-                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &crate::condition::Man::Guard(gd)); }
-            }
-            crate::character::anim_hit(g, c);
-        }
+        if !crate::condition::down(g, g.gd[gd].ch) && !g.gd[gd].god { touch(g, &b, &mut rep, gd); } else if down_asked(g, gd) { finish(g, &b, &mut rep, gd); }
     }
     crate::seats::each_seat(g, &mut |g: &mut Game| seat_blast(g, &b, &mut rep));
-    crate::morale::morale_blast(g, at, Some(spec.who));
+    crate::morale::morale_blast(g, at, Some(b.who));
     g.stats.frag.bursts += 1;
-    g.stats.frag.killed += rep.killed as i32;
-    g.stats.frag.wounded += rep.wounded as i32;
-    g.stats.frag.shielded += rep.shielded as i32;
-    g.stats.frag.stunned += rep.stunned as i32;
     g.m.frag.frag_log.push(rep.clone());
     if g.m.frag.frag_log.len() > 64 { g.m.frag.frag_log.remove(0); }
     rep
 }
 
+/// The flash, the bang, the scorch, and the ringing in the ears of a man whose head it has a line to.
+fn seen_and_heard(g: &mut Game, b: &Burst) {
+    let from = b.from;
+    let seed = g.fx_seed;
+    g.fx_seed += 1.0;
+    let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
+    let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) };
+    let l = crate::effects::spawn_burst(g, from, seed, Some(o));
+    crate::particle_fx::bang_fx(g, from);
+    let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
+    let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(b.who));
+    if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
+    crate::audio_iface::game_audio_like_play(g, "stunBang", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
+    crate::marks::bang_scorch(g, from);
+    let ears = g.pl[crate::seats::host_man(g)].ch;
+    let eye = g.ch[ears].bone_or(crate::character::Bone::Head, 1.6);
+    if !crate::condition::down(g, ears) && v3::dist(eye, from) < b.wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
+        crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / b.wound, 0.2, 0.7)), None);
+    }
+}
+
+/// WHAT THE BURST HAD A LINE TO BEFORE IT BROKE ANYTHING: how much of each man it can wound, by his number; those up, those down and breathing, and the players.
+fn lines_before(g: &mut Game, b: &Burst) -> JsMap<crate::Num, f64> {
+    let mut map: JsMap<crate::Num, f64> = JsMap::new();
+    let mut all = g.guards.clone();
+    all.extend(crate::civilians::civilians_shown(g));
+    for gd in all { if !g.gd[gd].god { standing_shows(g, b, &mut map, g.gd[gd].ch, 1.65); } }
+    for gd in g.guards.clone() {
+        if !down_asked(g, gd) { continue; }
+        let pts = lying(g, gd);
+        if v3::dist(b.from, pts[0]) <= b.wound { let e = lying_shows(g, b.from, &pts, GlassView::Blown); map.set(crate::Num(g.char_id(gd)), e); }
+    }
+    for pl in crate::seats::men(g) { standing_shows(g, b, &mut map, g.pl[pl].ch, 1.6); }
+    map
+}
+fn standing_shows(g: &mut Game, b: &Burst, map: &mut JsMap<crate::Num, f64>, c: CharId, up: f64) {
+    if crate::condition::down(g, c) { return; }
+    let (feet, head, id) = (g.ch[c].pos, g.ch[c].bone_or(crate::character::Bone::Head, up), g.ch[c].id);
+    if v3::dist(b.from, [feet[0], feet[1] + 0.9, feet[2]]) > b.wound { return; }
+    let e = exposure(g, b.from, feet, head, Some(GlassView::Blown));
+    map.set(crate::Num(id), e);
+}
+
+/// The leaves this burst (and this tick's others) took off: asked again with them out.
+fn torn_leaves(g: &mut Game, hung: &[DoorId]) -> Vec<BoxId> {
+    if !g.m.frag.torn.as_ref().is_some_and(|t| t.time == g.time) { g.m.frag.torn = Some(FragModTORNValue { time: g.time, doors: Vec::new() }); }
+    for &d in hung {
+        if !g.dr[d].leaf.off { continue; }
+        let t = g.m.frag.torn.as_mut().unwrap();
+        if !t.doors.contains(&d) { t.doors.push(d); }
+    }
+    g.m.frag.torn.as_ref().unwrap().doors.iter().filter(|&&d| g.dr[d].leaf.off).map(|&d| g.dr[d].box_).collect()
+}
+
+/// A man on his feet: killed, wounded or folded by it, or behind something.
+fn touch(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
+    let c = g.gd[gd].ch;
+    let (pos, head, id) = (g.ch[c].pos, g.ch[c].bone_or(crate::character::Bone::Head, 1.65), g.ch[c].id);
+    let j = judge(g, b, pos, head, id);
+    let Some(r) = j.r else { return };
+    let team = g.team(gd);
+    rep.hits.push(BlastHit { id, team, exposed: j.e, result: r });
+    if r == BlastResult::Shielded { return; }
+    if b.side == team && js::truthy(b.who) { g.stats.frag.own += 1; }
+    if r == BlastResult::Killed {
+        rep.killed += 1.0;
+        let dir = away(b.at, g.ch[c].pos);
+        // (on the thrower's seat, the debrief's row naming what went off)
+        let thrower = crate::seats::seat_of_id(g, b.who);
+        crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(b)), crate::game::With::Blast(&b.name)));
+        if js::truthy(b.who) { g.gd[gd].killer_id = b.who; }
+        return;
+    }
+    if g.gd[gd].civ.is_none() {
+        let st = g.k.frag.stagger;
+        let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
+        let w = g.gd[gd].weapon;
+        crate::condition::fold(g, c, secs);
+        g.fa[w].burst = None;
+        crate::condition::dazed(g, gd, secs, b.at, 0.92, "frag");
+        if r == BlastResult::Wounded { crate::condition::condition_hurt(g, c); }
+    }
+    crate::character::anim_hit(g, c);
+}
+
 /// The hand grenade goes off where it lies, and the item is gone.
 fn detonate_frag(g: &mut crate::game::Game, it: ItemId) -> crate::frag::BlastReport {
-    crate::throwables::item_set_fired(g, it, true);
-    crate::throwables::item_set_life(g, it, 0.0);
-    let at = crate::throwables::item_pos(g, it);
-    let who = crate::throwables::item_who(g, it);
-    let serial = crate::throwables::item_serial(g, it);
+    g.tab.item[it].fired = true;
+    g.tab.item[it].life = 0.0;
+    let at = g.tab.item[it].pos;
+    let who = g.tab.item[it].who;
+    let serial = g.tab.item[it].serial;
     let spec = BlastSpec { who, serial: Some(serial), name: Some(String::from("frag grenade")), destr: Some(BlastSpecDestr { radius: Some(g.k.frag.destr_m), power: Some(1.0) }), ..Default::default() };
     blast(g, at, &spec)
 }
 
 /// The fuse runs from the hand, in the air or on the floor.
 pub fn frag_fuse(g: &mut crate::game::Game, it: ItemId, dt: f64) {
-    if crate::throwables::item_fired(g, it) { return; }
-    let fuse = crate::throwables::item_fuse(g, it) - dt;
-    crate::throwables::item_set_fuse(g, it, fuse);
-    if crate::throwables::item_fuse(g, it) <= 0.0 { detonate_frag(g, it); }
+    if g.tab.item[it].fired { return; }
+    let fuse = g.tab.item[it].fuse - dt;
+    g.tab.item[it].fuse = fuse;
+    if g.tab.item[it].fuse <= 0.0 { detonate_frag(g, it); }
 }
 
 /// The game's list of live grenades: the row itself, a writer writes through it.
@@ -344,9 +315,7 @@ pub fn frag_reset(g: &mut crate::game::Game) {
     let men: Vec<GuardId> = books.iter().flat_map(|l| l.flee.keys()).collect();
     let (frag, time) = (crate::owner::by::FRAG, g.time);
     for gd in men {
-        crate::game::guard_set_path(g, gd, Vec::new());
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         crate::owner::release(g, gd, frag, time);
     }
     g.m.frag.books.as_mut().unwrap().clear();
@@ -367,7 +336,7 @@ fn roll_slow(g: &Game, v: V3, bog: f64) -> bool {
     m::abs(v[1]) < 0.5 && m::hyp2(v[0], v[2]) < 0.35 + (if bog > 0.0 { crate::throwables::bog_stick(g, bog) } else { 0.0 })
 }
 /// The item step's own bounce and roll replayed on a copy for what is left of its fuse: nothing is moved or sounded.
-fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f64>, props: bool, high: bool) -> RollOn {
+fn roll_body(g: &Game, it: RollBody, touch_fuse: Option<f64>, props: bool, high: bool) -> RollOn {
     let (mut p, mut v) = (it.pos, it.vel);
     let h = 1.0 / 120.0;
     let mut path: Vec<V3> = Vec::new();
@@ -377,9 +346,8 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
     let span = m::min(14.0, m::hyp2(v[0], v[2]) * m::max(0.0, it.fuse)) + 1.0;
     let mut furn = false;
     if props {
-        let g = a.game();
         for &pr in &g.props.props {
-            let (x, z) = (crate::props::prop_x(g, pr), crate::props::prop_z(g, pr));
+            let (x, z) = (g.tab.props_prop[pr].x, g.tab.props_prop[pr].z);
             if m::hyp2(x - p[0], z - p[2]) < span + g.tab.props_prop[pr].radius { furn = true; break; }
         }
     }
@@ -394,11 +362,11 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
         let dir = v3::scale(mv, 1.0 / len);
         let tmax = len + it.radius * 3.5;
         // (t, normal, a prop's)
-        let mut hit: Option<(f64, V3, bool)> = a.ray(p, dir, tmax).map(|x| (x.t, x.n, false));
+        let mut hit: Option<(f64, V3, bool)> = crate::scene_collision::raycast(g, p, dir, tmax).map(|x| (x.t, x.n, false));
         let mut back = 0.0;
         if furn {
             let upto = match hit { Some(x) => x.0, None => tmax };
-            if let Some(x) = a.thing_ray(p, dir, upto) { hit = Some((x.0, x.1, true)); }
+            if let Some(x) = crate::scene_collision::things_ray(g, p, dir, upto) { hit = Some((x.t, x.n, true)); }
         }
         if let Some(x) = hit {
             back = it.radius / m::max(0.3, -v3::dot(dir, x.1));
@@ -411,36 +379,36 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
                 let vn_ = v3::scale(n, vn);
                 let vt = v3::sub(v, vn_);
                 v = v3::add(v3::scale(vt, m::max(0.0, 1.0 - it.friction * (0.5 + 0.5 * m::abs(n[1])))), v3::scale(vn_, -it.restitution));
-                bog = if n[1] > 0.6 && !on_prop { a.bog_at(p[0], p[1] - it.radius, p[2]) } else { 0.0 };
+                bog = if n[1] > 0.6 && !on_prop { crate::snow_bog::snow_bog_at(g, p[0], p[1] - it.radius, p[2]) } else { 0.0 };
                 if bog > 0.0 {
                     let up = v3::dot(v, n);
-                    let (b, s) = (crate::throwables::bog_bounce(a.game(), bog), crate::throwables::bog_slide(a.game(), bog));
+                    let (b, s) = (crate::throwables::bog_bounce(g, bog), crate::throwables::bog_slide(g, bog));
                     v = v3::add(v3::scale(v3::sub(v, v3::scale(n, up)), s), v3::scale(n, up * b));
                 }
                 touched = true;
-                if n[1] > 0.6 && roll_slow(a.game(), v, bog) { done = true; }
+                if n[1] > 0.6 && roll_slow(g, v, bog) { done = true; }
             }
             p = v3::mad(p, n, 0.002);
         } else {
             p = v3::add(p, mv);
         }
         if p[1] < it.radius {
-            bog = a.bog_at(p[0], 0.0, p[2]);
+            bog = crate::snow_bog::snow_bog_at(g, p[0], 0.0, p[2]);
             p[1] = it.radius;
             if v[1] < 0.0 {
                 v[1] *= -it.restitution;
                 v[0] *= 0.7;
                 v[2] *= 0.7;
                 if bog > 0.0 {
-                    v[1] *= crate::throwables::bog_bounce(a.game(), bog);
-                    v[0] *= crate::throwables::bog_slide(a.game(), bog);
-                    v[2] *= crate::throwables::bog_slide(a.game(), bog);
+                    v[1] *= crate::throwables::bog_bounce(g, bog);
+                    v[0] *= crate::throwables::bog_slide(g, bog);
+                    v[2] *= crate::throwables::bog_slide(g, bog);
                 }
                 touched = true;
             }
-            if roll_slow(a.game(), v, bog) { done = true; }
+            if roll_slow(g, v, bog) { done = true; }
         }
-        let far = match last { None => true, Some(q) => flat(q, p) > 0.25 };
+        let far = match last { None => true, Some(q) => dist_xz(q, p) > 0.25 };
         if touched && far {
             let q: V3 = [p[0], if high { p[1] - it.radius } else { 0.0 }, p[2]];
             last = Some(q);
@@ -454,21 +422,21 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
 }
 
 /// Where a live thrown thing will rest and the floor it crosses to get there.
-fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
+fn roll_on(g: &crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
     let body = RollBody {
-        pos: crate::throwables::item_pos(g, it),
-        vel: crate::throwables::item_vel(g, it),
-        radius: crate::throwables::item_radius(g, it),
-        restitution: crate::throwables::item_restitution(g, it),
-        friction: crate::throwables::item_friction(g, it),
-        bounces: crate::throwables::item_bounces(g, it),
-        fuse: crate::throwables::item_fuse(g, it),
+        pos: g.tab.item[it].pos,
+        vel: g.tab.item[it].vel,
+        radius: g.tab.item[it].radius,
+        restitution: g.tab.item[it].restitution,
+        friction: g.tab.item[it].friction,
+        bounces: g.tab.item[it].bounces,
+        fuse: g.tab.item[it].fuse,
     };
     roll_body(g, body, touch_fuse, props.unwrap_or(true), high.unwrap_or(false))
 }
 
 /// Where a can thrown from `from` at `v0` will be when it is done moving, or when its fuse finds it.
-pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKind, from: V3, v0: V3) -> crate::frag::RestOfThrow {
+pub fn rest_of_throw(g: &Game, kind: crate::game::ThrowKind, from: V3, v0: V3) -> crate::frag::RestOfThrow {
     let is_frag = kind == crate::game::ThrowKind::Frag;
     let (radius, restitution, friction) = if is_frag {
         let b = crate::throwables::frag_item();
@@ -477,10 +445,9 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
         let b = crate::throwables::can_item();
         (b.radius, b.restitution, b.friction)
     };
-    let g = a.game();
     let stun = if kind == crate::game::ThrowKind::Flash { Some(crate::combat::flash_fuse(g)) } else { None };
     let fuse = if is_frag { g.k.frag.fuse } else if stun.is_some() { crate::effects::bang().max_air } else { 6.0 };
-    let r = roll_body(a, RollBody { pos: from, vel: v0, radius, restitution, friction, bounces: 0.0, fuse }, stun, true, true);
+    let r = roll_body(g, RollBody { pos: from, vel: v0, radius, restitution, friction, bounces: 0.0, fuse }, stun, true, true);
     RestOfThrow { at: r.at, path: r.path }
 }
 
@@ -488,10 +455,9 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
 /// comes to rest (`rest`) or where the launcher's arc ends.
 pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Option<crate::view::ThrowReachView> {
     use crate::game::ThrowKind;
-    let sol = g.pl[pl].throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
+    let sol = g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
     let burst = |at: V3| crate::view::ThrowReachView { at, kill: g.k.frag.lethal_m, hurt: m::max(g.k.frag.lethal_m, g.k.frag.wound_m), stun: 0.0 };
-    if g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
-        let kind = g.pl[pl].held_kind;
+    if let Some(kind) = crate::player::can_in_hand(g, pl) {
         if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag) { return None; }
         let at = rest?;
         return Some(if kind == ThrowKind::Frag { burst(at) } else { crate::view::ThrowReachView { at, kill: 0.0, hurt: 0.0, stun: crate::effects::bang().dazzle_radius } });
@@ -502,25 +468,25 @@ pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Opt
 /// The defenders' live grenades the man has been cued on: where each is, and the seconds left.
 pub fn frag_marks(g: &crate::game::Game) -> Vec<crate::view::FragMark> {
     let Some(books) = &g.m.frag.books else { return Vec::new() };
-    books.iter().filter(|l| l.cued && !crate::throwables::item_fired(g, l.it)).map(|l| crate::view::FragMark { at: crate::throwables::item_pos(g, l.it), left: crate::throwables::item_fuse(g, l.it) }).collect()
+    books.iter().filter(|l| l.cued && !g.tab.item[l.it].fired).map(|l| crate::view::FragMark { at: g.tab.item[l.it].pos, left: g.tab.item[l.it].fuse }).collect()
 }
 
 /// The height a grenade lying at y is judged from, less the lift: what it lies on.
-fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
+fn rest_y(y: f64) -> f64 {
     m::max(0.05, y)
 }
 
 /// The rest reckoning of book `l` of the live grenades, made again ten times a second.
 pub(super) fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest {
     let it = books_of(g)[l].it;
-    let settled = crate::throwables::item_settled(g, it);
+    let settled = g.tab.item[it].settled;
     let time = g.time;
     if let Some(r) = &books_of(g)[l].rest {
         if r.still == settled && (settled || time - r.t < 0.1) { return r.clone(); }
     }
     let rest = if settled {
-        let p = crate::throwables::item_pos(g, it);
-        Rest { t: time, still: true, at: [p[0], rest_y(g, p[1]), p[2]], path: Vec::new() }
+        let p = g.tab.item[it].pos;
+        Rest { t: time, still: true, at: [p[0], rest_y(p[1]), p[2]], path: Vec::new() }
     } else {
         let r = roll_on(g, it, None, None, None);
         Rest { t: time, still: false, at: r.at, path: r.path }
@@ -530,10 +496,10 @@ pub(super) fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest 
 }
 
 /// Would a straight leg a → b shoulder a mate staying at q.
-fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
+fn shoulders(g: &crate::game::Game, a: V3, b: V3, q: V3) -> bool {
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = dx * dx + dz * dz;
-    let d0 = m::hyp2(q[0] - a[0], q[2] - a[2]) - 0.05;
+    let d0 = v3::dist_xz(q, a) - 0.05;
     let (mut x, mut z) = (b[0], b[2]);
     if !(m::hyp2(x - q[0], z - q[2]) < m::min(g.k.frag.flee_apart_m, d0)) {
         let t = if l > 1e-6 { m::max(0.0, m::min(1.0, ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / l)) } else { 0.0 };
@@ -548,7 +514,7 @@ fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
 fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
     let mut out: Vec<Vec<f64>> = Vec::new();
     for x in g.doors.list.clone() {
-        if !crate::doors::door_off(g, x) && m::abs(crate::doors::door_angle(g, x)) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
+        if !g.dr[x].leaf.off && m::abs(g.dr[x].leaf.angle) > 0.15 && dist_xz(g.dr[x].frame_centre, p) < r {
             let u = crate::doors::door_dir(g, x);
             let (h, w) = (g.dr[x].def.hinge, g.dr[x].def.width);
             out.push(vec![h[0], h[1], h[0] + u[0] * w, h[1] + u[1] * w]);
@@ -571,7 +537,7 @@ fn leaf_dist(l: &[Vec<f64>], x: f64, z: f64) -> f64 {
 
 /// A straight leg a → b comes within fleeDoorLeaf of a leaf, and nearer it than `ref_`.
 fn leg_by_leaf(g: &crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
-    let r = flat(a, b);
+    let r = dist_xz(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
         let u = if r > 1e-3 { m::min(1.0, t / r) } else { 1.0 };
@@ -594,150 +560,156 @@ fn flee_shade(g: &mut Game, from: V3, p: V3) -> bool {
 /// Where a man in a grenade's line goes with `left` seconds on it; None: he drops where he is.
 pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> Option<V3> { flee_spot_kept(g, c_2, at, speed, left, accel, wise, who).0 }
 
-/// `fleeSpot`, and whether its answer is THE LEG HE HAS (`wise.keep` itself, the object: frag.ts:765 asks `spot === keep.goal`, an identity; a spot
-/// weighed afresh with the kept goal's very numbers is another spot there). The body is fleeSpot's, whole.
+/// `fleeSpot`, and whether its answer is THE LEG HE HAS (`wise.keep` itself; a spot weighed afresh with the kept goal's very numbers is another spot).
 pub(super) fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3, speed: f64, left: f64, accel: Option<f64>, wise: Option<&crate::frag::FleeSpotWise>, who: Option<GuardId>) -> (Option<V3>, bool) {
-    let accel = accel.unwrap_or(f64::INFINITY);
-    let cpos = c_2.pos;
     let mut ask = match who { Some(w) => crate::picture::exposure_asker(g, w, Some(true)), None => None };
-    let mind = ask.is_some();
-    let (flee_cost, lethal_m, wound_m, flee_keep, flee_apart_m) = (g.k.picture.flee_cost, g.k.frag.lethal_m, g.k.frag.wound_m, g.k.frag.flee_keep, g.k.frag.flee_apart_m);
-    let mut plain_s;
-    let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
-    let tt = m::max(0.0, left - 0.15);
-    let ta = speed / accel;
-    let reach = m::max(0.8, if tt <= ta { 0.5 * accel * tt * tt } else { speed * (tt - ta / 2.0) });
-    let d0 = m::hyp2(cpos[0] - at[0], cpos[2] - at[2]);
-    let a0 = m::atan2(cpos[0] - at[0], cpos[2] - at[2]);
-    let mut best: Option<V3> = None;
-    let mut best_s = d0 + 0.7;
-    let mut bar: Option<V3> = None;
-    let mut bar_s = f64::NEG_INFINITY;
-    let mut mates = false;
-    // identity of the spots, for `best !== plain` and `best !== wise.keep`: 0 none, 1 the leg he has, then one a spot weighed
-    let (mut best_id, mut plain_id, mut next_id) = (0u32, 0u32, 1u32);
-    let off_path = |x: f64, z: f64| -> f64 {
-        let mut d = lethal_m;
-        if let Some(w) = wise { for q in &w.path { d = m::min(d, m::hyp2(x - q[0], z - q[2])); } }
+    let f = Fleeing::of(g, c_2.pos, at, speed, left, accel.unwrap_or(f64::INFINITY), wise);
+    let mut w = Weighed { s: if wise.is_some() && f.d0 < f.lethal_m { f64::NEG_INFINITY } else { f.d0 + 0.7 }, bar_s: f64::NEG_INFINITY, next_id: 1, ..Weighed::default() };
+    w.plain_s = w.s;
+    weigh_kept(g, &f, &mut w, &mut ask);
+    let leaves = if wise.is_some() { open_leaves(g, f.pos, 8.0) } else { Vec::new() };
+    walk_rings(g, &f, &mut w, &mut ask, &leaves, false);
+    // (a second walk, between the first one's rings: where his mates' floor barred him from a hidden spot and nothing better than the open is left)
+    if wise.is_some() && w.mates && (w.best.is_none() || w.open) { walk_rings(g, &f, &mut w, &mut ask, &leaves, true); }
+    if (w.best.is_none() || w.open) && flee_shade(g, f.from, f.pos) { return (None, false); }
+    if w.best.is_none() && w.bar.is_some() && f.d0 < f.lethal_m { return (w.bar, false); }
+    if ask.is_some() && w.best.is_some() && w.id != w.plain_id && w.id != KEPT { g.stats.picture.moved += 1; }
+    (w.best, w.best.is_some() && w.id == KEPT)
+}
+
+/// a man running from a grenade that bursts at `from`: how far his legs take him in the time, how far from it and off its path he is now
+struct Fleeing<'a> { pos: V3, at: V3, from: V3, reach: f64, d0: f64, path0: f64, lethal_m: f64, wound_m: f64, wise: Option<&'a crate::frag::FleeSpotWise> }
+impl<'a> Fleeing<'a> {
+    fn of(g: &Game, pos: V3, at: V3, speed: f64, left: f64, accel: f64, wise: Option<&'a crate::frag::FleeSpotWise>) -> Fleeing<'a> {
+        let tt = m::max(0.0, left - 0.15);
+        let ta = speed / accel;
+        let reach = m::max(0.8, if tt <= ta { 0.5 * accel * tt * tt } else { speed * (tt - ta / 2.0) });
+        let mut f = Fleeing { pos, at, from: [at[0], at[1] + g.k.frag.lift, at[2]], reach, d0: v3::dist_xz(pos, at), path0: 0.0, lethal_m: g.k.frag.lethal_m, wound_m: g.k.frag.wound_m, wise };
+        if wise.is_some() { f.path0 = f.off_path(pos[0], pos[2]); }
+        f
+    }
+    /// how far that point is off the way the grenade will roll
+    fn off_path(&self, x: f64, z: f64) -> f64 {
+        let mut d = self.lethal_m;
+        if let Some(w) = self.wise { for q in &w.path { d = m::min(d, m::hyp2(x - q[0], z - q[2])); } }
         d
-    };
-    let path0 = if wise.is_some() { off_path(cpos[0], cpos[2]) } else { 0.0 };
-    let holds = |p: V3, hidden: bool| -> bool {
-        let (dx, dz) = (p[0] - cpos[0], p[2] - cpos[2]);
+    }
+    /// The straight leg there takes him no nearer the thing, nor its path.
+    fn holds(&self, p: V3) -> bool {
+        let (dx, dz) = (p[0] - self.pos[0], p[2] - self.pos[2]);
         let r = m::hyp2(dx, dz);
-        let dp = m::hyp2(p[0] - at[0], p[2] - at[2]);
-        if if hidden { dp < d0 - 0.05 } else { dp <= d0 + 0.3 } { return false; }
+        if v3::dist_xz(p, self.at) < self.d0 - 0.05 { return false; }
         let mut s = 0.4;
         loop {
             let u = m::min(1.0, s / m::max(r, 1e-3));
-            let (x, z) = (cpos[0] + dx * u, cpos[2] + dz * u);
-            if m::hyp2(x - at[0], z - at[2]) < d0 - 0.2 || off_path(x, z) < path0 - 0.3 { return false; }
+            let (x, z) = (self.pos[0] + dx * u, self.pos[2] + dz * u);
+            if m::hyp2(x - self.at[0], z - self.at[2]) < self.d0 - 0.2 || self.off_path(x, z) < self.path0 - 0.3 { return false; }
             if u >= 1.0 { return true; }
             s += 0.4;
         }
-    };
-    if wise.is_some() && d0 < lethal_m { best_s = f64::NEG_INFINITY; }
-    plain_s = best_s;
-    let score = |hidden: bool, shaded: bool, r: f64, dp: f64| -> f64 {
-        if hidden { 100.0 - r * 2.0 + m::min(dp, 4.0) * 0.2 } else { (if shaded { 40.0 } else { 0.0 }) + m::min(dp, wound_m + 1.0) - 0.15 * r }
-    };
-    let mut best_open = false;
-    if let Some(p) = wise.and_then(|w| w.keep) {
-        let (r, dp) = (m::hyp2(p[0] - cpos[0], p[2] - cpos[2]), m::hyp2(p[0] - at[0], p[2] - at[2]));
-        let hidden = exposed_to(g, from, p, [p[0], 1.15, p[2]], None) <= 0.0;
-        let shaded = !hidden && flee_shade(g, from, p);
-        if dp >= d0 - 0.05 && holds(p, true) {
-            best = Some(p);
-            best_id = 1;
-            plain_id = 1;
-            best_open = !hidden && !shaded;
-            plain_s = score(hidden, shaded, r, dp) + flee_keep;
-            // seenKept: only a firm line turns him off the leg he is on
-            let kept = if hidden {
-                let e = match ask.as_mut() { Some(f) => crate::picture::exposure_ask(g, f, p), None => 0.0 };
-                if e >= 0.5 { flee_cost * e } else { 0.0 }
-            } else { 0.0 };
-            best_s = plain_s - kept;
+    }
+    /// What a spot `r` off is to him.
+    fn read(&self, g: &mut Game, p: V3, r: f64) -> Spot {
+        let hidden = exposed_to(g, self.from, p, [p[0], 1.15, p[2]], None) <= 0.0;
+        let dp = v3::dist_xz(p, self.at);
+        let shaded = !hidden && flee_shade(g, self.from, p);
+        let s = if hidden { 100.0 - r * 2.0 + m::min(dp, 4.0) * 0.2 } else { (if shaded { 40.0 } else { 0.0 }) + m::min(dp, self.wound_m + 1.0) - 0.15 * r };
+        Spot { hidden, shaded, dp, s }
+    }
+}
+/// a spot: out of its line, or only behind what the burst will take; how far from it, and what that is worth
+#[derive(Clone, Copy)]
+struct Spot { hidden: bool, shaded: bool, dp: f64, s: f64 }
+impl Spot { fn open(&self) -> bool { !self.hidden && !self.shaded } }
+
+/// The best spot so far, the best his mates' floor bars him from, and the best by the grenade alone. A spot is told by its number: 0 none, KEPT the leg he has, then one a spot weighed.
+#[derive(Default)]
+struct Weighed { best: Option<V3>, s: f64, id: u32, open: bool, bar: Option<V3>, bar_s: f64, mates: bool, plain_s: f64, plain_id: u32, next_id: u32 }
+const KEPT: u32 = 1;
+
+/// The leg he has, if it still takes him no nearer: only a firm line of somebody's on it turns him off it.
+fn weigh_kept(g: &mut Game, f: &Fleeing, w: &mut Weighed, ask: &mut Option<crate::picture::ExposureAsker>) {
+    let Some(p) = f.wise.and_then(|w| w.keep) else { return };
+    let k = f.read(g, p, v3::dist_xz(p, f.pos));
+    if !(k.dp >= f.d0 - 0.05 && f.holds(p)) { return; }
+    w.best = Some(p);
+    w.id = KEPT;
+    w.plain_id = KEPT;
+    w.open = k.open();
+    w.plain_s = k.s + g.k.frag.flee_keep;
+    let e = match ask.as_mut() { Some(a) if k.hidden => crate::picture::exposure_ask(g, a, p), _ => 0.0 };
+    w.s = w.plain_s - if e >= 0.5 { g.k.picture.flee_cost * e } else { 0.0 };
+}
+
+/// Every spot of the rings round him, nearest ring first and from straight away from it to either side.
+fn walk_rings(g: &mut Game, f: &Fleeing, w: &mut Weighed, ask: &mut Option<crate::picture::ExposureAsker>, leaves: &[Vec<f64>], look: bool) {
+    let leaf0 = if leaves.is_empty() { 0.0 } else { leaf_dist(leaves, f.pos[0], f.pos[2]) };
+    let a0 = v3::yaw_to(f.at, f.pos) + (if look { m::PI / 32.0 } else { 0.0 });
+    let (turns, step) = if f.wise.is_some() { (32, m::PI / 16.0) } else { (16, m::PI / 8.0) };
+    for &r in if look { &LOOK_RINGS } else { &FIRST_RINGS } {
+        if r > f.reach + 0.4 { break; }
+        for k in 0..turns {
+            let sign = if k % 2 != 0 { -1.0 } else { 1.0 };
+            let a = a0 + sign * m::ceil(k as f64 / 2.0) * step;
+            let p: V3 = [f.pos[0] + m::sin(a) * r, 0.0, f.pos[2] + m::cos(a) * r];
+            if !can_run_to(g, f, p, a, r) { continue; }
+            if !leaves.is_empty() && leg_by_leaf(g, leaves, f.pos, p, leaf0) { continue; }
+            weigh(g, f, w, ask, p, r, look);
         }
     }
-    let leaves0 = if wise.is_some() { open_leaves(g, cpos, 8.0) } else { Vec::new() };
-    let leaves = if !leaves0.is_empty() { Some(leaves0) } else { None };
-    let leaf0 = match &leaves { Some(l) => leaf_dist(l, cpos[0], cpos[2]), None => 0.0 };
-    let turns = if wise.is_some() { 32 } else { 16 };
-    let step = m::PI / (if wise.is_some() { 16.0 } else { 8.0 });
-    for look in 0..2 {
-        if look != 0 && !(wise.is_some() && mates && (best.is_none() || best_open)) { break; }
-        let rings: &[f64; 6] = if look != 0 { &LOOK_RINGS } else { &FIRST_RINGS };
-        for &r in rings.iter() {
-            if r > reach + 0.4 { break; }
-            for k in 0..turns {
-                let sign = if k % 2 != 0 { -1.0 } else { 1.0 };
-                let a = a0 + (if look != 0 { m::PI / 32.0 } else { 0.0 }) + sign * m::ceil(k as f64 / 2.0) * step;
-                let p: V3 = [cpos[0] + m::sin(a) * r, 0.0, cpos[2] + m::cos(a) * r];
-                if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
-                if let Some(w) = wise {
-                    if !holds(p, true) { continue; }
-                    if let Some(n) = w.not { if m::hyp2(p[0] - n[0], p[2] - n[2]) < 0.8 { continue; } }
-                }
-                let mut barred = false;
-                if let Some(ap) = wise.and_then(|w| w.apart.as_ref()) {
-                    for &q in &ap.stay { if shoulders(g, cpos, p, q) { barred = true; break; } }
-                }
-                if crate::scene_collision::solid_blocked(g, [cpos[0], 0.45, cpos[2]], [p[0], 0.45, p[2]], None) { continue; }
-                let mut clear = true;
-                let mut s = 0.4;
-                while s < r {
-                    if crate::scene_collision::nav_grid_is_blocked(g, cpos[0] + m::sin(a) * s, cpos[2] + m::cos(a) * s) { clear = false; break; }
-                    s += 0.4;
-                }
-                if !clear { continue; }
-                if let Some(l) = &leaves { if leg_by_leaf(g, l, cpos, p, leaf0) { continue; } }
-                let hidden = exposed_to(g, from, p, [p[0], 1.15, p[2]], None) <= 0.0;
-                let dp = m::hyp2(p[0] - at[0], p[2] - at[2]);
-                let shaded = !hidden && flee_shade(g, from, p);
-                if wise.is_some() && !hidden && !shaded && dp <= d0 + 0.3 { continue; }
-                if look != 0 && !hidden && !shaded && dp <= wound_m { continue; }
-                if !barred && hidden {
-                    if let Some(ap) = wise.and_then(|w| w.apart.as_ref()) {
-                        for &q in &ap.go {
-                            if m::hyp2(p[0] - q[0], p[2] - q[2]) < flee_apart_m && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None) { barred = true; break; }
-                        }
-                    }
-                }
-                let s0 = score(hidden, shaded, r, dp);
-                let sc = if hidden && s0 > best_s {
-                    // seen: a spot past his legs pays the whole cost; no asker, nothing
-                    let cost = match ask.as_mut() { Some(f) => flee_cost * (if r > reach { 1.0 } else { crate::picture::exposure_ask(g, f, p) }), None => 0.0 };
-                    s0 - cost
-                } else { s0 };
-                if barred {
-                    if look == 0 {
-                        mates = mates || hidden;
-                        if s0 > bar_s { bar_s = s0; bar = Some(p); }
-                    }
-                    continue;
-                }
-                next_id += 1;
-                if mind && s0 > plain_s { plain_s = s0; plain_id = next_id; }
-                if sc > best_s { best_s = sc; best = Some(p); best_id = next_id; best_open = !hidden && !shaded; }
-            }
-        }
+}
+
+/// Free floor, reached in a straight line that takes him no nearer, and not the spot he made no ground to.
+fn can_run_to(g: &Game, f: &Fleeing, p: V3, a: f64, r: f64) -> bool {
+    if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
+    if let Some(w) = f.wise {
+        if !f.holds(p) || w.not.is_some_and(|n| v3::dist_xz(p, n) < 0.8) { return false; }
     }
-    if (best.is_none() || best_open) && flee_shade(g, from, cpos) { return (None, false); }
-    if best.is_none() && bar.is_some() && d0 < lethal_m { return (bar, false); }
-    if mind && best.is_some() && best_id != plain_id && best_id != 1 { g.stats.picture.moved += 1; }
-    (best, best.is_some() && best_id == 1)
+    if crate::scene_collision::low_blocked(g, f.pos, p) { return false; }
+    let mut s = 0.4;
+    while s < r {
+        if crate::scene_collision::nav_grid_is_blocked(g, f.pos[0] + m::sin(a) * s, f.pos[2] + m::cos(a) * s) { return false; }
+        s += 0.4;
+    }
+    true
+}
+
+/// One spot against the best so far: what it is worth, less what standing there in somebody's line costs him. A mate who stays in his way, or one going to the same corner, bars it.
+fn weigh(g: &mut Game, f: &Fleeing, w: &mut Weighed, ask: &mut Option<crate::picture::ExposureAsker>, p: V3, r: f64, look: bool) {
+    let apart = f.wise.and_then(|w| w.apart.as_ref());
+    let mut barred = match apart { Some(ap) => ap.stay.iter().any(|&q| shoulders(g, f.pos, p, q)), None => false };
+    let spot = f.read(g, p, r);
+    if f.wise.is_some() && spot.open() && spot.dp <= f.d0 + 0.3 { return; }
+    if look && spot.open() && spot.dp <= f.wound_m { return; }
+    if let Some(ap) = apart.filter(|_| !barred && spot.hidden) {
+        let near = g.k.frag.flee_apart_m;
+        barred = ap.go.iter().any(|&q| v3::dist_xz(p, q) < near && !crate::scene_collision::low_blocked(g, p, q));
+    }
+    let sc = match ask.as_mut() {
+        // (a spot past his legs pays the whole cost)
+        Some(a) if spot.hidden && spot.s > w.s => spot.s - g.k.picture.flee_cost * (if r > f.reach { 1.0 } else { crate::picture::exposure_ask(g, a, p) }),
+        _ => spot.s,
+    };
+    if barred {
+        if look { return; }
+        w.mates = w.mates || spot.hidden;
+        if spot.s > w.bar_s { w.bar_s = spot.s; w.bar = Some(p); }
+        return;
+    }
+    w.next_id += 1;
+    if ask.is_some() && spot.s > w.plain_s { w.plain_s = spot.s; w.plain_id = w.next_id; }
+    if sc > w.s { w.s = sc; w.best = Some(p); w.id = w.next_id; w.open = spot.open(); }
 }
 
 /// A doorway a man can leave by as it stands.
 fn open_way(g: &crate::game::Game, d: DoorId) -> bool {
-    crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && !crate::doors::door_closing(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.frag.flee_door_open)
+    g.dr[d].leaf.off || (!g.dr[d].leaf.latched && !g.dr[d].leaf.closing && m::abs(g.dr[d].leaf.angle) >= g.k.frag.flee_door_open)
 }
 
 /// His spot is in the mouth of an open doorway.
 pub(super) fn in_mouth(g: &crate::game::Game, p: V3) -> bool {
     for d in g.doors.list.clone() {
-        if open_way(g, d) && flat(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
+        if open_way(g, d) && dist_xz(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
     }
     false
 }
@@ -765,7 +737,7 @@ fn door_near(g: &Game, k: &DoorDeal, x: f64, z: f64) -> bool {
 }
 /// One straight leg: 0 clear, 1 a step of it is nearer the thing, 2 a leaf stands in it.
 fn door_clear(g: &Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
-    let r = flat(a, b);
+    let r = dist_xz(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
         let u = if r > 1e-3 { m::min(1.0, t / r) } else { 1.0 };
@@ -783,7 +755,6 @@ fn door_on_frame(g: &Game, b: V3, x: DoorId) -> bool {
 }
 /// The floor's own way from `a` to `p` through doorway `d`: its length, or -1 (no way, a door not open on it, a step nearer the thing, not through `d`), -2 (a leaf stands in it).
 fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
-    g.stats.frag.door_walks += 1;
     let nodes = g.k.frag.flee_door_nodes;
     let Some(mut way) = find_way(g, a, p, nodes, k.who) else { return -1.0 };
     let (mut q, mut len, mut thru) = (a, 0.0, false);
@@ -798,16 +769,16 @@ fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
         }
         let cl = door_clear(g, k, q, b, ref_);
         if cl != 0 { return -(cl as f64); }
-        len += flat(q, b);
+        len += dist_xz(q, b);
         q = b;
     }
     if thru { len } else { -1.0 }
 }
 fn door_take(g: &mut Game, k: &mut DoorDeal, goal: V3, p: V3, len: f64, v: bool) {
     let keep = k.wise.keep;
-    let same = match keep { Some(q) => flat(goal, q) < 0.05, None => false };
+    let same = match keep { Some(q) => dist_xz(goal, q) < 0.05, None => false };
     let unknown = if !k.ours || crate::cleared::cleared_rooms_known_at(g, p) { 0.0 } else { g.k.frag.flee_door_new };
-    let sc = 100.0 - len * 2.0 + m::min(flat(p, k.at), 4.0) * 0.2 - unknown + (if same { g.k.frag.flee_keep } else { 0.0 });
+    let sc = 100.0 - len * 2.0 + m::min(dist_xz(p, k.at), 4.0) * 0.2 - unknown + (if same { g.k.frag.flee_keep } else { 0.0 });
     if sc > k.best_s {
         k.best_s = sc;
         k.best = if same { keep } else { Some(goal) };
@@ -823,17 +794,17 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
     let ta = speed / accel;
     let reach = (if tt <= ta { 0.5 * accel * tt * tt } else { speed * (tt - ta / 2.0) }) * g.k.frag.flee_door_in;
     if !(reach > 0.5) { return None; }
-    let d0 = flat(cpos, at);
+    let d0 = dist_xz(cpos, at);
     let path0 = door_off_path(g, cpos[0], cpos[2], &wise.path);
     let leaves = open_leaves(g, cpos, reach + 2.0);
-    let ours = match who { None => true, Some(w) => g.gd[w].team == crate::teams::Team::Operative };
+    let ours = match who { None => true, Some(w) => g.team(w).ours() };
     let mut k = DoorDeal { at, d0, path0, wise, leaves, who, ours, best: None, best_s: f64::NEG_INFINITY, via: false };
     let (most, tries, apart_m) = (g.k.frag.flee_door_most, g.k.frag.flee_door_try, g.k.frag.flee_apart_m);
     let mut open: Vec<DoorId> = Vec::new();
     for d in g.doors.list.clone() {
-        if open_way(g, d) && flat(g.dr[d].frame_centre, cpos) <= reach { open.push(d); }
+        if open_way(g, d) && dist_xz(g.dr[d].frame_centre, cpos) <= reach { open.push(d); }
     }
-    js::sort_by(&mut open, |a, b| flat(g.dr[*a].frame_centre, cpos) - flat(g.dr[*b].frame_centre, cpos));
+    js::sort_by(&mut open, |a, b| dist_xz(g.dr[*a].frame_centre, cpos) - dist_xz(g.dr[*b].frame_centre, cpos));
     let mut asked = 0.0;
     for d in open {
         let fc = g.dr[d].frame_centre;
@@ -850,17 +821,17 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
         for kk in [1.0, -1.0] { for a in [0.4, 0.8, 1.6, 2.4] { for o in [0.7, 1.1] {
             let s = w / 2.0 + a;
             let p: V3 = [fc[0] + ux * s * kk - nx * o * side, 0.0, fc[2] + uz * s * kk - nz * o * side];
-            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || flat(p, at) < d0 - 0.05 { continue; }
-            if let Some(n) = wise.not { if flat(p, n) < 0.8 { continue; } }
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || dist_xz(p, at) < d0 - 0.05 { continue; }
+            if let Some(n) = wise.not { if dist_xz(p, n) < 0.8 { continue; } }
             if let Some(ap) = &wise.apart {
-                if ap.go.iter().any(|&q| flat(p, q) < apart_m) || ap.stay.iter().any(|&q| flat(p, q) < apart_m) { continue; }
+                if ap.go.iter().any(|&q| dist_xz(p, q) < apart_m) || ap.stay.iter().any(|&q| dist_xz(p, q) < apart_m) { continue; }
             }
             if exposed_to(g, from, p, [p[0], 1.15, p[2]], None) == 0.0 { spots.push(p); }
         } } }
-        js::sort_by(&mut spots, |a, b| flat(*a, cpos) - flat(*b, cpos));
+        js::sort_by(&mut spots, |a, b| dist_xz(*a, cpos) - dist_xz(*b, cpos));
         let (mut got, mut leafed, mut ways) = (false, false, 0.0);
         for &p in &spots {
-            if ways >= tries || flat(p, cpos) > reach { break; }
+            if ways >= tries || dist_xz(p, cpos) > reach { break; }
             let len = door_walk(g, &k, cpos, p, d);
             if len == -2.0 { leafed = true; }
             if len < 0.0 || len > reach { continue; }
@@ -868,18 +839,18 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
             ways += 1.0;
             door_take(g, &mut k, p, p, len, false);
         }
-        if got || !leafed || crate::doors::door_off(g, d) { continue; }
+        if got || !leafed || g.dr[d].leaf.off { continue; }
         // behind its own open leaf: round the leaf's end first, to the floor in front of the doorway, then out
         let u = crate::doors::door_dir(g, d);
         let h = g.dr[d].def.hinge;
         let tip_n = m::max(0.0, ((h[0] + u[0] * w - fc[0]) * nx + (h[1] + u[1] * w - fc[2]) * nz) * side);
         for mm in [0.65, 1.0] {
             let sp: V3 = [fc[0] + nx * side * (tip_n + mm), 0.0, fc[2] + nz * side * (tip_n + mm)];
-            let l0 = flat(cpos, sp);
+            let l0 = dist_xz(cpos, sp);
             if l0 < g.k.frag.flee_door_via_m || crate::scene_collision::nav_grid_is_blocked(g, sp[0], sp[2]) || !crate::scene_collision::nav_grid_walkable(g, cpos, sp) { continue; }
             let ref_ = leaf_dist(&k.leaves, cpos[0], cpos[2]);
             if door_clear(g, &k, cpos, sp, ref_) != 0 { continue; }
-            if let Some(n) = wise.not { if flat(sp, n) < 0.3 { continue; } }
+            if let Some(n) = wise.not { if dist_xz(sp, n) < 0.3 { continue; } }
             let mut any = false;
             let mut n = 0.0;
             for &p in &spots {
@@ -899,7 +870,6 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own bits, under EXACT
     #[test]
     fn leaf_dist_bits() {
         let l = vec![vec![1.25, -3.5, 2.1, -2.7], vec![0.3, 0.7, 0.3, 1.9]];

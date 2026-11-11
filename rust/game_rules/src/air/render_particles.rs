@@ -10,16 +10,11 @@ pub fn particles_impulse(g: &mut crate::game::Game, pos: V3, radius: f64, streng
 
 pub(super) fn particles_set_heat(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource]) { g.out.push(crate::out_events::OutEvent::ParticlesSetHeat(crate::out_events::OutParticlesSetHeat { srcs: srcs.to_vec() })); }
 
-/// BOUNDARY NO-OP (the picture's / the host's):
-
-/// BOUNDARY NO-OP (the picture's / the host's):
-pub fn particles_clear(g: &crate::game::Game) {}
-
-/// THE POOL'S EMIT, the game's half: the record goes to the host's pool as an out event, as the generated boundary sends it (one with nothing to
-/// throw is not sent: the TypeScript returns before it queues). What the event says beside the record:
-///  · THE ANSWER. A rule reads how many were accepted (blastLook's `first`, the panel's sums): the count the pool takes while its queue has room
+/// THE POOL'S EMIT, the game's half: the record goes to the host's pool as an out event (one with nothing to throw is not sent). What the event
+/// says beside the record:
+///  · THE ANSWER. A rule reads how many were accepted (blast_look's `first`, the panel's sums): the count the pool takes while its queue has room
 ///    (floored, at most a frame's births; the rain's own cap for a rain record). Whether its queue was full is the host's to know: taken as not.
-///  · `ours` (fogofwar.ts FOG.ours: "what is filed now is the team's own doing", up between the fog's `begin` and `done`; a rain record has none): on the event.
+///  · `ours` (the fog's `filing_ours`: what is filed now is the team's own doing, up between the fog's `begin` and `done`; a rain record has none): on the event.
 pub fn particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     use crate::render_particles::{PKind, MAX_NEW_PER_FRAME, RAIN_MAX_BIRTHS};
     let n = m::max(0.0, m::floor(count));

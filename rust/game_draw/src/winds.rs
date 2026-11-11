@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 use game::out_events::OutEvent;
-use game::smoke_types::{WindGpuSource, WindGpuSourceKind};
+use game::smoke_types::{WindGpuSource};
 use game::wind::{WindSource, WindSourceKind};
 
 section! {
@@ -63,7 +63,7 @@ section! {
 }
 
 /// WHAT THE PARTICLE POOL IS HANDED: the jets near the view, nearest first, then the storm. It wants a pool and where the view looks, so it is made here of the standing game and
-/// no game's record holds it. The page that plays the puppet has the same rule; tools/draw/weather-check.ts holds the two together.
+/// no game's record holds it.
 fn for_particles(g: &Game) -> Vec<game::ids::WindWindSourceId> {
     use game::wind::WindSourceKind as K;
     let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);
@@ -135,11 +135,7 @@ impl Winds {
         let list = (statics.len(), g.engine.world.geom_serial);
         if self.of != list {
             self.of = list; self.ceilings.clear();
-            ::sim::weather::roofs_begin();
-            for &id in statics { let b = &all[id]; ::sim::weather::roofs_box(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], game::scene_world::world().ceiling_y); }
-            let mut v = [0.0; ::sim::weather::ROOFS * 4];
-            let n = ::sim::weather::roofs_end(&mut v);
-            for i in 0..n { self.ceilings.push(Rect { r: [v[i * 4] as f32, v[i * 4 + 1] as f32, v[i * 4 + 2] as f32, v[i * 4 + 3] as f32] }); }
+            for r in game::weather::roofs_among(statics.iter().map(|&id| (all[id].c, all[id].h))) { self.ceilings.push(Rect { r: r.map(|x| x as f32) }); }
         }
         for &d in &g.doors.list { let b = &all[g.dr[d].box_]; if b.rot.is_none() { self.leaves.push(crate::boxes::Leaf { c: b.c.map(|x| x as f32), h: b.h.map(|x| x as f32), yaw: b.yaw as f32, flags: b.flags as i64 as u32, key: d.ix() as u32 }); } }
         if ::sim::state::state_read(g.sim).panes.used != 0 {
@@ -171,7 +167,7 @@ fn own(s: &WindSource, roofs: &mut Vec<Rect>) -> Wind {
 
 fn gpu(s: &WindGpuSource) -> Wind {
     let mut w = Wind::ZERO;
-    w.kind = matches!(s.kind, WindGpuSourceKind::Storm) as u32;
+    w.kind = matches!(s.kind, game::wind::WindSourceKind::Storm) as u32;
     w.says = (s.field == Some(true)) as u32 | (s.heat == Some(true)) as u32 * 2;
     w.kinds = s.kinds.map_or(0, |k| k as u32);
     w.pos = s.pos.map(|x| x as f32);

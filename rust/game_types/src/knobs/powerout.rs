@@ -25,7 +25,6 @@ pub struct PoweroutK {
     #[k(1.0)] pub parties: f64,
     /// s a man looks at a breaker shot to scrap before he says so · legs a walk is tried in before it is given up
     #[k(1.5)] pub look_secs: f64,
-    #[k(8.0)] pub tries: f64,
     /// s the first man stands at a lever that will not take his hand before he gives it up · s past the walk's own length before a party that lost a man and
     ///  sent no word is missed ("nothing from the breaker") · the nearest men, in a straight line, whose way to the lever is worked out
     #[k(8.0)] pub lever_secs: f64,

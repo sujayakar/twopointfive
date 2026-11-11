@@ -19,7 +19,7 @@ pub struct Hold {
     pub a: V3,
     pub b: V3,
     pub hot: bool,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
+    /// dealt when a hold starts
     pub serial: u32,
 }
 
@@ -69,15 +69,6 @@ pub struct RaisedLine {
 pub struct GunwallMod {
     pub st: JsMap<CharId, crate::gunwall::St>,
     pub fight: Option<crate::gunwall::GunwallModFIGHTValue>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct GunwallStats {
-    pub asked: i32,
-    pub lowered: i32,
-    pub lowered_s: f64,
-    pub tucked: i32,
 }
 
 pub const STAND_SH: f64 = 1.4;

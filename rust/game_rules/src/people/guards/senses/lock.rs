@@ -13,7 +13,7 @@ pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool)
         while i < g.doors.list.len() {
             let d = g.doors.list[i];
             i += 1;
-            if !crate::doors::door_lock_broken(g, d) || crate::doors::door_noticed(g, d) { continue; }
+            if !g.dr[d].leaf.lock_broken || g.dr[d].leaf.noticed { continue; }
             let f = g.dr[d].frame_centre;
             let pos = g.ch[c].pos;
             let (dx, dz) = (f[0] - pos[0], f[2] - pos[2]);
@@ -21,7 +21,7 @@ pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool)
             if dd > 2.2 || dd < 1e-3 { continue; }
             let look = crate::guards::look_of(g, c);
             if (look[0] * dx + look[2] * dz) / dd < m::cos(75.0 * v3::DEG) { continue; }
-            let off = crate::doors::door_off(g, d);
+            let off = g.dr[d].leaf.off;
             let spot: V3 = if off {
                 [f[0] - dx / dd * 0.45, 0.0, f[2] - dz / dd * 0.45]
             } else {
@@ -31,14 +31,14 @@ pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool)
             let eye = eye_of_char(g, c);
             if crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { continue; }
             let t = g.time;
-            crate::doors::door_set_noticed(g, d, true);
-            crate::doors::door_set_noticed_t(g, d, t);
+            g.dr[d].leaf.noticed = true;
+            g.dr[d].leaf.noticed_t = t;
             crate::mind::set_state(g, gd, St::Suspicious, "guards");
             crate::mind::raise(g, gd, 0.45, "guards");
             g.gd[gd].react_t = 1.1;
             g.gd[gd].search_t = 0.0;
             crate::mind::fix(g, gd, Some(spot), "guards");
-            clear_path(g, gd);
+            g.gd[gd].drop_path();
             crate::game::game_say(g, gd, if off { "this door's off its hinges…" } else { "this lock's been kicked in…" }, None, None);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
             break;

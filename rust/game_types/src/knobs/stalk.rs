@@ -23,7 +23,7 @@ pub struct StalkK {
     /// THE STEP IN: the grab a stalk ends in closes the last of the gap in one step over `catchSecs` (a step longer than `catchM` takes up to `catchLong` times that: the haul back has what is left of HOLD.secs.grab; `turnIn`: he comes round to the man's back through the step, not in its first frames) —
     ///  a lunge: off the mark over its first three frames, most of the way inside a third of it, landing gently (stepEase). The grab's own way in covers a
     ///  fifth of the gap in its first FRAME. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own.
-    ///  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him (`yankWith`; off, he stays where he landed and the man comes 11 cm into him) — over what is left of
+    ///  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him (or he would stay where he landed and the man come 11 cm into him) — over what is left of
     ///  the grab: movement across the floor is what the game's camera shows of a grab. Less where something solid
     ///  stands behind the pair (`yankRoom` m kept clear behind Sam); 0 = he is held where he stood.
     #[k(0.3)] pub catch_secs: f64,
@@ -34,14 +34,12 @@ pub struct StalkK {
     #[k(0.4)] pub yank_room: f64,
     #[k(1.35)] pub corner_m: f64,
     #[k(110.0)] pub corner_deg: f64,
-    /// BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck Sam gives when the man turns off his back with
-    ///  the stalk on AND comes on round to face him (Sam inside `joltFace`° of his nose within `joltSecs` s: a patrol's quarter turn is not that) — the whole of it,
-    ///  at once, when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was. joltFace 180 = at any turn that ends the stalk.
-    ///  `joltAtOnce` = the duck for a turn on the out's own frame with none of brokeDuck's tests: the fifth pass as it was, raised only by journal.ts for a recording of it.
-    ///  THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
-    ///  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
-    ///  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was.
-    ///  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1, `turnIn` and `yankWith` off. stalkPolish(true) writes POLISH_UP's.)
+    /// BROKEN OFF BY THE MAN (`stalk_step`): `jolt` = how much of the animator's duck Sam gives when the man turns off his back with
+    ///  the stalk on AND comes on round to face him (Sam inside `jolt_face`° of his nose within `jolt_secs` s: a patrol's quarter turn is not that) — the whole of it,
+    ///  at once, when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch. `jolt_face` 180 = at any turn that ends the stalk.
+    ///  THE WAIT SHOWS (`close_tick`): on the wall with the button held he coils — sunk `corner_coil` of the way into the crouch, the lead hand tucked toward the man at `corner_reach[0]`
+    ///  of the grab's reach, growing to `corner_reach[1]` as the nearest man he could take comes from `corner_see` m to `corner_m`; he comes up out of the coil over
+    ///  `corner_rise` s of the step in.
     #[k(0.6)] pub jolt: f64,
     #[k(50.0)] pub jolt_face: f64,
     #[k(0.6)] pub jolt_secs: f64,
@@ -76,8 +74,8 @@ pub struct StalkK {
     #[k(3.0)] pub orbit_k: f64,
     #[k(0.05)] pub orbit_edge: f64,
     #[k(0.3)] pub orbit_snap: f64,
-    /// …and with it a press can begin one from further off ("i think we can make the start radius a bit larger too"): inside `lowBeginM`, kept out to `lowOutM`,
-    ///  where close.ts's mode range (3.0 and 3.6 m) was the limit. From out there he comes on at his plain crouch walk; the mode's carriage and the sink come in inside it
+    /// …and with it a press can begin one from further off ("i think we can make the start radius a bit larger too"): inside `low_begin_m`, kept out to `low_out_m`,
+    ///  past the close-in mode's own range (`close.mode_m`, `close.mode_out_m`: 3.0 and 3.6 m). From out there he comes on at his plain crouch walk; the mode's carriage and the sink come in inside it
     #[k(4.2)] pub low_begin_m: f64,
     #[k(5.0)] pub low_out_m: f64,
 }

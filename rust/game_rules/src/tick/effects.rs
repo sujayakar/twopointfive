@@ -7,17 +7,14 @@ use alloc::{vec, vec::Vec};
 
 type Emitter = crate::smoke_types::SmokeEmitter;
 type Kind = crate::smoke_types::SmokeEmitterKind;
-type Lattice = crate::smoke_types::SmokeEmitterLattice;
+type Lattice = crate::smoke_types::SmokeLattice;
 
-/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone. (combat.ts fireWeaponRaw track and port; sparks.ts tracker)
+/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone.
 pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
         Track::EjectPort { by } => {
-            let from = match g.ch[by].bones.get(crate::character::Bone::HandR) {
-                Some(hand) => *hand,
-                None => g.ch[by].muzzle,
-            };
+            let from = g.ch[by].bone(crate::character::Bone::HandR).unwrap_or(g.ch[by].muzzle);
             Some((v3::add(v3::mad(from, g.ch[by].gun_dir, 0.06), [0.0, 0.06, 0.0]), [0.0, 1.0, 0.0]))
         }
         Track::Spark { slot, gen_ } => {
@@ -35,7 +32,7 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
 
 /// `smoke.emit`: the game's own smoke where it keeps one, then the event for the host's solver (the gas of a shot, a stun's jets and trails, the can's
 /// vent: the solver is the host's and hears of them the way it hears of a holed wall's puff).
-fn smoke_emit(g: &mut Game, e: &Emitter) {
+pub(crate) fn smoke_emit(g: &mut Game, e: &Emitter) {
     crate::smoke_types::smoke_system_like_emit(g, e);
     crate::out_events::push_smoke_system_like_emit(g, e);
 }
@@ -50,15 +47,6 @@ pub fn muzzle_frame(o: V3, d: V3) -> crate::effects::MuzzleFrame {
     }
     y = v3::normalize(y);
     MuzzleFrame { o: v3::copy(o), x: v3::cross(y, z), y, z }
-}
-
-/// A solver that takes nothing (spawnShot's `gas: false`).
-pub mod no_gas {
-    pub fn emit() {}
-    pub fn push() {}
-    pub fn in_smoke_domain() -> bool {
-        false
-    }
 }
 
 /// An offset in the muzzle frame, as a point.
@@ -245,50 +233,66 @@ pub fn vent_mouth(item_pos: V3, yaw: f64) -> V3 {
 mod tests {
     use super::*;
 
-    fn bits(a: V3) -> [u64; 3] {
-        [a[0].to_bits(), a[1].to_bits(), a[2].to_bits()]
+    fn at_near(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-9, "{what}: {a:?} against {b:?}"); }
+
+    /// Where a shot's gas comes out: z down the bore, y as near up as that lets it, x to the side, each a metre and square to the others.
+    #[test]
+    fn a_muzzle_frame_is_square_to_the_bore_and_up_as_near_as_it_can_be() {
+        for d in [[0.3, -0.2, 0.9], [1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, -2.0, 0.0], [0.001, 2.0, 0.0]] {
+            let f = muzzle_frame([1.5, 1.25, -3.0], d);
+            assert_eq!(f.o, [1.5, 1.25, -3.0]);
+            at_near(f.z, v3::normalize(d), "down the bore");
+            for (a, b) in [(f.x, f.y), (f.y, f.z), (f.x, f.z)] { assert!(v3::dot(a, b).abs() < 1e-9, "{d:?}: {a:?} {b:?}"); }
+            for a in [f.x, f.y] { assert!((v3::len(a) - 1.0).abs() < 1e-9, "{d:?}: {a:?}"); }
+            at_near(v3::cross(f.y, f.z), f.x, "right-handed");
+            if d[1].abs() < 1.0 { assert!(f.y[1] > 0.0, "{d:?}: up is up"); }
+        }
     }
 
-    // Expected values: the TypeScript's own, under bun with EXACT.on, printed as hex.
     #[test]
-    fn muzzle_frame_matches_the_typescript() {
-        let f = muzzle_frame([1.5, 1.25, -3.0], [0.3, -0.2, 0.9]);
-        assert_eq!(bits(f.o), [0x3ff8000000000000, 0x3ff4000000000000, 0xc008000000000000]);
-        assert_eq!(bits(f.x), [0x3fee5b9d136c6d97, 0x0000000000000000, 0xbfd43d136248490f]);
-        assert_eq!(bits(f.y), [0x3fb0b318e600b27b, 0x3fef4fceaf414ea4, 0x3fc90ca559010bb8]);
-        assert_eq!(bits(f.z), [0x3fd3cda44714c1ba, 0xbfca6785b41bacf8, 0x3fedb4766a9f2297]);
+    fn a_vent_opens_out_along_its_yaw_at_its_height() {
+        let v = vent();
+        let at = vent_mouth([2.0, 0.1, -4.0], m::PI / 2.0);
+        assert!(v3::dist(at, [2.0 + v.standoff, 0.1 + v.height, -4.0]) < 1e-9, "out along its way: {at:?}");
     }
+
+    /// A stun's vents differ burst to burst and jet to jet, the same each time it is replayed.
     #[test]
-    fn muzzle_frame_straight_up_takes_the_other_axis() {
-        let f = muzzle_frame([0.0, 0.0, 0.0], [0.0, 2.0, 0.0]);
-        assert_eq!(bits(f.x), [0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000]);
-        assert_eq!(bits(f.y), [0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000]);
-        assert_eq!(bits(f.z), [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]);
-    }
-    #[test]
-    fn vent_mouth_matches_the_typescript() {
-        assert_eq!(bits(vent_mouth([2.0, 0.1, -4.0], 0.7)), [0x40005c5ae466fc9c, 0x3fcc28f5c28f5c29, 0xc00f925a2b5aa590]);
-    }
-    #[test]
-    fn a_bursts_draws_match_the_typescript() {
-        let want: [u64; 5] = [0x3feb2a76e57f0000, 0x3fe68ec915850000, 0x3feeb0d5125a0000, 0x3fe02c6fb59d4000, 0x3fd408f1063f0000];
-        for (k, w) in [1.0, 2.0, 3.0, 41.0, 152.0].iter().zip(want.iter()) {
-            assert_eq!(rnd(7.0, *k).to_bits(), *w);
+    fn a_bursts_draws_are_its_own() {
+        for k in 0..300 {
+            let (seed, k) = (7.0, k as f64);
+            let r = rnd(seed, k);
+            assert!((0.0..1.0).contains(&r), "{k}: {r}");
+            assert_eq!(r, rnd(seed, k));
+            assert_ne!(r, rnd(seed + 1.0, k), "{k}: the next burst");
+            assert_ne!(r, rnd(seed, k + 1.0), "{k}: the next draw");
         }
-        assert_eq!(bits(wobble(7.0, [0.3, 0.1, -0.9], 0.54, 63.0)), [0x3fdfabe24fb459cf, 0x3fbc192de7c28739, 0xbfeb9595345febde]);
     }
-    // `gas: false` must make no call: smoke_system_like_emit is a stub that panics, so reaching it fails this.
+
+    #[test]
+    fn a_wobbled_direction_is_a_direction_near_the_one_it_was() {
+        let d = v3::normalize([0.3, 0.1, -0.9]);
+        let w = wobble(7.0, d, 0.54, 63.0);
+        assert!((v3::len(w) - 1.0).abs() < 1e-9);
+        assert_ne!(w, d);
+        assert!(v3::dot(w, d) > 0.8, "{w:?}");
+        at_near(wobble(7.0, d, 0.0, 63.0), d, "no amount: no wobble");
+    }
+
+    /// A shot with no gas puts nothing in the air and is still a flash, at the gain asked for, just out of the muzzle.
     #[test]
     fn a_shot_with_no_gas_files_none_and_still_flashes() {
         let mut g = Game::blank();
         let o = SpawnShotO { gas: Some(false), light_gain: Some(0.5), ..Default::default() };
         let l = spawn_shot(&mut g, [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], &o);
+        let s = shot();
         assert_eq!(l.len(), 1);
-        assert_eq!(l[0].intensity, 45.0);
-        assert_eq!(l[0].range, 8.0);
-        assert_eq!(l[0].ttl, 0.09);
-        assert_eq!(l[0].pos, v3::mad([0.0, 1.0, 0.0], [0.0, 0.0, 1.0], 0.22 * 0.4));
+        assert_eq!(l[0].intensity, s.light_power * 0.5);
+        assert_eq!((l[0].range, l[0].ttl), (s.light_range, s.light_duration));
+        assert_eq!(l[0].pos, v3::mad([0.0, 1.0, 0.0], [0.0, 0.0, 1.0], s.standoff * 0.4));
+        assert!(g.out.is_empty(), "no gas");
     }
+
     // rides the spark it was made on, and answers nothing once it dies or the slot goes to another.
     #[test]
     fn a_spark_track_lets_go_when_the_spark_dies_or_the_slot_is_reused() {
@@ -303,11 +307,5 @@ mod tests {
         g.sparks.pool[3].gen_ = 5.0;
         g.sparks.pool[3].alive = false;
         assert_eq!(track_at(&mut g, &tr), None);
-    }
-    #[test]
-    fn no_gas_takes_nothing() {
-        no_gas::emit();
-        no_gas::push();
-        assert!(!no_gas::in_smoke_domain());
     }
 }

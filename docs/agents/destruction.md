@@ -31,21 +31,22 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `break_table/`, `debris/`, `falling.rs` | what a broken thing throws and its shapes (`Mat`, `break_row`); the pool of pieces; where a thing comes down |
 | `furnblast.rs` | furniture and a blast |
 | `frag/`, `he40.rs` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
-| `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `glass_pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
-| `shards/`, `shard_model.rs`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
+| `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
+| `shards/`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
 | `fixture_break.rs`, `blast_look.rs`, `blast_feel/`, `dust_look.rs`, `floormess.rs` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
 | `marks.rs`, `render_decals/` | who asks for a mark, the list of marks |
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `falls.rs` for landings and
-litter; `slabs.rs` for a leaf in the air (`doors.md`). The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
+The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
+`rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
 
 ## How it works
 
 **Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
-most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on`, `glass_break_live` and `chew_live` all ask it.
+most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
 thresholds read (`t_decal` up to `t_tile`). One round marks a wall; a beaten spot loses its papers, its clutter, then a tile. Each kind has a rate cap
@@ -68,17 +69,17 @@ the box world's room, the cells stay shut and it answers no.
 under a standing upper. `destruction_round` does the rest. `coverfire.rs` lets a man spend rounds on what hides an enemy he knows of, by asking the same
 engine.
 
-**A blast.** `destruction_blast` runs its listeners (`BlastListener`: the glass and the bars), snow in the way, `doors_blast`, `wall_break_blast`,
-`furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
+**A blast.** `destruction_blast` tells its listeners (`BlastListener`: glass, bars), runs snow, `doors_blast`,
+`wall_break_blast`, tells them again through what opened, `furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
 `wall_break_plan_of` is the plan: columns in line within `hole_k` × radius go whole, within `port_k` lose their upper part, cover cells within
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 
 **A wall charge.** `wall_at` finds the wall under the point, or its reason in words. `wall_charge_settle` slides the place to floor on both sides.
-Sam's row is `wall_charge_sam_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
+Sam's row is `wall_charge_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
 `Standoff`, `Armed`, `Wait`, `Enter`) by `wall_charge_step`. The count is `carried` where the card (`kit/`) or the level's `wallCharges`
 (`issue_stage`) gave one, else `cost` door charges out of the bag (`wall_charge_price`).
 
-**The blow** (`wall_charge_blow_raw`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
+**The blow** (`wall_charge_blow`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
 borrowed stun can's burst (`detonate_stun`). On his own side a man inside `wallkill.near_m` dies; others go blind (`safe_secs`). Beyond the wall, only
 if a hole opened (a wall that held is still a wall), and with a line: inside `knock_m` he is struck down, inside `stun_m` blind and folded. A defender
 in that room with no line is folded out to `room_m`. A teammate past the wall is dazzled for `ours_secs`.
@@ -95,9 +96,10 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 `apart_m` (`furn_break_row`); props are thrown inside `throw_m`. `FurnKMouth` clears a hole's way, whoever owns what stands there.
 `furniture_hung_goes` tears boards hung under a charge.
 
-**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and `fall_store_schedule` keeps the landing in the game's
-falls. `debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
-piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down.
+**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and the landing is kept in `g.falls`.
+`debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
+piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
+`way_off` slides it the shortest free way clear of all of him.
 
 **Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
@@ -125,7 +127,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## Rules that hold
 
 - **A blast does the same to anyone.** "blowing a wall charge with me right next to it should kill me". Sam, teammates, defenders and civilians alike
-  (`blow_seat`).
+  (`guard_caught`, `civilian_caught`, `player_caught`).
 - **It catches whom the warning named.** `wall_charge_too_close` and the blow ask the same thing, before the blast, so furniture it smashes exposes
   nobody late.
 - **The men step back.** "after i place a wall charge, my guys should move away with standoff". A man told to hold stays, and the row says so.
@@ -149,7 +151,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`: `destruction.rs` (`ChaosK`), `wallbreak.rs` (`WallsK`), `wallcharge.rs` (`WallchargeK`, `WallshotK`,
-  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one; `?wallskin=0` leaves paint whole.
+  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one.
 - **What a stuff does:** its `MATERIALS` row in `src/scene/materials.ts` with the twin `does_of` reads (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.
@@ -166,7 +168,7 @@ Native tests in `rust/game_start/tests/`:
 | `wall_breaks.rs`, `blast_holes.rs` | a hole agrees for feet, eyes and rounds; chewed cover; a restart; asking first; a man walks the hole |
 | `wallcharge.rs`, `wall_kills.rs` | it catches whom the warning named; at it he dies, past it he is blind; men step back out of known fire |
 | `held_charges.rs`, `guns_and_debris.rs` | both hands, the count, whose key; a piece is heard where it lands, a boot files nothing |
-| `rounds_and_saves.rs` | what a round goes through; hits by `does`; a save carries the broken level; one flood for two walls |
+| `rounds_and_saves.rs` | what a round goes through; hits by `does`, wet or dry; a save carries the broken level; one flood for two walls |
 | `breaks.rs`, `debris_pool.rs`, `furniture.rs` | pieces of the thing, off a man down; a full pool; a wall shields furniture, a restart mends it |
 | `glass.rs`, `glass_open.rs`, `burst_panes.rs` | a pane broken early; what is open to feet, rays and sound; a burst and the glass between |
 | `held_frag.rs`, `held_forty.rs`, `marks.rs`, `restarts.rs` | whom a burst takes; the 40 mm's arming; marks put back; a restart is a fresh staging |

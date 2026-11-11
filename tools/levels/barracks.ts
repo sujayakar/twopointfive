@@ -329,8 +329,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Two swings are stopped short: o_s1 into bunks 3 (a cot stands past its jamb) and n3 into the gallery (wide open it would cross the fire door's leaf).
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
-  // out with the switch off, and then this is the barracks above, box for box). A police battalion's lines: what makes each room ITS room. The five bunk rooms are
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // A police battalion's lines: what makes each room ITS room. The five bunk rooms are
   // told apart by WHO sleeps there, said with one blanket a bed: recruits (brown-grey issue blankets, square, bunks stacked two high on the north wall), sergeants
   // (red quilts, a tunic with chevrons and a peaked cap on each), the standby section (blue blankets thrown back, vest and helmet on every bed), nobody (bare
   // springs, mattresses rolled in ticking), the sick (white sheets, a red cross: bunks 5 is the sick bay). Rules kept: nothing solid or loose within 1.1 m of a

@@ -45,7 +45,7 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
     let c = g.gd[gd].ch;
     let at = whip_at.unwrap();
     let pos = g.ch[c].pos;
-    let yaw = m::atan2(at[0] - pos[0], at[2] - pos[2]);
+    let yaw = v3::yaw_to(pos, at);
     let rate = if crate::morale::rung_of(g, gd) >= 2.0 { g.k.netquiet.whip_turn_broken } else { g.k.netquiet.whip_turn };
     g.ch[c].aim_yaw = v3::approach_angle(g.ch[c].aim_yaw, yaw, m::max(0.0, rate - 6.0) * dt);   // (the pose's own easing adds its 6 rad/s after this)
     if g.gd[gd].speed < 0.3 { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, rate * dt); }
@@ -56,7 +56,7 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
 mod tests {
     use super::*;
 
-    /// The TypeScript's bits under bun, EXACT.on, from watch's expressions copied into a script (watch is not exported) and the module's eyeSlack of 4.
+    /// The pinned bits of look_from, with an eye slack of 4.
     #[test]
     fn look_from_matches_the_typescripts_bits() {
         let a = look_from([1.25, 0.0, -3.5], 0.7, 0.785, 0.45, 0.6, 4.0);

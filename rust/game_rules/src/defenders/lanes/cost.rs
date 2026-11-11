@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -16,38 +17,33 @@ macro_rules! st {
     };
 }
 
-/// A new game's state: the TypeScript's own literal, whose clocks are not zero.
-pub(super) fn fresh(g: &mut crate::game::Game) -> crate::lanes::State {
+/// A new game's state, whose clocks are not zero.
+pub(super) fn fresh() -> crate::lanes::State {
     State { said_t: -100.0, t: -1.0, ..State::default() }
 }
 
 /// The game's state, made if it has none: the row itself.
 pub(super) fn s<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::lanes::State {
     if g.m.lanes.states.is_none() {
-        let f = fresh(g);
+        let f = fresh();
         g.m.lanes.states = Some(f);
     }
     g.m.lanes.states.as_mut().unwrap()
 }
 
-/// The distance on the plan.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// A man the rule is for: a defender of a live room fight, on his feet.
-pub(super) fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn mine(g: &crate::game::Game, gd: GuardId) -> bool {
     let r = &g.gd[gd];
-    r.team == SIDE && r.unit.is_some() && r.state != crate::game::GuardState::Dead && r.held.is_none()
+    g.ch[r.ch].team == SIDE && !g.cond[r.ch].down && r.held.is_none()
 }
 
 /// One of his who is neither dazzled nor staggering.
-pub(super) fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn fit(g: &crate::game::Game, gd: GuardId) -> bool {
     mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// The rule runs: a room fight is live, the AI on. (LANES.on settled on.)
-pub(super) fn live(g: &mut crate::game::Game) -> bool {
+pub(super) fn live(g: &crate::game::Game) -> bool {
     crate::roomfight::fight_live(g) && g.ai_enabled
 }
 
@@ -119,10 +115,7 @@ pub(super) fn lanes_gone(g: &mut crate::game::Game) {
 /// Where he looks from.
 pub(super) fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Head, 1.65)
 }
 
 /// The nav cell a point lies in, −1 off the grid.
@@ -159,14 +152,14 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
-    let Some(fc) = crate::teams::foe_char(g, gd) else { return false };
-    flat(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
+    let Some(fc) = g.gd[gd].foe else { return false };
+    dist_xz(g.pos_of(gd), g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 
 /// He is going in behind a charge; a lapsed entry is dropped as it is asked.
 pub(super) fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).push.get(gd).copied() else { return false };
-    if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
+    if g.time < t && !crate::condition::down(g, g.gd[gd].ch) {
         return true;
     }
     s(g).push.delete(gd);
@@ -189,7 +182,7 @@ pub(super) fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
     r.state == crate::game::GuardState::Alert
         || r.state == crate::game::GuardState::Search
         || r.awareness >= 0.3
-        || r.sup.src_t >= t - 1e-6
+        || g.cond[r.ch].sup.src_t >= t - 1e-6
         || r.last_seen_t >= t - 1.0
         || (r.witness.heard.last_shot_t >= 0.0 && r.witness.heard.last_shot_t >= t - 2.5)
 }
@@ -197,7 +190,7 @@ pub(super) fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
 /// He is sent round at the guns; a lapsed entry is dropped, and his errand unless he is set.
 pub(super) fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).flank.get(gd).copied() else { return false };
-    if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
+    if g.time < t && !crate::condition::down(g, g.gd[gd].ch) {
         return true;
     }
     let st = s(g);
@@ -216,26 +209,13 @@ pub(super) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
             None => false,
         };
     }
-    g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && g.gd[o].state != crate::game::GuardState::Dead)
+    g.guards.iter().any(|&o| g.char_id(o) == id_2 && !crate::condition::down(g, g.gd[o].ch))
 }
 
 pub use crate::roomfight::def_of;
 
-/// A line in the fight's log.
-pub(super) fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd {
-        Some(x) => g.gd[x].callsign.clone(),
-        None => String::from("-"),
-    };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: format!("[lanes] {}", what) });
-    if g.fight.log.len() > 600 {
-        g.fight.log.drain(0..200);
-    }
-}
-
 /// The floor one gun at `from` covers along the line to `at`: nav cells in the wedge with a line of fire from the gun.
-pub(super) fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
+pub(super) fn wedge(g: &crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
     let k = g.k.lanes;
     let (c, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let mut dx = at[0] - from[0];
@@ -349,14 +329,14 @@ pub(super) fn mask_of(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<u8>>
 }
 
 /// One of a lane's guns has a line of fire to a man standing at `p`.
-pub(super) fn gun_on(g: &mut crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64>) -> bool {
+pub(super) fn gun_on(g: &crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64>) -> bool {
     let wide = wide.unwrap_or(0.0);
     let q: V3 = [p[0], 1.1, p[2]];
     let reach = g.k.lanes.reach_m;
     let e = e_of(&g.tab.lanes_lane[l]);
     let guns = g.tab.lanes_lane[l].guns.clone(); // (a copy of its few guns: nothing asked below writes a lane)
     for gun in guns {
-        let d = flat(gun, p);
+        let d = dist_xz(gun, p);
         if d > reach || d < 0.3 {
             continue;
         }
@@ -418,74 +398,120 @@ fn rank(x: &Lane) -> i32 {
     (if x.known { 2 } else { 0 }) + (if x.weight >= 1.0 { 1 } else { 0 })
 }
 
+/// The one burst of fire a call of `cost` is about.
+#[derive(Clone, Copy)]
+struct Fire {
+    from: V3,
+    at: V3,
+    man: GuardId,
+    down: bool,
+    who: f64,
+    now: f64,
+}
+
 /// What a side has just suffered: fire from `from` landed at `at`, on a man dropped (`down`) or past a living one.
 pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: bool, who: f64) {
     let k = g.k.lanes;
-    let now = g.time;
-    let len = flat(from, at);
+    let len = dist_xz(from, at);
     if len < k.min_m {
         return; // (shot at arm's length is a fight, not a lane)
     }
+    let fire = Fire { from, at, man, down, who, now: g.time };
+    let l = lane_of_this_fire(g, fire, len);
+    let new_gun = count_the_fire(g, l, fire);
+    weigh_the_gun(g, l, who);
+    guns_have_moved_from_other_lanes(g, l, fire);
+    let r = &mut g.tab.lanes_lane[l];
+    r.until = fire.now + k.secs * m::min(3.0, m::max(1.0, r.downs));
+    if one_lane_too_many_goes(g, l) {
+        return;
+    }
+    if g.tab.lanes_lane[l].weight < 1.0 {
+        return;
+    }
+    if g.tab.lanes_lane[l].cells.is_none() {
+        first_floor_of_the_lane(g, l, fire);
+    } else if g.tab.lanes_lane[l].wedges.len() < 16 && (new_gun || !landed_in_it(g, l, at)) {
+        // (it reaches further, or wider, or from another gun, than they knew)
+        let r = &mut g.tab.lanes_lane[l];
+        r.wedges.push([from[0], 0.0, from[2]]);
+        r.wedges.push([at[0], 0.0, at[2]]);
+        let (e, mut cells) = (e_of(r), r.cells.take().unwrap());
+        wedge(g, &mut cells, from, at, e);
+        g.tab.lanes_lane[l].cells = Some(cells);
+        remask_or_bump(g, l);
+    }
+    if !g.tab.lanes_lane[l].known {
+        those_who_saw_it(g, l, fire);
+    }
+}
+
+/// The lane this fire runs along, the same way from guns it has; else a new one.
+fn lane_of_this_fire(g: &mut Game, fire: Fire, len: f64) -> LanesLaneId {
+    let Fire { from, at, now, .. } = fire;
     let dx = (at[0] - from[0]) / len;
     let dz = (at[2] - from[2]) / len;
-    let cos_m = m::cos((k.half_deg + 12.0) * m::PI / 180.0);
+    let cos_m = m::cos((g.k.lanes.half_deg + 12.0) * m::PI / 180.0);
     let found = st!(g).lanes.iter().copied().find(|&x| {
         let r = &g.tab.lanes_lane[x];
-        r.dx * dx + r.dz * dz > cos_m && r.guns.iter().any(|&gun| flat(gun, from) <= 5.0)
+        r.dx * dx + r.dz * dz > cos_m && r.guns.iter().any(|&gun| dist_xz(gun, from) <= 5.0)
     });
-    let l = match found {
-        Some(l) => l,
-        None => {
-            let st = st!(g);
-            st.serial += 1.0;
-            let id = st.serial;
-            let l = g.tab.lanes_lane.push(Lane {
-                id,
-                from: [from[0], 0.0, from[2]],
-                at: [at[0], 0.0, at[2]],
-                dx,
-                dz,
-                last_t: now,
-                known_at: -1.0,
-                push_until: -1.0,
-                pin_by: -1.0,
-                ..Lane::default()
-            });
-            let st = st!(g);
-            st.lanes.push(l);
-            st.stats.lanes += 1.0;
-            l
-        }
-    };
-    // its guns, least lately fired first (≤ 4: the stalest is forgotten); where the fire comes FROM is the one that fired last
-    let mut gun = false;
-    {
-        let r = &mut g.tab.lanes_lane[l];
-        match r.guns.iter().position(|&q| flat(q, from) < 1.5) {
-            None => {
-                r.guns.push([from[0], 0.0, from[2]]);
-                if r.guns.len() > 4 {
-                    r.guns.remove(0);
-                }
-                gun = true;
-            }
-            Some(gi) => {
-                if gi < r.guns.len() - 1 {
-                    let x = r.guns.remove(gi);
-                    r.guns.push(x);
-                }
-            }
-        }
-        r.from = v3::copy(r.guns[r.guns.len() - 1]);
-        r.weight += if down { 1.0 } else { k.round_k };
-        if down {
-            r.downs += 1.0;
-        }
-        r.last_t = now;
-        r.who.add(crate::Num(who));
-        r.moved.delete(crate::Num(who));
+    if let Some(l) = found {
+        return l;
     }
-    // (LANES.glass settled on: the gun in his hands as the round left is what a pane is to this lane)
+    let st = st!(g);
+    st.serial += 1.0;
+    let id = st.serial;
+    let l = g.tab.lanes_lane.push(Lane {
+        id,
+        from: [from[0], 0.0, from[2]],
+        at: [at[0], 0.0, at[2]],
+        dx,
+        dz,
+        last_t: now,
+        known_at: -1.0,
+        push_until: -1.0,
+        pin_by: -1.0,
+        ..Lane::default()
+    });
+    st!(g).lanes.push(l);
+    l
+}
+
+/// Its guns, least lately fired first (≤ 4: the stalest is forgotten); where the fire comes FROM is the one that fired last. True = a gun it did not have.
+fn count_the_fire(g: &mut Game, l: LanesLaneId, fire: Fire) -> bool {
+    let Fire { from, down, who, now, .. } = fire;
+    let round_k = g.k.lanes.round_k;
+    let r = &mut g.tab.lanes_lane[l];
+    let mut new_gun = false;
+    match r.guns.iter().position(|&q| dist_xz(q, from) < 1.5) {
+        None => {
+            r.guns.push([from[0], 0.0, from[2]]);
+            if r.guns.len() > 4 {
+                r.guns.remove(0);
+            }
+            new_gun = true;
+        }
+        Some(gi) => {
+            if gi < r.guns.len() - 1 {
+                let x = r.guns.remove(gi);
+                r.guns.push(x);
+            }
+        }
+    }
+    r.from = v3::copy(r.guns[r.guns.len() - 1]);
+    r.weight += if down { 1.0 } else { round_k };
+    if down {
+        r.downs += 1.0;
+    }
+    r.last_t = now;
+    r.who.add(crate::Num(who));
+    r.moved.delete(crate::Num(who));
+    new_gun
+}
+
+/// The gun in his hands as the round left is what a pane is to this lane.
+fn weigh_the_gun(g: &mut Game, l: LanesLaneId, who: f64) {
     let c = match crate::seats::man_by_id(g, who) {
         Some(p) => Some(g.pl[p].ch),
         None => g.guards.iter().map(|&o| g.gd[o].ch).find(|&c| g.ch[c].id == who),
@@ -500,98 +526,79 @@ pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, do
             r.e = e;
         }
     }
-    // THE GUNS HAVE MOVED: a gun that made another lane has now cost them from well away from it
+}
+
+/// THE GUNS HAVE MOVED: a gun that made another lane has now cost them from well away from it.
+fn guns_have_moved_from_other_lanes(g: &mut Game, l: LanesLaneId, fire: Fire) {
+    let k = g.k.lanes;
     for &x in st!(g).lanes.iter() {
         let r = &mut g.tab.lanes_lane[x];
-        if x != l && r.who.has(crate::Num(who)) && r.guns.iter().all(|&q| flat(q, from) > k.moved_m) {
-            r.moved.add(crate::Num(who));
+        if x != l && r.who.has(crate::Num(fire.who)) && r.guns.iter().all(|&q| dist_xz(q, fire.from) > k.moved_m) {
+            r.moved.add(crate::Num(fire.who));
             if r.moved.len() >= r.who.len() {
-                r.until = m::min(r.until, now + k.moved_secs);
+                r.until = m::min(r.until, fire.now + k.moved_secs);
             }
         }
     }
-    if down && g.tab.lanes_lane[l].known {
-        let what = format!("lane {}: another down in it ({})", g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].downs);
-        note(g, Some(man), &what);
+}
+
+/// One too many: the one that matters least goes. True = it was the newcomer itself.
+fn one_lane_too_many_goes(g: &mut Game, l: LanesLaneId) -> bool {
+    if st!(g).lanes.len() as f64 <= g.k.lanes.max {
+        return false;
     }
-    {
-        let r = &mut g.tab.lanes_lane[l];
-        r.until = now + k.secs * m::min(3.0, m::max(1.0, r.downs));
-    }
-    if st!(g).lanes.len() as f64 > k.max {
-        // (one too many: the one that matters least goes; the newcomer itself if that is it)
-        let st = st!(g);
-        let mut o = 0;
-        for i in 1..st.lanes.len() {
-            let (a, b) = (&g.tab.lanes_lane[st.lanes[i]], &g.tab.lanes_lane[st.lanes[o]]);
-            if rank(a) < rank(b) || (rank(a) == rank(b) && a.last_t < b.last_t) {
-                o = i;
-            }
-        }
-        let gone = st.lanes.remove(o);
-        lanes_gone(g);
-        st!(g).stats.lapsed += 1.0;
-        if g.tab.lanes_lane[gone].known {
-            let what = format!("lane {}: dropped for a newer one", g.tab.lanes_lane[gone].id);
-            note(g, None, &what);
-        }
-        if g.tab.lanes_lane[gone].cells.is_some() {
-            remask(g);
-        }
-        if gone == l {
-            return;
+    let st = st!(g);
+    let mut o = 0;
+    for i in 1..st.lanes.len() {
+        let (a, b) = (&g.tab.lanes_lane[st.lanes[i]], &g.tab.lanes_lane[st.lanes[o]]);
+        if rank(a) < rank(b) || (rank(a) == rank(b) && a.last_t < b.last_t) {
+            o = i;
         }
     }
-    if g.tab.lanes_lane[l].weight < 1.0 {
-        return;
+    let gone = st.lanes.remove(o);
+    lanes_gone(g);
+    if g.tab.lanes_lane[gone].cells.is_some() {
+        remask(g);
     }
-    if g.tab.lanes_lane[l].cells.is_none() {
-        // (the gun that fired now; what its other guns cover is read in by the roll, a wedge each half second)
-        let e = {
-            let r = &mut g.tab.lanes_lane[l];
-            r.wedges.push([from[0], 0.0, from[2]]);
+    gone == l
+}
+
+/// Its floor at last: the gun that fired now; what its other guns cover is read in by the roll, a wedge each half second.
+fn first_floor_of_the_lane(g: &mut Game, l: LanesLaneId, fire: Fire) {
+    let Fire { from, at, .. } = fire;
+    let r = &mut g.tab.lanes_lane[l];
+    r.wedges.push([from[0], 0.0, from[2]]);
+    r.wedges.push([at[0], 0.0, at[2]]);
+    let e = e_of(r);
+    let mut cells = JsSet::new();
+    wedge(g, &mut cells, from, at, e);
+    let r = &mut g.tab.lanes_lane[l];
+    r.cells = Some(cells);
+    for i in 0..r.guns.len() {
+        let q = r.guns[i];
+        if dist_xz(q, from) >= 1.5 {
+            r.wedges.push(v3::copy(q));
             r.wedges.push([at[0], 0.0, at[2]]);
-            e_of(r)
-        };
-        let mut cells = JsSet::new();
-        wedge(g, &mut cells, from, at, e);
-        let r = &mut g.tab.lanes_lane[l];
-        r.cells = Some(cells);
-        for i in 0..r.guns.len() {
-            let q = r.guns[i];
-            if flat(q, from) >= 1.5 {
-                r.wedges.push(v3::copy(q));
-                r.wedges.push([at[0], 0.0, at[2]]);
-            }
         }
-        if r.wedges.len() > 2 {
-            r.re = Some(LaneRe { set: r.cells.clone().unwrap(), i: 2.0 });
-        }
-        remask_or_bump(g, l);
-    } else if g.tab.lanes_lane[l].wedges.len() < 16 && (gun || !landed_in_it(g, l, at)) {
-        // (it reaches further, or wider, or from another gun, than they knew)
-        let (e, mut cells) = {
-            let r = &mut g.tab.lanes_lane[l];
-            r.wedges.push([from[0], 0.0, from[2]]);
-            r.wedges.push([at[0], 0.0, at[2]]);
-            (e_of(r), r.cells.take().unwrap())
-        };
-        wedge(g, &mut cells, from, at, e);
-        g.tab.lanes_lane[l].cells = Some(cells);
-        remask_or_bump(g, l);
     }
-    // who of them saw it: the man the rounds passed, and every fit mate with a line to where it happened
-    if !g.tab.lanes_lane[l].known {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let o = g.guards[i];
-            i += 1;
-            if !fit(g, o) || g.tab.lanes_lane[l].saw.has(o) {
-                continue;
-            }
-            if o == man || sees(g, o, at, k.see_m) {
-                g.tab.lanes_lane[l].saw.set(o, now);
-            }
+    if r.wedges.len() > 2 {
+        r.re = Some(LaneRe { set: r.cells.clone().unwrap(), i: 2.0 });
+    }
+    remask_or_bump(g, l);
+}
+
+/// Who of them saw it: the man the rounds passed, and every fit mate with a line to where it happened.
+fn those_who_saw_it(g: &mut Game, l: LanesLaneId, fire: Fire) {
+    let see_m = g.k.lanes.see_m;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let o = g.guards[i];
+        i += 1;
+        if !fit(g, o) || g.tab.lanes_lane[l].saw.has(o) {
+            continue;
+        }
+        if o == fire.man || sees(g, o, fire.at, see_m) {
+            g.tab.lanes_lane[l].saw.set(o, fire.now);
         }
     }
 }
@@ -612,10 +619,10 @@ fn remask_or_bump(g: &mut Game, l: LanesLaneId) {
 }
 
 /// A fit man of the side has a line to what happened at `at`, inside `reach` and not behind his back.
-pub(super) fn sees(g: &mut crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
+pub(super) fn sees(g: &crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let d = flat(pos, at);
+    let d = dist_xz(pos, at);
     if d >= reach {
         return false;
     }
@@ -646,7 +653,6 @@ pub(super) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: Guard
         r.frag_at = now + k.frag_think; // (LANES.frag settled on)
     }
     remask(g);
-    s(g).stats.known += 1.0;
     // (CUES.on settled on: the place is named wherever it has a name)
     let at = g.tab.lanes_lane[l].at;
     let place = crate::dialogue::place_name(g, at);
@@ -658,18 +664,6 @@ pub(super) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: Guard
     crate::game::game_say(g, who, &line, Some(true), None);
     let now = g.time;
     s(g).said_t = now;
-    let r = &g.tab.lanes_lane[l];
-    let what = format!(
-        "lane {}: called — fire from ({}, {}) down to ({}, {}), {} cells, {} down",
-        r.id,
-        js::to_fixed(r.from[0], 1),
-        js::to_fixed(r.from[2], 1),
-        js::to_fixed(r.at[0], 1),
-        js::to_fixed(r.at[2], 1),
-        r.cells.as_ref().unwrap().len(),
-        r.downs
-    );
-    note(g, Some(who), &what);
 }
 
 /// This frame's rounds (the shot events' own muzzle → impact segments): who of the side they dropped, whom they passed.
@@ -690,7 +684,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
         }
         let (Some(a), Some(b), Some(who)) = (from, to, who) else { continue };
         let team = crate::teams::team_of_id(g, who);
-        if !crate::teams::is_hostile(g, SIDE, team) {
+        if !SIDE.foe_of(team) {
             continue;
         }
         let sx = b[0] - a[0];
@@ -703,20 +697,17 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            if g.gd[gd].team != SIDE || g.gd[gd].unit.is_none() || g.gd[gd].held.is_some() {
+            if g.team(gd) != SIDE || g.gd[gd].held.is_some() {
                 continue;
             }
-            let dead = g.gd[gd].state == crate::game::GuardState::Dead;
+            let dead = crate::condition::down(g, g.gd[gd].ch);
             // (dropped by this very round — counted once, however many rounds were in the air — or standing)
             if dead && (st!(g).dropped.has(gd) || !(g.gd[gd].died_at >= time - 1e-6 && g.gd[gd].died_at <= g.time)) {
                 continue;
             }
             let c = g.gd[gd].ch;
             let p = if dead {
-                match g.ch[c].bones.get(crate::character::Bone::Hips) {
-                    Some(x) => *x,
-                    None => g.ch[c].pos,
-                }
+                g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
             } else {
                 g.ch[c].pos
             };

@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use crate::doortools::DoorToolsCanThresholdThenWhat as What;
+use crate::doortools::ThresholdThen as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -14,7 +14,6 @@ pub const ORDER: Row = Row {
     ..Row::new("openClear", label, issue)
 };
 
-/// doortools.ts:808 `held(t) ? 'go in and clear · no bang' : `${this.entryVerb(t)} and clear${known(t)}``
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return String::from("go in and clear · no bang"); }
@@ -28,6 +27,5 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    crate::doortools::row_entry(g, false, men, t, on_word)
+    crate::doortools::row_entry(g, false, men, t)
 }

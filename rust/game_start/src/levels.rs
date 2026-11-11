@@ -1,4 +1,4 @@
-//! WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game itself (the program is src/bin/levels.rs; `gate long` asks them all): natively, with no page and no TypeScript (tools/levels/export.ts asks two of these of every level it writes).
+//! WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game itself (the program is src/bin/levels.rs; `gate long` asks them all): natively, with no page (tools/levels/export.ts asks two of these of every level it writes).
 //!
 //!   levels second-way [LEVEL…] [--list] [--walls] [--nolists]      every room the defenders can shut has another way in
 //!   levels sight [LEVEL…] [--write]                                a defender sees what he watches
@@ -42,7 +42,7 @@
 //! NAMES: over the whole floor on a half-metre lattice, what a line calls a spot and what the debrief does is one of the level's own rooms and places, and the middle of each is its own name.
 //!
 //! RAIN (the maintainer: "rain is busted on records office"): ground under open sky is rained on, and ground under the level's ceiling slabs is not.
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game_draw::traffic::{door_mid, ways, WayKind};
 use crate::json::{self, Json};
@@ -131,6 +131,8 @@ struct Window { a: usize, b: usize, at: [f64; 2] }
 
 fn cell_at(g: &Game, x: f64, z: f64) -> bool { let n = &g.col.nav; x >= 0.0 && z >= 0.0 && x < n.w * n.cell && z < n.h * n.cell && !game::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn room_at(g: &mut Game, x: f64, z: f64) -> Option<RoomfightRoomId> { if cell_at(g, x, z) { game::roomfight::room_fight_room_at(g, [x, 0.0, z]) } else { None } }
+/// the level with no leaf hung in it: they swing
+fn no_leaves(g: &mut Game) { g.col.dynamic_boxes.clear(); g.tab.boxes.leaves(&[]); }
 fn cells_of(g: &Game, r: RoomfightRoomId) -> BTreeSet<usize> { g.tab.roomfight_room[r].cells.keys().iter().map(|c| c.0 as usize).collect() }
 fn key_of(g: &Game, r: RoomfightRoomId) -> usize { *cells_of(g, r).first().expect("a room has floor") }
 /// a mission staged and let stand: nobody thinks, so everybody is where it put him
@@ -171,7 +173,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
     for q in queries.iter().rev() {
         drop(p.take());
         let mut s = staged(level, q);
-        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| s.g.gd[gd].team != game::teams::Team::Operative && s.g.gd[gd].state != GuardState::Dead).map(|&gd| s.at(gd)).collect();
+        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| !s.g.team(gd).ours() && !game::condition::down(&s.g, s.g.gd[gd].ch)).map(|&gd| s.at(gd)).collect();
         let mut here: HashMap<usize, usize> = HashMap::new();
         for a in at { if let Some(r) = room_at(&mut s.g, a[0], a[1]) { *here.entry(key_of(&s.g, r)).or_default() += 1; } }
         for (k, c) in here { let m = men.entry(k).or_default(); *m = (*m).max(c); }
@@ -216,7 +218,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
             let mut other = None;
             for far in [0.6, 0.8, 1.0, 1.3, 1.7] { other = room_at(g, e.at[0] + e.out[0] * far, e.at[2] + e.out[1] * far).filter(|r| *r != rooms[i].id); if other.is_some() { break; } }
             let (pad, name) = (game::devices::devices_pad_of(g, e.door).is_some(), g.dr[e.door].def.name.clone());
-            let (steel, locked) = (g.dr[e.door].def.steel == Some(true), g.dr[e.door].def.locked == Some(true) || game::doors::door_locked(g, e.door));
+            let (steel, locked) = (g.dr[e.door].def.steel == Some(true), g.dr[e.door].def.locked == Some(true) || g.dr[e.door].leaf.locked);
             let plain = if steel { "steel" } else if locked { "locked in the level" } else if pad { "keypad" } else if !on_list(&name) { "on no squad's list" } else { "" };
             doors.push(Door { d: e.door, name, a: i, b: other.and_then(|r| index.get(&r).copied()), into: None, pad, locked_steel: steel && locked, plain });
             doors.len() - 1
@@ -240,10 +242,10 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
             let (Some(a), Some(b)) = (a, b) else { continue };
             if a == b { continue; }
             // the player's own circle and height band taken across the sheet with the sheet gone (a kerb, a lintel or furniture against it stops him)
-            g.tab.boxes[id].c[1] += 100.0; game::scene_collision::wrote(g);
+            g.tab.boxes.edit(id).c[1] += 100.0;
             let mut walks = true; let mut s = -0.7;
             while s <= 0.7 + 1e-6 { let at = if thin_x { [c[0] + s, 0.0, c[2]] } else { [c[0], 0.0, c[2] + s] }; let mut q = at; game::scene_collision::collide_circle(g, &mut q, 0.42, 0.2, 1.7, Some(2.0)); if hyp(q, at) > 0.02 { walks = false; break; } s += 0.1; }
-            g.tab.boxes[id].c[1] = c[1]; game::scene_collision::wrote(g);
+            g.tab.boxes.edit(id).c[1] = c[1];
             if walks { windows.push(Window { a: index[&a], b: index[&b], at: [c[0], c[2]] }); }
             break;
         }
@@ -360,12 +362,11 @@ fn sight(levels: &[String], write: bool) -> Verdicts {
         if men.is_empty() { unjudged.push(level); continue; }
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
         stood += 1;
-        p.g.col.dynamic_boxes.clear();   // (the leaves out: they swing)
+        no_leaves(&mut p.g);
         if broken {   // a post in the middle of the first man's line, by a box of the level moved there
             let (a, b) = men[0].1; let half = (hyp(a, b) / 4.0).min(0.8); let id = p.g.col.boxes[0];
-            let x = &mut p.g.tab.boxes[id]; x.c = [(a[0] + b[0]) / 2.0, 1.0, (a[2] + b[2]) / 2.0]; x.h = [half, 1.0, half]; x.yaw = 0.0; x.rot = None; x.flags = 0.0;
+            let mut x = p.g.tab.boxes.edit(id); x.c = [(a[0] + b[0]) / 2.0, 1.0, (a[2] + b[2]) / 2.0]; x.h = [half, 1.0, half]; x.yaw = 0.0; x.rot = None; x.flags = 0.0;
         }
-        game::scene_collision::wrote(&mut p.g);
         let file = held("sight", level);
         let was: HashMap<String, usize> = file.iter().flatten().filter(|l| !l.starts_with('#')).filter_map(|l| { let (n, c) = l.rsplit_once(' ')?; Some((n.to_string(), c.parse().ok()?)) }).collect();
         let mut now: Vec<String> = vec![];
@@ -406,7 +407,7 @@ fn walked(levels: &[String], write: bool) -> Verdicts {
     for level in &levels {
         let data = data_of(level);
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
-        if broken { p.g.level.routes.clear(); p.g.level.scenarios = None; }
+        if broken { let l = std::sync::Arc::make_mut(&mut p.g.level); l.routes.clear(); l.scenarios = None; }
         let w = ways(&p.g);
         n_ways += w.list.len();
         if w.lost > 0 { sick.push(format!("{level}: {} with no path", w.lost)); }
@@ -472,14 +473,14 @@ fn stacks(ids: &[String]) -> Verdicts {
     for e in missions().into_iter().filter(|e| ids.is_empty() || ids.contains(&e.id)) {
         let mut p = staged(&level_of(&e), &query_of(&e));
         let g: &mut Game = &mut p.g;
-        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.gd[gd].team == game::teams::Team::Operative && g.gd[gd].state != GuardState::Dead).collect();
+        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.team(gd).ours() && !game::condition::down(g, g.gd[gd].ch)).collect();
         let crews: Vec<(&[GuardId], &str)> = if men.len() > 2 { vec![(&men[..], ""), (&men[..2], " pair"), (&men[..1], " one")] } else if men.is_empty() { vec![] } else { vec![(&men[..], ""), (&men[..1], " one")] };
         let (mut marks, mut faces, mut refused, mut far): (usize, usize, usize, Vec<String>) = (0, 0, 0, vec![]);
         let list_ = g.doors.list.clone();
         for &d in &list_ {
-            let a0 = game::doors::door_angle(g, d);
+            let a0 = g.dr[d].leaf.angle;
             let stops: Vec<f64> = [game::doors::door_max_a(g, d), game::doors::door_min_a(g, d)].into_iter().filter(|a| a.abs() > 0.3).collect();
-            let set = |g: &mut Game, a: f64| { game::doors::door_set_angle(g, d, a); game::doors::door_place(g, d); };
+            let set = |g: &mut Game, a: f64| { g.dr[d].leaf.angle = a; game::doors::door_place(g, d); };
             for side in [1.0, -1.0] { for (crew, who) in &crews {
                 set(g, 0.0);
                 let Some(posts) = game::orders::squad_orders_stack_posts(g, d, side, crew, None) else { continue };
@@ -558,9 +559,9 @@ fn stands(levels: &[String]) -> Verdicts {
             let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&{words}"), &Opts { squad: 2, ..Default::default() });
             let (on, faults) = match key {
                 "roomClear" => (game::roomclear::room_clear_scenario_active(&p.g), game::roomclear::check_structure(&mut p.g, None)),
-                "rescue" => (p.g.rescue.active, game::rescue::check_rescue(&mut p.g, None)),
-                "nightBreach" => (p.g.night_breach.active, vec![]),
-                _ => { let on = p.g.quiet.active; drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
+                "rescue" => (game::rescue::rescue_up(&p.g), game::rescue::check_rescue(&mut p.g, None)),
+                "nightBreach" => (game::nightbreach::night_breach_up(&p.g), vec![]),
+                _ => { let on = game::quiet::quiet_of(&p.g); drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
             };
             if !on { bad.push(format!("{key}: it did not start")); }
             for f in faults { if f.contains(": standing in ") { said.push(f); } else { bad.push(format!("{key}: {f}")); } }
@@ -616,7 +617,7 @@ fn doors(levels: &[String], rows: bool) -> Verdicts {
         let data = data_of(level);
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
         let g: &mut Game = &mut p.g;
-        g.col.dynamic_boxes.clear(); game::scene_collision::wrote(g);   // (the frames are measured with no leaf in them)
+        no_leaves(g);   // (the frames are measured with no leaf in them)
         let air = |g: &mut Game, p: V3, d: V3, max: f64| game::scene_collision::raycast(g, p, d, max).map_or(max, |h| h.t);
         let mut bad: Vec<String> = vec![];
         let mut mids: Vec<[f64; 2]> = vec![];

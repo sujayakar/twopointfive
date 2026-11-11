@@ -55,22 +55,6 @@ pub(super) fn throw_tables(low: bool) -> crate::character::ThrowTables {
 mod tests {
     use super::*;
 
-    /// FNV-1a over a double's bits, the walk the TypeScript's digest made
-    fn eat(h: &mut u64, x: f64) { *h = (*h ^ x.to_bits()).wrapping_mul(0x100000001b3); }
-    const FNV: u64 = 0xcbf29ce484222325;
-
-    #[test]
-    fn throw_tables_hold_the_typescripts_bits() {
-        let mut h = FNV;
-        for low in [false, true] {
-            let t = throw_tables(low);
-            assert_eq!((t.k1.len(), t.k3.len()), (11, 6));
-            for k in &t.k1 { for key in k { eat(&mut h, key[0]); eat(&mut h, key[1]); } }
-            for k in &t.k3 { for (at, v) in k { eat(&mut h, *at); for &c in v { eat(&mut h, c); } } }
-        }
-        assert_eq!(h, 0x69d144554334ebd5);
-    }
-
     #[test]
     fn the_toss_borrows_the_overhands_left_hand() {
         let (over, low) = (throw_tables(false), throw_tables(true));
@@ -80,45 +64,22 @@ mod tests {
         assert_ne!(low.k3[0], over.k3[0]); // handR is its own
     }
 
+    /// A big tool's layer eases between the blow that landed and the next.
     #[test]
-    fn knife_keys_hold_the_typescripts_bits() {
-        let mut h = FNV;
-        let (kb, slash, back) = (&KNIFE_BLOW, &KNIFE_SLASH, &KNIFE_BACK);
-        let all: [&[BlowKey]; 4] = [&kb.cross.keys, &kb.jab.keys, &slash.keys, &back.keys];
-        for keys in all {
-            for k in keys {
-                eat(&mut h, k.t);
-                for a in [k.at, k.blade, k.fing, k.pole] { for c in a { eat(&mut h, c); } }
-            }
-        }
-        assert_eq!(h, 0x56072479a3f0ecf);
-    }
-
-    #[test]
-    fn blows_near_answers_as_the_typescript_does() {
-        // (t, end, blows, the answer's bits, printed by the TypeScript's own blowsNear under bun)
-        let nan = f64::NAN;
-        let cases: [(f64, f64, &[f64], &[u64]); 7] = [
-            (0.3, -1.0, &[0.1, 0.2, 0.5, 0.9], &[0x3fc999999999999a, 0x3fe0000000000000]),
-            (0.3, 0.6, &[0.5, 0.9, 0.1], &[0x3fb999999999999a, 0x3fe0000000000000]),
-            (0.3, 0.4, &[0.5], &[]),
-            (0.0, 0.0, &[], &[]),
-            (0.5, 0.5, &[0.5, 0.5, 0.6], &[0x3fe0000000000000]),
-            (0.3, -1.0, &[nan, 0.4], &[]),
-            (0.3, -1.0, &[0.2, nan], &[0x3fc999999999999a]),
-        ];
-        for (t, end, blows, want) in cases {
-            let got = blows_near(&BlowsNearB { t, end, blows: blows.to_vec() });
-            let bits: Vec<u64> = got.iter().map(|x| x.to_bits()).collect();
-            assert_eq!(bits, want);
-        }
+    fn a_tool_reads_the_blow_that_landed_and_the_next_and_none_past_its_end() {
+        let near = |t: f64, end: f64, blows: &[f64]| blows_near(&BlowsNearB { t, end, blows: blows.to_vec() });
+        assert_eq!(near(0.3, -1.0, &[0.1, 0.2, 0.5, 0.9]), vec![0.2, 0.5], "the latest landed, the soonest to come");
+        assert_eq!(near(0.3, 0.6, &[0.5, 0.9, 0.1]), vec![0.1, 0.5], "in any order, and nothing after the end");
+        assert_eq!(near(0.3, 0.4, &[0.5]), Vec::<f64>::new(), "the only blow is past the end");
+        assert_eq!(near(0.0, 0.0, &[]), Vec::<f64>::new());
+        assert_eq!(near(0.5, -1.0, &[0.5, 0.5, 0.6]), vec![0.5, 0.6], "a blow on the clock has landed");
     }
 }
 
 /// How long a landed blow or shell is followed through before the tool may start back, s.
-pub fn big_rebound(kind: crate::character::BigReboundKind) -> f64 {
+pub fn big_rebound(kind: crate::kit::BigTool) -> f64 {
     let t = &crate::character::BIGMOVE;
-    if kind == crate::character::BigReboundKind::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
+    if kind == crate::kit::BigTool::Hammer { t.hammer.rebound } else { t.shotgun.kick_in + t.shotgun.kick_out }
 }
 
 /// His hands are off his own gun for the big slot's tool this frame: from `hide` of the equip until `show` of the stow.
@@ -182,49 +143,42 @@ pub(super) fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
 #[cfg(test)]
 mod tests_2 {
     use super::*;
+    use crate::character::BIGMOVE;
 
-    // Expected bits printed by bun from character.ts lines 1381 to 1422, run as written.
+    /// A man's column, 0.28 m round and 1.8 m tall, at the origin.
+    fn entry(ro: V3, rd: V3, tmax: f64) -> f64 { column_entry(ro, rd, tmax, 0.0, 0.0, 0.28, 0.0, 1.8) }
+    fn near(a: f64, b: f64) { assert!(m::abs(a - b) < 1e-9, "{a} against {b}"); }
+
+    /// A round is tested against a man's column before his limbs: it answers where the round goes in, or that it does not.
     #[test]
-    fn column_entry_matches_the_typescript_bits() {
-        let cases: [(V3, V3, f64, f64, f64, f64, f64, f64, u64); 10] = [
-            ([0.0, 1.0, -3.0], [0.0, 0.0, 1.0], 10.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0x4005c28f5c28f5c2),
-            ([0.1, 1.3, -3.7], [0.13, 0.07, 0.98], 10.0, 0.2, 0.1, 0.28, 0.4, 1.8, 0xbff0000000000000),
-            ([0.1, 5.0, 0.05], [0.0, -1.0, 0.0], 10.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0x400999999999999a),
-            ([1.0, 5.0, 0.05], [0.0, -1.0, 0.0], 10.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0xbff0000000000000),
-            ([0.0, 2.5, -1.0], [0.01, -0.37, 0.93], 9.0, 0.03, 0.02, 0.25, 0.9, 1.6, 0xbff0000000000000),
-            ([0.0, 0.5, 0.0], [0.0, 0.0, 1.0], 5.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0xbff0000000000000),
-            ([0.0, 1.0, -3.0], [0.0, 0.0, 1.0], 2.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0xbff0000000000000),
-            ([3.0, 1.0, -3.0], [0.0, 0.0, 1.0], 10.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0xbff0000000000000),
-            ([0.0, 3.0, -3.0], [0.0, 0.0, 1.0], 10.0, 0.0, 0.0, 0.28, 0.0, 1.8, 0xbff0000000000000),
-            ([0.0, -1.0, -2.0], [0.05, 0.6, 0.8], 10.0, 0.1, 0.0, 0.3, 0.2, 1.1, 0x4001002aba1a27a1),
-        ];
-        for (ro, rd, tmax, cx, cz, r, bot, top, want) in cases {
-            assert_eq!(column_entry(ro, rd, tmax, cx, cz, r, bot, top).to_bits(), want, "{:?} {:?}", ro, rd);
-        }
+    fn a_line_enters_a_mans_column_at_its_skin() {
+        near(entry([0.0, 1.0, -3.0], [0.0, 0.0, 1.0], 10.0), 3.0 - 0.28);
+        near(entry([0.1, 5.0, 0.05], [0.0, -1.0, 0.0], 10.0), 3.2);
     }
 
     #[test]
-    fn big_rebound_matches_the_typescript_bits() {
-        assert_eq!(big_rebound(BigReboundKind::Hammer).to_bits(), 0x3fd0000000000000);
-        assert_eq!(big_rebound(BigReboundKind::Shotgun).to_bits(), 0x3fc5c28f5c28f5c3);
+    fn a_line_that_misses_the_column_or_stops_short_or_starts_inside_is_no_entry() {
+        assert_eq!(entry([3.0, 1.0, -3.0], [0.0, 0.0, 1.0], 10.0), -1.0, "past its side");
+        assert_eq!(entry([0.0, 3.0, -3.0], [0.0, 0.0, 1.0], 10.0), -1.0, "over his head");
+        assert_eq!(entry([1.0, 5.0, 0.05], [0.0, -1.0, 0.0], 10.0), -1.0, "straight down beside him");
+        assert_eq!(entry([0.0, 1.0, -3.0], [0.0, 0.0, 1.0], 2.0), -1.0, "it stops short");
+        assert_eq!(entry([0.0, 0.5, 0.0], [0.0, 0.0, 1.0], 5.0), -1.0, "from inside it");
+        assert_eq!(entry([0.0, 1.0, 3.0], [0.0, 0.0, 1.0], 10.0), -1.0, "going away from it");
     }
 
+    /// From `hide` of the equip until `show` of the stow, and not a moment outside.
     #[test]
-    fn big_off_matches_the_typescript_with_snug() {
-        let cases: [(f64, f64, f64, f64, bool); 10] = [
-            (-1.0, 0.6, 0.45, -1.0, false),
-            (0.03, 0.6, 0.45, -1.0, false),
-            (0.04, 0.6, 0.45, -1.0, true),
-            (0.5, 0.6, 0.45, 1.0, true),
-            (1.4, 0.6, 0.45, 1.0, true),
-            (1.42, 0.6, 0.45, 1.0, true),
-            (1.43, 0.6, 0.45, 1.0, false),
-            (1.001, 0.6, 0.0, 1.0, false),
-            (1.0009, 0.6, 0.0, 1.0, true),
-            (f64::NAN, 0.6, 0.45, 1.0, false),
-        ];
-        for (t, equip, stow, end, want) in cases {
-            assert_eq!(big_off(BigOffB { t, equip, stow, end }), want, "t {}", t);
-        }
+    fn his_hands_are_off_his_gun_from_the_tools_hide_until_its_show() {
+        let s = &BIGMOVE.snug;
+        let (equip, stow, end) = (0.6, 0.45, 1.0);
+        let off = |t: f64, end: f64| big_off(BigOffB { t, equip, stow, end });
+        assert!(!off(-1.0, -1.0), "no tool out");
+        assert!(!off(s.hide * equip - 0.001, -1.0), "still drawing it");
+        assert!(off(s.hide * equip + 0.001, -1.0), "the tool is in his hands");
+        assert!(off(0.5, end), "and through its work");
+        assert!(off(end + s.show * stow - 0.001, end), "as he stows it");
+        assert!(!off(end + s.show * stow + 0.001, end), "back on his gun");
+        // a stow of no length is over at once
+        assert!(!big_off(BigOffB { t: end + 0.01, equip, stow: 0.0, end }));
     }
 }

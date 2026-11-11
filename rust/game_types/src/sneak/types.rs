@@ -82,19 +82,19 @@ pub struct Exp {
 #[derive(Clone, Debug, Default)]
 pub struct SneakWalk {
     pub by: Option<GuardId>,
-    /// INVENTED by a review: see the proposals
+    /// the man who walks
     pub gd: GuardId,
-    /// INVENTED by a review: see the proposals
+    /// he goes crouched
     pub low: bool,
-    /// INVENTED by a review: see the proposals
+    /// how keen the defenders' eyes are: `guards::KEEN` once the alarm is up, else 1
     pub keen: f64,
-    /// INVENTED by a review: see the proposals
+    /// how his load shows (`kitload::load_seen`)
     pub card: f64,
-    /// INVENTED by a review: see the proposals
+    /// how far an eye is asked: the guards' range and half a meter
     pub reach: f64,
-    /// INVENTED by a review: see the proposals
+    /// the defenders who could see him: his foes, up, not blind and awake
     pub men: Vec<crate::sneak::SneakWalkMan>,
-    /// INVENTED by a review: see the proposals
+    /// what each cell has answered, plain and wider (`sneak_walk_watched`)
     pub memo: JsMap<crate::Num, bool>,
 }
 
@@ -131,30 +131,6 @@ pub struct LINESNag {
     pub door: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOW {
-    pub wait: crate::sneak::LINESNOWWait,
-    pub nag: crate::sneak::LINESNOWNag,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOWWait {
-    pub door: Option<String>,
-    pub near: Option<String>,
-    pub open: Option<String>,
-    pub lit: Option<String>,
-    pub long: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOWNag {
-    pub door: Option<String>,
-    pub near: Option<String>,
-    pub open: Option<String>,
-    pub lit: Option<String>,
-    pub long: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SneakModLeafTValue {
     pub a: f64,
@@ -189,19 +165,10 @@ pub struct SneakMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct SneakStats {
-    pub waits: i32,
-    pub wait_s: f64,
-    pub crossings: i32,
-    pub shade: i32,
-    pub back_offs: i32,
-    pub asides: i32,
     pub cues: i32,
-    pub noise_walks: i32,
 }
 
-pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're stood in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for his back."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're stood in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
-
-pub fn lines_now() -> crate::sneak::LINESNOW { crate::sneak::LINESNOW { wait: crate::sneak::LINESNOWWait { door: None, near: None, open: Some(String::from("holding in the dark. you're standing in the light.")), lit: None, long: None }, nag: crate::sneak::LINESNOWNag { door: None, near: Some(String::from("he's still facing me. waiting for him to turn.")), open: Some(String::from("you're standing in the light. i'll hold in the dark.")), lit: None, long: None } } }
+pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're standing in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for him to turn."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're standing in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
 
 pub const DEG: f64 = 0.017453292519943295;
 
@@ -213,12 +180,12 @@ pub fn none() -> crate::sneak::Exp { crate::sneak::Exp { seen: false, watched: f
 
 pub const MAP_SHORT: f64 = 0.05;
 
-/// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body
+/// what the eye test is asked about: a spot a man could stand on, or a man's own body
 #[derive(Clone, Copy, Debug)]
 pub enum Target { Spot { chest: V3, head: V3 }, Man { c: CharId } }
-/// INVENTED: one defender in a SneakWalk. His `kept` lines stay in g.m.sneak.kept_lines, read by his id
+/// one defender in a SneakWalk. His `kept` lines stay in g.m.sneak.kept_lines, read by his id
 #[derive(Clone, Debug)]
 pub struct SneakWalkMan { pub h: GuardId, pub x: f64, pub z: f64, pub open: crate::guards::Eye, pub looks: Vec<crate::sneak::SneakWalkLook>, pub line: JsMap<crate::Num, f64> }
-/// INVENTED: one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER
+/// one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER
 #[derive(Clone, Copy, Debug)]
 pub struct SneakWalkLook { pub e: crate::guards::Eye, pub ew: crate::guards::Eye, pub lx: f64, pub lz: f64 }

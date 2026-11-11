@@ -74,7 +74,6 @@ export const RECORDS_START: Vec3 = [13.0, 0, 26.9];
  *  into BOTH (as the office's server ↔ manager door is). The team's marks carry four men: the pair's two first, two more for the four. */
 export const RECORDS_STRUCTURE: StructureData = {
   name: 'records office',
-  wayOut: true,   // (hard only — rust/game_rules/src/defenders/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
   team: { sam: RECORDS_START, samYaw: Math.PI, ops: [[12.0, 0, 27.0], [14.0, 0, 27.0], [11.0, 0, 27.0], [15.0, 0, 27.0]], opsYaw: Math.PI },
   // the second way in (ROOMCLEAR.way): the dark west side, on the records room's own outside door instead of the front office's
   starts: [{ sam: [6.4, 0, 8.6], samYaw: Math.PI / 2, ops: [[5.2, 0, 7.6], [5.2, 0, 9.6], [4.0, 0, 7.6], [4.0, 0, 9.6]], opsYaw: Math.PI / 2 }],
@@ -256,7 +255,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 33.5, 10.0, 'street_lamp_east', [-1, 0, 0]);     // off the east wall: it lights the stack on the staff room's east door, in front of that door's sidelight
   K.moon(k);
 
-  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A district land office, and its things are the surveyor's: red and white ranging rods, tripods, maps rolled and unrolled, pegs. Each room by what only it has —
   // the front office is the PUBLIC's (the claims ledge, ink, forms: clean), records the PLAN BOOKS (open on a lectern at each end of the island, plan chests under the
   // window), the strong room the DEED VAULT (the steel safe; black deed tins with buff lids), the staff room the FIELD's (the drawing board, the theodolite

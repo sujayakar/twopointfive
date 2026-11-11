@@ -45,9 +45,6 @@ export interface StructureData { name: string; team?: TeamStart; rooms: Structur
   /** a bigger floor for the four-man squad: the most defenders this structure may hold ALIVE AT ONCE (absent = five; at most eleven — Sam, the four and eleven
    *  fill the skinning's sixteen: rust/game_rules/src/missions/roomclear.rs check_structure, nightbreach) */
   maxMen?: number;
-  /** HARD defenders here do not come in after the team one at a time: the men a lost room draws hold one door of it from back off it (rust/game_rules/src/defenders/pressure
-   *  PRESSURE.wayOut — nothing at standard, nothing on a level without the row; whichever scenario stands this structure's defenders) */
-  wayOut?: boolean;
   /** false = this floor's men NEVER DIG IN (rust/game_rules/src/defenders/digin — rust/game_rules/src/defenders/roomfight: no man of it braces a door, takes cover behind furniture or sets his gun on
    *  the door he expects, at any difficulty and whatever its squads decide) — for a level whose words lean on men standing where they were dealt (Training
    *  5 and 6: a lesson is read at six seconds a line, so its men always had the minute to set a gun on the door the order is taught at). Absent = the game's
@@ -181,7 +178,7 @@ export interface QuietSpot {
   rackIndex: number;
   /** the point on the holder's face (the marker; reach is measured from it) and half its width along that face */
   front: Vec3; halfW: number;
-  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (rust/game_rules/src/missions/takecheck.rs; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
+  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (rust/game_rules/src/missions/mission.rs; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
    *  told — a file out of a safe is missed by no one; only a man who hears it come out comes to look */
   wired?: boolean;
 }
@@ -226,13 +223,9 @@ export interface LessonStep {
   /** the line while a charge his own hands set goes off from his own actions (rust/game_rules/src/sam/ownblow.rs OWNBLOW.on), where the step names the squad's key for
    *  it (absent: `line`) */
   blowLine?: string;
-  /** the line while the SQUAD's ring or menu is up (rust/game_rules/src/squad_orders/orders): the hold is one line, what to press in the ring the next (absent: `line`) */
+  /** the line while the SQUAD's ring or menu is up (rust/game_rules/src/squad_orders/orders): the hold is one line, what to press in the ring the next (absent: `line`). A digit it names is the wedge the row is on with
+   *  this level's `rails.orders` */
   menuLine?: string;
-  /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
-  pageLine?: string;
-  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, rust/game_rules/src/missions/rails.rs RAILS.flatRing:
-   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
-  flatLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -290,10 +283,6 @@ export interface RailsData {
   /** the orders the squad's menu lists on this level, by id (rust/game_rules/src/squad_orders/orders: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
-  /** the squad's ring on this mission is the game's flat tree (rust/game_rules/src/squad_orders/cmdring.rs CMDRING.flat: every order of the thing on one ring, no pages), as it
-   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (rust/game_rules/src/missions/rails.rs RAILS.flatRing; absent: the menu's pages, whose
-   *  digits `menuLine` and `pageLine` name) */
-  flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];

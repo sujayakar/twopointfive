@@ -14,8 +14,8 @@ How teammates fight, look around and keep quiet without being told. What each or
 - **The team goes dark.** With Sam's goggles down or nobody found, they use goggles and no light. Compromised, each man's light is his own to use.
 - **Nobody fires first.** While nobody has found the squad, no teammate starts the fight until Sam shoots or gives an order that means it.
 - **Silent is an order.** It means walking quietly, no light, easing doors, picking locks and holding fire on men who have not noticed.
-- **When Sam sneaks, they sneak.** They go low when he does and keep his pace. On a quiet mission his partner reads the light and the defenders' eyes
-  before each step.
+- **When Sam sneaks, they sneak.** They go low when he does and keep his pace. A knee his work puts him on (the wand, a lock, a body) is not that: they
+  keep what they were doing. On a quiet mission his partner reads the light and the defenders' eyes before each step.
 
 ## Where the code is
 
@@ -24,7 +24,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | module | what it does |
 |---|---|
 | `roomfight/` | the fight: `operative.rs` is a teammate, `fight.rs` the tick and what he hears, `line.rs` who stands in a round's way, `rooms.rs` its rooms |
-| `cleared.rs` | the level's rooms, flooded from each door, and which the team has stood in |
+| `cleared/` | the level's rooms, flooded from each door, and which the team has stood in |
 | `roomread.rs` | the space round a point and its ways out, for `roomfit.rs` |
 | `seenwalk.rs` | what lit floor in view of an unknown room costs a walk |
 | `coverfire.rs` | rounds into breakable cover at a man known to be behind it |
@@ -38,14 +38,14 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | `showwhy.rs` | waves, fists and lines that say why a teammate is waiting |
 
 Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/people/guards/search.rs`, numbers in `LightsK`.
-Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs` and `flow.rs`. Openings dealt to stopped men are `cover/`, the team's pace
+Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs`, `flow.rs` and `flow_in.rs`. Openings dealt to stopped men are `cover/`, the team's pace
 `teampace.rs` (`squad.md`).
 
 The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `src/render/lights.ts` caps them.
 
 ## How it works
 
-**Order in the tick** (`step_seats_on_first`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
+**Order in the tick** (`STEPS`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
 `nvg_tick`, `coverfire_tick`, `ir_light_tick`. The posture stands before the orders pose the men.
 
 **The fight runs on top of the order.** `room_fight_tick` gives each teammate an `Op` and calls `room_fight_tick_op`. An order owns his legs and the
@@ -101,6 +101,7 @@ a loud tool is picked (`silent_tool`). A door no pick opens is booted only then 
 
 **Unseen** (`unseen_live`) needs no order: Sam low, on a wall or slow (`sam_sneaks`) and nobody found (`squad_found`). It gives `unseen_low`,
 `unseen_follow`, `unseen_step`, `unseen_holds` and a place along Sam's wall (`unseen_wall_slot`), to all but men working a door (`entering`).
+Whether he is low by his own key is `sam_low`; `kneel` keeps on him (`knee`) how he stood before his work, until he is up again.
 
 **The partner** is on only under `k.pairup.on`, which a quiet mission with a squad sets at its start (`pair_up_apply`; `quiet.rs` keeps the old switches
 in `Held`), with `k.silent.start`. `sneak_follow` walks Sam's own trail (`track`) and reads each step by the defenders' arithmetic (`exposure`,
@@ -117,7 +118,7 @@ when its own men are down.
 and his mark's, and `seen_way` in `rust/game_rules/src/squad_orders/orders/routes.rs` adds `seen_price`.
 
 **Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. A
-piece is chewed only where cover breaks (`chew_live`).
+piece is chewed only where cover breaks (`wall_charge_on`).
 
 **Why** (`show_why_tick`): masked by Sam, a wave and "you're in my line." (`masked`, one voice: `line_said_by`); a stack waiting, squeezes up the file
 then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "I've got this door.".

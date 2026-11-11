@@ -1,5 +1,4 @@
 //! WHERE A MAN GOES FOR COVER (suppression `cover_from`, asked by a man breaking off, under fire, startled or at a blown wall).
-use game::game::GuardState;
 use game::ids::GuardId;
 use game_start::play::{Opts, Play};
 
@@ -10,7 +9,7 @@ fn clinic(seed: u32, hour: &str) -> (Play, Vec<GuardId>) {
     p.g.god_mode = true;
     p.g.fog_of_war.on = false;
     p.run(0.5);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     (p, foes)
 }
 
@@ -29,8 +28,8 @@ fn a_man_who_stays_in_his_rooms_takes_cover_in_them() {
         for _ in 0..(60 * 40) {
             p.frame();
             for &f in &foes {
-                if p.g.gd[f].state == GuardState::Dead || p.g.gd[f].fled { continue; }
-                let q = p.g.ch[p.g.gd[f].ch].pos;
+                if game::condition::down(&p.g, p.g.gd[f].ch) || p.g.gd[f].fled { continue; }
+                let q = p.g.pos_of(f);
                 assert!(q[0] < 33.0, "seed {seed} {hour}: {} is outside at {q:?} and has not fled", p.g.gd[f].callsign);
             }
         }
@@ -50,8 +49,8 @@ fn floor_behind_a_shut_door_is_no_cover() {
     let threat = [28.0, 0.0, 9.2];
     let shut = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(shut.map_or(true, |s| s[0] < 33.0), "the door shut: cover at {shut:?}, past it");
-    game::doors::door_set_locked(&mut p.g, door, false);
-    game::doors::door_set_latched(&mut p.g, door, false);
+    p.g.dr[door].leaf.locked = false;
+    p.g.dr[door].leaf.latched = false;
     let open = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(open.map_or(false, |s| s[0] > 33.0), "the staging is wrong: the door off its latch and still no cover past it: {open:?}");
     p.g.gd[man].stays_in_rooms = true;

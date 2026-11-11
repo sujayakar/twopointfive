@@ -32,15 +32,11 @@ pub struct Shell {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct He40Mod {
-    /// (src/game/he40.ts:43 HE40_LOG)
     pub he40_log: Vec<crate::he40::ShellEnd>,
 }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct He40Stats {
-    pub fired: i32,
-    pub bursts: i32,
     pub duds: i32,
-    pub gone: i32,
 }

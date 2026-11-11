@@ -17,7 +17,7 @@ export function tapeIn(path: string): Uint8Array { let b = new Uint8Array(readFi
 const wasm = faceHere(); if (!wasm) { console.error('tape-again: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const g = new DrawGame({ exports: new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm)))).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
 const W = new HandWalk(tapeIn(file), HAND.count), S = W.start, [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), T = g.tape = new HandTape(HAND.count);
-g.commands.put(S.commands); g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', S.levelName))), words: S.words, mannequin, mannequinBin, cast, castLook, seed: S.seed, seats: S.seats, named: { level: S.levelName, build: '' } });
+g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', S.levelName))), words: S.words, kept: S.kept, mannequin, mannequinBin, cast, castLook, seed: S.seed, seats: S.seats, named: { level: S.levelName, build: '' } });
 let why = '';
 for (let r = W.next(); r; r = W.next()) {
   if (r.kind === 'step') { g.numbersOf().set(r.hand); g.step(r.dt, r.keys); }

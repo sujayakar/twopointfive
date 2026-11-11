@@ -23,30 +23,12 @@ pub struct RingState {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SeatRow {
-    pub key: Option<f64>,
-    pub hot_key: Option<String>,
-    pub opens: Option<String>,
-    pub free: Option<bool>,
-    pub targets: Vec<String>,
-    pub listed: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct FlatRow {
     pub id: String,
-    pub hot_key: Option<String>,
-    pub opens: Option<String>,
+    pub word: bool,
     pub free: Option<bool>,
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RingSeats {
-    pub row: Vec<f64>,
-    pub more: f64,
-    pub over: Vec<f64>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -63,14 +45,3 @@ pub enum RingLatch {
     Give,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct CmdringStats {
-    pub opened: i32,
-    pub quick: i32,
-    pub given: i32,
-    pub pages: i32,
-    pub cancelled: i32,
-    pub who: i32,
-    pub twice: i32,
-}

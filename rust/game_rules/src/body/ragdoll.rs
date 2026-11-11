@@ -26,24 +26,18 @@ const APART: [(usize, usize, f64); 20] = [(12, 13, 0.9), (14, 15, 0.9), (12, 15,
 /// knee direction rule over (hip, knee, ankle)
 const KNEES: [(usize, usize, usize); 2] = [(10, 12, 14), (11, 13, 15)];
 
-/// cos 55°, the game's own: the skeleton's const of this name is one unit in the last place off it (see notes, ## Skeleton), and this one shadows it.
+/// cos 55°.
 const NECK_CONE_COS: f64 = 0.5735764363510462;
 
-/// wd.gather(…, this.near): the collision grid's indices of the statics round the body. In a test, a stand-in for the grid's stub.
-fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
-    #[cfg(test)]
-    return tests::every_static(g, out);
-    #[cfg(not(test))]
+/// wd.gather(…, this.near): the collision grid's indices of the statics round the body.
+fn world_gather(g: &Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
-/// `b.c`, `b.h`, `b.yaw` of a box. Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`. Once the rows have a table
-/// this is the row's three fields. In a test, a stand-in for the table.
+/// a box's row
 fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
-    #[cfg(test)]
-    return tests::box_row(b);
-    #[cfg(not(test))]
-    { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
+    let x = &g.tab.boxes[b];
+    (x.c, x.h, x.yaw)
 }
 
 /// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.
@@ -111,7 +105,7 @@ pub(super) fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V
 /// (Ragdoll.point)
 pub fn ragdoll_point(g: &crate::game::Game, id: RagdollId, i: f64, out: Option<&mut V3>) -> V3 { rd_point(&g.tab.ragdoll[id], i, out) }
 /// (Ragdoll.radius)
-pub fn ragdoll_radius(g: &crate::game::Game, id: RagdollId, i: f64) -> f64 { rd_radius(&g.tab.ragdoll[id], i) }
+pub fn ragdoll_radius(i: f64) -> f64 { rd_radius(i) }
 /// (Ragdoll.addVelocity)
 pub(super) fn ragdoll_add_velocity(g: &mut crate::game::Game, id: RagdollId, i: f64, v: V3, scale: Option<f64>) { rd_add_velocity(&mut g.tab.ragdoll[id], i, v, scale) }
 /// (Ragdoll.addRigidVelocity)
@@ -147,8 +141,14 @@ fn rd_point(this: &crate::ragdoll::Ragdoll, i: f64, out: Option<&mut V3>) -> V3 
     p
 }
 
+/// The floor under particle i as the rag has met it: what it rests on, else the ground.
+pub fn ragdoll_floor_under(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+    let k = i as usize;
+    if this.cn[k * 3 + 1] > 0.0 { this.x[k * 3 + 1] - RADIUS[k] } else { 0.0 }
+}
+
 /// Collision radius of particle i.
-fn rd_radius(this: &crate::ragdoll::Ragdoll, i: f64) -> f64 {
+fn rd_radius(i: f64) -> f64 {
     RADIUS[i as usize]
 }
 
@@ -586,7 +586,7 @@ fn rd_buried(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
     let o = i as usize * 3;
     let x = &this.x;
     for k in 0..this.n_near as usize {
-        // (near_b is gatherNear's flat copy of the very box the TypeScript reads here: called only just after a gather, with no game step between)
+        // (near_b is the gather's flat copy of the box: called only just after a gather, with no game step between)
         let q = k * 6;
         let b = &this.near_b;
         let (c, s) = (this.near_cs[k * 2], this.near_cs[k * 2 + 1]);
@@ -676,7 +676,7 @@ fn rd_sphere_box(this: &mut crate::ragdoll::Ragdoll, i: f64, r: f64, b: &[f64], 
 
 /// Rotational part of the 3×3 matrix A (row-major), refined from the warm start q in place (Müller et al. 2016).
 fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
-    let mut rr = [0.0; 9];   // (erR: module scratch in the TypeScript)
+    let mut rr = [0.0; 9];
     let mut it = 0.0;
     while it < iters {
         it += 1.0;
@@ -721,44 +721,6 @@ fn quat_mat(q: Quat, out: &mut [f64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    extern crate std;
-
-    /// The grid's stand-in, as world.ts's world answers: every static, in order. (The real gather is the collision part's.)
-    pub(super) fn every_static(g: &mut Game, out: &mut Vec<i32>) -> f64 {
-        let mut n = 0;
-        while n < g.col.boxes.len() && n < out.len() { out[n] = n as i32; n += 1; }
-        n as f64
-    }
-
-    std::thread_local! {
-        static BOX_ROWS: std::cell::RefCell<Vec<(V3, V3, f64)>> = std::cell::RefCell::new(Vec::new());
-    }
-    pub(super) fn box_row(b: BoxId) -> (V3, V3, f64) { BOX_ROWS.with(|t| t.borrow()[b.ix()]) }
-
-    #[test]
-    fn the_skeletons_numbers_are_what_the_typescript_makes() {
-        // (ragdoll.ts:45-52, made in onExact with the game's own cos and pow; the two trailing lines of ragdoll.ts:50-51 by plain division)
-        assert_eq!(HIP_CONE_COS.to_bits(), m::cos(75.0 * m::PI / 180.0).to_bits());
-        assert_eq!(NECK_CONE_COS.to_bits(), m::cos(55.0 * m::PI / 180.0).to_bits());
-        assert_eq!(DAMP.to_bits(), m::pow(0.45, H).to_bits());
-        assert_eq!(DAMP_PINNED.to_bits(), m::pow(0.003, H).to_bits());
-        assert_eq!(DAMP_SETTLE.to_bits(), m::pow(0.02, H).to_bits());
-        assert_eq!(H.to_bits(), (1.0f64 / 180.0).to_bits());
-        assert_eq!(PIN_STEP.to_bits(), (2.4 * H).to_bits());
-    }
-
-    #[test]
-    fn the_private_tables_are_the_skeletons() {
-        // (held here as usize arrays: a substep allocates nothing, and the skeleton's are functions that build a Vec)
-        assert_eq!(radius(), RADIUS.to_vec());
-        assert_eq!(mass(), MASS.to_vec());
-        assert_eq!(trunk(), TRUNK.iter().map(|&i| i as f64).collect::<Vec<_>>());
-        assert_eq!(sticks(), STICKS.iter().map(|&(a, b)| [a as f64, b as f64]).collect::<Vec<_>>());
-        assert_eq!(leg_sticks(), LEG_STICKS.iter().map(|&i| i as f64).collect::<Vec<_>>());
-        assert_eq!(mindist(), MINDIST.iter().map(|&(a, b, c)| [a as f64, b as f64, c]).collect::<Vec<_>>());
-        assert_eq!(super::apart(), APART.iter().map(|&(a, b, c)| [a as f64, b as f64, c]).collect::<Vec<_>>());
-        assert_eq!(knees(), KNEES.iter().map(|&(a, b, c)| [a as f64, b as f64, c as f64]).collect::<Vec<_>>());
-    }
 
     #[test]
     fn trunk_set_is_trunk() {

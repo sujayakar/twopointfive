@@ -17,9 +17,9 @@ pub struct BreachDrill {
     #[is(f64::NAN)] pub t_enter: f64,
     #[is(f64::NAN)] pub t_corner: f64,
     #[is(f64::NAN)] pub t_clear: f64,
-    #[is(f64::NAN)] pub t_done: f64,
+    /// called off with men inside
+    pub recalled: bool,
     pub beats: Vec<crate::breach::BreachDrillBeatsItem>,
-    #[is(alloc::vec![0.0, 0.0])] pub rounds: Vec<f64>,
     pub t: f64,
     pub done: JsSet<String>,
     pub aim_a: V3,
@@ -70,7 +70,6 @@ pub struct OpFlow {
     pub next: f64,
     pub in_at: f64,
     pub corner_at: f64,
-    pub hold_at: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -111,11 +110,3 @@ pub const PAIR: f64 = 0.16;
 pub const SHIFT: f64 = 0.3;
 
 pub const FIRE_INSIDE_M: f64 = 0.3;
-
-pub fn live_lines() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("clear1"), String::from("right side — clear.")); t.set(String::from("clear2"), String::from("left clear. i have the door.")); t.set(String::from("roomClear1"), String::from("room clear.")); t } }
-
-pub fn live_guide() -> JsMap<String, Option<String>> { { let mut t = JsMap::new(); t.set(String::from("clear1"), Some(String::from("right side — clear. i've got the door."))); t } }
-
-pub fn live_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("clear1"), String::from("right side — clear. i have the door.")); t.set(String::from("clear2"), String::from("left clear.")); t } }
-
-pub fn live_no_charge() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("stack1"), String::from("stack on me — side door. on my boot.")); t.set(String::from("stack2"), String::from("set.")); t } }

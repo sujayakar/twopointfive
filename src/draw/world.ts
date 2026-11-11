@@ -1,7 +1,7 @@
 // THE BOX WORLD OF A PAGE THAT HOLDS NO GAME: the renderer's tables, filled with the rows Rust left (rust/game_draw boxes). Nothing is packed here and no box
 // is an object, but for what the picture's own plans ask of a static (where it stands and what kind of thing it is: scene/boxes.ts PlanBox), which are told
 // where one changed, and of a door's leaf.
-import { BoxFlag, BoxWorld, GB_ROWS, MAT_STRIDE, boxOf, type Box, type DrawWait } from '../scene/boxes';
+import { BoxFlag, BoxWorld, GB_ROWS, GB_STRIDE, MAT_STRIDE, boxOf, stopsSky, type Box, type DrawWait } from '../scene/boxes';
 import { MARK_TABLE_ROWS } from '../scene/markings';
 import { AIR_ROWS } from '../scene/airGrid';
 import { lookNeedBits } from '../render/gbuffer';
@@ -12,21 +12,25 @@ import { Beam, Cut, Geo, Head, Leaf, Mat, Row4, Section, Word } from './sections
 
 /** the GPU's flag word (rust/game_draw boxes/pack.rs): what of it a plan asks */
 const KEPT = 0xe7 | BoxFlag.Glass, ROUND = 8, ROT = 64, CUT = 1 << 16;
+/** of a pane's first row's second number: something of it has fallen out, all of it has (render/shaders/glass_open.wgsl) */
+const GB_OPEN = 1, GB_GONE = 8;
 /** m round a box that changed */
-const STALE = 0.6;
+const STALE = 0.1;
 const A_CUT: CutPlane[] = [{ n: [0, 1, 0], d: 0 }];
 
 export class DrawWorld extends BoxWorld {
   /** where the statics that a wall could be have changed since this was last read: rects on the plan */
   readonly walls: [number, number, number, number][] = [];
-  /** …and where any static came, went or was cut, whatever its height: what the smoke's solver has baked round there is stale */
-  readonly stale: { c: Vec3; r: number }[] = [];
+  /** …and where any static came, went or was cut, whatever its height, or a pane is open otherwise than it was: what the smoke's solver has baked round there is stale */
+  readonly stale: { lo: Vec3; hi: Vec3 }[] = [];
+  /** how often a static that stops a light of the sky has come, gone, moved or begun or ceased to stop one */
+  moved = 0;
   private boxes = 0; private stuffs = 0;
   private leaf: Box[] = [];
   /** the lines of light nearest the view, and the dot one ends on (engine.ts `beams`) */
   readonly beams: { list: Box[]; is(b: Box): boolean; airOf(b: Box): Box | null | undefined } = { list: [], is: () => true, airOf: b => { const a = b.owner; return a === 0 ? undefined : a === 1 ? null : this.dot; } };
   private dot = boxOf([0, 0, 0], [0, 0, 0], 0, [0, 0, 0], [0, 0, 0], 0, 0); private lines: Box[] = [];
-  constructor(device: GPUDevice, private D: Drawn) { super(device); }
+  constructor(device: GPUDevice, private D: Drawn) { super(device); this.staticsTold = 0; }
   get count(): number { return this.boxes; }
 
   upload(_between = false, _wait: DrawWait | null = null): void {
@@ -59,21 +63,39 @@ export class DrawWorld extends BoxWorld {
     if (to > from || this.statics.length !== st) this.mirror(from, to, st);
     this.geomSerial = u[h + Head.serial];
     { const L = this.glassList, n = this.infoData[BoxWorld.GLASS_WORD]; L.length = n; for (let k = 0; k < n; k++) L[k] = this.infoF32[BoxWorld.GLASS_WORD + 4 + k * 12 + 11]; }
+    if (u[h + Head.panesMoved]) this.holes();
+  }
+  /** what has fallen out of each static of glass, as one word of the rows that say it (a pane with nothing open has none) */
+  private holed = new Map<number, number>();
+  /** the panes' rows are others than they were: a pane that is open otherwise than it was last listed lets the smoke by somewhere else */
+  private holes(): void {
+    const u = this.D.u, L = this.glassList, words = GB_STRIDE * 4;
+    for (let k = 0; k < L.length; k++) {
+      const at = this.D.at[Section.panes] + k * words, fl = this.D.f[at + 1];
+      let key = fl & GB_GONE ? 1 : 0;
+      if (fl & GB_OPEN && !key) for (let w = 0; w < words; w++) if (w !== 3) key = (Math.imul(key ^ u[at + w], 0x01000193) + w) | 0;   // (all but the damage, which opens nothing by itself)
+      if (key === (this.holed.get(L[k]) ?? 0)) continue;
+      this.holed.set(L[k], key);
+      this.stands(this.statics[L[k]]);
+    }
   }
 
   /** the statics a plan reads: those from `from` to `to` as they stand now */
   private mirror(from: number, to: number, count: number): void {
     const D = this.D, f = D.f, u = D.u, g0 = D.at[Section.geo], m0 = D.at[Section.mat];
-    for (let i = count; i < this.statics.length; i++) this.wall(this.statics[i]);
+    this.staticsTold++;
+    for (let i = count; i < this.statics.length; i++) { this.wall(this.statics[i]); if (stopsSky(this.statics[i].flags)) this.moved++; }
     this.statics.length = Math.min(this.statics.length, count); this.glassStatics.length = 0;
     for (let i = from; i < to; i++) {
       const g = g0 + i * Geo.row, m = m0 + i * Mat.row, w = u[g + 7], was = this.statics[i], b = this.statics[i] ?? (this.statics[i] = boxOf([0, 0, 0], [0, 0, 0], 0, [0, 0, 0], [0, 0, 0], 0, 0));
-      const stood = was !== undefined && b.c[0] === f[g] && b.c[1] === f[g + 1] && b.c[2] === f[g + 2] && b.h[0] === f[g + 4] && b.h[1] === f[g + 5] && b.h[2] === f[g + 6] && b.flags === (w & KEPT) && (b.cut !== undefined) === ((w & CUT) !== 0);
+      const lies = was !== undefined && b.c[0] === f[g] && b.c[1] === f[g + 1] && b.c[2] === f[g + 2] && b.h[0] === f[g + 4] && b.h[1] === f[g + 5] && b.h[2] === f[g + 6] && (b.cut !== undefined) === ((w & CUT) !== 0), stood = lies && b.flags === (w & KEPT);
       if (was && !stood) this.wall(b);
+      const yaw = 2 * Math.atan2(f[m + 9], f[m + 11]), turned = was !== undefined && (b.yaw !== yaw || (b.round === true) !== ((w & ROUND) !== 0) || (b.rot !== undefined) !== ((w & ROT) !== 0) || b.rot !== undefined && b.rot.some((q, k) => q !== f[m + 8 + k]));
+      { const now = stopsSky(w & KEPT), then = was !== undefined && stopsSky(b.flags); if (now !== then || now && (!lies || turned)) this.moved++; }
       for (let k = 0; k < 3; k++) { b.c[k] = f[g + k]; b.h[k] = f[g + 4 + k]; b.albedo[k] = f[m + k]; b.emissive[k] = f[m + 4 + k]; }
       b.flags = w & KEPT; b.round = (w & ROUND) !== 0 ? true : undefined; b.cut = (w & CUT) !== 0 ? A_CUT : undefined; b.cutHeight = f[m + 3];
       if (w & ROT) { b.rot ??= [0, 0, 0, 1]; for (let k = 0; k < 4; k++) b.rot[k] = f[m + 8 + k]; } else b.rot = undefined;
-      b.yaw = 2 * Math.atan2(f[m + 9], f[m + 11]);
+      b.yaw = yaw;
       if (!stood && this.told) this.wall(b);
     }
     for (let i = 0; i < this.statics.length; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i);
@@ -89,7 +111,8 @@ export class DrawWorld extends BoxWorld {
     this.leaves();
   }
   private told = false;
-  private wall(b: Box): void { this.stale.push({ c: [b.c[0], b.c[1], b.c[2]], r: Math.hypot(b.h[0], b.h[1], b.h[2]) + STALE }); const [ex, ez] = BoxWorld.footprint(b); if (b.h[1] > 0.25) this.walls.push([b.c[0] - ex, b.c[2] - ez, b.c[0] + ex, b.c[2] + ez]); }
+  private stands(b: Box): void { const [ex, ez] = BoxWorld.footprint(b), ey = BoxWorld.heightExtent(b), c = b.c; this.stale.push({ lo: [c[0] - ex - STALE, c[1] - ey - STALE, c[2] - ez - STALE], hi: [c[0] + ex + STALE, c[1] + ey + STALE, c[2] + ez + STALE] }); }
+  private wall(b: Box): void { this.stands(b); const [ex, ez] = BoxWorld.footprint(b); if (b.h[1] > 0.25) this.walls.push([b.c[0] - ex, b.c[2] - ez, b.c[0] + ex, b.c[2] + ez]); }
   private leaves(): void {
     const D = this.D, f = D.f, u = D.u, n = D.n[Section.leaves], list = this.dynamics; list.length = n;
     for (let i = 0; i < n; i++) { const o = D.at[Section.leaves] + i * Leaf.row, b = this.leaf[i] ?? (this.leaf[i] = boxOf([0, 0, 0], [0, 0, 0], 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0)); list[i] = b;

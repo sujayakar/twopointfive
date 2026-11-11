@@ -5,14 +5,13 @@ use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct CmdringK {
-    /// the key: the squad's command key — the quick order's own code, which the page's board has on Q (host/keymap.ts; the
-    ///  maintainer, 10-21: "let's move the squad command button to Q then too", "from tab"). It was Tab until then: a recording carries its own table, so
-    ///  one made on Tab replays on Tab. Tab itself is the page's again — the way back and the objectives card (ui/tabcard.ts)
+    /// the key: the squad's command key — the quick order's own code, which the page's board has on Q (host/keymap.ts; the maintainer: "let's move the squad
+    ///  command button to Q then too", "from tab"). Tab itself is the page's: the way back and the objectives card (ui/tabcard.ts)
     #[k(String::from("KeyB"))] pub key: String,
-    /// wedges on the ring, clockwise from the top: the digits 1 … this (never above ORDER_DIGITS)
+    /// wedges on the ring, clockwise from the top: the digits 1 … this (never above 5)
     #[k(5.0)] pub wedges: f64,
     /// the ring's middle: the cursor this far (CSS px) out of it lights the wedge it is out toward — once it has been back inside since the ring last changed
-    ///  under it (a page turned, a digit, a man clicked, or a ring opened at the view's edge with the cursor out of its middle)
+    ///  under it (more, a digit, a man clicked, or a ring opened at the view's edge with the cursor out of its middle)
     #[k(24.0)] pub flick_px: f64,
     /// A TAP IS THE QUICK KEY'S ORDER AND NO RING (the maintainer, 10-20, after playing it: "we shouldn't open the radial menu on just a single tab press,
     ///  only after some (very short) delay"): the key let go inside this long (s) gives what the quick key gives on what the cursor was on when it went

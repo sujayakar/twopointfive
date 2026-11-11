@@ -31,7 +31,7 @@ pub struct GlassbreakK {
     #[k(0.03)] pub run_ring_secs: f64,
     /// falling glass is heard (one crack + one 'glass' hearing event) at most once per pane per this many seconds
     #[k(0.25)] pub crack_gap: f64,
-    /// base radii (m) of the three chords round a blow, by type — each ≥ 1.57× the last (glassPattern.ts: the chords of a sector must nest) — and [3] the base distance of
+    /// base radii (m) of the three chords round a blow, by type — each ≥ 1.57× the last, so that the chords of a sector nest — and [3] the base distance of
     ///  the daggers' snaps (annealed) / of the web's outer ring (laminated); × (0.75 + 0.25 e) clamped 0.8‥1.4
     #[k({ let mut t = JsMap::new(); t.set(GlassbreakKRhoKey::Annealed, [0.03, 0.07, 0.14, 0.5]); t.set(GlassbreakKRhoKey::Laminated, [0.018, 0.05, 0.11, 0.22]); t })] pub rho: JsMap<GlassbreakKRhoKey, [f64; 4]>,
     /// radial cracks a blow starts: [fewest, spread] (≤ 12 in all), and the share of an annealed site's sectors with no middle chord
@@ -63,8 +63,8 @@ pub struct GlassbreakK {
     #[k(0.2)] pub blast_run_k: f64,
     #[k(0.45)] pub blast_dice_k: f64,
     #[k(0.75)] pub blast_sheet_k: f64,
-    /// RAKING (tuning round two): Sam walking into what is left of an annealed pane that has run and is at least rakeOpen open takes every piece in his way with him (he alone — glassbreak.ts rake() — all
-    ///  but the teeth, everything reaching below walkClearH) — a magazine left jagged remains standing on the sill and the opening could never be stepped through. Heard as
+    /// RAKING: Sam walking into what is left of an annealed pane that has run and is at least `rake_open` open takes every piece in his way with him (he alone: the players, not the AI — all
+    ///  but the teeth, everything reaching below `walk_clear_h`) — a magazine left jagged stays on the sill and the opening could never be stepped through otherwise. Heard as
     ///  falling glass. 0 = off: the remains stand until a round or a blast takes them
     #[k(0.5)] pub rake_open: f64,
     #[k(0.5)] pub rake_m: f64,
@@ -72,16 +72,13 @@ pub struct GlassbreakK {
     /// (round two: 0.05 / 5 — the sheet frosts for a beat before the curtain comes down, and comes down a little slower)
     #[k(0.012)] pub dice_grain: f64,
     #[k(0.12)] pub clump_m: f64,
-    #[k(0.09)] pub dice_hang: f64,
-    #[k(4.2)] pub dice_speed: f64,
-    #[k(40.0)] pub clumps_per_frame: f64,
     /// queued pieces let go per frame (a round's own piece is never deferred)
     #[k(8.0)] pub releases_per_frame: f64,
     /// how a piece leaves: out along the blow (m/s, × 0.4‥1.4), spin (rad/s); a blast throws at blastOut × its strength there
     #[k(0.7)] pub out: f64,
     #[k(5.0)] pub spin: f64,
     #[k(5.0)] pub blast_out: f64,
-    /// the STAND-IN while no onRelease consumer is attached (the base's shards): thin Debris boxes + pale chips
+    /// what a released clump leaves in the game's debris: thin shard boxes + pale chips
     #[k([0.72, 0.8, 0.82])] pub shard_albedo: V3,
     #[k([0.8, 0.88, 0.9])] pub chip_color: V3,
     #[k(90.0)] pub chips_per_m2: f64,
@@ -107,16 +104,16 @@ pub struct GlassbreakKGrip {
     #[k(0.25)] pub wedged: f64,
 }
 
-/// GLASS AS BUILDINGS HAVE IT (two rules, each ON in the page — `?glassdrop=0`, `?glassplace=0` — and off here and on the frozen stand, `TPS_GLASSDROP=1`,
+/// GLASS AS BUILDINGS HAVE IT (two rules):
 ///    drop  — toughened glass lets go ALL AT ONCE. Its stored stress crazes the whole sheet in a millisecond; nothing travels across it that an eye could follow. So
-///            the sheet stands white for `hang` seconds and then every clump leaves on the one step (stepDice → dropAll), handed on as at most `blocks` fragments
-///            that fall: out along the blow a little, no push across the pane. (The wave was the same release spread over half a second at diceSpeed.)
-///            HEARD ONCE: `hang` is kept under GLASSBREAK.crackGap, so the sheet's breaking is the one crack and the one hearing event the blow's own clump files
+///            the sheet stands white for `hang` seconds and then every clump leaves on the one step (sim's panes: `step_dice` → `drop_all`), handed on as at most `blocks` fragments
+///            that fall: out along the blow a little, no push across the pane.
+///            HEARD ONCE: `hang` is kept under `glassbreak.crack_gap`, so the sheet's breaking is the one crack and the one hearing event the blow's own clump files
 ///            (emit); its fall files no second, and the landings are falling glass's own sounds. A hang past crackGap would file a second of each.
-///    place — which glass a pane is comes from WHERE IT SITS, as a glazier would have it: glass a body could fall into is safety glass. A pane whose foot is under
-///            `lowM` above the floor (it reaches the floor: a partition, a shopfront, frontage on a kick wall) or that is a panel of a door (within `doorM` of a
-///            door's opening on the plan and its foot under `doorFootM`: glass beside a door within a body's reach, not a light over it) is TOUGHENED; a window that starts at a sill is plain FLOAT glass, outside wall or not. Narrow inside
-///            sidelights and high outside strips stay laminated, as they were. (The first rule read the wall instead: outside = toughened, inside = float.)
+///    place — which glass a pane is comes from WHERE IT SITS, as a glazier would have it (`place_rule`): glass a body could fall into is safety glass. A pane whose foot is under
+///            `low_m` above the floor (it reaches the floor: a partition, a shopfront, frontage on a kick wall) or that is a panel of a door (within `door_m` of a
+///            door's opening on the plan and its foot under `door_foot_m`: glass beside a door within a body's reach, not a light over it) is TOUGHENED; a window that starts at a sill is plain FLOAT glass, outside wall or not. Narrow inside
+///            sidelights and short outside strips are laminated.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct GlassrealK {
     #[k(0.1)] pub hang: f64,

@@ -41,35 +41,31 @@ pub struct ChaosK {
     /// knock-off speed scale at chaos ≤ 0.5, and the multiplier reached at chaos 1
     #[k(1.0)] pub vel_low: f64,
     #[k(2.5)] pub vel_high_k: f64,
-    /// IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push; render/sheetModel.ts flies the reference the numbers were
-    /// picked on: a charge lifts the leaves within a metre well over a metre and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three
-    /// and a half and leaves the ones at four; a round hops the leaf beside it a few centimetres and scoots it a span; a thump twitches what lies within a stride)
+    /// IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push: a charge lifts the leaves within a metre well over a metre
+    /// and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three and a half and leaves the ones at four; a round hops the leaf beside it a few
+    /// centimetres and scoots it a span; a thump twitches what lies within a stride)
     pub imp: ChaosKImp,
-    /// THE LOUD LEVELS (read only with the destruction switch on — destructionSwitch.ts; off, nothing here is consulted). Fixtures die to ANYBODY's rounds and to blasts,
+    /// THE LOUD LEVELS. Fixtures die to ANYBODY's rounds and to blasts,
     /// the panel over a beaten zone goes with the tile beside it, and all of it is capped per encounter so a long fight cannot put the whole floor in the dark.
     pub loud: ChaosKLoud,
-    /// A BLAST'S PALL (the maintainer, 10-14: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A charge's dust was the
-    ///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge and every burst that
-    ///  comes through blast() with its chaos (the hand grenade, the 40 mm, a bomb → pallBurst) also raise a PALL — a handful of wide, slow, seconds-long emitters
+    /// A BLAST'S PALL (the maintainer: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A wall charge and every burst that
+    ///  comes through the blast with its chaos (the hand grenade, the 40 mm, a bomb) also raise a PALL — a handful of wide, slow, seconds-long emitters
     ///  into the smoke solver, on the charge's side of the wall and, through the hole, on the far side; in a ring round a burst with a darker column over it — and
     ///  a slow big layer of particle dust with it. The solver's part is real density: every sight line that crosses it reads it, the player's picture and the
-    ///  men's eyes alike (one model), so for a few seconds neither side sees through it; it thins by the solver's own decay. `solver` false = the particle layer
-    ///  alone (picture only: nobody is hidden by it). Its own allowance, not the puffs': `perWindow` palls in any `windowSecs` (one more burst in the window
-    ///  raises the old dust alone — six, not three: his word on it, 10-14, "it should feel pretty chaotic with HE going off"; the wall charge is never the one refused, and counts), and no emitter — nor the particle layer over it — while the solver
-    ///  has fewer than `slack` slots free. Not under a level script's show. The dice are a hash of the place and the moment: none of the lane's are drawn, so
-    ///  with the solver a null object (the harness) a run is the same run with the rule on or off. An emitter keeps `clear` radii off anything solid (judged
-    ///  at `clearY` m), shrinking to `minRadius` of its radius at the least with its density up to `maxGain` times for it (pallEmit).
+    ///  men's eyes alike (one model), so for a few seconds neither side sees through it; it thins by the solver's own decay. Its own allowance, not the puffs': `per_window` palls in any `window_secs` (one more burst in the window
+    ///  raises the old dust alone — six, not three: the maintainer, "it should feel pretty chaotic with HE going off"; the wall charge is never the one refused, and counts), and no emitter — nor the particle layer over it — while the solver
+    ///  has fewer than `slack` slots free. The dice are a hash of the place and the moment: none of the lane's are drawn, so a pall moves no other die. An emitter keeps `clear` radii off anything solid (judged
+    ///  at `clear_y` m), shrinking to `min_radius` of its radius at the least with its density up to `max_gain` times for it (`destruction_pall_emit`).
     ///  Rows: `near` / `far` emitters either side of the wall (far only through a hole), `ring` round a burst (× its size: 1 = the hand grenade's 2.5 m) and
-    ///  one darker column over it (`coreGain` × the density, `smoke` its tint), each `radius` m wide (gaussian), `density` /s at the core for `ttl` s, thrown
+    ///  one darker column over it (`core_gain` × the density, `smoke` its tint), each `radius` m wide (gaussian), `density` /s at the core for `ttl` s, thrown
     ///  `speed` m/s, `temp` its lift, `push` / `expand` as any emitter's, scattered `spread` m, standing `out` m off the wall; `dust` particles (near, far |
-    ///  round a burst) living `dustLife` s, `dustSize` m, `dustSpeed`. Measured on the page (docs/agents/destruction.md): hidden across it for 3 to 4 s.
-    ///  On (?pall=0 = the dust as it was, ?pall=look = the particle layer alone).
+    ///  round a burst) living `dust_life` s, `dust_size` m, `dust_speed`. Measured on the page: hidden across it for 3 to 4 s.
     pub pall: ChaosKPall,
-    /// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). ON: where a blast's pall stood a pale film of settled
+    /// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR ("the office floor looks too clean"). Where a blast's pall stood a pale film of settled
     /// dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes round it, none of them across a standing
     /// wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of cover that gives under fire leaves a small
-    /// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture
-    /// (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
+    /// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture:
+    /// no ray, foot, eye, ear or die knows them, and a full ring drops them first.
     pub mess: ChaosKMess,
 }
 
@@ -91,9 +87,9 @@ pub struct ChaosKTile {
     #[k([0.66, 0.66, 0.63])] pub albedo: V3,
 }
 
-/// IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push; render/sheetModel.ts flies the reference the numbers were
-/// picked on: a charge lifts the leaves within a metre well over a metre and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three
-/// and a half and leaves the ones at four; a round hops the leaf beside it a few centimetres and scoots it a span; a thump twitches what lies within a stride)
+/// IMPULSES (strength = the Δv m/s a sheet at the centre gets, radius m, up = the upward share on the radial push: a charge lifts the leaves within a metre well over a metre
+/// and lands them a stride off, hops the ones at two metres knee height, shivers the ones at three and a half and leaves the ones at four; a round hops the leaf beside it a few
+/// centimetres and scoots it a span; a thump twitches what lies within a stride)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKImp {
     pub bang: ChaosKImpBang,
@@ -131,11 +127,11 @@ pub struct ChaosKImpThud {
     #[k(4.0)] pub per_frame: f64,
 }
 
-/// THE LOUD LEVELS (read only with the destruction switch on — destructionSwitch.ts; off, nothing here is consulted). Fixtures die to ANYBODY's rounds and to blasts,
+/// THE LOUD LEVELS. Fixtures die to ANYBODY's rounds and to blasts,
 /// the panel over a beaten zone goes with the tile beside it, and all of it is capped per encounter so a long fight cannot put the whole floor in the dark.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKLoud {
-    /// a round passing this close to a fixture (or stopping in its box) is in it — the AI's rule; the player keeps combat.ts's wider aim-assisted one
+    /// a round passing this close to a fixture (or stopping in its box) is in it — the AI's rule; the player's own rounds go by `aimcost`
     #[k(0.18)] pub fixture_hit_m: f64,
     /// a charge this close to a fixture, with a clear line to it, breaks it (× √power): from the floor, the ceiling panel within ~1.3 m of straight overhead, a desk lamp across the room's corner
     #[k(3.2)] pub fixture_blast_m: f64,
@@ -157,22 +153,18 @@ pub struct ChaosKLoud {
     #[k(3.0)] pub burst_secs: f64,
 }
 
-/// A BLAST'S PALL (the maintainer, 10-14: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A charge's dust was the
-///  round's puff, a few times over, under the round's caps: a thin haze for a second. ON: a wall charge and every burst that
-///  comes through blast() with its chaos (the hand grenade, the 40 mm, a bomb → pallBurst) also raise a PALL — a handful of wide, slow, seconds-long emitters
+/// A BLAST'S PALL (the maintainer: "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). A wall charge and every burst that
+///  comes through the blast with its chaos (the hand grenade, the 40 mm, a bomb) also raise a PALL — a handful of wide, slow, seconds-long emitters
 ///  into the smoke solver, on the charge's side of the wall and, through the hole, on the far side; in a ring round a burst with a darker column over it — and
 ///  a slow big layer of particle dust with it. The solver's part is real density: every sight line that crosses it reads it, the player's picture and the
-///  men's eyes alike (one model), so for a few seconds neither side sees through it; it thins by the solver's own decay. `solver` false = the particle layer
-///  alone (picture only: nobody is hidden by it). Its own allowance, not the puffs': `perWindow` palls in any `windowSecs` (one more burst in the window
-///  raises the old dust alone — six, not three: his word on it, 10-14, "it should feel pretty chaotic with HE going off"; the wall charge is never the one refused, and counts), and no emitter — nor the particle layer over it — while the solver
-///  has fewer than `slack` slots free. Not under a level script's show. The dice are a hash of the place and the moment: none of the lane's are drawn, so
-///  with the solver a null object (the harness) a run is the same run with the rule on or off. An emitter keeps `clear` radii off anything solid (judged
-///  at `clearY` m), shrinking to `minRadius` of its radius at the least with its density up to `maxGain` times for it (pallEmit).
+///  men's eyes alike (one model), so for a few seconds neither side sees through it; it thins by the solver's own decay. Its own allowance, not the puffs': `per_window` palls in any `window_secs` (one more burst in the window
+///  raises the old dust alone — six, not three: the maintainer, "it should feel pretty chaotic with HE going off"; the wall charge is never the one refused, and counts), and no emitter — nor the particle layer over it — while the solver
+///  has fewer than `slack` slots free. The dice are a hash of the place and the moment: none of the lane's are drawn, so a pall moves no other die. An emitter keeps `clear` radii off anything solid (judged
+///  at `clear_y` m), shrinking to `min_radius` of its radius at the least with its density up to `max_gain` times for it (`destruction_pall_emit`).
 ///  Rows: `near` / `far` emitters either side of the wall (far only through a hole), `ring` round a burst (× its size: 1 = the hand grenade's 2.5 m) and
-///  one darker column over it (`coreGain` × the density, `smoke` its tint), each `radius` m wide (gaussian), `density` /s at the core for `ttl` s, thrown
+///  one darker column over it (`core_gain` × the density, `smoke` its tint), each `radius` m wide (gaussian), `density` /s at the core for `ttl` s, thrown
 ///  `speed` m/s, `temp` its lift, `push` / `expand` as any emitter's, scattered `spread` m, standing `out` m off the wall; `dust` particles (near, far |
-///  round a burst) living `dustLife` s, `dustSize` m, `dustSpeed`. Measured on the page (docs/agents/destruction.md): hidden across it for 3 to 4 s.
-///  On (?pall=0 = the dust as it was, ?pall=look = the particle layer alone).
+///  round a burst) living `dust_life` s, `dust_size` m, `dust_speed`. Measured on the page: hidden across it for 3 to 4 s.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKPall {
     #[k(6.0)] pub per_window: f64,
@@ -224,11 +216,11 @@ pub struct ChaosKPallBurst {
     #[k([0.34, 0.33, 0.32])] pub smoke: [f64; 3],
 }
 
-/// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR (floormess.ts; "the office floor looks too clean"). ON: where a blast's pall stood a pale film of settled
+/// WHAT A BLAST AND A BROKEN THING LEAVE ON THE FLOOR ("the office floor looks too clean"). Where a blast's pall stood a pale film of settled
 /// dust and grit lies on the floor (and on the desk tops under it), shaped to the room — a heart at the burst, lobes round it, none of them across a standing
 /// wall — with the soot rayed out of its middle; a wall charge lays one each side it reached; a wall or a piece of cover that gives under fire leaves a small
-/// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture
-/// (decals tagged by lookDecals.ts: no ray, foot, eye, ear or die knows them; a full ring drops them first).
+/// one at its foot; and a chunk the debris pool takes for its slot leaves the crushed mark of itself where it lay. ALL OF IT is marks laid only for the picture:
+/// no ray, foot, eye, ear or die knows them, and a full ring drops them first.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ChaosKMess {
     /// what STANDS in dust's way is whatever meets the band standY‥clearY (a wall, a pane, a cabinet; not a desk, a sill or a door's header) · how far a film

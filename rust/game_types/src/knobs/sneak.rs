@@ -18,14 +18,14 @@ pub struct SneakK {
     /// he looks before he steps (off: he never waits) · how far up the trail he reads · this lit (0‥1 on the meter's curve) is a lit step
     #[k(2.4)] pub ahead_m: f64,
     #[k(0.1)] pub lit_at: f64,
-    /// LIT TO WHOM (the maintainer's partner would not follow him across an open yard at night: on a GPU the open night shadow reads 14 to 27 on the meter,
-    /// over `litAt`, where the software renderer reads near 0 — so on the page every step with a line was "lit" and only lines decided). With `byEye` a step
-    /// at or over `litAt` with a line from a defender is SEEN only where THAT defender's eye would gain on a man there: the guards' own arithmetic (eyeRate:
-    /// detectRate × light^1.5 × the distance term × the crouch) over `seenRate`, which is the guards' own floor — a rate at or under 0.05 /s moves no
-    /// awareness. Dim ground far from an eye is ground he may stand on and cross; dim ground near one is not; nothing is seen that was not seen before. Read
+    /// LIT TO WHOM (his partner has to follow him across an open yard at night, and on a GPU the open night shadow reads over `lit_at` on the meter, where the
+    /// software renderer reads near 0). A step
+    /// at or over `lit_at` with a line from a defender is SEEN only where THAT defender's eye would gain on a man there: the guards' own arithmetic (`eye_rate`:
+    /// detect rate × light^1.5 × the distance term × the crouch) over `seen_rate`, which is the guards' own floor — a rate at or under 0.05 /s moves no
+    /// awareness. Dim ground far from an eye is ground he may stand on and cross; dim ground near one is not. Read
     /// so: the follower's step and standing place (read), the stalk's watched cells and its priced way (the walker's map), a door frame's funnel (an eye
     /// behind a frame that would not gain on a man at the spot is no eye on it). NOT read so: a remembered stretch with no eye on it now (the flat number
-    /// stands), darkfoe.ts, seenwalk.ts, spotted.ts. His kit card's shape is in the rate, as the guards have it. The page: on (`?byeye=0`.
+    /// stands), the dark foe, the seen walk, the spotted rule. His kit card's shape is in the rate, as the guards have it.
     #[k(0.05)] pub seen_rate: f64,
     /// a defender's cone is read this many degrees wider (a glance travels) · a step whose chest is inside this of an unwary defender's eye, in his near
     ///  field, is exposed, lit or not (the eye's own point-blank rule is 1.8 m, eye to chest)

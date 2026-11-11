@@ -68,16 +68,16 @@ fn a_flash_stands_his_clock_still_and_his_death_stops_it() {
 }
 
 /// F straight off, with the room's men set after `set` seconds: blind rounds from the room, and what the roamer and the captor did.
-fn assault(seed: u32, set: f64) -> (f64, Option<f64>, usize) {
+fn assault(seed: u32, set: f64) -> (f64, Option<f64>, bool) {
     let mut p = stood(seed, 60.0, 2.0, set);
     p.run(0.2);
     p.tap("KeyF");
-    p.until(40.0, |p| p.rescue_lost().is_some() || p.men().is_empty() || p.rescue_log().iter().any(|l| l.1 == "secured"));
+    let mut left = false;
+    p.until(40.0, |p| { left |= p.falls_back("Captor"); p.rescue_lost().is_some() || p.men().is_empty() || p.rescue_log().iter().any(|l| l.1 == "secured") });
     assert!(first_at(&p, "bang").is_some(), "seed {seed}: F went nowhere: {:?}", p.rescue_log());
     let at = |w: &str| first_at(&p, w);
     let off_post = match (at("learned:Roamer 1"), at("released:Roamer 1")) { (Some(a), Some(b)) => Some(b - a), _ => None };
-    let cap = p.fight_notes("Captor").iter().filter(|n| n.contains("goes to the fight") || n.contains("falls back")).count();
-    (p.rescue_blind(), off_post, cap)
+    (p.rescue_blind(), off_post, left)
 }
 
 /// THE RULE: a room hit before its men are set fires no blind round through its door; set, the roamer leaves his post no sooner than his seconds after he first hears it; and the captor never goes to a fight next door: he is the clock. The control is the room that is set on hearing: its roamer is off his post in seconds.
@@ -87,9 +87,9 @@ fn a_room_hit_before_its_men_are_set_fires_no_blind_round() {
     for s in [11, 12] {
         let (blind, _, cap) = assault(s, 30.0);
         assert_eq!(blind, 0.0, "seed {s}: blind rounds from men not set");
-        assert_eq!(cap, 0, "seed {s}: the captor left his post");
+        assert!(!cap, "seed {s}: the captor left his post");
         let (_, off_post, cap) = assault(s, 0.5);
-        assert_eq!(cap, 0, "seed {s}: the control: the captor left his post");
+        assert!(!cap, "seed {s}: the control: the captor left his post");
         assert!(off_post.is_none_or(|t| (0.45..8.5).contains(&t)), "seed {s}: the control: the roamer off his post after {off_post:?} s");
     }
 }

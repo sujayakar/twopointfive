@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---- what stands between a body and the skeleton's calls
 
 /// `pose.rot(i)`, a node by the list's usize
-fn rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate::anim_skeleton::pose_rot(g, pose, i as f64) }
+fn rot(g: &Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate::anim_skeleton::pose_rot(g, pose, i as f64) }
 /// `pose.setRot(i, q)`, a node by the list's usize
 fn set_rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize, q: Quat) { crate::anim_skeleton::pose_set_rot(g, pose, i as f64, q) }
 
@@ -24,7 +24,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
     if let Some(a) = &a {
         if a.clip != g.ch[c].anim.act_name {
             let rig = g.ch[c].anim.rig;
-            let clip = g.tab.rig[rig].clips.get(a.clip.clone()).copied();
+            let clip = g.art.rig[rig].clips.get(a.clip.clone()).copied();
             let an = &mut g.ch[c].anim;
             an.act_name = a.clip.clone();
             an.act_clip = clip;
@@ -57,7 +57,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
 /// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
     let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
-    anim_layer(g, c, |s, an, k| ::sim::layers::act_pose(s, an, clip, w, dt, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
 }
 
 // ---- MOVES
@@ -111,7 +111,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let pist = an.rl_b.hand && !long_gun && an.reload_t >= 0.0;
         let (throw_t, strike_t, no_tool) = (an.throw_t, an.strike_t, an.big_tool.is_none());
         let want = if live
-            && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
+            && (pist || (long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
             let rate = MV2.reload.rate;
@@ -134,7 +134,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let (hurt, aim, clutch_in, off_hand) = (an.hurt, an.upper_w.aim, an.clutch, an.throw_t < 0.0 && an.strike_t < 0.0 && an.big_tool.is_none());
         let reload_shown = an.mv2_shown.reload;
         let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * MV2.hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
-        let want = if mv_on(g, MvOnK::Clutch) && reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
+        let want = if reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.cl.x != 0.0 {
             let rate = MV2.clutch.rate;
             let cl = &mut g.ch[c].anim.mv2.cl;
@@ -152,10 +152,9 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
     }
     // ---- kept down: a hostage's wrists behind her back, hands on the head for somebody told to stay where he is
     {
-        let mv_bound = mv_on(g, MvOnK::Bound);
         let an = &mut g.ch[c].anim;
         let bound = an.bound;
-        let on = mv_bound && bound != 0.0 && !an.long_gun;
+        let on = bound != 0.0 && !an.long_gun;
         let want = if on && (an.mv2.bd.x < 0.02 || an.mv2.bd_k == bound) { 1.0 } else { 0.0 };
         if on && an.mv2.bd.x < 0.02 { an.mv2.bd_k = bound; }
         if want > 0.0 || an.mv2.bd.x != 0.0 {
@@ -176,9 +175,8 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 }
 
 /// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest.
-pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
-    let an = &g.ch[c].anim;
-    let (nd, fk) = (&an.nodes, &an.fk);
+pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId, fk: &crate::anim_skeleton::PoseFK) -> crate::character::AnimTrunkFrame {
+    let nd = &g.ch[c].anim.nodes;
     let up = v3::normalize(v3::sub(fk.pos[nd.spine3], fk.pos[nd.hips]));
     let mut left = v3::sub(fk.pos[nd.upper_arm_l], fk.pos[nd.upper_arm_r]);
     left = v3::normalize(v3::mad(left, up, -v3::dot(left, up)));
@@ -190,7 +188,7 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
     use crate::gunreload::{FeedBeat, FeedMarks, FeedPath};
     let an = &g.ch[c].anim;
     let (feed, b, n, port, back) = (an.feed, an.rl_b, an.feed_n, an.feed_port, an.reload_back);
-    let own = feed.and_then(|model| crate::gunreload::feed_path(g, model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
+    let own = feed.and_then(|model| crate::gunreload::feed_path(model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
     let marks = |r: &Mv2ReloadBox| FeedMarks { mag: r.mag, strip: r.strip, handle: r.handle, pull: r.pull, hf: r.hf, hb: r.hb };
     let (marks, keys) = match own {
         Some(FeedPath::Arm1(p)) => (p.marks.unwrap_or(marks(&MV2.reload.box_)), None),
@@ -207,10 +205,10 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
 fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
 /// The support hand pressed to his ribs.
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::clutch_arm(s, an, w, k)); }
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
 
 /// A figure kept down: wrists behind the back, or hands on the head.
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -225,8 +223,7 @@ pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 
 /// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis.
 fn anim_mv_post_body(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
-    let fold = fold_on(g, Some(g.ch[c].anim.fold_too));
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, fold, k));
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, k));
 }
 
 /// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss.
@@ -238,49 +235,6 @@ fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
 }
 
 // ---- procedural layers
-
-/// One node of PoseFK.run's arithmetic, operand for operand, under its parent's rotation and origin.
-#[inline]
-fn fk_node(d: &[f32], n: usize, i: usize, pr: Quat, pp: V3) -> (Quat, V3) {
-    let (rx, ry, rz, rw) = (d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64);
-    let (qx, qy, qz, qw) = (pr[0], pr[1], pr[2], pr[3]);
-    let (v0, v1, v2) = (d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64);
-    let (tx, ty, tz) = (2.0 * (qy * v2 - qz * v1), 2.0 * (qz * v0 - qx * v2), 2.0 * (qx * v1 - qy * v0));
-    let (t0, t1, t2) = (v0 + qw * tx + (qy * tz - qz * ty), v1 + qw * ty + (qz * tx - qx * tz), v2 + qw * tz + (qx * ty - qy * tx));
-    (
-        [
-            qw * rx + qx * rw + qy * rz - qz * ry,
-            qw * ry - qx * rz + qy * rw + qz * rx,
-            qw * rz + qx * ry - qy * rx + qz * rw,
-            qw * rw - qx * rx - qy * ry - qz * rz,
-        ],
-        [pp[0] + t0, pp[1] + t1, pp[2] + t2],
-    )
-}
-
-/// fk.run() for a few nodes: those of `list` hold exactly what a full run would give them, the rest of fk stands as the last run left it.
-pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, list: &[i32]) {
-    let n = crate::anim_skeleton::pose_rows(pose.nodes as f64) as usize;
-    let rig = g.ch[c].anim.rig;
-    for k in 0..list.len() {
-        let i = list[k] as usize;
-        let par = g.tab.rig[rig].nodes[i].parent;
-        if par < 0.0 {
-            let d = crate::anim_skeleton::pose_cols(g, pose);
-            let (r, t) = ([d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64], [d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64]);
-            let fk = &mut g.ch[c].anim.fk;
-            fk.rot[i] = r;
-            fk.pos[i] = t;
-            continue;
-        }
-        let fk = &g.ch[c].anim.fk;
-        let (pr, pp) = (fk.rot[par as usize], fk.pos[par as usize]);
-        let (q, p) = fk_node(crate::anim_skeleton::pose_cols(g, pose), n, i, pr, pp);
-        let fk = &mut g.ch[c].anim.fk;
-        fk.rot[i] = q;
-        fk.pos[i] = p;
-    }
-}
 
 /// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's.
 pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) {
@@ -432,10 +386,10 @@ pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, spe
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
     let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
     let idle = clip_at(g, c, idle, idle_t);
-    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
+    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; clip_at(g, c, clip, t) };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
-    anim_layer(g, c, |s, an, k| ::sim::layers::stand_pose(s, an, &cycle, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
 }
 
 /// The crouch laid over the stand pose.
@@ -445,80 +399,19 @@ pub(super) fn anim_crouch_laid(g: &mut crate::game::Game, c: CharId, ph: f64, w_
 mod tests {
     use super::*;
 
-    /// the hash's bits, from the TypeScript's own expression under bun (tools: see notes)
+    /// How a man's hands hang is his own: a number of his from -1 to 1, the same each time he is made, and not the next man's.
     #[test]
-    fn hand_hash_bits() {
-        for &(seed, k, want) in HASH_BITS {
-            assert_eq!(hand_hash(seed, k).to_bits(), want, "seed {} k {}", seed, k);
+    fn a_mans_hands_are_his_own() {
+        let (mut low, mut high) = (0, 0);
+        for seed in 0..200 {
+            let (seed, k) = (seed as f64, 40.0);
+            let h = hand_hash(seed, k);
+            assert!((-1.0..1.0).contains(&h), "seed {seed}: {h}");
+            assert_eq!(h, hand_hash(seed, k));
+            assert_ne!(h, hand_hash(seed + 1.0, k), "seed {seed}: the next man has the same hands");
+            assert_ne!(h, hand_hash(seed, k + 1.0), "seed {seed}: two fingers of a man move as one");
+            if h < 0.0 { low += 1; } else { high += 1; }
         }
+        assert!(low > 60 && high > 60, "men's hands fall to both sides: {low} and {high}");
     }
-
-    /// fkPart's arithmetic for one node with a parent, against the TypeScript's own bits
-    #[test]
-    fn fk_node_bits() {
-        let n = 2usize;
-        let mut d = [0f32; 20];
-        for (i, x) in FK_D.iter().enumerate() { d[i] = f32::from_bits(*x); }
-        let pr: Quat = [f64::from_bits(FK_PR[0]), f64::from_bits(FK_PR[1]), f64::from_bits(FK_PR[2]), f64::from_bits(FK_PR[3])];
-        let pp: V3 = [f64::from_bits(FK_PP[0]), f64::from_bits(FK_PP[1]), f64::from_bits(FK_PP[2])];
-        let (q, p) = fk_node(&d, n, 1, pr, pp);
-        for i in 0..4 { assert_eq!(q[i].to_bits(), FK_Q[i], "q{}", i); }
-        for i in 0..3 { assert_eq!(p[i].to_bits(), FK_P[i], "p{}", i); }
-    }
-    const HASH_BITS: &[(f64, f64, u64)] = &[
-        (0.0, 40.0, 0xbfe15ae6d0800000),
-        (0.0, 41.0, 0xbfebd78d78800000),
-        (0.0, 42.0, 0x3fe4b3ef42400000),
-        (0.0, 46.0, 0x3fe569d1f2c00000),
-        (0.0, 49.0, 0x3fd27b4173800000),
-        (0.0, 50.0, 0xbfd6f2be09000000),
-        (0.0, 53.0, 0x3feb139699800000),
-        (1.0, 40.0, 0xbfec3bc7e1400000),
-        (1.0, 41.0, 0xbf63397b40000000),
-        (1.0, 42.0, 0x3fe0527f6e800000),
-        (1.0, 46.0, 0xbfe1f1e867c00000),
-        (1.0, 49.0, 0xbfe5e8b74c800000),
-        (1.0, 50.0, 0xbfe2d92ec3000000),
-        (1.0, 53.0, 0x3fc0e1d51b000000),
-        (7.0, 40.0, 0xbfe9b7ef4c000000),
-        (7.0, 41.0, 0x3fde9ebe61800000),
-        (7.0, 42.0, 0x3fe5be5934000000),
-        (7.0, 46.0, 0xbfe84dbc77400000),
-        (7.0, 49.0, 0x3fe1bdf90a000000),
-        (7.0, 50.0, 0x3fdd253894000000),
-        (7.0, 53.0, 0x3fb1163222000000),
-        (123456.0, 40.0, 0x3fd1ced949800000),
-        (123456.0, 41.0, 0x3fe1e9e6ca000000),
-        (123456.0, 42.0, 0xbf79b7c920000000),
-        (123456.0, 46.0, 0x3feac96875000000),
-        (123456.0, 49.0, 0x3fe7f49c82400000),
-        (123456.0, 50.0, 0xbface6c0fc000000),
-        (123456.0, 53.0, 0x3fcf951fb7000000),
-        (3.5, 40.0, 0x3fe45d19ff800000),
-        (3.5, 41.0, 0xbfc2fff1bd000000),
-        (3.5, 42.0, 0x3fc1dc33d8000000),
-        (3.5, 46.0, 0xbfd5157670800000),
-        (3.5, 49.0, 0xbf6949fbc0000000),
-        (3.5, 50.0, 0xbfe1c88e9ec00000),
-        (3.5, 53.0, 0xbfe2de9fc1800000),
-        (4294967295.0, 40.0, 0xbfe8e8cafe800000),
-        (4294967295.0, 41.0, 0xbfd91b5768800000),
-        (4294967295.0, 42.0, 0xbfe2f2e8e9800000),
-        (4294967295.0, 46.0, 0x3fb378eaba000000),
-        (4294967295.0, 49.0, 0x3fe014d5cc400000),
-        (4294967295.0, 50.0, 0xbfe9ddf5f6400000),
-        (4294967295.0, 53.0, 0x3fd80f19a5000000),
-        (-1.0, 40.0, 0xbfe8e8cafe800000),
-        (-1.0, 41.0, 0xbfd91b5768800000),
-        (-1.0, 42.0, 0xbfe2f2e8e9800000),
-        (-1.0, 46.0, 0x3fb378eaba000000),
-        (-1.0, 49.0, 0x3fe014d5cc400000),
-        (-1.0, 50.0, 0xbfe9ddf5f6400000),
-        (-1.0, 53.0, 0x3fd80f19a5000000),
-    ];
-    const FK_D: [u32; 20] = [0x3dbb9eb0, 0x3e9052dd, 0xbe2830f1, 0xbe754e6e, 0x3e676768, 0x3e39ad16, 0xbf2d67d7, 0xbe8d3a73, 0x3f3f9a24, 0x3da9ec57, 0xbf451356, 0x3dec59b1, 0x3f3d7661, 0xbe9cbb7b, 0xbf2944b1, 0x3ef3f832, 0x3f09d58e, 0xbf1d80cc, 0xbec27ea8, 0x3f36900d];
-    const FK_PR: [u64; 4] = [0x3fbf9add3746f4c6, 0xbfd55555555552fd, 0x3fe22c2a3d04eba6, 0x3fe796e924193c52];
-    const FK_PP: [u64; 3] = [0x3ff0000000001198, 0xc001c71c71c71c40, 0x3fb999999999999a];
-    const FK_Q: [u64; 4] = [0xbfd4e8f1ea4e0d35, 0xbf7f7fa595a48b00, 0xbfc5d1f86ea7838c, 0xbfcd5fe11d5182da];
-    const FK_P: [u64; 3] = [0x3ff31ac0460ea885, 0xc00182abe9527f47, 0x3fdd7b49ac10adea];
 }

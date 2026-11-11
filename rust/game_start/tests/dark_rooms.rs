@@ -196,7 +196,7 @@ fn the_men_put_the_mains_back_and_go_home_and_not_twice() {
     let men = p.hostiles();
     let posts: Vec<[f64; 2]> = men.iter().map(|&m| p.at(m)).collect();
     p.mains_pulled();
-    p.until(70.0, |p| !game::sim_lightshome::mains_active(&p.g)).unwrap_or_else(|| panic!("70 s and the mains are down: {}", p.powerout_line()));
+    p.until(70.0, |p| !p.g.light_home.mains.active).unwrap_or_else(|| panic!("70 s and the mains are down: {}", p.powerout_line()));
     let word = p.powerout_at(game::powerout::PowerOutEventWhat::Said).expect("their word");
     assert!(p.time() - word >= 2.2, "the mains came back {:.1} s after the word", p.time() - word);
     let sent = p.powerout_sent();

@@ -50,9 +50,6 @@ fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a game tick: the follow itself, or the pin verbatim.
-fn follow_camera_step(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
-    step(&mut g.tab.camera[id], dt, follow, aim_point)
-}
 fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     if let Some(pin) = c.pin {
         c.desired = v3::copy(pin.look);
@@ -80,149 +77,25 @@ fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a drawn frame: 'previous' becomes the matrix the last frame was drawn with.
-fn follow_camera_frame(g: &mut Game, id: CameraId) {
-    frame(&mut g.tab.camera[id])
-}
 fn frame(c: &mut FollowCamera) {
-    c.prev_view_proj = match c.kick_drawn.take() {
-        Some(d) => d,
-        None => v3::m4::copy(&c.view_proj),
-    };
-}
-
-fn focus(c: &FollowCamera) -> V3 {
-    match (&c.draw_held, c.kick_held) {
-        (Some(h), _) => h.target,
-        (None, Some(t)) => t,
-        (None, None) => c.target,
-    }
-}
-
-fn kick_in(c: &mut FollowCamera) {
-    let k = match c.kick {
-        Some(k) if c.kick_held.is_none() => k,
-        _ => return,
-    };
-    c.kick_held = Some(c.target);
-    c.target = v3::add(c.target, k);
-    rebuild(c);
-}
-
-fn kick_out(c: &mut FollowCamera) {
-    let t = match c.kick_held {
-        Some(t) => t,
-        None => return,
-    };
-    c.kick_vp = v3::m4::copy(&c.view_proj);
-    c.kick_drawn = Some(c.kick_vp);
-    c.kick_held = None;
-    c.target = t;
-    rebuild(c);
-}
-
-fn draw_in(c: &mut FollowCamera, p: FollowCameraDrawInP) {
-    if c.draw_held.is_some() {
-        return;
-    }
-    c.draw_held = Some(FollowCameraDrawHeld { target: c.target, yaw: c.yaw, pitch: c.pitch, distance: c.distance });
-    c.target = [p.target[0], p.target[1], p.target[2]];
-    c.yaw = p.yaw;
-    c.pitch = p.pitch;
-    c.distance = p.distance;
-    rebuild(c);
-}
-
-fn draw_out(c: &mut FollowCamera) {
-    let h = match c.draw_held {
-        Some(h) => h,
-        None => return,
-    };
-    if c.kick_drawn.is_none() {
-        c.draw_vp = v3::m4::copy(&c.view_proj);
-        c.kick_drawn = Some(c.draw_vp);
-    }
-    c.draw_held = None;
-    c.target = h.target;
-    c.yaw = h.yaw;
-    c.pitch = h.pitch;
-    c.distance = h.distance;
-    rebuild(c);
+    c.prev_view_proj = v3::m4::copy(&c.view_proj);
 }
 
 /// The matrices from look-at, angles and distance; the tick calls it too.
 pub fn follow_camera_rebuild(g: &mut Game, id: CameraId) {
     rebuild(&mut g.tab.camera[id])
 }
-fn rebuild(c: &mut FollowCamera) {
+pub(super) fn rebuild(c: &mut FollowCamera) {
     let (cp, sp, cy, sy) = (m::cos(c.pitch), m::sin(c.pitch), m::cos(c.yaw), m::sin(c.yaw));
     c.forward = [-sy * cp, -sp, -cy * cp];
     c.pos = v3::mad(c.target, c.forward, -c.distance);
     c.view = v3::m4::look_at(c.pos, c.target, [0.0, 1.0, 0.0]);
     c.proj = v3::m4::perspective(c.fov, c.aspect, c.near, c.far);
     c.view_proj = v3::m4::mul(&c.proj, &c.view);
-    // (a singular matrix leaves the old inverse, as the TypeScript's `out` does)
+    // (a singular matrix leaves the old inverse)
     if let Some(i) = v3::m4::invert(&c.view_proj) {
         c.inv_view_proj = i;
     }
-}
-
-/// Spectating: every half second, pick the yaw the followed man can be seen from.
-fn follow_camera_auto_yaw(g: &mut Game, id: CameraId, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
-    // (`blocked` needs g, so the camera is let go across the search; the level's segment test writes no yaw)
-    let yaw = match auto_yaw_due(&mut g.tab.camera[id], dt) {
-        Some(yaw) => yaw,
-        None => return,
-    };
-    let best = auto_yaw_pick(yaw, target, &mut |a, b| blocked(g, a, b));
-    g.tab.camera[id].yaw_goal = Some(best);
-}
-/// The half-second timer: Some(the yaw to search from) when a search is due.
-fn auto_yaw_due(c: &mut FollowCamera, dt: f64) -> Option<f64> {
-    c.auto_yaw_t -= dt;
-    if c.auto_yaw_t > 0.0 {
-        return None;
-    }
-    c.auto_yaw_t = 0.5;
-    Some(c.yaw)
-}
-/// Eight yaws, the current first, then ±45°, ±90°, ±135°, 180°; the clearest low approach wins, a hair of preference for turning less.
-fn auto_yaw_pick(from: f64, target: V3, blocked: &mut dyn FnMut(V3, V3) -> bool) -> f64 {
-    let chest: V3 = [target[0], 1.3, target[2]];
-    let (mut best, mut best_score) = (from, -1.0);
-    for i in 0..8 {
-        let turns = m::ceil(i as f64 / 2.0);
-        let yaw = from + if i == 0 { 0.0 } else { (if i % 2 != 0 { 1.0 } else { -1.0 }) * turns * (m::PI / 4.0) };
-        let (sy, cy) = (m::sin(yaw), m::cos(yaw));
-        let mut clear = 0.0;
-        for s in 1..=4 {
-            let s = s as f64;
-            let p: V3 = [chest[0] + sy * s, 1.3, chest[2] + cy * s];
-            if blocked(chest, p) {
-                break;
-            }
-            clear = s;
-        }
-        let score = clear - m::abs(if i == 0 { 0.0 } else { turns }) * 0.01;
-        if score > best_score {
-            best_score = score;
-            best = yaw;
-        }
-    }
-    best
-}
-
-fn ease_yaw(c: &mut FollowCamera, dt: f64, on: bool) {
-    if !on {
-        c.yaw_goal = None;
-        return;
-    }
-    let goal = match c.yaw_goal {
-        Some(y) => y,
-        None => return,
-    };
-    let d = goal - c.yaw;
-    let d = m::atan2(m::sin(d), m::cos(d));
-    c.yaw += d * m::min(1.0, dt * 3.0);
 }
 
 pub fn follow_camera_zoom(g: &mut Game, id: CameraId, delta: f64) {
@@ -295,146 +168,149 @@ fn planar_basis(c: &FollowCamera) -> FollowCameraPlanarBasis {
     FollowCameraPlanarBasis { fwd: f, right: [-f[2], 0.0, f[0]] }
 }
 
-/// Every number below is the TypeScript's own, under EXACT.on, on the same camera.
 #[cfg(test)]
 mod tests {
     use super::*;
-    const FORWARD: [u64; 3] = [0xbfd2b3a50d27623a, 0xbfec84c54c2d6338, 0xbfd6341794125f58];
-    const POS: [u64; 3] = [0x40209c5207e94ab4, 0x4030eafaa9fbbcd8, 0xbffbf84d39308a08];
-    const VIEW: [u32; 16] = [0x3f43ccb3, 0xbf12fa49, 0x3e959d28, 0x00000000, 0x00000000, 0x3ee83dc0, 0x3f64262a, 0x00000000, 0xbf24eb73, 0xbf2e7f80, 0x3eb1a0bd, 0x00000000, 0xc0ef4f40, 0xc0831ba0, 0xc1872eb5, 0x3f800000];
-    const PROJ: [u32; 16] = [0x40206e66, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40805851, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xbf80891b, 0xbf800000, 0x00000000, 0x00000000, 0xbf00891b, 0x00000000];
-    const VP: [u32; 16] = [0x3ff568c0, 0xc0135fb2, 0xbe963d6a, 0xbe959d28, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfceb48e, 0xc02ef7e6, 0xbeb25f01, 0xbeb1a0bd, 0xc195f8bb, 0xc1837616, 0x4183bb39, 0x41872eb5];
-    const IVP: [u32; 16] = [0x3e9c37f9, 0x33816418, 0xbe8394c5, 0x315f4604, 0xbe129522, 0x3de79e00, 0xbe2e076e, 0x31e23113, 0xc18454db, 0xc206c782, 0x405ed3c7, 0xbffeef02, 0x41828c25, 0x4203c748, 0xc075f68c, 0x4000000a];
-    const P1: [u64; 2] = [0x40825bf1425c0160, 0x40802f31a32c167f];
-    const P1_F: bool = true;
-    const P2: [u64; 2] = [0x40825bf1425c0160, 0x40802f31a32c167f];
-    const P2_F: bool = false;
-    const P3: [u64; 2] = [0x4083ffff2369f375, 0x40767fff7c8bf64f];
-    const P3_F: bool = false;
-    const RO: [u64; 3] = [0x40203999388e6301, 0x403076028a23ba68, 0xbffda6aafba13b1a];
-    const RD: [u64; 3] = [0xbfd857b660e2f209, 0xbfecd796ac82b0ec, 0xbfca87ab8bcd57b1];
-    const GP: [u64; 3] = [0x3ff8bb9c5df74160, 0x3fecccccccccccd0, 0xc015b9ec7a7f825a];
-    const GP0: [u64; 3] = [0x3ff2a7f58640d454, 0x0000000000000000, 0xc0168dda7328fa24];
-    const GP_ABOVE_NONE: bool = true;
-    const FWD: [u64; 3] = [0xbfe49d6e694619b9, 0x0000000000000000, 0xbfe87996529f9d92];
-    const RIGHT: [u64; 3] = [0x3fe87996529f9d92, 0x0000000000000000, 0xbfe49d6e694619b9];
-    const ZOOM: [u64; 1] = [0x403840a82f047a1c];
-    const ZOOM_HI: [u64; 1] = [0x4044000000000000];
-    const EASE: [u64; 1] = [0x3fe9eecbfb15b574];
-    const KICKED: [u64; 3] = [0x400acccccccccccd, 0x3ff8000000000000, 0xc01fcccccccccccd];
-    const KICK_VP: [u32; 16] = [0x3fdd2427, 0xc025c100, 0xbea8fa3a, 0xbea845fc, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfe87c2d, 0xc01daa87, 0xbea0bb7d, 0xbea0100a, 0xc1a1d145, 0xc15a3483, 0x4186949d, 0x418a050f];
-    const FOCUS_IN: [u64; 3] = [0x400a000000000000, 0x3ff8000000000000, 0xc01f000000000000];
-    const AFTER: [u64; 3] = [0x400a000000000000, 0x3ff8000000000000, 0xc01f000000000000];
-    const AFTER_VP: [u32; 16] = [0x3fdd2427, 0xc025c100, 0xbea8fa3a, 0xbea845fc, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfe87c2d, 0xc01daa87, 0xbea0bb7d, 0xbea0100a, 0xc19d877e, 0xc1567736, 0x4186d19c, 0x418a41cd];
-    const PREV: [u32; 16] = [0x3fdd2427, 0xc025c100, 0xbea8fa3a, 0xbea845fc, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfe87c2d, 0xc01daa87, 0xbea0bb7d, 0xbea0100a, 0xc1a1d145, 0xc15a3483, 0x4186949d, 0x418a050f];
 
-    const PIN_APPLIED: [u64; 6] = [0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3fd999999999999a, 0x3ff8da7e39bae2a3, 0x3fe199999999999a];
-    const PIN_STEP: [u64; 10] = [0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3fd999999999999a, 0xbfe0000000000000, 0x4022000000000000, 0x4022000000000000];
-    const PIN_VP: [u32; 16] = [0x4004fd81, 0x3f3fb16e, 0xbeafb4da, 0xbeaef96e, 0x00000000, 0x40614443, 0x3ef67e31, 0x3ef57744, 0xbf60e8d5, 0x3fe2b2cb, 0xbf4fcadc, 0xbf4eed36, 0x3f0ec47c, 0xc151a044, 0x41259d79, 0x412cecd1];
-    const PIN_BACK: [u64; 4] = [0x3fe6666666666666, 0x3ff199999999999a, 0x40314ccccccccccd, 0x4036800000000000];
-    const STEP: [u64; 7] = [0x4014e147ae147ae1, 0x0000000000000000, 0xc01b28f5c28f5c29, 0x400afa1f5f609be1, 0x3ff6831a4bab4167, 0xc01ec30e7281cd06, 0x4031a380bd012696];
-    const STEP_VP: [u32; 16] = [0x3ff568c0, 0xc0135fb2, 0xbe963d6a, 0xbe959d28, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfceb48e, 0xc02ef7e6, 0xbeb25f01, 0xbeb1a0bd, 0xc1971373, 0xc17d1cd8, 0x41863d2a, 0x4189adfa];
-    const UPDATE: [u64; 7] = [0x4010000000000000, 0x0000000000000000, 0xc018000000000000, 0x400b5cfc4a189f89, 0x3ff4c803aabe1cea, 0xc01e3df76bfb6678, 0x403204ceb9c41ddd];
-    const UPDATE_VP: [u32; 16] = [0x3ff568c0, 0xc0135fb2, 0xbe963d6a, 0xbe959d28, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfceb48e, 0xc02ef7e6, 0xbeb25f01, 0xbeb1a0bd, 0xc1962325, 0xc1728008, 0x4188fe56, 0x418c6c35];
-    const UPDATE_PREV: [u32; 16] = [0x3ff568c0, 0xc0135fb2, 0xbe963d6a, 0xbe959d28, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xbfceb48e, 0xc02ef7e6, 0xbeb25f01, 0xbeb1a0bd, 0xc1971373, 0xc17d1cd8, 0x41863d2a, 0x4189adfa];
-    const ROTATED: [u64; 1] = [0x3fee666666666666];
-    const DRAW_FOCUS: [u64; 3] = [0x400b5cfc4a189f89, 0x3ff4c803aabe1cea, 0xc01e3df76bfb6678];
-    const DRAW_TARGET: [u64; 3] = [0x3ff0000000000000, 0x0000000000000000, 0x4000000000000000];
-    const DRAW_VP: [u32; 16] = [0x401d3bba, 0xbf1fc999, 0xbdfdf9c5, 0xbdfceadc, 0x00000000, 0x401f8fa1, 0xbf495ee9, 0xbf48881d, 0xbefefb6e, 0xc0451069, 0xbf1c9cd7, 0xbf1bf5c9, 0xbfbaf9bc, 0x40d9099c, 0x414e54a5, 0x4155788f];
-    const DRAW_AGAIN: [u64; 3] = [0x3ff0000000000000, 0x0000000000000000, 0x4000000000000000];
-    const DRAW_OUT: [u64; 6] = [0x400b5cfc4a189f89, 0x3ff4c803aabe1cea, 0xc01e3df76bfb6678, 0x3fee666666666666, 0x3ff199999999999a, 0x403204ceb9c41ddd];
-    const DRAW_OUT_VP: [u32; 16] = [0x3fbaa3ea, 0xc03a1487, 0xbebdb2f3, 0xbebce89a, 0x00000000, 0x3fe8ddfd, 0xbf651a8b, 0xbf64262a, 0xc0027f4d, 0xc0051172, 0xbe87a7f1, 0xbe87173e, 0xc1a33a34, 0xc102349c, 0x419025fd, 0x41938c3b];
-    const DRAW_PREV: [u32; 16] = [0x401d3bba, 0xbf1fc999, 0xbdfdf9c5, 0xbdfceadc, 0x00000000, 0x401f8fa1, 0xbf495ee9, 0xbf48881d, 0xbefefb6e, 0xc0451069, 0xbf1c9cd7, 0xbf1bf5c9, 0xbfbaf9bc, 0x40d9099c, 0x414e54a5, 0x4155788f];
-    const AUTO_GOAL: [u64; 1] = [0x3ff7c430dd5549bf];
-    const AUTO_T: [u64; 1] = [0x3fe0000000000000];
-    const AUTO_CALLS: usize = 58;
-    const AUTO_LAST: [u64; 2] = [0xbfe275b9a51866e4, 0xc0183ccb294fcec8];
-    const AUTO_GOAL2: [u64; 1] = [0x3ff7c430dd5549bf];
-    const AUTO_T2: [u64; 1] = [0x3fd999999999999a];
-    const AUTO_GOAL3: [u64; 1] = [0x3fe6666666666666];
-    const AUTO_T3: [u64; 1] = [0x3fe0000000000000];
-
-    fn same(got: &[f64], want: &[u64]) { assert_eq!(got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), want); }
-    fn same32(got: &[f32], want: &[u32]) { assert_eq!(got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), want); }
-
-    #[test]
-    fn the_same_bits_as_the_typescript() {
+    fn at_near(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-3, "{what}: {a:?} against {b:?}"); }
+    fn near(a: f64, b: f64, what: &str) { assert!(m::abs(a - b) < 1e-3, "{what}: {a} against {b}"); }
+    /// the game's usual camera over (3.25, 1.5, -7.75)
+    fn cam() -> FollowCamera {
         let mut c = FollowCamera::blank();
-        c.target = [3.25, 1.5, -7.75]; c.yaw = 0.7; c.pitch = 1.1; c.distance = 17.3; c.aspect = 1.6;
+        c.target = [3.25, 1.5, -7.75]; c.yaw = 0.7; c.pitch = 1.1; c.distance = 17.3; c.desired_distance = 17.3; c.aspect = 1.6;
         rebuild(&mut c);
-        same(&c.forward, &FORWARD); same(&c.pos, &POS);
-        same32(&c.view, &VIEW); same32(&c.proj, &PROJ); same32(&c.view_proj, &VP); same32(&c.inv_view_proj, &IVP);
-
-        let r = project(&c.view_proj, [4.0, 1.0, -6.0], 1280.0, 720.0, None, None);
-        same(&[r.0, r.1], &P1); assert_eq!(r.2, P1_F);
-        let r = project(&c.view_proj, [4.0, 1.0, -6.0], 1280.0, 720.0, Some(0.01), Some(1e-3));
-        same(&[r.0, r.1], &P2); assert_eq!(r.2, P2_F);
-        let behind = [c.pos[0] - c.forward[0] * 3.0, c.pos[1] - c.forward[1] * 3.0, c.pos[2] - c.forward[2] * 3.0];
-        let r = project(&c.view_proj, behind, 1280.0, 720.0, None, None);
-        same(&[r.0, r.1], &P3); assert_eq!(r.2, P3_F);
-
-        let r = ray(&c.inv_view_proj, 0.3, 0.6);
-        same(&r.ro, &RO); same(&r.rd, &RD);
-        same(&ground_point(&c.inv_view_proj, 0.3, 0.6, Some(0.9)).unwrap(), &GP);
-        same(&ground_point(&c.inv_view_proj, 0.3, 0.6, None).unwrap(), &GP0);
-        assert_eq!(ground_point(&c.inv_view_proj, 0.3, 0.6, Some(100.0)).is_none(), GP_ABOVE_NONE);
-        let b = planar_basis(&c);
-        same(&b.fwd, &FWD); same(&b.right, &RIGHT);
-
-        zoom(&mut c, 120.0); same(&[c.desired_distance], &ZOOM);
-        zoom(&mut c, 1e5); same(&[c.desired_distance], &ZOOM_HI);
-        c.yaw_goal = Some(3.0); ease_yaw(&mut c, 0.016, true); same(&[c.yaw], &EASE);
-        ease_yaw(&mut c, 0.016, false); assert!(c.yaw_goal.is_none());
-
-        c.kick = Some([0.1, 0.0, -0.2]);
-        kick_in(&mut c);
-        same(&c.target, &KICKED); same32(&c.view_proj, &KICK_VP); same(&focus(&c), &FOCUS_IN);
-        kick_in(&mut c); same(&c.target, &KICKED);   // (already in: nothing)
-        kick_out(&mut c);
-        same(&c.target, &AFTER); same32(&c.view_proj, &AFTER_VP);
-        frame(&mut c);
-        same32(&c.prev_view_proj, &PREV); assert!(c.kick_drawn.is_none());
+        c
     }
 
     #[test]
-    fn the_picture_half_the_same_bits() {
-        // pin: clamped as asked, applied verbatim by step, the free camera handed back
+    fn the_camera_stands_back_from_what_it_looks_at_along_its_angles() {
+        let c = cam();
+        near(v3::len(c.forward), 1.0, "its line");
+        at_near(v3::mad(c.pos, c.forward, c.distance), c.target, "its line reaches what it looks at");
+        assert!(c.pos[1] > c.target[1], "a pitch above nothing looks down");
+        let mut top = FollowCamera::blank();
+        top.pitch = m::PI / 2.0 - 1e-3; top.distance = 10.0; top.aspect = 1.6;
+        rebuild(&mut top);
+        near(top.pos[1], 10.0, "straight down: it hangs over the mark");
+    }
+
+    /// What a click means: the point of the floor under a pixel, and that pixel of the floor's point.
+    #[test]
+    fn a_point_of_the_picture_and_a_point_of_the_floor_come_back_to_each_other() {
+        let c = cam();
+        let (w, h) = (1280.0, 720.0);
+        let (x, y, front) = project(&c.view_proj, c.target, w, h, None, None);
+        assert!(front);
+        assert!(m::abs(x - w / 2.0) < 0.5 && m::abs(y - h / 2.0) < 0.5, "what it looks at is the middle of the picture: {x} {y}");
+        for (u, v) in [(0.3, 0.6), (0.9, 0.1), (0.5, 0.5)] {
+            let p = ground_point(&c.inv_view_proj, u, v, Some(0.9)).expect("the floor is under the camera");
+            near(p[1], 0.9, "on the height asked");
+            let (x, y, _) = project(&c.view_proj, p, w, h, None, None);
+            assert!(m::abs(x / w - u) < 1e-3 && m::abs(y / h - v) < 1e-3, "{u} {v} came back as {} {}", x / w, y / h);
+            let r = ray(&c.inv_view_proj, u, v);
+            near(v3::len(r.rd), 1.0, "a ray's way");
+            near(v3::len(v3::sub(v3::mad(r.ro, r.rd, v3::dist(r.ro, p)), p)), 0.0, "the ray goes through the point");
+        }
+        assert!(ground_point(&c.inv_view_proj, 0.3, 0.6, Some(100.0)).is_none(), "a plane over the camera is not under the pixel");
+        // the picture's top is further off than its bottom, and right is right
+        let (top, bottom) = (ground_point(&c.inv_view_proj, 0.5, 0.2, None).unwrap(), ground_point(&c.inv_view_proj, 0.5, 0.8, None).unwrap());
+        assert!(v3::dist(top, c.pos) > v3::dist(bottom, c.pos), "the top of a picture looks further off");
+    }
+
+    #[test]
+    fn what_is_behind_the_camera_or_out_of_the_margin_is_not_showable() {
+        let c = cam();
+        let behind = v3::mad(c.pos, c.forward, -3.0);
+        assert!(!project(&c.view_proj, behind, 1280.0, 720.0, None, None).2, "behind");
+        assert!(project(&c.view_proj, c.target, 1280.0, 720.0, Some(0.01), Some(1e-3)).2, "in the very middle, inside the smallest margin");
+        let off = ground_point(&c.inv_view_proj, 0.9, 0.5, None).unwrap();
+        assert!(project(&c.view_proj, off, 1280.0, 720.0, None, None).2, "in front");
+        assert!(!project(&c.view_proj, off, 1280.0, 720.0, Some(0.5), None).2, "and out of the margin");
+    }
+
+    /// W and D walk up and across the picture.
+    #[test]
+    fn w_goes_up_the_picture_and_d_across_it() {
+        let c = cam();
+        let b = planar_basis(&c);
+        near(b.fwd[1], 0.0, "on the floor");
+        near(v3::len(b.fwd), 1.0, "a metre");
+        near(v3::dot(b.fwd, b.right), 0.0, "square");
+        let (x0, y0, _) = project(&c.view_proj, c.target, 1280.0, 720.0, None, None);
+        let (_, y, _) = project(&c.view_proj, v3::add(c.target, b.fwd), 1280.0, 720.0, None, None);
+        assert!(y < y0, "forward is up the picture");
+        let (x, _, _) = project(&c.view_proj, v3::add(c.target, b.right), 1280.0, 720.0, None, None);
+        assert!(x > x0, "right is to the right of it");
+    }
+
+    #[test]
+    fn the_wheel_zooms_by_a_share_of_the_distance_and_stops_at_both_ends() {
         let mut c = FollowCamera::blank();
-        c.yaw = 0.7; c.pitch = 1.1; c.distance = 17.3; c.desired_distance = 22.5;
-        let p = set_pin(&mut c, Some(FollowCameraSetPinP { look: [1.0, 2.0, 3.0], yaw: 0.4, pitch: 2.0, dist: 0.1 })).unwrap();
-        same(&[p.look[0], p.look[1], p.look[2], p.yaw, p.pitch, p.dist], &PIN_APPLIED);
-        set_pin(&mut c, Some(FollowCameraSetPinP { look: [1.0, 2.0, 3.0], yaw: 0.4, pitch: -0.5, dist: 9.0 }));
+        c.desired_distance = 20.0;
+        zoom(&mut c, 100.0);
+        let out = c.desired_distance;
+        assert!(out > 20.0);
+        zoom(&mut c, -100.0);
+        near(c.desired_distance, 20.0, "as far in as it went out");
+        zoom(&mut c, 1e5);
+        assert_eq!(c.desired_distance, 40.0);
+        zoom(&mut c, -1e5);
+        assert_eq!(c.desired_distance, 6.0);
+    }
+
+    /// The pin holds the view as asked, kept off straight down and out of the near plane, and letting go gives the free camera back.
+    #[test]
+    fn a_pinned_view_stands_as_asked_and_gives_the_free_camera_back() {
+        let mut c = cam();
+        c.desired_distance = 22.5;
+        let asked = |pitch: f64, dist: f64| Some(FollowCameraSetPinP { look: [1.0, 2.0, 3.0], yaw: 0.4, pitch, dist });
+        let p = set_pin(&mut c, asked(2.0, 0.1)).unwrap();
+        assert_eq!(p.pitch, PIN_PITCH_MAX);
+        assert_eq!(p.dist, c.near + 0.05);
+        // a second pin does not take the first for the free camera
+        set_pin(&mut c, asked(-0.5, 9.0));
         let serial = c.desired_serial;
         step(&mut c, 0.016, [5.0, 0.0, 5.0], None);
-        assert_eq!(c.desired_serial, serial + 1);
-        same(&[c.target[0], c.target[1], c.target[2], c.desired[0], c.desired[1], c.desired[2], c.yaw, c.pitch, c.distance, c.desired_distance], &PIN_STEP);
-        same32(&c.view_proj, &PIN_VP);
+        assert_eq!(c.desired_serial, serial + 1, "a cut each step");
+        assert_eq!((c.target, c.desired, c.yaw, c.pitch, c.distance, c.desired_distance), ([1.0, 2.0, 3.0], [1.0, 2.0, 3.0], 0.4, -0.5, 9.0, 9.0), "the pin, whatever it was following");
         assert!(set_pin(&mut c, None).is_none());
-        same(&[c.yaw, c.pitch, c.distance, c.desired_distance], &PIN_BACK);
+        assert_eq!((c.yaw, c.pitch, c.distance, c.desired_distance), (0.7, 1.1, 17.3, 22.5));
+        let shown = c.yaw;
+        step(&mut c, 0.016, [5.0, 0.0, 5.0], None);
+        assert_eq!(c.yaw, shown);
+        assert_ne!(c.target, [1.0, 2.0, 3.0], "free again, it follows");
+    }
 
-        // the follow, then update's frame + step
-        let mut c = FollowCamera::blank();
-        c.target = [3.25, 1.5, -7.75]; c.yaw = 0.7; c.pitch = 1.1; c.distance = 17.3; c.aspect = 1.6; c.peek_offset = Some([0.5, 0.0, -0.25]);
-        step(&mut c, 0.016, [4.0, 0.0, -6.0], Some([8.0, 0.0, -9.0]));
-        same(&[c.desired[0], c.desired[1], c.desired[2], c.target[0], c.target[1], c.target[2], c.distance], &STEP);
-        same32(&c.view_proj, &STEP_VP);
-        c.peek_offset = None;
+    /// It leads toward the aim by its share and a peek, and closes on that at the same rate on any machine.
+    /// A FAILURE MEANS: the camera lags more on a slower frame rate, or jumps to where it is going.
+    #[test]
+    fn the_camera_follows_toward_his_aim_at_the_same_rate_at_any_frame_rate() {
+        let (follow, aim): (V3, V3) = ([4.0, 0.0, -6.0], [8.0, 0.0, -10.0]);
+        let mut c = cam();
+        c.aim_lead = 0.25;
+        c.peek_offset = Some([0.5, 0.0, -0.25]);
+        let start = c.target;
+        step(&mut c, 0.016, follow, Some(aim));
+        at_near(c.desired, [5.5, 0.0, -7.25], "a quarter of the way to the aim, and the peek");
+        let (d0, d1) = (v3::dist(start, c.desired), v3::dist(c.target, c.desired));
+        assert!(d1 < d0 && d1 > d0 * 0.8, "it closes, and not at once: {d0} to {d1}");
+        let (mut one, mut four) = (cam(), cam());
+        step(&mut one, 0.1, follow, None);
+        for _ in 0..4 { step(&mut four, 0.025, follow, None); }
+        at_near(one.target, four.target, "one long frame or four short ones");
+        near(one.distance, four.distance, "and the zoom");
+        for _ in 0..600 { step(&mut four, 0.05, follow, None); }
+        at_near(four.target, follow, "and it gets there");
+    }
+
+    /// The frame's previous matrix is the last one drawn with: what the picture blends from.
+    #[test]
+    fn update_keeps_last_frames_matrix_as_the_previous() {
+        let mut c = cam();
+        let was = c.view_proj;
         update(&mut c, 0.02, [4.0, 0.0, -6.0], None);
-        same(&[c.desired[0], c.desired[1], c.desired[2], c.target[0], c.target[1], c.target[2], c.distance], &UPDATE);
-        same32(&c.view_proj, &UPDATE_VP); same32(&c.prev_view_proj, &UPDATE_PREV);
-
-        // the pose in and out, focus while it is in, and the frame's 'previous'
-        c.yaw += 0.25; same(&[c.yaw], &ROTATED);
-        rebuild(&mut c);
-        draw_in(&mut c, FollowCameraDrawInP { target: [1.0, 0.0, 2.0], yaw: 0.2, pitch: 0.9, distance: 12.0 });
-        same(&focus(&c), &DRAW_FOCUS); same(&c.target, &DRAW_TARGET); same32(&c.view_proj, &DRAW_VP);
-        draw_in(&mut c, FollowCameraDrawInP { target: [9.0, 9.0, 9.0], yaw: 1.0, pitch: 1.0, distance: 1.0 });
-        same(&c.target, &DRAW_AGAIN);
-        draw_out(&mut c);
-        same(&[c.target[0], c.target[1], c.target[2], c.yaw, c.pitch, c.distance], &DRAW_OUT);
-        same32(&c.view_proj, &DRAW_OUT_VP);
-        frame(&mut c);
-        same32(&c.prev_view_proj, &DRAW_PREV);
+        assert_eq!(c.prev_view_proj, was);
+        assert_ne!(c.view_proj, was);
     }
 
     /// `this` is the ID: a method writes the camera it is named, and no other.
@@ -448,37 +324,12 @@ mod tests {
         let untouched = g.tab.camera[b].clone();
 
         follow_camera_rotate(&mut g, a, 0.25);
-        same(&[g.tab.camera[a].yaw], &[0.95f64.to_bits()]);
+        assert_eq!(g.tab.camera[a].yaw, 0.95);
         follow_camera_zoom(&mut g, a, 120.0);
-        follow_camera_step(&mut g, a, 0.016, [4.0, 0.0, -6.0], None);
-        follow_camera_frame(&mut g, a);
+        follow_camera_update(&mut g, a, 0.016, [4.0, 0.0, -6.0], None);
         assert!(g.tab.camera[a].desired_serial == 1 && g.tab.camera[a].desired == [4.0, 0.0, -6.0]);
-
-        // autoYaw lets the camera go across `blocked`, which is handed g, and files the goal on the same camera
-        let mut seen = 0;
-        follow_camera_auto_yaw(&mut g, a, 0.1, [2.0, 0.0, -3.0], &mut |g, _, _| { seen += g.tab.camera.len(); false });
-        assert_eq!(seen, 64);    // nothing blocked: eight yaws, four samples each, and each call sees both cameras in g
-        assert_eq!(g.tab.camera[a].yaw_goal, Some(0.95));
-        assert!(g.tab.camera[b].yaw_goal.is_none());
 
         let (bb, ub) = (&g.tab.camera[b], &untouched);
         assert_eq!((bb.yaw, bb.desired_distance, bb.desired, bb.desired_serial, bb.view_proj), (ub.yaw, ub.desired_distance, ub.desired, ub.desired_serial, ub.view_proj));
-    }
-
-    #[test]
-    fn auto_yaw_the_same_bits() {
-        fn run(c: &mut FollowCamera, dt: f64, blocked: &mut dyn FnMut(V3, V3) -> bool) {
-            if let Some(y) = auto_yaw_due(c, dt) { c.yaw_goal = Some(auto_yaw_pick(y, [2.0, 0.0, -3.0], blocked)); }
-        }
-        let mut c = FollowCamera::blank();
-        c.yaw = 0.7;
-        let mut calls: Vec<f64> = Vec::new();
-        run(&mut c, 0.1, &mut |_, p| { calls.push(p[0]); calls.push(p[2]); m::sin(p[0] * 1.7) + m::cos(p[2]) > 1.0 });
-        same(&[c.yaw_goal.unwrap()], &AUTO_GOAL); same(&[c.auto_yaw_t], &AUTO_T);
-        assert_eq!(calls.len(), AUTO_CALLS); same(&calls[calls.len() - 2..], &AUTO_LAST);
-        run(&mut c, 0.1, &mut |_, _| true);
-        same(&[c.yaw_goal.unwrap()], &AUTO_GOAL2); same(&[c.auto_yaw_t], &AUTO_T2);
-        run(&mut c, 0.45, &mut |_, _| true);
-        same(&[c.yaw_goal.unwrap()], &AUTO_GOAL3); same(&[c.auto_yaw_t], &AUTO_T3);
     }
 }

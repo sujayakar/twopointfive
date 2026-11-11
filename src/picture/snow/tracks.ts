@@ -65,8 +65,7 @@ export const SNOWTRACKS = {
   spray: 12,          // … and this many more thrown out BEHIND it, the way the foot came from, where the push-off flings them …
   sprayFar: 0.85,     // m: … the furthest of them this far back …
   sprayFan: 0.5,      // rad: … in a fan this wide either side of that line
-  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2 (rust/game_rules/src/air/snow_marks.rs has the
-  // things'). 0 on `form` = a mark is whole at once.
+  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2. 0 on `form` = a mark is whole at once.
   form: 0.2,          // s: a mark's floor sinks in over this ÷ (0.5 + force) — a walker's print about a seventh of a second, a sprinter's an eighth, a blast's at once
   throwLag: 0.16,     // s: the lumps it threw land this × (0.6 + 0.4 × force) after it was made (thrown harder, they fly longer) …
   throwPop: 0.07,     // s: … and settle over this
@@ -91,7 +90,7 @@ export interface SnowTracks {
   craters: number;
   /** every piece of `data` changed since the last hand-over, each by itself (`dirty` is the one rect round them all) */
   rects: [number, number, number, number][];
-  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent (rust/game_rules/src/air/snow_marks.rs) */
+  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent */
   marks: number;
   /** the marks still forming (SNOW_LOOK.marks; `formSnowTracks` brings them on) */
   forming: Forming[];
@@ -405,7 +404,7 @@ function craterInto(T: Stamp, TC: Stamp, cx: number, cz: number, r0: number, ser
   }
 }
 
-/** A THING'S MARK (rust/game_rules/src/air/snow_marks.rs — what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
+/** A THING'S MARK (what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
  *  its first end and `r` about its last, pressed down to `deep` (0‥1 of a boot's full depth: a light thing rides high), its outline broken into lumps and its
  *  bank's reach broken along its length as a print's are (`m` = how untidy, 0‥1; SNOWTRACKS.crumble / lump / reach). Never lifts what is already pressed. */
 export function pressGroove(T: Stamp, ax: number, az: number, bx: number, bz: number, r0: number, r: number, deep: number, m: number) {

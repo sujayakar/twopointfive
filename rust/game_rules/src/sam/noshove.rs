@@ -1,5 +1,3 @@
-pub use ::game_types::noshove::types;
-pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -8,14 +6,14 @@ use crate::v3::{self, Quat, V3};
 
 /// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's.
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() { return false; }
-    match crate::orders::squad_orders_of(g, seat, gd) {
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
+    match crate::orders::squad_orders_of(seat, gd) {
         Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
     }
 }
 
-/// player.ts updatePlayer, first thing: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player.
+/// first thing in the player's update: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player.
 pub fn no_shove_begin(g: &mut Game, pl: Option<&mut crate::player::Legs>) {
     let now = g.time;
     match pl {
@@ -57,7 +55,7 @@ fn note_on(shoved: &mut [f64; 2], shoved_t: &mut f64, shoved_from: &mut [f64; 2]
     shoved[0] += dx; shoved[1] += dz;
 }
 
-/// player.ts keepOffGuards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more.
+/// the keep-off from guards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more.
 pub(super) fn no_shove_back(g: &Game, seat: &crate::seats::SeatRef, mx: f64, mz: f64, l: f64, pl: Option<&crate::player::Legs>) -> f64 {
     let (shoved, shoved_t, shoved_from) = match pl {
         Some(pl) => (pl.shoved, pl.shoved_t, pl.shoved_from),
@@ -80,7 +78,6 @@ pub fn no_shove_own(g: &mut Game, dx: f64, dz: f64) -> Option<[f64; 2]> {
     let (sx, sz) = (g.pl[p].shoved[0], g.pl[p].shoved[1]);
     let sl = m::hyp2(sx, sz);
     if sl < 1e-9 { return Some([dx, dz]); }
-    g.stats.noshove.not_walked += 1;
     let c = g.pl[p].ch;
     Some(own_step(g.ch[c].pos, sx, sz, sl, g.pl[p].shoved_from))
 }
@@ -93,13 +90,13 @@ fn own_step(pos: V3, sx: f64, sz: f64, sl: f64, shoved_from: [f64; 2]) -> [f64; 
     [mx + sx / sl * t, mz + sz / sl * t]
 }
 
-/// squad.ts runGuardScript, after his step and its collisions: he stood at (x0, z0) before it. He goes round the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs).
+/// after his script's step and its collisions: he stood at (x0, z0) before it. He goes around the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs).
 pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bool {
     if !falling_in_yields(g, &crate::seats::here(g), gd) { return false; }
     let (ring, back) = (g.k.noshove.ring, g.k.noshove.back);
     let c = g.gd[gd].ch;
     let pc = g.pl[g.player].ch;
-    let s = g.ch[pc].pos;   // (the TypeScript's live alias; only this man's body moves below, so a copy reads the same)
+    let s = g.ch[pc].pos;   // (a copy: only this man's body moves below)
     let (x1, z1) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let l1 = m::hyp2(x1 - s[0], z1 - s[2]);
     if l1 >= ring { return false; }
@@ -114,7 +111,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
         g.ch[c].pos[0] += ux * step;
         g.ch[c].pos[2] += uz * step;
         settle(g, c, s, l1, [x1, z1]);
-        g.stats.noshove.back += 1;
         return false;
     }
     // closing on him inside the ring. A corner of his way under the player is not walked to: the one after it, where that is a straight walk
@@ -126,7 +122,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
         g.gd[gd].path_i += 1;
     }
     let goal = script_goal(g, gd);
-    // `wp !== goal` of the TypeScript is "wp is a corner of his path": no path holds the goal object itself (a path's points are the nav's own)
     let corner = if g.gd[gd].path_i < g.gd[gd].path.len() { Some(g.gd[gd].path[g.gd[gd].path_i]) } else { None };
     let wp = if corner.is_some() { corner } else { goal };
     let (mx, mz) = (x1 - x0, z1 - z0);
@@ -141,7 +136,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     let ux = if l0 > 1e-4 { bx / l0 } else { -fx };
     let uz = if l0 > 1e-4 { bz / l0 } else { -fz };
     if let Some(q) = goal {
-        if m::hyp2(q[0] - s[0], q[2] - s[2]) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
+        if v3::dist_xz(q, s) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
     }
     if let Some(q) = corner {
         if under(q, s, ring) { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // a corner under the player that he cannot cut: he waits for it
@@ -152,7 +147,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     if !room(g, c, s, fx, fz, ring, side) {
         side = if room(g, c, s, fx, fz, ring, -side) { -side } else { 0.0 };
     }
-    if side == 0.0 { g.stats.noshove.through += 1; return false; }   // no room either way: he squeezes past, the player unmoved
+    if side == 0.0 {  return false; }   // no room either way: he squeezes past, the player unmoved
     // round: this frame's stride, turned off his line toward that side by how squarely the player is in front of him, and never inside the ring
     let ahead = m::max(0.0, -(ux * fx + uz * fz));
     let dx = fx + fz * side * ahead;
@@ -166,7 +161,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     }
     g.ch[c].pos[0] = s[0] + qx;
     g.ch[c].pos[2] = s[2] + qz;
-    g.stats.noshove.round += 1;
     settle(g, c, s, rad, [x1, z1]);   // (the walls eat the turn: he squeezes past after all)
     false
 }
@@ -178,7 +172,7 @@ fn script_goal(g: &Game, gd: GuardId) -> Option<V3> {
 
 /// The closure `under`: is this point of his way under the player.
 fn under(q: V3, s: V3, ring: f64) -> bool {
-    m::hyp2(q[0] - s[0], q[2] - s[2]) < ring + 0.05
+    v3::dist_xz(q, s) < ring + 0.05
 }
 
 /// The closure `settle`: the walls have their say; left nearer the player than `min` by them, he is put at `back` (true).
@@ -186,7 +180,7 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
     let (mut p, r) = (g.ch[c].pos, g.ch[c].radius);
     crate::scene_collision::collide_circle(g, &mut p, r, 0.2, 1.5, None);
     g.ch[c].pos = p;
-    if m::hyp2(p[0] - s[0], p[2] - s[2]) >= min - 1e-6 { return false; }
+    if v3::dist_xz(p, s) >= min - 1e-6 { return false; }
     g.ch[c].pos[0] = back[0];
     g.ch[c].pos[2] = back[1];
     true
@@ -195,20 +189,19 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
 /// The closure `short`: held off, straight back out to where he may be; his legs stop (a man walking on the spot wakes followPath's stuck side-step). Always true.
 fn short(g: &mut Game, gd: GuardId, c: CharId, s: V3, rad: f64, ux: f64, uz: f64, x0: f64, z0: f64) -> bool {
     let p = g.ch[c].pos;
-    let l = m::hyp2(p[0] - s[0], p[2] - s[2]);
+    let l = v3::dist_xz(p, s);
     let vx = if l > 1e-4 { (p[0] - s[0]) / l } else { ux };
     let vz = if l > 1e-4 { (p[2] - s[2]) / l } else { uz };
     g.ch[c].pos[0] = s[0] + vx * rad;
     g.ch[c].pos[2] = s[2] + vz * rad;
     settle(g, c, s, rad, [x0, z0]);
-    g.stats.noshove.short += 1;
     g.gd[gd].speed = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
     true
 }
 
 /// The closure `room`: has his body the room to pass the player on this side.
-fn room(g: &mut Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
+fn room(g: &Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
     let hit = crate::scene_collision::raycast(g, [s[0], 0.45, s[2]], [fz * side, 0.0, -fx * side], 1.5);
     let t = match hit { Some(h) => h.t, None => 1.5 };
     t >= ring + g.ch[c].radius - 0.05
@@ -218,32 +211,33 @@ fn room(g: &mut Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) 
 mod tests {
     use super::*;
 
-    // the numbers: the TypeScript's own, under EXACT, in bun
+    /// A failure means a guard's shove puts Sam back, or that walking into him is not stopped: only what his own legs closed on the man is taken back.
     #[test]
-    fn back_is_the_typescripts_bits() {
-        let b = back_from([0.11, -0.07], [1.05, -2.41], 1.61, -2.13, 0.31);
-        assert_eq!(b.to_bits(), 0x3fceb851eb851eba);
+    fn he_is_put_back_only_by_what_his_own_legs_closed() {
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        near(back_from([0.0, 0.0], [0.0, 0.0], 0.5, 0.0, 0.3), 0.2);       // he walked 0.2 at the man
+        assert_eq!(back_from([0.0, 0.0], [0.0, 0.0], 0.5, 0.0, 0.6), 0.0);  // he walked away from him
+        near(back_from([0.1, 0.0], [0.0, 0.0], 0.5, 0.0, 0.3), 0.1);       // the men gave him 0.1 of the way
+        near(back_from([0.0, 0.0], [0.0, 0.0], 2.0, 0.0, 0.3), crate::player::KEEP_OFF - 0.3);   // no further than the man keeps him off
     }
 
     #[test]
-    fn note_starts_afresh_on_a_new_frame() {
+    fn a_shove_is_noted_afresh_each_frame_and_adds_up_within_one() {
         let (mut shoved, mut t, mut from) = ([0.11, -0.07], 4.0, [1.05, -2.41]);
-        note_on(&mut shoved, &mut t, &mut from, 1.3, -2.7, 5.25, 0.013, -0.029);
-        assert_eq!(shoved[0].to_bits(), 0x3f8a9fbe76c8b439);
-        assert_eq!(shoved[1].to_bits(), 0xbf9db22d0e560419);
-        assert_eq!(from[0].to_bits(), 0x3ff4978d4fdf3b65);
-        assert_eq!(from[1].to_bits(), 0xc0055e353f7ced92);
-        assert_eq!(t, 5.25);
+        note_on(&mut shoved, &mut t, &mut from, 1.0, -2.0, 5.25, 0.25, -0.5);
+        assert_eq!((shoved, t, from), ([0.25, -0.5], 5.25, [0.75, -1.5]), "last frame's shove is gone, and he stood where it found him");
+        note_on(&mut shoved, &mut t, &mut from, 1.25, -2.5, 5.25, 0.25, 0.25);
+        assert_eq!((shoved, t, from), ([0.5, -0.25], 5.25, [0.75, -1.5]), "the same frame: more of it, from the same place");
     }
 
+    /// `step` is what his legs did; the rest of where he stands is the men's shove of 0.1 along +x. A failure means a shove he never walked is counted as a walk (the squad's follow reads this).
     #[test]
-    fn own_takes_the_shove_out_of_his_step() {
-        let pos = [1.3, 0.0, -2.7];
-        let r = own_step(pos, 0.11, -0.07, m::hyp2(0.11, -0.07), [1.05, -2.41]);
-        assert_eq!(r[0].to_bits(), 0x3fc1eb851eb851e8);
-        assert_eq!(r[1].to_bits(), 0xbfcc28f5c28f5c30);
-        let r = own_step(pos, 0.3, 0.2, m::hyp2(0.3, 0.2), [1.4, -2.2]);
-        assert_eq!(r[0].to_bits(), 0xbfb9999999999994);
-        assert_eq!(r[1].to_bits(), 0xbfe0000000000002);
+    fn his_own_step_loses_only_the_shove_that_ran_against_it() {
+        let own = |step: [f64; 2]| own_step([step[0] + 0.1, 0.0, step[1]], 0.1, 0.0, 0.1, [0.0, 0.0]);
+        let near = |a: [f64; 2], b: [f64; 2]| assert!((a[0] - b[0]).abs() < 1e-12 && (a[1] - b[1]).abs() < 1e-12, "{a:?} {b:?}");
+        near(own([0.2, 0.0]), [0.2, 0.0]);       // with the shove: his whole step
+        near(own([0.0, 0.3]), [0.0, 0.3]);       // across it: his whole step
+        near(own([-0.05, 0.0]), [0.0, 0.0]);     // against it, less than it gave: nothing is left
+        near(own([-0.2, 0.0]), [-0.1, 0.0]);     // against it, more: no more than it gave comes off
     }
 }

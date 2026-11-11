@@ -152,7 +152,7 @@ export const QUIET: QuietData = {
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
-    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/missions/takecheck.rs; a safe and a locker tell nobody)
+    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent; a safe and a locker tell nobody)
     { place: 'the ops room', area: R.ops, door: 'ops', holder: 'the safe', rackIndex: 1, front: [25.9, 1.0, 9.77], halfW: 0.3 },
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
@@ -459,7 +459,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
 // What each place of the station is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
-// `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
+// `lived.<place>.<what>`, all of it the tail of the lists). No light and no change to one: the hiding dark is the level.
 // Out of doors nothing stands taller than a man's knee where a flood, the picket or a walker looks: paint, plates in the ground, things against a wall.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.
 function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>): void {

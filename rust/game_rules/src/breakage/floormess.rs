@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables)]
-//! THE FLOOR'S MESS is one arm of the marks (b_01.rs lays them, render_decals set.rs says when). No rule reads a mark.
+//! THE FLOOR'S MESS is one arm of the marks (render_decals/set.rs says when). No rule reads a mark.
 //! FLOOR MESS: what a blast and a broken thing LEAVE once the dust has gone out of the air. FILM where a burst's pall stood, a pale film of settled dust on the floor: a HEART at the
 //! burst and LOBES round it, each fitted to the room (none laid across something standing between it and the burst, each reaching only as far as the nearest thing standing between waist
 //! and head height, so the dust goes out through a doorway or the hole the blast made, never under a wall that held). The tops standing in a film take their own. RUBBLE: a chunk the pool
@@ -56,7 +56,7 @@ fn takes(b: &WorldBox) -> bool {
     js::to_u32(b.flags) & js::to_u32(f.no_primary + f.no_shadow) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
 }
 /// how far a film centred here may reach: to the nearest thing STANDING (any static whose span meets the band from waist to head height), measured to the box itself, and `want` at most. 0 = the centre is inside one.
-fn fit(g: &mut Game, x: f64, z: f64, want: f64) -> f64 {
+fn fit(g: &Game, x: f64, z: f64, want: f64) -> f64 {
     let k = g.k.chaos.mess;
     let mut near = alloc::vec![0i32; NEAR];
     let n = crate::scene_collision::gather(g, x - want, z - want, x + want, z + want, k.stand_y, k.clear_y, &mut near);

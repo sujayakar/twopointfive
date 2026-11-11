@@ -56,18 +56,13 @@ pub struct TeampaceMod {
     pub leave: JsMap<GuardId, crate::teampace::Leave>,
     pub ran: JsMap<GuardId, crate::teampace::TeampaceModRanValue>,
     pub dash: JsMap<GuardId, crate::teampace::TeampaceModDashValue>,
-    pub reason_t: JsMap<GuardId, f64>,
     pub aim_seen: JsMap<GuardId, crate::teampace::TeampaceModAimSeenValue>,
 }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct TeampaceStats {
-    pub follow: i32,
-    pub blast: i32,
     pub cover: i32,
-    pub told: i32,
-    pub secs: f64,
 }
 
 pub const FRAME: f64 = 0.1;

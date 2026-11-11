@@ -77,7 +77,7 @@ fn dust_at(p: &mut Play, at: [f64; 3]) -> f64 { sim::weather::of_read(p.g.sim).a
 /// The outside door the rule works: a shut exterior door of the records office with a roof over the floor inside and open sky out.
 fn outside_door(p: &mut Play) -> (String, [f64; 3], [f64; 2]) {
     for d in p.g.doors.list.clone() {
-        if !p.g.dr[d].def.exterior.unwrap_or(false) || game::doors::door_locked(&p.g, d) { continue; }
+        if !p.g.dr[d].def.exterior.unwrap_or(false) || p.g.dr[d].leaf.locked { continue; }
         let c = p.g.dr[d].frame_centre;
         for n in [[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] {
             let at = |m: f64| [c[0] + n[0] * m, c[2] + n[1] * m];
@@ -94,11 +94,11 @@ fn outside_door(p: &mut Play) -> (String, [f64; 3], [f64; 2]) {
 fn dust_comes_in_at_a_door() {
     let mut p = born("records.json", "&weather=dust");
     p.g.ai_enabled = false;
-    for d in p.g.doors.list.clone() { game::doors::door_set_latched(&mut p.g, d, true); game::doors::door_set_angle(&mut p.g, d, 0.0); }
+    for d in p.g.doors.list.clone() { p.g.dr[d].leaf.latched = true; p.g.dr[d].leaf.angle = 0.0; }
     game::air_dust::air_dust_reseed(&mut p.g);
     p.run(1.0);
     let (name, c, n) = outside_door(&mut p);
-    let leak = game::weather::weather_fog(&p.g).expect("dust has a fog row").leak;
+    let leak = p.g.weather.fog_spec.expect("dust has a fog row").leak;
     let at = |m: f64| [c[0] + n[0] * m, 1.5, c[2] + n[1] * m];
     let before = dust_at(&mut p, at(0.75));
     assert!(before < leak + 0.05, "{name}, shut: the threshold reads {before} (leak {leak})");
@@ -113,15 +113,15 @@ fn dust_comes_in_at_a_door() {
 #[test]
 fn snow_touches_no_ear() {
     let mut p = born("pass.json", "");
-    assert_eq!(game::weather::weather_kind(&p.g), Some(WeatherKind::Snow), "the pass is not in snow");
-    assert_eq!(game::weather::weather_rain_rate(&p.g), 0.0, "it rains in the snow");
+    assert_eq!(p.g.weather.kind_now, Some(WeatherKind::Snow), "the pass is not in snow");
+    assert_eq!(p.g.weather.rain_rate, 0.0, "it rains in the snow");
     for (a, b) in [([20.0, 1.6, 20.0], [40.0, 1.1, 20.0]), ([20.0, 1.6, 20.0], [20.5, 1.1, 20.0])] {
         assert_eq!(air(&mut p.g, a, b), 1.0, "snow stands between eyes");
         assert_eq!(mask(&mut p.g, a), 1.0, "snow masks a sound");
     }
     drop(p);
     let p = born("office.json", "");
-    assert_ne!(game::weather::weather_kind(&p.g), Some(WeatherKind::Snow), "snow on a level not built for it");
+    assert_ne!(p.g.weather.kind_now, Some(WeatherKind::Snow), "snow on a level not built for it");
 }
 
 /// THE RULE: a weather picked by word runs at any hour: rain at midday rains, fog at dawn stands. CONTROL: with nothing picked a daylight hour holds the level's own storm off.
@@ -131,11 +131,40 @@ fn a_picked_weather_runs_at_every_hour() {
     for (hour, word, kind) in [("midday", "rain", WeatherKind::Rain), ("dawn", "fog", WeatherKind::Fog), ("dusk", "dust", WeatherKind::Dust)] {
         let mut p = born("compound.json", &format!("&hour={hour}&weather={word}"));
         p.run(0.5);
-        assert!(game::weather::weather_enabled(&p.g) && game::weather::weather_kind(&p.g) == Some(kind), "{hour} + {word}: on {}, kind {:?}", game::weather::weather_enabled(&p.g), game::weather::weather_kind(&p.g));
-        assert_eq!(game::weather::weather_rain_rate(&p.g) > 0.0, word == "rain", "{hour} + {word}: rain {}", game::weather::weather_rain_rate(&p.g));
+        assert!(p.g.weather.on && p.g.weather.kind_now == Some(kind), "{hour} + {word}: on {}, kind {:?}", p.g.weather.on, p.g.weather.kind_now);
+        assert_eq!(p.g.weather.rain_rate > 0.0, word == "rain", "{hour} + {word}: rain {}", p.g.weather.rain_rate);
         drop(p);
     }
     let mut p = born("compound.json", "&hour=midday");
     p.run(0.5);
-    assert!(!game::weather::weather_enabled(&p.g), "midday with nothing picked: the level's own storm is on");
+    assert!(!p.g.weather.on, "midday with nothing picked: the level's own storm is on");
+}
+
+/// the ticks before a stroke its way is foreseen, with a thunder or more due in them
+const AHEAD: usize = 240;
+/// THE RULE: the way the next stroke shines is known before it comes, off the storm's own die, whatever the die stands at and however many thunders are on their way.
+/// A FAILURE MEANS: the throws of a stroke or of a thunder are not what `weather_next_way` counts, and the picture makes every flash's reach mask in the frame that shows it.
+#[test]
+fn the_next_stroke_is_foreseen() {
+    for die in [1, 4000000000] {
+        let mut p = born("office.json", "&weather=downpour");
+        p.g.weather.die = game::dice::Die(die);
+        let (mut said, mut strokes, mut thunders) = (std::collections::VecDeque::new(), 0, p.g.weather.stats.thunders);
+        for _ in 0..60 * 90 {
+            let was = p.g.weather.stats.flashes;
+            p.frame();
+            thunders = thunders.max(p.g.weather.stats.thunders);
+            if p.g.weather.stats.flashes > was {
+                let f = p.g.weather.flash.as_ref().expect("a stroke has its light");
+                let shines = Some(p.g.tab.light[f.light].dir);
+                if said.len() >= AHEAD { assert_eq!(said[0], shines, "stroke {strokes} of die {die}, {AHEAD} ticks before"); }
+                assert_eq!(said.back().copied(), Some(shines), "stroke {strokes} of die {die}");
+                strokes += 1;
+                said.clear();
+            }
+            said.push_back(game::weather::weather_next_way(&p.g));
+            if said.len() > AHEAD { said.pop_front(); }
+        }
+        assert!(strokes >= 4 && thunders >= 3.0, "die {die}: {strokes} strokes, {thunders} thunders");
+    }
 }

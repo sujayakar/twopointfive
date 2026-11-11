@@ -24,8 +24,8 @@ fn a_step_lists_the_box_world_itself() {
     p.sam_put([14.6, 15.2]);
     step(&mut p, 1);
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, WALL, None) { panic!("the wall charge was refused: {why}"); }
-    for _ in 0..3600 { step(&mut p, 1); if !p.g.wall_charge.set.is_empty() { break; } }
-    let c = *p.g.wall_charge.set.first().expect("a minute and no charge is on the wall");
+    for _ in 0..3600 { step(&mut p, 1); if !p.g.sets[p.g.seat].wall_charge.set.is_empty() { break; } }
+    let c = *p.g.sets[p.g.seat].wall_charge.set.first().expect("a minute and no charge is on the wall");
     game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
     step(&mut p, 120);
     let at_two_seconds = p.g.tab.frame_boxes.len();
@@ -33,6 +33,6 @@ fn a_step_lists_the_box_world_itself() {
     // the tick brings the ray grid up with no host's call: a grid thrown away is there again after one tick
     p.g.ray_grid = Default::default();
     step(&mut p, 1);
-    assert!(p.g.ray_grid.get::<game::scene_boxes::RayGrid>().is_some(), "the tick brought no grid up");
+    assert!(game::scene_boxes::ray_grid(&p.g).is_some(), "the tick brought no grid up");
     assert!(p.g.tab.frame_boxes.len() < at_two_seconds + 200, "the frame's table grew from {} to {} rows in ten seconds: nothing freed them", at_two_seconds, p.g.tab.frame_boxes.len());
 }

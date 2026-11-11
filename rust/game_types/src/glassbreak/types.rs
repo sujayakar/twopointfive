@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassBreak {
-    pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
@@ -18,18 +17,63 @@ pub struct GlassBreakViewOf {
     pub size: crate::glassbreak::GlassBlastOpts,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum GlassBreakViewOfKind {
-    #[default] Blown,
-    Wary,
-    Counted,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBlastOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,
     pub who: Option<f64>,
+}
+
+/// what a fragment is
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub enum FragmentKind {
+    #[default] Piece,
+    Dagger,
+    Clump,
+    Sheet,
+}
+
+/// what made it go
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub enum FragmentCause {
+    #[default] Hit,
+    Support,
+    Blast,
+    Dice,
+    Rake,
+}
+
+/// where and when it comes down
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FragmentFall {
+    pub t: f64,
+    pub pos: V3,
+}
+
+/// A FRAGMENT A PANE LET GO, as its one way out says it
+#[derive(Clone, Debug, Default)]
+pub struct Fragment {
+    pub bi: f64,
+    pub type_: crate::glasspen::PaneType,
+    pub kind: FragmentKind,
+    pub cause: FragmentCause,
+    pub outline: Vec<V3>,
+    pub centre: V3,
+    pub normal: V3,
+    pub thickness: f64,
+    pub area: f64,
+    pub velocity: V3,
+    pub spin: V3,
+    pub tint: V3,
+    pub grain: f64,
+    pub who: f64,
+    pub seed: f64,
+    pub key: f64,
+    /// its going is the pane's crack and hearing event (one a pane a gap)
+    pub heard: bool,
+    pub fall: Option<FragmentFall>,
+    /// its landing is scheduled already
+    pub landed: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -45,51 +89,6 @@ pub struct GlassImpact {
     pub cracked: bool,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct GlassFragment {
-    pub kind: crate::glassbreak::GlassFragmentKind,
-    pub outline: Vec<V3>,
-    pub centre: V3,
-    pub normal: V3,
-    pub area: f64,
-    pub velocity: V3,
-    pub spin: V3,
-    pub grain: f64,
-    pub who: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentKind {
-    #[default] Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlassFragmentFall {
-    pub t: f64,
-    pub pos: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Clump {
-    pub k: f64,
-    pub key: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Dice {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Pending {
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PaneState {
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PaneFrame {
     pub key: f64,
@@ -101,72 +100,7 @@ pub struct PaneFrame {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakModGBHOST {
     pub shards: f64,
-    pub chips: f64,
-    pub refused: f64,
     pub hooked: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TALLYAT {
-    pub panes: Option<f64>,
-    pub dropped: Option<f64>,
-    pub impacts: Option<f64>,
-    pub sites: Option<f64>,
-    pub runs: Option<f64>,
-    pub shards: Option<f64>,
-    pub diced: Option<f64>,
-    pub clumps: Option<f64>,
-    pub sheets: Option<f64>,
-    pub blasts: Option<f64>,
-    pub thinks: Option<f64>,
-    pub raked: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct GlassBreakLetGoF {
-    pub type_: crate::glasspen::PaneType,
-    pub kind: crate::glassbreak::GlassBreakLetGoFKind,
-    pub outline: Vec<V3>,
-    pub centre: V3,
-    pub normal: V3,
-    pub thickness: f64,
-    pub area: f64,
-    pub velocity: V3,
-    pub spin: V3,
-    pub tint: V3,
-    pub grain: f64,
-    pub cause: crate::glassbreak::GlassBreakLetGoFCause,
-    pub who: f64,
-    pub seed: f64,
-    pub fall: Option<crate::glassbreak::GlassFragmentFall>,
-    pub landed: Option<bool>,
-    pub key: f64,
-    pub heard: bool,
-    pub bi: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassBreakLetGoFKind {
-    #[default] Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassBreakLetGoFCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassBreakSeeThroughView {
-    Blown,
-    Wary,
-    Counted,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -178,83 +112,22 @@ pub struct GlassBreakPaneInfo {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassbreakMod {
-    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
+    #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
 }
-
-pub fn tally_at() -> crate::glassbreak::TALLYAT { crate::glassbreak::TALLYAT { panes: Some(0.0), dropped: Some(4.0), impacts: Some(1.0), sites: Some(2.0), runs: Some(3.0), shards: None, diced: Some(5.0), clumps: Some(6.0), sheets: Some(7.0), blasts: Some(8.0), thinks: Some(9.0), raked: Some(10.0) } }
-
-pub const GB_HEADER_ROWS: f64 = 4.0;
-
-pub const GB_SITE_ROWS: f64 = 4.0;
 
 pub const NO_TYPE: f64 = 9.0;
 
 pub const NO_OVER: f64 = 3.0;
 
-pub const SKY_UNKNOWN: f64 = 2.0;
-
-pub const OUT_LEN: f64 = 32.0;
-
-pub const O_PANE: f64 = 0.0;
-
-pub const O_TYPE: f64 = 1.0;
-
-pub const O_KIND: f64 = 2.0;
-
-pub const O_PTS: f64 = 3.0;
-
-pub const O_NPTS: f64 = 4.0;
-
-pub const O_CX: f64 = 5.0;
-
-pub const O_NX: f64 = 8.0;
-
-pub const O_THICK: f64 = 11.0;
-
-pub const O_AREA: f64 = 12.0;
-
-pub const O_VX: f64 = 13.0;
-
-pub const O_SX: f64 = 16.0;
-
-pub const O_GRAIN: f64 = 19.0;
-
-pub const O_CAUSE: f64 = 20.0;
-
-pub const O_WHO: f64 = 21.0;
-
-pub const O_SEED: f64 = 22.0;
-
-pub const O_KEY: f64 = 23.0;
-
-pub const O_HEARD: f64 = 24.0;
-
-pub const O_FALL_T: f64 = 25.0;
-
-pub const O_FALL_X: f64 = 26.0;
-
-pub const O_LANDED: f64 = 29.0;
-
-pub const GW_COLS: f64 = 2.0;
-
-pub const GW_ROWS: f64 = 3.0;
-
-pub const GW_DSEED: f64 = 4.0;
-
-pub const GW_N: f64 = 5.0;
-
-pub const GW_SEED: f64 = 13.0;
-
-pub const GW_OPEN: f64 = 21.0;
+pub const SKY_UNKNOWN: i32 = 2;
 
 pub const GW_FLAGS: f64 = 1.0;
 
 pub const G_GONE: f64 = 1.0;
 
-pub const G_DICE: f64 = 2.0;
-
-pub const G_RUN: f64 = 4.0;
-
-pub const G_SITE: f64 = 9.0;
-
-pub const G_DICE_AT: f64 = 72.0;
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum GlassBreakViewOfKind {
+    #[default] Blown,
+    Wary,
+    Counted,
+}

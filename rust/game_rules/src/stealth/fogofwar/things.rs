@@ -6,14 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
-fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Is the fixture lit, as it stands.
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
-    let on = crate::sim_lightshome::fixture_on(g, t);
-    let broken = crate::sim_lightshome::fixture_broken(g, t);
-    let until = crate::sim_lightshome::fixture_disabled_until(g, t);
+    let on = g.tab.fixture[t].on;
+    let broken = g.tab.fixture[t].broken;
+    let until = g.tab.fixture[t].blind_until;
     on && !broken && !(until > 0.0 && g.time < until)
 }
 
@@ -35,7 +33,7 @@ pub(super) fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) ->
 }
 
 /// `spot_seen`'s walk: 2 = an eye has the spot, 1 = in an eye's field and every such eye's line stopped, 0 = in no eye's field.
-fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+fn fog_of_war_ground_look(g: &crate::game::Game, x: f64, z: f64) -> f64 {
     let mut r = 0.0;
     let mut i = 0;
     while i < g.fog_of_war.eyes.len() {
@@ -87,7 +85,7 @@ fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64)
     g.fog_of_war.span_z = 0.0;
     let mut k = i as usize;
     while k < j as usize {
-        let q = bx(g, list[k]);
+        let q = &g.tab[list[k].into()];
         let (h, yaw) = (q.h, q.yaw);
         k += 1;
         if let Some((l, x, z)) = long_side(h, yaw, best) {
@@ -109,8 +107,8 @@ fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, 
         ghost.push(ghost_box(g, list[k]));
         k += 1;
     }
-    // (fogofwar.ts:1036 writes fresh copies over the record's list and the copies before them are dropped: here each was a row of the box table, and a
-    //  thing in sight is taken every frame, so the rows are let go as they are replaced. Before this a chair in view left five rows a frame for good.)
+    // (fresh copies go over the record's list, and each copy before them is a row of the box table. A thing in sight is
+    //  taken every frame, so the rows are let go as they are replaced, or a chair in view leaves five rows a frame for good.)
     let before = core::mem::take(&mut g.fog_of_war.thing_recs.get_mut(crate::Num(tk)).unwrap().ghost);
     for old in before { crate::scene_boxes::box_let_go(g, old); }
     let r = g.fog_of_war.thing_recs.get_mut(crate::Num(tk)).unwrap();
@@ -124,12 +122,12 @@ fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, 
 }
 
 /// Do boxes i‥j stand where the record's copies do?
-fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
+fn thing_same(g: &Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
     if ghost.len() != j - i { return false; }
     let mut k = i;
     while k < j {
-        let (sc, sy, sr) = { let s = bx(g, list[k]); (s.c, s.yaw, s.rot) };
-        let (qc, qy, qr) = { let q = bx(g, ghost[k - i]); (q.c, q.yaw, q.rot) };
+        let (sc, sy, sr) = { let s = &g.tab[list[k].into()]; (s.c, s.yaw, s.rot) };
+        let (qc, qy, qr) = { let q = &g.tab[ghost[k - i].into()]; (q.c, q.yaw, q.rot) };
         k += 1;
         if !(m::abs(sc[0] - qc[0]) + m::abs(sc[1] - qc[1]) + m::abs(sc[2] - qc[2]) < THING_EPS && m::abs(sy - qy) < THING_EPS) { return false; }
         if let (Some(a), Some(b)) = (sr, qr) {
@@ -163,7 +161,7 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
         }
         g.fog_of_war.our_chunks.add(crate::Num(k));
         if let Some(mate) = mate {
-            if bx(g, mate).mkey.is_some() {
+            if g.tab.boxes[mate].mkey.is_some() {
                 let mk = thing_key_of(g, mate.into());
                 g.fog_of_war.our_chunks.add(crate::Num(mk));
             }
@@ -173,127 +171,122 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
 
 /// The picture's list of loose things, rewritten thing by thing: live where the team sees the floor it is on; out of sight, the copy where it was last seen at rest, or nothing. Hands back the list as it now stands.
 pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) -> Vec<AnyBoxId> {
-    g.fog_of_war.thing_stats.held = 0.0;
-    g.fog_of_war.thing_stats.out = 0.0;
-    g.fog_of_war.thing_stats.tests = 0.0;
+    let f = &mut g.fog_of_war;
+    f.thing_stats.held = 0.0;
+    f.thing_stats.out = 0.0;
+    f.thing_stats.tests = 0.0;
     if !fog_of_war_active(g) || g.fog_of_war.eyes.is_empty() {
-        if g.fog_of_war.thing_recs.len() > 0 { g.fog_of_war.thing_recs.clear(); }
-        g.fog_of_war.thing_since = -1.0;
-        g.fog_of_war.props_loaded = false;
+        let f = &mut g.fog_of_war;
+        f.thing_recs.clear();
+        f.thing_since = -1.0;
+        f.props_loaded = false;
         return list.clone();
     }
-    let f = g.fog_of_war.frame_no;
+    let look = Look::of(g);
+    things_ours(g, look.ours, look.prime);
     let mut out = core::mem::take(&mut g.fog_of_war.thing_out);
     out.clear();
-    if g.fog_of_war.thing_since < 0.0 || f < g.fog_of_war.thing_since { g.fog_of_war.thing_since = f; }
-    let prime = f - g.fog_of_war.thing_since < THING_PRIME;
-    if !prime { g.fog_of_war.props_loaded = false; }
-    let loaded_p = g.fog_of_war.props_loaded;
-    g.fog_of_war.cell_seen.clear();
-    let ours = fog_of_war_ours_on(g);
-    things_ours(g, ours, prime);
-    let n = list.len();
-    let (rig_from, rig_to) = (g.fog_of_war.rig_from, g.fog_of_war.rig_to);
+    let (rig_from, rig_to) = (g.fog_of_war.rig_from as usize, g.fog_of_war.rig_to as usize);
+    // (what men wear is theirs, and no thing of the list: it is asked for no key)
+    let worn = |i: usize| i >= rig_from && i < rig_to;
+    let keys: Vec<Option<f64>> = list.iter().enumerate().map(|(i, &b)| if worn(i) { None } else { g.tab[b].mkey.map(|k| key_of_mkey(g, k)) }).collect();
     let mut i = 0;
-    while i < n {
-        let b = list[i];
-        if i as f64 >= rig_from && (i as f64) < rig_to {
-            out.push(b);
-            i += 1;
-            continue;
-        }
-        let (mkey, owner, c) = { let q = bx(g, b); (q.mkey, q.owner, q.c) };
-        if mkey.is_none() {
-            if prime || (ours && owner != 0.0 && g.engine.lights.fog_team.owners.has(crate::Num(owner))) || fog_of_war_cell_seen_at(g, c[0], c[2]) {
-                out.push(b);
-            } else {
-                g.fog_of_war.thing_stats.out += 1.0;
-            }
-            i += 1;
-            continue;
-        }
-        let tk = thing_key_of(g, b);
-        if tk < 0.0 {
-            out.push(b);
-            i += 1;
-            continue;
-        }
-        let mut j = i + 1;
-        while j < n && bx(g, list[j]).mkey.is_some() && thing_key_of(g, list[j]) == tk { j += 1; }
-        let mut x = 0.0;
-        let mut z = 0.0;
-        let mut k = i;
-        while k < j {
-            let c = bx(g, list[k]).c;
-            x += c[0];
-            z += c[2];
-            k += 1;
-        }
-        x /= (j - i) as f64;
-        z /= (j - i) as f64;
-        fog_of_war_span(g, list, i as f64, j as f64);
-        let (ox, oz) = (g.fog_of_war.span_x, g.fog_of_war.span_z);
-        let where_ = (x, z, ox, oz);
-        let key = crate::Num(tk);
-        let mine = g.fog_of_war.our_chunks.len() > 0 && g.fog_of_war.our_chunks.has(key);
-        let pr = prime && !(loaded_p && is_prop(tk));
-        if !g.fog_of_war.thing_recs.has(key) {
-            if pr || mine || fog_of_war_thing_seen(g, x, z, ox, oz) {
-                thing_take(g, tk, list, i, j, where_, f, !pr);
-                g.fog_of_war.thing_recs.get_mut(key).unwrap().f = f;
-                out.extend_from_slice(&list[i..j]);
-            } else {
-                g.fog_of_war.thing_stats.out += 1.0;
-            }
-            i = j;
-            continue;
-        }
-        g.fog_of_war.thing_recs.get_mut(key).unwrap().f = f;
-        let ghost = g.fog_of_war.thing_recs.get(key).unwrap().ghost.clone();
-        if thing_same(g, list, i, j, &ghost) {
-            let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
-            r.moving = false;
-            r.held = false;
-            out.extend_from_slice(&list[i..j]);
-            i = j;
-            continue;
-        }
-        let (held, moving, rx, rz, rox, roz) = { let r = g.fog_of_war.thing_recs.get(key).unwrap(); (r.held, r.moving, r.x, r.z, r.ox, r.oz) };
-        if pr || mine || ((!held || js::rem(f + tk, THING_EVERY) == 0.0) && fog_of_war_thing_seen(g, x, z, ox, oz)) {
-            thing_take(g, tk, list, i, j, where_, f, true);
-            out.extend_from_slice(&list[i..j]);
-            i = j;
-            continue;
-        }
-        if !held {
-            if moving || fog_of_war_thing_seen(g, rx, rz, rox, roz) {
-                g.fog_of_war.thing_recs.delete(key);
-                g.fog_of_war.thing_stats.out += 1.0;
-                i = j;
-                continue;
-            }
-            g.fog_of_war.thing_recs.get_mut(key).unwrap().held = true;
-        } else if js::rem(f + tk, THING_EVERY) == 1.0 && fog_of_war_thing_seen(g, rx, rz, rox, roz) {
-            g.fog_of_war.thing_recs.delete(key);
-            g.fog_of_war.thing_stats.out += 1.0;
-            i = j;
-            continue;
-        }
-        out.extend(ghost.iter().map(|&b| AnyBoxId::Frame(b)));
-        g.fog_of_war.thing_stats.held += 1.0;
-        i = j;
+    while i < list.len() {
+        if worn(i) { out.push(list[i]); i += 1; continue; }
+        i = thing(g, look, list, &keys, i, &mut out);
     }
-    // what has left the list altogether, out of sight: still in the picture where it was, until somebody looks there
+    things_gone(g, look, &mut out);
+    let stats = &g.fog_of_war.thing_stats;
+    if stats.held != 0.0 || stats.out != 0.0 { list.clone_from(&out); }
+    g.fog_of_war.thing_out = out;
+    list.clone()
+}
+
+/// How a pass over the things looks at them: its number, whether it is of the first few that take everything as seen (but the props of a save), and whether the team's own doing shows.
+#[derive(Clone, Copy)]
+struct Look { f: f64, prime: bool, props_loaded: bool, ours: bool }
+impl Look {
+    fn of(g: &mut Game) -> Look {
+        let f = &mut g.fog_of_war;
+        let n = f.frame_no;
+        if f.thing_since < 0.0 || n < f.thing_since { f.thing_since = n; }
+        let prime = n - f.thing_since < THING_PRIME;
+        if !prime { f.props_loaded = false; }
+        f.cell_seen.clear();
+        Look { f: n, prime, props_loaded: f.props_loaded, ours: fog_of_war_ours_on(g) }
+    }
+    /// Whose turn of the few a thing out of sight is asked about in: on 0 it is looked for where it is, on 1 where it was last seen.
+    fn turn(&self, key: f64) -> f64 { js::rem(self.f + key, THING_EVERY) }
+}
+
+/// One thing of the list, its boxes from `i` on: shown, shown as it was last seen, or left out. Returns where the next begins.
+fn thing(g: &mut Game, look: Look, list: &[AnyBoxId], keys: &[Option<f64>], i: usize, out: &mut Vec<AnyBoxId>) -> usize {
+    let Some(tk) = keys[i] else {
+        let b = &g.tab[list[i]];
+        let (owner, c) = (b.owner, b.c);
+        if look.prime || (look.ours && owner != 0.0 && g.engine.lights.fog_team.owners.has(crate::Num(owner))) || fog_of_war_cell_seen_at(g, c[0], c[2]) { out.push(list[i]); }
+        else { g.fog_of_war.thing_stats.out += 1.0; }
+        return i + 1;
+    };
+    if tk < 0.0 { out.push(list[i]); return i + 1; }
+    let j = i + keys[i..].iter().take_while(|&&k| k == Some(tk)).count();
+    if thing_shows(g, look, list, i, j, tk) { out.extend_from_slice(&list[i..j]); return j; }
+    match g.fog_of_war.thing_recs.get(crate::Num(tk)) {
+        Some(r) => { out.extend(r.ghost.iter().map(|&b| AnyBoxId::Frame(b))); g.fog_of_war.thing_stats.held += 1.0; }
+        None => g.fog_of_war.thing_stats.out += 1.0,
+    }
+    j
+}
+
+/// Is it shown as it is: nobody has to look at one lying where the team last saw it, and one that has moved is shown once it is seen. Out of
+/// sight, the record of it stays until the team looks where it was, or it was last seen moving.
+fn thing_shows(g: &mut Game, look: Look, list: &[AnyBoxId], i: usize, j: usize, tk: f64) -> bool {
+    let key = crate::Num(tk);
+    let at = thing_at(g, list, i, j);
+    let (x, z, ox, oz) = at;
+    let mine = g.fog_of_war.our_chunks.len() > 0 && g.fog_of_war.our_chunks.has(key);
+    let prime = look.prime && !(look.props_loaded && is_prop(tk));
+    let Some(r) = g.fog_of_war.thing_recs.get_mut(key) else {
+        if !(prime || mine || fog_of_war_thing_seen(g, x, z, ox, oz)) { return false; }
+        thing_take(g, tk, list, i, j, at, look.f, !prime);
+        g.fog_of_war.thing_recs.get_mut(key).unwrap().f = look.f;
+        return true;
+    };
+    r.f = look.f;
+    let (held, moving, was) = (r.held, r.moving, (r.x, r.z, r.ox, r.oz));
+    let ghost = core::mem::take(&mut r.ghost);
+    let same = thing_same(g, list, i, j, &ghost);
+    let r = g.fog_of_war.thing_recs.get_mut(key).unwrap();
+    r.ghost = ghost;
+    if same {
+        r.moving = false;
+        r.held = false;
+        return true;
+    }
+    if prime || mine || ((!held || look.turn(tk) == 0.0) && fog_of_war_thing_seen(g, x, z, ox, oz)) {
+        thing_take(g, tk, list, i, j, at, look.f, true);
+        return true;
+    }
+    let gone = if held { look.turn(tk) == 1.0 && fog_of_war_thing_seen(g, was.0, was.1, was.2, was.3) } else { moving || fog_of_war_thing_seen(g, was.0, was.1, was.2, was.3) };
+    if gone { g.fog_of_war.thing_recs.delete(key); } else { g.fog_of_war.thing_recs.get_mut(key).unwrap().held = true; }
+    false
+}
+/// The middle of a thing's boxes on the floor, and what it spans.
+fn thing_at(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize) -> (f64, f64, f64, f64) {
+    let (mut x, mut z) = (0.0, 0.0);
+    for &b in &list[i..j] { let c = g.tab[b].c; x += c[0]; z += c[2]; }
+    fog_of_war_span(g, list, i as f64, j as f64);
+    (x / (j - i) as f64, z / (j - i) as f64, g.fog_of_war.span_x, g.fog_of_war.span_z)
+}
+
+/// What has left the list altogether, out of sight: still in the picture where it was, until somebody looks there.
+fn things_gone(g: &mut Game, look: Look, out: &mut Vec<AnyBoxId>) {
     let mut at = 0;
     while let Some(key) = g.fog_of_war.thing_recs.next_key(&mut at) {
-        let tk = key.0;
         let r = g.fog_of_war.thing_recs.get(key).unwrap();
-        if r.f == f { continue; }
-        let (moving, held, rx, rz, rox, roz) = (r.moving, r.held, r.x, r.z, r.ox, r.oz);
-        if moving
-            || g.fog_of_war.thing_recs.len() as f64 > THING_CAP
-            || ((js::rem(f + tk, THING_EVERY) == 1.0 || !held) && fog_of_war_thing_seen(g, rx, rz, rox, roz))
-        {
+        if r.f == look.f { continue; }
+        let (moving, held, x, z, ox, oz) = (r.moving, r.held, r.x, r.z, r.ox, r.oz);
+        if moving || g.fog_of_war.thing_recs.len() as f64 > THING_CAP || ((look.turn(key.0) == 1.0 || !held) && fog_of_war_thing_seen(g, x, z, ox, oz)) {
             g.fog_of_war.thing_recs.delete(key);
             continue;
         }
@@ -302,17 +295,11 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
         out.extend(r.ghost.iter().map(|&b| AnyBoxId::Frame(b)));
         g.fog_of_war.thing_stats.held += 1.0;
     }
-    if js::truthy(g.fog_of_war.thing_stats.held) || js::truthy(g.fog_of_war.thing_stats.out) {
-        list.clear();
-        list.extend_from_slice(&out);
-    }
-    g.fog_of_war.thing_out = out;
-    list.clone()
 }
 
 /// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.
 pub fn fog_of_war_seen(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     g.fog_of_war.recs.get(gd).map_or(false, |r| r.seen)
 }
 
@@ -329,9 +316,9 @@ pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::
 
 /// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.
 pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
-    if r.seen || (g.gd[gd].state == crate::game::GuardState::Dead && r.body) { return true; }
+    if r.seen || (crate::condition::down(g, g.gd[gd].ch) && r.body) { return true; }
     let since = g.time - r.t;
     (since >= 0.0 && since < g.k.fog.linger) || fog_of_war_fired_on(g, gd) || r.framed == Some(true)
 }
@@ -354,12 +341,12 @@ pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark>
     let mut out = Vec::new();
     if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
     for &gd in g.guards.iter() {
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !g.team(gd).theirs() || !fog_of_war_hides(g, gd) { continue; }
         let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
         let Some(at) = r.at else { continue };
         let age = g.time - r.t;
         let life = if wand && r.wand_t.map_or(false, |w| m::abs(r.t - w) < 0.5) { m::max(secs, g.k.wand.mark_secs) } else { secs };
-        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.ch[g.gd[gd].ch].id, at, age, life }); }
+        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.char_id(gd), at, age, life }); }
     }
     out
 }
@@ -426,32 +413,43 @@ mod tests {
 
     fn game() -> alloc::boxed::Box<Game> { alloc::boxed::Box::new(Game::blank()) }
 
-    /// The bits of span's arithmetic, printed by the TypeScript's own formula under EXACT.
-    #[test]
-    fn span_is_the_typescripts_bits() {
-        let cases: [(&[(V3, f64)], u64, u64); 3] = [
-            (&[([1.2, 0.5, 0.3], 0.7), ([0.2, 0.5, 2.05], -1.3)], 0xbffd4acb93ae7660, 0x3fe04390d6282ef4),
-            (&[([0.4, 0.1, 0.45], 2.0)], 0, 0),
-            (&[([0.9, 0.1, 0.2], 1.1)], 0x3fd5c5ca051588cd, 0xbfe56393f9220a6a),
-        ];
-        for (rows, x, z) in cases {
-            let (mut best, mut sx, mut sz) = (0.45, 0.0f64, 0.0f64);
-            for &(h, yaw) in rows {
-                if let Some((l, a, b)) = long_side(h, yaw, best) { best = l; sx = a; sz = b; }
-            }
-            assert_eq!(sx.to_bits(), x);
-            assert_eq!(sz.to_bits(), z);
-        }
+    fn spans(rows: &[(V3, f64)]) -> (f64, f64) {
+        let mut g = game();
+        let list: Vec<AnyBoxId> = rows.iter().map(|&(h, yaw)| {
+            let b = g.tab.boxes.push(crate::scene_boxes::Box { h, yaw, ..crate::scene_boxes::Box::default() });
+            AnyBoxId::from(b)
+        }).collect();
+        fog_of_war_span(&mut g, &list, 0.0, list.len() as f64);
+        (g.fog_of_war.span_x, g.fog_of_war.span_z)
     }
 
-    /// A half-metre square is asked once a frame: the second ask takes no test, and the key is the TypeScript's.
+    /// A long thing is seen from either end of its biggest box's long side, 15 cm in from the ends. One under 0.9 m long is seen by its middle alone.
+    #[test]
+    fn a_long_thing_is_seen_by_its_long_side() {
+        assert_eq!(spans(&[([1.2, 0.5, 0.3], 0.0)]), (1.05, -0.0));
+        assert_eq!(spans(&[([0.3, 0.5, 1.2], 0.0)]), (0.0, 1.05));
+        assert_eq!(spans(&[([0.4, 0.1, 0.45], 2.0)]), (0.0, 0.0));
+        let (x, z) = spans(&[([0.9, 0.1, 0.2], 1.1)]);
+        assert!((m::hyp2(x, z) - 0.75).abs() < 1e-12, "turned with the box, and just as long");
+        assert!(x > 0.0 && z < 0.0);
+        // of two boxes, the longer's, in whichever order they come
+        let (a, b) = (([1.2, 0.5, 0.3], 0.0), ([0.2, 0.5, 2.05], 0.0));
+        assert_eq!(spans(&[a, b]), (0.0, 1.9));
+        assert_eq!(spans(&[b, a]), (0.0, 1.9));
+    }
+
+    /// A half-metre square is asked once a frame: another point of the same square takes no test, and a neighbour in either direction is a square of its own.
     #[test]
     fn a_cell_is_asked_once() {
         let mut g = game();
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.2, 7.6));
         assert_eq!(g.fog_of_war.thing_stats.tests, 1.0);
-        assert!(g.fog_of_war.cell_seen.has(crate::Num(f64::from_bits(0x418ff28078000000))));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.6, 7.9));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 2.0);
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 8.1));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 3.0);
     }
 
     /// The men the fog leaves out are not on the list to draw; the rest keep the order they were given.
@@ -468,7 +466,7 @@ mod tests {
     #[test]
     fn a_lamp_is_first_known_as_it_stands() {
         let mut g = game();
-        let t = g.tab.sim_lightshome_fixture.push(crate::sim_lightshome::Fixture::blank());
+        let t = g.tab.fixture.push(crate::fixtures::Fixture::blank());
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert_eq!(g.fog_of_war.lamp_recs.get(t).copied(), Some(true));

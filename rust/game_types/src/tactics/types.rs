@@ -23,7 +23,6 @@ pub struct Role {
     pub hold_at: Option<V3>,
     pub bearing: f64,
     pub avoid: Option<JsSet<crate::Num>>,
-    pub set: bool,
     pub holding: bool,
     pub hold_t: f64,
     pub arrived: bool,
@@ -43,7 +42,6 @@ pub struct Plan {
     pub members: Vec<GuardId>,
     pub roles: JsMap<GuardId, TacticsRoleId>,
     pub phase: crate::tactics::PlanPhase,
-    pub go_t: f64,
     pub first_arrive_t: f64,
     pub last_radio_t: f64,
     pub contact: bool,
@@ -63,14 +61,12 @@ pub struct Lone {
     pub hold_t: f64,
     pub called: bool,
     pub released: bool,
-    pub released_why: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DangerWhy {
     #[default] Body,
     Drop,
-    Press,
     Rounds,
 }
 
@@ -83,7 +79,6 @@ pub struct DangerRec {
     pub why: crate::tactics::DangerWhy,
     pub victim: Option<String>,
     pub banged: bool,
-    pub entered: bool,
     pub called: bool,
     pub summoned: Option<GuardId>,
 }
@@ -136,12 +131,6 @@ pub struct Gate {
     pub hs: Option<Option<crate::tactics::GateHs>>,
     pub action: crate::tactics::GateAction,
     pub thrower: Option<GuardId>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum GateRole {
-    #[default] Lead,
-    Second,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -200,12 +189,6 @@ pub struct SliceStations {
     pub look: Vec<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GateMateRole {
-    Lead,
-    Second,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct GateMate {
     pub gd: GuardId,
@@ -228,24 +211,7 @@ pub struct TacticsMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct TacticsStats {
-    pub plans: i32,
-    pub replans: i32,
-    pub flankers: i32,
-    pub seconds: i32,
-    pub swaps: i32,
-    pub goes: i32,
-    pub go_timeouts: i32,
-    pub arrivals: i32,
-    pub lone_holds: i32,
-    pub lone_calls: i32,
-    pub lone_releases: i32,
     pub dangers: i32,
-    pub gates: i32,
-    pub summons: i32,
-    pub bangs: i32,
-    pub slices: i32,
-    pub entries: i32,
-    pub lone_entries: i32,
 }
 
 pub const JOIN_M: f64 = 6.0;
@@ -332,3 +298,8 @@ pub const TOSS_AIR_CAP: f64 = 2.2;
 
 pub const GO_AFTER_BANG: f64 = 0.35;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum GateRole {
+    #[default] Lead,
+    Second,
+}

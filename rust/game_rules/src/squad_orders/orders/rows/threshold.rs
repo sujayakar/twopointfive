@@ -11,7 +11,6 @@ pub const ORDER: Row = Row {
     ..Row::new("thresholdHold", label, issue)
 };
 
-/// doortools.ts:864 (thrRows on `outsidePlain`)
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
     String::from(if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { "clear from outside · holding it" } else { "clear from outside" })
@@ -27,6 +26,5 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    match crate::doortools::door_tools_threshold_hold(g, men, t, Some(on_word)) { crate::doortools::DoorToolsThresholdHold::Text(w) => Some(w), crate::doortools::DoorToolsThresholdHold::Arm1(()) => None }
+    match crate::doortools::door_tools_threshold_hold(g, men, t) { crate::doortools::DoorToolsThresholdHold::Text(w) => Some(w), crate::doortools::DoorToolsThresholdHold::Arm1(()) => None }
 }

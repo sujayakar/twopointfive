@@ -4,14 +4,18 @@ import { Engine } from '../engine';
 import { defaultRcConfig, type RcConfig } from '../render/rc';
 import type { SmokeSystem } from '../smoke/smoke';
 import { laterProgress } from '../gpu/device';
+import { RENDER_PASSES } from '../gpu/timer';
 import { smokeLookStep } from '../render/smokeLook';
 
 export type QualityName = 'high' | 'medium' | 'low' | 'verylow';   // (ultra went 2026-11-07: a kept or typed 'ultra' is a name nobody knows, read as no pick)
 export const QUALITY_NAMES: QualityName[] = ['high', 'medium', 'low', 'verylow'];
+/** a tier by the name it is shown by; a tier's own name is for the address, a record and the code */
+export const TIER_NAME: Record<QualityName, string> = { high: 'High', medium: 'Medium', low: 'Low', verylow: 'Very low' };
+/** words made of a tier's own name (a label, a ladder's note), as a person reads them */
+export const tierWords = (text: string): string => text.replace(/\bverylow\b/g, 'very low');
 export const AUTO_LADDER: QualityName[] = ['verylow', 'low', 'medium', 'high'];   // 'verylow' is the rung under low for GPUs
                                                                                     // that cannot hold 30 fps on low even at the resolution floor (an M1-class laptop GPU on a HiDPI panel, by the cost model below)
 const LS_MODE = 'twopointsix.quality', LS_AUTO = 'twopointsix.autoPreset', LS_SCALE = 'twopointsix.autoScaleRel';   // (autoScaleRel since 08-11: the scale is relative to the window's cap now — a value remembered under the old 'autoScale' key meant something else and is left unread)
-const RENDER_PASSES = ['composite', 'post', 'fxaa', 'gbuffer'];   // render-pass timestamps are not load (they include the drawable wait) — excluded from every total here
 /** The render scale is RELATIVE TO THE CAP (engine.ts resize: internal height = min(preset maxH, CSS height × dpr) × scale): 1.0 = the preset's full resolution on this window and
  *  every step below it is real. So the floor is a fraction of the preset's own resolution — high never under 500 rows, verylow never under 300 — and past it the ladder
  *  changes preset instead (a cheaper preset buys more than fewer pixels by then). Until 08-11 the scale multiplied the WINDOW and was then capped: 0.35 of a 1440-px HiDPI
@@ -21,6 +25,10 @@ export const SCALE_FLOOR = 0.5;
  *  per step, so a size the ladder returns to finds its render targets still pooled (passes.ts / texpool.ts) and the step costs nothing */
 export const SCALE_STEP = 0.05;
 const snapDown = (v: number) => Math.floor(v / SCALE_STEP + 1e-6) * SCALE_STEP;
+/** HOW FAR UNDER ITS OWN START A TIER IS DRAWN BEFORE THE TIER UNDER IT IS THE BETTER PICTURE (of the window's cap): the boot's plan, the hop up and the way down all read it, so
+ *  what one of them takes another does not give back. A hop up wants half of it left. */
+export const TIER_CUT = 0.14;
+const SEEN_SECS = 180;
 /** auto's compute budget at boot (plan): 15 ms of GPU compute ≈ a presented 50–55 fps once the raster passes, the CPU and vsync slop are added — was 24 ms (≈ 30 fps)
  *  until 08-10, when the maintainer asked for the ladder to hold ~50–60 rather than tolerate anything over 29 (the merged experiments took 'high ×1.0' on the
  *  reference machine from ~45 to ~37 fps and nothing reacted, by design). The runtime ladder's bands below are set to match. */
@@ -45,19 +53,20 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
 //  doubling per repeat — the one memory apply() does not clear.)
 /** THE HEADROOM-AWARE CLIMB (settings.ladderClimb): frame RATE alone cannot see headroom past the display's refresh — a machine presenting 60 fps with the GPU
  *  busy 9 ms of every 16.7 sits at its tier's starting scale for ever. With GPU timings the ladder can: over 1-s windows in which the frame rate held the display rate (≥ LADDER.restoreFps) AND
- *  the UNION of the compute passes' GPU intervals stayed under `headroom` × the frame budget (1000 / budgetFps ms), for `windows` windows running, it takes ONE step up — the render scale by
- *  SCALE_STEP past the tier's own start up to 1.0; at 1.0 with the union still under `divisorRoom` × the budget, the lossy divisors in a fixed order (the gather ⅓ → ½, then the volumetrics
- *  ¼ → ½) — with ≥ `climbGap` s between climbs. A window over `backoff` × the
+ *  the UNION of the compute passes' GPU intervals left room for A FIGHT at the step it would take — `fight` × the union, priced at that step by the cost model, still under `backoff` × the frame
+ *  budget (1000 / budgetFps ms) — for `windows` windows running, it takes that ONE step up: the render scale by SCALE_STEP past the tier's own start up to 1.0, then the lossy divisors in a fixed
+ *  order (the gather ⅓ → ½, then the volumetrics ¼ → ½), with ≥ `climbGap` s between climbs. (A step is taken in a lull and paid for in the fight after it, which costs 1.0 to 2.0 times the lull over the
+ *  fourteen levels: a step that fits the lull alone is taken off again in the fight, with the frames it cost.) A window over `backoff` × the
  *  budget or under `backoffFps` with a climb standing UNDOES the last step at once and remembers the rung that failed for `failSecs` (no oscillation); the plain ladder's cut / preset logic
  *  runs on top as ever. Every step is one the pool + history resampling (passes.ts) make cheap. Off = the ladder as it was, byte for byte. */
-export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
+export const CLIMB = { budgetFps: 60, fight: 2, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
 /** one rung the climb has taken, newest last (undone in reverse) */
 type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
 /** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
  *  above and no line below takes another road — the ladder byte for byte as it was (aims at a 60 Hz budget, spends headroom on resolution, cuts only under 45 fps). N > 0 = HOLD N fps (never more
  *  than the display has been seen to show — Quality.displayHz; AIM_DISPLAY = that rate itself): the climb, the cut and the preset hop all work to N.
  *    · the GPU budget is U = 1000 / N − overheadMs (what a frame costs past the compute union: raster passes, CPU, present — the 1.67 ms PLAN_BUDGET_MS always implied at 60); the climb's bands
- *      keep their SHARE of it (headroom ⅔ U, back-off 8⁄9 U, a hop must fit hopFits × U, the boot plan fits U), so hold 60 climbs exactly as today does;
+ *      keep their SHARE of it (back-off 8⁄9 U, a hop must fit hopFits × U, the boot plan fits U), so hold 60 climbs exactly as today does;
  *    · the CUT is firm: two 1-s windows under `cut` × N with the GPU the limit → the scale goes straight to what the cost model says lands on `aim` × N (below the tier's start too, to the floor),
  *      and two windows with the union over the back-off band take one step off BEFORE the rate shows it; a preset drops when that has run out of road (the same floor / deep-cut rule);
  *    · pixels come back on the union's room, not on a frame rate a display at N can never exceed — a step at a time while the union priced at the next step stays `restore` of the way to the
@@ -163,7 +172,7 @@ const probesOf = (p: Preset, one = true) => { const g = rcGridOf(p, one); return
  *  relative firefly bound (settings.giFireflyK → lossyCfg.w, fgather.wgsl: each ray ≤ K × the radiance cache's estimate ÷ π; the Tab ▸ Indirect light slider): it cut
  *  the boil round a torch held near a wall by ~40 % (42e3e22) but it is a one-sided clamp — the review measured −24 % linear indirect on the floor 0.3 m from a
  *  70 W/sr hotspot, −8 % at 0.6 m, nothing past 0.9 m — so it is a trade like the rest: 4 on the ladder presets, 0 = off on ultra (the reference energy, boil and all) */
-type Lossy = { gatherThird: boolean; rcHalfRate: boolean; volQuarter: boolean; fireflyK: number; rcPeriods: readonly number[] };   // rcPeriods = settings.rcPeriods (render/rc.ts): per cascade level [c0 — always whole, c1, c2, c3] the frames a level takes to refresh all its probes, an interleaved 1/period per frame at constant cost; [1,1,1,1] = every level whole every frame (the reference). It REPLACES rcHalfRate on the ladder presets: the same average saving on a throughput-bound GPU but flat frame to frame instead of a whole-levels-on / off saw-tooth, and the near field (c0, the dice everyone reads) stays this-frame fresh
+type Lossy = { gatherThird: boolean; rcHalfRate: boolean; volQuarter: boolean; meshDirect: boolean; fireflyK: number; rcPeriods: readonly number[] };   // rcPeriods = settings.rcPeriods (render/rc.ts): per cascade level [c0 — always whole, c1, c2, c3] the frames a level takes to refresh all its probes, an interleaved 1/period per frame at constant cost; [1,1,1,1] = every level whole every frame (the reference). It REPLACES rcHalfRate on the ladder presets: the same average saving on a throughput-bound GPU but flat frame to frame instead of a whole-levels-on / off saw-tooth, and the near field (c0, the dice everyone reads) stays this-frame fresh
 /** the worst-case caps (renderer v3 Phase 0 — the loud minute: QRF weapon lights + rain + a pool full of smoke + a firefight's particles): every tier
  *  runs the same capped paths, scaled. vol = settings.volLightCap / volShadowEvery / volStepVoxels (volumetrics.wgsl: K lights per smoke-march step / haze ray, shadow-ray reuse
  *  period, march step in voxels); births = the GPU particles' births per frame (render/particles.ts maxBirthsPerFrame — the queue carries the rest to the next frames).
@@ -173,7 +182,7 @@ type Lossy = { gatherThird: boolean; rcHalfRate: boolean; volQuarter: boolean; f
  *  the loud minute at high measured volumetrics 9.9 → 7.1 ms mean, 14.7 → 10.3 p95 going back to K 4 / every 2, so those are the values again; the per-pixel PATH,
  *  which was the visible difference, stays.)
  *  ONE MARCH ON EVERY TIER (2026-11-07; the maintainer's pick from stills of both): haze and smoke are marched per pixel on every preset, by one program, and a tier
- *  differs by numbers alone. Medium and low run high's march (the pass at half size, its 20 beam steps, its shadow refresh and step length) with TWO lights a step
+ *  differs by numbers alone (high's pass is at quarter size since: PRESETS below). Medium and low run high's march (the pass at half size, its 20 beam steps, its shadow refresh and step length) with TWO lights a step
  *  where high has four: on the cloud's NVIDIA card that read 13.70 ms a frame on medium against 13.22 with the froxel grid it replaces and 14.73 at four lights,
  *  9.08 against 8.86 and 10.45 on low (a second pair of reads: +2.4 % and +1.2 %). Lights a step is the lever: half the steps or a slower shadow refresh moved a
  *  frame by under 0.2 ms, and a quarter-size march was SLOWER. Very low, the floor, keeps its own small rows (quarter size, 8 steps, a longer step): 3 % cheaper
@@ -219,6 +228,9 @@ export const PRESETS: Record<QualityName, Preset> = {
   // solves with high's at every preset (ONE SMOKE SOLVE below; smoke.ts's own default is the same 4 for a host with no Quality)
   // trade-offs folded in after a side-by-side eyeball with all five on (08-07): ultra stays the untouched reference; high takes the three measured invisible at
   // rest (third-res gather −3.4 ms, checkerboard rays −0.9, dim-pixel rays) and keeps half-res beams + full-rate cascades; medium and low take all five.
+  // then, on high (the maintainer's pick from stills of each beside the picture without it): the cache at half rate, the men's mesh in the direct light's rays alone and the beams and smoke at quarter
+  // size. An A10 reads 1.35 ms less in the office, 1.3 in a compound fight and 3.1 in a glasshouse fight. The climb's last rung gives the beams half size back where there is room for it;
+  // medium and low keep half size (their march at quarter size was slower: Caps above), so a beam is a little softer on high than on the two under it.
   // low and verylow raise the near-black threshold to 0.02 (≈ 4 % of display white after AgX instead of 2 %): more of a dark floor's pixels take the one-ray path.
   // verylow (08-08) = low with one shadow sample per leader (the measured half of the direct pass), more temporal reuse to carry it, 8 beam steps and a 600-px
   // internal cap — the rung auto drops to when low at the floor still starves.
@@ -235,10 +247,10 @@ export const PRESETS: Record<QualityName, Preset> = {
   // medium 3/10 · 3/16 · 1, low 2/8 · 3/12 · 1, verylow 2/8 · 2/8 · 1 — the same pipeline scaled; the clamp / edge-stop knobs are engine defaults shared by every tier.
   // scale + taau (renderer v3 phase 1): under TAAU each preset renders FEWER pixels than its cap and resolves up to it — ultra 1.0 (temporal AA only, no upscale) · high 0.77 (0.59× the
   // pixels) · medium 0.67 (0.45×) · low 0.6 (0.36×) · verylow 0.5 (0.25×); jitter cycle 8 where the ratio is mild, 16 for the deep upscales; clip γ 1.0 → 1.25 and sharpen 0.2 → 0.5 likewise.
-  high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, mesh: 'near', cards: true, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, rain: 4000 } },
-  medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 256, rain: 2500 } },
-  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 192, rain: 1500 } },
-  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, rain: 800 } },
+  high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, mesh: 'near', cards: true, lossy: { gatherThird: true, rcHalfRate: true, volQuarter: true, meshDirect: true, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, rain: 4000 } },
+  medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, meshDirect: false, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 256, rain: 2500 } },
+  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, meshDirect: false, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 192, rain: 1500 } },
+  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, meshDirect: false, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, rain: 800 } },
 };
 /** ONE SMOKE SOLVE (settings.oneSmokeSolve, default on, `?onesolve=0`; off = each preset's own `rbIters`, as it was: ultra 5, high 4, the rest 3). A sight line through smoke
  *  (a defender's eye to the player, the room fight's pairs, a camera's) was the optical depth of the SOLVER's density along the
@@ -338,12 +350,10 @@ export function costTable(oneGrid = true): CostTable {
 export const COST = costTable();
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
-/** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-check.ts: given the measured compute ms (total and its
- *  fixed part) at preset `cur` and effective scale `effNow` (internal / CSS×dpr, engine.effectiveScale) on a canvas `cssH` CSS px tall at `dpr`, return the highest ladder
- *  preset — and the render scale RELATIVE TO THAT PRESET'S CAP on this window (engine.ts resize; snapped down onto SCALE_STEP) — predicted to fit `budgetMs` of compute
- *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
- *  with the scale solved for the budget (never under the floor); verylow at full scale; verylow solved down to the floor; and if even that misses, verylow at the floor
- *  flagged 'below target' (the runtime ladder has nothing cheaper either). */
+/** THE PURE PART OF AUTO'S BOOT DECISION (Quality.decide): what the GPU took a frame at preset `cur` and effective scale `effNow` (internal / CSS×dpr, engine.effectiveScale) on a
+ *  canvas `cssH` CSS px tall at `dpr`, `fixedMs` of it work that does not shrink with the picture, → the highest ladder preset, and the render scale RELATIVE TO THAT PRESET'S CAP on
+ *  this window (engine.ts resize), predicted to fit `budgetMs` (PLAN_BUDGET_MS). A tier is tried at its own start and then smaller, TIER_CUT under it at the most, before the tier
+ *  below is tried; verylow goes to the floor, flagged 'below target' where even that misses (the ladder has nothing cheaper either). */
 export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true): Plan {
   const table = costTable(oneGrid);   // (the grid the presets run: settings.oneCacheGrid)
   const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = table[cur];
@@ -351,22 +361,26 @@ export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: n
   const fixedOf = (name: QualityName) => fixedMs * (table[name].fixed / c0.fixed);
   const perEff2 = (name: QualityName) => pixelMs * (table[name].pixel / c0.pixel) / Math.max(1e-4, effNow * effNow);   // ms per unit of effective scale² at that preset
   const predict = (name: QualityName, scale: number) => fixedOf(name) + perEff2(name) * (capOf(PRESETS[name]) * Math.min(1, scale)) ** 2;
-  const start = (name: QualityName) => startScale(PRESETS[name], taauOn);   // the scale a preset starts at: its TAAU scale, or 1.0 with the resolve off
-  for (let i = AUTO_LADDER.length - 1; i >= 1; i--) {            // high → medium → low at their starting scale
-    const name = AUTO_LADDER[i]; const pr = predict(name, start(name));
-    if (pr <= budgetMs) return { preset: name, scale: start(name), predicted: pr, note: 'fits' };
-  }
-  /** `name` with its scale solved for the budget: the effective scale that lands on the budget ÷ what the cap gives at 1.0, snapped DOWN onto the step grid, no lower than the
-   *  floor, no higher than the preset's own starting scale (every value below it renders fewer pixels — there is no cap left to hide behind) */
-  const solve = (name: QualityName): Plan => {
-    const p = PRESETS[name]; const cap = capOf(p); const room = budgetMs - fixedOf(name); const top = start(name);
-    const need = room > 0 ? Math.sqrt(room / perEff2(name)) : 0;    // the effective scale that lands exactly on the budget
-    const scale = Math.min(top, Math.max(SCALE_FLOOR, snapDown(need / Math.max(1e-4, cap))));
-    const predicted = predict(name, scale);
-    return { preset: name, scale: +scale.toFixed(2), predicted, note: predicted <= budgetMs + 1e-6 ? (scale >= top - 1e-3 ? 'fits' : `${name}, reduced scale`) : 'below target even at the floor' };
+  /** the largest scale of a tier that fits, its own start or a step of the grid down to `least`; none does: 0 */
+  const fits = (name: QualityName, least: number): number => {
+    const top = startScale(PRESETS[name], taauOn); if (predict(name, top) <= budgetMs) return top;   // the scale a preset starts at: its TAAU scale, or 1.0 with the resolve off
+    const room = budgetMs - fixedOf(name), s = room > 0 ? Math.min(top, snapDown(Math.sqrt(room / perEff2(name)) / Math.max(1e-4, capOf(PRESETS[name])))) : 0;
+    return s >= least - 1e-6 ? +s.toFixed(2) : 0;
   };
-  const low = solve('low'); if (low.predicted <= budgetMs + 1e-6) return low;
-  return solve('verylow');                                          // fits at its own scale, fits reduced, or the flagged floor — solve() says which
+  const at = (name: QualityName, scale: number): Plan => { const predicted = predict(name, scale), top = startScale(PRESETS[name], taauOn);
+    return { preset: name, scale, predicted, note: predicted > budgetMs + 1e-6 ? 'below target even at the floor' : scale >= top - 1e-3 ? 'fits' : `fits at ${Math.round(scale * 100)} %` }; };
+  for (let i = AUTO_LADDER.length - 1; i >= 0; i--) {   // high → medium → low → verylow
+    const name = AUTO_LADDER[i], s = fits(name, i === 0 ? SCALE_FLOOR : Math.max(SCALE_FLOOR, startScale(PRESETS[name], taauOn) - TIER_CUT));
+    if (s > 0) return at(name, s);
+  }
+  return at('verylow', SCALE_FLOOR);
+}
+
+/** the calibration as a sentence for a player: what was measured on which tier, what is picked and what that should take, and whether it holds the rate */
+export function calibWords(c: { gpuMs: number; what: string; on: [QualityName, number]; pick: [QualityName, number]; predicted: number; fits: boolean; target: number }): string {
+  const tier = (t: [QualityName, number]) => `${TIER_NAME[t[0]]} at ${Math.round(t[1] * 100)} %`, ms = (v: number) => v < 100 ? v.toFixed(1) : v.toFixed(0);
+  const hold = c.target > 0 ? `, ${c.fits ? 'which holds' : 'so it won’t hold'} ${c.target.toFixed(0)} frames a second` : '';
+  return `It measured ${ms(c.gpuMs)} ${c.what} on ${tier(c.on)}, and ${c.fits ? '' : 'even '}${tier(c.pick)} should take about ${ms(c.predicted)} ms${hold}.`;
 }
 
 const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -392,6 +406,7 @@ const pageHidden = () => document.hidden && !(window as { __testVisible?: boolea
 export const visitTier = (search: string): QualityName | null => { const q = new URLSearchParams(search).get('quality'); return q && (QUALITY_NAMES as string[]).includes(q) ? q as QualityName : null; };
 export const visitAdaptive = (search: string): boolean => { const v = new URLSearchParams(search).get('adapt'); return !(v === '0' || v === 'off' || v === 'false'); };
 
+const NO_CALIB = () => ({ frames: 0, t: 0, gpu: [] as number[], fixed: [] as number[], sum: [] as number[], dts: [] as number[], done: false, seen: -1 });
 export class Quality {
   current: QualityName = 'high';
   /** the row 'Hold frame rate' (Options > Graphics; Tab > Quality 'adaptive resolution'): the render size steps down under the frame rate's band and comes back. The page's boot sets it from the address (visit below) */
@@ -408,12 +423,16 @@ export class Quality {
   private lastClimbAt = -1e9; private undidForDip = false; private unsureAcc = false; private unsureRun = 0; private hopSlowAt = -1;   // (the fps back-off: when the last rung went up — undoing never touches it — and whether this dip already had its one newest-only undo)
   /** auto's preset hops: the last hop up (for 'straight back down = that hop failed') and the pairs held off since, `${from}>${to}` → until / repeat count — NOT cleared by apply() */
   private lastHop: { from: QualityName; to: QualityName; at: number } | null = null; private hopHold = new Map<string, { until: number; n: number }>();
+  /** WHAT A HOP UP HAS BEEN SEEN TO COST, against the model's price of it: `${from}>${to}` → the factor, and until when it stands (SEEN_SECS: a scene's price isn't the next one's). The first
+   *  window drawn at a tier auto went up to says it, so a hop the model prices wrong is asked again at what it was */
+  private costs = new Map<string, { k: number; until: number }>(); private hopPriced: { from: QualityName; to: QualityName; scale: number; ms: number } | null = null;
+  private seen(from: QualityName, to: QualityName): number { const c = this.costs.get(`${from}>${to}`); return c && c.until > this.clock ? c.k : 1; }
   // SHARP SHED's state (SHED above; none of it moves while settings.ladderShed or auto is off): sharp direct is shed · what this machine's union showed it costs (ms at `rows` output rows) · the
   // union the shed was taken at, for the first window after it to measure against · no way back before `until` (`n` sheds in this run of them, `backAt` = when it last came back) · windows with room for it
   shed = false; private shedSeen: { ms: number; rows: number; until: number } | null = null; private shedMark: { union: number; scale: number; preset: QualityName; back?: boolean } | null = null; private shedHold = { until: 0, n: 0, backAt: -1e9 }; private shedRoomy = 0;
   /** the cost model's price of running preset `next` at its starting scale on this window, relative to `cur` at its current scale (COST's per-pixel and fixed parts; the union × this =
    *  the union to expect after the hop): medium → high ≈ 1.5, low → medium and verylow → low ≈ 2.2 at 720 CSS rows on the coarse cache grid (low → medium ≈ 1.9 on the one grid) — never the flat '×2' a threshold would assume */
-  hopRatio(next: QualityName, cur: QualityName = this.current as QualityName): number {
+  hopRatio(next: QualityName, cur: QualityName = this.current as QualityName, scale = startScale(PRESETS[next], this.engine.settings.taau !== false)): number {
     if (!(cur in COST) || !(next in COST)) return 2;
     const { cssH, cssW, dpr } = this.win();
     const taauOn = this.engine.settings.taau !== false;
@@ -425,8 +444,20 @@ export class Quality {
     const one = this.oneGrid(), table = costTable(one);   // (the grid the presets run: ONE CACHE GRID)
     const curCost = costOf(cur === this.current ? presetCost(live, one) : table[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
     const nextCost = this.shed && this.shedOn() ? presetCost({ ...PRESETS[next], iq: { ...PRESETS[next].iq, sharp: false } }, one) : table[next];   // (SHARP SHED: the shed stays across the hop, so the next preset is priced as it will run)
-    return costOf(nextCost, PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
+    return this.seen(cur, next) * costOf(nextCost, PRESETS[next].maxH, scale) / Math.max(0.1, curCost);
   }
+  /** the scale the next preset up would be put on at, `union` ms at the one that stands: its own start, or where the ladder sizes the picture a step under it down to half TIER_CUT, whichever
+   *  first fits the hop's margin and the band that would take the step off again; null = none does */
+  private hopScale(next: QualityName, union: number, B: Bands): number | null {
+    const top = this.startOf(next), room = Math.min(LADDER.hopFits * B.planBudget, this.cutBand(B)), fits = (s: number) => union * this.hopRatio(next, undefined, s) < room;
+    if (fits(top)) return top;
+    if (this.adaptive) for (let s = snapDown(top - 1e-3); s >= Math.max(SCALE_FLOOR, top - TIER_CUT / 2) - 1e-6; s = +(s - SCALE_STEP).toFixed(2)) if (fits(s)) return +s.toFixed(2);
+    return null;
+  }
+  /** the scale a preset starts at on this engine */
+  private startOf(name: QualityName): number { return startScale(PRESETS[name], this.engine.settings.taau !== false); }
+  /** the union the ladder takes a step off over, which is what a tier put on must fit to keep the size it was put on at: an aim's back-off band (a plan or a hop over it is cut within a few seconds), or the plan budget as now */
+  private cutBand(B: Bands): number { return B.hold ? Math.min(B.planBudget, CLIMB.backoff * B.budget) : B.planBudget; }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
   private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = PRESETS[cur]; return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
   /** the climb is allowed at all this visit: false where the address holds a tier (`?quality=`, or `?adapt=0` alone: visit below) — 'pins a preset' means the rows the tools and A/B pages measure stay put; a preset pinned from a MENU
@@ -465,9 +496,11 @@ export class Quality {
     requestAnimationFrame(tick);
   }
   lastChange = '';
+  /** the same in words for a player ('' until a calibration has settled) */
+  calibNote = '';
   /** calibration (auto only): a couple of seconds of GPU pass timings behind the card that is up (the start card at boot, the pause card when auto is chosen
    *  there) → preset AND scale in one step, instead of crawling down 0.1 at a time while the player already suffers. `sample()` stays quiet until it has decided. */
-  private calib: { frames: number; t: number; gpu: number[]; fixed: number[]; dts: number[]; done: boolean } = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false };
+  private calib: { frames: number; t: number; gpu: number[]; fixed: number[]; sum: number[]; dts: number[]; done: boolean; seen: number } = NO_CALIB();
   get calibrating() { return this.auto && !this.calib.done; }
   /** …and its frames are being read now: not while it waits for the later set (STANDS_IN), when a frame drawn behind a page that hides the view measures nothing */
   get measuring() { return this.calibrating && !(laterProgress.pending > 0 && this.standsInFor < STANDS_IN.maxSecs); }
@@ -478,7 +511,7 @@ export class Quality {
    *  they are in (host/drawpage.ts asks every frame: `remeasure`). False on every load whose later set lands inside the wait. */
   early = false;
   /** the later set is in after an early measure: calibrate again, once, on the settings' own picture (auto only; a preset pinned meanwhile keeps its pin) */
-  remeasure() { if (!this.early || laterProgress.pending > 0) return; this.early = false; if (this.auto) this.calib = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false }; }
+  remeasure() { if (!this.early || laterProgress.pending > 0) return; this.early = false; if (this.auto) this.calib = NO_CALIB(); }
   /** fired when a calibration settles (decide) — host/drawpage.ts refreshes the pause card's note, which otherwise goes stale while the card is up */
   onCalibrated: (() => void) | null = null;
   /** STANDS IN: seconds sample() has been waiting on a program that is still compiling (0 = it is not waiting) */
@@ -503,7 +536,7 @@ export class Quality {
    *  measurement runs behind that card exactly as the boot's runs behind the start card — the still frame is the same load — and decide() lands about 1.3 s of
    *  presented frames later, normally before Resume; a player quicker than that gets the one step within their first second, as one who beats the start card does. */
   private startAuto() {
-    this.lastHop = null;   // (a hop under a previous auto spell says nothing about this one)
+    this.lastHop = null; this.costs.clear(); this.hopPriced = null;   // (a hop under a previous auto spell says nothing about this one)
     this.auto = true; this.shed = false; this.shedSeen = null; this.shedMark = null; this.shedHold = { until: 0, n: 0, backAt: -1e9 }; this.shedRoomy = 0;   // (nor does a shed: this spell starts with the tier's own rows and measures them)
     let remembered: string | null = null, sc: number | null = null;
     try { remembered = localStorage.getItem(LS_AUTO); const v = parseFloat(localStorage.getItem(LS_SCALE) ?? ''); if (isFinite(v)) sc = v; } catch { /* */ }
@@ -512,7 +545,7 @@ export class Quality {
     if (!onLadder(remembered)) sc = null;   // a remembered scale belongs to a remembered preset
     this.apply(start);
     if (sc !== null && sc < this.maxScale - 1e-3) this.engine.settings.renderScale = clamp01(sc, SCALE_FLOOR, this.maxScale); else sc = null;   // resume at the scale this machine settled on last time; calibration refines it
-    this.calib = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false };
+    this.calib = NO_CALIB();
     this.starved = this.cruising = 0;
     this.lastChange = `auto: starting at ${this.current}${sc !== null ? ` ×${this.engine.settings.renderScale.toFixed(2)}` : ''}${onLadder(remembered) ? ' (this machine\'s last pick)' : ''} — calibrating`;
   }
@@ -526,6 +559,10 @@ export class Quality {
   private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
   private oneSolve(): boolean { return this.engine.settings.oneSmokeSolve !== false; }
   private fireShed(): boolean { return this.engine.settings.fireSmokeShed !== false; }
+  /** a hop cost `ratio` of what it was priced at: half of the miss is taken (a scene changes as well as a tier), a wild one none of it */
+  private sees(from: QualityName, to: QualityName, ratio: number) {
+    if (ratio > 0.5 && ratio < 2) this.costs.set(`${from}>${to}`, { k: +clamp01(this.seen(from, to) * Math.sqrt(ratio), 0.6, 1.6).toFixed(3), until: this.clock + SEEN_SECS });
+  }
   /** The label for menus: 'auto (high)' or the pinned preset. */
   get label() { return this.auto ? `auto (${this.current})` : this.current; }
 
@@ -543,9 +580,13 @@ export class Quality {
   /** Back to auto (a menu's choice): remembered, then exactly the boot's auto path — this machine's last auto pick + scale if it has one, calibrate behind the card (startAuto). */
   setAuto() { try { localStorage.setItem(LS_MODE, 'auto'); } catch { /* */ } this.startAuto(); }
 
+  /** the readbacks resolved when a tier was last put on, for whoever states what a frame of it costs (a few frames later, the numbers are its own) */
+  appliedAt = 0;
+  get measured(): boolean { const t = this.engine.timer; return !t?.enabled || (t.resolved ?? 0) - this.appliedAt > 4; }
+
   apply(name: QualityName) {
     if (!(name in PRESETS)) throw new Error(`Quality.apply: no preset is called '${name}' (the presets: ${QUALITY_NAMES.join(', ')})`);   // (an untyped caller: the console, a script written when there was an ultra)
-    const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge)
+    const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null; this.hopPriced = null; this.appliedAt = this.engine.timer?.resolved ?? 0;   // (a preset put on is nobody's cut to judge)
     const sc = startScale(p, S.taau !== false);   // (a stub engine without the setting counts as TAAU on — the default)
     S.renderScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
     S.taauPhases = p.taau.phases; S.taauClipGamma = p.taau.clipGamma; S.taauSharpen = p.taau.sharpen;   // the resolve's per-tier knobs (Tab ▸ Frame rows move them by hand until the next preset)
@@ -558,7 +599,7 @@ export class Quality {
     S.restirRays = p.restir.rays; S.restirSpatial = p.restir.spatial; S.restirHistory = p.restir.history; S.heldRays = p.restir.held; S.restirMotionMin = p.restir.motionMin; S.restirMotionTaps = p.restir.motionTaps;   // ReSTIR DI's tier (the estimator itself is not a preset's business: ?norestir / the Tab row own it)
     const L = p.lossy; S.gatherThird = L.gatherThird; S.rcHalfRate = L.rcHalfRate; S.rcPeriods = [...L.rcPeriods];   // plain settings writes = exactly what the pause-menu rows do (engine.render mirrors them into setDivisors / rc.halfRate / the frame flag / lossyCfg each frame); a row flipped by hand afterwards sticks until the next preset is applied — by hand or by auto's ladder
     S.giFireflyK = L.fireflyK;   // the gather's relative firefly bound, the same way (lossyCfg.w; the Tab ▸ Indirect light slider is the by-hand row)
-    S.meshShadows = !!p.mesh; S.meshShadowsNear = p.mesh === 'near';   // mesh-traced character shadows: ultra every ray (measured free at 2133×1200: direct 17.4 / 17.9 / 17.1 ms off / on / off), high for NEAR receivers only (the contact seam between a limb and its proxy's shadow: +0.13 ms mesh pass + a bounded share of the direct rays), the rest off; the engine still ANDs meshShadowsAvailable; the pause-menu / Tab rows are the by-hand switch
+    S.meshShadows = !!p.mesh; S.meshShadowsNear = p.mesh === 'near'; S.meshShadowsDirect = L.meshDirect;   // mesh-traced character shadows: ultra every ray (measured free at 2133×1200: direct 17.4 / 17.9 / 17.1 ms off / on / off), high for NEAR receivers only (the contact seam between a limb and its proxy's shadow: +0.13 ms mesh pass + a bounded share of the direct rays), the rest off; the engine still ANDs meshShadowsAvailable; the pause-menu / Tab rows are the by-hand switch
     S.torchBounceCards = p.cards; // torch bounce cards: ultra + high (cheap everywhere, placed where the look was checked); Tab ▸ Indirect light is the by-hand switch
     const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps (putSmoke)
     // the worst-case caps (Caps above): the volumetric march / beams …
@@ -581,15 +622,18 @@ export class Quality {
     const waited = this.standsInFor, c = this.calib;
     if (this.standsIn(rawDt)) return;   // (the first-frame start: a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
     if (laterProgress.pending > 0) this.early = true;   // (the wait ran out: what is measured from here is the stand-ins' picture)
-    else if (waited > 0 && c.frames) { c.frames = 0; c.t = 0; c.gpu = []; c.fixed = []; c.dts = []; this.early = false; }   // (the set landed while that measure was under way: over again, on the settings' own picture alone)
+    else if (waited > 0 && c.frames) { c.frames = 0; c.t = 0; c.gpu = []; c.fixed = []; c.sum = []; c.dts = []; c.seen = -1; this.early = false; }   // (the set landed while that measure was under way: over again, on the settings' own picture alone)
     if (rawDt >= 0.5) return;
     c.frames++;
     if (c.frames <= 24) return;                                   // pipelines warm up, first smoke/rc allocations, shader compiles
     c.t += rawDt; c.dts.push(rawDt);
     const tm = this.engine.timer;
-    if (tm.enabled && tm.results.size) {
-      let fixed = 0; for (const [k, v] of tm.results) if (/^rc |^probe$|^smoke$|^taau$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$|^powder$|^diceRing$|^fogSight$|^place$/.test(k)) fixed += v;   // per-probe / per-voxel / per-character work: does not shrink with resolution (nor does the TAAU resolve: it runs at the OUTPUT size, which the render scale leaves alone — and neither do sharp direct's two output-size kernels; 'mesh' = the mesh shadows' skin + refit)
-      c.gpu.push(tm.total(RENDER_PASSES)); c.fixed.push(fixed);
+    // (the union of the passes' spans, as the ladder is fed (drawpage.ts): a pass that runs beside another is counted once; the part of it that does not shrink with the picture is what the
+    // passes that do not take of their sum: per probe, per voxel, per character, and the kernels at the output's size)
+    if (tm.enabled && tm.results.size && tm.resolved !== c.seen) {
+      c.seen = tm.resolved;
+      let fixed = 0, sum = 0; for (const [k, v] of tm.lastFrame) { if (RENDER_PASSES.includes(k)) continue; sum += v; if (/^rc |^probe$|^smoke$|^taau$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$|^powder$|^diceRing$|^fogSight$|^place$/.test(k)) fixed += v; }
+      const ms = tm.unionMs(RENDER_PASSES); if (ms > 0 && sum > 0) { c.gpu.push(ms); c.fixed.push(fixed); c.sum.push(sum); }
     }
     if (c.dts.length >= 54 || c.t > 3) this.decide();
   }
@@ -599,18 +643,21 @@ export class Quality {
     const c = this.calib; c.done = true;
     const med = (a: number[]) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };
     const S = this.engine.settings; const canvas = this.engine.gpu.canvas as HTMLCanvasElement; const dpr = window.devicePixelRatio || 1;
-    let gpuMs = med(c.gpu), fixedMs = med(c.fixed); const dtMed = med(c.dts); const fps = 1 / dtMed;
-    let source = 'gpu timers';
+    // (the union's mean, as the ladder judges a window, but for its longest tenth: the first hitches of a boot. A pass that rests on most frames is in it at its own rate; and the part that does not shrink is the passes' own share)
+    const cut = [...c.gpu].sort((x, y) => x - y).slice(0, Math.max(1, Math.ceil(c.gpu.length * 0.9))), mean = (a: number[]) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN, sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+    let gpuMs = mean(cut), fixedMs = gpuMs * Math.min(1, sum(c.fixed) / Math.max(1e-6, sum(c.sum))); const dtMed = med(c.dts); const fps = 1 / dtMed;
+    let what = 'ms of GPU a frame';
     if (!(gpuMs > 0)) {                                             // no timestamp queries: frame time is all we have — above ~50 fps it hides the headroom, so only act when slow
       if (fps > 50) { this.lastChange = `calibrated: ${fps.toFixed(0)} fps at ${this.current}, no GPU timers — leaving it to the runtime ladder`; this.onCalibrated?.(); return; }
-      gpuMs = Math.max(4, 1000 * dtMed - 4); fixedMs = gpuMs * 0.3; source = 'frame time';
+      gpuMs = Math.max(4, 1000 * dtMed - 4); fixedMs = gpuMs * 0.3; what = 'ms a frame (no GPU timers)';
     }
-    const B = this.bands;   // (an aim plans with the same measure against ITS budget — hold 60's is the 15 ms of today; the display's rate is rarely known this early, so 120 plans as 120 and the climb gives back what a slower display leaves)
-    const r = this.plan(gpuMs, fixedMs, this.current, this.engine.effectiveScale || (this.engine.capScale || 1) * S.renderScale, canvas.clientHeight || 800, dpr, B.planBudget);   // (effectiveScale = the true internal / CSS×dpr ratio the sample was rendered at; before the first resize, what the formula will give)
-    const from = `${this.current} ×${S.renderScale.toFixed(2)}`;
+    const B = this.bands;   // (an aim plans with the same measure against ITS back-off band (cutBand): what the plan puts on is not cut again at once; the display's rate is rarely known this early, so 120 plans as 120 and the climb gives back what a slower display leaves)
+    const r = this.plan(gpuMs, fixedMs, this.current, this.engine.effectiveScale || (this.engine.capScale || 1) * S.renderScale, canvas.clientHeight || 800, dpr, this.cutBand(B));   // (effectiveScale = the true internal / CSS×dpr ratio the sample was rendered at; before the first resize, what the formula will give)
+    const from = `${this.current} ×${S.renderScale.toFixed(2)}`, on: [QualityName, number] = [this.current, S.renderScale];
     if (r.preset !== this.current) this.apply(r.preset);
     S.renderScale = Math.min(this.maxScale, r.scale); this.cooldown = 2.5; this.slow = this.fast = this.starved = this.cruising = 0;
-    this.lastChange = `calibrated (${source}): ${gpuMs.toFixed(1)} ms compute at ${from} → ${r.preset} ×${S.renderScale.toFixed(2)} (predicted ${r.predicted.toFixed(1)} ms; ${r.note})${B.hold ? ` — holding ${B.target.toFixed(0)} fps: ${B.planBudget.toFixed(1)} ms of GPU` : ''}`;
+    this.lastChange = `calibrated: measured ${gpuMs.toFixed(1)} ${what} on ${from} → ${r.preset} ×${S.renderScale.toFixed(2)} (${r.predicted.toFixed(1)} ms expected; ${r.note})${B.hold ? ` — holding ${B.target.toFixed(0)} fps: ${this.cutBand(B).toFixed(1)} ms of GPU` : ''}`;
+    this.calibNote = calibWords({ gpuMs, what, on, pick: [r.preset, S.renderScale], predicted: r.predicted, fits: r.predicted <= this.cutBand(B) + 1e-6, target: B.hold ? B.target : 0 });
     try { localStorage.setItem(LS_AUTO, r.preset); localStorage.setItem(LS_SCALE, String(S.renderScale)); } catch { /* */ }
     this.onCalibrated?.();
   }
@@ -649,6 +696,7 @@ export class Quality {
     // failed lately is held off; without timings the rate alone decides. Under auto the CLIMB defers to it — presets first — except at the top of auto's ladder, or when the next preset will
     // not fit (or is held off) but a scale step still might (a medium machine 9.5 ms busy at 60 fps: high would cost ~14, no; 0.5 ms of pixels, yes)
     const timed = unionAvg > 0;
+    if (this.hopPriced) { const h = this.hopPriced; if (h.to !== this.current || Math.abs(h.scale - S.renderScale) > 1e-3) this.hopPriced = null; else if (timed) { this.hopPriced = null; this.sees(h.from, h.to, unionAvg / h.ms); } }
     // SHARP SHED, what this machine pays for sharp direct: the first judged window after it moved, nothing else moved since. OFF a shed: what the union gave back — the largest standing is
     // kept, for twice the hold-off only (a spike that ended inside that window reads as sharp direct's price, and a reading nothing could test again would keep it off for the spell). On
     // the way BACK: what the union took on, read in a calm scene — it replaces whatever stood, for SHED.backSecs
@@ -656,7 +704,7 @@ export class Quality {
       if (timed && m.preset === this.current && Math.abs(m.scale - S.renderScale) < 1e-3 && (m.back ? !this.shed && ms > 0 : this.shed && ms > this.shedSeenMs())) this.shedSeen = { ms, rows: this.outRows(), until: this.clock + (m.back ? SHED.backSecs : 2 * Math.max(0, this.shedHold.until - this.clock)) }; }
     const ai = AUTO_LADDER.indexOf(this.current as QualityName); const nextUp = ai >= 0 && ai < AUTO_LADDER.length - 1 ? AUTO_LADDER[ai + 1] : null;
     const hopHeld = !!nextUp && (this.hopHold.get(`${this.current}>${nextUp}`)?.until ?? -1) > this.clock;
-    const roomForNext = !!nextUp && !hopHeld && (!timed || unionAvg * this.hopRatio(nextUp) < LADDER.hopFits * B.planBudget);
+    let hopTo: number | null = nextUp ? this.startOf(nextUp) : null; const roomForNext = !!nextUp && !hopHeld && (!timed || (hopTo = this.hopScale(nextUp, unionAvg, B)) !== null);
     const autoWantsPreset = this.auto && !!nextUp && roomForNext;
     // THE PACED CHECK (PACED; as now, and an aim under ladderHeld): is this slow window a page something else paces? 2 = it moved the ladder itself
     const pacedNow = this.pacedStep(B, avg, avgT, unionAvg, sc, top); if (pacedNow === 2) return;
@@ -742,12 +790,12 @@ export class Quality {
           this.lastChange = `hold ${B.target.toFixed(0)} ↑ scale ${to.toFixed(2)} (${timed ? pacedNow ? `${(1 / avg).toFixed(0)} fps with the GPU at ${unionAvg.toFixed(1)} ms: frame pacing, not load — the frame has the room` : `gpu ∪ ${unionAvg.toFixed(1)} ms, room under its ${(CLIMB.backoff * budget).toFixed(1)} band` : `${(1 / avg).toFixed(0)} fps`})`;
         }
       }
-      // THE CLIMB itself: display rate held AND the GPU under the headroom band for CLIMB.windows windows running, the last climb long enough ago → one rung up (scale → its top, then the
-      // divisors), skipping rungs that failed lately
+      // THE CLIMB itself: display rate held AND room for a fight at the next rung (scale → its top, then the divisors; none that failed lately) for CLIMB.windows windows running, the last climb long
+      // enough ago → that rung up
       else if (climbOn && unionAvg > 0 && !autoWantsPreset && !sharpFits) {   // (SHARP SHED: room that fits sharp direct back is its room first, auto's block below)   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
-        const roomyNow = avg < 1 / B.cruisingFps && unionAvg < CLIMB.headroom * budget;   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the headroom itself is read off the GPU union, never off the rate)
+        const step = this.nextRung(S.renderScale), roomyNow = avg < 1 / B.cruisingFps && !!step && this.fightFits(step, unionAvg, CLIMB.backoff * budget);   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the room itself is read off the GPU union, never off the rate)
         this.roomy = roomyNow ? this.roomy + 1 : 0;   // (never reached in an unsure window: unionAvg is 0 then and this branch is skipped — the count simply waits)
-        if (this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { const step = this.nextRung(S.renderScale, unionAvg < CLIMB.divisorRoom * budget); if (step) { this.climb(step, unionAvg, B); this.roomy = 0; } }
+        if (step && this.roomy >= CLIMB.windows && this.sinceClimb >= CLIMB.climbGap && sc >= this.maxScale - 1e-3) { this.climb(step, unionAvg, B); this.roomy = 0; }
       }
       if (this.auto) { try { localStorage.setItem(LS_SCALE, String(Math.min(this.maxScale, S.renderScale))); } catch { /* */ } }   // (a climbed scale is this session's finding, re-earned next visit: what is remembered stays within the tier's own range)
     }
@@ -757,7 +805,7 @@ export class Quality {
       // spending that room at the top of the ladder. Long windows + cooldowns so it settles.
       const i = AUTO_LADDER.indexOf(this.current as QualityName);
       const atFloor = sc <= SCALE_FLOOR + 0.02;                               // adaptive will not step from here
-      const cutDeep = sc <= this.maxScale - 0.14;                             // a real cut has already been taken off — a cheaper preset (fewer rays, a slower cache refresh) buys more than pixels now
+      const cutDeep = sc <= this.maxScale - TIER_CUT;                             // a real cut has already been taken off — a cheaper preset (fewer rays, a slower cache refresh) buys more than pixels now
       const floorHit = !this.adaptive || atFloor || cutDeep;
       if (avg > 1 / B.starvedFps && floorHit && gpuBound) this.starved++; else this.starved = 0;   // (a paced page with an idle GPU never starves its preset away either)
       // cruising: the display's rate held (a threshold UNDER any refresh, so a 60 Hz panel can reach it) with the scaler holding nothing back, AND — with GPU timings — the union priced at
@@ -778,7 +826,7 @@ export class Quality {
         }
         this.lastChange = `auto ↓ ${this.current} (${(1 / avg).toFixed(0)} fps)${held}`;
       }
-      else if (this.cruising >= (timed ? LADDER.cruiseWindows : LADDER.cruiseWindowsBlind) && i >= 0 && i < AUTO_LADDER.length - 1) { const from = this.current; const predicted = timed ? unionAvg * this.hopRatio(AUTO_LADDER[i + 1]) : 0; this.apply(AUTO_LADDER[i + 1]); this.lastHop = { from, to: this.current, at: this.clock }; this.hopSlowAt = -1; this.lastChange = `auto ↑ ${this.current} (${(1 / avg).toFixed(0)} fps${timed ? `, gpu ∪ ${unionAvg.toFixed(1)} ms → ~${predicted.toFixed(1)} predicted` : ''})`; this.cooldown = 4; this.cruising = 0; }
+      else if (this.cruising >= (timed ? LADDER.cruiseWindows : LADDER.cruiseWindowsBlind) && i >= 0 && i < AUTO_LADDER.length - 1) { const from = this.current, next = AUTO_LADDER[i + 1], to = hopTo ?? this.startOf(next), predicted = timed ? unionAvg * this.hopRatio(next, undefined, to) : 0; this.apply(next); S.renderScale = to; this.hopPriced = timed ? { from, to: next, scale: to, ms: predicted } : null; this.lastHop = { from, to: this.current, at: this.clock }; this.hopSlowAt = -1; this.lastChange = `auto ↑ ${this.current} (${(1 / avg).toFixed(0)} fps${timed ? `, gpu ∪ ${unionAvg.toFixed(1)} ms → ~${predicted.toFixed(1)} predicted` : ''})`; this.cooldown = 4; this.cruising = 0; }
     }
   }
 
@@ -837,14 +885,18 @@ export class Quality {
    *  has nothing to decouple, so sharp direct, its decoupled jitter and GBAA all switch off — the '1.0 + TAA' picture measured worse on every column than 0.9 + C3j
    *  (why ultra starts at 0.9); the divisor rungs come after 0.95 instead */
   private scaleTop(): number { const S = this.engine.settings; return (S.sharpDirect || this.shed) && S.taau !== false ? +(1.0 - SCALE_STEP).toFixed(2) : 1.0; }   // (SHARP SHED: shed is not gone — the size it comes back at is kept)
-  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2), passing over rungs that failed lately; `divisorsToo` = the union leaves CLIMB.divisorRoom (the divisor rungs cost more than a scale step); null = nothing left to spend on */
-  private nextRung(scale: number, divisorsToo: boolean): ClimbStep | null {
+  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2), passing over rungs that failed lately; null = nothing left to spend on */
+  private nextRung(scale: number): ClimbStep | null {
     const S = this.engine.settings; const topScale = this.scaleTop();
     if (scale < topScale - 1e-3) { const to = +Math.min(topScale, snapDown(scale + 1e-6) + SCALE_STEP).toFixed(2); const step: ClimbStep = { kind: 'scale', from: scale, to }; return this.failed.has(rungKey(step)) ? null : step; }   // (a failed scale rung blocks the ones above it too: no leap-frogging a ceiling that just cost frames)
-    if (!divisorsToo) return null;
     if (S.gatherThird && !this.failed.has('gather')) return { kind: 'gather' };
     if (S.volQuarter && !this.failed.has('vol')) return { kind: 'vol' };
     return null;
+  }
+  /** would a fight still fit `band` ms with this rung taken: CLIMB.fight times this window's union, priced at the rung by the cost model */
+  private fightFits(step: ClimbStep, unionAvg: number, band: number): boolean {
+    const live = this.livePreset(this.current as QualityName), up: Preset = step.kind === 'scale' ? { ...live, scale: step.to } : { ...live, lossy: { ...live.lossy, ...(step.kind === 'gather' ? { gatherThird: false } : { volQuarter: false }) } };
+    return CLIMB.fight * unionAvg * this.costAt(up) / Math.max(0.1, this.costAt(live)) <= band;
   }
   private climb(step: ClimbStep, unionAvg: number, B: Bands = AS_NOW) {
     const S = this.engine.settings;

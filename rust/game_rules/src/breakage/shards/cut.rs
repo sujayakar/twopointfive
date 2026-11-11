@@ -199,7 +199,7 @@ pub(super) fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, po
     let off = pr.off;
     let at = |pt: &[f64; 2]| -> [f64; 2] { [pt[0] - off[0], pt[1] - off[1]] };
     let local: Vec<[f64; 2]> = if anti { poly.iter().map(at).collect() } else { poly.iter().rev().map(at).collect() };
-    Some(crate::shards::CutPlateBox { box_, cut: pr.cut, dropped: pr.dropped, poly: local })
+    Some(crate::shards::CutPlateBox { box_, cut: pr.cut, poly: local })
 }
 
 /// a polygon's area with its winding's sign.
@@ -217,39 +217,33 @@ mod tests {
     use super::*;
     use crate::glasspen::PaneType;
 
-    // Bits printed by the TypeScript's own functions (EXACT on), under bun.
-    fn same(what: &str, got: &[f64], want: &[u64]) {
-        let g: Vec<u64> = got.iter().map(|x| x.to_bits()).collect();
-        assert_eq!(g, want, "{}", what);
-    }
-    fn flat(p: &[[f64; 2]]) -> Vec<f64> {
-        p.iter().flat_map(|q| [q[0], q[1]]).collect()
-    }
-    fn fr(f: crate::shards::GlassShardsCutPlatesFr) -> Vec<f64> {
-        let mut o = Vec::new();
-        o.extend_from_slice(&f.u);
-        o.extend_from_slice(&f.v);
-        o.push(f.lu);
-        o.push(f.lv);
-        o.extend_from_slice(&f.mid);
-        o
-    }
     const TINT: V3 = [0.7213, 0.8011, 0.8197];
     const UNDER: V3 = [0.413, 0.377, 0.291];
-    const P: [[f64; 2]; 8] = [[0.1, 0.2], [1.37, 0.21], [1.37, 0.21000001], [2.3, 1.1], [1.9, 2.7], [1.15, 1.95], [0.4, 1.2], [0.1, 0.2]];
+    const BLACK: V3 = [0.0, 0.0, 0.0];
+    fn near(a: V3, b: V3) { assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-12), "{a:?} {b:?}"); }
+    fn times(a: V3, b: V3) -> V3 { [a[0] * b[0], a[1] * b[1], a[2] * b[2]] }
 
     #[test]
-    fn colours_match_the_typescripts_bits() {
-        same("clamp_a", &[clamp_i(1.5, 0.0, 1.0)], &[0x3ff0000000000000]);
-        same("clamp_b", &[clamp_i(-0.0, 0.0, 1.0)], &[0x0000000000000000]);
-        same("edge", &edge_colour(TINT, 0.37), &[0x3fe74d91eeaa6d27, 0x3feb479f666234a8, 0x3feab52220bc382a]);
-        same("edge2", &edge_colour(TINT, 1.25), &[0x3fe7ae147ae147ae, 0x3fee147ae147ae14, 0x3feb851eb851eb85]);
-        same("plate", &plate_albedo(TINT, UNDER, PaneType::Annealed), &[0x3fd49e877d6aed68, 0x3fd5630e264d3582, 0x3fd22f182a8802b2]);
-        same("plate_lam", &plate_albedo(TINT, UNDER, PaneType::Laminated), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
+    fn a_cut_edge_goes_from_the_tint_to_the_edge_green_and_no_further() {
+        let green = crate::shards::edge_green();
+        near(edge_colour(TINT, 0.0), TINT);
+        near(edge_colour(TINT, 1.0), green);
+        near(edge_colour(TINT, 1.25), green);
+        assert_eq!(clamp_i(1.5, 0.0, 1.0), 1.0);
+        assert_eq!(clamp_i(5.0, 2.0, 1.0), 2.0);    // lo wins a crossed pair
+    }
+
+    /// A failure means laminated glass goes as clear as plain, or a plate on the floor does not take the floor's colour.
+    #[test]
+    fn a_plate_shows_the_floor_through_its_tint_and_laminate_is_milkier() {
+        let through = |ty: PaneType| { let (a, b) = (plate_albedo(TINT, UNDER, ty), plate_albedo(TINT, BLACK, ty)); [a[0] - b[0], a[1] - b[1], a[2] - b[2]] };
+        near(through(PaneType::Annealed), v3::scale(times(UNDER, TINT), 0.82));
+        near(through(PaneType::Laminated), v3::scale(times(UNDER, TINT), 0.45));
+        near(plate_albedo(TINT, BLACK, PaneType::Annealed), v3::scale(TINT, 0.18 * 0.6));
     }
 
     #[test]
-    fn cut_faces_match_the_typescripts_bits() {
+    fn a_cut_plate_is_dark_in_the_air_and_lifts_at_rest() {
         let mut g = Game::blank();
         let mut run = |body: f64, see: f64, rest: f64, ty: PaneType, resting: bool| {
             g.k.shards.cut_body = body;
@@ -257,35 +251,62 @@ mod tests {
             g.k.shards.cut_rest_body = rest;
             cut_face_albedo(&mut g, TINT, UNDER, ty, resting)
         };
-        same("no_body", &run(0.0, 1.0, 0.3, PaneType::Laminated, true), &[0x3fd7d0338ef8abce, 0x3fd99e0472807b10, 0x3fd82e8ad2816ca7]);
-        same("opaque_rest", &run(0.37, 0.0, 0.3, PaneType::Annealed, true), &[0x3fd310be28c51b28, 0x3fd3543576da51f1, 0x3fce883d50c366f2]);
-        same("see_rest", &run(0.37, 1.0, 0.3, PaneType::Annealed, true), &[0x3fda2a0d8523c0d0, 0x3fdf53b87958b172, 0x3fde196ed16ef2fc]);
-        same("see_rest_clamped", &run(0.37, 1.0, 1.7, PaneType::Annealed, true), &[0x3fe7ae147ae147ae, 0x3fee147ae147ae14, 0x3feb851eb851eb84]);
-        same("in_air", &run(0.37, 1.0, 0.3, PaneType::Annealed, false), &[0x3fd114940bbb1f26, 0x3fd2f85510d38cdb, 0x3fd36916440f2389]);
+        near(run(0.0, 1.0, 0.3, PaneType::Laminated, true), plate_albedo(TINT, UNDER, PaneType::Laminated));    // no body: a plain plate
+        near(run(0.37, 1.0, 0.3, PaneType::Annealed, false), v3::scale(TINT, 0.37));                            // in the air: the dark body
+        near(run(0.37, 0.0, 0.3, PaneType::Annealed, true), times(UNDER, TINT));                                // at rest, opaque: the floor through the tint
+        near(run(0.37, 1.0, 1.7, PaneType::Annealed, true), crate::shards::edge_green());                       // at rest, seen into: lifted, no further than the edge
+        let some = run(0.37, 1.0, 0.3, PaneType::Annealed, true);
+        assert!(some[1] > 0.37 * TINT[1] && some[1] < crate::shards::edge_green()[1], "{some:?}");
+    }
+
+    /// A plate is laid along what it is long. A failure means a long dagger of glass gets a square box.
+    #[test]
+    fn a_frame_lies_along_the_long_side_of_its_outline() {
+        let n: V3 = [0.0, 0.0, 1.0];
+        let (cs, sn) = (m::cos(0.5), m::sin(0.5));
+        let along = |a: f64, b: f64| -> V3 { [1.0 + cs * a - sn * b, 2.0 + sn * a + cs * b, 0.0] };
+        let l = [along(-2.0, -0.5), along(2.0, -0.5), along(2.0, 0.5), along(-2.0, 0.5)];
+        let f = frame_of(&l, [1.0, 2.0, 0.0], n);
+        assert!((v3::dot(f.u, [cs, sn, 0.0]).abs() - 1.0).abs() < 1e-9, "{:?}", f.u);
+        assert!((f.lu - 4.0).abs() < 1e-9 && (f.lv - 1.0).abs() < 1e-9, "{} {}", f.lu, f.lv);
+        near(f.v, v3::cross(n, f.u));
+        assert!((f.mid[0] - 1.0).abs() < 1e-9 && (f.mid[1] - 2.0).abs() < 1e-9, "{:?}", f.mid);
+        // one point has no long side: a small square where it is
+        let f = frame_of(&[[1.0, 1.0, 1.0]], [1.0, 1.0, 1.0], n);
+        assert_eq!((f.lu, f.lv, f.mid), (0.05, 0.05, [1.0, 1.0, 1.0]));
+    }
+
+    const SQUARE: [[f64; 2]; 4] = [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]];
+
+    #[test]
+    fn an_outline_s_area_and_its_winding() {
+        let mut back = SQUARE;
+        back.reverse();
+        assert_eq!((poly_area(&SQUARE), signed_area(&SQUARE)), (4.0, 4.0));
+        assert_eq!((poly_area(&back), signed_area(&back)), (4.0, -4.0));
+    }
+
+    /// A cut record has only so many planes: a corner that is no corner must not take one.
+    #[test]
+    fn a_tidy_outline_has_no_repeated_points_and_no_points_on_a_straight_edge() {
+        let messy = [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0], [0.0, 0.0]];
+        assert_eq!(tidy_poly(&messy), SQUARE.to_vec());
     }
 
     #[test]
-    fn frames_match_the_typescripts_bits() {
-        let l: [V3; 4] = [[1.1, 0.3, 0.2], [1.7, 0.31, 0.9], [1.5, 1.4, 1.2], [0.9, 1.2, 0.5]];
-        let n = v3::normalize([0.6, 0.05, -0.5]);
-        same("frame", &fr(frame_of(&l, [1.3, 0.8, 0.7], n)), &[0xbfd33c5b2b0d47f6, 0xbfeafe8bc6a19aa9, 0xbfdc7b5628304214, 0xbfe227e62af5811b, 0x3fe10ffc7db3f3de, 0xbfe414ae26fb0289, 0x3ff7e411eeccacc6, 0x3ff2df0cb2329006, 0x3ff5387c9477c607, 0x3fea544586790b03, 0x3fe77b83dd4a47e1]);
-        same("frame_up", &fr(frame_of(&l, [1.3, 0.8, 0.7], [0.0, 1.0, 0.0])), &[0x3fe3b174f21e3086, 0x0000000000000000, 0x3fe938fa9c59df99, 0x3fe938fa9c59df99, 0x0000000000000000, 0xbfe3b174f21e3086, 0x3ff08cc7e4ffc64e, 0x3fd89a003877a555, 0x3ff4cccccccccccd, 0x3fe999999999999a, 0x3fe6666666666666]);
-        same("frame_flat", &fr(frame_of(&[[1.0, 1.0, 1.0]], [1.0, 1.0, 1.0], [0.0, 0.0, 1.0])), &[0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3fa999999999999a, 0x3fa999999999999a, 0x3ff0000000000000, 0x3ff0000000000000, 0x3ff0000000000000]);
+    fn an_outline_s_centre_is_its_centre_of_area() {
+        assert_eq!(poly_centroid(&SQUARE), [1.0, 1.0]);
+        assert_eq!(poly_centroid(&[[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]), [2.0, 2.0]);    // a line has none: the mean of its points
+        assert_eq!(poly_centroid(&[]), [0.0, 0.0]);
     }
 
+    /// Both sides of a cut are what a broken plate's pieces are: nothing lost, nothing made.
     #[test]
-    fn polygons_match_the_typescripts_bits() {
-        same("area", &[poly_area(&P)], &[0x4008343957709c78]);
-        let mut r = P.to_vec();
-        r.reverse();
-        same("signed", &[signed_area(&r)], &[0xc008343957709c79]);
-        let t = tidy_poly(&P);
-        same("tidy", &flat(&t), &[0x3fb999999999999a, 0x3fc999999999999a, 0x3ff5eb851eb851ec, 0x3fcae147ae147ae1, 0x4002666666666666, 0x3ff199999999999a, 0x3ffe666666666666, 0x400599999999999a, 0x3fd999999999999a, 0x3ff3333333333333]);
-        same("centroid", &poly_centroid(&t), &[0x3ff4a6ba68cebbd3, 0x3ff2f7348894a9e2]);
-        same("centroid0", &poly_centroid(&[[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]), &[0x4000000000000000, 0x4000000000000000]);
-        same("centroid_none", &poly_centroid(&[]), &[0x0000000000000000, 0x0000000000000000]);
-        same("clip", &flat(&clip_half(&t, 0.8, 0.6, 1.3)), &[0x3fb999999999999a, 0x3fc999999999999a, 0x3ff5eb851eb851ec, 0x3fcae147ae147ae1, 0x3ff6d402e26f0db4, 0x3fd0ea9b485a6198, 0x3fe2be2be2be2be2, 0x3ff62be2be2be2be, 0x3fd999999999999a, 0x3ff3333333333333]);
-        same("clip2", &flat(&clip_half(&t, -0.8, -0.6, -1.3)), &[0x3ff6d402e26f0db4, 0x3fd0ea9b485a6198, 0x4002666666666666, 0x3ff199999999999a, 0x3ffe666666666666, 0x400599999999999a, 0x3fe2be2be2be2be2, 0x3ff62be2be2be2be]);
-        assert!(clip_half(&t, 1.0, 0.0, -5.0).is_empty());
+    fn a_clip_keeps_one_side_of_the_line() {
+        let (a, b) = (clip_half(&SQUARE, 0.8, 0.6, 1.3), clip_half(&SQUARE, -0.8, -0.6, -1.3));
+        assert!(a.iter().all(|p| 0.8 * p[0] + 0.6 * p[1] <= 1.3 + 1e-12) && b.iter().all(|p| 0.8 * p[0] + 0.6 * p[1] >= 1.3 - 1e-12));
+        assert!((poly_area(&a) + poly_area(&b) - 4.0).abs() < 1e-12);
+        assert_eq!(clip_half(&SQUARE, 1.0, 0.0, 5.0), SQUARE.to_vec());
+        assert!(clip_half(&SQUARE, 1.0, 0.0, -5.0).is_empty());
     }
 }

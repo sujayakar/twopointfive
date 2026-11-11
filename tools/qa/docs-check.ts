@@ -1,21 +1,22 @@
 // THE PAGES SAY WHAT IS THERE. CLAUDE.md is the index, loaded into every session, so it stays small; docs/agents/<area>.md is one page a system, true to the code today. A page names files, modules,
 // functions, tests, numbers and commands in backticks, and every one of them must be there:
-//   a path from the top, or the end of one (`rust/sim/src/doors.rs`, `held_leaves.rs`, `doors/`)      some file or folder of the tree ends so. `*` stands for any run of letters
+//   a path from the top, or the end of one (`rust/sim/src/panes.rs`, `held_leaves.rs`, `doors/`)      some file or folder of the tree ends so. `*` stands for any run of letters
 //   a name of the code (`doors_kick_in`, `DoorContact`, `face_step`, `k.doorthrow`, `?doorcost=0`)      it is a word of rust/, src/, tools/, cloud/ or the page's own files
 //   a command (`bun run tools/qa/pages.ts boot`, `gate tests`)                                          what it runs is there
 // A plain lower-case word or a phrase is nobody's name and is not asked. A page holds no date: git has the history.
-// The same is asked of the other documents people work from (OTHER).
+// The same is asked of the other documents people work from (OTHER). And NO COMMENT of rust, src, tools or cloud names a .ts, .rs or .wgsl file that is not in the tree (comments.ts).
 //   bun run tools/qa/docs-check.ts [page …]       exit 0 · 1 and each fault
 //   DOCS_BREAK=1 bun run tools/qa/docs-check.ts   the red path: a page with one fault of each kind planted, in memory: exit 1 with every one found (3: it missed one)
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { goneInComments } from './comments';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK === '1', asked = process.argv.slice(2);
 const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 16_000, WIDE = 200;
 /** the other documents people work from, and the most each may be */
 const OTHER: Readonly<Record<string, number>> = { 'CLAUDE.md': 12_000, 'README.md': 8_000, 'STYLE.md': 18_000, 'docs/level-format.md': 42_000, '.claude/skills/verify/SKILL.md': 11_000, '.claude/skills/level/SKILL.md': 20_000,
-  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/fold/README.md': 12_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
+  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
 
 const read = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 const files: string[] = (execFileSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 }) as string).split('\n').filter(f => f && existsSync(resolve(ROOT, f)));
@@ -76,6 +77,9 @@ if (BREAK) {
     + `\`?nosuchword=1\` and \`DoorNobody\` and \`k.nosuchtable.x\`.\n${'x'.repeat(PAGE)}\n`, found = faults(planted, PAGE);
   const want = ['doors_kick_nobody', 'rust/game_rules/src/nowhere/', 'gone_test.rs', 'docs/not-here.md', '2026-10', 'none-check.ts', '--bin nobin', '?nosuchword=1', 'DoorNobody', 'k.nosuchtable', `${PAGE} at most`, 'letters wide'];
   const missed = want.filter(w => !found.some(f => f.includes(w))); if (uncredited(f => read(f).replace(CREDIT.line, '')).length !== CREDIT.at.length) missed.push(CREDIT.line); for (const f of found) console.log(`- FAIL — planted: ${f.slice(0, 160)}`);
+  // (a comment of each kind that names a file that is gone, and the same name in a string, which is no comment)
+  const into = ['rs', 'ts', 'wgsl'].map(e => files.find(f => /^(rust|src)\//.test(f) && f.endsWith(`.${e}`))!), gone = goneInComments(into, f => `${read(f)}\n// as no_such_file.rs does\n/* src/game/nobody.ts */\n${f.endsWith('.wgsl') ? '' : 'const S: &str = "no_such_file.rs // not_a_comment.ts";'}\n`).filter(x => /no_such_file|nobody|not_a_comment/.test(x));
+  if (gone.length !== into.length * 2 || gone.some(x => x.includes('not_a_comment'))) missed.push(`the planted comments (${gone.length} of ${into.length * 2})`);
   console.log(missed.length ? `docs: MISSED ${missed.join(' · ')}` : `docs: every planted fault found (${want.length})`); process.exit(missed.length ? 3 : 1);
 }
 let bad = 0;
@@ -85,6 +89,7 @@ if (!asked.length) {
   line(bytes <= INDEX.bytes && nLines <= INDEX.lines, `CLAUDE.md is ${bytes} bytes and ${nLines} lines (${INDEX.bytes} and ${INDEX.lines} at most)`);
   const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``));
   line(!unnamed.length, `the index names every page (${areas.length})${unnamed.length ? `: not ${unnamed.join(' ')}` : ''}`);
+  const lost = goneInComments(files, read); line(!lost.length, `no comment names a source file that is gone${lost.length ? ` (${lost.length})` : ''}`); for (const x of lost) console.log(`    ${x}`);
   const told = NOTICE.says.filter(w => !read(NOTICE.at).includes(w)); line(!told.length, `${NOTICE.at} carries its ${NOTICE.says.length} notices${told.length ? `: not '${told.join(`', '`)}'` : ''}`);
   const un = uncredited(f => files.includes(f) ? read(f) : '');
   line(!un.length, `"${CREDIT.line}" stands at all ${CREDIT.at.length} of its places${un.length ? `: not ${un.join(' ')}` : ''}`);

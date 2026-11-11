@@ -3,7 +3,7 @@
 //! WHY ONE BLOCK. State of the game has to be taken and put back (a rollback, a save kept in memory), put into another game, folded into the state's word and
 //! compared, and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
 //!   · a family of the update that keeps state here adds ONE FIELD to `State` (a struct of flat, fixed-size columns) and its row in `PARTS`. Nothing else in
-//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY the host proves (the box world), and
+//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY made again from the game, and
 //!     tools/qa/rust-rules-check.ts is red on a `static mut` it has no row for (STATICS there).
 //!   · NO ADDRESS IN A BLOCK, ONLY INDICES. A block is the same bytes in whichever slot it stands, in the host's own memory while another game has the slot,
 //!     in a file, on another machine. A pointer kept in one is wrong the moment it moves.
@@ -12,21 +12,15 @@
 //!   · ZEROS ARE A GAME WITH NOTHING IN IT. A new block is zeros with its head written; a part reads its zeros as "empty".
 //!   · no allocation: `GAMES` blocks, a fixed size each, so the module's memory never grows.
 //!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the poses, the smoke grid's bricks) is sized for the largest game, and its FIRST WORD is how
-//!     many of its bytes are in use, that word included. The host carries, compares and folds only those: what lies past them is nobody's state.
+//!     many of its bytes are in use, that word included. No rule reads what lies past them (a moment copies the block whole all the same).
 //!
-//! WHO HOLDS A SLOT is the host's business (src/sim/state.ts SimState: a game's block is bound to a slot here, or parked in the host's memory when more than
-//! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
+//! WHO HOLDS A SLOT is the host's business (game_face `face_start` deals them, and a moment kept keeps a copy of a block's bytes and `put`s it back: game_rules
+//! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
-use crate::dice::Dice;
 use crate::poses::Poses;
-use crate::doors::Doors;
-use crate::falls::Falls;
-use crate::props::Props;
-use crate::items::Items;
 use crate::men::Men;
 use crate::lights::Lights;
 use crate::panes::Panes;
-use crate::slabs::Slabs;
 use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
@@ -38,10 +32,7 @@ pub const GAMES: usize = 4;
 pub struct Head {
     /// the word of the layout this block was written under (`LAYOUT`): the host writes it into a new block
     pub layout: u32,
-    /// WHICH SYSTEMS' STATE IS AT HOME HERE, a bit a system: a system whose bit is down keeps its state in the
-    /// TypeScript objects, as it did before it moved, and the part it would use here is zeros
-    pub homes: u32,
-    pub spare: [u32; 2],
+    pub spare: [u32; 3],
 }
 const _: () = assert!(size_of::<Head>() == 16);
 
@@ -49,12 +40,6 @@ const _: () = assert!(size_of::<Head>() == 16);
 #[repr(C, align(16))]
 pub struct State {
     pub head: Head,
-    pub dice: Dice,
-    pub doors: Doors,
-    pub falls: Falls,
-    pub props: Props,
-    pub slabs: Slabs,
-    pub items: Items,
     pub men: Men,
     pub lights: Lights,
     pub weather: Weather,
@@ -68,26 +53,19 @@ pub struct Part {
     pub off: usize,
     pub len: usize,
     pub ver: u32,
-    /// a pool: its first word is how many of its bytes are in use (the host carries only those)
+    /// a pool: its first word is how many of its bytes are in use
     pub pool: bool,
 }
-/// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
-/// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
-/// paid for by every part that stands after it. Parts of a fixed length first, then the pools: every game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all (a last pool with nothing in it takes no room, src/sim/state.ts `span`).
-pub const PARTS: [Part; 13] = [
+/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools: every
+/// game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all.
+pub const PARTS: [Part; 7] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, falls), len: size_of::<Falls>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, props), len: size_of::<Props>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, slabs), len: size_of::<Slabs>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
-    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
-    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
+    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (a pose is ten columns of whole vectors)
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();

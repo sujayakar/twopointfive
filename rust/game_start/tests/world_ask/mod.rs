@@ -96,8 +96,8 @@ impl WorldAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
 }
 
@@ -148,11 +148,11 @@ impl GlassAsk for Play {
         h.speed = 0.0;
     }
     fn burst(&mut self, at: [f64; 2]) -> game::frag::BlastReport {
-        let who = self.g.ch[self.g.pl[self.g.player].ch].id;
+        let who = self.g.player_id(self.g.player);
         game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
-    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.gd[gd].stagger_until }
+    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.cond[self.g.gd[gd].ch].fold_until }
     fn share_open(&mut self, from: [f64; 2], feet: [f64; 2]) -> f64 {
         let lift = self.g.k.frag.lift;
         game::frag::exposure(&mut self.g, [from[0], 0.05 + lift, from[1]], [feet[0], 0.0, feet[1]], [feet[0], 1.6, feet[1]], Some(game::frag::GlassView::Whole))
@@ -185,7 +185,7 @@ pub trait WallAsk {
 
 impl WallAsk for Play {
     fn burst_at(&mut self, at: [f64; 3]) -> game::frag::BlastReport {
-        let (who, lift) = (self.g.ch[self.g.pl[self.g.player].ch].id, self.g.k.frag.lift);
+        let (who, lift) = (self.g.player_id(self.g.player), self.g.k.frag.lift);
         game::frag::blast(&mut self.g, [at[0], at[1] - lift, at[2]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn body_walks(&mut self, from: [f64; 2], to: [f64; 2]) -> [f64; 2] {
@@ -215,7 +215,7 @@ impl WallAsk for Play {
         game::wallcharge::wall_charge_raise_carried(&mut self.g, 2.0);
         let w = game::wallcharge::wall_at(&mut self.g, at, Some([from[0], 0.0, from[1]])).filter(|w| w.ok).ok_or_else(|| String::from("no place for a charge there"))?;
         let spot = game::wallcharge::wall_charge_set_spot(&mut self.g, &w).unwrap_or_else(|| game::wallcharge::wall_pt(&self.g, &w, 0.0, 0.55, None));
-        let n0 = self.g.wall_charge.set.len();
+        let n0 = self.g.sets[self.g.seat].wall_charge.set.len();
         let mut why = String::new();
         for h in [1.0, 1.7, 0.4] {
             let on = game::wallcharge::wall_pt(&self.g, &w, 0.0, 0.0, Some(h));
@@ -227,7 +227,7 @@ impl WallAsk for Play {
             self.frame();
             self.key_up("Space");
             let secs = self.g.k.doortools.set_secs + 1.0;
-            if self.until(secs, |p| p.g.wall_charge.set.len() > n0).is_some() { return Ok(*self.g.wall_charge.set.last().unwrap()); }
+            if self.until(secs, |p| p.g.sets[p.g.seat].wall_charge.set.len() > n0).is_some() { return Ok(*self.g.sets[self.g.seat].wall_charge.set.last().unwrap()); }
             why = String::from("the row was given and no charge is on the wall");
         }
         Err(why)
@@ -282,7 +282,7 @@ impl DarkAsk for Play {
     fn dark_line(&self, text: &str, kind: game::darkdoor::LineKind) -> bool { game::darkdoor::lines().get(String::from(kind.as_str())).map_or(false, |r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn dark_any(&self, text: &str) -> bool { game::darkdoor::lines().values().any(|r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn lamp_on(&self, gd: GuardId) -> bool { self.g.tab.light[self.g.gd[gd].flashlight].enabled }
-    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.gd[m].team == game::teams::Team::Hostile && self.lamp_on(m)).count() }
+    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.team(m) == game::teams::Team::Hostile && self.lamp_on(m)).count() }
     fn gunfire_reached(&mut self, gd: GuardId) { self.g.gd[gd].witness.heard.shots = self.g.gd[gd].witness.heard.shots.max(1.0); }
     fn heard_nothing(&self, gd: GuardId) -> bool { let h = &self.g.gd[gd].witness.heard; h.shots + h.kick + h.bang == 0.0 && self.g.gd[gd].witness.alerted_by.is_none() && self.state(gd) == game::game::GuardState::Patrol }
     fn face_each_other(&mut self, a: GuardId, b: GuardId) {
@@ -294,7 +294,7 @@ impl DarkAsk for Play {
         self.g.ch[cb].aim_yaw = y; self.g.ch[cb].body_yaw = y;
     }
     fn dark_knows(&self, gd: GuardId) -> bool { self.g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.knows) }
-    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::game::GameSetBlackoutCause::Hand); }
+    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::lighting::SetBlackoutCause::Hand); }
     fn powerout_at(&self, what: game::powerout::PowerOutEventWhat) -> Option<f64> { self.g.m.powerout.states.as_ref()?.events.iter().find(|e| e.what == what).map(|e| e.t) }
     fn powerout_sent(&self) -> Vec<GuardId> {
         let Some(st) = self.g.m.powerout.states.as_ref() else { return Vec::new() };
@@ -322,7 +322,7 @@ pub trait YardAsk {
     /// a place's own light, every carried light left out, by the meter: (bare, with the moon, through a tube)
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64);
     /// how the first camera stands
-    fn camera_state(&self) -> game::sim_lightshome::CameraState;
+    fn camera_state(&self) -> game::fixtures::CameraState;
     /// how much it has seen
     fn camera_seen(&self) -> f64;
     /// how many times the beam has been tripped, by its place in the level's list
@@ -341,19 +341,19 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, h.dazzled_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
         (h.script, h.task, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
         (h.script, h.task, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);
@@ -369,9 +369,9 @@ impl YardAsk for Play {
     }
     fn door_shut_locked(&mut self, name: &str, locked: bool) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
-        game::doors::door_set_locked(&mut self.g, d, locked);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
+        self.g.dr[d].leaf.locked = locked;
     }
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64) {
         let high = |p: &mut Play, y: f64| { let q = [at[0], y, at[1]]; (game::guards::light_estimate_at(&mut p.g, q, Some(&mut |_g, _o| true), None, None), game::nvg::nvg_place_light(&mut p.g, q)) };
@@ -379,9 +379,9 @@ impl YardAsk for Play {
         let (e, m) = (a.0.max(b.0), a.1.max(b.1));
         (game::game::game_visibility_of(&self.g, e), game::game::game_visibility_of(&self.g, m), game::nvg::tube_vis(&self.g, m))
     }
-    fn camera_state(&self) -> game::sim_lightshome::CameraState { game::sim_lightshome::camera_machine_state(&self.g, self.g.devices.cameras[0]) }
-    fn camera_seen(&self) -> f64 { game::sim_lightshome::camera_machine_seen(&self.g, self.g.devices.cameras[0]) }
-    fn beam_trips(&self, k: usize) -> f64 { game::sim_lightshome::laser_machine_trips(&self.g, self.g.devices.lasers[k]) }
+    fn camera_state(&self) -> game::fixtures::CameraState { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].state }
+    fn camera_seen(&self) -> f64 { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].seen }
+    fn beam_trips(&self, k: usize) -> f64 { self.g.tab.devices_laser_rt[self.g.devices.lasers[k]].trips as f64 }
     fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
     fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
@@ -446,7 +446,7 @@ impl FurnAsk for Play {
         let d = |&it: &PropId| { let q = self.prop_at(it); (q[0] - at[0]).hypot(q[1] - at[1]) };
         *self.g.props.all.iter().min_by(|a, b| d(a).partial_cmp(&d(b)).unwrap()).expect("a prop")
     }
-    fn prop_at(&self, it: PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_at(&self, it: PropId) -> [f64; 2] { [self.g.tab.props_prop[it].x, self.g.tab.props_prop[it].z] }
     fn level_as_it_stands(&self) -> [String; 3] {
         let n = self.g.destr.walls.authored as usize;
         let flags: Vec<String> = self.g.col.boxes.iter().take(n).map(|&b| format!("{}", self.g.tab.boxes[b].flags)).collect();
@@ -455,7 +455,7 @@ impl FurnAsk for Play {
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
     fn keep(&self) -> Moment { Moment::of(&self.g) }
-    fn put_back(&mut self, k: &Moment) { self.g = k.stands(self.g.sim); }
+    fn put_back(&mut self, k: &Moment) { self.g = k.laid(self.g.sim); }
 }
 
 /// The net
@@ -479,7 +479,7 @@ pub trait NetAsk {
 }
 
 impl NetAsk for Play {
-    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn shaken(&self, gd: GuardId) -> f64 { self.g.m.morale.state_of.get(gd).map_or(0.0, |m| m.shock) }
     fn steady(&mut self, gd: GuardId) -> bool { game::morale::training_of(&mut self.g, gd) == game::morale::TrainingOf::Steady }
     fn net_line(&self, text: &str, kind: &str, name: &str) -> bool { game::netquiet::lines().get(String::from(kind)).map_or(false, |r| r.iter().any(|l| l.replace("{name}", name) == text)) }
@@ -489,7 +489,7 @@ impl NetAsk for Play {
         let st = self.g.m.enemysquads.states.as_ref()?;
         st.squads.iter().flat_map(|&q| self.g.tab.enemysquads_squad[q].events.iter()).filter(|e| e.what == what).map(|e| e.t).fold(None, |a: Option<f64>, t| Some(a.map_or(t, |x| x.min(t))))
     }
-    fn put_down(&mut self, gd: GuardId) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); }
+    fn put_down(&mut self, gd: GuardId) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
 }
 
 /// A hostage rescue
@@ -524,15 +524,15 @@ pub trait RescueAsk {
 
 impl RescueAsk for Play {
     fn hostage_room_falls(&mut self, loud: bool) {
-        let cast: Vec<GuardId> = game::rescue::rescue_cast(&self.g).into_iter().filter(|c| c.in_room).map(|c| c.gd).collect();
+        let cast: Vec<GuardId> = self.g.staged.foes.iter().copied().filter(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).collect();
         for m in cast {
             let how = if loud { game::game::DownKind::Shot } else { game::game::DownKind::Struck };
-            game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), None);
+            game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), game::game::With::Hand);
         }
     }
     fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }
-    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
-    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn hostages_up(&self) -> Vec<GuardId> { self.g.staged.captives.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
+    fn theirs_up(&self) -> Vec<GuardId> { self.g.staged.foes.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
     fn in_hostage_room(&self, at: [f64; 2]) -> bool { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 }
     fn rescue_said(&self, starts: &str) -> Option<f64> { self.g.rescue.log.iter().find(|l| l.what.starts_with(starts)).map(|l| l.t) }
     fn rescue_lines(&self, starts: &str) -> Vec<String> { self.g.rescue.log.iter().filter(|l| l.what.starts_with(starts)).map(|l| l.what.clone()).collect() }
@@ -542,7 +542,7 @@ impl RescueAsk for Play {
             let a = k as f64 * std::f64::consts::FRAC_PI_4;
             self.sam_put([at[0] + a.sin() * 1.2, at[1] + a.cos() * 1.2]);
             self.run(2.0 / 60.0);
-            if self.g.nearby.iter().any(|r| r.guard == Some(h) && r.verb == Some(verb)) && game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Guard, Some(verb)) {
+            if self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(h) && r.verb == Some(verb)) && game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Guard, Some(verb)) {
                 self.key_down("Space");
                 self.frame();
                 self.key_up("Space");
@@ -566,7 +566,7 @@ impl RescueAsk for Play {
         }
     }
     fn a_loud_round_at_the_room(&mut self) {
-        let m = game::rescue::rescue_cast(&self.g).into_iter().find(|c| c.in_room).expect("a man in the room").gd;
+        let m = self.g.staged.foes.iter().copied().find(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).expect("a man in the room");
         let (at, time, serial) = (self.at(m), self.g.time, self.g.serial());
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
     }
@@ -580,10 +580,10 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let [statics, props, nav] = p.level_as_it_stands();
     let g = &p.g;
     let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
-    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
-    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", game::sim_lightshome::fixture_on(g, t), game::sim_lightshome::fixture_broken(g, t))).collect();
-    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", game::sim_lightshome::mains_active(g))), ("statics", statics), ("props", props), ("walk grid", nav),
-        ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.wall_charge.set.len())), ("glass hits", format!("{hits}"))]
+    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", g.dr[d].leaf.angle, g.dr[d].leaf.latched, g.dr[d].leaf.locked)).collect();
+    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
+    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
+        ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.sets[g.seat].wall_charge.set.len())), ("glass hits", format!("{hits}"))]
 }
 
 /// What a review found
@@ -611,10 +611,10 @@ pub trait ReviewAsk {
 }
 
 impl ReviewAsk for Play {
-    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| game::sim_lightshome::fixture_on(&self.g, t) && self.g.tab.sim_lightshome_fixture[t].kind != game::sim_lightshome::FixtureKind::Breaker).expect("a lamp lit") }
-    fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
-    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
-    fn lamp_disabled(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_disabled_until(&self.g, t) > self.g.time }
+    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
+    fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.sets[self.g.seat].aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
+    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::lighting::LightEventCause::Shot), None); }
+    fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
         let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };
         game::throwables::throwables_spawn(&mut self.g, kind, [5.0, 0.5, 5.0], [0.0; 3], Some(o))

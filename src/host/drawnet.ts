@@ -4,7 +4,7 @@ import { HAND, sampleHand, type HandCamera, type HandCanvas, type HandInput } fr
 import { CANT_PLAY, doorFromUrl, keyOff, movedTo, NETWAY, netStall, netTried, netTry, type NetDoor, type WalkRound } from '../net/door';
 import type { Foreseen } from '../net/foresee';
 import { NetGame, type NetFace } from '../net/modgame';
-import { commandBytes, startWhy, type NetStart } from '../net/start';
+import { startWhy, type NetStart } from '../net/start';
 import type { WireCmd } from '../net/wire';
 import { recipeSearch } from '../tape/address';
 import type { DrawGame, Start } from './drawgame';
@@ -29,7 +29,7 @@ export class DrawNet {
   /** the game every machine of it starts, on this build's own parts and the level the start names */
   start(own: Pick<Start, 'level' | 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
     const S = this.said, C = this.game.commands, G = this.game, c = this.door.client;
-    C.take(); C.put(commandBytes(S)); G.start({ ...own, words: S.words, seed: S.seed, seats: S.seats }); G.walked = true;
+    C.take(); G.start({ ...own, words: S.words, kept: S.kept, seed: S.seed, seats: S.seats }); G.walked = true;
     this.net = new NetGame(G.X as unknown as NetFace, G.memory, G.h);
     if (c.seat >= 0) G.X.face_show_seat(G.h, c.seat);
     G.show();
@@ -48,7 +48,7 @@ export class DrawNet {
     door.wake(this.round);
     if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now); else c.beat(recordOf(N, keys), now); }
     let over = false;
-    const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word(), watch: () => net.watch() }, this.round);
+    const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word() }, this.round);
     const level = this.level; this.level = false;
     if (level) game.show();
     this.ahead = door.look(c.seat >= 0 ? cmds => net.ahead(c.seat, cmds) : null);

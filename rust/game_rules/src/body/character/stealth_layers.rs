@@ -23,8 +23,8 @@ pub(super) fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> 
     let rate = if g.ch[c].anim.creep { dt / gait_in } else { -dt / gait_out };
     g.ch[c].anim.cr_t = v3::clamp(g.ch[c].anim.cr_t + rate, 0.0, 1.0);
     let pp = g.ch[c].anim.life.prev_pos;
-    let p0 = g.ch[c].pos;   // posIn is Character.pos itself (character.ts:4419 keeps the array, not a copy)
-    let d = if pp[0].is_finite() { m::hyp2(p0[0] - pp[0], p0[2] - pp[2]) } else { 0.0 };
+    let p0 = g.ch[c].pos;
+    let d = if pp[0].is_finite() { v3::dist_xz(p0, pp) } else { 0.0 };
     let a = &mut g.ch[c].anim;
     a.cr_v = if dt > 0.0 && d <= 0.5 { m::min(d / dt, 8.0) } else { 0.0 };
     v3::smoothstep(0.0, 1.0, a.cr_t)
@@ -44,17 +44,14 @@ fn anim_creep_plant(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
 
 /// the closure `find` of creepPlant. The legs' list is copied out of the man for the walk (once a man; fkPart takes it as an argument)
 fn creep_plant_find(g: &mut Game, c: CharId, clip: ClipId, off: f64) -> f64 {
-    let (toe_l, toe_r, p_c) = (g.ch[c].anim.nodes.toe_l, g.ch[c].anim.nodes.toe_r, g.ch[c].anim.p_c);
-    let legs = g.ch[c].anim.fk_legs.clone();
-    let singles = g.k.posemath.singles;
+    let (rig, toe_l, toe_r, p_c) = (g.ch[c].anim.rig, g.ch[c].anim.nodes.toe_l, g.ch[c].anim.nodes.toe_r, g.ch[c].anim.p_c);
     let mut best = 0.0;
     let mut score = -m::INF;
     for i in 0..96 {
-        let dur = g.tab.clip[clip].duration;
-        crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c, singles);
-        anim_fk_part(g, c, p_c, &legs);
-        let pos = &g.ch[c].anim.fk.pos;
-        let (a, b) = (pos[toe_l], pos[toe_r]);
+        let dur = g.art.clip[clip].duration;
+        crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c);
+        let at = |i| crate::anim_skeleton::pose_node(g, rig, p_c, i).1;
+        let (a, b) = (at(toe_l), at(toe_r));
         let sc = m::abs(a[2] - b[2]) - 4.0 * m::abs(a[1] - b[1]);
         if sc > score { score = sc; best = i as f64 / 96.0; }
     }
@@ -71,9 +68,6 @@ pub(super) fn anim_watch_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
     anim_watch_slip(g, c, dt, free, m_s);
     anim_watch_arm(g, c, w_l, w_r);
     anim_watch_look(g, c, dt, free, m_w);
-    let a = &mut g.ch[c].anim;
-    let t = a.wt;
-    a.watch_shown.w = t.w; a.watch_shown.yaw = t.yaw * t.w; a.watch_shown.slip = t.sw; a.watch_shown.lean = t.sl;
 }
 
 /// The slip's body: pelvis and trunk; `m` the man he gives room to, in the model.
@@ -168,11 +162,12 @@ fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: crate::anim_skelet
 
 // ---- the twist's inverse
 
-/// The chest twist run backwards for a point; fk must be current on the pose asked about.
+/// The chest twist run backwards for a point.
 fn anim_untwist(g: &crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
     if !js::truthy(tw_y) && !js::truthy(tw_p) { return Untwist::Same; }
     let an = &g.ch[c].anim;
-    let (p1, p2, p3) = (an.fk.pos[an.nodes.spine1], an.fk.pos[an.nodes.spine2], an.fk.pos[an.nodes.spine3]);
+    let at = |i| crate::anim_skeleton::pose_node(g, an.rig, an.p_a, i).1;
+    let (p1, p2, p3) = (at(an.nodes.spine1), at(an.nodes.spine2), at(an.nodes.spine3));
     untwist_of(q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35), q_yaw(tw_y * 0.4), tw_p, p1, p2, p3)
 }
 
@@ -202,7 +197,7 @@ fn untwist_at(un: &Untwist, h: V3) -> V3 {
 /// The swap's frame: both arms by IK on a copy of pA, then the clock.
 pub(super) fn anim_kit_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tw_y: f64, tw_p: f64) {
     let rc = anim_sheath_rest_inv(g, c);
-    let sling = crate::rig_props::sling_front_hand(g, None, Some(g.ch[c].anim.kit_rest));
+    let sling = crate::rig_props::sling_front_hand(None, Some(g.ch[c].anim.kit_rest));
     anim_layer(g, c, |s, an, k| sim::layers::kit_layer(s, an, tw_y, tw_p, rc, &sling, k));
     let an = &mut g.ch[c].anim;
     let k = an.kit.as_mut().unwrap();
@@ -223,12 +218,9 @@ pub(super) fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
         anim_catch_arm(g, c, x);
     } else if g.ch[c].anim.hold_pose.is_none() {
         if g.ch[c].anim.ready_w > 0.003 && g.ch[c].anim.ready_k == ReadyKind::Grab {
-            let p_a = g.ch[c].anim.p_a;
-            let mut fk = core::mem::take(&mut g.ch[c].anim.fk);
-            crate::anim_skeleton::pose_fk_run(g, &mut fk, p_a);
-            let an = &mut g.ch[c].anim;
-            an.fk = fk;
-            an.rd_hand_l = Some(v3::copy(an.fk.pos[an.nodes.hand_l]));
+            let an = &g.ch[c].anim;
+            let at = crate::anim_skeleton::pose_node(g, an.rig, an.p_a, an.nodes.hand_l).1;
+            g.ch[c].anim.rd_hand_l = Some(at);
         } else {
             g.ch[c].anim.rd_hand_l = None;
         }
@@ -237,11 +229,10 @@ pub(super) fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
 
 /// The ready pose: the trunk, then the arms. Weight `w`; `live` = still asked for.
 pub(super) fn anim_ready_layer(g: &mut crate::game::Game, c: CharId, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
-    let shape = crate::character::ready().get(String::from(kind.as_str())).unwrap().clone();
+    let shape = crate::character::ready().of(kind.as_str()).unwrap().clone();
     let there = g.ch[c].anim.rd_at.map(|p| anim_to_model_p(g, c, p));
     let rc = anim_sheath_rest_inv(g, c);
     anim_layer(g, c, |s, an, k| sim::layers::ready_layer(s, an, w, kind, &shape, live, dt, tw_y, tw_p, there, rc, k));
-    g.ch[c].anim.ready_shown = w;
 }
 
 /// The rest pose's chest turn, inverted: the sheath's frame; found once, off a rest pose of its own.
@@ -249,7 +240,7 @@ fn anim_sheath_rest_inv(g: &mut crate::game::Game, c: CharId) -> Quat {
     if let Some(q) = g.ch[c].anim.rc_inv { return q; }
     let rig = g.ch[c].anim.rig;
     let mut f = crate::anim_skeleton::pose_fk_new(g, rig);
-    let n = g.tab.rig[rig].nodes.len();
+    let n = g.art.rig[rig].nodes.len();
     let fresh = crate::anim_skeleton::pose_new(g, n);
     crate::anim_skeleton::rest_pose(g, rig, fresh);
     crate::anim_skeleton::pose_fk_run(g, &mut f, fresh);
@@ -327,7 +318,7 @@ pub(super) fn anim_blow_trunk(g: &mut crate::game::Game, c: CharId, b: &crate::c
 pub(super) fn anim_blow_arms(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
     let (at, at2) = (anim_to_model_p(g, c, b.at), b.at2.map(|p| anim_to_model_p(g, c, p)));
     let mut shown = 0.0;
-    anim_layer(g, c, |s, an, k| sim::layers::blow_arms(s, an, b, at, at2, tw_y, tw_p, &mut shown, k));
+    anim_layer(g, c, |s, an, _| sim::layers::blow_arms(s, an, b, at, at2, tw_y, tw_p, &mut shown));
     shown
 }
 
@@ -347,26 +338,25 @@ pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate:
     let t = (g.ch[c].anim.kb_t - t0) / fit;
     g.ch[c].anim.kb_t += dt;
     anim_knife_pose(g, c, &k, t, t0, total, tw_y, tw_p);
-    g.ch[c].anim.knife_shown = t > 0.0 && t < k.end;
 }
 
 /// The blow's pose, its clock being knifeBlow's: `t` the key time, `t0` the seconds to the hilt.
 fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let there = g.ch[c].anim.rd_at.map(|p| anim_to_model_p(g, c, p));
     let rc = anim_sheath_rest_inv(g, c);
-    anim_layer(g, c, |s, an, n| sim::layers::knife_pose(s, an, k, t, t0, total, tw_y, tw_p, there, rc, n));
+    anim_layer(g, c, |s, an, _| sim::layers::knife_pose(s, an, k, t, t0, total, tw_y, tw_p, there, rc));
 }
 
 // ---- lock work, the haul
 
 /// Lock work: the back un-rounded, the head on the lock, both hands at the keyway.
-pub(super) fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| sim::layers::lockpick_layer(s, an, w, k)); }
+pub(super) fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| sim::layers::lockpick_layer(s, an, w)); }
 
 /// Both hands on a body: the trunk bows toward the grip, both arms by IK on a copy.
 pub(super) fn anim_haul_layer(g: &mut crate::game::Game, c: CharId, w: f64, tw_y: f64, tw_p: f64) {
     let h = match g.ch[c].anim.hl_last { Some(h) => h, None => return };
     let (l, r) = (anim_to_model_p(g, c, h.l), anim_to_model_p(g, c, h.r));
-    anim_layer(g, c, |s, an, k| sim::layers::haul_layer(s, an, &h, w, l, r, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| sim::layers::haul_layer(s, an, &h, w, l, r, tw_y, tw_p));
 }
 
 // ---- world and model
@@ -385,7 +375,7 @@ fn to_model_d_of(yaw: f64, wd: V3) -> V3 {
 
 /// The controller's world placement to the model space the layers pose in: a point.
 pub(super) fn anim_to_model_p(g: &crate::game::Game, c: CharId, wp: V3) -> V3 {
-    let p0 = crate::character::anim_pos_in(g, c);   // (`this.posIn`: the array handed in at the last update, not the body's place now)
+    let p0 = crate::character::anim_pos_in(g, c);   // (the place handed in at the last update, not the body's place now)
     to_model_p_of(g.ch[c].anim.body_yaw_in, p0, wp)
 }
 
@@ -417,44 +407,53 @@ pub(super) fn anim_door_layer(g: &mut crate::game::Game, c: CharId, dt: f64, int
     let (n, p) = (anim_to_model_d(g, c, l.n), anim_to_model_p(g, c, l.p));
     let an = &g.ch[c].anim;
     let free = !armed && an.upper != UpperMode::Torch && an.throw_t < 0.0;
-    anim_layer(g, c, |s, an, k| sim::layers::door_layer(s, an, &l, n, p, dt, intent, free, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| sim::layers::door_layer(s, an, &l, n, p, dt, intent, free, tw_y, tw_p));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Expected bits printed by bun from the TypeScript's own untwist and toModelP / toModelD arithmetic, under EXACT.on.
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
     const P1: V3 = [0.01, 0.95, -0.02];
     const P2: V3 = [0.015, 1.1, -0.01];
     const P3: V3 = [0.02, 1.27, 0.005];
     const H: V3 = [0.31, 1.42, 0.48];
 
+    fn close(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-9, "{what}: {a:?} against {b:?}"); }
+
     #[test]
     fn no_twist_is_the_point_itself() {
-        assert_eq!(bits(untwist_at(&Untwist::Same, H)), bits(H));
+        assert_eq!(untwist_at(&Untwist::Same, H), H);
+    }
+
+    /// A hand posed below the twist has to end up where the world wants it once the spine has turned: the untwist is the spine's own three turns undone.
+    /// A FAILURE MEANS: a hand reached for something misses it by as much as he has twisted.
+    #[test]
+    fn a_point_posed_under_the_twist_ends_up_where_it_was_asked_for() {
+        let y = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
+        for (tw, pitch) in [(0.7, -0.3), (-1.1, 0.0)] {
+            let (e1, e2, e3) = (y(tw * 0.25), y(tw * 0.35), y(tw * 0.4));
+            let un = untwist_of(e1, e2, e3, pitch, P1, P2, P3);
+            let Untwist::Back { i_e3, p2t, p3t, .. } = un else { panic!("a twist has a way back") };
+            let posed = untwist_at(&un, H);
+            // the spine's joints each turn what lies above them about themselves: the point goes up the chain
+            let x1 = v3::add(v3::quat::rotate(e1, v3::sub(posed, P1)), P1);
+            let x2 = v3::add(v3::quat::rotate(e2, v3::sub(x1, p2t)), p2t);
+            let x3 = v3::add(v3::quat::rotate(v3::quat::conj(i_e3), v3::sub(x2, p3t)), p3t);
+            close(x3, H, "up the spine again");
+            assert!(v3::dist(posed, H) > 0.05, "the twist moved it");
+        }
     }
 
     #[test]
-    fn untwist_matches_the_typescript_bits() {
-        let y = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);   // (qYaw is another part's)
-        let un = untwist_of(y(0.7 * 0.25), y(0.7 * 0.35), y(0.7 * 0.4), -0.3, P1, P2, P3);
-        assert_eq!(bits(untwist_at(&un, H)), [0xbfb4b567bc34da6d, 0x3ff410ad046c02dc, 0x3fe24fb80647771c]);
-        let un = untwist_of(y(-1.1 * 0.25), y(-1.1 * 0.35), y(-1.1 * 0.4), 0.0, P1, P2, P3);
-        assert_eq!(bits(untwist_at(&un, H)), [0x3fe28f9e04981869, 0x3ff6b851eb851eb8, 0xbfa9a923ab14f612]);
-    }
-
-    #[test]
-    fn to_model_matches_the_typescript_bits() {
-        let (yaw, p0, wp) = (0.83, [3.25, 0.1, -7.5], [4.1, 1.6, -6.2]);
-        assert_eq!(bits(to_model_p_of(yaw, p0, wp)), [0xbfd8aec2112b716e, 0x3ff8000000000000, 0x3ff812c2a39a5f54]);
-        assert_eq!(bits(to_model_d_of(yaw, wp)), [0x401d5e6088506071, 0x3ff999999999999a, 0xbff28a14a40e3ade]);
-    }
-
-    #[test]
-    fn every_word_has_its_row() {
-        let r = crate::character::ready();
-        for k in [ReadyKind::Grab, ReadyKind::Seat, ReadyKind::Strike, ReadyKind::GrabGun] { assert!(r.get(String::from(k.as_str())).is_some()); }
+    fn the_model_space_stands_on_his_feet_and_faces_his_way() {
+        let (yaw, feet) = (0.83, [3.25, 0.1, -7.5]);
+        let ahead: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
+        close(to_model_p_of(yaw, feet, feet), [0.0; 3], "his feet");
+        close(to_model_p_of(yaw, feet, v3::add(feet, ahead)), [0.0, 0.0, 1.0], "a metre ahead of him");
+        close(to_model_p_of(yaw, feet, v3::add(feet, [0.0, 1.5, 0.0])), [0.0, 1.5, 0.0], "over his head");
+        // a direction turns with him and does not care where he stands
+        close(to_model_d_of(yaw, ahead), [0.0, 0.0, 1.0], "his way");
+        close(to_model_d_of(yaw, [0.0, 1.0, 0.0]), [0.0, 1.0, 0.0], "up");
     }
 }

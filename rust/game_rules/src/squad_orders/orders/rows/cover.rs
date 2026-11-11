@@ -22,10 +22,10 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
 }
 /// 'cover'.issue
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let t_at = rows::at(t);
+    let t_at = t.at();
     let watch: V3 = [t_at[0], 1.1, t_at[2]];
     for &gd in men {
-        let p = g.ch[g.gd[gd].ch].pos;
+        let p = g.pos_of(gd);
         let yaw = v3::yaw_to(p, watch);
         let (place, door) = match t {
             OrderTarget::Door(x) => (door_words(g, x.door), Some(x.door)),
@@ -35,7 +35,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let a = SquadOrdersAssignA {
             order: String::from(ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(yaw), watch: Some(watch), door,
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: words.clone(), there: words,
+            going: words.clone().into(), there: words.into(),
             ..Default::default()
         };
         squad_orders_assign(g, gd, &a);

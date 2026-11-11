@@ -2,7 +2,7 @@
 //! of); where the file reads whole, the rules a file can be held to by itself: ids that are one thing's, names that point at something, numbers in their range, lists that go together.
 //!
 //! It judges the FILE. What the built floor says (a mark on free floor, a way on foot, a light in a wall) is asked of the game: `levels`, and tools/qa/level-lint.ts.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Plan};
+use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
 use crate::level::{does_word, stuff_word, Said};
@@ -182,7 +182,7 @@ impl<'a> Rules<'a> {
         match (o.material, &o.albedo) {
             (Some(_), Some(_)) | (None, None) => self.say(w, "says one of material and albedo"),
             (Some(m), None) => {
-                let has = |m: &str| self.f.materials.get(String::from(m)).is_some();
+                let has = |m: &str| self.f.materials.of(m).is_some();
                 if !(has(m) || or && m.split('|').any(has)) { self.say(format!("{w}.material"), format!("the file has no material '{m}'")); }
             }
             (None, Some(a)) => if !light(a) { self.say(format!("{w}.albedo"), "0 or more"); }
@@ -236,7 +236,6 @@ impl<'a> Rules<'a> {
         self.finish(w, b.rough);
         self.words(w, said.stuff, said.does);
         if b.emissive.is_some_and(|e| !light(&e)) { self.say(format!("{w}.emissive"), "0 or more"); }
-        self.word(&format!("{w}.name"), &b.name);
         self.word(&format!("{w}.group"), &b.group);
         self.marks(w, &b.markings, &b.h, b.rot.is_some());
         self.round(w, b);
@@ -419,6 +418,7 @@ impl<'a> Rules<'a> {
         self.door("mission.objectives[reach].door", &m.reach.door);
         if !whole(m.drive.rack_index) || m.drive.rack_index < 0.0 { self.say("mission.objectives[drive].rackIndex", "a whole number, 0 or more"); }
         if m.drive.half_w < 0.0 { self.say("mission.objectives[drive].halfW", "0 or more"); }
+        for (w, name) in [("reach].name", &m.reach.name), ("drive].name", &m.drive.name), ("drive].holder", &m.drive.holder), ("exfil].name", &m.exfil.name)] { self.word(&format!("mission.objectives[{w}"), name); }
         self.door("mission.objectives[exfil].door", &m.exfil.door);
         if m.exfil.out.is_some_and(|o| !unit2(o)) { self.say("mission.objectives[exfil].out", "a unit vector, dx dz"); }
         self.a_box("breaker.panel", &f.breaker.panel);
@@ -637,8 +637,8 @@ impl<'a> Rules<'a> {
             self.text(format!("{at}.line"), &t.line);
             self.lesson_test(&format!("{at}.done"), &t.done, s);
             if !ids.insert(&t.id) { self.say(&at, "the id is another step's already"); }
-            for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line), ("pageLine", &t.page_line),
-                ("flatLine", &t.flat_line), ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }
+            for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line),
+                ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }
             if t.settle.is_some_and(|s| s <= 0.0 || s > 10.0) { self.say(format!("{at}.settle"), "seconds, over 0 and at most 10"); }
             if t.hold.is_some_and(|s| s < 0.0) { self.say(format!("{at}.hold"), "seconds, 0 or more"); }
             if t.eye.as_ref().and_then(|e| e.fov).is_some_and(|x| x <= 0.0 || x > 360.0) { self.say(format!("{at}.eye.fov"), "degrees, over 0 and up to 360"); }

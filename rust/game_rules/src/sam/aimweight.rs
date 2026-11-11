@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
     let pl = g.player;
-    g.puppet.is_none() && !g.pl[pl].down
+    !crate::condition::down(g, g.pl[pl].ch)
 }
 
 /// Does his aim have weight right now.
@@ -20,7 +20,7 @@ pub fn aim_weighs(g: &mut Game) -> bool {
 pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
-        Some(gun) => m::pow(crate::weapons::handling_of(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()), m::max(0.0, g.k.aimweight.heft)),
+        Some(gun) => m::pow(crate::weapons::handling_of(g.weapon(g.fa[gun].def)), m::max(0.0, g.k.aimweight.heft)),
         None => g.k.aimweight.bare,
     };
     m::max(0.5, g.k.aimweight.rate * scale)
@@ -77,7 +77,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     }
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let ap = g.aim_point;
+    let ap = g.sets[g.seat].aim_point;
     let pos = g.ch[c].pos;
     let dx = ap[0] - pos[0];
     let dz = ap[2] - pos[2];
@@ -89,7 +89,6 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
         w.y = ap[1];
     }
     g.pl[pl].aimw.live = true;
-    g.stats.aimweight.steps += 1;
     let mut err = 0.0;
     if d > 0.25 && dt > 0.0 {
         let y0 = g.ch[c].aim_yaw;
@@ -118,7 +117,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
 }
 
 /// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.
-pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
+pub(super) fn aim_weigh_shot(g: &Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
     if !w.live || w.on {
@@ -130,7 +129,6 @@ pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let dz = tgt[2] - pos[2];
     let cs = m::cos(w.err);
     let sn = m::sin(w.err);
-    g.stats.aimweight.off_shots += 1;
     [pos[0] + dx * cs - dz * sn, tgt[1], pos[2] + dz * cs + dx * sn]
 }
 
@@ -189,25 +187,36 @@ pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
 mod tests {
     use super::swing;
 
-    /// The TypeScript's own bits (bun, EXACT.on, AIMWEIGHT.smooth 0.05): vel, err, top, dt in; vel, left out.
-    const CASES: [[u64; 6]; 7] = [
-        [0x0000000000000000, 0x4004000000000000, 0x4026000000000000, 0x3f91111111111111, 0x401fb53fc5789426, 0x400359ea72f45940],
-        [0x4008000000000000, 0xbff3333333333333, 0x402199999999999a, 0x3f81111111111111, 0xc005ef201dfeb7a1, 0xbff32c68826334ef],
-        [0xc01c000000000000, 0x3fd999999999999a, 0x402b800000000000, 0x3f7c71c71c71c71c, 0xbfdda013d8220f83, 0x3fdb225356d4b942],
-        [0x0000000000000000, 0x3f40624dd2f1a9fc, 0x4026000000000000, 0x3f91111111111111, 0x0000000000000000, 0x0000000000000000],
-        [0x0000000000000000, 0x4008000000000000, 0x4026000000000000, 0x3fe0000000000000, 0x0000000000000000, 0x0000000000000000],
-        [0x0000000000000000, 0x0000000000000000, 0x4026000000000000, 0x3f91111111111111, 0x0000000000000000, 0x0000000000000000],
-        [0x4034000000000000, 0xc008cccccccccccd, 0x3fe0000000000000, 0x3fa1111111111111, 0x3fe8d9869fa8879b, 0xc00a835ff8b0d050],
-    ];
+
+    const FRAME: f64 = 1.0 / 60.0;
+
+    /// A failure means the aim feels different: a gun that overshoots, never lands, swings one way faster than the other, or turns at another rate on another machine's frame rate.
+    #[test]
+    fn a_swing_closes_the_gap_and_lands_dead_on_it() {
+        let (mut vel, top) = (0.0, 11.0);
+        let left = swing(0.05, &mut vel, 2.5, top, FRAME);
+        assert!(left > 0.0 && left < 2.5 && vel > 0.0, "the first frame starts it: {left}, {vel}");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 3.0, top, 0.5), vel), (0.0, 0.0), "a long frame gets there and stops");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 5e-4, top, FRAME), vel), (0.0, 0.0), "a sliver left, moving slowly, is there");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 0.0, top, FRAME), vel), (0.0, 0.0), "no gap: nothing moves");
+    }
 
     #[test]
-    fn swing_matches_the_typescript_bits() {
-        for c in CASES {
-            let f = f64::from_bits;
-            let mut vel = f(c[0]);
-            let left = swing(0.05, &mut vel, f(c[1]), f(c[2]), f(c[3]));
-            assert_eq!(vel.to_bits(), c[4], "vel of {:x?}", c);
-            assert_eq!(left.to_bits(), c[5], "left of {:x?}", c);
-        }
+    fn a_swing_is_the_same_either_way_and_at_any_frame_rate_and_held_to_its_top_speed() {
+        let (mut a, mut b) = (0.0, 0.0);
+        let (l, r) = (swing(0.05, &mut a, 2.5, 11.0, FRAME), swing(0.05, &mut b, -2.5, 11.0, FRAME));
+        assert!((l + r).abs() < 1e-12 && (a + b).abs() < 1e-12, "{l} {r} {a} {b}");
+        let mut once = 0.0;
+        let one = swing(0.05, &mut once, 2.5, 11.0, FRAME);
+        let mut twice = 0.0;
+        let half = swing(0.05, &mut twice, 2.5, 11.0, FRAME / 2.0);
+        let two = swing(0.05, &mut twice, half, 11.0, FRAME / 2.0);
+        assert!((one - two).abs() < 1e-9 && (once - twice).abs() < 1e-9, "{one} {two}");
+        let after = |top: f64| { let (mut vel, mut left) = (0.0, 2.5); for _ in 0..15 { left = swing(0.05, &mut vel, left, top, FRAME); } left };
+        assert!(after(1.0) > after(11.0) + 0.5, "{} {}", after(1.0), after(11.0));
+        assert!(2.5 - after(1.0) < 0.3, "a quarter of a second at 1 rad/s covers about a quarter radian: {}", after(1.0));
     }
 }

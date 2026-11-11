@@ -21,7 +21,7 @@ pub fn fill(g: &Game, out: &mut Vec<Rim>) {
     let tone = |s: game::ids::SeatId| if g.seats.iter().position(|x| *x == s).unwrap_or(0) % 2 == 0 { 0 } else { 3 };
     for s in core::iter::once(shown).chain(g.seats.iter().copied().filter(|s| *s != shown)) {
         let p = &g.pl[game::cmd::seat_man(g, s)];
-        if s == shown || !p.down { put(p.ch, tone(s)); }
+        if s == shown || !g.cond[p.ch].down { put(p.ch, tone(s)); }
     }
     for gd in game::seats::team_men(g, &game::seats::seat(g, shown)) {
         let m = &g.gd[gd];

@@ -1,213 +1,166 @@
-//! WHAT FALLS, AND WHAT IT LEAVES (src/sim/fallshome.ts; the rules that call it are src/game/shards.ts and src/game/debris.ts) — the landings the
-//! simulation has scheduled for things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves there), and the
-//! LITTER map: square metres of broken glass lying in each half-metre cell of the floor, which makes a footfall louder and is ground down by it.
+//! WHAT FALLS, AND WHAT IT LEAVES: the landings scheduled for things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves there), and the
+//! litter: square metres of broken glass in each half-metre cell of the floor, which makes a footfall louder and is ground down by it. This is the gameplay half of what breaks: the plates,
+//! the chunks and the spray a player sees read none of it.
 //!
-//! The landings wait in LISTS, one for each kind of thing that falls (L_GLASS: fragments of a pane · L_PIECES: the pieces a thing that breaks throws), each
-//! with its own count and its own memory of when the floor was last told, so that one kind's rule (its cap, its gap, its going inert) never moves another's.
-//!
-//! This is the GAMEPLAY half of what breaks. The plates, the chunks and the spray a player sees are dressing: they read none of this and write none of it.
-//!
-//! STATEMENT FOR STATEMENT with the TypeScript in fallshome.ts (tools/qa/falls-ident.ts holds the two together, column for column). No length and no
-//! angle is worked out here, so the row answers under either maths.
-use crate::state::state;
+//! IT KEEPS NOTHING HERE. The state is `Falls`, on the game, and every call is handed it. A landing goes in by `schedule` and comes out by `due`, in the order of its list, which is play.
+pub use game_types::falls::types::*;
 use crate::world::js_min;
-use core::mem::size_of;
+use alloc::{vec, vec::Vec};
 use prim::floor;
 
-/// the floor's cells: the world's floor rectangle (src/scene/world.ts WORLD: 40 m × 28 m from the origin) in cells of CELL metres
-pub const CELL: f64 = 0.5;
-pub const CELLS_X: usize = 80;
-pub const CELLS_Z: usize = 56;
-pub const NCELLS: usize = CELLS_X * CELLS_Z;
+/// the floor's cells, the world's floor rectangle
+const CELL: f64 = 0.5;
+const CELLS_X: usize = 80;
+const CELLS_Z: usize = 56;
+const CELLS: usize = CELLS_X * CELLS_Z;
 /// a cell holds no more glass than its own floor (m²)
-pub const CELL_MAX: f64 = 0.25;
-/// landings that can wait at once in one list (a rule's own cap — SHARDS.pendingMax — is under it; and a whole list coming due in one tick fits the
-/// scratch the host reads it from: MAXP × DUE doubles of lib.rs SCRATCH_LEN)
-pub const MAXP: usize = 96;
-/// the lists: fragments of glass · pieces thrown by a thing that breaks
-pub const L_GLASS: usize = 0;
-pub const NLIST: usize = 2;
+const CELL_MAX: f64 = 0.25;
+/// landings that can wait at once in one list (a rule's own cap is under it)
+pub const MAX_WAITING: usize = 96;
 
-// a landing's columns (fallshome.ts FP names them by the same numbers)
-pub const P_T: usize = 0;
-pub const P_X: usize = 1;
-pub const P_Y: usize = 2;
-pub const P_Z: usize = 3;
-/// the sound it lands with, by its place in fallshome.ts FALL_SOUNDS
-pub const P_NAME: usize = 4;
-pub const P_GAIN: usize = 5;
-pub const P_RATE: usize = 6;
-/// m² of glass it leaves
-pub const P_AMOUNT: usize = 7;
-pub const P_WHO: usize = 8;
-/// is the floor told of it: 0 no · 1 if it has a sound of its own (gain > 0) · 2 yes
-pub const P_EVENT: usize = 9;
-/// the hearing level it is told at (0: the rule's own, handed in when it lands)
-pub const P_LEVEL: usize = 10;
-/// the dust it raises where it lands (a puff's scale; 0 = none): the host's to let out, by its own caps
-pub const P_DUST: usize = 11;
-pub const NP: usize = 12;
-
-/// The falls' part of a game's block.
-#[repr(C)]
-pub struct Falls {
-    /// m² of glass in each cell, row by row (z × CELLS_X + x)
-    pub litter: [f64; NCELLS],
-    /// the landings waiting in each list, a column a number, in the order they were scheduled
-    pub p: [[[f64; MAXP]; NP]; NLIST],
-    /// how many wait in each list
-    pub n: [f64; NLIST],
-    /// glass has been laid since the map was last cleared (the TypeScript's `litter.size`)
-    pub any: f64,
-    /// the game time the floor was last told of a landing of each list (one a gap, floor-wide)
-    pub last_event_t: [f64; NLIST],
-    pub spare: f64,
+fn list_of(f: &mut Falls, kind: FallKind) -> &mut FallList {
+    match kind { FallKind::Glass => &mut f.glass, FallKind::Pieces => &mut f.pieces }
 }
-const _: () = assert!(size_of::<Falls>() == (NCELLS + NLIST * NP * MAXP + 2 * NLIST + 2) * 8);
-
-/// a landing that is due, as the host takes it back (lib.rs scratch, DUE doubles each): its sound, where, how loud and at what rate, whether the floor is
-/// told of it, at what level, and whose it was
-pub const DUE: usize = 10;
-const _: () = assert!(MAXP * DUE <= crate::SCRATCH_LEN);
-
-/// the cell (x, z) is in, or NCELLS where there is no floor of the world's under it
-#[inline]
-fn cell(x: f64, z: f64) -> usize {
+/// the cell (x, z) is in; none where the world has no floor under it
+fn cell(x: f64, z: f64) -> Option<usize> {
     let (ix, iz) = (floor(x / CELL), floor(z / CELL));
-    if ix >= 0.0 && ix < CELLS_X as f64 && iz >= 0.0 && iz < CELLS_Z as f64 {
-        iz as usize * CELLS_X + ix as usize
-    } else {
-        NCELLS
-    }
+    if ix >= 0.0 && ix < CELLS_X as f64 && iz >= 0.0 && iz < CELLS_Z as f64 { Some(iz as usize * CELLS_X + ix as usize) } else { None }
 }
 /// `amount` m² of glass laid at (x, z)
-pub fn deposit(f: &mut Falls, x: f64, z: f64, amount: f64) {
-    if amount <= 0.0 {
-        return;
-    }
-    let k = cell(x, z);
-    if k == NCELLS {
-        return;
-    }
-    f.litter[k] = js_min(CELL_MAX, f.litter[k] + amount);
-    f.any = 1.0;
+fn lay(litter: &mut Vec<f64>, x: f64, z: f64, amount: f64) {
+    if amount <= 0.0 { return; }
+    let Some(k) = cell(x, z) else { return };
+    if litter.is_empty() { *litter = vec![0.0; CELLS]; }
+    litter[k] = js_min(CELL_MAX, litter[k] + amount);
 }
-/// a landing put on list `l` — or, the list at the rule's cap, its glass laid now and its sound thickening the last landing of the list that has one.
-/// 1 = it waits.
-#[allow(clippy::too_many_arguments)]
-pub fn schedule(g: usize, l: usize, t: f64, x: f64, y: f64, z: f64, name: f64, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, dust: f64, cap: f64) -> u32 {
-    let f = &mut state(g).falls;
-    let n = f.n[l] as usize;
-    if f.n[l] >= cap || n >= MAXP {
-        deposit(f, x, z, amount);
-        if gain > 0.0 {
-            let mut i = n;
-            while i > 0 {
-                i -= 1;
-                if f.p[l][P_GAIN][i] > 0.0 {
-                    f.p[l][P_GAIN][i] = js_min(1.0, f.p[l][P_GAIN][i] + gain * 0.2);
-                    break;
-                }
-            }
+
+/// has any glass been laid since the floor was cleared
+pub fn any_glass(f: &Falls) -> bool { !f.litter.is_empty() }
+
+/// A landing put on its list; the list at `cap`, its glass is laid now, its sound thickens the last landing that has one, and the answer is false.
+pub fn schedule(f: &mut Falls, kind: FallKind, l: Landing, cap: f64) -> bool {
+    let Falls { glass, pieces, litter } = f;
+    let list = match kind { FallKind::Glass => glass, FallKind::Pieces => pieces };
+    let n = list.waiting.len();
+    if n as f64 >= cap || n >= MAX_WAITING {
+        lay(litter, l.pos[0], l.pos[2], l.amount);
+        if l.gain > 0.0 {
+            if let Some(last) = list.waiting.iter_mut().rev().find(|w| w.gain > 0.0) { last.gain = js_min(1.0, last.gain + l.gain * 0.2); }
         }
-        return 0;
+        return false;
     }
-    let row = [t, x, y, z, name, gain, rate, amount, who, event, level, dust];
-    for k in 0..NP {
-        f.p[l][k][n] = row[k];
-    }
-    f.n[l] += 1.0;
-    1
+    list.waiting.push(l);
+    true
 }
-/// every landing of list `l` whose time has come, in order — its glass laid, the floor told (one event a gap) — written to `out` for the host to play and
-/// to file. Returns how many.
-pub fn due(g: usize, l: usize, time: f64, level: f64, gap: f64, out: &mut [f64]) -> u32 {
-    let f = &mut state(g).falls;
-    let n = f.n[l] as usize;
-    let (mut w, mut made) = (0, 0);
-    for i in 0..n {
-        if f.p[l][P_T][i] > time {
-            if w != i {
-                for k in 0..NP {
-                    f.p[l][k][w] = f.p[l][k][i];
-                }
-            }
-            w += 1;
-            continue;
-        }
-        let (x, z, gain, ev) = (f.p[l][P_X][i], f.p[l][P_Z][i], f.p[l][P_GAIN][i], f.p[l][P_EVENT][i]);
-        deposit(f, x, z, f.p[l][P_AMOUNT][i]);
-        let mut heard = 0.0;
-        if (ev == 2.0 || (ev == 1.0 && gain > 0.0)) && !(time - f.last_event_t[l] < gap) {
-            f.last_event_t[l] = time;
-            heard = 1.0;
-        }
-        let o = made * DUE;
-        if o + DUE <= out.len() {
-            let lv = f.p[l][P_LEVEL][i];
-            out[o] = f.p[l][P_NAME][i];
-            out[o + 1] = x;
-            out[o + 2] = f.p[l][P_Y][i];
-            out[o + 3] = z;
-            out[o + 4] = gain;
-            out[o + 5] = f.p[l][P_RATE][i];
-            out[o + 6] = heard;
-            out[o + 7] = if lv != 0.0 { lv } else { level };
-            out[o + 8] = f.p[l][P_WHO][i];
-            out[o + 9] = f.p[l][P_DUST][i];
-        }
-        made += 1;
-    }
-    for i in w..n {
-        for k in 0..NP {
-            f.p[l][k][i] = 0.0;
-        }
-    }
-    f.n[l] = w as f64;
-    made as u32
+
+/// Every landing of its list whose time has come, in order: its glass laid, the floor told (one a `gap`, floor-wide), each said at the rule's own `level` unless it has one.
+pub fn due(f: &mut Falls, kind: FallKind, time: f64, level: f64, gap: f64) -> Vec<FallDue> {
+    let Falls { glass, pieces, litter } = f;
+    let list = match kind { FallKind::Glass => glass, FallKind::Pieces => pieces };
+    let mut out = Vec::new();
+    let mut last_told = list.last_told;
+    list.waiting.retain(|l| {
+        if l.t > time { return true; }
+        lay(litter, l.pos[0], l.pos[2], l.amount);
+        let tells = l.told == FallTold::Always || (l.told == FallTold::IfItSounds && l.gain > 0.0);
+        let heard = tells && !(time - last_told < gap);
+        if heard { last_told = time; }
+        out.push(FallDue { sound: l.sound, pos: l.pos, gain: l.gain, rate: l.rate, heard, level: if l.level != 0.0 { l.level } else { level }, who: l.who, dust: l.dust });
+        false
+    });
+    list.last_told = last_told;
+    out
 }
-/// A footfall at (x, z) of hearing level `level` — on glass it is louder and grinds the glass down. Returns the level to file; how much
-/// glass was underfoot (0‥1; 0 = no crunch) → `k`.
-#[allow(clippy::too_many_arguments)]
-pub fn step(g: usize, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64, k_out: &mut f64) -> f64 {
-    let f = &mut state(g).falls;
-    *k_out = 0.0;
-    let c = cell(x, z);
-    if c == NCELLS {
-        return level;
-    }
+
+/// A footfall at (x, z) of hearing level `level`: on glass it is louder and grinds the glass down.
+pub fn step(f: &mut Falls, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> FallStep {
+    let quiet = FallStep { level, k: 0.0 };
+    let (Some(c), false) = (cell(x, z), f.litter.is_empty()) else { return quiet };
     let a = f.litter[c];
-    if a == 0.0 || a != a {
-        return level;
-    }
+    if a == 0.0 || a != a { return quiet; }
     let k = js_min(1.0, a / crunch_full);
-    if k < 0.08 {
-        return level;
-    }
+    if k < 0.08 { return quiet; }
     f.litter[c] = a * grind;
-    *k_out = k;
-    level * (1.0 + gain * k) + add * k
+    FallStep { level: level * (1.0 + gain * k) + add * k, k }
 }
-/// nothing waits in list `l`; `all`: the floor's memory of the last landing of that list it was told of is forgotten too (`events`), and with the glass's
-/// list the glass that lies
-pub fn clear(g: usize, l: usize, all: bool, events: f64) {
-    let f = &mut state(g).falls;
-    f.p[l] = [[0.0; MAXP]; NP];
-    f.n[l] = 0.0;
-    if all {
-        f.last_event_t[l] = events;
-        if l == L_GLASS {
-            f.litter = [0.0; NCELLS];
-            f.any = 0.0;
-        }
-    }
+
+/// Nothing waits on its list.
+pub fn clear_waiting(f: &mut Falls, kind: FallKind) { list_of(f, kind).waiting.clear(); }
+
+/// Nothing waits on its list and its memory is new, and with the glass's list no glass lies.
+pub fn clear(f: &mut Falls, kind: FallKind) {
+    let list = list_of(f, kind);
+    list.waiting.clear();
+    list.last_told = FALL_NEVER;
+    if kind == FallKind::Glass { f.litter.clear(); }
 }
-/// may the floor be told of a landing of list `l` now (one a gap, floor-wide)? If so the telling is remembered.
-pub fn heard(g: usize, l: usize, time: f64, gap: f64) -> u32 {
-    let f = &mut state(g).falls;
-    if time - f.last_event_t[l] < gap {
-        return 0;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn landing(t: f64, sound: FallSound, gain: f64, amount: f64, told: FallTold) -> Landing {
+        Landing { t, pos: [2.0, 0.5, 3.0], sound, gain, rate: 1.5, amount, who: 7.0, told, level: 4.0, dust: 0.0 }
     }
-    f.last_event_t[l] = time;
-    1
+    fn lying(f: &Falls, x: f64, z: f64) -> f64 { cell(x, z).and_then(|k| f.litter.get(k).copied()).unwrap_or(0.0) }
+
+    #[test]
+    fn cell_is_the_floors_half_metre_grid() {
+        assert_eq!(cell(0.0, 0.0), Some(0));
+        assert_eq!(cell(0.49, 0.5), Some(80));
+        assert_eq!(cell(39.99, 27.99), Some(4479));
+        for (x, z) in [(40.0, 0.0), (0.0, 28.0), (-0.01, 0.0), (0.0, -0.01), (f64::NAN, 0.0)] { assert_eq!(cell(x, z), None); }
+    }
+
+    #[test]
+    fn a_landing_lays_its_glass_tells_the_floor_once_a_gap_and_is_gone() {
+        let mut f = Falls::blank();
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassShatter, 0.5, 0.1, FallTold::Always), 8.0));
+        assert!(schedule(&mut f, FallKind::Pieces, landing(1.0, FallSound::Empty, 0.0, 0.0, FallTold::Never), 8.0));
+        assert_eq!((f.glass.waiting.len(), f.pieces.waiting.len()), (1, 1));
+        assert!(due(&mut f, FallKind::Glass, 0.5, 1.0, 0.0).is_empty());
+        let d = due(&mut f, FallKind::Glass, 1.0, 9.0, 0.25);
+        assert_eq!(d.len(), 1);
+        assert_eq!((d[0].sound, d[0].pos, d[0].gain, d[0].rate, d[0].heard, d[0].level, d[0].who), (FallSound::GlassShatter, [2.0, 0.5, 3.0], 0.5, 1.5, true, 4.0, 7.0));
+        assert!(f.glass.waiting.is_empty() && any_glass(&f));
+        assert_eq!((lying(&f, 2.1, 3.1), lying(&f, -1.0, 3.1)), (0.1, 0.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.1, FallSound::GlassTinkle, 0.5, 0.0, FallTold::IfItSounds), 8.0));
+        assert!(!due(&mut f, FallKind::Glass, 1.1, 9.0, 0.25)[0].heard, "inside the gap");
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.3, FallSound::GlassTinkle, 0.0, 0.0, FallTold::IfItSounds), 8.0));
+        assert!(!due(&mut f, FallKind::Glass, 1.3, 9.0, 0.25)[0].heard, "no sound of its own");
+    }
+
+    #[test]
+    fn a_full_list_lays_the_glass_now_and_thickens_the_last_sound() {
+        let mut f = Falls::blank();
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassTinkle, 0.5, 0.0, FallTold::Always), 1.0));
+        assert!(!schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassTinkle, 0.5, 0.1, FallTold::Always), 1.0));
+        assert_eq!((f.glass.waiting.len(), f.glass.waiting[0].gain, lying(&f, 2.0, 3.0)), (1, 0.6, 0.1));
+    }
+
+    #[test]
+    fn a_footfall_on_glass_is_louder_and_grinds_it() {
+        let mut f = Falls::blank();
+        let bare = step(&mut f, 2.1, 3.1, 1.0, 0.1, 0.5, 2.0, 1.0);
+        assert_eq!((bare.level, bare.k), (1.0, 0.0));
+        lay(&mut f.litter, 2.1, 3.1, 0.1);
+        let s = step(&mut f, 2.1, 3.1, 1.0, 0.1, 0.5, 2.0, 1.0);
+        assert_eq!((s.level, s.k, lying(&f, 2.1, 3.1)), (4.0, 1.0, 0.05));
+        let s = step(&mut f, 0.1, 0.1, 1.0, 0.1, 0.5, 2.0, 1.0);
+        assert_eq!((s.level, s.k), (1.0, 0.0));
+    }
+
+    #[test]
+    fn clearing_reaches_as_far_as_it_says() {
+        let mut f = Falls::blank();
+        lay(&mut f.litter, 2.1, 3.1, 0.1);
+        f.glass.last_told = 1.0;
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::Empty, 0.0, 0.0, FallTold::Never), 8.0));
+        clear_waiting(&mut f, FallKind::Glass);
+        assert!(f.glass.waiting.is_empty() && any_glass(&f) && f.glass.last_told == 1.0, "the landings alone");
+        clear(&mut f, FallKind::Pieces);
+        assert!(any_glass(&f), "the pieces' list leaves the glass");
+        clear(&mut f, FallKind::Glass);
+        assert!(!any_glass(&f) && f.glass.last_told == FALL_NEVER);
+    }
 }

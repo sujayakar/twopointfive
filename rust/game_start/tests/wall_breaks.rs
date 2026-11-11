@@ -74,7 +74,7 @@ fn a_restart_puts_the_walls_back() {
         p.wall_blast([17.7, 0.3, z], None);
         p.run(0.1);
         assert_ne!(p.level_as_it_stands(), before, "seed {s}: the wreck changed nothing");
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.run(0.5);
         assert_eq!(p.level_as_it_stands(), before, "seed {s}: the restart left the wreck");
         assert_eq!(line(&mut p, z), [true; 6], "seed {s}: the wall is not a wall again");

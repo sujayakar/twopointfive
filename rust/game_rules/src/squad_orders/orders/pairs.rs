@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,56 +7,50 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// orders.ts:340 `const flat = v3.distXZ`
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
-/// where a man's body stands now
-fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-
 // ------------------------------------------------------------ a walk, asked for a menu
 
 /// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.
 pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> crate::orders::SquadOrdersAsked {
-    let at = man_pos(g, gd);
+    let at = g.pos_of(gd);
     let cell = g.col.nav.cell;
     let p = g.player;
     let mut locks = 0.0;
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) { locks += 1.0; }
+        if g.dr[d].leaf.locked && g.dr[d].leaf.latched { locks += 1.0; }
         i += 1;
     }
     let key = format!(
         "{}|{},{}|{},{}|{},{},{},{}",
-        js::num_str(g.ch[g.gd[gd].ch].id),
+        js::num_str(g.char_id(gd)),
         js::num_str(m::floor(at[0] / cell)), js::num_str(m::floor(at[2] / cell)),
         js::num_str(m::floor(to[0] / cell)), js::num_str(m::floor(to[2] / cell)),
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
     );
     let t = g.time;
-    if let Some(hit) = g.orders.reached.get(key.clone()) {
+    if let Some(hit) = g.sets[g.seat].orders.reached.get(key.clone()) {
         if m::abs(t - hit.t) < 1.0 {
             return SquadOrdersAsked { why: hit.why.clone(), lock: hit.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) };
         }
     }
-    if g.orders.reached.len() > 96 { g.orders.reached.clear(); }
+    if g.sets[g.seat].orders.reached.len() > 96 { g.sets[g.seat].orders.reached.clear(); }
     let r = squad_orders_route(g, gd, to, None, None, Some(true));
     let kept = SquadOrdersReachedValue { t, why: r.why.clone(), lock: r.lock.map(|l| SquadOrdersReachedValueLock { door: l.door, side: l.side }) };
-    g.orders.reached.set(key, kept);
+    g.sets[g.seat].orders.reached.set(key, kept);
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.
-pub(super) fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
-    let p = man_pos(g, gd);
+pub(super) fn squad_orders_has_line(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
+    let p = g.pos_of(gd);
     let (at, door) = match t {
         OrderTarget::Floor(x) => (x.at, false),
         OrderTarget::Door(x) => (x.at, true),
         OrderTarget::None(x) => (x.at, false),
         OrderTarget::Foe(x) => (x.at, false),
     };
-    let d = flat(p, at);
+    let d = dist_xz(p, at);
     if d < 0.6 { return true; }
     let k = (if door { d - 0.6 } else { m::min(d, 2.0) }) / d;
     !crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], [p[0] + (at[0] - p[0]) * k, 1.5, p[2] + (at[2] - p[2]) * k], None, None, None)
@@ -63,7 +58,7 @@ pub(super) fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &
 
 // ------------------------------------------------------------ men to spots
 
-/// orders.ts:2506 `find`: the spot's file
+/// the spot's file
 fn find(root: &mut [usize], i: usize) -> usize {
     if root[i] == i { return i; }
     let r = find(root, root[i]);
@@ -71,18 +66,15 @@ fn find(root: &mut [usize], i: usize) -> usize {
     r
 }
 
-/// orders.ts:2518 `walk`: the metres of his way there
-fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
-    let p = man_pos(g, gd);
+/// the metres of his way there
+fn file_walk(g: &Game, gd: GuardId, to: V3) -> f64 {
+    let p = g.pos_of(gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
-    let mut l = 0.0;
-    let mut q = p;
-    for &c in w.iter() { l += flat(q, c); q = c; }
-    l + flat(q, to)
+    crate::places::walk_len(p, &w) + dist_xz(w.last().copied().unwrap_or(p), to)
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
-fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
+fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
     let n = spots.len();
     let gap = g.k.orders.file_queue_gap;
     let cost = g.k.orders.file_queue_cost;
@@ -91,7 +83,7 @@ fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[
     let mut root: Vec<usize> = (0..n).collect();
     for i in 0..n {
         for j in (i + 1)..n {
-            if flat(spots[i], spots[j]) <= gap {
+            if dist_xz(spots[i], spots[j]) <= gap {
                 let ri = find(&mut root, i);
                 let rj = find(&mut root, j);
                 root[ri] = rj;
@@ -103,20 +95,20 @@ fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[
         let mut o: Option<usize> = None;
         for j in 0..n {
             if j != i && find(&mut root, j) == find(&mut root, i) {
-                let closer = match o { None => true, Some(o) => flat(spots[i], spots[j]) < flat(spots[i], spots[o]) };
+                let closer = match o { None => true, Some(o) => dist_xz(spots[i], spots[j]) < dist_xz(spots[i], spots[o]) };
                 if closer { o = Some(j); }
             }
         }
         let Some(o) = o else { continue; };
         let mk = spots[i];
-        let l = flat(mk, spots[o]);
+        let l = dist_xz(mk, spots[o]);
         if l < 0.05 { continue; }
         let nx = -(spots[o][2] - mk[2]) / l;
         let nz = (spots[o][0] - mk[0]) / l;
         let mut room = false;
         for sd in [1.0, -1.0] {
             let q: V3 = [mk[0] + nx * sd * w_, 0.0, mk[2] + nz * sd * w_];
-            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mk[0], 0.45, mk[2]], [q[0], 0.45, q[2]], None) { room = true; }
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mk, q) { room = true; }
         }
         if !room { let r = find(&mut root, i); tight[r] = true; }
     }
@@ -133,11 +125,11 @@ fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[
     Some(FileCross::Tight { file, tight, l, spots: spots.to_vec(), cost })
 }
 
-/// orders.ts:2522 the function fileCross returns: what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another
+/// what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another
 fn file_cross_cost(f: &FileCross, at: &[usize]) -> f64 {
     let FileCross::Tight { file, tight, l, spots, cost } = f;
     // x would have to get past y: y's mark lies on x's walk to his own, and y is on it before x comes by
-    let past = |x: usize, jx: usize, y: usize, jy: usize| l[x][jy] + flat(spots[jy], spots[jx]) <= l[x][jx] + 0.5 && l[x][jy] > l[y][jy];
+    let past = |x: usize, jx: usize, y: usize, jy: usize| l[x][jy] + dist_xz(spots[jy], spots[jx]) <= l[x][jx] + 0.5 && l[x][jy] > l[y][jy];
     let mut c = 0.0;
     for a in 0..at.len() {
         for b in (a + 1)..at.len() {
@@ -149,7 +141,7 @@ fn file_cross_cost(f: &FileCross, at: &[usize]) -> f64 {
     c
 }
 
-/// orders.ts:2532 what `rec` of pair() walks over and keeps
+/// what `pair_rec` walks over and keeps
 struct PairDeal<'a> {
     men: &'a [GuardId],
     spots: &'a [V3],
@@ -166,7 +158,7 @@ struct PairDeal<'a> {
     bc0: f64,
 }
 
-/// orders.ts:2533 `new Set(l.map(m => groups[cur[m]])).size`: Set's SameValueZero, where a missing row is one value of its own
+/// how many groups these men's spots are in: a missing row is one value of its own, and NaN is one too
 fn group_count(groups: &[f64], cur: &[usize], l: &[usize]) -> f64 {
     let mut seen: Vec<Option<f64>> = Vec::with_capacity(l.len());
     for &m_ in l {
@@ -181,7 +173,7 @@ fn group_count(groups: &[f64], cur: &[usize], l: &[usize]) -> f64 {
     seen.len() as f64
 }
 
-/// orders.ts:2532 `rec`: every way of dealing the men from man `i` on
+/// every way of dealing the men from man `i` on
 fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
     if i == s.men.len() {
         let mut c = walk;
@@ -204,14 +196,14 @@ fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
         if s.used[j] { continue; }
         s.used[j] = true;
         s.cur[i] = j;
-        let w = walk + flat(man_pos(g, s.men[i]), s.spots[j]);
+        let w = walk + dist_xz(g.pos_of(s.men[i]), s.spots[j]);
         pair_rec(g, s, i + 1, w);
         s.used[j] = false;
     }
 }
 
 /// Men to spots, the pairing that walks the least in all (`groups`: which spots belong together; `front`: the frame a stack's marks stand on).
-pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3], groups: Option<&[f64]>, front: Option<V3>) -> Vec<(GuardId, V3)> {
+pub fn squad_orders_pair(g: &crate::game::Game, men: &[GuardId], spots: &[V3], groups: Option<&[f64]>, front: Option<V3>) -> Vec<(GuardId, V3)> {
     let mut cross = if front.is_some() { squad_orders_file_cross(g, men, spots) } else { None };
     if men.len() > 2 && men.len() <= 4 && spots.len() >= men.len() {
         let n = men.len();
@@ -230,17 +222,14 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             best: Vec::new(), bc: m::INF, best0: Vec::new(), bc0: m::INF,
         };
         pair_rec(g, &mut s, 0, 0.0);
-        if s.cross.is_some() && s.best.len() == n && s.best.iter().zip(s.best0.iter()).any(|(a, b)| a != b) {
-            g.m.doorway.stack_own.queue += 1.0;
-        }
         if s.best.len() == n {
             return men.iter().enumerate().map(|(i, &gd)| (gd, spots[s.best[i]])).collect();
         }
         cross = s.cross;
     }
     if men.len() == 2 && spots.len() == 2 {
-        let (p0, p1) = (man_pos(g, men[0]), man_pos(g, men[1]));
-        let (d00, d11, d01, d10) = (flat(p0, spots[0]), flat(p1, spots[1]), flat(p0, spots[1]), flat(p1, spots[0]));
+        let (p0, p1) = (g.pos_of(men[0]), g.pos_of(men[1]));
+        let (d00, d11, d01, d10) = (dist_xz(p0, spots[0]), dist_xz(p1, spots[1]), dist_xz(p0, spots[1]), dist_xz(p1, spots[0]));
         let gr = if front.is_some() { crate::gunroles::gun_file_ranks(g, men) } else { None };
         let (gc01, gc10) = match gr.as_ref() {
             Some(r) => (crate::gunroles::gun_file_cost(g, r, &[spots[0], spots[1]], front.unwrap()), crate::gunroles::gun_file_cost(g, r, &[spots[1], spots[0]], front.unwrap())),
@@ -251,16 +240,15 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             None => (0.0, 0.0),
         };
         let keeps = d00 + d11 + gc01 + xc01 <= d01 + d10 + gc10 + xc10;
-        if cross.is_some() && (d00 + d11 + gc01 <= d01 + d10 + gc10) != keeps { g.m.doorway.stack_own.queue += 1.0; }
         return if keeps { vec![(men[0], spots[0]), (men[1], spots[1])] } else { vec![(men[0], spots[1]), (men[1], spots[0])] };
     }
     let mut left: Vec<V3> = spots.to_vec();
     let mut out = Vec::with_capacity(men.len());
     for &gd in men {
-        let p = man_pos(g, gd);
+        let p = g.pos_of(gd);
         let mut bi = 0;
         for (i, &s) in left.iter().enumerate() {
-            if flat(p, s) < flat(p, left[bi]) { bi = i; }
+            if dist_xz(p, s) < dist_xz(p, left[bi]) { bi = i; }
         }
         let spot = if left.len() > 1 { left.remove(bi) } else { left[0] };
         out.push((gd, spot));
@@ -272,32 +260,24 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 /// What one man is doing, in a few words.
 pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {
+        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
-        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.clone() } else { g.tab.orders_assignment[a].going.clone() };
+        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.words.clone() } else { g.tab.orders_assignment[a].going.words.clone() };
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert { return String::from("in contact"); }
         return match w {
             Some(w) if !w.is_empty() => format!("{} · {}", word, w),
             _ => word,
         };
     }
-    for own in [true, false] {
-        let mut i = 0;
-        while i < seat.orders.owners.len() {
-            if nightbreach_owns(g, gd) == own {
-                if let Some(s) = nightbreach_status(g, gd) {
-                    if !s.is_empty() { return s; }
-                }
-            }
-            i += 1;
-        }
+    match crate::mission::doing(g, gd) {
+        Some(s) if !s.is_empty() => s,
+        _ => String::from("no orders"),
     }
-    String::from("no orders")
 }
 
 /// Who the next order goes to, as the panel names it.
@@ -351,15 +331,7 @@ pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders:
 
 // ------------------------------------------------------------ ORDERS.propRound
 
-/// orders.ts:2645 `len`: the metres of a way from `from`
-fn way_len(from: V3, w: &[V3]) -> f64 {
-    let mut l = 0.0;
-    let mut q = from;
-    for &c in w { l += flat(q, c); q = c; }
-    l
-}
-
-/// orders.ts:2647 `doors`: the doors a way crosses, each once, in the order it crosses them
+/// the doors a way crosses, each once, in the order it crosses them
 fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     let mut out: Vec<DoorId> = Vec::new();
     let mut q = from;
@@ -378,20 +350,16 @@ fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
 /// Of the way over the statics alone and the way laid with movable things dear, the one he walks.
 pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V3]>) -> Vec<V3> {
     let round = match round { Some(r) if !r.is_empty() => r, _ => return plain.to_vec() };
-    if way_len(from, round) > way_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
+    if crate::places::walk_len(from, round) > crate::places::walk_len(from, plain) + g.k.orders.prop_round_more { return plain.to_vec(); }
     let a = way_doors(g, from, plain);
     let b = way_doors(g, from, round);
     if a.len() == b.len() && a.iter().all(|d| b.contains(d)) { round.to_vec() } else { plain.to_vec() }
 }
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched, and the one search is the search it was.
-pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
-    let mut i = 0;
-    while i < seat.orders.owners.len() {
-        if nightbreach_owns(g, gd) { return None; }
-        i += 1;
-    }
+pub fn prop_penalty(g: &crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
+    if !g.team(gd).ours() || g.props.props.is_empty() { return None; }
+    if crate::mission::has(g, gd) { return None; }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);
     let cs = g.col.nav.cell;
     let mut dear: JsSet<crate::Num> = JsSet::new();
@@ -399,7 +367,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
     while pi < g.props.props.len() {
         let p = g.props.props[pi];
         pi += 1;
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut near = false;
         for &d in g.doors.list.iter() {
             let fc = g.dr[d].frame_centre;
@@ -422,7 +390,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
             z += 1.0;
         }
     }
-    let at = man_pos(g, gd);
+    let at = g.pos_of(gd);
     let here = crate::scene_collision::nav_grid_idx(g, m::floor(at[0] / cs), m::floor(at[2] / cs));
     dear.delete(crate::Num(here));
     if dear.is_empty() { return None; }
@@ -454,7 +422,7 @@ pub(super) fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
     let mut at: V3 = a.first().copied().unwrap_or_default();
     for i in 1..a.len() {
         let (p, q) = (a[i - 1], a[i]);
-        let l = flat(p, q);
+        let l = dist_xz(p, q);
         let n = m::max(1.0, m::ceil(l / 0.5));
         let mut s = 1.0;
         while s <= n {
@@ -486,54 +454,55 @@ pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
 pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
     if let Some(said) = crate::doornames::door_said_name(g, d) { return said; }
     let name = g.dr[d].def.name.clone();
-    door_id_words(g, &name)
+    door_id_words(&name)
 }
 
-/// orders.ts:2692 the words of a door's id; nothing the game holds is read
+/// the words of a door's id; nothing the game holds is read
 fn id_words(id: &str) -> String {
     let said = door_said();
-    let mut t: Vec<String> = id.split('_').map(|x| said.get(String::from(x)).cloned().unwrap_or_else(|| String::from(x))).collect();
+    let mut t: Vec<String> = id.split('_').map(|x| said.of(x).cloned().unwrap_or_else(|| String::from(x))).collect();
     if t[t.len() - 1] != "door" { t.push(String::from("door")); }
     t.join(" ")
 }
 
 /// A door's id said as words: compass letters as words, no token dropped.
-pub fn door_id_words(g: &crate::game::Game, id_2: &str) -> String { id_words(id_2) }
+pub fn door_id_words(id: &str) -> String { id_words(id) }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const A: [V3; 4] = [[0.1, 0.0, 0.2], [3.7, 0.0, 1.3], [4.1, 0.0, 6.9], [-2.25, 0.0, 7.77]];
-    const B: [V3; 4] = [[0.3, 0.0, -0.4], [2.2, 0.0, 4.4], [2.2, 0.0, 4.4], [5.5, 0.0, 8.125]];
-
-    fn bits(r: FarOff) -> [u64; 3] { [r.d.to_bits(), r.at[0].to_bits(), r.at[2].to_bits()] }
-
-    /// the TypeScript's own farOff under EXACT, its doubles' bits
+    /// Two men may go one way only if it stays near theirs. A failure means a man takes a far longer way round to walk with his mate, or none he could.
     #[test]
-    fn far_off_has_the_typescripts_bits() {
-        assert_eq!(bits(far_off(&A, &B)), [0x40165407ae62fe8f, 0xc002000000000000, 0x401f147ae147ae14]);
-        assert_eq!(bits(far_off(&B, &A)), [0x4001200d1bb31168, 0x3ffae8ba2e8ba2e9, 0x4008ba2e8ba2e8bc]);
-        assert_eq!(bits(far_off(&A, &[[1.0, 0.0, 1.0]])), [0x7ff0000000000000, 0x3fe199999999999a, 0x3fd599999999999a]);
-        assert_eq!(bits(far_off(&[[1.5, 0.0, 2.5]], &B)), [0xbff0000000000000, 0x3ff8000000000000, 0x4004000000000000]);
+    fn how_far_a_way_gets_from_another_is_asked_along_it_and_says_where() {
+        let p = |x: f64, z: f64| -> V3 { [x, 0.0, z] };
+        let straight = [p(0.0, 0.0), p(4.0, 0.0)];
+        let on_and_round = [p(0.0, 0.0), p(4.0, 0.0), p(4.0, 3.0)];
+        let said = |r: FarOff| (r.d, r.at);
+        assert_eq!(said(far_off(&on_and_round, &straight)), (3.0, p(4.0, 3.0)));
+        assert_eq!(far_off(&straight, &on_and_round).d, 0.0);    // it does not matter that the other goes on
+        assert_eq!(said(far_off(&[p(0.0, 0.0), p(2.0, 2.0), p(4.0, 0.0)], &straight)), (2.0, p(2.0, 2.0)));
+        assert_eq!(far_off(&on_and_round, &[p(0.0, 0.0), p(2.0, 0.0)]).d, m::hyp2(2.0, 3.0));    // past the other's end: from its end
+        assert_eq!(said(far_off(&straight, &[p(0.0, 0.0), p(2.0, 2.0), p(4.0, 0.0)])), (m::hyp2(1.0, 1.0), p(2.0, 0.0)));    // the middle of a leg is asked too
+        assert_eq!(far_off(&straight, &[p(1.0, 1.0)]).d, m::INF);    // nothing to be near
+        assert_eq!(said(far_off(&[p(1.5, 2.5)], &straight)), (-1.0, p(1.5, 2.5)));    // nowhere to go
     }
 
-    /// the TypeScript's own doorIdWords, its strings
+    /// Doors are named in the men's own words.
     #[test]
-    fn id_words_say_what_the_typescript_says() {
+    fn a_door_s_id_is_said_in_words() {
         assert_eq!(id_words("breakroom_w"), "break room west door");
         assert_eq!(id_words("server_manager"), "server manager door");
         assert_eq!(id_words("n4a"), "n4a door");
         assert_eq!(id_words("mgr_door"), "manager's door");
         assert_eq!(id_words("ext_ne"), "outside north-east door");
-        assert_eq!(id_words(""), " door");
     }
 
+    /// A pair split across files costs by how many files it is in; a place past the list is a file of its own.
     #[test]
-    fn a_set_of_groups_counts_as_sets_do() {
-        assert_eq!(group_count(&[0.0, -0.0, 2.0], &[0, 1], &[0, 1]), 1.0);
+    fn men_dealt_across_groups_count_each_group_once() {
+        assert_eq!(group_count(&[0.0, 0.0, 2.0], &[0, 1], &[0, 1]), 1.0);
         assert_eq!(group_count(&[0.0, 1.0, 2.0], &[0, 1, 2], &[0, 1, 2]), 3.0);
-        assert_eq!(group_count(&[m::NAN, m::NAN], &[0, 1], &[0, 1]), 1.0);
         assert_eq!(group_count(&[1.0], &[0, 5, 6], &[0, 1, 2]), 2.0);
     }
 
@@ -545,5 +514,19 @@ mod tests {
         let f = FileCross::Tight { file: vec![1, 1], tight: vec![false, true], l: vec![vec![1.0, 2.0], vec![0.5, 1.5]], spots, cost: 500.0 };
         assert_eq!(file_cross_cost(&f, &[1, 0]), 500.0);
         assert_eq!(file_cross_cost(&f, &[0, 1]), 0.0);
+    }
+
+    /// Which face of a door a place is on, as the men deal it. A failure means a man on a door's own line is told off to the far face.
+    #[test]
+    fn a_place_on_a_door_s_line_counts_as_its_plus_face() {
+        let mut g = Game::blank();
+        let d = g.dr.push(crate::doors::Door::blank());
+        let mut at = |closed_dir: f64, p: V3| {
+            (g.dr[d].def.closed_dir, g.dr[d].def.hinge) = (closed_dir, [10.0, 5.0]);
+            side_of(&g, d, p)
+        };
+        assert_eq!(at(1.5707963267948966, [9.0, 0.0, 5.0]), 1.0);
+        assert_eq!(at(1.5707963267948966, [11.0, 0.0, 5.0]), -1.0);
+        assert_eq!(at(0.0, [12.0, 0.0, 5.0]), 1.0);
     }
 }

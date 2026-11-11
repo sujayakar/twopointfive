@@ -61,7 +61,7 @@ fn leading_number(s: &str) -> Option<f64> {
 pub(super) fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
     let Some(s) = e.s else { return };
     if !markable(&g.tab.boxes[s.box_], e.n) { return; }
-    let def = g.m.weapons.weapons.get(e.def).unwrap();
+    let def = g.weapon(e.def);
     let (mm, rifle, pellets) = (leading_number(&def.calibre).filter(|x| *x != 0.0).unwrap_or(6.0), def.cls != crate::weapons::WeaponClass::Pistol, def.pellets.is_some());
     let attach = if s.dynamic { Some(s.box_) } else { None };
     let b = &g.tab.boxes[s.box_];

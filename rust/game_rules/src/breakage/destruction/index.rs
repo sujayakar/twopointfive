@@ -6,17 +6,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A box's row (`Box.*`). Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
-
-/// A word of a box's flags against a mask.
-fn has_flag(flags: f64, mask: i32) -> bool {
-    (js::to_i32(flags) & mask) != 0
-}
 
 /// What a box does, by its word.
-fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = seam_box(g, b).does;
+fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
+    let word = g.tab.boxes[b].does;
     crate::scene_materials::does_of(g, word)
 }
 
@@ -28,7 +21,7 @@ pub fn chaos_of(g: &crate::game::Game) -> f64 {
 
 /// The loud levels' rules are live: a scenario is up.
 pub(super) fn loud_now(g: &crate::game::Game) -> bool {
-    crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active
+    g.staged.facts.fight
 }
 
 /// Impulses at all: chaos above 0 and the switch.
@@ -46,14 +39,9 @@ pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
     if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.imp.chaos_k - 1.0) * (chaos - 0.5) * 2.0 }
 }
 
-/// Under the ceiling slab: the office's footprint less a tile's width.
-fn indoors(p: V3) -> bool {
-    p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 23.7
-}
-
 /// The point just over a box's top, where line-of-sight targets aim.
-pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
-    let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+pub(super) fn top_of(g: &crate::game::Game, b: BoxId) -> V3 {
+    let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }
 
@@ -116,153 +104,151 @@ pub fn destruction_new(g: &mut crate::game::Game) -> crate::destruction::Destruc
     g.destr = Destruction::blank();
     g.destr.w = world.grid_w;
     g.destr.cs = world.grid_cell;
-    g.destr.debris = crate::debris::debris_new(g);
-    g.destr.breaks = crate::break_table::breaks_new(g);
+    g.destr.debris = crate::debris::debris_new();
+    g.destr.breaks = crate::break_table::breaks_new();
     g.destr.hw = m::ceil((world.max[0] - world.min[0]) / g.k.chaos.cell);
     g.destr.hh = m::ceil((world.max[2] - world.min[2]) / g.k.chaos.cell);
     g.destr.heat = vec![0.0f32; (g.destr.hw * g.destr.hh) as usize];
     g.destr.cells = vec![Vec::new(); (world.grid_w * world.grid_h) as usize];
     destruction_index(g);
     g.destr.walls = Box::new(crate::wallbreak::wall_break_new(g));
-    g.destr.edge_look = crate::edge_look::edge_look_new(g);
+    g.destr.edge_look = crate::edge_look::edge_look_new();
     g.destr.breaks.look = Some(crate::break_table::BreaksLook {  });
-    g.destr.furn = crate::furnblast::furniture_new(g);
+    g.destr.furn = crate::furnblast::furniture_new();
     core::mem::replace(&mut g.destr, Destruction::blank())
 }
 
 /// Walks the statics once: what can break, by shape and by its word.
 fn destruction_index(g: &mut crate::game::Game) {
-    let world = crate::scene_world::world();
-    let boxes_len = g.col.boxes.len();
-    let bf = crate::scene_boxes::box_flag();
-    let skip = js::to_i32(bf.glass) | js::to_i32(bf.no_primary);
-    let no_shadow = js::to_i32(bf.no_shadow);
-    g.destr.target_of_box.clear();
-    for t in g.targets.clone() {
-        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() {
-            g.destr.target_of_box.set(crate::Num(bi), t);
-        }
-    }
-    let mut fixture_boxes: JsSet<crate::Num> = JsSet::new();
-    for k in g.destr.target_of_box.keys() {
-        fixture_boxes.add(k);
-    }
-    for l in g.level.lights.iter() {
-        if let Some(fb) = l.fixture_box {
-            if fb >= 0.0 {
-                fixture_boxes.add(crate::Num(fb));
-            }
-        }
-    }
-    let mut screens: Vec<usize> = Vec::new();
-    for i in 0..boxes_len {
-        let b = BoxId::from_ix(i);
-        let h = seam_box(g, b).h;
-        let max_h = m::max_n(&h);
-        let min_h = m::min_n(&h);
-        let flags = seam_box(g, b).flags;
-        if has_flag(flags, skip) || seam_box(g, b).piece == Some(true) {
-            continue;
-        }
-        let bottom = seam_box(g, b).c[1] - h[1];
-        let e = seam_box(g, b).emissive;
-        let dark = e[0] + e[1] + e[2] == 0.0;
-        let does = does_of_box(g, b);
-        let kind = if has_flag(flags, no_shadow) && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
-            Some(DKind::Paper)
-        } else if does.screen.unwrap_or(false) && min_h <= 0.012 {
-            Some(if max_h > 0.35 || (bottom > 1.2 && max_h > 0.3) { DKind::Tv } else { DKind::Screen })
-        } else if !has_flag(flags, no_shadow) && !fixture_boxes.has(crate::Num(i as f64)) && max_h <= 0.17 && h[0] * h[1] * h[2] * 8.0 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark {
-            Some(if h[1] >= 0.1 && h[1] > 2.5 * m::min(h[0], h[2]) { DKind::Binder } else { DKind::Clutter })
-        } else {
-            None
-        };
-        let Some(kind) = kind else { continue };
-        let mut d = Destructible { i: i as f64, kind, box_: b, mate: None, target: None, group: None };
-        if kind == DKind::Screen || kind == DKind::Tv {
-            if let Some(&t) = g.destr.target_of_box.get(crate::Num(i as f64)) {
-                d.target = Some(t);
-            }
-            if kind == DKind::Screen {
-                screens.push(i);
-            }
-        }
-        g.destr.items.set(crate::Num(i as f64), d);
-    }
-    // each desk screen with the housing slab just behind it
-    for si in screens {
-        let s = BoxId::from_ix(si);
-        let (s_yaw, s_h, s_c) = (seam_box(g, s).yaw, seam_box(g, s).h, seam_box(g, s).c);
-        let mut best: Option<usize> = None;
-        let mut bd = 0.08;
-        for i in si.saturating_sub(6)..core::cmp::min(boxes_len, si + 6) {
-            if i == si {
-                continue;
-            }
-            let b = BoxId::from_ix(i);
-            let h = seam_box(g, b).h;
-            if m::abs(seam_box(g, b).yaw - s_yaw) > 1e-3 || h[0] < s_h[0] || h[1] < s_h[1] || h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
-                continue;
-            }
-            let dd = v3::dist(seam_box(g, b).c, s_c);
-            if dd < bd {
-                bd = dd;
-                best = Some(i);
-            }
-        }
-        if let Some(best) = best {
-            let best_key = crate::Num(best as f64);
-            let target = {
-                let sd = g.destr.items.get_mut(crate::Num(si as f64)).unwrap();
-                sd.mate = Some(best as f64);
-                sd.target
-            };
-            let had = g.destr.items.get(best_key).cloned();
-            let mut hd = match had {
-                Some(d) => d,
-                None => Destructible { i: best as f64, kind: DKind::Housing, box_: BoxId::from_ix(best), mate: None, target: None, group: None },
-            };
-            hd.kind = DKind::Housing;
-            hd.mate = Some(si as f64);
-            hd.target = target;
-            g.destr.items.set(best_key, hd);
+    let fixture_boxes = index_fixtures(g);
+    let screens = index_things(g, &fixture_boxes);
+    for screen in screens {
+        if let Some(housing) = housing_of(g, screen) {
+            pair(g, screen, housing);
         }
     }
     // a monitor's foot and neck, a fixture's own parts and whatever has no roof over it are not destructibles
     let mut fixtures: Vec<(V3, V3, f64)> = Vec::new();
     for fi in fixture_boxes.iter() {
-        if (fi.0 as usize) < boxes_len {
-            let f = &seam_box(g, BoxId::from_ix(fi.0 as usize));
+        if (fi.0 as usize) < g.col.boxes.len() {
+            let f = &g.tab.boxes[BoxId::from_ix(fi.0 as usize)];
             fixtures.push((f.c, f.h, f.yaw));
         }
     }
-    crate::scene_collision::window(g, &mut |g: &mut Game| index_prune(g, &fixtures));
-    // things standing on or against each other go together
-    let mut smalls: Vec<(f64, V3, V3)> = Vec::new();
-    let small_rows: Vec<(f64, BoxId)> = g.destr.items.values().filter(|d| d.kind == DKind::Clutter || d.kind == DKind::Binder).map(|d| (d.i, d.box_)).collect();
-    for (i, b) in small_rows {
-        smalls.push((i, seam_box(g, b).c, seam_box(g, b).h));
-    }
-    for d in 0..smalls.len() {
-        for o in 0..smalls.len() {
-            if o == d {
-                continue;
-            }
-            let (di, ac, ah) = smalls[d];
-            let (oi, bc, bh) = smalls[o];
-            if m::abs(ac[0] - bc[0]) > 0.07 + m::min(ah[0], bh[0]) || m::abs(ac[2] - bc[2]) > 0.07 + m::min(ah[2], bh[2]) {
-                continue;
-            }
-            if m::abs(ac[1] - bc[1]) > ah[1] + bh[1] + 0.03 {
-                continue;
-            }
-            g.destr.items.get_mut(crate::Num(di)).unwrap().group.get_or_insert_with(Vec::new).push(oi);
+    index_prune(g, &fixtures);
+    index_groups(g);
+    index_cells(g);
+}
+
+/// Whose box is whose: the targets' boxes by target, and every box a light is in.
+fn index_fixtures(g: &mut Game) -> JsSet<crate::Num> {
+    g.destr.target_of_box.clear();
+    for t in g.targets.clone() {
+        for bi in g.tab.fixture[t].boxes.clone() {
+            g.destr.target_of_box.set(crate::Num(bi), t);
         }
     }
-    // the 1 m cells
+    let mut boxes: JsSet<crate::Num> = JsSet::new();
+    for k in g.destr.target_of_box.keys() {
+        boxes.add(k);
+    }
+    for fb in g.level.lights.iter().filter_map(|l| l.fixture_box).filter(|fb| *fb >= 0.0) {
+        boxes.add(crate::Num(fb));
+    }
+    boxes
+}
+
+/// Every static that is a thing of its own, in the index; the desk screens among them.
+fn index_things(g: &mut Game, fixture_boxes: &JsSet<crate::Num>) -> Vec<usize> {
+    let mut screens: Vec<usize> = Vec::new();
+    for i in 0..g.col.boxes.len() {
+        let b = BoxId::from_ix(i);
+        let Some(kind) = thing_of(g, b, fixture_boxes.has(crate::Num(i as f64))) else { continue };
+        let mut d = Destructible { i: i as f64, kind, box_: b, mate: None, target: None, group: None };
+        if kind == DKind::Screen || kind == DKind::Tv {
+            d.target = g.destr.target_of_box.get(crate::Num(i as f64)).copied();
+        }
+        if kind == DKind::Screen {
+            screens.push(i);
+        }
+        g.destr.items.set(crate::Num(i as f64), d);
+    }
+    screens
+}
+
+/// What kind of thing a static is: a paper lying on something, a screen, or a small thing on a desk's height; None for anything else.
+fn thing_of(g: &Game, b: BoxId, in_fixture: bool) -> Option<DKind> {
+    let bf = crate::scene_boxes::box_flag();
+    let row = &g.tab.boxes[b];
+    let (h, flags) = (row.h, row.flags);
+    if js::has_bits(flags, js::to_i32(bf.glass) | js::to_i32(bf.no_primary)) || row.piece == Some(true) {
+        return None;
+    }
+    let (max_h, min_h, bottom) = (m::max_n(&h), m::min_n(&h), row.c[1] - h[1]);
+    let dark = row.emissive[0] + row.emissive[1] + row.emissive[2] == 0.0;
+    let shadowless = js::has_bits(flags, js::to_i32(bf.no_shadow));
+    let does = does_of_box(g, b);
+    if shadowless && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
+        return Some(DKind::Paper);
+    }
+    if does.screen.unwrap_or(false) && min_h <= 0.012 {
+        return Some(if max_h > 0.35 || (bottom > 1.2 && max_h > 0.3) { DKind::Tv } else { DKind::Screen });
+    }
+    if !shadowless && !in_fixture && max_h <= 0.17 && h[0] * h[1] * h[2] * 8.0 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark {
+        return Some(if h[1] >= 0.1 && h[1] > 2.5 * m::min(h[0], h[2]) { DKind::Binder } else { DKind::Clutter });
+    }
+    None
+}
+
+/// The housing slab just behind a desk screen: the nearest casing turned as it is, among the statics made beside it.
+fn housing_of(g: &Game, screen: usize) -> Option<usize> {
+    let s = &g.tab.boxes[BoxId::from_ix(screen)];
+    let mut best: Option<usize> = None;
+    let mut bd = 0.08;
+    for i in screen.saturating_sub(6)..core::cmp::min(g.col.boxes.len(), screen + 6) {
+        let b = BoxId::from_ix(i);
+        let row = &g.tab.boxes[b];
+        if i == screen || m::abs(row.yaw - s.yaw) > 1e-3 || row.h[0] < s.h[0] || row.h[1] < s.h[1] || row.h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
+            continue;
+        }
+        let dd = v3::dist(row.c, s.c);
+        if dd < bd {
+            bd = dd;
+            best = Some(i);
+        }
+    }
+    best
+}
+
+/// A screen and its housing are each other's.
+fn pair(g: &mut Game, screen: usize, housing: usize) {
+    let s = g.destr.items.get_mut(crate::Num(screen as f64)).unwrap();
+    s.mate = Some(housing as f64);
+    let target = s.target;
+    let key = crate::Num(housing as f64);
+    let group = g.destr.items.get(key).and_then(|d| d.group.clone());
+    g.destr.items.set(key, Destructible { i: housing as f64, kind: DKind::Housing, box_: BoxId::from_ix(housing), mate: Some(screen as f64), target, group });
+}
+
+/// Things standing on or against each other go together.
+fn index_groups(g: &mut Game) {
+    let smalls: Vec<(f64, V3, V3)> = g.destr.items.values().filter(|d| d.kind == DKind::Clutter || d.kind == DKind::Binder).map(|d| { let b = &g.tab.boxes[d.box_]; (d.i, b.c, b.h) }).collect();
+    for (d, &(di, ac, ah)) in smalls.iter().enumerate() {
+        for (o, &(oi, bc, bh)) in smalls.iter().enumerate() {
+            let apart = m::abs(ac[0] - bc[0]) > 0.07 + m::min(ah[0], bh[0]) || m::abs(ac[2] - bc[2]) > 0.07 + m::min(ah[2], bh[2]) || m::abs(ac[1] - bc[1]) > ah[1] + bh[1] + 0.03;
+            if o != d && !apart {
+                g.destr.items.get_mut(crate::Num(di)).unwrap().group.get_or_insert_with(Vec::new).push(oi);
+            }
+        }
+    }
+}
+
+/// Every thing by the 1 m cell it stands in.
+fn index_cells(g: &mut Game) {
+    let world = crate::scene_world::world();
     let rows: Vec<(f64, BoxId)> = g.destr.items.iter().map(|(i, d)| (i.0, d.box_)).collect();
     for (i, b) in rows {
-        let c = seam_box(g, b).c;
+        let c = g.tab.boxes[b].c;
         let cx = m::floor((c[0] - world.min[0]) / g.destr.cs);
         let cz = m::floor((c[2] - world.min[2]) / g.destr.cs);
         if cx >= 0.0 && cz >= 0.0 && cx < g.destr.w && cz < world.grid_h {
@@ -279,7 +265,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
             let d = g.destr.items.get(i).unwrap();
             (d.box_, d.kind)
         };
-        let c = seam_box(g, b).c;
+        let c = g.tab.boxes[b].c;
         if destruction_roof_y(g, c[0], c[2]).is_none() {
             g.destr.items.delete(i);
             continue;
@@ -301,8 +287,8 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
         }
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();
         for hb in housings {
-            let oc = seam_box(g, hb).c;
-            if m::hyp2(oc[0] - c[0], oc[2] - c[2]) < 0.12 && oc[1] > c[1] {
+            let oc = g.tab.boxes[hb].c;
+            if v3::dist_xz(oc, c) < 0.12 && oc[1] > c[1] {
                 g.destr.items.delete(i);
                 break;
             }
@@ -312,7 +298,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
 
 /// The underside of the roof over (x, z), or none under the open sky: five rays a 0.6 m square, remembered per square.
 pub(super) fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f64> {
-    let key = crate::Num(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6) + 0.0);
+    let key = crate::Num::of(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6));
     if let Some(&c) = g.destr.roofs.get(key) {
         return if c < 0.0 { None } else { Some(c) };
     }
@@ -386,22 +372,22 @@ pub(super) fn destruction_hash(g: &mut crate::game::Game) -> f64 {
 }
 
 /// One event out of a cap; a knock-off riding on its group leader's slot is free.
-pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
-    if k == DestructionTakeK::Knock && g.destr.free_knocks > 0.0 {
+pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::RateCapN) -> bool {
+    if k == crate::destruction::RateCapN::Knock && g.destr.free_knocks > 0.0 {
         g.destr.free_knocks -= 1.0;
         return true;
     }
     let t = g.time;
     let (caps, knobs) = (&mut g.destr.caps, &g.k.chaos);
     match k {
-        DestructionTakeK::Puff => rate_cap_take(&mut caps.puff, t, knobs),
-        DestructionTakeK::Paper => rate_cap_take(&mut caps.paper, t, knobs),
-        DestructionTakeK::Knock => rate_cap_take(&mut caps.knock, t, knobs),
-        DestructionTakeK::Decal => rate_cap_take(&mut caps.decal, t, knobs),
+        crate::destruction::RateCapN::Puff => rate_cap_take(&mut caps.puff, t, knobs),
+        crate::destruction::RateCapN::Paper => rate_cap_take(&mut caps.paper, t, knobs),
+        crate::destruction::RateCapN::Knock => rate_cap_take(&mut caps.knock, t, knobs),
+        crate::destruction::RateCapN::Decal => rate_cap_take(&mut caps.decal, t, knobs),
     }
 }
 
-/// The RUBBLE table as Debris.feet's knobs: the TypeScript hands the table itself.
+/// The rubble table as the debris's foot knobs.
 fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
     let r = &g.k.rubble;
     crate::debris::FootKnobs {
@@ -436,7 +422,7 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
         crate::debris::debris_feet(g, &men, knobs, None, None);
     }
     crate::edge_look::edge_look_feet(g, &men, knobs, dt);
-    if js::truthy(crate::sim_fallshome::fall_store_waiting_in(g, crate::sim_fallshome::FALL_PIECES)) {
+    if !g.falls.pieces.waiting.is_empty() {
         crate::debris::debris_landings(g);
     }
     if !g.destr.debris.list.is_empty() {
@@ -498,7 +484,7 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
     }
     for c in men {
         // (his floor is under his lowest bone: a ragdoll's own place says nothing of the height it lies at. A bone well over that is a limb propped up, with nothing under it)
-        let bones: Vec<V3> = BONES.iter().filter_map(|&k| g.ch[c].bones.get(k).copied()).collect();
+        let bones: Vec<V3> = BONES.iter().filter_map(|&k| g.ch[c].bone(k)).collect();
         let low = bones.iter().fold(m::INF, |l, p| m::min(l, p[1]));
         for p in bones {
             if p[1] < low + 0.6 { out.push(crate::debris::FootMan { pos: [p[0], low - 0.1, p[2]], vel: [0.0; 3], body: true }); }
@@ -506,17 +492,16 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
     }
 }
 
-
 /// The men on their feet this frame, bar a seated civilian.
 fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
     for gd in g.guards.iter() {
-        if g.gd[*gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[*gd].ch) {
             men.push(g.gd[*gd].ch);
         }
     }
     for cv in crate::civilians::civilians_shown(g) {
-        if g.gd[cv].state != crate::game::GuardState::Dead && !crate::civilians::civilian_seated(g, cv) {
+        if !crate::condition::down(g, g.gd[cv].ch) && !crate::civilians::civilian_seated(g, cv) {
             men.push(g.gd[cv].ch);
         }
     }
@@ -527,16 +512,15 @@ fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
 pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::debris::debris_boxes(g, out);
     crate::edge_look::edge_look_boxes(g, out);
-    crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)
+    crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint)
 }
 
 /// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.
 pub fn destruction_reset(g: &mut crate::game::Game) {
     for i in g.destr.hidden.keys() {
         let f = *g.destr.hidden.get(i).unwrap();
-        seam_box(g, BoxId::from_ix(i.0 as usize)).flags = f;
+        g.tab.boxes.edit(BoxId::from_ix(i.0 as usize)).flags = f;
     }
-    crate::scene_collision::wrote(g);
     g.destr.hidden.clear();
     crate::debris::debris_clear(g);
     for x in g.destr.heat.iter_mut() {
@@ -554,7 +538,7 @@ pub fn destruction_reset(g: &mut crate::game::Game) {
     rate_cap_reset(&mut g.destr.caps.decal);
     g.destr.free_knocks = 0.0;
     for t in g.destr.broke.keys() {
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().mend, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = false;
     }
     g.destr.broke.clear();
     g.destr.fixture_count = 0.0;
@@ -610,10 +594,4 @@ mod tests {
         assert_eq!(c.ts.len(), 2);
     }
 
-    #[test]
-    fn indoors_is_strict() {
-        assert!(indoors([4.31, 0.0, 4.31]));
-        assert!(!indoors([4.3, 0.0, 10.0]));
-        assert!(!indoors([10.0, 0.0, 23.7]));
-    }
 }

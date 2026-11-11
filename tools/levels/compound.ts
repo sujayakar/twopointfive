@@ -447,8 +447,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
-  // out with the switch off, and then this is the compound above, box for box). A FARMER'S WALLED HOUSE THAT A FAMILY STILL LIVES IN: each room is furnished for the
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // A FARMER'S WALLED HOUSE THAT A FAMILY STILL LIVES IN: each room is furnished for the
   // family first (the household on the ground: cushions, quilts, trays, sacks, brass and blue tin), and the gunmen are guests — one or two of their things laid on
   // a family thing in a room (a rifle across a flowered blanket, a chest rig on the loom, boots dumped in the shoe hall). Rules kept: nothing within 1.1 m of a
   // door's line or in a leaf's sweep, the wall a pair stacks on beside a jamb stays bare, nothing solid on a mark or across its aim; what lies on marks, lanes
@@ -870,7 +870,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           { pos: [30.0, 0, 7.2], watch: 'ab', aimAt: [27.16, 1.1, 8.9] },            // between the desk and the bed
         ] },
     ],
-    // WHO HOLDS WHAT (squad-format.md: the data says who and where, never what a squad does when)
+    // WHO HOLDS WHAT (the data says who and where, never what a squad does when)
     squads: [
       { id: 'yard', name: 'Yard', rooms: ['garage', 'shed'], rally: [6.2, 0, 20.9] },                             // the two outbuildings on the west yard: the men who come across it (five in two rooms)
       { id: 'gate', name: 'Gate', rooms: ['hut'], rally: [28.2, 0, 22.6], mayLeave: false },                       // the gate guard in his hut: one man, he stays (he used to be the Yard's third room, and its man who came round by the forecourt door of the garage)

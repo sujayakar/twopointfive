@@ -2,6 +2,7 @@
 // cut into the segments a real sweep logs; the report must hand each saving back, call the do-nothing row noise, and drop the settling frames (which carry a spike here).
 // A second take has a slow stretch across it (the whole machine 15 % slower for some segments): the rounds at its edges must be marked, the median round and the noise hold.
 //   bun run tools/qa/perf-sweep-selftest.ts        exit 0 = all pass, 1 = a check failed
+import { takeRead, takeWords } from '../../src/ui/perfsend';
 import { readSweeps, sweepText, sweepMarkdown, smokeText, smokeUnit, type Dump, type Frame, type Ev } from './perf-sweep';
 import { sweepOrder } from '../../src/ui/perfsweep';
 
@@ -46,6 +47,8 @@ for (const r of ROWS) {
 const pa = S.rows.find(x => x.id === 'a')!; check(pa.fps.mean > 0 && Math.abs(pa.frame.mean - 1.5) < 0.08, `fps and frame time follow: +${pa.fps.mean.toFixed(1)} fps, ${pa.frame.mean.toFixed(2)} ms a frame`);
 check(S.noise.union !== null && S.noise.union < 0.15, `the noise line: ±${S.noise.union!.toFixed(3)} ms a round with nothing flipped`);
 for (const r of ROWS) { const p = S.rows.find(x => x.id === r.id)!; check(Math.abs(p.median - r.save) < 0.08 && p.per.length === ROUNDS && !p.disturbed.some(Boolean), `${r.label}: its median round ${p.median.toFixed(2)} ms, every round listed, none marked`); }
+{ const read = takeRead({ ...D, startedAt: '', machine: '', dpr: 1, userAgent: '', note: '', events } as never, 'x'), s = read.sweep!;
+  check(s.baseGpu !== null && Math.abs(s.baseGpu - S.base.union!) < 0.01 && s.prices.length === ROWS.length && ROWS.every(r => { const p = s.prices.find(x => x[0] === r.id)!, q = S.rows.find(x => x.id === r.id)!; return Math.abs(p[1] - q.median) < 0.006 && p[2] === q.inNoise; }) && takeWords(read).some(w => /ms of /.test(w)), `the panel's Copy carries the same prices: ${s.prices.map(x => `${x[0]} ${x[1]}`).join(' · ')} of ${s.baseGpu}`); }
 check(S.noise.n >= 12 && S.disturbed === 0 && S.noise.union === S.noise.rmsUnion && S.noise.dt === S.noise.rmsDt && !/ran slow/.test(sweepText(D).join('\n')), `a calm take: the noise is the plain rms over ${S.noise.n} plain segments, no round marked`);
 { // A SLOW STRETCH: the whole machine 15 % slower from the start of one flip (the do-nothing row's, third round) for six segments, as the Mac's takes show for seconds at a time.
   // The rounds at its two edges have a calm plain segment on one side and a slow one on the other: they are marked, the median round still reads true, the noise does not move.

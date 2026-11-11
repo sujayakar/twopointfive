@@ -49,7 +49,6 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         empty: empty_view(g, seat),
         plan: plan_view(g, seat),
         live: crate::mission::mission_live(g),
-        quiet: crate::quiet::quiet_words(g).map(|q| QuietView { place: q.place, holder: q.holder, thing: q.thing, outs: q.outs, bare: q.bare }),
         interact: crate::interact::interact_view(g, seat),
         alarm: crate::guards::alarm_view(g),
         stage: stage_word(g.mission.stage),
@@ -64,14 +63,14 @@ pub fn host_now(g: &Game, input: crate::ids::InputId, cam: crate::ids::CameraId,
     HostNow { mouse: [i.mouse_x, i.mouse_y], client: [canvas.client_width, canvas.client_height], view_proj: c.view_proj, inv_view_proj: c.inv_view_proj }
 }
 
-/// the view of what `seat`'s cursor is on, through the camera as it stands (the copy of the boxes standing: scene_collision::stands)
+/// the view of what `seat`'s cursor is on, through the camera as it stands
 pub fn cursor_view(g: &Game, seat: &crate::seats::SeatRef, now: &HostNow) -> CursorView {
     CursorView { under: crate::orders::hover(g, seat, now).map(|t| under(g, &t)) }
 }
 /// a target in the view's words: a man by his character's id, a door by its name, a wall by its place
 pub fn under(g: &Game, t: &crate::orders::OrderTarget) -> Under {
     use crate::orders::OrderTarget as T;
-    let id = |gd: crate::ids::GuardId| g.ch[g.gd[gd].ch].id;
+    let id = |gd: crate::ids::GuardId| g.char_id(gd);
     match t {
         T::Floor(f) => Under {
             kind: UnderKind::Floor, at: f.at, thing: f.thing.clone(),

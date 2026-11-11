@@ -13,7 +13,7 @@
 //   node tools/qa/kernel-stack.cjs --kernel fgatherS/main,rcC0/rcC0  the kernels named (label/entry point, as --list prints them)
 //   node tools/qa/kernel-stack.cjs --list                            every compute pipeline the page makes, with its text's size
 //   node tools/qa/kernel-stack.cjs --query '&look=walls:0'           more of the page's URL · --plain = the game page, not the look page
-//   node tools/qa/kernel-stack.cjs --text file.wgsl                  that text in place of the (one) kernel's own: for trying a cut before making it
+//   node tools/qa/kernel-stack.cjs --text <file>                    that text in place of the (one) kernel's own: for trying a cut before making it
 // exit 0 = every kernel asked for was built and ran · 1 = one was not · 2 = no browser, no adapter or no such kernel
 // Run it alone: it finds the GPU process as the newest one on the machine. Compute kernels only (a render pipeline needs its targets; the page's boot says those).
 const { spawn, spawnSync } = require('node:child_process'); const fs = require('node:fs'); const net = require('node:net'); const path = require('node:path');

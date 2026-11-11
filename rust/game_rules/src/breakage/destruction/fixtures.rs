@@ -50,7 +50,7 @@ pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir
     for d in near.iter() {
         if d.kind != DKind::Clutter && d.kind != DKind::Binder { continue; }
         let b = d.box_;
-        let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+        let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
         if m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.7, c[2] - hit_p[2]) > g.k.chaos.knock_reach_m + m::max(h[0], h[2]) { continue; }
         let top = top_of(g, b);
         if crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), top, None) { continue; }   // (not through the partition the round stopped in)
@@ -62,7 +62,7 @@ pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir
 /// Hide the static and hand its box to the debris pool with a shove along `dirn`; over the pool's cap it becomes a burst of chips. Its group rides on the same slot.
 pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, chaos: f64, kind: crate::debris::ChunkKind, who: Option<f64>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Knock) { return false; }
+    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Knock) { return false; }
     let b = d.box_;
     let v_k = g.k.chaos.vel_low * (if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.vel_high_k - 1.0) * (chaos - 0.5) * 2.0 });
     let hz = v3::normalize([dirn[0], 0.0, dirn[2]]);
@@ -78,9 +78,8 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     ];
     let c = crate::debris::debris_spawn(g, kind, b, v, w, Some(who), None);
     destruction_hide(g, d);
-    if c.is_none() {   // the pool is full of moving chunks: it still goes, as a burst of chips of its colour
-        g.stats.destruction.destr_knocks_demoted += 1;
-        let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
+    if c.is_none() {   
+        let (bc, bh, albedo) = (g.tab.boxes[b].c, g.tab.boxes[b].h, g.tab.boxes[b].albedo);
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
             speed: 2.5,
             speed_jit: Some(0.7),
@@ -98,7 +97,6 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     if kind == crate::debris::ChunkKind::Housing {
         if let Some(t) = d.target { destruction_break_target(g, t); }   // (chunk or chip burst, the light is off the desk either way)
     }
-    g.stats.destruction.destr_knocks += 1;
     g.destr.knocks += 1.0;
     dlog(g, &format!("{} {} knocked off{}", kind.as_str(), d.i, if c.is_some() { "" } else { " (demoted)" }));
     if let Some(group) = &d.group {
@@ -115,65 +113,81 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     true
 }
 
+/// A square of the ceiling grid: its name, its middle on plan, and the underside of the slab over it.
+struct Square {
+    key: String,
+    x: f64,
+    z: f64,
+    top: f64,
+}
+
+/// What is in a tile's own slot under the slab.
+enum Slot {
+    Free,
+    Panel(FixtureId),
+    Taken,
+}
+
 /// A tile of the ceiling grid over `p` lets go: a slab under the ceiling, crumbs, dust; or the light panel in that square does.
 pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
-    let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    let panels = panels.unwrap_or(true);
-    if !force && g.time - g.destr.last_tile_t < g.k.chaos.tile_gap_secs { return false; }
+    let Some(q) = tile_over(g, p, force) else { return false };
+    match slot_of(g, &q) {
+        // the loud levels: the square is a light panel's, the PANEL lets go; it takes the tile gap like a tile
+        Slot::Panel(t) if panels.unwrap_or(true) && loud_now(g) && destruction_fixture_live(g, t) => {
+            let ok = destruction_kill_fixture(g, t, p, "shaken", Some(force));
+            if ok { g.destr.last_tile_t = g.time; }
+            return ok;
+        }
+        Slot::Panel(_) | Slot::Taken => return false,
+        Slot::Free => {}
+    }
+    let y = q.top - 0.03;
+    if crate::scene_collision::solid_blocked(g, [q.x, y - 0.05, q.z], [q.x, y - 0.6, q.z], None) { return false; }   // nor with something standing right under it
+    tile_falls(g, &q, y, who.unwrap_or(crate::consts::NOBODY_ID));
+    tile_dust(g, &q, y);
+    true
+}
+
+/// The square over the beaten spot, jittered a square either way, if the ceiling has a tile to spare there.
+fn tile_over(g: &mut Game, p: V3, force: bool) -> Option<Square> {
+    if !force && g.time - g.destr.last_tile_t < g.k.chaos.tile_gap_secs { return None; }
     if g.destr.tile_count >= g.k.chaos.tiles_per_encounter {
         g.stats.destruction.destr_tiles_refused += 1;
-        return false;
+        return None;
     }
-    if destruction_roof_y(g, p[0], p[2]).is_none() { return false; }
-    // the square over the beaten spot, jittered a square either way
+    destruction_roof_y(g, p[0], p[2])?;
     let jx = m::round((destruction_hash(g) - 0.5) * 2.4);
     let jz = m::round((destruction_hash(g) - 0.5) * 2.4);
     let tx = m::floor(p[0] / 0.6) + jx;
     let tz = m::floor(p[2] / 0.6) + jz;
     let key = tile_key(tx, tz);
-    if g.destr.tiles_down.has(key.clone()) { return false; }
-    let cx = (tx + 0.5) * 0.6;
-    let cz = (tz + 0.5) * 0.6;
-    let roof = match destruction_roof_y(g, cx, cz) {
-        Some(r) => r,
-        None => return false,   // (the jitter walked it out through the wall)
-    };
+    if g.destr.tiles_down.has(key.clone()) { return None; }
+    let (x, z) = ((tx + 0.5) * 0.6, (tz + 0.5) * 0.6);
+    let roof = destruction_roof_y(g, x, z)?;   // (or the jitter walked it out through the wall)
     let top = m::max(roof, destruction_roof_y(g, p[0], p[2]).unwrap_or(roof));   // (the slab's own underside: a panel in the square answers the roof ray 4 cm low)
-    let y = top - 0.03;
-    {
-        // anything in the tile's own slot under the slab: that square is not a free tile (gather is cell-granular: re-test the footprint)
-        let mut scratch: Vec<i32> = vec![0; 32];
-        let n = crate::scene_collision::gather(g, cx - 0.29, cz - 0.29, cx + 0.29, cz + 0.29, top - 0.14, top - 0.001, &mut scratch);
-        let mut k = 0usize;
-        while (k as f64) < n {
-            let ix = scratch[k];
-            let b = g.col.boxes[ix as usize];
-            let (yaw, bh, bc) = (seam_box(g, b).yaw, seam_box(g, b).h, seam_box(g, b).c);
-            let ac = m::abs(m::cos(yaw));
-            let as_ = m::abs(m::sin(yaw));
-            let ex = ac * bh[0] + as_ * bh[2];
-            let ez = as_ * bh[0] + ac * bh[2];
-            if m::abs(bc[0] - cx) < ex + 0.29 && m::abs(bc[2] - cz) < ez + 0.29 {
-                if panels && loud_now(g) {
-                    // the loud levels: the square is a light panel's, the PANEL lets go; it takes the tile gap like a tile
-                    if let Some(t) = g.destr.target_of_box.get(crate::Num(ix as f64)).copied() {
-                        if destruction_fixture_live(g, t) {
-                            let ok = destruction_kill_fixture(g, t, p, "shaken", Some(force));
-                            if ok { g.destr.last_tile_t = g.time; }
-                            return ok;
-                        }
-                    }
-                }
-                return false;
-            }
-            k += 1;
-        }
-    }
-    if crate::scene_collision::solid_blocked(g, [cx, y - 0.05, cz], [cx, y - 0.6, cz], None) { return false; }   // nor with something standing right under it
+    Some(Square { key, x, z, top })
+}
+
+/// Anything in the tile's own slot under the slab: that square is not a free tile (gather is cell-granular: re-test the footprint).
+fn slot_of(g: &Game, q: &Square) -> Slot {
+    let mut scratch: Vec<i32> = vec![0; 32];
+    let n = crate::scene_collision::gather(g, q.x - 0.29, q.z - 0.29, q.x + 0.29, q.z + 0.29, q.top - 0.14, q.top - 0.001, &mut scratch);
+    let over = scratch.iter().take(n as usize).copied().find(|&ix| {
+        let row = &g.tab.boxes[g.col.boxes[ix as usize]];
+        let (ac, as_) = (m::abs(m::cos(row.yaw)), m::abs(m::sin(row.yaw)));
+        let (ex, ez) = (ac * row.h[0] + as_ * row.h[2], as_ * row.h[0] + ac * row.h[2]);
+        m::abs(row.c[0] - q.x) < ex + 0.29 && m::abs(row.c[2] - q.z) < ez + 0.29
+    });
+    let Some(ix) = over else { return Slot::Free };
+    match g.destr.target_of_box.get(crate::Num(ix as f64)) { Some(&t) => Slot::Panel(t), None => Slot::Taken }
+}
+
+/// The slab lets go.
+fn tile_falls(g: &mut Game, q: &Square, y: f64, who: f64) {
     let (half, albedo) = (g.k.chaos.tile.half, g.k.chaos.tile.albedo);
     let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
-        c: [cx, y, cz],
+        c: [q.x, y, q.z],
         h: v3::copy(half),
         yaw: Some(0.0),
         albedo: Some(v3::copy(albedo)),
@@ -182,16 +196,19 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
         owner: Some(0.0),
         stuff: Some(crate::scene_stuff::BoxStuff::Paint),
         ..Default::default()
-    });   // (TypeScript: boxOf, then `box.stuff = 'paint'`; boxOf has no g here, and makeBox is the same box)
+    });
     let v: V3 = [(destruction_hash(g) - 0.5) * 0.4, -0.2, (destruction_hash(g) - 0.5) * 0.4];
     let w: V3 = [(destruction_hash(g) - 0.5) * 3.0, (destruction_hash(g) - 0.5) * 1.0, (destruction_hash(g) - 0.5) * 3.0];
-    let c = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Tile, box_, v, w, Some(who), None);
-    g.destr.tiles_down.add(key.clone());
+    crate::debris::debris_spawn(g, crate::debris::ChunkKind::Tile, box_, v, w, Some(who), None);
+    g.destr.tiles_down.add(q.key.clone());
     g.destr.last_tile_t = g.time;
     g.destr.tile_count += 1.0;
-    g.stats.destruction.destr_tiles += 1;
-    dlog(g, &format!("tile {} dropped", key));
-    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {   // crumbs of the tile's edge
+    dlog(g, &format!("tile {} dropped", q.key));
+}
+
+/// The crumbs of its edge, and the dust that comes down with it.
+fn tile_dust(g: &mut Game, q: &Square, y: f64) {
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [q.x, y - 0.05, q.z], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {
         speed: 1.2,
         speed_jit: Some(0.8),
         spread: Some(1.3),
@@ -203,7 +220,7 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
         color: Some([0.8, 0.79, 0.75]),
         ..Default::default()
     });
-    crate::particle_fx::emit_dust(g, [cx, y - 0.12, cz], [0.0, -1.0, 0.0], 10.0, crate::render_particles::EmitOpts {
+    crate::particle_fx::emit_dust(g, [q.x, y - 0.12, q.z], [0.0, -1.0, 0.0], 10.0, crate::render_particles::EmitOpts {
         shape: Some(crate::render_particles::EmitShape::Puff),
         speed: 0.7,
         speed_jit: Some(0.5),
@@ -216,17 +233,16 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
         color: Some([0.78, 0.76, 0.72]),
         ..Default::default()
     });
-    destruction_dust_puff(g, [cx, y - 0.2, cz], [0.0, -1.0, 0.0], 1.4, crate::scene_materials::Surf::Drywall);
-    true
+    destruction_dust_puff(g, [q.x, y - 0.2, q.z], [0.0, -1.0, 0.0], 1.4, crate::scene_materials::Surf::Drywall);
 }
 
 /// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.
 pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
-    use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
-    !fixture_broken(g, t)
-        && g.tab.sim_lightshome_fixture[t].interactive
-        && (g.tab.sim_lightshome_fixture[t].kind == FixtureKind::Emissive || g.tab.sim_lightshome_fixture[t].kind == FixtureKind::Analytic)
-        && (fixture_on(g, t) || fixture_factor(g, t) > 0.0 || crate::carlamps::lamp_glass(g, t))
+    use crate::fixtures::FixtureKind;
+    !g.tab.fixture[t].broken
+        && g.tab.fixture[t].interactive
+        && (g.tab.fixture[t].kind == FixtureKind::Emissive || g.tab.fixture[t].kind == FixtureKind::Analytic)
+        && (g.tab.fixture[t].on || g.tab.fixture[t].factor > 0.0 || crate::carlamps::lamp_glass(g, t))
         && !crate::fire::fire_holds(g, t)
 }
 
@@ -234,25 +250,23 @@ pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> b
 pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if g.destr.fixture_count >= g.k.chaos.loud.fixtures_per_encounter || (!force && g.time - g.destr.last_fixture_t < g.k.chaos.loud.fixture_gap_secs) {
-        g.stats.destruction.destr_fixtures_refused += 1;
         return false;
     }
     if !destruction_break_target(g, t) {
-        if crate::carlamps::lamp_glass(g, t) && crate::sim_lightshome::fixture_broken(g, t) {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
-            let pos = g.tab.sim_lightshome_fixture[t].pos;
+        if crate::carlamps::lamp_glass(g, t) && g.tab.fixture[t].broken {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
+            let pos = g.tab.fixture[t].pos;
             crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
             lens_shatter(g, t, from);
-            let name = g.tab.sim_lightshome_fixture[t].name.clone();
+            let name = g.tab.fixture[t].name.clone();
             dlog(g, &format!("lens {} broken ({})", name, why));
         }
         return false;
     }
     g.destr.fixture_count += 1.0;
     g.destr.last_fixture_t = g.time;
-    g.stats.destruction.destr_fixtures += 1;
-    let name = g.tab.sim_lightshome_fixture[t].name.clone();
+    let name = g.tab.fixture[t].name.clone();
     dlog(g, &format!("fixture {} out ({})", name, why));
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    let pos = g.tab.fixture[t].pos;
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
@@ -260,8 +274,8 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     } else {
         let shard = crate::particle_fx::FixtureShatterFxT {
             pos,
-            kind: String::from(g.tab.sim_lightshome_fixture[t].kind.as_str()),
-            boxes: g.tab.sim_lightshome_fixture[t].boxes.clone(),
+            kind: String::from(g.tab.fixture[t].kind.as_str()),
+            boxes: g.tab.fixture[t].boxes.clone(),
         };
         crate::particle_fx::fixture_shatter_fx(g, &shard, from);
     }
@@ -296,7 +310,7 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
         let t = g.targets[k];
         k += 1;
         if !destruction_fixture_live(g, t) { continue; }
-        let to_t = v3::sub(g.tab.sim_lightshome_fixture[t].pos, muzzle);
+        let to_t = v3::sub(g.tab.fixture[t].pos, muzzle);
         let depth = v3::dot(to_t, dir);
         if depth < 0.0 || depth > t_hit + r { continue; }
         let along = m::min(depth, t_hit);
@@ -307,7 +321,7 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
     }
 }
 
-/// The word a knocked thing's chunk is filed under, for clutter and binders.   (destruction.ts: `d.kind === 'binder' ? 'binder' : 'clutter'`, three sites)
+/// The word a knocked thing's chunk is filed under, for clutter and binders.
 fn knock_kind(kind: DKind) -> crate::debris::ChunkKind {
     if kind == DKind::Binder { crate::debris::ChunkKind::Binder } else { crate::debris::ChunkKind::Clutter }
 }
@@ -319,20 +333,18 @@ fn tile_key(tx: f64, tz: f64) -> String {
 
 /// A vehicle lamp's glass, from the fixture's row.
 fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
-    let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.sim_lightshome_fixture[t].pos, lens: g.tab.sim_lightshome_fixture[t].lens };
+    let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.fixture[t].pos, lens: g.tab.fixture[t].lens };
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 
-/// `b.…` for any box: a box's row, statics and made boxes alike. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Math.round(-0.3) is -0 and Math.floor(-0) is -0, and `${-0}` is "0": the square must be one key either way.
+    /// A tile that has dropped stays dropped: a square by the wall is one key, whichever side of nought it rounds from.
     #[test]
-    fn a_tile_key_has_no_negative_zero() {
+    fn a_tile_s_square_is_one_key_either_side_of_nought() {
         assert_eq!(tile_key(-0.0, 0.0), "0,0");
         assert_eq!(tile_key(-3.0, 12.0), "-3,12");
     }

@@ -3,7 +3,7 @@
 // pipelines are made before any menu can open. A switch of the page, not a rule of the game.
 // THE ROWS ARE GONE FROM OPTIONS (2026-11-08). Compact shaders and Separate shadow rays started on in every browser from 2026-10-27 (the maintainer's pick, "Everywhere"; "i'd generally
 // prefer to have a single path when possible"), and since 2026-11-07 they are not rows: the ten big kernels have the one writing (each heavy function called from one
-// place; shaders/compact/ and render/kernels.ts are gone) and the gather is its two programs (render/gatherSplit.ts). Their words on an address (`?compactshaders`, `?splitrays`) do nothing.
+// place) and the gather is its two programs (render/gatherSplit.ts). Their words on an address (`?compactshaders`, `?splitrays`) do nothing.
 // THE FIRST-FRAME START IS ON ONLY WHERE A PERSON SITS: a browser a script drives (navigator.webdriver, every page tool) starts with it off,
 // because a tool's first picture and first timing must be the settings' own and not a stand-in's (some forty tools poll for a hook and
 // begin at once). A tool that wants the player's start asks for it: `?firstframe=1`. `?firstframe=0` is a load that waits for every pipeline (a machine nobody has read

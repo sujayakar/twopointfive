@@ -8,8 +8,6 @@ pub struct SwingDeal {
     pub swing: f64,
     pub why: crate::doorswing::SwingWhy,
     pub into: Option<String>,
-    pub out: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
-    pub clear: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]

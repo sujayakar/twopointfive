@@ -346,8 +346,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['a_s', 'b_n', 'c_n', 'duty', 'battery_to_yard', 'generator_to_park', 'bay_to_yard']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…' — the loader leaves them all out
-  // with the switch off, and then this is the depot above, box for box). What makes each space ITS place, as the office's rooms are: a motor pool and its signals
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…').
+  // What makes each space ITS place, as the office's rooms are: a motor pool and its signals
   // hut. Rules kept: nothing solid within 1.1 m of a door's line or in a leaf's sweep, nothing solid on the wall a file stacks on beside a jamb, nothing on a
   // mark or a start or over 1.1 m across a mark's line to its door or out of its window, the lanes between doors bare. No light, nothing lit.
   // LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.

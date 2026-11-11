@@ -6,16 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// WEAPONS[w]: every WeaponId has its row.
-fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(w).unwrap()
-}
-
-/// The check's break path is tooling: BREAK is false in the game.
-pub(super) fn guns_broken() -> bool {
-    BREAK
-}
-
 /// The pick of that id, or None.
 fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)
@@ -25,7 +15,7 @@ fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
 pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     for p in picks() {
-        if p.slot == slot && [p.can, p.bare].iter().any(|w| w.map_or(false, |w| weapon_row(g, w).enabled)) {
+        if p.slot == slot && [p.can, p.bare].iter().any(|w| w.map_or(false, |w| g.weapon(w).enabled)) {
             ids.push(p.id);
         }
     }
@@ -33,11 +23,11 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
     ids
 }
 
-/// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true.
+/// The weapon row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled.
 pub(super) fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
-    order.into_iter().flatten().find(|&w| weapon_row(g, w).enabled)
+    order.into_iter().flatten().find(|&w| g.weapon(w).enabled)
 }
 
 /// The pick's name on its tile: its row's short name.
@@ -45,7 +35,7 @@ pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) ->
     let suppressed = suppressed.unwrap_or(true);
     if id_2 == NO_PRIMARY { return String::from("none"); }
     match pick_row(g, id_2, suppressed) {
-        Some(w) => weapon_row(g, w).short.clone(),
+        Some(w) => g.weapon(w).short.clone(),
         None => String::from(id_2),
     }
 }
@@ -56,24 +46,23 @@ pub(super) fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit:
         Some(w) => w,
         None => pick_row(g, id_2, false)?,
     };
-    Some(match weapon_row(g, w).cls {
+    Some(match g.weapon(w).cls {
         crate::weapons::WeaponClass::Pistol => crate::kit::KitWeapon::Pistol,
         crate::weapons::WeaponClass::Shotgun => crate::kit::KitWeapon::Shotgun,
         _ => crate::kit::KitWeapon::Rifle,
     })
 }
 
-/// He is handed the gun that is not in his hands (None: the pistol alone is his whole kit). GUNSLOTS.on is settled true.
+/// He is handed the gun that is not in his hands (None: the pistol alone is his whole kit).
 pub(super) fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
     g.gd[gd].second = None;
     let Some(row) = row else { return };
-    if !weapon_row(g, row).enabled { return; }
+    if !g.weapon(row).enabled { return; }
     let in_hand = g.gd[gd].weapon;
     if row == g.fa[in_hand].def { return; }
-    let def = weapon_row(g, row).clone();
+    let def = g.weapon(row).clone();
     let gun = crate::weapons::firearm_new(g, &def);
     g.gd[gd].second = Some(crate::game::GuardSecond { gun, id: row, ahead: def.muzzle_ahead, out: false, t: -100.0, lock: -100.0, shots: 0.0 });
-    g.stats.gunslots.staged += 1;
 }
 
 /// The gun in his hands and the one that is not change places; the row is dealt off his route every frame, so the route is written.
@@ -101,14 +90,14 @@ pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(k) = k else { return false };
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    side_out(g, gd, m::hyp2(k[0] - p[0], k[2] - p[2]))
+    side_out(g, gd, crate::v3::dist_xz(k, p))
 }
 
-/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds. GUNSLOTS.on and .dry are settled true.
+/// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds.
 pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     let Some(s) = g.gd[gd].second else { return false };
     if s.out || !js::truthy(crate::weapons::firearm_rounds_ready(g, s.gun)) { return false; }
-    if g.gd[gd].slung.as_ref().map_or(false, |l| l.out) || g.gd[gd].big_out.is_some() || g.gd[gd].state == crate::game::GuardState::Dead || !(dist <= g.k.gunslots.near) { return false; }
+    if g.gd[gd].slung.as_ref().map_or(false, |l| l.out) || g.gd[gd].big_out.is_some() || crate::condition::down(g, g.gd[gd].ch) || !(dist <= g.k.gunslots.near) { return false; }
     swap(g, gd);
     let (now, out) = (g.time, g.k.gunslots.out);
     let w = g.gd[gd].weapon;
@@ -119,7 +108,7 @@ pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     s.lock = now + out;
     s.shots = shots;
     g.stats.gunslots.out += 1;
-    g.gd[gd].fire_cd = 0.0;
+    g.arms[g.gd[gd].ch].fire_cd = 0.0;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     crate::audio_iface::game_audio_like_play(g, "equip", Some(pos), Some(0.45), None);
@@ -140,13 +129,13 @@ pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The long gun he let go of hangs down his front: its rig, while the sidearm is out.
-pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
+pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     let s = g.gd[gd].second?;
-    if !s.out || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
+    if !s.out || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let def = g.fa[s.gun].def;
-    match weapon_row(g, def).rig {
-        crate::weapons::WeaponDefRig::Carbine => Some(SideHung::Carbine),
-        crate::weapons::WeaponDefRig::Sc20k => Some(SideHung::Sc20k),
+    match g.weapon(def).rig {
+        crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
         _ => None,
     }
 }
@@ -155,11 +144,11 @@ pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::
 pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let dt = dt.unwrap_or(0.0);
     let Some(s) = g.gd[gd].second else { return };
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     if !s.out {
         if dt > 0.0 && g.time < s.lock {
             let w = g.gd[gd].weapon;
-            let def = weapon_row(g, g.fa[w].def).clone();
+            let def = g.weapon(g.fa[w].def).clone();
             let now = g.time - (s.lock - def.reload.dur - g.k.gunslots.back);
             let c = g.gd[gd].ch;
             crate::gunreload::feed_tick(g, c, &def, now - dt, now, None, None);
@@ -184,12 +173,12 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let side = g.gd[gd].second.unwrap().gun;
     crate::weapons::firearm_rearm(g, side);
     let w = g.gd[gd].weapon;
-    let def = weapon_row(g, g.fa[w].def).clone();
+    let def = g.weapon(g.fa[w].def).clone();
     let row = def.reload;
     let lock = g.time + row.dur + g.k.gunslots.back;
     g.gd[gd].second.as_mut().unwrap().lock = lock;
     g.stats.gunslots.back += 1;
-    let f = crate::gunreload::feed_of(g, &def);
+    let f = crate::gunreload::feed_of(&def);
     let c = g.gd[gd].ch;
     let long = if def.cls == crate::weapons::WeaponClass::Pistol { None } else { Some(w) };
     crate::gunreload::feed_deal(g, c, long, Some(true));
@@ -208,13 +197,13 @@ mod tests {
     use super::*;
     use crate::weapons::WeaponId as W;
 
-    /// One man with a pair of guns, on a blank game, the page's knobs and rows. Nothing here reaches a stub.
+    /// One man with a pair of guns, on a blank game, the page's knobs and rows.
     fn stand(in_hand: W, second: W) -> (Box<Game>, GuardId, FirearmId, FirearmId) {
         let mut g = Box::new(Game::blank());
         let a = g.fa.push(crate::weapons::Firearm { def: in_hand, ..crate::weapons::Firearm::blank() });
         let b = g.fa.push(crate::weapons::Firearm { def: second, ..crate::weapons::Firearm::blank() });
         let route = g.tab.route.push(crate::scene_level::PatrolRoute::default());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.ch[c].muzzle_ahead = 0.5;
         let mut man = crate::game::Guard::blank();
         man.ch = c;
