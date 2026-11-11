@@ -70,9 +70,9 @@ pub struct DoortoolsK {
     #[k(3.0)] pub search_moves: f64,
     #[k(24.0)] pub search_cap: f64,
     #[k(900.0)] pub search_cells: f64,
-    /// this module's stacks stand this much further past the jamb than orders.ts's (a man 0.45 m past the latch is in the line of a round fired from deep in
-    ///  the room at an angle through the opening) · behind the bang the first man closes up to `edgeOut` past the opening's edge · behind a bang, or working a
-    ///  door from outside, the men who do not open it file up `bangFile` apart behind the man who does
+    /// the door tools' stacks stand this much further past the jamb than an order's (a man 0.45 m past the latch is in the line of a round fired from deep in
+    ///  the room at an angle through the opening) · behind the bang the first man closes up to `edge_out` past the opening's edge · behind a bang, or working a
+    ///  door from outside, the men who do not open it file up `bang_file` apart behind the man who does
     #[k(0.4)] pub tuck: f64,
     #[k(0.4)] pub edge_out: f64,
     #[k(1.1)] pub bang_file: f64,
@@ -128,10 +128,10 @@ pub struct DoortoolsK {
     #[k(5.5)] pub thr_doors_m: f64,
     #[k(16.0)] pub thr_doors_walk: f64,
     #[k(1.0)] pub thr_doors_stay: f64,
-    /// THE ROOM'S OTHER DOOR HAS A GUN ON IT FROM THE ENTRY ITSELF (`otherDoorM`, metres; 0 = as it was: every man of a bang / open and clear on his corners,
-    ///  the floor and then the sector his point gave him, the room's other doors in nobody's — the warehouse's front office and the compound's garage: two men
-    ///  shot in the back through the connecting door within seconds of taking the room, 72 of 167 teammates lost in 48 warehouse runs). Every other door of the
-    ///  room being taken that NOBODY OF THE SQUAD HAS BEEN BEYOND (entrypoints.ts farKnown: one model — what the team has seen for itself) is one man's from the
+    /// THE ROOM'S OTHER DOOR HAS A GUN ON IT FROM THE ENTRY ITSELF (`other_door_m`, metres; 0 = every man of a bang / open and clear on his corners,
+    ///  the floor and then the sector his point gave him, the room's other doors in nobody's, and two men shot in the back through the connecting door within seconds
+    ///  of taking the room). Every other door of the
+    ///  room being taken that NOBODY OF THE SQUAD HAS BEEN BEYOND (`entry_points_far_known`: one model — what the team has seen for itself) is one man's from the
     ///  moment a man of the entry is on his point, his corners checked, with a line to its frame from within this many metres: the nearest such man turns his gun
     ///  onto it where he stands and keeps it there — through the rest of the search (the floor is the others': while the room is still being looked over no
     ///  more than half the entry's men are turned off it — one of two or three, two of four) and on the hold after, until an order takes him; if he drops, the

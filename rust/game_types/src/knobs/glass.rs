@@ -2,12 +2,12 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// the numbers (Tab ▸ Renderer — glass edits the renderer's three live; these are the game's)
+/// the numbers
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct GlassK {
     /// straight-line horizon of a round smacking a pane (m): inside it the usual propagation decides how much arrives
     #[k(30.0)] pub hear_m: f64,
-    /// event level: a bullet into glass is a report of its own (guards.ts: awareness toward min(0.85, …) × carry)
+    /// event level: a bullet into glass is a report of its own. Distance and how the way carries scale it into a man's hearing, and his awareness goes toward min(0.85, 0.4 + that)
     #[k(0.85)] pub hear_level: f64,
     /// a stun charge within this of a pane's nearest point stars it (overpressure) …
     #[k(2.5)] pub bang_m: f64,

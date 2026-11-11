@@ -19,8 +19,8 @@ pub struct WhistleK {
     /// what answering it leaves him with: the suspicion of a creak (under the 0.85 that is CONTACT, over the 0.3 that is 'huh?'), and the beat he takes to place it
     #[k(0.45)] pub awareness: f64,
     #[k(0.5)] pub react_t: f64,
-    /// while he is still WALKING over to one, his suspicion is held at least this high (guards.ts, the suspicious branch: it wears off at 0.06/s otherwise, and a spot
-    ///  eight metres off had him give up two strides short of it); arrived, it drains from here through the look round — ~3 s of torch into the corners — and he
+    /// while he is still WALKING over to one, his suspicion is held at least this high (the guards' suspicious branch: it wears off otherwise, and a spot
+    ///  eight metres off would have him give up two strides short of it); arrived, it drains from here through the look round — ~3 s of torch into the corners — and he
     ///  talks himself out of it ('must have been nothing') and goes back. 0 = the creak's behaviour exactly.
     #[k(0.32)] pub walk_floor: f64,
     /// the others who heard it: how long their heads stay turned toward it (s), and how far round a neck goes for it (rad)

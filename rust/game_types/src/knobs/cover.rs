@@ -29,8 +29,8 @@ pub struct CoverK {
     #[k(3.0)] pub bridge: f64,
     /// the squad's own men this near an opening are IN it (it is being walked through, not watched)
     #[k(0.9)] pub in_m: f64,
-    /// one of the squad's own within this of the line from a man to an opening: it is not his to take (m; `laneKeep` for the one he already has — taken clear
-    ///  of where orders.ts's own muzzle lane lets a gun back up, laneOut 0.7, and kept clear of where it brings one down, laneIn 0.45) · a man STOOD on his opening
+    /// one of the squad's own within this of the line from a man to an opening: it is not his to take (m; `lane_keep` for the one he already has — taken clear
+    ///  of where the order's own muzzle lane lets a gun back up, `orders.lane_out` 0.7, and kept clear of where it brings one down, `orders.lane_in` 0.45) · a man STOOD on his opening
     ///  keeps it this long with a mate crossing his line (s: his muzzle dips and comes back; he does not turn away and back)
     #[k(0.7)] pub lane: f64,
     #[k(0.5)] pub lane_keep: f64,
@@ -75,19 +75,14 @@ pub struct CoverK {
     #[k(0.6)] pub step_place_m: f64,
 }
 
-/// ONE JOB AT A TIME (the knobs: Team feel ▸ 'rear ▸ …'). The deal is redone four times a second and an opening is 'live' for a man only while a dozen things
-///  hold that frame (a line to it, nobody of ours in it, the file not going through it, nobody better placed) — so a job was handed out, taken back a quarter
-///  of a second later and another handed out the deal after. Between the two the man's gun went back to what his ORDER has him watch: for a stack's rear man the
-///  door, for a follower the way the file is going. Rear, door, rear, door: the play-through watcher's 'twitch' (four reversals in 2 s).
-///  `settle`: a gun the deal has let go of STAYS on its opening for `secs` before the order's own watch has it back, the man carrying himself for it as he was
+/// ONE JOB AT A TIME. The deal is redone four times a second and an opening is 'live' for a man only while a dozen things
+///  hold that frame (a line to it, nobody of ours in it, the file not going through it, nobody better placed), so a job can be handed out, taken back a quarter
+///  of a second later and another handed out the deal after. Between the two the man's gun goes back to what his ORDER has him watch, and that is a twitch.
+///  `secs`: a gun the deal has let go of STAYS on its opening this long before the order's own watch has it back, the man carrying himself for it as he was
 ///  (squared up to it stood, over his shoulder or still backing on the walk); a job dealt inside that takes the gun straight from the one opening to the other.
-///  The deal itself is not touched — who is dealt what, and when, is as it was (a first cut that kept the JOB a while cost the deal its freedom to re-deal).
-///  It ends at once when anything else has him (an order that leaves him no spare eyes, the entry, a fight, a contact: free() says so), when Sam or a mate is
-///  in the line of the gun or stood in the opening, when he is told to run with it behind him. settle false = the cover as it was, frame for frame
-///  (threshold-identity pins it off). `file`: the same for a follower / a holder, not a stack's rear men only — SHIPS OFF: it takes most of the file's own
-///  twitches too, but depot-four loses teammates with it on every seed set tried.
-///  Measured (tools/qa/playthrough.ts, the two four-man scenarios × 72 seeds, off → on): a stack's rear men's twitches 151 → 8, all twitches 397 → 214,
-///  won 113 → 116 of 144, teammates up 365 → 376 of 576 (inside the scatter). With `file` on as well: 10, 149, 117 and 335 (depot-four 207 → 180 of 288).
+///  The deal itself is not touched: keeping the JOB a while would cost the deal its freedom to re-deal.
+///  It ends at once when anything else has him (an order that leaves him no spare eyes, the entry, a fight, a contact), when Sam or a mate is
+///  in the line of the gun or stood in the opening, when he is told to run with it behind him.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RearK {
     #[k(0.75)] pub secs: f64,

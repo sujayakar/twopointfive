@@ -13,7 +13,7 @@ pub enum RoundHot {
 pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
 }
-/// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own (enemysquads.ts:287, the rows its literal names; merged as { ...SQUADS, ...row } at :306). One arm: the proposal shape has no key for a new struct
+/// one row of `drill_at`, what a map writes over the drill's table; a None field = the table's own (`drill_over`)
 #[derive(Clone, Debug, ToBytes)]
 pub enum DrillAtRow {
     Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },

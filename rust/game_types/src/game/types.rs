@@ -29,7 +29,7 @@ pub struct GuardScript {
     pub direct: Option<bool>,
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
-    /// INVENTED: g.serial() at the one place a man's own script is made (squad.ts:145 order, when he has none). DoorPath.after asks by identity whether the script it lent to is still his. A lent script (frag, runner, morale, startle) stays 0: guards.ts:2143-2146 put his own back before anything can read it here
+    /// dealt at the one place a man's own script is made (`squad::order`, when he has none). What runs a step of his script asks by it whether the script it began with is still his. A lent script (frag, runner, morale, startle) stays 0: his own goes back before anything can read it here
     pub serial: u32,
 }
 
@@ -242,7 +242,7 @@ pub struct Mission {
     pub down_card_at: f64,
     pub hands_on: bool,
     pub stats: crate::game::MissionStats,
-    /// INVENTED: g.serial() where g.mission is written whole: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity
+    /// dealt where g.mission is written whole: what asks "the same run?" holds this
     pub serial: u32,
 }
 
@@ -283,7 +283,7 @@ pub struct GameEvent {
     pub frag: Option<bool>,
     pub charge: Option<bool>,
     pub ears: Option<[V3; 2]>,
-    /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
+    /// dealt at birth: the heard sets know an event by it
     pub serial: u32,
 }
 
@@ -449,23 +449,22 @@ pub struct Game {
     pub door_owns: Vec<Option<usize>>,
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
-    /// INVENTED: what g.serial() deals
+    /// what g.serial() deals next
     #[is(1)] pub serial_next: u32,
-    /// INVENTED: a second cast of the squad is in the seat's row (squadcast::with_cast): seats.ts:240 CAST_VIEW
+    /// a second cast of the squad is in the seat's row (`squadcast::with_cast`)
     pub in_cast: bool,
-    /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
+    /// the rows box_frame has dealt that are not free yet (boxes_frame_reset)
     pub box_frame_rows: Vec<FrameBoxId>,
-    /// INVENTED: rows box_frame may deal again
+    /// rows box_frame may deal again
     pub box_frame_free: Vec<FrameBoxId>,
-    /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
+    /// poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows. The host drains it (the face clears it before a step)
     /// (a step's output, and no state: in no bytes)
     #[bytes(skip)]
     pub out: Vec<crate::out_events::OutEvent>,
-    /// INVENTED: how many with_seat calls stand open: seats.ts tells a seat's view from the bare Game by identity (`rawGame(g) !== g`). Zero between ticks, so the bridge does not carry it
+    /// how many with_seat calls stand open: above zero, this is a seat's view and not the bare tick. Zero between ticks
     pub view_depth: u32,
-    /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
     /// HOW EACH MAN IS, by his body: one table for the player, guards and civilians
@@ -1031,7 +1030,7 @@ pub struct Guard {
     pub wp: usize,
     pub wait: f64,
     pub awareness: f64,
-    /// written whole. doze.ts:244 asks whether a new fix was written: see fix_stamp
+    /// written whole: a new fix (`mind::fix`) counts in fix_stamp, one put back or carried over (`mind::fix_keep`) does not
     pub last_known: Option<V3>,
     #[is(-100.0)] pub last_seen_t: f64,
     pub covers: Option<V3>,
@@ -1076,11 +1075,11 @@ pub struct Guard {
     pub fled: bool,
     #[is(-1.0)] pub gun_lost_at: f64,
     #[is(-1.0)] pub torch_lost_at: f64,
-    /// compared by identity in doorway.ts, doorpath.ts, guards.ts: see path_serial
+    /// replaced whole: what reads it holds path_serial to know whether it is still the one it knew
     pub path: Vec<V3>,
     pub path_i: usize,
     pub repath_t: f64,
-    /// guards.ts asks whether the back-off laid it: see path_goal_orbit
+    /// whether the standoff's back-off laid it: see path_goal_orbit
     pub path_goal: Option<V3>,
     #[is(FirearmId(0))] pub weapon: FirearmId,
     #[is(-1.0)] pub reload_t: f64,
@@ -1140,11 +1139,11 @@ pub struct Guard {
     /// followLeader fills it in place through a local
     pub follow_goal: V3,
     pub post: Option<crate::scene_level::Chokepoint>,
-    /// INVENTED: bumped by every whole write of last_known, for the identity question at doze.ts:244
+    /// counts each new fix (`mind::fix`, not `fix_keep`): a rule compares it before and after to ask whether anything gave him one
     pub fix_stamp: u32,
-    /// INVENTED: bumped by every whole replacement of path
+    /// counts every whole replacement of path (`set_path`)
     pub path_serial: u32,
-    /// INVENTED: path_goal is the very point the standoff laid
+    /// path_goal is the very point the standoff laid
     pub path_goal_orbit: bool,
 }
 
@@ -1273,7 +1272,7 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
 impl Player {
-    ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
+    /// His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made from the weapon table, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
         let mut p = Player::blank();
         p.ch = ch; p.has_rifle = has_rifle; p.pistol = pistol; p.rifle = rifle;
@@ -1314,7 +1313,7 @@ impl Game {
         if ix as f64 != i { return None; }
         self.col.boxes.get(ix).copied()
     }
-    /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
+    /// a new serial, for a row or record a reader has to know from others just like it. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }
 

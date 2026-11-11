@@ -107,17 +107,15 @@ pub struct WallshotK {
     #[k(2.0)] pub ours_secs: f64,
 }
 
-/// A WALL CHARGE KILLS WHOEVER STANDS AT IT (the maintainer, 10-19, god mode off, 0.9 m from his own charge when he blew it and told only 'you were too
-///  close': "blowing a wall charge with me right next to it should kill me"). A blast does to the player what it does to anyone, so with `on` the rule is one
+/// A WALL CHARGE KILLS WHOEVER STANDS AT IT (the maintainer, 0.9 m from the player's own charge when it blew, with god mode off, and told only 'you were too
+///  close': "blowing a wall charge with me right next to it should kill me"). A blast does to the player what it does to anyone: the rule is one
 ///  rule for every man on the floor — the player, ours, the defenders, a civilian who is in the building:
-///    on the charge's OWN side, nearer than `nearM` with a line to it: killed, dead as a frag leaves a man (he was blind for the safety radius's seconds — a
-///      teammate, a defender — or rocked and blind — the player; a civilian was not asked about at all);
-///    BEHIND a wall it opened, nearer than DOORTOOLS.knockM with a line to the hole: down as a defender there always was (the charge's knock: 'struck') — now
-///      the player too (he was blind a second or two), a civilian, and one of ours whatever the team's size (on a team of more than two he was blind a second
-///      or two; on a team of two he already went down);
-///    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size (on a team of two he took the defenders' longer stun and fold).
-///  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode. A man with god mode
-///  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release. With the safety radius on (the page) the trigger's row names who
+///    on the charge's OWN side, nearer than `near_m` with a line to it: killed, dead as a frag leaves a man;
+///    BEHIND a wall it opened, nearer than `doortools.knock_m` with a line to the hole: down (the charge's knock: 'struck'): a defender, the player, a civilian
+///      and one of ours whatever the team's size;
+///    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size.
+///  The player goes down as a round puts him down (`hit_player`: his one hit): never in god mode. A man with god mode
+///  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release. The trigger's row names who
 ///  is too close and who is behind the wall before he presses it. No hit points anywhere: nobody takes more or fewer rounds.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WallkillK {

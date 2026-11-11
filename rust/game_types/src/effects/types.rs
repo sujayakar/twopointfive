@@ -3,7 +3,7 @@
 use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body, a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)
+/// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body, a blast's trail off its spark (which answers nothing once the spark dies or its slot is reused)
 #[derive(Clone, Debug)]
 pub enum Track {
     Muzzle { by: CharId },
