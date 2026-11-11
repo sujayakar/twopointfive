@@ -7,7 +7,7 @@
 //! Men who leave a game for good (a restart makes its guards anew) would fill the pool in time, so whenever a man whose poses are here is no longer on the
 //! game's lists the host takes every pose out, EMPTIES it (`clear_of`) and puts back the men who are there: one rule for whoever left,
 //! however he left. A pool FULL of men who are there is not emptied: the pose that did not fit stays the host's own array and is asked of the bench.
-//! A pose is stored as the TypeScript's Float32Array stores it (single.rs).
+//! A pose is stored in singles (single.rs).
 use crate::single::S;
 use crate::skeleton::singles;
 use crate::state::state;

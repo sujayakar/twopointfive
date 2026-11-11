@@ -38,7 +38,7 @@ const MOMENT: (usize, usize) = (18, 20);
 /// when the look is said a second time
 const LOOK_AGAIN: usize = 600;
 
-/// THE PAGE'S LOOK: src/draw/look.ts `lookNumbers` run once under bun as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
+/// THE PAGE'S LOOK, written out: what src/draw/look.ts `lookNumbers` gives (nothing here asks it again) as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
 /// on), with the one number a preset decides, the mirrors, as High has it.
 const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
     26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,

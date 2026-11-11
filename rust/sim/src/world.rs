@@ -17,7 +17,7 @@ pub const LASTS: usize = 1 << 13;
 /// THE SCRATCH OF ONE QUESTION, beside the boxes and no part of them: what it has met already, the cells it walked, the panes and statics it lists. One for
 /// whoever asks (one thread, and no question is asked inside another): so a question READS the boxes (`&World`) and writes nothing that is anybody's.
 pub struct Asking {
-    /// a box met by this question already (its id), as the TypeScript's `stamp`
+    /// a box met by this question already (its id)
     pub stamp: [u32; MAX_BOXES],
     pub cell_stamp: [u32; MAX_CELLS],
     pub seg_cells: [u32; MAX_CELLS],
@@ -39,7 +39,7 @@ static mut ASKING: Asking = IDLE;
 pub fn asking() -> &'static mut Asking { unsafe { &mut *core::ptr::addr_of_mut!(ASKING) } }
 
 impl Asking {
-    /// a fresh id for one question's stamps (the TypeScript's `++stampId`); at the wrap every stamp is wiped so that no old one reads as this question's
+    /// a fresh id for one question's stamps; at the wrap every stamp is wiped so that no old one reads as this question's
     #[inline]
     pub fn ask(&mut self) -> u32 {
         self.stamp_id = self.stamp_id.wrapping_add(1);
@@ -107,8 +107,8 @@ fn word_of(o: &World, i: usize) -> u64 {
     h
 }
 
-// ---- the TypeScript's own small operations, where the language's differ
-/// `x < 0 ? -x : x` as the TypeScript writes it (a −0 stays −0, where `abs` would clear it)
+// ---- small operations whose every edge is the game's: a NaN and the sign of a zero are part of the answer, and the language's own differ
+/// `x < 0 ? -x : x` (a −0 stays −0, where `abs` would clear it)
 #[inline(always)]
 pub fn neg_up(x: f64) -> f64 {
     if x < 0.0 {
@@ -117,12 +117,12 @@ pub fn neg_up(x: f64) -> f64 {
         x
     }
 }
-/// Math.ceil (a −0.x is −0, as there)
+/// the ceiling (a −0.x is −0)
 #[inline(always)]
 pub fn js_ceil(x: f64) -> f64 {
     -prim::floor(-x)
 }
-/// Math.min of two: NaN if either is, and −0 under +0
+/// the lesser of two: NaN if either is, and −0 under +0
 #[inline(always)]
 pub fn js_min(a: f64, b: f64) -> f64 {
     if a != a || b != b {
@@ -138,7 +138,7 @@ pub fn js_min(a: f64, b: f64) -> f64 {
         a
     }
 }
-/// Math.max of two: NaN if either is, and +0 over −0
+/// the greater of two: NaN if either is, and +0 over −0
 #[inline(always)]
 pub fn js_max(a: f64, b: f64) -> f64 {
     if a != a || b != b {
@@ -154,7 +154,7 @@ pub fn js_max(a: f64, b: f64) -> f64 {
         a
     }
 }
-/// Math.sign(x) || 1
+/// −1 under nought, else 1 (a zero and a NaN too)
 #[inline(always)]
 pub fn sign_or_one(x: f64) -> f64 {
     if x < 0.0 {
@@ -163,12 +163,12 @@ pub fn sign_or_one(x: f64) -> f64 {
         1.0
     }
 }
-/// Math.max of three, as Math.max(a, b, c) gives it
+/// the greatest of three, each pair as `js_max` takes it
 #[inline(always)]
 pub fn js_max3(a: f64, b: f64, c: f64) -> f64 {
     js_max(js_max(a, b), c)
 }
-/// Math.abs: a −0 is cleared, NaN is NaN
+/// the size of x: a −0 is cleared, NaN is NaN
 #[inline(always)]
 pub fn js_abs(x: f64) -> f64 {
     if x < 0.0 {
@@ -188,7 +188,7 @@ pub fn or_one(x: f64) -> f64 {
         x
     }
 }
-/// src/math/vec.ts clamp: `x < a ? a : x > b ? b : x` (NaN passes)
+/// `x < a ? a : x > b ? b : x` (NaN passes)
 #[inline(always)]
 pub fn clamp(x: f64, a: f64, b: f64) -> f64 {
     if x < a {
@@ -199,11 +199,10 @@ pub fn clamp(x: f64, a: f64, b: f64) -> f64 {
         x
     }
 }
-/// src/math/vec.ts smoothstep
 #[inline(always)]
 pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
     let t = clamp((x - a) / (b - a), 0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
-/// Math.PI / 180
+/// π / 180
 pub const DEG: f64 = 0.017453292519943295;

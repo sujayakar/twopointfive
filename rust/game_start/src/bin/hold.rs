@@ -1,4 +1,4 @@
-//! HOLD: is this build the same game as that one? Natively, with no page, no TypeScript and no wire (README.md, "Hold").
+//! HOLD: is this build the same game as that one? Natively, with no page and no wire (README.md, "Hold").
 //!
 //!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…     play, and keep what the game was after every frame
 //!   hold check DIR [--but PART,…]                                                 play the same again on this build, and compare

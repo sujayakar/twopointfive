@@ -1,5 +1,6 @@
 //! LYING SNOW UNDERFOOT: how boggy the ground is, read off the one table of the snow (world.rs `snow`, a byte a static, each box's place and turn being its own row's)
 //! under the roofs in force. A bounce's own numbers (`dead`, `grip`, `stick`) are no part of how boggy the ground is.
+//! It keeps nothing: a question is handed the box world and the rule's numbers (`Snow`).
 use crate::world::{js_abs, js_max, js_min, REC, R_C, R_COS, R_H, R_SIN, SNOW_BANK, SNOW_OLD, SNOW_PACKED, World};
 use game_types::knobs::Knobs;
 

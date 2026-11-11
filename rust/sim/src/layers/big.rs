@@ -51,7 +51,7 @@ fn line_mix(a: BigLine, b: BigLine, kk: f64, bow: Option<[f64; 3]>) -> BigLine {
         BigLine { g, d: dir_mix(a.d, b.d, kk) }
     }
 }
-/// CharacterAnimator.twisted: where a point posed below the chest ENDS UP after the chest twist still to come, and where spine2 itself does
+/// where a point posed below the chest ENDS UP after the chest twist still to come, and where spine2 itself does
 struct Twisted {
     e1: [f64; 4],
     e2: [f64; 4],
@@ -79,7 +79,7 @@ impl Twisted {
         v3::add(quat::rotate(self.e3, v3::sub(x2, self.p3t)), self.p3t)
     }
 }
-/// rigProps.ts bigBackOf for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
+/// for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
 fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua_l: [f64; 3], ua_r: [f64; 3], clear: f64) -> ([f64; 3], [f64; 3]) {
     let mut up = v3::sub(v3::lerp3(ua_l, ua_r, 0.5), hips);
     up = if v3::len(up) > 1e-3 { v3::normalize(up) } else { [0.0, 1.0, 0.0] };

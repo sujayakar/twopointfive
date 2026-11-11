@@ -261,8 +261,8 @@ fn arm_solved(st: &mut game_types::character::AnimSp, hh: &mut Hands, aw: &mut [
 fn nod_lift(n: f64) -> f64 {
     2.0 * DEGR - hypot2(n, 2.0 * DEGR)
 }
-/// CharacterAnimator.nvTip: a goggle nod's tip of the HEAD joint (+ = chin down) about the level axis square to where he faces, `head` being the head
-/// as it will be drawn (nvHead), so the gaze stays in its own upright plane
+/// a goggle nod's tip of the HEAD joint (+ = chin down) about the level axis square to where he faces, `head` being the head
+/// as it will be drawn, so the gaze stays in its own upright plane
 fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
     let hd = role(HEAD);
     let gh = quat::mul(*head, *rest_inv);

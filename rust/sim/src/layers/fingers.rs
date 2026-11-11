@@ -1,7 +1,7 @@
 //! The finger and thumb joints, last of all.
 use super::*;
 
-/// character.ts qAng between two tables of doubles
+/// the angle between two rotations, off two tables of doubles
 #[inline(always)]
 fn q_ang_of(a: &[f64], i: usize, b: &[f64], k: usize) -> f64 {
     let dot = abs(a[i] * b[k] + a[i + 1] * b[k + 1] + a[i + 2] * b[k + 2] + a[i + 3] * b[k + 3]);
