@@ -1,4 +1,4 @@
-//! THE START ITSELF: a level of `levels/` stands and runs with nothing made by TypeScript, and a game stood again in the same process is the
+//! THE START ITSELF: a level of `levels/` stands and runs, and a game stood again in the same process is the
 //! same game (rust/sim keeps blocks and tables in statics: a stand must leave nothing of the game before it).
 use game_start::play::{Opts, Play};
 

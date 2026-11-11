@@ -12,10 +12,10 @@
 //!   · ZEROS ARE A GAME WITH NOTHING IN IT. A new block is zeros with its head written; a part reads its zeros as "empty".
 //!   · no allocation: `GAMES` blocks, a fixed size each, so the module's memory never grows.
 //!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the poses, the smoke grid's bricks) is sized for the largest game, and its FIRST WORD is how
-//!     many of its bytes are in use, that word included. The host carries, compares and folds only those: what lies past them is nobody's state.
+//!     many of its bytes are in use, that word included. No rule reads what lies past them (a moment copies the block whole all the same).
 //!
-//! WHO HOLDS A SLOT is the host's business (src/sim/state.ts SimState: a game's block is bound to a slot here, or parked in the host's memory when more than
-//! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
+//! WHO HOLDS A SLOT is the host's business (game_face `face_start` deals them, and a moment kept keeps a copy of a block's bytes and `put`s it back: game_rules
+//! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
 use crate::poses::Poses;
 use crate::men::Men;
@@ -53,20 +53,19 @@ pub struct Part {
     pub off: usize,
     pub len: usize,
     pub ver: u32,
-    /// a pool: its first word is how many of its bytes are in use (the host carries only those)
+    /// a pool: its first word is how many of its bytes are in use
     pub pool: bool,
 }
-/// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
-/// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
-/// paid for by every part that stands after it. Parts of a fixed length first, then the pools: every game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all (a last pool with nothing in it takes no room, src/sim/state.ts `span`).
+/// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools: every
+/// game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all.
 pub const PARTS: [Part; 7] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
-    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
-    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
+    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (a pose is ten columns of whole vectors)
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();

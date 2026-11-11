@@ -1,4 +1,4 @@
-//! WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game itself (the program is src/bin/levels.rs; `gate long` asks them all): natively, with no page and no TypeScript (tools/levels/export.ts asks two of these of every level it writes).
+//! WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game itself (the program is src/bin/levels.rs; `gate long` asks them all): natively, with no page (tools/levels/export.ts asks two of these of every level it writes).
 //!
 //!   levels second-way [LEVEL…] [--list] [--walls] [--nolists]      every room the defenders can shut has another way in
 //!   levels sight [LEVEL…] [--write]                                a defender sees what he watches

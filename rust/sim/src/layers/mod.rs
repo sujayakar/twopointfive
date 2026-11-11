@@ -52,12 +52,11 @@ pub use watch::*;
 pub use work::*;
 
 const DEGR: f64 = PI / 180.0;
-/// Number.isFinite
 #[inline(always)]
 fn finite(x: f64) -> bool {
     abs(x) < f64::INFINITY
 }
-/// character.ts Spring.step on two doubles of a layer's state: the value, then its speed
+/// a spring's step on two doubles of a layer's state: the value, then its speed
 #[inline(always)]
 fn spring(st: &mut [f64], i: usize, target: f64, w: f64, dt: f64) {
     let (x, v) = (st[i], st[i + 1]);
@@ -75,7 +74,7 @@ fn spring_step(s: &mut Spring, target: f64, w: f64, dt: f64) {
 }
 const AX: [f64; 3] = [1.0, 0.0, 0.0];
 const AY: [f64; 3] = [0.0, 1.0, 0.0];
-/// CharacterAnimator.kneePole: the knee steered over the toes (the foot bone's Y runs along the foot)
+/// the knee steered over the toes (the foot bone's Y runs along the foot)
 fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
     let f = quat::rotate(*foot_rot, AY);
     let h = v3::normalize([f[0], 0.0, f[2] + 1e-6]);
@@ -92,7 +91,7 @@ fn ch(d: &[S], i: usize, c: usize) -> f64 {
 fn set_ch(d: &mut [S], i: usize, c: usize, v: f64) {
     put(d, c * (d.len() / NODE) + i, v)
 }
-/// CharacterAnimator.shift: node i's origin moved by a model-space offset
+/// node i's origin moved by a model-space offset
 fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     let p = parent_rot(rig, d, i);
     let l = quat::rotate([-p[0], -p[1], -p[2], p[3]], *off);
@@ -101,7 +100,7 @@ fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     set_ch(d, i, 1, y);
     set_ch(d, i, 2, z);
 }
-/// quat.axisAngle about the model's X, Y, Z: the products with the axis's noughts are written out, since −0 is a number too
+/// a rotation about the model's X, Y, Z: the products with the axis's noughts are written out, since −0 is a number too
 #[inline(always)]
 fn q_pitch(a: f64) -> [f64; 4] {
     let s = sin(a / 2.0);
@@ -117,7 +116,7 @@ fn q_roll(a: f64) -> [f64; 4] {
     let s = sin(a / 2.0);
     [0.0 * s, 0.0 * s, 1.0 * s, cos(a / 2.0)]
 }
-/// CharacterAnimator.turn: node i (and its subtree) about model axes, in place
+/// node i (and its subtree) about model axes, in place
 #[inline(always)]
 fn turn(d: &mut [S], rig: &Rig, i: usize, q: [f64; 4]) {
     let par = parent_rot(rig, d, i);
@@ -127,7 +126,7 @@ fn turn(d: &mut [S], rig: &Rig, i: usize, q: [f64; 4]) {
 fn cast(n: usize, roles: &[usize]) -> bool {
     roles.iter().all(|&r| role(r) < n)
 }
-/// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry
+/// the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry
 /// and on exit)
 fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
     let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
@@ -147,7 +146,7 @@ fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
 fn falsy(x: f64) -> bool {
     x == 0.0 || x != x
 }
-/// CharacterAnimator.untwist: where a point must be posed below spine3 to END UP at `h` after the chest twist still to come (the run-forward bones current)
+/// where a point must be posed below spine3 to END UP at `h` after the chest twist still to come (the run-forward bones current)
 fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
     if falsy(tw_y) && falsy(tw_p) {
         return h;
@@ -166,7 +165,7 @@ fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
     let x2 = v3::add(quat::rotate(ie2, v3::sub(x1, p2t)), p2t);
     v3::add(quat::rotate(ie1, v3::sub(x2, p1)), p1)
 }
-/// CharacterAnimator.lookAt: the neck and head turned by `w` of the way from where the eyes look to `target` (model space); runs the pose forward first
+/// the neck and head turned by `w` of the way from where the eyes look to `target` (model space); runs the pose forward first
 fn look_at(d: &mut [S], rig: &Rig, fk: &mut Fk, gaze_local: &[f64; 3], target: [f64; 3], w: f64, roll: f64) {
     fk_run(rig, d, fk.rot, fk.pos);
     let (nk, hd) = (role(NECK), role(HEAD));
@@ -233,23 +232,22 @@ fn set_own_rot(d: &mut [S], i: usize, q: &[f64; 4]) {
     set_ch(d, i, 5, q[2]);
     set_ch(d, i, 6, q[3]);
 }
-/// A CLIP A LAYER SAMPLES FOR ITSELF (`p.copy(rest); sampleClip(clip, t, looped, p)`): the rest pose copied into a scratch pose of the same character and the
-/// clip sampled over it. `clip` is the module's number for it, handed with the layer's own numbers (skeleton.ts clipNo: the host asks a layer only when the
-/// module holds every clip it samples); false = no such clip or pose
+/// A CLIP A LAYER SAMPLES FOR ITSELF: the rest pose copied into a scratch pose of the same character and the
+/// clip sampled over it. `clip` is the module's number for it, handed with the layer's own numbers (game_rules anim_skeleton `clip_no`); false = no such clip or pose
 fn sample_on_rest(g: usize, at_rest: usize, at_out: usize, nodes: usize, clip: f64, t: f64, looped: bool) -> bool {
     clip >= 0.0 && ask_blend(g, at_rest, at_rest, 1.0, false, at_out, nodes) && ask_sample(g, at_out, nodes, clip as usize, t, looped)
 }
 // ================================================================ THE ARMS
-// An arm is posed on a COPY of the pose (a second pose of the pool, the animator's pB) and laid back through a mask: the copy is made with `ask_blend` at
+// An arm is posed on a COPY of the pose (a second pose of the pool) and laid back through a mask: the copy is made with `ask_blend` at
 // weight 1 (singles copied, none worked out), the limbs are solved on it, the mask is written from the named joints and
-// the copy is blended in. The run-forward bones are then the COPY's, as the TypeScript leaves them.
+// the copy is blended in. The run-forward bones are then the COPY's.
 
-/// both arms from the collar bones down (CharacterAnimator.armsMask)
+/// both arms from the collar bones down
 fn arms_mask() {
     ask_mask(&[(role(SHOULDER_L), 1.0, true), (role(SHOULDER_R), 1.0, true)]);
 }
 const ARM_ROLES: [usize; 9] = [SPINE3, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, FOREARM_L, FOREARM_R, HAND_L, HAND_R];
-/// CharacterAnimator.gripTurn: the rotation that carries the aim clip's grip (bore `g0`, gun hand at model rotation `rr0`) onto the wanted bore `gd` — the
+/// the rotation that carries the aim clip's grip (bore `g0`, gun hand at model rotation `rr0`) onto the wanted bore `gd` — the
 /// shortest arc, then unrolled about the bore so the pistol's top strap (`grip_up`, in the hand) faces `up_ref` as nearly as the bore allows
 fn grip_turn(g0: &[f64; 3], rr0: &[f64; 4], gd: &[f64; 3], up_ref: &[f64; 3], grip_up: &[f64; 3]) -> [f64; 4] {
     let mut turn = quat::from_to(*g0, *gd);
@@ -311,7 +309,7 @@ fn hands_to(h: &Hands, an: &mut Anim) {
 fn poses(an: &Anim) -> (usize, usize, usize) {
     (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize)
 }
-/// what a Float32Array keeps of a double
+/// a double as a single keeps it
 #[inline(always)]
 fn stored(v: f64) -> f64 {
     let mut s = [S::ZERO];
@@ -331,7 +329,7 @@ fn q_ang(d: &[S], i: usize, b: &[f64], k: usize) -> f64 {
 /// full-fist flexion per knuckle (°), and the thumb's, joint by joint
 const FIST: [f64; 3] = [72.0, 92.0, 62.0];
 const THUMB_FIST: [f64; 3] = [30.0, 25.0, 45.0];
-/// CharacterAnimator.hand — curl the four fingers (0 straight … 1 fist) and set the thumb (0 alongside … 1 folded over the fist) of one hand, from the rest
+/// curl the four fingers (0 straight … 1 fist) and set the thumb (0 alongside … 1 folded over the fist) of one hand, from the rest
 /// (straight) hand; then the hand pass's note: a layer has set this hand, and how far its shape stands from where the locomotion left each digit.
 fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, spread: f64) {
     let (ns, at) = (digits(side), side * HAND_DIGITS);
@@ -356,7 +354,7 @@ fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, sp
         h.note[side * 5 + g] = stored(min(h.note[side * 5 + g], far));
     }
 }
-/// quat.fromBasis: the rotation whose axes are x, y, z
+/// the rotation whose axes are x, y, z
 fn from_basis(x: &[f64; 3], y: &[f64; 3], z: &[f64; 3]) -> [f64; 4] {
     let (m00, m10, m20, m01, m11, m21, m02, m12, m22) = (x[0], x[1], x[2], y[0], y[1], y[2], z[0], z[1], z[2]);
     let tr = m00 + m11 + m22;
@@ -402,14 +400,14 @@ impl Stands {
         [dx * cy - dz * sy, wp[1] - p0[1], dx * sy + dz * cy]
     }
 }
-/// CharacterAnimator.handRot: the model rotation of a hand whose fingers point along `f` with the back of the hand to `b` (made square to f); `fix` is that
-/// side's calibration from the rest pose (the animator's handFix, handed in with the layer's numbers)
+/// the model rotation of a hand whose fingers point along `f` with the back of the hand to `b` (made square to f); `fix` is that
+/// side's calibration from the rest pose (handed in with the layer's numbers)
 fn hand_rot(fix: &[f64; 4], f: [f64; 3], b: [f64; 3]) -> [f64; 4] {
     let ff = v3::normalize(f);
     let bb = v3::normalize(v3::mad(b, ff, -v3::dot(b, ff)));
     quat::mul(from_basis(&v3::cross(ff, bb), &ff, &bb), *fix)
 }
-/// CharacterAnimator.trunkFrame: the trunk's own left, up and forward, off the run-forward bones
+/// the trunk's own left, up and forward, off the run-forward bones
 fn trunk_frame(fk: &Fk) -> ([f64; 3], [f64; 3], [f64; 3]) {
     let up = v3::normalize(v3::sub(fk.at(role(SPINE3)), fk.at(role(HIPS))));
     let l = v3::sub(fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
@@ -452,13 +450,13 @@ fn wrist_ease(d: &mut [S], rig: &Rig, fk: &mut Fk, hand_n: usize, rot0: &[f64; 4
         set_model_rot(d, hand_n, &q, &par);
     }
 }
-/// CharacterAnimator.knifeRot: the right hand's turn from where the blade is to point and which way the back of the hand faces (squared to the blade here)
+/// the right hand's turn from where the blade is to point and which way the back of the hand faces (squared to the blade here)
 fn knife_rot(fix_r: &[f64; 4], blade: [f64; 3], back: [f64; 3]) -> [f64; 4] {
     let t = v3::normalize(blade);
     let b = v3::normalize(v3::mad(back, t, -v3::dot(back, t)));
     hand_rot(fix_r, v3::cross(t, b), b)
 }
-/// CharacterAnimator.sheathFist: where the right wrist goes, the fist's turn and the elbow's pole with the fist closed on the sheathed handle, in the chest
+/// where the right wrist goes, the fist's turn and the elbow's pole with the fist closed on the sheathed handle, in the chest
 /// joint's frame off the rest pose's (`rc_inv`: the rest chest's turn, inverted). `pull` m back down the knife's line, `off` m further off the chest.
 fn sheath_fist(fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: f64, off: f64) -> ([f64; 3], [f64; 4], [f64; 3]) {
     let s3 = role(SPINE3);
@@ -518,7 +516,7 @@ fn twist_of(y: f64, p: f64) -> [f64; 4] {
 fn ease(c: &mut [f64], i: usize, v: f64, q: f64) {
     c[i] += (v - c[i]) * q;
 }
-/// CharacterAnimator.untwistDir: a direction taken back through the chest twist still to come
+/// a direction taken back through the chest twist still to come
 fn untwist_dir(tw_y: f64, tw_p: f64, dv: [f64; 3]) -> [f64; 3] {
     if falsy(tw_y) && falsy(tw_p) {
         return dv;
@@ -531,7 +529,7 @@ fn untwist_dir(tw_y: f64, tw_p: f64, dv: [f64; 3]) -> [f64; 3] {
     }
     quat::rotate(quat::mul(quat::conj(e1), quat::mul(quat::conj(e2), quat::conj(e3))), dv)
 }
-/// bigLayer's ease: a share clamped to 0‥1 and smoothed
+/// the big layer's ease: a share clamped to 0‥1 and smoothed
 fn e3(u: f64) -> f64 {
     let u = clamp(u, 0.0, 1.0);
     u * u * (3.0 - 2.0 * u)

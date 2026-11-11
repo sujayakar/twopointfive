@@ -1,10 +1,11 @@
-//! THE SIMULATION IN RUST — the game's update, moved here a system at a time and built to WebAssembly for the page, the game server and the headless tools
-//! (docs/agents/rust.md says how a system moves, and what holds it to the TypeScript one it replaces).
+//! THE SIMULATION'S LOOPS: the questions of the box world (lines, rays, circles, a way across the floor), the senses, the smoke, the glass and the animator's layers, over
+//! flat state in one block a game (state.rs). THE HOST, in these files, is whoever calls this crate: the rules (rust/game_rules), which write what a question reads and say by
+//! name what a question could not answer. docs/agents/rust.md says what Rust code owes the game.
 //!
 //! What every line in this crate owes the game:
 //!   · one arithmetic. Doubles, and only + − × ÷ √ and what the standard makes exact of them (floor, trunc, abs, comparisons, the bits). Nothing that a
-//!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math, no `f32` where the
-//!     TypeScript holds a double.
+//!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math. An `f32` only where the
+//!     standard makes it exact too (a stored pose: single.rs; a rough rectangle of the plan: glow.rs; a hand's note: layers/).
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
 //!   · no world outside. No clock, no random source of its own, no files.
 //!   · state in one place. What a game keeps here from one call to the next is in its block (state.rs: indices, never addresses); every other `static mut`
@@ -12,7 +13,7 @@
 //!
 //! WHO HOLDS IT. The compiler: the crate is `no_std`, so no line of it can name a hash map, a thread, a clock or a file (`std::…` does not resolve here).
 //! tools/qa/rust-rules-check.ts: the float methods the compiler cannot keep out once any crate links the standard
-//! library (`.sin()`, `.powf()`, `.mul_add()` …), an `f32`, and the SIMD that rounds as the machine likes. The reader: the order of the arithmetic.
+//! library (`.sin()`, `.powf()`, `.mul_add()` …), and the SIMD that rounds as the machine likes. The reader: the order of the arithmetic.
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 extern crate alloc;
@@ -57,9 +58,9 @@ pub mod world;
 // one that reads the tables made from the state names the block's `stamp` too (`state::stamp`), and a step the box world `w` it is
 // taken over and that copy's number `copy`
 
-// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world, the leaves
-// and the time once (`panes_ctx`), and what it let go is read from `panes_out_*` and cleared before the next pane's.
-/// glass.ts boxSeed of a box of the world; pointSeed
+// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world
+// and the time once (`panes::Ctx`), and what it let go is left in that for the caller.
+/// the seed of a box of the world (`panes::box_seed`)
 pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> u32 {
     let mut b = [0.0; world::REC];
     b[world::R_C] = cx0;
@@ -70,7 +71,7 @@ pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> 
     b[world::R_H + 2] = hz;
     panes::box_seed(&b)
 }
-/// what a game holds of what levelfit.ts counts: 0 window's bars gone · 1 clumps of a sheet
+/// what a game holds of what a level is counted for as it loads (game_rules levelfit.rs): 0 window's bars gone · 1 clumps of a sheet
 pub fn panes_cap(i: u32) -> u32 {
     (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
 }

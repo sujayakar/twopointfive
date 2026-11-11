@@ -83,7 +83,7 @@ struct Feed {
     hr: f64,
 }
 
-/// CharacterAnimator.reloadArm (and its feedArm) — the long gun's magazine change, the support hand's: to the well, the empty stripped, a fresh one
+/// the long gun's magazine change, the support hand's: to the well, the empty stripped, a fresh one
 /// fetched and seated, the handle run, back to the fore-end; an untrained man's lands on the lip, is backed off and found, and is slapped home. Or, for
 /// a gun fed its own way, the hand through the stations it is handed. Solved on the scratch pose at `at_b` in the gun's frame as the trigger hand has
 /// it, laid on the pose by w through the support arm's mask.

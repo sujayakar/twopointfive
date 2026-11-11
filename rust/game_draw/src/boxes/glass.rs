@@ -1,5 +1,5 @@
 //! THE PANES: every static of glass, nearest to where the view looks first and as many as the info block holds, and behind each what is broken of it (the cells
-//! a round or a blast took out: game/glassbreak.ts `fill` is the layout).
+//! a round or a blast took out).
 use super::grid::{MAX_PANES, PANES};
 use super::{pack, Row4, Word};
 use alloc::vec::Vec;
@@ -11,7 +11,7 @@ const HEAD: usize = 4;
 const SITE: usize = 4;
 const SITES: usize = 8;
 const ROWS: usize = HEAD + SITES * SITE;
-// glassbreak.ts's places in a pane's row (rust/sim panes.rs Row.d and Row.w)
+// places in a pane's row (rust/sim panes.rs Row.d and Row.w)
 const D_SITE: usize = 9;
 const D_DICE: usize = 72;
 const W_FLAGS: usize = 1;

@@ -1,4 +1,4 @@
-//! MISSIONS: what a change of play does to the room clears and to the rescues and the night breach, read the same way before and after. Natively, with no page and no TypeScript (README.md, "Missions").
+//! MISSIONS: what a change of play does to the room clears and to the rescues and the night breach, read the same way before and after. Natively, with no page (README.md, "Missions").
 //!
 //!   missions [--seeds 1-8] [--secs 75] [--std | --hard] [--played] [LEVEL…]      play, and print a row a mission and difficulty, tab between columns (keep it in a file)
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums

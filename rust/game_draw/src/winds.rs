@@ -63,7 +63,7 @@ section! {
 }
 
 /// WHAT THE PARTICLE POOL IS HANDED: the jets near the view, nearest first, then the storm. It wants a pool and where the view looks, so it is made here of the standing game and
-/// no game's record holds it. The page has the same rule; tools/draw/weather-check.ts holds the two together.
+/// no game's record holds it.
 fn for_particles(g: &Game) -> Vec<game::ids::WindWindSourceId> {
     use game::wind::WindSourceKind as K;
     let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);

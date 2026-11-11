@@ -1,13 +1,12 @@
-//! POSING — src/anim/skeleton.ts: a local pose blended into another, a pose run forward into every node's model-space rotation and origin, a node turned in
-//! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
-//! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
+//! POSING: a local pose blended into another, a pose run forward into every node's model-space rotation and origin, a node turned in
+//! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. The operands stand in a written order, so the doubles are the
+//! same on every machine, and every pose value is stored as a single (single.rs).
 //!
-//! What a function works on is handed to it as slices. The animator's layers are layers/ and ask here; under the row `poses` a character's
-//! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
-//! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
-//! not a speed-up: the layers that move here next call these with no crossing at all.
+//! WHAT IT IS HANDED. A function works on slices. The animator's layers are layers/ and ask here. A character's poses live in its game's block (poses.rs) and a question is
+//! asked of them THERE, with no copy; a pose that is an array of the host's (a function's scratch) is written onto the BENCH below, asked about, and read back. The rig is
+//! written onto the bench before a question is asked of it, and the bench is scratch: nothing of a game is kept on it.
 //!
-//! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math`.
+//! The lengths and the angles are the game's own (rust/maths).
 
 use crate::maths::{acos, atan2, hypot4};
 use crate::single::{get, put, S};
@@ -90,7 +89,7 @@ pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, ou
     crate::single::blend4(store, a, b, crate::single::weight(w), mask, out, n, rows(n));
 }
 
-/// one node of PoseFK.run: its rotation and origin from its parent's and its own local row
+/// one node run forward: its rotation and origin from its parent's and its own local row
 #[inline(always)]
 fn fk_node(d: &[S], n: usize, rot: &mut [f64], pos: &mut [f64], i: usize, par: i32) {
     let (rx, ry, rz, rw) = (get(d, 3 * n + i), get(d, 4 * n + i), get(d, 5 * n + i), get(d, 6 * n + i));
@@ -117,7 +116,7 @@ fn fk_node(d: &[S], n: usize, rot: &mut [f64], pos: &mut [f64], i: usize, par: i
     pos[i * 3 + 1] = pos[p * 3 + 1] + t1;
     pos[i * 3 + 2] = pos[p * 3 + 2] + t2;
 }
-/// PoseFK.run: every node, parents first
+/// every node run forward, parents first
 pub fn fk_run(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64]) {
     let n = d.len() / NODE;
     for &i in rig.order {
@@ -125,7 +124,7 @@ pub fn fk_run(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64]) {
         fk_node(d, n, rot, pos, i, rig.parent[i]);
     }
 }
-/// PoseFK.runFrom: `root` and what hangs under it, in the rig's order (the others are current and are left)
+/// `root` and what hangs under it, in the rig's order (the others are current and are left)
 pub fn fk_run_from(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: usize) {
     let mut under = [false; MAX_NODES];
     let n = d.len() / NODE;
@@ -139,7 +138,7 @@ pub fn fk_run_from(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: u
         fk_node(d, n, rot, pos, i, par);
     }
 }
-/// PoseFK.parentRot: the model-space rotation of node i's parent, walked up the pose
+/// the model-space rotation of node i's parent, walked up the pose
 pub fn parent_rot(rig: &Rig, d: &[S], i: usize) -> [f64; 4] {
     let (mut x, mut y, mut z, mut w) = (0.0, 0.0, 0.0, 1.0);
     let mut p = rig.parent[i];
@@ -167,7 +166,7 @@ pub(crate) fn store_unit(d: &mut [S], o: usize, n: usize, x: f64, y: f64, z: f64
     put(d, o + 2 * n, z / l);
     put(d, o + 3 * n, w / l);
 }
-/// Pose.setRot of a rotation made unit (quat.normalize): node i's local rotation
+/// node i's local rotation, of a rotation made unit
 pub fn set_unit(d: &mut [S], i: usize, q: &[f64; 4]) {
     let n = d.len() / NODE;
     store_unit(d, 3 * n + i, n, q[0], q[1], q[2], q[3]);
@@ -210,7 +209,7 @@ fn rot_of(rot: &[f64], i: usize) -> [f64; 4] {
     [rot[i * 4], rot[i * 4 + 1], rot[i * 4 + 2], rot[i * 4 + 3]]
 }
 
-/// skeleton.ts twoBoneIK. `rot` / `pos` are the pose run forward: the limb and what it hangs from current on entry, the limb and what hangs off it on exit;
+/// THE TWO-BONE SOLVE. `rot` / `pos` are the pose run forward: the limb and what it hangs from current on entry, the limb and what hangs off it on exit;
 /// and, not `fresh`, the whole pose on exit, for a layer that has turned something else since it ran it and reads it after.
 #[allow(clippy::too_many_arguments)]
 pub fn two_bone_ik(
@@ -398,13 +397,13 @@ pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &
     let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
     Some(f(&mut poses_of!(b, g)[s..s + singles(n)], &rig, n, &mut fk))
 }
-/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, until the next layer. Nobody else reads them
+/// THE RUN-FORWARD BONES on the bench: what a layer runs forward it finds here, until the next layer. Nobody else reads them
 pub struct Fk<'a> {
     pub rot: &'a mut [f64],
     pub pos: &'a mut [f64],
 }
 impl Fk<'_> {
-    /// CharacterAnimator.fkPart: PoseFK.run for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
+    /// the run forward for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
     /// not is skipped)
     pub fn part(&mut self, rig: &Rig, d: &[S], list: &[u32]) {
         for &i in list {
@@ -425,7 +424,7 @@ impl Fk<'_> {
         [self.rot[i * 4], self.rot[i * 4 + 1], self.rot[i * 4 + 2], self.rot[i * 4 + 3]]
     }
 }
-/// blendPose: poses `a`, `b` → `out`, all three in the one array
+/// poses `a`, `b` → `out`, all three in the one array
 pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
         return false;
@@ -435,7 +434,7 @@ pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize,
     blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n);
     true
 }
-/// skeleton.ts buildMask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
+/// a mask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
 /// that weight. A later entry lies over an earlier one; a node the rig has not is skipped; every other node is nought.
 pub fn ask_mask(entries: &[(usize, f64, bool)]) {
     let b = bench();
@@ -463,7 +462,7 @@ pub fn ask_mask(entries: &[(usize, f64, bool)]) {
         }
     }
 }
-/// sampleClip: clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
+/// clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
 /// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not
 pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
     let need = crate::clips::nodes_of(c);
