@@ -164,7 +164,8 @@ fn views() -> String {
     l.extend(["  bool(): boolean { return this.b[this.p++] !== 0; }", "  str(): string { const n = this.uint32(), s = DEC.decode(this.b.subarray(this.p, this.p + n)); this.p += n; return s; }",
         "  list<T>(f: () => T): T[] { const n = this.uint32(), o: T[] = []; for (let i = 0; i < n; i++) o.push(f()); return o; }",
         "  word<T>(W: readonly T[], of: string): T { const k = this.uint16(); if (k >= W.length) throw new Error(`the view: no such word of ${of} (${k})`); return W[k]; } }", "const DEC = new TextDecoder();", ""].map(String::from));
-    for (n, shape) in host::types().list {
+    let (whole, types) = host::answers();
+    for (n, shape) in types.list {
         match shape {
             Shape::Words(w) => {
                 let quoted = |by: &str| w.iter().map(|x| format!("'{x}'")).collect::<Vec<_>>().join(by);
@@ -176,6 +177,7 @@ fn views() -> String {
                 let f: Vec<(String, (String, String))> = r.iter().map(|(f, t)| (camel(f), read(t))).collect();
                 l.push(format!("export interface {n} {{ {} }}", f.iter().map(|(k, (ts, _))| format!("{k}: {ts}")).collect::<Vec<_>>().join("; ")));
                 l.push(format!("function read{n}In(I: In): {n} {{ return {{ {} }}; }}", f.iter().map(|(k, (_, rd))| format!("{k}: {rd}")).collect::<Vec<_>>().join(", ")));
+                if !whole.contains(&Ty::Named(n)) { continue; }
                 l.push(format!("export function read{n}(b: Uint8Array): {n} {{ const I = new In(b), r = read{n}In(I); if (I.p !== b.length) throw new Error(`the view: {n} is ${{b.length}} bytes and ${{I.p}} were read`); return r; }}"));
             }
         }
