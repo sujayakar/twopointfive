@@ -129,7 +129,7 @@ program is in, up to a cap.
 
 - **A new pass:** open it in `Engine.render` or `passes.encode` with `timestampWrites: ts('name')`. A target it holds comes from `TexturePool`. Add
   its name to `calibrateTick`'s fixed part if it does not scale with pixels.
-- **A word for a shader:** a field in `FrameParams`, `writeFrame`, `struct Frame`; then `bun run tools/qa/frame-layout.ts`.
+- **A word for a shader:** a member of its struct, `bun run tools/gpu/wgsl-rows.ts`, its name in the writer.
 - **A setting:** `RenderSettings`, `defaultSettings`; if tiers differ, a row in `PRESETS` written in `Quality.apply` and priced in `presetCost`; a row
   in `graphicspanel.ts`; a row in `SWEEP_ROWS` to price it.
 - **A word on the address:** `pictureWords` if it moves shader text or buffers, `urlFlagsOnEngine` for a setting.
@@ -154,7 +154,7 @@ It says nothing of time or of how a thing looks. Say "never seen on a GPU" of an
 
 ## What holds it
 
-Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block against the struct), `shaders-check.ts` (parse, `trim`, `fold`, `inline`),
+Checks (`bun run tools/qa/checks.ts <name>`): `gpu/wgsl-rows.ts` (offsets and flags), `shaders-check.ts` (parse, `trim`, `fold`, `inline`),
 `quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
 `settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`. By hand, on the
 module: `bun run tools/draw/doors-check.ts` (each door's share of the plan, kept).
