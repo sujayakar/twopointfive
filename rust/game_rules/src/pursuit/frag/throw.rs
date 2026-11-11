@@ -247,7 +247,7 @@ fn dealt_again(g: &mut Game, u: &Under) -> Option<crate::game::GuardScript> {
 /// A wall already between him and it: he stays behind it, down, if it is close.
 fn stays_behind(g: &mut Game, u: &Under) {
     let man = &g.gd[u.gd];
-    if man.script.is_some() || man.hold || man.pinned || !(dist_xz(u.pos, u.dz) <= g.k.frag.lethal_m + 2.0) { return; }
+    if man.script.is_some() || !man.duty.free() || !(dist_xz(u.pos, u.dz) <= g.k.frag.lethal_m + 2.0) { return; }
     let time = g.time;
     let l = &mut live!(g, u.i);
     l.flee.set(u.gd, Some(down_where_he_is()));

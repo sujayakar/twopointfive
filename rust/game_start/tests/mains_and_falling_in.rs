@@ -19,7 +19,7 @@ fn the_mains_go_and_no_posted_man_walks() {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
         p.run(0.2);
-        assert!(p.hostiles().iter().all(|&m| p.g.gd[m].hold || p.g.gd[m].pinned), "seed {s}: the staging: a defender is off his mark");
+        assert!(p.hostiles().iter().all(|&m| p.g.gd[m].duty.holds || p.g.gd[m].duty.pinned), "seed {s}: the staging: a defender is off his mark");
         set_blackout(&mut p.g, 86400.0, SetBlackoutCause::Hand);
         keep_dark(&mut p, 2.5);
         assert!(on_errand(&p).is_empty() && said_it(&p) == 0, "seed {s}: errand {:?}, said {}", on_errand(&p), said_it(&p));
@@ -34,7 +34,7 @@ fn the_mains_go_and_no_posted_man_walks() {
         let man = *on_errand(&p).first().unwrap_or_else(|| panic!("seed {s}: nobody was handed it"));
         let d0 = dist(p.at(man), [panel[0], panel[2]]);
         keep_dark(&mut p, 2.5);
-        assert!(!p.g.gd[man].hold && !p.g.gd[man].pinned && said_it(&p) >= 1, "seed {s}: he is held or said nothing ({} lines)", said_it(&p));
+        assert!(!p.g.gd[man].duty.holds && !p.g.gd[man].duty.pinned && said_it(&p) >= 1, "seed {s}: he is held or said nothing ({} lines)", said_it(&p));
         assert!(d0 - dist(p.at(man), [panel[0], panel[2]]) > 1.0, "seed {s}: he has not walked for it: {d0} m then {}", dist(p.at(man), [panel[0], panel[2]]));
     }
 }
@@ -114,7 +114,7 @@ fn the_rescue_stages_its_men_held_with_no_order() {
     for s in [1u32, 2, 7] {
         let mut p = Play::mission("office.json", "?levelFile=office.json&rescue&squad=2", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
-        for m in p.mates() { assert!(order_of(&p, m).is_none() && p.g.gd[m].hold && p.g.gd[m].pinned, "rescue, seed {s}: {:?}", order_of(&p, m)); }
+        for m in p.mates() { assert!(order_of(&p, m).is_none() && p.g.gd[m].duty.holds && p.g.gd[m].duty.pinned, "rescue, seed {s}: {:?}", order_of(&p, m)); }
         p.run(3.0);
         assert!(p.g.rescue.t0.is_nan(), "rescue, seed {s}: the clock started by itself");
         for m in p.mates() { assert_eq!(p.rounds_fired(m), 0.0, "rescue, seed {s}: a round fired"); }

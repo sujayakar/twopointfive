@@ -353,7 +353,7 @@ fn budget_of(g: &crate::game::Game, thru: bool, rounds: f64) -> f64 {
 
 /// a man with no feet of his own to weigh
 fn stays(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].pinned || g.gd[gd].hold || g.gd[gd].script.is_some()
+    !g.gd[gd].duty.free() || g.gd[gd].script.is_some()
 }
 
 // ---------------------------------------------------------------- the choice

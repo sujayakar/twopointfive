@@ -461,7 +461,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
             g.gd[gd].body_duty = None;
             crate::mind::cap(g, gd, 0.25, "squad");
         }
-        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
+        crate::duty::hold(g, gd, false, "squad"); crate::duty::pin(g, gd, false, "squad");
         cl!(g).aw[i] = g.gd[gd].awareness;
         let mark = p.stack[i];
         let mut end: V3 = v3::copy(mark);

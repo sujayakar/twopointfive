@@ -240,8 +240,8 @@ fn spawn_the_garrison(g: &mut Game, marks: &[NightBreachMark], budget: Option<f6
         };
         let man = crate::guards::spawn_unit(g, &opts)?;
         g.staged.foes.push(man);
-        crate::control::set_hold(g, man, true, "nightbreach");
-        crate::control::set_pinned(g, man, true, "nightbreach");
+        crate::duty::hold(g, man, true, "nightbreach");
+        crate::duty::pin(g, man, true, "nightbreach");
     }
     Ok(())
 }
@@ -270,8 +270,8 @@ fn shut_the_plans_doors(g: &mut Game, p: &crate::scene_level::BreachPlan) {
 fn stand_easy(g: &mut Game, gd: GuardId) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "nightbreach");
     crate::mind::set(g, gd, 0.0, "nightbreach");
-    crate::control::set_hold(g, gd, false, "nightbreach");
-    crate::control::set_pinned(g, gd, false, "nightbreach");
+    crate::duty::hold(g, gd, false, "nightbreach");
+    crate::duty::pin(g, gd, false, "nightbreach");
     let c = g.gd[gd].ch;
     let patch = crate::squad::OrderPatch {
         goal: Some(None),
@@ -599,8 +599,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
                 let was = g.gd[h].state;
                 crate::squad::end_guard_script(g, h, Some(was));
             }
-            crate::control::set_hold(g, h, true, "nightbreach");
-            crate::control::set_pinned(g, h, true, "nightbreach");
+            crate::duty::hold(g, h, true, "nightbreach");
+            crate::duty::pin(g, h, true, "nightbreach");
             let Some(aim) = g.night_breach.marks.get(i).map(|m| m.aim_at) else { continue };
             if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 && g.gd[h].held.is_none() {
                 let c = g.gd[h].ch;
@@ -628,8 +628,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
             for o in night_breach_drill_ops(g) {
                 if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].script.is_some() && !in_his_book(g, o) {
                     crate::squad::end_guard_script(g, o, Some(crate::game::GuardState::Search));
-                    crate::control::set_hold(g, o, true, "nightbreach");
-                    crate::control::set_pinned(g, o, true, "nightbreach");
+                    crate::duty::hold(g, o, true, "nightbreach");
+                    crate::duty::pin(g, o, true, "nightbreach");
                 }
             }
             if night_breach_state(g) == NightBreachState::Recalled {

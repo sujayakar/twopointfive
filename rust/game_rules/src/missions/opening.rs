@@ -113,7 +113,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         if g.time - born > FRESH_SECS
             || g.gd[gd].state != crate::game::GuardState::Patrol
             || g.gd[gd].wp != 0
-            || g.gd[gd].hold
+            || g.gd[gd].duty.holds
             || g.gd[gd].script.is_some()
             || dist_xz(g.ch[c].pos, g.tab.route[g.gd[gd].route].points[0]) > 0.6
         {

@@ -138,7 +138,7 @@ fn two_men(look: [f64; 2]) -> (Play, game::ids::GuardId, game::ids::GuardId) {
     let mut p = Play::scene(&s, &Opts { seed: 402, ..Default::default() });
     p.g.god_mode = true;
     let (a, b) = (p.guard("a"), p.guard("b"));
-    p.g.gd[b].hold = true;
+    p.g.gd[b].duty.holds = true;
     p.run(0.8);   // (his head comes to where he looks)
     (p, a, b)
 }

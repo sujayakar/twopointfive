@@ -219,7 +219,7 @@ fn still_looking(g: &mut crate::game::Game) -> bool {
 /// calm, free of orders, errands and bodies, and of Sam's arm
 fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     let d = &g.gd[x];
-    x != m && d.state == GuardState::Patrol && !d.hold && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
+    x != m && d.state == GuardState::Patrol && !d.duty.holds && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {

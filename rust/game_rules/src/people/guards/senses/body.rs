@@ -64,7 +64,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
                 if g.gd[other].task.is_some() { continue; }
                 crate::belief::word(g, other, body);
                 let x = &g.gd[other];
-                if !x.hold && x.held.is_none() && x.body_duty.is_none() && (x.state == St::Patrol || x.state == St::Suspicious || x.script.is_some()) {
+                if !x.duty.holds && x.held.is_none() && x.body_duty.is_none() && (x.state == St::Patrol || x.state == St::Suspicious || x.script.is_some()) {
                     g.gd[other].body_duty = Some(crate::game::GuardBodyDuty { body: o, role: crate::game::GuardBodyDutyRole::Called, stage: crate::game::GuardBodyDutyStage::To, t: 0.0, t0: t, spot: None });
                 }
             }

@@ -421,16 +421,16 @@ impl StealthAsk for Play {
     }
     fn parked(&mut self, gd: GuardId) {
         let h = &mut self.g.gd[gd];
-        h.hold = true;
-        h.pinned = true;
+        h.duty.holds = true;
+        h.duty.pinned = true;
         self.g.cond[h.ch].blind_until = 1e9;
         h.heard_up_to = 1e12;
     }
     fn let_go(&mut self, gd: GuardId) {
         let seq = self.g.event_seq;
         let h = &mut self.g.gd[gd];
-        h.hold = false;
-        h.pinned = false;
+        h.duty.holds = false;
+        h.duty.pinned = false;
         self.g.cond[h.ch].blind_until = -1.0;
         h.heard_up_to = seq;
     }

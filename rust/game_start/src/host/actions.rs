@@ -124,7 +124,7 @@ fn stand_extra(g: &mut Game, n: f64) {
         let name = format!("Extra {}", serial + stood + 1);
         let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(game::v3::yaw_to(s.pos, s.aim_at)), name: Some(name.clone()), light: Some(false), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
-        g.gd[gd].hold = true; g.gd[gd].pinned = true;
+        g.gd[gd].duty.holds = true; g.gd[gd].duty.pinned = true;
         game::mission::adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) });
         if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;

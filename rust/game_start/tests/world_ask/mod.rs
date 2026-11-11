@@ -341,19 +341,19 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.duty.holds) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
         (h.script, h.task, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
         (h.script, h.task, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);

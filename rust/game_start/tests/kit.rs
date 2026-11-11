@@ -323,7 +323,7 @@ fn each_carriage_is_a_pose_of_its_own() {
     p.g.god_mode = true;
     let at = p.sam_at();
     let man = game::guards::spawn_unit(&mut p.g, &game::guards::UnitOpts { team: game::teams::Team::Guard, pos: [at[0] + 3.0, 0.0, at[1]], yaw: Some(0.0), weapon: Some(game::weapons::WeaponId::Aks74u), carbine_rig: Some(true), light: Some(false), ..Default::default() }).unwrap();
-    p.g.gd[man].hold = true;
+    p.g.gd[man].duty.holds = true;
     let c = p.g.gd[man].ch;
     p.run(0.5);
     let mut hands: Vec<[f64; 3]> = Vec::new();

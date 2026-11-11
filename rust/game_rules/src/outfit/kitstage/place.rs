@@ -176,8 +176,8 @@ fn stand_men(g: &mut Game, st: &mut KitStage, set: &Set) -> Men {
         let c = g.gd[x].ch;
         crate::character::pos_replace(g, c, [p[0], 0.0, p[1]]);
         g.ch[c].aim_pitch = 0.0;
-        crate::control::set_hold(g, x, true, "the kit picture");
-        crate::control::set_pinned(g, x, true, "the kit picture");
+        crate::duty::hold(g, x, true, "the kit picture");
+        crate::duty::pin(g, x, true, "the kit picture");
         faces.push((c, super::walk::faces(st, [p[0], p[1]])));
     }
     let shut = set.door.map_or(0.0, |d| g.dr[d].leaf.angle);
