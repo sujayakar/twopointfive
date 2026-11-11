@@ -7,37 +7,37 @@ export const HAND = 3121145077;
 
 /** WHAT A SEAT'S HANDS DID IN A TICK, as a player's own machine hands it and as it travels to another's: his keys go beside it, as their codes */
 export const enum SeatInput {
-  /** f64: the mouse's buttons held, those that went down, and what the wheel turned */
+  /** f64: the mouse's buttons held, a bit each */
   buttons = 0,
-  /** f64 */
+  /** f64: those that went down in the tick */
   clicked = 1,
-  /** f64 */
+  /** f64: what the wheel turned */
   wheel = 2,
-  /** f64: the cursor, and the size of the view it is in, in the page's pixels; and the picture's own size */
+  /** f64: the cursor, in the page's pixels */
   mx = 3,
   /** f64 */
   my = 4,
-  /** f64 */
+  /** f64: the view it is in: its width and height in the page's pixels */
   w = 5,
   /** f64 */
   h = 6,
-  /** f64 */
+  /** f64: … and in the picture's own */
   pw = 7,
   /** f64 */
   ph = 8,
-  /** f64 × 3: what his camera looks at and from where about it, its lens, and how far it leads his aim */
+  /** f64 × 3: what his camera looks at */
   target = 9,
-  /** f64 */
+  /** f64: from where about it: the turn, the tilt, how far */
   yaw = 12,
   /** f64 */
   pitch = 13,
   /** f64 */
   distance = 14,
-  /** f64 */
+  /** f64: its lens */
   fov = 15,
   /** f64 */
   aspect = 16,
-  /** f64 */
+  /** f64: how far it leads his aim */
   aimLead = 17,
   /** doubles a row */
   row = 18,
