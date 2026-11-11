@@ -170,7 +170,8 @@ pub enum LegEnd { #[default] Arrived, Nowhere, Contact, Taken }
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Def {
     pub gd: GuardId,
-    pub station: V3,
+    /// the post he holds and what he watches from it
+    pub task: TaskId,
     pub home: V3,
     pub room: Option<RoomfightRoomId>,
     pub pinned0: bool,
@@ -182,7 +183,6 @@ pub struct Def {
     pub glance_to: f64,
     pub glance_until: f64,
     pub glance_next: f64,
-    pub pt: V3,
     pub heard_t: f64,
     pub cnt: crate::roomfight::DefCnt,
     pub noise_at: Option<V3>,

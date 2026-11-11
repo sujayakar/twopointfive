@@ -289,7 +289,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
         if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
         crate::duty::pin(g, gd, pinned0, "roomfight");
     }
-    for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
+    for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; dropped(g, d); }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }
     g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
     crate::digin::dig_in_reset(g);

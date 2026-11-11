@@ -385,7 +385,7 @@ fn wall_react_unflood(g: &mut Game) {
     g.fight.room_of_cell.clear();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
-        let at = if crate::condition::down(g, g.gd[gd].ch) { g.tab.roomfight_def[d].station } else { g.pos_of(gd) };
+        let at = if crate::condition::down(g, g.gd[gd].ch) { crate::roomfight::station(g, d) } else { g.pos_of(gd) };
         let room = crate::roomfight::room_fight_room_at(g, at);
         let ev = match room { Some(r) => vec![0.0; g.tab.roomfight_room[r].entries.len()], None => Vec::new() };
         let row = &mut g.tab.roomfight_def[d];

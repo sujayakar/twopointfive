@@ -875,7 +875,7 @@ fn backs_off(g: &mut Game, gd: GuardId, now: Now) {
     let room = g.tab.roomfight_def[d].room.filter(|&r| !g.tab.roomfight_room[r].entries.is_empty());
     let Some(r) = room else { return settle(g, gd, d) };
     let spot = match low_spot(g, gd, r) {
-        None if out => Some(g.tab.roomfight_def[d].station),
+        None if out => Some(crate::roomfight::station(g, d)),
         s => s,
     };
     let Some(to) = spot else { return settle(g, gd, d) };
