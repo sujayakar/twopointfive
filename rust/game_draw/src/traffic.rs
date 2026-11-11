@@ -1,9 +1,7 @@
 //! THE TRAFFIC MAP the look's floors read (render/shaders/detail.wgsl; the numbers are the look's): two bytes a texel, eight texels a metre over the floor. r = where
 //! the level is walked: every way it has, traced along the walk grid's own paths, each kind by its weight, every waypoint stood at and every threshold crossed. g = the band along a wall where
-//! stones gather: each standing box lays its own × how long the straight line of faces is that the texel's nearest face is a piece of. A pure function of the level: made once, as the level
-//! stands when it is first asked for.
-use crate::boxes::Word;
-use crate::Row;
+//! stones gather: each standing box lays its own × how long the straight line of faces is that the texel's nearest face is a piece of. A pure function of the level as it stands when it is
+//! asked for: a host asks once, behind the loading.
 use alloc::vec;
 use alloc::vec::Vec;
 use game::game::Game;
@@ -36,36 +34,27 @@ const PATH_ITER: f64 = 6000.0;
 pub fn door_mid(d: &LevelDoorDef) -> V3 { [d.hinge[0] + m::cos(d.closed_dir) * d.width * 0.5, 0.0, d.hinge[1] + m::sin(d.closed_dir) * d.width * 0.5] }
 fn mid(r: &Rect) -> V3 { [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0] }
 
-/// the map of a level, made once a level
-#[derive(Default)]
-pub struct Traffic { pub words: Vec<Word>, of: Option<alloc::string::String> }
-impl Traffic {
-    pub fn take(&mut self, g: &Game) {
-        let name = g.m.scene_level_load.level_names.as_deref();
-        if self.of.as_deref() == name && !self.words.is_empty() { return; }
-        self.of = name.map(alloc::string::String::from);
-        fill(g, &mut self.words);
-    }
-}
-
-/// the rows of the map: a word holds two texels
-fn fill(g: &Game, out: &mut Vec<Word>) {
+/// the map, two bytes a texel, row after row
+pub fn map(g: &Game) -> Vec<u8> {
     let (mw, mh) = map_size();
     let mut t = vec![0f32; mw * mh];
     {
+        let mut across: Vec<(f64, f64)> = Vec::new();
         let mut stamp = |x: f64, z: f64, sigma: f64, amp: f64| {
             let (r, s2) = (sigma * 2.5, 2.0 * sigma * sigma);
             let x0 = m::max(0.0, m::floor((x - r) * RES)) as i64;
             let x1 = m::min(mw as f64 - 1.0, m::ceil((x + r) * RES)) as i64;
             let z0 = m::max(0.0, m::floor((z - r) * RES)) as i64;
             let z1 = m::min(mh as f64 - 1.0, m::ceil((z + r) * RES)) as i64;
+            if x0 > x1 || z0 > z1 { return; }
+            // (a bell's height at a point is its height across × its height deep)
+            across.clear();
+            across.extend((x0..=x1).map(|tx| { let dx = (tx as f64 + 0.5) / RES - x; (dx * dx, m::exp(-dx * dx / s2)) }));
             for tz in z0..=z1 {
                 let dz = (tz as f64 + 0.5) / RES - z;
-                for tx in x0..=x1 {
-                    let dx = (tx as f64 + 0.5) / RES - x;
-                    let d2 = dx * dx + dz * dz;
-                    if d2 <= r * r { let i = tz as usize * mw + tx as usize; t[i] += (amp * m::exp(-d2 / s2)) as f32; }
-                }
+                let deep = amp * m::exp(-dz * dz / s2);
+                let row = &mut t[tz as usize * mw + x0 as usize..];
+                for (to, &(dx2, e)) in row.iter_mut().zip(&across) { if dx2 + dz * dz <= r * r { *to += (deep * e) as f32; } }
             }
         };
         // every way the level is walked, each traced along its own line, by its kind's weight
@@ -85,14 +74,8 @@ fn fill(g: &Game, out: &mut Vec<Word>) {
     }
     let boxes: Vec<&Box> = g.col.boxes.iter().map(|b| &g.tab.boxes[*b]).collect();
     let band = band_by_faces(&boxes);
-    let byte = |v: f64| m::min(255.0, m::max(0.0, m::round(v * 255.0))) as u32;
-    out.clear();
-    out.resize(mw * mh / 2, Word::ZERO);
-    for i in 0..mw * mh {
-        let traffic = 1.0 - m::exp(-TRAFFIC_K * t[i] as f64);
-        let two = byte(traffic) | byte(band[i]) << 8;
-        out[i / 2].w |= two << (i % 2 * 16);
-    }
+    let byte = |v: f64| m::min(255.0, m::max(0.0, m::round(v * 255.0))) as u8;
+    (0..mw * mh).flat_map(|i| [byte(1.0 - m::exp(-TRAFFIC_K * t[i] as f64)), byte(band[i])]).collect()
 }
 
 /// what a way is of
@@ -102,12 +85,11 @@ pub enum WayKind { Patrol, Team, Doors, Hint }
 pub struct Way { pub kind: WayKind, pub amp: f64, pub points: Vec<V3> }
 /// the level's ways, the names its own list asks for that it has not, and how many of them the walk grid has no path for
 pub struct Ways { pub list: Vec<Way>, pub unknown: Vec<alloc::string::String>, pub lost: usize }
-/// every way the level is walked. Each is the walk grid's own path, asked of a copy of the game: the search's tables are the module's, and this takes the game shared.
+/// every way the level is walked. Each is the walk grid's own path.
 pub fn ways(g: &Game) -> Ways {
-    let mut asked = g.clone();
     let mut out = Ways { list: Vec::new(), unknown: Vec::new(), lost: 0 };
-    let mut walk = |kind: WayKind, weight: f64, a: V3, b: V3, out: &mut Ways| {
-        let pts = match game::scene_collision::nav_grid_find_path(&mut asked, a, b, Some(PATH_ITER), None) {
+    let walk = |kind: WayKind, weight: f64, a: V3, b: V3, out: &mut Ways| {
+        let pts = match game::scene_collision::nav_grid_find_path(g, a, b, Some(PATH_ITER), None) {
             Some(p) if !p.is_empty() => { let mut l = Vec::with_capacity(p.len() + 1); l.push(a); l.extend(p); l }
             _ => { out.lost += 1; vec![a, b] }
         };

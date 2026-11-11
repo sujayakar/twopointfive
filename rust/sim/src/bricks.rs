@@ -564,12 +564,10 @@ pub fn beat(g: usize, dt: f64) -> u32 {
 fn plan_of(w: &World) -> (f64, f64) {
     (-floor(-(w.w as f64 * w.cs) / SIDE), -floor(-(w.h as f64 * w.cs) / SIDE))
 }
-/// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
-pub fn light_ready(g: usize, w: &World, to_sun: [f64; 3], tune: &Knobs) {
+/// the light's tables of box world `w` made before a step asks for them, `most` lines of them (glow.rs ready). → are they whole
+pub fn light_ready(g: usize, w: &World, to_sun: [f64; 3], most: usize, tune: &Knobs) -> bool {
     let (x, z) = plan_of(w);
-    if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
-        crate::glow::ready(g, w, x as usize, z as usize, to_sun, tune);
-    }
+    !(x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64) || crate::glow::ready(g, w, x as usize, z as usize, to_sun, most, tune)
 }
 /// what a tick with no step in it makes ahead for the light (glow.rs ahead)
 pub fn ahead(g: usize, w: &World, tune: &Knobs) {

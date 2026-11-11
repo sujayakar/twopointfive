@@ -165,6 +165,9 @@ async function main(): Promise<void> {
   const tBoot = performance.now();
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
+  // (the device is asked for while the files come and the game is made: nothing of it is the game's)
+  if (kitPicture) PIPE_QUEUE.later = false;   // (the picture waits for every program: it is shown once, and nothing of it may change as one comes)
+  gpuStory.stage = 'while loading'; const tAsked = performance.now(), gpuP = initGpu(canvas, { retry: !(kitPicture || q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: !kitPicture, keeper: keep.keeper, seat: keep.seat }); gpuP.then(() => boot.span('gpuAsked', tAsked), () => { /* awaited below */ });
   boot.expose();
   const face = await faceP;
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
@@ -203,9 +206,7 @@ async function main(): Promise<void> {
   glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
-  if (kitPicture) PIPE_QUEUE.later = false;   // (the picture waits for every program: it is shown once, and nothing of it may change as one comes)
-  const tGpu = performance.now();
-  const gpu = await initGpu(canvas, { retry: !(kitPicture || q.has('bench') || runPage(q) || navigator.webdriver === true), canvasRead: !kitPicture, keeper: keep.keeper, seat: keep.seat });   // (the module's game has stood by now)
+  const tGpu = performance.now(), gpu = await gpuP; D.fresh();   // (the title is live meanwhile, and its desk may have grown the memory)
   if (kitPicture) void gpu.device.lost.then(kitNone);
   if (q.get('framecap') === '0') FRAMECAP.on = false;
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
@@ -214,7 +215,7 @@ async function main(): Promise<void> {
   urlFlagsOnEngine(engine); pictureSolves(q, engine, smoke);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
-  const decals = new DrawDecals(engine.device, D); engine.setDecals(decals); trafficFrom(engine.gbuffer, D);
+  const decals = new DrawDecals(engine.device, D); engine.setDecals(decals);
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => { gpuStory.stage = `while compiling shaders, ${pipelineProgress.done} of ${pipelineProgress.total}`; say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`); };
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -229,7 +230,8 @@ async function main(): Promise<void> {
   const group = (name: string): void => { boot.span('pipelines_' + name, tPipe); }, timed = <T>(name: string, p: Promise<T>): Promise<T> => p.then(v => { group(name); return v; });
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
-  // (while the programs compile: the ticks a run begins with, still, walking and firing)
+  // (while the programs compile: what the first step and the first frame want of the level, then the ticks a run begins with, still, walking and firing)
+  const tReady = performance.now(); await game.ready(nextTask); trafficFrom(engine.gbuffer, game.traffic()); boot.span('levelReady', tReady);
   if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
     await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, size), nextTask); }

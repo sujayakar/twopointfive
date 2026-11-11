@@ -462,8 +462,8 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
 /// a tick with no step of the grid in it: some of what the light of the next ones is worked out from is made ahead, no state
 pub fn grid_ahead(g: &Game) { if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::ahead(g.sim, world(g), &g.k); } }
 
-/// What the light under a roof is worked out from is made as a game stands, behind the loading, and not in its first step: the statics' lines, no state.
-pub fn light_ready(g: &Game) { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, &g.k); }
+/// What the light under a roof is worked out from is made behind the loading, `most` lines of it, and not in the first step: the statics' lines, no state. → is all of it made
+pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
 
 // ---- how a sound reaches a listener
 
