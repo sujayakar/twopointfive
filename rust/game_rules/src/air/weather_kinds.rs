@@ -160,7 +160,7 @@ pub(super) fn unpack_rect(w: f64) -> [f64; 4] {
     [(w & 255) as f64 * ROOF_Q, ((w >> 8) & 255) as f64 * ROOF_Q, ((w >> 16) & 255) as f64 * ROOF_Q, (w >> 24) as f64 * ROOF_Q]
 }
 
-/// The kind a query names, if any. (weatherKinds.ts weatherOfSearch, of words already read)
+/// The kind a query names, if any.
 pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 
 #[cfg(test)]
@@ -174,7 +174,7 @@ mod tests {
         v.iter().map(|x| x.to_bits()).collect()
     }
 
-    /// The TypeScript's own words and bits, under bun with EXACT on.
+    /// Pinned words and bits.
     #[test]
     fn fog_words_and_depths() {
         let rows: [(WeatherKind, f64, f64, f64, [u64; 7], [u64; 3], u64); 3] = [

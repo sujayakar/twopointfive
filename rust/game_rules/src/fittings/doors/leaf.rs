@@ -149,7 +149,7 @@ fn door_sided(g: &crate::game::Game, id: DoorId, a: f64) -> f64 {
 }
 /// the leaf's box and handles where its angle stands them
 pub fn door_place(g: &mut crate::game::Game, id: DoorId) {
-    if g.dr[id].leaf.off { return; }   // (the slab's box is doorblast.ts's to pose)
+    if g.dr[id].leaf.off { return; }   // (the slab's box is the door blast's to pose)
     door_keep(g, id);
     let (v, a) = (g.dr[id].leaf.vel, g.dr[id].leaf.angle);
     g.dr[id].leaf.vel_seen = v;
@@ -263,8 +263,8 @@ pub fn doors_side(g: &crate::game::Game, d: DoorId, from: V3) -> f64 {
 }
 /// The lock is against you: latched, still locked, you on the keyed side, and nothing on your ring fits it
 // (a ring is asked through `squadcast::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
-//  yes to every lock, squadcast.ts:17 EVERY_KEY, and a plain `has` of the lock's name answered no for it: the response team's lead booted a
-//  door his keys open where the TypeScript's lead goes to the handle)
+//  yes to every lock, and a plain `has` of the lock's name answers no for it: the response team's lead would boot a
+//  door his keys open and not go to the handle)
 pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
     g.dr[d].leaf.locked && g.dr[d].leaf.latched && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
 }
@@ -279,7 +279,7 @@ mod tests {
     use super::*;
     fn bits(x: &[f64]) -> Vec<u64> { x.iter().map(|v| v.to_bits()).collect() }
 
-    /// the bits are the TypeScript's own: new Door({ hinge: [1.25, -3.5], closedDir: 0.7, width: 0.93, thickness: 0.06, height: 2.05 }).poseAt(0.37), EXACT on
+    /// the pinned bits of a door (hinge [1.25, -3.5], closed at 0.7, 0.93 wide, 0.06 thick, 2.05 tall) posed at 0.37
     #[test]
     fn the_pose_is_the_typescripts_to_the_bit() {
         let p = pose_of([1.25, -3.5], 0.93, 0.7, 0.06, 2.05, 0.37);
@@ -287,7 +287,7 @@ mod tests {
         assert_eq!(bits(&got), [0x3ff7a6213404e158, 0x3ff08f5c28f5c28f, 0xc008aaa8cb200044, 0xbff11eb851eb851e, 0x3ff93a063e610b0e, 0x3ff0000000000000, 0xc00639c318a617ee, 0x3ffae92f9c7699be, 0x3ff0000000000000, 0xc006afc1e6a1520a]);
     }
 
-    /// the answers are the TypeScript's own: Doors.swingOf of that door with swing -1, sweeps(x, z, pad)
+    /// the pinned answers of that door with swing -1
     #[test]
     fn the_sweep_answers_as_the_typescript_does() {
         let s = crate::doors::DoorSwing { hinge: [1.25, 0.0, -3.5], swing: -1.0, open: 1.92, radius: 0.93, closed_dir: 0.7, one_way: true };
@@ -311,7 +311,7 @@ mod tests {
             let (a, b) = (&v[0], &v[1]);
             assert!(a.blocked_by.is_none() && a.bashed.is_none() && a.ripped.is_none() && a.struck.is_none() && a.man.is_none());
             assert_eq!(a.moved, Some(false));
-            assert_eq!(a.bashed_at, Some(0.5));   // (the TypeScript leaves it)
+            assert_eq!(a.bashed_at, Some(0.5));   // (the step leaves it)
             assert!(b.blocked_by.is_none() && b.bashed.is_some() && b.ripped.is_some());   // (no run: not his to clear)
         }).unwrap().join().unwrap();
     }

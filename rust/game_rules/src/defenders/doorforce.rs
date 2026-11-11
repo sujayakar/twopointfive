@@ -15,7 +15,7 @@ macro_rules! man { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unwra
 /// the stand he is on, which is there
 macro_rules! stand { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unwrap().men.get_mut($gd).unwrap().on.as_mut().unwrap() } }
 
-/// `gd.lastKnown = [x, 0, z]`: a whole write of his fix, which doze.ts:244 asks about by identity (Guard.fix_stamp).
+/// A whole write of his fix, at floor height: doze watches for one by Guard.fix_stamp.
 fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
     crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
@@ -258,7 +258,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
         let mut at = 0;
         while let Some(d) = man!(g, gd).beliefs.next_key(&mut at) {
             let b = man!(g, gd).beliefs.get_mut(d).unwrap();
-            if !(theirs && b.seen) { b.sure *= k; }   // (what he saw does not fade while coverfire.ts's burst on that sighting is going through the leaf)
+            if !(theirs && b.seen) { b.sure *= k; }   // (what he saw does not fade while coverfire's burst on that sighting is going through the leaf)
             let (sure, t) = (b.sure, b.t);
             if !shut(g, d) || sure < 0.02 || time - t > kf.stale_secs + kf.fade_secs {
                 let row = man!(g, gd);
@@ -386,7 +386,7 @@ fn door_he_believes_in(g: &mut Game, gd: GuardId) -> Option<Belief> {
     b
 }
 
-/// He is on this door now. A burst coverfire.ts has just put through a thin thing on this sighting is the first: this one's rounds then want a newer word.
+/// He is on this door now. A burst coverfire has just put through a thin thing on this sighting is the first: this one's rounds then want a newer word.
 fn takes_his_stand_on_it(g: &mut Game, gd: GuardId, b: &Belief) {
     let (d, time) = (b.door, g.time);
     let theirs = b.seen && time - man!(g, gd).cf_t < 2.0;

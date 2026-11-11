@@ -497,7 +497,7 @@ pub(super) fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreak
         while k < ch.len() { if ch[k + 1] == 0.0 { opened.push(ch[k]); } k += 2; }
     }
     if is_hard(&g.tab.wallbreak_breakable[b]) { for &c in &opened { g.destr.walls.shell_gaps.add(crate::Num(c)); } }
-    // (wallbreak.ts:416, :417: the two lanes of the look are told, as every way a cell opens comes through here)
+    // (the two lanes of the look are told, as every way a cell opens comes through here)
     { let bl = crate::edge_look::break_like(g, b); crate::edge_look::edge_look_opened(g, &bl, &fresh, cause.as_str(), dir, quiet); crate::wallskin::wall_skin_opened(g, &bl); }
     if !quiet && (cause == LevelChangeCause::Fire || cause == LevelChangeCause::Collapse) { crate::floormess::mess_opened(g, [x0, z0, x1, z1]); }
     let walkable = !opened.is_empty();
@@ -560,7 +560,7 @@ pub(in crate::breakage) fn wall_break_sill_open_in(g: &mut crate::game::Game, id
     out
 }
 
-/// What each subscriber does with a row. WallReact: wallreact.ts:166, WALLREACT.on settled on.
+/// What each subscriber does with a row.
 fn tell(g: &mut Game, who: ChangeListener, row: &LevelChange) {
     match who {
         ChangeListener::WallReact => {
@@ -583,7 +583,7 @@ pub fn wall_break_note(g: &mut crate::game::Game, c_2: &crate::wallbreak::WallBr
     row
 }
 
-/// Calls back on every change, on the frame it happens. Nothing ever unsubscribes (wallreact.ts:166 keeps the function only to test that it has one). (WallBreak.onChange)
+/// Calls back on every change, on the frame it happens. Nothing ever unsubscribes.
 pub fn wall_break_on_change(g: &mut crate::game::Game, fn_: crate::wallbreak::ChangeListener) { g.destr.walls.listeners.push(fn_); }
 
 /// The rows after `serial`; None = the ring has already dropped some of them: re-read the level. (WallBreak.since)

@@ -175,7 +175,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     c.map(|c| crate::dialogue::SamRemarkFor { text: c.text })
 }
 
-/// The hold's script if it is still live at this exchange: `sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null`, written twice in the TypeScript (:945, :993).
+/// The hold's script if it is still live at this exchange, up to stage 4.
 fn live_script(g: &mut Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId, stage_n: f64) -> Option<crate::dialogue::Script> {
     match script_for(g, ctx, talk) {
         Some(sc) if stage_n <= 4.0 && script_live(&sc, ctx) => Some(sc),
@@ -204,7 +204,7 @@ fn sam_eligible(lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::Dialo
     out
 }
 
-/// A line's share of the draw: the variant / floor / man lines beat the neutral ones. The product in the TypeScript's order.
+/// A line's share of the draw: the variant / floor / man lines beat the neutral ones. Keep the product in this order: the draw reads its bits.
 fn sam_weight(l: &crate::dialogue::SamLine) -> f64 {
     let w = l.w.unwrap_or(1.0);
     let needs = if l.needs.as_ref().is_some_and(|n| !n.is_empty()) { 1.6 } else { 1.0 };

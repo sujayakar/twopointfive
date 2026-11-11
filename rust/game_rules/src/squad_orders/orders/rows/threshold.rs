@@ -11,7 +11,6 @@ pub const ORDER: Row = Row {
     ..Row::new("thresholdHold", label, issue)
 };
 
-/// doortools.ts:864 (thrRows on `outsidePlain`)
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
     String::from(if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { "clear from outside · holding it" } else { "clear from outside" })

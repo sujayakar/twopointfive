@@ -19,7 +19,7 @@ fn clear_plan_bounds(g: &Game, door: &str) -> Option<crate::scene_scenarios::Rec
     g.level.clear_plans.as_ref()?.iter().find(|p| p.door == door).and_then(|p| p.bounds).map(rect_of)
 }
 
-/// orders.ts doorWords, by id, or the name its level wrote for it
+/// a door's words, by id, or the name its level wrote for it
 pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
     let d = crate::doors::doors_by_name(g, id_2);
     let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };

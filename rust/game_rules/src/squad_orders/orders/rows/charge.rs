@@ -12,7 +12,6 @@ pub const ORDER: Row = Row {
     ..Row::new("charge", label, issue)
 };
 
-/// doortools.ts:819 (OWNCHARGE.on is on on the page)
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     if let OrderTarget::Door(x) = t {
         if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return String::from("stand off · in behind the charge"); }

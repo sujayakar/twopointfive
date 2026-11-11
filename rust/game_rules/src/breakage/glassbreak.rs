@@ -1,4 +1,4 @@
-//! src/game/glassbreak.ts lines 219 to 584: the class GlassBreak, thin over rust/sim's panes.rs
+//! Glass breaking, thin over rust/sim's panes.rs.
 
 pub use ::game_types::glassbreak::types;
 pub use types::*;
@@ -20,12 +20,12 @@ use crate::glasspen::PaneType;
 use ::sim::world::{Sheet, VIEW_BLOWN, VIEW_GIVES, VIEW_NONE};
 use crate::Num;
 
-// ---------------------------------------------------------------- what the TypeScript reads off an array by a number
-/// TYPES[t], panes.rs's word for a glass; a word off the list reads laminated (the `??` of impact: no other caller can meet one)
+// ---------------------------------------------------------------- a glass's word and its number
+/// a glass's number as panes.rs's word for it; a number off the list reads laminated (only impact can meet one)
 fn type_word(t: u32) -> PaneType {
     match t { 0 => PaneType::Annealed, 1 => PaneType::Tempered, _ => PaneType::Laminated }
 }
-/// TYPES.indexOf(t)
+/// a glass's word as its number
 fn type_index(t: PaneType) -> u32 {
     match t { PaneType::Annealed => 0, PaneType::Tempered => 1, PaneType::Laminated => 2 }
 }
@@ -426,7 +426,7 @@ fn glass_break_update_gusts(g: &mut crate::game::Game) {
 fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to_i32(key), js::to_i32(2654435761.0))) as u32 as f64 }
 
 // ---------------------------------------------------------------- queries
-/// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
+/// nothing of a pane's is in the block: the panes part's first word, `used`
 pub(crate) fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
@@ -476,12 +476,12 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
     fn blank() -> Box<Game> { Box::new(Game::blank()) }
-    // the TypeScript's own result, from bun: (0x61A55 ^ Math.imul(key, 2654435761)) >>> 0
+    // pinned: (0x61A55 ^ imul(key, 2654435761)) >>> 0
     #[test]
     fn the_gust_seed_is_the_typescripts() {
         assert_eq!(seed_mix_gust(3735928559.0).to_bits(), 0x41e397dc0d400000);
     }
-    // TYPES of the TypeScript, panes.rs ANNEALED, TEMPERED, LAMINATED: the skeleton's PaneType lists its words in another order
+    // panes.rs's ANNEALED, TEMPERED, LAMINATED: `PaneType` lists its words in another order
     #[test]
     fn a_glass_word_is_the_modules() {
         for (t, want) in [(panes::ANNEALED, PaneType::Annealed), (panes::TEMPERED, PaneType::Tempered), (panes::LAMINATED, PaneType::Laminated)] {
@@ -527,7 +527,7 @@ mod tests {
         assert_eq!(normal_on(yaw, 0.0), [0.0, 0.0, 1.0]);
         assert_eq!(normal_on(yaw, 2.0), [1.0, 0.0, -0.0]);
     }
-    // off the list, negative, fractional, NaN: undefined in the TypeScript
+    // off the list, negative, fractional, NaN: none
     #[test]
     fn a_box_off_the_list_is_none() {
         let g = blank();

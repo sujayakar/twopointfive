@@ -9,7 +9,7 @@ use crate::guards::behave::{Acts, Sensed};
 use crate::guards::senses::Saw;
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- small helpers: the TypeScript's own repeated phrases
+// ---- small helpers
 
 /// `c.bones.head ?? v3.add(c.pos, [0, 1.65, 0])`
 pub(crate) fn eye_of_char(g: &Game, c: CharId) -> V3 {
@@ -26,8 +26,8 @@ pub(crate) fn head_or_pos(g: &Game, c: CharId) -> V3 {
 pub(crate) fn brake(g: &mut Game, gd: GuardId, rate: f64, dt: f64) {
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, rate, dt);
 }
-/// `const own = gd.script; gd.script = lent; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own;`
-/// Gives back what the run left in the lent script: its lender reads that (conventions 4, an object lent), and its `<module>_script_ran` puts it home.
+/// Runs his script with `lent` in its place: no pieing, the aim cleared, his own put back after.
+/// Gives back what the run left in the lent script: its lender reads that, and its `<module>_script_ran` puts it home.
 fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt: f64) -> Option<crate::game::GuardScript> {
     let own = g.gd[gd].script.take();
     g.gd[gd].script = Some(lent);

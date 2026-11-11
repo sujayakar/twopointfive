@@ -5,8 +5,8 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::{string::String, vec};
 
-/// A second cast of the squad's code: its own orders and door tools, each stood up with the seat's `orders` / `door_tools` reading as the
-/// TypeScript's view has them at that moment; Sam's pair is back in place on return.
+/// A second cast of the squad's code: its own orders and door tools. The orders are made on Sam's seat as it stands, the tools with the cast's orders on it;
+/// Sam's pair is back in place on return.
 pub fn squad_cast(g: &mut crate::game::Game, of: &crate::orders::OtherCast) -> crate::squadcast::SquadCast {
     let was_in_cast = core::mem::replace(&mut g.in_cast, true);
     // The orders are made while the seat's `orders` are still Sam's (`over` has no 'orders' yet); the tools see the cast's orders and still Sam's tools.
@@ -18,8 +18,8 @@ pub fn squad_cast(g: &mut crate::game::Game, of: &crate::orders::OtherCast) -> c
     crate::squadcast::SquadCast { orders, tools }
 }
 
-/// INVENTED BY THE SKELETON, for squadcast.ts's Proxy (lines 20-27): the cast's pair stands in the seat's row for the call, in_cast says so, and what stood there is back on return.
-/// Only those two fields and the flag: every other read and every write is the one Game's, as through the view.
+/// The cast's pair stands in the seat's row for the call, in_cast says so, and what stood there is back on return.
+/// Only those two fields and the flag: every other read and every write is the one Game's.
 pub fn with_cast<R>(g: &mut crate::game::Game, cast: &mut crate::squadcast::SquadCast, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
     use core::mem::{replace, swap};
     swap(&mut g.sets[g.seat].orders, &mut cast.orders);
@@ -32,7 +32,7 @@ pub fn with_cast<R>(g: &mut crate::game::Game, cast: &mut crate::squadcast::Squa
     r
 }
 
-/// INVENTED BY THE SKELETON: a ring of keys as a door asks it: it opens what it names, and everything if it names "*" (`every_key()`, squadcast.ts:17's set that always answers yes).
+/// a ring of keys as a door asks it: it opens what it names, and everything if it names "*" (`every_key()`).
 pub fn ring_has(ring: &JsSet<String>, key: &str) -> bool {
     ring.holds(key) || ring.holds("*")
 }

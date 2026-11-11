@@ -147,7 +147,7 @@ pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
     if !(loud_t > f64::NEG_INFINITY) || !hold_fire_lifted(g) {
         return false;
     }
-    // Read again: hold_fire_lifted can clear the stamp on the row the TypeScript goes on holding.
+    // Read again: hold_fire_lifted can clear the stamp on the row.
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,

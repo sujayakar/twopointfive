@@ -83,7 +83,7 @@ pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64]
     let Some(a) = s.at.get(gd) else { return 0.0 };
     let mut n = 0.0;
     for &i in cells {
-        // An index outside the array reads undefined in the TypeScript, and that is never `>= since`.
+        // An index outside the array counts for nothing.
         if let Some(&seen) = a.get(i as usize) {
             if (seen as f64) >= since { n += 1.0; }
         }
@@ -95,7 +95,7 @@ pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64]
 mod tests {
     use super::*;
 
-    /// A store is a single: the rounded value decides `since`, as a Float32Array does (bits from bun: Math.fround).
+    /// A store is a single: the rounded value decides `since`.
     #[test]
     fn count_reads_the_rounded_single() {
         assert_eq!((0.1f64 as f32 as f64).to_bits(), 0x3FB99999A0000000);

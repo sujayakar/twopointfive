@@ -82,7 +82,7 @@ pub fn team_named(g: &mut Game, id: &str) -> Option<String> {
     kit_loadout(g, id, only)
 }
 
-/// What the mission hands man i, in a line.   (loadout.ts issueOf; a level's block has no cameras and no wand)
+/// What the mission hands man i, in a line.
 fn issue_words(c: &IssueCard) -> String {
     let count = |n: Option<f64>| n.filter(|n| *n > 0.0);
     let plain = |n: Option<f64>, w: &str| count(n).map(|k| format!("{} {w}", js::num_str(k)));

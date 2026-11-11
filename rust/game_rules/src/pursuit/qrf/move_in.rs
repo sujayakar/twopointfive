@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// where a man with no foe named looks: the player nearest him
 pub(super) fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.player_pos(pl) }
 fn arrived(g: &Game, x: GuardId) -> bool { g.gd[x].script.map_or(false, |s| s.arrived.unwrap_or(false)) }
-/// a string the TypeScript tests for truth: null and '' are both false
+/// a word that may be missing: None and the empty string both read as none
 fn word(s: &Option<String>) -> Option<&str> { s.as_deref().filter(|w| !w.is_empty()) }
 /// `!y.door || g.doors.byName(y.door)`
 fn way_open(g: &Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
@@ -21,8 +21,8 @@ fn way_open(g: &Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
 fn marks_door(g: &Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
     match word(&mk.door) { None => None, Some(d) => crate::doors::doors_by_name(g, d) }
 }
-/// `st[0] = want[0]; st[1] = 0; st[2] = want[2]` on his station. In the TypeScript the station IS his script's goal once he has been ordered onto it, so the
-/// goal creeps with it and no new leg starts. Returns the station and whether his goal was that very point (by value: the Vec3 is no object here).
+/// Writes his station, at floor height. Once he has been ordered onto it the station is his script's goal, so the goal creeps with it and no new leg
+/// starts. Returns the station and whether his goal was that very point (asked by value).
 fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
     let old = *station_of(g, x);
     let tied = g.gd[x].script.map_or(false, |s| s.goal == Some(old));
@@ -33,9 +33,9 @@ fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
     let st = *st;
     if tied {
         if let Some(s) = g.gd[x].script.as_mut() { s.goal = Some(st); }
-        // (… and so does the runner's settle watch: squad.ts:81 keeps the goal OBJECT it was made for (`w.goal !== s.goal`), which is this station, so a
-        //  station written in place leaves the watch standing with its best and its clock. By value alone every creep of the file made a fresh watch
-        //  here, and a man the TypeScript stands still as "stuck short of his mark" went on easing onto it.)
+        // (… and so does the runner's settle watch: it holds the goal it was made for, which is this station, so a station written here leaves the watch
+        //  standing with its best and its clock. Left behind, every creep would make a fresh watch, and a man who should stand still as "stuck short of his
+        //  mark" would go on easing onto it.)
         if let Some(mut w) = g.m.squad.settle_watch.get(x).copied() { if w.goal == old { w.goal = st; g.m.squad.settle_watch.set(x, w); } }
     }
     (st, tied)
@@ -261,7 +261,7 @@ fn arriving(g: &mut crate::game::Game) {
             }
             _ => match mk.muster.get(i) {
                 Some(&p) => p,
-                None => { let what = format!("spawn-failed:{}:no muster mark", i); note(g, &what); break; }   // (the TypeScript's spawnUnit throws on the missing mark: caught the same way)
+                None => { let what = format!("spawn-failed:{}:no muster mark", i); note(g, &what); break; }
             },
         };
         let team = side_of_team(g);
@@ -1044,7 +1044,6 @@ fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits: sectorPoint([6.7, 0, 11.2], 2.4), and with d = 3, y = 0.25
     #[test]
     fn sector_point_bits() {
         let a = sector_point([6.7, 0.0, 11.2], 2.4, None, None);

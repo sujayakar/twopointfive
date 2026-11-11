@@ -69,7 +69,6 @@ mod tests {
         SurfacesDataZonesItem { mat, x0, z0, x1, z1 }
     }
 
-    // Expected values printed by the TypeScript's own floorAt under bun.
     #[test]
     fn the_offices_map() {
         use FloorMat::*;
@@ -81,7 +80,7 @@ mod tests {
         for &(x, z, want) in cases { assert_eq!(floor_at([x, 7.0, z], None), want, "{} {}", x, z); }
     }
 
-    // tread's lookup: every material has its row, with floor.ts's numbers.
+    // tread's lookup: every material has its row.
     #[test]
     fn every_material_has_its_row() {
         use FloorMat::*;

@@ -165,7 +165,6 @@ mod tests {
         Some(want.iter().map(|w| String::from(*w)).collect())
     }
 
-    // Every expected block below is what src/game/squaddeal.ts itself printed under bun for the same arguments.
     #[test]
     fn cuts_match_the_typescript() {
         assert_eq!(deal(line(), &["a", "a", "b", "c", "d", "d", "e"]), block(&["dealt1 Alpha: a,b", "dealt2 Bravo: c,d,e"]));

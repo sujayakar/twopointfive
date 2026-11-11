@@ -495,7 +495,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
     let r = safe_radius(g, w);
     let (post_off, file_gap, hide) = (g.k.wallcharge.post_off, g.k.wallcharge.file_gap, g.k.wallcharge.safe_hide_m);
     let cap = m::min(g.k.wallcharge.safe_walk_m, g.k.wallcharge.safe_back_m);
-    // a place and the walk measured to it (the Map `walk`, keyed by the array's identity in the TypeScript)
+    // a place and the walk measured to it
     let mut pool: Vec<(V3, Option<f64>)> = Vec::new();
     let mut fan: Vec<V3> = Vec::new();
     let mut fire = fire_new(g, Some(w), None);

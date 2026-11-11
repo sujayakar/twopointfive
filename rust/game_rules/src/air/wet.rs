@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// A man's own bookkeeping, as wet.ts memOf makes it the first time he is asked for.
+/// A man's own bookkeeping, made the first time he is asked for.
 fn mem_at(g: &mut Game, c: CharId) -> crate::wet::WetMem {
     if !g.m.wet.mem.has(c) {
         g.m.wet.mem.set(c, crate::wet::WetMem { sky_t: -1.0, open: true, prints_left: 0.0, last_out_wet_t: -1e9, drip_acc: 0.0 });
@@ -120,7 +120,7 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
 /// where a drop leaves him, dealt in turn
 const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::Head, crate::character::Bone::Hips, crate::character::Bone::Hips];
 
-/// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript.
+/// One drop off him: from a hand, the chin or the hem of the jacket.
 fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;

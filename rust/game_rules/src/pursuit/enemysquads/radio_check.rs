@@ -164,7 +164,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
         for e in def!(g, xd).ev.iter_mut() {
             *e = 0.0;
         }
-        // (`X.pt[0] = at[0]; X.pt[2] = at[2]` in place, enemysquads.ts:778: a fix or a cover that IS the point moves with it)
+        // (a cover on the point moves with it)
         { let was = def!(g, xd).pt; crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
         send_round(g, xd, from, None, Vec::new());
         names.push(x);
@@ -499,7 +499,7 @@ fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
     b.read = now;
     b.t
 }
-/// A looker's leg: pressure.ts's scripted leg, at the pace of a man going to look.
+/// A looker's leg: a scripted leg, at the pace of a man going to look.
 pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
     let pace = g.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::SQUAD_LEG);
@@ -1032,7 +1032,7 @@ pub(super) fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the word against the TypeScript's own (`(h ^ Math.floor(sum * 0x7fffff)) >>> 0`, run under bun)
+    /// the pinned words
     #[test]
     fn check_word_is_the_typescripts() {
         assert_eq!(check_word("Alpha", 0.0, 1.75), WORD_ALPHA);

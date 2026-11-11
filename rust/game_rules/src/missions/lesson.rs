@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-// ---- the lines: what the regular expressions of lesson.ts match, written out (no regex in the game). All works on bytes, as every pattern here
-// starts and ends on an ASCII character and a non-ASCII byte is no \w, as a non-ASCII unit is none in JavaScript.
+// ---- the lines: their patterns written out by hand (no regex in the game). All works on bytes, as every pattern here
+// starts and ends on an ASCII character and a non-ASCII byte is no word character.
 
 /// \b at `i`
 fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::js::is_word(b[i - 1])) != (i < b.len() && crate::js::is_word(b[i])) }
@@ -40,7 +40,7 @@ fn bare_line(line: &str) -> String {
 
 /// `s` between `head` and `tail`, at least a letter of it
 fn between<'a>(s: &'a str, head: &str, tail: &str) -> Option<&'a str> { s.strip_prefix(head)?.strip_suffix(tail).filter(|w| !w.is_empty()) }
-/// row `row` of lesson.ts TOKENS: its pattern on a name already of the letters lessonToken allows: the man's words
+/// row `row` of the token patterns, on a name already of the letters a token allows: the man's words
 fn token_hit(row: usize, n: &str) -> Option<&str> {
     match row {
         0 => between(n, "grab ", " from behind"),
@@ -159,7 +159,7 @@ fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1,
 /// a count kept in the step's map, as a test reads it
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
-/// one test asked: lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of)
+/// one test asked: the `ok` of each kind (the `check` of each is check_of)
 fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
@@ -610,7 +610,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     if g.lesson.i >= l.steps.len() as f64 || g.mission.stage == crate::game::MissionStage::Failed || who_down(g, &crate::seats::here(g)) {
         return;
     }
-    // The row is lent out of `g.lesson.seen` while `g` is passed along beside it; nothing it calls reads `seen` (private in the TypeScript, read by `settling` only).
+    // The row is lent out of `g.lesson.seen` while `g` is passed along beside it; nothing it calls reads `seen`.
     let mut s = match g.lesson.seen.take() {
         Some(s) => s,
         None => lesson_fresh(g, &crate::seats::here(g), Some(1e-6)),

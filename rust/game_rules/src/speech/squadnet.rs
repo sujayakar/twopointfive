@@ -11,7 +11,7 @@ pub fn squad_net_new() -> crate::squadnet::SquadNet {
     crate::squadnet::SquadNet::blank()
 }
 
-/// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing.
+/// A fresh encounter: everything but `last_t`, which stands.
 pub fn squad_net_reset(g: &mut crate::game::Game) {
     let n = &mut g.squad_net;
     n.rows = Vec::new();

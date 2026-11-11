@@ -25,7 +25,7 @@ fn job(going: &str, there: &str) -> WallChargeAssignA { WallChargeAssignA { goin
 fn none_upper(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::None), ..a } }
 fn none_aim(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), ..a } }
 
-// ------------------------------------------------------------ underFire's two answers: the match where they are called (conventions 3; the captures are WallChargeFireAsk)
+// ------------------------------------------------------------ underFire's two answers (the captures are WallChargeFireAsk)
 /// a round's line, the wall about to go being no cover where it will open   (underFire's `line`)
 fn fire_line(g: &Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
     if !crate::scene_collision::segment_blocked(g, a, b, None, None, None) { return true; }

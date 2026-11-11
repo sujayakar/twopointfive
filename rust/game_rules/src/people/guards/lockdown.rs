@@ -17,7 +17,7 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
 }
 
-/// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.
+/// The same chokepoint, by value: a man's post is a copy of the level's row.
 fn same_post(a: &crate::scene_level::Chokepoint, b: &crate::scene_level::Chokepoint) -> bool {
     a.name == b.name && a.pos == b.pos && a.yaw == b.yaw
 }
@@ -279,7 +279,7 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
     }
 }
 
-/// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.
+/// Stand an AI man of a side, held on a one-point route of his own. A refusal is the Err.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }

@@ -228,7 +228,7 @@ fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
 
 // ---------------------------------------------------------------- the trip
 
-/// lighting.ts setBlackout, on a trip that found the mains up: the answer's clock starts.
+/// a trip that found the mains up: the answer's clock starts.
 pub fn power_out(g: &mut crate::game::Game) {
     decide_out(g);
     breaker_say(g);
@@ -612,7 +612,7 @@ fn step_power_out(g: &mut crate::game::Game, _dt: f64) {
     if st(g).men.iter().any(|x| x.phase == Phase::Wait) && g.time >= go_at {
         step_off(g, fight);
     }
-    // `lever` is the man himself in the TypeScript and stays so under the walk: st.men is only cut when the walk is over, so its place is its name
+    // `lever` is the man's place in st.men, and it holds under the walk: st.men is only cut when the walk is over
     let lever = st(g).men.iter().position(|x| x.role == ManRole::Lever);
     let n = st(g).men.len();
     let mut keep = Vec::with_capacity(n);
@@ -854,7 +854,7 @@ fn step_off(g: &mut crate::game::Game, fight: bool) {
     } else {
         None
     };
-    // `why` is a Map keyed by the man in the TypeScript: here a list beside `wait`
+    // `why` is a list beside `wait`: one reason for each man in it
     let mut why: Vec<Option<String>> = Vec::with_capacity(wait.len());
     for &i in &wait {
         let gd = man(g, i).gd;
@@ -963,7 +963,7 @@ fn stand_down(g: &mut crate::game::Game) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // bits from the TypeScript's own lines under bun with EXACT.on
+    // the pinned bits of dist_xz
     #[test]
     fn flat_is_the_typescripts_bits() {
         assert_eq!(dist_xz([1.5, 0.0, -2.25], [0.1, 7.0, 3.3]).to_bits(), 0x4016e539e098fe40);

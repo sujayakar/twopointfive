@@ -63,7 +63,7 @@ mod tests {
 
 use crate::ask::Over;
 
-/// the room's identity: rooms are copied here, the TypeScript compares the one object
+/// the room's identity: rooms are copied, so their ids are compared
 pub(super) fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate::scene_scenarios::StructureRoom>) -> bool {
     match (a, b) { (Some(x), Some(y)) => x.id == y.id, (None, None) => true, _ => false }
 }
@@ -1005,7 +1005,7 @@ pub(super) const TOGETHER_SECS: f64 = 5.0;
 #[cfg(test)]
 mod tests_2 {
     use super::*;
-    // the TypeScript's own bits: its `along` under EXACT.on, a leg, a leg of no length (one point, at its corner), a leg
+    // the pinned bits of `along`: a leg, a leg of no length (one point, at its corner), a leg
     const BITS: [[u64; 3]; 22] = [
         [0x3fdd27d27d27d27d, 0xbfe4fa4fa4fa4fa6, 0x3fde22e7bdb3230c],
         [0x3fe38e38e38e38e4, 0xbfcb05b05b05b060, 0x3fee22e7bdb3230c],

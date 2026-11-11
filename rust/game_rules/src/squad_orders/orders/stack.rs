@@ -251,7 +251,7 @@ fn squad_orders_stack_posts_room(g: &mut crate::game::Game, d: DoorId, side: f64
     crate::stackroom::stack_room_fix(g, d, side, posts.as_deref(), &taken, None)
 }
 
-/// doorway.ts OWN MARK, asked where a stack's marks are handed out
+/// OWN MARK: where Sam stands by a mark men of the order are on and the plain answer moves one of those marks, the marks are asked again with Sam left out, and taken if none lands on him but those very marks
 pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
     if g.sets[g.seat].orders.sam_out { return ask(g); }
     let c = g.pl[g.player].ch;
@@ -368,7 +368,7 @@ fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side: f6
     Some(out)
 }
 
-/// doorway.ts OWN LEAF: where the answer was 'no room', the door's own open leaf is left out of the walls
+/// OWN LEAF: where the answer was 'no room', the door's own open leaf is left out of the walls
 fn squad_orders_stack_posts_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let out = squad_orders_stack_posts_leaf_in(g, &Over::OWN, d, side, men, Some(ignore));

@@ -33,7 +33,7 @@ fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
             return Some(OwnSet { at, words, where_, fatal: false, go: OwnSetGo::Door { d } });
         }
     }
-    // The TypeScript's `w!`, `wAt!`: a door's charge loses the distance only to a wall's, and with no door's charge the wall's is what stands.
+    // A door's charge loses the distance only to a wall's, and with no door's charge the wall's is what stands.
     let w = w?;
     let words = crate::wallcharge::wall_charge_sam_words(g, w);
     let fatal = crate::wallcharge::wall_charge_sam_fatal(g, w);
@@ -59,7 +59,7 @@ pub(super) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Int
     })
 }
 
-/// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down.
+/// at a bare tap's release: is the highlighted row his own charge where it would put him down.
 pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
@@ -67,7 +67,7 @@ pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::I
     true
 }
 
-/// game.ts, where this frame's act is read: the row given.
+/// where this frame's act is read: the row given.
 pub fn own_blow_act(g: &mut crate::game::Game) {
     let Some(a) = g.sets[g.seat].act.as_ref() else { return; };
     if a.kind != crate::game::InteractableKind::Charge || a.verb != Some(crate::game::Verb::Blow) || crate::condition::down(g, g.pl[g.player].ch) { return; }
