@@ -1,7 +1,7 @@
 // SDF CHARACTER RIG — the CPU-held parts, headless:
 //   sdfrig-fit      the round-cone fit off the shipped mannequin: deterministic (two solves agree bit for bit), every radius sane (1–20 cm), left / right slots mirror,
 //                   per-slot rms under 30 mm and the whole under 25 mm, no overrides unaccounted for; prints the table
-//   sdfrig-pack     BoxWorld.upload on the fake device turns a frame's proxy list into the rig exactly: r0 over the hand radius, r1's millimetres in misc's top byte,
+//   sdfrig-pack     a BoxWorld on the fake device turns a frame's proxy list into the rig exactly: r0 over the hand radius, r1's millimetres in misc's top byte,
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
 //   bun run tools/qa/checks.ts sdfrig
@@ -39,18 +39,20 @@ export async function sdfrigFit() {
 }
 
 export async function sdfrigPack() {
-  console.log('\n=== sdfrig-pack: BoxWorld.upload packs the fit into the capsule list ===');
+  console.log('\n=== sdfrig-pack: the fit is packed into the capsule list ===');
   const ch = await loadGltfCharacter(GLTF); const fit = fitRig(ch);
   const dev = fake();
-  const world = new BoxWorld(dev);
+  // (the page's world writes a frame's proxies and fits them as it uploads: draw/men.ts, draw/world.ts)
+  const world = new (class extends BoxWorld { upload() { if (this.rig) this.applyRig(this.rig); } })(dev);
+  const rows = (w: any, owner: number, albedo: number[], caps: number[][], bound: number[]): void => { const f = new Float32Array(15 * 8), u = new Uint32Array(f.buffer); for (let i = 0; i < 15; i++) f.set(caps[i] ?? [0, -100, 0, 0, 0, -100, 0], i * 8); w.addCapsuleRows(f, u, 0, owner, [albedo], new Float32Array(bound), 0); };
   // two characters' worth of synthetic proxies: a standing-ish set of 15 segments (a, r, b) round (10, 0, 12) and (14, 0, 12)
   const mk = (ox: number) => { const caps: number[][] = []; for (let i = 0; i < 15; i++) { const y0 = 0.1 + i * 0.1; caps.push([ox + (i % 3) * 0.1, y0, 12 + (i % 2) * 0.15, 0.05 + (i % 4) * 0.03, ox + ((i + 1) % 3) * 0.1, y0 + 0.25, 12 - (i % 2) * 0.1]); } return caps; };
   const c0 = mk(10), c1 = mk(14);
-  world.resetCapsules(); world.addCharacterCapsules(7, [0.5, 0.25, 0.75], c0, [10, 0.9, 12, 1.5]); world.addCharacterCapsules(11, [0.2, 0.6, 0.4], c1, [14, 0.9, 12, 1.5]);
+  world.resetCapsules(); rows(world, 7, [0.5, 0.25, 0.75], c0, [10, 0.9, 12, 1.5]); rows(world, 11, [0.2, 0.6, 0.4], c1, [14, 0.9, 12, 1.5]);
   const before = new Float32Array(world.capsuleData); const beforeU = new Uint32Array(world.capsuleU32);
   world.rig = null; world.upload();
   let untouched = true; for (let i = 0; i < 30 * 8; i++) if (world.capsuleU32[i] !== beforeU[i]) untouched = false;
-  verdict(untouched && world.infoF32[27] === 1.5 && world.infoF32[31] === 1.5, 'rig = null (no fit attached): the list and the 1.5 m cull spheres exactly as addCharacterCapsules wrote them — no r1 byte, so the GPU reads r again (an untapered cone)');
+  verdict(untouched && world.infoF32[27] === 1.5 && world.infoF32[31] === 1.5, 'rig = null (no fit attached): the list and the 1.5 m cull spheres exactly as addCapsuleRows wrote them — no r1 byte, so the GPU reads r again (an untapered cone)');
   world.rig = { r0: fit.r0, r1: fit.r1, kPad: RIG_KPAD }; world.upload();
   let okR = true, okB = true, okKeep = true; const D = world.capsuleData, U = world.capsuleU32;
   for (let c = 0; c < 2; c++) for (let i = 0; i < 15; i++) { const o = (c * 15 + i) * 8; if (D[o + 3] !== fit.r0[i]) okR = false; const q = U[o + 7] >>> 24; if (q !== Math.max(1, Math.min(255, Math.round(fit.r1[i] / RB_QUANT)))) okB = false; if ((U[o + 7] & 0xffffff) !== (beforeU[o + 7] & 0xffffff)) okKeep = false; for (const k of [0, 1, 2, 4, 5, 6]) if (D[o + k] !== before[o + k]) okKeep = false; }
@@ -66,11 +68,11 @@ export async function sdfrigPack() {
   verdict(idem, 'a second upload with no game step re-applies to the same bytes (idempotent)');
   // (retired with the capsule cleanup, 2026-08-11: 'rig → null with no game step restores the game's words', 'tightBounds off keeps the 1.5 m sphere', 'tight again = the first application' —
   //  the rig has no off switch and no bounds option any more; a fresh list from the game is the only way the words change, below)
-  world.resetCapsules(); world.addCharacterCapsules(7, [0.5, 0.25, 0.75], c0, [10, 0.9, 12, 1.5]); world.addCharacterCapsules(11, [0.2, 0.6, 0.4], c1, [14, 0.9, 12, 1.5]); world.upload();
+  world.resetCapsules(); rows(world, 7, [0.5, 0.25, 0.75], c0, [10, 0.9, 12, 1.5]); rows(world, 11, [0.2, 0.6, 0.4], c1, [14, 0.9, 12, 1.5]); world.upload();
   let same2 = true; for (let i = 0; i < 30 * 8; i++) if (world.capsuleU32[i] !== snap[i]) same2 = false; for (let i = 0; i < 8; i++) if (world.infoF32[24 + i] !== info[i]) same2 = false;
   verdict(same2, 'the same list written afresh by the game and uploaded = the first application byte for byte');
   // a padding record (radius 0) is left alone
-  world.resetCapsules(); world.addCharacterCapsules(7, [0.5, 0.5, 0.5], c0.slice(0, 12), [10, 0.9, 12, 1.5]); world.upload();
+  world.resetCapsules(); rows(world, 7, [0.5, 0.5, 0.5], c0.slice(0, 12), [10, 0.9, 12, 1.5]); world.upload();
   const oPad = 13 * 8; verdict(world.capsuleData[oPad + 3] === 0 && (world.capsuleU32[oPad + 7] >>> 24) === 0, 'a padding record (radius 0, y −100) keeps radius 0 and no r1 byte');
   verdict(world.capsuleData[3] === fit.r0[0] && (world.capsuleU32[7] >>> 24) > 0 && world.infoF32[27] < 1.5, 'and the real records of that shorter list are fitted, its sphere too');
 }

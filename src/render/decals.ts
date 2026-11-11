@@ -173,11 +173,10 @@ export class Decals {
   /** Attached decals: find each one's box in this frame's list (statics first, then dynamics — BoxWorld.upload's order) and re-derive its world placement from
    *  where the box stands now. Cheap when nothing moved (a cached index check + three compares per decal). Called by frame(). */
   sync(world: BoxWorld) {
-    const all = world.all; const nStat = world.statics.length;
+    const nStat = world.statics.length;
     for (const d of this.list) {
       if (!d.box || !d.local) continue;
-      let idx = d.boxIdx;
-      if (idx === DECAL_ANY_BOX || all[idx] !== d.box) { const k = world.dynamics.indexOf(d.box); idx = k < 0 ? -1 : nStat + k; }
+      const k = world.dynamics.indexOf(d.box), idx = k < 0 ? -1 : nStat + k;
       if (idx < 0 || idx >= DECAL_ANY_BOX) { if (!d.hidden) { d.hidden = true; this.dirty = true; } continue; }
       const b = d.box;
       const p = toWorld(b, d.local.p, true), n = toWorld(b, d.local.n, false), t = toWorld(b, d.local.t, false);

@@ -273,9 +273,8 @@ export class LightingPasses {
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
    *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), how far a stuff's own `mirrors` stands in for a plain coat's (the look's Pressed panels row, 0‥1; 0 on a page without the look), 0). Nothing here writes a box. */
-  private beamHide = new Set<Box>();
-  setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number; coats: number }): Set<Box> | null {
-    const F = this.beamData, U = new Uint32Array(F.buffer); let n = 0; const hide = this.beamHide; hide.clear();
+  setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number; coats: number }): void {
+    const F = this.beamData, U = new Uint32Array(F.buffer); let n = 0;
     if (list) {
       const found: { b: Box; d: number; bead: Box | null | undefined }[] = [];
       for (const b of list) if (is(b)) { const bead = opts.air ? opts.air(b) : undefined; if (bead === undefined && !opts.reflect) continue;
@@ -289,13 +288,11 @@ export class LightingPasses {
         F[o + 4] = b.c[0] + zx * L; F[o + 5] = b.c[1] + zy * L; F[o + 6] = b.c[2] + zz * L; F[o + 7] = air && bead ? 1 : 0;
         // a laser aimed at open ground: the game's reach does not meet the yard's floor, so the line ran on under it with no dot. In the air look it ends AT the ground, with its dot
         if (air && F[o + 5] < 0 && F[o + 1] > 0) { const t = F[o + 1] / (F[o + 1] - F[o + 5]); F[o + 4] = F[o] + (F[o + 4] - F[o]) * t; F[o + 6] = F[o + 2] + (F[o + 6] - F[o + 2]) * t; F[o + 5] = 0; F[o + 7] = 1; }
-        F[o + 8] = e[0]; F[o + 9] = e[1]; F[o + 10] = e[2]; F[o + 11] = air ? opts.A : 0; n++;
-        if (air) { hide.add(b); if (bead) hide.add(bead); } }
+        F[o + 8] = e[0]; F[o + 9] = e[1]; F[o + 10] = e[2]; F[o + 11] = air ? opts.A : 0; n++; }
     }
-    if (n === 0 && this.beamN === 0 && F[5] === opts.wet && F[6] === Math.fround(opts.coats)) return null;
+    if (n === 0 && this.beamN === 0 && F[5] === opts.wet && F[6] === Math.fround(opts.coats)) return;
     U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = opts.coats; F[7] = 0;
     this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
-    return hide.size ? hide : null;
   }
   /** THE OPEN FIRES (rust/game_rules/src/air/fire.rs → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
    *  each one's flame, coals and drawn smoke along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
