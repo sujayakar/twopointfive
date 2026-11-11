@@ -59,8 +59,8 @@ fn can_t_then(t: &crate::doortools::DoorToolsThresholdThenT) -> crate::doortools
 fn door_of_t(t: &crate::orders::OrderTarget) -> Option<DoorId> { match t { crate::orders::OrderTarget::Door(x) => Some(x.door), _ => None } }
 
 ///  `{ order: op.kind, door: op.door, shy: op.door, ...a }`; three callers say `shy: null`, which stays null
-fn merged_assign(kind: &str, door: DoorId, a: &crate::doortools::DoorToolsAssignA) -> crate::orders::SquadOrdersAssignA {
-    crate::orders::SquadOrdersAssignA {
+fn merged_assign(kind: &str, door: DoorId, a: &crate::doortools::DoorToolsAssignA) -> crate::duty::TaskGiven {
+    crate::duty::TaskGiven {
         post: a.post,
         going: a.going.clone(),
         order: match &a.order { Some(o) => o.clone(), None => String::from(kind) },
@@ -253,7 +253,7 @@ fn door_tools_stack_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, d:
     for m in roster {
         if crate::condition::down(g, g.gd[m].ch) { continue; }
         let Some(b) = crate::orders::squad_orders_of(seat, m) else { continue };
-        let b = &g.tab.orders_assignment[b];
+        let b = &g.tab.task[b];
         if crate::orders::rows::id_is(&b.order, crate::orders::Is::Stacks) && b.door == Some(d) && b.held_fire.unwrap_or(false) && b.arrived && b.yield_t < 0.0 { return true; }
     }
     false
@@ -268,12 +268,12 @@ pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) else { continue };
         let at = g.pos_of(gd);
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) || !row.arrived || row.stance != crate::character::Stance::Stack { continue; }
         let (Some(door), Some(post)) = (row.door, row.post) else { continue };
         if v3::dist_xz(at, post) > 0.6 { continue; }
         if crate::holdfire::hold_fire_holds_target(g, gd) || door_tools_stack_held(g, &crate::seats::here(g), door) { continue; }
-        if g.tab.orders_assignment[a].held_set.unwrap_or(false) { continue; }
+        if g.tab.task[a].held_set.unwrap_or(false) { continue; }
         let side = crate::orders::side_of(g, door, at);
         door_tools_test(g, door, side, gd, true);
     }
@@ -323,7 +323,7 @@ fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> 
 fn walker_on(g: &Game, m: GuardId) -> bool {
     let b = crate::orders::squad_orders_of(&crate::seats::here(g), m).unwrap();
     let at = g.pos_of(m);
-    let row = &g.tab.orders_assignment[b];
+    let row = &g.tab.task[b];
     match row.post { Some(p) => row.arrived && v3::dist_xz(at, p) <= 0.6, None => false }
 }
 
@@ -332,7 +332,7 @@ fn walk_marks(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> JsMap<
     let mut out = JsMap::new();
     for &m in men {
         let b = crate::orders::squad_orders_of(seat, m).unwrap();
-        let p = g.tab.orders_assignment[b].tries.as_ref().unwrap().post;
+        let p = g.tab.task[b].tries.as_ref().unwrap().post;
         out.set(m, crate::doortools::DoorToolsStackLeftPostValue { lead: p.lead, pos: p.pos, face: p.face, stack_side: p.stack_side });
     }
     out
@@ -340,19 +340,19 @@ fn walk_marks(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> JsMap<
 
 /// a walk that came to a door nobody had tried: the man on the jamb tries the handle; locked, the halt of a door order; else the walk is asked again
 pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
-    let mut seen: JsSet<OrdersAssignmentId> = JsSet::new();
+    let mut seen: JsSet<TaskId> = JsSet::new();
     let mut i = 0;
     while i < g.sets[g.seat].door_tools.roster.len() {
         let gd = g.sets[g.seat].door_tools.roster[i];
         i += 1;
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) else { continue };
-        let Some((d, side)) = g.tab.orders_assignment[a].tries.as_ref().map(|t| (t.door, t.side)) else { continue };
+        let Some((d, side)) = g.tab.task[a].tries.as_ref().map(|t| (t.door, t.side)) else { continue };
         if seen.has(a) || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let roster = g.sets[g.seat].door_tools.roster.clone();
         let mut men = Vec::new();
         for m in roster {
             let Some(b) = crate::orders::squad_orders_of(&crate::seats::here(g), m) else { continue };
-            let same = match g.tab.orders_assignment[b].tries.as_ref() { Some(u) => u.door == d && u.side == side, None => false };
+            let same = match g.tab.task[b].tries.as_ref() { Some(u) => u.door == d && u.side == side, None => false };
             if same && !crate::condition::down(g, g.gd[m].ch) { men.push(m); }
         }
         for &m in &men {
@@ -362,7 +362,7 @@ pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
         let mut lead = None;
         for &m in &men {
             let b = crate::orders::squad_orders_of(&crate::seats::here(g), m).unwrap();
-            if g.tab.orders_assignment[b].tries.as_ref().unwrap().post.lead { lead = Some(m); break; }
+            if g.tab.task[b].tries.as_ref().unwrap().post.lead { lead = Some(m); break; }
         }
         if lead.is_none() {
             for &m in &men {
@@ -416,7 +416,7 @@ fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, halted:
         let on_ch = match ch { Some(c) => g.tab.doortools_door_op[c].men.contains(&m), None => false };
         if hold.contains(&m) || on_ch { continue; }
         let Some(a) = a else { continue };
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if row.door == Some(d) {
             if let Some(p) = row.post { taken.push(p); }
         }
@@ -441,7 +441,7 @@ fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<Guar
     let c = g.dr[d].frame_centre;
     for &m in left {
         let p = post.get(m).unwrap();
-        let a = crate::orders::SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::stack::ORDER.id),
             post: Some(p.pos),
             face: Some(p.face),

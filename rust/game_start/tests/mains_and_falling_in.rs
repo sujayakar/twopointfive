@@ -87,7 +87,7 @@ fn where_the_fixed_spot_is_good_the_errand_keeps_it() {
 }
 
 fn order_of(p: &Play, m: GuardId) -> Option<(String, Option<[f64; 3]>)> {
-    game::orders::squad_orders_of(&game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.orders_assignment[a]; (a.order.clone(), a.post) })
+    game::orders::squad_orders_of(&game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.task[a]; (a.order.clone(), a.post) })
 }
 
 /// THE RULE (a settled rule): on the staging's own frame every living teammate is on the menu's fall in, no post, and nobody said it: no row in the orders' log and no line. Three seconds on with Sam standing still they're still on it and with him.

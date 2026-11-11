@@ -28,7 +28,7 @@ pub(super) fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
 struct Walk { op: DoorOpId, t: f64, jamb: Vec<GuardId>, sr: Option<DoortoolsRoomSearchId>, going: String, holding: String }
 
 /// One man on his cuts: the job he came into the tick with, where he is, whether he leans and kneels his cuts or only stands them, and which cut.
-struct Man { gd: GuardId, a: OrdersAssignmentId, p: V3, search: Option<bool>, pie: bool, i: usize }
+struct Man { gd: GuardId, a: TaskId, p: V3, search: Option<bool>, pie: bool, i: usize }
 
 /// A man's next mark: where, what his muzzle is on, how he stands at it, and what the board reads.
 struct Mark<'a> { post: V3, at: V3, search: Option<bool>, lean: (Option<f64>, Option<bool>), going: &'a str, there: &'a str }

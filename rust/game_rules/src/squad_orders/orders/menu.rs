@@ -289,14 +289,14 @@ pub fn squad_orders_has(seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     seat.orders.asg.has(gd)
 }
 
-pub fn squad_orders_of(seat: &crate::seats::SeatRef, gd: GuardId) -> Option<OrdersAssignmentId> {
+pub fn squad_orders_of(seat: &crate::seats::SeatRef, gd: GuardId) -> Option<TaskId> {
     seat.orders.asg.get(gd).copied()
 }
 
 /// The tick's one write of a follower's latched word: `d` is how far he is off his place.
-pub(super) fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssignmentId, d: f64) {
+pub(super) fn squad_orders_follow_word(g: &mut crate::game::Game, a: TaskId, d: f64) {
     let t = g.time;
-    let arrived = g.tab.orders_assignment[a].arrived;
+    let arrived = g.tab.task[a].arrived;
     let (far, hold) = (g.k.orders.word_far_m, g.k.orders.word_hold_s);
     let w = g.m.orders.follow_word.get_or_insert_with(a, || OrdersModFOLLOWWORDValue { on: false, out_t: -1.0 });
     if arrived {
@@ -309,8 +309,8 @@ pub(super) fn squad_orders_follow_word(g: &mut crate::game::Game, a: OrdersAssig
 }
 
 /// Is he shown as there: a follower's is the latch, every other order's is `arrived`.
-pub(super) fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmentId) -> bool {
-    let row = &g.tab.orders_assignment[a];
+pub(super) fn squad_orders_shown_there(g: &crate::game::Game, a: TaskId) -> bool {
+    let row = &g.tab.task[a];
     if row.post.is_some() { return row.arrived; }
     match g.m.orders.follow_word.get(a) {
         Some(w) => w.on,
@@ -414,7 +414,7 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
         if g.sets[g.seat].orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
         squad_orders_drop(g, gd);
     }
-    if !g.sets[g.seat].orders.asg.values().any(|&a| g.tab.orders_assignment[a].post.is_none()) { g.sets[g.seat].orders.trail.clear(); }
+    if !g.sets[g.seat].orders.asg.values().any(|&a| g.tab.task[a].post.is_none()) { g.sets[g.seat].orders.trail.clear(); }
 }
 
 /// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.

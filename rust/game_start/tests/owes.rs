@@ -153,7 +153,7 @@ fn each_count_counts() {
         p.order("move", [far[0], far[1] + 3.0], game::orders::Who::All);
         let mut stuck_at_3 = 0;
         for i in 0..60 * 7 {
-            if !watchdog { let seat = game::seats::here(&p.g); let a = game::orders::squad_orders_of(&seat, man).unwrap(); p.g.tab.orders_assignment[a].mark_t = p.g.time; }
+            if !watchdog { let seat = game::seats::here(&p.g); let a = game::orders::squad_orders_of(&seat, man).unwrap(); p.g.tab.task[a].mark_t = p.g.time; }
             p.frame();
             let c = p.g.gd[man].ch;
             (p.g.ch[c].pos[0], p.g.ch[c].pos[2]) = (at[0], at[1]);

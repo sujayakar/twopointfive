@@ -37,8 +37,8 @@ pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The fight has him: its lease, blind, folded, or the room fight's aim over his order.
-fn fought(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    g.tab.orders_assignment[a].yield_t >= 0.0
+fn fought(g: &crate::game::Game, gd: GuardId, a: TaskId) -> bool {
+    g.tab.task[a].yield_t >= 0.0
         || crate::control::man::blind(g, gd)
         || crate::control::man::staggered(g, gd)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
@@ -109,7 +109,7 @@ fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Jo
     }
     j.t0 = -1.0;
     j.live = false;
-    g.tab.orders_assignment[j.a].crouch = Some(false);
+    g.tab.task[j.a].crouch = Some(false);
 }
 
 /// Done with it: the lens out, a word, a plain hold: beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands.
@@ -132,7 +132,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
         crate::orders::squad_orders_assign(
             g,
             gd,
-            &crate::orders::SquadOrdersAssignA {
+            &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some(to.pos),
                 face: Some(to.yaw),
@@ -153,7 +153,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
         crate::orders::squad_orders_assign(
             g,
             gd,
-            &crate::orders::SquadOrdersAssignA {
+            &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
@@ -194,7 +194,7 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
     crate::orders::squad_orders_assign(
         g,
         gd,
-        &crate::orders::SquadOrdersAssignA {
+        &crate::duty::TaskGiven {
             order: String::from(WAND_ORDER),
             post: Some([p.spot.pos[0], 0.0, p.spot.pos[2]]),
             face: Some(p.spot.yaw),
@@ -231,7 +231,7 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
 }
 
 /// The order's beat for one man: walk, kneel, feed, look; ends when the leaf moves, the switch goes, or his mark is moved.
-pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let Some(mut j) = job(g, &crate::seats::here(g), gd) else { return };
     if j.a != a {
         return;
@@ -255,17 +255,17 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     j.last_t = now;
     put_job(g, gd, j);
     // (the orders stopped him short: his mark moved to his feet, and he never looks from there)
-    let short = match g.tab.orders_assignment[a].post {
+    let short = match g.tab.task[a].post {
         None => true,
         Some(post) => dist_xz(post, j.stand) > 0.3,
     };
     if short {
-        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
+        let line = if g.tab.task[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
         settle(g, gd, &mut j, line, false);
         return;
     }
     let pos = g.ch[c].pos;
-    let on = g.tab.orders_assignment[a].arrived
+    let on = g.tab.task[a].arrived
         && dist_xz(pos, j.stand) < 0.45
         && m::abs(v3::wrap_angle(g.ch[c].body_yaw - j.yaw)) < 0.6
         && crate::doors::doors_side(g, d, pos) == j.side
@@ -280,7 +280,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     g.ch[c].anim.lockpick = true;
     j.knelt = true;
-    g.tab.orders_assignment[a].crouch = Some(true);
+    g.tab.task[a].crouch = Some(true);
     // (WAND.quick settled on: only a second feed at this door waits WAND.feedSecs)
     let through = !j.live
         && if j.again {
@@ -300,7 +300,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));
-    g.tab.orders_assignment[a].there = there.into();
+    g.tab.task[a].there = there.into();
 }
 
 /// The order's row on the menus.
@@ -440,14 +440,14 @@ mod tests {
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
-        let a = g.tab.orders_assignment.push(crate::orders::Assignment::default());
-        g.tab.orders_assignment[a].crouch = Some(true);
+        let a = g.tab.task.push(crate::duty::Task::default());
+        g.tab.task[a].crouch = Some(true);
         g.ch[c].anim.lockpick = true;
 
         let mut j = Job { a, t0: 3.0, live: true, knelt: false, ..Job::default() };
         lens_out(&mut g, gd, &mut j);
         assert!(!j.again && !j.live && j.t0 == -1.0);
-        assert_eq!(g.tab.orders_assignment[a].crouch, Some(false));
+        assert_eq!(g.tab.task[a].crouch, Some(false));
         assert!(g.ch[c].anim.lockpick, "this file did not put the pose on him, so it does not take it off");
 
         j.knelt = true;

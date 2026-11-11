@@ -38,7 +38,7 @@ pub struct Rescue {
     pub called: bool,
     pub search_t: JsMap<GuardId, f64>,
     pub search_a: JsMap<GuardId, crate::rescue::RescueSearchAValue>,
-    pub auto: JsSet<OrdersAssignmentId>,
+    pub auto: JsSet<TaskId>,
     pub server_out: Option<V3>,
     pub ending: crate::rescueend::RescueEnd,
     pub flush: crate::rescueflush::RescueFlush,
@@ -146,7 +146,7 @@ pub enum RescueStep {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueSearchAValue {
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub face: Option<f64>,
     pub watch: Option<V3>,
     pub there: crate::orders::Doing,

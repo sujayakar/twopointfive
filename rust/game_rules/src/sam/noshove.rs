@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
     match crate::orders::squad_orders_of(seat, gd) {
-        Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
+        Some(a) => g.tab.task[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
     }
 }

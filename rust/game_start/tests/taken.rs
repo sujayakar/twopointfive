@@ -109,7 +109,7 @@ fn a_stack_of_four_keeps_its_rear() {
         let (mut frames, mut behind) = (0, 0);
         for _ in 0..(14 * 60) {
             p.frame();
-            let rear: Vec<GuardId> = p.mates().into_iter().filter(|&m| game::orders::squad_orders_of(&game::seats::here(&p.g), m).map_or(false, |a| { let a = &p.g.tab.orders_assignment[a]; a.spare == Some(true) && a.from.is_some() })).collect();
+            let rear: Vec<GuardId> = p.mates().into_iter().filter(|&m| game::orders::squad_orders_of(&game::seats::here(&p.g), m).map_or(false, |a| { let a = &p.g.tab.task[a]; a.spare == Some(true) && a.from.is_some() })).collect();
             assert_eq!(rear.len(), 2, "{level} {door}: {} of the four keep the rear", rear.len());
             frames += rear.len();
             for m in rear {
