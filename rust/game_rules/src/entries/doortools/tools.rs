@@ -543,7 +543,7 @@ pub(super) fn door_tools_to_gun(g: &mut crate::game::Game, op: DoorOpId) -> bool
     let by = match by { Some(x) => x, None => return false };
     let hammer = !gun_shell(g, d, by);
     let mut avoid: Vec<V3> = men.iter().copied().filter(|m| *m != by).map(|m| post_or_pos(g, op, m)).collect();
-    avoid.push(g.player_pos(g.player));
+    avoid.push(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g)));
     let mark = if hammer { None } else { Some(post_or_pos(g, op, by)) };
     let close = if hammer || crate::kit::kit_big(g, by) == crate::kit::BigKit::Shotgun {
         Some(if hammer { crate::kit::BigTool::Hammer } else { crate::kit::BigTool::Shotgun })
@@ -1013,14 +1013,13 @@ pub fn door_tools_frag_behind(g: &mut crate::game::Game, d: DoorId, side: f64, m
     let at = door_tools_land_for(g, d, side, deep);
     let land: V3 = [at[0], 0.3, at[2]];
     for gd in g.guards.clone() {
-        if g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && !men.contains(&gd) {
+        if crate::group::ours(g, gd) && !crate::condition::down(g, g.gd[gd].ch) && !men.contains(&gd) {
             let p = g.pos_of(gd);
             if frag_in_it(g, d, side, land, p) { return Some(g.gd[gd].callsign.clone()); }
         }
     }
-    let pl = g.player;
-    let p = g.player_pos(pl);
-    if !crate::condition::down(g, g.pl[pl].ch) && frag_in_it(g, d, side, land, p) { Some(String::from("you")) } else { None }
+    let at = crate::group::player(g).map(|pl| g.player_pos(pl))?;
+    frag_in_it(g, d, side, land, at).then(|| String::from("you"))
 }
 
 /// A teammate outside this order on the far side of the door, in the open reach of a charge on it.

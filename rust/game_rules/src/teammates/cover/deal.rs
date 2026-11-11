@@ -1203,7 +1203,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
         (along > 0.15 && along < len + k.in_m && m::abs(sx * fz - sz * fx) < k.lane_keep) || v3::dist_xz(b, j.to) < k.in_m
     };
     for pl in crate::seats::men_up(g) {
-        if ours(g.player_pos(pl)) { return None; }
+        if crate::group::is_seats(g) && ours(g.player_pos(pl)) { return None; }
     }
     for mt in crate::seats::team_men(g, &crate::seats::here(g)) {
         if mt != gd && !crate::condition::down(g, g.gd[mt].ch) && ours(g.pos_of(mt)) { return None; }

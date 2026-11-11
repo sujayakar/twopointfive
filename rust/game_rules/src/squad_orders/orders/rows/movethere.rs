@@ -32,7 +32,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 /// 'move'.issue: a place and a watch each that fit the room, or the line abreast
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let t_at = t.at();
-    let pc = g.pl[g.player].ch;
+    let pc = crate::group::lead(g, &crate::seats::here(g)).unwrap_or(g.pl[g.player].ch);
     let sam = g.ch[pc].pos;
     let face = if v3::dist_xz(sam, t_at) > 0.3 { v3::yaw_to(sam, t_at) } else { g.ch[pc].body_yaw };
     // (the room kept: Sam's, and every other man's mark: where he is walking to, not where he is)

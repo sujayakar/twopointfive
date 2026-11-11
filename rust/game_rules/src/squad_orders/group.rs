@@ -42,6 +42,36 @@ pub fn has(g: &Game, id: GroupId, gd: GuardId) -> bool {
     }
 }
 
+/// Whom a pass about a group must not hurt: the men of its side.
+pub fn ours(g: &Game, gd: GuardId) -> bool {
+    let (side, his) = (g.groups[g.group].side, g.team(gd));
+    side.ours() == his.ours() && (his.ours() || his.theirs())
+}
+
+/// Whom it is up against.
+pub fn foe(g: &Game, gd: GuardId) -> bool { g.groups[g.group].side.foe_of(g.team(gd)) }
+
+/// The player who commands it, if one does and he is up.
+pub fn player(g: &Game) -> Option<PlayerId> { Some(g.player).filter(|&p| is_seats(g) && !crate::condition::down(g, g.pl[p].ch)) }
+
+/// Who leads it, for where its men are sent and what they come back to: the player who commands it, else the first of its men who is up.
+pub fn lead(g: &Game, seat: &crate::seats::SeatRef) -> Option<CharId> {
+    if seat.group.by_a_player() { return Some(g.pl[seat.player].ch); }
+    g.guards.iter().find(|&&x| has(g, seat.group_id, x) && !crate::condition::down(g, g.gd[x].ch)).map(|&x| g.gd[x].ch)
+}
+/// … and where that one is
+pub fn lead_pos(g: &Game, seat: &crate::seats::SeatRef) -> crate::V3 { lead(g, seat).map_or(g.seat_pos(seat), |c| g.ch[c].pos) }
+
+/// A round of somebody it is up against: a man's, or a player's if it is up against players.
+pub fn their_shot(g: &Game, e: &crate::game::GameEvent) -> bool {
+    use crate::director::EventKind as K;
+    match e.kind {
+        K::GuardShot => e.who.is_some_and(|who| !g.guards.iter().any(|&x| ours(g, x) && g.char_id(x) == who)),
+        K::Shot => !g.groups[g.group].side.ours(),
+        _ => false,
+    }
+}
+
 /// The pass is about a player's own squad.
 pub fn is_seats(g: &Game) -> bool { g.groups[g.group].by_a_player() }
 
