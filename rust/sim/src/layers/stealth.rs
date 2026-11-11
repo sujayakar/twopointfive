@@ -51,35 +51,35 @@ struct Sneaks {
 
 /// The crouch's own arms: a free man low has his hands down ahead of his knees, never a held frame (the weight goes foot to foot at a stand, the hands
 /// drift), swinging with the crouch walk, the left leading its foot in the close-in mode, the elbows flaring as he sinks and the arms rising after him.
-pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, w_move: f64, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, w_move: f64, tw_y: f64, tw_p: f64, tune: &Knobs) -> bool {
     let mut o = Sneaks { dt, busy, crouch, w_move, tw_y, tw_p, ..Sneaks::default() };
     as_sneaks(an, &mut o);
     let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut st) = an.sp else {
-        return 0;
+        return false;
     };
     comes_up(&mut st, &mut o);
     arms_crouch(&mut st, tune, &mut o);
     if st.w_a <= 0.003 || o.up <= 0.003 {
         st.lead = 0.0;
         an.sp = Some(st);
-        return RAN;
+        return true;
     }
     let code = with_pose(g, o.at, |d, rig, _n, fk| {
         fk.part(rig, d, list(FK_LEGS));
         // at a stand: never a held frame, the weight goes foot to foot with the feet where they were
         sways_by(&mut o);
         if !(o.sway > 0.003) {
-            return RAN | ran_list(FK_LEGS);
+            return true;
         }
         weight_sways(tune, d, rig, fk, &o);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0);
-    if code == 0 {
-        return 0;
+    .unwrap_or(false);
+    if !code {
+        return false;
     }
     if o.w <= 0.003 {
         st.lead = 0.0;
@@ -87,10 +87,10 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
         return code;
     }
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     let mut arm_w = [0.0f64; 2];
@@ -121,11 +121,11 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
         (r(HAND_R), arm_w[1], true),
     ]);
     if !ask_blend(g, o.at, o.at_b, 1.0, true, o.at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
     an.sp = Some(st);
-    RAN | RAN_ALL
+    true
 }
 
 /// How he holds himself.
@@ -274,11 +274,11 @@ fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
 /// The look under a door: on the pose at `at` (a copy of the finished pose, which is then MADE the pose) he shuffles in and sinks with his feet where
 /// they were, the trunk folds, the head bows at the foot of the leaf, a goggle nod under way is posed on it, and the hands go low: the right wrist at
 /// the gap, the left by its knee.
-pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &Knobs) -> u32 {
+pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &Knobs) -> bool {
     let (at, at_b, lp, lock_z, nod, gaze_local) = (pic, an.p_b.at as usize, clamp(an.lp_w.x, 0.0, 1.0), an.lockpick_at[2], an.nv_nod, an.gaze_local);
     let (tw, hri, fix_l, fix_r, nv_a) = (an.nv_tw, an.head_rest_inv, an.hand_fix[0], an.hand_fix[1], &mut an.nv_a);
     let Some(nod_up) = an.sp.as_mut().map(|s| &mut s.nod_up) else {
-        return 0;
+        return false;
     };
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
         if !(cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
@@ -323,13 +323,13 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
         }
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -343,8 +343,8 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
     });
     arms_mask();
     if !ask_blend(g, at, at_b, e, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }

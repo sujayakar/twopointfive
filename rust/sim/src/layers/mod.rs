@@ -2,8 +2,7 @@
 //! tuned by (`tune`) where it asks one, and what only this call knows, reads and writes the pose WHERE IT LIVES (the game's pool, poses.rs) and the rig on the bench (skeleton.rs), and
 //! asks the rig's named nodes of roles.rs. What it keeps from one tick to the next it keeps on him.
 //!
-//! A layer answers 0 = not a pose of this pool, or a role with no node (the caller stops, by name) · else RAN, with a bit for each list of nodes it ran forward on
-//! the bench (`ran_list`), whose rotations and origins the caller reads back.
+//! A layer answers whether it ran: not = not a pose of this pool, or a role with no node (the caller stops, by name).
 use game_types::character::{KICK_IMPACT, KICK_PLANT, LONG_ANCHOR_SIDE_MAX, LONG_PULL_MAX, READY_RATE, READY_REACH, THROW_DUR, THROW_RELEASE, TOE_FLOOR_Y, TOSS_AFTER, TOSS_LOW, TOSS_TOP, WALL_GAIT_REST, WALL_ROOT_OFF, BIGMOVE, BLOW, BOB, CREEP, FEET, GAZE, GAZE_EL, HAND, KNIFE_BLOW, LEAN_POSE, LIFE, LONG_PIVOT, LONG_STEADY, MV2, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, REACH, READY_AZ, READY_BARE, READY_UP, RUN_LINGER, SMOKEARM, SNEAK, SOFT_KNEE, SPRINT_WARP, STEALTH, SWIV_REF_L, SWIV_REF_R, TAKEN, TOSS_HANG, WALL_POSE, WORK};
 use game_types::rig_props::{Adj as RigAdj, SlingFrontHand, BIGRIG, RIG};
 use game_types::character::{Anim, AnimBigTool, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
@@ -52,14 +51,6 @@ pub use wall::*;
 pub use watch::*;
 pub use work::*;
 
-/// a layer ran
-pub const RAN: u32 = 1;
-/// …and left ALL of the run-forward bones on the bench current for the pose (a leg or an arm solved: skeleton.rs two_bone_ik)
-pub const RAN_ALL: u32 = 2;
-/// …and ran list `i` of roles.rs forward on the bench
-pub const fn ran_list(i: usize) -> u32 {
-    4 << i
-}
 const DEGR: f64 = PI / 180.0;
 /// Number.isFinite
 #[inline(always)]
@@ -136,14 +127,14 @@ fn turn(d: &mut [S], rig: &Rig, i: usize, q: [f64; 4]) {
 fn cast(n: usize, roles: &[usize]) -> bool {
     roles.iter().all(|&r| role(r) < n)
 }
-/// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry;
-/// all of it on exit)
+/// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry
+/// and on exit)
 fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
     let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
     let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
     shift(d, rig, role(HIPS), off);
     fk.part(rig, d, list(FK_LEGS));
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
     two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
 }
 const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];

@@ -44,16 +44,14 @@ fn anim_creep_plant(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
 
 /// the closure `find` of creepPlant. The legs' list is copied out of the man for the walk (once a man; fkPart takes it as an argument)
 fn creep_plant_find(g: &mut Game, c: CharId, clip: ClipId, off: f64) -> f64 {
-    let (toe_l, toe_r, p_c) = (g.ch[c].anim.nodes.toe_l, g.ch[c].anim.nodes.toe_r, g.ch[c].anim.p_c);
-    let legs = g.ch[c].anim.fk_legs.clone();
+    let (rig, toe_l, toe_r, p_c) = (g.ch[c].anim.rig, g.ch[c].anim.nodes.toe_l, g.ch[c].anim.nodes.toe_r, g.ch[c].anim.p_c);
     let mut best = 0.0;
     let mut score = -m::INF;
     for i in 0..96 {
         let dur = g.art.clip[clip].duration;
         crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c);
-        anim_fk_part(g, c, p_c, &legs);
-        let pos = &g.ch[c].anim.fk.pos;
-        let (a, b) = (pos[toe_l], pos[toe_r]);
+        let at = |i| crate::anim_skeleton::pose_node(g, rig, p_c, i).1;
+        let (a, b) = (at(toe_l), at(toe_r));
         let sc = m::abs(a[2] - b[2]) - 4.0 * m::abs(a[1] - b[1]);
         if sc > score { score = sc; best = i as f64 / 96.0; }
     }
@@ -164,11 +162,12 @@ fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: crate::anim_skelet
 
 // ---- the twist's inverse
 
-/// The chest twist run backwards for a point; fk must be current on the pose asked about.
+/// The chest twist run backwards for a point.
 fn anim_untwist(g: &crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist {
     if !js::truthy(tw_y) && !js::truthy(tw_p) { return Untwist::Same; }
     let an = &g.ch[c].anim;
-    let (p1, p2, p3) = (an.fk.pos[an.nodes.spine1], an.fk.pos[an.nodes.spine2], an.fk.pos[an.nodes.spine3]);
+    let at = |i| crate::anim_skeleton::pose_node(g, an.rig, an.p_a, i).1;
+    let (p1, p2, p3) = (at(an.nodes.spine1), at(an.nodes.spine2), at(an.nodes.spine3));
     untwist_of(q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35), q_yaw(tw_y * 0.4), tw_p, p1, p2, p3)
 }
 
@@ -219,12 +218,9 @@ pub(super) fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
         anim_catch_arm(g, c, x);
     } else if g.ch[c].anim.hold_pose.is_none() {
         if g.ch[c].anim.ready_w > 0.003 && g.ch[c].anim.ready_k == ReadyKind::Grab {
-            let p_a = g.ch[c].anim.p_a;
-            let mut fk = core::mem::take(&mut g.ch[c].anim.fk);
-            crate::anim_skeleton::pose_fk_run(g, &mut fk, p_a);
-            let an = &mut g.ch[c].anim;
-            an.fk = fk;
-            an.rd_hand_l = Some(v3::copy(an.fk.pos[an.nodes.hand_l]));
+            let an = &g.ch[c].anim;
+            let at = crate::anim_skeleton::pose_node(g, an.rig, an.p_a, an.nodes.hand_l).1;
+            g.ch[c].anim.rd_hand_l = Some(at);
         } else {
             g.ch[c].anim.rd_hand_l = None;
         }

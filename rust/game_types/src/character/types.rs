@@ -680,7 +680,6 @@ pub struct Anim {
     pub arms_mask: Vec<f32>,
     pub arm_r_only: Vec<f32>,
     pub torso_mask: Vec<f32>,
-    pub fk: crate::anim_skeleton::PoseFK,
     pub hand_fix: Vec<Quat>,
     pub grip_up: V3,
     pub gaze_local: V3,

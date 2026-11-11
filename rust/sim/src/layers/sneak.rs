@@ -3,17 +3,16 @@ use super::*;
 
 /// Deliberate movement and the crouch's centre of gravity by pace, the legs and the trunk: the stride warped at the feet about the gait's middle, both
 /// feet and the pelvis riding the surge, the pelvis lower and tipped, the torso further over with the head level back out of it.
-pub fn sneak_body(g: usize, an: &Anim, dl: f64, pace: f64, soft: f64, surge: f64, dsh: f64, tune: &Knobs) -> u32 {
+pub fn sneak_body(g: usize, an: &Anim, dl: f64, pace: f64, soft: f64, surge: f64, dsh: f64, tune: &Knobs) -> bool {
     let (aim, mid) = (an.upper_w.aim, an.gait.mid);
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let kk = (1.0 + SNEAK.stride * dl) * (1.0 + SNEAK.pace_stride * pace) * (1.0 + tune.dash.stride * dsh);
         let drop = SNEAK.drop * dl + SNEAK.pace_drop * pace + SNEAK.soft_drop * soft + tune.dash.drop * dsh;
         let tip = drop * 25.0 * DEGR;
         let lean = (SNEAK.lean * dl + SNEAK.pace_lean * pace + tune.dash.lean * dsh) * DEGR * (1.0 - aim);
-        let mut ran = RAN;
         if kk > 1.0005 || drop > 2e-4 || abs(surge) > 2e-4 {
             fk.part(rig, d, list(FK_LEGS));
             let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
@@ -24,9 +23,8 @@ pub fn sneak_body(g: usize, an: &Anim, dl: f64, pace: f64, soft: f64, surge: f64
                 turn(d, rig, role(HIPS), q_pitch(tip));
             }
             fk.part(rig, d, list(FK_LEGS));
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
-            ran |= RAN_ALL;
         }
         if lean + tip > 1e-5 {
             turn(d, rig, role(SPINE1), q_pitch(lean * 0.45));
@@ -36,20 +34,20 @@ pub fn sneak_body(g: usize, an: &Anim, dl: f64, pace: f64, soft: f64, surge: f64
             turn(d, rig, role(NECK), q_pitch(-unl * 0.4));
             turn(d, rig, role(HEAD), q_pitch(-unl * 0.6));
         }
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The close-in mode's carriage, the body: the pelvis sunk and set back with the feet put back where the gait has them, the heft of his stride read off
 /// the feet (his shoulders round against the step and over the foot he is on), the spine bowed forward hips first with the head levelled back out of it
 /// and turned onto what he creeps at.
-pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64, p0: [f64; 3], out: &mut [f64; 2]) -> u32 {
+pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, tw_y: f64, tw_p: f64, dt: f64, p0: [f64; 3], out: &mut [f64; 2]) -> bool {
     *out = [0.0; 2];
     let (at, lo, speed, wt_w, yin, ls, hsh, gaze_local) = (an.p_a.at as usize, an.low_s, an.speed, an.wt.w, an.body_yaw_in, an.low_shape, an.heft_shape, an.gaze_local);
     let (at_there, creep_at, hf) = (an.creep_at.is_some(), an.creep_at.unwrap_or([0.0; 3]), &mut an.hf);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
         let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
@@ -77,7 +75,7 @@ pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, 
         }
         shift(d, rig, hips, &[hw * hsh[2], -(lerp(CREEP.drop[0], CREEP.drop[1], cr) + ls[0] * lo) * e - abs(hs) * hsh[4], -(lerp(CREEP.back[0], CREEP.back[1], cr) + ls[1] * lo) * e * free]);
         fk.part(rig, d, list(FK_LEGS));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
         let lean = (lerp(CREEP.lean[0], CREEP.lean[1], cr) + ls[2] * lo + hsh[3] * gw - hg * 9.0 + if gw > 0.0 { CREEP.heft.breath * gw * sin(hf.t * PI * 2.0 * CREEP.heft.breath_hz) } else { 0.0 }) * DEGR * e * free;
         if gw > 0.0 {
@@ -103,19 +101,19 @@ pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, 
             look_at(d, rig, fk, &gaze_local, target, lw, 0.0);
         }
         *out = [ha, hg];
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The gaze stabiliser: the head kept level and steady while the body works under it. Measured off the finished pose (the head's chain alone), it works
 /// out the pitch the neck and head take toward the gait's own eye line and the yaw wobble they take out against a half-second reference of itself. It
 /// turns nothing: the host pushes the two twists.
-pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, sprint: f64, fix: &mut f64) -> u32 {
+pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, sprint: f64, fix: &mut f64) -> bool {
     let (nod, hu, sk, gaze_local, v) = (an.nv_a, an.mvs.hu.x, an.mvs.sk.x, an.gaze_local, &mut an.gz);
     *fix = 0.0;
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &[NECK, HEAD]) {
-            return 0;
+            return false;
         }
         v.w = damp(v.w, want_w, 10.0, dt);
         if v.w > 0.01 {
@@ -132,25 +130,25 @@ pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, spr
             }
             v.yaw_ref += wrap_angle(gyaw - v.yaw_ref) * clamp(dt / 0.5, 0.0, 1.0);
             *fix = clamp(-wrap_angle(gyaw - v.yaw_ref) * GAZE.yaw_damp, -12.0 * DEGR, 12.0 * DEGR);
-            RAN | ran_list(FK_HEAD)
+            true
         } else {
             v.yaw_init = false;
             v.pitch = damp(v.pitch, 0.0, 10.0, dt);
-            RAN
+            true
         }
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The sneak's arms: hanging hands drawn in toward the thighs, or the two-hand carry brought down and back toward the lap, the support hand rigid with
 /// wherever the gun hand got to.
-pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64) -> u32 {
+pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (crouch, at_ease) = (an.crouch, an.upper_w.relaxed);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
         fk.part(rig, d, list(FK_ARMS));
@@ -164,18 +162,18 @@ pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64) -> u32 {
         let free_r = [pr0[0] + min(SNEAK.hand_in, max(0.0, -pr0[0])) * kk, pr0[1] - 0.02 * kk, pr0[2] - 0.03 * kk];
         let free_l = [pl0[0] - min(SNEAK.hand_in, max(0.0, pl0[0])) * kk, pl0[1] - 0.02 * kk, pl0[2] - 0.03 * kk];
         let pole_w = lerp(0.35, 0.7, r);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &v3::lerp3(free_r, gun_r, r), Some(&v3::lerp3([-0.05, 0.4, -1.0], [-0.12, -1.0, -0.5], r)), pole_w, Some(&rr0), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &v3::lerp3(free_r, gun_r, r), Some(&v3::lerp3([-0.05, 0.4, -1.0], [-0.12, -1.0, -0.5], r)), pole_w, Some(&rr0), true);
         let gun_l = v3::add(fk.at(hand_r), v3::sub(pl0, pr0));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &v3::lerp3(free_l, gun_l, r), Some(&v3::lerp3([0.05, 0.4, -1.0], [0.2, -1.0, -0.35], r)), pole_w, Some(&rl0), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0);
-    if code == 0 {
-        return 0;
+    .unwrap_or(false);
+    if !code {
+        return false;
     }
     arms_mask();
     if !ask_blend(g, at, at_b, clamp(arms_in, 0.0, 1.0), true, at, n) {
-        return 0;
+        return false;
     }
     code
 }
@@ -243,17 +241,17 @@ struct CreepArms {
 /// The close-in carriage's arms, after its body: the shoulders rounded and the hands brought up ahead of the hips in the shoulders' frame, let out wide
 /// and low by `ws`, alive with a slow working of the fingers when the distance is dealt, and the knife hand taken up across the chest to hover off the
 /// hilt as he closes. Solved on the scratch pose at `at_b`, laid back joint by joint down each arm.
-pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64, rc_inv: [f64; 4], tune: &Knobs) -> u32 {
+pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr: f64, ck: f64, cke: f64, ws: f64, ha: f64, hg: f64, rc_inv: [f64; 4], tune: &Knobs) -> bool {
     let mut o = CreepArms { w, wl, wr, e, cr, ck, cke, ws, ha, hg, rc_inv, ..CreepArms::default() };
     as_creeps(an, &mut o);
     let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
-        return 0;
+        return false;
     }
     weights(tune, &mut o);
     let hh = &mut h;
@@ -286,10 +284,10 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
         (r(HAND_R), o.w_hand * wr, true),
     ]);
     if !ask_blend(g, o.at, o.at_b, 1.0, true, o.at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// How he creeps, what he holds, and how wide his arms go.

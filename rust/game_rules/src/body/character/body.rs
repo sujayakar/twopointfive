@@ -32,7 +32,7 @@ fn skel_lent(g: &mut Game, id: CharId, twisted: bool, f: impl FnOnce(&Game, &mut
     }
     g.ch[id].skel = sk;
 }
-/// A pose of his run forward to be read and no further (another is drawn): no joint of it is skinned.
+/// A pose of his run forward to be read and no further: another is drawn.
 fn skel_read_pose(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
     skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_forward(g, sk, pose, tw, None));
 }
@@ -47,16 +47,13 @@ fn skel_rag_run(g: &mut Game, id: CharId) {
     skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_forward(g, sk, rd.pose, None, Some(&rd.ov)));
     g.ch[id].rd = Some(rd);
 }
-/// …and skinned where he lies.
+/// …where he lies.
 fn skel_rag_pose(g: &mut Game, id: CharId) {
     skel_rag_run(g, id);
-    skel_skin(g, id);
+    skel_lies(g, id);
 }
-/// What was run forward last, skinned where he stands.
-fn skel_skin(g: &mut Game, id: CharId) {
-    let world = g.ch[id].world;
-    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_skin(g, sk, &world));
-}
+/// What was run forward last is drawn where he lies.
+fn skel_lies(g: &mut Game, id: CharId) { g.ch[id].skel.world = g.ch[id].world; }
 fn same_kind(a: &crate::inhand::InHandWord, b: &crate::inhand::InHandWord) -> bool { core::mem::discriminant(a) == core::mem::discriminant(b) }
 
 /// RAG_LIMBS with each row's name read as its node (`n[k]`): [node, parent row (−1 = the rigid trunk), from-particle, to-particle] (ts:4262)
@@ -638,7 +635,7 @@ fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
     }
     skel_rag_run(g, id);
     rag_toes_over_the_floor(g, id, rag_id, &n);
-    skel_skin(g, id);
+    skel_lies(g, id);
     character_read_bones(g, id, dt);
 }
 
