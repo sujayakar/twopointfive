@@ -594,14 +594,14 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         g.gd[gd].beam_dir = v3::copy(dir);
     }
     let lens = if rk == crate::rig_props::RigWeapon::Sc20k {
-        crate::rig_props::sc20k_light_pose(g, c, None).pos
+        crate::rig_props::sc20k_light_pose(g, c).pos
     } else if crate::kit::kit_pistol(g, gd) && weapon_rig_is_pistol(g, gd) {
-        crate::rig_props::rig_light_pose(g, c, None).pos
+        crate::rig_props::rig_light_pose(g, c).pos
     } else {
         let want = if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon };
         let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::guards::InHand::Torch);
         let weapon = if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol };
-        crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(crate::rig_props::rig()), Some(weapon))
+        crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(weapon))
     };
     g.tab.light[fl].pos = lens;
     g.tab.light[fl].dir = dir;

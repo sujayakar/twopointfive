@@ -79,9 +79,9 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
 
 /// the muzzle of the stand-in gun in his hands
 fn stand_in_muzzle(g: &Game, long: Option<crate::rig_props::LongRig>, cb: bool, def: crate::weapons::WeaponId) -> f64 {
-    if long == Some(crate::rig_props::LongRig::Sc20k) { return crate::rig_props::sc20k_muzzle_ahead(None); }
+    if long == Some(crate::rig_props::LongRig::Sc20k) { return crate::rig_props::sc20k_muzzle_ahead(); }
     let row = g.weapon(def);
-    if cb && row.rig != crate::weapons::WeaponDefRig::Carbine { return crate::rig_props::carbine_muzzle_ahead(None); }
+    if cb && row.rig != crate::weapons::WeaponDefRig::Carbine { return crate::rig_props::carbine_muzzle_ahead(); }
     row.muzzle_ahead
 }
 
@@ -114,10 +114,10 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             g.ch[c].muzzle_ahead = a;
         }
         if long == Some(crate::rig_props::LongRig::Sc20k) {
-            let lg = *grip20k.get_or_insert_with(|| { let x = crate::rig_props::sc20k_grip(None, None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
+            let lg = *grip20k.get_or_insert_with(|| { let x = crate::rig_props::sc20k_grip(None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
             g.ch[c].anim.long_grip = lg;
         } else if cb {
-            let lg = *grip.get_or_insert_with(|| { let x = crate::rig_props::carbine_grip(None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
+            let lg = *grip.get_or_insert_with(|| { let x = crate::rig_props::carbine_grip(); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
             g.ch[c].anim.long_grip = lg;
         }
         {
@@ -133,8 +133,8 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
                 let at = match grip_own.iter().position(|r| r.0 == mo) {
                     Some(k) => k,
                     None => {
-                        let gr = crate::rig_props::model_grip(g, mo, None, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
-                        let a = crate::rig_props::model_muzzle_ahead(mo, None);
+                        let gr = crate::rig_props::model_grip(g, mo, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
+                        let a = crate::rig_props::model_muzzle_ahead(mo);
                         grip_own.push((mo, gr, a)); grip_own.len() - 1
                     }
                 };
