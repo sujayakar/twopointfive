@@ -443,7 +443,7 @@ pub struct WornView {
     /// his character's id
     pub man: f64,
     pub goggles: bool,
-    pub big: Option<crate::bigkit::BigCarried>,
+    pub big: Option<crate::kit::BigTool>,
 }
 impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles: false, big: None } } }
 
@@ -1143,7 +1143,7 @@ pub struct EmptyView {
     pub dist: Option<f64>,
 }
 
-/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`WorldAsk::way`)
+/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`scene_collision::way_host`)
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct PlanWay {
     /// his feet
@@ -1252,10 +1252,6 @@ pub enum AttentionMode { #[default] Go, Look, Lent }
 /// what a floor is, as a man's feet are heard on it
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum FloorWord { #[default] Carpet, Lino, Stone, Tile, Asphalt, Grass }
-
-/// the key that backs out
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
-pub enum BackKey { Tab, #[default] Esc }
 
 /// a line of a row of his list: the key that does it ('' = a line no key gives), by its default name for the page to name as bound
 #[derive(Clone, Debug, Default, ToBytes)]
@@ -1403,8 +1399,6 @@ pub struct HudLook {
     pub line_clear: bool,
     /// a tutorial step's mark gives way to a ring over it
     pub mark_clear: bool,
-    /// the key that backs out of the selector
-    pub back: crate::view::BackKey,
 }
 
 /// one man's held attention: a thread from his feet to the place and a ring there

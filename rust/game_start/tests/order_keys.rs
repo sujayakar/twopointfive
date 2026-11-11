@@ -39,10 +39,10 @@ fn a_digit_above_five_gives_nothing_with_any_menu_up() {
             nothing_from(&mut p, "no menu", s);
             p.menu_opens([at[0] + 4.0, at[1] + 6.0]);
             nothing_from(&mut p, "the floor's menu", s);
-            p.tap("Escape");
+            p.tap(game::backkey::BACK_KEY);
             p.menu_opens(p.sam_at());
             nothing_from(&mut p, "Sam's menu", s);
-            p.tap("Escape");
+            p.tap(game::backkey::BACK_KEY);
             p.menu_opens(at);
             assert!(p.menu_up().is_some(), "seed {s}: the staging");
             nothing_from(&mut p, "a door's menu", s);

@@ -13,18 +13,8 @@ fn fresh() -> State {
 
 /// This view's row, made if missing.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     g.m.holdfire.states.get_or_insert_with(key, fresh)
-}
-
-/// Which player's squad this is.
-fn lead_of(seat: &crate::seats::SeatRef) -> PlayerId {
-    seat.player
-}
-
-/// A teammate under orders.
-fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// The squad's living men.
@@ -49,7 +39,7 @@ fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
         let state = g.gd[h].state;
         if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search)
             && g.gd[h].last_seen_t >= 0.0
-            && crate::teams::hostile_to(g, h, g.gd[m].team)
+            && g.team(h).foe_of(g.team(m))
         {
             return Some(String::from("a defender has seen them"));
         }
@@ -79,7 +69,7 @@ fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// His shot or his order has started the fight. A stamp from a roster that is gone, or from ahead of the clock, is no lift.
 fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if let Some(lift_t) = g.m.holdfire.states.get(key).map(|s| s.lift_t) {
         if lift_t > f64::NEG_INFINITY {
             let gone = g.time < lift_t || {
@@ -122,7 +112,7 @@ fn lift(g: &mut crate::game::Game, loud: Option<bool>) {
 
 /// A round has left a gun: a player's starts the fight for his squad.
 pub fn hold_fire_shot(g: &mut crate::game::Game, shooter: CharId) {
-    let lead = lead_of(&crate::seats::here(g));
+    let lead = crate::seats::here(g).player;
     if shooter != g.pl[lead].ch {
         return;
     }
@@ -149,7 +139,7 @@ pub(super) fn hold_fire_silent(g: &crate::game::Game, seat: &crate::seats::SeatR
 
 /// The lift that stands is his 'go loud'; the sneak's hold holds nobody either.
 pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,
@@ -157,7 +147,7 @@ pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
     if !(loud_t > f64::NEG_INFINITY) || !hold_fire_lifted(g) {
         return false;
     }
-    // Read again: hold_fire_lifted can clear the stamp on the row the TypeScript goes on holding.
+    // Read again: hold_fire_lifted can clear the stamp on the row.
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,
@@ -172,7 +162,7 @@ pub fn hold_fire_drill(g: &mut crate::game::Game) {
 
 /// Is this loud teammate under the hold this frame.
 fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !mate(g, gd) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
+    if !g.team(gd).ours() || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
         return false;
     }
     let men = living(g, &crate::seats::here(g));

@@ -7,18 +7,18 @@ use alloc::boxed::Box;
 pub fn duties_anew(g: &mut crate::game::Game) {
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        g.gd[gd].covers = None;
+        g.gd[gd].duty.gun = None;
     }
 }
 
 /// The room fight (and the rules that hand a man back to it): his duty has his gun on `pt`.
 pub fn cover(g: &mut crate::game::Game, gd: GuardId, pt: V3) {
-    g.gd[gd].covers = Some(pt);
+    g.gd[gd].duty.gun = Some(pt);
 }
 
 /// His duty has nothing for his gun after all, this tick.
 pub fn uncover(g: &mut crate::game::Game, gd: GuardId) {
-    g.gd[gd].covers = None;
+    g.gd[gd].duty.gun = None;
 }
 
 /// His fix is the spot his eyes last had the man.
@@ -51,15 +51,15 @@ pub fn eyes_fix_def(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
 
 /// Where his gun goes with no man to shoot at: his eyes this very tick, else his duty, else his belief.
 pub(super) fn gun_point(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
-    let (lk, cv) = (g.gd[gd].last_known, g.gd[gd].covers);
-    if cv.is_none() || !g.gd[gd].hold || !g.gd[gd].pinned { return lk; }
+    let (lk, cv) = (g.gd[gd].last_known, g.gd[gd].duty.gun);
+    if cv.is_none() || !g.gd[gd].duty.holds || !g.gd[gd].duty.pinned { return lk; }
     if lk.is_some() && g.time - g.gd[gd].sight_t < 1e-6 && fix_at_sight(g, gd) { lk } else { cv }
 }
 
 /// A report that reaches him outside his ears and eyes places his belief.
 pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let now = g.time;
-    crate::mind::fix(g, gd, Some(at), "belief"); // a fresh object in the TypeScript: always a new fix
+    crate::mind::fix(g, gd, Some(at), "belief"); // always a new fix
     g.gd[gd].word_t = now;
 }
 
@@ -89,9 +89,9 @@ mod tests {
     fn rule_on_his_duty_is_not_his_belief() {
         let (mut g, gd) = stand();
         cover(&mut g, gd, [1.0, 0.0, 2.0]);
-        assert_eq!((g.gd[gd].covers, g.gd[gd].last_known, g.gd[gd].fix_stamp), (Some([1.0, 0.0, 2.0]), None, 0));
+        assert_eq!((g.gd[gd].duty.gun, g.gd[gd].last_known, g.gd[gd].fix_stamp), (Some([1.0, 0.0, 2.0]), None, 0));
         duties_anew(&mut g);
-        assert_eq!(g.gd[gd].covers, None);
+        assert_eq!(g.gd[gd].duty.gun, None);
     }
 
     #[test]
@@ -115,18 +115,18 @@ mod tests {
         g.gd[gd].last_known = Some(lk);
         g.gd[gd].sight_pos = lk;
         g.gd[gd].sight_t = 10.0;
-        g.gd[gd].covers = Some(cv);
+        g.gd[gd].duty.gun = Some(cv);
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // off his post: no duty
-        g.gd[gd].hold = true;
+        g.gd[gd].duty.holds = true;
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // both are asked
-        g.gd[gd].pinned = true;
+        g.gd[gd].duty.pinned = true;
         assert_eq!(gun_point(&mut g, gd), Some(lk)); // his eyes this tick beat his duty
         g.gd[gd].sight_t = 10.0 - 1.0 / 60.0;
         assert_eq!(gun_point(&mut g, gd), Some(cv)); // last tick's eyes do not
         g.gd[gd].sight_t = 10.0;
         g.gd[gd].last_known = Some([3.0, 0.0, 3.0]);
         assert_eq!(gun_point(&mut g, gd), Some(cv)); // a noise this tick does not
-        g.gd[gd].covers = None;
+        g.gd[gd].duty.gun = None;
         assert_eq!(gun_point(&mut g, gd), Some([3.0, 0.0, 3.0]));
     }
 

@@ -17,7 +17,7 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("shut that do
 
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
     let OrderTarget::Door(x) = t else { return men.to_vec() };
-    if crate::doors::door_off(g, x.door) || !crate::shutdoor::stands_open(g, x.door) { return men.to_vec(); }
+    if g.dr[x.door].leaf.off || !crate::shutdoor::stands_open(g, x.door) { return men.to_vec(); }
     match crate::shutdoor::plan(g, x.door, men) {
         crate::shutdoor::Plan::Text(_) => men.to_vec(),
         crate::shutdoor::Plan::Arm1(p) => vec![p.gd],

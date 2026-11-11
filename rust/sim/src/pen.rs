@@ -1,6 +1,6 @@
 //! WHAT A PANE IS TO A ROUND: what a sheet takes from a round crossing it, how the round turns, where it
 //! leaves, the flight over panes, and the through-holes rounds have left. One rule for a round and for a line-of-fire question: a man fires through a pane exactly
-//! when his round would get through it. Statement for statement with the rule it replaced. What a round does next and what it files is the caller's.
+//! when his round would get through it. What a round does next and what it files is the caller's.
 //!
 //! WHAT IS STATE. The holes (panes.rs `Hole`): a part of the panes' run in the game's block, a row a pane a round has been through.
 use game_types::knobs::Knobs;
@@ -8,8 +8,8 @@ use alloc::vec::Vec;
 use crate::collide;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
-use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
-use crate::world::{asking, clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
+use crate::panes::{self, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
+use crate::world::{asking, clamp, js_abs, js_max, js_min, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
 const PI: f64 = core::f64::consts::PI;
@@ -43,12 +43,12 @@ pub struct Crossing {
     pub into: i32,
 }
 #[inline]
-fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
-    let o = world(c.w);
-    if bi >= o.boxes as usize || o.flags[bi] & F_GLASS == 0 {
+fn sheet_box<'a>(c: &Ctx<'a>, bi: usize) -> Option<&'a [f64]> {
+    let o = c.w;
+    if bi >= o.boxes() || o.flags[bi] & F_GLASS == 0 {
         return None;
     }
-    let b: &'static [f64] = &o.rec[bi * REC..bi * REC + REC];
+    let b = o.row(bi);
     if js_min(b[R_H], b[R_H + 2]) <= THICK_GLASS_HALF {
         Some(b)
     } else {
@@ -111,8 +111,8 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
     let n = collide::gather(c.w, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, 64);
     let mut sheet = -1;
     for i in 0..n {
-        let o = world(c.w);
-        let bi = asking(c.w).list[i];
+        let o = c.w;
+        let bi = asking().list[i];
         if bi == me {
             continue;
         }
@@ -149,7 +149,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64, tune: &Kno
     let u1 = (s & 0xffff) as f64 / 65535.0;
     let u2 = (s >> 16) as f64 / 65535.0;
     let up = if js_abs(d[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
-    let e1 = norm3(cross(up, d));
+    let e1 = game_types::v3::normalize(cross(up, d));
     let e2 = cross(d, e1);
     let r = tan(a * sqrt(u1));
     let phi = u2 * PI * 2.0;
@@ -160,7 +160,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64, tune: &Kno
         let (px, py, pz) = (t.n[0] - d[0] * t.cos, t.n[1] - d[1] * t.cos, t.n[2] - d[2] * t.cos);
         out = [out[0] + px * kk, out[1] + py * kk, out[2] + pz * kk];
     }
-    norm3(out)
+    game_types::v3::normalize(out)
 }
 #[inline]
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -175,7 +175,7 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
     let at = mad(o, d, t);
     let to = pane_toll(c, bi, at, d, e, nth, tune)?;
     let b = sheet_box(c, bi as usize)?;
-    let te = match line_box(world(c.w), at[0], at[1], at[2], d[0], d[1], d[2], b) {
+    let te = match line_box(c.w, at[0], at[1], at[2], d[0], d[1], d[2], b) {
         Some(s) => s.1,
         None => -1.0,
     };
@@ -191,14 +191,14 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
 }
 #[inline]
 fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
-    lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, c.set, -1, true, out, tune)
+    lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, -1, true, out, tune)
 }
 /// The arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
 fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) -> bool {
     let mut any = false;
     for s in 0..panes::sheet_count(c) as usize {
         let bi = panes::sheet_bi(c, s) as usize;
-        let o = world(c.w);
+        let o = c.w;
         let b = &o.rec[bi * REC..bi * REC + REC];
         let s = match line_box(o, from[0], from[1], from[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s,
@@ -216,7 +216,7 @@ fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) ->
     any
 }
 /// The walk of a man's arm whose muzzle is already past the glass: the energy left and the panes it took, in order (none and in a hole: `energy`). None: something a
-/// round stops in is across the arm (the old rule stands).
+/// round stops in is across the arm.
 pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, tune: &Knobs) -> Option<(f64, Vec<Crossing>)> {
     let dd = [muzzle[0] - from[0], muzzle[1] - from[1], muzzle[2] - from[2]];
     let len = hypot3(dd[0], dd[1], dd[2]);
@@ -247,7 +247,7 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
             Some(b) => b,
             None => return None,
         };
-        let te = match line_box(world(c.w), at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
+        let te = match line_box(c.w, at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s.1,
             None => 0.0,
         };

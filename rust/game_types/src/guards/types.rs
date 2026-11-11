@@ -33,7 +33,6 @@ pub struct EngagementRounds {
     pub guard: Option<f64>,
     pub operative: Option<f64>,
     pub hostile: Option<f64>,
-    pub player: Option<f64>,
     pub civilian: Option<f64>,
 }
 
@@ -238,7 +237,7 @@ pub struct GuardsModUNSTICK {
 pub struct GuardsModLitSeenValue {
     pub t: f64,
     pub lit: bool,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub tgt: Option<crate::guards::LitSeenTgt>,
 }
 
@@ -298,14 +297,6 @@ pub struct StepIsThreatE {
 pub struct LightOutSeenE {
     pub pos: V3,
     pub from: Option<V3>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AlertCause {
-    Body,
-    Radio,
-    Sound,
-    Sight,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -418,37 +409,6 @@ pub struct ChaseFix {
     pub aim: Option<V3>,
     pub pied: bool,
     pub crouch: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SteadyLamps {
-    Bool(bool),
-    LampRows(crate::scene_collision::LampRows),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigOf {
-    Pistol,
-    Carbine,
-    Sc20k,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LongRigOf {
-    Carbine,
-    Sc20k,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum HandCarry {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum InHand {
-    Torch,
-    Weapon,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
@@ -727,3 +687,8 @@ pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(Stri
 
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum InHand {
+    Torch,
+    Weapon,
+}

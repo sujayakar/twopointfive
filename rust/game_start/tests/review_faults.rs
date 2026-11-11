@@ -55,12 +55,12 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
     p.run(0.08);
     let men = p.g.guards.clone();
     let (k, n, r) = (men[0], men[1], men[2]);
-    for (m, at, face) in [(k, [19.5, 11.3], [30.0, 11.3]), (n, [26.0, 11.3], [10.0, 11.3]), (r, [31.0, 16.0], [31.0, 26.0])] { p.posted_calm(m, at, face); p.g.gd[m].hold = false; }
+    for (m, at, face) in [(k, [19.5, 11.3], [30.0, 11.3]), (n, [26.0, 11.3], [10.0, 11.3]), (r, [31.0, 16.0], [31.0, 26.0])] { p.posted_calm(m, at, face); p.g.gd[m].duty.holds = false; }
     p.sam_put([18.7, 11.3]);
     p.key_down("KeyC"); p.frame(); p.key_up("KeyC");
     p.frame();
     game::player::start_grab(&mut p.g, k, None);
-    p.until(1.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
+    p.until(1.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
     p.g.gd[n].script = Some(game::game::GuardScript::default());
     p.g.gd[r].unit = Some(game::game::UnitInfo { light: true, pair: None, seat: None });
     game::mission::send_rack_check(&mut p.g);
@@ -205,11 +205,11 @@ fn a_door_put_back_forgets_who_touched_it() {
         let mut p = Play::scene(&sc, &seed(s));
         p.run(0.1);
         let d = game::doors::doors_by_name(&p.g, "d").unwrap();
-        let (at, who) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id);
+        let (at, who) = (p.sam_at(), p.g.player_id(p.g.player));
         game::doors::doors_use(&mut p.g, d, [at[0], 0.0, at[1]], who, None);
         p.run(0.3);
-        assert!(game::doors::door_last_who(&p.g, d) == who && !game::doors::door_latched(&p.g, d), "seed {s}: used by Sam: last who {}, latched {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == who && !p.g.dr[d].leaf.latched, "seed {s}: used by Sam: last who {}, latched {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched);
         game::doors::door_reset(&mut p.g, d);
-        assert!(game::doors::door_last_who(&p.g, d) == -1.0 && game::doors::door_latched(&p.g, d) && game::doors::door_angle(&p.g, d).abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d), game::doors::door_angle(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == -1.0 && p.g.dr[d].leaf.latched && p.g.dr[d].leaf.angle.abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched, p.g.dr[d].leaf.angle);
     }
 }

@@ -32,7 +32,12 @@ pub struct SetupRowOptsItem {
 
 pub fn row_key() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("mode"), 1.0); t.set(String::from("load"), 2.0); t.set(String::from("light"), 3.0); t } }
 
-pub fn slot_key() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("pistol"), 1.0); t.set(String::from("rifle"), 2.0); t } }
+pub fn slot_key(gun: crate::slotsetup::SetupGun) -> f64 {
+    match gun {
+        crate::slotsetup::SetupGun::Pistol => 1.0,
+        crate::slotsetup::SetupGun::Rifle => 2.0,
+    }
+}
 
 pub const KEYED: f64 = 0.1;
 

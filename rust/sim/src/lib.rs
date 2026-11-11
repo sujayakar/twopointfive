@@ -1,29 +1,30 @@
-//! THE SIMULATION IN RUST — the game's update, moved here a system at a time and built to WebAssembly for the page, the game server and the headless tools
-//! (docs/agents/rust.md says how a system moves, and what holds it to the TypeScript one it replaces).
+//! THE SIMULATION'S LOOPS: the questions of the box world (lines, rays, circles, a way across the floor), the senses, the smoke, the glass and the animator's layers, over
+//! flat state in one block a game (state.rs). THE HOST, in these files, is whoever calls this crate: the rules (rust/game_rules), which write what a question reads and say by
+//! name what a question could not answer. docs/agents/rust.md says what Rust code owes the game.
 //!
 //! What every line in this crate owes the game:
 //!   · one arithmetic. Doubles, and only + − × ÷ √ and what the standard makes exact of them (floor, trunc, abs, comparisons, the bits). Nothing that a
-//!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math, no `f32` where the
-//!     TypeScript holds a double.
+//!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math. An `f32` only where the
+//!     standard makes it exact too (a stored pose: single.rs; a rough rectangle of the plan: glow.rs; a hand's note: layers/).
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
-//!   · no world outside. No clock, no random source of its own (the game's die is in its block: dice.rs), no files.
+//!   · no world outside. No clock, no random source of its own, no files.
 //!   · state in one place. What a game keeps here from one call to the next is in its block (state.rs: indices, never addresses); every other `static mut`
 //!     is scratch of one call or a copy the host proves.
 //!
 //! WHO HOLDS IT. The compiler: the crate is `no_std`, so no line of it can name a hash map, a thread, a clock or a file (`std::…` does not resolve here).
 //! tools/qa/rust-rules-check.ts: the float methods the compiler cannot keep out once any crate links the standard
-//! library (`.sin()`, `.powf()`, `.mul_add()` …), an `f32`, and the SIMD that rounds as the machine likes. The reader: the order of the arithmetic.
+//! library (`.sin()`, `.powf()`, `.mul_add()` …), and the SIMD that rounds as the machine likes. The reader: the order of the arithmetic.
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 extern crate alloc;
 
+use game_types::boxworld::World;
 use game_types::knobs::Knobs;
 pub mod air;
 pub mod bricks;
 pub mod clips;
 pub mod collide;
-pub mod dice;
-pub mod doors;
+pub mod dome;
 pub mod falls;
 pub mod fog;
 pub mod glass;
@@ -50,120 +51,16 @@ pub mod weather;
 pub mod wind;
 pub mod world;
 
-/// How many doubles the scratch holds.
-pub const SCRATCH_LEN: usize = 1024;
-/// A few arguments or answers too many for a call's own parameters go through here: the caller writes, calls, reads. Nothing is kept in it between calls.
-static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
-
-/// The version of the calls: the rules name the one they were written against (sim_sim).
-pub const ABI: u32 = 34;
-
-pub fn sim_abi() -> u32 {
-    ABI
-}
-pub fn sim_scratch() -> *mut f64 {
-    core::ptr::addr_of_mut!(SCRATCH) as *mut f64
-}
-pub fn sim_scratch_len() -> usize {
-    SCRATCH_LEN
-}
-
-// ---- the box world's copy (world.rs) and the line tests through it (lines.rs)
-/// how many rows a table holds
-pub fn world_cap(table: u32) -> usize {
-    world::cap(table)
-}
-/// the grid of world `w` (cells across, cells deep, a cell's side) and how many statics and tilted statics its tables now hold
-pub fn world_shape(w: usize, gw: u32, gh: u32, cs: f64, boxes: u32, tilted: u32) {
-    let o = world::world(w);
-    o.w = gw;
-    o.h = gh;
-    o.cs = cs;
-    o.boxes = boxes;
-    o.n_tilted = tilted;
-}
-/// how many leaves list `set` of world `w` now holds
-pub fn world_leaves(w: usize, set: usize, n: u32) {
-    if set < world::LEAF_SETS {
-        world::world(w).leaves[set] = n;
-    }
-}
-/// how many things of furniture stand in world `w` now (their parts are list THING_SET of the leaves: world_leaves says how many)
-pub fn world_things(w: usize, n: u32) {
-    world::world(w).things = if (n as usize) < world::MAX_THINGS { n } else { world::MAX_THINGS as u32 };
-}
-/// how many panes of world `w` are no longer whole (the rows of its glass tables that are written: glass.rs)
-pub fn world_glass(w: usize, n: u32) {
-    world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
-}
-/// the level's sheets of glass for world `w` (scratch: a static, how far it stands from a door's opening, which face has the sky, each)
-pub fn world_sheets(w: usize, n: usize) {
-    let (o, d) = (world::world(w), scratch());
-    let n = if n < world::MAX_SHEETS { n } else { world::MAX_SHEETS };
-    for i in 0..n {
-        o.sheets[i] = world::Sheet { bi: d[3 * i] as u32, gap: d[3 * i + 1], sky: d[3 * i + 2] as i32 };
-    }
-    o.sheet_n = n as u32;
-}
-/// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
-pub fn world_view(w: usize, kind: u32, n: u32) {
-    let o = world::world(w);
-    o.view_kind = kind;
-    o.view_n = if (n as usize) < world::MAX_VIEW { n } else { world::MAX_VIEW as u32 };
-}
-/// glassbreak.ts `openAt(bi, X) || also(bi, X)`: is static `bi`, a pane of glass, open at the point (1) or not (0)
-pub fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64, tune: &Knobs) -> u32 {
-    let o = world::world(w);
-    ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z, tune)) as u32
-}
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 
-// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
-/// how many rows a table holds (5: the columns of the doors' part of a block)
-pub fn doors_cap(table: u32) -> usize {
-    doors::cap(table)
-}
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
-/// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
-#[inline(always)]
-fn scratch() -> &'static mut [f64; SCRATCH_LEN] {
-    unsafe { &mut *core::ptr::addr_of_mut!(SCRATCH) }
-}
-pub fn light_cap() -> usize {
-    light::MAX_LAMPS
-}
-/// what a search holds: 0 the cells of the largest floor it can be asked over (nav::MAX_FLOOR: on such a floor no table of a search is outgrown) ·
-/// 1 a way's waypoints
-pub fn nav_cap(table: u32) -> usize {
-    match table {
-        0 => nav::MAX_FLOOR,
-        1 => nav::MAX_WAY,
-        _ => 0,
-    }
-}
 // ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
 // one that reads the tables made from the state names the block's `stamp` too (`state::stamp`), and a step the box world `w` it is
 // taken over and that copy's number `copy`
-/// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
-pub fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
-    bricks::dirty(w, x0, z0, x1, z1)
-}
-pub fn grid_wind_cap() -> usize {
-    bricks::MAX_GLOW
-}
 
-// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world, the leaves
-// and the time once (`panes_ctx`), and what it let go is read from `panes_out_*` and cleared before the next pane's.
-pub fn panes_world(w: usize, g: i32) {
-    world::world(w).panes_g = (g + 1) as u32;
-}
-pub fn panes_view(w: usize, kind: u32, x: f64, y: f64, z: f64, radius: f64, power: f64, sure: f64) {
-    let o = world::world(w);
-    o.view_kind = kind;
-    o.view_n = 0;
-    o.view_at = [x, y, z, radius, power, sure];
-}
-/// glass.ts boxSeed of a box of the world; pointSeed
+// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world
+// and the time once (`panes::Ctx`), and what it let go is left in that for the caller.
+/// the seed of a box of the world (`panes::box_seed`)
 pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> u32 {
     let mut b = [0.0; world::REC];
     b[world::R_C] = cx0;
@@ -174,7 +71,7 @@ pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> 
     b[world::R_H + 2] = hz;
     panes::box_seed(&b)
 }
-/// what a game holds of what levelfit.ts counts: 0 window's bars gone · 1 clumps of a sheet
+/// what a game holds of what a level is counted for as it loads (game_rules levelfit.rs): 0 window's bars gone · 1 clumps of a sheet
 pub fn panes_cap(i: u32) -> u32 {
     (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
 }
@@ -202,16 +99,16 @@ pub fn air_seed(g: usize, stamp: f64, leak: f64, roofs: &[[f64; 4]]) {
     a.seed(p, leak, |x, z| weather::under_any(roofs, x, z))
 }
 /// …every opening asked and run on until it stands still
-pub fn air_settle(g: usize, stamp: f64, w: usize, set: i32, ask: u32, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
+pub fn air_settle(g: usize, stamp: f64, w: &World, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
     let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
     let (a, p) = air_of(g, stamp, roofs);
-    a.settle(p, w, set, ask, &mut said, tune);
+    a.settle(p, w, &mut said, tune);
     said
 }
 /// one tick of it
-pub fn air_update(g: usize, stamp: f64, w: usize, set: i32, ask: u32, dt: f64, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
+pub fn air_update(g: usize, stamp: f64, w: &World, dt: f64, roofs: &[[f64; 4]], tune: &Knobs) -> air::Said {
     let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
     let (a, p) = air_of(g, stamp, roofs);
-    a.update(p, w, set, ask, dt, &mut said, tune);
+    a.update(p, w, dt, &mut said, tune);
     said
 }

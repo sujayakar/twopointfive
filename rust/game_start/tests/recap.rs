@@ -1,6 +1,5 @@
 //! EVERY DEATH EXPLAINS ITSELF, AND THE GAME KEEPS IT (rust/game_rules/src/speech/deathrecap.rs): who of ours fell, to whom, from where, with what, and the floor's last seconds,
-//! read off the game's own record. Each test holds one rule over three seeds beside a control that differs in the one thing the rule is about. Before the tick kept the
-//! recap the page's TypeScript did, on its copy of the game, with a word of its own over a teammate's head: nothing here could have been asked of the game at all.
+//! read off the game's own record. Each test holds one rule over three seeds beside a control that differs in the one thing the rule is about.
 use game::deathrecap::{RecapCause, RecapDeath};
 use game::game::{DownBy, DownKind, MissionStage};
 use game::ids::GuardId;
@@ -618,11 +617,10 @@ fn the_recap_moves_nothing_a_rule_reads() {
             p.g.recap = before;
             p.g.cues.bubbles = cues;
             let (serial, seq, t, deaths, calls0) = (p.g.serial_next, p.g.event_seq, p.g.time, p.g.stats.deathrecap.deaths, calls(&p));
-            let die = |p: &Play| { let d = p.g.dice.as_ref().expect("the game has its die"); (game::math_dice::sim_dice_n(d), game::math_dice::sim_dice_s(d)) };
-            let dice = die(&p);
+            let dice = p.g.dice;
             game::deathrecap::recap_tick(&mut p.g);
             assert!(p.g.serial_next == serial && p.g.event_seq == seq && p.g.time == t, "seed {}: it dealt a number", seed);
-            assert_eq!(die(&p), dice, "seed {}: it drew from the die", seed);
+            assert_eq!(p.g.dice, dice, "seed {}: it drew from the die", seed);
             explained += p.g.stats.deathrecap.deaths - deaths;
             said += calls(&p) - calls0;
         }

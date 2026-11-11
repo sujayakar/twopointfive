@@ -9,26 +9,16 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// The spot of any target: every arm of the union has `at`.
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(x) => x.at,
-        crate::orders::OrderTarget::Door(x) => x.at,
-        crate::orders::OrderTarget::None(x) => x.at,
-        crate::orders::OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// The squad's smoke canisters left this run.
 pub fn squad_smoke_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     match g.m.squadsmoke.states.get(key) { Some(s) => s.cans, None => 0.0 }
 }
 
 /// A scenario has just staged its team: the squad's smoke is `cans`, and the row is on the menu only if that is one or more.
 pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let n = m::max(0.0, js::or(m::floor(cans), 0.0));
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if !g.m.squadsmoke.states.has(key) {
         if !js::truthy(n) { return; }
         g.m.squadsmoke.states.set(key, State { brought: 0.0, cans: 0.0, last: JsMap::new() });
@@ -41,10 +31,10 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     }
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
-    let after = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
+    let after = g.groups[g.group].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let def = row(g);
     let before = match after {
-        Some(a) => g.sets[g.seat].orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
+        Some(a) => g.groups[g.group].orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
         None => None,
     };
     crate::orders::squad_orders_register(g, def, before.as_deref());
@@ -60,7 +50,7 @@ fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k: Op
 }
 
 /// Nothing between a can down at `a` and the spot `b` for its run along the floor.
-fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn run_clear(g: &crate::game::Game, a: V3, b: V3) -> bool {
     let d = v3::dist_xz(a, b);
     if d < 0.05 { return true; }
     let rd: V3 = [(b[0] - a[0]) / d, 0.0, (b[2] - a[2]) / d];
@@ -87,14 +77,14 @@ pub(super) fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Where a throw on `s` rests, the ground under its landing shortening the run.
-fn rest_of(g: &mut Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k: f64) -> V3 {
+fn rest_of(g: &Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k: f64) -> V3 {
     let bog = crate::snow_bog::snow_bog_at(g, s.land[0], 0.0, s.land[2]);
     let run = crate::snow_bog::bog_run(g, bog);
     squad_smoke_rest(from, s, Some(roll_k * run))
 }
 
 /// One man's throw to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests. None: he has none.
-pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
+pub(super) fn squad_arc_to(g: &crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
     let t = squadsmoke();
     let roll_k = match roll_k { Some(r) => r, None => t.roll_k };
     let to: V3 = [at[0], at[1] + 0.05, at[2]];
@@ -103,7 +93,7 @@ pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_
     let p = match stood { Some(s) => s, None => pos };
     let d = v3::dist_xz(p, at);
     let a = if d > 1e-3 { t.hand_ahead / d } else { 0.0 };
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied();
+    let head = g.ch[c].bone(crate::character::Bone::Head);
     let up = m::max(0.6, m::min(t.hand_up, match head { Some(h) => h[1] - pos[1] - t.head_drop, None => t.hand_up }));
     let from: V3 = [p[0] + (at[0] - p[0]) * a, p[1] + up, p[2] + (at[2] - p[2]) * a];
     if crate::scene_collision::solid_blocked(g, [p[0], p[1] + up, p[2]], from, None) { return None; }
@@ -122,12 +112,12 @@ pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_
 }
 
 /// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it.
-pub(super) fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
+pub(super) fn squad_smoke_thrower(g: &crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
     let again = squadsmoke().again_secs;
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let mut order: Vec<GuardId> = men.to_vec();
     js::sort_by(&mut order, |a, b| {
-        v3::dist_xz(g.ch[g.gd[*a].ch].pos, at) - v3::dist_xz(g.ch[g.gd[*b].ch].pos, at)
+        v3::dist_xz(g.pos_of(*a), at) - v3::dist_xz(g.pos_of(*b), at)
     });
     for gd in order {
         if !squad_hand_free(g, gd) { continue; }
@@ -154,8 +144,8 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given.
 pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let at = target_at(t);
+    let key = g.group;
+    let at = t.at();
     let has_cans = match g.m.squadsmoke.states.get(key) { Some(s) => s.cans > 0.0, None => false };
     let th = if has_cans { squad_smoke_thrower(g, men, at) } else { None };
     let th = match th { Some(th) => th, None => return Some(String::from("no throw from here.")) };
@@ -177,7 +167,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
     crate::game::game_say(g, th.gd, "smoke out.", None, None);
     let callsign = g.gd[th.gd].callsign.clone();
     let serial = g.serial();
-    g.sets[g.seat].orders.log.push(crate::orders::SquadOrdersLogItem {
+    g.groups[g.group].orders.log.push(crate::orders::SquadOrdersLogItem {
         t: g.time,
         order: String::from(SMOKE_ORDER),
         who: vec![callsign.clone()],
@@ -190,7 +180,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 
 /// The squad's HUD block: what is left, while this staging brought any.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    match g.m.squadsmoke.states.get(crate::seats::view_key(g, seat)) {
+    match g.m.squadsmoke.states.get(seat.group_id) {
         Some(s) if s.brought > 0.0 => vec![crate::view::Note { key: String::new(), text: format!("smoke {}", js::num_str(s.cans)) }],
         _ => Vec::new(),
     }

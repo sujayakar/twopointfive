@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
 use game::out_events::OutEvent as E;
-use game::smoke_types::{SmokeEmitter, SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokePushLattice};
+use game::smoke_types::{SmokeEmitter, SmokeEmitterMode, SmokePush};
 
 /// no number said: the reader's own
 const NONE: f32 = f32::NAN;
@@ -286,7 +286,7 @@ impl Events {
 
     /// a source of smoke, and what it does to the air
     fn source(&mut self, tick: u32, g: &Game, e: &SmokeEmitter) {
-        let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
+        let lattice = match e.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 };
         let air = e.speed != 0.0 || e.push.is_some() || e.expand.is_some();
         let push = if air {
             let serial = self.pushes.len() as u32;
@@ -337,18 +337,18 @@ impl Events {
     fn push(&mut self, tick: u32, p: &SmokePush) {
         let serial = self.pushes.len() as u32;
         let (shape, len) = match (p.line, p.body) { (Some(l), _) if l > 0.0 => (1, l), (_, Some(b)) => (2, b), _ => (0, 0.0) };
-        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
+        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 } });
     }
 }
 
-/// how tense the floor is, 0 to 1   (guards.ts tension, by the opposition's nerves)
+/// how tense the floor is, 0 to 1, by the opposition's nerves
 fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);
     let mut x = game::m::max(if g.light_home.mains.active { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
     for &gd in &g.guards {
         let d = &g.gd[gd];
-        let own = d.team == game::teams::Team::Operative;
+        let own = g.ch[d.ch].team.ours();
         if d.state == S::Dead || (own && d.state != S::Alert) { continue; }
         let s = match d.state {
             _ if d.script.is_some() && g.clearing.is_some() => 0.3,

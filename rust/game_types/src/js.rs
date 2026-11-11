@@ -1,7 +1,8 @@
-//! WHAT THE TYPESCRIPT LEANS ON OF ITS LANGUAGE, kept as it was: a Map and a Set that remember the order their keys were first set (the game
-//! walks them, and the order is play), the integer conversions, the stable sort. A translated file uses these wherever the TypeScript's result
-//! depends on the language's own behaviour.
+//! WHAT THE GAME KEEPS OF JAVASCRIPT'S RULES: a Map and a Set that remember the order their keys were first set (the game
+//! walks them, and the order is play), the integer conversions, the stable sort. Code uses these wherever a result
+//! depends on those rules.
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::hash::{Hash, Hasher};
 
 /// A `Map`: `get` / `set` / `delete` by key, walked in the order keys were FIRST set (setting a key again keeps its place; a deleted key set
@@ -49,7 +50,7 @@ impl Hasher for KeyHash {
         h ^ (h >> 33)
     }
 }
-fn hash_of<K: Hash>(k: &K) -> u64 {
+fn hash_of<K: Hash + ?Sized>(k: &K) -> u64 {
     let mut h = KeyHash(0);
     k.hash(&mut h);
     h.finish()
@@ -70,9 +71,9 @@ impl<K: Eq + Clone + Hash, V> JsMap<K, V> {
         self.live == 0
     }
     /// the key's place in the rows
-    fn place(&self, k: &K) -> Option<usize> {
+    fn place<Q: Eq + Hash + ?Sized>(&self, k: &Q) -> Option<usize> where K: Borrow<Q> {
         if self.table.is_empty() {
-            return self.rows.iter().position(|r| matches!(&r.1, Some((x, _)) if x == k));
+            return self.rows.iter().position(|r| matches!(&r.1, Some((x, _)) if x.borrow() == k));
         }
         let mask = self.table.len() - 1;
         let mut s = hash_of(k) as usize & mask;
@@ -82,7 +83,7 @@ impl<K: Eq + Clone + Hash, V> JsMap<K, V> {
                 GONE => {}
                 p => {
                     let i = p as usize - 1;
-                    if matches!(&self.rows[i].1, Some((x, _)) if x == k) { return Some(i); }
+                    if matches!(&self.rows[i].1, Some((x, _)) if x.borrow() == k) { return Some(i); }
                 }
             }
             s = (s + 1) & mask;
@@ -109,6 +110,14 @@ impl<K: Eq + Clone + Hash, V> JsMap<K, V> {
     }
     pub fn get(&self, k: K) -> Option<&V> {
         self.place(&k).and_then(|i| self.rows[i].1.as_ref()).map(|r| &r.1)
+    }
+    /// `has` by a key as it is lent (a name, where the keys are Strings)
+    pub fn holds<Q: Eq + Hash + ?Sized>(&self, k: &Q) -> bool where K: Borrow<Q> {
+        self.place(k).is_some()
+    }
+    /// `get` by a key as it is lent
+    pub fn of<Q: Eq + Hash + ?Sized>(&self, k: &Q) -> Option<&V> where K: Borrow<Q> {
+        self.place(k).and_then(|i| self.rows[i].1.as_ref()).map(|r| &r.1)
     }
     pub fn get_mut(&mut self, k: K) -> Option<&mut V> {
         match self.place(&k) {
@@ -233,6 +242,10 @@ impl<K: Eq + Clone + Hash> JsSet<K> {
     pub fn has(&self, k: K) -> bool {
         self.m.has(k)
     }
+    /// `has` by a key as it is lent
+    pub fn holds<Q: Eq + Hash + ?Sized>(&self, k: &Q) -> bool where K: Borrow<Q> {
+        self.m.holds(k)
+    }
     /// `set.add(k)`; true where it was not there before
     pub fn add(&mut self, k: K) -> bool {
         self.m.set(k, ()).is_none()
@@ -264,6 +277,26 @@ pub fn to_u32(x: f64) -> u32 {
     let m = t - prim::floor(t / 4294967296.0) * 4294967296.0;
     m as u32
 }
+/// `x | bits` on flags kept as numbers
+#[inline]
+pub fn or_bits(x: f64, bits: f64) -> f64 {
+    (to_i32(x) | to_i32(bits)) as f64
+}
+/// `(x & bits) !== 0` on flags kept as numbers
+#[inline]
+pub fn has_bits(x: f64, bits: i32) -> bool {
+    (to_i32(x) & bits) != 0
+}
+/// a pattern's `\w`: a byte of a character past ASCII is outside it
+#[inline]
+pub fn is_word(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+/// `s.length`: UTF-16 units, not bytes
+#[inline]
+pub fn utf16_len(s: &str) -> f64 {
+    s.encode_utf16().count() as f64
+}
 /// a number as a condition: `if (x)`, `!x`: 0, −0 and NaN are false
 #[inline]
 pub fn truthy(x: f64) -> bool {
@@ -294,7 +327,7 @@ pub fn sort_by<T>(v: &mut [T], mut cmp: impl FnMut(&T, &T) -> f64) {
     });
 }
 
-/// `x.toFixed(digits)`: the decimal of the double's EXACT value, rounded half up at `digits` places (a tie goes to the larger number, as
+/// `x.toFixed(digits)`: the decimal of the double's exact value, rounded half up at `digits` places (a tie goes to the larger number, as
 /// the language says; `format!("{:.1}")` rounds a tie to even and so differs at 0.25). `digits` 0 to 20, as JavaScript's.
 pub fn to_fixed(x: f64, digits: u32) -> alloc::string::String {
     use alloc::string::{String, ToString};
@@ -542,7 +575,7 @@ mod tests {
 
     use super::*;
     use alloc::string::String;
-    /// each row: the text, JavaScript's `Number(text)` and `parseFloat(text)` of it as the language prints them (read off bun)
+    /// each row: the text, JavaScript's `Number(text)` and `parseFloat(text)` of it as the language prints them
     #[test]
     fn reads_a_word_as_a_number_as_the_language_does() {
         let rows: [(&str, &str, &str); 32] = [("2", "2", "2"), (" 2 ", "2", "2"), ("", "0", "NaN"), ("  ", "0", "NaN"), ("2.5", "2.5", "2.5"), (".5", "0.5", "0.5"), ("5.", "5", "5"), ("-3", "-3", "-3"),
@@ -689,7 +722,7 @@ mod tests {
     }
     #[test]
     fn to_fixed_is_javascripts() {
-        // (the double's bits, digits, what bun printed for x.toFixed(digits))
+        // (the double's bits, digits, x.toFixed(digits))
         let cases: &[(u64, u32, &str)] = &[
             (0x0, 0, "0"),
             (0x0, 1, "0.0"),

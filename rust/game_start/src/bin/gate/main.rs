@@ -1,4 +1,4 @@
-//! THE GATE: one native command for what a build is held to before it joins the others (README.md, "The gate"). Nothing of TypeScript is in it, and no page.
+//! THE GATE: one native command for what a build is held to before it joins the others (README.md, "The gate"). No page is in it.
 //!
 //!   gate                 the quick kind: every row, four at a time; exit 0 = all pass · 1 = a row failed · 64 = a wrong word
 //!   gate ROW…            only rows whose name starts with one of the words (`gate start`, `gate "start depot-four"`, `gate save`)

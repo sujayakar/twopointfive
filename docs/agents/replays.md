@@ -30,7 +30,7 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `src/tape/module.ts` | which module this page plays, and `otherModule` |
 | `src/ui/replays.ts`, `src/cloud/tapes.ts` | the list on the title; a hosted build sends what the store holds to its backend |
 | `src/host/fixedstep.ts` | whole ticks a frame: `planTicks` |
-| `rust/maths/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the game's die, and its keyed draws |
+| `rust/game_types/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the dice on records, and the game's keyed draws |
 | `rust/maths/`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
 | `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
@@ -50,9 +50,8 @@ backend, and `tools/qa/replay-dump.ts` unpacks them: one `.tape` a visit, and a 
 written from add, subtract, multiply, divide and square root, which are exact on every machine, so the same inputs give the same bits. The step is
 fixed: the page runs whole ticks, `FIXEDSTEP.hz` a second, however fast the display goes, and draws between them.
 
-**Two kinds of draw.** `sim_random` is one stream, so a draw added anywhere moves every draw after it. `draw_of` and its kin are keyed: a fixed
-function of the seed, the site's name, the man it is about, the tick and the count at that site this tick, so a new rule's draws deal nobody else's
-again. Each still steps the die, and its count (`face_die_n`) witnesses how many draws a run made.
+**The draws are keyed.** `draw_of` and its kin are a fixed function of the seed, the site's name, the man it is about, the tick and the count at that
+site this tick, so a new rule's draws deal nobody else's again. Each is counted, and the count (`face_die_n`) witnesses how many draws a run made.
 
 **The tape** is the bytes of what the module was handed, in order. `TapeStart` holds the level file itself, the address's words, the seed, the seats,
 what the machine kept (`Kept`'s text), and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order

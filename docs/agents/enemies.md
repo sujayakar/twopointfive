@@ -30,7 +30,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `suppression.rs`, `flinch.rs`, `startle.rs`, `morale.rs`, `runner.rs`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
 | `darkdoor.rs`, `darkfoe.rs`, `calmtorch.rs`, `powerout.rs` | men and the dark |
 | `gunhold.rs`, `gunroles.rs`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
-| `qrf/`, `squadcast.rs` | the response team, and its room drill by the squad's own code |
+| `qrf/` | the response team: a group (`group.rs`) that works its doors by the squad's own code |
 | `needs.rs`, `doze.rs`, `smokebreak.rs` | men at their ease |
 | `civilians/`, `rescueflush.rs` | civilians and hostages; a rescue's men coming for the hostages |
 
@@ -38,7 +38,7 @@ The start card's difficulty row is `difficulty_row` in `start_list/`.
 
 ## How it works
 
-**The tick.** `step_seats_on_first` runs the floor's rules (`update_suppression`, `room_fight_tick`, `morale_tick` and the rest, to `frag_tick`), then
+**The tick.** `STEPS` runs the floor's rules (`update_suppression`, `room_fight_tick`, `morale_tick` and the rest, to `frag_tick`), then
 `update_guard` for each man, then `door_force_tick`, `update_civilians`, `update_escalation`, `update_qrf`. `Team::Guard` is night staff on routes;
 `Team::Hostile` is defenders, posted by the room fight. Both run `update_guard`, whose head lists its parts.
 
@@ -73,8 +73,8 @@ night breach's are cut by the rooms they stand in (`squads_by_rooms`), trained; 
 (`leads`: with the hostages, or on the captor's word) are nobody else's. After a thinking beat `decide` picks `Barricade`, `Flank` or `Help`,
 with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
 beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). Men called to a room of theirs
-are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`). `radio_check` finds a drop
-nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
+are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`); another room hit before they
+are off, they go there, and a man whose own it is stays (`due_here`). `radio_check` finds a drop nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
 
 **The room fight's other rules.** On Hard the last man up in a room gives it up by another door (`last_man`, `tick_out`), and the last of them all keeps
 his (`last_holds`). `dig_in_tick` runs `begin`, `start_brace`, `haul`, `wedge` and `to_cover`, each
@@ -88,12 +88,14 @@ each says where he is (`tick_moved`).
 held at its mouth (`held_on`), `back_out` of its line, are sent `round`, set and fire from an angle (`pin_start`), throw (`frag_out`, `stun`), or look
 (`peek_start`). `lane_bars` bars other rules. Room fight only, at any difficulty.
 
-**Nerve.** `note_round` adds to a man's suppression, `flinch_round` ducks him, `head_down` pins him and `cover_from` finds him cover. `startle_sight`
-gives a beat at first sight, then `choose` draws or, for a green man alone inside `run_m`, runs. Morale is shock plus standing terms (alone, dark) as
-dread: `rung_now` gives jumpy and broken, and a blast (`feed`) starts a duck, a scrabble back or a blind burst. `ripe` and `lost` hand a broken man to
-`runner_tick`: a shout, the gun dropped (`drop`), a way out (`plan_out`). From there he counts for nothing (`runner_nobody`). `flinch_tick` sends a
-green man alone under fire too. `net_quiet_asked`, `net_quiet_body` and `net_quiet_fall` shock the men, once a dead man (`pay`), and worsen the calls;
-a whip turns his gun to a noise; the last man (`last_kind`) goes low on `low_spot`.
+**Nerve.** `note_round` adds to a man's suppression, `flinch_round` ducks him, and `head_down` pins him. Where getting down hides him from nobody
+(`ducking_hides`) he goes a beat later for what `cover_from` finds, off his post by `control/open.rs`, facing them and firing as he goes
+(`fight_on_the_way`: the walk's own cone, never more lined up than a walking man gets). `startle_sight` gives a beat at first sight, then `choose`
+draws or, for a green man alone inside `run_m`, runs. Morale is shock plus standing terms (alone, dark) as dread: `rung_now` gives jumpy and broken,
+and a blast (`feed`) starts a duck, a scrabble back or a blind burst. `ripe` and `lost` hand a broken man to `runner_tick`: a shout, the gun dropped
+(`drop`), a way out (`plan_out`). From there he counts for nothing (`runner_nobody`). `flinch_tick` sends a green man alone under fire too.
+`net_quiet_asked`, `net_quiet_body` and `net_quiet_fall` shock the men, once a dead man (`pay`), and worsen the calls; a whip turns his gun to a
+noise; the last man (`last_kind`) goes low on `low_spot`.
 
 **The dark.** `dark_door_gate` stops a green man alone short of a dark room (`dark_room`), calling a mate if one is near. In `dark_foe_tick` a man who
 knows (`learns`) or has the word (`has_word`) and is blind (`dark_foe_blind`) lights his lamp if he carries one (`carry`), else walks where he can see
@@ -110,8 +112,9 @@ and `gun_hold_free` opens the clean line at Sam's back once he has fired from be
 
 **Response team.** A level has one only if its file has a `ResponseData` block (`has_response`). `update_qrf` calls it on a locked-down floor that
 heard gunfire or found two bodies, or on a silent net (`silent_net`). `dealt` draws way, size and time; `read_net` keeps what the net says, its word
-of the team until it sees him. `QrfState` runs on: `arriving` musters the men, `deploy` throws the door, then `pick_target`, stack and breach or
-`start_drill`, and `maybe_perimeter`. There is one wave (`request_qrf`). A block's `raid` brings it on the defenders' side in a room clear.
+of the team until it sees him. `QrfState` runs on: `arriving` musters the men, `deploy` throws the door, then `pick_target`: to a room by the
+squad's door tools (`start_drill`), to a place by its order to move there (`told`), and `maybe_perimeter`. There is one wave (`request_qrf`). A
+block's `raid` brings it on the defenders' side in a room clear.
 
 **At ease.** `needs_tick` fills four kinds of `NeedKind` and sends one man at a time after `announce`; a shot ends it (`cancel_trip`). In
 `doze_patrol` a calm staff man with a wait of `min_wait` to `max_wait` sits. `doze_deaf` sleeps him with dull ears and no eyes; noise, light on his

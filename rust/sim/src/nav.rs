@@ -1,17 +1,18 @@
-//! A WAY ACROSS THE FLOOR — src/scene/collision.ts NavGrid.findPath (A* over the half-metre grid, then the greedy smoothing), nearestFree and
-//! walkable; with a penalty too, whose prices the host hands in as the search comes to need them (`find_priced`, `resume`). The rule is the TypeScript's, statement for statement: the same cells popped in the same order, the same ties, the same waypoints.
+//! A WAY ACROSS THE FLOOR: A* over the half-metre grid, then the greedy smoothing (`find_path`); with a penalty too, whose prices are asked as the search comes to need them
+//! (`start_priced`, `priced`). The cells are popped in a written order and the ties go a written way, so a way's waypoints are the same on every machine, and changing that
+//! order changes the game.
 //!
-//! The grid of shut cells is the host's (it bakes it and re-bakes it under a blast); it writes it here before it asks. Everything in this file is scratch of
-//! one question: the search's four tables stand blank between searches, as the TypeScript's do. The scores are KEPT in singles, as the TypeScript keeps them
-//! in Float32Arrays (single.rs), and worked out in doubles.
+//! WHAT IS HANDED. The grid of shut cells is the host's (it bakes it and re-bakes it under a blast); it writes it here (`floor_is`) before it asks. `floor_is` keeps a copy
+//! and what it derives until a cell differs. Everything else in this file is scratch of one question: the search's four tables stand blank between searches, and there is one
+//! search at a time (a price may not ask for another way). The scores are KEPT in singles (single.rs) and worked out in doubles.
 //!
-//! The lengths (the smoothing's, and the lines nearestFree asks) are the game's own, so this answers only where EXACT.on.
+//! The lengths (the smoothing's, and the lines `nearest_free` asks) are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::hypot2;
 use crate::single::{get, put, S};
-use crate::world::{js_abs, js_max, js_min, or_one};
+use crate::world::{js_abs, js_max, js_min, or_one, World};
 use prim::floor;
 
 /// the cells the tables of a search are laid out for (a floor is its box grid's, four nav cells to the metre square)
@@ -23,7 +24,7 @@ pub const MAX_WAY: usize = 1 << 13;
 /// THE FLOOR A SEARCH CAN HOLD, in cells: what the host is told (`nav_cap(0)`) and the most `begin` takes. On a floor of no more cells than this no
 /// table here can be outgrown, whatever cap the caller puts on the search: a search closes a cell once and lists eight more at most as it does (so the
 /// open list and the list of cells written hold 1 + 8 × cells entries at most), and a way has no more waypoints than the floor has cells. The floor is
-/// the BUILD's (src/scene/world.ts WORLD: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
+/// the BUILD's (`scene_world::world()`: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
 /// once by the host, and never a level's.
 pub const MAX_FLOOR: usize = least(least(MAX_NAV, MAX_WAY), (MAX_OPEN - 1) / 8);
 const fn least(a: usize, b: usize) -> usize {
@@ -36,8 +37,7 @@ const fn least(a: usize, b: usize) -> usize {
 
 static mut SHUT: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut G: [S; MAX_NAV] = [S::ZERO; MAX_NAV];
-static mut F: [S; MAX_NAV] = [S::ZERO; MAX_NAV];
-/// the cell a cell was reached from, PLUS ONE (0 = none: the TypeScript's −1)
+/// the cell a cell was reached from, PLUS ONE (0 = none)
 static mut CAME: [u32; MAX_NAV] = [0; MAX_NAV];
 static mut CLOSED: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut OPEN: [u32; MAX_OPEN] = [0; MAX_OPEN];
@@ -47,10 +47,34 @@ static mut WAY: [f64; MAX_WAY * 2] = [0.0; MAX_WAY * 2];
 /// the scores have been made blank (infinite) once: they are zero as the module loads, and a table of infinities would be bytes in the file
 static mut BLANK: bool = false;
 
-/// where the host writes the shut cells (a byte address), and where a way's waypoints are (x z a point)
-pub fn shut_addr() -> usize {
-    core::ptr::addr_of!(SHUT) as usize
+/// which of the eight cells round a cell a step enters (in `NEAR`'s order, a bit each), of the floor `floor` was last told
+static mut ENTERS: [u8; MAX_NAV] = [0; MAX_NAV];
+static mut WIDE: (usize, usize) = (0, 0);
+/// the eight, in the search's own order
+const NEAR: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
+/// THE FLOOR A SEARCH IS OF: its shut cells, `gw` across
+pub fn floor_is(blocked: &[u8], gw: usize) {
+    let (shut, enters, wide) = unsafe { (&mut *core::ptr::addr_of_mut!(SHUT), &mut *core::ptr::addr_of_mut!(ENTERS), &mut *core::ptr::addr_of_mut!(WIDE)) };
+    if *wide == (gw, blocked.len()) && shut[..blocked.len()] == *blocked {
+        return;
+    }
+    *wide = (gw, blocked.len());
+    shut[..blocked.len()].copy_from_slice(blocked);
+    let gh = if gw == 0 { 0 } else { blocked.len() / gw };
+    for c in 0..gw * gh {
+        let (cx, cz) = ((c % gw) as i32, (c / gw) as i32);
+        let open = |x: i32, z: i32| x >= 0 && z >= 0 && x < gw as i32 && z < gh as i32 && blocked[z as usize * gw + x as usize] == 0;
+        let mut bits = 0;
+        for (k, &(dx, dz)) in NEAR.iter().enumerate() {
+            // (a step on the diagonal passes both the cells beside it)
+            if open(cx + dx, cz + dz) && (dx == 0 || dz == 0 || (open(cx + dx, cz) && open(cx, cz + dz))) {
+                bits |= 1 << k;
+            }
+        }
+        enters[c] = bits;
+    }
 }
+/// where a way's waypoints are (x z a point)
 pub fn way_addr() -> usize {
     core::ptr::addr_of!(WAY) as usize
 }
@@ -60,12 +84,11 @@ const SQRT2: f64 = 1.4142135623730951;
 pub const NO_WAY: i32 = -1;
 pub const ASK_HOST: i32 = -2;
 
-/// Math.ceil
 #[inline(always)]
 fn ceil(x: f64) -> f64 {
     -floor(-x)
 }
-/// collision.ts clampi over a floored coordinate, as a cell
+/// a floored coordinate held to the grid, as a cell
 #[inline(always)]
 fn cell_of(x: f64, cell: f64, n: usize) -> usize {
     let c = floor(x / cell);
@@ -86,34 +109,45 @@ pub struct Grid {
     pub cell: f64,
 }
 impl Grid {
-    /// NavGrid.isBlocked: off the grid is shut
-    #[inline]
-    fn is_blocked(&self, shut: &[u8], wx: f64, wz: f64) -> bool {
-        let (x, z) = (floor(wx / self.cell), floor(wz / self.cell));
-        if x < 0.0 || z < 0.0 || x >= self.gw as f64 || z >= self.gh as f64 {
-            return true;
-        }
-        shut[z as usize * self.gw + x as usize] == 1
+    /// a place along an axis in cells (a cell whose size is a power of two is divided by as it is multiplied by its inverse: the same double)
+    #[inline(always)]
+    fn cells(&self, v: f64) -> f64 {
+        if self.cell == 0.5 { v * 2.0 } else { v / self.cell }
     }
-    /// NavGrid.walkable
-    fn walkable(&self, shut: &[u8], a0: f64, a2: f64, b0: f64, b2: f64) -> bool {
+    /// off the grid is shut
+    #[inline(always)]
+    fn is_blocked(&self, shut: &[u8], wx: f64, wz: f64) -> bool {
+        let (x, z) = (self.cells(wx), self.cells(wz));
+        // (a floor over nought is what the cast leaves off)
+        !(x >= 0.0 && z >= 0.0 && x < self.gw as f64 && z < self.gh as f64) || shut[z as usize * self.gw + x as usize] == 1
+    }
+    /// is the straight way from a to b free of shut cells. `at`: how far along the last line asked was shut, where this one is asked first (and left so): whether a line is free hangs on no order
+    fn walkable(&self, shut: &[u8], a0: f64, a2: f64, b0: f64, b2: f64, at: &mut f64) -> bool {
         let (dx, dz) = (b0 - a0, b2 - a2);
         let len = hypot2(dx, dz);
         let n = ceil(len / (self.cell * 0.5)) + 1.0;
         let (px, pz) = (-dz / or_one(len) * 0.22, dx / or_one(len) * 0.22);
-        let mut i = 0.0;
-        while i <= n {
+        let blocked = |i: f64| {
             let t = i / n;
             let (x, z) = (a0 + dx * t, a2 + dz * t);
-            if self.is_blocked(shut, x, z) || self.is_blocked(shut, x + px, z + pz) || self.is_blocked(shut, x - px, z - pz) {
+            self.is_blocked(shut, x, z) || self.is_blocked(shut, x + px, z + pz) || self.is_blocked(shut, x - px, z - pz)
+        };
+        let first = floor(*at / len * n);
+        if first >= 0.0 && first <= n && blocked(first) {
+            return false;
+        }
+        let mut i = 0.0;
+        while i <= n {
+            if blocked(i) {
+                *at = i / n * len;
                 return false;
             }
             i += 1.0;
         }
         true
     }
-    /// NavGrid.nearestFree for a world point that asked: Ok(the cell, or none), Err = a line the host must judge
-    fn nearest_free(&self, shut: &[u8], w: usize, set: i32, ask: u32, gx: usize, gz: usize, wx: f64, wz: f64, tune: &Knobs) -> Result<Option<(usize, usize)>, ()> {
+    /// the free cell nearest a world point that asked: Ok(the cell, or none), Err = a line this module cannot walk
+    fn nearest_free(&self, shut: &[u8], w: &World, gx: usize, gz: usize, wx: f64, wz: f64, tune: &Knobs) -> Result<Option<(usize, usize)>, ()> {
         let mut fallback: Option<(usize, usize)> = None;
         let mut extra: i32 = 1;
         let (gx, gz) = (gx as i32, gz as i32);
@@ -132,7 +166,7 @@ impl Grid {
                     if fallback.is_none() {
                         fallback = Some(c);
                     }
-                    match lines::solid_line(w, set, ask, wx, 1.0, wz, (x as f64 + 0.5) * self.cell, 1.0, (z as f64 + 0.5) * self.cell, tune) {
+                    match lines::solid_line(w, true, lines::ASK_GLASS, wx, 1.0, wz, (x as f64 + 0.5) * self.cell, 1.0, (z as f64 + 0.5) * self.cell, tune) {
                         None => return Err(()),
                         Some(false) => return Ok(Some(c)),
                         Some(true) => {}
@@ -151,82 +185,74 @@ impl Grid {
     }
 }
 
-/// findPath(a, b, max_iter) with no penalty: how many waypoints were written (x z each, at way_addr) · NO_WAY (the TypeScript's null) · ASK_HOST
+/// the way from a to b with no penalty: how many waypoints were written (x z each, at way_addr) · NO_WAY · ASK_HOST
 #[allow(clippy::too_many_arguments)]
-pub fn find_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
-    begin(&mut Flat, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter, tune)
+pub fn find_path(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
+    match begin(w, gw, gh, cell, a0, a2, b0, b2, max_iter, tune) {
+        Ok(()) => go(&mut Flat),
+        Err(said) => said,
+    }
 }
-/// findPath(a, b, max_iter, penalty): as `find_path`, or NEED = the search has come to cells whose price it does not have (`need_len` of them at
-/// `need_addr`, a cell's index each). The host writes each one's price at `price_addr` (a double a cell, by the cell's index) and calls `resume`,
-/// which answers as this does. A SEARCH THAT WAITS IS SCRATCH OF ONE QUESTION: until it is resumed to its end or dropped (`drop_run`), every
-/// other search asked here is the host's (ASK_HOST), so the host never asks one from inside a price.
+/// the way from a to b with a penalty: the search is set to its start, or what it says without one (Some). The way is `priced`'s to find.
 #[allow(clippy::too_many_arguments)]
-pub fn find_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
-    begin(&mut Asked, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter, tune)
+pub fn start_priced(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> Option<i32> {
+    begin(w, gw, gh, cell, a0, a2, b0, b2, max_iter, tune).err()
 }
-pub fn need_addr() -> usize {
-    core::ptr::addr_of!(WANT) as usize
-}
-pub fn need_len() -> usize {
-    unsafe { *core::ptr::addr_of!(N_WANT) }
-}
-pub fn price_addr() -> usize {
-    core::ptr::addr_of!(PRICE) as usize
+/// …and found by the price of a step into a cell (its index in the grid), asked once a cell as the search comes to it. It asks for no other way.
+pub fn priced(price: &mut dyn FnMut(usize) -> f64) -> i32 {
+    go(&mut Priced { price, n: 0 })
 }
 
-/// a search asked for prices it does not have (the cells are at `need_addr`)
-pub const NEED: i32 = -3;
-/// the cells one NEED can name (a search's step names eight at most; a leg of the smoothing, the cells along it)
-pub const MAX_NEED: usize = 1024;
-
-/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH (collision.ts findPath's `penalty`: a multiplier, read as 1 where it is under 1). THE SEARCH IS
-/// WRITTEN ONCE, OVER THIS: a search with no penalty is the search whose every price is 1 (`Flat`); one with a penalty of the host's is the search
-/// over the prices the host has handed in so far (`Asked`), which does not know a cell until the host has priced it. A rule that moves here
-/// brings a source of its own that always knows, and the waiting below goes with `Asked`.
+/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH (a multiplier, read as 1 where it is under 1). THE SEARCH IS
+/// WRITTEN ONCE, OVER THIS: a search with no penalty is the search whose every price is 1 (`Flat`).
 trait Prices {
     /// every price is 1: no cell is dear, so the smoothing has none to count along a leg
     const FLAT: bool;
-    /// the price of cell `c`, or None = not known yet: the source has noted the cell, and the search stops where it is and says NEED
-    fn at(&mut self, c: usize) -> Option<f64>;
+    /// the price of cell `c`
+    fn at(&mut self, c: usize) -> f64;
+    /// the search is over
+    fn over(&mut self) {}
 }
 struct Flat;
 impl Prices for Flat {
     const FLAT: bool = true;
     #[inline(always)]
-    fn at(&mut self, _c: usize) -> Option<f64> {
-        Some(1.0)
+    fn at(&mut self, _c: usize) -> f64 {
+        1.0
     }
 }
-/// the host's prices, a cell at a time as the search comes to need them (PRICE, KNOWN, WANT below)
-struct Asked;
-impl Prices for Asked {
+/// a caller's prices, each asked once
+struct Priced<'a> {
+    price: &'a mut dyn FnMut(usize) -> f64,
+    n: usize,
+}
+impl Prices for Priced<'_> {
     const FLAT: bool = false;
     #[inline(always)]
-    fn at(&mut self, c: usize) -> Option<f64> {
-        let (price, known) = unsafe { (&*core::ptr::addr_of!(PRICE), &*core::ptr::addr_of!(KNOWN)) };
-        if known[c] != 0 {
-            Some(price[c])
-        } else {
-            want_cell(c);
-            None
+    fn at(&mut self, c: usize) -> f64 {
+        let (price, known) = unsafe { (&mut *core::ptr::addr_of_mut!(PRICE), &mut *core::ptr::addr_of_mut!(KNOWN)) };
+        if known[c] == 0 {
+            price[c] = (self.price)(c);
+            known[c] = 1;
+            unsafe { (*core::ptr::addr_of_mut!(PRICED))[self.n] = c as u32 };
+            self.n += 1;
+        }
+        price[c]
+    }
+    fn over(&mut self) {
+        let (known, priced) = unsafe { (&mut *core::ptr::addr_of_mut!(KNOWN), &*core::ptr::addr_of!(PRICED)) };
+        for &c in &priced[..self.n] {
+            known[c as usize & (MAX_NAV - 1)] = 0;
         }
     }
 }
-/// THE HOST'S PRICES OF ONE SEARCH, a double a cell, written by the host where the search asked; which cells have one; and the list of those, so
-/// that the table is blank again as the search ends
+/// THE PRICES OF ONE SEARCH, a double a cell; which cells have one; and the list of those, so that the table is blank again as the search ends
 static mut PRICE: [f64; MAX_NAV] = [0.0; MAX_NAV];
 static mut KNOWN: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut PRICED: [u32; MAX_NAV] = [0; MAX_NAV];
-static mut WANT: [u32; MAX_NEED] = [0; MAX_NEED];
-/// …and how many it names now. Its own word, not the run's: the source of prices writes it while the search holds the run
-static mut N_WANT: usize = 0;
-/// A SEARCH BETWEEN ITS CALLS: where it stands, kept here so that one that waits for prices can go on (only `Asked` ever waits)
+/// A SEARCH SET TO ITS START
+#[derive(Clone, Copy)]
 struct Run {
-    live: bool,
-    /// the search is done and its way's cells stand in CELLS: what is left is the smoothing, which is run from its top at every resume
-    smoothing: bool,
-    /// `cur` was popped and closed, and waits for its neighbours' prices
-    held: bool,
     gw: usize,
     gh: usize,
     cell: f64,
@@ -236,47 +262,33 @@ struct Run {
     goal: usize,
     gx: usize,
     gz: usize,
-    n_open: usize,
-    n_seen: usize,
-    iter: u32,
     max_iter: u32,
-    cur: usize,
-    n: usize,
-    n_priced: usize,
 }
-static mut RUN: Run = Run { live: false, smoothing: false, held: false, gw: 0, gh: 0, cell: 0.0, a0: 0.0, a2: 0.0, start: 0, goal: 0, gx: 0, gz: 0, n_open: 0, n_seen: 0, iter: 0, max_iter: 0, cur: 0, n: 0, n_priced: 0 };
+static mut RUN: Run = Run { gw: 0, gh: 0, cell: 0.0, a0: 0.0, a2: 0.0, start: 0, goal: 0, gx: 0, gz: 0, max_iter: 0 };
+/// whether a search has the tables (one asked from inside a price has none)
+static mut LIVE: bool = false;
 
 #[allow(clippy::too_many_arguments)]
-fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
+fn begin(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> Result<(), i32> {
     let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
     // (a search asked while another waits for its prices would write over that one's tables)
-    if run.live {
-        return ASK_HOST;
+    if unsafe { LIVE } {
+        return Err(ASK_HOST);
     }
-    // (a floor of more cells than a search holds: the host has said so by name before it asks, NavGrid.there. Each side is under MAX_FLOOR before the
+    // (a floor of more cells than a search holds: the host has said so by name before it asks. Each side is under MAX_FLOOR before the
     //  two are multiplied: the product cannot wrap)
     if gw == 0 || gh == 0 || gw > MAX_FLOOR || gh > MAX_FLOOR || gw * gh > MAX_FLOOR {
-        return ASK_HOST;
+        return Err(ASK_HOST);
     }
-    // (a point that is no number has no cell: the TypeScript's own answer for it, whatever that is, is the host's to give)
+    // (a point that is no number has no cell: the host says what that means)
     if !(a0 - a0 == 0.0 && a2 - a2 == 0.0 && b0 - b0 == 0.0 && b2 - b2 == 0.0) || !(cell > 0.0) {
-        return ASK_HOST;
+        return Err(ASK_HOST);
     }
-    let (shut, g, f, open, seen, way) = unsafe {
-        (
-            &*core::ptr::addr_of!(SHUT),
-            &mut *core::ptr::addr_of_mut!(G),
-            &mut *core::ptr::addr_of_mut!(F),
-            &mut *core::ptr::addr_of_mut!(OPEN),
-            &mut *core::ptr::addr_of_mut!(SEEN),
-            &mut *core::ptr::addr_of_mut!(WAY),
-        )
-    };
+    let (shut, g, way) = unsafe { (&*core::ptr::addr_of!(SHUT), &mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(WAY)) };
     unsafe {
         if !BLANK {
             for i in 0..MAX_NAV {
                 g[i] = S::INF;
-                f[i] = S::INF;
             }
             BLANK = true;
         }
@@ -285,9 +297,9 @@ fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: us
     let (sx, sz) = (cell_of(a0, cell, gw), cell_of(a2, cell, gh));
     let (mut gx, mut gz) = (cell_of(b0, cell, gw), cell_of(b2, cell, gh));
     if shut[gz * gw + gx] != 0 {
-        match grid.nearest_free(shut, w, set, ask, gx, gz, b0, b2, tune) {
-            Err(()) => return ASK_HOST,
-            Ok(None) => return NO_WAY,
+        match grid.nearest_free(shut, w, gx, gz, b0, b2, tune) {
+            Err(()) => return Err(ASK_HOST),
+            Ok(None) => return Err(NO_WAY),
             Ok(Some((x, z))) => {
                 gx = x;
                 gz = z;
@@ -298,329 +310,320 @@ fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: us
     if start == goal {
         way[0] = (gx as f64 + 0.5) * cell;
         way[1] = (gz as f64 + 0.5) * cell;
-        return 1;
+        return Err(1);
     }
-    {
-        let (x, z) = ((start % gw) as f64, (start / gw) as f64);
-        let (dx, dz) = (js_abs(x - gx as f64), js_abs(z - gz as f64));
-        put(g, start, 0.0);
-        put(f, start, (dx + dz) + (SQRT2 - 2.0) * js_min(dx, dz));
-    }
-    open[0] = start as u32;
-    seen[0] = start as u32;
-    *run = Run { live: true, smoothing: false, held: false, gw, gh, cell, a0, a2, start, goal, gx, gz, n_open: 1, n_seen: 1, iter: 0, max_iter, cur: 0, n: 0, n_priced: 0 };
-    unsafe { *core::ptr::addr_of_mut!(N_WANT) = 0 };
-    go(src)
+    unsafe { LIVE = true };
+    *run = Run { gw, gh, cell, a0, a2, start, goal, gx, gz, max_iter };
+    Ok(())
 }
-/// the prices asked for are written: the search goes on from where it waited. ASK_HOST = no search waits.
-pub fn resume() -> i32 {
-    let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
-    if !run.live {
-        return ASK_HOST;
-    }
-    let (known, priced, want) = unsafe { (&mut *core::ptr::addr_of_mut!(KNOWN), &mut *core::ptr::addr_of_mut!(PRICED), &*core::ptr::addr_of!(WANT)) };
-    for &c in &want[..unsafe { *core::ptr::addr_of!(N_WANT) }] {
-        let c = c as usize & (MAX_NAV - 1);
-        if known[c] == 0 {
-            known[c] = 1;
-            priced[run.n_priced] = c as u32;
-            run.n_priced += 1;
-        }
-    }
-    unsafe { *core::ptr::addr_of_mut!(N_WANT) = 0 };
-    go(&mut Asked)
-}
-/// the search's four tables as they stood before it: every cell it wrote is in SEEN
+/// the search's tables as they stood before it: every cell it wrote is in SEEN
 fn blank(n_seen: usize) {
-    let (g, f, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(F), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };
+    let (at, g, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(AT), &mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };
     for &c in &seen[..n_seen] {
         let c = c as usize & (MAX_NAV - 1);
+        at[c] = 0;
         g[c] = S::INF;
-        f[c] = S::INF;
         came[c] = 0;
         closed[c] = 0;
     }
 }
-/// the search has answered `r`: no price is known any more, and none waits
-fn end(r: i32) -> i32 {
-    let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
-    let (known, priced) = unsafe { (&mut *core::ptr::addr_of_mut!(KNOWN), &*core::ptr::addr_of!(PRICED)) };
-    for &c in &priced[..run.n_priced] {
-        known[c as usize & (MAX_NAV - 1)] = 0;
-    }
-    run.n_priced = 0;
-    unsafe { *core::ptr::addr_of_mut!(N_WANT) = 0 };
-    run.live = false;
-    r
-}
-/// a cell the search needs the price of and has not: named for the host, once (false = the list is full: what is named is priced first, and the
-/// search asks again)
-fn want_cell(c: usize) -> bool {
-    let (want, n) = unsafe { (&mut *core::ptr::addr_of_mut!(WANT), &mut *core::ptr::addr_of_mut!(N_WANT)) };
-    if want[..*n].iter().any(|&q| q as usize == c) {
-        return true;
-    }
-    if *n >= MAX_NEED {
-        return false;
-    }
-    want[*n] = c as u32;
-    *n += 1;
-    true
-}
-/// NavGrid.dearAlong: the distinct cells along the straight leg a → b (sampled at half a cell) whose price is above plain floor. Err = a cell on it
-/// has no price yet (the leg is walked to its end all the same, so that every cell of it is asked for at once: the TypeScript reads them all)
-fn dear_along<P: Prices>(src: &mut P, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64) -> Result<u32, ()> {
+/// the distinct cells along the straight leg a → b (sampled at half a cell) whose price is above plain floor
+fn dear_along<P: Prices>(src: &mut P, grid: &Grid, a0: f64, a2: f64, b0: f64, b2: f64) -> u32 {
+    let (gw, gh) = (grid.gw as f64, grid.gh as f64);
     let (dx, dz) = (b0 - a0, b2 - a2);
-    let n = ceil(hypot2(dx, dz) / (cell * 0.5)) + 1.0;
-    let (mut last, mut count, mut missing) = (-1.0f64, 0u32, false);
+    let n = ceil(hypot2(dx, dz) / (grid.cell * 0.5)) + 1.0;
+    let (mut last, mut count) = (-1.0f64, 0u32);
     let mut k = 0.0;
     while k <= n {
         let t = k / n;
         k += 1.0;
-        let (ix, iz) = (floor((a0 + dx * t) / cell), floor((a2 + dz * t) / cell));
-        let i = iz * gw as f64 + ix;
+        let (ix, iz) = (floor(grid.cells(a0 + dx * t)), floor(grid.cells(a2 + dz * t)));
+        let i = iz * gw + ix;
         if i == last {
             continue;
         }
         last = i;
-        if ix >= 0.0 && iz >= 0.0 && ix < gw as f64 && iz < gh as f64 {
-            let c = iz as usize * gw + ix as usize;
-            match src.at(c) {
-                None => missing = true,
-                Some(p) => {
-                    if p > 1.0 {
-                        count += 1;
-                    }
-                }
-            }
+        if ix >= 0.0 && iz >= 0.0 && ix < gw && iz < gh && src.at(iz as usize * grid.gw + ix as usize) > 1.0 {
+            count += 1;
         }
     }
-    if missing {
-        Err(())
-    } else {
-        Ok(count)
+    count
+}
+/// the search's tables
+struct Tables {
+    shut: &'static [u8; MAX_NAV],
+    enters: &'static [u8; MAX_NAV],
+    g: &'static mut [S; MAX_NAV],
+    came: &'static mut [u32; MAX_NAV],
+    closed: &'static mut [u8; MAX_NAV],
+    seen: &'static mut [u32; MAX_OPEN],
+    cells: &'static mut [u32; MAX_NAV],
+    way: &'static mut [f64; MAX_WAY * 2],
+}
+fn tables() -> Tables {
+    unsafe {
+        Tables {
+            shut: &*core::ptr::addr_of!(SHUT),
+            enters: &*core::ptr::addr_of!(ENTERS),
+            g: &mut *core::ptr::addr_of_mut!(G),
+            came: &mut *core::ptr::addr_of_mut!(CAME),
+            closed: &mut *core::ptr::addr_of_mut!(CLOSED),
+            seen: &mut *core::ptr::addr_of_mut!(SEEN),
+            cells: &mut *core::ptr::addr_of_mut!(CELLS),
+            way: &mut *core::ptr::addr_of_mut!(WAY),
+        }
     }
 }
-/// THE SEARCH, from where it stands (its start, or where it waited), to its answer or its next wait
+
+/// THE OPEN CELLS, in the order they were opened (one taken off leaves its place to the last), each with its score: a cell opened again stands twice, and both
+/// have its newest. The least is found by the least of every BLOCK of places.
+struct Open {
+    n: usize,
+    /// the last place a cell stands at and, of a place, the one its cell stood at before (a place and one; 0 = none)
+    at: &'static mut [u32; MAX_NAV],
+    before: &'static mut [u32; MAX_OPEN],
+    cell: &'static mut [u32; MAX_OPEN],
+    score: &'static mut [S; MAX_OPEN],
+    least: &'static mut [u32; MAX_OPEN / BLOCK + 1],
+}
+const BLOCK: usize = 16;
+static mut AT: [u32; MAX_NAV] = [0; MAX_NAV];
+static mut BEFORE: [u32; MAX_OPEN] = [0; MAX_OPEN];
+static mut SCORE: [S; MAX_OPEN] = [S::ZERO; MAX_OPEN];
+static mut LEAST: [u32; MAX_OPEN / BLOCK + 1] = [0; MAX_OPEN / BLOCK + 1];
+impl Open {
+    fn empty() -> Open {
+        unsafe { Open { n: 0, at: &mut *core::ptr::addr_of_mut!(AT), before: &mut *core::ptr::addr_of_mut!(BEFORE), cell: &mut *core::ptr::addr_of_mut!(OPEN), score: &mut *core::ptr::addr_of_mut!(SCORE), least: &mut *core::ptr::addr_of_mut!(LEAST) } }
+    }
+    /// one more, at the end
+    #[inline(always)]
+    fn push(&mut self, c: usize, f: f64) {
+        let (n, b) = (self.n, self.n / BLOCK);
+        self.cell[n] = c as u32;
+        self.before[n] = self.at[c];
+        self.at[c] = n as u32 + 1;
+        put(self.score, n, f);
+        if n % BLOCK == 0 || get(self.score, n) < get(self.score, self.least[b] as usize) {
+            self.least[b] = n as u32;
+        }
+        self.n += 1;
+    }
+    /// a cell that stands here already has another score (a better one, but for what the single it is kept as rounds off)
+    fn better(&mut self, c: usize, f: f64) {
+        let mut p = self.at[c] as usize;
+        while p != 0 {
+            let i = p - 1;
+            p = self.before[i] as usize;
+            let (l, was) = (self.least[i / BLOCK] as usize, get(self.score, i));
+            put(self.score, i, f);
+            let (v, least) = (get(self.score, i), get(self.score, l));
+            if l == i {
+                if v > was {
+                    self.look(i / BLOCK);
+                }
+            } else if v < least || (v == least && i < l) {
+                self.least[i / BLOCK] = i as u32;
+            }
+        }
+    }
+    /// what pointed at a place of cell `c`'s points at another, or at what that one pointed at (`to` none)
+    #[inline(always)]
+    fn point(&mut self, c: usize, from: usize, to: Option<usize>) {
+        let next = match to {
+            Some(to) => {
+                self.before[to] = self.before[from];
+                to as u32 + 1
+            }
+            None => self.before[from],
+        };
+        let mut p = self.at[c] as usize;
+        if p == from + 1 {
+            self.at[c] = next;
+            return;
+        }
+        while p != 0 {
+            if self.before[p - 1] as usize == from + 1 {
+                self.before[p - 1] = next;
+                return;
+            }
+            p = self.before[p - 1] as usize;
+        }
+    }
+    /// the cell of the least score, the first of equals, off the list
+    #[inline(always)]
+    fn pop(&mut self) -> usize {
+        let mut mi = self.least[0] as usize;
+        let mut mf = get(self.score, mi);
+        for &l in &self.least[1..self.n.div_ceil(BLOCK)] {
+            let f = get(self.score, l as usize);
+            if f < mf {
+                (mi, mf) = (l as usize, f);
+            }
+        }
+        let c = self.cell[mi] as usize;
+        self.n -= 1;
+        self.point(c, mi, None);
+        if mi != self.n {
+            self.point(self.cell[self.n] as usize, self.n, Some(mi));
+            self.cell[mi] = self.cell[self.n];
+            self.score[mi] = self.score[self.n];
+        }
+        self.look(mi / BLOCK);
+        // (the last one's block has another least only if that was it)
+        let b = self.n / BLOCK;
+        if b != mi / BLOCK && self.least[b] as usize == self.n {
+            self.look(b);
+        }
+        c
+    }
+    /// a block's least, found again
+    #[inline(always)]
+    fn look(&mut self, b: usize) {
+        let (from, to) = (b * BLOCK, if (b + 1) * BLOCK < self.n { (b + 1) * BLOCK } else { self.n });
+        if from >= to {
+            return;
+        }
+        let (mut mi, mut mf) = (from, get(self.score, from));
+        for (k, s) in self.score[from..to].iter().enumerate().skip(1) {
+            let f = get(core::slice::from_ref(s), 0);
+            if f < mf {
+                (mi, mf) = (from + k, f);
+            }
+        }
+        self.least[b] = mi as u32;
+    }
+}
+
+/// THE SEARCH, from its start to its answer
 fn go<P: Prices>(src: &mut P) -> i32 {
-    let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
-    let (shut, g, f, came, closed, open, seen, cells, way) = unsafe {
-        (
-            &*core::ptr::addr_of!(SHUT),
-            &mut *core::ptr::addr_of_mut!(G),
-            &mut *core::ptr::addr_of_mut!(F),
-            &mut *core::ptr::addr_of_mut!(CAME),
-            &mut *core::ptr::addr_of_mut!(CLOSED),
-            &mut *core::ptr::addr_of_mut!(OPEN),
-            &mut *core::ptr::addr_of_mut!(SEEN),
-            &mut *core::ptr::addr_of_mut!(CELLS),
-            &mut *core::ptr::addr_of_mut!(WAY),
-        )
+    let run = unsafe { *core::ptr::addr_of!(RUN) };
+    let mut t = tables();
+    let said = match search(src, &run, &mut t) {
+        Ok(n) => smooth(src, &run, &mut t, n),
+        Err(said) => said,
     };
-    let (gw, gh, cell) = (run.gw, run.gh, run.cell);
-    let grid = Grid { gw, gh, cell };
-    if !run.smoothing {
-        let (start, goal, max_iter) = (run.start, run.goal, run.max_iter);
-        let (gxf, gzf) = (run.gx as f64, run.gz as f64);
-        let (mut n_open, mut n_seen, mut iter) = (run.n_open, run.n_seen, run.iter);
-        let mut full = false;
-        loop {
-            let cur;
-            if run.held {
-                // (popped and closed before the wait: its neighbours' prices are here now)
-                cur = run.cur;
-                run.held = false;
-            } else {
-                if n_open == 0 {
-                    break;
-                }
-                let it = iter;
-                iter = iter.wrapping_add(1);
-                if !(it < max_iter) {
-                    break;
-                }
-                // pop the least f (the first of equals, as the scan finds it)
-                // (a cell is under MAX_NAV, a power of two: the mask says so to the compiler, and the scan is then two loads and a compare an entry)
-                let mut mi = 0usize;
-                let mut mf = get(f, open[0] as usize & (MAX_NAV - 1));
-                for (i, &c) in open[..n_open].iter().enumerate().skip(1) {
-                    let fi = get(f, c as usize & (MAX_NAV - 1));
-                    if fi < mf {
-                        mi = i;
-                        mf = fi;
-                    }
-                }
-                cur = open[mi] as usize;
-                n_open -= 1;
-                open[mi] = open[n_open];
-                if cur == goal {
-                    break;
-                }
-                if closed[cur] != 0 {
-                    continue;
-                }
-                closed[cur] = 1;
-                // (cannot be on a floor `begin` took: MAX_FLOOR)
-                if n_open + 8 > MAX_OPEN || n_seen + 8 > MAX_OPEN {
-                    full = true;
-                    break;
-                }
+    src.over();
+    unsafe { LIVE = false };
+    said
+}
+
+/// the least way from a cell to the goal: straight and on the diagonal
+#[inline(always)]
+fn left(run: &Run, x: usize, z: usize) -> f64 {
+    let (dx, dz) = (js_abs(x as f64 - run.gx as f64), js_abs(z as f64 - run.gz as f64));
+    (dx + dz) + (SQRT2 - 2.0) * js_min(dx, dz)
+}
+/// the search itself: how many cells its way has (they stand in `cells`), or what it says instead
+fn search<P: Prices>(src: &mut P, run: &Run, t: &mut Tables) -> Result<usize, i32> {
+    let gw = run.gw;
+    let mut open = Open::empty();
+    put(t.g, run.start, 0.0);
+    open.push(run.start, left(run, run.start % gw, run.start / gw));
+    t.seen[0] = run.start as u32;
+    let (mut n_seen, mut iter, mut full) = (1usize, 0u32, false);
+    while open.n > 0 {
+        let it = iter;
+        iter = it.wrapping_add(1);
+        if !(it < run.max_iter) {
+            break;
+        }
+        let cur = open.pop();
+        if cur == run.goal {
+            break;
+        }
+        if t.closed[cur] != 0 {
+            continue;
+        }
+        t.closed[cur] = 1;
+        // (cannot be on a floor `begin` took: MAX_FLOOR)
+        if open.n + 8 > MAX_OPEN || n_seen + 8 > MAX_OPEN {
+            full = true;
+            break;
+        }
+        let (from, cx, cz) = (get(t.g, cur), cur as u32 % gw as u32, cur as u32 / gw as u32);
+        let mut near = t.enters[cur];
+        while near != 0 {
+            let k = near.trailing_zeros() as usize;
+            near &= near - 1;
+            let (dx, dz) = NEAR[k];
+            let (x, z) = (cx.wrapping_add_signed(dx), cz.wrapping_add_signed(dz));
+            let ni = (z as usize * gw + x as usize) & (MAX_NAV - 1);
+            if t.closed[ni] != 0 {
+                continue;
             }
-            // the cells a step from `cur` may enter, in the search's own order, said ONCE: both passes below go by this list (which cells they are
-            // does not hang on what the second pass writes)
-            let mut near = [(0usize, false); 8];
-            let mut n_near = 0usize;
-            {
-                let (cx, cz) = ((cur % gw) as i32, (cur / gw) as i32);
-                for dz in -1..=1i32 {
-                    for dx in -1..=1i32 {
-                        if dx == 0 && dz == 0 {
-                            continue;
-                        }
-                        let (nx, nz) = (cx + dx, cz + dz);
-                        if nx < 0 || nz < 0 || nx >= gw as i32 || nz >= gh as i32 {
-                            continue;
-                        }
-                        let ni = nz as usize * gw + nx as usize;
-                        if shut[ni] != 0 || closed[ni] != 0 {
-                            continue;
-                        }
-                        if dx != 0 && dz != 0 && (shut[cz as usize * gw + (cx + dx) as usize] != 0 || shut[(cz + dz) as usize * gw + cx as usize] != 0) {
-                            continue;
-                        }
-                        near[n_near] = (ni, dx != 0 && dz != 0);
-                        n_near += 1;
-                    }
+            let ng = from + (if dx != 0 && dz != 0 { SQRT2 } else { 1.0 }) * js_max(1.0, src.at(ni));
+            let was = get(t.g, ni);
+            if ng < was {
+                let f = ng + left(run, x as usize, z as usize);
+                put(t.g, ni, ng);
+                t.came[ni] = cur as u32 + 1;
+                if was < f64::INFINITY {
+                    open.better(ni, f);
                 }
-            }
-            if !P::FLAT {
-                // every one of them is priced before any is stepped into. One whose price is not known: the cell waits with all of them asked for,
-                // and is opened when they are here
-                let mut wait = false;
-                for &(ni, _) in &near[..n_near] {
-                    if src.at(ni).is_none() {
-                        wait = true;
-                    }
-                }
-                if wait {
-                    run.held = true;
-                    run.cur = cur;
-                    run.n_open = n_open;
-                    run.n_seen = n_seen;
-                    run.iter = iter;
-                    return NEED;
-                }
-            }
-            for &(ni, diagonal) in &near[..n_near] {
-                let step = if diagonal { SQRT2 } else { 1.0 };
-                // (a price is here: the pass above saw to it, and a search that finds none all the same is the host's, not a guess. A step at the
-                //  price of 1 is the step: the same double)
-                let Some(price) = src.at(ni) else {
-                    blank(n_seen);
-                    return end(ASK_HOST);
-                };
-                let ng = get(g, cur) + step * js_max(1.0, price);
-                if ng < get(g, ni) {
-                    let (hx, hz) = (js_abs((ni % gw) as f64 - gxf), js_abs((ni / gw) as f64 - gzf));
-                    put(g, ni, ng);
-                    came[ni] = cur as u32 + 1;
-                    put(f, ni, ng + ((hx + hz) + (SQRT2 - 2.0) * js_min(hx, hz)));
-                    open[n_open] = ni as u32;
-                    n_open += 1;
-                    seen[n_seen] = ni as u32;
-                    n_seen += 1;
-                }
+                open.push(ni, f);
+                t.seen[n_seen] = ni as u32;
+                n_seen += 1;
             }
         }
-        let mut n = 0usize;
-        let found = came[goal] != 0;
-        if found && !full {
-            let mut c = goal;
-            loop {
-                if c == start {
-                    break;
-                }
-                cells[n] = c as u32;
-                n += 1;
-                if came[c] == 0 {
-                    break;
-                }
-                c = came[c] as usize - 1;
-            }
-        }
-        blank(n_seen);
-        if full {
-            return end(ASK_HOST);
-        }
-        if !found {
-            return end(NO_WAY);
-        }
-        cells[..n].reverse();
-        run.n = n;
-        run.smoothing = true;
     }
-    let n = run.n;
-    // (with a price: which raw cells the search paid extra for, read once for the whole way. Each was priced as the search reached it; one that
-    //  was not is asked for like any other)
+    let way = if full { Err(ASK_HOST) } else { way_back(run, t) };
+    blank(n_seen);
+    way
+}
+
+/// the way the search found, its cells from the first step to the goal: how many
+fn way_back(run: &Run, t: &mut Tables) -> Result<usize, i32> {
+    if t.came[run.goal] == 0 {
+        return Err(NO_WAY);
+    }
+    let (mut n, mut c) = (0usize, run.goal);
+    while c != run.start {
+        t.cells[n] = c as u32;
+        n += 1;
+        if t.came[c] == 0 {
+            break;
+        }
+        c = t.came[c] as usize - 1;
+    }
+    t.cells[..n].reverse();
+    Ok(n)
+}
+
+/// THE GREEDY SMOOTHING: from the anchor, the farthest cell of the way a man can walk straight to, and, with a price, to which the straight leg crosses
+/// no more dear cells than the raw cells it stands in for (how many of those there are up to each is counted once for the whole way).
+fn smooth<P: Prices>(src: &mut P, run: &Run, t: &mut Tables, n: usize) -> i32 {
+    let grid = Grid { gw: run.gw, gh: run.gh, cell: run.cell };
+    // (`seen` is free again: the search is over)
     if !P::FLAT {
-        let mut wait = false;
-        for &c in &cells[..n] {
-            if src.at(c as usize).is_none() {
-                wait = true;
-            }
-        }
-        if wait {
-            return NEED;
+        t.seen[0] = 0;
+        for k in 0..n {
+            t.seen[k + 1] = t.seen[k] + (src.at(t.cells[k] as usize) > 1.0) as u32;
         }
     }
-    // the greedy smoothing: from the anchor, the farthest cell of the way a man can walk straight to — and, with a price, to which the straight leg
-    // crosses no more dear cells than the raw cells it stands in for
-    let centre = |c: u32| -> (f64, f64) { (((c as usize % gw) as f64 + 0.5) * cell, ((c as usize / gw) as f64 + 0.5) * cell) };
+    let centre = |c: u32| -> (f64, f64) { (((c as usize % run.gw) as f64 + 0.5) * run.cell, ((c as usize / run.gw) as f64 + 0.5) * run.cell) };
     let (mut anchor0, mut anchor2) = (run.a0, run.a2);
-    let mut out = 0usize;
-    let mut i = 0usize;
+    let (mut out, mut i) = (0usize, 0usize);
     while i < n {
         let mut j = n - 1;
+        let mut shut_at = 0.0;
         while j > i {
-            let (q0, q2) = centre(cells[j]);
-            if grid.walkable(shut, anchor0, anchor2, q0, q2) {
-                if P::FLAT {
-                    break;
-                }
-                match dear_along(src, gw, gh, cell, anchor0, anchor2, q0, q2) {
-                    Err(()) => return NEED,
-                    Ok(d) => {
-                        // (the raw cells this leg stands in for: priced above, every one)
-                        let mut stood = 0u32;
-                        for &c in &cells[i..=j] {
-                            match src.at(c as usize) {
-                                None => return end(ASK_HOST),
-                                Some(p) => {
-                                    if p > 1.0 {
-                                        stood += 1;
-                                    }
-                                }
-                            }
-                        }
-                        if d <= stood {
-                            break;
-                        }
-                    }
-                }
+            let (q0, q2) = centre(t.cells[j]);
+            if grid.walkable(t.shut, anchor0, anchor2, q0, q2, &mut shut_at) && (P::FLAT || dear_along(src, &grid, anchor0, anchor2, q0, q2) <= t.seen[j + 1] - t.seen[i]) {
+                break;
             }
             j -= 1;
         }
-        let (p0, p2) = centre(cells[j]);
+        let (p0, p2) = centre(t.cells[j]);
         // (cannot be on a floor `begin` took: a waypoint is a cell of the way, each once)
         if out >= MAX_WAY {
-            return end(ASK_HOST);
+            return ASK_HOST;
         }
-        way[out * 2] = p0;
-        way[out * 2 + 1] = p2;
+        t.way[out * 2] = p0;
+        t.way[out * 2 + 1] = p2;
         out += 1;
         anchor0 = p0;
         anchor2 = p2;
         i = j + 1;
     }
-    end(out as i32)
+    out as i32
 }

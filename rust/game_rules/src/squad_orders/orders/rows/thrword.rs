@@ -20,20 +20,16 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
 }
 
-/// doortools.ts:936 `S.big ? this.waitingMen(men) : this.heldMen(men, t)`
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
     if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_waiting_men(g, men) } else { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) }
 }
 
-/// doortools.ts:937 `this.heldOn(t, men).some(op => !op.word) || wg(…)`
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let ops = crate::doortools::door_tools_held_on(g, &crate::seats::here(g), t, men);
     if ops.iter().any(|&o| g.tab.doortools_door_op[o].word.is_none()) { return Ok(()); }
-    let (now, was) = (String::from("nobody's holding that door."), String::from("nobody is holding that door."));
-    Err(Some(crate::words::wg(g, &now, &was)))
+    Err(Some(String::from("nobody's holding that door.")))
 }
 
-/// doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) }
 }

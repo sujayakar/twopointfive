@@ -176,7 +176,6 @@ pub struct OutSnowBlast {
     pub radius: f64,
 }
 
-/// (audio_iface.ts PlayOpts: an object with some of these)
 #[derive(Clone, Debug, Default)]
 pub struct OutPlayOpts {
     pub rate: Option<f64>,

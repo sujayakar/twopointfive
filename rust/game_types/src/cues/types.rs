@@ -45,15 +45,9 @@ pub struct Man {
     pub said_t: f64,
     pub again_t: f64,
     pub stood_t: f64,
-    pub moved: Option<crate::cues::ManMoved>,
+    pub moved: Option<crate::roomfight::DefMoveKind>,
     pub from: String,
     pub covered: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
-pub enum ManMoved {
-    Cover,
-    Fallback,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]

@@ -8,7 +8,7 @@ use game_start::play::{Opts, Play};
 const SEEDS: [u32; 3] = [1, 2, 3];
 
 fn line_of(v: &game::view::TickView, man: f64) -> Option<BubbleView> { v.bubbles.iter().find(|b| b.man == Some(man)).cloned() }
-fn id_of(p: &Play, gd: GuardId) -> f64 { p.g.ch[p.g.gd[gd].ch].id }
+fn id_of(p: &Play, gd: GuardId) -> f64 { p.g.char_id(gd) }
 fn says(p: &mut Play, gd: GuardId, text: &str) { game::guards::say(&mut p.g, gd, text, None, Some(true)); }
 
 /// A FAILURE MEANS: a seat's HUD is told a line it should not show, or not told one it should. A man the fog hides has no line over him, unless he is the seat's own, whose line
@@ -57,7 +57,7 @@ fn a_line_on_the_floor_is_told_as_the_scene_says_it() {
         assert!(unseen > 0, "seed {}: the fog hid nobody ({} seen), so this proved nothing", seed, seen);
         // a man of the seat's own goes down: his line goes, and the call of it stands where he fell
         says(&mut p, mate, "moving.");
-        let at = p.g.ch[p.g.gd[mate].ch].pos;
+        let at = p.g.pos_of(mate);
         p.falls(mate, DownBy::Guard);
         p.frame();
         let v = p.view();
@@ -191,7 +191,7 @@ fn in_a_game_of_two_each_hud_is_told_its_own_men_its_own_line_and_its_own_room()
         assert_eq!(own(&p.view_of(1)), Some((String::from("who sent you?"), Some(b.me))), "seed {}: the second seat", seed);
         assert_eq!(own(&p.view_of(0)), None, "seed {}: the first seat", seed);
         // a teammate of the second seat's: his to find at the edge, and to the first only a man on the floor
-        let theirs = p.g.guards.iter().copied().find(|&gd| game::seats::in_seat(&p.g, pl, gd) && p.g.gd[gd].team == game::teams::Team::Operative && p.g.gd[gd].unit.is_some());
+        let theirs = p.g.guards.iter().copied().find(|&gd| game::seats::in_seat(&p.g, pl, gd) && p.g.team(gd).ours() && p.g.gd[gd].unit.is_some());
         let m = theirs.unwrap_or_else(|| panic!("seed {}: the second seat has no man of its own", seed));
         says(&mut p, m, "on you.");
         let id = id_of(&p, m);

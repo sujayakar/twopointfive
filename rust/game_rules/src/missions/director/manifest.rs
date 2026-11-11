@@ -1,3 +1,4 @@
+pub use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -18,7 +19,7 @@ pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<c
     Ok(manifest)
 }
 
-/// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
+/// the define pass of the level this names; its verbs are the manifest_* and program_* below
 fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.
@@ -70,11 +71,9 @@ pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, nam
     Ok(())
 }
 
-pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
-pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
+/// arithmetic on places, at the path a script writes: `director::util`.
 pub mod util {
-    pub use super::{dist_xz, yaw_to};
+    pub use crate::v3::{dist_xz, yaw_to};
 }
 
 fn err(out: &mut Vec<LintProblem>, what: String) { out.push(LintProblem { level: LintProblemLevel::Error, what }); }
@@ -115,67 +114,93 @@ pub(super) fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest
 /// the lint itself, handed the names of the level's routes (a route is the one thing of a level that lives in `g`)
 fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[String]) -> Vec<LintProblem> {
     let mut out: Vec<LintProblem> = Vec::new();
-    let no_devices = Vec::new();
-    let devices: &Vec<crate::scene_level::DeviceDef> = level.devices.as_ref().unwrap_or(&no_devices);
-    let no_volumes = Vec::new();
-    let volumes: &Vec<crate::scene_level::VolumeDef> = level.volumes.as_ref().unwrap_or(&no_volumes);
-    let no_plans = Vec::new();
-    let clear_plans: &Vec<crate::scene_level::RoomClearPlan> = level.clear_plans.as_ref().unwrap_or(&no_plans);
+    let devices: &[crate::scene_level::DeviceDef] = level.devices.as_deref().unwrap_or(&[]);
+    let volumes: &[crate::scene_level::VolumeDef] = level.volumes.as_deref().unwrap_or(&[]);
+    let clear_plans: &[crate::scene_level::RoomClearPlan] = level.clear_plans.as_deref().unwrap_or(&[]);
+    lint_doors_and_devices(m, level, devices, &mut out);
+    lint_routes_and_volumes(m, volumes, route_names, &mut out);
+    lint_plans(m, level, clear_plans, &mut out);
+    lint_marks_and_loadouts(m, &mut out);
+    lint_light_groups(m, level, devices, &mut out);
+    for (pn, p) in m.programs.iter() {
+        lint_program(m, &pn, p, &mut out);
+    }
+    lint_expects(m, &mut out);
+    out
+}
 
+/// Every door and device named is in the level; the error lists what is.
+fn lint_doors_and_devices(m: &Manifest, level: &LintManifestLevel, devices: &[crate::scene_level::DeviceDef], out: &mut Vec<LintProblem>) {
     for id in m.doors.iter() {
         if !door_is_in(level, &id) {
             let names: Vec<&str> = level.doors.iter().map(|d| d.name.as_str()).collect();
-            err(&mut out, format!("door '{}' is not in the level (doors: {})", id, names.join(", ")));
+            err(out, format!("door '{}' is not in the level (doors: {})", id, names.join(", ")));
         }
     }
     for id in m.devices.iter() {
         if !devices.iter().any(|d| device_name(d) == id) {
             let names: Vec<&str> = devices.iter().map(device_name).collect();
             let names = if names.is_empty() { String::from("none") } else { names.join(", ") };
-            err(&mut out, format!("device '{}' is not in the level (devices: {})", id, names));
+            err(out, format!("device '{}' is not in the level (devices: {})", id, names));
         }
     }
+}
+
+/// Every route and volume named is in the level.
+fn lint_routes_and_volumes(m: &Manifest, volumes: &[crate::scene_level::VolumeDef], route_names: &[String], out: &mut Vec<LintProblem>) {
     for id in m.routes.iter() {
-        if !route_names.iter().any(|name| *name == id) { err(&mut out, format!("route '{}' is not in the level", id)); }
+        if !route_names.iter().any(|name| *name == id) { err(out, format!("route '{}' is not in the level", id)); }
     }
     for id in m.volumes.iter() {
         if !volumes.iter().any(|v| v.name == id) {
-            err(&mut out, format!("volume '{}' is not in the level{}", id, if volumes.is_empty() { " (it authors none)" } else { "" }));
+            err(out, format!("volume '{}' is not in the level{}", id, if volumes.is_empty() { " (it authors none)" } else { "" }));
         }
     }
+}
+
+/// The breach plan named is there and whole; a room-clear plan named is one of the level's.
+fn lint_plans(m: &Manifest, level: &LintManifestLevel, clear_plans: &[crate::scene_level::RoomClearPlan], out: &mut Vec<LintProblem>) {
     for (id, k) in m.plans.iter() {
         if *k == PlanKind::Breach {
             match &level.breach {
-                None => err(&mut out, String::from("plan 'breach': the level has no breach plan (plans.breach)")),
+                None => err(out, String::from("plan 'breach': the level has no breach plan (plans.breach)")),
                 Some(b) => {
                     for dn in [&b.door, &b.next.door] {
-                        if !door_is_in(level, dn) { err(&mut out, format!("plan 'breach' names door '{}', not in the level", dn)); }
+                        if !door_is_in(level, dn) { err(out, format!("plan 'breach' names door '{}', not in the level", dn)); }
                     }
-                    if b.hostiles.is_empty() { err(&mut out, String::from("plan 'breach' has no hostiles")); }
+                    if b.hostiles.is_empty() { err(out, String::from("plan 'breach' has no hostiles")); }
                 }
             }
         } else if !clear_plans.iter().any(|p| p.room.as_deref() == Some(id.as_str()) || p.door == id) {
-            err(&mut out, format!("plan '{}': no room-clear plan of that room / door in the level", id));
+            err(out, format!("plan '{}': no room-clear plan of that room / door in the level", id));
         }
     }
+}
+
+/// Every mark has a finite place, and every loadout a team that can be spawned and tints in range.
+fn lint_marks_and_loadouts(m: &Manifest, out: &mut Vec<LintProblem>) {
     for (id, mark) in m.marks.iter() {
         match mark.pos {
-            None => err(&mut out, format!("mark '{}' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))", id)),
+            None => err(out, format!("mark '{}' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))", id)),
             Some(pos) => {
-                if !pos.iter().all(|x| x.is_finite()) { err(&mut out, format!("mark '{}' position is not finite", id)); }
+                if !pos.iter().all(|x| x.is_finite()) { err(out, format!("mark '{}' position is not finite", id)); }
             }
         }
     }
     for (id, l) in m.loadouts.iter() {
         if !teams().iter().any(|team| team == l.team.as_str()) {
-            err(&mut out, format!("loadout '{}': team '{}' cannot be spawned (guard / operative / hostile)", id, l.team.as_str()));
+            err(out, format!("loadout '{}': team '{}' cannot be spawned (guard / operative / hostile)", id, l.team.as_str()));
         }
         for t in [l.tint, l.tint2] {
             if let Some(t) = t {
-                if !t.iter().all(|x| x.is_finite() && *x >= 0.0 && *x <= 1.0) { err(&mut out, format!("loadout '{}': tint out of range", id)); }
+                if !t.iter().all(|x| x.is_finite() && *x >= 0.0 && *x <= 1.0) { err(out, format!("loadout '{}': tint out of range", id)); }
             }
         }
     }
+}
+
+/// Every light group named is carried by a light, a switch or a device of the level.
+fn lint_light_groups(m: &Manifest, level: &LintManifestLevel, devices: &[crate::scene_level::DeviceDef], out: &mut Vec<LintProblem>) {
     let mut groups: JsSet<String> = JsSet::new();
     for l in level.lights.iter() { groups.add(l.group.clone()); }
     for s in level.switchables.iter() { groups.add(s.group.clone()); }
@@ -183,45 +208,50 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
     for id in m.groups.iter() {
         if !groups.has(id.clone()) {
             let names: Vec<String> = groups.iter().filter(|name| !name.is_empty()).collect();
-            err(&mut out, format!("light group '{}' is not in the level (groups: {})", id, names.join(", ")));
+            err(out, format!("light group '{}' is not in the level (groups: {})", id, names.join(", ")));
         }
     }
-    for (pn, p) in m.programs.iter() {
-        if p.beats.is_empty() { warn(&mut out, format!("program '{}' declares no beats", pn)); }
-        if !p.triggers.iter().any(|t| t.kind == TriggerDefKind::Start) && p.triggers.is_empty() {
-            warn(&mut out, format!("program '{}' has no trigger — nothing will ever start a beat", pn));
+}
+
+/// A program has beats and a way to start one; its triggers are sound, and its when() predicates few enough.
+fn lint_program(m: &Manifest, pn: &str, p: &crate::director::ProgramDef, out: &mut Vec<LintProblem>) {
+    if p.beats.is_empty() { warn(out, format!("program '{}' declares no beats", pn)); }
+    if !p.triggers.iter().any(|t| t.kind == TriggerDefKind::Start) && p.triggers.is_empty() {
+        warn(out, format!("program '{}' has no trigger — nothing will ever start a beat", pn));
+    }
+    for t in p.triggers.iter() {
+        if !p.beats.has(t.beat.clone()) {
+            let detail = match t.kind {
+                TriggerDefKind::After => format!(" {}s", num_text(t.secs)),
+                TriggerDefKind::Enter => format!(" '{}'", t.volume.as_deref().unwrap_or("undefined")),
+                TriggerDefKind::Event => format!(" '{}'", t.event.map_or("undefined", |e| e.as_str())),
+                TriggerDefKind::Signal => format!(" '{}'", t.name.as_deref().unwrap_or("undefined")),
+                _ => String::new(),
+            };
+            err(out, format!("program '{}': trigger {}{} → beat '{}', which is not declared", pn, t.kind.as_str(), detail, t.beat));
         }
-        for t in p.triggers.iter() {
-            if !p.beats.has(t.beat.clone()) {
-                let detail = match t.kind {
-                    TriggerDefKind::After => format!(" {}s", num_text(t.secs)),
-                    TriggerDefKind::Enter => format!(" '{}'", t.volume.as_deref().unwrap_or("undefined")),
-                    TriggerDefKind::Event => format!(" '{}'", t.event.map_or("undefined", |e| e.as_str())),
-                    TriggerDefKind::Signal => format!(" '{}'", t.name.as_deref().unwrap_or("undefined")),
-                    _ => String::new(),
-                };
-                err(&mut out, format!("program '{}': trigger {}{} → beat '{}', which is not declared", pn, t.kind.as_str(), detail, t.beat));
-            }
-            if t.kind == TriggerDefKind::After && !t.secs.map_or(false, |s| s.is_finite() && s >= 0.0) {
-                err(&mut out, format!("program '{}': after({}) is not a finite delay", pn, num_text(t.secs)));
-            }
-            if t.kind == TriggerDefKind::Enter && !t.volume.as_ref().map_or(false, |v| m.volumes.has(v.clone())) {
-                err(&mut out, format!("program '{}': onEnter names volume '{}' the script never declared with D.volume", pn, t.volume.as_deref().unwrap_or("undefined")));
-            }
+        if t.kind == TriggerDefKind::After && !t.secs.map_or(false, |s| s.is_finite() && s >= 0.0) {
+            err(out, format!("program '{}': after({}) is not a finite delay", pn, num_text(t.secs)));
         }
-        if p.triggers.iter().filter(|t| t.kind == TriggerDefKind::When).count() as f64 > MAX_WHEN {
-            err(&mut out, format!("program '{}': more than {} when() predicates", pn, MAX_WHEN));
+        if t.kind == TriggerDefKind::Enter && !t.volume.as_ref().map_or(false, |v| m.volumes.has(v.clone())) {
+            err(out, format!("program '{}': onEnter names volume '{}' the script never declared with D.volume", pn, t.volume.as_deref().unwrap_or("undefined")));
         }
     }
+    if p.triggers.iter().filter(|t| t.kind == TriggerDefKind::When).count() as f64 > MAX_WHEN {
+        err(out, format!("program '{}': more than {} when() predicates", pn, MAX_WHEN));
+    }
+}
+
+/// What the script expects names a program it declares, and a time above zero.
+fn lint_expects(m: &Manifest, out: &mut Vec<LintProblem>) {
     for e in m.expects.iter() {
         if let Some(program) = &e.program {
-            if !m.programs.has(program.clone()) { err(&mut out, format!("expect: program '{}' is not declared", program)); }
+            if !m.programs.has(program.clone()) { err(out, format!("expect: program '{}' is not declared", program)); }
         }
         if e.kind == ManifestExpectsItemKind::Within && !e.max.map_or(false, |max| max > 0.0) {
-            err(&mut out, format!("expect.within: {} s", num_text(e.max)));
+            err(out, format!("expect.within: {} s", num_text(e.max)));
         }
     }
-    out
 }
 
 #[cfg(test)]
@@ -356,7 +386,7 @@ mod tests {
         manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), None);
         manifest_mark(&mut manifest, "m2", None, None);
         manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), ..LoadoutSpec::default() });
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Civilian, tint: Some([2.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, tint: Some([1.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         let mut level = LintManifestLevel::default();
         level.doors = vec![crate::scene_level::LevelDoorDef { name: "a".into(), ..crate::scene_level::LevelDoorDef::default() }];
@@ -371,7 +401,7 @@ mod tests {
             "plan 'nope': no room-clear plan of that room / door in the level",
             "mark 'm2' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))",
             "mark 'm3' position is not finite",
-            "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)",
+            "loadout 'l1': team 'civilian' cannot be spawned (guard / operative / hostile)",
             "loadout 'l1': tint out of range",
         ]);
     }

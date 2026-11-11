@@ -16,7 +16,7 @@ pub fn save_store_set() -> bool { false }
 
 /// Load asked for inside a step: a save in memory waits for the end of this update, anything else is a file's load.
 pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<String> {
-    let run = match g.saves.shelf.m.get(String::from(key)) {
+    let run = match g.saves.shelf.m.of(key) {
         Some(e) => e.info.run_id.clone(),
         None => return load_off_shelf(),
     };

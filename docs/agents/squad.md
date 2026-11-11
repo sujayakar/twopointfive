@@ -28,7 +28,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
 | `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
 | `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
-| `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
+| `group.rs` | the groups: a player's squad, an enemy squad and the response team (`qrf/`): its orders and door tools. `group::of` a man, `group::with` another |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
 block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the game asks for, `KeyB` (`?bkey` leaves it on B).
@@ -38,28 +38,28 @@ block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the gam
 **A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
 under it wins, and a door counts by the doorway the ray looks through.
 
-**The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+**The book** is `SquadOrders`, a group's `orders` (`g.group` is the one a pass is about). `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
-`Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
+`Task` (`duty.rs`): `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
 `flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
-click turns back from more, or puts it away. So do Tab and Esc.
+click turns back from more, or puts it away. So does Tab.
 
 **The ring's rows** (`squad_orders_flat_rows`) are one list: the rows of each tool a listed row opens, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
 tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind
 a last wedge, more.
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
-`can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
+`can` and `valid` may refuse, `issue` hands each man his `Task` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
 sent together on one way, then one man assents. A refusal is said by the man it is about, and "nobody's free for that." by the nearest (`say_why`).
 
 **The tick** (`squad_orders_tick`) runs after the door tools, `rear_watch_tick`, `cover_tick` and `pair_orders_tick`. For each man: give way to the
 fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may
 take his gun or feet, the muzzle drops off Sam, and `order` writes it all. When the last man of a `group` arrives he says "set."
 
-**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_whole`: no key picks a pair), unless the cursor is on one teammate or
+**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_sams`: no key picks a pair), unless the cursor is on one teammate or
 Shift picks a part. `goal_men` decides: the man under the cursor; everyone, on Sam himself; the men already on that door; with nothing going, half
 (`goal_half`: a whole pair if it can, else the nearer men); else the free men; else half of the biggest group. Nobody to spare says so (`GOAL_NONE`).
 `roster_of` makes the team: one or two men are one pair, three or four are Red and Blue (`unit.pair`). `squad_orders_men` is where to ask for men. In
@@ -102,7 +102,7 @@ tap on a door they stand stacked on is answered and moves nobody (`squad_orders_
 **How it ends.** Another order replaces it, and a job that finishes hands him a plain hold or the file. A man stopped short of his mark for
 `stuck_secs` takes where he stands as his mark. If that is a metre or more off he says "can't get through." and his group calls no "set."
 `squad_orders_drop` lets go of a dead man or one a drill takes (`mission::has`). In a fight the AI has him, a posted man pinned to his post
-(`set_pinned`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
+(`duty::pin`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
 
 ### The file
 

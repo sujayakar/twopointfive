@@ -1,5 +1,6 @@
 //! THE ROOMS a fight is fought in: which room a place is in, and free floor in it.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -53,7 +54,7 @@ pub fn room_fight_room_at(g: &mut crate::game::Game, p: V3) -> Option<RoomfightR
     }
     for &c in &q { g.fight.fill_mark[c as usize] = 0; }
     let room = match merge {
-        Some(r) => {   // (a room wallreact absorbed holds this one's Set in the TypeScript: it gets the same cells)
+        Some(r) => {   // (a room wallreact absorbed shares this one's cells, each with its own copy: it gets the same new cells)
             let same: Vec<_> = g.fight.rooms.iter().copied().filter(|o| *o != r && g.tab.roomfight_room[*o].cells.keys() == g.tab.roomfight_room[r].cells.keys()).collect();
             for c in cells.keys() { g.tab.roomfight_room[r].cells.add(c); for o in &same { g.tab.roomfight_room[*o].cells.add(c); } }
             r
@@ -92,7 +93,7 @@ pub(in crate::defenders) fn room_fight_free_near(g: &crate::game::Game, p: V3) -
 }
 
 /// `p` lies outside the rectangle round every room of the level's structure with open sky over it.
-pub(super) fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
+pub(super) fn room_fight_out_of_building(g: &crate::game::Game, p: V3) -> bool {
     let (mut x0, mut x1, mut z0, mut z1) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
     {
         let rooms = g.level.rooms();
@@ -113,7 +114,7 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 { continue; }
         let f = crate::guards::frame_of(g, d);
         let along = (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz;
         let off = (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz;
@@ -126,13 +127,13 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
 pub(super) fn room_fight_spot_free(g: &crate::game::Game, p: V3, self_: GuardId) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     for pl in crate::seats::men(g) {
-        if !crate::condition::down(g, g.pl[pl].ch) && flat(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }
+        if !crate::condition::down(g, g.pl[pl].ch) && dist_xz(g.player_pos(pl), p) < 0.8 { return false; }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != self_ && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, p) < 0.8 { return false; }
+        if o != self_ && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.pos_of(o), p) < 0.8 { return false; }
     }
     true
 }

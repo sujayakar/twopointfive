@@ -17,7 +17,7 @@ pub fn walk_len(from: V3, path: &[V3]) -> f64 {
 }
 
 /// The metres on foot from `a` to `b`, or to the free floor nearest it; infinite with no way there.
-pub fn on_foot(g: &mut Game, a: V3, b: V3) -> f64 {
+pub fn on_foot(g: &Game, a: V3, b: V3) -> f64 {
     crate::scene_collision::nav_grid_find_path(g, a, b, None, None).map_or(m::INF, |path| walk_len(a, &path))
 }
 
@@ -29,7 +29,7 @@ pub struct Walk {
 }
 
 /// His walk from `from` to `p`, if there is one and it ends within `near` of it.
-pub fn walk(g: &mut Game, from: V3, p: V3, near: f64) -> Option<Walk> {
+pub fn walk(g: &Game, from: V3, p: V3, near: f64) -> Option<Walk> {
     let path = crate::scene_collision::nav_grid_find_path(g, from, p, None, None)?;
     let end = *path.last()?;
     if v3::dist_xz(end, p) > near { return None; }
@@ -45,7 +45,7 @@ pub fn roomy(g: &Game, p: V3) -> bool {
 /// SOMEBODY HAS IT: within `apart` of `p` another man stands, or is on his way there, or means to, whatever rule or order sent him; or a player does.
 pub fn taken(g: &mut Game, gd: GuardId, p: V3, apart: f64) -> bool {
     let at = |q: Option<V3>| q.map_or(false, |q| v3::dist_xz(q, p) < apart);
-    if crate::seats::men_up(g).into_iter().any(|pl| at(Some(g.ch[g.pl[pl].ch].pos))) { return true; }
+    if crate::seats::men_up(g).into_iter().any(|pl| at(Some(g.player_pos(pl)))) { return true; }
     for o in g.guards.clone() {
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let m = &g.gd[o];
@@ -55,7 +55,7 @@ pub fn taken(g: &mut Game, gd: GuardId, p: V3, apart: f64) -> bool {
             || at(g.cond[m.ch].sup.cover)
             || at(m.body_duty.and_then(|d| d.spot))
             || at(m.standoff.and_then(|s| g.tab.guards_standoff[s].orbit_goal)) { return true; }
-        if g.gd[o].unit.is_some() && crate::seats::order_of(g, o).is_some_and(|a| at(g.tab.orders_assignment[a].post)) { return true; }
+        if g.gd[o].unit.is_some() && crate::duty::order(g, o).is_some_and(|a| at(g.tab.task[a].post)) { return true; }
     }
     false
 }

@@ -1,5 +1,5 @@
-//! A man's card as the page shows it (src/ui/kitCard.ts draw, drawDense; kitNoise.ts; gunStats.ts; the rows' words of src/game/kit.ts buildRowsTree), and the
-//! few presses and store lines only the desk asks for. Only the card as a tree stands here: its other forms are gone from the rules.
+//! A man's card as the page shows it (`src/ui/kitCard.ts` draws it), with the words of its rows, and the
+//! few presses and store lines only the desk asks for. Only the card as a tree stands here.
 //!
 //! A read takes `&mut Game` only because the helpers do: it leaves the cards as they were.
 use super::rows::{same_value, value_text};
@@ -18,7 +18,7 @@ pub struct CardFor {
     pub no_fog: bool,
 }
 
-/// Where the launcher's load is worked from (slotsetup.ts loadKeys; the words of the build's own keys, as player.rs words them).
+/// Where the launcher's load is worked from (in the words of the build's own keys).
 const LOAD_KEYS: &str = "press 2, then 2";
 /// Where your light is worked from.
 const LIGHT_KEYS: &str = "its gun's key again, then 3";
@@ -95,7 +95,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Trim if you => if m.trim == TrimId::Issued { "your own green joints" } else { "the joints: how you pick yourself out from above" },
         KitField::Trim => if m.trim == TrimId::Issued { "the pair colour on a four (red, blue)" } else { "the joints: how you tell him from above" },
         KitField::Big => {
-            let notes = big_note().get(String::from(big_of(m).as_str())).cloned().expect("every big thing has its line");
+            let notes = big_note().of(big_of(m).as_str()).cloned().expect("every big thing has its line");
             return notes[if you { 0 } else { 1 }].clone();
         }
     };
@@ -320,8 +320,8 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
         clip: worn,
         paste_why,
         words,
-        suit: suits().get(String::from(m.suit.as_str())).map(|s| s.tint),
-        trim: trims().get(String::from(m.trim.as_str())).map(|s| s.tint),
+        suit: suits().of(m.suit.as_str()).map(|s| s.tint),
+        trim: trims().of(m.trim.as_str()).map(|s| s.tint),
     }
 }
 

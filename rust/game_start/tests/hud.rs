@@ -1,6 +1,6 @@
 //! WHAT A SEAT'S HUD IS TOLD OF ITS OWN KEY AND OF THE FLOOR (`view.interact`, `alarm`, `stage`, `look`; rust/game_rules/src/sam/interact/hud.rs): the overlay draws these and asks nothing of a game.
 use game::game::{Interactable, InteractableKind as K};
-use game::view::{BackKey, Stage, ThingKind, TickView};
+use game::view::{Stage, ThingKind, TickView};
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
@@ -136,7 +136,7 @@ fn a_thing_on_a_man_names_him_and_a_body_stays_at_its_place() {
     for seed in SEEDS {
         let (mut p, _) = play(seed);
         let gd = p.hostiles()[0];
-        let feet = p.g.ch[p.g.gd[gd].ch].pos;
+        let feet = p.g.pos_of(gd);
         let on = |kind| Interactable { kind, guard: Some(gd), pos: [feet[0], feet[1] + 1.35, feet[2]], ..Interactable::default() };
         p.g.sets[p.g.seat].hover = Some(on(K::Guard));
         let R = p.view().interact.ring.expect("a ring on him");
@@ -218,8 +218,6 @@ fn the_look_is_the_tables_as_they_stand() {
         assert_eq!(look.mark_clear, !was.mark_clear, "seed {seed}");
         assert_eq!(look.ring.places, 6.0, "seed {seed}");
         assert_eq!(look.plan.sector_m, was.plan.sector_m, "seed {seed}: CONTROL");
-        p.g.k.backkey.tab = true; assert_eq!(p.view().look.back, BackKey::Tab, "seed {seed}");
-        p.g.k.backkey.tab = false; assert_eq!(p.view().look.back, BackKey::Esc, "seed {seed}");
     }
 }
 

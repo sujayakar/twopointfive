@@ -91,7 +91,7 @@ fn his_hammer_takes_a_locked_door_in_one_blow_or_two_where_the_frame_holds_a_boo
             let rounds = p.sam_rounds();
             assert!(game::game::game_select_verb(&mut p.g, Kind::Door, Some(Verb::Hammer)));
             p.tap("Space");
-            p.until(6.0, |p| !game::doors::door_locked(&p.g, d)).unwrap_or_else(|| panic!("seed {s}, pull {pull}: 6 s and the lock holds: {}", p.roll()));
+            p.until(6.0, |p| !p.g.dr[d].leaf.locked).unwrap_or_else(|| panic!("seed {s}, pull {pull}: 6 s and the lock holds: {}", p.roll()));
             p.run(0.5);
             assert_eq!(p.big_counts().0 as f64, want, "seed {s}, pull {pull}: blows");
             assert_eq!(p.sam_rounds(), rounds, "seed {s}, pull {pull}: the hammer fired");

@@ -4,8 +4,7 @@ use super::aim::{aim_legs, clamp, quiet_tick, Step, R};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::plan::KIT_PLAN;
 use super::types::*;
-use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
-use crate::doors::door_off;
+use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2};
 use crate::game::{Game, SlotKind};
 use crate::ids::*;
 use crate::m;
@@ -51,7 +50,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         let h0 = 1.15;
         b.quiet = true;
         b.h_to = h0 + (lamp_pos[1] - h0) * 3.0 / d;
-        b.legs = vec![Leg { yaw: yaw_to(p, lamp_pos), cap: K.gun_rate * R, min_t: QK.rise, hold: 0.1 }];
+        b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, lamp_pos), cap: K.gun_rate * R, min_t: QK.rise, hold: 0.1 }];
         b.leg = 0;
         b.leg_t = f64::NAN;
         to(g, b, "rise");
@@ -80,7 +79,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             st.a.lift_at = now;
             if QK.cut { gas_out(g, st, true); }
             to(g, b, "dark");
-            b.legs = vec![Leg { yaw: yaw_to(p, at(st, [0.0, -1.5, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }];
+            b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, at(st, [0.0, -1.5, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }];
             b.leg = 0;
             b.leg_t = f64::NAN;
             b.h_to = 1.0;
@@ -117,7 +116,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     quiet_tick(g, st, b)
 }
 /// THE SUIT, THE TRIM: no walk, no turn: he leans half a step toward the pool so that a shoulder catches it, holds, and leans back (down throughout)
-pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn lean_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     let face = st.plan.as_ref().map_or(0.0, |x| x.wall.face);
     let t = at(st, [0.0, face + KIT_PLAN.off_face, 0.0]);
@@ -131,7 +130,7 @@ pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Resul
     sam_stand(g, st);
     Ok(())
 }
-pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+pub(super) fn lean_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
     let el = g.time - b.pt;
@@ -150,7 +149,7 @@ pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
 }
 /// SAM'S WEAPON LIGHT on the quiet picture: one blink: the gun out, the beam on as his aim reaches the door's far jamb, across to the near one, held and off. No step, no hand on the leaf, no cost.
-pub(super) fn light_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn light_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     if !st.quiet || (st.walled && !st.hole) { return Err(String::from("no door to cross")); }
     if !in_hand(g, &crate::seats::here(g)) { return Err(String::from("no gun in his hand")); }
@@ -160,7 +159,7 @@ pub(super) fn light_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Resu
     if g.pl[g.player].holstered { press(st, draw_key(g, &crate::seats::here(g))); }
     Ok(())
 }
-pub(super) fn light_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+pub(super) fn light_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let el = g.time - b.pt;
@@ -172,7 +171,7 @@ pub(super) fn light_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step 
         let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
         let (w2, o) = (st.width / 2.0, st.plan.as_ref().map_or(0.0, |x| x.wall.face));
         b.quiet = true;
-        b.legs = vec![Leg { yaw: yaw_to(p, at(st, [-sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }, Leg { yaw: yaw_to(p, at(st, [sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: QK.light.sweep, hold: QK.light.hold }];
+        b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, at(st, [-sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }, Leg { yaw: crate::v3::yaw_to(p, at(st, [sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: QK.light.sweep, hold: QK.light.hold }];
         b.leg = 0;
         b.leg_t = f64::NAN;
         to(g, b, "act");
@@ -228,12 +227,12 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
 }
 pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage) {
     life_off(g, st, true);
-    let hinge = st.door.filter(|&d| !door_off(g, d)).map(|d| g.dr[d].def.hinge);
+    let hinge = st.door.filter(|&d| !g.dr[d].leaf.off).map(|d| g.dr[d].def.hinge);
     let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
     st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, moved: 0.0 });
-    st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
+    st.a.cost_feet = v2(g.player_pos(g.player));
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;
     st.a.cost_lamp = Some(super::stage::hang_lamp(g, "kitview_cost", 0.0, p, [0.0, -1.0, 0.0], c.color, c.intensity, c.range, 0.0, 180.0, c.radius));
@@ -246,17 +245,17 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
     let el = now - st.a.cost_t;
     let a = cost_at(el);
     let pl = g.player;
-    let feet = g.ch[g.pl[pl].ch].pos;
+    let feet = g.player_pos(pl);
     st.a.stow_t = now;
     let mut last = st.a.cost_last.unwrap_or_default();
     last.moved = m::max(last.moved, flat(feet, st.a.cost_feet));
     if st.a.asked.is_none() && !a.done {
         g.pl[pl].crouch = false;
         if a.open {
-            if let Some(d) = st.door.filter(|&d| !door_off(g, d)) {
-                crate::doors::door_set_locked(g, d, false);
+            if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) {
+                g.dr[d].leaf.locked = false;
                 let f = at(st, [0.0, 1.0, 0.0]);
-                let id = g.ch[g.pl[pl].ch].id;
+                let id = g.player_id(pl);
                 crate::doors::doors_crack(g, d, f, id, st.a.step_dt, None, Some(c.swing), Some(c.wide_deg * R));
             }
             if !last.up {
@@ -270,7 +269,7 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
             }
             last.up = true;
         }
-        if let Some(d) = st.door.filter(|&d| !door_off(g, d)) { last.leaf = m::max(last.leaf, m::abs(crate::doors::door_angle(g, d) - st.leaf_shut)); }
+        if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) { last.leaf = m::max(last.leaf, m::abs(g.dr[d].leaf.angle - st.leaf_shut)); }
         st.a.cost_last = Some(last);
         return true;
     }
@@ -315,7 +314,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
         if !st.a.life_on.unwrap_or(QK.idle.on) { st.a.life_next = f64::NAN; return; }
         if busy || st.a.life_next.is_nan() { st.a.life_next = now + QK.idle.every[st.a.life_n as usize % QK.idle.every.len()]; return; }
         if now < st.a.life_next || (st.a.hi.is_some() && st.a.rest_until - now < QK.idle.out * 2.0 + QK.idle.stay + 0.5) { return; }
-        let sam_p = g.ch[g.pl[g.player].ch].pos;
+        let sam_p = g.player_pos(g.player);
         if off_rest(g, st) || flat(sam_p, st.sam) > K.on_slot || away(g, st) { return; }
         let hung = st.inside.filter(|l| g.engine.lights.lights.contains(l));
         let o = &QK.own;
@@ -330,7 +329,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
     let a = idle_at(now - st.a.life_t);
     let Some(l) = st.a.life_lamp.filter(|_| !a.done) else { life_off(g, st, false); return };
     let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
-    let way = if st.door.map_or(false, |d| !door_off(g, d)) { st.latch } else { -sg };
+    let way = if st.door.map_or(false, |d| !g.dr[d].leaf.off) { st.latch } else { -sg };
     let h = st.a.life_home;
     let i = (if st.a.life_hung { QK.own.intensity * QK.idle.gain * a.env } else { QK.own.intensity * st.a.blade }) * a.lit;
     let r = &mut g.tab.light[l];

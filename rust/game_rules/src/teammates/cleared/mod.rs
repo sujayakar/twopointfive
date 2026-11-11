@@ -25,11 +25,11 @@ fn grid(g: &Game) -> &[u16] {
 }
 
 /// May a flood stand on this cell: on the grid, not shut, not a doorway.
-fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
+fn free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
     // (`+ 0.0`: a Map's key is the same for −0 and 0, Num's is by bits)
-    g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num(i + 0.0))
+    g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num::of(i))
 }
 
 /// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.
@@ -216,13 +216,13 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
     g.cleared.last = g.time;
     for gd in crate::seats::team_squad(g, &crate::seats::here(g)) {
         if !crate::condition::down(g, g.gd[gd].ch) {
-            let p = g.ch[g.gd[gd].ch].pos;
+            let p = g.pos_of(gd);
             cleared_rooms_mark(g, p);
         }
     }
     for pl in crate::seats::men(g) {
         if !crate::condition::down(g, g.pl[pl].ch) {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             cleared_rooms_mark(g, p);
         }
     }
@@ -255,7 +255,7 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
     let mut metres = 0.0;
     let mut a = from;
     for &b in path {
-        let l = m::hyp2(b[0] - a[0], b[2] - a[2]);
+        let l = v3::dist_xz(b, a);
         let n = m::max(1.0, m::ceil(l / 0.25));
         let mut i = 1.0;
         while i <= n {
@@ -273,7 +273,7 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
 mod tests {
     use super::*;
 
-    /// The metres against the TypeScript's own bits (cleared.ts dearAlong under EXACT, a cell dear where its x is even).
+    /// The pinned metres of `cleared_rooms_dear_along`, a cell dear where its x is even.
     #[test]
     fn dear_along_keeps_the_typescripts_bits() {
         let mut g = Game::blank();

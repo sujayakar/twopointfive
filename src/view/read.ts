@@ -121,11 +121,11 @@ export function readThrowView(b: Uint8Array): ThrowView { const I = new In(b), r
 export interface AimView { ring: AimRing | null; dot: GunDot | null; tooClose: boolean; throw: ThrowView | null }
 function readAimViewIn(I: In): AimView { return { ring: I.bool() ? readAimRingIn(I) : null, dot: I.bool() ? readGunDotIn(I) : null, tooClose: I.bool(), throw: I.bool() ? readThrowViewIn(I) : null }; }
 export function readAimView(b: Uint8Array): AimView { const I = new In(b), r = readAimViewIn(I); if (I.p !== b.length) throw new Error(`the view: AimView is ${b.length} bytes and ${I.p} were read`); return r; }
-export type BigCarried = 'shotgun' | 'hammer';
-const BigCarriedWords: readonly BigCarried[] = ['shotgun', 'hammer'];
-function readBigCarriedIn(I: In): BigCarried { return I.word(BigCarriedWords, 'BigCarried'); }
-export interface WornView { man: number; goggles: boolean; big: BigCarried | null }
-function readWornViewIn(I: In): WornView { return { man: I.float64(), goggles: I.bool(), big: I.bool() ? readBigCarriedIn(I) : null }; }
+export type BigTool = 'shotgun' | 'hammer';
+const BigToolWords: readonly BigTool[] = ['shotgun', 'hammer'];
+function readBigToolIn(I: In): BigTool { return I.word(BigToolWords, 'BigTool'); }
+export interface WornView { man: number; goggles: boolean; big: BigTool | null }
+function readWornViewIn(I: In): WornView { return { man: I.float64(), goggles: I.bool(), big: I.bool() ? readBigToolIn(I) : null }; }
 export function readWornView(b: Uint8Array): WornView { const I = new In(b), r = readWornViewIn(I); if (I.p !== b.length) throw new Error(`the view: WornView is ${b.length} bytes and ${I.p} were read`); return r; }
 export type Pair = 'red' | 'blue';
 const PairWords: readonly Pair[] = ['red', 'blue'];
@@ -229,11 +229,8 @@ export function readNetLook(b: Uint8Array): NetLook { const I = new In(b), r = r
 export interface AttentionLook { ringM: number; wayReask: number }
 function readAttentionLookIn(I: In): AttentionLook { return { ringM: I.float64(), wayReask: I.float64() }; }
 export function readAttentionLook(b: Uint8Array): AttentionLook { const I = new In(b), r = readAttentionLookIn(I); if (I.p !== b.length) throw new Error(`the view: AttentionLook is ${b.length} bytes and ${I.p} were read`); return r; }
-export type BackKey = 'tab' | 'esc';
-const BackKeyWords: readonly BackKey[] = ['tab', 'esc'];
-function readBackKeyIn(I: In): BackKey { return I.word(BackKeyWords, 'BackKey'); }
-export interface HudLook { ring: RingLook; plan: PlanLook; net: NetLook; attention: AttentionLook; lineClear: boolean; markClear: boolean; back: BackKey }
-function readHudLookIn(I: In): HudLook { return { ring: readRingLookIn(I), plan: readPlanLookIn(I), net: readNetLookIn(I), attention: readAttentionLookIn(I), lineClear: I.bool(), markClear: I.bool(), back: readBackKeyIn(I) }; }
+export interface HudLook { ring: RingLook; plan: PlanLook; net: NetLook; attention: AttentionLook; lineClear: boolean; markClear: boolean }
+function readHudLookIn(I: In): HudLook { return { ring: readRingLookIn(I), plan: readPlanLookIn(I), net: readNetLookIn(I), attention: readAttentionLookIn(I), lineClear: I.bool(), markClear: I.bool() }; }
 export function readHudLook(b: Uint8Array): HudLook { const I = new In(b), r = readHudLookIn(I); if (I.p !== b.length) throw new Error(`the view: HudLook is ${b.length} bytes and ${I.p} were read`); return r; }
 export type AttentionMode = 'go' | 'look' | 'lent';
 const AttentionModeWords: readonly AttentionMode[] = ['go', 'look', 'lent'];

@@ -30,7 +30,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | `coverfire.rs` | rounds into breakable cover at a man known to be behind it |
 | `nvg.rs`, `irlight.rs` | whether the team is dark and each man's goggles; the infrared flood on the goggles |
 | `irlaser.rs` | Sam's infrared laser |
-| `silent.rs` | the silent posture, and `round_held`, the one question every fire hold goes through |
+| `silent.rs` | the silent posture. `round_held`, the one question every fire hold goes through, is `duty.rs` |
 | `holdfire.rs` | nobody fires first, whatever the posture |
 | `unseen.rs`, `sneak/` | the team sneaking because Sam is; the partner's careful follow |
 | `spotted.rs` | what a silent man does when a defender is onto him |
@@ -38,14 +38,14 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | `showwhy.rs` | waves, fists and lines that say why a teammate is waiting |
 
 Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/people/guards/search.rs`, numbers in `LightsK`.
-Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs` and `flow.rs`. Openings dealt to stopped men are `cover/`, the team's pace
+Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs`, `flow.rs` and `flow_in.rs`. Openings dealt to stopped men are `cover/`, the team's pace
 `teampace.rs` (`squad.md`).
 
 The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `src/render/lights.ts` caps them.
 
 ## How it works
 
-**Order in the tick** (`step_seats_on_first`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
+**Order in the tick** (`STEPS`): `silent_tick`, `spotted_tick`, `squad_orders_tick`, `room_fight_tick`, `show_why_tick`, and later
 `nvg_tick`, `coverfire_tick`, `ir_light_tick`. The posture stands before the orders pose the men.
 
 **The fight runs on top of the order.** `room_fight_tick` gives each teammate an `Op` and calls `room_fight_tick_op`. An order owns his legs and the
@@ -118,7 +118,7 @@ when its own men are down.
 and his mark's, and `seen_way` in `rust/game_rules/src/squad_orders/orders/routes.rs` adds `seen_price`.
 
 **Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. A
-piece is chewed only where cover breaks (`chew_live`).
+piece is chewed only where cover breaks (`wall_charge_on`).
 
 **Why** (`show_why_tick`): masked by Sam, a wave and "you're in my line." (`masked`, one voice: `line_said_by`); a stack waiting, squeezes up the file
 then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "I've got this door.".

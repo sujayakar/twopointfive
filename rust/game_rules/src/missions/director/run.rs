@@ -26,22 +26,15 @@ fn uncaught<T>(r: Result<T, String>) -> T {
 // ---------------------------------------------------------------- small helpers
 /// `g.guards.find(x => x.char.id === id)`
 fn guard_by_char_id(g: &Game, id: f64) -> Option<GuardId> {
-    g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == id)
+    g.guards.iter().copied().find(|&x| g.char_id(x) == id)
 }
 /// `R.byName.get(name)`: names are unique in R.beats, as startBeat replaces a spent record
 fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> {
     g.tab.director_run[r].beats.iter().copied().find(|&b| g.tab.director_live_beat[b].name == name)
 }
 /// `gd.team === 'guard' ? 'search' : 'alert'`
-fn hand_back_state(g: &Game, gd: GuardId) -> crate::squad::EndGuardScriptState {
-    if g.gd[gd].team == crate::teams::Team::Guard { crate::squad::EndGuardScriptState::Search } else { crate::squad::EndGuardScriptState::Alert }
-}
-/// the man's chest, else `up` over his feet
-fn chest_of(g: &Game, c: CharId, up: f64) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
+fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
+    if g.team(gd) == crate::teams::Team::Guard { crate::game::GuardState::Search } else { crate::game::GuardState::Alert }
 }
 /// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word (TS 505)
 fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
@@ -94,7 +87,7 @@ pub(in crate::missions) fn director_programs(g: &crate::game::Game) -> Vec<Strin
 /// Why `name` cannot start now; None = it can.
 fn director_can_start(g: &crate::game::Game, name: &str) -> Option<String> {
     let Some(manifest) = &g.director.manifest else { return Some(String::from("this level has no script")) };
-    if manifest.programs.get(String::from(name)).is_none() {
+    if manifest.programs.of(name).is_none() {
         let list = manifest.programs.keys().join(", ");
         return Some(format!("no program '{}' (programs: {})", name, if list.is_empty() { "none" } else { list.as_str() }));
     }
@@ -146,7 +139,7 @@ pub(in crate::missions) fn director_start(g: &mut crate::game::Game, name: &str,
     if let Some(why) = director_can_start(g, name) {
         return Some(why);
     }
-    let def = g.director.manifest.as_ref().unwrap().programs.get(String::from(name)).unwrap().clone();
+    let def = g.director.manifest.as_ref().unwrap().programs.of(name).unwrap().clone();
     let seed = seed_of(opts.and_then(|o| o.seed), g.director.serial);
     g.director.serial += 1.0;
     let triggers = def.triggers.clone();
@@ -156,7 +149,7 @@ pub(in crate::missions) fn director_start(g: &mut crate::game::Game, name: &str,
         def,
         t: 0.0,
         tick_n: 0.0,
-        dice: crate::dice::Die::new(js::to_u32(seed)),
+        dice: crate::dice::Die(js::to_u32(seed)),
         beats: Vec::new(),
         fired: JsSet::new(),
         signals: Vec::new(),
@@ -312,7 +305,7 @@ fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[
 
 /// A second trigger for a running beat is a no-op; one re-started after it ended replaces its record.
 pub(super) fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> {
-    let Some(script) = g.tab.director_run[r].def.beats.get(String::from(name)).map(|b| b.fn_) else {
+    let Some(script) = g.tab.director_run[r].def.beats.of(name).map(|b| b.fn_) else {
         return None;
     };
     let cur = beat_by_name(g, r, name);
@@ -407,7 +400,7 @@ fn director_resume(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveB
     n > 0.0
 }
 
-/// A c.on's filter: the closures of levels/*.script.ts, by what each captured. (a throw from `c.query.pos` in Heard is uncaught there: TS 627)
+/// Does the event pass a wait's filter. (`Heard` panics if its man cannot be found)
 fn filter_holds(g: &Game, r: DirectorRunId, f: &EventFilter, e: &EventView) -> bool {
     let p = e.pos;
     match f {
@@ -418,7 +411,7 @@ fn filter_holds(g: &Game, r: DirectorRunId, f: &EventFilter, e: &EventView) -> b
         EventFilter::OrderSignal => e.name.as_deref().map_or(false, |n| n.starts_with("order:")),
         EventFilter::Heard { by, run_level, run_within, walk_level, walk_within } => {
             let at = uncaught(director_query_pos_unit(g, r, by));
-            let near = |within: f64| m::hyp2(at[0] - p[0], at[2] - p[2]) <= within;
+            let near = |within: f64| v3::dist_xz(at, p) <= within;
             (e.level >= *run_level && near(*run_within)) || (e.level >= *walk_level && near(*walk_within))
         }
     }
@@ -449,7 +442,7 @@ fn director_holds(g: &mut crate::game::Game, r: DirectorRunId, c_2: &mut crate::
                     continue;
                 }
                 let any_name = c.name.as_deref().map_or(true, |n| n.is_empty());
-                if c.kind == CondArm3Kind::Signal && !any_name && e.name != c.name {
+                if c.kind == crate::director::EventViewKind::Signal && !any_name && e.name != c.name {
                     continue;
                 }
                 if c.filter.as_ref().map_or(true, |f| filter_holds(g, r, f, e)) {
@@ -548,7 +541,7 @@ fn unit_guard(g: &Game, r: DirectorRunId, id: f64) -> Option<GuardId> {
     }
 }
 
-/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts.
+/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from `combat::fire_weapon`.
 fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     let mut i = 0;
     while i < g.tab.director_run[r].bursts.len() {
@@ -568,7 +561,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
             continue;
         }
         let at: Option<V3> = match &b.at {
-            RunBurstsItemAt::Unit(u) => unit_guard(g, r, u.id).map(|v| chest_of(g, g.gd[v].ch, 1.1)),
+            RunBurstsItemAt::Unit(u) => unit_guard(g, r, u.id).map(|v| g.ch[g.gd[v].ch].bone_or(crate::character::Bone::Chest, 1.1)),
             RunBurstsItemAt::List(v) => Some([v[0], js::or(v[1], 1.1), v[2]]),
             RunBurstsItemAt::Mark(mk) => {
                 let p = uncaught(director_place_of(g, &Place::Mark(mk.clone())));
@@ -595,7 +588,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands.
+/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) `doors_kick_in` does the boot's work from where he stands.
 fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
         return;
@@ -667,13 +660,13 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
     let units = &g.tab.director_run[r].units;
     match who {
         DirectorInsideVolumeWho::Sam => sam,
-        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.gd[gd].team == crate::teams::Team::Operative && alive(gd) && in_volume(v, g.ch[g.gd[gd].ch].pos)),
-        DirectorInsideVolumeWho::AnyUnit => units.values().any(|u| alive(u.gd) && in_volume(v, g.ch[g.gd[u.gd].ch].pos)),
-        DirectorInsideVolumeWho::Unit(u) => units.get(crate::Num(u.id)).map_or(false, |x| alive(x.gd) && in_volume(v, g.ch[g.gd[x.gd].ch].pos)),
+        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.team(gd).ours() && alive(gd) && in_volume(v, g.pos_of(gd))),
+        DirectorInsideVolumeWho::AnyUnit => units.values().any(|u| alive(u.gd) && in_volume(v, g.pos_of(u.gd))),
+        DirectorInsideVolumeWho::Unit(u) => units.get(crate::Num(u.id)).map_or(false, |x| alive(x.gd) && in_volume(v, g.pos_of(x.gd))),
     }
 }
 
-// The Query's methods: closures in the TypeScript (TS 845-856), with the skeleton's names: a beat calls them.
+// The Query's methods: a beat calls them.
 pub(in crate::missions) fn director_query_alive(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     unit_guard(g, r, u.id).map_or(false, |gd| !crate::condition::down(g, g.gd[gd].ch))
 }
@@ -686,17 +679,16 @@ pub(in crate::missions) fn director_query_state(g: &crate::game::Game, r: Direct
 }
 pub(in crate::missions) fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<V3, String> {
     let gd = director_guard_of(g, r, u)?;
-    Ok(v3::copy(g.ch[g.gd[gd].ch].pos))
+    Ok(v3::copy(g.pos_of(gd)))
 }
-/// (director.ts Query.door; DOORWAY.oneWay is settled on: swing is the door's)
 pub(in crate::missions) fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {
-        angle: crate::doors::door_angle(g, id),
+        angle: g.dr[id].leaf.angle,
         open: !crate::doors::door_is_closed(g, id),
-        latched: crate::doors::door_latched(g, id),
-        locked: crate::doors::door_locked(g, id),
-        broken: crate::doors::door_lock_broken(g, id),
+        latched: g.dr[id].leaf.latched,
+        locked: g.dr[id].leaf.locked,
+        broken: g.dr[id].leaf.lock_broken,
         swing: crate::doors::door_swing(g, id),
     })
 }

@@ -111,10 +111,10 @@ fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
         let asks = ask.is_some();
         let line = match ask {
             Some(a) => a,
-            None => { let now = beat.sam_now.clone().unwrap_or_else(|| beat.sam.clone()); crate::words::wg(g, &now, &beat.sam) }
+            None => beat.sam.clone(),
         };
         let tokens = tokens_map(&ctx.tokens);
-        if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
+        if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js::utf16_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
             let id = alloc::format!("S:{}:{}{}", sc.id, stage_word(s), if asks { "?" } else { "" });
             if let Some(m) = mem.as_deref_mut() { m.said.set(id.clone(), ctx.time); m.last = Some(id.clone()); }
             return SamPick { text };
@@ -122,10 +122,10 @@ fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
     }
     let tiers: Vec<Vec<crate::dialogue::SamLine>> = match q {
         Some(kind) => vec![
-            sam_lines_where(g, |l| l.s == SamLineS::Q && l.q == Some(kind)),
-            sam_lines_where(g, |l| l.s == SamLineS::Ask),
+            sam_lines_where(|l| l.s == SamLineS::Q && l.q == Some(kind)),
+            sam_lines_where(|l| l.s == SamLineS::Ask),
         ],
-        None => vec![sam_lines_where(g, |l| l.s.as_str() == cat.as_str())],
+        None => vec![sam_lines_where(|l| l.s.as_str() == cat.as_str())],
     };
     let facts = sam_facts(g, ctx, variant);
     let c = choose_sam_line(g, &tiers, ctx, &facts, mem, rnd);
@@ -153,7 +153,7 @@ pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::
     let mut die = |g: &mut Game| crate::dice::draw_of(g, "dialogue::sam_key_line_for#1", gd);
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
-    let tiers = [sam_lines_where(g, |l| l.s == SamLineS::Key)];
+    let tiers = [sam_lines_where(|l| l.s == SamLineS::Key)];
     let facts = sam_facts(g, &ctx, variant);
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
@@ -167,7 +167,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     let mut die = |g: &mut Game| crate::dice::draw_of(g, "dialogue::sam_remark_for#1", gd);
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
-    let tiers = [sam_lines_where(g, |l| l.s == SamLineS::Open && l.needs.as_ref().is_some_and(|n| n.contains(&SamNeed::Gun)))];
+    let tiers = [sam_lines_where(|l| l.s == SamLineS::Open && l.needs.as_ref().is_some_and(|n| n.contains(&SamNeed::Gun)))];
     let facts = sam_facts(g, &ctx, crate::character::HoldVariant::Gun);
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
@@ -175,7 +175,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     c.map(|c| crate::dialogue::SamRemarkFor { text: c.text })
 }
 
-/// The hold's script if it is still live at this exchange: `sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null`, written twice in the TypeScript (:945, :993).
+/// The hold's script if it is still live at this exchange, up to stage 4.
 fn live_script(g: &mut Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId, stage_n: f64) -> Option<crate::dialogue::Script> {
     match script_for(g, ctx, talk) {
         Some(sc) if stage_n <= 4.0 && script_live(&sc, ctx) => Some(sc),
@@ -196,7 +196,7 @@ fn sam_eligible(lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::Dialo
                 }
             }
         }
-        let said = crate::dialogue::SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: None, guide: l.guide.clone() };
+        let said = crate::dialogue::SaidTextL { text: l.text.clone(), away: l.away.clone(), bare: None };
         let line = said_text(&said, ctx);
         let text = match expand(&line, &tokens) { Some(t) if !t.is_empty() => t, _ => continue };
         out.push((l.clone(), text, sam_weight(l)));
@@ -204,7 +204,7 @@ fn sam_eligible(lines: &[crate::dialogue::SamLine], ctx: &crate::dialogue::Dialo
     out
 }
 
-/// A line's share of the draw: the variant / floor / man lines beat the neutral ones. The product in the TypeScript's order.
+/// A line's share of the draw: the variant / floor / man lines beat the neutral ones. Keep the product in this order: the draw reads its bits.
 fn sam_weight(l: &crate::dialogue::SamLine) -> f64 {
     let w = l.w.unwrap_or(1.0);
     let needs = if l.needs.as_ref().is_some_and(|n| !n.is_empty()) { 1.6 } else { 1.0 };
@@ -226,10 +226,8 @@ fn sam_draw(pool: &[Eligible], roll: f64) -> usize {
     chosen
 }
 
-/// `SAM_LINES.filter(...)`, as copies of the rows.
-fn sam_lines_where(g: &Game, keep: impl Fn(&crate::dialogue::SamLine) -> bool) -> Vec<crate::dialogue::SamLine> {
-    g.m.dialogue.sam_lines.iter().filter(|l| keep(l)).cloned().collect()
-}
+/// Sam's lines that are kept
+fn sam_lines_where(keep: impl Fn(&crate::dialogue::SamLine) -> bool) -> Vec<crate::dialogue::SamLine> { crate::dialogue::sam_lines().into_iter().filter(keep).collect() }
 
 /// The memory's row out of the game for the length of a pick (a pick takes `g` and the row at once); the caller writes it back with `*sam_memory_of(g) = mem`.
 /// Nothing a pick reaches reads the row: the only other samMemoryOf calls in the game are :770 (interrogate) and the :2083 restore.
@@ -263,31 +261,6 @@ fn stage_word(s: crate::dialogue::StageKey) -> String {
         crate::dialogue::StageKey::X => String::from("x"),
     }
 }
-
-/// A string's `.length` in JavaScript: UTF-16 units, not bytes (the lines hold "…" and "—").
-fn js_len(s: &str) -> f64 {
-    s.encode_utf16().count() as f64
-}
-
-/// `Object.entries` of an intel table but its 'sc:<script id>' rows (the map `sc`, walked after these): the TypeScript's key beside the field it became (a struct's order, not the literal's: only the order of the lint's messages feels it).
-macro_rules! intel_rows { ($t:expr) => { [
-    ("steady", &$t.steady), ("nervy", &$t.nervy), ("hard", &$t.hard), ("*", &$t.under),
-    ("pedant", &$t.pedant), ("selfown", &$t.selfown), ("folder", &$t.folder), ("ramble", &$t.ramble), ("fan", &$t.fan), ("stoic", &$t.stoic), ("con", &$t.con), ("game", &$t.game), ("menace", &$t.menace),
-    ("steady:none", &$t.steady_none), ("steady:heard", &$t.steady_heard), ("steady:glimpsed", &$t.steady_glimpsed), ("steady:saw", &$t.steady_saw), ("steady:sawHurt", &$t.steady_saw_hurt),
-    ("nervy:none", &$t.nervy_none), ("nervy:heard", &$t.nervy_heard), ("nervy:glimpsed", &$t.nervy_glimpsed), ("nervy:saw", &$t.nervy_saw), ("nervy:sawHurt", &$t.nervy_saw_hurt),
-    ("hard:none", &$t.hard_none), ("hard:heard", &$t.hard_heard), ("hard:glimpsed", &$t.hard_glimpsed), ("hard:saw", &$t.hard_saw), ("hard:sawHurt", &$t.hard_saw_hurt),
-    ("*:none", &$t.__none), ("*:heard", &$t.__heard), ("*:glimpsed", &$t.__glimpsed), ("*:saw", &$t.__saw), ("*:sawHurt", &$t.__saw_hurt),
-    ("pedant:steady", &$t.pedant_steady), ("pedant:nervy", &$t.pedant_nervy), ("pedant:hard", &$t.pedant_hard),
-    ("selfown:steady", &$t.selfown_steady), ("selfown:nervy", &$t.selfown_nervy), ("selfown:hard", &$t.selfown_hard),
-    ("folder:steady", &$t.folder_steady), ("folder:nervy", &$t.folder_nervy), ("folder:hard", &$t.folder_hard),
-    ("ramble:steady", &$t.ramble_steady), ("ramble:nervy", &$t.ramble_nervy), ("ramble:hard", &$t.ramble_hard),
-    ("fan:steady", &$t.fan_steady), ("fan:nervy", &$t.fan_nervy), ("fan:hard", &$t.fan_hard),
-    ("stoic:steady", &$t.stoic_steady), ("stoic:nervy", &$t.stoic_nervy), ("stoic:hard", &$t.stoic_hard),
-    ("con:steady", &$t.con_steady), ("con:nervy", &$t.con_nervy), ("con:hard", &$t.con_hard),
-    ("game:steady", &$t.game_steady), ("game:nervy", &$t.game_nervy), ("game:hard", &$t.game_hard),
-    ("menace:steady", &$t.menace_steady), ("menace:nervy", &$t.menace_nervy), ("menace:hard", &$t.menace_hard),
-] } }
-use intel_rows;
 
 #[cfg(test)]
 mod tests {
@@ -381,7 +354,7 @@ mod tests {
         *sam_memory_of(&mut g) = lent;
         let row = sam_memory_of(&mut g);
         assert_eq!(row.last.as_deref(), Some("Sp1"));
-        assert_eq!(row.said.get(String::from("So1")).copied(), Some(3.0));
+        assert_eq!(row.said.of("So1").copied(), Some(3.0));
     }
 
     #[test]
@@ -403,7 +376,7 @@ mod tests {
     /// A FAILURE MEANS: a line under the cap is thrown out because a dash is three bytes.
     #[test]
     fn a_lines_length_is_its_characters_not_its_bytes() {
-        assert_eq!(js_len("Lights die — what's next…"), 25.0);
+        assert_eq!(js::utf16_len("Lights die — what's next…"), 25.0);
     }
 
     /// A FAILURE MEANS: Sam's {sawWhere} finds nothing, so a line that names it is never said.
@@ -412,8 +385,8 @@ mod tests {
         let mut t = crate::dialogue::DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the vault"));
         let m = tokens_map(&t);
-        assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));
-        assert_eq!(m.get(String::from("door")), Some(&None));
+        assert_eq!(m.of("sawWhere"), Some(&Some(String::from("the vault"))));
+        assert_eq!(m.of("door"), Some(&None));
     }
 
 }

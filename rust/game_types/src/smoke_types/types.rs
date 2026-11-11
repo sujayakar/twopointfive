@@ -17,13 +17,6 @@ pub enum SmokeEmitterKind {
     Puff,
     Breath,
 }
-/// which lattice an emitter lands on (smoke/types.ts:22 SmokeEmitter.lattice; absent = by kind, smoke/smoke.ts:182)
-#[derive(Clone, Copy, Debug)]
-pub enum SmokeEmitterLattice {
-    Fine,
-    Coarse,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SmokeEmitter {
     /// an open fire's: the graphics preset that sheds a fire's smoke drops it
@@ -43,7 +36,7 @@ pub struct SmokeEmitter {
     pub expand: Option<f64>,
     pub attack: Option<f64>,
     pub jitter: Option<f64>,
-    pub lattice: Option<crate::smoke_types::SmokeEmitterLattice>,
+    pub lattice: Option<crate::smoke_types::SmokeLattice>,
     pub confined: Option<bool>,
     pub prio: Option<f64>,
     pub min_voxels: Option<f64>,
@@ -66,21 +59,15 @@ pub struct SmokePush {
     pub dir: V3,
     pub speed: f64,
     pub radius: f64,
-    pub lattice: Option<crate::smoke_types::SmokePushLattice>,
+    pub lattice: Option<crate::smoke_types::SmokeLattice>,
     pub body: Option<f64>,
     pub line: Option<f64>,
     pub push: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SmokePushLattice {
-    Fine,
-    Coarse,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WindGpuSource {
-    pub kind: crate::smoke_types::WindGpuSourceKind,
+    pub kind: crate::wind::WindSourceKind,
     pub pos: V3,
     pub dir: V3,
     pub speed: f64,
@@ -93,12 +80,6 @@ pub struct WindGpuSource {
     pub bound: crate::smoke_types::WindGpuSourceBound,
     pub kinds: Option<f64>,
     pub heat: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum WindGpuSourceKind {
-    #[default] Jet,
-    Storm,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -122,3 +103,10 @@ pub struct SmokeSystemLike {
 }
 
 pub const WIND_GPU_MAX: f64 = 8.0;
+
+/// which lattice an emitter lands on; none = by its kind: the page's smoke (src/smoke/smoke.ts `levelOf`) puts a canister on the coarse one and everything else on the fine
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum SmokeLattice {
+    Fine,
+    Coarse,
+}

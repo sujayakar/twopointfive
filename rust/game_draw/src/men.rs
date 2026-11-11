@@ -110,7 +110,7 @@ impl Men {
     fn man(&mut self, g: &Game, id: CharId) {
         let c = &g.ch[id];
         // (a man with no pose yet has no bones to be drawn by)
-        if c.skel.joint_data.is_empty() || c.bones.get(game::character::Bone::Hips).is_none() { return; }
+        if c.skel.globals.is_empty() || c.bones.get(game::character::Bone::Hips).is_none() { return; }
         let (side, suit) = dress(g, id);
         let s = game::stature::stature_of(g, id);
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
@@ -120,7 +120,7 @@ impl Men {
         let at = self.men.len();
         let b = caps.bound;
         let bc = x([b[0], b[1], b[2]]);
-        let head = c.bones.get(game::character::Bone::Head).copied().unwrap_or([c.pos[0], c.pos[1] + 1.6, c.pos[2]]);
+        let head = c.bone_or(game::character::Bone::Head, 1.6);
         self.heads.push(f3(head));
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
@@ -146,12 +146,11 @@ impl Men {
         self.insts.push(i);
         // ---- his bones, scaled about his feet where he is drawn taller or shorter
         let mut bones = Bones::ZERO;
-        let src = &c.skel.joint_data[..c.skel.joint_data.len().min(JOINTS * 16)];
-        if s == 1.0 { bones.w[..src.len()].copy_from_slice(src); } else {
+        game::anim_skeleton::skeleton_instance_skin(g, &c.skel, &mut bones.w[..JOINTS * 16]);
+        if s != 1.0 {
             let off = c.pos.map(|v| v * (1.0 - s));
-            for (o, mat) in src.chunks_exact(16).enumerate() {
-                let d = &mut bones.w[o * 16..o * 16 + 16];
-                for k in 0..16 { d[k] = if k % 4 == 3 { mat[k] } else { (mat[k] as f64 * s + if k >= 12 { off[k - 12] } else { 0.0 }) as f32 }; }
+            for d in bones.w[..g.art.rig[c.skel.rig].skin.joints.len().min(JOINTS) * 16].chunks_exact_mut(16) {
+                for k in 0..16 { if k % 4 != 3 { d[k] = (d[k] as f64 * s + if k >= 12 { off[k - 12] } else { 0.0 }) as f32; } }
             }
         }
         self.now.push(bones);
@@ -219,10 +218,10 @@ fn shown(g: &Game, bared: bool) -> Vec<CharId> {
 /// whose table a man is dressed by, and whether he is in the sneaking suit
 fn dress(g: &Game, c: CharId) -> (CastSide, bool) {
     if players(g).any(|p| p == c) {
-        let side = g.m.cast.worn.get(c).map_or(CastSide::Operator, |&v| g.tab.anim_gltf_cast_variant[v].side);
+        let side = g.m.cast.worn.get(c).map_or(CastSide::Operator, |&v| g.art.variant[v].side);
         return (side, suit(g, c, true));
     }
-    if let Some(&gd) = g.guards.iter().find(|&&gd| g.gd[gd].ch == c) { return (game::char_look::side_of_team(g.gd[gd].team, Some(g.gd[gd].trained)), suit(g, c, false)); }
+    if let Some(&gd) = g.guards.iter().find(|&&gd| g.gd[gd].ch == c) { return (game::char_look::side_of_team(g.team(gd), Some(g.gd[gd].trained)), suit(g, c, false)); }
     (CastSide::Civilian, false)
 }
 fn suit(g: &Game, c: CharId, player: bool) -> bool {

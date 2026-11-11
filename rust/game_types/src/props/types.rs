@@ -1,7 +1,7 @@
 //! The types of `props`.
 #![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PropContact {
@@ -59,7 +59,7 @@ pub struct Prop {
     pub tune: crate::props::KindTune,
     pub home: [f64; 3],
     pub boxes: Vec<BoxId>,
-    pub def: crate::scene_level::PropDef,
+    pub def: Arc<crate::scene_level::PropDef>,
     pub id: f64,
     // where it stands and how it turns; the cos and sin of `yaw` are written where the yaw is written
     pub x: f64,
@@ -114,28 +114,14 @@ pub struct PropSystemRaycast {
     pub box_: BoxId,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PropSystemRaycastHere {
-    pub t: f64,
-    pub n: V3,
-    pub prop: PropId,
-    pub box_: BoxId,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PropSystemNoiseSound {
-    Thud,
-    Scrape,
-}
-
 pub fn kind() -> JsMap<String, crate::props::KindTune> { { let mut t = JsMap::new(); t.set(String::from("chair"), crate::props::KindTune { decel: 1.6, visc: 0.5, rest: 0.25, scrape_rate: 1.35, thud_rate: 1.15 }); t.set(String::from("cardboard"), crate::props::KindTune { decel: 3.2, visc: 0.8, rest: 0.12, scrape_rate: 1.0, thud_rate: 0.8 }); t.set(String::from("bin"), crate::props::KindTune { decel: 3.0, visc: 0.8, rest: 0.3, scrape_rate: 1.2, thud_rate: 1.5 }); t.set(String::from("plant"), crate::props::KindTune { decel: 4.5, visc: 1.0, rest: 0.1, scrape_rate: 0.8, thud_rate: 0.95 }); t } }
 
 pub const MAX_V: f64 = 5.0;
 
 pub const MAX_W: f64 = 9.0;
 
-/// things a level can have: the box world's copy lists no more (sim::world::MAX_THINGS)
+/// things a level can have: a level is refused past it (levelfit)
 pub const PROP_CAP: f64 = 128.0;
 
-/// boxes of all the furniture of a level, likewise (sim::world::MAX_LEAVES)
+/// boxes of all the furniture of a level, likewise
 pub const PROP_PARTS: f64 = 512.0;

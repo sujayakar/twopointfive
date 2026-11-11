@@ -91,18 +91,13 @@ pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
 pub(in crate::squad_orders) fn unlist(g: &mut Game, r: &Row) { crate::orders::squad_orders_unregister(g, r.id) }
 
 /// Hand a man his task under this order: `a` with the order's own id (whatever `a.order` held).
-pub(in crate::squad_orders) fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::orders::SquadOrdersAssignA) {
-    crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA { order: String::from(r.id), ..a });
+pub(in crate::squad_orders) fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::duty::TaskGiven) {
+    crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven { order: String::from(r.id), ..a });
 }
 
 /// Once a frame for each seat, after the menu's own input: every order's `frame`, in the list's order.
 pub fn frame(g: &mut Game) {
     for r in ROWS { if let Some(f) = r.frame { f(g); } }
-}
-
-/// the point of the floor an order's target names
-pub(in crate::squad_orders) fn at(t: &OrderTarget) -> crate::v3::V3 {
-    match t { OrderTarget::Floor(x) => x.at, OrderTarget::Door(x) => x.at, OrderTarget::None(x) => x.at, OrderTarget::Foe(x) => x.at }
 }
 
 /// `issue` of a row that only opens a page: `give` refuses such a row before it comes to this
@@ -120,4 +115,4 @@ pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r
 pub fn id_is(id: &str, what: Is) -> bool { by_id(id).map_or(false, |r| r.is.contains(&what)) }
 
 /// Is the man under this assignment under such an order?
-pub fn is(g: &Game, a: OrdersAssignmentId, what: Is) -> bool { id_is(&g.tab.orders_assignment[a].order, what) }
+pub fn is(g: &Game, a: TaskId, what: Is) -> bool { id_is(&g.tab.task[a].order, what) }

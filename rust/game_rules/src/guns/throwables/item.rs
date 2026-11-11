@@ -29,7 +29,7 @@ pub fn item_set_on(g: &mut crate::game::Game, id: ItemId, p: Option<PropId>) {
 
 /// A box for an item's part.
 pub(super) fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
-    crate::scene_boxes::box_of_frame(g, c_2, h, yaw, albedo, [0.0, 0.0, 0.0], flags, 0.0, Some(rot), None)
+    crate::scene_boxes::box_of_frame(g, c_2, h, yaw, albedo, [0.0, 0.0, 0.0], flags, 0.0, Some(rot))
 }
 
 /// The share of its slide a thing keeps on lying snow.

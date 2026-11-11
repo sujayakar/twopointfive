@@ -18,10 +18,10 @@ fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        doors.push_str(&js::num_str(crate::doors::door_angle(g, d)));
-        if crate::doors::door_latched(g, d) { doors.push('l'); }
-        if crate::doors::door_locked(g, d) { doors.push('k'); }
-        if crate::doors::door_off(g, d) { doors.push('o'); }
+        doors.push_str(&js::num_str(g.dr[d].leaf.angle));
+        if g.dr[d].leaf.latched { doors.push('l'); }
+        if g.dr[d].leaf.locked { doors.push('k'); }
+        if g.dr[d].leaf.off { doors.push('o'); }
         doors.push(',');
         i += 1;
     }
@@ -93,7 +93,7 @@ pub(super) fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::
     while k < 4 && px.is_nan() {
         let (cx, cz) = (bx * 2.0 + (k & 1) as f64, bz * 2.0 + (k >> 1) as f64);
         if cx < g.col.nav.w && cz < g.col.nav.h {
-            // (off the grid's low edge the TypeScript reads undefined from the typed array, which is not 1)
+            // (off the grid's low edge there is no cell, which is not 1)
             let at = crate::scene_collision::nav_grid_idx(g, cx, cz);
             let cell = if at >= 0.0 { g.col.nav.blocked.get(at as usize).copied() } else { None };
             if cell != Some(1) {
@@ -103,7 +103,7 @@ pub(super) fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::
         }
         k += 1;
     }
-    if !px.is_nan() && crate::cleared::cleared_rooms_known_at(g, [px, 0.0, pz]) {   // (floor inside an unknown room is cleared.ts's own price)
+    if !px.is_nan() && crate::cleared::cleared_rooms_known_at(g, [px, 0.0, pz]) {   // (floor inside an unknown room has the cleared rooms' own price)
         let lit = crate::calmtorch::place_light(g, px, pz);
         if lit >= g.k.seenwalk.lit_at {
             let (reach, head): (f64, V3) = (crate::guards::eye_reach(g, lit), [px, 1.5, pz]);

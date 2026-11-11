@@ -7,17 +7,14 @@ use alloc::{vec, vec::Vec};
 
 type Emitter = crate::smoke_types::SmokeEmitter;
 type Kind = crate::smoke_types::SmokeEmitterKind;
-type Lattice = crate::smoke_types::SmokeEmitterLattice;
+type Lattice = crate::smoke_types::SmokeLattice;
 
-/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone. (combat.ts fireWeaponRaw track and port; sparks.ts tracker)
+/// A stored `Track` called: its `{ pos, dir }`, read live, or nothing once what it rides has gone.
 pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
         Track::EjectPort { by } => {
-            let from = match g.ch[by].bones.get(crate::character::Bone::HandR) {
-                Some(hand) => *hand,
-                None => g.ch[by].muzzle,
-            };
+            let from = g.ch[by].bone(crate::character::Bone::HandR).unwrap_or(g.ch[by].muzzle);
             Some((v3::add(v3::mad(from, g.ch[by].gun_dir, 0.06), [0.0, 0.06, 0.0]), [0.0, 1.0, 0.0]))
         }
         Track::Spark { slot, gen_ } => {
@@ -35,7 +32,7 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
 
 /// `smoke.emit`: the game's own smoke where it keeps one, then the event for the host's solver (the gas of a shot, a stun's jets and trails, the can's
 /// vent: the solver is the host's and hears of them the way it hears of a holed wall's puff).
-fn smoke_emit(g: &mut Game, e: &Emitter) {
+pub(crate) fn smoke_emit(g: &mut Game, e: &Emitter) {
     crate::smoke_types::smoke_system_like_emit(g, e);
     crate::out_events::push_smoke_system_like_emit(g, e);
 }

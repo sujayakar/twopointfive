@@ -1,9 +1,10 @@
 //! THE CHARACTER FROM ITS FILES: the mannequin (its skeleton, skin, mesh and clips) and, where a cast file is given, the cast's meshes over it.
-//! `src/anim/gltf.ts` `loadGltfCharacter` and `loadGltfCast`, line for line, with the files' bytes handed in (the start reads no file itself).
-//! The rows go where the game keeps them: `g.tab.rig`, `g.tab.clip`, `g.tab.anim_gltf_mesh_data`, `g.tab.anim_gltf_cast_info` / `_cast_variant`.
+//! The files' bytes are handed in: the start reads no file itself.
+//! The rows go where the game keeps them: `g.art.rig`, `g.art.clip`, `g.art.mesh`, `g.art.cast` / `_cast_variant`.
 use crate::json::{self, Json};
 use alloc::{string::String, vec, vec::Vec};
 use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, SkinData, Track};
+use alloc::sync::Arc;
 use game::game::Game;
 use game::ids::*;
 use game::js::JsMap;
@@ -37,7 +38,7 @@ fn base64(t: &[u8]) -> Vec<u8> {
     out
 }
 
-/// (gltf.ts openGltf: the text parsed, every buffer as bytes)
+/// the text parsed, every buffer as bytes
 fn open(f: GltfFile) -> Open {
     let g = json::parse(f.text).unwrap_or_else(|e| panic!("gltf: {}", e));
     let mut bins: Vec<Vec<u8>> = Vec::new();
@@ -50,7 +51,7 @@ fn open(f: GltfFile) -> Open {
 }
 
 impl Open {
-    /// accessor `i` as a tightly packed array (gltf.ts readAccessor: a byte stride is honoured)
+    /// accessor `i` as a tightly packed array (a byte stride is honored)
     fn accessor(&self, i: f64) -> Accessor {
         let a = self.g.get("accessors").at(i as usize);
         let bv = self.g.get("bufferViews").at(a.get("bufferView").num().expect("gltf: an accessor's view") as usize);
@@ -254,20 +255,23 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
 }
 
 /// THE CHARACTER A GAME STANDS ON, as rows of `g`: the mannequin, or with `cast` the cast's meshes over its skeleton, skin and clips
-/// (gltf.ts loadCharacterSet, but a cast off its contract is refused here and not passed over: a test should not stand on another mesh
+/// (a cast off its contract is refused here and not passed over: a test should not stand on another mesh
 /// than it asked for). Answers the character's row.
 pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> RigId {
     let base = load_base(mannequin);
     let dressed = cast.map(|c| load_cast(c, &base));
+    let art = Arc::make_mut(&mut g.art);
     let mut clips: JsMap<String, ClipId> = JsMap::new();
-    for c in base.clips { let name = c.name.clone(); let id = g.tab.clip.push(c); clips.set(name, id); }
+    for c in base.clips { let name = c.name.clone(); let id = art.clip.push(c); clips.set(name, id); }
     let (mesh, cast) = match dressed {
-        None => (g.tab.anim_gltf_mesh_data.push(base.mesh), None),
+        None => (art.mesh.push(base.mesh), None),
         Some((md, parts, variants)) => {
-            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| g.tab.anim_gltf_cast_variant.push(v)).collect();
-            (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, variants })))
+            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| art.variant.push(v)).collect();
+            (art.mesh.push(md), Some(art.cast.push(CastInfo { parts, variants })))
         }
     };
-    g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
+    let mut rig = GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, back: None };
+    rig.back = game::packside::back_of(art, &rig);
+    art.rig.push(rig)
 }
 

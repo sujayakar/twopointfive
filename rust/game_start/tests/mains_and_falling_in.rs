@@ -7,7 +7,7 @@ use game::scene_collision::{nav_grid_is_blocked, solid_blocked};
 use game::workthings::{breaker_errand, work_things_things, WorkThingKind};
 use game_start::play::{dist, Opts, Play};
 
-fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| matches!(&p.g.gd[m].task, Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Breaker)).collect() }
+fn on_errand(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| matches!(&p.g.gd[m].errand, Some(game::game::Errand::At(t)) if t.kind == game::game::ErrandThing::Breaker)).collect() }
 fn said_it(p: &Play) -> usize { p.said.iter().filter(|l| l.text.contains("checking the breaker")).count() }
 fn keep_dark(p: &mut Play, secs: f64) { for _ in 0..(secs * 60.0) as usize { p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.05; p.frame(); } }
 
@@ -19,7 +19,7 @@ fn the_mains_go_and_no_posted_man_walks() {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
         p.run(0.2);
-        assert!(p.hostiles().iter().all(|&m| p.g.gd[m].hold || p.g.gd[m].pinned), "seed {s}: the staging: a defender is off his mark");
+        assert!(p.hostiles().iter().all(|&m| p.g.gd[m].duty.holds || p.g.gd[m].duty.pinned), "seed {s}: the staging: a defender is off his mark");
         set_blackout(&mut p.g, 86400.0, SetBlackoutCause::Hand);
         keep_dark(&mut p, 2.5);
         assert!(on_errand(&p).is_empty() && said_it(&p) == 0, "seed {s}: errand {:?}, said {}", on_errand(&p), said_it(&p));
@@ -34,7 +34,7 @@ fn the_mains_go_and_no_posted_man_walks() {
         let man = *on_errand(&p).first().unwrap_or_else(|| panic!("seed {s}: nobody was handed it"));
         let d0 = dist(p.at(man), [panel[0], panel[2]]);
         keep_dark(&mut p, 2.5);
-        assert!(!p.g.gd[man].hold && !p.g.gd[man].pinned && said_it(&p) >= 1, "seed {s}: he is held or said nothing ({} lines)", said_it(&p));
+        assert!(!p.g.gd[man].duty.holds && !p.g.gd[man].duty.pinned && said_it(&p) >= 1, "seed {s}: he is held or said nothing ({} lines)", said_it(&p));
         assert!(d0 - dist(p.at(man), [panel[0], panel[2]]) > 1.0, "seed {s}: he has not walked for it: {d0} m then {}", dist(p.at(man), [panel[0], panel[2]]));
     }
 }
@@ -87,7 +87,7 @@ fn where_the_fixed_spot_is_good_the_errand_keeps_it() {
 }
 
 fn order_of(p: &Play, m: GuardId) -> Option<(String, Option<[f64; 3]>)> {
-    game::orders::squad_orders_of(&game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.orders_assignment[a]; (a.order.clone(), a.post) })
+    game::orders::squad_orders_of(&game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.task[a]; (a.order.clone(), a.post) })
 }
 
 /// THE RULE (a settled rule): on the staging's own frame every living teammate is on the menu's fall in, no post, and nobody said it: no row in the orders' log and no line. Three seconds on with Sam standing still they're still on it and with him.
@@ -114,7 +114,7 @@ fn the_rescue_stages_its_men_held_with_no_order() {
     for s in [1u32, 2, 7] {
         let mut p = Play::mission("office.json", "?levelFile=office.json&rescue&squad=2", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
-        for m in p.mates() { assert!(order_of(&p, m).is_none() && p.g.gd[m].hold && p.g.gd[m].pinned, "rescue, seed {s}: {:?}", order_of(&p, m)); }
+        for m in p.mates() { assert!(order_of(&p, m).is_none() && p.g.gd[m].duty.holds && p.g.gd[m].duty.pinned, "rescue, seed {s}: {:?}", order_of(&p, m)); }
         p.run(3.0);
         assert!(p.g.rescue.t0.is_nan(), "rescue, seed {s}: the clock started by itself");
         for m in p.mates() { assert_eq!(p.rounds_fired(m), 0.0, "rescue, seed {s}: a round fired"); }

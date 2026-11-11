@@ -7,12 +7,12 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// a row's digit, the same on every gun
 fn row_digit(kind: SetupKind) -> f64 {
-    *row_key().get(String::from(kind.as_str())).unwrap()
+    *row_key().of(kind.as_str()).unwrap()
 }
 
 /// a gun's own digit
 fn slot_digit(gun: SetupGun) -> i32 {
-    *slot_key().get(String::from(gun.as_str())).unwrap() as i32
+    slot_key(gun) as i32
 }
 
 /// the key's code of a digit (`Digit${d}`)
@@ -49,7 +49,7 @@ pub fn setup_rows(g: &crate::game::Game, pl: PlayerId, gun: crate::slotsetup::Se
     let mut rows: Vec<SetupRow> = Vec::new();
     let f = gun_of(g, pl, gun);
     let def = g.fa[f].def;
-    let modes = g.m.weapons.weapons.get(def).unwrap().modes.clone();
+    let modes = g.weapon(def).modes.clone();
     if modes.len() > 1 {
         let mode = g.fa[f].mode;
         let opts = modes
@@ -113,16 +113,7 @@ pub(super) fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
         };
         crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
     }).collect();
-    Some(crate::view::KitSetup { rows, back: String::from("TAB") })
-}
-
-/// Esc with the back key's rule off: shut it, and say whether there was one to shut
-pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
-    if !slot_setup_open(g, &crate::seats::here(g)) {
-        return false;
-    }
-    g.sets[g.seat].hand.setup = None;
-    true
+    Some(crate::view::KitSetup { rows, back: crate::backkey::BACK_KEY.to_uppercase() })
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up
@@ -170,13 +161,13 @@ fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &cr
 fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
     for gun in [SetupGun::Pistol, SetupGun::Rifle] {
         if Some(gun) != in_hand && crate::input::input_hit(g, input, &digit_code(slot_digit(gun))) {
-            let (pl, t) = (g.player, g.time);
+            let t = g.time;
             g.sets[g.seat].hand.setup_key = Some(crate::game::PlayerSetupKey { gun, t });
         }
     }
 }
 
-/// player.ts updatePlayer, ahead of the digits' own lines: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
+/// Ahead of the digits' own lines in the player's update: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
 /// A digit used here is taken out of the frame
 pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let pl = g.player;
@@ -200,7 +191,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             || g.time - s.seen > STALE
             || crate::handwork::sam_work(g).is_some()
             || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
-            || g.sets[g.seat].orders.menu.is_some()
+            || g.groups[g.group].orders.menu.is_some()
             || crate::interact::backable_interact(g, &crate::seats::here(g));
         if shut {
             up = None;

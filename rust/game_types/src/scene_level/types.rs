@@ -1,9 +1,9 @@
 //! The types of `scene_level`.
 #![allow(unused_imports)]
 use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
-/// which level's script this is, by the level file's name; the body is levels/<name>.script.ts, its define pass called by a match
+/// which level's script this is, by the level file's name; the body is its rust/game_rules/src/missions/script_tut_*.rs, its define pass called by a match
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub enum LevelScriptFn {
     #[default] Unset,
@@ -34,7 +34,7 @@ pub struct PropPart {
     pub h: V3,
     pub yaw: f64,
     pub albedo: V3,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
 }
@@ -95,7 +95,7 @@ pub struct BreachPlan {
     pub breach_lines: crate::scene_level::BreachPlanBreachLines,
     pub door: String,
     pub room: Option<String>,
-    pub breach: Option<crate::scene_level::BreachPlanBreach>,
+    pub breach: Option<crate::scene_level::PlanBreach>,
     pub bounds: Option<crate::scene_level::BreachPlanBounds>,
     pub from: Option<[V3; 2]>,
     pub stack: [V3; 2],
@@ -222,12 +222,6 @@ pub struct BreachPlanBreachLines {
     pub radio1: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum BreachPlanBreach {
-    Kick,
-    Open,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreachPlanBounds {
     pub x0: f64,
@@ -256,7 +250,7 @@ pub struct BreachPlanLines {
 pub struct RoomClearPlan {
     pub door: String,
     pub room: Option<String>,
-    pub breach: Option<crate::scene_level::RoomClearPlanBreach>,
+    pub breach: Option<crate::scene_level::PlanBreach>,
     pub bounds: Option<crate::scene_level::BreachPlanBounds>,
     pub from: Option<[V3; 2]>,
     pub stack: [V3; 2],
@@ -310,15 +304,9 @@ impl Default for RoomClearPlan {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum RoomClearPlanBreach {
-    Kick,
-    Open,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
-    pub props: Vec<crate::scene_level::PropDef>,
+    pub props: Vec<Arc<crate::scene_level::PropDef>>,
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub player_spawn: V3,
@@ -348,10 +336,7 @@ fn plan_of_breach(b: &crate::scene_level::BreachPlan) -> crate::scene_level::Roo
     crate::scene_level::RoomClearPlan {
         door: b.door.clone(),
         room: b.room.clone(),
-        breach: b.breach.map(|k| match k {
-            crate::scene_level::BreachPlanBreach::Kick => crate::scene_level::RoomClearPlanBreach::Kick,
-            crate::scene_level::BreachPlanBreach::Open => crate::scene_level::RoomClearPlanBreach::Open,
-        }),
+        breach: b.breach,
         bounds: b.bounds,
         from: b.from,
         stack: b.stack,
@@ -487,12 +472,6 @@ pub struct CivilianDef {
     pub face: Option<Vec<f64>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum CivilianDefKind {
-    #[default] Cleaner,
-    Worker,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum CivilianTask {
     Bin,
@@ -544,4 +523,16 @@ pub struct PatrolRoute {
     pub wait: Vec<f64>,
     pub weapon: Option<crate::weapons::WeaponId>,
     pub keys: Option<Vec<String>>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum PlanBreach {
+    Kick,
+    Open,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum CivilianDefKind {
+    #[default] Cleaner,
+    Worker,
 }

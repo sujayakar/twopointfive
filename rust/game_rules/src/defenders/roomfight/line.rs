@@ -1,5 +1,6 @@
 //! WHO IS IN THE LINE of a round: a mate, Sam, anybody it could go to.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -8,21 +9,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `c.bones.upperArmR ?? c.pos + [0, 1.4, 0]`
-pub(super) fn shoulder_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::UpperArmR) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]) }
-}
-
-/// `c.bones.head ?? c.pos + [0, 1.6, 0]`
-pub(super) fn head_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) }
-}
-
 /// Is this body within the clearance it is owed of the line from → to
-pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
+pub(super) fn line_hit(g: &Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
     let pos = g.ch[ch].pos;
     let vel = g.ch[ch].vel;
-    let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => pos };
+    let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(pos);
     let tr = ((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2;
     let t = v3::clamp(tr, 0.0, t_max);
     let sam = !mate && crate::seats::man_of(g, Some(ch)).is_some();
@@ -42,7 +33,7 @@ pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, 
 }
 
 /// A friend, Sam or another living operative, within a body's breadth of the line from → to and a metre past it, wider for one on the move.
-pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<CharId> {
+pub fn room_fight_friend_in_line(g: &crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<CharId> {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l2 = dx * dx + dz * dz;
@@ -54,16 +45,16 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
         let ch = g.pl[pl].ch;
         if line_hit(g, ch, false, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
-    let mine = g.gd[self_].team;
+    let mine = g.team(self_);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         let ch = g.gd[o].ch;
         if o == self_ || crate::condition::down(g, g.gd[o].ch) || !g.ch[ch].alive { continue; }
-        let theirs = g.gd[o].team;
-        if crate::teams::is_hostile(g, mine, theirs) { continue; }
-        let mate = theirs == crate::teams::Team::Operative && g.gd[o].unit.is_some();
+        let theirs = g.team(o);
+        if mine.foe_of(theirs) { continue; }
+        let mate = theirs.ours();
         if line_hit(g, ch, mate, from, dx, dz, l2, l, t_max) { return Some(ch); }
     }
     None
@@ -73,7 +64,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
 pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let from = shoulder_of(g, c);
+    let from = crate::combat::shoulder(g, c);
     if !room_fight_friend_in_line(g, from, to, gd).is_some_and(|f| crate::character::is_player(g, f)) { return false; }
     g.gd[gd].muzzle_down = true;
     g.gd[gd].muzzle_clear_t = 0.0;
@@ -85,14 +76,14 @@ pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) { return false; }
         match (row.watch, row.post) { (Some(w), Some(p)) => (w, p), _ => return false }
     };
     let cp = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
     let hc = g.gd[h].ch;
     let hp = g.ch[hc].pos;
-    if flat(cp, post) > 0.8 || flat(cp, hp) < r.cover_near_m { return false; } // not on his post yet · a man this close is anybody's
+    if dist_xz(cp, post) > 0.8 || dist_xz(cp, hp) < r.cover_near_m { return false; } // not on his post yet · a man this close is anybody's
     if m::abs(v3::wrap_angle(v3::yaw_to(cp, hp) - v3::yaw_to(cp, watch))) <= r.cover_half_deg * crate::v3::DEG { return false; } // in the angle he was given
     if m::abs(v3::wrap_angle(v3::yaw_to(hp, cp) - g.ch[hc].aim_yaw)) < 0.35 { return false; } // a muzzle on him is his own business
     // a mate HAS the man: his gun on him and a round to send; a man this one is already ON goes only to a mate past his own beat to fire

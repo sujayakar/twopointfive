@@ -69,7 +69,7 @@ export interface Box {
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
   /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
-   *  box does is its word, scene/materials.ts; the wet lot's answer is the row's own `wet`). weather.ts darkens rained-on ground with it. */
+   *  box does is its word, scene/materials.ts, in any weather). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
@@ -224,8 +224,8 @@ export function matWord(b: Box): number {
 export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
 /** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
  *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
- *  const GLASS_BREAK (render/frame.ts glassBreakConfig; common.wgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
+ *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by glass_open.wgsl glassCellOpen and composite's crack drawing only under the prelude
+ *  const GLASS_BREAK (render/frame.ts glassBreakConfig; glassOpenWgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
  *  is not a different frame. */
 export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
 export const MAT_STRIDE = 16; // words (64 B): albedo.rgb cutHeight | emissive.rgb finish (matWord: roughness + metal + aniso — was the owner, which no shader read from here: boxOwner() takes it from the geo flags) | rotation quaternion xyzw (= yaw for ordinary boxes, the full 3D rotation for boxes with Box.rot; raster and rays both use it) | SECONDARY albedo.rgb (= albedo unless markings are folded in — common.wgsl boxAlbedoSec: what gather / cascade / probe hits read) + markGain (× the emission of the box's emissive markings)
@@ -357,6 +357,9 @@ export class BoxWorld {
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
+  /** a count of the statics' changes, by whoever mirrors them from elsewhere (draw/world.ts): what was read off them stands while it does. Every row that is
+   *  told, whatever changed it (a load, a flag, a lamp's face), where `geomSerial` counts what a blast does to the level's shape alone. NaN = nobody counts */
+  staticsTold = NaN;
   /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;

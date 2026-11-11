@@ -41,16 +41,12 @@ fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
 }
 
 /// Are Sam's hands free for it at all: empty, and nothing else has him.
-fn hands(g: &mut crate::game::Game) -> bool {
+fn hands(g: &crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].holstered
         && !crate::condition::down(g, g.pl[me].ch)
-        && g.pl[me].holding.is_none()
-        && g.pl[me].takedown.is_none()
-        && g.pl[me].dragging.is_none()
-        && g.pl[me].kick.is_none()
-        && g.pl[me].picking.is_none()
-        && g.pl[me].wanding.is_none()
+        && !g.pl[me].planted()
+        && g.pl[me].tow.is_none()
         && g.pl[me].wall.is_none()
         && able(g, &crate::seats::here(g))
 }
@@ -61,14 +57,14 @@ fn free(g: &mut crate::game::Game) -> bool {
 }
 
 /// A tutorial step has taken the click.
-fn shut(g: &mut crate::game::Game) -> bool {
+fn shut(g: &crate::game::Game) -> bool {
     crate::rails::rails_shuts(g, "stalk")
 }
 
-/// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever.
+/// The gate on a grab: not folded by a blast, no hand on a breaker's lever.
 fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let me = seat.player;
-    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
+    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move().is_none()
 }
 
 /// How far off a press can begin one.
@@ -86,17 +82,17 @@ pub(super) fn stalk_begin_m(g: &crate::game::Game) -> f64 {
 }
 
 /// Is the held click the ONE way to grab a man from behind: on the page, only on a wall.
-pub(super) fn stalk_click_only(g: &mut crate::game::Game) -> bool {
+pub(super) fn stalk_click_only(g: &crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].wall.is_some() && !shut(g)
 }
 
 /// Why this man cannot be stalked from `p` right now, or None when he can (`begin`: a press's stricter test).
-fn out_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Option<crate::stalk::Why> {
+fn out_of(g: &crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Option<crate::stalk::Why> {
     if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
         return Some(Why::Him);
     }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
     let limit = if begin { begin_m(g) } else { out_m(g) };
     if d >= limit {
@@ -117,13 +113,13 @@ pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !free(g) {
         return false;
     }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     out_of(g, gd, &p, true).is_none()
 }
 
 /// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point.
-fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
-    let p = g.ch[g.pl[g.player].ch].pos;
+fn pressed(g: &crate::game::Game) -> Option<GuardId> {
+    let p = g.player_pos(g.player);
     let a = g.sets[g.seat].aim_point;
     if let Some(ag) = g.sets[g.seat].aim_guard {
         if out_of(g, ag, &p, true).is_none() {
@@ -136,8 +132,8 @@ fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        let pos = g.ch[g.gd[gd].ch].pos;
-        let d = m::hyp2(a[0] - pos[0], a[2] - pos[2]);
+        let pos = g.pos_of(gd);
+        let d = v3::dist_xz(a, pos);
         if d < bd && out_of(g, gd, &p, true).is_none() {
             best = Some(gd);
             bd = d;
@@ -147,7 +143,7 @@ fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up.
-fn corner_gate(g: &mut crate::game::Game) -> bool {
+fn corner_gate(g: &crate::game::Game) -> bool {
     let me = g.player;
     let (kind, drawn) = match &g.pl[me].wall {
         None => return false,
@@ -157,23 +153,19 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || drawn
         || !g.pl[me].holstered
         || crate::condition::down(g, g.pl[me].ch)
-        || g.pl[me].holding.is_some()
-        || g.pl[me].takedown.is_some()
-        || g.pl[me].dragging.is_some()
-        || g.pl[me].kick.is_some()
-        || g.pl[me].picking.is_some()
-        || g.pl[me].wanding.is_some()
+        || g.pl[me].planted()
+        || g.pl[me].tow.is_some()
         || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))
 }
 
 /// The man the wait at a corner takes this frame: the nearest who has come past him.
-fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
+fn corner_man(g: &crate::game::Game) -> Option<GuardId> {
     if !corner_gate(g) {
         return None;
     }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let cos = m::cos(g.k.stalk.corner_deg * m::PI / 180.0);
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.stalk.corner_m;
@@ -184,8 +176,8 @@ fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
         if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
-        let pos = g.ch[g.gd[gd].ch].pos;
-        let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
+        let pos = g.pos_of(gd);
+        let d = v3::dist_xz(p, pos);
         if d < bd && m::cos(bearing_of(g, gd, &p)) <= cos && crate::close::clear_between(g, &pos, &p) {
             best = Some(gd);
             bd = d;
@@ -198,7 +190,7 @@ fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
 fn duck(g: &mut crate::game::Game, gd: GuardId, k: f64) {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     crate::character::anim_flinch_from(g, c, Some([pos[0] - p[0], 0.0, pos[2] - p[2]]), Some(k), Some(true));
 }
 
@@ -209,17 +201,17 @@ fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
         Some(b) => b,
         None => return,
     };
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     if g.time - b.t > g.k.stalk.jolt_secs
         || row.on.is_some()
         || !free(g)
         || !crate::close::close_subject(g, b.gd)
-        || m::hyp2(p[0] - b.at[0], p[2] - b.at[2]) > 1.0
+        || v3::dist_xz(p, b.at) > 1.0
     {
         g.m.stalk.state.get_mut(pl).unwrap().broke = None;
         return;
     }
-    let pos = g.ch[g.gd[b.gd].ch].pos;
+    let pos = g.pos_of(b.gd);
     if !crate::close::clear_between(g, &pos, &p) {
         return;
     }
@@ -277,7 +269,7 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
         end(g, me);
         return None;
     }
-    let p = g.ch[g.pl[me].ch].pos;
+    let p = g.player_pos(me);
     if let Some(why) = out_of(g, gd, &p, false) {
         // broken off by the man himself: at once when he is onto Sam; after a turn, only if he comes on round (brokeDuck). Not on the frame a stalk began.
         if had == Some(gd) && g.k.stalk.jolt > 0.0 {
@@ -295,7 +287,7 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
     let at: V3 = [gp[0], gp[1] + 1.2, gp[2]];
-    let dist = m::hyp2(p[0] - gp[0], p[2] - gp[2]);
+    let dist = v3::dist_xz(p, gp);
     let (grab_m, key_m) = (g.k.stalk.grab_m, g.k.stalk.key_m);
     let mut hold: Option<f64> = None; // keeping station: how far outside `keyM` he is, −1‥1
     if dist < grab_m {
@@ -407,7 +399,7 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
         return None;
     }
     let me = g.player;
-    let p = g.ch[g.pl[me].ch].pos;
+    let p = g.player_pos(me);
     let mut found = g.m.stalk.state.get(me).and_then(|s| s.on);
     let mut bd = m::INF;
     if found.is_none() {
@@ -415,8 +407,8 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
         while i < g.guards.len() {
             let x = g.guards[i];
             i += 1;
-            let pos = g.ch[g.gd[x].ch].pos;
-            let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
+            let pos = g.pos_of(x);
+            let d = v3::dist_xz(p, pos);
             if d < bd && d < begin_m(g) && out_of(g, x, &p, true).is_none() {
                 found = Some(x);
                 bd = d;
@@ -426,7 +418,7 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     let gd = found?;
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
-    let d = m::hyp2(p[0] - gp[0], p[2] - gp[2]);
+    let d = v3::dist_xz(p, gp);
     let neck = g.ch[c].bones.get(crate::character::Bone::Neck).or(g.ch[c].bones.get(crate::character::Bone::Head)).copied();
     let at: V3 = match neck {
         Some(n) => [n[0], n[1], n[2]],
@@ -437,7 +429,7 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
 }
 
 /// The wait at a corner on his body: where his hands point, how much of the grab's reach, how far he is sunk.
-pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> {
+pub(super) fn stalk_wait(g: &crate::game::Game) -> Option<crate::stalk::StalkWait> {
     let me = g.player;
     let row = *g.m.stalk.state.get(me)?;
     let n = g.pl[me].wall.as_ref().map(|w| w.n);
@@ -448,7 +440,7 @@ pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     if g.time - row.t > 0.1 || !corner_gate(g) {
         return None;
     }
-    let p = g.ch[g.pl[me].ch].pos;
+    let p = g.player_pos(me);
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.stalk.corner_see;
     let mut i = 0;
@@ -458,8 +450,8 @@ pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
         if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
-        let pos = g.ch[g.gd[gd].ch].pos;
-        let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
+        let pos = g.pos_of(gd);
+        let d = v3::dist_xz(p, pos);
         if d < bd && crate::close::clear_between(g, &pos, &p) {
             best = Some(gd);
             bd = d;
@@ -480,7 +472,7 @@ pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     Some(StalkWait { at, reach: r[0] + (r[1] - r[0]) * near, coil: g.k.stalk.corner_coil })
 }
 
-/// He waits at a corner this frame: what the tick found, as the view is told it. (stalk.ts stalkWait, whose man and reach are his body's alone)
+/// He waits at a corner this frame: what the tick found, as the view is told it.
 pub fn stalk_waits(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     g.pl[seat.player].wall.is_some() && g.m.stalk.state.get(seat.player).map_or(false, |r| r.wait == Some(true) && g.time - r.t <= 0.1)
 }
@@ -494,12 +486,12 @@ pub fn stalk_grab(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
 }
 
 /// The row's grab on this man is about to be taken: is it the stalk's? A question only.
-pub fn stalk_key_can(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn stalk_key_can(g: &crate::game::Game, gd: GuardId) -> bool {
     let me = g.player;
     if g.gd[gd].civ.is_some() || !hands(g) || (g.pl[me].crouch && !crate::player::can_stand(g)) {
         return false;
     }
-    let p = g.ch[g.pl[me].ch].pos;
+    let p = g.player_pos(me);
     out_of(g, gd, &p, false).is_none()
 }
 

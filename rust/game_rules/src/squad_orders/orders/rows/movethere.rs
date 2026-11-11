@@ -18,21 +18,21 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("move there")
 
 /// 'move'.can
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
-    let at = rows::at(t);
+    let at = t.at();
     if squad_orders_walk_try(g, gd, at).is_some() { return None; }
     squad_orders_reach(g, gd, at)
 }
 /// 'move'.valid: a door nobody has tried is walked up to, where it has room for them
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match squad_orders_walk_stacks(g, men, rows::at(t)) {
+    match squad_orders_walk_stacks(g, men, t.at()) {
         Some(SquadOrdersWalkStacks::Text(w)) => Err(Some(w)),
         _ => Ok(()),
     }
 }
 /// 'move'.issue: a place and a watch each that fit the room, or the line abreast
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let t_at = rows::at(t);
-    let pc = g.pl[g.player].ch;
+    let t_at = t.at();
+    let pc = crate::group::lead(g, &crate::seats::here(g)).unwrap_or(g.pl[g.player].ch);
     let sam = g.ch[pc].pos;
     let face = if v3::dist_xz(sam, t_at) > 0.3 { v3::yaw_to(sam, t_at) } else { g.ch[pc].body_yaw };
     // (the room kept: Sam's, and every other man's mark: where he is walking to, not where he is)
@@ -41,12 +41,12 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     let mut held: Vec<String> = Vec::new();
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);
-        let post = of.and_then(|a| g.tab.orders_assignment[a].post);
-        bodies.push(match post { Some(p) => p, None => g.ch[g.gd[m].ch].pos });
+        let post = of.and_then(|a| g.tab.task[a].post);
+        bodies.push(match post { Some(p) => p, None => g.pos_of(m) });
     }
     for &m in &rest {
         let of = squad_orders_of(&crate::seats::here(g), m);
-        let key = of.and_then(|a| g.tab.orders_assignment[a].fit.as_ref().and_then(|f| f.key.clone()));
+        let key = of.and_then(|a| g.tab.task[a].fit.as_ref().and_then(|f| f.key.clone()));
         if let Some(k) = key { if !k.is_empty() { held.push(k); } }
     }
     let fits = crate::roomfit::fit_spots(g, t_at, men.len() as f64, face, sam, Some(&bodies), Some(&held));
@@ -70,10 +70,10 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     for (gd, p) in deal {
         let fit = fits.as_ref().and_then(|f| f.iter().find(|x| v3::dist_xz(x.pos, p) < 1e-6).cloned());
         let walk = at.as_ref().and_then(|m| m.get(gd).copied());
-        let on = SquadOrdersAssignA {
+        let on = crate::duty::TaskGiven {
             order: String::from(ORDER.id), post: Some(p), face: Some(face),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
+            going: "moving".into(), there: "in position".into(), set_line: Some(String::from("set.")), fit,
             ..Default::default()
         };
         if let Some(w) = walk {

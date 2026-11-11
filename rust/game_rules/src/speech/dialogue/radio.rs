@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The row the TypeScript's `R` holds, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
+/// The game's radio row, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
 fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {
     g.m.dialogue.radio_by_game.as_mut().unwrap()
 }
@@ -55,8 +55,7 @@ fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 /// Nobody is fighting, and Sam's mouth and hands are free.
 fn radio_clear(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     !g.guards.iter().any(|&x| g.gd[x].state == crate::game::GuardState::Alert)
-        && g.pl[seat.player].holding.is_none()
-        && g.pl[seat.player].takedown.is_none()
+        && !g.pl[seat.player].on_a_man()
 }
 
 /// Sound a beat now (no delay) or queue it `delay` seconds out. False if it will never sound. The variant is dealt off the beat and the run's start.
@@ -75,9 +74,9 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     if now - r.last_at < 5.0 || r.reply.is_some() { return false; }
     let table = crate::dialogue::handler_lines();
-    let Some(pool) = table.get(String::from(beat.as_str())) else { return false };
+    let Some(pool) = table.of(beat.as_str()) else { return false };
     if pool.is_empty() { return false; }
-    let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
+    let dealt = crate::dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
@@ -122,7 +121,7 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
     }
     row(g).found = found;
     let mut i = row(g).queue.len();
-    while i > 0 {   // backward, with splice, as the TypeScript walks it
+    while i > 0 {   // backward, because a row may be taken out on the way
         i -= 1;
         let q = row(g).queue[i];
         if g.time < q.at { continue; }

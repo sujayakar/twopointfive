@@ -55,7 +55,7 @@ fn what_the_team_does_is_always_shown() {
     for s in SEEDS {
         let (mut p, h, post) = shut_in(s);
         pinned(&mut p, h, post, 30, |_| {});
-        let (sam, mate, foe) = (p.g.ch[p.g.pl[p.g.player].ch].id, p.id_of(p.mates()[0]), p.id_of(h));
+        let (sam, mate, foe) = (p.g.player_id(p.g.player), p.id_of(p.mates()[0]), p.id_of(h));
         assert!(p.fogged(h), "seed {s}: staging: he is hidden");
         assert!(p.ours(Some(sam)) && p.ours(Some(mate)), "seed {s}: Sam's doing and a teammate's are the team's");
         assert!(!p.ours(Some(foe)) && !p.ours(None), "seed {s}: a hidden defender's or nobody's are not");
@@ -155,7 +155,7 @@ fn no_teammate_walks_through_a_leaf_the_picture_has_shut() {
         let behind = [sam[0] * 2.0 - door[0], sam[1] * 2.0 - door[1]];
         p.point_at(behind);
         for _ in 0..(60 * 15) {
-            for &f in foes.iter() { p.g.gd[f].hold = true; p.g.gd[f].pinned = true; }
+            for &f in foes.iter() { p.g.gd[f].duty.holds = true; p.g.gd[f].duty.pinned = true; }
             p.frame();
             let (held, angle, shown) = p.leaf(&name);
             if angle.abs() > 0.3 { opened = true; }

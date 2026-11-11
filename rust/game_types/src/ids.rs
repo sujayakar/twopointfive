@@ -28,15 +28,15 @@ macro_rules! id {
 id! {
     /// Box: g.tab.boxes
     BoxId,
-    /// Clip: g.tab.clip
+    /// Clip: g.art.clip
     ClipId,
-    /// MeshData: g.tab.anim_gltf_mesh_data
+    /// MeshData: g.art.mesh
     AnimGltfMeshDataId,
-    /// CastVariant: g.tab.anim_gltf_cast_variant
+    /// CastVariant: g.art.variant
     AnimGltfCastVariantId,
-    /// CastInfo: g.tab.anim_gltf_cast_info
+    /// CastInfo: g.art.cast
     AnimGltfCastInfoId,
-    /// GltfCharacter: g.tab.rig
+    /// GltfCharacter: g.art.rig
     RigId,
     /// PoseSet: g.tab.pose_set
     PoseSetId,
@@ -46,8 +46,6 @@ id! {
     CharId,
     /// Door: g.dr
     DoorId,
-    /// DriveCols: no table here
-    DriveColsId,
     /// Prop: g.tab.props_prop
     PropId,
     /// Input: g.tab.input
@@ -64,6 +62,8 @@ id! {
     DebrisChunkId,
     /// Seat: g.tab.cmd_seat
     SeatId,
+    /// Group: g.groups
+    GroupId,
     /// RtLight: g.tab.light
     LightId,
     /// Fixture: g.tab.fixture
@@ -80,8 +80,8 @@ id! {
     WindWindSourceId,
     /// DoorOp: g.tab.doortools_door_op
     DoorOpId,
-    /// Assignment: g.tab.orders_assignment
-    OrdersAssignmentId,
+    /// Task: g.tab.task
+    TaskId,
     /// RoomSearch: g.tab.doortools_room_search
     DoortoolsRoomSearchId,
     /// Word: g.tab.doortools_word

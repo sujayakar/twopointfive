@@ -13,7 +13,7 @@ pub struct RescueflushK {
     #[k(3.0)] pub kill_secs: f64,
     /// a man with one of the team in his sights this recently is fighting: not sent anywhere
     #[k(2.0)] pub busy_secs: f64,
-    /// smoke between him and her thinner than this hides her from him (the bar guards.ts puts between two AI men)
+    /// smoke between him and her thinner than this hides her from him (the bar between two AI men)
     #[k(0.3)] pub smoke_k: f64,
     /// a man sent round has reached a mark of his way inside this many metres of it: on to the next, and from the side door in
     #[k(1.8)] pub at_door_m: f64,

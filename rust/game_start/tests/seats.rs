@@ -10,10 +10,10 @@ use game_start::play::{Opts, Play};
 const SEEDS: [u32; 3] = [5, 6, 7];
 
 /// A handful of readers of one seat: the men an order would go to, where the seat's man is, the wall charge's row on the menu, whether the
-/// seat's squad is whole.
+/// seat's squad is the player's own.
 type Answers = (Vec<game::ids::GuardId>, [f64; 3], String, bool);
 fn answers(g: &Game, seat: &SeatRef) -> Answers {
-    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(seat))
+    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_sams(seat))
 }
 
 /// THE RULE: in a game of two players, the readers asked about the second seat while `g.seat` is the FIRST answer as they do with the
@@ -58,7 +58,7 @@ fn a_row_of_the_menu_is_one_seats() {
         assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
         // the second seat's fall in is given a target of its own: the first seat's menu is as it was
         seats::with_seat(&mut p.g, second, &mut |g| {
-            let d = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
+            let d = g.groups[g.group].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
             g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
             game::orders::squad_orders_register(g, d, None);
         });

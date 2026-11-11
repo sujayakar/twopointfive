@@ -133,12 +133,6 @@ pub struct Gate {
     pub thrower: Option<GuardId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum GateRole {
-    #[default] Lead,
-    Second,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GateHs {
     pub pos: V3,
@@ -193,12 +187,6 @@ pub struct StackSpot {
 pub struct SliceStations {
     pub pts: Vec<V3>,
     pub look: Vec<V3>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GateMateRole {
-    Lead,
-    Second,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -310,3 +298,8 @@ pub const TOSS_AIR_CAP: f64 = 2.2;
 
 pub const GO_AFTER_BANG: f64 = 0.35;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum GateRole {
+    #[default] Lead,
+    Second,
+}

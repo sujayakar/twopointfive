@@ -22,7 +22,7 @@ fn tap(p: &mut Play, code: &str) { p.key_down(code); p.frame(); p.key_up(code); 
 // ---------------------------------------------------------------- a burst on a man already down: the debrief card
 
 fn defender(p: &Play, not: Option<GuardId>) -> GuardId {
-    p.g.guards.iter().copied().find(|&gd| Some(gd) != not && p.g.gd[gd].team != game::teams::Team::Operative && p.g.gd[gd].civ.is_none() && p.up(gd)).unwrap()
+    p.g.guards.iter().copied().find(|&gd| Some(gd) != not && !p.g.team(gd).ours() && p.g.gd[gd].civ.is_none() && p.up(gd)).unwrap()
 }
 /// The border crossing as two.
 fn as_two(seed: u32) -> Play {
@@ -45,7 +45,7 @@ fn one_down(seed: u32, by: DownBy) -> (Play, GuardId) {
 }
 /// a burst a little off him, by the man with that id
 fn burst_beside(p: &mut Play, man: GuardId, who: f64, name: Option<&str>, seed: u32) {
-    let at = p.g.ch[p.g.gd[man].ch].pos;
+    let at = p.g.pos_of(man);
     let spec = game::frag::BlastSpec { who, name: name.map(String::from), fx: Some(false), ..Default::default() };
     game::frag::blast(&mut p.g, [at[0] + 0.6 + 0.2 * nudge(seed, 1), 0.05, at[2] + 0.2 * nudge(seed, 2)], &spec);
 }
@@ -67,7 +67,7 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
-        let who = if sams { p.g.ch[p.g.pl[p.g.player].ch].id } else { p.id_of(p.g.staged.team[0]) };
+        let who = if sams { p.g.player_id(p.g.player) } else { p.id_of(p.g.staged.team[0]) };
         burst_beside(&mut p, man, who, name, seed);
         p.run(0.5);
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");
@@ -225,7 +225,7 @@ fn in_the_guns_hold() -> (Play, GuardId, [f64; 2]) {
     p.run(0.5);
     (p, man, at)
 }
-fn holding(p: &Play) -> bool { p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
+fn holding(p: &Play) -> bool { p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
 fn rounds(p: &Play) -> f64 { game::weapons::firearm_rounds_ready(&p.g, p.g.pl[p.g.player].pistol) }
 fn charge(p: &Play) -> f64 { p.g.pl[p.g.player].ocp.charge }
 fn click(p: &mut Play, b: Button) { p.press(b); p.frame(); p.release(b); }
@@ -323,7 +323,7 @@ fn each_carriage_is_a_pose_of_its_own() {
     p.g.god_mode = true;
     let at = p.sam_at();
     let man = game::guards::spawn_unit(&mut p.g, &game::guards::UnitOpts { team: game::teams::Team::Guard, pos: [at[0] + 3.0, 0.0, at[1]], yaw: Some(0.0), weapon: Some(game::weapons::WeaponId::Aks74u), carbine_rig: Some(true), light: Some(false), ..Default::default() }).unwrap();
-    p.g.gd[man].hold = true;
+    p.g.gd[man].duty.holds = true;
     let c = p.g.gd[man].ch;
     p.run(0.5);
     let mut hands: Vec<[f64; 3]> = Vec::new();
@@ -424,7 +424,7 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let ours: Vec<_> = p.mates().into_iter().take(4).collect();
         assert_eq!(ours.len(), 4, "the staging is wrong: not four men");
         for &m in &ours { p.g.gd[m].god = false; }
-        let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).collect();
+        let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.team(gd) == game::teams::Team::Hostile && p.up(gd)).collect();
         let (thrower, rest) = theirs.split_first().unwrap();
         for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
         p.sam_put([9.0, 26.2]);
@@ -432,9 +432,9 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let d = game::doors::doors_by_name(&p.g, "foot_gate").unwrap();
         let frame_x = p.g.dr[d].frame_centre[0];
         let marks = [[2.8, 22.75], [2.8, 20.75], [2.0, 23.45], [2.0, 20.05]];
-        game::doors::door_set_locked(&mut p.g, d, false);
-        game::doors::door_set_latched(&mut p.g, d, !open);
-        game::doors::door_set_angle(&mut p.g, d, if open { 1.5 } else { 0.0 });
+        p.g.dr[d].leaf.locked = false;
+        p.g.dr[d].leaf.latched = !open;
+        p.g.dr[d].leaf.angle = if open { 1.5 } else { 0.0 };
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
         p.run(0.05);
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
@@ -444,8 +444,8 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let (mut latched, mut swung, mut there) = (true, 0.0f64, Vec::new());
         for _ in 0..(((FUSE + 0.5) * 60.0) as usize) {
             there = ours.iter().map(|&m| (m, p.at(m))).collect();
-            latched &= game::doors::door_latched(&mut p.g, d);
-            swung = swung.max(game::doors::door_angle(&p.g, d).abs());
+            latched &= p.g.dr[d].leaf.latched;
+            swung = swung.max(p.g.dr[d].leaf.angle.abs());
             p.frame();
             if p.g.stats.frag.bursts > bursts0 { break; }
         }

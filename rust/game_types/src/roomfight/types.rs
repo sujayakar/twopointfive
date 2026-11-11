@@ -121,10 +121,57 @@ pub enum DefMode {
     Free,
 }
 
+/// The leg a defender is on, or was on last (roomfight/post.rs).
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct OnLeg {
+    /// who sent him: a tasker of owner/, `By::NOBODY` the room fight itself
+    pub by: crate::owner::By,
+    /// the points he still goes by, the last of them where he is sent
+    pub way: Vec<V3>,
+    pub kind: crate::roomfight::DefMoveKind,
+    /// the door he comes by
+    pub door: Option<DoorId>,
+    /// at its end he stands there on his sender's word
+    pub stays: bool,
+    /// how many times more he tries when he gets nowhere
+    pub tries: u8,
+    /// how it ended; None: he is on it
+    pub end: Option<LegEnd>,
+    /// how long he has been on it · where he last made ground, and how long ago · when his boots were last heard
+    pub t: f64,
+    pub stall_at: V3,
+    pub stall_t: f64,
+    pub step_t: f64,
+    /// the post he left for it, as he held it
+    pub left: Option<PostLeft>,
+}
+
+/// A post as a man held it when he left it, and how he was.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct PostLeft {
+    pub t: f64,
+    pub state: crate::game::GuardState,
+    pub awareness: f64,
+    pub hold: bool,
+    pub pinned: bool,
+    pub station: V3,
+    pub home: V3,
+    pub room: Option<RoomfightRoomId>,
+    pub ev: Vec<f64>,
+    pub watch: f64,
+    pub want: f64,
+    pub pt: V3,
+}
+
+/// How a leg ended: he is there, there is no way, somebody to fight stopped him, or he was sent or let go elsewhere.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum LegEnd { #[default] Arrived, Nowhere, Contact, Taken }
+
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Def {
     pub gd: GuardId,
-    pub station: V3,
+    /// the post he holds and what he watches from it
+    pub task: TaskId,
     pub home: V3,
     pub room: Option<RoomfightRoomId>,
     pub pinned0: bool,
@@ -136,13 +183,12 @@ pub struct Def {
     pub glance_to: f64,
     pub glance_until: f64,
     pub glance_next: f64,
-    pub pt: V3,
     pub heard_t: f64,
     pub cnt: crate::roomfight::DefCnt,
     pub noise_at: Option<V3>,
     pub noise_t: f64,
     pub noise_out: bool,
-    pub last_state: String,
+    pub last_state: crate::game::GuardState,
     pub last_seen: f64,
     pub fix_keep: f64,
     pub pre: bool,
@@ -150,13 +196,7 @@ pub struct Def {
     pub lost_at: f64,
     pub moved_at: f64,
     pub mode: crate::roomfight::DefMode,
-    pub move_kind: crate::roomfight::DefMoveKind,
-    pub move_t: f64,
-    /// who sent him on the leg he is on, or was on last: a tasker of owner/, `By::NOBODY` the room fight itself
-    pub leg_by: crate::owner::By,
-    pub came_by: Option<DoorId>,
-    pub stall_at: V3,
-    pub stall_t: f64,
+    pub leg: OnLeg,
     pub free_at: f64,
     pub burst: crate::roomfight::DefBurst,
     pub bolt_until: f64,
@@ -169,12 +209,6 @@ pub struct DefCnt {
     pub kick: f64,
     pub bang: f64,
     pub small: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DefMoveKind {
-    #[default] Cover,
-    Fallback,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -322,3 +356,9 @@ pub fn room_dx() -> Vec<f64> { alloc::vec![1.0, -1.0, 0.0, 0.0] }
 pub fn room_dz() -> Vec<f64> { alloc::vec![0.0, 0.0, 1.0, -1.0] }
 
 pub const GLASS_LOOK: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+pub enum DefMoveKind {
+    #[default] Cover,
+    Fallback,
+}

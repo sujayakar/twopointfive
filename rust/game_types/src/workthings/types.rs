@@ -30,7 +30,7 @@ pub struct WorkThings {
 pub struct Job {
     pub thing: crate::workthings::WorkThing,
     pub verb: crate::workthings::WorkVerb,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub t0: f64,
     pub last_t: f64,
 }

@@ -1,14 +1,15 @@
 // THE SHORT READ OF A TAKE (ui/lookpanel.ts). The F9 recorder's take (ui/perfrec.ts) leaves a page as a file; here is a short read of it (takeRead: the frame
-// times, the slow frames one by one with what each cost, the passes) that fits a text box with a Copy button. A sweep's rows are NOT priced here:
-// tools/qa/perf-report.ts prices them off the whole take, by its own rules.
+// times, the slow frames one by one with what each cost, the passes, a sweep's rows with what each gives back) that fits a text box with a Copy button.
+// The prices are ui/sweepread.ts's, the one reading tools/qa/perf-report.ts prints too.
 import type { PerfDump, PerfFrame } from './perfrec';
+import { readSweeps } from './sweepread';
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const mean = (a: number[]) => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
 const at = (sorted: number[], q: number) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : 0;
 const cost = (f: PerfFrame) => f.gpuUnion ?? f.gpuSum;
 
-export interface TakeRead { [k: string]: unknown; id: string; frames: number; seconds: number; dt: Record<string, number>; over: Record<string, number>; slow: unknown[]; passes: Record<string, [number, number]>; sweep: { rows: number; rounds: number; segments: number; skipped: unknown; end: unknown } | null }
+export interface TakeRead { [k: string]: unknown; id: string; frames: number; seconds: number; dt: Record<string, number>; over: Record<string, number>; slow: unknown[]; passes: Record<string, [number, number]>; sweep: { rows: number; rounds: number; segments: number; skipped: unknown; end: unknown; baseGpu: number | null; prices: [string, number, boolean][] } | null }
 
 /** the short read of a take. Frames inside a sweep's settle (the flip itself hitches: a program compiles, a history starts again) are left out of the slow list.
  *  The GPU figure of a frame is the compute passes' (the recorder's union, or their sum in a take without it): a render pass's timer is not to be trusted on every GPU */
@@ -30,6 +31,7 @@ export function takeRead(dump: PerfDump, id: string): TakeRead {
     const near = dump.events.filter(e => e.kind !== 'sweep' && Math.abs(e.t - f.t) < 400).slice(0, 3).map(e => `${e.kind}: ${e.text.slice(0, 80)}`);
     return { frame: i, t: Math.round(f.t), dt: r2(f.dt), update: r2(f.cpu.update), render: r2(f.cpu.render), other: r2(f.cpu.other), gpu: r2(cost(f)), hot, near };
   });
+  const price = begin ? readSweeps(dump).at(-1) ?? null : null;   // (GPU ms given back, the median of the rounds; true = inside the noise)
   const rowsAsked = (begin?.rows as unknown[] | undefined)?.length ?? 0;
   const f0 = F[0], fN = F[n - 1];
   return { id, startedAt: dump.startedAt, commit: dump.commit ?? '', query: dump.query ?? '', machine: dump.machine, dpr: dump.dpr, userAgent: dump.userAgent, note: dump.note,
@@ -37,12 +39,12 @@ export function takeRead(dump: PerfDump, id: string): TakeRead {
     dt: { mean: r2(mean(dts)), p50: r2(med), p95: r2(at(dts, 0.95)), p99: r2(at(dts, 0.99)), worst: r2(dts[n - 1] ?? 0) },
     over: { '20ms': dts.filter(v => v > 20).length, '25ms': dts.filter(v => v > 25).length, '33ms': dts.filter(v => v > 33.4).length, '50ms': dts.filter(v => v > 50).length, '100ms': dts.filter(v => v > 100).length },
     gpu: { mean: r2(mean(F.map(cost))), p95: r2(at(F.map(cost).sort((a, b) => a - b), 0.95)) }, cpu: { update: r2(mean(F.map(f => f.cpu.update))), render: r2(mean(F.map(f => f.cpu.render))), other: r2(mean(F.map(f => f.cpu.other))) },
-    slowLine: r2(line), slow, passes, sweep: begin ? { rows: rowsAsked, rounds: Number(begin.rounds ?? 0), segments: seg.length, skipped: begin.skipped ?? [], end: end?.j ?? null } : null, events: dump.events.filter(e => e.kind !== 'sweep').length };
+    slowLine: r2(line), slow, passes, sweep: begin ? { rows: rowsAsked, rounds: Number(begin.rounds ?? 0), segments: seg.length, skipped: begin.skipped ?? [], end: end?.j ?? null, baseGpu: price?.base.union != null ? r2(price.base.union) : null, prices: (price?.rows ?? []).map(r => [r.id, r2(r.median), r.inNoise] as [string, number, boolean]) } : null, events: dump.events.filter(e => e.kind !== 'sweep').length };
 }
 
 /** the read as a person reads it: a few lines for the panel */
 export function takeWords(r: TakeRead): string[] {
   const out = [`${r.frames} frames in ${r.seconds} s`, `a frame: ${r.dt.p50} ms in the middle, ${r.dt.p95} at the 95th, ${r.dt.worst} at worst`, `slow frames: ${r.over['25ms']} over 25 ms, ${r.over['33ms']} over 33, ${r.over['50ms']} over 50`];
-  if (r.sweep) out.push(`the sweep: ${r.sweep.rows} rows, ${r.sweep.segments} segments; its rows are priced when the take is read`);
+  if (r.sweep) out.push(`the sweep: ${r.sweep.rows} rows, ${r.sweep.segments} segments`, ...r.sweep.prices.filter(p => !p[2]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8).map(p => `${p[0]}: ${p[1] < 0 ? '' : '+'}${p[1]} ms of ${r.sweep!.baseGpu ?? '?'}`));
   return out;
 }

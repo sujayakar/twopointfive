@@ -1,5 +1,5 @@
 // GPU resources for instanced skinned characters sharing one mesh (SkinnedDrawable for the G-buffer pass).
-import { makeBuffer, makeBufferWithData, writeWordsIfChanged } from '../gpu/device';
+import { makeBuffer, makeBufferWithData } from '../gpu/device';
 import { SkinnedDrawable } from '../render/gbuffer';
 import { GltfCharacter } from './gltf';
 import { CHAR_MAT_FLOATS, charSlots } from '../render/charMaterials';
@@ -11,7 +11,7 @@ export const MAX_CHARS = 16;
  *  bits, 0) — the last four rows are the wet-character look (rust/game_rules/src/air/wet.rs), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
  *  is 0 on the mannequin = every vertex drawn, the two tints by matSel, exactly as it always was */
 export const CHAR_INST_BYTES = 96;
-const INST_F32 = CHAR_INST_BYTES / 4;
+const BONES = JOINT_STRIDE * 16;   // words of a man's joint matrices
 /** bytes per instance in `charMats` (render/charMaterials.ts: CHAR_MAT_ROWS vec4 rows — the per-slot materials; all zero = the two tints above, as ever) */
 export const CHAR_MAT_BYTES = CHAR_MAT_FLOATS * 4;
 
@@ -22,11 +22,8 @@ export class CharacterRenderer implements SkinnedDrawable {
   slotBuf: GPUBuffer; charMats: GPUBuffer;
   private matData = new Float32Array(MAX_CHARS * CHAR_MAT_FLOATS); private matDirty = true; private slotsUp = false;
   jointsFormat: GPUVertexFormat;
-  private instData = new Float32Array(MAX_CHARS * INST_F32); private instU32 = new Uint32Array(this.instData.buffer);
-  private jointStaging = new Float32Array(MAX_CHARS * JOINT_STRIDE * 16);
-  /** every man's material rows and instance words are written whole next frame */
-  forgetSent() { this.matDirty = true; this.instSent.fill(0xffffffff); }
-  private instSent = new Uint32Array(MAX_CHARS * INST_F32);   // charInsts as last written (gpu/device.ts writeWordsIfChanged)
+  /** every man's material rows are written whole next frame */
+  forgetSent() { this.matDirty = true; }
 
   constructor(private device: GPUDevice, public ch: GltfCharacter) {
     const m = ch.mesh; const n = m.vertexCount;
@@ -71,7 +68,7 @@ export class CharacterRenderer implements SkinnedDrawable {
   }
 
   /** Instance i's material rows for this frame: `write` fills CHAR_MAT_FLOATS floats at the offset it is handed (charMaterials.ts writeCharPalette), omitted = zeros = the
-   *  two tints. Uploaded by finish() only when a row changed, so a frame with the switch off — every frame, by default — writes nothing after the first. */
+   *  two tints. Uploaded by materialsOut() only when a row changed, so a frame with the switch off — every frame, by default — writes nothing after the first. */
   setMaterials(i: number, write?: (out: Float32Array, offset: number) => void) {
     const o = i * CHAR_MAT_FLOATS; const f = this.matData;
     if (!write) { if (f[o] !== 0) { f.fill(0, o, o + CHAR_MAT_FLOATS); this.matDirty = true; } return; }
@@ -83,22 +80,22 @@ export class CharacterRenderer implements SkinnedDrawable {
     const was = this.scratch; was.set(f.subarray(o, o + CHAR_MAT_FLOATS)); write(f, o);
     for (let k = 0; k < CHAR_MAT_FLOATS; k++) if (f[o + k] !== was[k]) { this.matDirty = true; break; }
   }
-  /** A FRAME'S MEN WHOSE INSTANCES AND BONES ARE WRITTEN ELSEWHERE (src/draw/men.ts): how many, and the parts each wears */
-  drawn(count: number) { this.instanceCount = count; }
+  /** A FRAME'S MEN WHOSE INSTANCES AND BONES ARE WRITTEN ELSEWHERE (src/draw/men.ts): how many, their bones as they are sent (instance i's at `at` + i × JOINT_STRIDE × 16 words), and the parts each wears */
+  drawn(count: number, bones: Uint32Array, at: number) {
+    this.instanceCount = count;
+    for (let i = 0, o = 0; i < count; i++, o += BONES) {
+      const was = this.bones; let w = 0; while (w < BONES && bones[at + o + w] === was[o + w]) w++;
+      if (w < BONES) { for (; w < BONES; w++) was[o + w] = bones[at + o + w]; this.moves[i]++; }
+    }
+  }
+  private bones = new Uint32Array(MAX_CHARS * BONES);
+  /** how many times the bones sent for instance i have been others than the ones sent before them (the shadow trees ask: render/meshShadows.ts) */
+  readonly moves = new Uint32Array(MAX_CHARS);
   drawnParts(i: number, mask: number) { this.masks[i] = mask; }
+  partsOf(i: number): number { return this.masks[i]; }
   /** …and their material rows, where one changed */
   materialsOut(queue: GPUQueue) { if (this.matDirty) { queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; } }
   private scratch = new Float32Array(CHAR_MAT_FLOATS);
-  // DRAWING BETWEEN TICKS (src/host/between.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
-  // palette — a blend of two ticks', in an array of the caller's — over the GPU's copy. The staging is never written by it: what the game staged is what the next tick finds.
-  get staged(): Float32Array { return this.jointStaging; }
-  finish(count: number) {
-    this.instanceCount = count;
-    if (this.matDirty) { this.device.queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; }
-    if (count === 0) return;
-    this.device.queue.writeBuffer(this.jointMats, 0, this.jointStaging.buffer, 0, count * JOINT_STRIDE * 64);
-    writeWordsIfChanged(this.device, this.charInsts, 0, this.instU32, this.instSent, count * INST_F32);   // (tints, owners, the wet rows, the part masks: the same words while nobody's coat or kit changes)
-  }
 }
 
 /** Each part's span of the index buffer as (first index, index count) pairs by part index — or null unless EVERY triangle's three corners are one part's and the parts' triangles lie

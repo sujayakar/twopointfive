@@ -9,10 +9,8 @@ pub struct Eyes { pub seen: bool, pub dist: f64, pub body: Option<CharId> }
 
 pub(in crate::people) fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Eyes {
     let mut seen = false;
-    if staff && crate::teams::is_hostile(g, crate::teams::Team::Guard, crate::teams::Team::Operative) {
-        acquire_foe(g, gd);
-        if g.gd[gd].foe.is_none() { let c = g.pl[g.player].ch; crate::mind::foe(g, gd, Some(c), "guards"); }
-    } else if !staff { acquire_foe(g, gd); }
+    acquire_foe(g, gd);
+    if staff && g.gd[gd].foe.is_none() { let c = g.pl[g.player].ch; crate::mind::foe(g, gd, Some(c), "guards"); }
     let fc = g.gd[gd].foe;
     let man = fc.and_then(|f| crate::character::guard_of(g, f));
     let (visible, dist) = match (fc, man) {

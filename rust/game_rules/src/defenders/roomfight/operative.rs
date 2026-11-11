@@ -1,5 +1,6 @@
 //! A SQUAD MAN IN THE FIGHT: his eyes on each of them, who his muzzle is on, what he does with nobody in his sight, and his fire.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -13,13 +14,13 @@ fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardI
     let known = known.unwrap_or(false);
     let r = crate::guards::sight_gain_on(g, viewer, target, dist);
     let st = g.gd[viewer].state;
-    if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.gd[viewer].team == crate::teams::Team::Operative { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
+    if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.team(viewer).ours() { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
 }
 
 /// this teammate's feet are held this frame.
 pub fn room_fight_short(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.fight.live { return false; }
-    match op_id(g, gd) { Some(o) => { let s = g.tab.roomfight_op[o].short_t; g.time - s >= 0.0 && g.time - s < 0.25 } None => false }
+    match op_of(g, gd) { Some(o) => { let s = g.tab.roomfight_op[o].short_t; g.time - s >= 0.0 && g.time - s < 0.25 } None => false }
 }
 
 /// FIGHT_SKILL.operative: `readonly skill = FIGHT_SKILL`, one table
@@ -27,22 +28,22 @@ pub(super) fn skill_operative(g: &Game) -> FightSkill { *g.fight.skill.get(RoomF
 
 /// `gd.weapon.def`: the row of WEAPONS behind a man's gun
 pub(super) fn weapon_def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().clone()
+    g.weapon(g.fa[g.gd[gd].weapon].def).clone()
 }
 
 /// `s.over === O.ov`: only this module ever puts an overlay on a script, and each man has one Op
-pub(super) fn over_is_mine(g: &Game, gd: GuardId) -> bool {
+pub(crate) fn has_over(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
-/// O.ov.aimAt IS O.aim and s.over IS O.ov in the TypeScript: after a write to either, the script's copy follows
+/// the script keeps a copy of the op's overlay, whose aim_at is the op's aim: after a write to either, the copy follows
 pub(super) fn over_follow(g: &mut Game, o: RoomfightOpId) {
     let over = over_of(g, o);
     let gd = g.tab.roomfight_op[o].gd;
     if let Some(s) = g.gd[gd].script.as_mut() { if s.over.is_some() { s.over = Some(over); } }
 }
 
-/// the script's copy of O.ov (OpOv and GuardScriptOver are one object in the TypeScript; its aimAt is O.aim)
+/// the script's copy of the op's overlay; its aim_at is the op's aim
 pub(super) fn over_of(g: &Game, o: RoomfightOpId) -> crate::game::GuardScriptOver {
     let (aim, ov) = (g.tab.roomfight_op[o].aim, g.tab.roomfight_op[o].ov);
     crate::game::GuardScriptOver { aim_at: aim, face: ov.face, walk: ov.walk }
@@ -108,8 +109,8 @@ fn calls_mate_down(g: &mut Game, o: RoomfightOpId) {
         i += 1;
         let x = g.tab.roomfight_op[xo].gd;
         if xo == o || !crate::condition::down(g, g.gd[x].ch) || g.fight.down_called.has(x) { continue; }
-        let e = eye_of(g, c);
-        let xp = g.ch[g.gd[x].ch].pos;
+        let e = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
+        let xp = g.pos_of(x);
         if crate::scene_collision::segment_blocked(g, e, [xp[0], 0.4, xp[2]], None, None, None) { continue; }
         g.fight.down_called.add(x);
         room_fight_speak(g, o, "man down.", Some(0.0));
@@ -127,7 +128,7 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
     let fc = g.gd[gd].foe.filter(|&f| !crate::character::is_player(g, f));
     if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
         let muzzle = g.ch[c].muzzle;
-        let at = chest_of(g, fc);
+        let at = g.ch[fc].bone_or(crate::character::Bone::Chest, 1.1);
         if room_fight_friend_in_line(g, muzzle, at, gd).is_some_and(|f| crate::character::is_player(g, f)) {
             g.gd[gd].muzzle_down = true;
             g.gd[gd].muzzle_clear_t = 0.0;
@@ -153,8 +154,8 @@ fn his_eyes(g: &mut Game, o: RoomfightOpId, dt: f64, sk: &FightSkill, blind: boo
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        let (mine, theirs) = (g.gd[gd].team, g.gd[h].team);
-        if theirs == mine || !crate::teams::is_hostile(g, mine, theirs) { continue; }
+        let (mine, theirs) = (g.team(gd), g.team(h));
+        if theirs == mine || !mine.foe_of(theirs) { continue; }
         if !g.tab.roomfight_op[o].meters.has(h) { g.tab.roomfight_op[o].meters.set(h, Meter { m: 0.0, seen_t: -100.0, glass_t: None }); }
         if crate::condition::down(g, g.gd[h].ch) { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; }
         if g.gd[h].fled { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; } // a man who dropped it and ran is nobody's target
@@ -182,9 +183,9 @@ fn his_eyes(g: &mut Game, o: RoomfightOpId, dt: f64, sk: &FightSkill, blind: boo
         if no_shot { // walked on from for want of a shot: his again the moment there is one
             let mut clear = false;
             if visible {
-                let at = chest_of(g, hc);
+                let at = g.ch[hc].bone_or(crate::character::Bone::Chest, 1.1);
                 clear = crate::guards::clear_shot(g, c, at);
-                if !clear { let head = head_of(g, hc); clear = crate::guards::clear_shot(g, c, head); }
+                if !clear { let head = g.ch[hc].bone_or(crate::character::Bone::Head, 1.6); clear = crate::guards::clear_shot(g, c, head); }
             }
             if clear { g.tab.roomfight_op[o].pass = None; } else { continue; }
         }
@@ -217,7 +218,7 @@ fn muzzle_to(g: &mut Game, o: RoomfightOpId, best: Option<GuardId>, sk: &FightSk
     let c = g.gd[gd].ch;
     if let Some(b) = best {
         let cp = g.ch[c].pos;
-        let bp = g.ch[g.gd[b].ch].pos;
+        let bp = g.pos_of(b);
         let off = m::abs(v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].aim_yaw));
         let t = g.time;
         let beat = if g.tab.roomfight_op[o].tgt.is_some() || t - g.tab.roomfight_op[o].lost_at < 1.5 {
@@ -285,19 +286,19 @@ fn nobody_in_sight(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, blind: b
     if !blind { room_fight_cue(g, o); }
     let look = match g.tab.roomfight_op[o].turn { Some(u) if g.time >= u.at && !crate::condition::down(g, g.gd[u.to].ch) => Some(u), _ => None };
     if let Some(u) = look {
-        let tc = chest_of(g, g.gd[u.to].ch);
+        let tc = g.ch[g.gd[u.to].ch].bone_or(crate::character::Bone::Chest, 1.1);
         let to = match u.pt {
-            Some(pt) => { let e = eye_of(g, c); if crate::guards::eye_blocked(g, gd, e, tc) { pt } else { tc } }
+            Some(pt) => { let e = g.ch[c].bone_or(crate::character::Bone::Head, 1.65); if crate::guards::eye_blocked(g, gd, e, tc) { pt } else { tc } }
             None => tc,
         };
         room_fight_sam_in_line(g, o, to);
         room_fight_point(g, o, to, dt, speed);
     } else if !blind && crate::coverfire::cover_op(g, o, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed)) {
         // a man he knows is behind something breakable: his rounds go into it
-    } else if over_is_mine(g, gd) {
+    } else if has_over(g, gd) {
         if g.time - g.tab.roomfight_op[o].lost_at > 0.5 || (g.tab.roomfight_op[o].fell == Some(true) && crate::doortools::door_tools_owes_corner(g, &crate::seats::here(g), gd)) {
             room_fight_restore(g, o);
-        } else if flat(g.ch[c].pos, g.tab.roomfight_op[o].aim) < 2.5 { // the half second his gun stays where the man was: a BEARING
+        } else if dist_xz(g.ch[c].pos, g.tab.roomfight_op[o].aim) < 2.5 { // the half second his gun stays where the man was: a BEARING
             let (p, yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
             g.tab.roomfight_op[o].aim[0] = p[0] + m::sin(yaw) * 2.5;
             g.tab.roomfight_op[o].aim[2] = p[2] + m::cos(yaw) * 2.5;
@@ -314,8 +315,8 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     g.tab.roomfight_op[o].turn = None;
     let h = g.tab.roomfight_op[o].tgt.unwrap();
     let hc = g.gd[h].ch;
-    let chest = chest_of(g, hc);
-    let dist = flat(g.ch[c].pos, g.ch[hc].pos);
+    let chest = g.ch[hc].bone_or(crate::character::Bone::Chest, 1.1);
+    let dist = dist_xz(g.ch[c].pos, g.ch[hc].pos);
     let brg = room_fight_point(g, o, chest, dt, speed);
     let sam_in = room_fight_sam_in_line(g, o, chest);
     if sam_in { room_fight_hold_short(g, o); }
@@ -331,12 +332,12 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     if let Some(to) = tracked(g, o, h, dt, speed, dist, brg, sk) { fires(g, o, h, to, dt, speed, dist, sk); }
 }
 
-/// THE TRACK (aim.ts's law, this side's K): whether a round may go now, and at what point of him
+/// THE TRACK (the aim law, this side's K): whether a round may go now, and at what point of him
 fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist: f64, brg: f64, sk: &FightSkill) -> Option<V3> {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     let hc = g.gd[h].ch;
-    let chest = chest_of(g, hc);
+    let chest = g.ch[hc].bone_or(crate::character::Bone::Chest, 1.1);
     let p = g.k.aim.guard;
     let facing_err = m::abs(v3::wrap_angle(brg - g.ch[c].aim_yaw));
     let on_man = g.time >= g.tab.roomfight_op[o].ready_at && facing_err < p.on_deg * crate::v3::DEG + m::atan2(0.35, m::max(dist, 0.3)) && v3::dist(g.tab.roomfight_op[o].aim, chest) < 0.3;
@@ -358,13 +359,13 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
     g.tab.roomfight_op[o].wall_t = 0.0;
     if !on { g.tab.roomfight_op[o].block_t = m::max(0.0, g.tab.roomfight_op[o].block_t - dt); } // off him, the count runs back down
     if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || crate::control::man::changing_magazine(g, gd) || crate::gunslots::side_locked(g, gd) || !on { return None; }
-    if crate::silent::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
+    if crate::duty::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
         room_fight_speak(g, o, "eyes on. holding.", Some(8.0));
         return None;
     }
     let mut to = chest;
     if !crate::guards::clear_shot(g, c, to) {
-        let head = head_of(g, hc);
+        let head = g.ch[hc].bone_or(crate::character::Bone::Head, 1.6);
         if crate::guards::clear_shot(g, c, head) {
             to = head;
         } else if !crate::coverfire::cover_seen(g, gd, Some(g.gd[h].ch), chest) {
@@ -445,7 +446,7 @@ fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt: f64
     let c = g.gd[gd].ch;
     let (pos, vel, aim_yaw, body_yaw) = (g.ch[c].pos, g.ch[c].vel, g.ch[c].aim_yaw, g.ch[c].body_yaw);
     if !g.gd[gd].script.as_ref().unwrap().over.is_some() { // from where the muzzle is: it travels, it does not snap
-        let r = m::max(1.0, flat(pos, to));
+        let r = m::max(1.0, dist_xz(pos, to));
         g.tab.roomfight_op[o].aim[0] = pos[0] + m::sin(aim_yaw) * r;
         g.tab.roomfight_op[o].aim[1] = 1.2;
         g.tab.roomfight_op[o].aim[2] = pos[2] + m::cos(aim_yaw) * r;
@@ -454,7 +455,7 @@ fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt: f64
         g.gd[gd].script.as_mut().unwrap().over = Some(over);
     }
     for i in 0..3 { g.tab.roomfight_op[o].aim[i] = v3::damp(g.tab.roomfight_op[o].aim[i], to[i], 16.0, dt); }
-    let brg = m::atan2(to[0] - pos[0], to[2] - pos[2]);
+    let brg = v3::yaw_to(pos, to);
     let off = m::abs(v3::wrap_angle(brg - body_yaw));
     let walk = speed >= 0.3;
     if walk { // walking, it is the way he is GOING the point is behind, or not: a test on the chest would turn him to and fro
@@ -472,8 +473,38 @@ fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt: f64
 pub(super) fn in_arc(g: &Game, c: CharId, arc: Option<f64>, h: GuardId) -> bool {
     match arc {
         None => true,
-        Some(a) => m::abs(v3::wrap_angle(v3::yaw_to(g.ch[c].pos, g.ch[g.gd[h].ch].pos) - a)) < g.k.roomfight.arc_half_deg * crate::v3::DEG,
+        Some(a) => m::abs(v3::wrap_angle(v3::yaw_to(g.ch[c].pos, g.pos_of(h)) - a)) < g.k.roomfight.arc_half_deg * crate::v3::DEG,
     }
+}
+
+/// What the cue has to go on, once any look he has is settled.
+#[derive(Clone, Copy)]
+struct CueLook {
+    o: RoomfightOpId,
+    gd: GuardId,
+    c: CharId,
+    eye: V3,
+    gone: Option<GuardId>,
+    arc: Option<f64>,
+    a: Option<TaskId>,
+    on_way_to_door: bool,
+    look: Option<OpTurn>,
+}
+
+/// What turns him, and how.
+#[derive(Clone, Copy)]
+struct CueCause {
+    who: GuardId,
+    call: bool,
+    pt: Option<V3>,
+    secs: f64,
+    door: Option<DoorId>,
+    shot_door: Option<DoorId>,
+}
+
+/// A cause that is a man, or a place he comes from: looked at for the usual time.
+fn cue_at_man(who: GuardId, call: bool, pt: Option<V3>) -> CueCause {
+    CueCause { who, call, pt, secs: 2.5, door: None, shot_door: None }
 }
 
 /// What turns a teammate with nobody in his sight: a hostile's round from where he has a line, else the man a mate's muzzle is on, a footfall, a door.
@@ -485,7 +516,39 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
         let lapse = g.time > u.until || crate::condition::down(g, g.gd[u.to].ch) || (u.door.is_none() && (crate::workthings::work_passes(g, gd, u.to) || room_fight_cover_passes(g, &crate::seats::here(g), o, u.to)));
         if lapse { g.tab.roomfight_op[o].turn = None; g.tab.roomfight_op[o].lost_at = g.time; }
     }
-    let mut look: Option<OpTurn> = g.tab.roomfight_op[o].turn.filter(|u| u.pt.is_some()); // a look at where steps come from: it follows them and lasts while they keep coming
+    let look = look_follows_the_steps(g, o);
+    if g.tab.roomfight_op[o].turn.is_some() && look.is_none() { return; }
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
+    // the man he has just walked on from: only the eye loop turns him back
+    let gone = match g.tab.roomfight_op[o].pass { Some(p) if p.no_shot.unwrap_or(false) && g.time < p.until => Some(p.h), _ => None };
+    let a = crate::duty::order(g, gd);
+    let arc = arc_of_his_hold(g, c, a);
+    let on_way_to_door = match a { Some(id) => g.tab.task[id].door.is_some() && !g.tab.task[id].arrived, None => false };
+    let s = CueLook { o, gd, c, eye, gone, arc, a, on_way_to_door, look };
+    let mut cause = round_from_a_man_in_his_line(g, s);
+    if cause.is_none() { cause = man_a_mates_muzzle_is_on(g, s); }
+    if cause.is_none() { cause = footsteps_coming(g, s); }
+    let opened = door_opened_in_his_sight(g, s, cause.is_none());
+    if opened.is_some() { cause = opened; }
+    // last of all: a man in his line, a mate's call, a footfall and a door just opened each come first
+    if cause.is_none() && !on_way_to_door {
+        let only = look.and_then(|l| l.door);
+        if let Some(ds) = room_fight_door_shot(g, o, eye, gone, arc, a, only) {
+            cause = Some(CueCause { who: ds.by, call: false, pt: Some(ds.at), secs: g.k.roomfight.door_look_secs, door: Some(ds.door), shot_door: Some(ds.door) });
+        }
+    }
+    let Some(w) = cause else { return };
+    let same = look.filter(|l| l.to == w.who || (w.shot_door.is_some() && l.door == w.shot_door)); // the man he was already looking for by ear: no second beat
+    let at = match same {
+        Some(l) => if w.door.is_some() { l.at } else { m::min(l.at, g.time) },
+        None => { let t = g.time; t + pick(g, crate::dice::Who::Op(o), sk.react) + if w.call { 0.25 } else { 0.0 } }
+    };
+    g.tab.roomfight_op[o].turn = Some(OpTurn { to: w.who, at, until: g.time + w.secs, pt: w.pt, t0: Some(g.time), door: w.door });
+}
+
+/// A look at where steps come from: it follows them and lasts while they keep coming.
+fn look_follows_the_steps(g: &mut Game, o: RoomfightOpId) -> Option<OpTurn> {
+    let mut look: Option<OpTurn> = g.tab.roomfight_op[o].turn.filter(|u| u.pt.is_some());
     if let (Some(mut l), Some(sb)) = (look, g.tab.roomfight_op[o].step_by) {
         if l.door.is_none() && sb.by == l.to && g.time - sb.t < 0.6 {
             l.pt = Some(sb.at);
@@ -494,104 +557,91 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
             g.tab.roomfight_op[o].turn = Some(l);
         }
     }
-    if g.tab.roomfight_op[o].turn.is_some() && look.is_none() { return; }
-    let eye = eye_of(g, c);
+    look
+}
+
+/// The way an order to hold has him watching, once he has got there.
+fn arc_of_his_hold(g: &Game, c: CharId, a: Option<TaskId>) -> Option<f64> {
+    let row = &g.tab.task[a?];
+    match row.watch { Some(w) if crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
+}
+
+/// A hostile's round just fired, by the nearest shooter he has a line to.
+fn round_from_a_man_in_his_line(g: &Game, s: CueLook) -> Option<CueCause> {
+    let CueLook { o, gd, c, eye, gone, .. } = s;
     let mut who: Option<GuardId> = None;
     let mut bd = 16.0;
-    let mut call = false;
-    let mut pt: Option<V3> = None;
-    let gone = match g.tab.roomfight_op[o].pass { Some(p) if p.no_shot.unwrap_or(false) && g.time < p.until => Some(p.h), _ => None }; // the man he has just walked on from: only the eye loop turns him back
-    let a = crate::seats::order_of(g, gd);
-    let arc = match a {
-        Some(id) => {
-            let row = &g.tab.orders_assignment[id];
-            match row.watch { Some(w) if crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
-        }
-        None => None,
-    };
-    let on_way_to_door = match a { Some(id) => g.tab.orders_assignment[id].door.is_some() && !g.tab.orders_assignment[id].arrived, None => false };
     let mut i = 0;
     while i < g.fight.reports.len() {
         let r = g.fight.reports[i];
         i += 1;
         if g.time - r.t > 0.6 || crate::condition::down(g, g.gd[r.by].ch) || Some(r.by) == gone || room_fight_cover_passes(g, &crate::seats::here(g), o, r.by) { continue; }
         let by = g.gd[r.by].ch;
-        let dist = flat(g.ch[c].pos, g.ch[by].pos);
+        let dist = dist_xz(g.ch[c].pos, g.ch[by].pos);
         if dist < bd {
-            let at = chest_of(g, by);
+            let at = g.ch[by].bone_or(crate::character::Bone::Chest, 1.1);
             if !crate::guards::eye_blocked(g, gd, eye, at) { bd = dist; who = Some(r.by); }
         }
     }
-    if who.is_none() {
-        let mut i = 0;
-        while i < g.fight.ops.len() {
-            let xo = g.fight.ops[i];
-            i += 1;
-            let (xg, xt) = (g.tab.roomfight_op[xo].gd, g.tab.roomfight_op[xo].tgt);
-            let t = match xt { Some(t) if xo != o => t, _ => continue };
-            if Some(t) == gone || crate::condition::down(g, g.gd[t].ch) || crate::condition::down(g, g.gd[xg].ch) { continue; }
-            let tc = g.gd[t].ch;
-            if flat(g.ch[c].pos, g.ch[tc].pos) >= 16.0 || !in_arc(g, c, arc, t) { continue; }
-            let at = chest_of(g, tc);
-            if crate::guards::eye_blocked(g, gd, eye, at) || crate::workthings::work_passes(g, gd, t) || room_fight_cover_passes(g, &crate::seats::here(g), o, t) { continue; }
-            who = Some(t);
-            call = true;
-        }
+    who.map(|w| cue_at_man(w, false, None))
+}
+
+/// The man a mate's muzzle is on, in his arc and his line: the last mate's, if several.
+fn man_a_mates_muzzle_is_on(g: &mut Game, s: CueLook) -> Option<CueCause> {
+    let CueLook { o, gd, c, eye, gone, arc, .. } = s;
+    let mut who: Option<GuardId> = None;
+    let mut i = 0;
+    while i < g.fight.ops.len() {
+        let xo = g.fight.ops[i];
+        i += 1;
+        let (xg, xt) = (g.tab.roomfight_op[xo].gd, g.tab.roomfight_op[xo].tgt);
+        let t = match xt { Some(t) if xo != o => t, _ => continue };
+        if Some(t) == gone || crate::condition::down(g, g.gd[t].ch) || crate::condition::down(g, g.gd[xg].ch) { continue; }
+        let tc = g.gd[t].ch;
+        if dist_xz(g.ch[c].pos, g.ch[tc].pos) >= 16.0 || !in_arc(g, c, arc, t) { continue; }
+        let at = g.ch[tc].bone_or(crate::character::Bone::Chest, 1.1);
+        if crate::guards::eye_blocked(g, gd, eye, at) || crate::workthings::work_passes(g, gd, t) || room_fight_cover_passes(g, &crate::seats::here(g), o, t) { continue; }
+        who = Some(t);
     }
-    if who.is_none() {
-        if let Some(sb) = g.tab.roomfight_op[o].step_by { // footsteps coming, and his the nearest ears: he looks
-            if g.time - sb.t < 0.6 && !crate::condition::down(g, g.gd[sb.by].ch) && Some(sb.by) != gone && in_arc(g, c, arc, sb.by) && !crate::workthings::work_passes(g, gd, sb.by) && !room_fight_cover_passes(g, &crate::seats::here(g), o, sb.by) {
-                let at = chest_of(g, g.gd[sb.by].ch);
-                if !crate::guards::eye_blocked(g, gd, eye, at) {
-                    who = Some(sb.by);
-                    call = true;
-                } else if look.is_none() && !on_way_to_door { // at where they come from, with no line to the man himself
-                    who = Some(sb.by);
-                    call = true;
-                    pt = Some(sb.at);
-                }
-            }
-        }
+    who.map(|w| cue_at_man(w, true, None))
+}
+
+/// Footsteps coming, and his the nearest ears: he looks at the man, or at where they come from with no line to the man himself.
+fn footsteps_coming(g: &mut Game, s: CueLook) -> Option<CueCause> {
+    let CueLook { o, gd, c, eye, gone, arc, on_way_to_door, look, .. } = s;
+    let sb = g.tab.roomfight_op[o].step_by?;
+    if !(g.time - sb.t < 0.6 && !crate::condition::down(g, g.gd[sb.by].ch) && Some(sb.by) != gone && in_arc(g, c, arc, sb.by)
+        && !crate::workthings::work_passes(g, gd, sb.by) && !room_fight_cover_passes(g, &crate::seats::here(g), o, sb.by)) {
+        return None;
     }
-    let mut secs = 2.5;
-    let mut door: Option<DoorId> = None;
-    if let Some(db) = g.tab.roomfight_op[o].door_by {
-        if g.time - db.t >= 0.6 || crate::condition::down(g, g.gd[db.by].ch) || look.map_or(false, |l| l.door == Some(db.door)) {
-            g.tab.roomfight_op[o].door_by = None; // stale, or the door he is already looking at
-        } else if who.is_none() && Some(db.by) != gone && !crate::doors::door_latched(g, db.door) && m::abs(crate::doors::door_angle(g, db.door)) > 0.1 && !on_way_to_door
-            && arc.map_or(true, |a| m::abs(v3::wrap_angle(v3::yaw_to(g.ch[c].pos, db.at) - a)) < g.k.roomfight.arc_half_deg * crate::v3::DEG) {
-            // a door an enemy's hand has OPENED in his sight: he looks at its doorway
-            who = Some(db.by);
-            call = true;
-            pt = Some(db.at);
-            secs = g.k.roomfight.door_look_secs;
-            door = Some(db.door);
-            g.tab.roomfight_op[o].door_by = None;
-        }
+    let at = g.ch[g.gd[sb.by].ch].bone_or(crate::character::Bone::Chest, 1.1);
+    if !crate::guards::eye_blocked(g, gd, eye, at) {
+        return Some(cue_at_man(sb.by, true, None));
     }
-    let mut shot_door: Option<DoorId> = None; // last of all: a man in his line, a mate's call, a footfall and a door just opened each come first
-    if who.is_none() && !on_way_to_door {
-        let only = look.and_then(|l| l.door);
-        if let Some(ds) = room_fight_door_shot(g, o, eye, gone, arc, a, only) {
-            who = Some(ds.by);
-            pt = Some(ds.at);
-            secs = g.k.roomfight.door_look_secs;
-            door = Some(ds.door);
-            shot_door = Some(ds.door);
-        }
+    if look.is_none() && !on_way_to_door {
+        return Some(cue_at_man(sb.by, true, Some(sb.at)));
     }
-    if let Some(w) = who {
-        let same = look.filter(|l| l.to == w || (shot_door.is_some() && l.door == shot_door)); // the man he was already looking for by ear: no second beat
-        let at = match same {
-            Some(l) => if door.is_some() { l.at } else { m::min(l.at, g.time) },
-            None => { let t = g.time; t + pick(g, crate::dice::Who::Op(o), sk.react) + if call { 0.25 } else { 0.0 } }
-        };
-        g.tab.roomfight_op[o].turn = Some(OpTurn { to: w, at, until: g.time + secs, pt, t0: Some(g.time), door });
+    None
+}
+
+/// A door an enemy's hand has OPENED in his sight: if nothing else turned him, he looks at its doorway. A stale word of one, or of the door he is looking at, is dropped.
+fn door_opened_in_his_sight(g: &mut Game, s: CueLook, nothing_else: bool) -> Option<CueCause> {
+    let CueLook { o, c, gone, arc, on_way_to_door, look, .. } = s;
+    let db = g.tab.roomfight_op[o].door_by?;
+    if g.time - db.t >= 0.6 || crate::condition::down(g, g.gd[db.by].ch) || look.map_or(false, |l| l.door == Some(db.door)) {
+        g.tab.roomfight_op[o].door_by = None;
+        return None;
     }
+    if !(nothing_else && Some(db.by) != gone && !g.dr[db.door].leaf.latched && m::abs(g.dr[db.door].leaf.angle) > 0.1 && !on_way_to_door
+        && arc.map_or(true, |a| m::abs(v3::wrap_angle(v3::yaw_to(g.ch[c].pos, db.at) - a)) < g.k.roomfight.arc_half_deg * crate::v3::DEG)) {
+        return None;
+    }
+    g.tab.roomfight_op[o].door_by = None;
+    Some(CueCause { who: db.by, call: true, pt: Some(db.at), secs: g.k.roomfight.door_look_secs, door: Some(db.door), shot_door: None })
 }
 
 /// The nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his to the shooter.
-fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
+fn room_fight_door_shot(g: &crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<TaskId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
     let r_k = g.k.roomfight;
     let p = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
     let mut best: Option<RoomFightDoorShot> = None;
@@ -607,16 +657,16 @@ fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, go
             let d = g.doors.list[j];
             j += 1;
             if only.map_or(false, |x| x != d) { continue; } // a door he is already looking at keeps his look until it lapses
-            if !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) <= 0.1) { continue; } // a shut leaf is no opening
+            if !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) <= 0.1) { continue; } // a shut leaf is no opening
             if let Some(id) = a { // a gun an order has on ANOTHER door keeps it
-                let row = &g.tab.orders_assignment[id];
+                let row = &g.tab.task[id];
                 if let (true, Some(ad), false, Some(w)) = (row.arrived, row.door, row.spare.unwrap_or(false), row.watch) {
-                    if ad != d && flat(w, g.dr[ad].frame_centre) < 1.6 { continue; }
+                    if ad != d && dist_xz(w, g.dr[ad].frame_centre) < 1.6 { continue; }
                 }
             }
             let fc = g.dr[d].frame_centre;
-            let far = flat(fc, from);
-            let near = flat(fc, p);
+            let far = dist_xz(fc, from);
+            let near = dist_xz(fc, p);
             if far > r_k.door_shot_m || near > 9.0 || near < 0.5 || near >= bd { continue; }
             let th = g.dr[d].def.closed_dir;
             let nx = -m::sin(th);
@@ -642,13 +692,13 @@ fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, go
 /// In the dark on a lit man, Sam in the line to him, and an order's walk still to make: his feet wait; the order itself is untouched.
 fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let h = match g.tab.roomfight_op[o].tgt { Some(h) => h, None => return };
     let script = match g.gd[gd].script.as_ref() { Some(s) => s, None => return };
     let goal = match script.goal { Some(goal) => goal, None => return };
     if script.arrived.unwrap_or(false) || g.tab.roomfight_op[o].step.is_some() { return; }
-    let hp = g.ch[g.gd[h].ch].pos;
-    if flat(goal, hp) > flat(p, hp) - 0.3 || !crate::guards::gun_on_lit_man(g, gd) || room_fight_funnel_of(g, p).is_some() { return; }
+    let hp = g.pos_of(h);
+    if dist_xz(goal, hp) > dist_xz(p, hp) - 0.3 || !crate::guards::gun_on_lit_man(g, gd) || room_fight_funnel_of(g, p).is_some() { return; }
     if g.time - g.tab.roomfight_op[o].short_seen > 1.0 || g.time < g.tab.roomfight_op[o].short_seen {
         g.tab.roomfight_op[o].short_since = g.time;
     }
@@ -663,7 +713,7 @@ fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
     let let_go = g.k.roomfight.let_go;
     if !(let_go > 0.0) || g.tab.roomfight_op[o].line_t < let_go || g.tab.roomfight_op[o].step.is_some() { return; }
     let tgt = match g.tab.roomfight_op[o].tgt { Some(t) => t, None => return };
-    let eye = eye_of(g, c);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let mut who: Option<GuardId> = None;
     let mut bd = 16.0;
     let mut i = 0;
@@ -672,9 +722,9 @@ fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
         i += 1;
         if g.time - r.t > 1.5 || crate::condition::down(g, g.gd[r.by].ch) || r.by == tgt { continue; }
         let by = g.gd[r.by].ch;
-        let dist = flat(g.ch[c].pos, g.ch[by].pos);
+        let dist = dist_xz(g.ch[c].pos, g.ch[by].pos);
         if dist < bd {
-            let at = chest_of(g, by);
+            let at = g.ch[by].bone_or(crate::character::Bone::Chest, 1.1);
             if !crate::guards::eye_blocked(g, gd, eye, at) { bd = dist; who = Some(r.by); }
         }
     }
@@ -788,7 +838,7 @@ fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, spe
     let l = js::or(m::hyp2(dx, dz), 1.0);
     for w in [0.9, -0.9, 1.6, -1.6, 2.4, -2.4] {
         let p: V3 = [pos[0] + dz / l * w, 0.0, pos[2] - dx / l * w];
-        if !room_fight_spot_free(g, p, gd) || room_fight_funnel_of(g, p).is_some() || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [p[0], 0.45, p[2]], None) { continue; }
+        if !room_fight_spot_free(g, p, gd) || room_fight_funnel_of(g, p).is_some() || crate::scene_collision::low_blocked(g, pos, p) { continue; }
         let from: V3 = [p[0], 1.4, p[2]];
         let def = g.fa[g.gd[gd].weapon].def;
         let energy = crate::glasspen::shot_energy(g, c, Some(def));
@@ -822,7 +872,7 @@ mod tests {
     }
     fn at_bearing(a: f64) -> V3 { [m::sin(a) * 5.0, 0.0, m::cos(a) * 5.0] }
 
-    /// `s.over` IS `O.ov` and its aimAt IS O.aim in the TypeScript: what the runner reads must follow every write of `point`.
+    /// The script's overlay and its aim_at are copies of the op's: what the runner reads must follow every write of `point`.
     #[test]
     fn the_scripts_overlay_follows_the_op() {
         let (mut g, gd, o) = man_with_overlay();
@@ -841,13 +891,12 @@ mod tests {
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
-        let d = g.tab.roomfight_def.push(Def::default());
-        g.tab.roomfight_def[d].gd = gd;
-        g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
-        g.gd[gd].covers = Some([1.0, 0.0, 1.0]);
+        let task = g.tab.task.push(crate::duty::Task { watch: Some([1.0, 0.0, 1.0]), ..Default::default() });
+        let d = g.tab.roomfight_def.push(Def { gd, task, ..Def::default() });
+        g.gd[gd].duty.gun = Some([1.0, 0.0, 1.0]);
         g.gd[gd].last_known = Some([1.0, 0.0, 1.0]); // the same bits, but no stamp: a noise filed there is not the post
         move_pt(&mut g, d, [2.0, 0.0, 2.0]);
-        assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
+        assert_eq!(g.gd[gd].duty.gun, Some([2.0, 0.0, 2.0]));
         assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
     }
 

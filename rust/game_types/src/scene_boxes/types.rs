@@ -1,7 +1,7 @@
 //! The types of `scene_boxes`.
 #![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Box {
@@ -17,13 +17,12 @@ pub struct Box {
     pub rot: Option<Quat>,
     pub dc: Option<V3>,
     pub dh: Option<V3>,
-    pub name: Option<String>,
     pub rough: Option<f64>,
     pub metal: Option<bool>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
     pub aniso: Option<bool>,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub mark_gain: Option<f64>,
     pub fog_emit: Option<[f64; 3]>,
     pub fog_mark: Option<f64>,
@@ -38,6 +37,8 @@ pub struct Box {
     pub round: Option<bool>,
     pub shape: Option<crate::scene_shapes::BoxShape>,
     pub shaped: Option<bool>,
+    /// a wall's stud, left standing where its board went
+    pub stud: bool,
     pub piece: Option<bool>,
     pub of: Option<f64>,
     pub dress: Option<bool>,
@@ -49,7 +50,6 @@ pub struct BoxWorld {
     pub dynamics: Vec<AnyBoxId>,
     pub max_boxes: f64,
     pub geom_serial: f64,
-    pub glass_open: Option<crate::scene_collision::PaneRule>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -94,13 +94,12 @@ pub struct MakeBoxP {
     pub rot: Option<Quat>,
     pub dc: Option<V3>,
     pub dh: Option<V3>,
-    pub name: Option<String>,
     pub rough: Option<f64>,
     pub metal: Option<bool>,
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
     pub aniso: Option<bool>,
-    pub marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub mark_gain: Option<f64>,
     pub fog_emit: Option<[f64; 3]>,
     pub fog_mark: Option<f64>,
@@ -158,8 +157,6 @@ pub struct RayBoxRound {
 }
 
 pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
-
-pub const BOX_WORLD_RS: f64 = 12.0;
 
 pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
 

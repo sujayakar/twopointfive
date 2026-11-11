@@ -7,11 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// INVENTED: THE whole write of a man's path. Every `gd.path = x` of the TypeScript (a new array, even `[]`) is this call: identity readers compare path_serial. An in-place edit (splice, push, index, `length = n`) is not a whole write and does not call it. ONE exception: runner.ts:294 puts the same array back, so it restores path and path_serial together and does not call this
-pub fn guard_set_path(g: &mut crate::game::Game, gd: GuardId, path: Vec<V3>) { let o = &mut g.gd[gd]; o.path = path; o.path_serial = o.path_serial.wrapping_add(1); }
-
-/// A game stands in this slot of rust/sim's: its own word says so, and the box mirror's, which the world's lookups read.
-pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.col.mirror.slot = slot as f64; }
+/// A game stands in this slot of rust/sim's.
+pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.tab.boxes.stand_in(slot); }
 
 /// A man easing past furniture: a player crouched and not dashing; anyone else low.
 pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
@@ -46,7 +43,7 @@ mod tests {
 /// The selector open with his hand on it: a list, or a ring whose key is still down.
 pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.sets[crate::seats::seat_of_man(g, id)].hand.sel;
-    sel.open && !sel.ring.as_ref().and_then(|r| r.free).unwrap_or(false)
+    sel.open && !sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true))
 }
 
 /// Makes a player: his guns first (the field initialisers), then his body.
@@ -69,8 +66,9 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
     p.frags = frags;
     let id = g.pl.push(p);
     g.ch[c].who = crate::character::Who::Player(id);
+    g.ch[c].team = crate::teams::Team::Ours;
     let def = g.fa[pistol].def;
-    g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
+    g.ch[c].muzzle_ahead = g.weapon(def).muzzle_ahead;
     id
 }
 
@@ -80,7 +78,7 @@ pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<Firearm
         None
     } else if g.pl[id].slot == crate::game::SlotKind::Pistol {
         Some(g.pl[id].pistol)
-    } else if player_rifle_sel(g, id) && g.pl[id].dragging.is_none() {
+    } else if player_rifle_sel(g, id) && g.pl[id].dragging().is_none() {
         Some(g.pl[id].rifle)
     } else {
         None
@@ -99,7 +97,7 @@ pub fn player_rifle_sel(g: &crate::game::Game, id: PlayerId) -> bool {
 
 /// The FN2000 is in both hands.
 pub fn player_rifle_up(g: &crate::game::Game, id: PlayerId) -> bool {
-    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !crate::condition::down(g, g.pl[id].ch)
+    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging().is_none() && !crate::condition::down(g, g.pl[id].ch)
 }
 
 /// Braced on the foregrip, on his own legs this tick.
@@ -110,7 +108,7 @@ pub fn player_braced(g: &crate::game::Game, id: PlayerId) -> bool {
 
 /// Braced, asked of legs that are or are not at a run.
 pub fn player_braced_at(g: &crate::game::Game, id: PlayerId, sprinting: bool) -> bool {
-    player_rifle_up(g, id) && !sprinting && g.pl[id].kick.is_none()
+    player_rifle_up(g, id) && !sprinting && g.pl[id].kick().is_none()
 }
 
 /// The canister the selected slot puts in the fist, None with a gun selected.
@@ -173,7 +171,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     };
     let moved = match g.gd[id].fix_ref {
         None => true,
-        Some(r) => m::hyp2(lk[0] - r[0], lk[2] - r[2]) > 0.5,
+        Some(r) => v3::dist_xz(lk, r) > 0.5,
     };
     if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
 }
@@ -214,10 +212,10 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
             cs[js::rem(m::max(0.0, id_2 - 10.0), cs.len() as f64) as usize].clone()
         }
     };
-    if let Some(team) = look.and_then(|l| l.team) { g.gd[id].team = team; }
-    let team = g.gd[id].team;
+    if let Some(team) = look.and_then(|l| l.team) { g.ch[c].team = team; }
+    let team = g.team(id);
     // (an enemy of the player is born with the first of them in mind)
-    g.gd[id].foe = if team == crate::teams::Team::Guard || team == crate::teams::Team::Hostile { Some(g.pl[g.player].ch) } else { None };
+    g.gd[id].foe = if team.theirs() { Some(g.pl[g.player].ch) } else { None };
     let keys = match keys {
         Some(k) => k,
         None => vec![String::from(crate::doors::FLOOR_KEY)],
@@ -225,8 +223,8 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     let mut held: JsSet<String> = JsSet::new();
     for k in keys { held.add(k); }
     g.gd[id].keys = held;
-    // a row the table does not hold panics here, as the TypeScript's throws
-    let row = g.m.weapons.weapons.get(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).unwrap().clone();
+    // a row the table does not hold panics here
+    let row = g.weapon(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).clone();
     let w = crate::weapons::firearm_new(g, &row);
     g.gd[id].weapon = w;
     g.ch[c].muzzle_ahead = row.muzzle_ahead;

@@ -16,7 +16,7 @@ pub enum WallChargeKept {
     Repick { op: WallOpId },
     Local { memo: JsMap<String, f64> },
 }
-/// what underFire's two answers close over: the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits: the TypeScript keeps them by the array's identity)
+/// what an under-fire ask's two answers hold: the wall about to go, the foes as known when it was asked, and each place's answer so far (a place by its bits)
 #[derive(Clone, Debug)]
 pub enum WallChargeFireAsk {
     Lines { wall: Option<crate::wallcharge::WallSpot>, all: Vec<V3>, memo: JsMap<[crate::Num; 3], f64>, hit: JsMap<[crate::Num; 3], bool> },
@@ -49,7 +49,6 @@ pub struct WallCharge {
     pub player: Option<PlayerId>,
     pub roster: Vec<GuardId>,
     pub alone: f64,
-    pub sam: Option<crate::wallcharge::WallChargeSam>,
     pub offered: Option<crate::wallcharge::WallSpot>,
     pub carried: Option<f64>,
     pub brought: Option<f64>,
@@ -104,12 +103,6 @@ pub struct PodHold {
     pub face: f64,
     pub watch: V3,
     pub door: Option<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallChargeDoneItemStageValue {
-    Lane,
-    Pod,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -188,12 +181,12 @@ pub struct WallOp {
     pub set_t: f64,
     pub stow_off_t: Option<f64>,
     pub owes: Option<bool>,
-    pub mine: JsMap<GuardId, OrdersAssignmentId>,
+    pub mine: JsMap<GuardId, TaskId>,
     pub post: JsMap<GuardId, V3>,
     pub from: JsMap<GuardId, V3>,
     pub hole: Option<crate::wallcharge::WallChargeDoneItemHole>,
     pub queue: Vec<crate::wallcharge::WallChargeDoneItemQueueItem>,
-    pub stage: JsMap<GuardId, crate::wallcharge::WallOpStageValue>,
+    pub stage: JsMap<GuardId, crate::wallcharge::WallStage>,
     pub pod: JsMap<GuardId, crate::wallcharge::Pod>,
     pub crossed: JsMap<GuardId, f64>,
     pub last: JsMap<GuardId, Option<V3>>,
@@ -204,47 +197,6 @@ pub struct WallOp {
     pub redealt: Option<JsSet<GuardId>>,
     pub repick_n: Option<f64>,
     pub repick_kept: Option<JsMap<String, f64>>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallOpStageValue {
-    Lane,
-    Pod,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct WallChargeRowsRowOver {
-    pub kind: Option<crate::wallcharge::WallChargeRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum WallChargeRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 #[derive(Clone, Debug)]
@@ -288,9 +240,9 @@ pub enum WallChargeValid {
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub order: Option<String>,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
@@ -356,11 +308,6 @@ pub struct WallChargeBlow {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WallChargeBlowRaw {
-    pub hole: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeHoleAt {
     pub du: f64,
     pub half: f64,
@@ -386,3 +333,9 @@ pub const SKY_TOP: f64 = 12.0;
 pub fn sky_off() -> Vec<f64> { alloc::vec![0.5, 1.0, 1.6] }
 
 pub fn sky_along() -> Vec<f64> { alloc::vec![-0.5, 0.0, 0.5] }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum WallStage {
+    Lane,
+    Pod,
+}

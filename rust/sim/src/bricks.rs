@@ -3,18 +3,17 @@
 //! the picture's solver is handed and knows nothing else of that solver: no velocity and no pressure, and of the wind only a drift under the open sky
 //! (`K.wind`). What it has is THE WALLS:
 //! smoke passes from a cell to its neighbour only where nothing solid and no leaf stands between their centres, so a canister fills the room it is in, goes
-//! out by the open door and stops at the shut one.
+//! out by the open door and by a window whose pane has fallen out, and stops at the shut one.
 //!
 //! THE STATE is a part of the game's block (state.rs; `Smoke`): one row of doubles (`LEN`): a head (the plan in bricks, the emitters live, the steps
 //! taken), the emitters still letting out, which brick is where, the light that comes round (glow.rs), and LAST the density of every cell, a brick after
 //! another. It holds indices and numbers only, so it is the same bytes in any slot, in a snapshot or on another machine. The part is a POOL: its first
-//! word says how many of its bytes are the game's (the row up to the end of the highest brick that stands), and the host carries those and no more.
+//! word says how many of its bytes are the game's (the row up to the end of the highest brick that stands): no rule reads what lies past them.
 //! WHAT IS NOT STATE and is made again from the state and the box world, a set of tables a slot of the blocks: where each brick is (`INDEX`, from the
 //! state alone) and which faces of each cell are open (`FACES`: asked of the box world's lines once a cell; again round every leaf at every step, since a
-//! door swings, and wherever the host says a static was written). So the faces are at every step what asking them all afresh would give: a game put back
-//! from a snapshot and one that never was step alike. WHOSE the tables of a slot are is three numbers (`MADE`): the block's stamp they were made from
-//! (src/sim/state.ts SimState.stamp: another number whenever a block was written wholesale or changed place), and the box world and the copy of it the
-//! faces were asked of. A call names the three as they are now; where one differs the tables are made again before anything is read from them.
+//! door swings, wherever a static's row is another, `SEEN`, and round a pane that is open otherwise than it was, `PANES`). So the faces are at every step what asking them all afresh would give: a game put back
+//! from a snapshot and one that never was step alike. WHOSE the tables of a slot are is the block's stamp they were made from (`MADE`: another number
+//! whenever a block was written wholesale or changed place); where it differs the tables are made again before anything is read from them.
 //!
 //! The arithmetic is + − × ÷ and the game's own exp and length, in an order that is written down (bricks by slot, cells by index): the same bits on every
 //! machine.
@@ -22,8 +21,9 @@
 use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{exp, hypot3};
+use crate::panes::MAX_ROWS;
 use crate::state::{state, state_read, GAMES};
-use crate::world::{js_max, js_min, world, ASK_HOST, K_ROT, LEAF_SETS, MAX_LEAVES, REC, R_C, R_H, R_KIND};
+use crate::world::{js_max, js_min, ASK_HOST, K_ROT, MAX_LEAVES, REC, R_C, R_H, R_KIND, World, Seen};
 use core::mem::size_of;
 use prim::floor;
 
@@ -101,12 +101,12 @@ static mut FACES: [[u8; MAX_BRICKS * CELLS]; GAMES] = [[0; MAX_BRICKS * CELLS]; 
 /// the leaves as the last step found them, a row each as the box world holds it, and how many
 static mut LEAF_AT: [[f64; MAX_LEAVES * REC]; GAMES] = [[0.0; MAX_LEAVES * REC]; GAMES];
 static mut LEAF_N: [usize; GAMES] = [0; GAMES];
-/// WHOSE A SLOT'S TABLES ARE: the stamp of the block INDEX was made from · the box world FACES and the leaves were asked of · and the copy of it (the
-/// host's numbers, never 0: 0 = made from nothing yet)
-static mut MADE: [[f64; 3]; GAMES] = [[0.0; 3]; GAMES];
-const M_STAMP: usize = 0;
-const M_WORLD: usize = 1;
-const M_COPY: usize = 2;
+/// WHOSE A SLOT'S TABLES ARE: the stamp of the block INDEX was made from (0: none yet) · have the faces of that state been asked
+static mut MADE: [(f64, bool); GAMES] = [(0.0, false); GAMES];
+/// the statics as the faces were last asked of them: each one's word, and the rectangle of the plan round it
+static mut SEEN: [Seen; GAMES] = [const { Seen::NONE }; GAMES];
+/// the panes that are open somewhere, as the faces were last asked of them
+static mut PANES: [Panes; GAMES] = [const { Panes { n: 0, at: [(0, 0); MAX_ROWS] } }; GAMES];
 /// a step's change of every cell, summed before any is applied; and which bricks the step left with next to nothing in them
 static mut DELTA: [f64; MAX_BRICKS * CELLS] = [0.0; MAX_BRICKS * CELLS];
 static mut THIN: [bool; MAX_BRICKS] = [false; MAX_BRICKS];
@@ -125,8 +125,14 @@ const F_NORTH: u8 = 32;
 const F_EDGE: u8 = 64;
 
 #[inline(always)]
-fn made(g: usize) -> &'static mut [f64; 3] {
+fn made(g: usize) -> &'static mut (f64, bool) {
     unsafe { &mut (*core::ptr::addr_of_mut!(MADE))[g] }
+}
+
+/// each one's static, and a word of where it is open
+struct Panes {
+    n: usize,
+    at: [(u32, u64); MAX_ROWS],
 }
 
 struct Grid {
@@ -175,7 +181,7 @@ pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
     let st = &state_read(g).smoke.st;
     let (wide, deep) = dims(st);
     let m = made(g);
-    if wide == 0 || m[M_STAMP] != stamp || m[M_COPY] == 0.0 {
+    if wide == 0 || *m != (stamp, true) {
         return None;
     }
     Some(Stands { wide, deep, steps: st[H_STEPS], g })
@@ -194,10 +200,10 @@ impl Stands {
     }
 }
 /// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
-pub fn under_roof(g: usize, w: usize, p: [f64; 3], tune: &Knobs) -> Option<crate::glow::Field> {
+pub fn under_roof(g: usize, w: &World, p: [f64; 3], tune: &Knobs) -> Option<crate::glow::Field> {
     let st = &state_read(g).smoke.st;
     let (x, z) = dims(st);
-    crate::glow::at(w, st, x, z, p, tune)
+    crate::glow::at(g, w, st, x, z, p, tune)
 }
 /// THE PLAN A GAME'S GRID STANDS ON, in metres along x and z (0 by 0 before its first step)
 pub fn plan(g: usize) -> (f64, f64) {
@@ -326,12 +332,15 @@ impl Grid {
         self.reindex();
         self.forget();
     }
-    /// no face is known, and no leaf is remembered
+    /// no face is known, and no leaf and no pane is remembered
     fn forget(&mut self) {
         for f in self.faces.iter_mut() {
             *f = 0;
         }
-        unsafe { (*core::ptr::addr_of_mut!(LEAF_N))[self.g] = 0 };
+        unsafe {
+            (*core::ptr::addr_of_mut!(LEAF_N))[self.g] = 0;
+            (*core::ptr::addr_of_mut!(PANES))[self.g].n = 0;
+        }
     }
     /// HOW MUCH OF THE PART IS THE GAME'S NOW: the row up to the end of the highest brick that stands
     fn relive(&mut self) {
@@ -349,32 +358,44 @@ impl Grid {
 fn tables(g: usize, stamp: f64) -> Grid {
     let m = made(g);
     let mut gr = grid(g);
-    if m[M_STAMP] != stamp {
-        m[M_STAMP] = stamp;
-        m[M_COPY] = 0.0;
+    if m.0 != stamp {
+        *m = (stamp, false);
         gr.remake();
     }
     gr
 }
-/// …and its faces were asked of copy `copy` of box world `w`, or none is known now (the copy was made afresh; the game steps over another world)
-fn over(g: usize, w: usize, copy: f64) {
-    let m = made(g);
-    if m[M_WORLD] == w as f64 && m[M_COPY] == copy {
+/// …and its faces are of the statics as they stand: where one was written, they are asked again (where it stood, and where it stands)
+fn over(g: usize, w: &World) {
+    made(g).1 = true;
+    let mut gr = grid(g);
+    let round = |r: &[f64]| {
+        let e = r[R_H] + r[R_H + 1] + r[R_H + 2];
+        [r[R_C] - e, r[R_C + 2] - e, r[R_C] + e, r[R_C + 2] + e, r[R_C + 1] + e]
+    };
+    let seen = unsafe { &mut (*core::ptr::addr_of_mut!(SEEN))[g] };
+    seen.look(w, round, |r| gr.dirty(r[0], r[1], r[2], r[3]));
+    panes(w, &mut gr);
+}
+/// the faces round a pane that is open otherwise than it was last found are to be asked again
+fn panes(w: &World, g: &mut Grid) {
+    let was = unsafe { &mut (*core::ptr::addr_of_mut!(PANES))[g.g] };
+    let mut now = Panes { n: 0, at: [(0, 0); MAX_ROWS] };
+    if let Some(slot) = w.panes {
+        crate::panes::open_panes(slot, |bi, word| {
+            now.at[now.n] = (bi, word);
+            now.n += 1;
+        });
+    }
+    let (old, new) = (&was.at[..was.n], &now.at[..now.n]);
+    if old == new {
         return;
     }
-    m[M_WORLD] = w as f64;
-    m[M_COPY] = copy;
-    grid(g).forget();
-}
-/// A STATIC WAS WRITTEN inside this rectangle of the plan of box world `w` (where it stood, or where it stands): the faces near it are asked again at
-/// the next step, in every set of tables whose faces were asked of that world
-pub fn dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
-    for g in 0..GAMES {
-        let m = made(g);
-        if m[M_COPY] != 0.0 && m[M_WORLD] == w as f64 {
-            grid(g).dirty(x0, z0, x1, z1);
-        }
+    for p in new.iter().filter(|p| !old.contains(p)).chain(old.iter().filter(|p| !new.contains(p))) {
+        let r = w.row(p.0 as usize);
+        let e = r[R_H] + r[R_H + 2];
+        g.dirty(r[R_C] - e, r[R_C + 2] - e, r[R_C] + e, r[R_C + 2] + e);
     }
+    *was = now;
 }
 /// THE GAME IN SLOT `g` HAS A GRID (`home`: an empty one, on no plan yet, nothing swept) OR HAS NONE (its part is nobody's, zeros). The whole row is
 /// written, not what was in use of it: a slot keeps what the block before left past its own.
@@ -385,7 +406,7 @@ pub fn reset(g: usize, home: bool) {
     }
     p.live = if home { (ROW + O_RHO * 8) as u32 } else { 0 };
     p.spare = 0;
-    *made(g) = [0.0; 3];
+    *made(g) = (0.0, false);
 }
 /// NO SMOKE ANYWHERE: the cells, the emitters, the book and the count of steps are zeros. The plan the grid stands on and the light that comes round
 /// stay: they are the level's, not the smoke's.
@@ -403,28 +424,23 @@ pub fn empty(g: usize) {
         *v = 0.0;
     }
     gr.relive();
-    *made(g) = [0.0; 3];
+    *made(g) = (0.0, false);
 }
 
-/// is the way between two cells' centres open: nothing solid and no leaf between them, asked both ways (a line that STARTS inside a box is not stopped by
-/// it — collision.ts segmentBlocked's own rule for an eye in a wall — so a cell inside a wall is shut off by the line that ends in it)
-fn open(w: usize, set: i32, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
-    clear(w, set, a, b, CELL, tune) && clear(w, set, b, a, CELL, tune)
+/// is the way between two cells' centres open: nothing solid, no glass that is not open there and no leaf between them, asked both ways (a line that STARTS inside a box is not stopped by
+/// it, the rule for an eye in a wall, so a cell inside a wall is shut off by the line that ends in it)
+fn open(w: &World, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
+    clear(w, a, b, CELL, tune) && clear(w, b, a, CELL, tune)
 }
-/// nothing solid and no leaf on the line a → b of this length (the one place this file walks a line: the walk is not copied into every asker)
+/// nothing of that on the line a → b of this length (the one place this file walks a line: the walk is not copied into every asker)
 #[inline(never)]
-fn clear(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64, tune: &Knobs) -> bool {
-    clear_but(w, set, a, b, len, 0, tune)
-}
-/// …the same line for what passes boxes of the flags `through` (glow.rs: light goes through a pane, smoke does not)
-#[inline(never)]
-pub(crate) fn clear_but(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64, through: u32, tune: &Knobs) -> bool {
-    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, through, set, 0, tune) != -1
+fn clear(w: &World, a: [f64; 3], b: [f64; 3], len: f64, tune: &Knobs) -> bool {
+    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, 0, true, lines::ASK_GLASS, tune) != -1
 }
 /// can what is let out at `p` reach the point `c` (a line of any length; one too short to be a line is open)
-fn reaches(w: usize, set: i32, p: [f64; 3], c: [f64; 3], tune: &Knobs) -> bool {
+fn reaches(w: &World, p: [f64; 3], c: [f64; 3], tune: &Knobs) -> bool {
     let len = hypot3(c[0] - p[0], c[1] - p[1], c[2] - p[2]);
-    len < 1e-4 || clear(w, set, p, c, len, tune)
+    len < 1e-4 || clear(w, p, c, len, tune)
 }
 
 /// what a step is told: the model's numbers
@@ -447,7 +463,7 @@ pub struct K {
     pub wind_keep: f64,
 }
 
-/// THE WIND'S SHARE a square metre of the plan (0 under a roof … 1 in the open: game/wind.ts stormShare, the footprints the picture's wind goes by),
+/// THE WIND'S SHARE a square metre of the plan (0 under a roof … 1 in the open: the footprints the picture's wind goes by),
 /// row by row, `2 · nbx` to a row: written by the host before a step that has wind and read by that step alone. Nothing of a game is kept here.
 static mut WIND: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 pub fn wind_addr() -> *mut f64 {
@@ -574,43 +590,46 @@ pub fn beat(g: usize, dt: f64) -> u32 {
 }
 
 /// the plan of box world `w`, in squares
-fn plan_of(w: usize) -> (f64, f64) {
-    let o = world(w);
-    (-floor(-(o.w as f64 * o.cs) / SIDE), -floor(-(o.h as f64 * o.cs) / SIDE))
+fn plan_of(w: &World) -> (f64, f64) {
+    (-floor(-(w.w as f64 * w.cs) / SIDE), -floor(-(w.h as f64 * w.cs) / SIDE))
 }
-/// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
-pub fn light_ready(w: usize, to_sun: [f64; 3], tune: &Knobs) {
+/// the light's tables of box world `w` made before a step asks for them, `most` lines of them (glow.rs ready). → are they whole
+pub fn light_ready(g: usize, w: &World, to_sun: [f64; 3], most: usize, tune: &Knobs) -> bool {
     let (x, z) = plan_of(w);
-    if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
-        crate::glow::ready(w, x as usize, z as usize, to_sun, tune);
-    }
+    !(x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64) || crate::glow::ready(g, w, x as usize, z as usize, to_sun, most, tune)
 }
-/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
-/// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
+/// what a tick with no step in it makes ahead for the light (glow.rs ahead)
+pub fn ahead(g: usize, w: &World, tune: &Knobs) {
+    let st = &state_read(g).smoke.st;
+    let (x, z) = dims(st);
+    crate::glow::ahead(g, w, st, x, z, tune);
+}
+/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over box world `w` as it stands.
+/// 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
 /// state is as it was.
-pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>, tune: &Knobs) -> u32 {
+pub fn step(g: usize, stamp: f64, w: &World, n: u32, k: &K, glow: Option<&crate::glow::K>, tune: &Knobs) -> u32 {
     let (nbx, nbz) = plan_of(w);
-    if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || set >= LEAF_SETS as i32 || state(g).smoke.live == 0 {
+    if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || state(g).smoke.live == 0 {
         return ASK_HOST;
     }
-    tables(g, stamp);
-    over(g, w, copy);
-    let mut g = grid(g);
-    if g.st[H_NBX] != nbx || g.st[H_NBZ] != nbz {
+    let mut on = tables(g, stamp);
+    if on.st[H_NBX] != nbx || on.st[H_NBZ] != nbz {
         // (the first step on this level: a state from any other plan holds nothing that is anywhere here)
-        g.st[H_NBX] = nbx;
-        g.st[H_NBZ] = nbz;
-        for v in g.st[O_GLOW_MAX..O_RHO].iter_mut() {
+        on.st[H_NBX] = nbx;
+        on.st[H_NBZ] = nbz;
+        for v in on.st[O_GLOW_MAX..O_RHO].iter_mut() {
             *v = 0.0;
         }
-        g.nbx = nbx as usize;
-        g.nbz = nbz as usize;
-        g.remake();
+        on.nbx = nbx as usize;
+        on.nbz = nbz as usize;
+        on.remake();
     }
+    over(g, w);
+    let mut g = grid(g);
     for _ in 0..n {
-        substep(w, set, &mut g, k, tune);
+        substep(w, &mut g, k, tune);
         match glow {
-            Some(gk) => crate::glow::step(w, set, g.st, g.nbx, g.nbz, gk, tune),
+            Some(gk) => crate::glow::step(g.g, w, g.st, g.nbx, g.nbz, gk, tune),
             None => crate::glow::down(g.st),
         }
         g.st[H_STEPS] += 1.0;
@@ -619,32 +638,31 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
     0
 }
 
-/// THE WAYS OF THE STATE THAT STANDS are asked, over the copy `copy` of box world `w` as it stands and the leaves of list `set`: what the next step would
+/// THE WAYS OF THE STATE THAT STANDS are asked, over box world `w` as it stands: what the next step would
 /// ask first, for whoever draws a game put back before it steps. No state is written. Nothing, where the state's plan is not the level's (no step yet).
-pub fn ways(g: usize, stamp: f64, w: usize, copy: f64, set: i32, tune: &Knobs) {
+pub fn ways(g: usize, stamp: f64, w: &World, tune: &Knobs) {
     let (on, plan) = (dims(&state_read(g).smoke.st), plan_of(w));
-    if set >= LEAF_SETS as i32 || on.0 == 0 || on != (plan.0 as usize, plan.1 as usize) {
+    if on.0 == 0 || on != (plan.0 as usize, plan.1 as usize) {
         return;
     }
     tables(g, stamp);
-    over(g, w, copy);
+    over(g, w);
     let mut g = grid(g);
-    leaves(w, set, &mut g);
-    ask(w, set, &mut g, tune);
+    leaves(w, &mut g);
+    ask(w, &mut g, tune);
 }
 /// the faces round every leaf that is not as it was last found (a door swings; one is new, one is gone) are to be asked again: where it stood and where
 /// it stands. A leaf that has not moved keeps the answers it had.
-fn leaves(w: usize, set: i32, g: &mut Grid) {
+fn leaves(w: &World, g: &mut Grid) {
     let s = g.g;
     let (kept, kept_n) = unsafe { (&mut (*core::ptr::addr_of_mut!(LEAF_AT))[s], &mut (*core::ptr::addr_of_mut!(LEAF_N))[s]) };
-    let o = world(w);
-    let n = if set < 0 { 0 } else { js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize };
+    let n = js_min(w.leaves() as f64, MAX_LEAVES as f64) as usize;
     // (its reach in plan whichever way it is turned: the two half sides, and the third where it is tilted off the upright)
     let reach = |r: &[f64]| r[R_H] + r[R_H + 2] + if r[R_KIND] as u32 & K_ROT != 0 { r[R_H + 1] } else { 0.0 };
     for i in 0..if n > *kept_n { n } else { *kept_n } {
-        let at = if set < 0 { 0 } else { (set as usize * MAX_LEAVES + i) * REC };
-        let (was, now) = (&mut kept[i * REC..(i + 1) * REC], &o.leaf[at..at + REC]);
         let (had, has) = (i < *kept_n, i < n);
+        let was = &mut kept[i * REC..(i + 1) * REC];
+        let now = if has { &w.leaf[i * REC..(i + 1) * REC] } else { &[][..] };
         if had && has && (0..REC).all(|j| was[j].to_bits() == now[j].to_bits()) {
             continue;
         }
@@ -663,10 +681,9 @@ fn leaves(w: usize, set: i32, g: &mut Grid) {
     *kept_n = n;
 }
 /// the faces nobody has asked (a new brick's, those round a leaf, those round a static that was written)
-fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
+fn ask(w: &World, g: &mut Grid, tune: &Knobs) {
     for b in 0..MAX_BRICKS {
         let Some((bx, bz)) = g.key(b) else { continue };
-        let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
         for y in 0..BY {
             for z in 0..BX {
                 for x in 0..BX {
@@ -674,15 +691,15 @@ fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
                     if g.faces[c] & F_ASKED != 0 {
                         continue;
                     }
-                    let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
+                    let p = middle(bx, bz, x, y, z);
                     let mut f = F_ASKED;
-                    if open(w, set, p, [p[0] + CELL, p[1], p[2]], tune) {
+                    if open(w, p, [p[0] + CELL, p[1], p[2]], tune) {
                         f |= F_X;
                     }
-                    if y + 1 < BY && open(w, set, p, [p[0], p[1] + CELL, p[2]], tune) {
+                    if y + 1 < BY && open(w, p, [p[0], p[1] + CELL, p[2]], tune) {
                         f |= F_Y;
                     }
-                    if open(w, set, p, [p[0], p[1], p[2] + CELL], tune) {
+                    if open(w, p, [p[0], p[1], p[2] + CELL], tune) {
                         f |= F_Z;
                     }
                     g.faces[c] = f;
@@ -694,80 +711,82 @@ fn ask(w: usize, set: i32, g: &mut Grid, tune: &Knobs) {
 
 /// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
 const LAID: f64 = 0.4;
-fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
-    // 0. the leaves as they stand now
-    leaves(w, set, g);
+/// the four neighbours a brick can spill into
+const OUT: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
-    // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
-    //    and the spent ones leave the list
-    let windy = k.wind_x != 0.0 || k.wind_z != 0.0;
-    let share = unsafe { &*core::ptr::addr_of!(WIND) };
-    let wide = g.nbx * 2;
+/// what one step of the smoke is made by
+struct Sub<'a> {
+    w: &'a World,
+    k: &'a K,
+    tune: &'a Knobs,
+    /// each square's share of the wind, the plan's squares across, and whether there is a wind
+    share: &'static [f64; MAX_GLOW],
+    wide: usize,
+    windy: bool,
+    /// is there any color to carry
+    dyes: bool,
+    /// what of a difference crosses a face in a step, and the density a brick spills at
+    rate: f64,
+    spill: f64,
+    /// what of a density a step leaves
+    keep: f64,
+}
+/// each cell's change in a step, the color that came into each brick, whether a brick goes, and what it held
+struct Scratch {
+    delta: &'static mut [f64; MAX_BRICKS * CELLS],
+    came: &'static mut [[f64; 4]; MAX_BRICKS],
+    thin: &'static mut [bool; MAX_BRICKS],
+    held: &'static mut [f64; MAX_BRICKS],
+}
+fn scratch() -> Scratch {
+    unsafe { Scratch { delta: &mut *core::ptr::addr_of_mut!(DELTA), came: &mut *core::ptr::addr_of_mut!(CAME), thin: &mut *core::ptr::addr_of_mut!(THIN), held: &mut *core::ptr::addr_of_mut!(HELD) } }
+}
+
+/// ONE STEP OF THE SMOKE (SUB of a second). The leaves as they stand now, what the emitters let out, the bricks it would spill into, the faces nobody has
+/// asked; then the wind carries it, it passes toward the thinner side, it thins, and the bricks with next to nothing in them are given back.
+fn substep(w: &World, g: &mut Grid, k: &K, tune: &Knobs) {
+    leaves(w, g);
+    let mut s = Sub {
+        w,
+        k,
+        tune,
+        share: unsafe { &*core::ptr::addr_of!(WIND) },
+        wide: g.nbx * 2,
+        windy: k.wind_x != 0.0 || k.wind_z != 0.0,
+        dyes: (0..MAX_BRICKS).any(|b| g.st[O_KEYS + b * 2] != 0.0 && g.dyed(b) != [0.0; 3]),
+        rate: k.spread * 0.5 * SUB / (CELL * CELL),
+        spill: k.gone / (CELLS as f64 * VOL),
+        keep: exp(-k.decay * SUB),
+    };
+    let mut t = scratch();
+    let_out(&mut s, g);
+    spills(&s, g);
+    ask(w, g, tune);
+    if s.dyes {
+        *t.came = [[0.0; 4]; MAX_BRICKS];
+    }
+    let blown = if s.windy { wind(&s, g, &mut t) } else { 0.0 };
+    passes_across(&s, g, &mut t);
+    thins(&s, g, &mut t);
+    let given = gives_back(&s, g, &mut t);
+    g.st[H_GIVEN] += given + blown * VOL * s.keep;
+}
+
+/// The emitters let out, each up the column it stands under, and the spent ones leave the list.
+fn let_out(s: &mut Sub, g: &mut Grid) {
     let n = emitters(g.st);
     let mut kept = 0;
-    // (is there any color to carry)
-    let mut dyes = (0..MAX_BRICKS).any(|b| g.st[O_KEYS + b * 2] != 0.0 && g.dyed(b) != [0.0; 3]);
     for i in 0..n {
         let o = O_EMIT + i * EMIT;
-        let (x, y0, z, rate, ttl, age, radius) = (g.st[o], g.st[o + 1], g.st[o + 2], g.st[o + 3], g.st[o + 4], g.st[o + 5], g.st[o + 6]);
-        let dye = [g.st[o + 7], g.st[o + 8], g.st[o + 9]];
-        dyes |= dye != [0.0; 3];
-        if age < ttl {
-            let amount = rate * js_min(SUB, ttl - age);
-            let top = (BY - 1) as f64;
-            // (its foot and the top of its plume, in cells: each cell between takes what of the plume is in it)
-            let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
-            let (fx, fz) = (floor(x / CELL), floor(z / CELL));
-            // (the wind lays a plume over: in all of it, it rises LAID less)
-            let (mx, mz) = (floor(x), floor(z));
-            let blown = if windy && mx >= 0.0 && mz >= 0.0 && mx < wide as f64 && mz < (g.nbz * 2) as f64 { unit(share[mz as usize * wide + mx as usize]) } else { 0.0 };
-            let rise = js_min(k.rise, k.rise_rate * age) * (1.0 - LAID * blown);
-            let head = js_min(js_max((y0 + radius + rise) / CELL, foot + 0.1), top + 1.0);
-            // (a point off the plan lets out nowhere)
-            if fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64 {
-                // the column: the one it stands in if what it lets out can reach that cell's middle, else the first of those round it that it can reach (a
-                // canister against a wall stands in a cell whose middle is inside the wall)
-                const ROUND: [(f64, f64); 9] = [(0.0, 0.0), (-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0), (-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)];
-                let p = [x, js_max(y0, 0.05), z];
-                let (mut cx, mut cz) = (fx, fz);
-                for (dx, dz) in ROUND {
-                    let (tx, tz) = (fx + dx, fz + dz);
-                    if tx < 0.0 || tz < 0.0 || tx >= (g.nbx * BX) as f64 || tz >= (g.nbz * BX) as f64 {
-                        continue;
-                    }
-                    if reaches(w, set, p, [(tx + 0.5) * CELL, (js_min(js_max(floor(p[1] / CELL), 0.0), top) + 0.5) * CELL, (tz + 0.5) * CELL], tune) {
-                        cx = tx;
-                        cz = tz;
-                        break;
-                    }
-                }
-                let (ux, uz) = (cx as usize, cz as usize);
-                g.st[H_OUT] += amount;
-                if let Some(b) = g.brick_or_new((ux / BX) as i32, (uz / BX) as i32) {
-                    if dyes {
-                        let had: f64 = g.st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS].iter().sum();
-                        g.mix(b, amount / VOL / (had + amount / VOL), dye);
-                    }
-                    let each = amount / VOL / (head - foot);
-                    let mut y = floor(foot);
-                    while y < head {
-                        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each * (js_min(head, y + 1.0) - js_max(foot, y));
-                        y += 1.0;
-                    }
-                }
-            }
+        let mut e: [f64; EMIT] = core::array::from_fn(|c| g.st[o + c]);
+        s.dyes |= e[7..10] != [0.0; 3];
+        if e[5] < e[4] {
+            lets_out(s, g, &e);
         }
-        let age = age + SUB;
-        if age < ttl {
+        e[5] += SUB;
+        if e[5] < e[4] {
             let t = O_EMIT + kept * EMIT;
-            g.st[t] = x;
-            g.st[t + 1] = y0;
-            g.st[t + 2] = z;
-            g.st[t + 3] = rate;
-            g.st[t + 4] = ttl;
-            g.st[t + 5] = age;
-            g.st[t + 6] = radius;
-            g.st[t + 7..t + 10].copy_from_slice(&dye);
+            g.st[t..t + EMIT].copy_from_slice(&e);
             kept += 1;
         }
     }
@@ -775,158 +794,102 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
         g.st[O_EMIT + i] = 0.0;
     }
     g.st[H_EMIT] = kept as f64;
+}
 
-    // 2. a brick gets the neighbour it would spill into: where a cell at its edge holds smoke AND the way out of that cell
-    //    into the neighbour is open. A wall along a brick's edge costs no brick behind it.
-    let rate = k.spread * 0.5 * SUB / (CELL * CELL);
-    let spill = k.gone / (CELLS as f64 * VOL);
-    const OUT: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+/// One emitter: from its own foot to the top of its plume, its width and the rise the blobs had; each cell between takes what of the plume is in it.
+fn lets_out(s: &Sub, g: &mut Grid, e: &[f64; EMIT]) {
+    let [x, y0, z, rate, ttl, age, radius, ..] = *e;
+    let amount = rate * js_min(SUB, ttl - age);
+    let top = (BY - 1) as f64;
+    let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
+    let (fx, fz) = (floor(x / CELL), floor(z / CELL));
+    // (the wind lays a plume over: in all of it, it rises LAID less)
+    let (mx, mz) = (floor(x), floor(z));
+    let blown = if s.windy && mx >= 0.0 && mz >= 0.0 && mx < s.wide as f64 && mz < (g.nbz * 2) as f64 { unit(s.share[mz as usize * s.wide + mx as usize]) } else { 0.0 };
+    let rise = js_min(s.k.rise, s.k.rise_rate * age) * (1.0 - LAID * blown);
+    let head = js_min(js_max((y0 + radius + rise) / CELL, foot + 0.1), top + 1.0);
+    // (a point off the plan lets out nowhere)
+    if !(fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64) {
+        return;
+    }
+    let (ux, uz) = column(s, g, [x, js_max(y0, 0.05), z], fx, fz);
+    g.st[H_OUT] += amount;
+    let Some(b) = g.brick_or_new((ux / BX) as i32, (uz / BX) as i32) else {
+        return;
+    };
+    if s.dyes {
+        let had: f64 = g.st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS].iter().sum();
+        g.mix(b, amount / VOL / (had + amount / VOL), [e[7], e[8], e[9]]);
+    }
+    let each = amount / VOL / (head - foot);
+    let mut y = floor(foot);
+    while y < head {
+        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each * (js_min(head, y + 1.0) - js_max(foot, y));
+        y += 1.0;
+    }
+}
+
+/// The column a thing lets out up: the one it stands in (`fx`, `fz`) if what it lets out can reach that cell's middle, else the first of those round it
+/// that it can reach (a canister against a wall stands in a cell whose middle is inside the wall).
+fn column(s: &Sub, g: &Grid, p: [f64; 3], fx: f64, fz: f64) -> (usize, usize) {
+    const ROUND: [(f64, f64); 9] = [(0.0, 0.0), (-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0), (-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)];
+    for (dx, dz) in ROUND {
+        let (tx, tz) = (fx + dx, fz + dz);
+        if tx < 0.0 || tz < 0.0 || tx >= (g.nbx * BX) as f64 || tz >= (g.nbz * BX) as f64 {
+            continue;
+        }
+        let y = js_min(js_max(floor(p[1] / CELL), 0.0), (BY - 1) as f64);
+        if reaches(s.w, p, [(tx + 0.5) * CELL, (y + 0.5) * CELL, (tz + 0.5) * CELL], s.tune) {
+            return (tx as usize, tz as usize);
+        }
+    }
+    (fx as usize, fz as usize)
+}
+
+/// A brick gets the neighbour it would spill into: where a cell at its edge holds smoke AND the way out of that cell into the neighbour is open. A wall
+/// along a brick's edge costs no brick behind it.
+fn spills(s: &Sub, g: &mut Grid) {
     for b in 0..MAX_BRICKS {
         let Some((bx, bz)) = g.key(b) else { continue };
-        let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
         for (side, &(dx, dz)) in OUT.iter().enumerate() {
             let (nx, nz) = (bx + dx, bz + dz);
             if nx < 0 || nz < 0 || nx as usize >= g.nbx || nz as usize >= g.nbz || g.brick(nx, nz).is_some() {
                 continue;
             }
-            let mut wanted = false;
-            'edge: for y in 0..BY {
-                for i in 0..BX {
-                    let (x, z) = edge_cell(side, i);
-                    if !(g.st[O_RHO + b * CELLS + cell_at(x, y, z)] > spill) {
-                        continue;
-                    }
-                    let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
-                    if open(w, set, p, [p[0] + dx as f64 * CELL, p[1], p[2] + dz as f64 * CELL], tune) {
-                        wanted = true;
-                        break 'edge;
-                    }
-                }
-            }
-            if wanted {
+            if spills_out(s, g, b, (bx, bz), side) {
                 g.brick_or_new(nx, nz);
             }
         }
     }
+}
 
-    // 3. the faces nobody has asked
-    ask(w, set, g, tune);
-
-    let delta = unsafe { &mut *core::ptr::addr_of_mut!(DELTA) };
-    let came = unsafe { &mut *core::ptr::addr_of_mut!(CAME) };
-    if dyes {
-        *came = [[0.0; 4]; MAX_BRICKS];
-    }
-    // 3b. THE WIND (K.wind): under the open sky the air moves and the smoke goes with it — across the open faces in plan, out of the cell UPWIND (a
-    //     donor's own density: nothing is made), at the wind's speed at that height × the share of it the two squares have (none under a roof: a
-    //     room's smoke stays a room's, and the wind comes in at a door only as far as the lee lets it). What it carries over the plan's edge has left
-    //     the level: into the book as given back. A PASS carries at most DRIFT_MAX of a cell across a face, so a faster wind takes more passes of the
-    //     step, each from the densities the one before left; a wind faster than MAX_PASSES carry is slowed WHOLE, both axes by one number, never
-    //     bent. A brick the smoke is blown toward is made by 2, at the next step. No statement of this is reached in still air.
-    let mut blown = 0.0;
-    if windy {
-        let fast = js_max(js_max(k.wind_x, -k.wind_x), js_max(k.wind_z, -k.wind_z)) * SUB / CELL * (k.wind_low + js_max(k.wind_gain, 0.0));
-        let passes = js_max(1.0, js_min(MAX_PASSES, -floor(-fast / DRIFT_MAX)));
-        let slowed = js_min(1.0, passes * DRIFT_MAX / fast) / passes;
-        let (cx, cz) = (k.wind_x * SUB / CELL * slowed, k.wind_z * SUB / CELL * slowed);
-        let mut pass = 0.0;
-        while pass < passes {
-            pass += 1.0;
-            for b in 0..MAX_BRICKS {
-                if g.st[O_KEYS + b * 2] != 0.0 {
-                    for c in 0..CELLS {
-                        delta[b * CELLS + c] = 0.0;
-                    }
-                }
+/// whether brick `b` has a cell at its edge on `side` that holds smoke and is open into the neighbour there
+fn spills_out(s: &Sub, g: &Grid, b: usize, (bx, bz): (i32, i32), side: usize) -> bool {
+    let (dx, dz) = OUT[side];
+    for y in 0..BY {
+        for i in 0..BX {
+            let (x, z) = edge_cell(side, i);
+            if !(g.st[O_RHO + b * CELLS + cell_at(x, y, z)] > s.spill) {
+                continue;
             }
-            for b in 0..MAX_BRICKS {
-                let Some((bx, bz)) = g.key(b) else { continue };
-                let (east, south) = (g.brick(bx + 1, bz), g.brick(bx, bz + 1));
-                let (gx, gz) = (bx as usize * BX, bz as usize * BX);
-                let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
-                for z in 0..BX {
-                    for x in 0..BX {
-                        let (s, sx, sz) = shares(share, wide, gx, gz, x, z, east.is_some(), south.is_some());
-                        if s == 0.0 && sx == 0.0 && sz == 0.0 {
-                            continue;
-                        }
-                        for y in 0..BY {
-                            // (the wind at this layer's middle, as the storm's field has it: slower at the ground)
-                            let h = k.wind_low + k.wind_gain * js_max(0.0, js_min(1.0, (y as f64 + 0.5) * CELL / k.wind_full_at));
-                            let (ux, uz) = (cx * h * 0.5 * (s + sx), cz * h * 0.5 * (s + sz));
-                            let c = b * CELLS + cell_at(x, y, z);
-                            // (a cell on the plan's near edge is asked its ways out the first time a wind blows over it)
-                            if ((x == 0 && bx == 0) || (z == 0 && bz == 0)) && g.faces[c] & F_EDGE == 0 {
-                                let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
-                                let mut f = g.faces[c] | F_EDGE;
-                                if x == 0 && bx == 0 && open(w, set, p, [p[0] - CELL, p[1], p[2]], tune) {
-                                    f |= F_WEST;
-                                }
-                                if z == 0 && bz == 0 && open(w, set, p, [p[0], p[1], p[2] - CELL], tune) {
-                                    f |= F_NORTH;
-                                }
-                                g.faces[c] = f;
-                            }
-                            let (f, here) = (g.faces[c], g.st[O_RHO + c]);
-                            if f & F_X != 0 {
-                                let n = if x + 1 < BX { Some(c + 1) } else { east.map(|e| e * CELLS + cell_at(0, y, z)) };
-                                if let Some(n) = n {
-                                    let over = if ux > 0.0 { ux * here } else { ux * g.st[O_RHO + n] };
-                                    delta[c] -= over;
-                                    delta[n] += over;
-                                    if dyes {
-                                        carry(g, came, c, n, over);
-                                    }
-                                } else if cx > 0.0 && bx as usize + 1 == g.nbx {
-                                    let out = cx * h * s * here;
-                                    delta[c] -= out;
-                                    blown += out;
-                                }
-                            }
-                            if f & F_Z != 0 {
-                                let n = if z + 1 < BX { Some(c + BX) } else { south.map(|e| e * CELLS + cell_at(x, y, 0)) };
-                                if let Some(n) = n {
-                                    let over = if uz > 0.0 { uz * here } else { uz * g.st[O_RHO + n] };
-                                    delta[c] -= over;
-                                    delta[n] += over;
-                                    if dyes {
-                                        carry(g, came, c, n, over);
-                                    }
-                                } else if cz > 0.0 && bz as usize + 1 == g.nbz {
-                                    let out = cz * h * s * here;
-                                    delta[c] -= out;
-                                    blown += out;
-                                }
-                            }
-                            if f & F_WEST != 0 && cx < 0.0 {
-                                let out = -cx * h * s * here;
-                                delta[c] -= out;
-                                blown += out;
-                            }
-                            if f & F_NORTH != 0 && cz < 0.0 {
-                                let out = -cz * h * s * here;
-                                delta[c] -= out;
-                                blown += out;
-                            }
-                        }
-                    }
-                }
-            }
-            for b in 0..MAX_BRICKS {
-                if g.st[O_KEYS + b * 2] != 0.0 {
-                    for c in 0..CELLS {
-                        g.st[O_RHO + b * CELLS + c] = js_max(0.0, g.st[O_RHO + b * CELLS + c] + delta[b * CELLS + c]);
-                    }
-                }
+            let p = middle(bx, bz, x, y, z);
+            if open(s.w, p, [p[0] + dx as f64 * CELL, p[1], p[2] + dz as f64 * CELL], s.tune) {
+                return true;
             }
         }
     }
-    // 4. smoke passes across every open face toward the thinner side: each cell's change summed from the densities as the step found them, then applied.
-    //    WHERE THE WIND BLOWS THE SMOKE GOES WITH THE AIR AND DOES LITTLE OF ITS OWN (K.wind; the picture's solver pulls the smoke's whole velocity
-    //    toward the wind's, and the wind is flat, so its own motions die and it stays as low as it was let out — smoke/wind_force.wgsl): a face
-    //    passes less by the share of the wind its squares have. UPWARD, nothing in the open; SIDEWAYS, down to `wind_keep` of it (enough to get
-    //    round what the wind pushes it against, as the picture's does by its pressure). In still air and under a roof: all of it, as ever.
-    let calm = 1.0 - unit(k.wind_keep);
+    false
+}
+
+/// the middle of a cell of the brick at (bx, bz), in the world
+#[inline(always)]
+fn middle(bx: i32, bz: i32, x: usize, y: usize, z: usize) -> [f64; 3] {
+    let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
+    [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL]
+}
+
+/// nothing has changed yet in a brick that stands
+fn nothing_yet(g: &Grid, delta: &mut [f64; MAX_BRICKS * CELLS]) {
     for b in 0..MAX_BRICKS {
         if g.st[O_KEYS + b * 2] != 0.0 {
             for c in 0..CELLS {
@@ -934,6 +897,132 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
             }
         }
     }
+}
+
+/// the cell east of a cell (`c` of all, x of its brick), in its brick or the one beside it
+#[inline(always)]
+fn east_of(c: usize, (x, y, z): (usize, usize, usize), east: Option<usize>) -> Option<usize> {
+    if x + 1 < BX { Some(c + 1) } else { east.map(|e| e * CELLS + cell_at(0, y, z)) }
+}
+/// …and the one south of it
+#[inline(always)]
+fn south_of(c: usize, (x, y, z): (usize, usize, usize), south: Option<usize>) -> Option<usize> {
+    if z + 1 < BX { Some(c + BX) } else { south.map(|s| s * CELLS + cell_at(x, y, 0)) }
+}
+/// `over` of smoke goes from cell `c` to cell `n`, with its color
+#[inline(always)]
+fn goes(s: &Sub, g: &Grid, t: &mut Scratch, c: usize, n: usize, over: f64) {
+    t.delta[c] -= over;
+    t.delta[n] += over;
+    if s.dyes {
+        carry(g, t.came, c, n, over);
+    }
+}
+
+/// THE WIND (K.wind): under the open sky the air moves and the smoke goes with it, across the open faces in plan, out of the cell UPWIND (a donor's own
+/// density: nothing is made), at the wind's speed at that height by the share of it the two squares have (none under a roof: a room's smoke stays a
+/// room's, and the wind comes in at a door only as far as the lee lets it). What it carries over the plan's edge has left the level: into the book as
+/// given back. A PASS carries at most DRIFT_MAX of a cell across a face, so a faster wind takes more passes of the step, each from the densities the one
+/// before left; a wind faster than MAX_PASSES carry is slowed WHOLE, both axes by one number, never bent. A brick the smoke is blown toward is made by
+/// the spill of the next step. None of this is reached in still air. → what it blew off the plan.
+fn wind(s: &Sub, g: &mut Grid, t: &mut Scratch) -> f64 {
+    let k = s.k;
+    let fast = js_max(js_max(k.wind_x, -k.wind_x), js_max(k.wind_z, -k.wind_z)) * SUB / CELL * (k.wind_low + js_max(k.wind_gain, 0.0));
+    let passes = js_max(1.0, js_min(MAX_PASSES, -floor(-fast / DRIFT_MAX)));
+    let slowed = js_min(1.0, passes * DRIFT_MAX / fast) / passes;
+    let by = (k.wind_x * SUB / CELL * slowed, k.wind_z * SUB / CELL * slowed);
+    let mut blown = 0.0;
+    let mut pass = 0.0;
+    while pass < passes {
+        pass += 1.0;
+        nothing_yet(g, t.delta);
+        for b in 0..MAX_BRICKS {
+            wind_over(s, g, t, b, by, &mut blown);
+        }
+        for b in 0..MAX_BRICKS {
+            if g.st[O_KEYS + b * 2] != 0.0 {
+                for c in 0..CELLS {
+                    g.st[O_RHO + b * CELLS + c] = js_max(0.0, g.st[O_RHO + b * CELLS + c] + t.delta[b * CELLS + c]);
+                }
+            }
+        }
+    }
+    blown
+}
+
+/// the wind over one brick
+fn wind_over(s: &Sub, g: &mut Grid, t: &mut Scratch, b: usize, (cx, cz): (f64, f64), blown: &mut f64) {
+    let Some((bx, bz)) = g.key(b) else { return };
+    let (k, east, south) = (s.k, g.brick(bx + 1, bz), g.brick(bx, bz + 1));
+    let (gx, gz) = (bx as usize * BX, bz as usize * BX);
+    let (last_x, last_z) = (bx as usize + 1 == g.nbx, bz as usize + 1 == g.nbz);
+    for z in 0..BX {
+        for x in 0..BX {
+            let (sh, sx, sz) = shares(s.share, s.wide, gx, gz, x, z, east.is_some(), south.is_some());
+            if sh == 0.0 && sx == 0.0 && sz == 0.0 {
+                continue;
+            }
+            for y in 0..BY {
+                // (the wind at this layer's middle, as the storm's field has it: slower at the ground)
+                let h = k.wind_low + k.wind_gain * js_max(0.0, js_min(1.0, (y as f64 + 0.5) * CELL / k.wind_full_at));
+                let (ux, uz) = (cx * h * 0.5 * (sh + sx), cz * h * 0.5 * (sh + sz));
+                let c = b * CELLS + cell_at(x, y, z);
+                if ((x == 0 && bx == 0) || (z == 0 && bz == 0)) && g.faces[c] & F_EDGE == 0 {
+                    ask_edge(s, g, c, (bx, bz), (x, y, z));
+                }
+                let (f, here) = (g.faces[c], g.st[O_RHO + c]);
+                let mut leaves = |t: &mut Scratch, out: f64| {
+                    t.delta[c] -= out;
+                    *blown += out;
+                };
+                if f & F_X != 0 {
+                    if let Some(n) = east_of(c, (x, y, z), east) {
+                        let over = if ux > 0.0 { ux * here } else { ux * g.st[O_RHO + n] };
+                        goes(s, g, t, c, n, over);
+                    } else if cx > 0.0 && last_x {
+                        leaves(t, cx * h * sh * here);
+                    }
+                }
+                if f & F_Z != 0 {
+                    if let Some(n) = south_of(c, (x, y, z), south) {
+                        let over = if uz > 0.0 { uz * here } else { uz * g.st[O_RHO + n] };
+                        goes(s, g, t, c, n, over);
+                    } else if cz > 0.0 && last_z {
+                        leaves(t, cz * h * sh * here);
+                    }
+                }
+                if f & F_WEST != 0 && cx < 0.0 {
+                    leaves(t, -cx * h * sh * here);
+                }
+                if f & F_NORTH != 0 && cz < 0.0 {
+                    leaves(t, -cz * h * sh * here);
+                }
+            }
+        }
+    }
+}
+
+/// a cell on the plan's near edge is asked its ways out, the first time a wind blows over it
+fn ask_edge(s: &Sub, g: &mut Grid, c: usize, (bx, bz): (i32, i32), (x, y, z): (usize, usize, usize)) {
+    let p = middle(bx, bz, x, y, z);
+    let mut f = g.faces[c] | F_EDGE;
+    if x == 0 && bx == 0 && open(s.w, p, [p[0] - CELL, p[1], p[2]], s.tune) {
+        f |= F_WEST;
+    }
+    if z == 0 && bz == 0 && open(s.w, p, [p[0], p[1], p[2] - CELL], s.tune) {
+        f |= F_NORTH;
+    }
+    g.faces[c] = f;
+}
+
+/// Smoke passes across every open face toward the thinner side: each cell's change summed from the densities as the step found them, applied after.
+/// WHERE THE WIND BLOWS THE SMOKE GOES WITH THE AIR AND DOES LITTLE OF ITS OWN (K.wind; the picture's solver pulls the smoke's whole velocity toward the
+/// wind's, and the wind is flat, so its own motions die and it stays as low as it was let out, smoke/wind_force.wgsl): a face passes less by the share of
+/// the wind its squares have. UPWARD, nothing in the open; SIDEWAYS, down to `wind_keep` of it (enough to get round what the wind pushes it against, as
+/// the picture's does by its pressure). In still air and under a roof: all of it, as ever.
+fn passes_across(s: &Sub, g: &mut Grid, t: &mut Scratch) {
+    let calm = 1.0 - unit(s.k.wind_keep);
+    nothing_yet(g, t.delta);
     for b in 0..MAX_BRICKS {
         let Some((bx, bz)) = g.key(b) else { continue };
         let (east, south) = (g.brick(bx + 1, bz), g.brick(bx, bz + 1));
@@ -943,107 +1032,103 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K, tune: &Knobs) {
                 for x in 0..BX {
                     let c = b * CELLS + cell_at(x, y, z);
                     let (f, here) = (g.faces[c], g.st[O_RHO + c]);
-                    let (rx, ry, rz) = if windy {
-                        let (s, sx, sz) = shares(share, wide, gx, gz, x, z, east.is_some(), south.is_some());
-                        (rate * (1.0 - calm * 0.5 * (s + sx)), rate * (1.0 - s), rate * (1.0 - calm * 0.5 * (s + sz)))
+                    let (rx, ry, rz) = if s.windy {
+                        let (sh, sx, sz) = shares(s.share, s.wide, gx, gz, x, z, east.is_some(), south.is_some());
+                        (s.rate * (1.0 - calm * 0.5 * (sh + sx)), s.rate * (1.0 - sh), s.rate * (1.0 - calm * 0.5 * (sh + sz)))
                     } else {
-                        (rate, rate, rate)
+                        (s.rate, s.rate, s.rate)
                     };
                     if f & F_X != 0 {
-                        let n = if x + 1 < BX { Some(c + 1) } else { east.map(|e| e * CELLS + cell_at(0, y, z)) };
-                        if let Some(n) = n {
-                            let pass = rx * (here - g.st[O_RHO + n]);
-                            delta[c] -= pass;
-                            delta[n] += pass;
-                            if dyes {
-                                carry(g, came, c, n, pass);
-                            }
+                        if let Some(n) = east_of(c, (x, y, z), east) {
+                            goes(s, g, t, c, n, rx * (here - g.st[O_RHO + n]));
                         }
                     }
                     if f & F_Y != 0 {
                         let n = c + BX * BX;
                         let pass = ry * (here - g.st[O_RHO + n]);
-                        delta[c] -= pass;
-                        delta[n] += pass;
+                        t.delta[c] -= pass;
+                        t.delta[n] += pass;
                     }
                     if f & F_Z != 0 {
-                        let n = if z + 1 < BX { Some(c + BX) } else { south.map(|s| s * CELLS + cell_at(x, y, 0)) };
-                        if let Some(n) = n {
-                            let pass = rz * (here - g.st[O_RHO + n]);
-                            delta[c] -= pass;
-                            delta[n] += pass;
-                            if dyes {
-                                carry(g, came, c, n, pass);
-                            }
+                        if let Some(n) = south_of(c, (x, y, z), south) {
+                            goes(s, g, t, c, n, rz * (here - g.st[O_RHO + n]));
                         }
                     }
                 }
             }
         }
     }
-    // 5. … applied, thinned by the step's decay (and the book with it). A brick with next to nothing in it is given back once nothing can feed it: no
-    //    emitter stands in it or beside it, and no brick round it holds smoke at the edge they share: the very test that makes a brick (2), so one made
-    //    this step is not given back in it. What it held goes into the book. Every brick is judged by what the step left, before any is given back.
-    let keep = exp(-k.decay * SUB);
+}
+
+/// The step's changes, applied and thinned by its decay, and the book with it: what each brick holds now, and whether that is next to nothing.
+fn thins(s: &Sub, g: &mut Grid, t: &mut Scratch) {
     for h in [H_OUT, H_GIVEN] {
-        g.st[h] *= keep;
+        g.st[h] *= s.keep;
     }
-    let thin = unsafe { &mut *core::ptr::addr_of_mut!(THIN) };
-    let held = unsafe { &mut *core::ptr::addr_of_mut!(HELD) };
     for b in 0..MAX_BRICKS {
-        thin[b] = true;
+        t.thin[b] = true;
         if g.st[O_KEYS + b * 2] == 0.0 {
             continue;
         }
         let mut mass = 0.0;
         for c in 0..CELLS {
-            let v = js_max(0.0, (g.st[O_RHO + b * CELLS + c] + delta[b * CELLS + c]) * keep);
+            let v = js_max(0.0, (g.st[O_RHO + b * CELLS + c] + t.delta[b * CELLS + c]) * s.keep);
             g.st[O_RHO + b * CELLS + c] = v;
             mass += v;
         }
-        held[b] = mass * VOL;
-        thin[b] = held[b] < k.gone;
+        t.held[b] = mass * VOL;
+        t.thin[b] = t.held[b] < s.k.gone;
         // (what came in is mixed into what is there now; the thinning leaves the color as it is)
-        if dyes && came[b][0] > 0.0 && mass > 0.0 {
-            let [i, d @ ..] = came[b];
-            g.mix(b, i * keep / mass, d.map(|v| v / i));
+        if s.dyes && t.came[b][0] > 0.0 && mass > 0.0 {
+            let [i, d @ ..] = t.came[b];
+            g.mix(b, i * s.keep / mass, d.map(|v| v / i));
         }
     }
+}
+
+/// A brick with next to nothing in it is given back once nothing can feed it: every brick is judged by what the step left, before any is given back.
+/// → what the ones that went held.
+fn gives_back(s: &Sub, g: &mut Grid, t: &mut Scratch) -> f64 {
     let mut given = 0.0;
     for b in 0..MAX_BRICKS {
         let Some((bx, bz)) = g.key(b) else { continue };
-        if !thin[b] {
+        if !t.thin[b] {
             continue;
         }
-        // (the side of the neighbour that faces this brick is the opposite one: OUT pairs them 0 ↔ 1, 2 ↔ 3)
-        let mut fed = OUT.iter().enumerate().any(|(side, &(dx, dz))| {
-            g.brick(bx + dx, bz + dz).map_or(false, |n| {
-                (0..BY).any(|y| {
-                    (0..BX).any(|i| {
-                        let (x, z) = edge_cell(side ^ 1, i);
-                        g.st[O_RHO + n * CELLS + cell_at(x, y, z)] > spill
-                    })
-                })
-            })
-        });
-        for i in 0..emitters(g.st) {
-            let o = O_EMIT + i * EMIT;
-            let (ex, ez) = (floor(g.st[o] / SIDE) - bx as f64, floor(g.st[o + 2] / SIDE) - bz as f64);
-            fed |= ex >= -1.0 && ex <= 1.0 && ez >= -1.0 && ez <= 1.0;
-        }
         // (`thin` from here on: this brick goes)
-        thin[b] = !fed;
-        if !fed {
-            given += held[b];
+        t.thin[b] = !fed(s, g, bx, bz);
+        if t.thin[b] {
+            given += t.held[b];
         }
     }
-    // (given back together, once every brick has been judged by the same densities)
     for b in 0..MAX_BRICKS {
-        if thin[b] && g.st[O_KEYS + b * 2] != 0.0 {
+        if t.thin[b] && g.st[O_KEYS + b * 2] != 0.0 {
             g.free(b);
         }
     }
-    g.st[H_GIVEN] += given + blown * VOL * keep;
+    given
+}
+
+/// Whether anything can feed a brick: an emitter in it or beside it, or a brick round it with smoke at the edge they share: the very test that makes a
+/// brick, so one made this step is not given back in it.
+fn fed(s: &Sub, g: &Grid, bx: i32, bz: i32) -> bool {
+    // (the side of the neighbour that faces this brick is the opposite one: OUT pairs them 0 and 1, 2 and 3)
+    let beside = OUT.iter().enumerate().any(|(side, &(dx, dz))| {
+        g.brick(bx + dx, bz + dz).map_or(false, |n| {
+            (0..BY).any(|y| {
+                (0..BX).any(|i| {
+                    let (x, z) = edge_cell(side ^ 1, i);
+                    g.st[O_RHO + n * CELLS + cell_at(x, y, z)] > s.spill
+                })
+            })
+        })
+    });
+    beside
+        || (0..emitters(g.st)).any(|i| {
+            let o = O_EMIT + i * EMIT;
+            let (ex, ez) = (floor(g.st[o] / SIDE) - bx as f64, floor(g.st[o + 2] / SIDE) - bz as f64);
+            ex >= -1.0 && ex <= 1.0 && ez >= -1.0 && ez <= 1.0
+        })
 }
 
 /// `over` of smoke goes from cell `c` to cell `n` (or back, where it is less than nothing): into another brick it takes its brick's color along

@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 
 /// A door the wand goes under: shut home, on its hinges, not the steel fire door.
 pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && m::abs(crate::doors::door_angle(g, d)) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
+    !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
 }
 
 /// Is 'look under it' on this door's rows for this player.
@@ -52,16 +52,16 @@ fn lens_at(hinge: [f64; 2], u: [f64; 2], w: f64, side: f64, past_m: f64, eye_y: 
 
 /// Turn the lens of this player's look toward the frame's aim point, at its rate, inside its stops.
 pub fn wand_turn(g: &mut crate::game::Game, pl: PlayerId, aim: V3, dt: f64) {
-    let Some(w) = g.pl[pl].wanding else { return };
+    let Some(w) = g.pl[pl].wanding().copied() else { return };
     let l = wand_lens(g, w.door, w.side);
     let max = wand_pan_max(g);
     let pan = turned(w.pan, l, aim, max, g.k.wand.pan_rate, dt);
-    if let Some(held) = g.pl[pl].wanding.as_mut() { held.pan = pan; }
+    if let Some(held) = g.pl[pl].wanding_mut() { held.pan = pan; }
 }
 
 /// wandTurn's arithmetic: the pan after this step.
 fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, dt: f64) -> f64 {
-    let mut want = m::atan2(aim[0] - l.pos[0], aim[2] - l.pos[2]) - l.yaw;
+    let mut want = v3::yaw_to(l.pos, aim) - l.yaw;
     want = m::atan2(m::sin(want), m::cos(want));
     want = m::max(-max, m::min(max, want));
     let step = pan_rate * dt;
@@ -72,7 +72,7 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
 /// The lens as one of the fog's eyes, or None while nobody is looking.
 pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::fogofwar::FogEye> {
     let pl = seat.player;
-    let w = g.pl[pl].wanding?;
+    let w = g.pl[pl].wanding().copied()?;
     if !w.live || crate::condition::down(g, g.pl[pl].ch) { return None; }
     let l = wand_lens(g, w.door, w.side);
     let a = l.yaw + w.pan;
@@ -81,10 +81,10 @@ pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<c
     Some(crate::fogofwar::FogEye { id: g.ch[c].id, pos: l.pos, look: [m::sin(a), 0.0, m::cos(a)], at: l.pos, fov: Some(fov), near: Some(0.0), wand: Some(true) })
 }
 
-/// The look let go of with nothing said; player.ts stopWand is the worded way out.
+/// The look let go of; `stop_wand` does this and stops him where he kneels.
 pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
-    if g.pl[pl].wanding.is_none() { return; }
-    g.pl[pl].wanding = None;
+    if g.pl[pl].wanding().is_none() { return; }
+    g.pl[pl].wanding_over();
     let c = g.pl[pl].ch;
     g.ch[c].anim.lockpick = false;
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.wand.stow_secs);

@@ -67,13 +67,13 @@ pub fn paint_leaves(g: &mut Game) {
     for &d in &g.doors.list {
         let (def, leaf) = (&g.dr[d].def, g.dr[d].box_);
         if def.steel == Some(true) { continue; }
-        let h = crate::math_dice::hash_str(&def.name) as u32;
+        let h = crate::dice::hash_str(&def.name) as u32;
         let k = 0.9 + (h % 1000) as f64 / 1000.0 * 0.2;
         let outside = def.exterior == Some(true);
         let old = !outside && (h >> 10) % 4 == 0;
         let a = if outside { accent } else if old { faded } else { wood };
         let stuff = if let Some(Row { stuff: Said::All(w), .. }) = row { Some(w) } else if old { None } else { said(outside).or_else(|| own(outside)) };
-        let b = &mut g.tab.boxes[leaf];
+        let mut b = g.tab.boxes.edit(leaf);
         b.albedo = a.map(|x| x * k);
         b.stuff = stuff;
     }

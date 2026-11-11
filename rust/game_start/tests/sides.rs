@@ -28,7 +28,7 @@ fn a_lit_sam_in_front_of_an_alert_teammate_is_never_his_foe() {
         let (sc, _, man) = lit_room(s);
         let mut p = Play::scene(&sc, &seed(s));
         p.sam_unhurt();
-        let op = p.man_of(Team::Operative, man, EAST);
+        let op = p.man_of(Team::Ours, man, EAST);
         p.pin_man(op, man, EAST, GuardState::Alert, 1.0);
         p.run(0.2);
         assert!(p.sam_light() > 0.3 || p.until(1.0, |p| p.sam_light() > 0.3).is_some(), "seed {s}: staging: Sam is lit ({:.2})", p.sam_light());
@@ -58,7 +58,7 @@ fn a_man_behind_a_wall_is_never_fought_until_he_fires_and_is_placed_by_ear() {
             sc.bulb(18.0, 9.0).bulb(18.0, 15.0).sam(38.0, 26.0);
             let mut p = Play::scene(&sc, &seed(s));
             let at = [18.25, 9.25 + 0.5 * nudge(s, 1).round()];
-            let (op, ho) = (p.man_of(Team::Operative, [18.25, 15.25], -EAST), p.man_of(Team::Hostile, at, EAST));
+            let (op, ho) = (p.man_of(Team::Ours, [18.25, 15.25], -EAST), p.man_of(Team::Hostile, at, EAST));
             p.pin_man(op, [18.25, 15.25], -EAST, GuardState::Alert, 1.0);
             p.pin_man(ho, at, EAST, GuardState::Patrol, 0.0);
             if let Some(t) = p.always(3.0, |p| !p.has_foe(op) && p.fix(op).is_none()) { panic!("seed {s}: through the wall at {t:.2} s: foe {}, fix {:?}", p.has_foe(op), p.fix(op)); }

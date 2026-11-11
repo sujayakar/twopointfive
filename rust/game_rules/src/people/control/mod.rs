@@ -19,8 +19,8 @@
 //!   `GuardScript`  asked once his ears and eyes have run (`Stage::Body`): his whole body follows the script for the tick and nothing else of his
 //!                  frame runs (guards::update_guard's `lent`). Below these rules stands his own script (`gd.script`, which 71 files read
 //!                  and so stays where it is), and below that his own state.
-//!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is or goes crouched to a
-//!                  spot, his gun lowered toward the danger, no round fired, his hands free to change magazine (update_guard's `alert`,
+//!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is, his gun lowered toward the
+//!                  danger and no round fired, or goes crouched to a spot, firing as he goes at a man he sees (update_guard's `alert`,
 //!                  its first test). `TakeCover::down()` and `TakeCover::to(spot, pace)` are the two ways to say it.
 //!   `LeavePost`    asked at his post in a room fight, once he has looked and reacted, where he can see (`Stage::Post`, roomfight/defender.rs): he
 //!                  leaves it, on a leg or on his own hunt. It is something he does once, so nobody is recorded as having him for it: on the
@@ -59,8 +59,8 @@ pub enum Intent {
 #[derive(Clone, Copy, Debug)]
 pub enum LeavePost { On(crate::roomfight::Leg), Loose }
 
-/// A man taking cover in a fight: down where he stands or off to a spot, crouched, his gun lowered toward the danger; he fires no round and
-/// his hands may change magazine.
+/// A man taking cover in a fight: down where he stands, his gun lowered toward the danger and no round fired, or off to a spot, crouched, firing
+/// as he goes at a man he sees; his hands may change magazine.
 #[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
 pub struct TakeCover {
     /// where to go; `None`: get down where he stands
@@ -172,8 +172,8 @@ macro_rules! rules {
     };
 }
 
-// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` takes him
-// off his post.)
+// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` and `open`
+// take him off his post.)
 rules! {
     frag: "a live grenade";
     runner: "broke and ran";
@@ -181,6 +181,7 @@ rules! {
     startle: "startled";
     duck: "head down under fire";
     lost: "his room is lost";
+    open: "caught in the open";
 }
 // a man's record of who said no is a bit a rule
 const _: () = assert!(RULES.len() <= 32, "Control.declined is 32 bits: widen it before the list holds a 33rd rule");
@@ -219,38 +220,6 @@ impl Control {
     pub const fn blank() -> Self { Control { holder: [Holder::Own; 3], since: [0.0; 3], declined: 0, t: -1.0 } }
 }
 
-/// WHO HOLDS A MAN TO HIS POST. `hold` (he does not leave where he stands) and `pinned` (the room fight has him this tick) are flags of the
-/// man that two dozen modules write. They are written through `set_hold` and `set_pinned`, which note the writer: the module that last
-/// CHANGED the flag, and when. Nothing in the tick reads the note; it is for `control_line`, and it is where a post will come to be given
-/// and released by rank.
-#[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
-pub struct PostNote {
-    pub hold_by: &'static str,
-    pub hold_since: f64,
-    pub pinned_by: &'static str,
-    pub pinned_since: f64,
-}
-
-/// `g.gd[gd].hold = on`, by the module `by`
-pub fn set_hold(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
-    let now = g.time;
-    if g.gd[gd].hold != on {
-        let p = state_mut(g).post.at(gd);
-        p.hold_by = by; p.hold_since = now;
-    }
-    g.gd[gd].hold = on;
-}
-
-/// `g.gd[gd].pinned = on`, by the module `by`
-pub fn set_pinned(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
-    let now = g.time;
-    if g.gd[gd].pinned != on {
-        let p = state_mut(g).post.at(gd);
-        p.pinned_by = by; p.pinned_since = now;
-    }
-    g.gd[gd].pinned = on;
-}
-
 /// every man's record and every rule's rows
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct ControlState {
@@ -259,8 +228,6 @@ pub struct ControlState {
     pub rows: Rows,
     /// how many man-ticks each rule has had a man: a tally for the checks, by `RuleId as usize`
     pub had: Vec<u32>,
-    /// who last changed each man's post flags
-    pub post: PerMan<PostNote>,
     /// who last moved each man's awareness and state (mind.rs)
     pub mind: PerMan<crate::mind::Note>,
 }
@@ -362,11 +329,11 @@ pub fn control_line(g: &Game, gd: GuardId) -> String {
     };
     let no: Vec<&str> = RULES.iter().filter(|r| c.declined & (1 << r.id as u32) != 0).map(|r| r.name).collect();
     if !no.is_empty() { s.push_str(" · said no: "); s.push_str(&no.join(", ")); }
-    let (m, p) = (&g.gd[gd], state(g).and_then(|s| s.post.get(gd)).copied().unwrap_or_default());
+    let d = &g.gd[gd].duty;
     let by = |who: &'static str| if who.is_empty() { "the start" } else { who };
     if let Some((name, _, t)) = crate::owner::who(g, gd) { s.push_str(&format!(" · {} has him for {:.1} s", name, g.time - t)); }
-    if m.hold { s.push_str(&format!(" · held to his post by {} for {:.1} s", by(p.hold_by), g.time - p.hold_since)); }
-    if m.pinned { s.push_str(&format!(" · pinned by {} for {:.1} s", by(p.pinned_by), g.time - p.pinned_since)); }
+    if d.holds { s.push_str(&format!(" · held to his post by {} for {:.1} s", by(d.holds_by.by), g.time - d.holds_by.since)); }
+    if d.pinned { s.push_str(&format!(" · pinned by {} for {:.1} s", by(d.pinned_by.by), g.time - d.pinned_by.since)); }
     s
 }
 
@@ -414,23 +381,15 @@ mod tests {
     }
 
     #[test]
-    fn a_post_flag_notes_who_last_changed_it() {
+    fn his_line_says_who_holds_him() {
         let (mut g, gd) = stand();
         g.gd[gd].callsign = String::from("Ruiz");
-        g.time = 2.0; set_hold(&mut g, gd, true, "roomfight");
-        g.time = 3.0; set_hold(&mut g, gd, true, "orders");      // the same again: not a change
-        g.time = 4.0; set_pinned(&mut g, gd, true, "orders");
-        let p = *state(&g).unwrap().post.get(gd).unwrap();
-        assert_eq!((p.hold_by, p.hold_since, p.pinned_by, p.pinned_since), ("roomfight", 2.0, "orders", 4.0));
-        assert!(g.gd[gd].hold && g.gd[gd].pinned);
+        g.time = 2.0; crate::duty::hold(&mut g, gd, true, "roomfight");
+        g.time = 4.0; crate::duty::pin(&mut g, gd, true, "orders");
         g.time = 5.0; settle(&mut g, gd);
         assert_eq!(control_line(&g, gd), "Ruiz: his own for 0.0 s · held to his post by roomfight for 3.0 s · pinned by orders for 1.0 s");
         crate::owner::claim(&mut g, gd, crate::owner::by::LANE, 5.0, None);
         assert_eq!(control_line(&g, gd), "Ruiz: his own for 0.0 s · a covered lane has him for 0.0 s · held to his post by roomfight for 3.0 s · pinned by orders for 1.0 s");
-        crate::owner::release(&mut g, gd, crate::owner::by::LANE, 5.0);
-        g.time = 6.0; set_hold(&mut g, gd, false, "pressure");
-        assert_eq!(state(&g).unwrap().post.get(gd).unwrap().hold_by, "pressure");
-        assert!(!g.gd[gd].hold);
     }
 
     #[test]

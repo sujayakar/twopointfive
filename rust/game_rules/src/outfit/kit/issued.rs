@@ -13,17 +13,15 @@ const CARDS: usize = KIT_MEMBERS as usize;
 
 /// `issuing` as a condition (true and 'own' both hold)
 fn issuing_on(g: &Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
-/// `WEAPONS[w]`, a copy to hand on while `g` is lent
-fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> crate::weapons::WeaponDef { g.m.weapons.weapons.get(w).unwrap().clone() }
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
-fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.m.weapons.weapons.get(w).unwrap().cls == crate::weapons::WeaponClass::Pistol }
+fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.weapon(w).cls == crate::weapons::WeaponClass::Pistol }
 /// `SUITS[s].tint`
-fn suit_tint(s: SuitId) -> V3 { suits().get(String::from(s.as_str())).unwrap().tint }
+fn suit_tint(s: SuitId) -> V3 { suits().of(s.as_str()).unwrap().tint }
 /// `TRIMS[t].tint`
-fn trim_tint(t: TrimId) -> V3 { trims().get(String::from(t.as_str())).unwrap().tint }
+fn trim_tint(t: TrimId) -> V3 { trims().of(t.as_str()).unwrap().tint }
 /// `g.guards.some(gd => !!gd.unit && gd.team === 'operative')`
 fn team_on_floor(g: &Game) -> bool {
-    g.guards.iter().any(|&gd| g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative)
+    g.guards.iter().any(|&gd| g.team(gd).ours())
 }
 /// `kitIssueWhole(g.level.scenarios?.issue?.members)`
 fn issue_names_you(g: &Game) -> bool {
@@ -55,7 +53,7 @@ fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.l
 
 /// The level's block names a card for you: nothing is handed over it.
 pub(super) fn kit_issue_whole(members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
-    members.map_or(false, |m| m.has(String::from("0")))
+    members.map_or(false, |m| m.holds("0"))
 }
 
 /// A mission's own issue: `f` (the staging, asked again) runs under the mission's cards. False: no such block, or already issuing.
@@ -160,111 +158,101 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
     let lent = !own && !(matches!(g.m.kit.issuing, KitModIssuing::Own) && issue_names_you(g));
     let mut m = g.m.kit.kit.members[0].clone();
     let pl = g.player;
-    if !g.m.kit.issued_player.has(pl) {
-        let (rifle, side, c) = (g.pl[pl].rifle, g.pl[pl].pistol, g.pl[pl].ch);
-        let cams = if g.fa[rifle].attachments.contains(&crate::weapons::RifleAttachment::Cam) { g.fa[rifle].cams } else { -1.0 };
-        let was = KitModIssuedPlayerValue {
-            rifle: g.pl[pl].has_rifle,
-            gun: rifle,
-            side,
-            slot: g.pl[pl].slot,
-            smoke: g.pl[pl].canisters,
-            stun: g.pl[pl].flashbangs,
-            frags: g.pl[pl].frags,
-            shells: g.fa[rifle].shells,
-            rings: g.fa[rifle].rings,
-            wand: g.pl[pl].wand,
-            big: g.pl[pl].big_kit,
-            cams,
-            tint: g.ch[c].tint,
-            tint2: g.ch[c].tint2,
-        };
-        g.m.kit.issued_player.set(pl, was);
-    }
-    let counts = !(page_issued(g) && matches!(g.m.kit.issuing, KitModIssuing::Bool(true)));
+    if !g.m.kit.issued_player.has(pl) { let was = issued_now(g, pl); g.m.kit.issued_player.set(pl, was); }
     big_home(&mut m, 0.0);
     g.m.kit.kit.members[0] = m.clone();
-    g.pl[pl].big_kit = if !js::truthy(m.walls) { m.big } else { BigKit::None };
+    g.pl[pl].big_kit = if m.walls == 0.0 { m.big } else { BigKit::None };
+    card_guns(g, pl, &m);
+    if !(page_issued(g) && matches!(g.m.kit.issuing, KitModIssuing::Bool(true))) { card_counts(g, pl, &m, lent); }
+    card_bare(g, pl, &m);
+    if matches!(g.m.kit.issuing, KitModIssuing::Own) { issue_loaded(g, pl); }
+    g.pl[pl].wand = (m.wand && wand_row(g, 0.0)) || (lent && crate::quietfog::quiet_wand(g));
+    let c = g.pl[pl].ch;
+    if m.suit != SuitId::Issued { g.ch[c].tint = suit_tint(m.suit); }
+    if m.trim != TrimId::Issued { g.ch[c].tint2 = trim_tint(m.trim); }
+    let worn = if own { Some(&m) } else { None };
+    crate::kitload::load_man(g, c, 0.0, worn, None);
+    kit_alone(g);
+}
+
+/// What the mission issued him, before any card.
+fn issued_now(g: &Game, pl: PlayerId) -> KitModIssuedPlayerValue {
+    let p = &g.pl[pl];
+    let (rifle, c) = (&g.fa[p.rifle], &g.ch[p.ch]);
+    KitModIssuedPlayerValue {
+        rifle: p.has_rifle, gun: p.rifle, side: p.pistol, slot: p.slot,
+        smoke: p.canisters, stun: p.flashbangs, frags: p.frags,
+        shells: rifle.shells, rings: rifle.rings, cams: if rifle.attachments.contains(&crate::weapons::RifleAttachment::Cam) { rifle.cams } else { -1.0 },
+        wand: p.wand, big: p.big_kit, tint: c.tint, tint2: c.tint2,
+    }
+}
+
+/// The guns the card picks.
+fn card_guns(g: &mut Game, pl: PlayerId, m: &MemberKit) {
+    use crate::gunslots::{pick_row, GunSlot};
     if m.weapon == KitWeapon::Pistol && g.pl[pl].has_rifle {
         g.pl[pl].has_rifle = false;
         if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
     }
-    let long = crate::gunslots::pick_row(g, &m.primary, true);
-    let side = crate::gunslots::pick_row(g, &m.secondary, true);
-    if let Some(long) = long {
-        if g.pl[pl].has_rifle {
-            let want = mine(g, long, &m, crate::gunslots::GunSlot::Primary);
-            if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&want)); }
-        }
+    let (long, side) = (pick_row(g, &m.primary, true), pick_row(g, &m.secondary, true));
+    if let Some(long) = long.filter(|_| g.pl[pl].has_rifle) {
+        let want = mine(g, long, m, GunSlot::Primary);
+        if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&want)); }
     }
     if let Some(side) = side {
-        let want = mine(g, side, &m, crate::gunslots::GunSlot::Secondary);
+        let want = mine(g, side, m, GunSlot::Secondary);
         if g.fa[g.pl[pl].pistol].def != want.id { g.pl[pl].pistol = crate::weapons::pistol_new(g, Some(&want)); }
     }
-    if counts {
-        g.pl[pl].canisters = m.smoke;
-        g.pl[pl].flashbangs = m.bangs;
-        let (slot, can, fb) = (g.pl[pl].slot, g.pl[pl].canisters, g.pl[pl].flashbangs);
-        if (slot == crate::game::SlotKind::Smoke && !js::truthy(can)) || (slot == crate::game::SlotKind::Flash && !js::truthy(fb)) {
-            g.pl[pl].slot = crate::game::SlotKind::Pistol;
-        }
-        g.pl[pl].frags = m.frags;
-        if g.pl[pl].slot == crate::game::SlotKind::Frag && !js::truthy(g.pl[pl].frags) { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
-        let rf = g.pl[pl].rifle;
-        if g.fa[rf].attachments.contains(&crate::weapons::RifleAttachment::He40) { g.fa[rf].shells = m::min(m.shells, SHELLS_MAX); }
-    }
-    if counts && cam_row(g) && g.pl[pl].has_rifle {
-        let n = if tubed(g, &m) { m::max(m.cams, if lent { crate::stickycam::sticky_visit(g) } else { 0.0 }) } else { 0.0 };
+}
+
+/// The cans and the launcher's loads the card counts; a visit's kit (`lent`) is given a few of some.
+fn card_counts(g: &mut Game, pl: PlayerId, m: &MemberKit, lent: bool) {
+    use crate::weapons::RifleAttachment as Load;
+    let p = &mut g.pl[pl];
+    p.canisters = m.smoke;
+    p.flashbangs = m.bangs;
+    p.frags = m.frags;
+    let out = crate::game::player_canister_sel(g, pl).is_some_and(|k| crate::player::throw_count(g, &crate::seats::here(g), k) == 0.0);
+    if out { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
+    let rifle = g.pl[pl].rifle;
+    if g.fa[rifle].attachments.contains(&Load::He40) { g.fa[rifle].shells = m::min(m.shells, SHELLS_MAX); }
+    if cam_row(g) && g.pl[pl].has_rifle {
+        let n = if tubed(g, m) { m::max(m.cams, if lent { crate::stickycam::sticky_visit(g) } else { 0.0 }) } else { 0.0 };
         crate::stickycam::sticky_issue(g, pl, n, None);
     }
-    if counts && g.fa[g.pl[pl].rifle].attachments.contains(&crate::weapons::RifleAttachment::Ring) {
-        let rf = g.pl[pl].rifle;
-        let handed = if lent && stealth_run(g) { g.k.kittree.lend } else { 0.0 };
-        g.fa[rf].rings = m::min(RINGS_MAX, m::max(m.rings, handed));
-        if !js::truthy(g.fa[rf].rings) && crate::weapons::rifle_attachment(g, rf) == Some(crate::weapons::RifleAttachment::Ring) {
-            let (shells, cams) = (g.fa[rf].shells, g.fa[rf].cams);
-            let k = g.fa[rf].attachments.iter().position(|&a| match a {
-                crate::weapons::RifleAttachment::He40 => shells > 0.0,
-                crate::weapons::RifleAttachment::Cam => cams > 0.0,
-                crate::weapons::RifleAttachment::Ring => false,
-            });
-            if let Some(k) = k { g.fa[rf].att_idx = k as i32; }
-        }
-    }
+    if !g.fa[rifle].attachments.contains(&Load::Ring) { return; }
+    let handed = if lent && stealth_run(g) { g.k.kittree.lend } else { 0.0 };
+    g.fa[rifle].rings = m::min(RINGS_MAX, m::max(m.rings, handed));
+    if g.fa[rifle].rings != 0.0 || crate::weapons::rifle_attachment(g, rifle) != Some(Load::Ring) { return; }
+    let fa = &mut g.fa[rifle];
+    let loaded = fa.attachments.iter().position(|&a| match a { Load::He40 => fa.shells > 0.0, Load::Cam => fa.cams > 0.0, Load::Ring => false });
+    if let Some(k) = loaded { fa.att_idx = k as i32; }
+}
+
+/// What the card leaves off: the gun lights, the goggles.
+fn card_bare(g: &mut Game, pl: PlayerId, m: &MemberKit) {
     g.m.kit.you_bare.set(pl, KitModYouBareValue { light: !m.light, nvg: !m.nvg });
-    if !m.light {
-        let (rf, sd) = (g.pl[pl].rifle, g.pl[pl].pistol);
-        g.fa[rf].light_on = false;
-        g.fa[sd].light_on = false;
-    }
     if !m.nvg { g.pl[pl].nv = false; }
-    if matches!(g.m.kit.issuing, KitModIssuing::Own) {
-        let up = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).and_then(|d| d.members.get(String::from("0"))).and_then(|c| c.loaded);
-        if let Some(up) = up {
-            let a = match up {
-                crate::scene_scenarios::IssueCardLoaded::Ring => crate::weapons::RifleAttachment::Ring,
-                crate::scene_scenarios::IssueCardLoaded::He40 => crate::weapons::RifleAttachment::He40,
-            };
-            let rf = g.pl[pl].rifle;
-            if let Some(k) = g.fa[rf].attachments.iter().position(|&x| x == a) {
-                if crate::weapons::rifle_left(g, rf, a) > 0.0 { g.fa[rf].att_idx = k as i32; }
-            }
-        }
-    }
-    let wand = (m.wand && wand_row(g, 0.0)) || (lent && crate::quietfog::quiet_wand(g));
-    g.pl[pl].wand = wand;
-    let c = g.pl[pl].ch;
-    if m.suit != SuitId::Issued { g.ch[c].tint = suit_tint(m.suit); }
-    if m.trim != TrimId::Issued { g.ch[c].tint2 = trim_tint(m.trim); }
-    let worn = if issuing_on(g) { None } else { Some(&m) };
-    crate::kitload::load_man(g, g.pl[g.player].ch, 0.0, worn, None);
-    kit_alone(g);
+    if m.light { return; }
+    let (rifle, side) = (g.pl[pl].rifle, g.pl[pl].pistol);
+    g.fa[rifle].light_on = false;
+    g.fa[side].light_on = false;
+}
+
+/// The level's issue says which load is up under his barrel.
+fn issue_loaded(g: &mut Game, pl: PlayerId) {
+    use crate::scene_scenarios::IssueCardLoaded as Up;
+    let Some(up) = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).and_then(|d| d.members.of("0")).and_then(|c| c.loaded) else { return };
+    let a = match up { Up::Ring => crate::weapons::RifleAttachment::Ring, Up::He40 => crate::weapons::RifleAttachment::He40 };
+    let rifle = g.pl[pl].rifle;
+    let Some(k) = g.fa[rifle].attachments.iter().position(|&x| x == a) else { return };
+    if crate::weapons::rifle_left(g, rifle, a) > 0.0 { g.fa[rifle].att_idx = k as i32; }
 }
 
 /// kitPlayer's `mine`: the gun your card picks for this slot.
-fn mine(g: &mut Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
+fn mine(g: &Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
     if let Some(d) = kit_slot_def(g, m, slot) { return d; }
-    weapon_row(g, w)
+    g.weapon(w).clone()
 }
 
 /// Nobody came with you: the counts the door tools and the wall charge spend are your card's.
@@ -286,15 +274,6 @@ fn kit_solo(g: &mut crate::game::Game) {
 /// The page's own question: the plain night off the loadout screen, or a quiet mission alone, and no squad scenario up.
 pub fn kit_solo_if(g: &mut crate::game::Game, solo: bool) {
     if !g.staged.facts.fight && (solo || (g.staged.facts.unseen && g.staged.team.is_empty())) { kit_solo(g); }
-}
-
-/// A mission started lowers the card on every host, and the harness's shipped stand asks the question too.
-pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
-    let plain = plain.unwrap_or(true);
-    g.solo_card = false;
-    if !g.stood.solo_stand { return; }
-    let lesson = g.level.lesson().is_some_and(|l| !l.steps.is_empty());
-    if !lesson { kit_solo_if(g, plain); }
 }
 
 /// The kit picture is about to be staged on this Player: his card comes off.
@@ -358,10 +337,10 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         crate::kitload::load_man(g, g.gd[gd].ch, i as f64, held, Some(n));
         let gun = kit_gun(g, &m);
         let changed = m.weapon != d.weapon || m.suppressed != d.suppressed || m.primary != d.primary;
-        if changed && gun != g.fa[g.gd[gd].weapon].def && g.m.weapons.weapons.get(gun).unwrap().enabled {
+        if changed && gun != g.fa[g.gd[gd].weapon].def && g.weapon(gun).enabled {
             let route = g.gd[gd].route;
             g.tab.route[route].weapon = Some(gun);
-            let def = weapon_row(g, gun);
+            let def = g.weapon(gun).clone();
             let fresh = crate::weapons::firearm_new(g, &def);
             g.gd[gd].weapon = fresh;
             g.gd[gd].reload_t = -1.0;
@@ -392,9 +371,9 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     if js::truthy(n) && (pool.bangs != g.k.doortools.bangs || pool.charges != g.k.doortools.charges || pool.frags != g.k.frag.squad) {
         crate::seats::each_seat(g, &mut |v| {
             crate::doortools::door_tools_sync(v);
-            v.sets[v.seat].door_tools.bangs = crate::seats::seat_share(v, pool.bangs);
-            v.sets[v.seat].door_tools.charges = crate::seats::seat_share(v, pool.charges);
-            v.sets[v.seat].door_tools.frags = crate::seats::seat_share(v, pool.frags);
+            v.groups[v.group].tools.bangs = crate::seats::seat_share(v, pool.bangs);
+            v.groups[v.group].tools.charges = crate::seats::seat_share(v, pool.charges);
+            v.groups[v.group].tools.frags = crate::seats::seat_share(v, pool.frags);
         });
     }
     if js::truthy(n) {
@@ -420,7 +399,7 @@ pub(super) fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
 }
 
 /// The squad's counted stun canisters and charges with `n` teammates coming.
-pub(super) fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
+pub(super) fn kit_pool(g: &crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
     let issued = issued.unwrap_or(KitPoolIssued { bangs: g.k.doortools.bangs, charges: g.k.doortools.charges });
     let (mut b, mut c, mut f) = (issued.bangs, issued.charges, g.k.frag.squad);
     let on = g.m.kit.kit.on;

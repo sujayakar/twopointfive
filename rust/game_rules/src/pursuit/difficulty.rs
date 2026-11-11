@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- what the part's own tables hold
 
-/// DIFFICULTIES in the TypeScript's order; the enum sorts its words, so never walk by the enum.
+/// The levels, lowest first; the enum sorts its words, so never walk by the enum.
 const DIFFICULTIES_ROWS: [Difficulty; 2] = [Difficulty::Standard, Difficulty::Hard];
 
 /// the `Cone && '.' + Cone` of difficultyWords, HARD.cone being settled on.
@@ -16,12 +16,12 @@ const CONE_TAIL: &str = ". Under the fog of war each teammate sees only the cone
 
 /// HARD_AT[structure]?.stuns: a row with no stuns reads as no row.
 fn hard_at_stuns(g: &Game, structure: &str) -> Option<f64> {
-    g.k.hard_at.rows.get(String::from(structure)).copied().flatten()
+    g.k.hard_at.rows.of(structure).copied().flatten()
 }
 
 /// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it.
 fn store_name_in(level: Difficulty) {
-    if level == Difficulty::Standard {  } else { crate::savestate::save_store_set(); }
+    if level != Difficulty::Standard { crate::savestate::save_store_set(); }
 }
 
 /// JSON.stringify of a Partial<Levers>, in the order of these rows; the words need no escape. None when no row is present (Object.keys(S).length === 0).
@@ -120,11 +120,11 @@ fn href_parts(href: &str) -> (&str, Vec<&str>) {
 /// the structure a level file's room clear stands on.
 pub fn structure_of_level(file: Option<&str>) -> String {
     let file = file.unwrap_or("");
-    level_structure().get(String::from(file)).cloned().unwrap_or_default()
+    level_structure().of(file).cloned().unwrap_or_default()
 }
 
 /// LEVERS with the fog's bottom rung and the fourth lever; TOLD.on and TOLD.fogOff are settled on.
-pub fn levers_now(g: &crate::game::Game) -> Vec<crate::difficulty::LeverDef> {
+pub fn levers_now() -> Vec<crate::difficulty::LeverDef> {
     let mut out = levers();
     for l in out.iter_mut() {
         if l.key == LeverKey::Fog {
@@ -150,7 +150,7 @@ fn any_set(g: &crate::game::Game) -> bool {
 /// v is a word and a rung of lever k.
 pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<&str>) -> bool {
     match v {
-        Some(w) => levers_now(g).iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
+        Some(w) => levers_now().iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
         None => false,
     }
 }
@@ -342,9 +342,8 @@ fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 fn store_levers(g: &crate::game::Game) {
     let s = g.m.difficulty.set;
     let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
-    match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
-        Some(line) => { crate::savestate::save_store_set(); }
-        None => {},
+    if levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]).is_some() {
+        crate::savestate::save_store_set();
     }
 }
 
@@ -472,7 +471,7 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
     let mut levers = Vec::new();
     if !plain {
-        for l in levers_now(g).iter() {
+        for l in levers_now().iter() {
             if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
         }
     }
@@ -483,8 +482,8 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     Some(DifficultyAsked { level, levers, digin, pressure, cone })
 }
 
-/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; what a machine keeps
-/// goes under it: game_start `host::lay`)
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the single-switch flags over whatever those wrote. (What a machine keeps
+/// goes under it: game_start `host::lay`.)
 pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
     if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
     for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }
@@ -499,7 +498,7 @@ pub fn lever_set(g: &crate::game::Game, key: crate::difficulty::LeverKey) -> Opt
 /// the rung of one lever in a line ('' = it stands on none).
 pub fn lever_words(g: &crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
     let Some(rung) = rung else { return String::new() };
-    levers_now(g).into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
+    levers_now().into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
 }
 
 /// the text this machine keeps of the levers moved, in the order they were moved ('' = it keeps none).
@@ -543,7 +542,7 @@ pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> St
 pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
     if any_set(g) && !shown_whole(g) { return String::from(href); }
     let (path, all) = href_parts(href);
-    let now = levers_now(g);
+    let now = levers_now();
     let keys: Vec<&str> = all.iter().copied().filter(|k| {
         let name = k.split('=').next().unwrap_or("");
         !now.iter().any(|l| name == l.param)
@@ -561,16 +560,12 @@ pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String
 }
 
 /// what a level is, in a sentence.
-pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyWordsLevel>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
+pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyNow>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
     let level = match level {
         Some(l) => l,
-        None => match difficulty_now(g) {
-            DifficultyNow::Hard => DifficultyWordsLevel::Hard,
-            DifficultyNow::Standard => DifficultyWordsLevel::Standard,
-            DifficultyNow::Custom => DifficultyWordsLevel::Custom,
-        },
+        None => difficulty_now(g),
     };
-    if level == DifficultyWordsLevel::Custom && levers_mixed(g) {
+    if level == crate::difficulty::DifficultyNow::Custom && levers_mixed(g) {
         return alloc::format!("your own mix: {}", levers_line(g, Some(true)));
     }
     // (squads: a word, or true = one not said which; '' and false = not one)
@@ -579,7 +574,7 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         Some(DifficultyWordsSquads::Bool(true)) => Some(None),
         _ => None,
     };
-    if let (Some(word), DifficultyWordsLevel::Hard) = (squad_word, level) {
+    if let (Some(word), crate::difficulty::DifficultyNow::Hard) = (squad_word, level) {
         let w = word.and_then(|sq| squad_hard().into_iter().find(|x| x.file == sq || x.structure == sq).map(|x| x.words));
         let at = match word {
             Some(sq) => { let s = structure_of_level(Some(sq)); if s.is_empty() { String::from(sq) } else { s } }
@@ -593,13 +588,13 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         };
     }
     match level {
-        DifficultyWordsLevel::Standard => String::from("standard: the usual defenders"),
-        DifficultyWordsLevel::Hard => {
+        crate::difficulty::DifficultyNow::Standard => String::from("standard: the usual defenders"),
+        crate::difficulty::DifficultyNow::Hard => {
             let here = g.m.difficulty.here.clone();
             let kit = if hard_at_stuns(g, &here).map_or(false, js::truthy) { ". Here each defender carries a stun charge, and he'll throw it through a door before he comes in" } else { "" };
             alloc::format!("hard: the defenders come at you together and around through a second door, a far room's defenders come as a group, and they stand and fight where they meet you in the open. If they hear you before your first entry, they'll get ready. The last defender in a room will slip out through another door before you reach his door. At the records office, the defenders who come to a lost room will watch its door from out of a flashbang's reach and let you come out to them. On a hostage rescue the captor calls your assault on the radio and his guards act on it. On the night breach the defenders are drilled, half as shaken by a flashbang, and they'll fire blind through the door they were watching{}{}", kit, CONE_TAIL)
         }
-        DifficultyWordsLevel::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
+        crate::difficulty::DifficultyNow::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
     }
 }
 
@@ -608,7 +603,7 @@ fn levers_line(g: &crate::game::Game, all: Option<bool>) -> String {
     let all = all.unwrap_or(false);
     let s = levers_shown(g, None);
     let set = g.m.difficulty.set;
-    let now = levers_now(g);
+    let now = levers_now();
     let mut parts: Vec<String> = Vec::new();
     for l in now.iter() {
         if !(all || set_word(&set, l.key).is_some()) { continue; }
@@ -686,7 +681,7 @@ mod tests {
     #[test]
     fn levers_now_is_the_tables_with_the_bottom_rung_and_the_fourth() {
         let mut g = crate::game::Game::blank();
-        let now = levers_now(&mut g);
+        let now = levers_now();
         assert_eq!(now.iter().map(|l| l.key.as_str()).collect::<Vec<_>>(), ["fog", "ai", "kit", "told"]);
         assert_eq!(now[0].rungs.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(), ["off", "team", "cones", "own"]);
         for l in now.iter() {

@@ -11,7 +11,7 @@ fn office(seed: u32) -> Play {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() });
     p.sam_unhurt();
     p.run(0.5);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
+    for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
     p
 }
 
@@ -57,12 +57,12 @@ fn a_man_taken_off_a_locked_door_slings_the_shotgun() {
         let out = |p: &Play, m: GuardId| p.g.gd[m].slung.as_ref().map_or(false, |x| x.out);
         // (an entry halts at a door it finds shut, for Sam's word: the row given again, as the lead's "your call" asks)
         let mut k = 0;
-        let up = p.until(45.0, |p| { k += 1; if k % 60 == 0 && p.g.sets[p.g.seat].door_tools.ops.is_empty() { let _ = squad_orders_give(&mut p.g, "openClear", Some(&t), Some(Who::All), None); } p.mates().into_iter().any(|m| out(p, m)) });
+        let up = p.until(45.0, |p| { k += 1; if k % 60 == 0 && p.g.groups[p.g.group].tools.ops.is_empty() { let _ = squad_orders_give(&mut p.g, "openClear", Some(&t), Some(Who::All), None); } p.mates().into_iter().any(|m| out(p, m)) });
         assert!(up.is_some(), "seed {s}: nobody brought the shotgun up for the lock");
         squad_orders_clear(&mut p.g, None);
         p.frame();
         p.frame();
-        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty(), "seed {s}: the door's work goes on two frames after the orders were taken");
+        assert!(p.g.groups[p.g.group].tools.ops.is_empty(), "seed {s}: the door's work goes on two frames after the orders were taken");
         for (m, gun) in &own { assert!(!out(&p, *m) && p.g.gd[*m].weapon == *gun, "seed {s}: {} still has the shotgun up two frames after his orders were taken", p.g.gd[*m].callsign); }
     }
 }
@@ -81,7 +81,7 @@ fn a_man_with_a_fresh_sighting_is_dealt_no_opening() {
         p.run(4.0);
         let Some(m) = p.mates().into_iter().find(|&m| p.g.cover.jobs.has(m)) else { panic!("seed {s}: nobody was dealt an opening") };
         let op = game::roomfight::room_fight_op_of(&mut p.g, m).expect("a squad man of a room clear has his row of the fight");
-        let h = p.g.guards.iter().copied().find(|&h| p.g.gd[h].team == game::teams::Team::Hostile && p.up(h)).expect("a defender is up");
+        let h = p.g.guards.iter().copied().find(|&h| p.g.team(h) == game::teams::Team::Hostile && p.up(h)).expect("a defender is up");
         let t = p.time();
         let secs = p.g.k.cover.contact_secs;
         let meter = p.g.tab.roomfight_op[op].meters.get_mut(h).expect("the fight keeps a row a defender");
@@ -102,14 +102,14 @@ fn a_stack_of_four_keeps_its_rear() {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, ..Default::default() });
         p.sam_unhurt();
         p.run(0.5);
-        for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
+        for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
         let d = p.g.doors.list.iter().copied().find(|&d| p.g.dr[d].def.name == door).unwrap_or_else(|| panic!("{level} has the door {door}"));
         let c = p.g.dr[d].frame_centre;
         p.order("stack", [c[0], c[2]], Who::All);
         let (mut frames, mut behind) = (0, 0);
         for _ in 0..(14 * 60) {
             p.frame();
-            let rear: Vec<GuardId> = p.mates().into_iter().filter(|&m| game::orders::squad_orders_of(&game::seats::here(&p.g), m).map_or(false, |a| { let a = &p.g.tab.orders_assignment[a]; a.spare == Some(true) && a.from.is_some() })).collect();
+            let rear: Vec<GuardId> = p.mates().into_iter().filter(|&m| game::orders::squad_orders_of(&game::seats::here(&p.g), m).map_or(false, |a| { let a = &p.g.tab.task[a]; a.spare == Some(true) && a.from.is_some() })).collect();
             assert_eq!(rear.len(), 2, "{level} {door}: {} of the four keep the rear", rear.len());
             frames += rear.len();
             for m in rear {

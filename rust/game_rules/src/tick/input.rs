@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::string::String;
 
-/// A new Input with every field initialised and no listeners: the harness's, the replayer's, a seat's, a native host's.
+/// A new Input with every field initialised and no listeners: a seat's, a host's.
 pub fn input_detached(g: &mut Game) -> InputId {
     g.tab.input.push(Input::blank())
 }
@@ -13,42 +13,37 @@ pub fn input_detached(g: &mut Game) -> InputId {
 
 /// Is this key held?
 pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].keys.has(String::from(code))
+    g.tab.input[id].keys.holds(code)
 }
 
 /// Did this key go down this frame?
 pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].pressed.has(String::from(code))
+    g.tab.input[id].pressed.holds(code)
 }
 
 /// Left button held.
 pub fn input_lmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 1)
+    js::has_bits(g.tab.input[id].buttons, 1)
 }
 
 /// Right button held.
 pub fn input_rmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 4)
+    js::has_bits(g.tab.input[id].buttons, 4)
 }
 
 /// Left button went down this frame.
 pub fn input_lmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 1)
+    js::has_bits(g.tab.input[id].clicked, 1)
 }
 
 /// Right button went down this frame.
 pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 4)
+    js::has_bits(g.tab.input[id].clicked, 4)
 }
 
 /// The drawn frame is over: every one-frame edge and travel goes.
 pub fn input_end_frame(g: &mut Game, id: InputId) {
     end_frame(&mut g.tab.input[id])
-}
-
-/// `(word & mask) !== 0` on a JavaScript number
-fn bit(word: f64, mask: i32) -> bool {
-    (js::to_i32(word) & mask) != 0
 }
 
 fn end_frame(i: &mut Input) {

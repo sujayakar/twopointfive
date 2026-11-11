@@ -89,19 +89,7 @@ pub enum LineKind {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct MoraleModMixAtValue {
     pub key: String,
-    pub mix: crate::morale::MoraleModMixAtValueMix,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum MoraleModMixAtValueMix {
-    #[default] Hard,
-    Mixed,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MixNow {
-    Hard,
-    Mixed,
+    pub mix: crate::morale::MixNow,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -137,3 +125,8 @@ pub fn morale_at() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(
 
 pub const ALERT_AW: f64 = 0.85;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum MixNow {
+    #[default] Hard,
+    Mixed,
+}

@@ -21,7 +21,7 @@ pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], 
         }
         for b in boxes {
             let Some(b) = *b else { continue };
-            let (c, h) = seam_box_c_h(g, b);
+            let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
             let to_b = v3::sub(c, s.o);
             let db = v3::dot(to_b, s.d);
             let r = m::hyp3(h[0], h[1], h[2]) + pad;
@@ -40,18 +40,12 @@ pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], 
 /// `rayBox(ro, rd, grown, tmax) != null`, `grown` being a copy of `b` with half sizes `h`. `h` is the only field that differs, so the row itself takes it for the one
 /// call and has its own back before anything else can read it. `copy_box` is not used: its answer is a row of `g.col.boxes`, which never shrinks, and a shot must not add to the world.
 fn ray_grown(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, h: V3, tmax: f64) -> bool {
-    let (_, own) = seam_box_c_h(g, b);
-    seam_box_set_h(g, b, h);
+    let own = g.tab.boxes[b].h;
+    g.tab.boxes.edit(b).h = h;
     let hit = crate::scene_boxes::ray_box(g, ro, rd, b.into(), tmax).is_some();
-    seam_box_set_h(g, b, own);
+    g.tab.boxes.edit(b).h = own;
     hit
 }
-
-/// `b.c`, `b.h` of a box's row.
-fn seam_box_c_h(g: &crate::game::Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
-
-/// `grown.h = h`, on the row itself for the one call.
-fn seam_box_set_h(g: &mut crate::game::Game, b: BoxId, h: V3) { g.tab.boxes[b].h = h; }
 
 /// How near a round's legs pass a point (m; the legs' own lengths, nothing past where it stopped): the cheap test ahead of `lamp_struck`.
 pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {
@@ -65,7 +59,7 @@ pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {
 }
 
 /// The feet a man's hands still remember: the fastest he has gone, let go over `stop_tau` (and to nothing: `stop_bleed`).
-pub fn feet_hold(g: &mut crate::game::Game, prev: f64, speed: f64, dt: f64) -> f64 {
+pub fn feet_hold(g: &crate::game::Game, prev: f64, speed: f64, dt: f64) -> f64 {
     let kept = prev * m::exp(-dt / m::max(g.k.aimcost.stop_tau, 1e-3)) - g.k.aimcost.stop_bleed * dt;
     let v = m::max(speed, kept);
     if v.is_finite() && v > 1e-4 { v } else { 0.0 }

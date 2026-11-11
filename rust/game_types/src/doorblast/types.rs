@@ -9,9 +9,7 @@ pub struct SlabMet {
     pub lx: f64,
     pub lz: f64,
     pub rested: bool,
-    pub nudged: f64,
     pub nudge_max: f64,
-    pub laid: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

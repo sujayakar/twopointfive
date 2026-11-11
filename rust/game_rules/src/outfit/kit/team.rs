@@ -82,7 +82,7 @@ pub fn team_named(g: &mut Game, id: &str) -> Option<String> {
     kit_loadout(g, id, only)
 }
 
-/// What the mission hands man i, in a line.   (loadout.ts issueOf; a level's block has no cameras and no wand)
+/// What the mission hands man i, in a line.
 fn issue_words(c: &IssueCard) -> String {
     let count = |n: Option<f64>| n.filter(|n| *n > 0.0);
     let plain = |n: Option<f64>, w: &str| count(n).map(|k| format!("{} {w}", js::num_str(k)));
@@ -122,7 +122,7 @@ fn note_line(f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> String {
 }
 
 /// What is carried between them.
-fn pool_line(g: &mut Game, f: Option<&TeamFor>, size: f64) -> String {
+fn pool_line(g: &Game, f: Option<&TeamFor>, size: f64) -> String {
     let issued = f.map_or(0.0, |f| f.walls);
     let walls_word = |n: f64| format!("{} wall charge{}", js::num_str(n), if n == 1.0 { "" } else { "s" });
     if !cards_on(f) {

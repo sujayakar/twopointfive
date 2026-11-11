@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---- what stands between a body and the skeleton's calls
 
 /// `pose.rot(i)`, a node by the list's usize
-fn rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate::anim_skeleton::pose_rot(g, pose, i as f64) }
+fn rot(g: &Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate::anim_skeleton::pose_rot(g, pose, i as f64) }
 /// `pose.setRot(i, q)`, a node by the list's usize
 fn set_rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize, q: Quat) { crate::anim_skeleton::pose_set_rot(g, pose, i as f64, q) }
 
@@ -24,7 +24,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
     if let Some(a) = &a {
         if a.clip != g.ch[c].anim.act_name {
             let rig = g.ch[c].anim.rig;
-            let clip = g.tab.rig[rig].clips.get(a.clip.clone()).copied();
+            let clip = g.art.rig[rig].clips.get(a.clip.clone()).copied();
             let an = &mut g.ch[c].anim;
             an.act_name = a.clip.clone();
             an.act_clip = clip;
@@ -57,7 +57,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
 /// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
     let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
-    anim_layer(g, c, |s, an, k| ::sim::layers::act_pose(s, an, clip, w, dt, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
 }
 
 // ---- MOVES
@@ -175,9 +175,8 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 }
 
 /// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest.
-pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
-    let an = &g.ch[c].anim;
-    let (nd, fk) = (&an.nodes, &an.fk);
+pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId, fk: &crate::anim_skeleton::PoseFK) -> crate::character::AnimTrunkFrame {
+    let nd = &g.ch[c].anim.nodes;
     let up = v3::normalize(v3::sub(fk.pos[nd.spine3], fk.pos[nd.hips]));
     let mut left = v3::sub(fk.pos[nd.upper_arm_l], fk.pos[nd.upper_arm_r]);
     left = v3::normalize(v3::mad(left, up, -v3::dot(left, up)));
@@ -206,10 +205,10 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
 fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
 /// The support hand pressed to his ribs.
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::clutch_arm(s, an, w, k)); }
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
 
 /// A figure kept down: wrists behind the back, or hands on the head.
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -236,49 +235,6 @@ fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
 }
 
 // ---- procedural layers
-
-/// One node of PoseFK.run's arithmetic, operand for operand, under its parent's rotation and origin.
-#[inline]
-fn fk_node(d: &[f32], n: usize, i: usize, pr: Quat, pp: V3) -> (Quat, V3) {
-    let (rx, ry, rz, rw) = (d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64);
-    let (qx, qy, qz, qw) = (pr[0], pr[1], pr[2], pr[3]);
-    let (v0, v1, v2) = (d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64);
-    let (tx, ty, tz) = (2.0 * (qy * v2 - qz * v1), 2.0 * (qz * v0 - qx * v2), 2.0 * (qx * v1 - qy * v0));
-    let (t0, t1, t2) = (v0 + qw * tx + (qy * tz - qz * ty), v1 + qw * ty + (qz * tx - qx * tz), v2 + qw * tz + (qx * ty - qy * tx));
-    (
-        [
-            qw * rx + qx * rw + qy * rz - qz * ry,
-            qw * ry - qx * rz + qy * rw + qz * rx,
-            qw * rz + qx * ry - qy * rx + qz * rw,
-            qw * rw - qx * rx - qy * ry - qz * rz,
-        ],
-        [pp[0] + t0, pp[1] + t1, pp[2] + t2],
-    )
-}
-
-/// fk.run() for a few nodes: those of `list` hold exactly what a full run would give them, the rest of fk stands as the last run left it.
-pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, list: &[i32]) {
-    let n = crate::anim_skeleton::pose_rows(pose.nodes as f64) as usize;
-    let rig = g.ch[c].anim.rig;
-    for k in 0..list.len() {
-        let i = list[k] as usize;
-        let par = g.tab.rig[rig].nodes[i].parent;
-        if par < 0.0 {
-            let d = crate::anim_skeleton::pose_cols(g, pose);
-            let (r, t) = ([d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64], [d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64]);
-            let fk = &mut g.ch[c].anim.fk;
-            fk.rot[i] = r;
-            fk.pos[i] = t;
-            continue;
-        }
-        let fk = &g.ch[c].anim.fk;
-        let (pr, pp) = (fk.rot[par as usize], fk.pos[par as usize]);
-        let (q, p) = fk_node(crate::anim_skeleton::pose_cols(g, pose), n, i, pr, pp);
-        let fk = &mut g.ch[c].anim.fk;
-        fk.rot[i] = q;
-        fk.pos[i] = p;
-    }
-}
 
 /// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's.
 pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) {
@@ -430,10 +386,10 @@ pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, spe
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
     let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
     let idle = clip_at(g, c, idle, idle_t);
-    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
+    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; clip_at(g, c, clip, t) };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
-    anim_layer(g, c, |s, an, k| ::sim::layers::stand_pose(s, an, &cycle, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
 }
 
 /// The crouch laid over the stand pose.
@@ -457,22 +413,5 @@ mod tests {
             if h < 0.0 { low += 1; } else { high += 1; }
         }
         assert!(low > 60 && high > 60, "men's hands fall to both sides: {low} and {high}");
-    }
-
-    /// A node hangs off its parent: his place is the parent's and his offset turned by the parent's turn, his turn is the parent's and his own.
-    #[test]
-    fn a_node_hangs_off_its_parent_by_the_parents_turn() {
-        let yaw = |a: f64| v3::quat::axis_angle([0.0, 1.0, 0.0], a);
-        let (n, i) = (2usize, 1usize);
-        let mut d = [0f32; 14];
-        d[n + i] = 0.5;
-        d[2 * n + i] = 1.0;
-        let own = yaw(m::PI / 2.0);
-        for c in 0..4 { d[(3 + c) * n + i] = own[c] as f32; }
-        let (q, p) = fk_node(&d, n, i, yaw(m::PI / 2.0), [1.0, 2.0, 3.0]);
-        assert!(v3::dist(p, [2.0, 2.5, 3.0]) < 1e-6, "a metre ahead of a parent who faces his left: {p:?}");
-        let half = yaw(m::PI);
-        let dot = q[0] * half[0] + q[1] * half[1] + q[2] * half[2] + q[3] * half[3];
-        assert!(m::abs(dot) > 1.0 - 1e-6, "two quarter turns make a half: {q:?}");
     }
 }

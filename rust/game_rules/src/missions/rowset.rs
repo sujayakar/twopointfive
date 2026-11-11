@@ -8,10 +8,10 @@ use crate::query::Query;
 use crate::scene_scenarios::ScenarioEntry;
 
 /// a row with a level file of its own that names an hour or a weather
-fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
+pub(super) fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
-/// LEVEL'S). (rowset.ts rowOfQuery, of words already read)
+/// LEVEL'S).
 fn row_of(q: &Query) -> Option<ScenarioEntry> {
     let level = crate::scene_scenario_list::spec_of(q)?.level.filter(|l| !l.is_empty())?;
     crate::scene_scenario_list::all_missions().into_iter().find(|e| own(e) && e.level.as_deref() == Some(level.as_str()))

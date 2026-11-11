@@ -10,7 +10,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 pub(super) fn flat(a: V3, p: V2) -> f64 { m::hyp2(a[0] - p[0], a[2] - p[1]) }
-pub(super) fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
 pub(super) fn free(g: &Game, p: V2) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[1]) }
 pub(super) fn v2(p: V3) -> V2 { [p[0], p[2]] }
 pub(super) fn v3(p: V2) -> V3 { [p[0], 0.0, p[1]] }
@@ -32,12 +31,12 @@ pub fn home_of(g: &Game, st: &KitStage, x: GuardId) -> (V2, f64) {
 }
 /// the quiet picture: the partner rests on a knee behind Sam
 pub(super) fn low_at(g: &Game, st: &KitStage, x: GuardId) -> bool { st.quiet && st.mate.is_some() && st.order.first() == Some(&x) && actor(g, st) != Some(x) }
-pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.ch[g.gd[x].ch].pos, home_of(g, st, x).0) }
+pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.pos_of(x), home_of(g, st, x).0) }
 pub(super) fn away(g: &Game, st: &KitStage) -> bool { st.order.iter().any(|&x| off_home(g, st, x) > K.home_m) }
 
 /// a teammate to a mark, at a walk, turned to `face`, his gun on `watch` or at the low ready: the squad's own hand-over, which takes him off whatever had him. `strafe`: his chest kept on `face` all the way
 pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>, pace: f64, strafe: bool, crouch: bool) {
-    let mut a = crate::orders::SquadOrdersAssignA::default();
+    let mut a = crate::duty::TaskGiven::default();
     a.order = String::from("cover");
     a.post = Some([p[0], 0.0, p[1]]);
     a.face = Some(face);
@@ -49,8 +48,8 @@ pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>
     a.crouch = Some(crouch);
     crate::orders::squad_orders_assign(g, x, &a);
 }
-fn assignment(g: &Game, x: GuardId) -> Option<OrdersAssignmentId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
-fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.orders_assignment[a].order == "cover") }
+fn assignment(g: &Game, x: GuardId) -> Option<TaskId> { crate::orders::squad_orders_of(&crate::seats::here(g), x) }
+fn is_cover(g: &Game, x: GuardId) -> bool { assignment(g, x).map_or(false, |a| g.tab.task[a].order == "cover") }
 
 pub(super) fn go(g: &Game, st: &mut KitStage, x: GuardId, pts: Vec<V2>, pace: f64, delay: f64, lane: bool) {
     let w = Walk { man: x, pts, k: 0, pace, at: g.time + delay, lane, sent: None, watch: None, t0: g.time, face: None, dealt: false, low: false };
@@ -60,7 +59,7 @@ pub(super) fn walk_of<'a>(st: &'a mut KitStage, x: GuardId) -> Option<&'a mut Wa
 /// down on a knee, or up: the squad's own word on his order, kept on his walk so that an order sent again has it
 pub(super) fn low(g: &mut Game, st: &mut KitStage, x: GuardId, on: bool) {
     if let Some(w) = walk_of(st, x) { w.low = on; }
-    if let Some(a) = assignment(g, x) { let r = &mut g.tab.orders_assignment[a]; if r.order == "cover" { r.crouch = Some(on); } }
+    if let Some(a) = assignment(g, x) { let r = &mut g.tab.task[a]; if r.order == "cover" { r.crouch = Some(on); } }
 }
 /// a man the running row has not placed has one walk: to his place, on his feet, whatever dealt him another or took his order
 fn placed(st: &KitStage, x: GuardId) -> bool {
@@ -112,14 +111,14 @@ pub(super) fn arriving(g: &Game, st: &KitStage) -> bool {
     let now = g.time;
     if let Some(x) = actor(g, st) { return st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane && now - w.t0 < K.swap_secs); }
     st.order.iter().any(|&x| st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| {
-        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.ch[g.gd[x].ch].pos, *w.pts.last().unwrap()) > K.on_slot + 0.1)
+        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.pos_of(x), *w.pts.last().unwrap()) > K.on_slot + 0.1)
     }))
 }
 /// a hand more than two bodies, so that nobody is shouldered
 const ROOM: f64 = 0.2;
 /// THE CARD SWITCH: no restage, the SAME men walk. The man whose card opened steps out a lane, walks up and cuts in at the head place; the men ahead of his old place each step back one, rearmost first. Sam never moves;
 /// the fourth man (behind Sam, across the door) does not cross it: he steps round Sam's yard side to `act4` and back when his card shuts.
-pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
+pub(super) fn rotate(g: &Game, st: &mut KitStage, who: Option<GuardId>) {
     let (s, n) = (st.s, st.n);
     let pp = |p: V2, a: f64, o: f64| -> V2 { [p[0] + s[0] * a + n[0] * o, p[1] + s[1] * a + n[1] * o] };
     if let Some(&x) = st.order.get(3) {
@@ -152,7 +151,7 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
         let x = st.order[k];
         if was[k] == x { continue; }
         let t = st.spots[k];
-        let p = v2(g.ch[g.gd[x].ch].pos);
+        let p = v2(g.pos_of(x));
         if x == who {
             let a = pp(p, -K.cut_in, lane_out - out_of(st, p));
             let b = pp(t, K.cut_in, K.lane);
@@ -182,7 +181,7 @@ pub(super) fn sam_hand(g: &mut Game, st: &mut KitStage, cmd: &mut crate::cmd::Pl
     let pl = g.player;
     if led.low && !g.pl[pl].crouch { st.a.press.push("KeyC"); }
     let Some(to) = led.to else { return };
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     if flat(p, to) <= 0.1 { return; }
     for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(alloc::string::String::from(key)); } }
 }
@@ -201,14 +200,14 @@ fn homing_at_hole(g: &Game, st: &mut KitStage) -> bool {
     let (on, act, all) = (K.on_slot + 0.1, actor(g, st), st.a.hole_all);
     let mut men = core::mem::take(&mut st.a.hole_men);
     men.retain(|&x| off_home(g, st, x) > on);
-    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.ch[g.pl[g.player].ch].pos, st.sam) > on);
+    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.player_pos(g.player), st.sam) > on);
     if waiting && st.a.home_t.is_nan() { st.a.home_t = now; }
     if !waiting || now - st.a.home_t >= K.swap_secs + K.home_secs { st.a.hole_all = false; st.a.home_t = f64::NAN; return false; }
     st.a.hole_men = men;
     true
 }
 /// HOME: no row begins with a man far from his place, and a row of Sam's waits for the men on their own legs, `home_secs` at most: then, and at once for a man `far_m` off, the room is staged again under the dissolve, and the row that waited begins at once. A man found off his place again after that is not staged again until he has been seen home. True: the row waits.
-pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
+pub(super) fn homing(g: &Game, st: &mut KitStage) -> bool {
     let now = g.time;
     if st.hole { return homing_at_hole(g, st); }
     if st.a.seated { st.a.seated = false; st.a.home_t = f64::NAN; return false; }
@@ -239,11 +238,11 @@ pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
 fn seat(g: &Game, st: &mut KitStage) { st.a.seat_tried = true; st.a.seated = true; ask_veil(g, st); }
 /// Where the leaf rests is its own business: the quiet picture rests it ajar, eased back there by the host's own hand after a row moved it
 pub(super) fn ease_leaf(g: &mut Game, st: &KitStage, d: DoorId) {
-    let a0 = crate::doors::door_angle(g, d);
+    let a0 = g.dr[d].leaf.angle;
     let da = st.leaf_rest - a0;
     let step = QK.leaf_rate * st.a.step_dt;
-    crate::doors::door_set_latched(g, d, false);
-    crate::doors::door_set_closing(g, d, false);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_angle(g, d, if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step });
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.angle = if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step };
 }

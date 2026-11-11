@@ -3,7 +3,7 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
+/// what a civilian has given up on: a man, or a CivSpot of the level by its place in the level's list
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
@@ -161,17 +161,11 @@ pub struct CivSpots {
 #[derive(Clone, Debug, Default)]
 pub struct SpawnHostageDef {
     pub name: String,
-    pub kind: crate::civilians::SpawnHostageDefKind,
+    pub kind: crate::scene_level::CivilianDefKind,
     pub tint: V3,
     pub tint2: Option<V3>,
     pub pos: V3,
     pub face: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum SpawnHostageDefKind {
-    #[default] Cleaner,
-    Worker,
 }
 
 #[derive(Clone, Debug, Default)]

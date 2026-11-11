@@ -12,7 +12,7 @@ import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
-import { lookConfig } from '../render/frame';
+import { glassOpenWgsl, lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
 // WIND (rust/game_rules/src/air/wind.rs): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
@@ -148,7 +148,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const uni = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: CS, buffer: { type: 'uniform' } });
     this.g0L = device.createBindGroupLayout({ label: 'smokeG0', entries: [uni(0), uni(2)] });
     this.g1L = device.createBindGroupLayout({ label: 'smokeG1', entries: [sto(0), sto(1), sto(2), sto(3), sto(4)] });
-    this.gLinkL = device.createBindGroupLayout({ label: 'smokeLink', entries: [ro(1), ro(2), ro(3), uni(4), uni(5)] });
+    this.gLinkL = device.createBindGroupLayout({ label: 'smokeLink', entries: [ro(1), ro(2), ro(3), uni(4), uni(5), ro(11)] });
     this.gArgsL = device.createBindGroupLayout({ label: 'smokeArgsL', entries: [sto(6)] });
     this.gPubL = device.createBindGroupLayout({ label: 'smokePub', entries: [
       { binding: 7, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '3d' } },
@@ -160,7 +160,7 @@ export class SmokeSystem implements SmokeSystemLike {
     this.gArgs = device.createBindGroup({ layout: this.gArgsL, entries: [buf(6, this.argsBuf)] });
     this.gPub = device.createBindGroup({ layout: this.gPubL, entries: [{ binding: 7, resource: this.atlas.createView() }, { binding: 8, resource: this.page.createView() }] });
     this.gBox = device.createBindGroup({ layout: this.gBoxL, entries: [buf(9, this.domBuf), buf(10, this.statBuf)] });
-    this.mod = makeShader(device, wgslWorldConsts() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
+    this.mod = makeShader(device, wgslWorldConsts() + glassOpenWgsl() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
     this.binding = { uniform: this.domBuf, atlasView: this.atlas.createView(), count: 0, pageView: this.page.createView(), encode: (enc, ts) => this.encode(enc, ts) };
   }
 
@@ -265,7 +265,6 @@ export class SmokeSystem implements SmokeSystemLike {
   /** nothing is drawn yet and the game has smoke: the next frame takes it whole, whether or not time goes by in it */
   private whole(): boolean { return this.needsReset && this.bentRows > 0 && this.params.bend > 0 && !this.params.frozen; }
   private again = false; private skipWas = false;
-  obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }
   setWind(srcs: readonly WindGpuSource[], relax: number) { this.windSrcs = srcs; this.windRelax = relax; }
   private stirK = 0;
   setStir(amount: number) { this.stirK = Math.min(4, Math.max(0, +amount || 0)); }
@@ -283,7 +282,8 @@ export class SmokeSystem implements SmokeSystemLike {
     const f = this.engine.viewFocus, key = (s: WindGpuSource) => s.kind === 'storm' ? -1 : v3.dist(s.bound.c, f);
     return out.sort((a, b) => key(a) - key(b)).slice(0, WIND_GPU_MAX);
   }
-  private noteDirty(lo: Vec3, hi: Vec3) { if (!this.live()) return; if (this.dirty.length >= MAX_DIRTY) { this.bakeAll = true; return; } this.dirty.push({ lo, hi }); }
+  /** what stands in that box is another thing: the bricks that meet it bake again */
+  obstaclesChanged(lo: Vec3, hi: Vec3) { if (!this.live()) return; if (this.dirty.length >= MAX_DIRTY) { this.bakeAll = true; return; } this.dirty.push({ lo, hi }); }
   /** anything to step: a source, bricks the pool last reported, or too soon after either to know */
   private live(): boolean { return this.emitters.length > 0 || this.quiet < 2 || (this.bentRows > 0 && this.params.bend > 0); }
   private zeroStats() { const s = this.stats; s.live = 0; s.bricksScalar = s.bricksRender = s.vmax = 0; s.pool = 0; s.act = 0; s.free = this.grid.cap; s.failed = s.made = s.freed = s.fine = s.boxes = 0; s.stepNo = 0; s.stepped = s.skipped = 0; s.tinted = 0; s.fineAll = s.fineHeld = 0; }
@@ -318,7 +318,7 @@ export class SmokeSystem implements SmokeSystemLike {
       const [ex, ez] = BoxWorld.footprint(b);
       now.set(b, { cx: b.c[0], cz: b.c[2], yaw: b.yaw, ex, ez, y0: b.c[1] - b.h[1], y1: b.c[1] + b.h[1] });
     }
-    const box = (q: SealPose) => this.noteDirty([q.cx - q.ex - 0.1, q.y0, q.cz - q.ez - 0.1], [q.cx + q.ex + 0.1, q.y1, q.cz + q.ez + 0.1]);
+    const box = (q: SealPose) => this.obstaclesChanged([q.cx - q.ex - 0.1, q.y0, q.cz - q.ez - 0.1], [q.cx + q.ex + 0.1, q.y1, q.cz + q.ez + 0.1]);
     let changed = force || now.size !== this.sealed.size;
     for (const [b, q] of now) { const s = this.sealed.get(b); if (!s) { box(q); changed = true; } else if (Math.abs(s.cx - q.cx) > SEAL_MOVE || Math.abs(s.cz - q.cz) > SEAL_MOVE || Math.abs(s.yaw - q.yaw) > SEAL_TURN) { box(s); box(q); changed = true; } else now.set(b, s); }
     for (const [b, s] of this.sealed) if (!now.has(b)) { box(s); changed = true; }
@@ -416,7 +416,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const w = this.engine.world;
     if (this.gLink && this.gLinkItems === w.itemBuf) return;
     this.gLink = this.engine.device.createBindGroup({ layout: this.gLinkL, entries: [
-      { binding: 1, resource: { buffer: w.geoBuf } }, { binding: 2, resource: { buffer: w.cellBuf } }, { binding: 3, resource: { buffer: w.itemBuf } }, { binding: 4, resource: { buffer: w.infoBuf } }, { binding: 5, resource: { buffer: this.sealBuf } } ] });
+      { binding: 1, resource: { buffer: w.geoBuf } }, { binding: 2, resource: { buffer: w.cellBuf } }, { binding: 3, resource: { buffer: w.itemBuf } }, { binding: 4, resource: { buffer: w.infoBuf } }, { binding: 5, resource: { buffer: this.sealBuf } }, { binding: 11, resource: { buffer: w.matBuf } } ] });
     this.gLinkItems = w.itemBuf;
   }
   encode(enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) {

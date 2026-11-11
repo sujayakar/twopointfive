@@ -8,19 +8,16 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 
-fn pos_of(g: &Game, m: GuardId) -> V3 {
-    g.ch[g.gd[m].ch].pos
-}
 /// the men's callsigns, joined
 fn calls(g: &Game, men: &[GuardId]) -> String {
     men.iter().map(|&m| g.gd[m].callsign.clone()).collect::<Vec<String>>().join(", ")
 }
 /// `men.filter(m => m.state !== 'dead')`
-fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
+pub(super) fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
     men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect()
 }
 /// `[...new Set(words)].join(' + ')`: first sight's order
-fn uniq_plus(words: Vec<String>) -> String {
+pub(super) fn uniq_plus(words: Vec<String>) -> String {
     let mut seen: Vec<String> = Vec::new();
     for w in words {
         if !seen.contains(&w) {
@@ -28,10 +25,6 @@ fn uniq_plus(words: Vec<String>) -> String {
         }
     }
     seen.join(" + ")
-}
-/// the key's letter: `DOORTOOLS.blowKey.replace('Key', '')`
-fn blow_letter(g: &Game) -> String {
-    g.k.doortools.blow_key.replacen("Key", "", 1)
 }
 /// `closeWords(c)` with the warning's head in capitals (OWNCHARGE.on)
 fn close_caps(g: &crate::game::Game, seat: &crate::seats::SeatRef, c: ChargeId) -> String {
@@ -41,10 +34,6 @@ fn close_caps(g: &crate::game::Game, seat: &crate::seats::SeatRef, c: ChargeId) 
 fn on_lattice(x: f64, z: f64, cell: f64) -> bool {
     ((js::to_i32(m::floor(x / cell)) | js::to_i32(m::floor(z / cell))) & 1) == 0
 }
-/// `pos === pos` of the arrays S.pair hands back: the bits of the coordinates stand in for the array's identity
-fn same_pos(a: V3, b: V3) -> bool {
-    a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits()
-}
 /// `v.slice(a, b)`
 fn js_slice<T: Copy>(v: &[T], a: usize, b: usize) -> Vec<T> {
     let n = v.len();
@@ -53,10 +42,14 @@ fn js_slice<T: Copy>(v: &[T], a: usize, b: usize) -> Vec<T> {
 
 // ---------------------------------------------------------------- the grenade's wait
 
-/// the names of who ran and is not back (fragStep's `names`)
-fn fled_names(g: &Game, op: DoorOpId) -> String {
-    let f = g.tab.doortools_door_op[op].fled.as_ref().map(|f| f.keys()).unwrap_or_default();
-    calls(g, &f)
+/// The names of who ran and is not back.
+pub(super) fn fled_names(g: &Game, fled: &Option<JsSet<GuardId>>) -> String { calls(g, &fled.as_ref().map(|f| f.keys()).unwrap_or_default()) }
+/// The first of the men who did not run says so.
+pub(super) fn fled_said(g: &mut Game, op: DoorOpId, fled: Option<JsSet<GuardId>>) {
+    door_tools_beat(g, op, &format!("the door waits: {} not back", fled_names(g, &fled)));
+    let r = &g.tab.doortools_door_op[op];
+    let who = r.men.iter().copied().find(|&m| !fled.as_ref().is_some_and(|f| f.has(m))).unwrap_or(r.lead);
+    crate::game::game_say(g, who, "hold — back on the door.", None, None);
 }
 
 /// Once a tick for an order whose door is still to be opened: who ran from a grenade and is not back, and true when the order does not move
@@ -86,7 +79,7 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
     }
     let size = g.tab.doortools_door_op[op].fled.as_ref().unwrap().len();
     if size > 0 && n0 == 0 {
-        let what = format!("grenade on the stack · {} off the door", fled_names(g, op));
+        let what = format!("grenade on the stack · {} off the door", fled_names(g, &g.tab.doortools_door_op[op].fled));
         door_tools_beat(g, op, &what);
     }
     if size == 0 && n0 > 0 {
@@ -113,12 +106,8 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
     }
     if !o.fled_said.unwrap_or(false) {
         o.fled_said = Some(true);
-        let what = format!("the door waits: {} not back", fled_names(g, op));
-        door_tools_beat(g, op, &what);
-        let o = &g.tab.doortools_door_op[op];
-        let f = o.fled.as_ref().unwrap();
-        let who = o.men.iter().copied().find(|&m| !f.has(m)).unwrap_or(o.lead);
-        crate::game::game_say(g, who, "hold — back on the door.", None, None);
+        let fled = g.tab.doortools_door_op[op].fled.clone();
+        fled_said(g, op, fled);
     }
     true
 }
@@ -126,9 +115,9 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
 // ---------------------------------------------------------------- the threshold: who throws, what is lit, where a can goes
 
 /// Is he at the door, on the order's side of it.
-pub(super) fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
+pub(super) fn door_tools_thr_at(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
-    let p = pos_of(g, m);
+    let p = g.pos_of(m);
     v3::dist_xz(p, g.dr[d].frame_centre) < g.k.doortools.throw_reach && off_of(g, d, p, side) > 0.0
 }
 
@@ -149,7 +138,7 @@ pub(super) fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand:
     }
     {
         let g: &Game = g;
-        js::sort_by(&mut others, |&a, &b| v3::dist_xz(pos_of(g, a), fc) - v3::dist_xz(pos_of(g, b), fc));
+        js::sort_by(&mut others, |&a, &b| v3::dist_xz(g.pos_of(a), fc) - v3::dist_xz(g.pos_of(b), fc));
     }
     for &m in &others {
         if thr_pick_fit(g, &mut fit, m) {
@@ -161,7 +150,7 @@ pub(super) fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand:
             continue;
         }
         // (a stack that went without its far-jamb man: he throws nothing from down the wall, the lead's own hand)
-        let ok = if hand { door_tools_thr_at(g, op, m) } else { !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach };
+        let ok = if hand { door_tools_thr_at(g, op, m) } else { !last_stack || v3::dist_xz(g.pos_of(m), fc) < reach };
         if ok && thr_pick_fit(g, &mut fit, m) {
             return Some(m);
         }
@@ -195,7 +184,7 @@ pub(super) fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId
     if c >= 0 {
         return c == 1;
     }
-    let mut every = |_: &mut Game, _: f64| true;
+    let mut every = |_: &Game, _: f64| true;
     let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None);
     let c = if crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at { 1 } else { 0 };
     g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.as_mut().unwrap()[i] = c;
@@ -217,10 +206,10 @@ pub(super) fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpI
 }
 
 /// Where a can leaves the hand: in the opening's span at the thrower's end, a forearm outside the frame line.
-pub(super) fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
+pub(super) fn door_tools_hand_at(g: &crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let w = g.dr[d].def.width;
-    let p = pos_of(g, th);
+    let p = g.pos_of(th);
     let a = v3::clamp(along_of(g, d, p), 0.25, w - 0.25);
     door_pt(g, d, a, 0.35, side, Some(1.3))
 }
@@ -337,7 +326,7 @@ pub(super) fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
 // ---------------------------------------------------------------- the step in
 
 /// `fits` of shallowPods: free floor, a clear line from the doorway's middle, apart from those already taken, not in the frame.
-fn shallow_fits(g: &mut Game, d: DoorId, mid: V3, out: &[crate::entrypoints::Pod], p: V3) -> bool {
+fn shallow_fits(g: &Game, d: DoorId, mid: V3, out: &[crate::entrypoints::Pod], p: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
         && !crate::scene_collision::solid_blocked(g, mid, [p[0], 0.45, p[2]], None)
         && !out.iter().any(|o| v3::dist_xz(o.pos, p) < 0.9)
@@ -361,7 +350,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 0.6, 4.5, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -377,7 +366,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 1.2, 5.0, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -393,7 +382,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
         if let Some(f) = f {
             let off = -off_of(g, d, [f[0], 0.0, f[2]], side);
             if off > 0.3 && off <= 2.5 && !out.iter().any(|o| v3::dist_xz(o.pos, f) < 0.9) {
-                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None });
             }
         }
     }
@@ -422,7 +411,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
         let able: Vec<GuardId> = jamb
             .iter()
             .copied()
-            .filter(|&m| !crate::condition::down(g, g.gd[m].ch) && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach))
+            .filter(|&m| !crate::condition::down(g, g.gd[m].ch) && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(g.pos_of(m), fc) < reach))
             .collect();
         let able = crate::gunroles::gun_first(g, &able);
         let f = door_tools_seen_most(g, lead, &able, at);
@@ -441,13 +430,13 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let mut rest: Vec<GuardId> = men.iter().copied().filter(|m| !jamb.contains(m)).collect();
     {
         let g: &Game = g;
-        js::sort_by(&mut rest, |&a, &b| v3::dist_xz(pos_of(g, a), fc) - v3::dist_xz(pos_of(g, b), fc));
+        js::sort_by(&mut rest, |&a, &b| v3::dist_xz(g.pos_of(a), fc) - v3::dist_xz(g.pos_of(b), fc));
     }
     let mut turn = jamb;
     turn.extend(rest);
@@ -461,7 +450,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
         if !mm.is_empty() {
             let spots: Vec<V3> = sp.iter().map(|x| x.pos).collect();
             for (gd, pos) in crate::orders::squad_orders_pair(g, &mm, &spots, None, None) {
-                if let Some(x) = sp.iter().find(|x| same_pos(x.pos, pos)) {
+                if let Some(x) = sp.iter().find(|x| crate::orders::same_bits(x.pos, pos)) {
                     deal.set(gd, *x);
                 }
             }
@@ -493,7 +482,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
 /// The squad's HUD block: what is left, and a charge waiting for the trigger.
 pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
     let mut out = vec![format!("charges {} · bangs {}", seat.door_tools.charges, seat.door_tools.bangs)];
-    let f = blow_letter(g);
+    let f = super::tools::blow_letter(g);
     if g.k.frag.squad > 0.0 {
         out.push(format!("frags {}", seat.door_tools.frags));
     }
@@ -546,7 +535,7 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
 pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     let mut out: Vec<Note> = Vec::new();
-    let f = blow_letter(g);
+    let f = super::tools::blow_letter(g);
     let word = crate::orders::squad_orders_big(g, seat) && {
         let men = door_tools_word_men(g, seat);
         !door_tools_waiting_any(g, seat, &men).is_empty()
@@ -579,7 +568,7 @@ pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatR
 /// The word, while somebody is waiting on it: the key that gives it, to whom; with the orders going to somebody else, who is waiting (a set charge is left out of that: it has its own line, and its own key).
 pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
-    let f = blow_letter(g);
+    let f = super::tools::blow_letter(g);
     let word_men = door_tools_word_men(g, seat);
     let all = crate::orders::squad_orders_men(g, seat, None, None);
     if !crate::orders::squad_orders_big(g, seat) {   // (the small squad's: its plain stacks, under wordSmall: the key is always the word's there)

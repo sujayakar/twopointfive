@@ -40,16 +40,12 @@ pub enum QrfReason {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
-    Bang,
     Fan,
-    Breach,
     Hold,
     Move,
-    Stack,
     Called,
     Drill,
     Fight,
-    Flow,
     Regroup,
     Landing,
     File,
@@ -125,22 +121,12 @@ pub struct Qrf {
     #[is(-100.0)] pub fix_t: f64,
     pub cue_rush: bool,
     pub cleared: JsMap<String, f64>,
-    pub wps: JsMap<GuardId, Vec<V3>>,
-    pub trail: Vec<V3>,
-    pub station_t: f64,
-    #[is(-1.0)] pub point_id: f64,
-    #[is(2.15)] pub move_speed: f64,
     pub door_pulled: bool,
     pub filed: f64,
-    pub flowed: f64,
     pub can: Option<ItemId>,
-    #[is(f64::NAN)] pub can_land_t: f64,
-    pub stack_marks: Vec<V3>,
-    #[is(f64::NAN)] pub shoved_at: f64,
     pub seen_ids: JsSet<crate::Num>,
-    pub aim_pts: JsMap<GuardId, V3>,
-    pub stations: JsMap<GuardId, V3>,
-    pub cast: Option<crate::squadcast::SquadCast>,
+    /// the group it is at a door, once it has been at one
+    pub group: Option<GroupId>,
     pub op: Option<DoorOpId>,
     pub op_beat: f64,
     pub spent: Option<crate::qrf::QrfSpent>,
@@ -169,12 +155,6 @@ pub struct QrfSpent {
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SideOfTeam {
-    Guard,
-    Hostile,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -224,13 +204,6 @@ pub struct SweepPlacesItem {
     pub pos: V3,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct FlowLegs {
-    pub pts: Vec<V3>,
-    pub face: f64,
-    pub aim: V3,
-}
-
 pub const LOUD_MEMORY_SECS: f64 = 180.0;
 
 pub const SILENT_CHECK_SECS: f64 = 6.0;
@@ -251,27 +224,14 @@ pub const MOVE_SPEED: f64 = 2.15;
 
 pub const RUSH_SPEED: f64 = 2.6;
 
-pub const FILE_SPACING: f64 = 1.3;
-
-pub const FILE_OFFSET: f64 = 0.42;
-
-pub const STATION_SECS: f64 = 0.35;
-
 pub const RETARGET_M: f64 = 4.0;
 
 pub const RETARGET_SECS: f64 = 20.0;
 
 pub const RECLEAR_SECS: f64 = 90.0;
 
-pub const STACK_CAP: f64 = 5.5;
-
-pub const BANG_DEPTH: f64 = 2.3;
-
-pub const BANG_FUSE: f64 = 0.7;
-
-pub const FLOW_GAP: f64 = 0.42;
-
-pub const FLOW_CAP: f64 = 6.5;
+/// the longest a walk to a place is given
+pub const MOVE_CAP: f64 = 60.0;
 
 pub const HOLD360_SECS: f64 = 1.6;
 

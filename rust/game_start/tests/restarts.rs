@@ -14,7 +14,7 @@ fn office(link: Option<&str>) -> Play {
 /// a game restarted as the page's cards and keys restart it, at a clock and a die both arms share, and a quarter of a second of quiet
 fn restart(p: &mut Play) {
     p.g.time = CLOCK;
-    p.g.dice = Some(game::math_dice::sim_dice_new(9.0));
+    p.g.dice = game::dice::Draws { seed: 9, n: 0.0 };
     game::savestate::control::restart(&mut p.g);
     p.g.god_mode = true;
     p.run(0.25);
@@ -28,8 +28,8 @@ fn wreck(p: &mut Play) {
     p.mains_pulled();
     let d = p.g.doors.list[0];
     let turn = game::doors::door_swing(&mut p.g, d) * 1.4;
-    game::doors::door_set_latched(&mut p.g, d, false);
-    game::doors::door_set_angle(&mut p.g, d, turn);
+    p.g.dr[d].leaf.latched = false;
+    p.g.dr[d].leaf.angle = turn;
     game::tactics::mark_danger(&mut p.g, d, game::teams::Team::Guard, game::tactics::DangerWhy::Rounds, Some("Kowalski"));
     let pane = p.g.col.boxes.clone().into_iter().find(|&b| game::glass::is_pane(&mut p.g, Some(b))).expect("a pane");
     let c = p.g.tab.boxes[pane].c;

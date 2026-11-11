@@ -1,7 +1,7 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line.
 import { railClear, type Box } from './railclear';
 import { railCard, type RailCard } from './railcard';
-import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/drawpage.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
+import type { HudLike, View } from '../host/hud';   // the loop's view of a HUD (src/host/drawpage.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { clamp, lerp, v3, type Vec3 } from '../math/vec';
 import type { HudCam, HudSource } from '../view/hud';
 import type { ListRow, ThingDot, ThingRing, ThrowReachView } from '../view/read';
@@ -110,8 +110,8 @@ export class Overlay implements HudLike {
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is: a thread and a ring on the floor, under everything else drawn there)
     this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none';
   }
-  update(src: HudSource, cam: HudCam, canvas: HTMLCanvasElement) {
-    const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
+  update(src: HudSource, cam: HudCam, view: View) {
+    const tz = textZoom(), w = view.clientWidth / tz, h = view.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     const dt = Math.max(0, Math.min(0.1, src.time - this.drawnT)); this.drawnT = src.time;   // (what is eased goes by the picture's clock: the same at any rate of frames)
     // WHAT THE GAME MARKS (game.view.marks): which men, in which glyphs and which colour; where a man stands is what the picture drew. A viewer's own picture with the fog lifted
     // (bared: the engine replay's switch) shows every man the fog hides, and none of the fog's own marks.

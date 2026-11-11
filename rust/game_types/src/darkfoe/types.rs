@@ -14,7 +14,6 @@ pub struct FoeState {
     pub blind_for: f64,
     pub moves: f64,
     pub since: f64,
-    pub to: Option<V3>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

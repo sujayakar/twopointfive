@@ -69,12 +69,12 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
             c = add(c, Some([x.mob, x.con]), None);
         }
     } else if field == "big" {
-        let big = g.k.kitload.big.get(String::from(crate::kit::big_of(m).as_str())).copied();
+        let big = g.k.kitload.big.of(crate::kit::big_of(m).as_str()).copied();
         c = add(c, big, None);
     } else if field == "wand" {
-        let wand = if m.wand { g.k.kitload.small.get(String::from("wand")).copied() } else { None };
+        let wand = if m.wand { g.k.kitload.small.of("wand").copied() } else { None };
         c = add(c, wand, None);
-    } else if let Some(small) = g.k.kitload.small.get(String::from(field)).copied() {
+    } else if let Some(small) = g.k.kitload.small.of(field).copied() {
         c = add(c, Some(small), Some(m::max(0.0, card_count(m, field))));
     }
     if js::truthy(c[0]) || js::truthy(c[1]) {
@@ -85,7 +85,7 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
 }
 
 /// Member i's two scores for the card `m`: 1 less what every row his card HAS takes.
-pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> crate::kitload::KitLoad {
+pub(super) fn load_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> crate::kitload::KitLoad {
     let (mut mob, mut con) = (0.0, 0.0);
     for r in crate::kit::kit_rows(g, i) {
         if let Some(s) = load_share(g, i, m, r.field.as_str()) {
@@ -97,7 +97,7 @@ pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberK
 }
 
 /// The reference for member i: his own card as issued, to a team of `n`.
-pub(super) fn load_ref(g: &mut crate::game::Game, i: f64, n: Option<f64>) -> crate::kitload::KitLoad {
+pub(super) fn load_ref(g: &crate::game::Game, i: f64, n: Option<f64>) -> crate::kitload::KitLoad {
     let issued = crate::kit::kit_issued_shown(g, i, n);
     load_of(g, i, &issued)
 }
@@ -108,7 +108,7 @@ fn snap(x: f64, r: f64) -> f64 {
 }
 
 /// What member i wears with the card `m` on him.
-fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> crate::kitload::KitWorn {
+fn load_worn(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> crate::kitload::KitWorn {
     let l = load_of(g, i, m);
     let r = load_ref(g, i, n);
     crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con }

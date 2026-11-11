@@ -81,7 +81,7 @@ pub(super) fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
 
-/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after, since a `pose_new` would hold a place in the pool for good where the TypeScript's scratch held none.
+/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after.
 pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64);
     let stale = match g.m.character.at0.get(clip) {
@@ -91,8 +91,7 @@ pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::an
     if stale {
         let kept = crate::anim_skeleton::pose_cols(g, out).to_vec();
         crate::anim_skeleton::pose_cols(g, out).fill(f32::NAN);
-        let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
-        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out, singles);
+        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out);
         let (at, v) = keyed_slots(crate::anim_skeleton::pose_cols(g, out));
         crate::anim_skeleton::pose_cols(g, out).copy_from_slice(&kept);
         g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows, at, v });
@@ -129,7 +128,7 @@ pub(super) fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton:
     let nr = crate::anim_skeleton::pose_rows(p.nodes as f64) as usize;
     for i in 0..p.nodes as usize {
         if only[i] as f64 <= 0.0 { continue; }
-        // One borrow at a time, read before written: p may be `from` (the head comment of the TypeScript's says so), and three slices of one pool cannot be held.
+        // One borrow at a time, read before written: p may be `from`, and three slices of one pool cannot be held.
         let a = joint_of(crate::anim_skeleton::pose_cols(g, from), nr, i);
         let b = joint_of(crate::anim_skeleton::pose_cols(g, to), nr, i);
         let pc = crate::anim_skeleton::pose_cols(g, p);
@@ -145,7 +144,7 @@ fn joint_of(cols: &[f32], nr: usize, i: usize) -> [f64; 7] {
     j
 }
 
-/// add_pose_delta's sums for one joint, as the TypeScript does them: in doubles, stored as singles once.
+/// add_pose_delta's sums for one joint: in doubles, stored as singles once.
 fn delta_joint(p: [f64; 7], a: [f64; 7], b: [f64; 7], w: f64) -> [f32; 7] {
     let mut o = [0.0f32; 7];
     for c in 0..3 { o[c] = (p[c] + (b[c] - a[c]) * w) as f32; }
@@ -182,9 +181,9 @@ fn long_flat(s: crate::character::LongShape) -> Vec<f64> {
 
 /// The carriage's spring targets for the posture shown: LONG toward LONG_CROUCH by the crouch weight.
 pub(super) fn long_targets(stance: crate::character::LongStance, crouch_w: f64) -> Vec<f64> {
-    let mut a = long_flat(*crate::character::long().get(String::from(stance.as_str())).unwrap());
+    let mut a = long_flat(crate::character::long(stance));
     if crouch_w <= 1e-4 { return a; }
-    let b = long_flat(*crate::character::long_crouch().get(String::from(stance.as_str())).unwrap());
+    let b = long_flat(crate::character::long_crouch(stance));
     let w = v3::clamp(crouch_w, 0.0, 1.0);
     for i in 0..a.len() {
         a[i] += (b[i] - a[i]) * w;
@@ -238,7 +237,7 @@ mod tests_2 {
     fn a_carriage_is_read_by_its_channels_and_goes_to_the_crouch_table_when_he_is_low() {
         let c = lc();
         for st in [LongStance::PatrolLong, LongStance::LowLong, LongStance::Shoulder, LongStance::PortLong] {
-            let (up, down) = (*crate::character::long().get(String::from(st.as_str())).unwrap(), *crate::character::long_crouch().get(String::from(st.as_str())).unwrap());
+            let (up, down) = (crate::character::long(st), crate::character::long_crouch(st));
             let (a, b) = (long_targets(st, 0.0), long_targets(st, 1.0));
             assert_eq!((a[c.side as usize], a[c.up as usize], a[c.fwd as usize], a[c.pitch as usize], a[c.yaw as usize], a[c.lean as usize]), (up.side, up.up, up.fwd, up.pitch, up.yaw, up.lean), "{st:?}");
             assert_eq!((a[c.elbow_r as usize + 1], a[c.elbow_l as usize + 2]), (up.elbow_r[1], up.elbow_l[2]), "{st:?}");

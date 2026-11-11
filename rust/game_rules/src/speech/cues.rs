@@ -29,31 +29,29 @@ static CLASSES: &[(&[Pat], f64)] = &[
     (&[Pat::In("lock the doors"), Pat::In("on the doors"), Pat::In("back on our doors"), Pat::In("stay on your doors"), Pat::In("digging in"), Pat::In("getting ready"), Pat::In("ready for them"), Pat::In("room ready"), Pat::In("staying on my door"), Pat::In("holding my room"), Pat::In("staying on my post"), Pat::In("holding my post"), Pat::In("let them come"), Pat::In("not coming out"), Pat::In("holding my corner"), Pat::In("holding here"), Pat::In("i've got this door"), Pat::In("on my own")], 3.0),
 ];
 
-/// A kind's row of LINES (WORDS.on and WORDS.guide are settled on: `guide`, else `now`, else `say`).
+/// A kind's lines and how they rank on the net.
 struct Line {
     kind: CueKind,
     cls: f64,
     say: &'static [&'static str],
-    now: Option<&'static [&'static str]>,
-    guide: Option<&'static [&'static str]>,
 }
-/// The new lines, in the written order.
+/// The lines, in the written order.
 static LINES: &[Line] = &[
-    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
-    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"], now: None, guide: None },
-    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"], now: None, guide: None },
-    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"], now: None, guide: None },
-    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"], now: None, guide: None },
-    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. Wait for my word!"], now: Some(&["{sq}: hold — let them come in. wait for my word!"]), guide: Some(&["{sq}: hold — let them come in. wait for my call!"]) },
-    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. Wait for my word!"], now: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my word!"]), guide: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my call!"]) },
-    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"], now: None, guide: None },
-    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"], now: None, guide: None },
-    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"], now: None, guide: None },
-    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on this door"], now: Some(&["they're still out there — holding {the}", "still out there — staying on my post"]), guide: None },
-    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"], now: None, guide: None },
-    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"], now: None, guide: None },
+    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"] },
+    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"] },
+    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"] },
+    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"] },
+    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"] },
+    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"] },
+    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"] },
+    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. wait for my call!"] },
+    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. wait for my call!"] },
+    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"] },
+    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"] },
+    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"] },
+    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on my post"] },
+    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"] },
+    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"] },
 ];
 fn line_of(k: CueKind) -> &'static Line {
     LINES.iter().find(|l| l.kind == k).unwrap()
@@ -72,9 +70,6 @@ fn gap_of(k: CueKind) -> f64 {
 
 // ---------------------------------------------------------------- the file's regular expressions, by hand
 
-fn word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
 /// the prefix test of a case-blind pattern (bytes: JavaScript's /i folds no non-ASCII letter onto an ASCII one, and the only non-ASCII in a pattern is the dash)
 fn has_head_blind(hay: &[u8], needle: &[u8]) -> bool {
     hay.len() >= needle.len() && hay[..needle.len()].eq_ignore_ascii_case(needle)
@@ -86,7 +81,7 @@ fn pat_hits(p: &Pat, text: &[u8]) -> bool {
     match p {
         Pat::In(s) => has_blind(text, s.as_bytes()),
         Pat::Head(s) => has_head_blind(text, s.as_bytes()),
-        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(word_byte),
+        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(js::is_word),
     }
 }
 /// `/^[A-Z][a-z]{1,11}: /`: a row under a squad's name, not a man's callsign.
@@ -105,10 +100,10 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
     while i < b.len() {
         if b[i] == b'{' {
             let mut j = i + 1;
-            while j < b.len() && word_byte(b[j]) { j += 1; }
+            while j < b.len() && js::is_word(b[j]) { j += 1; }
             if j > i + 1 && j < b.len() && b[j] == b'}' {
                 out.push_str(&line[from..i]);
-                if let Some(v) = vars.and_then(|m| m.get(String::from(&line[i + 1..j]))) { out.push_str(v); }
+                if let Some(v) = vars.and_then(|m| m.of(&line[i + 1..j])) { out.push_str(v); }
                 i = j + 1;
                 from = i;
                 continue;
@@ -206,7 +201,7 @@ pub fn cue_class(text: &str) -> f64 {
 /// A kind's lines as they are said now.
 fn said(k: crate::cues::CueKind) -> Vec<String> {
     let l = line_of(k);
-    l.guide.or(l.now).unwrap_or(l.say).iter().map(|s| String::from(*s)).collect()
+    l.say.iter().map(|s| String::from(*s)).collect()
 }
 
 /// A line is shouted when its writer put an exclamation mark in it.
@@ -222,11 +217,6 @@ fn new_stats() -> crate::cues::CuesStats {
         gap: 0.0,
         full: 0.0,
     }
-}
-
-/// The distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A new Cues: the field initialisers, nothing more.
@@ -265,10 +255,10 @@ fn file_done(g: &mut Game, drawn: bool, why: &str) -> bool {
     drawn
 }
 
-/// One row for the strip, or not; `raw` is always drawn. `classT`, the gate's clock, is read by laststand.ts through netWait.
+/// One row for the strip, or not; `raw` is always drawn. `class_t`, the gate's clock, is read by the last stand through `cues_net_wait`.
 fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: crate::cues::CuesFileKind) -> bool {
     let t = g.time;
-    prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
+    prune_rows(g);
     let c = cls as usize;
     // (the same words from another man are the same news)
     let words: &str = if kind == CuesFileKind::Raw || who.is_empty() { text } else {
@@ -278,7 +268,7 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     let rank = cls * 2.0 + (if squad { 0.0 } else { 1.0 });
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t >= at && t - at < secs);
     if cls > 0.0 {
-        if within(g.cues.said.get(String::from(words)).copied(), g.k.cues.dup_secs) {
+        if within(g.cues.said.of(words).copied(), g.k.cues.dup_secs) {
             g.cues.stats.dup += 1.0;
             return file_done(g, false, "dup");
         }
@@ -344,7 +334,7 @@ fn net_row(callsign: &str, text: &str) -> String {
 
 /// A unit's line went out on his side's net: the strip gets it.
 pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
-    if g.gd[gd].team != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
+    if g.team(gd) != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
     let callsign = g.gd[gd].callsign.clone();
     let _ = cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard);
 }
@@ -367,18 +357,18 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 }
 
 /// Every ear of the team's a shout could reach.
-fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
+fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.ch[g.pl[pl].ch].pos)); }
+        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.player_pos(pl))); }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
         let c = g.gd[o].ch;
-        if g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch) && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
+        if g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
     }
     out
 }
@@ -392,8 +382,7 @@ fn heard_done(why: &str) -> bool {
 pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     let t = g.time;
     if !is_shout(text) || crate::condition::down(g, g.gd[gd].ch) { return false; }
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
+    if !g.team(gd).theirs() || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if let Some(s) = g.cues.shout_t {
         if t < s {   // (the clock went back: a checkpoint loaded)
             g.cues.shout_t = None;
@@ -402,16 +391,16 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
         }
     }
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t - at < secs);
-    if within(g.cues.heard_said.get(String::from(text)).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
+    if within(g.cues.heard_said.of(text).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
     if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
     if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let mouth: V3 = [p[0], p[1] + 1.2, p[2]];
     let reach = g.k.digin.shout_m;
     let mut reached = false;
     for ear in cues_ears(g) {
-        if flat(mouth, ear) > reach { continue; }
+        if v3::dist_xz(mouth, ear) > reach { continue; }
         let h = crate::weather::hear_path(g, mouth, ear, Some(false));
         if h.path_len < reach * h.carry { reached = true; break; }
     }
@@ -464,7 +453,7 @@ fn bubble_tone(g: &crate::game::Game, gd: GuardId) -> crate::view::BubbleTone {
     }
     match m.state {
         S::Alert => T::Alert,
-        S::Suspicious | S::Search if m.team != crate::teams::Team::Operative => T::Sus,
+        S::Suspicious | S::Search if !g.ch[m.ch].team.ours() => T::Sus,
         _ => T::Calm,
     }
 }
@@ -540,7 +529,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     let n = g.cues.n;
     g.cues.n += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    let pick = js::rem(crate::math_dice::hash_str(&callsign) + n, say.len() as f64) as usize;
+    let pick = js::rem(crate::dice::hash_str(&callsign) + n, say.len() as f64) as usize;
     let text = fill(&say[pick], vars);
     cues_man(g, gd).said_t = t;
     g.cues.stats.cues += 1.0;
@@ -580,7 +569,7 @@ fn cues_squad_voice(g: &crate::game::Game, squad: EnemysquadsSquadId, by: Option
 
 // ---------------------------------------------------------------- once a frame, after everybody has moved
 
-/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
+/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `cues_file`, so it moves the clock the last stand waits on.
 pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     let t = g.time;
     if !g.fight.live { return; }
@@ -616,10 +605,10 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
             if cues_cue(g, gd, CueKind::Calm, None) { cues_man(g, gd).stood_t = t; }
         } else if on_player && faced_down(g).is_some() && state == crate::game::GuardState::Alert && !cues_man(g, gd).covered && still && {
             let f = crate::seats::faced_man(g, gd);
-            flat(g.ch[c].pos, g.ch[g.pl[f].ch].pos) < 3.5
+            v3::dist_xz(g.ch[c].pos, g.player_pos(f)) < 3.5
         } {
             let f = crate::seats::faced_man(g, gd);
-            let p = g.ch[g.pl[f].ch].pos;
+            let p = g.player_pos(f);
             let at = cues_at(g, p);
             // (said, or a man beside him has just said it for both)
             if cues_cue(g, gd, CueKind::Cover, Some(&at_vars(&at))) || cues_kind_busy(g, CueKind::Cover) { cues_man(g, gd).covered = true; }
@@ -674,7 +663,7 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
     let Some(d) = crate::roomfight::def_of(g, gd) else { return };
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     cues_man(g, gd);
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     match did {
         Did::HoldsWhereHeIs => {
             if g.time - cues_man(g, gd).stood_t > 15.0 {
@@ -683,8 +672,8 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
             }
         }
         Did::FallsBack => {
-            cues_man(g, gd).moved = Some(ManMoved::Fallback);
-            let station = g.tab.roomfight_def[d].station;
+            cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Fallback);
+            let station = crate::roomfight::station(g, d);
             let from = crate::dialogue::place_name(g, station);
             cues_man(g, gd).from = from.clone();
             cues_man(g, gd).said_t = -100.0;
@@ -692,9 +681,9 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
             vars.set(String::from("the"), from);
             cues_cue(g, gd, CueKind::FellBack, Some(&vars));
         }
-        Did::TakesCover => cues_man(g, gd).moved = Some(ManMoved::Cover),
+        Did::TakesCover => cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Cover),
         Did::Plants { fighting } => {
-            if cues_man(g, gd).moved == Some(ManMoved::Fallback) && !fighting {
+            if cues_man(g, gd).moved == Some(crate::roomfight::DefMoveKind::Fallback) && !fighting {
                 let h = cues_at(g, p);
                 let floor = g.time - g.k.cues.man_secs;
                 let row = cues_man(g, gd);
@@ -759,7 +748,7 @@ mod tests {
     #[test]
     fn a_lines_words_rank_it_as_its_row_does() {
         for l in LINES.iter().filter(|l| l.cls > 0.0) {
-            for text in l.say.iter().chain(l.now.unwrap_or(&[])).chain(l.guide.unwrap_or(&[])) { assert_eq!(cue_class(text), l.cls, "{}", text); }
+            for text in l.say { assert_eq!(cue_class(text), l.cls, "{}", text); }
         }
     }
 

@@ -10,7 +10,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// a row of this id is on the menu's list (`S.defs.some(d => d.id === id)`)
-fn def_listed(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> bool {
+pub(super) fn def_listed(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> bool {
     seat.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == id)
 }
 
@@ -24,20 +24,10 @@ fn turn_of(l: crate::squadthrow::Lent, at: V3, t0: f64, fired_t: f64, shot: Shot
     Turn { at, t0, fired_t, shot, mates: l.mates, gd: l.gd, t: l.t, a: l.a, home: l.home, home_yaw: l.home_yaw, back: l.back }
 }
 
-/// the `at` every kind of target carries
-fn at_of(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(f) => f.at,
-        crate::orders::OrderTarget::Door(f) => f.at,
-        crate::orders::OrderTarget::None(f) => f.at,
-        crate::orders::OrderTarget::Foe(f) => f.at,
-    }
-}
-
-/// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
+/// the launcher is under the gun in his hands: a long gun whose row has one.
 fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;
-    let r = g.m.weapons.weapons.get(d).unwrap();
+    let r = g.weapon(d);
     r.cls != crate::weapons::WeaponClass::Pistol && r.pellets.is_none() && r.launcher != Some(false)
 }
 
@@ -50,16 +40,16 @@ fn left_in(g: &Game, s: &State) -> f64 {
     n
 }
 
-/// the rounds the squad's men on their feet have between them. (squad40.ts squad40Left)
+/// the rounds the squad's men on their feet have between them.
 pub fn squad40_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let g: &Game = g;
     match g.m.squad40.states.get(key) { Some(s) => left_in(g, s), None => 0.0 }
 }
 
-/// the words the throws' row adds while the order is on the page. (squad40.ts squad40Word)
+/// the words the throws' row adds while the order is on the page.
 pub(super) fn squad40_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
         Some(b) if b > 0.0 => format!(" · 40 mm {}", js::num_str(squad40_left(g, seat))),
@@ -67,7 +57,7 @@ pub(super) fn squad40_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
     }
 }
 
-/// A scenario has just staged its team: each man's rounds are what his card carries. (squad40.ts squad40Stage)
+/// A scenario has just staged its team: each man's rounds are what his card carries.
 pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     let mut rounds: JsMap<GuardId, f64> = JsMap::new();
     let mut n = 0.0;
@@ -75,7 +65,7 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
         let k = if tube_up(g, gd) { m::max(0.0, js::or(m::floor(c), 0.0)) } else { 0.0 };
         if js::truthy(k) { rounds.set(gd, k); n += k; }
     }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squad40.states.get(key).is_none() {
         if !js::truthy(n) { return; }
         g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), shown: None, plan: None });
@@ -88,18 +78,17 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     s.shown = None;
 }
 
-/// the bodies a round stops on, as far as the player can see them. (squad40.ts bodies)
-fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
+/// the bodies a round stops on, as far as the player can see them.
+fn bodies(g: &crate::game::Game) -> crate::squad40::Bodies {
     let (mut friends, mut foes, mut mates): (Vec<CharId>, Vec<CharId>, Vec<CharId>) = (Vec::new(), Vec::new(), Vec::new());
     if !crate::condition::down(g, g.pl[g.player].ch) { friends.push(g.pl[g.player].ch); }
     for gd in g.guards.clone() {
         let c = g.gd[gd].ch;
         let up = !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive;
-        if g.gd[gd].team == crate::teams::Team::Operative {
+        if g.team(gd).ours() {
             if up { mates.push(c); }
         } else if up && !crate::fogofwar::fog_of_war_hidden(g, gd) {
-            let team = g.gd[gd].team;
-            if crate::teams::is_hostile(g, crate::teams::Team::Operative, team) && g.gd[gd].civ.is_none() && !g.staged.captives.contains(&gd) {
+            if g.team(gd).theirs() && !g.staged.captives.contains(&gd) {
                 foes.push(c);
             } else {
                 friends.push(c);
@@ -113,13 +102,13 @@ fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
     Bodies { friends, foes, mates }
 }
 
-/// he faces the spot. (squad40.ts onIt)
+/// he faces the spot.
 fn on_it(g: &crate::game::Game, gd: GuardId, at: V3) -> bool {
     let c = g.gd[gd].ch;
     m::abs(v3::wrap_angle(g.ch[c].aim_yaw - v3::yaw_to(g.ch[c].pos, at))) < g.k.squad40.aim_rad
 }
 
-/// his gun is UP and on the spot: in a fight, or under an order that has it at his shoulder. (squad40.ts gunOn)
+/// his gun is UP and on the spot: in a fight, or under an order that has it at his shoulder.
 fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, at: V3) -> bool {
     if !on_it(g, gd, at) { return false; }
     if g.gd[gd].state == crate::game::GuardState::Alert { return true; }
@@ -127,13 +116,13 @@ fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, at: 
         if g.tab.roomfight_op[o].tgt.is_some() { return true; }
     }
     match crate::orders::squad_orders_of(seat, gd) {
-        Some(a) => g.tab.orders_assignment[a].upper == crate::character::UpperMode::Aim,
+        Some(a) => g.tab.task[a].upper == crate::character::UpperMode::Aim,
         None => false,
     }
 }
 
-/// ONE MAN'S SHOT to a spot, from where he stands with his gun turned to it (`Close`: not armed there; None: he has none). (squad40.ts shotOf)
-fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
+/// ONE MAN'S SHOT to a spot, from where he stands with his gun turned to it (`Close`: not armed there; None: he has none).
+fn shot_of(g: &crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
     let made;
     let bb: &Bodies = match b { Some(x) => x, None => { made = bodies(g); &made } };
     let c = g.gd[gd].ch;
@@ -141,7 +130,7 @@ fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squ
     let d = v3::dist_xz(p, at);
     if d < 1e-3 { return Some(ShotOf::Close); }
     let (muzzle_up, head_drop, muzzle_ahead, near_m, arm_slack) = (g.k.squad40.muzzle_up, g.k.squad40.head_drop, g.k.squad40.muzzle_ahead, g.k.squad40.near_m, g.k.squad40.arm_slack);
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied();
+    let head = g.ch[c].bone(crate::character::Bone::Head);
     let up = m::max(0.6, m::min(muzzle_up, match head { Some(h) => h[1] - p[1] - head_drop, None => muzzle_up }));
     let k = muzzle_ahead / d;
     let from: V3 = [p[0] + (at[0] - p[0]) * k, p[1] + up, p[2] + (at[2] - p[2]) * k];
@@ -163,7 +152,7 @@ fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squ
     Some(ShotOf::Shot(Shot { gd, from, to, sol, burst, aimed }))
 }
 
-/// who of ours the burst would have in it (None: nobody), asked of where it goes off AND of the spot. (squad40.ts caught)
+/// who of ours the burst would have in it (None: nobody), asked of where it goes off AND of the spot.
 fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Option<String> {
     let c = g.gd[a.gd].ch;
     let moved = crate::squadthrow::SquadFragCatchesMoved { gd: a.gd, at: g.ch[c].pos };
@@ -174,7 +163,7 @@ fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Option
 /// `ready` of plan: a launcher in a free hand, not turning already, the tube closed on his last round
 fn ready(g: &mut Game, gd: GuardId) -> bool {
     if !tube_up(g, gd) || !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_at_work(g, gd) { return false; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let (turning, t) = match g.m.squad40.states.get(key) {
         Some(s) => (s.turns.has(gd), s.last.get(gd).copied().unwrap_or(-1e9)),
         None => (false, -1e9),
@@ -183,10 +172,10 @@ fn ready(g: &mut Game, gd: GuardId) -> bool {
 }
 
 /// THE SHOT AS IT WOULD BE ORDERED NOW: the man of `men` who would fire it, one whose gun is on the spot first, then the nearest; else why nobody has one. Asked each time,
-/// by the row, the picture (`follow`) and the order. (squad40.ts plan)
+/// by the row, the picture (`follow`) and the order.
 pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate::squad40::ShellPlan {
     let of = |shot: Option<Shot>, no: Option<String>| ShellPlan { at, men: men.to_vec(), shot, no };
-    let row = crate::seats::view_key(g, &crate::seats::here(g));
+    let row = g.group;
     if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return of(None, Some(String::from(none))); }
     let bb = bodies(g);
     let (mut any, mut asked, mut close) = (false, false, false);
@@ -195,7 +184,7 @@ pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate:
     js::sort_by(&mut order, |x, y| {
         let (x, y) = (*x, *y);
         let by_gun = (if gun_on(g, &crate::seats::here(g), y, at) { 1.0 } else { 0.0 }) - (if gun_on(g, &crate::seats::here(g), x, at) { 1.0 } else { 0.0 });
-        js::or(by_gun, v3::dist_xz(g.ch[g.gd[x].ch].pos, at) - v3::dist_xz(g.ch[g.gd[y].ch].pos, at))
+        js::or(by_gun, v3::dist_xz(g.pos_of(x), at) - v3::dist_xz(g.pos_of(y), at))
     });
     for gd in order {
         let has = g.m.squad40.states.get(row).and_then(|s| s.rounds.get(gd).copied()).map_or(false, |k| k > 0.0);
@@ -216,7 +205,7 @@ pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate:
         return of(Some(a), None);
     }
     if let Some((a, who)) = dirty { return of(Some(a), Some(who)); }
-    let text: &str = if !any { crate::words::wg(g, &"nobody's carrying one.", &"none with them.") } else if !asked { "not ready." } else if close { "too close to arm." } else { "no shot from here." };
+    let text: &str = if !any { "nobody's carrying one." } else if !asked { "not ready." } else if close { "too close to arm." } else { "no shot from here." };
     of(None, Some(String::from(text)))
 }
 
@@ -231,16 +220,16 @@ pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3)>
 /// once a frame with a menu up: the lit row's shot as it is now, for whoever draws it
 fn follow(g: &mut Game) {
     let seat = crate::seats::here(g);
-    let (key, asked) = (crate::seats::view_key(g, &seat), lit(g, &seat));
+    let (key, asked) = (seat.group_id, lit(g, &seat));
     let now = asked.map(|(men, at)| plan(g, &men, at));
     if let Some(s) = g.m.squad40.states.get_mut(key) { s.plan = now; }
 }
 
-/// the round leaves his tube; `pl` is the row of `states` it is counted on. (squad40.ts fire)
-fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot) {
+/// the round leaves his tube; `key` is the row of `states` it is counted on.
+fn fire(g: &mut crate::game::Game, key: GroupId, a: &crate::squad40::Shot) {
     let gd = a.gd;
     let now = g.time;
-    let s = g.m.squad40.states.get_mut(pl).unwrap();
+    let s = g.m.squad40.states.get_mut(key).unwrap();
     let left = s.rounds.get(gd).copied().unwrap_or(0.0);
     s.rounds.set(gd, m::max(0.0, left - 1.0));
     s.last.set(gd, now);
@@ -250,7 +239,7 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot) {
     crate::game::game_say(g, gd, "forty out!", None, None);
     let callsign = g.gd[gd].callsign.clone();
     let t = g.time;
-    g.m.squad40.states.get_mut(pl).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
+    g.m.squad40.states.get_mut(key).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
     let log = &mut g.m.squad40.squad40_log;
     log.push(Squad40ModSQUAD40LOGItem { burst: a.burst });
     if log.len() > 100 { log.drain(0..50); }
@@ -261,14 +250,14 @@ fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
         crate::game::game_say(g, gd, l, None, None);
     }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let w = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.delete(gd)).unwrap();
     crate::squadthrow::squad_hand_back(g, &mut lent_of(w), Some(true));
 }
 
-/// A MAN TURNING TO HIS SHOT, each frame (the row's `tick`). (squad40.ts turnTick)
-pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+/// A MAN TURNING TO HIS SHOT, each frame (the row's `tick`).
+pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
+    let key = g.group;
     let now = g.time;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -279,14 +268,14 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             // (under the row's id with no turn of ours behind it: he holds where he is)
             if w.is_some() { g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd); }
             let face = g.ch[c].body_yaw;
-            crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
+            crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 set_line: None,
                 ..Default::default()
             });
@@ -317,7 +306,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 
 /// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = at_of(t);
+    let at = t.at();
     let a = match plan(g, men, at) {
         ShellPlan { no: Some(why), .. } => {  return Some(why); }
         ShellPlan { shot: Some(a), .. } => a,
@@ -327,30 +316,30 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     crate::squadthrow::squad_log_row(g, gd, SHELL_THERE, at);
-    if a.aimed { let key = crate::seats::view_key(g, &crate::seats::here(g)); fire(g, key, &a); return None; }
+    if a.aimed { let key = g.group; fire(g, key, &a); return None; }
     let to = v3::copy(a.to);
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, &crate::seats::here(g), gd, t);
     let mut w = turn_of(lent, v3::copy(at), now, -1.0, a);
-    crate::orders::rows::assign(g, &crate::orders::rows::shell40::ORDER, gd, crate::orders::SquadOrdersAssignA {
+    crate::orders::rows::assign(g, &crate::orders::rows::shell40::ORDER, gd, crate::duty::TaskGiven {
         post: Some([p[0], 0.0, p[2]]),
         face: Some(v3::yaw_to(p, at)),
         watch: Some(to),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: String::from("turning to fire · 40 mm"),
-        there: String::from("aiming · 40 mm"),
+        going: "turning to fire · 40 mm".into(),
+        there: "aiming · 40 mm".into(),
         set_line: None,
         ..Default::default()
     });
     w.a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.turns.set(gd, w);
     None
 }
 
-/// the order's row, put on the throws' page. (squad40.ts row)
+/// the order's row, put on the throws' page.
 fn list(g: &mut crate::game::Game) {
     crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
         page: Some(String::from(crate::squadthrow::THROW_PAGE)),
@@ -360,9 +349,9 @@ fn list(g: &mut crate::game::Game) {
     });
 }
 
-/// the squad's HUD block: what is left while this staging brought any, and the shot just made. (squad40.ts notes)
+/// the squad's HUD block: what is left while this staging brought any, and the shot just made.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    let Some(st) = g.m.squad40.states.get(crate::seats::view_key(g, seat)) else { return Vec::new() };
+    let Some(st) = g.m.squad40.states.get(seat.group_id) else { return Vec::new() };
     if !js::truthy(st.brought) || !def_listed(g, seat, SHELL_THERE) { return Vec::new(); }
     let plain = |text: String| crate::view::Note { key: String::new(), text };
     let left = plain(format!("40 mm {}", js::num_str(squad40_left(g, seat))));
@@ -372,9 +361,9 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
     }
 }
 
-/// Once a frame straight after the menu's own input: the row kept in step with what this staging brought and with the throws' page, a turn whose man is down or under another order ended. (squad40.ts squad40Tick)
+/// Once a frame straight after the menu's own input: the row kept in step with what this staging brought and with the throws' page, a turn whose man is down or under another order ended.
 pub fn squad40_tick(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squad40.states.get(key).is_none() { return; }
     let mut at = 0;
     while let Some(gd) = g.m.squad40.states.get(key).unwrap().turns.next_key(&mut at) {
@@ -390,7 +379,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let has = def_listed(g, &crate::seats::here(g), SHELL_THERE);
     let want = brought > 0.0 && def_listed(g, &crate::seats::here(g), crate::squadthrow::THROW_OPEN);
     if has == want { follow(g); return; }
-    if g.sets[g.seat].orders.menu.is_some() { crate::orders::squad_orders_close(g); }
+    if g.groups[g.group].orders.menu.is_some() { crate::orders::squad_orders_close(g); }
     if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
     list(g);
 }

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::vec;
 
 /// A new record: empty maps, frame 0; its one argument was the game.
-pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
+pub fn floor_seen_new() -> crate::floorseen::FloorSeen {
     crate::floorseen::FloorSeen::blank()
 }
 
@@ -16,7 +16,7 @@ pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
 pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     let (cs, w, h, t) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h, g.time);
     let frame = {
-        let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
+        let s = g.groups[g.group].tools.seen.as_mut().unwrap();
         s.frame = s.frame + 1.0;
         s.frame
     };
@@ -25,7 +25,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
         let gd = men[j];
         if crate::condition::down(g, g.gd[gd].ch) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
         {
-            let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
+            let s = g.groups[g.group].tools.seen.as_mut().unwrap();
             if !s.at.has(gd) || !s.asked.has(gd) {
                 let cells = (w * h) as usize;
                 s.at.set(gd, vec![NEVER as f32; cells]);
@@ -33,10 +33,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
             }
         }
         let c = g.gd[gd].ch;
-        let eye: V3 = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(head) => *head,
-            None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-        };
+        let eye: V3 = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
         let look = crate::guards::look_of(g, c);
         let (lx, lz) = (look[0], look[2]);
         let (half_deg, near_deg, near_m) = (g.k.guard_eye.half_deg, g.k.guard_eye.near_deg, g.k.guard_eye.near_m);
@@ -47,7 +44,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
         let z0 = m::floor(eye[2] / cs);
         // The man's two arrays are held out of the record for the walk: the line test takes `g`, and nothing it reaches reads this record.
         let (mut a, mut q) = {
-            let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
+            let s = g.groups[g.group].tools.seen.as_mut().unwrap();
             (core::mem::take(s.at.get_mut(gd).unwrap()), core::mem::take(s.asked.get_mut(gd).unwrap()))
         };
         let (x_lo, x_hi) = (m::max(0.0, x0 - n), m::min(w - 1.0, x0 + n));
@@ -74,7 +71,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
                 if !crate::scene_collision::segment_blocked(g, eye, [px, 1.0, pz], None, None, None) { a[i] = t as f32; }
             }
         }
-        let s = g.sets[g.seat].door_tools.seen.as_mut().unwrap();
+        let s = g.groups[g.group].tools.seen.as_mut().unwrap();
         *s.at.get_mut(gd).unwrap() = a;
         *s.asked.get_mut(gd).unwrap() = q;
     }
@@ -86,7 +83,7 @@ pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64]
     let Some(a) = s.at.get(gd) else { return 0.0 };
     let mut n = 0.0;
     for &i in cells {
-        // An index outside the array reads undefined in the TypeScript, and that is never `>= since`.
+        // An index outside the array counts for nothing.
         if let Some(&seen) = a.get(i as usize) {
             if (seen as f64) >= since { n += 1.0; }
         }
@@ -98,16 +95,16 @@ pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64]
 mod tests {
     use super::*;
 
-    /// A store is a single: the rounded value decides `since`, as a Float32Array does (bits from bun: Math.fround).
+    /// A store is a single: the rounded value decides `since`.
     #[test]
     fn count_reads_the_rounded_single() {
         assert_eq!((0.1f64 as f32 as f64).to_bits(), 0x3FB99999A0000000);
         assert_eq!((0.7f64 as f32 as f64).to_bits(), 0x3FE6666660000000);
         let mut g = Game::blank();
         let gd = GuardId(0);
-        let mut seen = floor_seen_new(&mut g);
+        let mut seen = floor_seen_new();
         seen.at.set(gd, vec![0.1f64 as f32, 0.7f64 as f32, NEVER as f32]);
-        g.sets[g.seat].door_tools.seen = Some(seen);
+        g.groups[g.group].tools.seen = Some(seen);
         // 0.1 rounds up and counts at 0.1; 0.7 rounds down and does not count at 0.7; cell 2 was never seen; cell 9 is past the array.
         assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.1), 2.0);
         assert_eq!(floor_seen_count(&crate::seats::here(&g), gd, &[0.0, 1.0, 2.0, 9.0], 0.7), 0.0);

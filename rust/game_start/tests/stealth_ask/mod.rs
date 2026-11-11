@@ -223,11 +223,11 @@ impl StealthAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
-    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.phase) }
-    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.g) }
+    fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding().map(|h| h.phase) }
+    fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding().map(|h| h.g) }
     fn out_cold(&self, gd: GuardId) -> bool { self.state(gd) == game::game::GuardState::Dead && game::game::is_breathing(&self.g, gd) }
     fn down_kind(&self, gd: GuardId) -> Option<game::game::DownKind> { self.g.gd[gd].down_kind }
     fn grab_row(&self, gd: GuardId) -> bool { self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(gd) && r.verb == Some(game::game::Verb::Grab)) }
@@ -269,7 +269,7 @@ impl StealthAsk for Play {
         self.g.tune.qrf = true;
         self.g.tune.qrf_eta = eta;
         self.g.tune.qrf_size = men;
-        if let Some(r) = self.g.level.scenarios.as_mut().and_then(|s| s.response.as_mut()) { r.men = Some([men, men]); r.eta = Some([eta, eta]); }
+        if let Some(r) = std::sync::Arc::make_mut(&mut self.g.level).scenarios.as_mut().and_then(|s| s.response.as_mut()) { r.men = Some([men, men]); r.eta = Some([eta, eta]); }
     }
     fn alarm_raised_to(&mut self, level: f64) { game::guards::raise_escalation(&mut self.g, level, None, None, None); }
     fn body_is_found(&mut self, gd: GuardId) { self.g.gd[gd].found = true; }
@@ -308,8 +308,8 @@ impl StealthAsk for Play {
     fn door_at(&self, name: &str) -> [f64; 2] { let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")); let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
     fn door_shut(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
     }
     fn in_doors_line(&self, name: &str, from: [f64; 2], at: [f64; 2]) -> bool {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
@@ -348,7 +348,7 @@ impl StealthAsk for Play {
     fn mission_stage(&self) -> game::game::MissionStage { self.g.mission.stage }
     fn quiet_deal(&self) -> (f64, f64, f64) { let d = &self.g.quiet.deal; (d.start, d.spot, d.patrol) }
     fn wall_for(&mut self, gd: GuardId) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
-        let (at, y, off) = (self.g.ch[self.g.gd[gd].ch].pos, self.g.k.sticky.aim_y, self.g.k.sticky.off);
+        let (at, y, off) = (self.g.pos_of(gd), self.g.k.sticky.aim_y, self.g.k.sticky.off);
         let chest = [at[0], 1.1, at[2]];
         for k in 0..32 {
             let a = k as f64 * std::f64::consts::PI / 16.0;
@@ -372,7 +372,7 @@ impl StealthAsk for Play {
     fn fog_saw(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_seen(&self.g, gd) }
     fn in_newest_wedge(&self, at: [f64; 3]) -> bool { let e = *self.g.fog_of_war.eyes.last().expect("an eye"); game::fogofwar::fog_of_war_in_field(&self.g, e, at) }
     fn cams(&self) -> (usize, f64) { let pl = &self.g.pl[self.g.player]; (pl.cams.len(), self.g.fa[pl.rifle].cams) }
-    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding.as_ref().map(|w| w.live) }
+    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding().map(|w| w.live) }
     fn eye_is_lens(&self) -> bool { self.g.fog_of_war.eyes.iter().any(|e| e.wand == Some(true)) }
     fn smoke_counts(&mut self) -> game::smokebreak::SmokeBreakStats { game::smokebreak::state_of(&mut self.g).stats }
     fn hand_from_head(&self, gd: GuardId, bone: game::character::Bone) -> f64 {
@@ -383,7 +383,7 @@ impl StealthAsk for Play {
     fn holds_round(&mut self, m: GuardId, h: GuardId) -> bool { game::spotted::spotted_holds_round(&mut self.g, m, h) }
     fn leaf(&self, name: &str) -> (bool, f64, f64) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        (game::fogofwar::fog_of_war_door_held(&self.g, d), game::doors::door_angle(&self.g, d), game::fogofwar::fog_of_war_door_shown(&self.g, d))
+        (game::fogofwar::fog_of_war_door_held(&self.g, d), self.g.dr[d].leaf.angle, game::fogofwar::fog_of_war_door_shown(&self.g, d))
     }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
     fn throws_the_breaker(&mut self) {
@@ -394,13 +394,13 @@ impl StealthAsk for Play {
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
     }
     fn mains_out(&self) -> bool { self.g.light_home.mains.active }
-    fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Breaker, .. })))) }
-    fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].task { Some(game::game::GuardTask::Arm0(k)) => k.pos, _ => panic!("no errand") } }
+    fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].errand, Some(game::game::Errand::At(game::game::ErrandAt { kind: game::game::ErrandThing::Breaker, .. })))) }
+    fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].errand { Some(game::game::Errand::At(k)) => k.pos, _ => panic!("no errand") } }
     fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]) {
         let floor = self.g.k.whistle.walk_floor;
         let (at, h) = (self.at(gd), &mut self.g.gd[gd]);
         if h.state == game::game::GuardState::Dead { return; }
-        h.task = None;
+        h.errand = None;
         h.state = game::game::GuardState::Suspicious;
         h.last_known = Some(spot);
         h.awareness = if (at[0] - spot[0]).hypot(at[1] - spot[2]) > 1.2 { floor } else { h.awareness.min(floor) };
@@ -421,16 +421,16 @@ impl StealthAsk for Play {
     }
     fn parked(&mut self, gd: GuardId) {
         let h = &mut self.g.gd[gd];
-        h.hold = true;
-        h.pinned = true;
+        h.duty.holds = true;
+        h.duty.pinned = true;
         self.g.cond[h.ch].blind_until = 1e9;
         h.heard_up_to = 1e12;
     }
     fn let_go(&mut self, gd: GuardId) {
         let seq = self.g.event_seq;
         let h = &mut self.g.gd[gd];
-        h.hold = false;
-        h.pinned = false;
+        h.duty.holds = false;
+        h.duty.pinned = false;
         self.g.cond[h.ch].blind_until = -1.0;
         h.heard_up_to = seq;
     }
@@ -464,7 +464,7 @@ impl StealthAsk for Play {
         h.last_seen_t = -100.0;
         h.sight_t = -100.0;
         h.search_t = 0.0;
-        h.task = None;
+        h.errand = None;
         h.script = None;
     }
     fn pursuit(&self) -> Vec<(Vec<(GuardId, game::tactics::RoleKind, f64)>, game::tactics::PlanPhase)> {
@@ -484,7 +484,7 @@ impl StealthAsk for Play {
     fn last_cam(&self) -> ([f64; 3], f64, bool) { let pl = &self.g.pl[self.g.player]; let c = *pl.cams.last().expect("a camera out"); let r = &self.g.tab.stickycam_sticky_cam[c]; (r.pos, r.si, r.vel.is_none()) }
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn loud_report(&mut self) {
-        let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
+        let (at, time, serial, who) = (self.g.player_pos(self.g.player), self.g.time, self.g.serial(), self.g.player_id(self.g.player));
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::default() });
     }
     fn squad_men(&self, name: &str) -> (Vec<GuardId>, usize) {
@@ -503,8 +503,7 @@ impl StealthAsk for Play {
         self.g.tab.enemysquads_squad[q].rooms.iter().any(|r| { let b = &r.bounds; at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 })
     }
     fn wand_jobs(&self) -> Vec<GuardId> {
-        let k = game::seats::view_key(&self.g, &game::seats::here(&self.g));
-        self.g.m.wandorder.states.get(k).map_or(Vec::new(), |st| st.jobs.keys())
+        self.g.m.wandorder.states.get(self.g.group).map_or(Vec::new(), |st| st.jobs.keys())
     }
     fn mates_lenses(&mut self) -> usize { game::wandorder::mate_wand_eyes(&mut self.g).len() }
     fn pair_silent(&mut self) {

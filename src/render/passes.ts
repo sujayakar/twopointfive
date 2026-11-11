@@ -461,7 +461,7 @@ export class LightingPasses {
       { binding: 2, visibility: FS, buffer: { type: 'uniform' } },
     ] });
     // ReSTIR DI: the same group 1 + its own group 2 (last frame's reservoirs read-only, this frame's written, the uniform) — two more storage buffers in the compute
-    // stage: scene 6 (+ reach + mesh) + 2 = 10 at ultra on Metal, exactly the ceiling; 8 on a default adapter (reach in a uniform, no mesh binding)
+    // stage: scene 7 (+ mesh) + 2 = 10 at ultra on Metal, exactly the ceiling; 9 with no mesh binding
     this.lRestir = device.createBindGroupLayout({ label: 'restir', entries: [
       { binding: 0, visibility: CS, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: CS, buffer: { type: 'storage' } },

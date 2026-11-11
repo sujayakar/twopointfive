@@ -17,7 +17,7 @@ fn text_value(w: &str) -> KitValue {
     KitValue::Text(String::from(w))
 }
 
-/// A yes/no row, in the order the TypeScript writes its two values.
+/// A yes/no row, `first` listed first.
 fn flags(first: bool) -> Vec<KitValue> {
     vec![KitValue::Bool(first), KitValue::Bool(!first)]
 }
@@ -59,11 +59,6 @@ pub(super) fn value_text(v: &KitValue) -> String {
     }
 }
 
-/// The pick in a card's gun slot: `m[slot]`.
-fn slot_pick(m: &MemberKit, slot: crate::gunslots::GunSlot) -> &str {
-    match slot { crate::gunslots::GunSlot::Primary => &m.primary, crate::gunslots::GunSlot::Secondary => &m.secondary }
-}
-
 /// A row's value in words.
 pub(super) fn row_word(g: &Game, r: &KitRow, v: &KitValue) -> String {
     match r.field {
@@ -100,7 +95,7 @@ pub(super) fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
         KitField::Suppressed => crate::gunslots::GunSlot::Primary,
         _ => return String::new(),
     };
-    let id = slot_pick(m, slot);
+    let id = super::slots::pick_of(m, slot);
     if can_choice(g, id) { return String::new(); }
     let word = crate::gunslots::pick_word(g, id, None);
     let name = crate::gear::gear_text(&word);
@@ -179,7 +174,7 @@ pub fn kit_rows(g: &crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
 }
 
 /// What a row costs member i's pouches as his card stands, and its rate in plain words; null for a row that is no pouch.
-pub(super) fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
+pub(super) fn kit_row_cost(g: &crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     let item = r.item?;
     let it = g.k.slots.table.items.get(item).cloned();
@@ -203,14 +198,9 @@ fn line_of(parts: &[String], sep: &str) -> String {
     kept.join(sep)
 }
 
-/// The plural's letter of a count.
-fn plural(n: f64) -> &'static str {
-    if n == 1.0 { "" } else { "s" }
-}
-
 /// A gun by its pick's name, 'bare' after one whose suppressor the card has taken off.
 fn gun_words(g: &Game, m: &MemberKit, slot: crate::gunslots::GunSlot) -> String {
-    let id = slot_pick(m, slot);
+    let id = super::slots::pick_of(m, slot);
     let word = crate::gunslots::pick_word(g, id, None);
     let name = crate::gear::gear_text(&word);
     let bare = can_choice(g, id) && !kit_slot_can(g, m, slot);
@@ -228,23 +218,23 @@ fn guns_words(g: &Game, m: &MemberKit) -> String {
 }
 
 /// A card in a line.
-pub(super) fn kit_words(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
+pub(super) fn kit_words(g: &crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     kit_card_words(g, i, &m)
 }
 /// A card he has been handed, in a line
 pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> String {
-    let suit = if m.suit != SuitId::Issued { suits().get(String::from(m.suit.as_str())).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
-    let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().get(String::from(m.trim.as_str())).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
+    let suit = if m.suit != SuitId::Issued { suits().of(m.suit.as_str()).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
+    let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().of(m.trim.as_str()).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
     let look = line_of(&[suit, trim], ", ");
-    let frags = if js::truthy(m.frags) { alloc::format!(", {} frag{}", m.frags, plural(m.frags)) } else { String::new() };
+    let frags = if js::truthy(m.frags) { alloc::format!(", {} frag{}", m.frags, super::loadouts::plural(m.frags)) } else { String::new() };
     if i == 0.0 {
         let guns = guns_words(g, &m);
         let or_no = |x: f64| if js::truthy(x) { alloc::format!("{}", x) } else { String::from("no") };
         let shells = if js::truthy(m.shells) { alloc::format!(", {}\u{a0}×\u{a0}40\u{a0}mm", m.shells) } else { String::new() };
         let sponge = if js::truthy(m.rings) { alloc::format!(", {}\u{a0}sponge", m.rings) } else { String::new() };
-        let charges = if charge_row(g, 0.0) && js::truthy(m.charges) { alloc::format!(", {} charge{}", m.charges, plural(m.charges)) } else { String::new() };
-        let cams = if js::truthy(m.cams) && cam_row(g) { alloc::format!(", {}\u{a0}cam{}", m.cams, plural(m.cams)) } else { String::new() };
+        let charges = if charge_row(g, 0.0) && js::truthy(m.charges) { alloc::format!(", {} charge{}", m.charges, super::loadouts::plural(m.charges)) } else { String::new() };
+        let cams = if js::truthy(m.cams) && cam_row(g) { alloc::format!(", {}\u{a0}cam{}", m.cams, super::loadouts::plural(m.cams)) } else { String::new() };
         let wand = if m.wand && wand_row(g, 0.0) { String::from(", wand") } else { String::new() };
         let carried = alloc::format!("{} smoke, {} stun{}{}{}{}{}{}", or_no(m.smoke), or_no(m.bangs), frags, shells, sponge, charges, cams, wand);
         let walls = wall_words(g, 0.0, &m);
@@ -254,7 +244,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
     let guns = guns_words(g, &m);
     let smoke = if js::truthy(m.smoke) { alloc::format!(", {} smoke", m.smoke) } else { String::new() };
     let shells = if js::truthy(m.shells) { alloc::format!(", {}\u{a0}×\u{a0}40\u{a0}mm", m.shells) } else { String::new() };
-    let carried = alloc::format!("{} stun, {} charge{}{}{}{}", m.bangs, m.charges, plural(m.charges), frags, smoke, shells);
+    let carried = alloc::format!("{} stun, {} charge{}{}{}{}", m.bangs, m.charges, super::loadouts::plural(m.charges), frags, smoke, shells);
     let walls = wall_words(g, i, &m);
     let big = big_words(&m);
     line_of(&[
@@ -271,7 +261,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
 /// The big slot's shotgun or hammer of a card's line.
 fn big_words(m: &crate::kit::MemberKit) -> String {
     if !js::truthy(m.walls) && m.big != BigKit::None {
-        return big_word().get(String::from(m.big.as_str())).cloned().unwrap_or_default();
+        return big_word().of(m.big.as_str()).cloned().unwrap_or_default();
     }
     String::new()
 }
@@ -283,14 +273,14 @@ fn wall_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Strin
 }
 
 /// Member i's card differs from what he is issued (only the rows his card has).
-pub(super) fn kit_changed(g: &mut crate::game::Game, i: f64) -> bool {
+pub(super) fn kit_changed(g: &crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut d = kit_issued_shown(g, i, None);
     kit_rows(g, i).iter().any(|r| row_has(g, r, &m) && { let (a, b) = (row_get(g, r, &mut m), row_get(g, r, &mut d)); !same_value(&a, &b) })
 }
 
 /// Why member i's card with one row set to `v` is refused, or null: it fits.
-fn over_why(g: &mut crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &crate::kit::KitValue) -> Option<String> {
+fn over_why(g: &crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &crate::kit::KitValue) -> Option<String> {
     let mut m = g.m.kit.kit.members[i as usize].clone();
     row_set(g, row, &mut m, v);
     card_why(g, i, &m)
@@ -397,14 +387,14 @@ pub(super) fn kit_reset_why(g: &mut crate::game::Game, i: f64) -> String {
 }
 
 /// Member i's card is what he is issued.
-pub(super) fn kit_as_issued(g: &mut crate::game::Game, i: f64) -> bool {
+pub(super) fn kit_as_issued(g: &crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut c = issued_dealt(g, i);
     kit_rows(g, i).iter().all(|r| (!row_has(g, r, &c) && !row_has(g, r, &m)) || { let (a, b) = (row_get(g, r, &mut c), row_get(g, r, &mut m)); same_value(&a, &b) })
 }
 
 /// Member i's card as another man's card makes it: each row of his own takes the copied value where it offers it, a count over his row's most comes down.
-fn kit_paste_card(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::MemberKit {
+fn kit_paste_card(g: &crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::MemberKit {
     let mut m = kit_shown(g, i);
     let mut from = from.clone();   // (a read may home its picks: the caller's card is not ours to write)
     for r in kit_rows(g, i) {
@@ -493,13 +483,13 @@ fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {
 }
 
 /// A stored (or hand-typed) card made safe: every field one of its row's values, anything else the issued one.
-pub fn kit_sanitize(g: &mut crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
+pub fn kit_sanitize(g: &crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
     let mut card = kit_default(g, i);
     let Some(raw) = raw else { return card; };
-    let at = |k: &str| raw.get(String::from(k));
-    let word = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Text(s)) => Some(s.as_str()), _ => None };
-    let flag = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Bool(b)) => Some(*b), _ => None };
-    let num = |k: &str| match raw.get(String::from(k)) { Some(KitValue::Num(n)) => *n, _ => 0.0 };
+    let at = |k: &str| raw.of(k);
+    let word = |k: &str| match raw.of(k) { Some(KitValue::Text(s)) => Some(s.as_str()), _ => None };
+    let flag = |k: &str| match raw.of(k) { Some(KitValue::Bool(b)) => Some(*b), _ => None };
+    let num = |k: &str| match raw.of(k) { Some(KitValue::Num(n)) => *n, _ => 0.0 };
 
     let you = i == 0.0;
     let rows = kit_rows(g, i);

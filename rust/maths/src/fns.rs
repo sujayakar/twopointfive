@@ -123,7 +123,6 @@ const MPI4: [u64; 20] = [
 ];
 const M64: u128 = 0xffff_ffff_ffff_ffff;
 /// x ≥ 2^29 reduced by multiples of π/4 (Payne and Hanek: the bits of x against the bits of 4/π): the remainder, and the eighth of the turn.
-/// (The TypeScript does this on unbounded integers; every width below is the one its masks leave.)
 fn trig_reduce(x: f64) -> (f64, i64) {
     let bits = x.to_bits();
     let hw = (bits >> 32) as u32;

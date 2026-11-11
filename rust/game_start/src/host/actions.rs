@@ -1,7 +1,7 @@
 //! THE PANEL'S ACTIONS: what a person does to the game from the debugger that isn't a number, as one list. The page draws a button, a box or a choice from a row and knows none by name; a press is a
 //! command (`Act`), so a tape carries it as it does a turned number.
 use alloc::{format, string::String, vec, vec::Vec};
-use game::game::{Game, GameSetBlackoutCause};
+use game::game::{Game};
 use game::m;
 use game::teams::Team;
 
@@ -56,7 +56,7 @@ const SAM_CLEAR_M: f64 = 8.0;
 fn free(g: &Game, p: [f64; 3], taken: &[[f64; 3]]) -> bool {
     !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
         && !g.props.props.iter().any(|&i| { let r = &g.tab.props_prop[i]; game::props::prop_gap(r.home, r.hx, r.hz, p) < PROP_CLEAR_M })
-        && !taken.iter().any(|t| m::hyp2(t[0] - p[0], t[2] - p[2]) < SPACING_M)
+        && !taken.iter().any(|t| game::v3::dist_xz(*t, p) < SPACING_M)
 }
 fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
     for i in (1..a.len()).rev() { let j = m::floor(die.roll() * (i + 1) as f64) as usize; a.swap(i, j); }
@@ -64,10 +64,10 @@ fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
 }
 /// where n more men can stand: a room clear's unused marks and then its free floor, a room in turn; on any other floor anywhere a man can walk to from the player, none on top of him
 fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
-    let mut die = game::math_dice::mulberry32(0x57E55 as f64);
-    let mut taken: Vec<[f64; 3]> = vec![g.ch[g.pl[g.player].ch].pos];
-    taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
-    taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
+    let mut die = game::dice::Die(0x57E55);
+    let mut taken: Vec<[f64; 3]> = vec![g.player_pos(g.player)];
+    taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.pos_of(x)));
+    taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.pos_of(x)));
     let mut out: Vec<Spot> = Vec::new();
     if !g.staged.rooms.is_empty() {
         let rooms: Vec<_> = g.staged.rooms.iter().map(|r| r.def.clone()).collect();
@@ -101,10 +101,10 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
         }
         return out;
     }
-    let (sam, cell, w, h) = (g.ch[g.pl[g.player].ch].pos, g.col.nav.cell, g.col.nav.w, g.col.nav.h);
+    let (sam, cell, w, h) = (g.player_pos(g.player), g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let mut cells = Vec::new();
     let mut x = 0.0;
-    while x < w { let mut z = 0.0; while z < h { let p = [(x + 0.5) * cell, 0.0, (z + 0.5) * cell]; if m::hyp2(p[0] - sam[0], p[2] - sam[2]) >= SAM_CLEAR_M { cells.push(p); } z += 2.0; } x += 2.0; }
+    while x < w { let mut z = 0.0; while z < h { let p = [(x + 0.5) * cell, 0.0, (z + 0.5) * cell]; if game::v3::dist_xz(p, sam) >= SAM_CLEAR_M { cells.push(p); } z += 2.0; } x += 2.0; }
     for pos in shuffled(cells, &mut die) {
         if out.len() >= n { break; }
         if !free(g, pos, &taken) || game::scene_collision::nav_grid_find_path(g, sam, pos, None, None).is_none() { continue; }
@@ -122,9 +122,9 @@ fn stand_extra(g: &mut Game, n: f64) {
     let budget = game::guards::MAX_SKINNED - g.civilians.len() as f64;
     for s in spots {
         let name = format!("Extra {}", serial + stood + 1);
-        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(false), budget: Some(budget), ..game::guards::UnitOpts::default() };
+        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(game::v3::yaw_to(s.pos, s.aim_at)), name: Some(name.clone()), light: Some(false), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
-        g.gd[gd].hold = true; g.gd[gd].pinned = true;
+        g.gd[gd].duty.holds = true; g.gd[gd].duty.pinned = true;
         game::mission::adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) });
         if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;
@@ -132,7 +132,7 @@ fn stand_extra(g: &mut Game, n: f64) {
 }
 
 pub static ACTIONS: &[Action] = &[
-    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, GameSetBlackoutCause::Debug) } },
+    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, game::lighting::SetBlackoutCause::Debug) } },
     Action { name: "smoke", label: "smoke at the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::sense::sense_tool(g, 2.0, &[a[0], a[1] + 0.12, a[2]]); } },
     Action { name: "clearsmoke", label: "clear smoke", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { game::sense::sense_tool(g, 3.0, &[]); } },
     Action { name: "teleport", label: "teleport to the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::game::game_teleport_player(g, a); } },
@@ -143,7 +143,7 @@ pub static ACTIONS: &[Action] = &[
     Action { name: "groupon", label: "a group on", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, true) },
     Action { name: "groupoff", label: "a group off", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, false) },
     Action { name: "repair", label: "repair the lights", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_repair_lights(g) },
-    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, GameSetBlackoutCause::Debug) },
+    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, game::lighting::SetBlackoutCause::Debug) },
     Action { name: "weather", label: "weather kind", section: "Weather", title: "a new page of this address in that weather", takes: Takes::Reload { word: "weather", picks: WEATHERS }, run: |_, _, _| {} },
     Action { name: "strike", label: "lightning now", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, None); } },
     Action { name: "strikeclose", label: "lightning, close (0.4 km)", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, Some(game::weather::WeatherStrikeOpts { dist_km: Some(0.4), ..Default::default() })); } },

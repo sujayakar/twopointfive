@@ -1,8 +1,7 @@
 //! WHAT A STAND-UP DOES TO A LEVEL'S BOXES before they go to the world, in its order: the thin things that
 //! stand free marked, a window's bars marked
-//! , and each box that says a shape given its record and its pieces of trim. Line for line from the
-//! TypeScript. A level is stood ONCE here, on boxes fresh from its file, so the passes' "put back what an earlier stand-up gave" halves
-//! (plainLevel, thinClear, barClear) have nothing to do and are not written.
+//! , and each box that says a shape given its record and its pieces of trim.
+//! A level is stood ONCE here, on boxes fresh from its file, so no pass has to put back what an earlier stand-up gave.
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
@@ -17,7 +16,7 @@ fn has(b: &Box, bits: f64) -> bool { (b.flags as u32) & (bits as u32) != 0 }
 fn set(b: &mut Box, bit: f64, on: bool) { let f = b.flags as u32; b.flags = (if on { f | bit as u32 } else { f & !(bit as u32) }) as f64; }
 fn cut(b: &Box) -> bool { b.cut.as_ref().map_or(false, |c| !c.is_empty()) }
 
-// ---- thin.ts
+// ---- the thin things
 pub const THIN_WIDTH: f64 = 0.25;
 const BESIDE: f64 = 0.03;
 const SHARE: f64 = 0.25;
@@ -76,14 +75,14 @@ fn stands_free(ai: usize, boxes: &[Box], width: f64) -> bool {
 /// A LEVEL'S THIN THINGS: every static's mark off, then on the ones that stand free. Answers how many.
 pub fn thin_level(g: &mut Game, ids: &[BoxId], doors: &[LevelDoorDef]) -> usize {
     let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes[b], f.thin, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), f.thin, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let free: Vec<usize> = (0..boxes.len()).filter(|&i| solid(&boxes[i]) && narrow(&boxes[i], THIN_WIDTH) && !at_door(&boxes[i], doors) && stands_free(i, &boxes, THIN_WIDTH)).collect();
-    for &i in free.iter() { set(&mut g.tab.boxes[ids[i]], f.thin, true); }
+    for &i in free.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.thin, true); }
     free.len()
 }
 
-// ---- bars.ts
+// ---- a window's bars
 const BAR_ACROSS: f64 = 0.1;
 const BAR_DEEP: f64 = 0.25;
 const BAR_TALL: f64 = 0.4;
@@ -126,14 +125,14 @@ fn in_opening(ai: usize, boxes: &[Box]) -> bool {
 /// A LEVEL'S WINDOW BARS: every static's mark off, then on the ones the rule names. Answers how many.
 pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
     let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes[b], f.bar, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), f.bar, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let bars: Vec<usize> = (0..boxes.len()).filter(|&i| slim(&boxes[i]) && in_opening(i, &boxes)).collect();
-    for &i in bars.iter() { set(&mut g.tab.boxes[ids[i]], f.bar, true); }
+    for &i in bars.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.bar, true); }
     bars.len()
 }
 
-// ---- shapes.ts
+// ---- the shapes
 pub const ARC_PLANES: usize = 5;
 fn arc_facets(n_cut: usize) -> f64 { if n_cut <= 1 { 6.0 } else if n_cut <= 3 { 4.0 } else { 2.0 } }
 /// the eight planes that, with the box's own faces, make a box a twelve-sided prism of radius r about its own x (1) or z (3)
@@ -179,7 +178,7 @@ fn form_box(b: &mut Box, f: &Form) {
     else if let Some(arc) = f.arc { let w = if arc.axis == 1.0 { b.h[2] } else { b.h[0] }; let r = (w * w + arc.rise * arc.rise) / (2.0 * arc.rise); b.cut_round = Some(arc.axis); b.cut_arc = Some(r - b.h[1]); }
     if f.old == Some(true) { b.cut_old = Some(true); }
 }
-/// A LEVEL'S SHAPES (shapes.ts shapeLevel): each box that says a shape is given its record, and its pieces of trim follow the
+/// A LEVEL'S SHAPES: each box that says a shape is given its record, and its pieces of trim follow the
 /// level's last box, so no box changes its number. Never a tilted box, a box cut already or a window's bar. Answers how many
 /// boxes are shaped; `ids` grows by the pieces.
 pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
@@ -189,8 +188,8 @@ pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
         let b = &g.tab.boxes[id];
         let Some(s) = b.shape.clone() else { continue; };
         if b.rot.is_some() || b.cut.is_some() || has(b, f.bar) { continue; }
-        let b = &mut g.tab.boxes[id];
-        form_box(b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
+        let mut b = g.tab.boxes.edit(id);
+        form_box(&mut b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
         b.shaped = Some(true);
         let b = b.clone();
         for w in s.with.iter().flatten() {

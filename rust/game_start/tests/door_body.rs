@@ -9,9 +9,9 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     p.g.god_mode = true;
     p.run(0.17);
     let door = game::doors::doors_by_name(&p.g, "breakroom_n").expect("the office's break room door");
-    assert!(game::doors::door_latched(&p.g, door), "the staging is wrong: the door stands open");
+    assert!(p.g.dr[door].leaf.latched, "the staging is wrong: the door stands open");
     let gd = p.g.guards[0];
-    for o in p.g.guards.clone().into_iter().skip(1) { let m = &mut p.g.gd[o]; (m.hold, m.pinned, p.g.cond[m.ch].blind_until) = (true, true, 1e9); }
+    for o in p.g.guards.clone().into_iter().skip(1) { let m = &mut p.g.gd[o]; (m.duty.holds, m.duty.pinned, p.g.cond[m.ch].blind_until) = (true, true, 1e9); }
     p.sam_put(sam);
     let at = p.sam_at();
     p.walk_keys_to(Some(at));
@@ -24,7 +24,7 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw);
     let t0 = p.g.time;
     let m = &mut p.g.gd[gd];
-    (m.state, m.awareness, m.react_t, p.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, p.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(p.g.pl[p.g.player].ch));
+    (m.state, m.awareness, m.react_t, p.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, p.g.cond[m.ch].blind_until, m.duty.pinned, m.duty.holds, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(p.g.pl[p.g.player].ch));
     m.path.clear();
     m.path_goal = None;
     let (mut first, mut last_shot, mut opened, mut spell, mut worst) = (None, t0, false, 0.0f64, 0.0f64);
@@ -32,7 +32,7 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
         p.frame();
         let now = p.g.time;
         if p.g.events.iter().any(|e| e.kind == game::director::EventKind::GuardShot && e.time == now) { last_shot = now; first = first.or(Some(now - t0)); }
-        opened = opened || game::doors::door_angle(&p.g, door).abs() > 0.1;
+        opened = opened || p.g.dr[door].leaf.angle.abs() > 0.1;
         let m = &p.g.gd[gd];
         if opened && m.state == GuardState::Alert && m.speed < 0.25 && now - last_shot > 2.0 { spell += 1.0 / 60.0; worst = worst.max(spell); } else { spell = 0.0; }
     }

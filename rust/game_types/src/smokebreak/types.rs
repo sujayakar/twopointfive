@@ -18,7 +18,7 @@ pub struct Man {
     pub flamed: bool,
     pub ember_t: f64,
     pub live: bool,
-    /// INVENTED by a review: see the proposals
+    /// when his breath comes out, on his `t`; None while none is due
     pub out_at: Option<f64>,
 }
 

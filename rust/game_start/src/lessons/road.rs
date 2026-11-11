@@ -1,7 +1,8 @@
 //! The tutorial's first mission: what each line asks, through the input only, in the order a new player would do it. He is mortal: the fights are the level's script's and none of them is aimed at
 //! a man who does what the line says.
 use super::{Bot, Ended, Tutorial};
-use crate::player::{at, flat, Walk, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Walk, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -46,7 +47,7 @@ fn down(b: &Bot) -> usize { b.downed() }
 fn stack(b: &Bot) -> bool { b.me(|p| p.wall.as_ref().is_some_and(|w| w.kind == Some(WallHoldKind::Stack))) }
 async fn off_wall(b: &Bot) { if b.on_wall() { b.press("KeyQ", 10).await; } }
 fn sprinting() -> Walk { Walk { sprint: true, ..Walk::doors() } }
-fn last_in(b: &Bot) -> bool { let m = b.men(); m.iter().skip(3).enumerate().all(|(k, &x)| !b.up(x) || flat(b.man_at(x), LAST_MEN[k]) < 0.9) }
+fn last_in(b: &Bot) -> bool { let m = b.men(); m.iter().skip(3).enumerate().all(|(k, &x)| !b.up(x) || dist_xz(b.man_at(x), LAST_MEN[k]) < 0.9) }
 /// the lane behind the sandbags, from the side door's lee to its far end
 async fn lane(b: &Bot) { b.to([JAMB[0] + 0.1, 0.0, LANE_Z], 12.0).await; b.to(BAGS_END, 15.0).await; }
 
@@ -140,7 +141,7 @@ async fn deed(b: &Bot, id: &str) {
             b.until(|| !b.closed(hut), 2.0).await;
             if b.closed(hut) { b.fail(String::from("the reload's line is up and the hut's door still stands: the script did not open it")).await; }
             let w = b.gun();
-            let full = || !b.reloading() && b.ask(|g| game::weapons::firearm_rounds_ready(g, w) >= g.m.weapons.weapons.get(g.fa[w].def).unwrap().mag_capacity);
+            let full = || !b.reloading() && b.ask(|g| game::weapons::firearm_rounds_ready(g, w) >= g.weapon(g.fa[w].def).mag_capacity);
             if !full() && !b.reloading() { b.press("KeyR", 6).await; }
             if !b.reloading() && !full() { b.fail(format!("R did not start a reload ({} ready)", b.rounds())).await; }
             while b.reloading() { b.tick().await; if !b.step_is("reload") { b.fail(String::from("the next line came up while the rifle was still being reloaded")).await; } }
@@ -155,12 +156,12 @@ async fn deed(b: &Bot, id: &str) {
             b.to_near([HUT_X0 - 0.7, 0.0, HUT_DOOR_Z + 0.15], 6.0, 0.25).await;
             b.wait(2.2).await;
             if b.is_down() { b.fail(String::from("he stood at the hut's doorway as the man behind the boards fired, and was hit")).await; }
-            if !b.until(|| !b.up(x) || flat(b.man_at(x), HUT_MAN) < 0.5, 5.0).await { b.fail(format!("the man in the back room did not come out of his nook to the boards (he is at {})", Bot::at_str(b.man_at(x)))).await; }
+            if !b.until(|| !b.up(x) || dist_xz(b.man_at(x), HUT_MAN) < 0.5, 5.0).await { b.fail(format!("the man in the back room did not come out of his nook to the boards (he is at {})", Bot::at_str(b.man_at(x)))).await; }
             // (a burst at the door can chew the boards' near end: a line through a gap his own rounds made is his to have. What is asked is that the boards, where they still stand on the
             //  line between the two, hide the man)
             let (seen, me, c) = (b.line(x), b.pos(), b.chest(x));
             let zc = c[2] + (me[2] - c[2]) * (c[0] - PLANKS_X) / (c[0] - me[0]);
-            let stand = b.world(|w| w.ray([PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
+            let stand = b.ask(|g| game::scene_collision::raycast(g, [PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
             if seen && stand { b.fail(format!("he has a clear line to the man behind the boards from the doorway with the boards standing between them (he is at {}, the player at {})", Bot::at_str(c), Bot::at_str(me))).await; }
             if seen { b.say(String::from("  the boards on the line to him are down (his own rounds at the door): he is shot through the gap")); }
             let r0 = b.rounds();
@@ -213,7 +214,7 @@ async fn deed(b: &Bot, id: &str) {
             b.fight(6, 60.0, async || {
                 let Some(x) = b.men().into_iter().find(|&y| b.up(y)) else { return };
                 let p = b.man_at(x);
-                if !b.on_wall() && flat(p, b.pos()) > 12.0 { b.to_by([p[0], 0.0, p[2]], 1.5, Walk::doors(), || b.line(x)).await; } else { b.ticks(10).await; }
+                if !b.on_wall() && dist_xz(p, b.pos()) > 12.0 { b.to_by([p[0], 0.0, p[2]], 1.5, Walk::doors(), || b.line(x)).await; } else { b.ticks(10).await; }
             }, None).await;
         }
         // THE RADIO: the trunk in the gun's nest, round the end of its sandbags. The line asks for a TAP, and a tap does the top row: it must be the radio's (the gunner lies a pace from it)

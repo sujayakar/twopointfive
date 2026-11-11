@@ -14,7 +14,7 @@ pub struct Man { pub ch: CharId, pub team: String, pub kind: &'static str, pub d
 pub fn men(g: &Game) -> Vec<Man> {
     let mut out = Vec::new();
     for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: "player", down: g.cond[q.ch].down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
-    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: m.team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
+    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: g.ch[m.ch].team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
     for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: "civ", down: g.cond[m.ch].down, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
     out
 }
@@ -23,7 +23,7 @@ fn bits(v: f64) -> String { format!("{:016x}", v.to_bits()) }
 /// what is in a gun: chambered and in the magazine, the spare magazines, the rounds it has fired
 fn rounds(g: &Game, gun: FirearmId) -> String { let f = &g.fa[gun]; format!("{} {} {} {}", f.chamber, f.mag.unwrap_or(-1.0), f.spare.iter().sum::<f64>(), f.shots_fired) }
 fn order_of(g: &Game, gd: GuardId) -> String {
-    for &s in &g.seats { if let Some(a) = game::orders::squad_orders_of(&game::seats::seat(g, s), gd) { return g.tab.orders_assignment[a].order.clone(); } }
+    for &s in &g.seats { if let Some(a) = game::orders::squad_orders_of(&game::seats::seat(g, s), gd) { return g.tab.task[a].order.clone(); } }
     String::new()
 }
 
@@ -81,8 +81,7 @@ fn destroyed(g: &Game) -> String {
 /// EVERY FIGURE, named: `who what` and its value as text
 pub fn read(g: &Game) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
-    let d = &sim::state::state_read(g.sim).dice;
-    out.push((String::from("die"), format!("{} {}", d.n, d.s)));
+    out.push((String::from("draws"), format!("{}", g.dice.n)));
     for m in men(g) {
         let c = &g.ch[m.ch];
         let who = match (m.player, m.kind) { (Some((i, _)), _) => format!("seat {}", i), (_, "civ") => format!("civilian {}", c.id), _ => format!("man {}", c.id) };
@@ -104,7 +103,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
         }
     }
     for &d in &g.doors.list {
-        out.push((format!("door {}", g.dr[d].i), format!("{} {} {} {} {}", bits(game::doors::door_angle(g, d)), game::doors::door_latched(g, d), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d))));
+        out.push((format!("door {}", g.dr[d].i), format!("{} {} {} {} {}", bits(g.dr[d].leaf.angle), g.dr[d].leaf.latched, g.dr[d].leaf.locked, g.dr[d].leaf.lock_broken, g.dr[d].leaf.off)));
     }
     for (bi, said) in glass(g) { out.push((format!("glass {}", bi), said)); }
     for id in g.tab.fixture.ids() { out.push((format!("lamp {}", id.0 as f64), lamp(g, id))); }
@@ -147,7 +146,7 @@ impl Track {
 pub fn line(g: &Game) -> String {
     let mut said = Vec::new();
     for (i, &s) in g.seats.iter().enumerate() { let q = &g.pl[game::cmd::seat_man(g, s)]; said.push(format!("seat {} {}", i, if g.cond[q.ch].down { "down" } else { "up" })); }
-    let side = |ours: bool| g.guards.iter().filter(move |&&x| (g.gd[x].team == game::teams::Team::Operative) == ours);
+    let side = |ours: bool| g.guards.iter().filter(move |&&x| (g.team(x).ours()) == ours);
     let up = |ours: bool| side(ours).filter(|&&x| !game::condition::down(g, g.gd[x].ch) && g.gd[x].down_kind.is_none()).count();
     said.push(format!("{} of {} ours up", up(true), side(true).count()));
     said.push(format!("{} of {} others up", up(false), side(false).count()));

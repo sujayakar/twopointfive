@@ -20,7 +20,7 @@ fn at_the_door(s: u32, work: &str) -> (Play, DoorId, [f64; 2]) {
     let there = p.at(keep);
     p.pin_man(keep, there, 0.0, GuardState::Patrol, 0.0);
     let d = game::doors::doors_by_name(&p.g, "server").unwrap();
-    if work == "lock" { game::doors::door_set_locked(&mut p.g, d, true); }
+    if work == "lock" { p.g.dr[d].leaf.locked = true; }
     let sam = p.g.player;
     p.g.pl[sam].wand = true;
     p.sam_put([door[0], door[1] + 0.9]);
@@ -35,7 +35,7 @@ fn starts(p: &mut Play, d: DoorId, work: &str) {
     else { game::player::start_picking(&mut p.g, d); }
     p.frame();
     let sam = p.g.player;
-    assert!(p.g.pl[sam].crouch && (p.g.pl[sam].wanding.is_some() || p.g.pl[sam].picking.is_some()), "{work}: he never went down to it");
+    assert!(p.g.pl[sam].crouch && (p.g.pl[sam].wanding().is_some() || p.g.pl[sam].picking().is_some()), "{work}: he never went down to it");
 }
 fn taps(p: &mut Play, key: &str) { p.key_down(key); p.frame(); p.key_up(key); p.run(0.2); }
 trait Low { fn low_men(&self) -> (bool, bool); }
@@ -44,7 +44,7 @@ impl Low for Play { fn low_men(&self) -> (bool, bool) { let l: Vec<bool> = self.
 /// a step back from his work: he breaks it off, still on his knee
 fn steps_off(p: &mut Play, door: [f64; 2]) {
     p.walk_keys_to(Some([door[0] + 0.1, door[1] + 2.0]));
-    p.until(3.0, |p| { let s = p.g.player; p.g.pl[s].wanding.is_none() && p.g.pl[s].picking.is_none() }).expect("a step breaks it off");
+    p.until(3.0, |p| { let s = p.g.player; p.g.pl[s].wanding().is_none() && p.g.pl[s].picking().is_none() }).expect("a step breaks it off");
     p.run(0.3);
     p.walk_keys_to(None);
     p.run(1.0);

@@ -71,7 +71,8 @@ everywhere. What is drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ 
 for gun gas, out of one pool (`smokeGridConfig`). `smokeFrom` hands the grid over where a step was taken, and the solver is **bent toward it** a
 little every step (`SmokeParams`: `bend`, `pull`), as fast as the gap shows; it thins by the game's law alone. Only the game's own share of a cell is measured;
 a fire's plume or a breath says so in its `K`
-word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). `SMOKE_LOOK` is how smoke is drawn.
+word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). Both go by
+a pane where it has fallen out: the solver asks `glass_open.wgsl`, as the picture does, and bakes again as a pane opens. `SMOKE_LOOK` is how smoke is drawn.
 
 **Eyes.** Buffers hold exposed light. `hourExposure` says what an hour's picture stands for, and every source is drawn at the lesser of its authored
 and its real strength under it (`photometry.ts`). `PlaceField` solves one light level a place from the cache, on `PlaceMap`'s cells. `lookExpoFor`
@@ -112,7 +113,9 @@ program is in, up to a cap.
   matches something authoritatively on the CPU, we should have a control system that bends the GPU sim towards the CPU state gradually". Detail finer
   than the grid is free: "i'm actually fine with vision being a bit different than the visuals, can be just the brick level stuff".
 - **Smoke stays near High.** "the smoke looks so sick in our game that i'd rather we keep it closer to high but then tradeoff other things in the
-  frame budget". Only `verylow` marches at a quarter, and medium and low take "Per-pixel, two lights a step".
+  frame budget". `verylow` marches at a quarter, and `high` too since the maintainer picked it from stills
+  (the light cache at half rate and the mesh in the direct light's rays alone with it; the climb's last rung gives the half size back); medium and low
+  march at half and take "Per-pixel, two lights a step".
 - **Four presets.** "I think we can just remove ultra entirely".
 - **Past the level's edge is black.** "we should just have black outside the edges of the map, not extend" (`composite.wgsl`).
 - **Compile once, and never in play.** "ideally not needing to recompile for the gear selection screen and levels", "i think we shouldn't do truly
@@ -151,7 +154,8 @@ It says nothing of time or of how a thing looks. Say "never seen on a GPU" of an
 
 Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block against the struct), `shaders-check.ts` (parse, `trim`, `fold`, `inline`),
 `quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
-`settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`.
+`settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`. By hand, on the
+module: `bun run tools/draw/doors-check.ts` (each door's share of the plan, kept).
 
 Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokelife-page.cjs` (the running smoke is the
 game's; `--life` on a card), `smokejump-page.cjs` (after a jump the

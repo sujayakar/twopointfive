@@ -89,7 +89,7 @@ fn every_run_owes() {
 /// A FAILURE MEANS: that kind of fault can happen with nobody told: each row breaks one thing by hand in a run that owed nothing until then.
 #[test]
 fn each_fault_is_said() {
-    use game::doors as d;
+    
     use game::game::{GuardState, MissionStage};
     type Break = fn(&mut Play, game::ids::GuardId);
     let rows: [(&str, Break); 12] = [
@@ -99,8 +99,8 @@ fn each_fault_is_said() {
         ("awareness", |p, m| p.g.gd[m].awareness = 2.0),
         ("alive", |p, m| { let c = p.g.gd[m].ch; p.g.ch[c].alive = false; }),
         ("down with no how", |p, m| { let c = p.g.gd[m].ch; p.g.gd[m].state = GuardState::Dead; p.g.cond[c].down = true; p.g.ch[c].alive = false; }),
-        ("door", |p, _| { let k = p.g.doors.list[0]; d::door_set_latched(&mut p.g, k, true); d::door_set_angle(&mut p.g, k, 0.5); }),
-        ("door", |p, _| { let k = p.g.doors.list[0]; d::door_set_pick(&mut p.g, k, 2.0); }),
+        ("door", |p, _| { let k = p.g.doors.list[0]; p.g.dr[k].leaf.latched = true; p.g.dr[k].leaf.angle = 0.5; }),
+        ("door", |p, _| { let k = p.g.doors.list[0]; p.g.dr[k].leaf.pick = 2.0; }),
         ("alarm", |p, _| { p.g.escalation = 1.0; p.g.escalation_t = -1.0; }),
         ("lockdown duty", |p, m| { let other = p.g.guards.iter().copied().find(|&x| x != m).unwrap(); p.g.gd[m].leader = Some(other); }),
         ("tracers", |p, _| p.g.tracers.live += 1.0),
@@ -153,7 +153,7 @@ fn each_count_counts() {
         p.order("move", [far[0], far[1] + 3.0], game::orders::Who::All);
         let mut stuck_at_3 = 0;
         for i in 0..60 * 7 {
-            if !watchdog { let seat = game::seats::here(&p.g); let a = game::orders::squad_orders_of(&seat, man).unwrap(); p.g.tab.orders_assignment[a].mark_t = p.g.time; }
+            if !watchdog { let seat = game::seats::here(&p.g); let a = game::orders::squad_orders_of(&seat, man).unwrap(); p.g.tab.task[a].mark_t = p.g.time; }
             p.frame();
             let c = p.g.gd[man].ch;
             (p.g.ch[c].pos[0], p.g.ch[c].pos[2]) = (at[0], at[1]);

@@ -35,10 +35,6 @@ fn deal_key(i: usize, x: f64, z: f64) -> String {
     alloc::format!("0|{}|{}|{}", i, round_text(x * 10.0), round_text(z * 10.0))
 }
 
-/// `WEAPONS[id]`, for a read. A Firearm's `def` is this table's key, one row an id.
-fn row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(id).unwrap()
-}
 /// The id of the row of his primary: `gunPrimary` without the copy of the row, for the rules here that ask only which row it is.
 fn primary_id(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
     if let Some(s) = &g.gd[gd].second {
@@ -51,13 +47,13 @@ fn primary_id(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
 }
 /// The row in his hands, `gd.weapon.def`.
 fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
-    row(g, g.fa[g.gd[gd].weapon].def)
+    g.weapon(g.fa[g.gd[gd].weapon].def)
 }
 
 /// What his primary is for.
 fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
-    if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
+    if g.weapon(d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)
 }
 
@@ -67,7 +63,7 @@ fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// The clear floor from his mark toward what he watches, chest high (m).
-fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
+fn line_of(g: &crate::game::Game, p: V3, to: V3) -> f64 {
     let dx = to[0] - p[0];
     let dz = to[2] - p[2];
     let l = m::hyp2(dx, dz);
@@ -82,10 +78,10 @@ fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
 /// A row of the table into a man's hands: nothing for the row he carries or one switched off.
 fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::WeaponId) {
     let held = g.gd[gd].weapon;
-    if g.fa[held].def == id_2 || !row(g, id_2).enabled { return; }
+    if g.fa[held].def == id_2 || !g.weapon(id_2).enabled { return; }
     let route = g.gd[gd].route;
     g.tab.route[route].weapon = Some(id_2);
-    let def = row(g, id_2).clone();
+    let def = g.weapon(id_2).clone();
     let gun = crate::weapons::firearm_new(g, &def);
     g.gd[gd].weapon = gun;
     g.gd[gd].reload_t = -1.0;
@@ -114,9 +110,9 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
     for (i, dm) in men.iter().enumerate() {
         let c = g.gd[dm.gd].ch;
         let p = g.ch[c].pos;
-        let mut d = crate::math_dice::die_of(crate::math_dice::hash_str(&deal_key(i, p[0], p[2])));
-        let first = crate::math_dice::roll(&mut d);
-        let second = crate::math_dice::roll(&mut d);
+        let mut d = crate::dice::Die(js::to_u32(crate::dice::hash_str(&deal_key(i, p[0], p[2]))));
+        let first = d.roll();
+        let second = d.roll();
         draws.push([first, second]);
     }
     let n = men.len() as f64;
@@ -155,21 +151,21 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
     }
     let mut said: Vec<String> = Vec::with_capacity(out.len());
     for o in &out {
-        let short = row(g, o.gun).short.replace(' ', "-");
+        let short = g.weapon(o.gun).short.replace(' ', "-");
         said.push(alloc::format!("{} {} ({} m)", g.gd[o.gd].callsign, short, round_text(o.line)));
     }
     out
 }
 
 /// A defender with the belt-fed gun keeps the post he was dealt.
-pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
+pub fn gun_keeps_post(g: &crate::game::Game, gd: GuardId) -> bool {
+    if g.team(gd) != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
     true
 }
 
 /// What this dealing of men to stack marks costs for the guns in it.
 pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) -> f64 {
-    let d: Vec<f64> = spots.iter().map(|s| m::hyp2(s[0] - front[0], s[2] - front[2])).collect();
+    let d: Vec<f64> = spots.iter().map(|s| v3::dist_xz(*s, front)).collect();
     let file_cost = g.k.gunroles.file_cost;
     let mut c = 0.0;
     for a in 0..r.len() {
@@ -188,7 +184,7 @@ pub fn gun_file_ranks(g: &crate::game::Game, men: &[GuardId]) -> Option<Vec<f64>
 }
 
 /// Of the men who may go first, the ones whose gun is the room's.
-pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
+pub fn gun_first(g: &crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     let lo = m::min_n(&ranks);
@@ -203,7 +199,7 @@ pub fn gun_before(g: &crate::game::Game, first: GuardId, lead: GuardId) -> bool 
 }
 
 /// The turn the men go in by, the long guns last in the order they had; the man picked first never moves.
-pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
+pub fn gun_turn(g: &crate::game::Game, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 { return turn.to_vec(); }
     let mut long: Vec<GuardId> = Vec::new();
     for &x in turn {
@@ -216,7 +212,7 @@ pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> 
 }
 
 /// The men through a blown wall, nearest the hole first: the long guns' men after the others.
-pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
+pub fn gun_last(g: &crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     let back: Vec<GuardId> = men.iter().zip(&ranks).filter(|(_, &r)| r == 2.0).map(|(&x, _)| x).collect();
@@ -252,7 +248,7 @@ pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
     if d != primary_id(g, gd) { return 0.0; }
     let r = gun_role(g, gd);
     if r == GunRole::Belt {
-        if let Some(b) = &row(g, d).burst { return m::round((b.min + b.max) / 2.0); }
+        if let Some(b) = &g.weapon(d).burst { return m::round((b.min + b.max) / 2.0); }
     }
     if r == GunRole::Reach { 1.0 } else { 0.0 }
 }

@@ -1,6 +1,7 @@
 //! LYING SNOW UNDERFOOT: how boggy the ground is, read off the one table of the snow (world.rs `snow`, a byte a static, each box's place and turn being its own row's)
 //! under the roofs in force. A bounce's own numbers (`dead`, `grip`, `stick`) are no part of how boggy the ground is.
-use crate::world::{js_abs, js_max, js_min, world, REC, R_C, R_COS, R_H, R_SIN, SNOW_BANK, SNOW_OLD, SNOW_PACKED};
+//! It keeps nothing: a question is handed the box world and the rule's numbers (`Snow`).
+use crate::world::{js_abs, js_max, js_min, REC, R_C, R_COS, R_H, R_SIN, SNOW_BANK, SNOW_OLD, SNOW_PACKED, World};
 use game_types::knobs::Knobs;
 
 /// how many roofs a level has in force, at most
@@ -27,14 +28,13 @@ fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
     js_abs(cs * px - sn * pz) <= rec[q + R_H] && js_abs(sn * px + cs * pz) <= rec[q + R_H + 2]
 }
 /// HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare
-pub fn bog_of(w: usize, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
-    let o = world(w);
-    let n = o.boxes as usize;
+pub fn bog_of(w: &World, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
+    let n = w.boxes();
     if !(y < s.top) {
         for bi in 0..n {
-            if o.snow[bi] == SNOW_BANK {
+            if w.snow[bi] == SNOW_BANK {
                 let q = bi * REC;
-                if js_abs(o.rec[q + R_C + 1] + o.rec[q + R_H + 1] - y) <= s.bank && over(&o.rec, q, x, z) {
+                if js_abs(w.rec[q + R_C + 1] + w.rec[q + R_H + 1] - y) <= s.bank && over(&w.rec, q, x, z) {
                     return 1.0;
                 }
             }
@@ -46,8 +46,8 @@ pub fn bog_of(w: usize, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
     }
     let mut k = 1.0;
     for bi in 0..n {
-        let kind = o.snow[bi];
-        if kind == 0 || kind == SNOW_BANK || !over(&o.rec, bi * REC, x, z) {
+        let kind = w.snow[bi];
+        if kind == 0 || kind == SNOW_BANK || !over(&w.rec, bi * REC, x, z) {
             continue;
         }
         let v = if kind == SNOW_PACKED { s.packed } else if kind == SNOW_OLD { s.old } else { 0.0 };
@@ -59,7 +59,7 @@ pub fn bog_of(w: usize, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
 }
 
 /// How boggy the ground of world `w` is under these roofs where a thing touched down at (x, y, z), 0‥1
-pub fn bog_at(roofs: &[[f64; 4]], w: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> f64 {
+pub fn bog_at(roofs: &[[f64; 4]], w: &World, x: f64, y: f64, z: f64, tune: &Knobs) -> f64 {
     let mut roof = [0.0; MAX_ROOFS * 4];
     for (to, r) in roof.chunks_exact_mut(4).zip(roofs) {
         to.copy_from_slice(r);

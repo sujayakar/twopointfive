@@ -6,16 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// every kind of target carries `at` (the rows here are floor rows; squad40 lends on a floor target)
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(x) => x.at,
-        crate::orders::OrderTarget::Door(x) => x.at,
-        crate::orders::OrderTarget::None(x) => x.at,
-        crate::orders::OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// a man's `{ ...fields of a lent order }` in another struct of the same shape (Lent.back, Walk.back, the assignment handed to `assign`)
 macro_rules! back_as {
     ($b:expr, $T:path) => {{
@@ -31,13 +21,13 @@ macro_rules! back_as {
     }};
 }
 
-/// a walk read as the Lent it extends (the TypeScript passes the same object)
+/// a walk read as the Lent it extends
 fn walk_lent(w: &Walk) -> Lent {
     Lent { mates: w.mates.clone(), gd: w.gd, t: w.t.clone(), a: w.a, home: w.home, home_yaw: w.home_yaw, back: w.back.clone().map(|b| back_as!(b, LentBack)) }
 }
 
 /// the row of the walk (only between calls that take `g`)
-fn walk_of(g: &mut Game, key: PlayerId, gd: GuardId) -> Option<&mut Walk> {
+fn walk_of(g: &mut Game, key: GroupId, gd: GuardId) -> Option<&mut Walk> {
     g.m.squadthrow.states.get_mut(key).and_then(|s| s.walks.get_mut(gd))
 }
 
@@ -46,14 +36,14 @@ fn arc_of(th: &SquadThrower) -> Arc {
 }
 
 /// The state's row, made if it is not there; its key, for a write that outlives a call taking `g`.
-fn state_key(g: &mut Game) -> PlayerId {
+fn state_key(g: &mut Game) -> GroupId {
     state(g);
-    crate::seats::view_key(g, &crate::seats::here(g))
+    g.group
 }
 
 /// This view's state, the row itself, made if it is not there.
 pub(super) fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     g.m.squadthrow.states.get_or_insert_with(k, || State::default())
 }
 
@@ -82,9 +72,6 @@ pub(super) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squa
     let text = format!("{} · {} out", g.gd[gd].callsign, if kind == SquadThrowKind::Frag { "frag" } else { "bang" });
     let t = g.time;
     g.m.squadthrow.states.get_mut(key).unwrap().shown = Some(StateShown { t, text });
-    if kind == SquadThrowKind::Frag {
-    } else {
-    }
     let who_said = g.gd[gd].callsign.clone();
     let log = &mut g.m.squadthrow.squadthrow_log;
     log.push(SquadthrowModSQUADTHROWLOGItem { who: who_said, rest: arc.rest });
@@ -98,25 +85,25 @@ pub(in crate::squad_orders) fn squad_log_row(g: &mut crate::game::Game, gd: Guar
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
-    g.sets[g.seat].orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
+    g.groups[g.group].orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
 }
 
 /// The assignment that walks him to his throw, under the row's own id.
-fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::SquadThrowKind, post: V3, at: V3, arc: Option<&crate::squadthrow::Arc>) -> Option<OrdersAssignmentId> {
+fn walk_to(g: &mut crate::game::Game, gd: GuardId, kind: crate::squadthrow::SquadThrowKind, post: V3, at: V3, arc: Option<&crate::squadthrow::Arc>) -> Option<TaskId> {
     let face = match arc {
         Some(a) => v3::yaw_of(a.sol.v0),
         _ => v3::yaw_to(post, at),
     };
     let w = word(kind).as_str();
-    crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
+    crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
         order: String::from(row_of(kind).as_str()),
         post: Some(v3::copy(post)),
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-        going: format!("moving to throw · {}", w),
-        there: format!("throwing · {}", w),
+        going: format!("moving to throw · {}", w).into(),
+        there: format!("throwing · {}", w).into(),
         set_line: None,
         ..Default::default()
     });
@@ -128,7 +115,7 @@ pub(super) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::
     let key = state_key(g);
     let gd = th.gd;
     let post = th.post.unwrap();
-    let at = target_at(t);
+    let at = t.at();
     let line = walk_line(g, gd, post);
     let lent = squad_lend(g, &crate::seats::here(g), gd, t);
     let last_t = g.time;
@@ -172,7 +159,7 @@ pub(in crate::squad_orders) fn squad_lend(g: &crate::game::Game, seat: &crate::s
     let was = crate::orders::squad_orders_of(seat, gd);
     let back = match was {
         Some(a) if crate::orders::rows::is(g, a, crate::orders::Is::Resumed) => {
-            let w = g.tab.orders_assignment[a].clone();
+            let w = g.tab.task[a].clone();
             Some(LentBack {
                 order: w.order,
                 post: w.post.map(v3::copy),
@@ -201,13 +188,13 @@ pub(in crate::squad_orders) fn squad_lend(g: &crate::game::Game, seat: &crate::s
     };
     let mut mates = Vec::new();
     if let Some(a) = was {
-        let (group, order) = (g.tab.orders_assignment[a].group, g.tab.orders_assignment[a].order.clone());
+        let (group, order) = (g.tab.task[a].group, g.tab.task[a].order.clone());
         for m in g.guards.clone() {
             if m == gd {
                 continue;
             }
             if let Some(o) = crate::orders::squad_orders_of(seat, m) {
-                let row = &g.tab.orders_assignment[o];
+                let row = &g.tab.task[o];
                 if row.group == group && row.order == order {
                     mates.push(m);
                 }
@@ -229,7 +216,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
     }
     crate::orders::squad_orders_new_group(g);
     if b.as_ref().map_or(false, |b| crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows)) {
-        let d = g.sets[g.seat].orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
+        let d = g.groups[g.group].orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
         if let Some(d) = d {
             crate::orders::order_issue(g, d, &[gd], &w.t, None);
             return;
@@ -242,7 +229,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
             for m in w.mates.iter().copied() {
                 if !crate::condition::down(g, g.gd[m].ch) {
                     if let Some(o) = crate::orders::squad_orders_of(&crate::seats::here(g), m) {
-                        if g.tab.orders_assignment[o].order == b.order {
+                        if g.tab.task[o].order == b.order {
                             any = true;
                             break;
                         }
@@ -256,7 +243,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
         if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows) && !stale {
             let post = Some(b.post.unwrap_or_else(|| v3::copy(w.home)));
             let face = Some(b.face.unwrap_or(w.home_yaw));
-            let mut a = back_as!(b, crate::orders::SquadOrdersAssignA);
+            let mut a = back_as!(b, crate::duty::TaskGiven);
             a.post = post;
             a.face = face;
             crate::orders::squad_orders_assign(g, gd, &a);
@@ -265,22 +252,22 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
     }
     let at: V3 = if back { w.home } else { [p[0], 0.0, p[2]] };
     let face = if back { w.home_yaw } else { g.ch[c].body_yaw };
-    crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
+    crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some(v3::copy(at)),
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-        going: String::from(if back { "moving back" } else { "holding" }),
-        there: String::from("holding"),
+        going: String::from(if back { "moving back" } else { "holding" }).into(),
+        there: "holding".into(),
         set_line: None,
         ..Default::default()
     });
 }
 
 /// the walk is over: his word if any, off the list, handed back (walkTick's `end`)
-fn end_walk(g: &mut Game, key: PlayerId, gd: GuardId, line: Option<&str>) {
+fn end_walk(g: &mut Game, key: GroupId, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
         crate::game::game_say(g, gd, l, None, None);
     }
@@ -291,7 +278,7 @@ fn end_walk(g: &mut Game, key: PlayerId, gd: GuardId, line: Option<&str>) {
 }
 
 /// One more look, from where he is (twice at most): true = he is walking again. (walkTick's lookAgain)
-fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
+fn look_again(g: &mut Game, key: GroupId, gd: GuardId) -> bool {
     let (again, at, kind) = match walk_of(g, key, gd) {
         Some(w) => (w.again, w.at, w.kind),
         None => return false,
@@ -327,31 +314,28 @@ fn look_again(g: &mut Game, key: PlayerId, gd: GuardId) -> bool {
     true
 }
 
-/// A WALKING THROWER'S FRAME: the rows' `tick`, while he is under the row's id and the fight does not have him.
-pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+/// One frame of a walking thrower.
+#[derive(Clone, Copy)]
+struct OnHisWalk {
+    key: GroupId,
+    gd: GuardId,
+    a: TaskId,
+    now: f64,
+    p: V3,
+    post: V3,
+    at: V3,
+    kind: SquadThrowKind,
+}
+
+/// A WALKING THROWER'S FRAME: the rows' `tick`, while he is under the row's id and the fight does not have him. Walking, nothing; on his place and settled, the throw, if it
+/// still holds.
+pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let key = state_key(g);
     let now = g.time;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let had = g.m.squadthrow.states.get(key).and_then(|s| s.walks.get(gd)).map(|w| w.a);
-    if had != Some(Some(a)) {
-        if had.is_some() {
-            g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
-        }
-        let face = g.ch[c].body_yaw;
-        crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-            order: String::from(crate::orders::rows::hold::ORDER.id),
-            post: Some([p[0], 0.0, p[2]]),
-            face: Some(face),
-            stance: Some(crate::character::Stance::LowReady),
-            upper: Some(crate::character::UpperMode::None),
-            going: String::from("holding"),
-            there: String::from("holding"),
-            set_line: None,
-            ..Default::default()
-        });
-        return;
-    }
+    if had != Some(Some(a)) { holds_where_he_is(g, key, gd, had.is_some()); return; }
     let (thrown_t, spent, post, at, kind) = {
         let w = walk_of(g, key, gd).unwrap();
         let dt = now - w.last_t;
@@ -367,15 +351,9 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         return;
     }
-    if spent > g.k.squadthrow.walk_secs {
-        return end_walk(g, key, gd, Some("can't get a throw."));
-    }
-    if !g.tab.orders_assignment[a].arrived && v3::dist_xz(p, post) > 0.4 {
-        return;
-    }
-    if !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) {
-        return;
-    }
+    if spent > g.k.squadthrow.walk_secs { return end_walk(g, key, gd, Some("can't get a throw.")); }
+    if !g.tab.task[a].arrived && v3::dist_xz(p, post) > 0.4 { return; }
+    if !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) { return; }
     let on_t = {
         let w = walk_of(g, key, gd).unwrap();
         if w.on_t < 0.0 {
@@ -383,46 +361,9 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         w.on_t
     };
-    if now - on_t < g.k.squadthrow.settle_secs || g.gd[gd].speed > 0.3 {
-        return;
-    }
-    let roll = roll_of(g, kind);
-    let mut arc: Option<Arc> = crate::squadsmoke::squad_arc_to(g, gd, at, roll, None).map(|t| Arc { from: t.from, sol: t.sol, rest: t.rest });
-    if arc.is_none() {
-        let (held_at, held_t, was) = {
-            let w = walk_of(g, key, gd).unwrap();
-            (w.held_at, w.held_t, w.arc.clone())
-        };
-        let redo = match held_at {
-            None => true,
-            Some(h) => v3::dist_xz(p, h) > 0.05 || now - held_t.unwrap() > 1.0,
-        };
-        if redo {
-            let from: V3 = [was.from[0] + p[0] - post[0], was.from[1], was.from[2] + p[2] - post[2]];
-            let f = if crate::scene_collision::solid_blocked(g, [p[0], from[1], p[2]], from, None) { None } else { Some(crate::throwplan::throw_flight(g, kind, from, was.sol.v0, None)) };
-            let hits = match &f {
-                Some(f) => crate::throwplan::throw_hits(g, f.end, at, None),
-                None => false,
-            };
-            let held: Option<Arc> = match (hits, f) {
-                (true, Some(f)) => Some(Arc { from, sol: crate::throwables::ThrowSolution { points: f.points, land: f.land, ..was.sol.clone() }, rest: f.end }),
-                _ => {
-                    let n = g.k.squadthrow.lob_sims;
-                    crate::throwplan::throw_to(g, gd, at, kind, None, None, Some(&mut crate::throwplan::ThrowToLim { n })).map(|t| Arc { from: t.from, sol: t.sol, rest: t.rest })
-                }
-            };
-            if let Some(h) = &held {
-                g.tab.orders_assignment[a].face = Some(v3::yaw_of(h.sol.v0));
-            }
-            if let Some(w) = walk_of(g, key, gd) {
-                w.held = held;
-                w.held_at = Some(v3::copy(p));
-                w.held_t = Some(now);
-            }
-        }
-        arc = walk_of(g, key, gd).and_then(|w| w.held.clone());
-    }
-    let Some(arc) = arc else {
+    if now - on_t < g.k.squadthrow.settle_secs || g.gd[gd].speed > 0.3 { return; }
+    let f = OnHisWalk { key, gd, a, now, p, post, at, kind };
+    let Some(arc) = throw_from_here(g, &f) else {
         if !look_again(g, key, gd) {
             end_walk(g, key, gd, Some("no throw from here."));
         }
@@ -432,31 +373,91 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         w.arc = arc.clone();
     }
     let toward = v3::yaw_of(arc.sol.v0);
-    if m::abs(v3::wrap_angle(g.ch[c].body_yaw - toward)) > 0.9 && now - on_t < g.k.squadthrow.turn_secs {
-        return;
-    }
-    if left(g, kind) <= 0.0 {
-        let w = none(kind).as_str();
-        return end_walk(g, key, gd, Some(w));
-    }
-    if kind == SquadThrowKind::Frag {
-        let who = squad_frag_catches(g, arc.rest, at, Some(SquadFragCatchesMoved { gd, at: p }), Some(false), None, None);
-        if let Some(who) = who {
-            if who == format!("{} is in it.", g.gd[gd].callsign) && look_again(g, key, gd) {
-                return;
-            }
-            return end_walk(g, key, gd, Some(who.as_str()));
-        }
-    }
-    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
-    if !crate::doortools::door_tools_take(g, what) {
-        let w = none(kind).as_str();
-        return end_walk(g, key, gd, Some(w));
-    }
+    if m::abs(v3::wrap_angle(g.ch[c].body_yaw - toward)) > 0.9 && now - on_t < g.k.squadthrow.turn_secs { return; }
+    if left(g, kind) <= 0.0 { return end_walk(g, key, gd, Some(none(kind).as_str())); }
+    if frag_would_catch_ours(g, &f, &arc) { return; }
+    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsCan::Frag } else { crate::doortools::DoorToolsCan::Bang };
+    if !crate::doortools::door_tools_take(g, what) { return end_walk(g, key, gd, Some(none(kind).as_str())); }
     throw_it(g, gd, &arc, kind);
     if let Some(w) = walk_of(g, key, gd) {
         w.thrown_t = now;
     }
+}
+
+/// His order is no longer this walk: it is forgotten, and he holds where he stands.
+fn holds_where_he_is(g: &mut Game, key: GroupId, gd: GuardId, had_a_walk: bool) {
+    if had_a_walk {
+        g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
+    }
+    let c = g.gd[gd].ch;
+    let p = g.ch[c].pos;
+    let face = g.ch[c].body_yaw;
+    crate::orders::squad_orders_assign(g, gd, &crate::duty::TaskGiven {
+        order: String::from(crate::orders::rows::hold::ORDER.id),
+        post: Some([p[0], 0.0, p[2]]),
+        face: Some(face),
+        stance: Some(crate::character::Stance::LowReady),
+        upper: Some(crate::character::UpperMode::None),
+        going: "holding".into(),
+        there: "holding".into(),
+        set_line: None,
+        ..Default::default()
+    });
+}
+
+/// A straight arc from where he stands, else the throw he came here for, kept while he stays put and for a second at most.
+fn throw_from_here(g: &mut Game, f: &OnHisWalk) -> Option<Arc> {
+    let OnHisWalk { key, gd, now, p, at, kind, .. } = *f;
+    let roll = roll_of(g, kind);
+    let arc: Option<Arc> = crate::squadsmoke::squad_arc_to(g, gd, at, roll, None).map(|t| Arc { from: t.from, sol: t.sol, rest: t.rest });
+    if arc.is_some() { return arc; }
+    let (held_at, held_t, was) = {
+        let w = walk_of(g, key, gd).unwrap();
+        (w.held_at, w.held_t, w.arc.clone())
+    };
+    let redo = match held_at {
+        None => true,
+        Some(h) => v3::dist_xz(p, h) > 0.05 || now - held_t.unwrap() > 1.0,
+    };
+    if redo { works_his_throw_out_again(g, f, &was); }
+    walk_of(g, key, gd).and_then(|w| w.held.clone())
+}
+
+/// The arc he walked here for, made from where he actually stands, if it still comes down on the spot; else any he can work out.
+fn works_his_throw_out_again(g: &mut Game, f: &OnHisWalk, was: &Arc) {
+    let OnHisWalk { key, gd, a, now, p, post, at, kind } = *f;
+    let from: V3 = [was.from[0] + p[0] - post[0], was.from[1], was.from[2] + p[2] - post[2]];
+    let flight = if crate::scene_collision::solid_blocked(g, [p[0], from[1], p[2]], from, None) { None }
+        else { Some(crate::throwplan::throw_flight(g, kind, from, was.sol.v0, None)) };
+    let hits = match &flight {
+        Some(f) => crate::throwplan::throw_hits(g, f.end, at, None),
+        None => false,
+    };
+    let held: Option<Arc> = match (hits, flight) {
+        (true, Some(f)) => Some(Arc { from, sol: crate::throwables::ThrowSolution { points: f.points, land: f.land, ..was.sol.clone() }, rest: f.end }),
+        _ => {
+            let n = g.k.squadthrow.lob_sims;
+            crate::throwplan::throw_to(g, gd, at, kind, None, None, Some(&mut crate::throwplan::ThrowToLim { n })).map(|t| Arc { from: t.from, sol: t.sol, rest: t.rest })
+        }
+    };
+    if let Some(h) = &held {
+        g.tab.task[a].face = Some(v3::yaw_of(h.sol.v0));
+    }
+    if let Some(w) = walk_of(g, key, gd) {
+        w.held = held;
+        w.held_at = Some(v3::copy(p));
+        w.held_t = Some(now);
+    }
+}
+
+/// A frag thrown now would catch one of ours: the job ends with his word, unless it is only himself and he has another look. True: no throw this frame.
+fn frag_would_catch_ours(g: &mut Game, f: &OnHisWalk, arc: &Arc) -> bool {
+    let OnHisWalk { key, gd, p, at, kind, .. } = *f;
+    if kind != SquadThrowKind::Frag { return false; }
+    let Some(who) = squad_frag_catches(g, arc.rest, at, Some(SquadFragCatchesMoved { gd, at: p }), Some(false), None, None) else { return false };
+    if who == format!("{} is in it.", g.gd[gd].callsign) && look_again(g, key, gd) { return true; }
+    end_walk(g, key, gd, Some(who.as_str()));
+    true
 }
 
 /// The row that opens the page and the page's two: made, not yet on the menu.
@@ -484,7 +485,7 @@ fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
 
 /// The squad's HUD block: the throw just made.
 pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
-    if let Some(w) = g.m.squadthrow.states.get(crate::seats::view_key(g, seat)).and_then(|s| s.shown.as_ref()) {
+    if let Some(w) = g.m.squadthrow.states.get(seat.group_id).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
             return vec![crate::view::Note { key: String::new(), text: w.text.clone() }];
         }
@@ -494,16 +495,16 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
 
 /// The rows on the menu.
 fn sync(g: &mut crate::game::Game) {
-    let has = g.sets[g.seat].orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
+    let has = g.groups[g.group].orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
     if has {
         return;
     }
     state_key(g);
-    let smoke = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
-    let hold = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
+    let smoke = g.groups[g.group].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
+    let hold = g.groups[g.group].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let after = if smoke.is_some() { smoke } else { hold };
     let made = rows(g);
-    let before = after.and_then(|a| g.sets[g.seat].orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());
+    let before = after.and_then(|a| g.groups[g.group].orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());
     crate::orders::squad_orders_register(g, made[0], before.as_deref());
     for d in &made[1..] {
         crate::orders::squad_orders_register(g, *d, None);
@@ -512,7 +513,7 @@ fn sync(g: &mut crate::game::Game) {
 
 /// Once a frame after the ring's input: the rows in step with the switch, the walks whose man is gone, and what is worked out for an open menu.
 pub fn squad_throw_frame(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if g.m.squadthrow.states.get(key).map_or(false, |s| !s.walks.is_empty()) {
         let mut at = 0usize;
         while let Some(gd) = g.m.squadthrow.states.get(key).and_then(|s| s.walks.next_key(&mut at)) {
@@ -527,7 +528,7 @@ pub fn squad_throw_frame(g: &mut crate::game::Game) {
     }
     sync(g);
     // (no menu up, nothing is shown: what was worked out for one, or for the order it gave, goes)
-    if g.sets[g.seat].orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
+    if g.groups[g.group].orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
     else { follow(g); }
 }
 
@@ -542,7 +543,7 @@ mod tests {
         let gd = g.gd.push(crate::game::Guard::blank());
         squad_log_row(&mut g, gd, "fragThere", [0.25, 0.0, -0.04]);
         squad_log_row(&mut g, gd, "fragThere", [1.45, 0.0, 12.0]);
-        let log = &g.sets[g.seat].orders.log;
+        let log = &g.groups[g.group].orders.log;
         assert_eq!(log[0].target, "floor:0.3,-0.0");
         assert_eq!(log[1].target, "floor:1.4,12.0");
         assert_ne!(log[0].serial, log[1].serial);

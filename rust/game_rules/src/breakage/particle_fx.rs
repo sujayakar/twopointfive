@@ -43,27 +43,22 @@ fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
 
 // ---------------------------------------------------------------- what a hit is made of
 
-/// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked.
-pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
-    let does = seam_box(g, b).does;
-    if g.weather.lot == Some(b) {
-        crate::scene_materials::does_wet(g, does).surf
-    } else {
-        crate::scene_materials::does_of(g, does).surf
-    }
+/// What a round knocks out of a static: its word's surface, in any weather.
+pub fn surf_at(g: &crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
+    crate::scene_materials::does_of(g, g.tab.boxes[b].does).surf
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
-pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
+pub(super) fn said_surf(g: &crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
     let b = b?;
-    let stuff = seam_box(g, b).stuff?;
-    if is_pane(seam_box(g, b).flags) { return None; }
+    let stuff = g.tab.boxes[b].stuff?;
+    if is_pane(g.tab.boxes[b].flags) { return None; }
     surf_of_stuff(stuff)
 }
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
 /// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does.
-pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
+pub(super) fn hit_look(g: &crate::game::Game, hit: &crate::combat::RoundMet) -> crate::particle_fx::HitLook {
     let leaf = hit.prop.is_none() && hit.index.is_some_and(|i| i >= 1e6);
     let st = if hit.prop.is_none() && !leaf { hit.index.and_then(|i| js_ix(g.col.boxes.len(), i)).map(|x| g.col.boxes[x]) } else { None };
     let b: Option<BoxId> = if let Some(p) = hit.prop {
@@ -75,21 +70,21 @@ pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLo
         st
     };
     if let Some(said) = said_surf(g, b) {
-        let albedo = seam_box(g, b.unwrap()).albedo;
+        let albedo = g.tab.boxes[b.unwrap()].albedo;
         return crate::particle_fx::HitLook { surf: said, albedo, solid: said == crate::scene_materials::Surf::Glass, said: true };
     }
     if let Some(p) = hit.prop {
         let surf = surf_of_prop(g.tab.props_prop[p].def.kind);
-        let albedo = match g.tab.props_prop[p].boxes.first().copied() { Some(x) => seam_box(g, x).albedo, None => [0.5, 0.5, 0.5] };
+        let albedo = match g.tab.props_prop[p].boxes.first().copied() { Some(x) => g.tab.boxes[x].albedo, None => [0.5, 0.5, 0.5] };
         return crate::particle_fx::HitLook { surf, albedo, solid: false, said: false };
     }
     if leaf {
-        let albedo = match b { Some(x) => seam_box(g, x).albedo, None => [0.42, 0.3, 0.19] };
+        let albedo = match b { Some(x) => g.tab.boxes[x].albedo, None => [0.42, 0.3, 0.19] };
         return crate::particle_fx::HitLook { surf: crate::scene_materials::Surf::Wood, albedo, solid: false, said: false };
     }
     if let Some(st) = st {
-        let surf = if is_pane(seam_box(g, st).flags) { crate::scene_materials::Surf::Glass } else { surf_at(g, st) };
-        let albedo = seam_box(g, st).albedo;
+        let surf = if is_pane(g.tab.boxes[st].flags) { crate::scene_materials::Surf::Glass } else { surf_at(g, st) };
+        let albedo = g.tab.boxes[st].albedo;
         return crate::particle_fx::HitLook { surf, albedo, solid: false, said: false };
     }
     crate::particle_fx::HitLook { surf: crate::scene_materials::Surf::Concrete, albedo: [0.5, 0.5, 0.5], solid: false, said: false }
@@ -135,9 +130,9 @@ fn js_ix(len: usize, i: f64) -> Option<usize> {
 // ---------------------------------------------------------------- the sites
 
 /// A round stopped in something solid: what it knocks out, by what it hit.
-pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::particle_fx::ImpactFxHit, def: &crate::weapons::WeaponDef) {
+pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::combat::RoundMet, def: &crate::weapons::WeaponDef) {
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
-    let look = hit_look(g, crate::particle_fx::HitLookHit { index: hit.index, prop: hit.prop, box_: hit.box_ });
+    let look = hit_look(g, &hit);
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
     let r = impact_row(surf);
     let pfx = g.m.particle_fx.pfx;
@@ -168,7 +163,7 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::part
 
 /// IMPACT[surf]: the table has every word of Surf.
 fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactRecipe {
-    *crate::particle_fx::impact().get(String::from(surf.as_str())).unwrap()
+    *crate::particle_fx::impact().of(surf.as_str()).unwrap()
 }
 
 /// The muzzle's unburnt powder.
@@ -225,7 +220,7 @@ pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::Fix
     let b: Option<BoxId> = t.boxes.first().and_then(|&i| js_ix(g.engine.world.statics.len(), i)).map(|i| g.engine.world.statics[i]);
     let (at, spread): (V3, f64) = match b {
         Some(b) => {
-            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
             ([c[0], m::min(c[1] - h[1] - 0.03, 2.9), c[2]], m::min(0.6, m::max(h[0], h[2])))
         }
         None => ([t.pos[0], m::min(t.pos[1], 2.9), t.pos[2]], 0.15),
@@ -346,7 +341,7 @@ pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapon
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
-    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bones.get(crate::character::Bone::HandR).copied().unwrap_or(muzzle) } else { muzzle };
+    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bone(crate::character::Bone::HandR).unwrap_or(muzzle) } else { muzzle };
     let port = v3::mad(v3::mad(v3::mad(base, f.z, c.ahead), f.y, c.up), right, c.right);
     let dir = v3::normalize(v3::add(v3::add(v3::scale(right, c.dir[0]), v3::scale(f.y, c.dir[1])), v3::scale(f.z, c.dir[2])));
     let life = g.m.particle_fx.pfx.casing_life;
@@ -384,8 +379,6 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
 }
 
-/// a box's row, to read and to write through
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.
 type Emit = crate::render_particles::EmitOpts;
@@ -463,12 +456,12 @@ mod tests {
     #[test]
     fn a_hit_on_what_has_no_box_looks_like_wood_or_concrete() {
         let mut g = crate::game::Game::blank();
-        let at = |i: f64| crate::particle_fx::HitLookHit { index: Some(i), prop: None, box_: None };
-        let l = hit_look(&mut g, at(1e6));
+        let at = |i: f64| crate::combat::RoundMet { index: Some(i), ..Default::default() };
+        let l = hit_look(&mut g, &at(1e6));
         assert!(l.surf == crate::scene_materials::Surf::Wood && !l.said && l.albedo == [0.42, 0.3, 0.19]);
-        let l = hit_look(&mut g, at(99.0));
+        let l = hit_look(&mut g, &at(99.0));
         assert!(l.surf == crate::scene_materials::Surf::Concrete && l.albedo == [0.5, 0.5, 0.5]);
-        let l = hit_look(&mut g, crate::particle_fx::HitLookHit { index: None, prop: None, box_: None });
+        let l = hit_look(&mut g, &crate::combat::RoundMet::default());
         assert!(l.surf == crate::scene_materials::Surf::Concrete);
     }
 }

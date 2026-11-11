@@ -8,12 +8,8 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what this skeleton still cannot give
-/// a box's row
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- helpers
-/// the bits of two flag words or'd   (`a | b`)
-fn bor(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 /// a bar, not hidden   (`(flags & (Bar | HIDE)) === Bar`)
 fn stands(flags: f64) -> bool {
     let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
@@ -24,8 +20,6 @@ fn box_of(g: &Game, index: f64) -> Option<BoxId> {
     if !(index < 1e6) || index < 0.0 || m::floor(index) != index { return None; }
     g.col.boxes.get(index as usize).copied()
 }
-/// `g.col.boxes[index]` where the TypeScript takes it to be there
-fn box_at(g: &Game, index: f64) -> BoxId { g.col.boxes[index as usize] }
 /// `Math.min(B.length, g.level.boxes.length)`: that list and `g.col.boxes` are one array, so it is the list's length
 fn built_boxes(g: &Game) -> usize { g.col.boxes.len() }
 /// the bar's word, the level it was struck at   (breakBar's `seed`)
@@ -34,22 +28,20 @@ fn seed_word(box_seed: f64, hit_u: f64) -> f64 { js::to_u32(box_seed + 131.0 + m
 fn hash_key(seed: f64, k: f64) -> f64 { m::imul(js::to_i32(seed + k), js::to_i32(2654435761.0)) as f64 }
 /// the k-th choice of a break   (breakBar's `R`)
 fn choice(seed: f64, k: f64) -> f64 { crate::debris::hash01(hash_key(seed, k)) }
-/// nothing of a pane's stands in this game's block   (glassbreak.ts panesUntouched; its stub takes no slot, see notes)
-fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
 
 // ---------------------------------------------------------------- the part
 /// The game's row, made if it is not there.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
 /// Is static `index` a window's bar that still stands?
-pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
+pub fn bar_at(g: &crate::game::Game, index: f64) -> bool {
     let Some(b) = box_of(g, index) else { return false };
-    stands(seam_box(g, b).flags)
+    stands(g.tab.boxes[b].flags)
 }
 
 /// The flags a bar this rule took was authored with, or None.
-pub(super) fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
-    if untouched(g) { return None; }
+pub(super) fn bar_flags0(g: &crate::game::Game, index: f64) -> Option<f64> {
+    if crate::glassbreak::glass_break_untouched(g) { return None; }
     let s = g.sim;
     for i in 0..::sim::panes::bars_gone(s) as usize {
         if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
@@ -65,11 +57,10 @@ pub fn boot_bars(g: &mut crate::game::Game) {
 
 /// A round would stop in bar `index`: hidden from the rest of its flight, nothing more until bars_settle.
 pub fn bar_meet(g: &mut crate::game::Game, index: f64, t: f64, at: V3, dir: V3) -> crate::winbars::BarMet {
-    let b = box_at(g, index);
-    let flags = seam_box(g, b).flags;
+    let b = g.col.boxes[index as usize];
+    let flags = g.tab.boxes[b].flags;
     let m = BarMet { index, t, at, dir, flags };
-    seam_box(g, b).flags = bor(flags, HIDE);
-    crate::scene_collision::wrote(g);
+    g.tab.boxes.edit(b).flags = js::or_bits(flags, HIDE);
     state_of(g).met.push(m);
     m
 }
@@ -81,10 +72,9 @@ pub fn bars_unmeet(g: &mut crate::game::Game) {
         _ => return,
     };
     for m in &met {
-        let b = box_at(g, m.index);
-        seam_box(g, b).flags = m.flags;
+        let b = g.col.boxes[m.index as usize];
+        g.tab.boxes.edit(b).flags = m.flags;
     }
-    crate::scene_collision::wrote(g);
     state_of(g).met.clear();
 }
 
@@ -93,10 +83,9 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
     let mut n = 0.0;
     state_of(g).met.clear();
     for m in met {
-        let b = box_at(g, m.index);
-        seam_box(g, b).flags = m.flags;
+        let b = g.col.boxes[m.index as usize];
+        g.tab.boxes.edit(b).flags = m.flags;
     }
-    crate::scene_collision::wrote(g);
     for m in met {
         if m.t > t_hit + 1e-6 {
             continue;
@@ -112,19 +101,16 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 /// Bar `index` goes: hidden to every question, its pieces thrown the way `dir` from where it was struck. False = gone already or no standing bar.
 fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
-    let taken = crate::glassbreak::glass_break_asking(g, &mut |g, cx| {
-        let flags = seam_box(g, b).flags;
-        ::sim::panes::bar_take(cx, js::to_u32(index), js::to_u32(flags))
-    });
-    if !taken { return false; }
-    let flags = seam_box(g, b).flags;
-    seam_box(g, b).flags = bor(flags, HIDE);
+    let flags = g.tab.boxes[b].flags;
+    if !::sim::panes::bar_take(&crate::glassbreak::glass_ctx(g), js::to_u32(index), js::to_u32(flags)) { return false; }
+    let flags = g.tab.boxes[b].flags;
+    g.tab.boxes.edit(b).flags = js::or_bits(flags, HIDE);
     changed(g);
     if cause == BreakBarCause::Round {  } else {  }
 
     // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
     let k_ = g.k.winbars;
-    let (bc, bh, yaw, albedo, does) = { let r = seam_box(g, b); (r.c, r.h, r.yaw, r.albedo, r.does.map(|w| String::from(w.as_str()))) };
+    let (bc, bh, yaw, albedo, does) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw, r.albedo, r.does.map(|w| String::from(w.as_str()))) };
     let n = m::max(1.0, m::round(k_.pieces));
     let y0 = bc[1] - bh[1];
     let h = 2.0 * bh[1];
@@ -163,7 +149,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         let fc: V3 = [bc[0], y0 + (u0 + u1) / 2.0 * h, bc[2]];
         let fh: V3 = [bh[0], (u1 - u0) / 2.0 * h, bh[2]];
         {
-            let piece = seam_box(g, f);
+            let mut piece = g.tab.boxes.edit(f);
             piece.c = fc;
             piece.h = fh;
             piece.flags = tab.dynamic;
@@ -202,21 +188,20 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
 
 /// The level changed where a bar stood: whoever keeps an answer about the level's boxes asks again.
 fn changed(g: &mut crate::game::Game) {
-    g.engine.world.geom_serial += 1.0;
-    crate::scene_collision::wrote(g);
+    g.boxes_changed();
     crate::scene_collision::sound_paths_invalidate(g);
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.
-pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
+pub(super) fn bars_blast(g: &mut crate::game::Game, over: &crate::ask::Over, ev: crate::wallbreak::BlastEvent) {
     if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let took = crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::bars_blast(cx, from, r, built_boxes(g), &g.k));
+    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(&crate::glassbreak::glass_ctx(g), v, from, r, built_boxes(g), &g.k));
     for (i, at) in took {
         let i = i as f64;
-        let b = box_at(g, i);
-        let c = seam_box(g, b).c;
+        let b = g.col.boxes[i as usize];
+        let c = g.tab.boxes[b].c;
         let (dx, dz) = (c[0] - from[0], c[2] - from[2]);
         let l = m::hyp2(dx, dz);
         let dir: V3 = if l > 1e-3 { [dx / l, 0.0, dz / l] } else { [0.0, 0.0, 0.0] };
@@ -231,12 +216,12 @@ mod tests {
     #[test]
     fn a_bar_stands_until_either_hide_flag_is_up() {
         let t = crate::scene_boxes::box_flag();
-        assert_eq!(HIDE, bor(t.no_primary, t.no_shadow));
+        assert_eq!(HIDE, js::or_bits(t.no_primary, t.no_shadow));
         assert!(stands(t.bar));
-        assert!(stands(bor(t.bar, t.dynamic)));
-        assert!(!stands(bor(t.bar, t.no_primary)));
-        assert!(!stands(bor(t.bar, t.no_shadow)));
+        assert!(stands(js::or_bits(t.bar, t.dynamic)));
+        assert!(!stands(js::or_bits(t.bar, t.no_primary)));
+        assert!(!stands(js::or_bits(t.bar, t.no_shadow)));
         assert!(!stands(t.dynamic));
-        assert_eq!(bor(t.bar, HIDE), t.bar + 3.0);
+        assert_eq!(js::or_bits(t.bar, HIDE), t.bar + 3.0);
     }
 }

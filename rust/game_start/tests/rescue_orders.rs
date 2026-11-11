@@ -124,13 +124,13 @@ fn a_man_searching_the_room_pans_to_both_sides_of_its_middle() {
         // he has come in and stands at his post; the door's tools and the room's fight have let him go
         let c = p.g.gd[man].ch;
         game::character::pos_replace(&mut p.g, c, [at[0], 0.0, at[1]]);
-        p.g.tab.orders_assignment[a].post = Some([at[0], 0.0, at[1]]);
-        p.g.sets[p.g.seat].door_tools.ops.clear();
+        p.g.tab.task[a].post = Some([at[0], 0.0, at[1]]);
+        p.g.groups[p.g.group].tools.ops.clear();
         let fight = p.g.fight.ops.clone();
         p.g.fight.ops = fight.into_iter().filter(|&o| p.g.tab.roomfight_op[o].gd != man).collect();
         p.frame();
-        if p.g.tab.orders_assignment[a].search != Some(true) { continue; }
-        let off = game::v3::wrap_angle(p.g.tab.orders_assignment[a].face.unwrap() - mid_yaw);
+        if p.g.tab.task[a].search != Some(true) { continue; }
+        let off = game::v3::wrap_angle(p.g.tab.task[a].face.unwrap() - mid_yaw);
         (least, most) = (least.min(off), most.max(off));
     }
     assert!(least < -0.5 && most > 0.5, "he panned from {least:.2} to {most:.2} round the room's middle");

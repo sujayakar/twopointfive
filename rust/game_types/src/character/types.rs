@@ -7,6 +7,15 @@ use alloc::{string::String, vec::Vec};
 pub const BONE_ORDER: [Bone; 22] = [Bone::Hips, Bone::Spine2, Bone::Chest, Bone::Neck, Bone::Head, Bone::UpperArmL, Bone::ForearmL, Bone::HandL, Bone::UpperArmR, Bone::ForearmR, Bone::HandR, Bone::ThighL, Bone::ShinL, Bone::FootL, Bone::ToeL, Bone::ThighR, Bone::ShinR, Bone::FootR, Bone::ToeR, Bone::FingerR, Bone::FingerL, Bone::HeadTop];
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Bone { Hips, Spine2, Chest, Neck, Head, UpperArmL, ForearmL, HandL, UpperArmR, ForearmR, HandR, ThighL, ShinL, FootL, ToeL, ThighR, ShinR, FootR, ToeR, FingerR, FingerL, HeadTop }
+impl Character {
+    /// a bone's place, once a pose has written it
+    pub fn bone(&self, b: Bone) -> Option<V3> { self.bones.get(b).copied() }
+    /// a bone's place, or a place this far over his feet before any pose has written it
+    pub fn bone_or(&self, b: Bone, up: f64) -> V3 {
+        self.bone(b).unwrap_or([self.pos[0], self.pos[1] + up, self.pos[2]])
+    }
+}
+
 impl Bone {
     pub const fn as_str(self) -> &'static str {
         match self { Bone::Hips => "hips", Bone::Spine2 => "spine2", Bone::Chest => "chest", Bone::Neck => "neck", Bone::Head => "head", Bone::UpperArmL => "upperArmL", Bone::ForearmL => "forearmL", Bone::HandL => "handL", Bone::UpperArmR => "upperArmR", Bone::ForearmR => "forearmR", Bone::HandR => "handR", Bone::ThighL => "thighL", Bone::ShinL => "shinL", Bone::FootL => "footL", Bone::ToeL => "toeL", Bone::ThighR => "thighR", Bone::ShinR => "shinR", Bone::FootR => "footR", Bone::ToeR => "toeR", Bone::FingerR => "fingerR", Bone::FingerL => "fingerL", Bone::HeadTop => "headTop" }
@@ -23,7 +32,7 @@ pub struct BlowLive { pub by: CharId, pub vic: CharId, pub style: BlowStyle }
 /// THE TRUNK'S PATH IN A GUIDED FALL: the pelvis led over [p0, p1], the turn over [n0, n1]
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Led { pub pv: V3, pub p_t: V3, pub v_t: V3, pub p0: f64, pub p1: f64, pub n0: f64, pub n1: f64, pub v0n: V3 }
-/// `frame` of a guided fall, by the fall's kind (the closures of character.ts's guided fall, with what they captured)
+/// `frame` of a guided fall, by the fall's kind: what its pins read
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FallFrame {
     /// 'fold' and 'sink': onto his knees, then laid on his front
@@ -272,12 +281,6 @@ pub struct WorkPose {
     pub hand: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum CarryKind2 {
-    Torch,
-    Weapon,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HaulPose {
     pub l: V3,
@@ -467,7 +470,7 @@ pub struct Anim {
     pub held_pose: Option<crate::character::HeldPose>,
     pub door_push: Option<crate::character::DoorPush>,
     pub work: Option<crate::character::WorkPose>,
-    pub carry: Option<Option<crate::character::CarryKind2>>,
+    pub carry: Option<Option<crate::guards::InHand>>,
     pub swap_lag: f64,
     pub haul: Option<crate::character::HaulPose>,
     pub long_gun: bool,
@@ -677,7 +680,6 @@ pub struct Anim {
     pub arms_mask: Vec<f32>,
     pub arm_r_only: Vec<f32>,
     pub torso_mask: Vec<f32>,
-    pub fk: crate::anim_skeleton::PoseFK,
     pub hand_fix: Vec<Quat>,
     pub grip_up: V3,
     pub gaze_local: V3,
@@ -713,7 +715,7 @@ pub struct Anim {
     pub hd_busy: bool,
     pub big_buf: Option<crate::anim_skeleton::Pose>,
     pub big_under: bool,
-    /// INVENTED by a review: see the proposals
+    /// the place the animator was handed at the last update, once the body's own has been replaced; POS_IN_IS_POS while the two are one
     pub pos_in: V3,
 }
 
@@ -737,12 +739,6 @@ pub struct AnimFootSpot {
     pub yaw: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum AnimCarry {
-    Torch,
-    Weapon,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimLongGrip {
     pub wrist: V3,
@@ -752,7 +748,7 @@ pub struct AnimLongGrip {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AnimBigTool {
-    pub kind: crate::character::AnimBigToolKind,
+    pub kind: crate::kit::BigTool,
     pub t: f64,
     pub equip: f64,
     pub windup: f64,
@@ -761,12 +757,6 @@ pub struct AnimBigTool {
     pub end: f64,
     pub at: V3,
     pub snug: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum AnimBigToolKind {
-    #[default] Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -999,9 +989,9 @@ pub struct AnimWk {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimSw {
-    pub cur: Option<Option<crate::character::AnimCarry>>,
-    pub from: Option<crate::character::AnimCarry>,
-    pub to: Option<crate::character::AnimCarry>,
+    pub cur: Option<Option<crate::guards::InHand>>,
+    pub from: Option<crate::guards::InHand>,
+    pub to: Option<crate::guards::InHand>,
     pub t: f64,
     pub dur: f64,
     pub shown: bool,
@@ -1190,12 +1180,6 @@ pub struct AnimKickFrom {
     pub r_r: Quat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum AnimKickLeg {
-    Left,
-    Right,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AnimHn {
     pub nodes: Vec<Vec<i32>>,
@@ -1239,7 +1223,7 @@ pub struct AnimHdIdle {
     pub upper: crate::character::UpperMode,
     pub long: bool,
     pub crouch: f64,
-    pub carry: Option<Option<crate::character::AnimCarry>>,
+    pub carry: Option<Option<crate::guards::InHand>>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1279,9 +1263,9 @@ pub struct FallGuide {
     pub end: f64,
     pub pins: Vec<crate::character::GuidePin>,
     pub release: Option<crate::character::FallRelease>,
-    /// INVENTED: what the pins' closures shared
+    /// what the pins read
     pub frame: crate::character::FallFrame,
-    /// INVENTED: the head pin's nod
+    /// the head pin's nod
     pub nod: crate::character::FallNod,
 }
 impl Default for FallGuide {
@@ -1380,9 +1364,11 @@ pub struct Character {
     #[is(RigId(0))] pub rig: RigId,
     /// whose body this is
     #[is(crate::character::Who::Guard(GuardId(0)))] pub who: crate::character::Who,
-    /// INVENTED: his row of the block's men (ManCols.r). None (0xffffffff) once he has left, or for a man of no game
+    /// whose man he is
+    pub team: crate::teams::Team,
+    /// his row of the block's men. None (0xffffffff) once he has left, or for a man of no game
     #[is(0xffffffff)] pub man_row: u32,
-    /// INVENTED: owner, rank, reason, since of a man with no row: the numbers he took with him (manLeaves)
+    /// owner, rank, reason, since of a man with no row: the numbers he took with him (`man_leaves`)
     pub man_kept: Option<[f64; 4]>,
 }
 
@@ -1483,9 +1469,7 @@ pub struct Gaze {
 pub struct Life {
     pub on: f64,
     pub breath_rate: f64,
-    pub breath_rate_run: f64,
     pub breath_amp: f64,
-    pub breath_amp_run: f64,
     pub mass_gain: f64,
     pub mass_back: f64,
     pub mass_fwd: f64,
@@ -2361,12 +2345,6 @@ pub struct ThrowTables {
     pub k3: Vec<Vec<(f64, Vec<f64>)>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigReboundKind {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigOffB {
     pub t: f64,
@@ -2403,13 +2381,7 @@ pub struct AnimFeedClock {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimKickDoorOpts {
-    pub leg: Option<crate::character::AnimKickDoorOptsLeg>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimKickDoorOptsLeg {
-    Left,
-    Right,
+    pub leg: Option<crate::character::AnimKickLeg>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -2518,7 +2490,7 @@ pub static GAZE_EL: crate::character::GazeEl = crate::character::GazeEl { stand:
 
 pub static GAZE: crate::character::Gaze = crate::character::Gaze { keep: 0.8, yaw_damp: 0.7 };
 
-pub static LIFE: crate::character::Life = crate::character::Life { on: 1.0, breath_rate: 0.25, breath_rate_run: 0.62, breath_amp: 1.0, breath_amp_run: 2.6, mass_gain: 0.011, mass_back: 0.035, mass_fwd: 0.03, mass_dip: 0.004, mass_dip_max: 0.025, tip_gain: 0.9, tip_back: 5.0, tip_fwd: 6.0, rest_after: 1.6, shift_min: 4.0, shift_span: 5.0, shift_travel: 0.028, shift_in: 3.2, shift_out: 9.0, hip_drop: 2.2, spine_counter: 1.4, neck_counter: 0.6 };
+pub static LIFE: crate::character::Life = crate::character::Life { on: 1.0, breath_rate: 0.25, breath_amp: 1.0, mass_gain: 0.011, mass_back: 0.035, mass_fwd: 0.03, mass_dip: 0.004, mass_dip_max: 0.025, tip_gain: 0.9, tip_back: 5.0, tip_fwd: 6.0, rest_after: 1.6, shift_min: 4.0, shift_span: 5.0, shift_travel: 0.028, shift_in: 3.2, shift_out: 9.0, hip_drop: 2.2, spine_counter: 1.4, neck_counter: 0.6 };
 
 pub const TOE_FLOOR_Y: f64 = 0.0147;
 
@@ -2554,9 +2526,18 @@ pub fn stances() -> JsMap<String, crate::character::StanceShape> { { let mut t =
 
 pub const WALL_ROOT_OFF: f64 = 0.45;
 
-pub fn long() -> JsMap<String, crate::character::LongShape> { { let mut t = JsMap::new(); t.set(String::from("patrolLong"), crate::character::LongShape { side: -0.245, up: -0.16, fwd: 0.13, anchor: 0.0, pitch: -42.0, aim_k: 0.0, yaw: 20.0, blade: -8.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.45, -1.0, -0.5], elbow_l: [0.35, -1.0, -0.3], pole_w: 0.65, sway: 1.0, steady: 0.5 }); t.set(String::from("lowLong"), crate::character::LongShape { side: -0.165, up: -0.085, fwd: 0.2, anchor: 0.05, pitch: -40.0, aim_k: 0.05, yaw: 24.0, blade: -10.0, lean: 2.0, head_yaw: 0.0, head_pitch: 2.0, head_roll: 0.0, elbow_r: [-0.55, -1.0, -0.35], elbow_l: [0.4, -1.0, -0.1], pole_w: 0.75, sway: 0.25, steady: 1.0 }); t.set(String::from("shoulder"), crate::character::LongShape { side: -0.15, up: -0.015, fwd: 0.255, anchor: 0.5, pitch: -2.0, aim_k: 1.0, yaw: 0.0, blade: -36.0, lean: 4.0, head_yaw: -10.0, head_pitch: 6.0, head_roll: 7.0, elbow_r: [-0.8, -1.0, -0.2], elbow_l: [0.6, -1.0, 0.35], pole_w: 0.6, sway: 0.1, steady: 1.0 }); t.set(String::from("portLong"), crate::character::LongShape { side: -0.115, up: -0.15, fwd: 0.19, anchor: 0.0, pitch: 50.0, aim_k: 0.0, yaw: 35.0, blade: 0.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.7, -0.8, -0.3], elbow_l: [0.9, -0.6, 0.1], pole_w: 0.75, sway: 0.5, steady: 0.7 }); t } }
+/// how a long gun is carried in each stance
+pub fn long(stance: crate::character::LongStance) -> crate::character::LongShape {
+    use crate::character::LongStance as S;
+    match stance {
+        S::PatrolLong => crate::character::LongShape { side: -0.245, up: -0.16, fwd: 0.13, anchor: 0.0, pitch: -42.0, aim_k: 0.0, yaw: 20.0, blade: -8.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.45, -1.0, -0.5], elbow_l: [0.35, -1.0, -0.3], pole_w: 0.65, sway: 1.0, steady: 0.5 },
+        S::LowLong => crate::character::LongShape { side: -0.165, up: -0.085, fwd: 0.2, anchor: 0.05, pitch: -40.0, aim_k: 0.05, yaw: 24.0, blade: -10.0, lean: 2.0, head_yaw: 0.0, head_pitch: 2.0, head_roll: 0.0, elbow_r: [-0.55, -1.0, -0.35], elbow_l: [0.4, -1.0, -0.1], pole_w: 0.75, sway: 0.25, steady: 1.0 },
+        S::Shoulder => crate::character::LongShape { side: -0.15, up: -0.015, fwd: 0.255, anchor: 0.5, pitch: -2.0, aim_k: 1.0, yaw: 0.0, blade: -36.0, lean: 4.0, head_yaw: -10.0, head_pitch: 6.0, head_roll: 7.0, elbow_r: [-0.8, -1.0, -0.2], elbow_l: [0.6, -1.0, 0.35], pole_w: 0.6, sway: 0.1, steady: 1.0 },
+        S::PortLong => crate::character::LongShape { side: -0.115, up: -0.15, fwd: 0.19, anchor: 0.0, pitch: 50.0, aim_k: 0.0, yaw: 35.0, blade: 0.0, lean: 0.0, head_yaw: 0.0, head_pitch: 0.0, head_roll: 0.0, elbow_r: [-0.7, -0.8, -0.3], elbow_l: [0.9, -0.6, 0.1], pole_w: 0.75, sway: 0.5, steady: 0.7 },
+    }
+}
 
-pub fn long_crouch() -> JsMap<String, crate::character::LongShape> { crate::character::long() }
+pub fn long_crouch(stance: crate::character::LongStance) -> crate::character::LongShape { long(stance) }
 
 pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBox { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
 
@@ -2660,3 +2641,9 @@ pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character
 
 /// how a long gun is kept steady on the move
 pub static LONG_STEADY: crate::character::LongSteady = crate::character::LongSteady { tau: 0.5, run_yaw: 0.85 };
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum AnimKickLeg {
+    Left,
+    Right,
+}

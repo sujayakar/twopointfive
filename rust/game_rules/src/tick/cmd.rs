@@ -123,7 +123,7 @@ enum Json {
     Other,
 }
 
-/// JSON.parse over the text's bytes. A text that is no JSON panics where the TypeScript throws.
+/// A JSON reader over the text's bytes. A text that is no JSON panics.
 struct JsonReader<'a> {
     t: &'a [u8],
     at: usize,
@@ -491,8 +491,8 @@ fn check_record(g: &Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCm
 }
 
 /// A record made one an honest seat could have sent. `raw` None = what was sent was no object.
-pub(super) fn check_cmd(g: &crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
-    CheckCmd { cmd: check_record(g, raw.cloned(), near).0 }
+pub(super) fn check_cmd(g: &crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::PlayerCmd {
+    check_record(g, raw.cloned(), near).0
 }
 
 /// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.
@@ -506,7 +506,7 @@ fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd {
 
 /// A record as a tick would take it, for code that must leave it as it came: the check on a copy.
 pub(super) fn honest_copy(g: &crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd {
-    check_cmd(g, Some(c_2), near).cmd
+    check_cmd(g, Some(c_2), near)
 }
 
 /// The body of loadLens: a record's view put on a camera, its matrices rounded to the camera's singles as `Float32Array.set` does.
@@ -529,7 +529,7 @@ pub(super) fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd
     lens_from(&mut g.tab.camera[cam], v);
 }
 
-/// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.
+/// A player's seat: its Input and its camera, of the game's own.
 pub(super) fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     let input = crate::input::input_detached(g);
     let cam = g.tab.camera.push(crate::camera::FollowCamera::blank());

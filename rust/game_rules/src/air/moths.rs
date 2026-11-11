@@ -2,7 +2,7 @@
 //! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT, whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
 //! the frame's list (MKEY.test + 0x4000 + i), and the fog of war keeps a record of every keyed loose thing of that list and caps its records, the
 //! frame's room is budgeted with them in it, and the men's kit starts behind them in the list (`rig_from`). So the tick reads what this lane writes,
-//! and the lane runs here, under its DRESS row, as it runs in the TypeScript.
+//! and the lane runs here, under its dress row.
 
 pub use ::game_types::moths::types;
 pub use types::*;
@@ -83,7 +83,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     let mut sum_act = 0.0; for x in g.moths.lamps.iter() { sum_act += x.act; }
     let quota: Vec<f64> = g.moths.lamps.iter().map(|x| if sum_act > 1e-6 { m::min(k.per_lamp, x.act * k.max / m::max(1.0, sum_act)) } else { 0.0 }).collect();
     let mut held: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { held[mo.lamp as usize] += 1.0; }
-    // (the TypeScript's `rankOf` is a Map by the moth: here by its place in the pool)
+    // (each moth's rank among its lamp's, by its place in the pool)
     let mut rank_of: Vec<f64> = Vec::with_capacity(g.moths.moths.len());
     { let mut seen: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { rank_of.push(seen[mo.lamp as usize]); seen[mo.lamp as usize] += 1.0; } }
     for i in 0..g.moths.moths.len() {
@@ -102,7 +102,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
         let rate = if target > mo.shown { 1.0 / k.gather_secs } else { 1.0 / k.scatter_secs };
         mo.shown += m::max(-rate * dt, m::min(rate * dt, target - mo.shown));
         g.moths.moths[i].shown = mo.shown;
-        if mo.shown <= 0.01 { g.tab.boxes[mo.box_].c = [0.0, -50.0, 0.0]; continue; }
+        if mo.shown <= 0.01 { g.tab.boxes.edit(mo.box_).c = [0.0, -50.0, 0.0]; continue; }
         // the orbit: round the head at its own rate, radius breathing, bobbing under the lens, and every dartT a half-second dart in at the lens and out again
         let th = mo.ph + mo.omega * t + 0.6 * m::sin(t * 0.7 * mo.wob + mo.bob_ph);
         let dart_x = js::rem(t + mo.dart_ph, mo.dart_t) / 0.55; let dart = if dart_x < 1.0 { m::sin(dart_x * m::PI) } else { 0.0 };
@@ -113,7 +113,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
         let c: V3 = [orbit[0] + mo.away[0] * off, orbit[1] + mo.away[1] * off, orbit[2] + mo.away[2] * off];
         let heading = -(th + m::sign(mo.omega) * m::PI / 2.0);   // tangent to the orbit (Box yaw convention: local +X → (cos yaw, −sin yaw))
         let roll = 0.9 * m::sin((t * k.flap_hz + mo.flap_ph) * 6.283);   // the flutter: the wings' plane rocking fast
-        let bx = &mut g.tab.boxes[mo.box_];
+        let mut bx = g.tab.boxes.edit(mo.box_);
         bx.c = c; bx.yaw = 0.0; bx.rot = Some(quat::mul(quat::yaw(heading), quat::axis_angle([1.0, 0.0, 0.0], roll)));
     }
 }

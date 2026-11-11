@@ -20,7 +20,7 @@ fn floor(level: &str, seed: u32) -> Play {
 fn events(p: &Play, what: What) -> Vec<f64> { p.squad_names().iter().flat_map(|q| p.squad_events(q)).filter(|e| e.0 == what).map(|e| e.1).collect() }
 /// how far a man has to go
 fn walk(p: &mut Play, m: GuardId, to: [f64; 2]) -> f64 {
-    let from = p.g.ch[p.g.gd[m].ch].pos;
+    let from = p.g.pos_of(m);
     let way = game::scene_collision::nav_grid_find_path(&mut p.g, from, [to[0], 0.0, to[1]], None, None).expect("a way");
     way.iter().fold((0.0, p.at(m)), |(l, q), w| (l + dist(q, [w[0], w[2]]), [w[0], w[2]])).0
 }
@@ -80,4 +80,48 @@ fn one_man_alone_keeps_his_door() {
         }
     }
     assert!(stayed >= 2 && came >= 2, "the staging is wrong: {stayed} stayed, {came} came");
+}
+
+/// the man and the room of every man of a squad who is due at a fight and not off yet
+fn due(p: &Play) -> Vec<(game::ids::EnemysquadsSquadId, GuardId, String)> {
+    p.g.tab.enemysquads_squad.iter().flat_map(|(q, x)| x.due.iter().map(move |d| (q, d.gd, d.room.as_ref().map_or(String::new(), |r| r.name.clone())))).collect()
+}
+/// the room of his squad's he stands in
+fn his_room(p: &Play, q: game::ids::EnemysquadsSquadId, m: GuardId) -> Option<String> {
+    game::enemysquads::room_of(&p.g, q, p.g.pos_of(m), None).map(|r| r.name)
+}
+
+/// THE RULE: a man about to leave for another room's fight stays when his own room is hit, and goes to the last room hit when that is another again.
+/// A FAILURE MEANS: men walk out of the room that is being entered, to one the team has left (before: 92 of 314 men called to a fight, in 104 clears).
+#[test]
+fn a_man_about_to_go_goes_where_they_are_now() {
+    let (mut stays, mut turned) = (0, 0);
+    for s in SEEDS {
+        for level in ["compound", "office", "pass", "depot", "warehouse", "barracks"] {
+            let mut p = floor(level, s);
+            let hit = p.hostiles()[0];
+            let at = p.at(hit);
+            p.flash_lands([at[0] + 1.0, at[1]]);
+            if p.until(6.0, |p| !due(p).is_empty()).is_none() { continue; }
+            let (q, m, a) = due(&p)[0].clone();
+            let men = p.g.tab.enemysquads_squad[q].men.clone();
+            let mine = his_room(&p, q, m);
+            let third = men.iter().copied().find(|&o| p.up(o) && his_room(&p, q, o).is_some_and(|r| r != a && Some(&r) != mine.as_ref()));
+            // another room of theirs, and then his own
+            if let Some(o) = third {
+                let b = his_room(&p, q, o).unwrap();
+                let at = p.at(o);
+                p.flash_lands([at[0] + 1.0, at[1]]);
+                p.until(1.0, |p| p.g.tab.enemysquads_squad[q].hit_room.as_ref().is_some_and(|r| r.name == b));
+                if let Some(x) = due(&p).into_iter().find(|x| x.1 == m) { if his_room(&p, q, m) == mine { assert_eq!(x.2, b, "{level}, seed {s}: he is due in {} when they are in {b}", x.2); turned += 1; } }
+            }
+            if !due(&p).iter().any(|x| x.1 == m) { continue; }
+            let at = p.at(m);
+            p.flash_lands([at[0] + 1.0, at[1]]);
+            let Some(_) = p.until(1.0, |p| p.g.tab.enemysquads_squad[q].hit_room.as_ref().map(|r| r.name.clone()) == mine) else { continue };
+            assert!(!due(&p).iter().any(|x| x.1 == m), "{level}, seed {s}: his own room is hit and he is due in another");
+            stays += 1;
+        }
+    }
+    assert!(stays >= 3 && turned >= 3, "the staging is wrong: {stays} stay, {turned} turned");
 }

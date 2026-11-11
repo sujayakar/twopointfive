@@ -1,7 +1,7 @@
 //! THE MISSION LIST BEFORE A GAME: its rows in the page's order, the sheet of one mission, a choice pressed on it, and the links they all make. What it holds of its own is `Sitting`: the
 //! visitor's address, the hour and weather picked on it, the way in picked per mission, and what this machine keeps of the levers. The difficulty, the levers and the quiet picks are the game's
-//! own tables. (src/ui/missions.ts, startpage.ts, levers.ts: what those screens lit and wrote, without the screens.)
-use crate::difficulty::{self, Difficulty, DifficultyNow, DifficultyWordsLevel, KitRung, LeverKey};
+//! own tables. This is what the start screens light and write, without the screens.
+use crate::difficulty::{self, Difficulty, DifficultyNow, KitRung, LeverKey};
 use crate::game::Game;
 use crate::hours::{self, HourId};
 use crate::js;
@@ -59,9 +59,9 @@ impl Mission {
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
     fn own_weather(&self, g: &Game) -> bool { weather_kinds::snow_level(g, self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
     /// the hour and the weather a row is always started in
-    fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.hour) }
+    fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {
-        let w = self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.weather)?;
+        let w = self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.weather)?;
         weather_kinds::WEATHER_ROW.iter().flatten().copied().find(|k| k.as_str() == w.as_str())
     }
     fn kind_word(&self) -> &'static str { self.entry.as_ref().map_or(SOLO_KEY, |e| e.kind.as_str()) }
@@ -69,7 +69,6 @@ impl Mission {
 }
 
 fn lesson_row(e: &ScenarioEntry) -> bool { e.group == Some(MissionGroup::Tutorial) }
-fn row_own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The plain night, alone: not a scenario, no word but `?solo`.
 fn solo_night() -> Mission {
@@ -207,7 +206,7 @@ impl Default for Sitting {
     }
 }
 
-fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
+pub fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
 
 /// Which way in a mission with `ways` of them takes on an address's word.
 fn way_of_link(ways: usize, word: Option<&str>) -> usize { roomclear::way_taken(roomclear::way_asked(word), ways) }
@@ -238,7 +237,7 @@ impl Sitting {
     /// The levers this machine keeps, by the words it said: the address's own come last, one for each it names, and a word that is no rung was never kept.
     fn kept_said(&self, g: &Game) -> Vec<(LeverKey, &str)> {
         let boot = Query::parse(self.booted.as_deref().unwrap_or(""));
-        let named = difficulty::levers_now(g).iter().filter(|l| boot.get(&l.param).is_some_and(|w| !w.is_empty())).count();
+        let named = difficulty::levers_now().iter().filter(|l| boot.get(&l.param).is_some_and(|w| !w.is_empty())).count();
         let kept = &self.said[..self.said.len().saturating_sub(named)];
         kept.iter().filter_map(|(k, r)| Some((lever_key(k)?, r.as_str()))).filter(|(k, r)| difficulty::is_rung(g, *k, Some(r))).collect()
     }
@@ -497,7 +496,7 @@ impl Sitting {
 /// Standard | Hard, greyed where the pick changes nothing.
 fn difficulty_row(g: &Game, m: &Mission) -> Setting {
     let now = difficulty::difficulty_now(g);
-    let level = match now { DifficultyNow::Standard => DifficultyWordsLevel::Standard, DifficultyNow::Hard => DifficultyWordsLevel::Hard, DifficultyNow::Custom => DifficultyWordsLevel::Custom };
+    let level = now;
     let note = match &m.entry {
         Some(e) if e.kind == MissionKind::Quiet => String::from("a quiet mission uses the level's own shift on either setting"),
         Some(e) => difficulty::difficulty_words(g, Some(level), Some(&difficulty::squads_held(e))),
@@ -521,7 +520,7 @@ fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
     let shown = difficulty::levers_shown(g, Some(&structure));
     let cams_on = quiet && quietfog::quiet_cams(g);
     let quiet_lit = quietfog::quiet_fog(g);
-    for l in difficulty::levers_now(g) {
+    for l in difficulty::levers_now() {
         let live = !m.lesson() && if matches!(l.key, LeverKey::Fog | LeverKey::Told) { fog_on || quiet } else { m.diff_live() };
         let mine = quiet && l.key == LeverKey::Fog;
         let lit: Option<&str> = if mine { Some(quiet_lit.as_str()) } else {

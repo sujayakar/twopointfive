@@ -12,7 +12,7 @@ fn two(seed: u32) -> (Play, GuardId) {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, seats: 2, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     (p, foes[0])
 }
@@ -60,7 +60,7 @@ fn the_team_is_down_when_all_of_it_is() {
             let m = man(&p, seat);
             p.g.cond[p.g.pl[m].ch].down = true;
             assert!(game::doze::live(&mut p.g), "seed {s}: seat {seat}'s man down and the other up: the floor is still calm");
-            p.g.gd[t1].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
+            p.g.ch[p.g.gd[t1].ch].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
             p.g.alarm.episode = true;
             let was = p.g.escalation;
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
@@ -72,7 +72,7 @@ fn the_team_is_down_when_all_of_it_is() {
             q.g.cond[q.g.pl[a].ch].down = true;
             q.g.cond[q.g.pl[b].ch].down = true;
             assert!(!game::doze::live(&mut q.g), "seed {s}: CONTROL: both down, nobody is left to doze for");
-            q.g.gd[t2].team = game::teams::Team::Guard;
+            q.g.ch[q.g.gd[t2].ch].team = game::teams::Team::Guard;
             q.g.alarm.episode = true;
             let was = q.g.escalation;
             q.pin_man(t2, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
@@ -278,10 +278,10 @@ fn a_walk_through_a_door_goes_by_his_own_seats_order() {
             let Some(m) = walker else { panic!("seed {s}, seat {seat}: CONTROL: five seconds after the word no man of his has a walk") };
             let a = game::orders::squad_orders_of(&game::seats::seat(&p.g, sn), m).expect("he is on the order");
             let pod = p.g.door_path.walks.get(m).unwrap().pod;
-            p.g.tab.orders_assignment[a].post = Some(pod);
-            p.g.tab.orders_assignment[a].via = vec![pod];
+            p.g.tab.task[a].post = Some(pod);
+            p.g.tab.task[a].via = vec![pod];
             p.frame();
-            assert!(p.g.tab.orders_assignment[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
+            assert!(p.g.tab.task[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
         }
     }
 }
@@ -293,7 +293,7 @@ fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
     for s in SEEDS {
         for seat in 0..2 {
             let (mut p, _) = two(s);
-            for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+            for d in p.g.doors.list.clone() { p.g.dr[d].leaf.locked = false; }
             p.run(0.3);
             let sn = p.g.seats[seat];
             let th = game::workthings::work_things_things(&game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
@@ -365,7 +365,7 @@ fn partners(seed: u32) -> (Play, GuardId) {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=2", &Opts { seed, seats: 2, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     let t1 = foes[0];
     p.g.k.pairup.on = true;
@@ -487,7 +487,7 @@ fn a_blast_kill_is_the_man_who_set_it_off() {
             p.g.pl[other].holstered = true;
             p.g.pl[m].holstered = false;
             let c = p.g.gd[t1].ch;
-            let (who, at) = (p.g.ch[p.g.pl[m].ch].id, p.g.ch[c].pos);
+            let (who, at) = (p.g.player_id(m), p.g.ch[c].pos);
             let n0 = p.g.chronicle.events.len();
             let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
             game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
@@ -508,12 +508,12 @@ fn a_blast_kill_names_what_went_off_with_one_player() {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
         p.g.god_mode = true;
         p.run(0.3);
-        let t1 = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+        let t1 = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
         let pl = p.g.player;
         p.g.pl[pl].holstered = false;
         assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
         let c = p.g.gd[t1].ch;
-        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let (who, at) = (p.g.player_id(pl), p.g.ch[c].pos);
         let n0 = p.g.chronicle.events.len();
         let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
         game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
@@ -536,7 +536,7 @@ fn a_civilian_killed_by_a_blast_names_what_went_off() {
         p.g.pl[pl].holstered = false;
         assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
         let c = p.g.gd[her].ch;
-        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let (who, at) = (p.g.player_id(pl), p.g.ch[c].pos);
         let n0 = p.g.chronicle.events.len();
         let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
         game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);

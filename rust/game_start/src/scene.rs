@@ -1,5 +1,5 @@
 //! THE SCENE BUILDER: a few lines in, A LEVEL FILE out. A scene is a level written by a program: rooms, walls, doors, lamps and men, said in
-//! metres, become the records of docs/level-format.md, and `level_text()` is a file the TypeScript loader takes, the editor opens and the Rust
+//! metres, become the records of docs/level-format.md, and `level_text()` is a file the
 //! start stands like any level of `levels/`. So a test's scene is no second way to make a game: it goes in by the level format, through the one
 //! start (`stand.rs`).
 //!
@@ -13,9 +13,9 @@ use crate::json::{arr, b, n, nums, obj, s, Json};
 use alloc::{format, string::String, vec, vec::Vec};
 use game::m;
 
-/// THE SIZES, from the game's own tables where it has them (`scene_world::world()`, `scene_door_size::door_size()`, written from the TypeScript:
-/// a door rule or a world that changes there changes here), and the level kit's own two that are no table of the game (levelKit.ts WALL_INT,
-/// DOOR_SLOT; doorSize.ts JAMB_FACE)
+/// THE SIZES, from the game's own tables where it has them (`scene_world::world()`, `scene_door_size::door_size()`: a door rule or a world that
+/// changes there changes here), and the level kit's own that are no table of the game (WALL_INT, DOOR_SLOT and JAMB_FACE, the same numbers as
+/// tools/levels/lib levelKit.ts and doorSize.ts)
 struct Sizes { world: [f64; 2], ceiling: f64, gap: f64, head: f64, cell: f64, reach: f64, leaf_w: f64, leaf_h: f64 }
 fn sizes() -> Sizes {
     let (w, d) = (game::scene_world::world(), game::scene_door_size::door_size());

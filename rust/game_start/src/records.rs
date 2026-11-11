@@ -110,7 +110,7 @@ impl FromJson for game::lesson::LessonTest {
             "reload" => T::Reload,
             "launcher" => T::Launcher { on: if j.peek("on").and_then(Json::str) == Some("none") { field::<String>(j, "on", at); None } else { Some(field(j, "on", at)) }, fired: said(j, "fired", at) },
             "burst" => T::Burst { n: field(j, "n", at) },
-            "threw" => T::Threw { kind: field(j, "kind", at), quick: said(j, "quick", at), area: field(j, "area", at) },
+            "threw" => T::Threw { kind: field(j, "kind", at), area: field(j, "area", at) },
             "orderTo" => T::OrderTo { who: field(j, "who", at) },
             "stackOn" => T::StackOn { door: field(j, "door", at), who: field(j, "who", at), set: said(j, "set", at) },
             "pairsOn" => T::PairsOn { doors: field(j, "doors", at) },
@@ -141,7 +141,7 @@ json_words!(game::scene_level::CivilianTask { Bin: "bin", Stand: "stand", Wipe: 
 json_struct!(game::scene_level::VentDef { name: "id", pos: "pos", dir: "dir", speed: "speed", spread: "spread", reach: "reach", size: "size", period: "period", duty: "duty", phase: "phase", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
 json_words!(game::scene_level::HumKind { Hum: "hum", Servers: "servers", Buzz: "buzz", Wind: "wind" });
 json_struct!(game::scene_level::HumDef { name: "id", kind: "kind", pos: "pos", level: "level", radius: "radius", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
-json_words!(game::scene_level::RoomClearPlanBreach { Kick: "kick", Open: "open" });
+json_words!(game::scene_level::PlanBreach { Kick: "kick", Open: "open" });
 json_struct!(game::scene_level::BreachPlanBounds { x0: "x0", x1: "x1", z0: "z0", z1: "z1" });
 json_struct!(game::scene_level::BreachPlanLines { stack1: "stack1", stack2: "stack2", go2: "go2", in1: "in1", side2: "side2", side1: "side1", push1: "push1", under2: "under2", nothing2: "nothing2", corner1: "corner1", empty2: "empty2", radio1: "radio1" });
 json_struct!(game::scene_level::RoomClearPlan { door: "door", room: "room", breach: "breach", bounds: "bounds", from: "from", stack: "stack", stack_face: "stackFace", stack_side: "stackSide", stack_aim: "stackAim", kick_from: "kickFrom", kick_face: "kickFace", fling: "fling", entry: "entry", pod_face: "podFace", entry_aim: "entryAim", search_path: "searchPath", search_face: "searchFace", search_aim_walk: "searchAimWalk", search_aim_there: "searchAimThere", under_aim: "underAim", up_aim: "upAim", form_up: "formUp", form_face: "formFace", lines: "lines" });
@@ -153,7 +153,6 @@ json_struct!(game::scene_level::BreachPlanTargets0 { centre: "centre", corner: "
 json_struct!(game::scene_level::BreachPlanTargets1 { centre: "centre", corner: "corner" });
 json_struct!(game::scene_level::BreachPlanNext { door: "door", stack: "stack", stack_face: "stackFace", stack_side: "stackSide", stack_aim: "stackAim", via: "via" });
 json_struct!(game::scene_level::BreachPlanBreachLines { breach1: "breach1", bang2: "bang2", going1: "going1", clear1: "clear1", clear2: "clear2", room_clear1: "roomClear1", next1: "next1", radio1: "radio1" });
-json_words!(game::scene_level::BreachPlanBreach { Kick: "kick", Open: "open" });
 json_struct!(game::scene_level::BreachPlan { inward: "inward", hostiles: "hostiles", retreat: "retreat", toss: "toss", flow: "flow", targets: "targets", next: "next", breach_lines: "breachLines", door: "door", room: "room", breach: "breach", bounds: "bounds", from: "from", stack: "stack", stack_face: "stackFace", stack_side: "stackSide", stack_aim: "stackAim", kick_from: "kickFrom", kick_face: "kickFace", fling: "fling", entry: "entry", pod_face: "podFace", entry_aim: "entryAim", search_path: "searchPath", search_face: "searchFace", search_aim_walk: "searchAimWalk", search_aim_there: "searchAimThere", under_aim: "underAim", up_aim: "upAim", form_up: "formUp", form_face: "formFace", lines: "lines" });
 json_struct!(game::devices::CameraDef2 { name: "id", pos: "pos", yaw: "yaw", pitch: "pitch", sweep: "sweep", sweep_period: "sweepPeriod", fov_deg: "fovDeg", range: "range", group: "group", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
 json_struct!(game::devices::KeypadDef2 { name: "id", pos: "pos", yaw: "yaw", door: "door", code: "code" } drops { "floor": Option<String>, "notes": Option<String> });

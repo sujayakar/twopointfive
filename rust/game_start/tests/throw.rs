@@ -14,8 +14,8 @@ fn flat(p: game::V3) -> [f64; 2] { [p[0], p[2]] }
 fn lit(p: &mut Play, at: [f64; 2]) -> bool {
     let key = p.g.k.cmdring.key.clone();
     p.key_up(&key);
-    p.g.sets[p.g.seat].orders.menu = None;
-    p.g.sets[p.g.seat].orders.cmd_ring = None;
+    p.g.groups[p.g.group].orders.menu = None;
+    p.g.groups[p.g.group].orders.cmd_ring = None;
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     if !game::orders::squad_orders_open(&mut p.g, Some(&t), None) { return false; }
     p.ring_over_menu();
@@ -23,7 +23,7 @@ fn lit(p: &mut Play, at: [f64; 2]) -> bool {
     light(p)
 }
 fn light(p: &mut Play) -> bool {
-    let o = &mut p.g.sets[p.g.seat].orders;
+    let o = &mut p.g.groups[p.g.group].orders;
     let Some(m) = o.menu.as_mut() else { return false };
     let Some(i) = m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere") else { return false };
     m.sel = i as f64;
@@ -39,7 +39,7 @@ fn shown(p: &mut Play) -> Option<Throw> {
 
 /// the walks to a throw under way, by man: the spot asked for and the spot he walks to
 fn walks(p: &Play) -> Vec<(game::ids::GuardId, [f64; 2], [f64; 2])> {
-    let Some(s) = p.g.m.squadthrow.states.get(p.g.player) else { return Vec::new() };
+    let Some(s) = p.g.m.squadthrow.states.get(p.g.group) else { return Vec::new() };
     s.walks.keys().into_iter().map(|gd| { let w = s.walks.get(gd).unwrap(); (gd, flat(w.at), flat(w.post)) }).collect()
 }
 
@@ -48,7 +48,7 @@ fn given(p: &mut Play, thrown: usize, before: &[(game::ids::GuardId, [f64; 2], [
     let log = &p.g.m.squadthrow.squadthrow_log;
     if log.len() > thrown { let x = log.last().unwrap(); let who = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].callsign == x.who)?; return Some((who, None, flat(x.rest))); }
     let new = walks(p).into_iter().find(|w| !before.contains(w))?;
-    let s = p.g.m.squadthrow.states.get(p.g.player)?;
+    let s = p.g.m.squadthrow.states.get(p.g.group)?;
     Some((new.0, Some(new.2), flat(s.walks.get(new.0)?.arc.rest)))
 }
 
@@ -67,22 +67,22 @@ fn the_throw_shown_is_the_throw_given() {
             let mates: Vec<_> = p.mates().into_iter().filter(|&x| p.up(x)).collect();
             let Some(&m0) = mates.first() else { break };
             let at0 = p.at(m0);
-            let Some(h) = p.g.guards.clone().into_iter().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).map(|gd| p.at(gd)).min_by(|a, b| dist(*a, at0).partial_cmp(&dist(*b, at0)).unwrap()) else { break };
+            let Some(h) = p.g.guards.clone().into_iter().filter(|&gd| p.g.team(gd) == game::teams::Team::Hostile && p.up(gd)).map(|gd| p.at(gd)).min_by(|a, b| dist(*a, at0).partial_cmp(&dist(*b, at0)).unwrap()) else { break };
             if k % 2 == 0 {
                 let d = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).min_by(|a, b| dist(*a, h).partial_cmp(&dist(*b, h)).unwrap()).unwrap_or(h);
                 let t = game::orders::squad_orders_target_at(&mut p.g, [d[0], 0.0, d[1]]);
                 let _ = game::orders::squad_orders_give(&mut p.g, if k % 4 == 0 { "openClear" } else { "move" }, Some(&t), Some(game::orders::Who::All), None);
             }
             p.run(1.2);
-            p.g.sets[p.g.seat].door_tools.frags = 9.0;
+            p.g.groups[p.g.group].tools.frags = 9.0;
             // a spot of the floor some of them have a throw to, 7 to 11 m from the first of the squad
             let lead = p.at(m0);
             let spot = (0..16).map(|b| { let a = (b as f64 + 0.37 * k as f64) * std::f64::consts::PI / 8.0; let r = 7.0 + (b % 3) as f64 * 2.0; [lead[0] + r * a.sin(), lead[1] + r * a.cos()] })
                 .find(|&at| lit(&mut p, at) && { p.frame(); light(&mut p) && shown(&mut p).is_some() });
-            if spot.is_none() { p.g.sets[p.g.seat].orders.menu = None; continue; }
+            if spot.is_none() { p.g.groups[p.g.group].orders.menu = None; continue; }
             for _ in 0..(20 + 7 * k) { p.frame(); light(&mut p); }
-            let Some(i) = p.g.sets[p.g.seat].orders.menu.as_ref().map(|m| m.sel) else { continue };
-            let Some(was) = shown(&mut p) else { p.g.sets[p.g.seat].orders.menu = None; continue };
+            let Some(i) = p.g.groups[p.g.group].orders.menu.as_ref().map(|m| m.sel) else { continue };
+            let Some(was) = shown(&mut p) else { p.g.groups[p.g.group].orders.menu = None; continue };
             let (thrown, before) = (p.g.m.squadthrow.squadthrow_log.len(), walks(&p));
             let refused = game::orders::squad_orders_pick(&mut p.g, Some(i));
             presses += 1;

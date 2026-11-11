@@ -10,7 +10,7 @@ pub struct Job {
     pub stand: V3,
     pub yaw: f64,
     pub aside: Option<crate::wandorder::JobAside>,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub t0: f64,
     pub live_t: f64,
     pub last_t: f64,
@@ -58,7 +58,7 @@ pub enum Issue {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WandorderMod {
-    pub states: JsMap<PlayerId, crate::wandorder::State>,
+    pub states: JsMap<GroupId, crate::wandorder::State>,
 }
 
 /// the counters this module keeps for the checks

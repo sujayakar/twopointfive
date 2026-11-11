@@ -66,8 +66,6 @@ fn what_is_made_from_the_record_may_be_forgotten() {
                 let had = ask(&mut p);
                 p.g.ray_grid = Default::default();
                 p.g.m.hours.reach = Default::default();
-                p.g.col.lamp_q = Default::default();
-                game::scene_collision::unstand(&mut p.g);
                 assert_eq!(ask(&mut p), had, "a ray with no grid and a ray with one");
             }
             act(&mut p, k);

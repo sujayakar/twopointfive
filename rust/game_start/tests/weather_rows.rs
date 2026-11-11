@@ -71,7 +71,7 @@ fn a_snow_level_says_what_lies_on_it() {
     assert_eq!(d.sky[0].snow_level, 1, "the pass is a snow level");
     assert_eq!(d.snow.words.len(), p.g.engine.world.statics.len());
     assert!(d.snow.words.iter().any(|w| w.w == 1), "the pass has fresh snow");
-    let me = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
+    let me = p.g.player_id(p.g.player) as u32;
     let f = d.snow.feet.iter().find(|f| f.id == me).expect("Sam stands on it");
     assert_eq!(f.says & game_draw::snow::ALIVE, game_draw::snow::ALIVE);
     drop(p);

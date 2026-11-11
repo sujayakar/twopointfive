@@ -23,11 +23,11 @@ pub(super) fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) 
 fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
     let up: Vec<GuardId> = men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     if up.is_empty() { return 0.0; }
-    let def = match g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
+    let def = match g.groups[g.group].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
         Some(d) => d,
         None => return 0.0,
     };
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     crate::orders::squad_orders_new_group(g);
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
     if crate::orders::order_issue(g, def, &up, &t, None).is_some() { return 0.0; }

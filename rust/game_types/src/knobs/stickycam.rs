@@ -2,10 +2,10 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// Every number of it (Tab ▸ Player & weapons ▸ Sticky cameras; in the knob registry and a journal's tables).
-///  `carry` = the most a rifle is handed (kit.ts CAMS_MAX: the card's own cap, the same three) · `max` = the most that stay out on their walls (one more sent
+/// Every number of it.
+///  `carry` = the most a rifle is handed (the kit's `CAMS_MAX`: the card's own cap, the same three) · `max` = the most that stay out on their walls (one more sent
 ///  retires the oldest) · `live` = how many of those SEND A PICTURE, the newest first (1: his headset shows one feed — sending the next camera gives the last
-///  one's view up; `max` or more = every camera out is an eye, as it first shipped) · `issue` = what a mission
+///  one's view up; `max` or more = every camera out is an eye) · `issue` = what a mission
 ///  started the 'cameras' way hands him when his card carries fewer · the flight (a Ballistics: speed m/s, gravity, drag /s, contact radius m, seconds, substeps
 ///  a frame) · `cd` s before the tube's next round · `aimY` m: the height it flies over the spot the cursor names (above a head, under a door's head) ·
 ///  `fovDeg`: a wall camera's wedge about the wall's normal (a camera lying flat sees all round) · `off` m: how far off its surface the lens stands ·

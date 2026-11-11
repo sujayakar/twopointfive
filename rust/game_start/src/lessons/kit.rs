@@ -2,7 +2,8 @@
 //! them is aimed at a man who does what the line says. In the squad's half he gives the orders the lines ask for (the command key tapped on a thing, held for its ring and a digit, the word) and
 //! shoots only on the last line.
 use super::{Bot, Ended, Tutorial};
-use crate::player::{at, flat, Walk, LEFT, RIGHT, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Walk, LEFT, RIGHT, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -59,9 +60,9 @@ async fn ring(b: &Bot, p: V3) -> bool {
     b.down("KeyB");
     b.hold(&["KeyB"], 0.45, || false).await;
     b.ticks(2).await;
-    if b.ask(|g| g.sets[g.seat].orders.menu.is_none()) { b.say(String::from("  the squad's ring did not come up")); return false }
+    if b.ask(|g| g.groups[g.group].orders.menu.is_none()) { b.say(String::from("  the squad's ring did not come up")); return false }
     let said = b.ask(|g| game::lesson::lesson_step(g).and_then(|t| t.menu_line)).unwrap_or_default();
-    let rows = || b.ask(|g| g.sets[g.seat].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
+    let rows = || b.ask(|g| g.groups[g.group].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
     let digits = Bot::digits(&said);
     b.say(format!("  the ring is up: '{}' -> {:?} · {}", said, digits, rows()));
     for d in digits { b.press(&format!("Digit{}", d), 4).await; b.say(format!("    [{}] -> {}", d, rows())); }
@@ -148,7 +149,7 @@ async fn deed(b: &Bot, id: &str) {
         }
         "charge" => {
             if !b.verb(InteractableKind::Door, Verb::Charge, Some(SHOP_DOOR)).await { b.fail(String::from("no 'charge' row on the shop's door")).await; }
-            b.until(|| b.me(|p| p.charging.is_none() && p.kick.is_none()), 12.0).await;
+            b.until(|| b.me(|p| p.charging().is_none() && p.kick().is_none()), 12.0).await;
             b.ticks(20).await;
         }
         "back" => { b.to_near(BACK, 10.0, 0.5).await; b.ticks(20).await; }
@@ -192,12 +193,12 @@ async fn deed(b: &Bot, id: &str) {
             b.until(|| !b.step_is("behind"), 9.0).await;
             if b.step_is("behind") { return; }
             let men: Vec<GuardId> = last_two(b).into_iter().filter(|&x| b.up(x)).collect();
-            let off = men.iter().enumerate().filter(|(k, &x)| flat(b.man_at(x), LAST_MEN[*k]) > 0.8).count();
+            let off = men.iter().enumerate().filter(|(k, &x)| dist_xz(b.man_at(x), LAST_MEN[*k]) > 0.8).count();
             if men.len() < 2 || off > 0 { b.fail(format!("the shot is asked for before the two stand in the doorway ({} up, {} still on the way)", men.len(), off)).await; }
         }
         // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
         "launch" => {
-            b.until(|| { let m = last_two(b); m.len() >= 2 && m.iter().enumerate().all(|(k, &x)| !b.up(x) || flat(b.man_at(x), LAST_MEN[k]) < 0.8) }, 12.0).await;
+            b.until(|| { let m = last_two(b); m.len() >= 2 && m.iter().enumerate().all(|(k, &x)| !b.up(x) || dist_xz(b.man_at(x), LAST_MEN[k]) < 0.8) }, 12.0).await;
             let Some(x) = last_two(b).into_iter().find(|&y| b.up(y)) else { b.fail(String::from("nobody came out through the shop")).await; return };
             if b.angle(b.door("store")).abs() <= 1.0 { b.fail(String::from("the two are in the doorway and the store's back door is not open: they did not come by it")).await; }
             let on = b.ask(|g| game::weapons::rifle_attachment(g, g.pl[g.player].rifle));
@@ -213,7 +214,7 @@ async fn deed(b: &Bot, id: &str) {
             b.fight(6, 60.0, async || {
                 let Some(x) = b.foes().into_iter().find(|&y| b.up(y) && !b.scripted(y)) else { b.ticks(10).await; return };
                 let p = b.man_at(x);
-                if flat(p, b.pos()) > 14.0 { b.to_by([p[0], 0.0, p[2]], 1.5, Walk::doors(), || b.line(x)).await; } else { b.ticks(10).await; }
+                if dist_xz(p, b.pos()) > 14.0 { b.to_by([p[0], 0.0, p[2]], 1.5, Walk::doors(), || b.line(x)).await; } else { b.ticks(10).await; }
             }, Some(&who)).await;
         }
 

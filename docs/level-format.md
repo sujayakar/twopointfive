@@ -63,7 +63,7 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
 
 A file also says a few things no rule of the game reads, which `levelToData` writes and the reader asks for: `floors` (at least one, with `id`, `y` and `ceiling`;
 `tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list), an `id` on each objective, beacon and plan, an
-`id` on each surface zone, and a `kind` of hide, utility or trigger on each volume.
+`id` on each surface zone, a `kind` of hide, utility or trigger on each volume, and (optional) a `name` on a box.
 
 ### How much a level may hold
 
@@ -76,7 +76,7 @@ A file also says a few things no rule of the game reads, which `levelToData` wri
 | beacons, cameras, lasers | 32 each | `faults.rs` |
 | lights, switchables, cameras, lasers and the breaker together | 256 | `faults.rs` |
 | light rows, counted at start with beacons, cameras and vehicle lamps | 256 | a start alone |
-| sheets of glass | 256 | a start alone (`PANE_CAP`) |
+| sheets of glass | 256 | a start alone (`MAX_SHEETS`) |
 
 ### What comes last
 
@@ -90,7 +90,6 @@ index holds without them.
 - `id` text, unique. What every other record names it by.
 - `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it, and `carlamps.rs`
   goes by what the kits write. A door's frame is plain boxes in group `doorframe.<id>`.
-- `name` text; default none. A tag on the box. `wallpen.rs` takes a name starting `door_` as a door.
 - `c` V3, the center. `h` V3, half sizes, each at least 0.
 - `yaw` number; default 0. Turn about +y.
 - `rot` four numbers x, y, z, w, a unit quaternion; default none. For a tilted thing. Takes no `markings` and no `shape`.
@@ -271,7 +270,7 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 Glass has no block of its own: a pane is a box with the Glass flag. Its paint is the tint it lets through. `load` makes the box, `glass.rs` keeps its state, and the picture tests
 it apart from the world's boxes. Feet and sound take it as a wall, sight passes through it, and a round, a kick or a bang breaks it. It takes no form, so `shape.with` is the only
 shape it says. A sheet is thin: `is_sheet` asks that the thinner of `h[0]` and `h[2]` is at most `THICK_GLASS_HALF`, and a thicker Glass box is solid glass that does not craze.
-The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
+The kit lays panes with `paneX` and `paneZ`. A level's most is `MAX_SHEETS`.
 
 ## plans
 
@@ -436,7 +435,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 | loaded, reload, following | none | he has loaded, is reloading, or all are falling in |
 | launcher | `on`, `fired` | that rifle attachment is up, and has just fired if said |
 | burst | `n` (default 3) | so many rounds in an automatic burst |
-| threw | `kind`, `quick`, `area` | a throw of that kind, and into the area if said |
+| threw | `kind`, `area` | a throw of that kind, and into the area if said |
 | orderTo | `who` | the orders menu is on that man or pair |
 | stackOn | `door`, `who`, `set` | those men are stacked on the door, and arrived if `set` |
 | pairsOn | `doors` | the pairs stand on so many doors |

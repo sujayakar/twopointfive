@@ -127,8 +127,8 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, lead: f64) -> FlatSe
     let w = wedges as usize;
     let mut row: Vec<f64> = vec![-1.0; w + 1];
     let (flat_top, flat_left) = (flat_top(), flat_left());
-    let top = flat_top.get(String::from(kind));
-    let left = flat_left.get(String::from(kind));
+    let top = flat_top.of(kind);
+    let left = flat_left.of(kind);
     let mut rest: Vec<f64> = Vec::new();
     let mut last: Vec<f64> = Vec::new();
     if lead >= 0.0 {

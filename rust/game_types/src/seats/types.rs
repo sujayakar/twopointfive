@@ -17,8 +17,6 @@ pub struct SeatHand {
     pub setup: Option<crate::game::PlayerSetup>,
     pub setup_key: Option<crate::game::PlayerSetupKey>,
     pub f_held: bool,
-    pub aim_held: bool,
-    pub throw_held: bool,
     pub throw_preview: Option<crate::throwables::ThrowSolution>,
     pub friend_low: bool,
     #[is(-10.0)] pub friend_t: f64,
@@ -28,10 +26,9 @@ pub struct SeatHand {
 #[derive(Clone, Debug, ToBytes)]
 #[bytes(parts)]
 pub struct SeatSet {
-    pub seat: SeatId,
     pub player: PlayerId,
-    pub orders: crate::orders::SquadOrders,
-    pub door_tools: crate::doortools::DoorTools,
+    /// his squad
+    pub group: GroupId,
     pub work: crate::workthings::WorkThings,
     pub wall_charge: crate::wallcharge::WallCharge,
     pub aim_point: V3,
@@ -43,7 +40,6 @@ pub struct SeatSet {
     pub interactables: Vec<crate::game::Interactable>,
     pub nearby: Vec<crate::game::Interactable>,
     pub act: Option<crate::game::Interactable>,
-    pub use_door: Option<DoorId>,
     /// (the host's camera: in no bytes)
     #[bytes(skip)]
     pub view_proj: Option<crate::game::GameViewProj>,
@@ -54,10 +50,8 @@ pub struct SeatSet {
 impl Default for SeatSet {
     fn default() -> Self {
         SeatSet {
-            seat: SeatId(0),
             player: PlayerId(0),
-            orders: crate::orders::SquadOrders::blank(),
-            door_tools: crate::doortools::DoorTools::blank(),
+            group: GroupId(0),
             work: crate::workthings::WorkThings::blank(),
             wall_charge: crate::wallcharge::WallCharge::blank(),
             aim_point: [0.0, 0.0, 0.0],
@@ -69,7 +63,6 @@ impl Default for SeatSet {
             interactables: Vec::new(),
             nearby: Vec::new(),
             act: None,
-            use_door: None,
             view_proj: None,
             threat_proximity: 0.0,
             torch_on_t: -100.0,

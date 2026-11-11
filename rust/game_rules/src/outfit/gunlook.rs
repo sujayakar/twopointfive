@@ -63,43 +63,13 @@ pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>,
     Some(l)
 }
 
-/// LONG_MODELS[id], from the skeleton's table.
-fn long_row(id: crate::weapons::GunModelId) -> Option<LongModel> {
-    use crate::weapons::GunModelId as Id;
-    let t = long_models();
-    match id {
-        Id::M870 => t.m870,
-        Id::Mk12 => t.mk12,
-        Id::Mp7 => t.mp7,
-        Id::Mk46 => t.mk46,
-        Id::M1014 => t.m1014,
-        Id::Hk45 => t.hk45,
-        Id::G18 => t.g18,
-    }
-}
-
-/// PISTOL_MODELS[id], from the skeleton's table.
-fn pistol_row(id: crate::weapons::GunModelId) -> Option<PistolModel> {
-    use crate::weapons::GunModelId as Id;
-    let t = pistol_models();
-    match id {
-        Id::M870 => t.m870,
-        Id::Mk12 => t.mk12,
-        Id::Mp7 => t.mp7,
-        Id::Mk46 => t.mk46,
-        Id::M1014 => t.m1014,
-        Id::Hk45 => t.hk45,
-        Id::G18 => t.g18,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::weapons::GunModelId as Id;
     use crate::weapons::{WeaponDef, WeaponId as W};
 
-    fn row(g: &Game, id: W) -> WeaponDef { g.m.weapons.weapons.get(id).unwrap().clone() }
+    fn row(g: &Game, id: W) -> WeaponDef { g.weapon(id).clone() }
 
     /// A FAILURE MEANS: a gun is drawn twice over, or finds no model at all.
     #[test]

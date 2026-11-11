@@ -3,16 +3,13 @@
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
 //! lane's `out`). The pieces are on the frame's list, which the tick's own counts read (the fog's `rig_from` / `rig_to`):
-//! so the lane runs here as it runs in the TypeScript.
+//! so the lane runs here.
 //!
-//! WHERE THE RUST IS NOT A PLAIN COPY:
-//! - STAND-IN: THE LANE'S BOOKS ARE MADE ON FIRST USE (`ensure`). The TypeScript makes them in WallBreak's constructor, from the level as authored; the
-//!   bridge does not carry `WallBreak.skins`, so an imported game holds a blank one. `ensure` reads every box's flags AS AUTHORED (what the two lanes that
-//!   hide a static kept of it), so it answers the constructor's lists whenever it is asked. Belongs: the bridge (carry `cand` and `solid`), or the
-//!   import's own deal.
+//! WHAT TO KNOW:
+//! - THE LANE'S BOOKS ARE MADE ON FIRST USE (`ensure`), from the level as authored: `ensure` reads every box's flags AS AUTHORED (what the two lanes that
+//!   hide a static kept of it), so it gives the same lists whenever it is asked.
 //! - A piece is a row its sheet keeps (`scene_boxes::box_kept`) and lets go when it is cut again or made whole.
-//! - The three closures handed to the constructor (`own`, `brk`, `all`) are asks of the game by path.
-//! - `try … catch → fail`: a fault here is a panic with its place; `failed` is never raised.
+//! - A fault here is a panic with its place; `failed` is never raised.
 
 pub use ::game_types::wallskin::types;
 pub use types::*;
@@ -27,6 +24,9 @@ use crate::scene_cut::CutPlane;
 
 type Bx = crate::scene_boxes::Box;
 type Rect = [f64; 4];
+
+mod cut;
+use cut::wall_skin_recut;
 
 fn into_b(b: &Bx, p: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); let (x, z) = (p[0] - b.c[0], p[2] - b.c[2]); [cs * x - sn * z, p[1] - b.c[1], sn * x + cs * z] }
 fn out_of_b(b: &Bx, l: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]] }
@@ -55,7 +55,7 @@ fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f64; 4
     let part = |u: f64, v: f64| -> i64 { parts.iter().position(|r| inside(*r, u, v)).map(|i| i as i64).unwrap_or(-1) };
     let (us, vs) = (edges(hu, 0), edges(hv, 2));
     let mut out: Vec<Rect> = Vec::new();
-    // (the TypeScript's `last` is the row's rectangles themselves, already in `out`: here their places in it; its key is the row's outline as a string)
+    // (`last` is the last row's rectangles, by their places in `out`; its key is the row's outline)
     let (mut last_from, mut last_n) = (0usize, 0usize); let mut last_key: Vec<(f64, f64, i64)> = Vec::new();
     let col: Option<Vec<bool>> = if cols { Some((0..us.len() - 1).map(|i| (0..vs.len() - 1).any(|j| gone((us[i] + us[i + 1]) / 2.0, (vs[j] + vs[j + 1]) / 2.0))).collect()) } else { None };
     for j in 0..vs.len() - 1 {
@@ -76,7 +76,7 @@ fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f64; 4
     out
 }
 
-// ---------------------------------------------------------------- the three asks the TypeScript hands the constructor as closures
+// ---------------------------------------------------------------- what a static is to this rule
 
 /// Static j has a road of its own (a fixture's box, one of the lane's destructibles) and is no sheet of this rule.
 fn wall_skin_own(g: &crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
@@ -103,7 +103,7 @@ fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallS
     w
 }
 
-/// STAND-IN (the head of this file): the books made the first time anything of the lane is asked on a game that came without them
+/// the books made the first time anything of the lane is asked on a game that came without them
 fn ensure(g: &mut Game) {
     let authored = g.destr.walls.authored;
     if g.destr.walls.skins.solid.len() as f64 == authored { return; }
@@ -227,149 +227,4 @@ fn wall_skin_skins_of(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
     }
     g.destr.walls.skins.on.set(crate::Num(b.id), l.clone());
     l
-}
-
-// ---------------------------------------------------------------- cutting one
-
-#[allow(clippy::too_many_arguments)]
-fn cells_of(s: &Bx, q: &Seat, w: &Bx, wnx: f64, wny: f64, wnz: f64, yb: &[f64], open: &[u8], a: f64) -> Vec<Rect> {
-    let mut out: Vec<Rect> = Vec::new();
-    let (n, face) = (q.n, q.face); let u = 2.0 - n; let nn = if n == 0.0 { wnz } else { wnx }; let at = if face > 0.0 { (if n == 0.0 { wnx } else { wnz }) - 1.0 } else { 0.0 };
-    let mut k = 0.0;
-    while k < nn {
-        let mut iy = 0.0;
-        while iy < wny {
-            let (ix, iz) = (if n == 0.0 { at } else { k }, if n == 0.0 { k } else { at });
-            if open.get(((iy * wnz + iz) * wnx + ix) as usize).copied().unwrap_or(0) != 0 {
-                let (mut lo, mut hi): (V3, V3) = ([0.0, yb[iy as usize], 0.0], [0.0, yb[iy as usize + 1], 0.0]);
-                lo[ax(n)] = face * w.h[ax(n)]; hi[ax(n)] = face * w.h[ax(n)];
-                lo[ax(u)] = -w.h[ax(u)] + 2.0 * w.h[ax(u)] * k / nn; hi[ax(u)] = -w.h[ax(u)] + 2.0 * w.h[ax(u)] * (k + 1.0) / nn;
-                let (p, e) = (into_b(s, out_of_b(w, lo)), into_b(s, out_of_b(w, hi)));
-                let r: Rect = [m::min(p[ax(a)], e[ax(a)]), m::max(p[ax(a)], e[ax(a)]), m::min(p[1], e[1]), m::max(p[1], e[1])];
-                if m::min(r[1], s.h[ax(a)]) - m::max(r[0], -s.h[ax(a)]) > EPS && m::min(r[3], s.h[1]) - m::max(r[2], -s.h[1]) > EPS { out.push(r); }
-            }
-            iy += 1.0;
-        }
-        k += 1.0;
-    }
-    out
-}
-
-fn uncut(g: &mut Game, j: f64) {
-    if let Some(old) = g.destr.walls.skins.cut.delete(crate::Num(j)) { for b in old { crate::scene_boxes::box_let_go(g, b); } }
-    g.destr.walls.skins.laid.delete(crate::Num(j));
-}
-
-/// One sheet cut again from what stands behind it.
-fn wall_skin_recut(g: &mut crate::game::Game, j: f64) {
-    let seats = wall_skin_backs(g, j); if seats.is_empty() { return; }
-    let kk = g.k.wallskin; let fl = crate::scene_boxes::box_flag(); let col = g.col.boxes.clone();
-    let s = g.tab.boxes[col[j as usize]].clone();
-    let t = seats[0].t; let a = 2.0 - t; let (hu, hv) = (s.h[ax(a)], s.h[1]);
-    // what has gone of each thing it lay on: a breakable's open cells at that face; any other solid whole, once something has hidden it
-    let on: Vec<Rect> = seats.iter().map(|q| q.r).collect(); let near: Vec<f64> = seats.iter().map(|q| q.near).collect();
-    let open: Vec<Vec<Rect>> = seats.iter().map(|q| match brk_id(g, q.k) {
-        Some(b) => { let w = &g.tab.wallbreak_breakable[b]; cells_of(&s, q, &g.tab.boxes[w.box_], w.nx, w.ny, w.nz, &w.yb, &w.open, a) }
-        None => if js::to_i32(g.tab.boxes[col[q.k as usize]].flags) & js::to_i32(fl.no_primary) != 0 { vec![all()] } else { Vec::new() },
-    }).collect();
-    let whole = |r: &[Rect]| r.len() == 1 && r[0][0] <= -hu + EPS && r[0][1] >= hu - EPS && r[0][2] <= -hv + EPS && r[0][3] >= hv - EPS;
-    // what stands behind may END RAGGED (a breakable's standing piece under a cut record, with the cut switch up): the part of the sheet on such a piece
-    // takes the outline of that piece's face
-    let mut parts: Vec<Rect> = Vec::new(); let mut rag: Vec<(Bx, Seat)> = Vec::new();
-    for q in seats.iter() {
-        let Some(b) = brk_id(g, q.k) else { continue; };
-        let (live, slots) = { let w = &g.tab.wallbreak_breakable[b]; (w.live, w.slots.clone()) };
-        let mut i = 0.0;
-        while i < live {
-            let pi = slots.get(i as usize).copied(); i += 1.0;
-            let Some(pid) = pi.and_then(|x| col.get(x as usize).copied()) else { continue; };
-            let p = &g.tab.boxes[pid];
-            if !p.cut.as_ref().map(|c| !c.is_empty()).unwrap_or(false) { continue; }
-            let (lo, hi) = (into_b(&s, out_of_b(p, [-p.h[0], -p.h[1], -p.h[2]])), into_b(&s, out_of_b(p, [p.h[0], p.h[1], p.h[2]])));
-            let r: Rect = [m::min(lo[ax(a)], hi[ax(a)]), m::max(lo[ax(a)], hi[ax(a)]), m::min(lo[1], hi[1]), m::max(lo[1], hi[1])];
-            if m::min(r[1], hu) - m::max(r[0], -hu) > EPS && m::min(r[3], hv) - m::max(r[2], -hv) > EPS { parts.push(r); rag.push((p.clone(), *q)); }
-        }
-    } 
-    let mut rects: Vec<Rect> = if open.iter().any(|l| !l.is_empty()) || !parts.is_empty() { standing(hu, hv, &on, &near, &open, Some(false), Some(&parts)) } else { vec![[-hu, hu, -hv, hv]] };
-    if whole(&rects) && parts.is_empty() { uncut(g, j); return; }   // (something solid stands behind every part of it that lay on anything: the authored box, whole)
-    let marked = s.marks.as_ref().map(|x| !x.is_empty()).unwrap_or(false); let base: Vec<CutPlane> = s.cut.clone().unwrap_or_default();
-    if marked && base.len() as f64 + 4.0 > crate::scene_cut::MAX_CUT_PLANES {   // (its marks are laid out on the whole box and no record can be drawn, or has room: left as it was)
-        if !g.destr.walls.skins.marked.has(crate::Num(j)) { g.destr.walls.skins.marked.add(crate::Num(j));  }
-        return;
-    }
-    // (what the other sheets hand over: one the hangers have since thrown spends none of the cap)
-    let mut others = 0.0;
-    for i in g.destr.walls.skins.cut.keys() { if i.0 != j && crate::scene_boxes::box_drawn(g, &col, col[i.0 as usize]) { others += g.destr.walls.skins.cut.get(i).map(|l| l.len()).unwrap_or(0) as f64; } }
-    let fits = |r: &[Rect]| r.len() as f64 <= m::min(kk.per_skin, SLOTS) && others + r.len() as f64 <= kk.max_pieces;
-    if !fits(&rects) && !parts.is_empty() { parts.clear(); rag.clear(); rects = standing(hu, hv, &on, &near, &open, None, None); if whole(&rects) { uncut(g, j); return; } }   // (past a cap: square ends first)
-    if !fits(&rects) { rects = standing(hu, hv, &on, &near, &open, Some(true), None); if !fits(&rects) {  return; }  }   // (… then by whole columns, else as it last stood)
-    // the planes of the piece behind rectangle `r`, about a box of the sheet's frame centred at `pc`: each taken where it meets the face the sheet lies
-    // on, and stood square to that face
-    let outline = |r: &Rect, pc: V3| -> Vec<CutPlane> {
-        let Some(k) = parts.iter().position(|x| inside(*x, (r[0] + r[1]) / 2.0, (r[2] + r[3]) / 2.0)) else { return Vec::new(); };
-        let (p, q) = (&rag[k].0, &rag[k].1);
-        let o = into_b(p, pc); let tf = q.side * (s.h[ax(t)] + m::max(q.near, 0.0)); let zero = into_b(&s, p.c);
-        let mut out: Vec<CutPlane> = Vec::new();
-        for c in p.cut.as_ref().unwrap().iter() {
-            let mut n = into_b(&s, out_of_b(p, c.n)); n[0] -= zero[0]; n[1] -= zero[1]; n[2] -= zero[2];
-            let d = c.d - (c.n[0] * o[0] + c.n[1] * o[1] + c.n[2] * o[2]) - n[ax(t)] * tf; n[ax(t)] = 0.0;
-            let l = m::hyp3(n[0], n[1], n[2]);
-            if l > 1e-6 { out.push(CutPlane { n: [n[0] / l, n[1] / l, n[2] / l], d: d / l }); }
-        }
-        out
-    };
-    // a piece's key is its sheet and one of 16 places: a piece a later cut leaves alone keeps its place, and a new one takes a place no piece of the
-    // last cut had while there is one
-    let prev: Vec<WallSkinLaidValueItem> = g.destr.walls.skins.laid.get(crate::Num(j)).cloned().unwrap_or_default();
-    let old: Vec<f64> = prev.iter().map(|p| p.slot).collect(); let mut now: Vec<f64> = Vec::new();
-    let mut lay: Vec<WallSkinLaidValueItem> = rects.iter().map(|r| {
-        let same = prev.iter().find(|p| (0..4).all(|i| m::abs(p.r[i] - r[i]) <= EPS));
-        if let Some(sm) = same { if !now.contains(&sm.slot) { now.push(sm.slot); } }
-        WallSkinLaidValueItem { r: *r, slot: same.map(|x| x.slot).unwrap_or(-1.0) }
-    }).collect();
-    for x in lay.iter_mut() {
-        if x.slot >= 0.0 { continue; }
-        let mut k = 0.0; while k < SLOTS && (now.contains(&k) || old.contains(&k)) { k += 1.0; }
-        if k == SLOTS { k = 0.0; while now.contains(&k) { k += 1.0; } }
-        x.slot = k; now.push(k);
-    }
-    let mut pieces: Vec<Bx> = Vec::new(); let mut kept: Vec<WallSkinLaidValueItem> = Vec::new(); let mut bit = false;
-    let mut area = 0.0; for r in rects.iter() { area += (r[1] - r[0]) * (r[3] - r[2]); }
-    for x in lay.iter() {
-        let (r, slot) = (x.r, x.slot);
-        let (mut lc, mut h): (V3, V3) = ([0.0, (r[2] + r[3]) / 2.0, 0.0], [0.0, (r[3] - r[2]) / 2.0, 0.0]);
-        lc[ax(a)] = (r[0] + r[1]) / 2.0; h[ax(a)] = (r[1] - r[0]) / 2.0; h[ax(t)] = s.h[ax(t)];
-        let mut p = s.clone();
-        p.flags = ((js::to_i32(s.flags) & !js::to_i32(fl.no_primary)) | js::to_i32(fl.dynamic)) as f64; p.name = Some(String::from("skin"));
-        p.mkey = Some(crate::scene_boxes::mkey().skin + j * SLOTS + slot);
-        if marked {   // the whole box again, under the planes of the rectangle that stands (a side that is the box's own takes none): every mark where it was
-            let mut planes: Vec<CutPlane> = base.clone();
-            let mut side = |axis: usize, sign: f64, at: f64| { let mut n: V3 = [0.0, 0.0, 0.0]; n[axis] = sign; planes.push(CutPlane { n, d: sign * at }); };
-            if r[0] > -hu + EPS { side(ax(a), -1.0, r[0]); } if r[1] < hu - EPS { side(ax(a), 1.0, r[1]); } if r[2] > -hv + EPS { side(1, -1.0, r[2]); } if r[3] < hv - EPS { side(1, 1.0, r[3]); }
-            p.c = s.c; p.h = s.h; p.cut = Some(planes);
-        } else {
-            p.c = out_of_b(&s, lc); p.h = h;
-            // (a shape's planes are in the box's own frame: the same planes about the piece's middle)
-            p.cut = if !base.is_empty() { Some(base.iter().map(|c| CutPlane { n: c.n, d: c.d - (c.n[0] * lc[0] + c.n[1] * lc[1] + c.n[2] * lc[2]) }).collect()) } else { None };
-        }
-        if !parts.is_empty() {
-            let more = outline(&r, p.c);
-            if !more.is_empty() {
-                let mine = p.cut.clone().unwrap_or_default();
-                let own = crate::scene_cut::cut_record(p.h, &mine).cut.map(|c| c.len()).unwrap_or(0);
-                let mut both = mine; both.extend(more);
-                let rr = crate::scene_cut::cut_record(p.h, &both);
-                if rr.empty || rr.cut.as_ref().map(|c| c.len()).unwrap_or(0) > own { bit = true; }
-                if rr.empty { continue; }
-                p.cut = rr.cut;
-            }
-        }
-        // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)
-        p.shape = None; p.shaped = None; p.piece = None; p.of = None;
-        pieces.push(p); kept.push(*x);
-    }
-    if !bit && area >= 4.0 * hu * hv - EPS { uncut(g, j); return; }   // (split at a ragged piece's bounds, and no plane of it bites the sheet: the authored box, whole)
-    g.destr.walls.skins.laid.set(crate::Num(j), kept);
-    let rows: Vec<FrameBoxId> = pieces.into_iter().map(|p| crate::scene_boxes::box_kept(g, p)).collect();
-    if let Some(old) = g.destr.walls.skins.cut.set(crate::Num(j), rows) { for b in old { crate::scene_boxes::box_let_go(g, b); } }
 }

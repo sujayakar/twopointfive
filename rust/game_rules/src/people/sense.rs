@@ -12,7 +12,7 @@ use alloc::vec::Vec;
 /// All of it is the block's: nothing of it is kept here.
 
 /// The block has a grid's part: an empty one, made as a game's first tick opens.
-pub fn smoke_home(g: &mut crate::game::Game) {
+pub fn smoke_home(g: &crate::game::Game) {
     if sim::state::state_read(g.sim).smoke.live == 0 {
         sim::bricks::reset(g.sim, true);
     }
@@ -55,7 +55,7 @@ pub fn smoke_held(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) -
 }
 
 /// Something lets smoke out.
-pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
+pub fn smoke_emit(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
     let Some((r, rate)) = held(g, e) else { return };
     smoke_home(g);
     sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl, e.tint.map_or([0.0; 3], |t| t.map(|v| 1.0 - v)));
@@ -72,7 +72,7 @@ pub fn smoke_sources(g: &crate::game::Game) -> Vec<crate::smoke_types::SmokeEmit
 }
 
 /// Every source lets out no more; what is in the air stays.
-pub fn smoke_shut(g: &mut crate::game::Game) {
+pub fn smoke_shut(g: &crate::game::Game) {
     if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::shut(g.sim); }
 }
 
@@ -86,6 +86,7 @@ pub fn smoke_budget(g: &crate::game::Game) -> f64 {
 pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
     let n = sim::bricks::beat(g.sim, dt);
     if n == 0 {
+        crate::scene_collision::grid_ahead(g);
         return;
     }
     let s = g.k.sense.smoke;
@@ -96,12 +97,12 @@ pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The smoke's ways are asked, of a game that was put back and is drawn before its next step. The game is as it was.
-pub fn smoke_ways(g: &mut crate::game::Game) {
+pub fn smoke_ways(g: &crate::game::Game) {
     if sim::state::state_read(g.sim).smoke.live != 0 { crate::scene_collision::grid_ways(g); }
 }
 
 /// No smoke anywhere; the beat, the plan and the light that comes round stay: they are the level's.
-pub fn smoke_clear(g: &mut crate::game::Game) {
+pub fn smoke_clear(g: &crate::game::Game) {
     if smoky(g) {
         sim::bricks::empty(g.sim);
     }
@@ -110,16 +111,14 @@ pub fn smoke_clear(g: &mut crate::game::Game) {
 /// THE LIGHT UNDER A ROOF at a point that is no lamp's and not the sun's own beam (None: it is under the open
 /// sky, or nothing was swept yet).
 pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {
-    sim::bricks::under_roof(g.sim, g.sim, p, &g.k)
+    sim::bricks::under_roof(g.sim, g.tab.boxes.world(), p, &g.k)
 }
 
 /// THE LIGHT THAT STANDS ON A POINT, asked from outside a tick: a page's preview asks it a block of floor at a time. `owners`: whose carried
 /// lamps are left out · `steady`: what the place lights, with nothing that passes · `leave`: lamps of the level's own left out, by what feeds them. The game is as it was
 /// (`game_start/tests/senses.rs`), so no host takes its state again after it.
 pub fn light_asked(g: &mut crate::game::Game, p: V3, owners: &[f64], steady: bool, leave: f64) -> f64 {
-    if crate::ask::WorldAsk::try_of(g).is_err() { crate::scene_collision::stands(g); }
-    crate::scene_box_mirror::box_mirror_things(g);
-    crate::guards::light_at(g, p, Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
+    crate::guards::light_at(g, p, Some(&mut |_: &Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
 }
 
 /// ASKING THE SENSES FROM OUTSIDE A TICK; no rule asks it. `what` 0: the light on points (`xs`: 1 for what the place lights with nothing that
@@ -131,7 +130,7 @@ pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> 
         0 => {
             let [steady, leave, n, rest @ ..] = xs else { return Vec::new() };
             let (owners, points) = rest.split_at(*n as usize);
-            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(*steady != 0.0), Some(*leave)).0).collect()
+            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &Game, o: f64| owners.contains(&o)), Some(*steady != 0.0), Some(*leave)).0).collect()
         }
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {

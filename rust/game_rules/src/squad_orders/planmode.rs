@@ -18,13 +18,13 @@ fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::pla
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
     for m in crate::orders::squad_orders_men(g, seat, Some(crate::orders::SquadOrdersMenSel::All), None) {
         let a = match crate::orders::squad_orders_of(seat, m) {
-            Some(a) if g.tab.orders_assignment[a].post.is_some() => a,
+            Some(a) if g.tab.task[a].post.is_some() => a,
             _ => {
                 idle.push(m);
                 continue;
             }
         };
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         let k = match row.door {
             Some(d) => alloc::format!("d{}", g.doors.list.iter().position(|x| *x == d).map_or(-1, |i| i as i64)),
             None => alloc::format!("g{}", row.group),
@@ -119,7 +119,7 @@ pub(super) fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, in
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down.
 pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    if !(goal_shift(g, &crate::seats::here(g), input) && g.sets[g.seat].orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
+    if !(goal_shift(g, &crate::seats::here(g), input) && g.groups[g.group].orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
         return;
     }
     let key = g.k.cmdring.key.clone();
@@ -129,22 +129,11 @@ pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraI
     }
 }
 
-/// `t.at`, which every kind of target has.
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    use crate::orders::OrderTarget;
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// `G.every(m => S.of(m)?.door === door)`.
 fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
         let on = match crate::orders::squad_orders_of(seat, m) {
-            Some(a) => g.tab.orders_assignment[a].door == Some(door),
+            Some(a) => g.tab.task[a].door == Some(door),
             None => false,
         };
         if !on {
@@ -156,11 +145,11 @@ fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: 
 
 /// The men's mean distance to `t` on the floor.
 fn far(g: &Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
-    let at = target_at(t);
+    let at = t.at();
     let mut s = 0.0;
     for &m in men {
-        let p = g.ch[g.gd[m].ch].pos;
-        s = s + m::hyp2(p[0] - at[0], p[2] - at[2]);
+        let p = g.pos_of(m);
+        s = s + v3::dist_xz(p, at);
     }
     s / men.len() as f64
 }

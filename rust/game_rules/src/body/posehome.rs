@@ -21,7 +21,7 @@ fn posed_chars(g: &Game) -> Vec<CharId> {
 }
 
 /// Every handle on a pose one character keeps besides his set's own list: his animator's stages and buffers, and his ragdoll's pose.
-/// A handle is a COPY of a place in the pool (the TypeScript's is the pose object, whose place is written in it), so whatever moves a pose rewrites these.
+/// A handle is a COPY of a place in the pool, so whatever moves a pose rewrites these.
 fn handles(ch: &mut crate::character::Character, f: &mut dyn FnMut(&mut Pose)) {
     let a = &mut ch.anim;
     for p in [&mut a.pose, &mut a.p_a, &mut a.p_b, &mut a.p_c, &mut a.p_upper, &mut a.rest, &mut a.p_aim] { f(p); }
@@ -38,14 +38,14 @@ fn replace(g: &mut Game, c: CharId, map: &BTreeMap<u32, Pose>) {
 }
 
 /// the poses a character keeps from tick to tick, each once, in the order they go into the pool: his set's list, then his ragdoll's
-fn kept(g: &mut Game, c: CharId, ragdoll: bool) -> Vec<Pose> {
+fn kept(g: &Game, c: CharId, ragdoll: bool) -> Vec<Pose> {
     if ragdoll { return g.ch[c].rd.as_ref().map(|rd| alloc::vec![rd.pose]).unwrap_or_default(); }
     let s = g.ch[c].anim.poses;
     g.tab.pose_set[s].list.clone()
 }
 
 /// A man who is on a list again, or was made since the last tick: whatever of his stands outside the pool (he left while others stayed, and his floats
-/// were kept for him) takes a place at the pool's end, as the TypeScript's go in from arrays of their own.
+/// were kept for him) takes a place at the pool's end.
 fn come_home(g: &mut Game, c: CharId) {
     let mut map: BTreeMap<u32, Pose> = BTreeMap::new();
     for rag in [false, true] {
@@ -59,9 +59,9 @@ fn come_home(g: &mut Game, c: CharId) {
     if !map.is_empty() { replace(g, c, &map); }
 }
 
-/// EVERYBODY OUT, THE POOL EMPTIED, THOSE WHO ARE THERE BACK IN (posehome.ts moveOut, then moveIn's second pass): the sets of the men on the lists in
-/// the lists' order, each set's poses in the order it made them. A man who is on no list keeps his floats outside the pool (rows of `loose_poses`,
-/// as the TypeScript's go out into arrays of their own) until he is on one again. A ragdoll's pose is a pose of its own on both sides and is not
+/// EVERYBODY OUT, THE POOL EMPTIED, THOSE WHO ARE THERE BACK IN: the sets of the men on the lists in
+/// the lists' order, each set's poses in the order it made them. A man who is on no list keeps his floats outside the pool (rows of `loose_poses`)
+/// until he is on one again. A ragdoll's pose is a pose of its own on both sides and is not
 /// the pool's to move (a carried game may still hold one in the pool: it goes back in after the sets).
 fn everybody_out_and_in(g: &mut Game, chars: &[CharId]) {
     let slot = g.sim;
@@ -76,9 +76,9 @@ fn everybody_out_and_in(g: &mut Game, chars: &[CharId]) {
             for p in kept(g, c, rag) {
                 // (a pose of a set's list that stands OUTSIDE the pool goes in with the rest, in the list's place: a man made since the last tick,
                 //  whose set was never at home (a restart made the players and the guards anew while the old sets still held the pool), is on the
-                //  lists like any other, and the TypeScript's second pass puts every pose of every listed set in, in order (posehome.ts moveIn →
-                //  poseSetIn). Left out here, his set was told it was at home while his animator's handles still named rows outside the pool, and
-                //  the next layer was handed a pose the module does not hold. A ragdoll's own pose outside the pool stays outside.)
+                //  lists like any other, and every pose of every listed set goes in, in order. Left out, his set would be told it is at home while his animator's
+                //  handles still named rows outside the pool, and
+                //  the next layer would be handed a pose the module does not hold. A ragdoll's own pose outside the pool stays outside.)
                 if p.nodes == 0 || (rag && p.at >= Pose::LOOSE) || back.iter().any(|b| b.0.at == p.at) { continue; }
                 let f = crate::anim_skeleton::pose_cols(g, p).to_vec();
                 back.push((p, f));
@@ -143,9 +143,8 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
 // ---- THE STAGE
 //
 // An animator's update runs over poses that stand in a pool (its layers are handed their poses by their places). A man of a ticking game has his in
-// the game's pool. A man made INSIDE a tick is not at home until the next tick opens: the TypeScript lends his update "the stage", a block of its
-// own, and takes his poses back into arrays of his own as the update shuts. Here the stage is the END OF THE GAME'S OWN POOL for the length of the
-// update: his poses go in past what is in use, and as it shuts they come out into the rows they came from and the pool is as it was, to the byte.
+// the game's pool. A man made INSIDE a tick is not at home until the next tick opens. For the length of his update the stage is the END OF THE GAME'S OWN POOL:
+// his poses go in past what is in use, and as it shuts they come out into the rows they came from and the pool is as it was, to the byte.
 
 /// The update of a man whose set is not at home opens: his poses into the pool's end, his handles on them, and the set told it stands (a pose it
 /// makes during the update is made there). None: the set is at home and nothing is lent.

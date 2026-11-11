@@ -77,7 +77,7 @@ fn dust_at(p: &mut Play, at: [f64; 3]) -> f64 { sim::weather::of_read(p.g.sim).a
 /// The outside door the rule works: a shut exterior door of the records office with a roof over the floor inside and open sky out.
 fn outside_door(p: &mut Play) -> (String, [f64; 3], [f64; 2]) {
     for d in p.g.doors.list.clone() {
-        if !p.g.dr[d].def.exterior.unwrap_or(false) || game::doors::door_locked(&p.g, d) { continue; }
+        if !p.g.dr[d].def.exterior.unwrap_or(false) || p.g.dr[d].leaf.locked { continue; }
         let c = p.g.dr[d].frame_centre;
         for n in [[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] {
             let at = |m: f64| [c[0] + n[0] * m, c[2] + n[1] * m];
@@ -94,7 +94,7 @@ fn outside_door(p: &mut Play) -> (String, [f64; 3], [f64; 2]) {
 fn dust_comes_in_at_a_door() {
     let mut p = born("records.json", "&weather=dust");
     p.g.ai_enabled = false;
-    for d in p.g.doors.list.clone() { game::doors::door_set_latched(&mut p.g, d, true); game::doors::door_set_angle(&mut p.g, d, 0.0); }
+    for d in p.g.doors.list.clone() { p.g.dr[d].leaf.latched = true; p.g.dr[d].leaf.angle = 0.0; }
     game::air_dust::air_dust_reseed(&mut p.g);
     p.run(1.0);
     let (name, c, n) = outside_door(&mut p);
@@ -148,7 +148,7 @@ const AHEAD: usize = 240;
 fn the_next_stroke_is_foreseen() {
     for die in [1, 4000000000] {
         let mut p = born("office.json", "&weather=downpour");
-        p.g.weather.die = die;
+        p.g.weather.die = game::dice::Die(die);
         let (mut said, mut strokes, mut thunders) = (std::collections::VecDeque::new(), 0, p.g.weather.stats.thunders);
         for _ in 0..60 * 90 {
             let was = p.g.weather.stats.flashes;

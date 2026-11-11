@@ -13,7 +13,7 @@ pub enum RoundHot {
 pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
 }
-/// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own (enemysquads.ts:287, the rows its literal names; merged as { ...SQUADS, ...row } at :306). One arm: the proposal shape has no key for a new struct
+/// one row of `drill_at`, what a map writes over the drill's table; a None field = the table's own (`drill_over`)
 #[derive(Clone, Debug, ToBytes)]
 pub enum DrillAtRow {
     Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },
@@ -60,11 +60,10 @@ pub struct Sent {
     pub spot: Option<V3>,
     pub door: Option<DoorId>,
     pub fix_at: V3,
-    pub tries: f64,
-    pub step_t: f64,
     pub t0: f64,
     pub there: Option<f64>,
-    pub way: Option<Vec<V3>>,
+    /// the points he goes by, the last of them where he is sent
+    pub way: Vec<V3>,
     pub aim: Option<V3>,
     pub set_t: Option<f64>,
     pub from: V3,
@@ -139,7 +138,7 @@ pub struct Check {
     pub looked: JsSet<GuardId>,
     pub look: Vec<crate::enemysquads::Looker>,
     pub n: f64,
-    pub die: crate::math_dice::Die,
+    pub die: crate::dice::Die,
     pub cut: Option<Vec<crate::enemysquads::CheckCutItem>>,
     pub beat: Option<f64>,
     pub late: Option<bool>,
@@ -150,13 +149,6 @@ pub struct Check {
     pub net_out: Option<JsMap<GuardId, crate::enemysquads::CheckNetOutValue>>,
     pub by_ear: bool,
     pub tick_t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CheckStage {
-    #[default] Idle,
-    Called,
-    Asked,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -176,31 +168,13 @@ pub struct Looker {
     pub spot: V3,
     pub from: V3,
     pub back: bool,
-    pub tries: f64,
-    pub step_t: f64,
     pub t0: f64,
     pub news0: f64,
     pub look_t: Option<f64>,
-    pub calm: crate::enemysquads::Calm,
     pub about: Option<EnemysquadsSquadId>,
     pub all: Option<bool>,
     pub stops: Option<Vec<V3>>,
     pub n: Option<f64>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Calm {
-    pub state: crate::game::GuardState,
-    pub awareness: f64,
-    pub hold: bool,
-    pub pinned: bool,
-    pub station: V3,
-    pub home: V3,
-    pub room: Option<RoomfightRoomId>,
-    pub ev: Vec<f64>,
-    pub watch: f64,
-    pub want: f64,
-    pub pt: V3,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -219,7 +193,6 @@ pub struct CheckNetOutValue {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Call {
     pub by: GuardId,
-    pub t0: f64,
     pub end: f64,
     pub at: V3,
     pub room: Option<crate::scene_scenarios::StructureRoom>,
@@ -233,6 +206,7 @@ pub struct Squad {
     pub name: String,
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub men: Vec<GuardId>,
+    pub group: GroupId,
     pub barricade: JsSet<String>,
     pub state: crate::enemysquads::SquadState,
     pub state0: Option<crate::enemysquads::SquadChoice>,
@@ -250,11 +224,11 @@ pub struct Squad {
     pub hit_room: Option<crate::scene_scenarios::StructureRoom>,
     pub rc: Option<crate::enemysquads::Check>,
     pub calls: Option<Vec<crate::enemysquads::Call>>,
-    pub call_die: Option<crate::math_dice::Die>,
+    pub call_die: Option<crate::dice::Die>,
     pub hung: Option<Vec<crate::enemysquads::SquadHungItem>>,
     pub trouble: Option<f64>,
     pub wary: Option<bool>,
-    pub ask_die: Option<crate::math_dice::Die>,
+    pub ask_die: Option<crate::dice::Die>,
     pub sent: Vec<crate::enemysquads::Sent>,
     pub went: Vec<crate::enemysquads::Sent>,
     pub due: Vec<crate::enemysquads::SquadDueItem>,
@@ -280,7 +254,6 @@ pub struct State {
     pub stay_ask: Option<bool>,
     pub s: crate::scene_scenarios::StructureData,
     pub squads: Vec<EnemysquadsSquadId>,
-    pub of: JsMap<GuardId, EnemysquadsSquadId>,
     pub net: Vec<crate::enemysquads::StateNetItem>,
     pub nc: Option<crate::enemysquads::NetCheck>,
     pub word: Option<crate::enemysquads::StateWord>,
@@ -297,7 +270,7 @@ pub struct StateNetItem {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetCheck {
     pub next_at: f64,
-    pub stage: crate::enemysquads::NetCheckStage,
+    pub stage: crate::enemysquads::CheckStage,
     pub t0: f64,
     pub caller: Option<GuardId>,
     pub about: Option<EnemysquadsSquadId>,
@@ -305,15 +278,8 @@ pub struct NetCheck {
     pub tried: JsMap<EnemysquadsSquadId, f64>,
     pub queried: JsMap<EnemysquadsSquadId, f64>,
     pub say: Vec<crate::enemysquads::NetCheckSayItem>,
-    pub die: crate::math_dice::Die,
+    pub die: crate::dice::Die,
     pub tick_t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum NetCheckStage {
-    #[default] Idle,
-    Called,
-    Asked,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -463,3 +429,10 @@ pub const HUNG_SECS: f64 = 10.0;
 pub const NET_BREATH: f64 = 1.2;
 
 pub const NET_TRIES: f64 = 2.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum CheckStage {
+    #[default] Idle,
+    Called,
+    Asked,
+}

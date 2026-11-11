@@ -17,7 +17,6 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     format!("{} and clear", crate::doortools::door_tools_big_word(g, t, &men).as_str())
 }
 
-/// doortools.ts:931-936 (SHOTGUN.on, SILENT.toolsLoud and DOORTOOLS.testDoor are on on the page: the silent refusal is not on its path)
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let OrderTarget::Door(x) = t else { return Err(None) };
     if crate::doortools::is_open(g, x.door) { return Err(Some(String::from("it's open."))); }
@@ -25,21 +24,20 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     let mut any = false;
     for &m in men { if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) { any = true; break; } }
     if !any { return Err(Some(String::from("nobody here carries one."))); }
-    if crate::doors::door_locked(g, x.door) && g.dr[x.door].lock_id.starts_with("wedge:") {
+    if g.dr[x.door].leaf.locked && g.dr[x.door].lock_id.starts_with("wedge:") {
         let mut hammer = false;
         for &m in men { if crate::bigkit::carries_hammer(g, m) { hammer = true; break; } }
         if !hammer && crate::doortools::door_tools_known_shut(g, x.door, x.side) {
-            let (now, was) = (String::from("it's wedged. a shell won't open it."), String::from("wedged. no shell shifts it."));
-            return Err(Some(crate::words::wg(g, &now, &was)));
+            return Err(Some(String::from("it's wedged. a shell won't open it.")));
         }
     }
     crate::doortools::row_stackable(g, t, men)
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    g.sets[g.seat].door_tools.big_next = true;
+    g.groups[g.group].tools.big_next = true;
     let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::OpenClear, men, t);
-    g.sets[g.seat].door_tools.big_next = false;
+    g.groups[g.group].tools.big_next = false;
     match r { crate::doortools::DoorToolsIssue::Text(w) => Some(w), crate::doortools::DoorToolsIssue::Arm1(()) => None }
 }
 

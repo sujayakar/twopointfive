@@ -7,16 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// A number's part above its floor.
-fn frac(x: f64) -> f64 {
-    x - m::floor(x)
-}
-
 /// His id's share of 0..1: neighbours in the roster differ, no dice.
 fn id_share(g: &crate::game::Game, gd: GuardId, salt: Option<f64>) -> f64 {
     let salt = salt.unwrap_or(0.0);
     let c = g.gd[gd].ch;
-    frac((g.ch[c].id + salt) * 0.6180339887)
+    v3::frac((g.ch[c].id + salt) * 0.6180339887)
 }
 
 /// Does he carry a light of his own to switch on.
@@ -34,8 +29,7 @@ fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let c = g.gd[gd].ch;
     if !g.ch[c].alive { return false; }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
         && !crate::mission::lies_in_wait(g, gd)
 }
 
@@ -45,7 +39,7 @@ pub fn dark_foe_lit(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The meter's reading of a point of floor: everything steady but the lights `skip` names.
-fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&mut crate::game::Game, f64) -> bool) -> f64 {
+fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&Game, f64) -> bool) -> f64 {
     let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
@@ -56,7 +50,7 @@ pub fn dark_foe_blind(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let (pos, aim_yaw, me) = (g.ch[c].pos, g.ch[c].aim_yaw, g.ch[c].id);
     let eye: V3 = [pos[0], 1.5, pos[2]];
-    let mut skip = move |_: &mut Game, owner: f64| owner == me;   // (TS: mine(gd))
+    let mut skip = move |_: &Game, owner: f64| owner == me;   // (TS: mine(gd))
     let mut n: i32 = 0;
     let mut lit: i32 = 0;
     for off in [0.0, -k.fan_rad, k.fan_rad] {
@@ -87,11 +81,11 @@ fn learns(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Or for now: the net's word on the dark, or a burning lamp of a mate who knows in his view.
-fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn has_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::powerout::power_out_word(g, gd) { return true; }
     let c = g.gd[gd].ch;
     let (pos, aim_yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let eye: V3 = [pos[0], 1.5, pos[2]];
     let cos = m::cos(g.k.guard_eye.half_deg * m::PI / 180.0);
     let fx = m::sin(aim_yaw);
@@ -100,7 +94,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) { continue; }
+        if o == gd || g.team(o) != team || crate::condition::down(g, g.gd[o].ch) { continue; }
         if !g.m.darkfoe.state_of.get(o).map_or(false, |s| s.knows) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
@@ -115,8 +109,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The switch under his thumb, for the player's ears only: no event is filed.
-fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on {  } else {  }
+pub(super) fn click(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
@@ -133,7 +126,7 @@ fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
             let a = ((i as f64) + turn) * m::PI / 4.0;
             let qx = p[0] + m::sin(a) * r;
             let qz = p[2] + m::cos(a) * r;
-            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &mut Game, _: f64| true) >= k.lit_at {
+            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &Game, _: f64| true) >= k.lit_at {
                 return true;
             }
         }
@@ -144,12 +137,12 @@ fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
 /// Floor a man can see from: the place's own light on it, or lit floor in plain view; `edge`: only the second.
 fn dark_foe_sees(g: &mut crate::game::Game, p: V3, edge: Option<bool>) -> bool {
     let edge = edge.unwrap_or(false);
-    let lit = floor_light(g, p[0], p[2], &mut |_: &mut Game, _: f64| true) >= g.k.darkfoe.lit_at;
+    let lit = floor_light(g, p[0], p[2], &mut |_: &Game, _: f64| true) >= g.k.darkfoe.lit_at;
     if edge { !lit && lit_in_view(g, p) } else { lit || lit_in_view(g, p) }
 }
 
 /// Is a point in his room; a man with no room is everywhere in it.
-fn in_room(g: &mut crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
+fn in_room(g: &crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
     let Some(room) = g.tab.roomfight_def[d].room else { return true };
     let cell = g.col.nav.cell;
     let key = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
@@ -174,12 +167,12 @@ fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     }
     match (bi, row.room) {
         (Some(i), Some(room)) => g.tab.roomfight_room[room].entries[i].at,
-        _ => row.pt,
+        _ => crate::roomfight::watched(g, d),
     }
 }
 
 /// A way of no more than `walkM` to a spot, never by a doorway of his room nor out of it.
-fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
+fn way_to(g: &crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;
     let start = g.ch[c].pos;
@@ -241,14 +234,14 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
             r += 1.5;
         }
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut best: Option<V3> = None;
     let mut bd = f64::INFINITY;
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
+        if o == gd || g.team(o) != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;
@@ -321,7 +314,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
                 blind_for: 0.0,
                 moves: 0.0,
                 since: k.again_secs,
-                to: None,
             });
         }
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
@@ -361,7 +353,7 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
                     s.lit = lit;
                     s.against = 0.0;
                     s.held = 0.0;
-                    click(g, gd, lit);
+                    click(g, gd);
                 }
             }
             continue;
@@ -384,7 +376,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
         };
         let s = g.m.darkfoe.state_of.get_mut(gd).unwrap();
         s.moves += 1.0;
-        s.to = Some(v3::copy(to.spot));
         walk(g, d, to.spot);
     }
 }
@@ -393,7 +384,7 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    /// (id + salt) * 0.6180339887 and its frac, printed by the TypeScript under EXACT.
+    /// the pinned bits of (id + salt) * 0.6180339887 and its frac
     #[test]
     fn frac_has_the_typescripts_bits() {
         for (id, salt, whole, part) in [
@@ -405,8 +396,8 @@ mod tests {
         ] {
             let x: f64 = (id + salt) * 0.6180339887;
             assert_eq!(x.to_bits(), whole);
-            assert_eq!(frac(x).to_bits(), part);
+            assert_eq!(v3::frac(x).to_bits(), part);
         }
-        assert_eq!(frac(-0.25).to_bits(), 0x3fe8000000000000);
+        assert_eq!(v3::frac(-0.25).to_bits(), 0x3fe8000000000000);
     }
 }

@@ -15,24 +15,25 @@ fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let p = &g.pl[pl];
     let a = &g.ch[c].anim;
     // (kitHold: the gun is still on its way to his hands; `undefined` alone is "in his hands", null is bare hands and holds the laser off too)
-    a.upper == crate::character::UpperMode::Aim && !g.cond[p.ch].down && !p.sprinting && p.holding.is_none() && !a.hide_held_item && a.kit_hold.is_none()
+    a.upper == crate::character::UpperMode::Aim && !g.cond[p.ch].down && !p.sprinting && p.holding().is_none() && !a.hide_held_item && a.kit_hold.is_none()
 }
 
-/// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (combat.ts handProps asks, right after his rig).
-/// NOT a boundary no-op, though it draws: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
-/// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.
-pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    if !sam_laser_on(g, &crate::seats::here(g)) || !ir_viewer(g) { return; }
-    let c = g.pl[g.player].ch;
-    if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
+/// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (hand_props asks, after his rig and the work props).
+/// It draws, and still it counts: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
+/// every table numbered by reach count. Without them a goggled player's frame is two boxes short from the moment his gun comes up.
+pub fn sam_laser_boxes(g: &crate::game::Game, seat: &crate::seats::SeatRef, out: &mut crate::rig_props::Carried) {
+    if ir_viewer(g) { beams_of(g, seat, out); }
 }
 
-/// The infrared lines the players really have on, for a viewer's picture through a tube the run's own picture did not have: the very rule a step draws them by, asked as
-/// if the picture were the tube's.
-pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let was = g.m.irlaser.view_tube.replace(true);
-    for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut |g| sam_laser_boxes(g, out)); }
-    g.m.irlaser.view_tube = was;
+fn beams_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, out: &mut crate::rig_props::Carried) {
+    if !sam_laser_on(g, seat) { return; }
+    let c = g.pl[seat.player].ch;
+    if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(r.from, r.dir, r.l, out, r.dot, true, true); }
+}
+
+/// The infrared lines the players really have on, for a viewer's picture through a tube the run's own picture did not have: the very rule a step draws them by.
+pub fn ir_beams(g: &crate::game::Game, out: &mut crate::rig_props::Carried) {
+    for &s in g.seats.iter() { beams_of(g, &crate::seats::seat(g, s), out); }
 }
 
 /// The mark "this box is an infrared line the step drew for its own tube": the set beside the boxes that a picture with the tube off leaves out by
@@ -41,11 +42,9 @@ pub fn ir_note(g: &mut crate::game::Game, b: AnyBoxId) -> AnyBoxId { g.m.irlaser
 /// A box's row is free again: the mark of the box that stood in it goes with it.
 pub fn ir_forget(g: &mut crate::game::Game, b: AnyBoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }
 
-/// SOME PLAYER'S PICTURE IS A TUBE'S, so the infrared lines are made this step; a replay viewer's own tube, while one is set, answers instead.
+/// SOME PLAYER'S PICTURE IS A TUBE'S, so the infrared lines are made this step.
 /// It asks EVERY seat's man, never the one this machine shows: the lines are boxes of the frame's list, so whether they are made is the game's and
 /// every machine of it must answer alike. A machine whose own picture is bare-eyed leaves them out of what it draws (`ir_made` marks them).
-/// (irlaser.ts irViewer, which asked the shown man)
 pub fn ir_viewer(g: &crate::game::Game) -> bool {
-    if let Some(t) = g.m.irlaser.view_tube { return t; }
     g.seats.iter().any(|&s| g.pl[crate::seats::seat(g, s).player].nv_amount > 0.5)
 }

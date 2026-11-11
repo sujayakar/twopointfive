@@ -8,7 +8,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Turn box `b` by fraction `k` of the way toward lying with its nearest face on a surface of normal `n` (k = 1: exactly flat); keeps yaw as the heading.
 pub(super) fn lay_flat(g: &mut crate::game::Game, b: AnyBoxId, n: V3, k: f64) {
-    lay_flat_row(seam_box(g, b), n, k);
+    lay_flat_row(&mut g.tab.edit(b), n, k);
 }
 
 /// The whole of layFlat on the box's row, so the only step the skeleton blocks is finding the row.
@@ -28,7 +28,7 @@ fn lay_flat_row(row: &mut crate::scene_boxes::Box, n: V3, k: f64) {
 /// A SHEET DOES NOT STAND ON ITS EDGE: one that came to rest up on end goes down on its face (a thing that is many times its thickness tall has nothing to stand on).
 pub(super) fn lay_sheet(g: &mut crate::game::Game, b: AnyBoxId, n: V3) {
     const SHEET: f64 = 3.0;
-    let row = seam_box(g, b);
+    let row = &mut *g.tab.edit(b);
     let r: Quat = match row.rot { Some(q) => q, None => v3::quat::yaw(row.yaw) };
     let h = row.h;
     let (mut up, mut most) = (0usize, -1.0);
@@ -64,8 +64,6 @@ fn lay_axis_row(row: &mut crate::scene_boxes::Box, bi: usize, n: V3, k: f64) {
     if m::hyp2(f[0], f[2]) > 1e-3 { row.yaw = m::atan2(f[0], f[2]); }   // heading of local +Z, the level's yaw convention
 }
 
-/// A box's row. Once `g.col.boxes` is the table the index says, the body is `&mut g.col.boxes[b]`.
-fn seam_box(g: &mut crate::game::Game, b: impl Into<AnyBoxId>) -> &mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).
 pub(super) fn pose_key(g: &crate::game::Game, p: PropId) -> f64 {

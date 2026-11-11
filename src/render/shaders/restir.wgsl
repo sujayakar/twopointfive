@@ -1,7 +1,6 @@
 // A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
-// ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
-// Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
-// total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:
+// ReSTIR DI direct lighting: the direct-light estimator. Four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
+// total): the denoiser and sharp direct read them, the composite S as the denoiser hands it back. How S is estimated:
 //
 //   Every light the tile can see is still scored unshadowed per pixel (evalLight, exact — that is U, and it is the candidate pdf). Per class the
 //   integrand is Σ_i E_i·V_i over the class's lights; the only unknown is visibility V. Instead of K leaders × stratified rays + a tail ray, each
@@ -83,7 +82,7 @@
 //                a history validated somewhere else; full memory the moment it rests; (c, 1024) spatial reuse at every pixel whose motion exceeds ru.mot.z px, with at least cfg.y >> 8 taps
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
-// Kept from direct.wgsl: the tile light list (the tile light list, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
+// Beside the reservoirs: the tile light list, reach masks (a walled-off light is in U, never a candidate, dark in S), glass
 // transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
 // ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
@@ -105,7 +104,7 @@ struct RestirU {
   jitter: vec4f,  // xy = this frame's TAAU jitter in internal px, zw = the previous render's (the reservoir domain is the UNJITTERED pixel centre: traced from there, reprojected from there)
   mot: vec4f,     // MOTION (header; cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
   fwd: array<vec4u, 4>,           // last frame's light slot p → this frame's slot (byte p; 255 = that light is not uploaded this frame)
-  inv: array<vec4u, 4>,           // this frame's slot → last frame's (255 = the light is new this frame)
+  inv: array<vec4u, 4>,           // this frame's slot → last frame's (a byte each: 255 = the light is new this frame; + 64 = its record is last frame's, word for word: lights.ts SLOT_SAME)
   prevLights: array<Light, 64>,   // last frame's uploaded light records (positions, cones, intensities as they were): the fresh candidate's 'target then'
 };
 @group(2) @binding(0) var<storage, read> resIn: array<vec4u>;          // last frame's reservoirs (temporal stage), 8×8-tiled: x,y = class 0, z,w = class 1 (layout: pack / unpack below); then one belief record per tile (tileRecIndex)
@@ -113,7 +112,7 @@ struct RestirU {
 @group(2) @binding(2) var<uniform> ru: RestirU;
 
 var<workgroup> wgLights: array<Light, 64>;
-// per-tile light culling — the same statements as direct.wgsl (its exactness argument holds word for word: a culled light scores !ok at every live pixel)
+// per-tile light culling, exact: a culled light scores !ok at every live pixel
 var<workgroup> wgP: array<vec4f, 64>;
 var<workgroup> wgRowMin: array<vec4f, 8>;
 var<workgroup> wgRowMax: array<vec4f, 8>;
@@ -136,7 +135,9 @@ fn tileRecIndex(t: vec2u, dims: vec2u) -> u32 { let tilesX = (dims.x + 7u) >> 3u
 fn tileDark(bel: vec2u, s: u32) -> bool { return ((bel[s >> 5u] >> (s & 31u)) & 1u) != 0u; }
 
 fn fwdSlot(p: u32) -> u32 { return (ru.fwd[p >> 4u][(p >> 2u) & 3u] >> ((p & 3u) * 8u)) & 255u; }
-fn invSlot(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
+fn invByte(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
+/** the light with this byte is as it was last frame: what it would have sent a point then is what it sends it now (most of a level's lights, most frames) */
+fn sameLight(b: u32) -> bool { return (b & 192u) == 64u; }
 
 // ---- reservoir texel: 64 bits per class + a 12-bit view-depth signature split over the two ----
 //   word A: slot 6 | M 5 | Vq 3 | iu 4 | iv 4 | hint 4 | depth6 6      word B: W f16 | p̂ log-12 | 3 darkSlot (low 3 in class 0's word, high 3 in class 1's) | valid 1 (bit 31)
@@ -234,7 +235,7 @@ fn traceSample(s: u32, Po: vec3f, N: vec3f, owner: u32, iu: u32, iv: u32) -> vec
 fn targetAt(s: u32, P: vec3f, N: vec3f, masked: bool) -> f32 { if (masked && lightReachLevel(s, P) == 0u) { return 0.0; } let e = evalLightDirect(wgLights[s], P, N); return select(0.0, luminance(e.E), e.ok); }
 /** the hue (colour ÷ its luminance) of light slot `s`: evalLight scales the light's colour by a scalar, so this is the hue of its irradiance anywhere it reaches */
 fn hueOf(s: u32) -> vec3f { let cl = wgLights[s].color; return cl / max(luminance(cl), 1e-6); }
-/** penumbra hint (px) from a blocked ray's width `pw` (m) for a light carrying `share` of the class's luminance — direct.wgsl's rule */
+/** penumbra hint (px) from a blocked ray's width `pw` (m) for a light carrying `share` of the class's luminance */
 fn hintPx(pw: f32, pxPerMetre: f32, share: f32) -> f32 { return max(0.75, pw * pxPerMetre * min(1.0, share * 2.0)); }
 
 @compute @workgroup_size(8, 8)
@@ -273,7 +274,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   // (the barriers of the light-list block below order these writes before any lane reads wgBelief)
 
-  // ---- per-tile light list (the tile light list) — as direct.wgsl ----
+  // ---- per-tile light list ----
   var nIter = nL;
   wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
   workgroupBarrier();
@@ -404,7 +405,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // U.a = the luminance of the light this pixel BELIEVES visible (Uv: live, not tile-dark, not its darkSlot) — the v3 shadow denoiser keys its light-motion / light-jump
     // cues on it (denoise.wgsl shTemporal): a fluorescent's stroke is an 85 % change of what actually reaches the desk under it but only ~20 % of U, which on this
     // floor is three-quarters street lamp behind the outer wall (in U by its reach through the windows, dark by every ray) — keyed on U the jump never registered.
-    // Nothing else reads U.a (softblur / composite / fgather take .rgb; direct.wgsl writes 1.0 there and the denoiser then falls back to U itself).
+    // Nothing else reads U.a (the denoiser's last step and sharp direct take .rgb).
     textureStore(outSharpU, gxy, vec4f(U0, luminance(Uv[0] + Ut[0])));   // (+ the transient stratum: a flash arriving or gone IS a light-jump for the cue; the hue Uv keeps to the persistent lights)
     textureStore(outBroadU, gxy, vec4f(U1, luminance(Uv[1] + Ut[1])));
   } else if (onScreen) {
@@ -444,6 +445,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         // a cone that swept off the pixel, a dimmed panel let go at once; a light that did not reach here last frame (the cone just arrived) keeps its confidence
         // (symmetric: a light that JUMPED up — a fluorescent restrike's strokes go 5 % ↔ 100 % frame to frame — is as badly represented by the history as one that dropped;
         // one-sided, the up-strokes came through at half weight for a frame)
+        if (sameLight(invByte(curT[c]))) { pPT[c] = pT[c]; Mt[c] = min(rM(twA), mCapPix); }   // (as it was: its target is last frame's, and the ratio 1)
+        else {
         let lp = ru.prevLights[rSlot(twA)];
         let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok);
         if (pPT[c] > 0.0) {
@@ -458,6 +461,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
+        }
       }
       var raysC = raysCfg; var dimC = false;
       if (RESTIR_TRADE && dimShare > 0.0 && Wl[c] < dimShare * (Wl[0] + Wl[1] + luminance(Ut[0] + Ut[1]))) { raysC = min(raysCfg, 2u); dimC = true; }   // TRADE (dim class): this class is a sliver of the light here — the 2-ray tier's alternation for it alone
@@ -618,7 +622,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         let slot = select(pickF[c], pickG[c], j == 1u); let pj = select(pF[c], pG[c], j == 1u);
         // its target LAST frame at this point: the same light as it was then (new this frame → 0 → it enters at full weight)
         var pPrev = 0.0;
-        if (M_t > 0.0) { let ps = invSlot(slot); if (ps != 255u) { let evp = evalLightDirect(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
+        if (M_t > 0.0) { let b = invByte(slot); if (sameLight(b)) { pPrev = pj; } else if (b != 255u) { let evp = evalLightDirect(ru.prevLights[b & 63u], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
         let wj = pj / (M_t * pPrev + Mf * pj) * Vj * Wf[c];        // m_j × p̂_c(x_j)·W_j (= Wf exactly: W_j = 1 / p(x_j) = Wf / p̂ over the set the draw ranged over) × V
         if (wj > 0.0) { wsum += wj; col += hueOf(slot) * wj; if (tileDark(bel, slot) || slot + 1u == darkSlot) { wOut += wj; colOut += hueOf(slot) * wj; } }   // (HUE SPLIT: a fresh sample of its own darkSlot light / a light the tile calls dark)
         if (rnd() * wsum < wj) { ySlot = slot; yUv = select(uvF[c], uvG[c], j == 1u); yV = Vj; yP = pj; }

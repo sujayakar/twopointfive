@@ -46,7 +46,7 @@ A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g
 ## How it works
 
 **Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
-most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on`, `glass_break_live` and `chew_live` all ask it.
+most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
 thresholds read (`t_decal` up to `t_tile`). One round marks a wall; a beaten spot loses its papers, its clutter, then a tile. Each kind has a rate cap
@@ -69,17 +69,17 @@ the box world's room, the cells stay shut and it answers no.
 under a standing upper. `destruction_round` does the rest. `coverfire.rs` lets a man spend rounds on what hides an enemy he knows of, by asking the same
 engine.
 
-**A blast.** `destruction_blast` runs its listeners (`BlastListener`: the glass and the bars), snow in the way, `doors_blast`, `wall_break_blast`,
-`furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
+**A blast.** `destruction_blast` tells its listeners (`BlastListener`: glass, bars), runs snow, `doors_blast`,
+`wall_break_blast`, tells them again through what opened, `furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
 `wall_break_plan_of` is the plan: columns in line within `hole_k` × radius go whole, within `port_k` lose their upper part, cover cells within
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 
 **A wall charge.** `wall_at` finds the wall under the point, or its reason in words. `wall_charge_settle` slides the place to floor on both sides.
-Sam's row is `wall_charge_sam_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
+Sam's row is `wall_charge_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
 `Standoff`, `Armed`, `Wait`, `Enter`) by `wall_charge_step`. The count is `carried` where the card (`kit/`) or the level's `wallCharges`
 (`issue_stage`) gave one, else `cost` door charges out of the bag (`wall_charge_price`).
 
-**The blow** (`wall_charge_blow_raw`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
+**The blow** (`wall_charge_blow`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
 borrowed stun can's burst (`detonate_stun`). On his own side a man inside `wallkill.near_m` dies; others go blind (`safe_secs`). Beyond the wall, only
 if a hole opened (a wall that held is still a wall), and with a line: inside `knock_m` he is struck down, inside `stun_m` blind and folded. A defender
 in that room with no line is folded out to `room_m`. A teammate past the wall is dazzled for `ours_secs`.
@@ -127,7 +127,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## Rules that hold
 
 - **A blast does the same to anyone.** "blowing a wall charge with me right next to it should kill me". Sam, teammates, defenders and civilians alike
-  (`blow_seat`).
+  (`guard_caught`, `civilian_caught`, `player_caught`).
 - **It catches whom the warning named.** `wall_charge_too_close` and the blow ask the same thing, before the blast, so furniture it smashes exposes
   nobody late.
 - **The men step back.** "after i place a wall charge, my guys should move away with standoff". A man told to hold stays, and the row says so.
@@ -168,7 +168,7 @@ Native tests in `rust/game_start/tests/`:
 | `wall_breaks.rs`, `blast_holes.rs` | a hole agrees for feet, eyes and rounds; chewed cover; a restart; asking first; a man walks the hole |
 | `wallcharge.rs`, `wall_kills.rs` | it catches whom the warning named; at it he dies, past it he is blind; men step back out of known fire |
 | `held_charges.rs`, `guns_and_debris.rs` | both hands, the count, whose key; a piece is heard where it lands, a boot files nothing |
-| `rounds_and_saves.rs` | what a round goes through; hits by `does`; a save carries the broken level; one flood for two walls |
+| `rounds_and_saves.rs` | what a round goes through; hits by `does`, wet or dry; a save carries the broken level; one flood for two walls |
 | `breaks.rs`, `debris_pool.rs`, `furniture.rs` | pieces of the thing, off a man down; a full pool; a wall shields furniture, a restart mends it |
 | `glass.rs`, `glass_open.rs`, `burst_panes.rs` | a pane broken early; what is open to feet, rays and sound; a burst and the glass between |
 | `held_frag.rs`, `held_forty.rs`, `marks.rs`, `restarts.rs` | whom a burst takes; the 40 mm's arming; marks put back; a restart is a fresh staging |

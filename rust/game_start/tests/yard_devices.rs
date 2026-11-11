@@ -22,7 +22,7 @@ fn the_yard_is_lit_off_the_mains_and_dark_with_them_out() {
         let lit = p.place_light(at);
         assert!(lit.0 > 0.6, "{what}, the mains on: reads {lit:?}");
     }
-    game::game::game_set_blackout(&mut p.g, 86400.0, game::game::GameSetBlackoutCause::Hand);
+    game::game::game_set_blackout(&mut p.g, 86400.0, game::lighting::SetBlackoutCause::Hand);
     p.run(4.0);
     for at in [[8.0, 18.0], [5.0, 21.8]] {
         let d = p.place_light(at);
@@ -41,7 +41,7 @@ fn the_yard_is_lit_off_the_mains_and_dark_with_them_out() {
 fn the_gate_and_the_middle_of_the_yard_are_dark_with_the_mains_out() {
     let mut p = Play::mission("floodlit.json", "?levelFile=floodlit.json&roomclear&squad4", &seed(1));
     p.g.god_mode = true;
-    game::game::game_set_blackout(&mut p.g, 86400.0, game::game::GameSetBlackoutCause::Hand);
+    game::game::game_set_blackout(&mut p.g, 86400.0, game::lighting::SetBlackoutCause::Hand);
     p.run(4.5);
     for at in [[20.0, 23.4], [20.0, 18.5]] { let d = p.place_light(at); assert!(d.0 < 0.2 && d.1 < 0.2, "the yard at {at:?}: reads {d:?}"); }
     let d = p.place_light([26.0, 10.6]);

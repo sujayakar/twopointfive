@@ -14,7 +14,7 @@ fn wary_dots(awareness: f64) -> String {
 /// a man of the floor's mark: which glyphs, which colour, and nothing of where
 fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     let m = &g.gd[gd];
-    let own = m.team == crate::teams::Team::Operative;
+    let own = g.ch[m.ch].team.ours();
     let (mut text, mut tone) = (String::new(), HeadTone::Calm);
     let zz = crate::doze::doze_mark(g, gd);
     match m.state {
@@ -73,11 +73,11 @@ pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
     let row = |gd: GuardId, civ: bool| {
         let (text, tone) = if civ { civ_mark(g, gd) } else { guard_mark(g, gd) };
         let debug = if !g.show_debug { String::new() } else if civ { civ_debug(g, gd) } else { guard_debug(g, gd) };
-        ManMark { man: g.ch[g.gd[gd].ch].id, text, tone, civ, hidden: crate::fogofwar::fog_of_war_hides(g, gd), debug }
+        ManMark { man: g.char_id(gd), text, tone, civ, hidden: crate::fogofwar::fog_of_war_hides(g, gd), debug }
     };
     let mut men: Vec<ManMark> = g.guards.iter().map(|&gd| row(gd, false)).collect();
     men.extend(g.civilians.iter().filter(|&&cv| g.gd[cv].civ.map_or(false, |c| g.cv[c].state != crate::civilians::CivState::Gone)).map(|&cv| row(cv, true)));
-    let stalk = crate::stalk::stalk_on(g, seat).map(|gd| g.ch[g.gd[gd].ch].id);
+    let stalk = crate::stalk::stalk_on(g, seat).map(|gd| g.char_id(gd));
     MarksView {
         men,
         seen: crate::fogofwar::fog_of_war_last_seen(g),
@@ -96,8 +96,7 @@ pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
 /// the arc he has up, with where it comes to rest and what it would reach
 fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
     let sol = g.sets[seat.id].hand.throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
-    let mut world = crate::ask::WorldAsk::try_of(g).ok();
-    let rest = world.as_mut().and_then(|w| crate::player::throw_rest(w, seat.player));
+    let rest = crate::player::throw_rest(g, seat.player);
     let at = rest.as_ref().map(|r| r.at);
     Some(ThrowView { points: sol.points.clone(), land: sol.land, short: crate::he40::preview_too_close(g, seat.player), reach: crate::frag::throw_reach(g, seat.player, at), rest })
 }
@@ -107,18 +106,18 @@ pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let pl = seat.player;
     let p = &g.pl[pl];
     let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !g.cond[p.ch].down;
-    let steady = gun_out && !p.sprinting && p.dragging.is_none();
+    let steady = gun_out && !p.sprinting && p.dragging().is_none();
     let model = g.tune.aim_model && steady;
     let swing = if steady { crate::aimweight::aim_gun_point(g, seat) } else { None };
     let trail = swing.is_some() && !crate::aimweight::aim_gun_on(g, pl);
-    let shut = steady && crate::ask::WorldAsk::try_of(g).map_or(false, |mut w| crate::player::gun_shut(&mut w, seat));
+    let shut = steady && crate::player::gun_shut(g, seat);
     let snap = seat.aim_snap;
     let ring = if gun_out && (snap.is_some() || model || swing.is_some()) {
         let at = swing.or(snap).unwrap_or(seat.aim_point);
         let cone = if model {
             let a = crate::aim::player_aim(g, pl);
             let c = &g.ch[p.ch];
-            let hand = c.bones.get(crate::character::Bone::HandR).copied().unwrap_or([c.pos[0], c.pos[1] + 1.4, c.pos[2]]);
+            let hand = c.bone_or(crate::character::Bone::HandR, 1.4);
             Some(AimCone { spread: a.spread, track: a.track, range: crate::v3::dist(at, hand), hands: a.base, settle: a.settle, crossing: a.tgt, feet: a.own })
         } else { None };
         let on = if seat.aim_guard.is_some() { RingOn::Guard } else if snap.is_some() { RingOn::Light } else { RingOn::Free };
@@ -135,7 +134,7 @@ pub(super) fn worn_view(g: &Game) -> Vec<WornView> {
         let big = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id });
         if goggles || big.is_some() { Some(WornView { man: id, goggles, big }) } else { None }
     };
-    let seats = g.seats.iter().filter_map(|&s| { let pl = crate::seats::seat(g, s).player; man(g.ch[g.pl[pl].ch].id, None) });
-    let guards = g.guards.iter().filter_map(|&gd| man(g.ch[g.gd[gd].ch].id, Some(gd)));
+    let seats = g.seats.iter().filter_map(|&s| { let pl = crate::seats::seat(g, s).player; man(g.player_id(pl), None) });
+    let guards = g.guards.iter().filter_map(|&gd| man(g.char_id(gd), Some(gd)));
     seats.chain(guards).collect()
 }

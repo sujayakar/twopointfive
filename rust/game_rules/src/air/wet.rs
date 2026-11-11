@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// A man's own bookkeeping, as wet.ts memOf makes it the first time he is asked for.
+/// A man's own bookkeeping, made the first time he is asked for.
 fn mem_at(g: &mut Game, c: CharId) -> crate::wet::WetMem {
     if !g.m.wet.mem.has(c) {
         g.m.wet.mem.set(c, crate::wet::WetMem { sky_t: -1.0, open: true, prints_left: 0.0, last_out_wet_t: -1e9, drip_acc: 0.0 });
@@ -23,23 +23,18 @@ fn head_at(g: &Game, c: CharId) -> f64 {
     if ch.ragdoll.is_some() { m::max(0.3, head.unwrap_or(0.3)) } else { head.unwrap_or(ch.pos[1] + 1.6) }
 }
 
-/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. A man's coat is the picture's, but the call is the game's: it stands the rule's copy of the box world (`rule_open`), asks the roofs and may cast the
-/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host.
+/// Once a tick, after the weather has written this tick's rain: soak / dry everybody. Sam's drips and prints after it (samAftermath) tell the host.
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        // everyCharacter: Sam (every seat's man), then the guards, living or not
-        let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
-        all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
-        for c in all {
-            let mem = mem_at(g, c);
-            let head = head_at(g, c);
-            wet_step(g, (w, set, ask), c, head, mem, dt);
-        }
-    });
+    // everyCharacter: Sam (every seat's man), then the guards, living or not
+    let mut all: Vec<CharId> = crate::seats::men(g).into_iter().map(|p| g.pl[p].ch).collect();
+    all.extend(g.guards.iter().map(|gd| g.gd[*gd].ch));
+    for c in all {
+        let mem = mem_at(g, c);
+        let head = head_at(g, c);
+        wet_step(g, c, head, mem, dt);
+    }
     crate::seats::each_seat(g, &mut |v: &mut Game| sam_aftermath(v, dt));
 }
 
@@ -50,23 +45,23 @@ const WET_SKY_SECS: f64 = 0.25;
 const SKY_OFFSETS: [[f64; 2]; 5] = [[0.0, 0.0], [SKY_RING, 0.0], [-SKY_RING, 0.0], [0.0, SKY_RING], [0.0, -SKY_RING]];
 
 /// Is a man under the open sky: outside every footprint, and most of what is over him and a forearm round him is sky. The answer holds a quarter of a second a man.
-fn open_sky(g: &mut Game, (w, set, ask): (usize, i32, u32), c: CharId, head: f64, mem: &mut WetMem) -> bool {
+fn open_sky(g: &Game, c: CharId, head: f64, mem: &mut WetMem) -> bool {
     let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     if ::sim::weather::under_any(&g.weather.roof_rects, x, z) { return false; }
     let time = g.time;
     if time - mem.sky_t >= WET_SKY_SECS || mem.sky_t < 0.0 || time < mem.sky_t {
         mem.sky_t = time;
-        let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(w, set, ask, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
+        let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(g.tab.boxes.world(), true, ::sim::lines::ASK_GLASS, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
         mem.open = covered < 3;
     }
     mem.open
 }
 
 /// One man soaked or dried by this tick's weather.
-fn wet_step(g: &mut Game, world: (usize, i32, u32), c: CharId, head: f64, mem: WetMem, dt: f64) {
+fn wet_step(g: &mut Game, c: CharId, head: f64, mem: WetMem, dt: f64) {
     let rain = m::max(0.0, g.weather.rain_now);
     let mut mem = mem;
-    let wetting = rain > 0.001 && open_sky(g, world, c, head, &mut mem);
+    let wetting = rain > 0.001 && open_sky(g, c, head, &mut mem);
     *g.m.wet.mem.get_mut(c).unwrap() = mem;
     let (k, ch) = (&g.k.wet, &mut g.ch[c]);
     let runoff = m::max(k.bead_runoff_secs, 0.1);
@@ -88,15 +83,11 @@ fn wet_step(g: &mut Game, world: (usize, i32, u32), c: CharId, head: f64, mem: W
 fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     let mem = mem_at(g, c);
     crate::weather::weather_roofs_now(g);
-    crate::scene_collision::rule(g, &mut |g: &mut Game| {
-        crate::scene_collision::rule_open(g);
-        let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
-        let head = head_at(g, c);
-        let mut mem = mem;
-        let open = open_sky(g, (w, set, ask), c, head, &mut mem);
-        *g.m.wet.mem.get_mut(c).unwrap() = mem;
-        open
-    })
+    let head = head_at(g, c);
+    let mut mem = mem;
+    let open = open_sky(g, c, head, &mut mem);
+    *g.m.wet.mem.get_mut(c).unwrap() = mem;
+    open
 }
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
@@ -129,12 +120,12 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
 /// where a drop leaves him, dealt in turn
 const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::Head, crate::character::Bone::Hips, crate::character::Bone::Hips];
 
-/// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript.
+/// One drop off him: from a hand, the chin or the hem of the jacket.
 fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];
-    let Some(b) = g.ch[c_2].bones.get(k).copied() else { return; };
+    let Some(b) = g.ch[c_2].bone(k) else { return; };
     let j = g.m.wet.drip_n * 0.618034;
     let down = match k { crate::character::Bone::Head => -0.12, crate::character::Bone::Hips => -0.05, _ => -0.06 };
     let off: V3 = [m::cos(j * 6.2831853) * 0.09, down, m::sin(j * 6.2831853) * 0.09];
@@ -163,7 +154,7 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     let prints_left = mem_at(g, c).prints_left;
     if prints_left <= 0.0 || g.ch[c].wet < 0.15 { return; }
     if m::max(0.0, g.weather.rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
-    let bone = |g: &Game, b: Bone| g.ch[c].bones.get(b).copied();
+    let bone = |g: &Game, b: Bone| g.ch[c].bone(b);
     let mut left = left_hint;
     if let (Some(fl), Some(fr)) = (bone(g, Bone::FootL), bone(g, Bone::FootR)) {
         let vel = g.ch[c].vel;

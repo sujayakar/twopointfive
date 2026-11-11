@@ -50,7 +50,7 @@ pub struct Walk {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::WalkBack>,
@@ -85,10 +85,10 @@ impl Default for Walk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WalkBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -138,7 +138,7 @@ pub struct Lent {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::LentBack>,
@@ -160,10 +160,10 @@ impl Default for Lent {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LentBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -363,7 +363,7 @@ pub struct FragCatchesBurst {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadthrowMod {
-    pub states: JsMap<PlayerId, crate::squadthrow::State>,
+    pub states: JsMap<GroupId, crate::squadthrow::State>,
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
 }

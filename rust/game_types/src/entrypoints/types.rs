@@ -8,8 +8,6 @@ pub struct Pod {
     pub pos: V3,
     pub face: f64,
     pub watch: Option<V3>,
-    /// INVENTED: this point was moved off an opening or swapped in, read by dealt for the tallies (:172)
-    pub moved: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]

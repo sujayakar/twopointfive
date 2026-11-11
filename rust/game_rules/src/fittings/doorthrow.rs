@@ -9,26 +9,20 @@ use alloc::vec::Vec;
 
 /// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.
 fn side_of(t: crate::teams::Team) -> f64 {
-    if t == crate::teams::Team::Player || t == crate::teams::Team::Operative {
-        1.0
-    } else if t == crate::teams::Team::Civilian {
-        3.0
-    } else {
-        2.0
-    }
+    if t.ours() { 1.0 } else if t.theirs() { 2.0 } else { 3.0 }
 }
 
 /// The guard or civilian whose body has this character id.
-fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
+fn man_of(g: &Game, id_2: f64) -> Option<GuardId> {
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.ch[g.gd[x].ch].id == id_2 {
+        if g.char_id(x) == id_2 {
             return Some(x);
         }
     }
     for i in 0..g.civilians.len() {
         let x = g.civilians[i];
-        if g.ch[g.gd[x].ch].id == id_2 {
+        if g.char_id(x) == id_2 {
             return Some(x);
         }
     }
@@ -59,7 +53,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
         None => return 0.0,
     };
     let until = m::max(g.cond[g.gd[gd].ch].fold_until, g.cond[g.gd[gd].ch].blind_until);
-    let side = if g.gd[gd].civ.is_some() { 3.0 } else { side_of(g.gd[gd].team) };
+    let side = side_of(g.team(gd));
     let state = g.gd[gd].state;
     let braced = if g.gd[gd].held.is_some() {
         braced_bit | held_bit
@@ -73,11 +67,11 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
 }
 
 /// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).
-fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
+fn team_of(g: &Game, id_2: f64) -> Option<crate::teams::Team> {
     if crate::seats::is_man_id(g, id_2) {
-        return Some(crate::teams::Team::Player);
+        return Some(crate::teams::Team::Ours);
     }
-    man_of(g, id_2).map(|gd| g.gd[gd].team)
+    man_of(g, id_2).map(|gd| g.team(gd))
 }
 
 /// After the leaves are stepped: a carried man is settled against the walls, a struck man startled or thrown.
@@ -145,21 +139,19 @@ fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         Some(by) => by,
         None => return,
     };
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, by, team) || (team != crate::teams::Team::Guard && team != crate::teams::Team::Hostile) {
+    let team = g.team(gd);
+    if !by.foe_of(team) || !team.theirs() {
         return; // Sam's men know whose door it is
     }
     if g.gd[gd].state == crate::game::GuardState::Patrol {
         if g.gd[gd].script.is_some() {
-            crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Suspicious));
+            crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
         }
         let startle = g.k.doorthrow.startle;
         crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "doorthrow");
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, startle);
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         let weapon = g.gd[gd].weapon;
         g.fa[weapon].burst = None;
@@ -198,10 +190,8 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     if g.gd[gd].script.is_some() {
         let then = match g.gd[gd].state {
-            crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Suspicious,
-            crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search,
-            crate::game::GuardState::Alert => crate::squad::EndGuardScriptState::Alert,
-            _ => crate::squad::EndGuardScriptState::Suspicious,
+            s @ (crate::game::GuardState::Search | crate::game::GuardState::Alert) => s,
+            _ => crate::game::GuardState::Suspicious,
         };
         crate::squad::end_guard_script(g, gd, Some(then));
     }
@@ -215,8 +205,7 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     let by = team_of(g, s.by);
     if let Some(by) = by {
-        let team = g.gd[gd].team;
-        if crate::teams::is_hostile(g, by, team) {
+        if by.foe_of(g.team(gd)) {
             let aware = g.k.doorthrow.aware;
             crate::mind::raise(g, gd, aware, "doorthrow");
             if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].last_known.is_none() {
@@ -235,7 +224,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
         return;
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);
-    let heard = v3::add(g.ch[g.pl[pl].ch].pos, [0.0, 1.1, 0.0]);
+    let heard = v3::add(g.player_pos(pl), [0.0, 1.1, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     if s.floor {
         crate::unseen::kneel(g, pl);

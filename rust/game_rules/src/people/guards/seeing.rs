@@ -6,14 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
-pub(crate) fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => or,
-    }
-}
-
 fn hunting(g: &Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
     st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search
@@ -92,12 +84,11 @@ pub fn gunfire_due(g: &crate::game::Game, gd: GuardId, bangs: Option<bool>) -> b
 
 /// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither.
 pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
-    let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
-    let team = g.gd[gd].team;
-    if shooter == team {
-        return crate::guards::ShotRelation::Own;
-    }
-    if crate::teams::is_hostile(g, team, shooter) { crate::guards::ShotRelation::Threat } else { crate::guards::ShotRelation::None }
+    use crate::guards::ShotRelation;
+    let team = g.team(gd);
+    if e.kind == crate::director::EventKind::Shot { return if team.theirs() { ShotRelation::Threat } else { ShotRelation::None }; }   // (a player's round is no news to his squad)
+    let shooter = crate::teams::team_of_id(g, e.who.unwrap_or(-1.0));
+    if shooter == team { ShotRelation::Own } else if team.foe_of(shooter) { ShotRelation::Threat } else { ShotRelation::None }
 }
 
 /// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has.
@@ -113,15 +104,15 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     if let Some(who) = e.who {
         for i in 0..g.guards.len() {
             let x = g.guards[i];
-            if g.ch[g.gd[x].ch].id == who {
+            if g.char_id(x) == who {
                 sh = Some(x);
                 break;
             }
         }
     }
-    let player_pos = g.ch[g.pl[g.player].ch].pos;
+    let player_pos = g.player_pos(g.player);
     if let Some(s) = sh {
-        let who = g.gd[s].foe.or_else(|| if g.gd[s].team == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
+        let who = g.gd[s].foe.or_else(|| if g.team(s) == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
             if let Some(i) = crate::picture::idea_of(g, s, who) {
                 let mine = crate::picture::idea_of(g, gd, who);
@@ -145,7 +136,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
         }
     }
     let s = match sh {
-        Some(s) if g.gd[s].team != crate::teams::Team::Guard => s,
+        Some(s) if g.team(s) != crate::teams::Team::Guard => s,
         _ => return Some(player_pos),
     };
     if let Some(fc) = g.gd[s].foe {
@@ -160,19 +151,19 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
 /// Is this footfall an enemy's: Sam's steps carry no `who`; a unit's carry his id.
 pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guards::StepIsThreatE) -> bool {
     let who = e.who.unwrap_or(crate::consts::PLAYER_ID);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     if crate::seats::is_man_id(g, who) {
-        crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+        team.theirs()
     } else {
         let of = crate::teams::team_of_id(g, who);
-        crate::teams::is_hostile(g, team, of)
+        team.foe_of(of)
     }
 }
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
     let view = crate::seats::view_key(g, &crate::seats::here(g));
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let now = g.time;
     let Some(row) = g.m.guards.ground_track.get_mut(view) else {
         let vel: V3 = [0.0, 0.0, 0.0];
@@ -248,10 +239,10 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
 }
 
 /// What a watched man builds a second in this one's eye.
-fn gain(g: &mut Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
+fn gain(g: &Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
     let at = g.ch[w.c].pos;
     let hunts = hunting(g, gd);
-    let moving = motion_sum(g.ch[g.gd[gd].ch].pos, hunts, at, w.vel, w.light, dist);
+    let moving = motion_sum(g.pos_of(gd), hunts, at, w.vel, w.light, dist);
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
     let mut rate = g.tune.detect_rate * m::pow(w.light, 1.5) * crate::guards::dist_term(g, dist) * (if w.low { 0.75 } else { 1.0 }) * moving * v3::clamp((w.smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
     rate *= crate::attention::attention_side_k(g, gd, at) * crate::kitload::load_seen(g, w.c);
@@ -266,7 +257,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.gd[o].team != g.gd[gd].team {
+        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.team(o) != g.team(gd) {
             continue;
         }
         if crate::guards::body_seen(g, gd, o, None) {
@@ -276,7 +267,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     None
 }
 
-/// bodyInView's test of one body: in range, in the cone (none with `around`), a clear line, light enough. `around`: None is the TypeScript's false, a number how far round his feet a body is plain.
+/// One body's test: in range, in the cone (none with `around`), a clear line, light enough. `around`: None keeps the cone, a number is how far round his feet a body is plain.
 pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Option<f64>) -> bool {
     if crate::pairorders::pair_grip_body(g, gd) || crate::doze::doze_asleep(g, gd) {
         return false;
@@ -284,9 +275,9 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     let c = g.gd[gd].ch;
     let oc = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.65, 0.0]));
     let look = crate::guards::look_of(g, c);
-    let body = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let body = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let to = v3::sub(body, eye);
     let dist = v3::len(to);
     if dist > 12.0 {
@@ -304,7 +295,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
         return false;
     }
     let at_feet = match around {
-        Some(n) => m::hyp2(body[0] - pos[0], body[2] - pos[2]) <= n,
+        Some(n) => v3::dist_xz(body, pos) <= n,
         None => false,
     };
     if g.tune.body_light {
@@ -326,7 +317,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
         }
     }
     let c = g.gd[o].ch;
-    let hp = bone_or(g, c, crate::character::Bone::Hips, g.ch[c].pos);
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let at: V3 = [hp[0], m::max(hp[1], 0.12) + 0.22, hp[2]];
     let e = crate::guards::light_estimate_at(g, at, None, None, None);
     let dt = match was {
@@ -345,7 +336,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
 pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
-    let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let hp = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];
     let trans = crate::sense::clear_between(g, eye, at);
     let b = g.k.body_light;
@@ -365,7 +356,7 @@ pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64
 mod tests {
     use super::*;
 
-    /// The bits are the TypeScript's own: motionFactor and playerGroundVel under EXACT.on, bun, this part's guards.ts, the same frames.
+    /// Pinned bits of the motion factor and the player's ground velocity, on the same frames.
     #[test]
     fn ground_track_and_motion_match_the_typescript() {
         let eye: V3 = [3.25, 0.0, -1.5];

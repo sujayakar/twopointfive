@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// Hand back `v`, and write it to the caller's `out` where one was given: the TypeScript's every path fills all three.
+/// Hand back `v`, and write it to the caller's `out` where one was given.
 fn put(out: Option<&mut V3>, v: V3) -> V3 {
     if let Some(o) = out {
         *o = v;
@@ -98,7 +98,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         let r0 = shape(g, CORE_K) * size;
         let bc = v3::mad(v.pos, dir, d_max / 2.0);
         let br = m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) * 1.05 + 0.3;
-        let seed = crate::math_dice::hash_str(&v.name);
+        let seed = crate::dice::hash_str(&v.name);
         let id = g.tab.wind_wind_source.push(WindSource {
             why: WindWhy::Vent,
             base: v.speed,
@@ -136,7 +136,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         base: 0.0,
         on: 1.0,
         gust: 1.0,
-        seed: crate::math_dice::hash_str("storm"),
+        seed: crate::dice::hash_str("storm"),
         vent: None,
         door: None,
         kind: WindSourceKind::Storm,
@@ -193,7 +193,7 @@ fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWin
     let r0 = g.dr[d].def.width * 0.4;
     let pos: V3 = [fc[0] - inward[0] * 0.15, 1.05, fc[2] - inward[2] * 0.15];
     let name = alloc::format!("door:{}", g.dr[d].def.name);
-    let seed = crate::math_dice::hash_str(&name);
+    let seed = crate::dice::hash_str(&name);
     g.tab.wind_wind_source.push(WindSource {
         why: WindWhy::Door,
         base: 0.0,
@@ -225,14 +225,14 @@ fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWin
     })
 }
 
-/// wind.ts:165 in1, :173 under: is (x, z) under any of the roofs (edges in)?
+/// Is (x, z) under any of the roofs (edges in)?
 fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
 }
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two.
 pub(super) fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
-    // weather.ts:240 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
+    // Before the wind is built its list is blank, with no `storm` row to write. A real one holds at least the storm.
     if g.wind.all.is_empty() {
         return;
     }
@@ -373,6 +373,13 @@ pub fn wind_storm_wind(g: &crate::game::Game) -> Option<V3> {
     Some([wx, 0.0, wz])
 }
 
+/// The storm's wind, and how fast it is.
+#[derive(Clone, Copy)]
+struct Storm {
+    w: V3,
+    speed: f64,
+}
+
 /// Once a frame: every source's speed for this frame, the active list, and the hand-off to the smoke. Which of them a particle pool is handed is the host's, made
 /// of the standing game where a pool is.
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
@@ -382,98 +389,77 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
         return;
     }
     wind_sync_field(g);
-    let t = g.time;
-    let sw = wind_storm_wind(g);
-    let storm_speed = match sw {
-        Some(w) => m::hyp2(w[0], w[2]),
-        None => 0.0,
-    };
-    let vent_k = g.k.wind.vent_k;
-    let ramp_up = g.k.wind.ramp_up;
-    let ramp_down = g.k.wind.ramp_down;
-    let gust_amp = g.k.wind.gust_amp;
-    let gust_period = g.k.wind.gust_period;
-    let storm_gust_amp = g.k.wind.storm_gust_amp;
-    let storm_gust_period = g.k.wind.storm_gust_period;
+    let storm = wind_storm_wind(g).map(|w| Storm { w, speed: m::hyp2(w[0], w[2]) });
     for k in 0..g.wind.all.len() {
         let id = g.wind.all[k];
-        let base;
-        let seed = g.tab.wind_wind_source[id].seed;
-        match g.tab.wind_wind_source[id].why {
-            WindWhy::Vent => {
-                let (speed, due, mains) = {
-                    let v = g.tab.wind_wind_source[id].vent.as_ref().unwrap();
-                    (v.speed, vent_due(v, t), v.mains.unwrap_or(crate::scene_level_data::vent_defaults().mains))
-                };
-                base = speed * vent_k;
-                let mut target = 1.0;
-                if !due {
-                    target = 0.0;
-                }
-                if mains && g.light_home.mains.active {
-                    target = 0.0;
-                }
-                let s = &mut g.tab.wind_wind_source[id];
-                let rate = if target > s.on { 1.0 / m::max(0.1, ramp_up) } else { 1.0 / m::max(0.1, ramp_down) };
-                s.on += m::max(-rate * dt, m::min(rate * dt, target - s.on));
-                s.gust = 1.0 + gust_amp * vnoise(seed, t / gust_period);
-            }
-            WindWhy::Storm => {
-                let s = &mut g.tab.wind_wind_source[id];
-                let w = match sw {
-                    Some(w) => w,
-                    None => {
-                        s.speed = 0.0;
-                        s.base = 0.0;
-                        continue;
-                    }
-                };
-                base = storm_speed;
-                s.dir = [w[0] / storm_speed, 0.0, w[2] / storm_speed];
-                s.on = 1.0;
-                s.gust = 1.0 + storm_gust_amp * vnoise(seed, t / storm_gust_period);
-            }
-            WindWhy::Glass => {
-                let s = &mut g.tab.wind_wind_source[id];
-                base = s.base;
-                s.on = 1.0;
-                s.gust = 1.0 + gust_amp * vnoise(seed, t / (0.6 * gust_period));
-            }
-            WindWhy::Door => {
-                let d = g.tab.wind_wind_source[id].door.unwrap();
-                let w = match sw {
-                    Some(w) => w,
-                    None => {
-                        let s = &mut g.tab.wind_wind_source[id];
-                        s.speed = 0.0;
-                        s.base = 0.0;
-                        continue;
-                    }
-                };
-                let open = m::min(1.0, m::abs(crate::doors::door_angle(g, d)) / g.k.wind.door_open_rad);
-                if open < 0.04 {
-                    let s = &mut g.tab.wind_wind_source[id];
-                    s.speed = 0.0;
-                    s.base = 0.0;
-                    continue;
-                }
-                let door_k = g.k.wind.door_k;
-                let s = &mut g.tab.wind_wind_source[id];
-                let facing = m::max(0.0, (w[0] * s.dir[0] + w[2] * s.dir[2]) / storm_speed);
-                base = storm_speed * door_k * open * (0.35 + 0.65 * facing);
-                s.on = 1.0;
-                s.gust = 1.0 + storm_gust_amp * vnoise(seed, t / storm_gust_period);
-            }
-        }
+        let base = match g.tab.wind_wind_source[id].why {
+            WindWhy::Vent => Some(vent_air(g, id, dt)),
+            WindWhy::Glass => Some(glass_air(g, id)),
+            WindWhy::Storm => storm.map(|st| storm_air(g, id, st)),
+            WindWhy::Door => storm.and_then(|st| door_air(g, id, st)),
+        };
         let s = &mut g.tab.wind_wind_source[id];
-        s.base = base;
-        s.speed = base * s.on * s.gust * master;
+        s.base = base.unwrap_or(0.0);
+        s.speed = if base.is_some() { s.base * s.on * s.gust * master } else { 0.0 };
         if s.speed > 0.005 {
             g.wind.active.push(id);
         } else {
             s.speed = 0.0;
         }
     }
+}
+
+/// A gust about a steady blow: so much of it, over so long.
+fn gust(seed: f64, t: f64, amp: f64, period: f64) -> f64 {
+    1.0 + amp * vnoise(seed, t / period)
+}
+
+/// A vent, spinning up while it is due and has the mains it needs, and down when not.
+fn vent_air(g: &mut Game, id: WindWindSourceId, dt: f64) -> f64 {
+    let (t, k) = (g.time, &g.k.wind);
+    let blackout = g.light_home.mains.active;
+    let s = &mut g.tab.wind_wind_source[id];
+    let v = s.vent.as_ref().unwrap();
+    let runs = vent_due(v, t) && !(blackout && v.mains.unwrap_or(crate::scene_level_data::vent_defaults().mains));
+    let base = v.speed * k.vent_k;
+    let target = if runs { 1.0 } else { 0.0 };
+    let rate = 1.0 / m::max(0.1, if target > s.on { k.ramp_up } else { k.ramp_down });
+    s.on += m::max(-rate * dt, m::min(rate * dt, target - s.on));
+    s.gust = gust(s.seed, t, k.gust_amp, k.gust_period);
+    base
+}
+
+/// The storm itself.
+fn storm_air(g: &mut Game, id: WindWindSourceId, st: Storm) -> f64 {
+    let (t, k) = (g.time, &g.k.wind);
+    let s = &mut g.tab.wind_wind_source[id];
+    s.dir = [st.w[0] / st.speed, 0.0, st.w[2] / st.speed];
+    s.on = 1.0;
+    s.gust = gust(s.seed, t, k.storm_gust_amp, k.storm_gust_period);
+    st.speed
+}
+
+/// What blows in by a broken pane: as hard as it was set.
+fn glass_air(g: &mut Game, id: WindWindSourceId) -> f64 {
+    let (t, k) = (g.time, &g.k.wind);
+    let s = &mut g.tab.wind_wind_source[id];
+    s.on = 1.0;
+    s.gust = gust(s.seed, t, k.gust_amp, 0.6 * k.gust_period);
+    s.base
+}
+
+/// What blows in by a door standing open: the more it faces the storm the harder. None through one that is shut.
+fn door_air(g: &mut Game, id: WindWindSourceId, st: Storm) -> Option<f64> {
+    let (t, k) = (g.time, &g.k.wind);
+    let s = &mut g.tab.wind_wind_source[id];
+    let open = m::min(1.0, m::abs(g.dr[s.door.unwrap()].leaf.angle) / k.door_open_rad);
+    if open < 0.04 {
+        return None;
+    }
+    let facing = m::max(0.0, (st.w[0] * s.dir[0] + st.w[2] * s.dir[2]) / st.speed);
+    s.on = 1.0;
+    s.gust = gust(s.seed, t, k.storm_gust_amp, k.storm_gust_period);
+    Some(st.speed * k.door_k * open * (0.35 + 0.65 * facing))
 }
 
 /// The air's velocity at p this frame, m/s: the sum over every active source.
@@ -519,7 +505,7 @@ mod tests {
         [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()]
     }
 
-    // the doubles of the TypeScript's own stormVel / stormVelRoofs under bun with EXACT.on
+    // the pinned doubles of `storm_vel` / `storm_vel_roofs`
     #[test]
     fn storm_vel_is_the_typescripts_bits() {
         let cases: [(V3, V3, [u64; 3]); 5] = [
@@ -549,7 +535,7 @@ mod tests {
         }
     }
 
-    // the doubles of the TypeScript's own jetVel under bun with EXACT.on: a jet at a floor, on the axis at a floor, sideways, under the floor, no speed
+    // the pinned doubles of `jet_vel`: a jet at a floor, on the axis at a floor, sideways, under the floor, no speed
     #[test]
     fn jet_vel_is_the_typescripts_bits() {
         let down: V3 = [0.0, -1.0, 0.0];
@@ -613,7 +599,7 @@ mod tests {
         (g, id)
     }
 
-    // weather.ts:240 asks before the Wind is built: a blank one has no storm row to write
+    // asked before the wind is built: a blank one has no storm row to write
     #[test]
     fn a_reroof_before_the_wind_exists_is_nothing() {
         let mut g = Game::blank();

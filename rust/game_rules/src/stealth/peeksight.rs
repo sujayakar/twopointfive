@@ -3,7 +3,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.
-pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
+pub(super) fn peek_eye(g: &crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wall?;
     if !(w.peek > 0.0) || crate::condition::down(g, g.pl[pl].ch) { return None; }
@@ -54,7 +54,7 @@ fn turned_look(own_look: V3, s: f64, t: V3, n: V3, e: f64, turn_deg: f64) -> V3 
     [t[0] * cs - n[0] * sn, 0.0, t[2] * cs - n[2] * sn]
 }
 
-/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent, as the TypeScript's literal leaves them.
+/// The eye the peek gives: `pos` and `at` both the head's place; fov, near and wand absent.
 fn eye_at(own: crate::fogofwar::FogEye, p: V3, look: V3) -> crate::fogofwar::FogEye {
     crate::fogofwar::FogEye { id: own.id, pos: p, look, at: p, fov: None, near: None, wand: None }
 }

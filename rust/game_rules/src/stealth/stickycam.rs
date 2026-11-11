@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The module's knobs as the launcher's flight reads them.
-fn b(g: &mut crate::game::Game) -> crate::launcher::Ballistics {
+fn b(g: &crate::game::Game) -> crate::launcher::Ballistics {
     let r = &g.k.sticky;
     crate::launcher::Ballistics { speed: r.speed, gravity: r.gravity, drag: r.drag, radius: r.radius, life: r.life, substeps: r.substeps, solve_iters: r.solve_iters }
 }
@@ -55,13 +55,13 @@ pub fn cam_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: 
 }
 
 /// The previewed flight, by the live flight's own stepping.
-pub fn cam_solve(g: &mut crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
+pub fn cam_solve(g: &crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
     let r = b(g);
     crate::launcher::arc_solve(g, from, target, r)
 }
 
 /// The launch velocity: dead level through the aim point's height.
-fn cam_vel(g: &mut crate::game::Game, from: V3, target: V3) -> V3 {
+fn cam_vel(g: &crate::game::Game, from: V3, target: V3) -> V3 {
     let r = b(g);
     crate::launcher::launch_vel(from, target, r)
 }
@@ -204,7 +204,7 @@ pub(super) fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
     let pl = seat.player;
     if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
-    // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
+    // (under the fog's cone a camera's wedge is no wider than an eye's)
     let wide = if g.k.fog.cone { m::min(g.k.sticky.fov_deg, crate::fogofwar::field_deg(g)) } else { g.k.sticky.fov_deg };
     let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
     for c in live {
@@ -231,7 +231,7 @@ fn can_take(g: &crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// His own stuck camera nearest his feet within `r` that he has a clear line to from his eyes.
-fn cam_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> {
+fn cam_near(g: &crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> {
     let ch = g.pl[pl].ch;
     let p = g.ch[ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
@@ -250,13 +250,10 @@ fn cam_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCam
 }
 
 /// Nothing in his hands that takes them.
-fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
-    let p = &g.pl[pl];
-    p.dragging.is_none() && !p.sprinting && p.takedown.is_none() && p.holding.is_none()
-}
+pub(super) fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
 
 /// The camera he could take back this frame.
-fn cam_to_take(g: &mut crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
+fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
     if can_take(g, pl) && hands_free(g, pl) {
         let reach = g.k.sticky.take_reach;
         cam_near(g, pl, reach)
@@ -266,29 +263,16 @@ fn cam_to_take(g: &mut crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
 }
 
 /// The interaction row of the nearest stuck camera.
-pub fn sticky_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::stickycam::StickyRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn sticky_rows(g: &crate::game::Game, pl: PlayerId, busy: bool, o: &mut crate::player::Offers) {
     if !can_take(g, pl) { return; }
     let Some(c) = cam_near(g, pl, crate::player::NEARBY_M) else { return };
     let ch = g.pl[pl].ch;
     let near = v3::dist_xz(g.tab.stickycam_sticky_cam[c].pos, g.ch[ch].pos) < g.k.sticky.take_reach;
     let reach = near && hands_free(g, pl);
     let pos = cam_lens(g, c);
-    let it = crate::game::Interactable {
-        kind: crate::game::InteractableKind::Cam,
-        pos,
-        line1: String::from("sticky camera"),
-        line2: String::from(if reach { "" } else if near { "hands full" } else { "step closer" }),
-        in_reach: reach,
-        off: false,
-        ..crate::game::Interactable::default()
-    };
-    // (row spreads `it` into a new object and offer keeps `it` itself: the clone is the spread)
-    let verbs = if reach && !busy {
-        vec![row(g, it.clone(), crate::game::Verb::TakeCam, String::from("take it back"), None, None)]
-    } else {
-        Vec::new()
-    };
-    offer(g, it, verbs);
+    let it = crate::player::mark(crate::game::InteractableKind::Cam, pos, "sticky camera", if reach { "" } else if near { "hands full" } else { "step closer" }, reach);
+    let take = if reach && !busy { Some(crate::player::row(&it, crate::game::Verb::TakeCam, "take it back", "")) } else { None };
+    o.add(it, take.into_iter().collect());
 }
 
 /// Space on that row: the camera comes off its wall and is one more on his launcher. False = nothing to take.
@@ -381,7 +365,7 @@ mod tests {
         let from = [0.3, 1.2, -0.4];
         g.sets[g.seat].aim_point = [1.1, 0.0, 0.7];
         let p = cam_aim_point(&g, &crate::seats::here(&g), from);
-        assert!((m::hyp2(p[0] - from[0], p[2] - from[2]) - 1.5).abs() < 1e-12, "{:?}", p);
+        assert!((v3::dist_xz(p, from) - 1.5).abs() < 1e-12, "{:?}", p);
         assert!(((p[2] - from[2]) * (1.1 - from[0]) - (p[0] - from[0]) * (0.7 - from[2])).abs() < 1e-12, "on the cursor's bearing");
         assert_eq!(p[1], g.k.sticky.aim_y);
         g.sets[g.seat].aim_point = [10.25, 0.0, -3.5];

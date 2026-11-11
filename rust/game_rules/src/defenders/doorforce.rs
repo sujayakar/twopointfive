@@ -1,5 +1,6 @@
 pub use ::game_types::doorforce::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -14,21 +15,10 @@ macro_rules! man { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unwra
 /// the stand he is on, which is there
 macro_rules! stand { ($g:expr, $gd:expr) => { $g.m.doorforce.states.as_mut().unwrap().men.get_mut($gd).unwrap().on.as_mut().unwrap() } }
 
-/// `gd.lastKnown = [x, 0, z]`: a whole write of his fix, which doze.ts:244 asks about by identity (Guard.fix_stamp).
+/// A whole write of his fix, at floor height: doze watches for one by Guard.fix_stamp.
 fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
     crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
-
-/// `gd.path = []; gd.pathGoal = null`: a whole write of his path (Guard.path_serial) and no goal, so none the standoff laid.
-fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
-}
-
-/// The rule is up: the AI runs.
-fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled }
 
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
@@ -48,9 +38,6 @@ fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorf
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// A line for the panel's log.
 fn log(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
@@ -62,18 +49,18 @@ fn log(g: &mut crate::game::Game, s: &str) {
 /// A man this rule may have: a defender, up, on his own senses.
 fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    g.gd[gd].team != crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
+    !g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
 }
 
 /// A leaf that is a shut door to a man: hung, home in its frame.
-fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d)
+fn shut(g: &crate::game::Game, d: DoorId) -> bool {
+    !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d)
 }
 
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge.
-fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
+fn behind(g: &crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
     let k = g.k.doorforce;
-    if !shut(g, d) || flat(g.dr[d].frame_centre, at) > k.behind_m || flat(g.dr[d].frame_centre, from) > k.reach_m { return false; }
+    if !shut(g, d) || dist_xz(g.dr[d].frame_centre, at) > k.behind_m || dist_xz(g.dr[d].frame_centre, from) > k.reach_m { return false; }
     if crate::doors::doors_side(g, d, from) == crate::doors::doors_side(g, d, at) { return false; }
     let l = crate::doors::doors_frame_coords(g, d, at);
     if l.along < -k.behind_m || l.along > g.dr[d].def.width + k.behind_m { return false; }
@@ -81,7 +68,7 @@ fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -
 }
 
 /// HEARD: the shut door `at` is close behind for a man at `from`, the nearest such to `at`.
-fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
+fn door_between(g: &crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
     let mut best: Option<DoorId> = None;
     let mut bd = m::INF;
     let mut i = 0;
@@ -89,14 +76,14 @@ fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Opt
         let d = g.doors.list[i];
         i += 1;
         if !behind(g, gd, d, from, at) { continue; }
-        let da = flat(g.dr[d].frame_centre, at);
+        let da = dist_xz(g.dr[d].frame_centre, at);
         if da < bd { bd = da; best = Some(d); }
     }
     best
 }
 
 /// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man.
-fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
+fn door_hiding(g: &crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let from: V3 = [pos[0], pos[1] + 1.5, pos[2]];
@@ -126,7 +113,7 @@ fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, se
 /// His ears: a sound that came to him across a shut leaf, or a door's own noise, is word of that door.
 pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, prop: crate::doorforce::DoorForceHearProp) {
     use crate::director::EventKind;
-    if !live(g) || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
+    if !g.ai_enabled || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
     let k = g.k.doorforce;
     let who: f64;
     let horizon: f64;
@@ -146,12 +133,12 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         _ => return,
     }
     let c = g.gd[gd].ch;
-    let (me, team) = (g.ch[c].id, g.gd[gd].team);
+    let (me, team) = (g.ch[c].id, g.team(gd));
     let player_ch = g.pl[g.player].ch;
     let player_id = g.ch[player_ch].id;
     if who == me { return; }
     let their = crate::teams::team_of_id(g, who);
-    if !crate::teams::is_hostile(g, team, their) || (g.player_invisible && who == player_id) { return; }
+    if !team.foe_of(their) || (g.player_invisible && who == player_id) { return; }
     let a = e.level.unwrap_or(0.3) * v3::clamp(1.0 - prop.path_len / horizon, 0.0, 1.0) * prop.carry;
     if a < k.hear_min && !loud { return; }
     let mut add = if loud { k.shot } else { a * k.gain };
@@ -174,7 +161,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         while i < g.doors.list.len() {
             let x = g.doors.list[i];
             i += 1;
-            if shut(g, x) && flat(g.dr[x].frame_centre, e.pos) < g.dr[x].def.width + 0.3 && behind(g, gd, x, my_pos, maker_pos) { found = Some(x); break; }
+            if shut(g, x) && dist_xz(g.dr[x].frame_centre, e.pos) < g.dr[x].def.width + 0.3 && behind(g, gd, x, my_pos, maker_pos) { found = Some(x); break; }
         }
         d = match found { Some(x) => x, None => return };
         let u = crate::doors::door_dir(g, d);
@@ -203,22 +190,22 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
 }
 
 /// This 'kick' is a boot this rule had a man of the listener's own side (or the listener) throw: no intruder.
-pub fn door_force_own_boot(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
+pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
     if e.kind != crate::director::EventKind::Kick { return false; }
     let who = match e.who { Some(w) => w, None => return false };
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let t = match g.m.doorforce.states.as_ref().and_then(|s| s.boots.get(crate::Num(who))) { Some(&t) => t, None => return false };
     if g.time - t > 1.0 { return false; }
     let c = g.gd[gd].ch;
     if who == g.ch[c].id { return true; }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let their = crate::teams::team_of_id(g, who);
-    !crate::teams::is_hostile(g, team, their)
+    !team.foe_of(their)
 }
 
 /// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind.
 pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
-    if !live(g) { return; }
+    if !g.ai_enabled { return; }
     let (kf, time) = (g.k.doorforce, g.time);
     state_of(g).last_t = time;
     let k = m::exp(-dt / kf.fade_secs * m::log(3.0));
@@ -253,7 +240,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
         let cf = crate::coverfire::coverfire_on(g, gd);
-        let theirs = match &cf { Some(x) => x.kind == "thru", None => false };
+        let theirs = match &cf { Some(x) => x.kind.is_none(), None => false };
         if theirs && cf.as_ref().unwrap().fired > 0.0 { man!(g, gd).cf_t = time; }
         // a stand or a boot the alert branch has stopped asking about is over: taken up again it starts again
         {
@@ -271,7 +258,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
         let mut at = 0;
         while let Some(d) = man!(g, gd).beliefs.next_key(&mut at) {
             let b = man!(g, gd).beliefs.get_mut(d).unwrap();
-            if !(theirs && b.seen) { b.sure *= k; }   // (what he saw does not fade while coverfire.ts's burst on that sighting is going through the leaf)
+            if !(theirs && b.seen) { b.sure *= k; }   // (what he saw does not fade while coverfire's burst on that sighting is going through the leaf)
             let (sure, t) = (b.sure, b.t);
             if !shut(g, d) || sure < 0.02 || time - t > kf.stale_secs + kf.fade_secs {
                 let row = man!(g, gd);
@@ -317,7 +304,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// roundFor's `through`: the round reaches `to`, the leaf the first thing in the line, not with his muzzle against it, and not laid through standing glass.
-fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from: V3, to: V3, e: f64, index: f64) -> bool {
+fn round_through(g: &Game, gd: GuardId, def: crate::weapons::WeaponId, from: V3, to: V3, e: f64, index: f64) -> bool {
     let t = match crate::wallpen::thin_line(g, from, to, e, Some(0.3), None) {
         Some(crate::wallpen::ThinLine2::ThinLine(t)) => t,
         _ => return false,
@@ -329,7 +316,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
 }
 
 /// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it.
-fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
+fn round_for(g: &crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
     if g.dr[d].def.steel == Some(true) { return None; }
@@ -358,14 +345,31 @@ fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::B
 
 /// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind.
 pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::DoorForce> {
-    if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
+    if !g.ai_enabled || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
     g.m.doorforce.states.as_ref()?.men.get(gd)?;
-    let (kf, time, c, w) = (g.k.doorforce, g.time, g.gd[gd].ch, g.gd[gd].weapon);
+    let (kf, time, c) = (g.k.doorforce, g.time, g.gd[gd].ch);
     man!(g, gd).served = time;
     if man!(g, gd).kick.is_some() {
         if let Some(r) = kick_step(g, gd, dt) { return Some(DoorForce { aim: r.aim, move_: r.move_ }); }
     }
-    // the door he is on, or the one he is surest of
+    let mut b = door_he_believes_in(g, gd)?;
+    let d = b.door;
+    if man!(g, gd).on.is_none() { takes_his_stand_on_it(g, gd, &b); }
+    let free = g.gd[gd].duty.free();
+    let pos = g.ch[c].pos;
+    let to = where_a_round_would_go(g, gd, &mut b, pos, dt);
+    let st = stand!(g, gd);
+    let (t0, no_shot_t) = (st.t0, st.no_shot_t);
+    // THE BOOT: a free man who has been on it long enough and is still sure
+    if free && !state!(g).kickers.has(d) && (time - t0 >= kf.kick_secs || no_shot_t >= kf.kick_secs_no_shot) && g.gd[gd].reload_t < 0.0 {
+        return boots_it_or_leaves_it(g, gd, &b, pos, dt);
+    }
+    Some(lays_rounds_on_it(g, gd, &b, to, pos, dt))
+}
+
+/// The door he is on while he is still sure of it, or the one he is surest of.
+fn door_he_believes_in(g: &mut Game, gd: GuardId) -> Option<Belief> {
+    let (kf, time) = (g.k.doorforce, g.time);
     let on_door = man!(g, gd).on.map(|o| o.door);
     let mut b: Option<Belief> = match on_door { Some(d) => man!(g, gd).beliefs.get(d).copied(), None => None };
     if let Some(x) = b {
@@ -379,21 +383,23 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
             if x.sure >= kf.sure && time - x.t <= kf.stale_secs && shut(g, x.door) && b.map_or(true, |y| x.sure > y.sure) { b = Some(x); }
         }
     }
-    let mut b = b?;
-    let d = b.door;
-    if man!(g, gd).on.is_none() {
-        // (a burst coverfire.ts has just put through a thin thing on this sighting is the first: this one's rounds then want a newer word)
-        let theirs = b.seen && time - man!(g, gd).cf_t < 2.0;
-        man!(g, gd).on = Some(Stand { door: d, t0: time, n: 0.0, fired_t: if theirs { time } else { -1e9 }, next: 0.0, lay: 0.0, fired: 0.0, no_shot_t: 0.0, to: None, to_key: [m::NAN, m::NAN, m::NAN] });
-        let line = alloc::format!("{} on {}: {} (sure {})", g.gd[gd].callsign, g.dr[d].def.name, if b.seen { "saw him go behind it" } else { "hears them behind it" }, js::to_fixed(b.sure, 2));
-        log(g, &line);
-    }
-    let free = !g.gd[gd].pinned && !g.gd[gd].hold;
-    // (what his round would do changes only with a new word, or when he moves: asked again then, not every frame)
-    let pos = g.ch[c].pos;
+    b
+}
+
+/// He is on this door now. A burst coverfire has just put through a thin thing on this sighting is the first: this one's rounds then want a newer word.
+fn takes_his_stand_on_it(g: &mut Game, gd: GuardId, b: &Belief) {
+    let (d, time) = (b.door, g.time);
+    let theirs = b.seen && time - man!(g, gd).cf_t < 2.0;
+    man!(g, gd).on = Some(Stand { door: d, t0: time, n: 0.0, fired_t: if theirs { time } else { -1e9 }, next: 0.0, lay: 0.0, fired: 0.0, no_shot_t: 0.0, to: None, to_key: [m::NAN, m::NAN, m::NAN] });
+    let line = alloc::format!("{} on {}: {} (sure {})", g.gd[gd].callsign, g.dr[d].def.name, if b.seen { "saw him go behind it" } else { "hears them behind it" }, js::to_fixed(b.sure, 2));
+    log(g, &line);
+}
+
+/// What his round would do changes only with a new word, or when he moves: asked again then, not every frame. The time without a shot is kept.
+fn where_a_round_would_go(g: &mut Game, gd: GuardId, b: &mut Belief, pos: V3, dt: f64) -> Option<V3> {
     let key = stand!(g, gd).to_key;
     if key[0] != b.t || key[1] != pos[0] || key[2] != pos[2] {
-        let to = round_for(g, gd, &mut b);
+        let to = round_for(g, gd, b);
         let st = stand!(g, gd);
         st.to = to;
         st.to_key = [b.t, pos[0], pos[2]];
@@ -401,65 +407,89 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
     let to = stand!(g, gd).to;
     let st = stand!(g, gd);
     st.no_shot_t = if to.is_some() { 0.0 } else { st.no_shot_t + dt };
-    let (t0, no_shot_t) = (st.t0, st.no_shot_t);
-    // THE BOOT: a free man who has been on it long enough and is still sure
-    if free && !state!(g).kickers.has(d) && (time - t0 >= kf.kick_secs || no_shot_t >= kf.kick_secs_no_shot) && g.gd[gd].reload_t < 0.0 {
-        let spot = crate::doors::doors_kick_spot(g, d, pos);
-        let steel = g.dr[d].def.steel == Some(true);
-        if steel || crate::doors::doors_boot_holds(g, d, pos) || crate::scene_collision::nav_grid_is_blocked(g, spot.pos[0], spot.pos[2]) {
-            let why = if steel { "steel" } else if crate::doors::doors_boot_holds(g, d, pos) { "the frame would hold a boot" } else { "no floor to kick from" };
-            let line = alloc::format!("{} leaves {} to his hand ({})", g.gd[gd].callsign, g.dr[d].def.name, why);
-            log(g, &line);
-            set_fix(g, gd, b.at);
-            let row = man!(g, gd);
-            row.rest.set(d, time + kf.rest_secs);
-            row.beliefs.delete(d);
-            row.on = None;
-            return None;
-        }
-        man!(g, gd).kick = Some(Kick { door: d, spot: spot.pos, yaw: spot.yaw, phase: KickPhase::Walk, t0: time, set_t: 0.0 });
-        state!(g).kickers.set(d, gd);
-        clear_walk(g, gd);
-        g.gd[gd].stall_ref = None;
-        let line = alloc::format!("{} goes to boot {}", g.gd[gd].callsign, g.dr[d].def.name);
+    to
+}
+
+/// He goes to boot it; a door that would hold a boot, or no floor to kick from, he leaves alone a while.
+fn boots_it_or_leaves_it(g: &mut Game, gd: GuardId, b: &Belief, pos: V3, dt: f64) -> Option<DoorForce> {
+    let (kf, time, d) = (g.k.doorforce, g.time, b.door);
+    let spot = crate::doors::doors_kick_spot(g, d, pos);
+    let steel = g.dr[d].def.steel == Some(true);
+    if steel || crate::doors::doors_boot_holds(g, d, pos) || crate::scene_collision::nav_grid_is_blocked(g, spot.pos[0], spot.pos[2]) {
+        let why = if steel { "steel" } else if crate::doors::doors_boot_holds(g, d, pos) { "the frame would hold a boot" } else { "no floor to kick from" };
+        let line = alloc::format!("{} leaves {} to his hand ({})", g.gd[gd].callsign, g.dr[d].def.name, why);
         log(g, &line);
-        return kick_step(g, gd, dt).map(|r| DoorForce { aim: r.aim, move_: r.move_ });
+        set_fix(g, gd, b.at);
+        let row = man!(g, gd);
+        row.rest.set(d, time + kf.rest_secs);
+        row.beliefs.delete(d);
+        row.on = None;
+        return None;
     }
-    // THE ROUNDS: stood still, laid on the spot, by the aim law and the cadence every round of his obeys
+    man!(g, gd).kick = Some(Kick { door: d, spot: spot.pos, yaw: spot.yaw, phase: KickPhase::Walk, t0: time, set_t: 0.0 });
+    state!(g).kickers.set(d, gd);
+    g.gd[gd].drop_path();
+    g.gd[gd].stall_ref = None;
+    let line = alloc::format!("{} goes to boot {}", g.gd[gd].callsign, g.dr[d].def.name);
+    log(g, &line);
+    kick_step(g, gd, dt).map(|r| DoorForce { aim: r.aim, move_: r.move_ })
+}
+
+/// THE ROUNDS: stood still, laid on the spot, by the aim law and the cadence every round of his obeys.
+fn lays_rounds_on_it(g: &mut Game, gd: GuardId, b: &Belief, to: Option<V3>, pos: V3, dt: f64) -> DoorForce {
+    let (kf, time, c) = (g.k.doorforce, g.time, g.gd[gd].ch);
     let aim: V3 = match to { Some(x) => x, None => [b.at[0], pos[1] + kf.chest_y, b.at[2]] };
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 6.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
     g.arms[g.gd[gd].ch].fire_cd -= dt;
     let held = DoorForce { aim, move_: 0.0 };
-    if crate::control::man::changing_magazine(g, gd) { return Some(held); }
-    if to.is_none() { return Some(held); }
+    if crate::control::man::changing_magazine(g, gd) || to.is_none() { return held; }
     let st = stand!(g, gd);
     if st.n >= kf.rounds { st.n = 0.0; st.fired_t = time; st.next = time + kf.gap_secs; }   // these rounds are through: he listens
     let p = g.k.aim.guard;
-    let dist = flat(pos, aim);
-    let on = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
+    let dist = dist_xz(pos, aim);
+    let on = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * (match g.gd[gd].skill { Some(sk) => sk.settle_k, None => 1.0 });
     let aim_model = g.tune.aim_model;
     let st = stand!(g, gd);
     st.lay = if !aim_model { if on { 1.0 } else { 0.0 } } else if on { m::min(1.0, st.lay + dt / settle) } else { m::max(0.0, st.lay - p.lose_rate * dt) };   // (his lay on the spot, kept while he listens too)
     let (lay, fired_t, next) = (st.lay, st.fired_t, st.next);
     let armed = b.t > fired_t && time >= next;
-    if !armed && g.fa[w].burst.is_none() { return Some(held); }
+    if !armed && g.fa[g.gd[gd].weapon].burst.is_none() { return held; }
     let muzzle = g.ch[c].muzzle;
     if !crate::coverfire::cover_lane(g, gd, muzzle, aim) {
-        return Some(held);
+        return held;
     }
     let ok = on && lay >= p.acquire_min - 1e-9;
+    fires_through_it(g, gd, b.door, DoorShot { aim, dist, lay, ok, armed }, dt);
+    held
+}
+
+/// A round at the door as it stands to go.
+#[derive(Clone, Copy)]
+struct DoorShot {
+    aim: V3,
+    dist: f64,
+    lay: f64,
+    ok: bool,
+    armed: bool,
+}
+
+/// The burst's trigger or the single round's, and what went counted on his stand.
+fn fires_through_it(g: &mut Game, gd: GuardId, d: DoorId, shot: DoorShot, dt: f64) {
+    let DoorShot { aim, dist, lay, ok, armed } = shot;
+    let (c, w) = (g.gd[gd].ch, g.gd[gd].weapon);
+    let p = g.k.aim.guard;
     let had = crate::weapons::firearm_rounds_ready(g, w);
     let def = g.fa[w].def;
-    if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
+    if g.weapon(def).burst.is_some() {
         let tr = g.arms[g.gd[gd].ch].aim.track;
         g.arms[g.gd[gd].ch].aim.track = lay;   // (his lay on the SPOT for the burst's own cone, and for nothing else: his track on the man is put back)
         crate::guards::burst_trigger(g, gd, dt, aim, ok && armed, ok, None);
         g.arms[g.gd[gd].ch].aim.track = tr;
     } else if ok && armed && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && !crate::guards::round_past_colleague(g, gd, aim, None, None) && crate::weapons::firearm_fire(g, w) {
         let mo = crate::suppression::guard_fire_mods(g, gd);
-        let row = g.m.weapons.weapons.get(def).unwrap();
+        let row = g.weapon(def);
         let (r, cd, jitter) = (row.ai_spread, row.cd, row.cd_jitter);
         let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
         g.arms[g.gd[gd].ch].fire_cd = (cd + die * jitter) * mo.gap;
@@ -482,7 +512,6 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
         st.n += out;
         st.fired += out;
     }
-    Some(held)
 }
 
 /// kickStep's `end`: the boot is over, thrown or given up. Unless he still `believes`, his fix is the place he believed in and the door is left alone a while.
@@ -494,7 +523,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
     let s = state!(g);
     if s.kickers.get(d) == Some(&gd) { s.kickers.delete(d); }
     man!(g, gd).kick = None;
-    clear_walk(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if !believes {
         if let Some(b) = b { set_fix(g, gd, b.at); }
@@ -518,18 +547,18 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     let lock: V3 = [hinge[0] + m::cos(closed) * (width - 0.2), 0.9, hinge[1] + m::sin(closed) * (width - 0.2)];
     if kk.phase != KickPhase::Kick && !shut(g, d) { return kick_end(g, gd, d, b, Some("it stands open"), false); }
     if kk.phase == KickPhase::Walk {
-        if g.gd[gd].pinned || g.gd[gd].hold { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
+        if !g.gd[gd].duty.free() { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
         if g.time - kk.t0 > g.k.doorforce.walk_secs { return kick_end(g, gd, d, b, Some("the walk took too long"), false); }
         crate::guards::go_to(g, gd, kk.spot, None);
         let speed = g.tune.guard_investigate;
         let arrived = crate::guards::follow_path(g, gd, dt, speed);
-        let dist = flat(g.ch[c].pos, kk.spot);
+        let dist = dist_xz(g.ch[c].pos, kk.spot);
         if dist < 0.3 || (arrived && dist < 0.6) {
             let time = g.time;
             let k = man!(g, gd).kick.as_mut().unwrap();
             k.phase = KickPhase::Set;
             k.set_t = time;
-            clear_walk(g, gd);
+            g.gd[gd].drop_path();
         } else if arrived {
             return kick_end(g, gd, d, b, Some("no way to the spot"), false);
         }
@@ -538,7 +567,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
     // on the spot: square to the leaf as the spot was dealt, his eyes on the lock
-    let on_it = flat(g.ch[c].pos, kk.spot) < 0.6;
+    let on_it = dist_xz(g.ch[c].pos, kk.spot) < 0.6;
     if kk.phase == KickPhase::Set {
         if !on_it { return kick_end(g, gd, d, b, Some("he was moved off the spot"), false); }
         let pos = g.ch[c].pos;
@@ -565,7 +594,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     if gave {
         let pos = g.ch[c].pos;
         crate::marks::kick_scuff(g, d, pos);
-        crate::doors::door_set_noticed(g, d, true);   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
+        g.dr[d].leaf.noticed = true;   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
     }
     let line = alloc::format!("{} boots {}: {}", g.gd[gd].callsign, g.dr[d].def.name, if gave { "it goes in" } else { "it holds" });
     log(g, &line);
@@ -656,7 +685,7 @@ mod tests {
         row.on = Some(Stand { door: d, ..Stand::default() });
         state_of(g).kickers.set(d, gd);
         g.gd[gd].path = vec![[1.0, 0.0, 1.0]];
-        crate::guards::guard_set_path_goal(g, gd, Some([1.0, 0.0, 1.0]));
+        g.gd[gd].set_path_goal(Some([1.0, 0.0, 1.0]));
         g.gd[gd].stall_ref = Some([1.0, 0.0, 1.0]);
         (gd, b)
     }

@@ -42,10 +42,10 @@ fn fwd_of(yaw: f64) -> V3 {
 }
 
 /// Where on the man each move's hands go, off his bones as they stand: the blow's own point, the free hand's.
-pub fn marks(g: &mut crate::game::Game, by: CharId, vic: CharId, style: crate::character::BlowStyle) -> (V3, Option<V3>) {
+pub fn marks(g: &crate::game::Game, by: CharId, vic: CharId, style: crate::character::BlowStyle) -> (V3, Option<V3>) {
     use crate::character::Bone;
-    let neck = g.ch[vic].bones.get(Bone::Neck).copied();
-    let head = g.ch[vic].bones.get(Bone::Head).copied();
+    let neck = g.ch[vic].bone(Bone::Neck);
+    let head = g.ch[vic].bone(Bone::Head);
     marks_of(g.ch[by].pos, g.ch[by].body_yaw, g.ch[vic].pos, g.ch[vic].body_yaw, neck, head, style)
 }
 
@@ -73,7 +73,7 @@ fn marks_of(by_pos: V3, by_yaw: f64, vic_pos: V3, vic_yaw: f64, neck: Option<V3>
 }
 
 /// No headroom over him: a crouched Sam does not rise into the blow; everybody else stands.
-fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
+fn may_rise(g: &crate::game::Game, by: CharId) -> bool {
     let p = g.player;
     !(by == g.pl[p].ch && g.pl[p].crouch && !crate::player::can_stand(g))
 }
@@ -105,7 +105,7 @@ fn fall_way_of(p: V3, yaw: f64, from: Option<V3>, style: crate::character::FallS
     use crate::character::FallStyle;
     let f = fwd_of(yaw);
     let away: V3 = match from {
-        Some(from) if m::hyp2(p[0] - from[0], p[2] - from[2]) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
+        Some(from) if v3::dist_xz(p, from) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
         _ => f,
     };
     if style == FallStyle::Topple {
@@ -145,12 +145,12 @@ fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::Fal
 }
 
 /// Is a line along the fall's way, at height `y` and `len` long, stopped by something solid.
-fn shut(g: &mut Game, p: V3, d: V3, y: f64, len: f64) -> bool {
+fn shut(g: &Game, p: V3, d: V3, y: f64, len: f64) -> bool {
     crate::scene_collision::solid_blocked(g, [p[0], y, p[2]], [p[0] + d[0] * len, y, p[2] + d[2] * len], None)
 }
 
 /// Has the level floor for the whole of him laid `a` further along: three lines, then the strip's volume.
-fn fits(g: &mut Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
+fn fits(g: &Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
     let len = a + LAY_REACH;
     if shut(g, p, d, 0.15, len) || shut(g, p, d, 0.45, len) || shut(g, p, d, 1.1, len) { return false; }
     let mut s = LAY_HALF;

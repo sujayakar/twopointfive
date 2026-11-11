@@ -30,7 +30,7 @@ pub struct Leg {
 
 /// The bodies a thing `by` sent can find: the living, himself and the squad's own AI men apart.
 pub fn bodies(g: &Game, by: CharId) -> Vec<CharId> {
-    let men = g.guards.iter().filter(|&&gd| g.gd[gd].team != crate::teams::Team::Operative).map(|&gd| g.gd[gd].ch);
+    let men = g.guards.iter().filter(|&&gd| !g.team(gd).ours()).map(|&gd| g.gd[gd].ch);
     let civilians = crate::civilians::civilian_bodies(g).into_iter().map(|cv| g.gd[cv].ch);
     let players = crate::seats::men(g).into_iter().map(|pl| g.pl[pl].ch);
     let all: Vec<CharId> = men.chain(civilians).chain(players).collect();
@@ -38,7 +38,7 @@ pub fn bodies(g: &Game, by: CharId) -> Vec<CharId> {
 }
 
 /// `h` seconds of it: drag and gravity on its velocity, then the first thing along the way. None: it does not move.
-pub fn leg(g: &mut Game, b: &Ballistics, h: f64, pos: V3, vel: &mut V3, bodies: &[CharId]) -> Option<Leg> {
+pub fn leg(g: &Game, b: &Ballistics, h: f64, pos: V3, vel: &mut V3, bodies: &[CharId]) -> Option<Leg> {
     let k = m::exp(-b.drag * h);
     *vel = [vel[0] * k, vel[1] * k - b.gravity * h, vel[2] * k];
     let seg = v3::scale(*vel, h);
@@ -142,7 +142,7 @@ fn double_over(g: &mut Game, gd: GuardId, from: V3) {
     use crate::game::GuardState;
     let c = g.gd[gd].ch;
     if g.gd[gd].script.is_some() {
-        use crate::squad::EndGuardScriptState as End;
+        use crate::game::GuardState as End;
         let to = match g.gd[gd].state { GuardState::Patrol => End::Suspicious, GuardState::Search => End::Search, GuardState::Alert => End::Alert, _ => End::Suspicious };
         crate::squad::end_guard_script(g, gd, Some(to));
     }
@@ -163,8 +163,7 @@ fn double_over(g: &mut Game, gd: GuardId, from: V3) {
     crate::mind::raise(g, gd, aware, "flight");
     if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
     let all = crate::launcher::stagger_lines_table();
-    let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
-    let pool = crate::words::w(g, &now);
+    let pool: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
     let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
     crate::game::game_say(g, gd, line, None, None);

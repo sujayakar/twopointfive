@@ -1,4 +1,4 @@
-//! MISSIONS: what a change of play does to the room clears and to the rescues and the night breach, read the same way before and after. Natively, with no page and no TypeScript (README.md, "Missions").
+//! MISSIONS: what a change of play does to the room clears and to the rescues and the night breach, read the same way before and after. Natively, with no page (README.md, "Missions").
 //!
 //!   missions [--seeds 1-8] [--secs 75] [--std | --hard] [--played] [LEVEL…]      play, and print a row a mission and difficulty, tab between columns (keep it in a file)
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums
@@ -44,14 +44,14 @@ struct Run { behind: usize, ours: usize, cap: usize, to: [usize; 3], up: usize, 
 
 fn file_of(level: &str) -> String { format!("{level}.json") }
 
-fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
+fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.team(m) == Team::Hostile).collect() }
 
 /// The commander: an order every four to seven seconds, onto one of the three men nearest the squad, "open and clear" the door nearest that man (or the next one) or
 /// "move" onto him, by turns. His die is his own, so two seeds are two fights: on a fixed beat onto the nearest man the seeds of a mission were one fight over again.
 struct Commander { die: Die, next: usize, clear: bool }
 
 impl Commander {
-    fn new(seed: u32) -> Commander { Commander { die: Die::new(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
+    fn new(seed: u32) -> Commander { Commander { die: Die(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
     fn one_of(&mut self, mut v: Vec<[f64; 2]>, to: [f64; 2], n: usize) -> Option<[f64; 2]> {
         v.sort_by(|a, b| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap());
         v.truncate(n);
@@ -90,7 +90,7 @@ impl Moments {
     fn tick(&mut self, p: &Play, f: usize) {
         let t = p.time();
         for &d in &p.g.doors.list {
-            let shut = game::doors::door_angle(&p.g, d).abs() < 0.12;
+            let shut = p.g.dr[d].leaf.angle.abs() < 0.12;
             if self.shut.insert(d, shut) == Some(true) && !shut {
                 let c = p.g.dr[d].frame_centre;
                 let by = p.mates().into_iter().filter(|&m| p.up(m)).map(|m| (dist(p.at(m), [c[0], c[2]]), m)).filter(|x| x.0 < 2.0).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).map(|x| x.1);
@@ -159,7 +159,7 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
         let t = p.time() - t0;
         if r.fell.is_none() && p.mates().iter().any(|&m| !p.up(m)) { r.fell = Some(t); }
         for m in p.g.guards.clone() {
-            let side = match p.g.gd[m].team { Team::Operative => 0, Team::Hostile => 1, _ => continue };
+            let side = match p.g.team(m) { Team::Ours => 0, Team::Hostile => 1, _ => continue };
             let now = (p.reloading(m).is_some(), p.rounds_fired(m));
             let (reloading, fired) = *was.get(&m.0).unwrap_or(&now);
             if now.0 && !reloading { r.reloads[side] += 1; }

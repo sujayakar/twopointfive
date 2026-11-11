@@ -17,8 +17,8 @@ pub fn blow_tail(key_is: bool, key: &str, sep: Option<&str>) -> String {
 
 /// The nearest free charge of his own, a door's or a wall's.
 fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
-    if g.sets[g.seat].door_tools.set.is_empty() && g.sets[g.seat].wall_charge.set.is_empty() { return None; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    if g.groups[g.group].tools.set.is_empty() && g.sets[g.seat].wall_charge.set.is_empty() { return None; }
+    let p = g.player_pos(g.player);
     let d = crate::doortools::door_tools_sam_set(g);
     let w = crate::wallcharge::wall_charge_sam_set(g);
     if d.is_none() && w.is_none() { return None; }
@@ -33,7 +33,7 @@ fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
             return Some(OwnSet { at, words, where_, fatal: false, go: OwnSetGo::Door { d } });
         }
     }
-    // The TypeScript's `w!`, `wAt!`: a door's charge loses the distance only to a wall's, and with no door's charge the wall's is what stands.
+    // A door's charge loses the distance only to a wall's, and with no door's charge the wall's is what stands.
     let w = w?;
     let words = crate::wallcharge::wall_charge_sam_words(g, w);
     let fatal = crate::wallcharge::wall_charge_sam_fatal(g, w);
@@ -59,7 +59,7 @@ pub(super) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Int
     })
 }
 
-/// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down.
+/// at a bare tap's release: is the highlighted row his own charge where it would put him down.
 pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
@@ -67,7 +67,7 @@ pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::I
     true
 }
 
-/// game.ts, where this frame's act is read: the row given.
+/// where this frame's act is read: the row given.
 pub fn own_blow_act(g: &mut crate::game::Game) {
     let Some(a) = g.sets[g.seat].act.as_ref() else { return; };
     if a.kind != crate::game::InteractableKind::Charge || a.verb != Some(crate::game::Verb::Blow) || crate::condition::down(g, g.pl[g.player].ch) { return; }

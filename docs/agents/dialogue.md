@@ -38,8 +38,8 @@ Who says what, and where the words are:
 
 | who | lines | when |
 |---|---|---|
-| a man in Sam's arm | `lines`, `scripts`, `intel_text_table` in `game_types/src/dialogue/types.rs` | each press of the key |
-| Sam | `sam_lines` on the game's table, a script's own beats | before each answer, `sam_key_line_for` as he takes a key, `sam_remark_for` as the pistol comes up |
+| a man in Sam's arm | `lines`, `scripts` in `game_types/src/dialogue/types.rs`, `intel_text` in `game_rules/src/speech/dialogue/lines.rs` | each press of the key |
+| Sam | `sam_lines()`, a script's own beats | before each answer, `sam_key_line_for` as he takes a key, `sam_remark_for` as the pistol comes up |
 | two calm guards | `ambient_pairs` | `update_ambient`, on a floor with no alarm |
 | staff about their rounds | `needs_lines_table`, and lines in `guards/` | a coffee, a smoke, a call for a missing man |
 | the handler and Sam | `handler_lines` | `handler_beat`, the office night only |

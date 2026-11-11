@@ -2,16 +2,12 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// ------------------------------------------------------------ bodies are found by the light on them (tune.bodyLight — review A6.2, Chaos Theory's rule)
-/// A body in the dark is HIDDEN; one under a lamp, in a lit doorway or in the pool of a torch — the finder's own included — is found. What bodyInView asks on top of
-/// its range / cone / line: the light where the body lies, read the way every eye in the game reads a man — the renderer's irradiance at the body's trunk (a probe
-/// query keyed by the body, answered a frame or two later) and until it answers (the browser's first frames; headless, always) the CPU estimate of the same direct
-/// light (lightEstimateAt: fixtures, lamps, the torches and weapon lights in the set — his own beam on it is simply one of those lights) — through the meter's own
-/// curve (Game.visibilityOf), eased like everybody's meter; and the smoke between his eye and it (the probe's segment transmittance, as canSee marches it to Sam).
-/// Off (Tab ▸ Sandbox) = range, cone and line alone: found in the pitch dark at twelve metres, as before.
+/// BODIES ARE FOUND BY THE LIGHT ON THEM (`tune.body_light`; false = range, cone and line alone). A body in the dark is HIDDEN; one under a lamp, in a lit doorway or in the
+/// pool of a flashlight, the finder's own included, is found. What `body_seen` asks on top of its range, cone and line: the light where the body lies, as every eye in
+/// the game reads a man (`body_visibility`), and the smoke between his eye and it (`clear_between`).
 /// the meter reading (0‥1) at the body at or above which it is plain from FAR_M and beyond (0.22 ≈ the fringe of a corridor panel's pool as the meter reads it; a
 ///  torch beam squarely on it reads 0.7+, open floor between two panels at night ~0.35, a dark office 0); inside NEAR_M he all but trips on it — found in any light
-///  — and from NEAR to FAR the bar eases up from LIT_NEAR to LIT; SMOKE: eye → body transmittance under which the plume hides it (canSee's own line for a standing man)
+///  — and from NEAR to FAR the bar eases up from LIT_NEAR to LIT; SMOKE: eye → body transmittance under which the plume hides it (the line a standing man is hidden at too)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct BodyLightK {
     #[k(0.22)] pub lit: f64,
@@ -40,16 +36,14 @@ pub struct GuardEyeK {
 
 /// HOW THE TEAM CARRIES ITSELF. A teammate (an operative unit, while the room fight is live) is a man with a rifle and a
 ///  plate carrier: `max` is the most his legs are ever asked for, whoever asks (an order's leg, a drill's flow, the fight AI's chase, a step off a doorway) — a
-///  purposeful walk with some jog in it, none of the sprint clip (character.ts BLEND: the walk carries to 1.6 m/s, the sprint starts past 2.7) — and he LEANS INTO a
-///  move: his speed rises by no more than `accel` m/s² (he stops as crisply as ever: a man arriving on a mark is on it). And his GUN TRAVELS: the runner
-///   put a scripted man's muzzle on its aim point the frame the point changed — an order given, a corner checked, the fight's own read taking over
-///  from behind his shoulder: a rifle, a head and a weapon light's cone through 60‥150° in one frame, a few times a minute per man (tools/qa/playthrough.ts
-///  counted them) — now it comes round to a point an ORDER (or the unasked cover) gives it at `turn` rad/s at most (0 = on the point at once, as it was): 8 is
+///  purposeful walk with some jog in it, none of the sprint clip (the animator's `blend()`: the walk carries to 1.6 m/s, the sprint starts past 2.7) — and he LEANS INTO a
+///  move: his speed rises by no more than `accel` m/s² (he stops as crisply as ever: a man arriving on a mark is on it). And his GUN TRAVELS: put on its aim point
+///  the frame the point changed (an order given, a corner checked, the fight's own read taking over from behind his shoulder), a rifle, a head and a weapon light's
+///  cone would go through 60‥150° in one frame. So it comes round to a point an ORDER (or the unasked cover) gives it at `turn` rad/s at most (0 = on the point at once): 8 is
 ///  the operatives' own body turn — a quarter turn in a fifth of a second. A point his own EYES have given him
-///  (GuardScript.over: the room fight's read, which eases itself — roomfight.ts point()) is not slowed: throttled too, the pair lost three more rooms in six.
+///  (GuardScript.over: the room fight's read, which eases itself) is not slowed: throttled too, the pair lost three more rooms in six.
 ///  What that point may not do is TELEPORT: when it passes behind his back the waist's twist clamp flips from one shoulder to the other, 150° and more in a
-///  frame — that crossing is swung through his front at `swing` rad/s (0 = the flip, as it was; 30 is a half turn in a tenth of a second).
-///  `on` false = everybody as they were.
+///  frame — that crossing is swung through his front at `swing` rad/s (0 = the flip; 30 is a half turn in a tenth of a second).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct PaceK {
     #[k(2.2)] pub max: f64,

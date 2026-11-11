@@ -96,8 +96,8 @@ impl WorldAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
 }
 
@@ -148,7 +148,7 @@ impl GlassAsk for Play {
         h.speed = 0.0;
     }
     fn burst(&mut self, at: [f64; 2]) -> game::frag::BlastReport {
-        let who = self.g.ch[self.g.pl[self.g.player].ch].id;
+        let who = self.g.player_id(self.g.player);
         game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
@@ -185,7 +185,7 @@ pub trait WallAsk {
 
 impl WallAsk for Play {
     fn burst_at(&mut self, at: [f64; 3]) -> game::frag::BlastReport {
-        let (who, lift) = (self.g.ch[self.g.pl[self.g.player].ch].id, self.g.k.frag.lift);
+        let (who, lift) = (self.g.player_id(self.g.player), self.g.k.frag.lift);
         game::frag::blast(&mut self.g, [at[0], at[1] - lift, at[2]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn body_walks(&mut self, from: [f64; 2], to: [f64; 2]) -> [f64; 2] {
@@ -282,7 +282,7 @@ impl DarkAsk for Play {
     fn dark_line(&self, text: &str, kind: game::darkdoor::LineKind) -> bool { game::darkdoor::lines().get(String::from(kind.as_str())).map_or(false, |r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn dark_any(&self, text: &str) -> bool { game::darkdoor::lines().values().any(|r| r.say.iter().chain(r.he.iter().flatten()).chain(r.they.iter().flatten()).any(|l| l == text)) }
     fn lamp_on(&self, gd: GuardId) -> bool { self.g.tab.light[self.g.gd[gd].flashlight].enabled }
-    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.gd[m].team == game::teams::Team::Hostile && self.lamp_on(m)).count() }
+    fn lamps_burning(&self) -> usize { self.g.guards.iter().filter(|&&m| self.g.team(m) == game::teams::Team::Hostile && self.lamp_on(m)).count() }
     fn gunfire_reached(&mut self, gd: GuardId) { self.g.gd[gd].witness.heard.shots = self.g.gd[gd].witness.heard.shots.max(1.0); }
     fn heard_nothing(&self, gd: GuardId) -> bool { let h = &self.g.gd[gd].witness.heard; h.shots + h.kick + h.bang == 0.0 && self.g.gd[gd].witness.alerted_by.is_none() && self.state(gd) == game::game::GuardState::Patrol }
     fn face_each_other(&mut self, a: GuardId, b: GuardId) {
@@ -294,7 +294,7 @@ impl DarkAsk for Play {
         self.g.ch[cb].aim_yaw = y; self.g.ch[cb].body_yaw = y;
     }
     fn dark_knows(&self, gd: GuardId) -> bool { self.g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.knows) }
-    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::game::GameSetBlackoutCause::Hand); }
+    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::lighting::SetBlackoutCause::Hand); }
     fn powerout_at(&self, what: game::powerout::PowerOutEventWhat) -> Option<f64> { self.g.m.powerout.states.as_ref()?.events.iter().find(|e| e.what == what).map(|e| e.t) }
     fn powerout_sent(&self) -> Vec<GuardId> {
         let Some(st) = self.g.m.powerout.states.as_ref() else { return Vec::new() };
@@ -341,20 +341,20 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.duty.holds) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
-        (h.script, h.task, h.body_duty) = (None, None, None);
+        (h.script, h.errand, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
-        (h.script, h.task, h.body_duty) = (None, None, None);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.script, h.errand, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);
     }
@@ -369,9 +369,9 @@ impl YardAsk for Play {
     }
     fn door_shut_locked(&mut self, name: &str, locked: bool) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
-        game::doors::door_set_locked(&mut self.g, d, locked);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
+        self.g.dr[d].leaf.locked = locked;
     }
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64) {
         let high = |p: &mut Play, y: f64| { let q = [at[0], y, at[1]]; (game::guards::light_estimate_at(&mut p.g, q, Some(&mut |_g, _o| true), None, None), game::nvg::nvg_place_light(&mut p.g, q)) };
@@ -383,7 +383,7 @@ impl YardAsk for Play {
     fn camera_seen(&self) -> f64 { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].seen }
     fn beam_trips(&self, k: usize) -> f64 { self.g.tab.devices_laser_rt[self.g.devices.lasers[k]].trips as f64 }
     fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
-    fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
+    fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].errand, Some(game::game::Errand::At(game::game::ErrandAt { kind: game::game::ErrandThing::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
         let keys = ["KeyW", "KeyS", "KeyA", "KeyD"];
         let mut got = false;
@@ -455,7 +455,7 @@ impl FurnAsk for Play {
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
     fn keep(&self) -> Moment { Moment::of(&self.g) }
-    fn put_back(&mut self, k: &Moment) { self.g = k.stands(self.g.sim); }
+    fn put_back(&mut self, k: &Moment) { self.g = k.laid(self.g.sim); }
 }
 
 /// The net
@@ -579,8 +579,8 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let hits = game::glass::glass_state(&mut p.g).hits;
     let [statics, props, nav] = p.level_as_it_stands();
     let g = &p.g;
-    let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
-    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
+    let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].errand.is_some()) }).collect();
+    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", g.dr[d].leaf.angle, g.dr[d].leaf.latched, g.dr[d].leaf.locked)).collect();
     let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
     vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
         ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.sets[g.seat].wall_charge.set.len())), ("glass hits", format!("{hits}"))]
@@ -613,7 +613,7 @@ pub trait ReviewAsk {
 impl ReviewAsk for Play {
     fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
     fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.sets[self.g.seat].aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
-    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
+    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::lighting::LightEventCause::Shot), None); }
     fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
         let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };
@@ -621,7 +621,7 @@ impl ReviewAsk for Play {
     }
     fn things(&self) -> Vec<ItemId> { self.g.items.items.clone() }
     fn things_gone(&mut self) { self.g.items.items.clear(); }
-    fn on_errand(&self, gd: GuardId) -> bool { self.g.gd[gd].task.is_some() }
+    fn on_errand(&self, gd: GuardId) -> bool { self.g.gd[gd].errand.is_some() }
     fn civ_state(&self, gd: GuardId) -> game::civilians::CivState { self.g.cv[self.g.gd[gd].civ.expect("a civilian")].state }
     fn civ_ko_rows(&self) -> usize { self.g.chronicle.events.iter().filter(|e| format!("{:?}", e.kind).contains("CivilianKo") || format!("{:?}", e.kind).contains("CivilianKO")).count() }
 }

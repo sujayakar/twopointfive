@@ -55,9 +55,9 @@ mod tests {
 
 /// ACTS.move.keys: the walk keys
 fn walk_keys() -> Vec<String> { crate::rails::acts().delete(String::from("move")).and_then(|r| r.keys).unwrap_or_default() }
-/// /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/
+/// /^(Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/
 fn is_free(code: &str) -> bool {
-    if matches!(code, "Escape" | "Tab" | "Enter" | "NumpadEnter" | "Blur" | "Paused" | "BracketLeft" | "BracketRight") { return true; }
+    if matches!(code, "Tab" | "Enter" | "NumpadEnter" | "Blur" | "Paused" | "BracketLeft" | "BracketRight") { return true; }
     let b = code.as_bytes();
     (b.len() == 2 || b.len() == 3) && b[0] == b'F' && b[1..].iter().all(|c| c.is_ascii_digit())
 }
@@ -66,7 +66,7 @@ fn is_digit(code: &str) -> bool {
     let b = code.as_bytes();
     b.len() == 6 && code.starts_with("Digit") && (b'1'..=b'5').contains(&b[5])
 }
-fn has(a: &JsSet<String>, k: &str) -> bool { a.has(String::from(k)) }
+fn has(a: &JsSet<String>, k: &str) -> bool { a.holds(k) }
 fn names(v: &Option<Vec<String>>, k: &str) -> bool { v.as_ref().map_or(false, |l| l.iter().any(|x| x == k)) }
 fn step_at(l: &crate::scene_scenarios::LessonData, i: f64) -> Option<&crate::scene_scenarios::LessonStep> { l.steps.get(i as usize) }
 fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empty()) }
@@ -74,8 +74,8 @@ fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empt
 fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
     for gd in rails_squad(g) {
         if let Some(a) = crate::orders::squad_orders_of(seat, gd) {
-            if let Some(p) = g.tab.orders_assignment[a].post {
-                if m::hyp2(p[0] - at[0], p[2] - at[2]) < g.k.rails.way_m { return true; }
+            if let Some(p) = g.tab.task[a].post {
+                if v3::dist_xz(p, at) < g.k.rails.way_m { return true; }
             }
         }
     }
@@ -83,7 +83,7 @@ fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
 }
 fn order_of(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(seat, gd)?;
-    Some(g.tab.orders_assignment[a].order.clone())
+    Some(g.tab.task[a].order.clone())
 }
 
 /// the last moment of HIS fight
@@ -95,7 +95,7 @@ fn rails_fight(g: &mut crate::game::Game) -> f64 {
         n += 1;
         if !(time > g.rails.act_t) { continue; }
         let hit = kind == K::Kick || kind == K::Bang || (kind == K::Prop && loud)
-            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Operative));
+            || ((kind == K::Shot || kind == K::GuardShot) && armed && (kind == K::Shot || crate::teams::team_of_id(g, who.unwrap_or(-1.0)) == crate::teams::Team::Ours));
         if hit { g.rails.act_t = time; }
     }
     for k in 0..g.guards.len() {
@@ -207,7 +207,7 @@ fn rails_note_given(g: &mut crate::game::Game, o: &str) {
 }
 /// this man runs the leg he is on
 pub fn rails_runs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if !g.rails.running || g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.rails.running || !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     match order_of(g, seat, gd) { Some(o) => !crate::orders::rows::id_is(&o, crate::orders::Is::Follows) && !crate::orders::rows::id_is(&o, crate::orders::Is::Holds), None => false }
 }
 /// is a man of the squad under an order to the step's mark
@@ -255,11 +255,11 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.sets[g.seat].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
+    let menu_up = g.groups[g.group].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
-        (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
-         i.keys.has(String::from("Enter")) || i.pressed.has(String::from("Enter")) || i.keys.has(String::from("NumpadEnter")) || i.pressed.has(String::from("NumpadEnter")))
+        (i.keys.holds("ShiftLeft") || i.keys.holds("ShiftRight"),
+         i.keys.holds("Enter") || i.pressed.holds("Enter") || i.keys.holds("NumpadEnter") || i.pressed.holds("NumpadEnter"))
     };
     let p = g.player;
     let hand_up = has(&a, "use") && g.sets[g.seat].hand.sel.open;
@@ -268,7 +268,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     if hand_up { buttons |= 4; }
     let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.sets[g.seat].hand.setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
-    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.sets[g.seat].orders.cmd_ring.is_none() && g.sets[g.seat].orders.menu.is_none() && {
+    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown().is_none() && g.groups[g.group].orders.cmd_ring.is_none() && g.groups[g.group].orders.menu.is_none() && {
         let ik = String::from(crate::consts::INTERACT_KEY);
         let (down_t, f_held) = (g.sets[g.seat].hand.sel.down_t, g.sets[g.seat].hand.f_held);
         let i = &g.tab.input[input];
@@ -294,7 +294,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     i.buttons = (js::to_i32(i.buttons) & buttons) as f64;
     i.clicked = (clicked & buttons) as f64;
     if !wheel && !menu_up && !hand_up { i.wheel = 0.0; }
-    let word = i.pressed.has(String::from("KeyF"));
+    let word = i.pressed.holds("KeyF");
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));
@@ -340,7 +340,7 @@ pub fn rails_tick(g: &mut crate::game::Game) {
         g.rails.run = Some(g.mission.serial);
         g.rails.answered = -1.0; g.rails.spared.clear();
         g.rails.fresh = 3.0;
-        g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64;
+        g.rails.orders_seen = g.groups[g.group].orders.log.len() as f64;
         rails_clean(g);
         rails_start_program(g);
     } else if g.rails.fresh > 0.0 { g.rails.fresh -= 1.0; }
@@ -348,9 +348,9 @@ pub fn rails_tick(g: &mut crate::game::Game) {
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
     if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
     // every order the player gives is told to the level's program
-    if (g.sets[g.seat].orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64; }
-    while g.rails.orders_seen < g.sets[g.seat].orders.log.len() as f64 {
-        let o = g.sets[g.seat].orders.log[g.rails.orders_seen as usize].order.clone();
+    if (g.groups[g.group].orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.groups[g.group].orders.log.len() as f64; }
+    while g.rails.orders_seen < g.groups[g.group].orders.log.len() as f64 {
+        let o = g.groups[g.group].orders.log[g.rails.orders_seen as usize].order.clone();
         rails_note_given(g, &o);
         crate::director::director_signal(g, &alloc::format!("order:{}", o));
         g.rails.orders_seen += 1.0;
@@ -360,7 +360,7 @@ pub fn rails_tick(g: &mut crate::game::Game) {
         let mut walking = false;
         for gd in rails_squad(g) {
             if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
-                let r = &g.tab.orders_assignment[a];
+                let r = &g.tab.task[a];
                 if !crate::orders::rows::id_is(&r.order, crate::orders::Is::Holds) && !crate::orders::rows::id_is(&r.order, crate::orders::Is::Follows) && !r.arrived { walking = true; break; }
             }
         }
@@ -419,8 +419,8 @@ pub(super) fn rails_ends_now(g: &crate::game::Game) -> bool { rails_at(g).map_or
 fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let d = match rails_data(g) { Some(d) => d, None => return false };
     let respawn = match d.respawn { Some(r) => r, None => return false };
-    if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
-    let id = crate::Num(g.ch[g.gd[gd].ch].id);
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    let id = crate::Num(g.char_id(gd));
     if let Some(until) = g.rails.spared.get(id) { if g.time < *until { return true; } }
     let t = g.time + if respawn > 0.0 { respawn } else { g.k.rails.spare_secs };
     g.rails.spared.set(id, t);
@@ -431,7 +431,7 @@ fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 /// is this man on his knee right now, spared
 pub fn rails_is_spared(g: &crate::game::Game, gd: GuardId) -> bool {
-    let id = crate::Num(g.ch[g.gd[gd].ch].id);
+    let id = crate::Num(g.char_id(gd));
     g.rails.spared.get(id).map_or(false, |t| g.time < *t)
 }
 /// the squad's men still up
@@ -440,7 +440,7 @@ fn rails_squad(g: &crate::game::Game) -> Vec<GuardId> {
     for k in 0..g.guards.len() {
         let x = g.guards[k];
         let r = &g.gd[x];
-        if r.unit.is_some() && r.team == crate::teams::Team::Operative && !g.cond[r.ch].down { out.push(x); }
+        if g.ch[r.ch].team.ours() && !g.cond[r.ch].down { out.push(x); }
     }
     out
 }
@@ -449,14 +449,14 @@ fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) {
     let low = low.unwrap_or(false);
     let c = g.gd[gd].ch;
     let (p, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(yaw),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
-        going: String::from("holding"),
-        there: String::from("holding"),
+        going: "holding".into(),
+        there: "holding".into(),
         crouch: if low { Some(true) } else { None },
         ..Default::default()
     };
@@ -508,8 +508,8 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it)
     let menu = if up { seat.orders.menu.as_ref() } else { None };
     let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
-        let p = crate::orders::order_target_at(&x.target);
-        m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
+        let p = x.target.at();
+        v3::dist_xz(p, at) < MENU_M
     }));
     let ring = if on { t.menu_line.as_ref().filter(|l| !l.is_empty()) } else { None };
     let d = g.time - g.rails.tap_t;
@@ -532,8 +532,8 @@ pub(super) fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s:
     let rd = s.l.rails.as_ref()?;
     let t = step_at(&s.l, s.i);
     let over = crate::lesson::lesson_over(g, seat);
-    let mut line_men: Vec<f64> = rails_squad(g).into_iter().map(|x| g.ch[g.gd[x].ch].id).collect();
-    line_men.push(g.ch[g.pl[seat.player].ch].id);
+    let mut line_men: Vec<f64> = rails_squad(g).into_iter().map(|x| g.char_id(x)).collect();
+    line_men.push(g.seat_id(seat));
     let open = allowed_of(s);
     Some(crate::view::RailsView {
         prompt: rails_prompt(g, seat, s),
@@ -557,7 +557,7 @@ mod tests_2 {
     use super::*;
     #[test]
     fn the_pages_own_keys_are_free_and_only_they() {
-        assert!(is_free("Escape") && is_free("F1") && is_free("F12") && is_free("BracketLeft"));
+        assert!(is_free("Tab") && is_free("F1") && is_free("F12") && is_free("BracketLeft"));
         assert!(!is_free("F") && !is_free("F123") && !is_free("Fx") && !is_free("KeyF"));
         assert!(is_digit("Digit1") && is_digit("Digit5"));
         assert!(!is_digit("Digit0") && !is_digit("Digit6") && !is_digit("Digit12"));

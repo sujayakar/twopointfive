@@ -7,13 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// a state as the TypeScript's literal makes it
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
 }
-
-/// the roster's own test for one man
-fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
 
 /// the squad of this seat
 fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> { crate::orders::squad_orders_squad(g, seat) }
@@ -21,7 +17,7 @@ fn cast_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> 
 /// is the squad silent right now
 pub fn squad_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     if !g.k.silent.on { return false; }
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     match g.m.silent.states.get(key) {
         Some(s) if s.silent => crate::orders::squad_orders_active(g, seat),
         _ => false,
@@ -30,7 +26,7 @@ pub fn squad_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 
 /// put the squad in silent or take it out
 pub fn set_silent(g: &mut crate::game::Game, on: bool) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if !g.m.silent.states.has(key) {
         let cast = cast_of(g, &crate::seats::here(g));
         let since = g.time;
@@ -40,11 +36,10 @@ pub fn set_silent(g: &mut crate::game::Game, on: bool) {
     let s = g.m.silent.states.get_mut(key).unwrap();
     if s.silent == on { return; }
     s.silent = on; s.since = now; s.hot = false; s.was = Some(false); s.booted = None;
-    if on {  } else {  }
 }
 
 /// this teammate is under the silent posture this frame
-pub fn under_silence(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && mate(g, gd) }
+pub fn under_silence(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && g.team(gd).ours() }
 
 /// squadSilent(viewOf(g, gd)): one book is the game in hand, as viewOf says; else asked inside his seat
 fn squad_silent_of_view(g: &mut Game, gd: GuardId) -> bool {
@@ -68,8 +63,8 @@ pub fn silent_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// loud has reached this man since the order
-pub(super) fn reached(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+pub(super) fn reached(g: &crate::game::Game, gd: GuardId) -> bool {
+    let key = g.group;
     let since = match g.m.silent.states.get(key) { Some(s) => s.since, None => return false };
     crate::roomfight::room_fight_hot_for(g, gd) && crate::roomfight::room_fight_hot_of(g, gd) >= since
 }
@@ -121,7 +116,7 @@ pub fn silent_pick(g: &mut crate::game::Game) -> bool { squad_silent(g, &crate::
 /// a door no pick opens, before a squad compromised since the order: the boot goes
 pub fn silent_boot(g: &mut crate::game::Game, d: DoorId) -> Option<crate::silent::SilentBoot> {
     if !squad_silent(g, &crate::seats::here(g)) { return None; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let was = match g.m.silent.states.get(key) { Some(s) => s.was == Some(true), None => false };
     if !was || urgent(g) { return None; }
     let s = g.m.silent.states.get_mut(key).unwrap();
@@ -137,7 +132,7 @@ pub fn silent_no_cans(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bo
 /// is his gun quiet: by the weapon's own report
 pub fn quiet_gun(g: &crate::game::Game, gd: GuardId) -> bool {
     let def = g.fa[g.gd[gd].weapon].def;
-    let r = &g.m.weapons.weapons.get(def).unwrap().report;
+    let r = &g.weapon(def).report;
     !r.loud && r.level < 1.0
 }
 
@@ -146,11 +141,6 @@ fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if reached(g, gd) || quiet_gun(g, gd) { return false; }
     let st = g.gd[h].state;
     !(st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed || urgent(g))
-}
-
-/// is this round held: the room fight's and the cover's fire's one question
-pub fn round_held(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    silent_holds_round(g, gd, h) || crate::pairorders::pair_holds_round(g, gd, h) || crate::spotted::spotted_holds_round(g, gd, h)
 }
 
 /// his round at `h` is held
@@ -185,9 +175,6 @@ pub fn silent_holds_glass(g: &mut crate::game::Game, gd: GuardId, h: GuardId, c_
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || urgent(g) { return false; }
     let from = crate::guards::shot_origin(g, c_2);
     if !crate::glasspen::glass_on_line(g, from, to) { return false; }
-    if sil {  }
-    else if uns {  }
-    else {  }
     true
 }
 
@@ -201,14 +188,14 @@ pub fn silent_tool(g: &mut crate::game::Game, loud: bool) {
 /// is the silent squad compromised right now
 pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     if !squad_silent(g, seat) { return false; }
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     match g.m.silent.states.get(key) { Some(s) => s.hot, None => false }
 }
 
 /// `only` of the posture's two rows: the whole squad, whoever was addressed
 pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
 
-/// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are
+/// the posture's two rows on the menu: made anew at each call
 fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
     let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
         targets: targets(),
@@ -239,18 +226,18 @@ fn loud_word(w: Option<&str>) -> String {
 /// the rows on the menu, off it with the switch off; work only when that changes
 fn seat(g: &mut crate::game::Game) {
     let on = g.k.silent.on;
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if let Some(was) = g.m.silent.seats.get(key) {
         if was.on == on { return; }
     }
     g.m.silent.seats.set(key, SilentModSeatsValue { on });
     crate::orders::squad_orders_unregister(g, crate::orders::rows::loud::ORDER.id);
     crate::orders::squad_orders_unregister(g, crate::orders::rows::silent::ORDER.id);
-    if !on { g.sets[g.seat].orders.posture = None; return; }
+    if !on { g.groups[g.group].orders.posture = None; return; }
     let [silent, loud] = rows(g);
     crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);
-    g.sets[g.seat].orders.posture = Some(seam_posture());
+    g.groups[g.group].orders.posture = Some(seam_posture());
 }
 
 /// `posture.word`: what the posture's seam should call
@@ -267,7 +254,7 @@ fn seam_posture() -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrd
 /// once a frame, before the orders pose the men: the rows, a new cast, the one line when loud reaches the squad
 pub fn silent_tick(g: &mut crate::game::Game) {
     seat(g);
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if !g.m.silent.states.has(key) {
         if !g.k.silent.on || !g.k.silent.start { return; }
         let cast = cast_of(g, &crate::seats::here(g));

@@ -26,11 +26,11 @@ const APART: [(usize, usize, f64); 20] = [(12, 13, 0.9), (14, 15, 0.9), (12, 15,
 /// knee direction rule over (hip, knee, ankle)
 const KNEES: [(usize, usize, usize); 2] = [(10, 12, 14), (11, 13, 15)];
 
-/// cos 55°, the game's own: the skeleton's const of this name is one unit in the last place off it (see notes, ## Skeleton), and this one shadows it.
+/// cos 55°.
 const NECK_CONE_COS: f64 = 0.5735764363510462;
 
 /// wd.gather(…, this.near): the collision grid's indices of the statics round the body.
-fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn world_gather(g: &Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
@@ -586,7 +586,7 @@ fn rd_buried(this: &crate::ragdoll::Ragdoll, i: f64) -> bool {
     let o = i as usize * 3;
     let x = &this.x;
     for k in 0..this.n_near as usize {
-        // (near_b is gatherNear's flat copy of the very box the TypeScript reads here: called only just after a gather, with no game step between)
+        // (near_b is the gather's flat copy of the box: called only just after a gather, with no game step between)
         let q = k * 6;
         let b = &this.near_b;
         let (c, s) = (this.near_cs[k * 2], this.near_cs[k * 2 + 1]);
@@ -676,7 +676,7 @@ fn rd_sphere_box(this: &mut crate::ragdoll::Ragdoll, i: f64, r: f64, b: &[f64], 
 
 /// Rotational part of the 3×3 matrix A (row-major), refined from the warm start q in place (Müller et al. 2016).
 fn extract_rotation(a: &[f64], q: &mut Quat, iters: f64) {
-    let mut rr = [0.0; 9];   // (erR: module scratch in the TypeScript)
+    let mut rr = [0.0; 9];
     let mut it = 0.0;
     while it < iters {
         it += 1.0;

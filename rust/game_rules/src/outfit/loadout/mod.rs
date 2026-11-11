@@ -4,8 +4,7 @@ pub use screen::*;
 use crate::js::{self, JsMap, JsSet};
 use alloc::string::String;
 
-/// The squad size a query asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None. (loadout.ts squadOfQuery, of
-/// words already read)
+/// The squad size a query asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None.
 pub fn squad_of(q: &crate::query::Query, flag4: bool) -> Option<f64> {
     let asked = q.get("squad").and_then(size_of_text);
     if asked.is_some() { return asked; }

@@ -1,8 +1,11 @@
 //! A ROUND GOES THROUGH WHAT IT SAYS IT GOES THROUGH AND STOPS IN THE REST. A SAVE CARRIES THE BROKEN LEVEL.
 mod world_ask;
+use game::combat::RoundMet;
+use game::out_events::OutEvent;
 use game::particle_fx::surf_at;
 use game::scene_collision::{nav_grid_is_blocked, segment_blocked};
 use game::scene_materials::Surf;
+use game::smoke_types::SmokeEmitterKind;
 use game_start::play::{Button, Opts, Play};
 use game_start::scene::{Axis, Scene};
 use world_ask::{a_box_of, scene_with, FurnAsk};
@@ -71,10 +74,10 @@ fn gunfire_splinters_a_wooden_leaf_at_its_toll() {
     let (a, b) = ([16.0, 1.6, z], [20.0, 1.6, z]);
     assert!(segment_blocked(&mut p.g, a, b, None, None, None), "the shut leaf stops no eye");
     let toll = p.g.k.doorshot.toll as usize;
-    let n = shoot_until(&mut p, [18.0, z], wall * toll - 1, &|p: &Play| game::doors::door_off(&p.g, d));
-    assert!(!game::doors::door_off(&p.g, d), "off its hinges after {n} rounds, the yardstick is {wall}");
-    let more = shoot_until(&mut p, [18.0, z], 8, &|p: &Play| game::doors::door_off(&p.g, d));
-    assert!(game::doors::door_off(&p.g, d), "{} rounds and it hangs", n + more);
+    let n = shoot_until(&mut p, [18.0, z], wall * toll - 1, &|p: &Play| p.g.dr[d].leaf.off);
+    assert!(!p.g.dr[d].leaf.off, "off its hinges after {n} rounds, the yardstick is {wall}");
+    let more = shoot_until(&mut p, [18.0, z], 8, &|p: &Play| p.g.dr[d].leaf.off);
+    assert!(p.g.dr[d].leaf.off, "{} rounds and it hangs", n + more);
     assert_eq!(n + more, wall * toll, "rounds to take the leaf, with the yardstick at {wall}");
     p.run(0.2);
     assert!(!segment_blocked(&mut p.g, a, b, None, None, None), "off its hinges and it stops the eye");
@@ -90,6 +93,34 @@ fn a_hit_goes_by_what_the_thing_says_it_is() {
     assert_eq!(of(&mut p, 12.0), Surf::Plastic);
     let bare = of(&mut p, 14.0);
     assert!(bare != Surf::Metal && bare != Surf::Plastic, "saying nothing, black paint reads {bare:?}");
+}
+
+/// THE RULE: the weather changes what nothing is to a round: rifle rounds that stop in the open ground of the compound raise the same puffs of dust under a downpour,
+/// the lot soaked, as on a clear night. CONTROL: the clear night's rounds did raise dust, the downpour did soak the ground and the clear night did not.
+/// A FAILURE MEANS: the rain decides a material again, and a round into wet tarmac is a round into steel: it dents, it sparks and no dust rises.
+#[test]
+fn a_round_into_soaked_ground_does_what_it_does_dry() {
+    let dust = |weather: &str| {
+        let mut p = Play::mission("compound.json", &format!("?levelFile=compound.json&weather={weather}&roomclear&squad4"), &Opts { seed: 8, ..Default::default() });
+        p.g.god_mode = true; p.g.ai_enabled = false; p.g.tune.chaos = 0.5;
+        let soaked = p.until(2.0, |p| p.g.weather.wet_on).is_some();
+        // the ground the whole level stands on, by its place among the statics: what a round's flight says it stopped in
+        let ground = p.g.col.boxes.iter().position(|&b| { let (c, h) = (p.g.tab.boxes[b].c, p.g.tab.boxes[b].h); c[1] + h[1] == 0.0 && h[0] >= 20.0 && h[2] >= 14.0 }).expect("the ground") as f64;
+        let (sam, rifle) = (p.g.pl[p.g.player].ch, p.g.pl[p.g.player].rifle);
+        let def = p.g.m.weapons.weapons.get(p.g.fa[rifle].def).unwrap().clone();
+        let (at, from) = (p.sam_at(), p.smoke.len());
+        for _ in 0..6 {
+            game::destruction::destruction_round(&mut p.g, sam, [at[0] + 1.5, 0.0, at[1]], [0.0, -1.0, 0.0], &RoundMet { n: [0.0, 1.0, 0.0], index: Some(ground), prop: None, box_: None }, &def);
+            p.run(0.16);
+        }
+        let puffs = p.smoke[from..].iter().filter(|e| matches!(e, OutEvent::SmokeSystemLikeEmit(x) if matches!(x.e.kind, SmokeEmitterKind::Puff))).count();
+        (soaked, puffs)
+    };
+    let (dry_soaked, dry) = dust("clear");
+    let (soaked, wet) = dust("downpour");
+    assert!(soaked && !dry_soaked, "the downpour soaks the ground and a clear night does not");
+    assert!(dry > 0, "six rifle rounds into dry ground raise dust");
+    assert_eq!(wet, dry, "puffs of dust off the soaked ground, against the dry");
 }
 
 /// THE RULE: a save after a wreck carries the walls: loaded after more damage, the same cells are open, the same pieces stand, the grid is the same, and the hole is a hole to the feet and the eye. CONTROL: the more damage did change them.

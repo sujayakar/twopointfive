@@ -1,16 +1,17 @@
-//! POSING — src/anim/skeleton.ts: a local pose blended into another, a pose run forward into every node's model-space rotation and origin, a node turned in
-//! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
-//! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
+//! POSING: a local pose blended into another, a pose run forward into every node's model-space rotation and origin, a node turned in
+//! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. The operands stand in a written order, so the doubles are the
+//! same on every machine, and every pose value is stored as a single (single.rs).
 //!
-//! What a function works on is handed to it as slices. The animator's layers are layers.rs and ask here; under the row `poses` a character's
-//! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
-//! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
-//! not a speed-up: the layers that move here next call these with no crossing at all.
+//! WHAT IT IS HANDED. A function works on slices. The animator's layers are layers/ and ask here. A character's poses live in its game's block (poses.rs) and a question is
+//! asked of them THERE, with no copy; a pose that is an array of the host's (a function's scratch) is written onto the BENCH below, asked about, and read back. The rig is
+//! written onto the bench before a question is asked of it, and the bench is scratch: nothing of a game is kept on it.
 //!
-//! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math`.
+//! The lengths and the angles are the game's own (rust/maths).
 
-use crate::maths::{acos, atan2, cos, hypot3, hypot4, sin};
+use crate::maths::{acos, atan2, hypot4};
 use crate::single::{get, put, S};
+use game_types::m;
+use game_types::v3::{self, quat, Quat, V3};
 
 /// nodes a rig on the bench can have (the game's has 55)
 pub const MAX_NODES: usize = 128;
@@ -74,21 +75,6 @@ fn or_one(l: f64) -> f64 {
         l
     }
 }
-#[inline(always)]
-fn clamp(x: f64, a: f64, b: f64) -> f64 {
-    if x < a {
-        a
-    } else if x > b {
-        b
-    } else {
-        x
-    }
-}
-/// Math.abs
-#[inline(always)]
-fn abs(x: f64) -> f64 {
-    f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
-}
 
 
 /// A RIG AS A FUNCTION SEES IT
@@ -98,58 +84,12 @@ pub struct Rig<'a> {
 }
 
 /// Out = lerp(a, b, w · mask[node]) — `a`, `b` and `out` are places on one store of poses (out may be a's)
-/// `in_singles` = the rule POSEMATH.singles (single.rs): the same blend worked in singles, four nodes a step, a rotation's length a plain root.
-pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, out: usize, n: usize, in_singles: bool) {
-    let r = rows(n);
-    if in_singles {
-        return crate::single::blend4(store, a, b, crate::single::weight(w), mask, out, n, r);
-    }
-    for i in 0..n {
-        let t = match mask {
-            Some(m) => w * get(m, i),
-            None => w,
-        };
-        if t <= 0.0 {
-            if out != a {
-                for c in 0..NODE {
-                    store[out + c * r + i] = store[a + c * r + i];
-                }
-            }
-            continue;
-        }
-        if t >= 1.0 {
-            for c in 0..NODE {
-                store[out + c * r + i] = store[b + c * r + i];
-            }
-            continue;
-        }
-        for c in 0..3 {
-            let (av, bv) = (get(store, a + c * r + i), get(store, b + c * r + i));
-            put(store, out + c * r + i, av + (bv - av) * t);
-        }
-        for c in 7..10 {
-            let (av, bv) = (get(store, a + c * r + i), get(store, b + c * r + i));
-            put(store, out + c * r + i, av + (bv - av) * t);
-        }
-        let (qa, qb, qo) = (a + 3 * r + i, b + 3 * r + i, out + 3 * r + i);
-        let (mut bx, mut by, mut bz, mut bw) = (get(store, qb), get(store, qb + r), get(store, qb + 2 * r), get(store, qb + 3 * r));
-        let (ax, ay, az, aw) = (get(store, qa), get(store, qa + r), get(store, qa + 2 * r), get(store, qa + 3 * r));
-        if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
-            bx = -bx;
-            by = -by;
-            bz = -bz;
-            bw = -bw;
-        }
-        let (x, y, z, ww) = (ax + (bx - ax) * t, ay + (by - ay) * t, az + (bz - az) * t, aw + (bw - aw) * t);
-        let l = or_one(hypot4(x, y, z, ww));
-        put(store, qo, x / l);
-        put(store, qo + r, y / l);
-        put(store, qo + 2 * r, z / l);
-        put(store, qo + 3 * r, ww / l);
-    }
+/// Worked in singles (single.rs), four nodes a step, a rotation's length a plain root.
+pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, out: usize, n: usize) {
+    crate::single::blend4(store, a, b, crate::single::weight(w), mask, out, n, rows(n));
 }
 
-/// one node of PoseFK.run: its rotation and origin from its parent's and its own local row
+/// one node run forward: its rotation and origin from its parent's and its own local row
 #[inline(always)]
 fn fk_node(d: &[S], n: usize, rot: &mut [f64], pos: &mut [f64], i: usize, par: i32) {
     let (rx, ry, rz, rw) = (get(d, 3 * n + i), get(d, 4 * n + i), get(d, 5 * n + i), get(d, 6 * n + i));
@@ -176,7 +116,7 @@ fn fk_node(d: &[S], n: usize, rot: &mut [f64], pos: &mut [f64], i: usize, par: i
     pos[i * 3 + 1] = pos[p * 3 + 1] + t1;
     pos[i * 3 + 2] = pos[p * 3 + 2] + t2;
 }
-/// PoseFK.run: every node, parents first
+/// every node run forward, parents first
 pub fn fk_run(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64]) {
     let n = d.len() / NODE;
     for &i in rig.order {
@@ -184,7 +124,7 @@ pub fn fk_run(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64]) {
         fk_node(d, n, rot, pos, i, rig.parent[i]);
     }
 }
-/// PoseFK.runFrom: `root` and what hangs under it, in the rig's order (the others are current and are left)
+/// `root` and what hangs under it, in the rig's order (the others are current and are left)
 pub fn fk_run_from(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: usize) {
     let mut under = [false; MAX_NODES];
     let n = d.len() / NODE;
@@ -198,7 +138,7 @@ pub fn fk_run_from(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: u
         fk_node(d, n, rot, pos, i, par);
     }
 }
-/// PoseFK.parentRot: the model-space rotation of node i's parent, walked up the pose
+/// the model-space rotation of node i's parent, walked up the pose
 pub fn parent_rot(rig: &Rig, d: &[S], i: usize) -> [f64; 4] {
     let (mut x, mut y, mut z, mut w) = (0.0, 0.0, 0.0, 1.0);
     let mut p = rig.parent[i];
@@ -226,7 +166,7 @@ pub(crate) fn store_unit(d: &mut [S], o: usize, n: usize, x: f64, y: f64, z: f64
     put(d, o + 2 * n, z / l);
     put(d, o + 3 * n, w / l);
 }
-/// Pose.setRot of a rotation made unit (quat.normalize): node i's local rotation
+/// node i's local rotation, of a rotation made unit
 pub fn set_unit(d: &mut [S], i: usize, q: &[f64; 4]) {
     let n = d.len() / NODE;
     store_unit(d, 3 * n + i, n, q[0], q[1], q[2], q[3]);
@@ -269,139 +209,106 @@ fn rot_of(rot: &[f64], i: usize) -> [f64; 4] {
     [rot[i * 4], rot[i * 4 + 1], rot[i * 4 + 2], rot[i * 4 + 3]]
 }
 
-/// skeleton.ts twoBoneIK. `rot` / `pos` are the pose run forward: current on entry (all of it if `fresh`), current again on exit.
+/// THE TWO-BONE SOLVE. `rot` / `pos` are the pose run forward: the limb and what it hangs from current on entry, the limb and what hangs off it on exit;
+/// and, not `fresh`, the whole pose on exit, for a layer that has turned something else since it ran it and reads it after.
 #[allow(clippy::too_many_arguments)]
 pub fn two_bone_ik(
     rig: &Rig, d: &mut [S], rot: &mut [f64], pos: &mut [f64], a: usize, b: usize, c: usize, target: &[f64; 3], pole: Option<&[f64; 3]>, pole_w: f64, end_rot: Option<&[f64; 4]>, fresh: bool,
 ) {
-    let (pa, pb, pc) = ([pos[a * 3], pos[a * 3 + 1], pos[a * 3 + 2]], [pos[b * 3], pos[b * 3 + 1], pos[b * 3 + 2]], [pos[c * 3], pos[c * 3 + 1], pos[c * 3 + 2]]);
-    let (la, lb) = (hypot3(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2]), hypot3(pb[0] - pc[0], pb[1] - pc[1], pb[2] - pc[2]));
-    let (tt0, tt1, tt2) = (target[0] - pa[0], target[1] - pa[1], target[2] - pa[2]);
-    let ttl = hypot3(tt0, tt1, tt2);
-    let dist = clamp(ttl, abs(la - lb) + 0.01, (la + lb) * 0.998);
-    // 1. bend at b for the reach
-    let (mut x, mut y, mut z) = (pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]);
-    let mut l = or_one(hypot3(x, y, z));
-    let (u0, u1, u2) = (x / l, y / l, z / l);
-    x = pc[0] - pb[0];
-    y = pc[1] - pb[1];
-    z = pc[2] - pb[2];
-    l = or_one(hypot3(x, y, z));
-    let (w0, w1, w2) = (x / l, y / l, z / l);
-    let bend_now = acos(clamp(u0 * w0 + u1 * w1 + u2 * w2, -1.0, 1.0));
-    let bend_want = core::f64::consts::PI - acos(clamp((la * la + lb * lb - dist * dist) / (2.0 * la * lb), -1.0, 1.0));
-    let (mut ax0, mut ax1, mut ax2) = (u1 * w2 - u2 * w1, u2 * w0 - u0 * w2, u0 * w1 - u1 * w0);
-    let al = hypot3(ax0, ax1, ax2);
-    let (pl0, pl1, pl2) = match pole {
-        Some(p) => (p[0], p[1], p[2]),
-        None => (0.0, 0.0, 1.0),
-    };
-    let (mut pa0, mut pa1, mut pa2) = (pl1 * u2 - pl2 * u1, pl2 * u0 - pl0 * u2, pl0 * u1 - pl1 * u0);
-    if hypot3(pa0, pa1, pa2) < 1e-6 {
-        pa0 = 1.0;
-        pa1 = 0.0;
-        pa2 = 0.0;
-    }
-    l = or_one(hypot3(pa0, pa1, pa2));
-    pa0 = pa0 / l;
-    pa1 = pa1 / l;
-    pa2 = pa2 / l;
-    if al < 1e-5 {
-        ax0 = pa0;
-        ax1 = pa1;
-        ax2 = pa2;
-    } else {
-        let ia = 1.0 / al;
-        ax0 = ax0 * ia;
-        ax1 = ax1 * ia;
-        ax2 = ax2 * ia;
-        if ax0 * pa0 + ax1 * pa1 + ax2 * pa2 < 0.0 && bend_now < 0.26 {
-            ax0 = ax0 * -1.0;
-            ax1 = ax1 * -1.0;
-            ax2 = ax2 * -1.0;
-        }
-        let k = clamp((bend_now - 0.09) / 0.17, 0.0, 1.0);
-        x = pa0 + (ax0 - pa0) * k;
-        y = pa1 + (ax1 - pa1) * k;
-        z = pa2 + (ax2 - pa2) * k;
-        l = or_one(hypot3(x, y, z));
-        ax0 = x / l;
-        ax1 = y / l;
-        ax2 = z / l;
-    }
-    let mut q = [0.0f64; 4];
-    {
-        let sn = sin((bend_want - bend_now) / 2.0);
-        q[0] = ax0 * sn;
-        q[1] = ax1 * sn;
-        q[2] = ax2 * sn;
-        q[3] = cos((bend_want - bend_now) / 2.0);
-    }
-    rotate_model(d, b, &q, &rot_of(rot, a));
+    let (pa, pb, pc) = (at3(pos, a), at3(pos, b), at3(pos, c));
+    let (la, lb) = (v3::dist(pa, pb), v3::dist(pb, pc));
+    let to = v3::sub(*target, pa);
+    let far = v3::len(to);
+    let reach = v3::clamp(far, m::abs(la - lb) + 0.01, (la + lb) * 0.998);
+    rotate_model(d, b, &bend(pa, pb, pc, la, lb, reach, pole), &rot_of(rot, a));
+    // (between its turns only the limb's own bones are read: what hangs off them is run forward once, at the end)
     if fresh {
-        fk_run_from(rig, d, rot, pos, b);
+        fk_run_limb(rig, d, rot, pos, b, c);
     } else {
         fk_run(rig, d, rot, pos);
     }
-    // 2. swing a so the end lands on the target line
+    // swing a so the end lands on the target line
     let par_a = rig.parent[a];
     let p_rot_a = if par_a >= 0 { rot_of(rot, par_a as usize) } else { [0.0, 0.0, 0.0, 1.0] };
-    let tl1 = or_one(ttl);
-    let (s0, s1, s2) = (tt0 / tl1, tt1 / tl1, tt2 / tl1);
-    {
-        x = pos[c * 3] - pos[a * 3];
-        y = pos[c * 3 + 1] - pos[a * 3 + 1];
-        z = pos[c * 3 + 2] - pos[a * 3 + 2];
-        l = or_one(hypot3(x, y, z));
-        let (f0, f1, f2) = (x / l, y / l, z / l);
-        let dd = f0 * s0 + f1 * s1 + f2 * s2;
-        if dd < -0.9999 {
-            // quat.fromTo's own turn-about for two opposite directions
-            let (e0, e1, e2) = if abs(f0) < 0.9 { (1.0, 0.0, 0.0) } else { (0.0, 1.0, 0.0) };
-            let (c0, c1, c2) = (f1 * e2 - f2 * e1, f2 * e0 - f0 * e2, f0 * e1 - f1 * e0);
-            let cl = or_one(hypot3(c0, c1, c2));
-            q[0] = c0 / cl;
-            q[1] = c1 / cl;
-            q[2] = c2 / cl;
-            q[3] = 0.0;
-        } else {
-            let (c0, c1, c2, c3) = (f1 * s2 - f2 * s1, f2 * s0 - f0 * s2, f0 * s1 - f1 * s0, 1.0 + dd);
-            let ql = or_one(hypot4(c0, c1, c2, c3));
-            q[0] = c0 / ql;
-            q[1] = c1 / ql;
-            q[2] = c2 / ql;
-            q[3] = c3 / ql;
-        }
+    let line = v3::normalize(to);
+    let end = v3::normalize(v3::sub(at3(pos, c), at3(pos, a)));
+    rotate_model(d, a, &quat::from_to(end, line), &p_rot_a);
+    fk_run_limb(rig, d, rot, pos, a, c);
+    // swivel the bend plane toward the pole about the a→target axis
+    if let Some(q) = pole.filter(|_| pole_w > 0.0).and_then(|pole| swivel(v3::sub(at3(pos, b), at3(pos, a)), *pole, line, pole_w)) {
         rotate_model(d, a, &q, &p_rot_a);
+        fk_run_limb(rig, d, rot, pos, a, c);
     }
-    fk_run_from(rig, d, rot, pos, a);
-    // 3. swivel the bend plane toward the pole about the a→target axis
-    if let Some(pole) = pole {
-        if pole_w > 0.0 {
-            let (e0, e1, e2) = (pos[b * 3] - pos[a * 3], pos[b * 3 + 1] - pos[a * 3 + 1], pos[b * 3 + 2] - pos[a * 3 + 2]);
-            let (es, ps) = (-(e0 * s0 + e1 * s1 + e2 * s2), -(pole[0] * s0 + pole[1] * s1 + pole[2] * s2));
-            let (ep0, ep1, ep2) = (e0 + s0 * es, e1 + s1 * es, e2 + s2 * es);
-            let (pp0, pp1, pp2) = (pole[0] + s0 * ps, pole[1] + s1 * ps, pole[2] + s2 * ps);
-            let (el, ppl) = (hypot3(ep0, ep1, ep2), hypot3(pp0, pp1, pp2));
-            if el > 1e-4 && ppl > 1e-4 {
-                let (en0, en1, en2) = (ep0 / el, ep1 / el, ep2 / el);
-                let (pn0, pn1, pn2) = (pp0 / ppl, pp1 / ppl, pp2 / ppl);
-                let ang = atan2((en1 * pn2 - en2 * pn1) * s0 + (en2 * pn0 - en0 * pn2) * s1 + (en0 * pn1 - en1 * pn0) * s2, en0 * pn0 + en1 * pn1 + en2 * pn2);
-                let sn = sin(ang * pole_w / 2.0);
-                q[0] = s0 * sn;
-                q[1] = s1 * sn;
-                q[2] = s2 * sn;
-                q[3] = cos(ang * pole_w / 2.0);
-                rotate_model(d, a, &q, &p_rot_a);
-                fk_run_from(rig, d, rot, pos, a);
-            }
-        }
-    }
-    // 4. the end's own rotation
+    // the end's own rotation
     if let Some(er) = end_rot {
         set_model_rot(d, c, er, &rot_of(rot, b));
-        fk_run_from(rig, d, rot, pos, c);
     }
+    fk_run_from(rig, d, rot, pos, a);
+}
+
+/// The nodes from `root` down to `end` alone, run forward (`root` first, whatever stands between).
+fn fk_run_limb(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64], root: usize, end: usize) {
+    let n = d.len() / NODE;
+    let mut way = [0u32; LIMB];
+    let (mut k, mut i) = (0, end);
+    while i != root && k < LIMB {
+        way[k] = i as u32;
+        k += 1;
+        match rig.parent[i] {
+            p if p >= 0 => i = p as usize,
+            _ => break,
+        }
+    }
+    if i != root {
+        return fk_run_from(rig, d, rot, pos, root);   // (a limb that is no limb: its end does not hang under its root, or is too far under it)
+    }
+    fk_node(d, n, rot, pos, root, rig.parent[root]);
+    for &i in way[..k].iter().rev() {
+        fk_node(d, n, rot, pos, i as usize, rig.parent[i as usize]);
+    }
+}
+/// nodes a limb can have between its root and its end
+const LIMB: usize = 12;
+
+/// a bone's place in a pose run forward
+#[inline(always)]
+fn at3(pos: &[f64], i: usize) -> V3 {
+    [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]]
+}
+
+/// The turn at the middle bone that brings the end to `reach` of the root: about the axis it is bent round now, or the pole's where it is all but straight
+/// (a straight limb's own axis is noise: eased from the pole's to its own between 0.09 and 0.26 rad of bend, and never bent back to front).
+fn bend(pa: V3, pb: V3, pc: V3, la: f64, lb: f64, reach: f64, pole: Option<&V3>) -> Quat {
+    let (u, w) = (v3::normalize(v3::sub(pb, pa)), v3::normalize(v3::sub(pc, pb)));
+    let bend_now = acos(v3::clamp(v3::dot(u, w), -1.0, 1.0));
+    let bend_want = core::f64::consts::PI - acos(v3::clamp((la * la + lb * lb - reach * reach) / (2.0 * la * lb), -1.0, 1.0));
+    let own = v3::cross(u, w);
+    let al = v3::len(own);
+    let across = v3::cross(pole.copied().unwrap_or([0.0, 0.0, 1.0]), u);
+    let poles = v3::normalize(if v3::len(across) < 1e-6 { [1.0, 0.0, 0.0] } else { across });
+    let axis = if al < 1e-5 {
+        poles
+    } else {
+        let mut own = v3::scale(own, 1.0 / al);
+        if v3::dot(own, poles) < 0.0 && bend_now < 0.26 {
+            own = v3::scale(own, -1.0);
+        }
+        v3::normalize(v3::lerp3(poles, own, v3::clamp((bend_now - 0.09) / 0.17, 0.0, 1.0)))
+    };
+    quat::axis_angle(axis, bend_want - bend_now)
+}
+
+/// The turn about the root's line to the target that brings the bend (`e`: root to middle) `pole_w` of the way round toward the pole.
+fn swivel(e: V3, pole: V3, line: V3, pole_w: f64) -> Option<Quat> {
+    let ep = v3::mad(e, line, -v3::dot(e, line));
+    let pp = v3::mad(pole, line, -v3::dot(pole, line));
+    let (el, pl) = (v3::len(ep), v3::len(pp));
+    if !(el > 1e-4 && pl > 1e-4) {
+        return None;
+    }
+    let (en, pn) = ([ep[0] / el, ep[1] / el, ep[2] / el], [pp[0] / pl, pp[1] / pl, pp[2] / pl]);
+    let ang = atan2(v3::dot(v3::cross(en, pn), line), v3::dot(en, pn));
+    Some(quat::axis_angle(line, ang * pole_w))
 }
 
 // ---- THE QUESTIONS (the module's exports: lib.rs)
@@ -481,7 +388,7 @@ macro_rules! poses_of {
         }
     };
 }
-/// A LAYER'S WAY IN (layers.rs): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
+/// A LAYER'S WAY IN (layers/): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
 /// `f` — or None where a question would answer false
 pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &mut Fk) -> R) -> Option<R> {
     let b = bench();
@@ -490,13 +397,13 @@ pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &
     let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
     Some(f(&mut poses_of!(b, g)[s..s + singles(n)], &rig, n, &mut fk))
 }
-/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, and the host reads back the nodes a layer says it ran
+/// THE RUN-FORWARD BONES on the bench: what a layer runs forward it finds here, until the next layer. Nobody else reads them
 pub struct Fk<'a> {
     pub rot: &'a mut [f64],
     pub pos: &'a mut [f64],
 }
 impl Fk<'_> {
-    /// CharacterAnimator.fkPart: PoseFK.run for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
+    /// the run forward for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
     /// not is skipped)
     pub fn part(&mut self, rig: &Rig, d: &[S], list: &[u32]) {
         for &i in list {
@@ -517,17 +424,17 @@ impl Fk<'_> {
         [self.rot[i * 4], self.rot[i * 4 + 1], self.rot[i * 4 + 2], self.rot[i * 4 + 3]]
     }
 }
-/// blendPose: poses `a`, `b` → `out`, all three in the one array
-pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize, in_singles: bool) -> bool {
+/// poses `a`, `b` → `out`, all three in the one array
+pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
         return false;
     };
     let bn = bench();
     let d = poses_of!(bn, g);
-    blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n, in_singles);
+    blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n);
     true
 }
-/// skeleton.ts buildMask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
+/// a mask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
 /// that weight. A later entry lies over an earlier one; a node the rig has not is skipped; every other node is nought.
 pub fn ask_mask(entries: &[(usize, f64, bool)]) {
     let b = bench();
@@ -555,9 +462,9 @@ pub fn ask_mask(entries: &[(usize, f64, bool)]) {
         }
     }
 }
-/// sampleClip: clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
+/// clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
 /// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not
-pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool, in_singles: bool) -> bool {
+pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
     let need = crate::clips::nodes_of(c);
     if need == 0 || need > nodes {
         return false;
@@ -566,24 +473,6 @@ pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: b
         return false;
     };
     let b = bench();
-    crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped, in_singles);
-    true
-}
-/// PoseFK.run (root < 0) / runFrom
-pub fn ask_run(g: usize, at: usize, root: i32) -> bool {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    let Some(s) = start(g, at, n) else {
-        return false;
-    };
-    if root >= n as i32 {
-        return false;
-    }
-    let d = &poses_of!(b, g)[s..s + singles(n)];
-    if root < 0 {
-        fk_run(&rig, d, &mut b.rot, &mut b.pos);
-    } else {
-        fk_run_from(&rig, d, &mut b.rot, &mut b.pos, root as usize);
-    }
+    crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped);
     true
 }

@@ -144,16 +144,16 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.
 6. Thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
-7. The die, seeded before the men are made (the game's `sim_dice_new`).
-8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
-   constructor, `game_new`** (`rust/game_rules/src/tick/game/stand.rs`).
-9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
-10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
+7. The seed the game's draws are keyed by, before the men are made: what they are dealt is drawn under it.
+8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: the game's own
+   `game_new`.
+9. The moving state at home in the block (`settle`: the pose pool, the smoke grid).
+10. The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).
-12. A mission, where asked: the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's
-    question, as a click on a row of the mission list starts it on a page. Refused words stop the start, unless `StartOpts.may_refuse` says to report them
+12. A mission, where asked: the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words. Then the solo card's
+    question (`kit_solo_if`), whichever it was, as a click on a row of the mission list starts it on a page. Refused words stop the start, unless `StartOpts.may_refuse` says to report them
     in `Stood.refused`.
-13. What the light under a roof is worked out from (`light_ready`).
+13. What the light under a roof is worked out from (`light_ready`), unless the host makes it in slices.
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the Input's frame
 ended. It answers what the step told its host (sounds, marks, lines said). `step` is the same with that list left on the game, for a host that draws
@@ -197,7 +197,7 @@ why, and which take a flag such as `--list` or `--write`. `LEVELS_BREAK=1` is ea
 
 ## Hold: is this build the same game as that one (`src/bin/hold.rs`)
 
-For a change that is meant to change nothing of play. It needs no page, no TypeScript and no module build.
+For a change that is meant to change nothing of play.
 
 ```
 cd rust/game_start
@@ -207,19 +207,19 @@ cargo run --release --bin hold -- check /tmp/held --but PART,PART   # … with t
 cargo run --release --bin hold -- draw /tmp/drawn       # play, draw every frame, and say what it cost and whether it changed anything
 ```
 
-`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands.rs`, and writes, for every frame, the state's words
-(`game::state_words`: a hash of every part of the game that a host does not hand in, with `rust/sim`'s block a part at a time) folded to one number
-and one byte of each part. `check` reads the folder's own list of runs and its copies of the hands, plays them on the build it is, and says of each run
+`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands/`, and writes, for every frame, the state's words
+(`game::state_words`: a hash of every part of the game that a host does not hand in) folded to one number and one byte
+of each part. `check` reads the folder's list of runs and its copies of the hands, plays them on the build it is, and says of each run
 `the same after every frame`, or the first frame that differs and the names of the parts that differ in it (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in
-guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and the length are arguments
+guards, chars, dice`). Exit 0: every run is the same. Levels, hands, seeds and the length are arguments
 (`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is `DEFAULT_LEVELS` (a `:clear` starts a room clear, a
-mission's id that mission) by every hand by seed 1. A run is a process of its own, four at a time. Fewer hands: `--hand push --hand bangs`.
+mission's id that mission) by every hand by seed 1. A run is a process of its own, four at a time.
 
-`draw` keeps nothing but the hands it plays, in a folder of its own. After every frame it makes every section of what the picture is told
+`draw` keeps nothing. After every frame it makes every section of what the picture is told
 (`rust/game_draw`), as a host does that draws at twice the tick's rate, and once a second it holds the game's own words to what they were before.
+`steps DIR` plays as `keep` does and prints, for each step of the tick, its microseconds a frame and the parts of the game it wrote.
 
-A hand is a few lines of what is done to the game from outside (`hands/*.hand`; the head of `src/bin/hold.rs` is its grammar). Seven stand here, and
-each file says what it reaches and what it does not:
+A hand is a few lines of what is done to the game from outside (the head of `src/bin/hold.rs` is its grammar). Each file says what it reaches and what it does not:
 
 - `push`: Sam unhurtable; every 6 s the squad is ordered to move to the nearest man who is not theirs; every 10 s Sam fires a round at him. It reaches
   the move order, doors, contact, the room fight on both sides, hunting, reloads, deaths.
@@ -234,9 +234,7 @@ each file says what it reaches and what it does not:
 - `pair`: Sam unhurtable; the partner is told to take the nearest such man, and to watch him. It reaches the partner's take and watch, where a mission
   has them.
 
-A run's line says how many of the hand's lines the game took, and names each line it NEVER took on that floor with the game's own reason
-(`NEVER DONE HERE: order shutDoor door all (it's shut)`), so a hand is not trusted for what it only names. On a floor with no squad the hands that give
-orders do nothing but what Sam does himself.
+A run's line says how many of the hand's lines the game took, and names each line it NEVER took on that floor with the game's own reason, so a hand is not trusted for what it only names.
 
 What a green check proves: on these floors, under these hands, the two builds played the same game part for part. What it does not: anything no hand
 reaches (charges, the 40 mm, a startled man, a player walking, a second seat), and anything that is not in the state's words (what a host hands in: the
@@ -311,6 +309,8 @@ The rows, each with what it holds and then its breaks:
   out of the tree before the stand. The parts differ in nothing but what the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own
   part does differ, and the level's own record stands on each side as it stood. Breaks: `moves` a die drawn once on the clocked side only · `noclock` the
   block is out on both sides.
+- **`steps <run>`:** A STEP OF THE TICK WRITES WHAT `steps.txt` SAYS (made by `hold steps DIR --write`): 16 s of four runs, each step asked each tenth
+  tick what it changed. Another part is a new coupling: meant and added, or not. Break: `said` forgets one.
 - **long: `played <id>`:** every room clear, rescue and the night breach, by the hands-off player (`src/hands_off.rs`) under the page's god mode, so
   that each goes on to its floor cleared. The mission played to its end by keys alone. (a) What a run owes (`src/owes.rs`), every tick. (b) It ends.
   (c) A line of words a reader can read (its end and time, Sam, who is up and down, the orders, the medal if any, the counts of `owes`) and a word a second

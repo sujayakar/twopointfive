@@ -44,11 +44,8 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     {
         let ears = crate::seats::host_man(g);
         let c = g.pl[ears].ch;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(h) => *h,
-            None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
-        };
-        if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, at) < b.dazzle_radius && !seg(g, v3::add(at, [0.0, 0.3, 0.0]), eye) {
+        let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
+        if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, at) < b.dazzle_radius && !crate::scene_collision::segment_blocked(g, v3::add(at, [0.0, 0.3, 0.0]), eye, None, None, None) {
             crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.2 - v3::dist(eye, at) / b.dazzle_radius, 0.25, 0.8)), None);
         }
     }
@@ -66,17 +63,16 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         Some(s) => s,
         None => {
             let who = g.tab.item[it].who;
-            if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Player }
+            if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Ours }
         }
     };
     let (from, over, entry) = (v3::add(at, [0.0, 0.3, 0.0]), v3::add(at, [0.0, g.k.flash.lift, 0.0]), crate::roomfight::fight_live(g));
-    let flash = Flash { at, from, over, entry, lifted: entry && !seg(g, from, over), radius: b.dazzle_radius, secs: [b.dazzle_seconds, b.dazzle_min] };
-    let squad = |t: crate::teams::Team| t == crate::teams::Team::Player || t == crate::teams::Team::Operative;
+    let flash = Flash { at, from, over, entry, lifted: entry && !crate::scene_collision::segment_blocked(g, from, over, None, None, None), radius: b.dazzle_radius, secs: [b.dazzle_seconds, b.dazzle_min] };
     if crate::effects::flags().dazzle {
         for gd in g.guards.clone() {
-            let (c, team) = (g.gd[gd].ch, g.gd[gd].team);
+            let (c, team) = (g.gd[gd].ch, g.team(gd));
             if crate::condition::down(g, c) { continue; }
-            let Some((secs, fold)) = flash.takes(g, c, team == side || squad(side) && squad(team), false, false) else { continue };
+            let Some((secs, fold)) = flash.takes(g, c, team == side, false, false) else { continue };
             if fold > 0.0 {
                 let drilled = crate::roomfight::drilled_k(g, gd);
                 crate::condition::fold(g, c, fold * drilled);
@@ -93,7 +89,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let c = g.pl[g.player].ch;
         if borrowed || !crate::effects::flags().dazzle || crate::condition::down(g, g.pl[g.player].ch) { return; }
-        let Some((secs, fold)) = flash.takes(g, c, squad(sam_side), spare, g.k.samstun.own_seen) else { return };
+        let Some((secs, fold)) = flash.takes(g, c, sam_side.ours(), spare, g.k.samstun.own_seen) else { return };
         if !(secs > 0.0) { return; }
         crate::samstun::dazzle_player(g, secs, at);
         if fold > 0.0 {
@@ -110,15 +106,15 @@ impl Flash {
     /// takes him as any other does where he looks at it
     fn takes(&self, g: &mut Game, c: CharId, own: bool, spare: bool, own_seen: bool) -> Option<(f64, f64)> {
         let bare = if matches!(g.ch[c].who, crate::character::Who::Player(_)) { 1.6 } else { 1.65 };
-        let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, bare, 0.0]));
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, bare);
         let d = v3::dist(head, self.at);
         if d > self.radius { return None; }
         let u = v3::clamp(d / self.radius, 0.0, 1.0);
         if !self.entry {
-            if spare && !own_seen || seg(g, self.from, head) { return None; }
+            if spare && !own_seen || crate::scene_collision::segment_blocked(g, self.from, head, None, None, None) { return None; }
             return Some((v3::lerp(self.secs[0], self.secs[1], u), 0.0));
         }
-        let seen = !seg(g, self.from, head) || (self.lifted && !seg(g, self.over, head));
+        let seen = !crate::scene_collision::segment_blocked(g, self.from, head, None, None, None) || (self.lifted && !crate::scene_collision::segment_blocked(g, self.over, head, None, None, None));
         if own && spare && !(seen && own_seen) { return None; }
         let mut k = 1.0;
         if !seen {
@@ -151,9 +147,4 @@ pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p
         Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(fuse), heading: Some(heading), ..Default::default() }),
     );
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-}
-
-/// g.col.segmentBlocked(a, b) with its defaults.
-fn seg(g: &mut Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::segment_blocked(g, a, b, None, None, None)
 }

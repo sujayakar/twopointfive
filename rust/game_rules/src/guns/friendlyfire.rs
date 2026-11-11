@@ -11,8 +11,7 @@ pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     if !(!crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
     }
-    let team = g.gd[gd].team;
-    !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(gd).theirs()
 }
 
 /// Is this shooter's side Sam's: an operative, never the night staff or a defender.
@@ -21,12 +20,11 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     if g.gd[sg].civ.is_some() {
         return false;
     }
-    let team = g.gd[sg].team;
-    !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(sg).theirs()
 }
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
-pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
+pub fn friend_in_cone(g: &crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
     if !ff_side(g, Some(self_)) {
         return None;
     }
@@ -51,7 +49,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     if let Some(on) = on {
         if g.ch[on].alive {
             let p = g.ch[on].pos;
-            let ch = g.ch[on].bones.get(crate::character::Bone::Chest).copied().unwrap_or([p[0], p[1] + 1.2, p[2]]);
+            let ch = g.ch[on].bone(crate::character::Bone::Chest).unwrap_or([p[0], p[1] + 1.2, p[2]]);
             if m::hyp3(to[0] - ch[0], to[1] - ch[1], to[2] - ch[2]) < 0.35 && k * l <= g.k.friendlyfire.sure_m {
                 past = l + 0.3;
             }
@@ -79,10 +77,10 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
 
 /// The closure `ask` of friendInCone: is this man nearer along the line than the best so far, in the cone and not behind anything solid.
 #[allow(clippy::too_many_arguments)]
-fn ask(g: &mut Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64, past: f64, energy: Option<f64>, thin: f64, best: &mut Option<CharId>, bt: &mut f64) {
+fn ask(g: &Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64, past: f64, energy: Option<f64>, thin: f64, best: &mut Option<CharId>, bt: &mut f64) {
     let pos = g.ch[c].pos;
-    let hips = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(pos);
-    let chest_bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
+    let hips = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos);
+    let chest_bone = g.ch[c].bone(crate::character::Bone::Chest);
     let chest = chest_bone.unwrap_or(hips);
     let mx = hips[0] - muzzle[0];
     let mz = hips[2] - muzzle[2];
@@ -108,7 +106,7 @@ fn ask(g: &mut Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64,
         return;
     }
     let cy = if chest_bone.is_some() { chest[1] } else { pos[1] + 1.2 };
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or([pos[0], pos[1] + 1.6, pos[2]]);
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or([pos[0], pos[1] + 1.6, pos[2]]);
     // something solid between them that his round does not go through: asked of his middle, his head and the two edges of his column
     if !reaches(g, muzzle, [chest[0], cy, chest[2]], energy, thin)
         && !reaches(g, muzzle, head, energy, thin)
@@ -122,7 +120,7 @@ fn ask(g: &mut Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64,
 }
 
 /// The closure `reaches` of friendInCone: level geometry only, less what the round goes through.
-fn reaches(g: &mut Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> bool {
+fn reaches(g: &Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> bool {
     !crate::scene_collision::shot_blocked(g, muzzle, p, Some(0.02), energy) || (thin >= 0.0 && crate::wallpen::thin_line(g, muzzle, p, thin, None, None).is_some())
 }
 
@@ -161,7 +159,7 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
             continue;
         }
         let near_m = g.k.friendlyfire.near_m;
-        let bones = [g.ch[c].bones.get(crate::character::Bone::Head).copied(), g.ch[c].bones.get(crate::character::Bone::Chest).copied()];
+        let bones = [g.ch[c].bone(crate::character::Bone::Head), g.ch[c].bone(crate::character::Bone::Chest)];
         for p in bones {
             let Some(p) = p else { continue };
             let t = ((p[0] - from[0]) * dx + (p[1] - from[1]) * dy + (p[2] - from[2]) * dz) / l2;
@@ -181,7 +179,7 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
 pub(super) fn on_our_side(g: &crate::game::Game, c: CharId) -> bool {
     match crate::character::guard_of(g, c) {
         None => true,
-        Some(gd) => g.gd[gd].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, g.gd[gd].team),
+        Some(gd) => g.team(gd).ours(),
     }
 }
 

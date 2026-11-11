@@ -74,8 +74,7 @@ pub(super) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
 
 /// A living operative with a unit whose card left him his goggles.
 fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && !crate::condition::down(g, g.gd[gd].ch)
         && crate::kit::kit_goggles(g, gd)
 }
@@ -95,7 +94,7 @@ fn loud_t(g: &crate::game::Game) -> f64 {
 
 /// The light of the place at a point, nothing carried, as it stands: the tube is the eye, and no eye's habit is in it.
 pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
-    crate::guards::light_at(g, p, Some(&mut |_: &mut Game, _: f64| true), None, None).0
+    crate::guards::light_at(g, p, Some(&mut |_: &Game, _: f64| true), None, None).0
 }
 
 /// One point of his place: is it dark to the bare eye, and (if `tube`) too dark for the tube.
@@ -128,8 +127,8 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
         }
         read_at(g, p[0], p[2], r <= TUBE_M, true, &mut dim, &mut black);
     }
-    if let Some(a) = crate::seats::order_of(g, gd) {
-        let (post, arrived) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].arrived);
+    if let Some(a) = crate::duty::order(g, gd) {
+        let (post, arrived) = (g.tab.task[a].post, g.tab.task[a].arrived);
         if let Some(post) = post {
             if !arrived && v3::dist_xz(pos, post) < g.k.lights.lit_mark_m {
                 read_at(g, post[0], post[2], true, true, &mut dim, &mut black);
@@ -139,7 +138,7 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {
         if let Some(tgt) = g.tab.roomfight_op[o].tgt {
             if !crate::condition::down(g, g.gd[tgt].ch) {
-                let at = g.ch[g.gd[tgt].ch].pos;
+                let at = g.pos_of(tgt);
                 read_at(g, at[0], at[2], false, true, &mut dim, &mut black);
             }
         }
@@ -170,32 +169,11 @@ fn lead_lit(g: &Game, pl: PlayerId) -> bool {
 
 /// Once a frame from Game.update: is the team dark, and each man's goggles.
 pub fn nvg_tick(g: &mut crate::game::Game) {
-    if !crate::roomfight::fight_live(g) {
-        if let Some(t) = g.m.nvg.teams.as_mut() {
-            if t.mode != Mode::Off {
-                t.mode = Mode::Off;
-                t.men.clear();
-            }
-        }
-        return;
-    }
-    let keep = match &g.m.nvg.teams {
-        None => false,
-        Some(t) => {
-            let known = t.men.is_empty() || t.men.iter().any(|(gd, _)| g.guards.contains(&gd));
-            t.mode != Mode::Off && !(t.t > g.time) && known
-        }
-    };
-    if !keep {
+    if !crate::roomfight::fight_live(g) { return nobody_in_the_dark(g); }
+    if !team_carries_on(g) {
         g.m.nvg.teams = Some(fresh());   // (a fresh staging, or the clock put back by a load: nothing remembered)
     }
-    let mut squad: Vec<GuardId> = Vec::new();
-    for i in 0..g.guards.len() {
-        let gd = g.guards[i];
-        if is_mate(g, gd) {
-            squad.push(gd);
-        }
-    }
+    let squad: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| is_mate(g, gd)).collect();
     let team = g.m.nvg.teams.as_mut().unwrap();
     for gd in team.men.keys() {
         if !squad.contains(&gd) {
@@ -206,35 +184,11 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         team.mode = Mode::Off;
         return;
     }
-    // ---- what the team knows of its own secret
     let mut up = crate::seats::men(g);
     up.retain(|&pl| !crate::condition::down(g, g.pl[pl].ch));
-    let mut lit = false;
-    for &pl in &up {
-        if lead_lit(g, pl) {
-            lit = true;
-            break;
-        }
-    }
-    if lit {
-        g.m.nvg.teams.as_mut().unwrap().lead_lit_t = g.time;
-    }
-    if crate::guards::escalation_of(g) >= 1.0 {
-        g.m.nvg.teams.as_mut().unwrap().alarm_t = g.time;
-    }
-    let (lead_lit_t, was) = {
-        let team = g.m.nvg.teams.as_ref().unwrap();
-        (team.lead_lit_t, team.mode)
-    };
-    let lead: Option<Mode> = if up.is_empty() {
-        None
-    } else if g.time - lead_lit_t < g.k.nvg.lead_tail {
-        Some(Mode::Free)
-    } else if up.iter().any(|&pl| g.pl[pl].nv) {
-        Some(Mode::Dark)
-    } else {
-        None
-    };
+    notes_what_is_known(g, &up);
+    let was = g.m.nvg.teams.as_ref().unwrap().mode;
+    let lead = what_the_lead_says(g, &up);
     let quiet = g.time - loud_t(g) >= g.k.nvg.quiet_secs;
     let mode = lead.unwrap_or(if quiet { Mode::Dark } else { Mode::Free });
     let why = match lead {
@@ -248,45 +202,93 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
     team.mode = mode;
     team.why = why;
     if mode != was {
-        g.m.nvg.teams.as_mut().unwrap().call_due = mode == Mode::Dark && was == Mode::Free;
+        team.call_due = mode == Mode::Dark && was == Mode::Free;
     }
-    // ---- each man
     let mut caller: Option<GuardId> = None;
     for &gd in &squad {
-        let now = g.time;
-        let team = g.m.nvg.teams.as_mut().unwrap();
-        if !team.men.has(gd) {
-            team.men.set(gd, Man { down: false, dark: false, agree_t: now - 10.0, place_t: -m::INF, dim: false, black: false, run: 0.0 });
-        }
-        let mut row = *team.men.get(gd).unwrap();
-        read_place(g, gd, &mut row);   // (the row lives in g: lent by copy, written back at the foot of this walk. It writes only at its own foot and nothing it calls writes a row)
-        let ruled = crate::guards::light_ruled(g, gd);
-        let dark = mode == Mode::Dark && ruled && !(lead.is_none() && row.black);
-        row.dark = dark;
-        if dark && caller.is_none() {
+        if goes_dark(g, gd, mode, lead) && caller.is_none() {
             caller = Some(gd);
         }
-        let want = row.dim && (dark || {
-            let l = g.gd[gd].flashlight;   // (his light as last frame posed it; a dark man's is going off this frame)
-            !g.tab.light[l].enabled
-        });
-        if want == row.down {
-            row.agree_t = g.time;
-        } else if g.time - row.agree_t >= (if want { g.k.nvg.down_secs } else { g.k.nvg.up_secs }) {
-            row.down = want;
-            row.agree_t = g.time;
-        }
-        *g.m.nvg.teams.as_mut().unwrap().men.get_mut(gd).unwrap() = row;
     }
+    calls_it(g, caller);
+}
+
+/// The fight is over: the team's mode is off and nobody is remembered.
+fn nobody_in_the_dark(g: &mut Game) {
+    let Some(t) = g.m.nvg.teams.as_mut() else { return };
+    if t.mode != Mode::Off {
+        t.mode = Mode::Off;
+        t.men.clear();
+    }
+}
+
+/// There is a team that was live, its clock has not been put back, and it knows one of the men here (or nobody yet).
+fn team_carries_on(g: &Game) -> bool {
+    let Some(t) = &g.m.nvg.teams else { return false };
+    let known = t.men.is_empty() || t.men.iter().any(|(gd, _)| g.guards.contains(&gd));
+    t.mode != Mode::Off && !(t.t > g.time) && known
+}
+
+/// What the team knows of its own secret: when a player's light was last on, and when the alarm was last up.
+fn notes_what_is_known(g: &mut Game, up: &[PlayerId]) {
+    if up.iter().any(|&pl| lead_lit(g, pl)) {
+        g.m.nvg.teams.as_mut().unwrap().lead_lit_t = g.time;
+    }
+    if crate::guards::escalation_of(g) >= 1.0 {
+        g.m.nvg.teams.as_mut().unwrap().alarm_t = g.time;
+    }
+}
+
+/// A player on his feet decides it: a light on a moment ago and the team goes free, his goggles on and it goes dark. None: it is the team's own call.
+fn what_the_lead_says(g: &Game, up: &[PlayerId]) -> Option<Mode> {
+    let lead_lit_t = g.m.nvg.teams.as_ref().unwrap().lead_lit_t;
+    if up.is_empty() {
+        None
+    } else if g.time - lead_lit_t < g.k.nvg.lead_tail {
+        Some(Mode::Free)
+    } else if up.iter().any(|&pl| g.pl[pl].nv) {
+        Some(Mode::Dark)
+    } else {
+        None
+    }
+}
+
+/// One man's row this frame: his place read, whether he is dark (the answer), and his goggles going down or up once he has wanted it long enough.
+fn goes_dark(g: &mut Game, gd: GuardId, mode: Mode, lead: Option<Mode>) -> bool {
+    let now = g.time;
+    let team = g.m.nvg.teams.as_mut().unwrap();
+    if !team.men.has(gd) {
+        team.men.set(gd, Man { down: false, dark: false, agree_t: now - 10.0, place_t: -m::INF, dim: false, black: false, run: 0.0 });
+    }
+    let mut row = *team.men.get(gd).unwrap();
+    read_place(g, gd, &mut row);   // (the row lives in g: lent by copy, written back at the foot of this walk. It writes only at its own foot and nothing it calls writes a row)
+    let ruled = crate::guards::light_ruled(g, gd);
+    let dark = mode == Mode::Dark && ruled && !(lead.is_none() && row.black);
+    row.dark = dark;
+    let want = row.dim && (dark || {
+        let l = g.gd[gd].flashlight;   // (his light as last frame posed it; a dark man's is going off this frame)
+        !g.tab.light[l].enabled
+    });
+    if want == row.down {
+        row.agree_t = g.time;
+    } else if g.time - row.agree_t >= (if want { g.k.nvg.down_secs } else { g.k.nvg.up_secs }) {
+        row.down = want;
+        row.agree_t = g.time;
+    }
+    *g.m.nvg.teams.as_mut().unwrap().men.get_mut(gd).unwrap() = row;
+    dark
+}
+
+/// "Going dark" is said by the first man who really is dark, the frame there is one, when it is owed and the last was long enough ago.
+fn calls_it(g: &mut Game, caller: Option<GuardId>) {
+    let Some(who) = caller else { return };
     let now = g.time;
     let gap = g.k.nvg.call_gap;
     let team = g.m.nvg.teams.as_mut().unwrap();
-    if let Some(who) = caller {
-        if team.call_due && now - team.called_t >= gap {
-            team.call_due = false;
-            team.called_t = now;
-            crate::game::game_say(g, who, "going dark.", None, None);   // (said by the first man who really is dark, the frame there is one)
-        }
+    if team.call_due && now - team.called_t >= gap {
+        team.call_due = false;
+        team.called_t = now;
+        crate::game::game_say(g, who, "going dark.", None, None);
     }
 }
 
@@ -297,8 +299,7 @@ pub fn nvg_dark(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// He wears the goggles at all.
 pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && crate::kit::kit_goggles(g, gd)
         && crate::roomfight::fight_live(g)
 }
@@ -327,7 +328,7 @@ pub fn nvg_sight(g: &mut crate::game::Game, viewer: GuardId, o: GuardId) -> f64 
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits under EXACT (bun, nvg.ts:109 and 110 with albedo 0.3, re-run on the snapshot): exposure, gain, E, k, sig
+    /// the pinned bits of the tube curve at albedo 0.3: exposure, gain, E, k, sig
     #[test]
     fn the_tube_curve_gives_the_typescripts_bits() {
         let rows: [(f64, f64, f64, u64, u64); 6] = [

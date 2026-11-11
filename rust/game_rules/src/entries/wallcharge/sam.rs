@@ -6,17 +6,16 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
-fn hole_open(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
+fn hole_open(g: &Game, w: &WallSpot, t: f64, du: f64) -> bool {
     let (a, b) = (wall_pt(g, w, du, FACE, Some(0.35)), wall_pt(g, w, du, -(t + FACE), Some(0.35)));
     if crate::scene_collision::solid_blocked(g, a, b, None) { return false; }
     let (a, b) = (wall_pt(g, w, du, FACE, Some(1.3)), wall_pt(g, w, du, -(t + FACE), Some(1.3)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 /// holeAt's `through`: floor at both mouths
-fn hole_through(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
+fn hole_through(g: &Game, w: &WallSpot, t: f64, du: f64) -> bool {
     let mouth_in = g.k.wallcharge.mouth_in;
     let far = xz(wall_pt(g, w, du, -(t + mouth_in), None));
     if crate::scene_collision::nav_grid_is_blocked(g, far[0], far[1]) { return false; }
@@ -24,7 +23,7 @@ fn hole_through(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, near[0], near[1])
 }
 /// holeAt's `shut`: an open run ends at `to`; if a man fits, the way through nearest its middle
-fn hole_shut(g: &mut Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best: &mut Option<WallChargeHoleAt>, to: f64) {
+fn hole_shut(g: &Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best: &mut Option<WallChargeHoleAt>, to: f64) {
     if run.is_nan() { return; }
     let a = *run - step / 2.0;
     let b = to - step / 2.0;
@@ -47,12 +46,12 @@ fn hole_shut(g: &mut Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best:
 }
 
 /// The gap a man fits through nearest the charge, read off the wall as it stands
-pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<crate::wallcharge::WallChargeHoleAt> {
+pub fn wall_charge_hole_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<crate::wallcharge::WallChargeHoleAt> {
     let t = thick(g, w);
     let (step, r) = (0.125, 2.5);
     let mut best: Option<WallChargeHoleAt> = None;
     let mut run = f64::NAN;
-    let (bc, bh) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    let (bc, bh) = { let b = &g.tab.boxes[w.box_]; (b.c, b.h) };
     let c = if w.along_x { bc[0] } else { bc[2] };
     let l = if w.along_x { bh[0] } else { bh[2] };
     let lo = m::max(-r, c - l - w.u);
@@ -130,21 +129,21 @@ pub fn wall_charge_sam_set(g: &mut crate::game::Game) -> Option<WallChargeId> {
 }
 
 /// Where a set charge sits
-pub fn wall_charge_sam_at(g: &mut crate::game::Game, c_2: WallChargeId) -> V3 {
+pub fn wall_charge_sam_at(g: &crate::game::Game, c_2: WallChargeId) -> V3 {
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let height = g.k.wallcharge.height;
     wall_pt(g, &w, 0.0, 0.0, Some(height))
 }
 
 /// Who stands inside its radius, in words
-pub fn wall_charge_sam_words(g: &mut crate::game::Game, c_2: WallChargeId) -> String {
+pub fn wall_charge_sam_words(g: &crate::game::Game, c_2: WallChargeId) -> String {
     wall_charge_close_words(g, Some(c_2), None)
 }
 
 /// Would it put HIM down where he stands
-pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bool {
+pub fn wall_charge_sam_fatal(g: &crate::game::Game, c_2: WallChargeId) -> bool {
     if g.god_mode { return false; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
     let off = wall_off(g, &w, p);
@@ -161,8 +160,8 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
     if W.set.is_empty() { return out; }
     let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let p = g.ch[g.pl[seat.player].ch].pos;
+    let f = crate::doortools::blow_letter(g);
+    let p = g.seat_pos(seat);
     for own in [false, true] {
         let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
         if of.is_empty() { continue; }
@@ -176,14 +175,12 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// With the cursor on a partition and Sam at its foot, the marker and its row
-pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut crate::player::Offers) {
     g.sets[g.seat].wall_charge.offered = None;
     g.sets[g.seat].wall_charge.marker = None;
     if !wall_charge_on(g) || !g.sets[g.seat].wall_charge.seated { return; }
     let pl = g.player;
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let key = crate::ownblow::blow_key_word(false, &f);
-    let sam_wall = g.sets[g.seat].wall_charge.sam.as_ref().map(|s| s.wall.clone());
+    let sam_wall = g.pl[pl].wall_work().map(|s| s.wall.clone());
     let wall = match sam_wall {
         Some(w) => Some(w),
         None => {
@@ -199,31 +196,26 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
     let set_off = g.k.wallcharge.set_off;
     let foot = wall_pt(g, &w, 0.0, set_off, None);
     let d = v3::dist_xz(p, foot);
-    if d > g.k.wallcharge.sam_marker_m || (c.is_none() && g.sets[g.seat].wall_charge.sam.is_none() && wall_charge_open_at(g, &w)) { return; }
-    if c.is_none() && g.sets[g.seat].wall_charge.sam.is_none() && !wall_charge_affordable(g, &crate::seats::here(g)) { return; }
+    let setting = g.pl[pl].wall_work().is_some();
+    if d > g.k.wallcharge.sam_marker_m || (c.is_none() && !setting && wall_charge_open_at(g, &w)) { return; }
+    if c.is_none() && !setting && !wall_charge_affordable(g, &crate::seats::here(g)) { return; }
     let near = d < g.k.wallcharge.sam_reach && wall_off(g, &w, p) > 0.0 && {
         let to = wall_pt(g, &w, 0.0, 0.1, Some(0.9));
         !crate::scene_collision::solid_blocked(g, [p[0], 0.9, p[2]], to, None)
     };
-    let free = !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none();
+    let free = !g.pl[pl].sprinting && g.pl[pl].tow.is_none() && !g.pl[pl].on_a_man();
     let reach = near && free;
+    let f = crate::doortools::blow_letter(g);
+    let key = crate::ownblow::blow_key_word(false, &f);
     let line1 = if c.is_some() { "wall · charge set" } else if w.outer == Some(true) { "wall · outer wall" } else { "wall · partition" };
     let line2 = if reach { "" } else if near { "hands full" } else { "step closer" };
     let height = g.k.wallcharge.height;
     let pos = wall_pt(g, &w, 0.0, 0.05, Some(height));
-    let mut it = crate::game::Interactable {
-        kind: crate::game::InteractableKind::Wall,
-        pos,
-        line1: String::from(line1),
-        line2: String::from(line2),
-        in_reach: reach,
-        off: false,
-        ..Default::default()
-    };
-    if g.sets[g.seat].wall_charge.sam.is_some() {
+    let mut it = crate::player::mark(crate::game::InteractableKind::Wall, pos, line1, line2, reach);
+    if setting {
         it.in_reach = true;
         g.sets[g.seat].wall_charge.marker = Some(it.clone());
-        offer(g, it, Vec::new());
+        o.add(it, Vec::new());
         return;
     }
     if let Some(c) = c {
@@ -231,7 +223,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         let word = crate::ownblow::blow_key_word(key_is, &f);
         let close = wall_charge_close_words(g, Some(c), None);
         it.line2 = alloc::format!("{}  blow the charge{}", word, close);
-        offer(g, it, Vec::new());
+        o.add(it, Vec::new());
         return;
     }
     let mut verbs: Vec<crate::game::Interactable> = Vec::new();
@@ -243,11 +235,10 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         it.line2 = String::from("a charge is going on it");
     } else if reach && !busy {
         let words = wall_charge_row_words(g, &crate::seats::here(g));
-        let v = row(g, it.clone(), crate::game::Verb::Charge, words, Some(alloc::format!("{}  blows it once set", key)), None);
-        verbs.push(v);
+        verbs.push(crate::player::row(&it, crate::game::Verb::Charge, &words, &alloc::format!("{}  blows it once set", key)));
         g.sets[g.seat].wall_charge.offered = Some(w);
     }
-    offer(g, it, verbs);
+    o.add(it, verbs);
 }
 
 /// The row performed starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off
@@ -261,21 +252,22 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         Some(a) => a.kind == crate::game::InteractableKind::Wall && a.verb == Some(crate::game::Verb::Charge),
         None => false,
     };
-    if mine && g.sets[g.seat].wall_charge.sam.is_none() {
+    if mine && g.pl[pl].wall_work().is_none() {
         if let Some(wall) = g.sets[g.seat].wall_charge.offered.clone() {
-            g.sets[g.seat].wall_charge.sam = Some(WallChargeSam { wall, t0: g.time, at: [p[0], 0.0, p[2]] });
+            let t0 = g.time;
+            crate::deed::begin(g, crate::game::Deed::Wall(WallChargeSam { wall, t0, at: [p[0], 0.0, p[2]] }));
             return;
         }
     }
-    let s = match g.sets[g.seat].wall_charge.sam.clone() { Some(s) => s, None => return };
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
+    let Some(s) = g.pl[pl].wall_work().cloned() else { return };
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting
         || v3::dist_xz(p, s.at) > g.k.wallcharge.sam_shift || (has_act && !mine) {
-        wall_charge_cancel(g);
+        g.pl[pl].wall_work_over();
         return;
     }
     if crate::workstow::sam_stowing(g, &crate::seats::here(g)) {
         let now = g.time;
-        if let Some(sam) = g.sets[g.seat].wall_charge.sam.as_mut() { sam.t0 = now; }
+        if let Some(w) = g.pl[pl].wall_work_mut() { w.t0 = now; }
         return;
     }
     let set_secs = g.k.doortools.set_secs;
@@ -284,7 +276,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let el = g.time - s.t0;
     crate::handwork::charge_hands(g, ch, at, wall_n(&s.wall), el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[pl].wall_work_over();
     if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &crate::seats::here(g), &s.wall).is_some() { return; }
     let paid = wall_charge_take(g);
     if paid < 0.0 {
@@ -298,43 +290,21 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     crate::furnblast::furniture_warm(g);
 }
 
-/// Is Sam setting one right now
-pub fn wall_charge_setting(seat: &crate::seats::SeatRef) -> bool {
-    seat.wall_charge.sam.is_some()
-}
-
-/// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145
-pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
+/// The charge Sam is setting by hand, for whoever stands him at it.
+pub fn wall_charge_sam_job(g: &crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
     let height = g.k.wallcharge.height;
-    let (wall, at) = match g.sets[g.seat].wall_charge.sam.as_ref() { Some(s) => (s.wall.clone(), s.at), None => return None };
+    let (wall, at) = g.pl[g.player].wall_work().map(|s| (s.wall.clone(), s.at))?;
     Some(WallChargeSamJob { p: wall_pt(g, &wall, 0.0, 0.0, Some(height)), n: wall_n(&wall), at })
 }
 
-/// Broken off, nothing spent; true: there was one to break off
-pub fn wall_charge_cancel(g: &mut crate::game::Game) -> bool {
-    if g.sets[g.seat].wall_charge.sam.is_none() { return false; }
-    g.sets[g.seat].wall_charge.sam = None;
-    true
-}
-
 /// The one row while he is at it
-pub fn wall_charge_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, f64) -> crate::game::Interactable) -> crate::game::Interactable {
-    let s = g.sets[g.seat].wall_charge.sam.clone().unwrap();
-    let height = g.k.wallcharge.height;
-    let it = match g.sets[g.seat].wall_charge.marker.clone() {
-        Some(it) => it,
-        None => crate::game::Interactable {
-            kind: crate::game::InteractableKind::Wall,
-            pos: wall_pt(g, &s.wall, 0.0, 0.05, Some(height)),
-            line1: String::from(if s.wall.outer == Some(true) { "wall · outer wall" } else { "wall · partition" }),
-            line2: String::new(),
-            in_reach: true,
-            off: false,
-            ..Default::default()
-        },
+pub fn wall_charge_running_row(g: &crate::game::Game) -> crate::game::Interactable {
+    let s = g.pl[g.player].wall_work().unwrap();
+    let it = match &g.sets[g.seat].wall_charge.marker {
+        Some(it) => it.clone(),
+        None => crate::player::mark(crate::game::InteractableKind::Wall, wall_pt(g, &s.wall, 0.0, 0.05, Some(g.k.wallcharge.height)), if s.wall.outer == Some(true) { "wall · outer wall" } else { "wall · partition" }, "", true),
     };
-    let progress = (g.time - s.t0) / g.k.doortools.set_secs;
-    running(g, it, crate::game::Verb::Charge, String::from("setting the charge… — Space or a step breaks it off"), progress)
+    crate::player::running(&it, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some((g.time - s.t0) / g.k.doortools.set_secs))
 }
 
 /// A point's x and z

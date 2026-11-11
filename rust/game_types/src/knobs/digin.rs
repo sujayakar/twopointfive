@@ -6,9 +6,8 @@ use game_derive::Knobs;
 pub struct DiginK {
     /// THE switch: off = nothing here runs (the room fight as it was)
     #[k(false)] pub on: bool,
-    /// EVERY man who hears them coming holds his room and digs in — nobody goes to the fight next door. Off (shipped): the room fight's rally decides first, as
-    ///  ever (ROOMFIGHT.rallyK is the dial for how many go), and only a man who holds his room digs in. MEASURED: with nobody on the hunt the scripted team loses
-    ///  FEWER men than today, flashbangs in hand — the men who come to the fight are what kills it between doors
+    /// No rule reads it: the difficulty rows only compare it. It names every man who hears them coming holding his room, where the room fight's rally decides first
+    ///  and only a man who holds his room digs in.
     #[k(false)] pub stay: bool,
     /// REACH (m, on foot): a man whose way to the fight he hears is longer than this cannot join it in time — he holds his room and digs in, whatever the room
     ///  fight's rally would have rolled; a man nearer than this is his squad's to send. 0 (shipped) = no reach rule. MEASURED at 18 m: it claims six men in ten on every level there is (they all sit in one
@@ -20,33 +19,25 @@ pub struct DiginK {
     #[k(true)] pub cover: bool,
     /// WHERE HE MAY GO FOR IT: the spot he pushes the furniture from is in HIS OWN ROOM and so is the way to it. 'Behind the prop' is a point 0.7 m past it from
     ///  the door: for a bin or a carton against a wall that point is IN the wall, and the nearest free floor to it can be the far side — the warehouse's dock men
-    ///  walked out into the lot for a carton by the east wall and held the building from outside it. On: such a prop is pushed from the best spot behind it inside
-    ///  the room (within reach of it, nothing solid between, and the haul from there to the door inside the room too), else the next nearest prop is tried, else no furniture (he shuts the door and takes cover, as a man with nothing to haul does). Off = as it was:
-    ///  only a last-stand man is refused a goal outside his room
+    ///  would walk out into the lot for a carton by the east wall and hold the building from outside it. So such a prop is pushed from the best spot behind it inside
+    ///  the room (within reach of it, nothing solid between, and the haul from there to the door inside the room too), else the next nearest prop is tried, else no furniture (he shuts the door and takes cover, as a man with nothing to haul does).
+    ///  The rule always runs: nothing reads this switch
     #[k(true)] pub brace_in_room: bool,
-    /// … once HE has noticed them (on; off = on his first glimpse, as it was — the 10-13 tapes: a calm man at 1–20 % awareness radioing 'they're on us. watch
-    ///  your doors!' half a second before his own 'huh?', and a man dropped 0.18 s after his first glimpse having told every room). Noticed = roused (alert or
-    ///  searching: the line the squads' net draws for a man's eyes, enemysquads.ts) AND `noticedSecs` of them in his eyes without a break: this tick runs
-    ///  before the room fight hands a man his own start, so 'past his own start' alone let a roused man's word out on the very frame of the glimpse
+    /// … once HE has noticed them, so a calm man at 1–20 % awareness does not radio 'they're on us. watch your doors!' half a second before his own 'huh?', and a man
+    ///  dropped on his first glimpse has told no room. Noticed = roused (alert or searching: the line the squads' net draws for a man's eyes) AND `noticed_secs` of them in
+    ///  his eyes without a break: this tick runs before the room fight hands a man his own start, so 'past his own start' alone would let a roused man's word out on the very frame of the glimpse
     #[k(0.35)] pub noticed_secs: f64,
-    /// WHERE DOORS STAY AS THEY ARE LEFT (doors.ts DOORSTAY — nothing below runs where every leaf has its closer, or with this off: the 2.5 s wait and his own
-    ///  door only, as it was): a man who has pulled a door of his room to keeps his hand on it until the latch has it — a leaf with no closer takes four or five
-    ///  seconds from its stop, not the moment a sprung one had left, and he used to walk off from his furniture before it was home, the wedge never placed. He
-    ///  pushes it home the last of the way (a one-way leaf: it comes to on its frame) and pulls it again if something stopped it. And before he goes to cover he
-    ///  shuts the room's OTHER doors that stand open, nearest first: never one a mate has in hand, never by a way that leaves his room, and not at all once
-    ///  they are heard at any door of it (shut or open: then he takes cover, as he did).
-    ///  SHIPS OFF: it overshoots the build with closers. On the barracks (144 scripted seeds) defenders wedged 669 doors with it on against 248 on the old build
-    ///  and 249 with it off, the squad booted 74 against 29, and the men it lost in open-and-clear entries went from 62 to 105. On the block with three squads it
-    ///  only puts back what closers gave (wedges 133 on, 74 off, 72 seeds). Tab ▸ Sandbox ▸ Defenders dig in turns it on
+    /// No rule reads `shut_open`, `shut_secs`, `shut_home_rad` or `shut_doors`: the difficulty rows only compare them. They name a man who keeps his hand on a door he pulled to until
+    ///  it latches and shuts his room's other open doors before he goes to cover.
     #[k(false)] pub shut_open: bool,
-    /// …seconds he gives a pulled leaf to latch before he lets it be · how near home (rad) his hand pushes it the rest · the other doors one man goes to at most
+    /// …seconds he gives a pulled leaf to latch · how near home (rad) his hand pushes it the rest · the other doors one man goes to at most
     #[k(7.0)] pub shut_secs: f64,
     #[k(0.3)] pub shut_home_rad: f64,
     #[k(2.0)] pub shut_doors: f64,
-    /// DOUBLE UP (off as shipped: measured, it puts two men under one flashbang and the team loses fewer): a man alone in his room, who hears them coming, runs to
-    ///  a room of his side's that still has men in it and digs in THERE (said on the net) — the team finds his room empty and the next one full
+    /// No rule reads it: the difficulty rows only compare it. It names a man alone in his room, who hears them coming, running to a room of his side's that still has men in
+    ///  it. A man who falls back to a room dug in (`dig_in_refuge`) goes by the two numbers below.
     #[k(false)] pub gather: bool,
-    /// … no further than this by the floor (m), and never by a way that passes this near the noise (m)
+    /// no further than this by the floor (m), and never by a way that passes this near the noise (m)
     #[k(24.0)] pub gather_m: f64,
     #[k(6.0)] pub gather_shy_m: f64,
     /// seconds between hearing it and moving [min, max] — his own, drawn per man

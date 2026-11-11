@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec;
 
-/// The row of a man the rule has already asked about: the one truth behind every `S` of the TypeScript.
+/// The row of a man the rule has already asked about.
 fn row(g: &mut Game, c: CharId) -> &mut St {
     g.m.gunwall.st.get_mut(c).unwrap()
 }
@@ -38,7 +38,7 @@ fn fight_on(g: &mut crate::game::Game) -> bool {
 }
 
 /// His frame on `yaw`: forward, right, the gun shoulder over his feet, how crouched (0..1).
-fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
+fn frame(g: &crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
     let (s, co) = (m::sin(yaw), m::cos(yaw));
     let f: V3 = [s, 0.0, co];
     let r: V3 = [-co, 0.0, s];
@@ -72,7 +72,7 @@ fn closing(s: crate::gunwall::St, f: V3) -> f64 {
 }
 
 /// The line a raised gun lies along on `yaw`: `a` at the hand end, `b` at the muzzle.
-fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
+fn raised_line(g: &crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
     let o = o.unwrap_or(g.ch[c_2].pos);
     let fr = frame(g, c_2, yaw);
     let af = AtF { f: fr.f, r: fr.r };
@@ -92,14 +92,14 @@ fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp
 }
 
 /// A collision ray a → b, at most `most` metres.
-fn hits(g: &mut Game, a: V3, b: V3, most: f64) -> bool {
+fn hits(g: &Game, a: V3, b: V3, most: f64) -> bool {
     let d = v3::sub(b, a);
     let l = v3::len(d);
     l > 1e-3 && crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), m::min(l, most)).is_some()
 }
 
 /// Stood at (x, z) with the long gun in the shoulder on `to`: would the gun, and the first `ahead` metres of its round's way, lie clear?
-pub(super) fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
+pub(super) fn gun_clear_from(g: &crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
     let yaw = m::atan2(to[0] - x, to[2] - z);
     let fr = frame(g, c_2, yaw);
     let py = g.ch[c_2].pos[1];
@@ -121,17 +121,16 @@ fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// A panel on a → b as a round sees one, counted.
-fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn panel(g: &crate::game::Game, a: V3, b: V3) -> bool {
     wood_between(g, a, b)
 }
 
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through.
-pub(super) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
-    if !crate::combat::solid_between(q, a, b) { return false; }
+pub(super) fn wood_between(g: &Game, a: V3, b: V3) -> bool {
+    if !crate::combat::solid_between(g, a, b) { return false; }
     let d = v3::sub(b, a);
     let l = v3::len(d);
-    let h = if l > 1e-3 { q.ray(a, v3::scale(d, 1.0 / l), l) } else { None };
-    let g = q.game();
+    let h = if l > 1e-3 { crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), l) } else { None };
     match h {
         Some(h) if h.index < 1e6 => { let b = g.col.boxes[h.index as usize]; !crate::glass::is_pane(g, Some(b)) }
         _ => true,
@@ -139,7 +138,7 @@ pub(super) fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool
 }
 
 /// A ray along a → b, `need` past it; a hit where he aims (`to`) does not count.
-fn cast(g: &mut Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bool {
+fn cast(g: &Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bool {
     let d = v3::sub(b, a);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
@@ -170,8 +169,8 @@ fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp,
         if same && (if hd.hot { panel(g, hd.a, hd.b) } else { cast(g, to, deep, hd.a, hd.b, 0.0) }) { return true; }
         row(g, c).hold = None;
     }
-    let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
-    let sh = g.ch[c].bones.get(crate::character::Bone::UpperArmR).copied();
+    let hand = g.ch[c].bone(crate::character::Bone::HandR);
+    let sh = g.ch[c].bone(crate::character::Bone::UpperArmR);
     let bb = g.ch[c].bones_at;
     let (pos, muzzle) = (g.ch[c].pos, g.ch[c].muzzle);
     let settled = up == GunUp::Aim && hand.is_some() && sh.is_some()
@@ -213,7 +212,7 @@ fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp,
 }
 
 /// YOUR BREACH SHOT: where the raised gun's own line meets a lock a shell takes, inside the gun's reach and a stride: that point; else none.
-pub(super) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
+pub(super) fn breach_aim(g: &crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
     let aim_yaw = g.ch[c_2].aim_yaw;
     let ml = raised_line(g, c_2, GunUp::Aim, aim_yaw, None);
     let rd = v3::sub(ml.b, ml.a);
@@ -224,7 +223,7 @@ pub(super) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapo
     if h.index < 1e6 { return None; }
     let bx = g.col.dynamic_boxes.get((h.index - 1e6) as usize).copied()?;
     let d = g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx)?;
-    if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { return None; }
+    if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { return None; }
     let p = v3::mad(ml.a, dir, h.t);
     let u = crate::doors::door_dir(g, d);
     let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);
@@ -266,7 +265,7 @@ pub fn gun_wall_check(g: &mut crate::game::Game, gd: GuardId, up: Option<crate::
     let hot = hot.unwrap_or(false) || fight_on(g);
     let c = g.gd[gd].ch;
     let def = g.fa[g.gd[gd].weapon].def;
-    let deep = g.m.weapons.weapons.get(def).unwrap().pellets.is_some();
+    let deep = g.weapon(def).pellets.is_some();
     let low = gun_walled(g, c, up, to, dt, Some(hot), Some(deep));
     if low {
         g.gd[gd].muzzle_down = true;
@@ -396,7 +395,7 @@ mod tests {
         g.ch[c].aim_pitch = 0.0;
         let there = raised_line(&mut g, c, GunUp::Aim, 0.0, Some([5.0, 0.1, 5.0]));
         near(there.a[2] - 5.0, l.a[2] - g.ch[c].pos[2]);
-        // ported, a long gun's muzzle rides high and across him
+        // at port arms, a long gun's muzzle rides high and across him
         let port = raised_line(&mut g, c, GunUp::Port, 0.0, None);
         assert!(port.b[1] > port.a[1] && port.b[2] > port.a[2]);
         // stooped, the whole line is lower; a longer gun reaches further at the low ready too

@@ -5,12 +5,12 @@ use crate::v3::{self, Quat, V3};
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
 fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) { return true; }
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
+    if g.dr[d].leaf.off { return true; }
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.stackline.ajar
 }
 
 /// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.
-fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
+fn stack_line_sees(g: &crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
     let kn = g.k.stackline;
     let f = crate::guards::frame_of(g, d);
     let mut k = 0.0;
@@ -26,10 +26,10 @@ fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bo
 }
 
 /// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.
-pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId, left: f64, brisk: f64) -> Option<f64> {
+pub fn stack_line_pace(g: &crate::game::Game, gd: GuardId, a: TaskId, left: f64, brisk: f64) -> Option<f64> {
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) { return None; }
         let Some(shy) = row.shy else { return None; };
         if row.door != Some(shy) { return None; }

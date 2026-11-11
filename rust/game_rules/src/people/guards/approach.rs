@@ -51,9 +51,8 @@ pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
 /// scoreSpots on the plan in hand.
 fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
     let elapsed = g.time - p.t0;
-    let team = g.gd[gd].team;
-    let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.gd[o].team == team).collect();   // (teams: spots are split over HIS side's net)
-    let at = g.ch[g.gd[gd].ch].pos;
+    let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.team(o) == g.team(gd)).collect();   // (teams: spots are split over HIS side's net)
+    let at = g.pos_of(gd);
     let (slack, ramp) = (PLAUS_SLACK_SECS, PLAUS_RAMP_SECS);
     for s in p.spots.iter_mut() {
         if !s.visited {
@@ -78,11 +77,11 @@ pub fn score_spots(g: &mut crate::game::Game, gd: GuardId, walk: Option<&[f32]>)
 
 /// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.
 fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let spacing = SEARCH_SPACING_M;
     for &o in g.guards.iter() {
         let m_ = &g.gd[o];
-        if o == gd || m_.state != crate::game::GuardState::Search || m_.script.is_some() || m_.team != team { continue; }
+        if o == gd || m_.state != crate::game::GuardState::Search || m_.script.is_some() || g.ch[m_.ch].team != team { continue; }
         let q_plan = match &m_.search_plan { Some(q) => q, None => continue };
         if q_plan.current < 0.0 || (q_plan.phase != SearchPlanPhase::Walk && q_plan.phase != SearchPlanPhase::Look) { continue; }
         if let Some(q) = q_plan.spots.get(q_plan.current as usize) { if v3::dist_xz(q.pos, s.pos) < spacing { return true; } }
@@ -92,7 +91,7 @@ fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot)
 
 /// On to the best spot still worth it (scored this frame), or the plan is done.
 pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let walk = flood_from(g, at, SEARCH_RADIUS_M * 2.0 + 4.0, Some(true)).metres;   // (his own walk to each, doors and all: round the partitions, not through them)
     let mut own = g.gd[gd].search_plan.take().unwrap();   // (off his row until the line is chosen: the scoring and the tests below read only the OTHER men's plans)
     let p = &mut own;
@@ -108,10 +107,7 @@ pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     p.phase_t = 0.0;
     {
         let me = &mut g.gd[gd];
-        me.path = Vec::new();
-        me.path_serial = me.path_serial.wrapping_add(1);
-        me.path_goal = None;
-        me.path_goal_orbit = false;
+        me.drop_path();
         me.stall_ref = None;
     }
     // (one man says it for a search, not each of them a second apart)
@@ -169,7 +165,7 @@ fn crosses_frame(f: &crate::doorway::RelF, a: V3, b: V3) -> Option<crate::guards
 
 /// Doorways a hunting man goes through, pied or not: his stride since the last frame looked at cutting a frame line. Once a frame at most.
 pub(super) fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if g.gd[gd].pie_prev_t == g.time { return; }
     if let Some(prev) = g.gd[gd].pie_prev {
         if g.time - g.gd[gd].pie_prev_t < 0.5 && v3::dist_xz(prev, pos) > 1e-4 {
@@ -203,9 +199,9 @@ fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz
 /// This frame's threshold discipline for a man followPath is about to move at `speed`: keeps Guard.pieing, notes the doorways he goes through. `eyes_on`: no
 /// drill, he is chasing. Returns the speed to walk at and a look point (None = the caller's own).
 pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, eyes_on: bool) -> crate::guards::PieDoorway {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     note_door_crossings(g, gd);
-    if g.gd[gd].pinned || eyes_on {
+    if g.gd[gd].duty.pinned || eyes_on {
         g.gd[gd].pieing = None;
         return crate::guards::PieDoorway { speed, look: None };
     }
@@ -294,7 +290,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
 
 /// Does the man's remaining path still run through this door.
 fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
-    let mut prev = g.ch[g.gd[gd].ch].pos;
+    let mut prev = g.pos_of(gd);
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
         let wp = g.gd[gd].path[i];
@@ -308,7 +304,7 @@ fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 /// The crossing point of the man's pie (his row) again, off the path as it now runs.
 fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
     let door = g.gd[gd].pieing.as_ref().unwrap().door;
-    let mut prev = g.ch[g.gd[gd].ch].pos;
+    let mut prev = g.pos_of(gd);
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
         let wp = g.gd[gd].path[i];
@@ -325,7 +321,7 @@ fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
 /// of it unless he comes along the wall from the latch side. Only onto free cells he can walk between.
 fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
     let f = frame_of(g, d);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let bef = |p: V3| ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * sg;
     let alg = |p: V3| (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz;
     let at = |a: f64, b: f64| -> V3 { [f.hx + f.ux * a + f.nx * sg * b, 0.0, f.hz + f.uz * a + f.nz * sg * b] };
@@ -413,7 +409,7 @@ pub fn chase_fix(g: &mut crate::game::Game, gd: GuardId, dt: f64, pace: f64) -> 
 mod tests {
     use super::*;
 
-    // The expected bits are the TypeScript's own: guards.ts frameOf / crossesDoor under bun with EXACT.on.
+    // The expected bits are pinned.
     #[test]
     fn frame_is_the_typescripts() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);

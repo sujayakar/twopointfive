@@ -62,7 +62,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         let bx = g.col.dynamic_boxes.get((e.index - 1e6) as usize).copied();
         let d = match bx { Some(bx) => g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx), None => None };
         let d = match d { Some(d) => d, None => continue };
-        if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { continue; }
+        if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { continue; }
         let u = crate::doors::door_dir(g, d);
         let along = (e.at[0] - g.dr[d].def.hinge[0]) * u[0] + (e.at[2] - g.dr[d].def.hinge[1]) * u[1];
         if along < g.dr[d].def.width - b.latch_m { continue; }
@@ -87,7 +87,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
 pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let def = g.fa[g.gd[gd].weapon].def;
-    let breach = match g.m.weapons.weapons.get(def).unwrap().pellets { Some(p) => p.breach.is_some(), None => false };
+    let breach = match g.weapon(def).pellets { Some(p) => p.breach.is_some(), None => false };
     breach || crate::kit::kit_big(g, gd) == crate::kit::BigKit::Shotgun
 }
 
@@ -99,7 +99,7 @@ pub fn lock_point(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
 }
 
 /// Where the man with the gun stands for d's lock on face `side`. None: no spot has floor and a line.
-pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::shotgun::BreachSpotClose>) -> Option<crate::shotgun::BreachSpot> {
+pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::kit::BigTool>) -> Option<crate::shotgun::BreachSpot> {
     let avoid: &[V3] = avoid.unwrap_or(&[]);
     let at = lock_point(g, d, side);
     let w = g.dr[d].def.width;
@@ -116,14 +116,11 @@ pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Optio
     };
     let mut mine: Option<Option<crate::shotgun::BreachSpot>> = None;
     if let Some(close) = close {
-        let tool = match close {
-            crate::shotgun::BreachSpotClose::Shotgun => crate::bigkit::BigSpotsTool::Shotgun,
-            crate::shotgun::BreachSpotClose::Hammer => crate::bigkit::BigSpotsTool::Hammer,
-        };
+        let tool = close;
         for s in crate::bigkit::big_spots(g, d, side, tool) {
             if crowds(g, avoid, s.pos)
                 || crate::orders::squad_orders_behind_glass(g, d, side, s.pos)
-                || (close == crate::shotgun::BreachSpotClose::Shotgun && across(g, at, avoid, s.pos))
+                || (close == crate::kit::BigTool::Shotgun && across(g, at, avoid, s.pos))
             {
                 continue;
             }
@@ -165,7 +162,7 @@ fn spot(at: V3, pos: V3, beside: bool, own: bool) -> crate::shotgun::BreachSpot 
 }
 
 /// Floor under `pos` and a clear line from chest height to the lock. (breachSpot's `stands`)
-fn stands(g: &mut Game, at: V3, pos: V3) -> bool {
+fn stands(g: &Game, at: V3, pos: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) && !crate::scene_collision::solid_blocked(g, [pos[0], 1.2, pos[2]], at, None)
 }
 
@@ -227,7 +224,7 @@ mod tests {
     use super::*;
 
     fn m870_shell(g: &Game) -> crate::shotgun::Shell {
-        let def = g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap().clone();
+        let def = g.weapon(crate::weapons::WeaponId::M870).clone();
         crate::shotgun::Shell { def, i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() }
     }
 

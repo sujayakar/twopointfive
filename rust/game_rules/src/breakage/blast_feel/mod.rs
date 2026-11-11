@@ -1,16 +1,14 @@
 #![allow(unused_imports, unused_variables)]
 //! THE FEEL OF A WALL CHARGE GOING OFF: what of it the tick itself decides or writes.
 //!
-//! TRANSLATED: the charges that stand set remembered for the next frame's blast (`seen`); `wall_report`, which combat's stun burst asks before it plays
+//! THE TICK'S HALF: the charges that stand set remembered for the next frame's blast (`seen`); `wall_report`, which combat's stun burst asks before it plays
 //! the can's report (true = this burst is a wall charge's, and its own report is played in the can's place); the report's sounds; the kick written to
-//! the seat's camera for the render (`kick_of`), a field of a camera the game holds. All of it under the DRESS row `blastFeel`, as game.ts calls the tick.
+//! the seat's camera for the render (`kick_of`), a field of a camera the game holds. All of it under the dress row `blast_feel`.
 //!
 //! THE PICTURE'S HALF (the fireball, the dust ring, the pushes, the ceiling's dust) is picture.rs.
 //!
-//! STAND-IN: THE REPORT IS PLAYED AT ONCE. The TypeScript holds each of the report's sounds back by the time sound takes from the blast to the player's
-//! head (at most 0.25 s; the thump a frame and the patter 0.1 s after that) on a queue of closures (`later`). There is no such queue
-//! here: the sounds go out as the blast's own
-//! tick's out events. Belongs: a queue row that says which sound, how loud and when, or the host's audio taking a delay.
+//! THE REPORT IS PLAYED AT ONCE: its sounds go out as out events of the blast's own tick, not held back by the time sound takes from the blast to the player's
+//! head (`late`, worked out and not used). Holding them back takes a queue row that says which sound, how loud and when, or the host's audio taking a delay.
 
 pub use ::game_types::blast_feel::types;
 pub use types::*;
@@ -43,14 +41,13 @@ fn hash_u(n: f64) -> f64 {
 fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0
-fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
-fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
-fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
+fn live(g: &crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+pub(crate) fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands.
-fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
+pub(crate) fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
 /// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height.
-fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let (h, th) = (g.k.wallcharge.height, thick(g, w));
+pub(crate) fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+    let (h, th) = (g.k.wallcharge.height, crate::wallcharge::thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
@@ -58,7 +55,7 @@ fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
 /// Combat's stun burst, where it plays the can's report: true = this burst is a wall charge's and its own report is played (the can's is not); false =
 /// not this module's (the switch off, the DRESS row down, a thrown can, a door charge).
 pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
-    crate::seats::first_of(g, &mut |v: &mut Game| if wall_report_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is: seats.ts)
+    crate::seats::first_of(g, &mut |v: &mut Game| if wall_report_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is)
 }
 
 fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
@@ -68,7 +65,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     let set = g.sets[g.seat].wall_charge.set.clone();
     let mut found: Option<usize> = None;
     for (i, c) in seen.iter().enumerate() {
-        if set.contains(c) { continue; }   // (a charge is its row: the id is the TypeScript's object)
+        if set.contains(c) { continue; }   // (a charge is its row, so the id names it)
         let wall = g.tab.wallcharge_set_wall_charge[*c].wall.clone();
         let p = burst_at(g, &wall);
         if near(p, at, 0.06) { found = Some(i); break; }
@@ -84,10 +81,10 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     true
 }
 
-/// game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
+/// Once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
 /// later stage of its blast are the team's doing: the fog's begin / done round it.
 pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_feel_tick_raw(g, cam);
     crate::fogofwar::fog_of_war_done(g, was);
@@ -107,12 +104,10 @@ fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     let time = g.time;
     {
         let s = state_mut(g);
-        // (the clock went back, a load: nothing of the old encounter's blast plays into this one. The TypeScript also asks whether the charges' list is a
-        //  NEW ARRAY, a restart whose clock runs on; a Rust list has no identity to ask, and a restart here is a game made again, with no state of this module)
+        // (the clock went back, a load: nothing of the old encounter's blast plays into this one)
         if time < s.last {  s.kicks.clear(); s.seen.clear(); }
         s.last = time;
         s.seen = set;
-        // (the queue: nothing of the tick's is ever on it, the head of this file)
     }
     let k = kick_of(g, key, cam);
     g.tab.camera[cam].kick = k;
@@ -146,9 +141,9 @@ fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3>
 fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;
-    let ear = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+    let ear = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let d = v3::dist(ear, at);
-    let _late = m::min(k.late_max, d / k.c);   // (STAND-IN, the head of this file: the report is played at once, not `late` seconds on)
+    let _late = m::min(k.late_max, d / k.c);   // (the head of this file: the report is played at once, not `late` seconds on)
     let dull = 1.0 / (1.0 + (d / k.dull_m) * (d / k.dull_m));
     let carry = 1.0 + k.carry * m::min(1.0, m::max(0.0, (d - k.carry_from) / k.carry_over));
     let (r2, r3) = { let s = state_mut(g); let r2 = 0.96 + 0.06 * dice(s); let r3 = 0.94 + 0.12 * dice(s); (r2, r3) };

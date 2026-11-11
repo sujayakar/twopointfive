@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RearwatchK {
-    /// how far from the stack's marks a way behind is looked for (cover.ts's own reach is the line's limit)
+    /// how far from the stack's marks a way behind is looked for
     #[k(9.0)] pub reach: f64,
     /// a leaf this far open is an open way
     #[k(0.6)] pub ajar: f64,

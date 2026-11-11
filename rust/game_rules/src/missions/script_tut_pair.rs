@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-//! levels/tut-pair.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-pair: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_pair::types;
 pub use types::*;
@@ -8,7 +8,7 @@ use crate::ids::*;
 use alloc::string::String;
 
 /// The man by name, if he is still at his work.
-fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
+pub(super) fn calm(g: &Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let u = crate::director::director_beat_unit(g, callsign)?;
     if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
 }

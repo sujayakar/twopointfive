@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small helpers of the context
 
 fn unit_ref_of(g: &Game, gd: GuardId) -> UnitRef {
-    UnitRef { id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
+    UnitRef { id: g.char_id(gd), callsign: g.gd[gd].callsign.clone() }
 }
 fn touch(g: &mut Game, b: DirectorLiveBeatId, u: &UnitRef) { g.tab.director_live_beat[b].touched.add(crate::Num(u.id)); }
 
@@ -41,7 +41,7 @@ pub(in crate::missions) fn director_beat_order(g: &mut crate::game::Game, r: Dir
     if o.flinch.is_some() { patch.flinch = o.flinch; }
     if o.direct.is_some() { patch.direct = o.direct; }
     if o.smoke.is_some() { patch.smoke = o.smoke; }
-    crate::control::set_hold(g, gd, false, "director");
+    crate::duty::hold(g, gd, false, "director");
     crate::squad::order(g, gd, patch);
     Ok(())
 }
@@ -62,7 +62,7 @@ pub(in crate::missions) fn director_beat_until(test: crate::director::CondTest) 
     Cond::Arm2(CondArm2 { test })
 }
 /// c.on: the union `filterOrName` comes resolved, a name or a filter
-pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::CondArm3Kind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
+pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::EventViewKind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
     Cond::Arm3(CondArm3 { kind, name: name.map(String::from), filter, got: None, tick0: g.tab.director_run[r].tick_n })
 }
 /// c.all
@@ -117,17 +117,17 @@ pub(in crate::missions) fn director_beat_rout(g: &mut crate::game::Game, r: Dire
     if crate::condition::down(g, g.gd[gd].ch) { return Ok(false); }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-    crate::control::set_hold(g, gd, false, "director");
+    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
+    crate::duty::hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     Ok(true)
 }
 /// c.release
-pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::squad::EndGuardScriptState>) -> Result<(), String> {
-    let state = state.unwrap_or(crate::squad::EndGuardScriptState::Search);
+pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::game::GuardState>) -> Result<(), String> {
+    let state = state.unwrap_or(crate::game::GuardState::Search);
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
-    crate::control::set_hold(g, gd, false, "director");
+    crate::duty::hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     Ok(())
 }
@@ -152,30 +152,30 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
         crate::chronicle::chron_radio(g, x, line);
     }
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
-    let at = gd.map(|x| { let c = g.gd[x].ch; match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos } });
+    let at = gd.map(|x| { let c = g.gd[x].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) });
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
 }
 // ---- world: doors (ts 985)
 /// c.doors.lock
 pub(in crate::missions) fn director_beat_door_lock(g: &mut crate::game::Game, d: &crate::director::DoorRef, on: bool) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_locked(g, door, on);
-    if on { crate::doors::door_set_lock_broken(g, door, false); }
+    g.dr[door].leaf.locked = on;
+    if on { g.dr[door].leaf.lock_broken = false; }
     Ok(())
 }
 /// c.doors.open
 pub(in crate::missions) fn director_beat_door_open(g: &mut crate::game::Game, d: &crate::director::DoorRef, angle: Option<f64>, hold: Option<bool>) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_latched(g, door, false);
-    crate::doors::door_set_closing(g, door, false);
+    g.dr[door].leaf.latched = false;
+    g.dr[door].leaf.closing = false;
     match angle {
-        Some(a) => { crate::doors::door_set_angle(g, door, a); crate::doors::door_set_vel(g, door, 0.0); crate::doors::door_place(g, door); }
+        Some(a) => { g.dr[door].leaf.angle = a; g.dr[door].leaf.vel = 0.0; crate::doors::door_place(g, door); }
         None => {
             let sign = js::or(m::sign(g.dr[door].def.angle.unwrap_or(1.0)), 1.0);
-            crate::doors::door_set_vel(g, door, sign * 3.2);
+            g.dr[door].leaf.vel = sign * 3.2;
         }
     }
-    if hold == Some(true) { crate::doors::door_set_quiet_t(g, door, -3600.0); } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
+    if hold == Some(true) { g.dr[door].leaf.quiet_t = -3600.0; } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
     Ok(())
 }
 // ---- world: stimulus (ts 999)

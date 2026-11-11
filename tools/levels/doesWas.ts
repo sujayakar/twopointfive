@@ -88,8 +88,6 @@ export function wasOf(albedo: V): Was {
 }
 /** is this colour, to the number, a row of the look's palette or a snow paint AS THEY STOOD (not a stand-in a hair off one)? */
 export const lookRowWas = (albedo: V): boolean => { const k = albedo.join(','); return Object.values(LOOK).some(a => a.join(',') === k) || Object.values(SNOW).some(a => a.join(',') === k); };
-/** … and of the lot's slab while the weather had soaked it (rust/game_rules/src/air/weather.rs setWet halved its colour in place, and the rules read that) */
-export const wasWetOf = (albedo: V): Was => wasOf(WET(albedo));
 
 /** the row each office paint's name is (scene/materials.ts) */
 const NAME_ROW: Record<string, DoesWord> = {

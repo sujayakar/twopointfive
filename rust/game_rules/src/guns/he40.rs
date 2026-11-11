@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// The length of a previewed arc in metres. (he40.ts arcLength)
+/// The length of a previewed arc in metres.
 pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
     let mut l = 0.0;
     let mut i = 1;
@@ -19,18 +19,18 @@ pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
     l
 }
 
-/// Would a round that flew this arc be armed where it lands. (he40.ts arcArmed)
+/// Would a round that flew this arc be armed where it lands.
 pub fn arc_armed(g: &crate::game::Game, sol: &crate::throwables::ThrowSolution) -> bool {
     arc_length(sol) >= g.k.he40.arm_m
 }
 
-/// The rifle is up with rounds in its 40 mm under it. (he40.ts, the arc's own gate)
+/// The rifle is up with rounds in its 40 mm under it.
 pub fn he40_ready(g: &crate::game::Game, pl: PlayerId) -> bool {
     let r = g.pl[pl].rifle;
     crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && g.fa[r].shells > 0.0
 }
 
-/// The arc he has up is the launcher's, and too short to arm. (he40.ts previewTooClose)
+/// The arc he has up is the launcher's, and too short to arm.
 pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
     let r = g.pl[pl].rifle;
     match &g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview {
@@ -39,15 +39,15 @@ pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
     }
 }
 
-/// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
+/// The living man under the reticle a round can meet, never one of Sam's own side.
 fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     match seat.aim_guard {
-        Some(id) if !crate::condition::down(g, g.gd[id].ch) && g.gd[id].team != crate::teams::Team::Operative => Some(id),
+        Some(id) if !crate::condition::down(g, g.gd[id].ch) && !g.team(id).ours() => Some(id),
         _ => None,
     }
 }
 
-/// The living bodies a round stops on, as far as Sam can see them. (he40.ts shellBodies)
+/// The living bodies a round stops on, as far as Sam can see them.
 pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
     let mut out: Vec<CharId> = Vec::new();
     let mut i = 0;
@@ -56,7 +56,7 @@ pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
         i += 1;
         let ch = g.gd[gd].ch;
         if !crate::condition::down(g, g.gd[gd].ch)
-            && g.gd[gd].team != crate::teams::Team::Operative
+            && !g.team(gd).ours()
             && g.ch[ch].alive
             && !crate::fogofwar::fog_of_war_hidden(g, gd)
         {
@@ -86,8 +86,8 @@ fn ballistics(g: &Game) -> crate::launcher::Ballistics {
     }
 }
 
-/// Where a round fired now would go, cut where it first enters one of `bodies`. (he40.ts shellSolve)
-pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Option<&[CharId]>) -> crate::throwables::ThrowSolution {
+/// Where a round fired now would go, cut where it first enters one of `bodies`.
+pub fn shell_solve(g: &crate::game::Game, from: V3, target: V3, bodies: Option<&[CharId]>) -> crate::throwables::ThrowSolution {
     let r = ballistics(g);
     let sol = crate::launcher::arc_solve(g, from, target, r);
     let bodies = bodies.unwrap_or(&[]);
@@ -123,11 +123,11 @@ pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Opti
     sol
 }
 
-/// The point to send a round at: the chest of the man under the reticle, led; else the fixture; else the cursor's point. (he40.ts shellAimPoint)
+/// The point to send a round at: the chest of the man under the reticle, led; else the fixture; else the cursor's point.
 pub fn shell_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
     if let Some(gd) = shell_man(g, seat) {
         let c = g.gd[gd].ch;
-        let bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
+        let bone = g.ch[c].bone(crate::character::Bone::Chest);
         let chest = v3::add(bone.unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.2, 0.0])), [0.0, 0.0, 0.0]);
         let tof = v3::dist(from, chest) / (g.k.he40.speed * 0.97);
         let vel = g.ch[c].vel;
@@ -140,7 +140,7 @@ pub fn shell_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from
     [ap[0], ap[1] + 0.03, ap[2]]
 }
 
-/// Lets one round go off `shooter`'s launcher: in the air from this frame, the thump, and the room hears it. (he40.ts fireShell)
+/// Lets one round go off `shooter`'s launcher: in the air from this frame, the thump, and the room hears it.
 pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: V3) -> crate::he40::Shell {
     let b = ballistics(g);
     let sh = crate::he40::Shell {
@@ -157,7 +157,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
     sh
 }
 
-/// Keeps a round's end in the capped QA log. (he40.ts logEnd)
+/// Keeps a round's end in the capped QA log.
 fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
     g.m.he40.he40_log.push(e.clone());
     if g.m.he40.he40_log.len() > 32 {
@@ -165,7 +165,7 @@ fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
     }
 }
 
-/// Armed and stopped: frag.ts's blast, judged from `pt`. (he40.ts burst)
+/// Armed and stopped: a grenade's blast, judged from `pt`.
 fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::he40::ShellEndMet) {
     let spec = crate::frag::BlastSpec {
         who: g.ch[sh.shooter].id,
@@ -177,7 +177,7 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: true, met });
 }
 
-/// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears. (he40.ts dud)
+/// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears.
 fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet) {
     let most = g.k.he40.spent_speed_max;
     crate::flight::to_item(g, crate::throwables::ItemKind::Shell, sh.shooter, at, vel, most, crate::throwables::ItemBounce::ShellSkitter);
@@ -189,7 +189,7 @@ fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: 
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
 }
 
-/// Is the fuze armed `t` metres on from what has been flown. (he40.ts updateShells armedAt)
+/// Is the fuze armed `t` metres on from what has been flown.
 fn armed_at(flown: f64, t: f64, arm_m: f64) -> bool {
     flown + m::max(0.0, t) >= arm_m
 }
@@ -279,7 +279,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight. Picture only; nothing in the tick calls it. (he40.ts shellBoxes)
+/// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight.
 pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;

@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -15,13 +16,6 @@ fn clip_line(text: &str) -> String {
     let mut s = String::from_utf16_lossy(&head);
     s.push('…');
     s
-}
-
-fn team_of(side: crate::qrf::SideOfTeam) -> crate::teams::Team {
-    match side {
-        crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard,
-        crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile,
-    }
 }
 
 // ---------------------------------------------------------------- the level's own team
@@ -42,8 +36,8 @@ pub(super) fn raid_over(g: &crate::game::Game) -> bool {
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.
-pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
-    if raid(g) { crate::qrf::SideOfTeam::Hostile } else { crate::qrf::SideOfTeam::Guard }
+pub(super) fn side_of_team(g: &crate::game::Game) -> crate::teams::Team {
+    if raid(g) { crate::teams::Team::Hostile } else { crate::teams::Team::Guard }
 }
 
 /// A raid: the men who can call it in.
@@ -149,11 +143,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 
 // ---------------------------------------------------------------- small shared helpers
 
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// A row of the response's log, which keeps its last 150 to 200.
 pub(super) fn note(g: &mut crate::game::Game, what: &str) {
     g.qrf.log.push(crate::qrf::QrfLogItem { what: String::from(what) });
@@ -198,7 +187,7 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     let line = alloc::format!("{} — {}", g.gd[x].callsign, text);
     crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
-    let at = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
@@ -209,7 +198,7 @@ fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     let mut br = -1;
     for &x in &g.guards {
         let m = &g.gd[x];
-        if m.unit.is_some() || m.team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
+        if m.unit.is_some() || g.ch[m.ch].team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
         let r = if m.state == crate::game::GuardState::Alert { 0 } else if m.state == crate::game::GuardState::Patrol { 2 } else { 1 };
         if r > br { br = r; best = Some(x); }
     }
@@ -227,7 +216,7 @@ pub(super) fn bodies_found(g: &crate::game::Game) -> f64 {
 }
 
 /// The run is Sam's to answer for.
-pub(super) fn live(g: &mut crate::game::Game) -> bool {
+pub(super) fn live(g: &crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
@@ -259,8 +248,8 @@ pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
 
 /// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
-    let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
+    let side = side_of_team(g);
+    if g.team(x) != side || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
@@ -399,9 +388,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.
 pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| dist_xz(g.player_pos(pl), p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && dist_xz(g.pos_of(x), p) < clear_m { return false; }
     }
     true
 }

@@ -8,7 +8,7 @@ use game::orders::OrderTarget;
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
-fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } } }
+fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } } }
 
 // ---------------------------------------------------------------- a round into a wall
 
@@ -59,7 +59,7 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear", &Opts { seed: 3, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.2);
-    for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
+    for d in p.g.doors.list.clone() { p.g.dr[d].leaf.locked = false; }
     p.run(0.3);
     let th = game::workthings::work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);
@@ -138,7 +138,7 @@ fn two_men(look: [f64; 2]) -> (Play, game::ids::GuardId, game::ids::GuardId) {
     let mut p = Play::scene(&s, &Opts { seed: 402, ..Default::default() });
     p.g.god_mode = true;
     let (a, b) = (p.guard("a"), p.guard("b"));
-    p.g.gd[b].hold = true;
+    p.g.gd[b].duty.holds = true;
     p.run(0.8);   // (his head comes to where he looks)
     (p, a, b)
 }
@@ -196,7 +196,7 @@ fn won(level: &str, link: &str) -> game::verdict::RunVerdict {
     let at = p.sam_at();
     p.sam_put([at[0] + 2.0, at[1]]);
     p.run(0.1);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
+    for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
     p.run(4.0);
     p.g.verdict.res.clone().unwrap_or_else(|| panic!("no verdict: {}", p.roll()))
 }
@@ -234,8 +234,8 @@ fn sam_going_down_is_the_verdict_down() {
 
 fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
     let rig = p.g.ch[c].rig;
-    let cast = p.g.tab.rig[rig].cast.expect("no cast on this stand");
-    let at = p.g.tab.anim_gltf_cast_info[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
+    let cast = p.g.art.rig[rig].cast.expect("no cast on this stand");
+    let at = p.g.art.cast[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
     (p.g.ch[c].parts as u32) & (1 << at) != 0
 }
 
@@ -313,7 +313,7 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(p.g.falls.glass.waiting.len() != waiting, "the staging is wrong: nothing landed in two seconds");
-    p.g = kept.stands(p.g.sim);
+    p.g = kept.laid(p.g.sim);
     assert_eq!(p.g.falls.glass.waiting.len(), waiting, "put back: the landings waiting");
     for (k, want) in first.iter().enumerate() {
         p.frame();

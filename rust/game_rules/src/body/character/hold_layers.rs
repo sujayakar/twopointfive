@@ -33,7 +33,7 @@ pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
 }
 
 /// What the gun hand visibly holds: the rule's, unless a swap is running.
-pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
+pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::guards::InHand>) -> Option<crate::guards::InHand> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
         if let (Some(r), Some(Some(cur))) = (rule, s.cur) {
@@ -54,7 +54,7 @@ pub(super) fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
 /// The torch and sidearm swap's clock, and its arm when it shows.
 pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) {
     if taken { g.ch[c].anim.sw.t = -1.0; return; }
-    let weapon = g.ch[c].anim.sw.to == Some(AnimCarry::Weapon);
+    let weapon = g.ch[c].anim.sw.to == Some(crate::guards::InHand::Weapon);
     if g.ch[c].anim.shoot_t >= 0.0 && weapon {
         let s = &mut g.ch[c].anim.sw;
         s.t = m::max(s.t, s.dur * 0.85);
@@ -80,7 +80,7 @@ pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tak
 
 /// The swap's arm, by its envelope e and how far across k.
 fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
-    anim_layer(g, c, |s, an, n| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p, n));
+    anim_layer(g, c, |s, an, _| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p));
 }
 
 /// Hands at work on a thing: the gate, and the layer when it runs.
@@ -98,11 +98,11 @@ pub(super) fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fre
     let (p, n) = (anim_to_model_p(g, c, l.p), anim_to_model_d(g, c, l.n));
     let an = &g.ch[c].anim;
     let r_free = l.hand != Some(0.0) && !armed && an.upper != UpperMode::Torch && (!an.long_gun || an.stowed) && (!an.grip[1] || an.stowed) && an.throw_t < 0.0 && an.sw.t < 0.0;
-    anim_layer(g, c, |s, an, k| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p));
 }
 
 /// The torch up in the hand that holds it, weight e.
-pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::torch_up(s, an, e, k)); }
+pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::torch_up(s, an, e)); }
 
 /// A hand to the radio: its clock and spring, and the pose when it shows.
 pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
@@ -119,7 +119,7 @@ pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
 }
 
 /// The hand at the radio by w, and the head's share hw.
-fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::radio_pose(s, an, w, hw, k)); }
+fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::radio_pose(s, an, w, hw)); }
 
 // ---- holding a man, and being held
 
@@ -145,7 +145,7 @@ pub(super) fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
 pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let an = &mut g.ch[c].anim;
     // (undefined, null or a word: all three are told apart)
-    let carry = an.carry.map(|o| o.map(|k| match k { CarryKind2::Torch => AnimCarry::Torch, CarryKind2::Weapon => AnimCarry::Weapon }));
+    let carry = an.carry;
     if an.hold_pose.is_some() {
         an.hd_idle.upper = an.upper; an.hd_idle.long = an.long_gun; an.hd_idle.crouch = an.crouch_target;
         an.hd_idle.carry = carry;
@@ -166,7 +166,7 @@ pub(super) fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
 pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character::AnimBigTool, tw_y: f64, tw_p: f64) {
     let stowing = b.end >= 0.0 && b.t >= b.end;
     let us = if stowing { v3::clamp((b.t - b.end) / m::max(1e-3, b.stow), 0.0, 1.0) } else { 0.0 };
-    let ham = b.kind == AnimBigToolKind::Hammer;
+    let ham = b.kind == crate::kit::BigTool::Hammer;
     if !(b.t >= 0.0) || us >= 1.0 { g.ch[c].anim.big_under = false; g.ch[c].anim.big_k = 0.0; return; }
     if ham && g.ch[c].anim.big_buf.is_none() {
         let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);
@@ -176,7 +176,7 @@ pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::ch
     let near = blows_near(&crate::character::BlowsNearB { t: b.t, end: b.end, blows: b.blows.clone() });
     let at = if (b.at[0] + b.at[1] + b.at[2]).is_finite() { anim_to_model_p(g, c, b.at) } else { [0.0, 1.0, 0.8] };
     let at_buf = if ham { g.ch[c].anim.big_buf.unwrap().at as usize } else { 0 };
-    let grip = crate::rig_props::carbine_grip(None);
+    let grip = crate::rig_props::carbine_grip();
     anim_layer(g, c, |s, an, k| ::sim::layers::big_layer(s, an, b, at_buf, &near, at, &grip, tw_y, tw_p, k));
 }
 

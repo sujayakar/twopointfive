@@ -195,13 +195,6 @@ pub struct Debrief {
     pub grade: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DebriefState {
-    #[default] Down,
-    Done,
-    Sofar,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct ROOMSItem {
     pub name: String,
@@ -268,13 +261,6 @@ pub struct RatingOf {
     pub blurb: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SummaryLineState {
-    Down,
-    Done,
-    Sofar,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ChronicleMod {
@@ -311,3 +297,9 @@ pub fn need_short() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set
 
 pub fn intel() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("door"), String::from("the keyed door (and his key)")); t.set(String::from("code"), String::from("a door code")); t.set(String::from("routes"), String::from("a colleague's route")); t.set(String::from("rollcall"), String::from("when the radio check is due")); t.set(String::from("rollcallLive"), String::from("that a radio check is on now")); t.set(String::from("checkOn"), String::from("that a man is out looking for a colleague")); t.set(String::from("clearing"), String::from("which room the pair is clearing")); t.set(String::from("blackout"), String::from("who is on the breaker")); t.set(String::from("lockdownPosts"), String::from("where the lockdown posts are")); t.set(String::from("missing"), String::from("that a man is missed")); t.set(String::from("drive"), String::from("that the rack is being looked at")); t } }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum DebriefState {
+    #[default] Down,
+    Done,
+    Sofar,
+}

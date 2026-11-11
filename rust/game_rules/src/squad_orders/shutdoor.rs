@@ -2,6 +2,7 @@ pub use ::game_types::shutdoor::types;
 pub use types::*;
 /// this module's own order
 pub const SHUT_ID: &str = crate::orders::rows::shutdoor::ORDER.id;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -9,31 +10,15 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// where a man stands (his body's position)
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    g.ch[g.gd[gd].ch].pos
-}
-
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
-/// A floor point in the door's frame: `along` from the hinge, `off` out on face `side`.
-fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
-    let f = crate::guards::frame_of(g, d);
-    [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
-}
-
 /// Where the door's handle comes to.
-fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
+fn handle_of(g: &crate::game::Game, d: DoorId) -> V3 {
     let w = g.dr[d].def.width;
-    pt_of(g, d, w - k().handle_in, 0.0, 1.0)
+    crate::handleside::pt_of(g, d, w - k().handle_in, 0.0, 1.0)
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed).
 pub(super) fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= k().open
 }
 
 /// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack.
@@ -46,44 +31,39 @@ fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f
     let along = px * f.ux + pz * f.uz;
     let t = m::max(0.0, m::min(f.w, along));
     if m::hyp2(px - f.ux * t, pz - f.uz * t) <= pad { return true; }   // on the frame's line: where the leaf comes to
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let th = v3::wrap_angle(m::atan2(pz, px) - g.dr[d].def.closed_dir) * js::or(m::sign(angle), 1.0);
     th >= 0.0 && th <= m::abs(angle)
 }
 
-/// A wall, a sill or a pane between two floor points at shin height, the level's statics only.
-fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
-}
-
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body.
-fn stands(g: &mut crate::game::Game, p: V3) -> bool {
+fn stands(g: &crate::game::Game, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     let mut q: V3 = [p[0], 0.0, p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, None);
-    flat(p, q) < 0.02
+    dist_xz(p, q) < 0.02
 }
 
 /// shutSpot's `ok`: clear of the leaf's way, a place to stand, nothing of the level between it and the door.
-fn spot_ok(g: &mut Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
-    !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !walled(g, ref_, p)
+fn spot_ok(g: &Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
+    !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !crate::scene_collision::low_walled(g, ref_, p)
 }
 
 /// The place d is shut from on face `side`, as it stands now; None: none.
-fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
+fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
     let w = g.dr[d].def.width;
     let hd = handle_of(g, d);
-    let ref_ = pt_of(g, d, w - k().handle_in, 0.2, side);
+    let ref_ = crate::handleside::pt_of(g, d, w - k().handle_in, 0.2, side);
     let pad = k().body + k().slack;
-    let face = |p: V3| m::atan2(hd[0] - p[0], hd[2] - p[2]);
+    let face = |p: V3| v3::yaw_to(p, hd);
     let mut best: Option<V3> = None;
     let mut bc = f64::INFINITY;
     let mut a = w - 0.5;
     while a <= w + 0.8 + 1e-6 {
         let mut off = 0.4;
         while off <= 1.0 + 1e-6 {
-            let p = pt_of(g, d, a, off, side);
-            let r = flat(p, hd);
+            let p = crate::handleside::pt_of(g, d, a, off, side);
+            let r = dist_xz(p, hd);
             if !(r > k().reach) {
                 let c = r + (if a < w { 0.25 } else { 0.0 });
                 if !(c >= bc || !spot_ok(g, d, ref_, p, pad)) {
@@ -100,8 +80,8 @@ fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::s
     while a <= w + 0.4 + 1e-6 {
         let mut off = 0.5;
         while off <= 1.8 + 1e-6 {
-            let p = pt_of(g, d, a, off, side);
-            let r = flat(p, hd);
+            let p = crate::handleside::pt_of(g, d, a, off, side);
+            let r = dist_xz(p, hd);
             if !(r > k().far_reach || r >= bc || !spot_ok(g, d, ref_, p, pad)) {
                 best = Some(p);
                 bc = r;
@@ -115,7 +95,7 @@ fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::s
 
 /// Both faces' places for the leaf as it stands, kept for the frame.
 fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let key = alloc::format!("{}|{}|{}", js::num_str(g.time), g.dr[d].def.name, js::to_fixed(angle, 3));
     if let Some(hit) = &g.m.shutdoor.spotted {
         if hit.key == key { return hit.spots.clone(); }
@@ -128,17 +108,17 @@ fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor:
 }
 
 /// The length of his walk to p by the walkers' grid (infinity: no way).
-fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
-    let at = pos_of(g, gd);
-    if flat(at, p) < 0.5 { return flat(at, p); }
+fn walk(g: &crate::game::Game, gd: GuardId, p: V3) -> f64 {
+    let at = g.pos_of(gd);
+    if dist_xz(at, p) < 0.5 { return dist_xz(at, p); }
     let path = match crate::scene_collision::nav_grid_find_path(g, at, p, None, None) { Some(path) => path, None => return f64::INFINITY };
-    crate::places::walk_len(at, &path) + flat(path.last().copied().unwrap_or(at), p)
+    crate::places::walk_len(at, &path) + dist_xz(path.last().copied().unwrap_or(at), p)
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).
 fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(seat, gd) { Some(a) => a, None => return false };
-    let row = &g.tab.orders_assignment[a];
+    let row = &g.tab.task[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
 }
 
@@ -149,13 +129,13 @@ pub(super) fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> cra
     let mut out: Option<PlanArm1> = None;
     let mut bc = f64::INFINITY;
     let mut why: Option<String> = None;
-    let sam_at = g.ch[g.pl[g.player].ch].pos;
+    let sam_at = g.player_pos(g.player);
     let sam = crate::orders::side_of(g, d, sam_at);
     for &gd in men {
         let want = if from_file(g, &crate::seats::here(g), gd) {
             sam
         } else {
-            let at = pos_of(g, gd);
+            let at = g.pos_of(gd);
             crate::orders::side_of(g, d, at)
         };
         for spot in &spots {
@@ -180,7 +160,7 @@ pub(super) fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> cra
 /// inTheWay's `body`: a body lying in the leaf's way (the particles a leaf feels).
 fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
     let rag = match g.ch[c].ragdoll { Some(rag) => rag, None => return false };
-    if flat(g.ch[c].pos, g.dr[d].frame_centre) > 4.0 { return false; }
+    if dist_xz(g.ch[c].pos, g.dr[d].frame_centre) > 4.0 { return false; }
     let r = crate::ragdoll::rag();
     for i in [r.pelvis, r.spine, r.head, r.knee_l, r.knee_r, r.ank_l, r.ank_r] {
         let p = crate::ragdoll::ragdoll_point(g, rag, i, None);
@@ -191,7 +171,7 @@ fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
 }
 
 /// Who or what is in the leaf's way shut (None: nothing); `seen`: the menu's question, an enemy the picture does not show is not given away.
-fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
+fn in_the_way(g: &crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
     let seen = seen.unwrap_or(false);
     let player = g.player;
     let sam_ch = g.pl[player].ch;
@@ -208,10 +188,10 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
         }
         let at = g.ch[c].pos;
         if !in_shut_swing(g, d, at[0], at[2], Some(k().body))
-            || (seen && g.gd[m].team != crate::teams::Team::Operative && !crate::fogofwar::fog_of_war_drawn(g, m)) {
+            || (seen && !g.team(m).ours() && !crate::fogofwar::fog_of_war_drawn(g, m)) {
             continue;
         }
-        return Some(if g.gd[m].team == crate::teams::Team::Operative {
+        return Some(if g.team(m).ours() {
             alloc::format!("{} is in its way.", g.gd[m].callsign)
         } else {
             String::from("somebody's in its way.")
@@ -221,20 +201,19 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
 }
 
 /// An enemy somebody of the team has in sight right now through that doorway.
-fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn contact_through(g: &crate::game::Game, d: DoorId) -> bool {
     let player = g.player;
     let sam_ch = g.pl[player].ch;
     for h in g.guards.clone() {
-        let team = g.gd[h].team;
-        if crate::condition::down(g, g.gd[h].ch) || !crate::teams::is_hostile(g, crate::teams::Team::Operative, team) { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || !g.team(h).theirs() { continue; }
         for m in crate::roomfight::room_fight_seen_by(g, h) {
-            let (m_at, h_at) = (pos_of(g, m), pos_of(g, h));
+            let (m_at, h_at) = (g.pos_of(m), g.pos_of(h));
             if crate::guards::crosses_door(g, m_at, h_at, d).is_some() { return true; }
         }
-        let (sam_at, h_at) = (g.ch[sam_ch].pos, pos_of(g, h));
+        let (sam_at, h_at) = (g.ch[sam_ch].pos, g.pos_of(h));
         if !crate::condition::down(g, g.pl[player].ch)
             && crate::guards::crosses_door(g, sam_at, h_at, d).is_some()
-            && flat(sam_at, h_at) < 30.0
+            && dist_xz(sam_at, h_at) < 30.0
             && crate::fogofwar::fog_of_war_drawn(g, h)
             && !crate::scene_collision::segment_blocked(g, [sam_at[0], 1.5, sam_at[2]], [h_at[0], 1.2, h_at[2]], None, None, None) {
             return true;
@@ -245,8 +224,8 @@ fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
 
 /// Why these men cannot shut that door (None: one of them can): the row's `valid`.
 pub(super) fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Option<String> {
-    if crate::doors::door_off(g, d) { return Some(String::from("it's off its hinges.")); }
-    if crate::doors::door_latched(g, d) { return Some(String::from("it's shut.")); }
+    if g.dr[d].leaf.off { return Some(String::from("it's off its hinges.")); }
+    if g.dr[d].leaf.latched { return Some(String::from("it's shut.")); }
     if !stands_open(g, d) { return Some(String::from("it's all but shut.")); }
     if contact_through(g, d) { return Some(String::from("contact through that door.")); }
     match plan(g, d, men) {
@@ -259,7 +238,7 @@ pub(super) fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]
 fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor::Spot) {
     let name = crate::orders::door_words(g, d);
     let fc = g.dr[d].frame_centre;
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(SHUT_ID),
         post: Some(spot.pos),
         face: Some(spot.yaw),
@@ -267,8 +246,8 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
         door: Some(d),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: alloc::format!("shutting · {}", name),
-        there: alloc::format!("at · {}", name),
+        going: alloc::format!("shutting · {}", name).into(),
+        there: alloc::format!("at · {}", name).into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);
@@ -276,8 +255,8 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
 
 /// His hand on it: the leaf is pulled to; a leaf somebody propped is let go of.
 fn pull(g: &mut crate::game::Game, d: DoorId, gd: GuardId) {
-    if crate::doors::door_quiet_t(g, d) < 0.0 { crate::doors::door_set_quiet_t(g, d, 0.0); }
-    let who = g.ch[g.gd[gd].ch].id;
+    if g.dr[d].leaf.quiet_t < 0.0 { g.dr[d].leaf.quiet_t = 0.0; }
+    let who = g.char_id(gd);
     crate::doors::doors_pull_to(g, d, who);
 }
 
@@ -287,13 +266,13 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     if j.map_or(false, |j| j.back) {
-        let a = crate::orders::SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(99.0),
             face: None,
-            going: String::from("falling in"),
-            there: String::from("with you"),
+            going: "falling in".into(),
+            there: "with you".into(),
             ..Default::default()
         };
         crate::orders::squad_orders_assign(g, gd, &a);
@@ -303,54 +282,53 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
         Some(j) => alloc::format!("holding · by {}", crate::orders::door_words(g, j.door)),
         None => String::from("holding"),
     };
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
-        going: String::from("holding"),
-        there,
+        going: "holding".into(),
+        there: there.into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);
 }
 
 /// tick's `end`: the word, the log, the count, and his order is over.
-fn end(g: &mut Game, gd: GuardId, d: DoorId, j: Job, line: Option<&str>, shut: bool) {
+fn end(g: &mut Game, gd: GuardId, j: Job, line: Option<&str>) {
     if let Some(line) = line { crate::game::game_say(g, gd, line, None, None); }
-    if shut {  } else {  }
     finish(g, gd, Some(j));
 }
 /// tick's `clearOf`: is p out of the leaf's way
-fn clear_of(g: &mut Game, d: DoorId, p: V3) -> bool {
+fn clear_of(g: &Game, d: DoorId, p: V3) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(k().body))
 }
-/// The job is one row of the table, written in place in the TypeScript: every change of the local copy goes back to it.
+/// The job is one row of the table: every change of the local copy goes back to it.
 fn store(g: &mut Game, gd: GuardId, j: Job) {
     if let Some(row) = g.m.shutdoor.jobs.get_mut(gd) { *row = j; }
 }
 
 /// The order's stages, once a frame for its man before he is posed.
-pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let mut j = match g.m.shutdoor.jobs.get(gd).copied() {
-        Some(j) if g.tab.orders_assignment[a].door == Some(j.door) => j,
+        Some(j) if g.tab.task[a].door == Some(j.door) => j,
         _ => { finish(g, gd, None); return; }   // (a guard: the order's issue sets both)
     };
     let d = j.door;
-    let p = pos_of(g, gd);
+    let p = g.pos_of(gd);
     let t = g.time;
-    if crate::doors::door_off(g, d) { end(g, gd, d, j, Some("door's gone."), false); return; }
-    if crate::doors::door_latched(g, d) {
+    if g.dr[d].leaf.off { end(g, gd, j, Some("door's gone.")); return; }
+    if g.dr[d].leaf.latched {
         if j.phase == JobPhase::Go {
-            end(g, gd, d, j, Some("it's shut."), true);
+            end(g, gd, j, Some("it's shut."));
         } else {
-            end(g, gd, d, j, Some("door's shut."), true);
+            end(g, gd, j, Some("door's shut."));
         }
         return;
     }
     if j.phase == JobPhase::Go {
-        // (the runner has called his walk off and told Sam so: orders.ts's stuck rule)
-        let stopped = match g.tab.orders_assignment[a].post { None => true, Some(post) => flat(post, j.spot.pos) > 0.05 };
-        let there = !stopped && flat(p, j.spot.pos) < 0.4;
+        // (the runner has called his walk off and told Sam so)
+        let stopped = match g.tab.task[a].post { None => true, Some(post) => dist_xz(post, j.spot.pos) > 0.05 };
+        let there = !stopped && dist_xz(p, j.spot.pos) < 0.4;
         if !stopped && !there && t - j.t0 <= k().go_cap { return; }
         if there && !clear_of(g, d, p) {   // (the last strides to his place, out of the leaf's way)
             let near = match j.near {
@@ -363,7 +341,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
             // at his place and in the leaf's way: it was moved while he walked. The place for the leaf as it stands now, once or twice
             let now = if there && j.moved < 2.0 { shut_spot(g, d, j.spot.side) } else { None };
             if let Some(now) = now {
-                if flat(now.pos, j.spot.pos) > 0.3 {
+                if dist_xz(now.pos, j.spot.pos) > 0.3 {
                     j.moved += 1.0;
                     j.spot = now;
                     j.near = None;
@@ -376,11 +354,11 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
             let side = j.spot.side;
             let w = g.dr[d].def.width;
             let ok = crate::orders::side_of(g, d, p) == side
-                && flat(p, handle_of(g, d)) <= k().far_reach
+                && dist_xz(p, handle_of(g, d)) <= k().far_reach
                 && clear_of(g, d, p)
-                && { let q = pt_of(g, d, w - k().handle_in, 0.2, side); !walled(g, p, q) };
+                && { let q = crate::handleside::pt_of(g, d, w - k().handle_in, 0.2, side); !crate::scene_collision::low_walled(g, p, q) };
             if !ok {
-                end(g, gd, d, j, if stopped { None } else { Some("can't get to it.") }, false);
+                end(g, gd, j, if stopped { None } else { Some("can't get to it.") });
                 return;
             }
         }
@@ -389,14 +367,14 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         store(g, gd, j);
     }
     let hd = handle_of(g, d);
-    let face = m::atan2(hd[0] - p[0], hd[2] - p[2]);
-    g.tab.orders_assignment[a].face = Some(face);
-    g.tab.orders_assignment[a].watch = None;   // squared up to the handle, the gun off the leaf that is coming
+    let face = v3::yaw_to(p, hd);
+    g.tab.task[a].face = Some(face);
+    g.tab.task[a].watch = None;   // squared up to the handle, the gun off the leaf that is coming
     if j.phase == JobPhase::Shut {
         let way = in_the_way(g, d, Some(gd), None);
         if way.is_some() || !clear_of(g, d, p) {
             if t - j.t > k().blocked_cap {
-                end(g, gd, d, j, Some("can't shut it."), false);
+                end(g, gd, j, Some("can't shut it."));
             }
             return;
         }
@@ -410,15 +388,15 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         return;
     }
     // wait: the leaf comes to and the latch catches it. One that somebody stopped is pulled again, a few times, while its way is clear
-    if t - j.t > k().latch_cap { end(g, gd, d, j, Some("it won't shut."), false); return; }
-    if !crate::doors::door_closing(g, d) {
+    if t - j.t > k().latch_cap { end(g, gd, j, Some("it won't shut.")); return; }
+    if !g.dr[d].leaf.closing {
         if t - j.t > k().again && j.pulls < 4.0 && in_the_way(g, d, Some(gd), None).is_none() && clear_of(g, d, p) {
             pull(g, d, gd);
             j.pulls += 1.0;
             j.t = t;
             store(g, gd, j);
         }
-    } else if m::abs(crate::doors::door_angle(g, d)) > k().hand_to && in_the_way(g, d, Some(gd), None).is_none() {
+    } else if m::abs(g.dr[d].leaf.angle) > k().hand_to && in_the_way(g, d, Some(gd), None).is_none() {
         pull(g, d, gd);   // (never against a body it has come to rest on: the leaf settles there, as it does for anybody)
     }
 }
