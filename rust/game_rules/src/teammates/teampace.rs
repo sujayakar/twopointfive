@@ -51,7 +51,7 @@ fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
     let slow = team_walk(g);
     if !g.k.teampace.pacing { return slow; }
     let own = g.tune.player_walk;
-    let post = match crate::orders::squad_orders_of(seat, gd) { Some(a) => g.tab.orders_assignment[a].post, None => None };
+    let post = match crate::orders::squad_orders_of(seat, gd) { Some(a) => g.tab.task[a].post, None => None };
     let mark = match post { Some(mark) => mark, None => return own };
     let (near, gap, cos, k, top) = (g.k.teampace.pace_near, g.k.teampace.pace_gap, g.k.teampace.pace_cos, g.k.teampace.k, g.k.pace.max);
     let p = g.pos_of(gd);

@@ -1342,7 +1342,7 @@ pub struct Tabs {
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
     pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
-    pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
+    pub task: Tab<TaskId, crate::duty::Task>,
     pub doortools_room_search: Tab<DoortoolsRoomSearchId, crate::doortools::RoomSearch>,
     pub doortools_word: Tab<WordId, crate::doortools::Word>,
     pub doortools_door_gate: Tab<DoorGateId, crate::doortools::DoorGate>,

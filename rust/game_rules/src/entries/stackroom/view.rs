@@ -119,8 +119,8 @@ fn stood_marks(g: &Game, x: &View, men: &[GuardId]) -> Vec<V3> {
     let mut stood: Vec<V3> = Vec::new();
     for &man in men {
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), man) else { continue };
-        if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(x.d) { continue; }
-        let Some(post) = g.tab.orders_assignment[a].post else { continue };
+        if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.task[a].door != Some(x.d) { continue; }
+        let Some(post) = g.tab.task[a].post else { continue };
         if v3::dist_xz(g.pos_of(man), post) < 0.6 && crate::doortools::off_of(g, x.d, post, x.side) > 0.0 { stood.push(post); }
     }
     stood

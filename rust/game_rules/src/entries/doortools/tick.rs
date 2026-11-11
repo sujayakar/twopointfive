@@ -150,7 +150,7 @@ pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::S
         if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
-        let A = &g.tab.orders_assignment[a];
+        let A = &g.tab.task[a];
         let (Some(door), Some(post)) = (A.door, A.post) else { continue };
         if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.at == crate::orders::At::Stacked) {
             continue;
@@ -274,9 +274,9 @@ pub(in crate::entries) fn door_tools_waits_on(g: &crate::game::Game, men: &[Guar
     let mut set = true;
     for &m in &st {
         let on = match crate::orders::squad_orders_of(&crate::seats::here(g), m) {
-            Some(a) => match g.tab.orders_assignment[a].post {
+            Some(a) => match g.tab.task[a].post {
                 Some(post) => {
-                    let arrived = g.tab.orders_assignment[a].arrived;
+                    let arrived = g.tab.task[a].arrived;
                     arrived || v3::dist_xz(g.pos_of(m), post) < 0.6
                 }
                 None => false,
@@ -506,10 +506,10 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
         door_tools_beat_is(g, op, crate::doortools::Beat::Word, "the word");
         for gd in dop!(g, op).men.clone() {
             let Some(a) = dop!(g, op).mine.get(gd).copied() else { continue };
-            if g.tab.orders_assignment[a].there.at == crate::orders::At::Ready {
+            if g.tab.task[a].there.at == crate::orders::At::Ready {
                 let door = dop!(g, op).door;
                 let words = crate::orders::door_words(g, door);
-                g.tab.orders_assignment[a].there = crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", words));
+                g.tab.task[a].there = crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", words));
             }
         }
     }
@@ -534,7 +534,7 @@ fn go_list(g: &Game, men: &[GuardId], only: Option<&[DoorToolsGoMenOnlyItem]>) -
 /// a pair standing on a plain 'stack up' becomes an open-and-clear from the very marks it stands on
 fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) -> Option<DoorOpId> {
     let first = men.first().copied().and_then(|m| crate::orders::squad_orders_of(&crate::seats::here(g), m))?;
-    let first_post = g.tab.orders_assignment[first].post?;
+    let first_post = g.tab.task[first].post?;
     let side = crate::orders::side_of(g, d, first_post);
     let name = crate::orders::door_words(g, d);
     let w = g.dr[d].def.width;
@@ -543,7 +543,7 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
     for &gd in men {
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
         let body = g.gd[gd].ch;
-        let A = &g.tab.orders_assignment[a];
+        let A = &g.tab.task[a];
         posts.push(crate::orders::StackPost {
             pos: v3::copy(A.post.unwrap()),
             face: A.face.unwrap_or(g.ch[body].body_yaw),
@@ -554,7 +554,7 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
     }
     for &gd in men {
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
-        on.push(g.tab.orders_assignment[a].arrived);
+        on.push(g.tab.task[a].arrived);
     }
     let op = door_tools_new_op(g, DoorToolKind::OpenClear, d, side, men, Phase::Stack);
     let mut lead: Option<GuardId> = None;
@@ -578,8 +578,8 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
         door_tools_assign(g, op, gd, &a);
         if on[i] {
             let a = dop!(g, op).mine.get(gd).copied().unwrap();
-            g.tab.orders_assignment[a].arrived = true;
-            g.tab.orders_assignment[a].arr_t = g.time;
+            g.tab.task[a].arrived = true;
+            g.tab.task[a].arr_t = g.time;
         }
         let along = along_of(g, d, P.pos);
         let score = (if P.lead { 10.0 } else { 0.0 }) - m::abs(along - (w + past));
@@ -1067,7 +1067,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
             let O = &dop!(g, op);
             let spare = O.thr.is_some() && O.phase != Phase::Enter && O.rear.has(gd);
             let from = O.from.get(gd).copied();
-            let A = &mut g.tab.orders_assignment[a];
+            let A = &mut g.tab.task[a];
             A.spare = Some(spare);
             if spare && A.from.is_none() {
                 A.from = from;
@@ -1081,7 +1081,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
 }
 pub(super) fn door_tools_arrived(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     match dop!(g, op).mine.get(gd) {
-        Some(&a) => g.tab.orders_assignment[a].arrived,
+        Some(&a) => g.tab.task[a].arrived,
         None => false,
     }
 }

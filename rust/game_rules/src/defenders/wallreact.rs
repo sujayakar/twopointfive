@@ -145,7 +145,7 @@ fn take_ask(g: &mut Game, row: &crate::wallbreak::LevelChange, b: Option<Wallrea
             match g.tab.wallreact_breach[o].into { Some(n) => ob = Some(n), None => break }
         }
         let a = crate::seats::order_of(g, gd);
-        let at = match a.and_then(|a| g.tab.orders_assignment[a].post) { Some(post) => post, None => g.pos_of(gd) };
+        let at = match a.and_then(|a| g.tab.task[a].post) { Some(post) => post, None => g.pos_of(gd) };
         let mut list = vec![Gone { rect: old.rect, b: ob, who: old.who }];
         list.extend(old.also.unwrap_or_default());
         p.also = Some(wall_react_kept(g, at, &mut list));
@@ -177,7 +177,7 @@ fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
     }
     for it in wall_react_posts(g) {
         if take_own(g, it.gd, row) { continue; }
-        let post = g.tab.orders_assignment[it.a].post.unwrap();
+        let post = g.tab.task[it.a].post.unwrap();
         if rect_dist(post, row.rect) <= near { take_ask(g, row, b, &mut asked, it.gd); }
     }
 }
@@ -232,7 +232,7 @@ fn wall_react_sweep(g: &mut Game) {
         }
         if g.tab.wallreact_breach[b].ops >= 0.0 {
             for it in wall_react_posts(g) {
-                let a = &g.tab.orders_assignment[it.a];
+                let a = &g.tab.task[it.a];
                 if a.arrived { let at = a.post.unwrap(); sweep_ask(g, it.gd, at, b); }
             }
         }
@@ -797,7 +797,7 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if let Some(a) = crate::seats::order_of(g, gd) {
-            if g.tab.orders_assignment[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
+            if g.tab.task[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
         }
     }
     out
@@ -1144,11 +1144,11 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let gd = p.gd;
     let v = crate::seats::view_of(g, gd);
     let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(&crate::seats::here(g), gd)) { Some(a) => a, None => return crate::wallreact::Reconsidered::Fine };
-    let post = match g.tab.orders_assignment[a].post { Some(q) => q, None => return crate::wallreact::Reconsidered::Fine };
+    let post = match g.tab.task[a].post { Some(q) => q, None => return crate::wallreact::Reconsidered::Fine };
     if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
     if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
-    if g.tab.orders_assignment[a].order == crate::wallcharge::WALL_ORDER && g.tab.orders_assignment[a].watch.is_some() { return crate::wallreact::Reconsidered::Fine; }
-    if g.tab.orders_assignment[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return crate::wallreact::Reconsidered::Later; }
+    if g.tab.task[a].order == crate::wallcharge::WALL_ORDER && g.tab.task[a].watch.is_some() { return crate::wallreact::Reconsidered::Fine; }
+    if g.tab.task[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return crate::wallreact::Reconsidered::Later; }
     let q = match wall_react_asks(g, gd, p, post, 1.2) { WallReactAsks::Text(_) => return crate::wallreact::Reconsidered::Fine, WallReactAsks::Arm1(q) => q };
     let threat = q.threat;
     let pb = q.x.b;
@@ -1159,7 +1159,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let to = match to { Some(q) => q, None => { return crate::wallreact::Reconsidered::Later; } };
     let now = g.time;
     let at = g.pos_of(gd);
-    let row = &mut g.tab.orders_assignment[a];
+    let row = &mut g.tab.task[a];
     row.post = Some(to); if row.had == Some(to) { row.had = None; }   // (`had` is asked by value: a mark he had that holds THESE numbers would read as this new one, so that one goes; any other stays)
     row.goal = v3::copy(to);
     row.new_leg = true;   // (an unguarded write of the goal: see Assignment.new_leg)

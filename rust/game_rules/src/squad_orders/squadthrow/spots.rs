@@ -517,13 +517,13 @@ pub(in crate::squad_orders) fn may_walk(g: &crate::game::Game, seat: &crate::sea
     // (a room fight drives a teammate in 'patrol' with no yield stamp: the man it has a gun on is its `tgt`; a stack's or a stand-off's rear man keeps the squad's back)
     if g.gd[gd].state == crate::game::GuardState::Alert { return false; }
     if let Some(a) = a {
-        if g.tab.orders_assignment[a].yield_t >= 0.0 { return false; }
+        if g.tab.task[a].yield_t >= 0.0 { return false; }
     }
     if crate::roomfight::room_fight_op_of(g, gd).map_or(false, |o| g.tab.roomfight_op[o].tgt.is_some()) { return false; }
     match a {
         Some(a) => {
-            if g.tab.orders_assignment[a].spare == Some(true) { return false; }
-            let order = g.tab.orders_assignment[a].order.as_str();
+            if g.tab.task[a].spare == Some(true) { return false; }
+            let order = g.tab.task[a].order.as_str();
             crate::orders::rows::id_is(order, crate::orders::Is::Resumed)
         }
         None => true,

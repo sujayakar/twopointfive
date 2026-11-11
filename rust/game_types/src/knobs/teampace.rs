@@ -40,7 +40,7 @@ pub struct TeampaceK {
     /// for a third to a half of the walk (and his weapon light, rightly, dark for it). So in the walking carriage and with no line from his gun
     /// to the order's watch (to short of it: a door's own leaf stands in its frame), the tick hands his gun a point straight ahead of his chest instead, and he walks his
     /// path facing it (no side-step with his chest to a point he cannot see); once he has the line the watch is his again and the gun comes round to it at the ordered gun's
-    /// own rate. ONLY the order's own watch in the walking carriage (Assignment.move: a stack, a walk to a door, a cover mark, a lane to cover, a stand-off) is asked: a
+    /// own rate. ONLY the order's own watch in the walking carriage (Task.move: a stack, a walk to a door, a cover mark, a lane to cover, a stand-off) is asked: a
     /// point the unasked cover dealt him (dealt on a line of sight), the spotted rule's, the fight's (GuardScript.over: his own eyes) and the legs of an entry or a slice
     /// — which have no walking carriage: their point is the corner the muzzle leads him round to — are not, nor is any drill. The door path hands the same kind
     /// of point, the way he goes, for a gun that would cross an open leaf. `walk_aim_off` / `walk_aim_on`: how long the line must have been shut before the watch is given up,

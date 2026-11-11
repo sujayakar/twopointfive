@@ -68,7 +68,7 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     }
     // the men's own face of the door, off the marks they stand on: no path search to find it
     let a = match w.men.first().copied() { Some(m) => crate::orders::squad_orders_of(&crate::seats::here(g), m), None => None };
-    let post = match a { Some(a) => g.tab.orders_assignment[a].post, None => None };
+    let post = match a { Some(a) => g.tab.task[a].post, None => None };
     let side = match post { Some(p) => crate::orders::side_of(g, door, p), None => td.side };
     let td_men = crate::orders::OrderTargetDoor { side, ..*td };
     let tm = crate::orders::OrderTarget::Door(td_men);

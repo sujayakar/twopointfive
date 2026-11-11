@@ -84,7 +84,7 @@ pub enum WallReactManKnowsHow {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallReactPostsItem {
     pub gd: GuardId,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

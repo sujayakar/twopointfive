@@ -204,7 +204,7 @@ fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId
         Some(a) => a,
         None => return false,
     };
-    if g.tab.doortools_door_op[op].mine.get(gd).copied() != Some(a) || !g.tab.orders_assignment[a].arrived {
+    if g.tab.doortools_door_op[op].mine.get(gd).copied() != Some(a) || !g.tab.task[a].arrived {
         return false;
     }
     if op_tgt(g, gd).is_some() {
@@ -361,10 +361,10 @@ fn line_shown(g: &mut Game, gd: GuardId, quiet: bool) {
 }
 
 /// DOOR, never in a fight: the player stands in the doorway he waits at. He is waved through, and asked to go.
-fn door_shown(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
+fn door_shown(g: &mut Game, gd: GuardId, a: TaskId) {
     let (k, t, pl) = (g.k.showwhy, g.time, g.player);
     let pc = g.pl[pl].ch;
-    let held = !g.tab.orders_assignment[a].arrived
+    let held = !g.tab.task[a].arrived
         && !crate::condition::down(g, pc)
         && crate::doorway::doorway_held_by(g, gd).as_deref() == Some("Player")
         && m::hyp2(g.ch[pc].vel[0], g.ch[pc].vel[2]) < 0.6
@@ -383,7 +383,7 @@ fn door_shown(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 }
 
 /// HURT: that he is hit, once a wound and not long after it; then that he cannot keep up, when the player runs on from him.
-fn hurt_owed(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
+fn hurt_owed(g: &mut Game, gd: GuardId, a: TaskId) {
     let (k, t, c) = (g.k.showwhy, g.time, g.gd[gd].ch);
     if !crate::condition::is_hurt(g, c, None) { return; }
     let (hurt_at, up_at) = (g.cond[c].hurt_at, g.cond[c].fold_until);

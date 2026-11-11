@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// the order's row
 macro_rules! o { ($g:ident, $op:expr) => { $g.tab.doortools_door_op[$op] } }
 /// an assignment's row
-macro_rules! asg { ($g:ident, $a:expr) => { $g.tab.orders_assignment[$a] } }
+macro_rules! asg { ($g:ident, $a:expr) => { $g.tab.task[$a] } }
 /// the order's threshold (`op.thr!`)
 macro_rules! thr { ($g:ident, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as_mut().unwrap() } }
 /// a man's slice (`op.slice.get(gd)!`)
@@ -121,7 +121,7 @@ fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: crate::doortoo
         let kept = stay.has(m);
         let at: V3 = if kept { [mp[0], 0.0, mp[2]] } else { post.pos };
         let words = crate::orders::door_words(g, d);
-        let a = crate::orders::SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::hold::ORDER.id), post: Some(at), face: Some(if kept { v3::yaw_to(at, c) } else { post.face }), watch: Some([c[0], 1.1, c[2]]),
             door: Some(d), shy: Some(d), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
             going: format!("to hold · {}", words).into(), there: format!("holding · {}", words).into(), ..Default::default()
@@ -597,7 +597,7 @@ fn next_through(g: &mut Game, op: DoorOpId, cx: &Cx) {
         if !o!(g, op).men.contains(&q.gd) { continue; }
         o!(g, op).pod.set(q.gd, q.pod);
         // (the order's own assignment shies from its door: this one, that goes through it, does not)
-        let a = crate::orders::SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(o!(g, op).kind.as_str()), door: Some(cx.d), shy: None, post: Some(q.pod.pos), face: Some(q.pod.face), watch: None, thru: Some(cx.d), pace: Some(g.sets[g.seat].orders.knobs.entry),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light_of(&crate::seats::here(g))), search: Some(true), going: format!("entering · {}", cx.name).into(), there: "holding the room".into(), ..Default::default()
         };

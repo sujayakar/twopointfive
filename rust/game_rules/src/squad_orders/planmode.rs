@@ -18,13 +18,13 @@ fn goal_parts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::pla
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
     for m in crate::orders::squad_orders_men(g, seat, Some(crate::orders::SquadOrdersMenSel::All), None) {
         let a = match crate::orders::squad_orders_of(seat, m) {
-            Some(a) if g.tab.orders_assignment[a].post.is_some() => a,
+            Some(a) if g.tab.task[a].post.is_some() => a,
             _ => {
                 idle.push(m);
                 continue;
             }
         };
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         let k = match row.door {
             Some(d) => alloc::format!("d{}", g.doors.list.iter().position(|x| *x == d).map_or(-1, |i| i as i64)),
             None => alloc::format!("g{}", row.group),
@@ -133,7 +133,7 @@ pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraI
 fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
         let on = match crate::orders::squad_orders_of(seat, m) {
-            Some(a) => g.tab.orders_assignment[a].door == Some(door),
+            Some(a) => g.tab.task[a].door == Some(door),
             None => false,
         };
         if !on {

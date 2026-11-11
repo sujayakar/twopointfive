@@ -38,7 +38,7 @@ pub struct CoverJob {
     pub lane_t: f64,
     pub off: bool,
     pub pace: f64,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -46,7 +46,7 @@ pub struct CoverStep {
     pub q: V3,
     pub from: V3,
     pub o: CoverOpeningId,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub t: f64,
     pub done: bool,
     pub saw: bool,
@@ -80,7 +80,7 @@ pub struct Cover {
     pub rear: Option<CoverOpeningId>,
     pub rears: JsMap<GuardId, CoverOpeningId>,
     pub floors: JsMap<GuardId, CoverOpeningId>,
-    pub reads: JsMap<OrdersAssignmentId, crate::cover::CoverReadsValue>,
+    pub reads: JsMap<TaskId, crate::cover::CoverReadsValue>,
     pub kept: JsMap<GuardId, crate::cover::CoverKeptValue>,
     pub outs: JsMap<GuardId, crate::cover::CoverOutsValue>,
 }
