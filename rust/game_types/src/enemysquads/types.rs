@@ -85,6 +85,8 @@ pub enum SentPhase {
     #[default] Set,
     Run,
     Loose,
+    /// he is short of the door he was sent to, waiting for those sent with him
+    Form,
     /// he is on an order of his squad's, with those sent with him
     Told,
 }
@@ -247,8 +249,6 @@ pub struct Entry {
     pub t0: f64,
     /// the stuns they set out with
     pub stuns: f64,
-    /// somebody has said they are on the door
-    pub said: bool,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
