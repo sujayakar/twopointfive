@@ -21,6 +21,7 @@
 //!   marks     a list's rows are dealt as each list is first met, so a box's slot differs (and `HISTORY` masks what says the slot)
 //!   decals    a build leaves the rows of a list that was longer behind its end
 use crate::rows::{Flags, RUN_SECS, SEED};
+use game::handed::PageLook;
 use game::rows::words;
 use game_draw::boxes::{glass::Pane, Cut, Geo, Mat, Row4, Word};
 use game_draw::{want, Drawn, Row};
@@ -41,10 +42,12 @@ const LOOK_AGAIN: usize = 600;
 
 /// THE PAGE'S LOOK, written out: what src/draw/look.ts `lookNumbers` gives (nothing here asks it again) as src/host/drawpage.ts sets it up as a page opens (COATFINISH and SOLIDGLASS on, its cast, the settings as they stand, the cut boxes
 /// on), with the one number a preset decides, the mirrors, as High has it.
-const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
-    26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,
-    -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
-    1.0, 2.0, 1.0, 1.0, 1.0];
+const PAGE_LOOK: PageLook = PageLook {
+    on: 1.0, marks: 1.0, cut: 1.0, round: 1.0, motion: 1.0, panes: 1.0, mirrors: 1.0, air: 1.0, glass_lum: 0.02, glass_rough: 0.05, texel: 0.025,
+    stuff: [26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0],
+    coat: [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
+    swaps: [1.0, 2.0, 1.0, 1.0], wet: 1.0,
+};
 
 /// a row as words: two rows are the same where their bits are (a NaN is the same as itself)
 fn same<T>(a: &T, b: &T) -> bool { unsafe { std::slice::from_raw_parts(a as *const T as *const u8, size_of::<T>()) == std::slice::from_raw_parts(b as *const T as *const u8, size_of::<T>()) } }

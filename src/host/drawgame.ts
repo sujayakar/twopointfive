@@ -6,9 +6,10 @@ import { Drawn, drawRefused } from '../draw/drawn';
 import { Face, HOLDS, type GameNo, type MomentNo } from '../draw/face';
 import { Heard, Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
-import { HAND } from '../draw/hand';
+import { newHand, type Hand } from '../draw/hand';
+import { cursorNow, LeadNow, leadNow, type Doubles } from '../draw/input';
 import { HandTape, MARKS, hashOf, type PartOf, type TapeFigures, type TapeMark, type TapeRow } from '../tape/handtape';
-import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
+import { sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import type { ActionRow, CursorView, DebriefView, EndView, FloorView, HandsSaid, KnobRow, MapView, OutcomeView, RunView, SavesTold, SavesView, ShownRow, Tally, TickView } from '../view/read';
 
 /** what a start is handed beside the level (rust/game_start/src/handed.rs) */
@@ -44,7 +45,7 @@ export class DrawGame {
   /** moves with everything done to the game: what was asked of it before is asked again */
   private done = 0;
   readonly ms = { step: 0, draw: 0 };
-  private numbers = new Float64Array(HAND.count);
+  private readonly hand = newHand();
 
   constructor(f: Fetched) {
     // (a trap, of a panic or of the stack run out, loses the game of that call, and nothing else of it is asked until it stands again)
@@ -85,13 +86,13 @@ export class DrawGame {
   /** the floors' traffic map, two bytes a texel: worked out as it is asked */
   traffic(): Uint8Array<ArrayBuffer> { return this.face.traffic(this.h); }
 
-  /** the numbers of the next hand, to be written by whoever samples the player */
-  numbersOf(): Float64Array { return this.numbers; }
+  /** the next hand, to be written by whoever samples the player */
+  numbersOf(): Hand { return this.hand; }
   /** ONE TICK on the hand as it stands: `keys` = the codes held, a line feed, the codes that went down */
   step(dt: number, keys: string): void {
     const t0 = performance.now();
     this.order();
-    const T = this.tape; T?.step(dt, this.numbersOf(), keys);
+    const T = this.tape; T?.step(dt, this.hand.all, keys);
     this.tick(dt, keys);
     if (T) { if (this.ticks % MARKS.every === 0) { T.mark(this.mark()); T.figures(this.figures()); } if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.ended = T; this.tape = null; } }
     const t1 = performance.now();
@@ -100,7 +101,7 @@ export class DrawGame {
     this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1;
   }
   private tick(dt: number, keys: string, told = SAVES): void {
-    this.face.hand(this.h, 0, this.numbers, keys);
+    this.face.hand(this.h, 0, this.hand.input, this.hand.lens, keys);
     this.face.step(this.h, dt, told);
     this.ticks++; this.done++;
   }
@@ -116,19 +117,22 @@ export class DrawGame {
   figures(): TapeFigures { return { tick: this.ticks, shots: this.tally().stats.shots, men: this.map().men }; }
   /** A ROW OF A TAPE, handed over as it was: `seen` false, a tick nobody is shown (what it left to be drawn is not made, nor kept) */
   feed(row: TapeRow, seen = true): void {
-    if (row.kind === 'step') { const t0 = performance.now(); this.numbersOf().set(row.hand); this.tick(row.dt, row.keys); const t1 = performance.now(); if (seen) this.draw(); this.face.outClear(this.h); this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1; }
+    if (row.kind === 'step') { const t0 = performance.now(); this.hand.all.set(row.hand); this.tick(row.dt, row.keys); const t1 = performance.now(); if (seen) this.draw(); this.face.outClear(this.h); this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1; }
     else if (row.kind === 'order') { this.face.commands(this.h, row.bytes); this.done++; if (seen) this.draw(); }
     else if (row.kind === 'hands') this.handsOff(row.plan);
   }
   /** A TICK STEPPED BY ANOTHER HAND (a networked game's walk): what it left is taken (`seen` false: nobody is shown it; `over`: one after the first before a frame) */
   stepped(seen: boolean, over: boolean): void { this.ticks++; this.done++; if (seen) { if (over) this.drawn.takeOver(this.h); else this.draw(); } this.face.outClear(this.h); }
   /** the shown seat's hand, for the picture's own view: a record handed for the seat after it is what is stepped */
-  shownHand(seat: number, keys: string): void { this.face.hand(this.h, seat, this.numbers, keys); }
+  shownHand(seat: number, keys: string): void { this.face.hand(this.h, seat, this.hand.input, this.hand.lens, keys); }
   /** where the shown man is drawn ahead of the game, this tick of the page's (null: where the game has him); `still`: the game was not stepped in it */
   lead(L: { id: number; from: { pos: ArrayLike<number>; yaw: number }; to: { pos: ArrayLike<number>; yaw: number } } | null, still: boolean): void {
     if (still) this.face.drawHold(this.h);
-    this.face.drawLead(this.h, L ? L.id : 0, L ? [L.from.pos[0], L.from.pos[1], L.from.pos[2], L.from.yaw, L.to.pos[0], L.to.pos[1], L.to.pos[2], L.to.yaw] : []);
+    const N = this.leads;
+    if (L) { N[LeadNow.man] = L.id; N[LeadNow.yaw] = L.from.yaw; N[LeadNow.toYaw] = L.to.yaw; for (let i = 0; i < 3; i++) { N[LeadNow.at + i] = L.from.pos[i]; N[LeadNow.to + i] = L.to.pos[i]; } }
+    this.face.drawLead(this.h, L ? N : null);
   }
+  private readonly leads = leadNow();
   /** A VIEWER'S OWN PICTURE of the run: with the fog off it, and through a tube or not whatever the run's was (null: as the run had it). The first call has the game keep what such a picture is made from */
   viewAs(bared: boolean, tube: boolean | null): void { this.as = [bared, tube]; if (this.lost) return; this.face.drawAs(this.h, bared, tube); this.draw(); }
   private as: [bared: boolean, tube: boolean | null] | null = null;
@@ -146,7 +150,7 @@ export class DrawGame {
   momentDrop(k: MomentNo): void { this.face.momentDrop(k); }
   /** THE FIRST TICKS, PLAYED AND THROWN AWAY: a browser compiles a function of the module as it is first called, and a game's first tick calls thousands of them. `hand` fills in what tick `i` of them is
    *  handed (the keys' text its answer); a tick, then a turn of the event loop. The game stands at its moment again after, and nobody was shown any of it */
-  async warm(n: number, hand: (N: Float64Array, i: number) => string, turn: () => Promise<void>): Promise<void> {
+  async warm(n: number, hand: (N: Hand, i: number) => string, turn: () => Promise<void>): Promise<void> {
     const k = this.face.moment(this.h); if (!k) return;
     const T = this.tape, at = this.ticks, told = this.walked ? 0 : SAVES; this.tape = null;   // (a tape keeps what was played)
     try { for (let i = 0; i < n; i++) { const keys = hand(this.numbersOf(), i); this.tick(1 / 60, keys, told); this.face.outClear(this.h); await turn(); } } catch (e) { if (!this.lost) throw e; /* (lost in them: it stands again below, and is lost in play if it is to be) */ }
@@ -168,7 +172,7 @@ export class DrawGame {
     return null;
   }
   /** what this page says of its look, when it is another than it last said */
-  look(v: Float64Array): void {
+  look(v: Doubles<'PageLook'>): void {
     const was = this.said; if (was) { let i = 0; while (i < v.length && v[i] === was[i]) i++; if (i === v.length) return; }
     this.said = v.slice(); this.face.drawLook(this.h, v); this.draw();
   }
@@ -179,7 +183,7 @@ export class DrawGame {
     const T = this.told; if (!T.view || T.done !== this.done) { T.view = this.face.tickView(this.h); T.done = this.done; }
     return T.view;
   }
-  private cursorN = new Float64Array(CURSOR_DOUBLES); private pointed = { done: -1, view: { under: null } as CursorView };
+  private cursorN = cursorNow(); private pointed = { done: -1, view: { under: null } as CursorView };
   /** WHAT THE CURSOR IS ON, through the camera as it stands: asked again when the cursor, the camera or the game has moved */
   cursor(input: CursorAt, cam: CursorLens, canvas: CursorCanvas): CursorView {
     const T = this.pointed, moved = sampleCursor(this.cursorN, input, cam, canvas);

@@ -73,8 +73,8 @@ each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 
 
 - `hold keep DIR`, then `hold check DIR` on the changed tree: for a change meant to change no play. It names the first frame and the parts that differ.
 - `missions > before.tsv`, the same to `after.tsv`, then `missions diff before.tsv after.tsv`: for a change meant to change play, never a claim about how hard a mission is.
-- `half`: writes the page's half (`src/draw/sections.ts`, `commands.ts`, `asks.ts`, `face.ts`, `src/view/read.ts`) from what Rust declares; `half --check` is red where a file would change, as
-  `tests/half.rs` is, and a module of another stamp is refused as a page loads.
+- `half`: writes the page's half (`sections.ts`, `commands.ts`, `asks.ts`, `face.ts`, `input.ts` and `gpu.ts` of `src/draw/`, `src/view/read.ts`, the shaders' rows) from what Rust declares;
+  `half --check` is red where a file would change, as `tests/half.rs` is, and a module of another stamp is refused as a page loads.
 - `levels second-way | sight | walked | stacks | stands | doors | charges | names | rain`: the level tool, exit 1 a FAIL line.
 
 **Checks.** `bun run tools/qa/checks.ts [group | name …] [--list]`, groups `picture`, `shaders`, `page`, `menus`, `sound`, `levels`, `words`, `build`. Each is a file run in its

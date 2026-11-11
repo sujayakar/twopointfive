@@ -1,6 +1,5 @@
 // A TAPE WALKED (tape/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
 import type { MomentNo } from '../draw/face';
-import { HAND } from '../draw/hand';
 import { ANOTHER, HandWalk, TapeRefused, figuresPart, type TapeFigures, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
 import { GameLost, partsOf, type DrawGame, type Start } from './drawgame';
 
@@ -31,9 +30,9 @@ export class DrawPlay {
 
   /** `same`: it was played on this very module */
   constructor(readonly game: DrawGame, bytes: Uint8Array, private same = true) {
-    this.walk = new HandWalk(bytes, HAND.count); this.rows = new HandWalk(bytes, HAND.count);
+    this.walk = new HandWalk(bytes); this.rows = new HandWalk(bytes);
     let total = 0, ends = ''; for (let r = this.rows.next(); r; r = this.rows.next()) { if (r.kind === 'step') total++; else if (r.kind === 'try') this.tries.push(r.tick); else if (r.kind === 'end') ends = r.why; }
-    this.total = total; this.ends = ends; this.rows = new HandWalk(bytes, HAND.count);
+    this.total = total; this.ends = ends; this.rows = new HandWalk(bytes);
   }
   /** the game from the tape's start, on this build's own parts; a part that is another build's is refused by its name */
   start(own: Pick<Start, 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
