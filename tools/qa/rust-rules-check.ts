@@ -50,6 +50,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs PRICE': 'SCRATCH · one priced search\'s prices, written by the host where the search asked', 'sim/src/nav.rs KNOWN': 'SCRATCH · which cells one priced search has a price for, blank after it',
   'sim/src/nav.rs PRICED': 'SCRATCH · the cells one priced search has a price for, so it can blank them',
   'sim/src/nav.rs RUN': 'SCRATCH · a search set to its start, before it is run', 'sim/src/nav.rs LIVE': 'SCRATCH · whether a search has the tables: one asked from inside a price has none',
+  'sim/src/nav.rs AT': 'SCRATCH · where a cell last stands in one search\'s open list, left blank after it', 'sim/src/nav.rs BEFORE': 'SCRATCH · where it stands beside',
   'sim/src/nav.rs SCORE': 'SCRATCH · one search\'s open cells\' scores', 'sim/src/nav.rs LEAST': 'SCRATCH · the least of each block of them',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
