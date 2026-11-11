@@ -229,10 +229,13 @@ async function main(): Promise<void> {
   const group = (name: string): void => { boot.span('pipelines_' + name, tPipe); }, timed = <T>(name: string, p: Promise<T>): Promise<T> => p.then(v => { group(name); return v; });
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
-  // (while the programs compile: the ticks a run begins with, still, walking and firing)
+  // (while the programs compile: the ticks a run begins with, still, with an order given at the nearest doors, walking and firing)
   if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
-    await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, size), nextTask); }
+    const { men: who, doors } = game.map(), me = who.find(m => m.kind === 'player'), off = (d: { hx: number; hz: number }): number => me ? Math.hypot(d.hx - me.x, d.hz - me.z) : 0;
+    const near = doors.sort((a, b) => off(a) - off(b)).map(d => eye.project([d.hx + d.ux * d.width / 2, 1, d.hz + d.uz * d.width / 2], w, h)), order = new Set(['KeyB']), STILL = WARM / 3;
+    await game.warm(WARM, (N, i) => { const told = i < STILL && i >= 4 && i % 2 === 0 ? order : none, [x, y] = i < STILL && near[i >> 1] || [w * 0.6, h * 0.4];   // (… the order on one door after another: some are behind a wall, and what is not a door is a walk)
+      return sampleHand(N, { keys: i < STILL ? told : walk, pressed: told, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: x, mouseY: y }, eye, size); }, nextTask); }
   await made;
   boot.span('pipelines', tPipe); boot.mark('pipelines'); boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up'; pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
   const quality = new Quality(engine, smoke); quality.visit(location.search); pictureOpens(q, engine, quality); quality.onCalibrated = refreshOptions; (window as unknown as { __quality: Quality }).__quality = quality;
