@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 use crate::character::Bone;
-use crate::game::{GuardBodyDuty, GuardBodyDutyRole, GuardBodyDutyStage, GuardBubble, GuardState, GuardTask, GuardTaskCheckOn};
+use crate::game::{GuardBodyDuty, GuardBodyDutyRole, GuardBodyDutyStage, GuardBubble, GuardState, Errand, ErrandCheckOn};
 use crate::teams::Team;
 
 // ---- small readers
@@ -209,17 +209,17 @@ fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
 }
 /// Somebody already out walking this man's route.
 pub fn checker_for(g: &crate::game::Game, m: GuardId) -> Option<GuardId> {
-    g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(k)) if k.who == m))
+    g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].errand, Some(Errand::CheckOn(k)) if k.who == m))
 }
 /// A silent man is being looked for right now: the floor's alarm level holds meanwhile.
 fn still_looking(g: &mut crate::game::Game) -> bool {
     rollcall_state(g).stage == RollcallStage::Asked
-        || g.guards.iter().any(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].task, Some(GuardTask::CheckOn(_))))
+        || g.guards.iter().any(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(&g.gd[x].errand, Some(Errand::CheckOn(_))))
 }
 /// calm, free of orders, errands and bodies, and of Sam's arm
 fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
     let d = &g.gd[x];
-    x != m && d.state == GuardState::Patrol && !d.duty.holds && d.script.is_none() && d.task.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
+    x != m && d.state == GuardState::Patrol && !d.duty.holds && d.script.is_none() && d.errand.is_none() && d.body_duty.is_none() && d.held.is_none() && g.ch[d.ch].team == Team::Guard
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
@@ -248,7 +248,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     }
     let pos: V3 = if !pts.is_empty() { v3::copy(pts[i0]) } else { v3::copy(post_of(g, m)) };
     let t0 = g.time;
-    g.gd[gd].task = Some(GuardTask::CheckOn(GuardTaskCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
+    g.gd[gd].errand = Some(Errand::CheckOn(ErrandCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
     crate::mind::fix(g, gd, Some(v3::copy(pos)), "guards");
     crate::mind::raise(g, gd, 0.42, "guards");
     if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "guards"); g.gd[gd].react_t = 0.8; }
@@ -262,10 +262,10 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.
 pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
-    let k = match &g.gd[gd].task { Some(GuardTask::CheckOn(k)) => *k, _ => return };
+    let k = match &g.gd[gd].errand { Some(Errand::CheckOn(k)) => *k, _ => return };
     let who = k.who;
     if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) {
-        g.gd[gd].task = None;
+        g.gd[gd].errand = None;
         if g.gd[who].found && crate::condition::down(g, g.gd[who].ch) && g.guards.contains(&who) && g.gd[gd].body_duty.is_none() {
             let t0 = g.time;
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
@@ -284,15 +284,15 @@ pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
 }
 /// The next of the missing man's waypoints, or, the last one looked at, he is not on his route.
 pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
-    let who = match &g.gd[gd].task { Some(GuardTask::CheckOn(k)) => k.who, _ => return };
+    let who = match &g.gd[gd].errand { Some(Errand::CheckOn(k)) => k.who, _ => return };
     let pts = route_points(g, who).unwrap_or_default();
-    let left = match &mut g.gd[gd].task {
-        Some(GuardTask::CheckOn(k)) => { k.left -= 1.0; k.left }
+    let left = match &mut g.gd[gd].errand {
+        Some(Errand::CheckOn(k)) => { k.left -= 1.0; k.left }
         _ => return,
     };
     if left <= 0.0 || pts.is_empty() { check_on_done(g, gd, who, false); return; }
     let mut pos = [0.0; 3];
-    if let Some(GuardTask::CheckOn(k)) = &mut g.gd[gd].task {
+    if let Some(Errand::CheckOn(k)) = &mut g.gd[gd].errand {
         k.wp = js::rem(k.wp + 1.0, pts.len() as f64);
         pos = v3::copy(pts[k.wp as usize]);
         k.pos = pos;
@@ -310,7 +310,7 @@ pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.
 fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: bool) {
-    g.gd[gd].task = None;
+    g.gd[gd].errand = None;
     g.gd[gd].search_t = 0.0;
     { let to = v3::clamp(g.gd[gd].awareness, 0.2, 0.3); crate::mind::set(g, gd, to, "guards"); }
     let line = if capped {

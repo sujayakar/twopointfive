@@ -159,7 +159,7 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
         && x.awareness < awareness
         && x.held.is_none()
         && x.script.is_none()
-        && x.task.is_none()
+        && x.errand.is_none()
         && x.body_duty.is_none()
         && !x.duty.holds
         && !x.duty.pinned
@@ -204,10 +204,10 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if x.body_duty.is_some() {
         return Some(String::from("a body"));
     }
-    if let Some(task) = x.task.as_ref() {
+    if let Some(task) = x.errand.as_ref() {
         let kind = match task {
-            crate::game::GuardTask::Arm0(a) => a.kind.as_str(),
-            crate::game::GuardTask::CheckOn(_) => "checkOn",
+            crate::game::Errand::At(a) => a.kind.as_str(),
+            crate::game::Errand::CheckOn(_) => "checkOn",
         };
         return Some(format!("an errand ({})", kind));
     }

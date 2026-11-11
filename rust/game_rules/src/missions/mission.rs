@@ -218,7 +218,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
 
 /// The dead rack is noticed: the nearest calm patrol goes to look at it.
 pub fn send_rack_check(g: &mut crate::game::Game) {
-    use crate::game::{GuardState, GuardTask, GuardTaskArm0, GuardTaskArm0Kind};
+    use crate::game::{GuardState, Errand, ErrandAt, ErrandThing};
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) {
         return;
@@ -230,7 +230,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let mut bd = 1e9;
     for &gd in g.guards.iter() {
         let t = &g.gd[gd];
-        if t.state != GuardState::Patrol || t.duty.holds || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.task.is_some() {
+        if t.state != GuardState::Patrol || t.duty.holds || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.errand.is_some() {
             continue;
         }
         let d = v3::dist(g.ch[t.ch].pos, goal);
@@ -241,7 +241,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let Some(best) = best else { return };
     {
-        g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
+        g.gd[best].errand = Some(Errand::At(ErrandAt { kind: ErrandThing::Rack, pos: goal }));
         crate::mind::fix(g, best, Some(v3::copy(goal)), "mission");
         crate::mind::raise(g, best, 0.42, "mission");
         crate::mind::set_state(g, best, GuardState::Suspicious, "mission");

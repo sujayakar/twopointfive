@@ -14,7 +14,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
     let target = g.tab.route[route].points.get(g.gd[gd].wp).copied();
     if g.gd[gd].drawn { upper = UpperMode::Aim; }
     if g.gd[gd].body_duty.is_some() && g.gd[gd].awareness < 0.3 { g.gd[gd].body_duty = None; }
-    if matches!(g.gd[gd].task, Some(crate::game::GuardTask::CheckOn(_))) { g.gd[gd].task = None; }
+    if matches!(g.gd[gd].errand, Some(crate::game::Errand::CheckOn(_))) { g.gd[gd].errand = None; }
     let walk = g.tune.guard_walk * (if lvl >= 1.0 { 1.15 } else { 1.0 });
     if g.gd[gd].duty.holds {
         g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(g.gd[gd].look_phase * 0.5) * 0.2, 2.0, dt);

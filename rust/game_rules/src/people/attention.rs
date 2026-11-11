@@ -184,7 +184,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let calm = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && man.body_duty.is_none()
-        && man.task.is_none()
+        && man.errand.is_none()
         && man.awareness < g.k.attention.calm_aw
         && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
