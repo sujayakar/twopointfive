@@ -334,7 +334,6 @@ pub struct Game {
     pub dice: crate::dice::Draws,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
     pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,

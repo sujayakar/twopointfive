@@ -126,9 +126,9 @@ pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
     alloc::format!("a ray that is no number{} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)", at)
 }
 
-/// a question's word of the rows: the block that holds them is this game's
-fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
-    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
+/// a question's word of the level's lamps
+fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows<'_>> {
+    r.map(|r| sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
 }
 
 /// a sense's question the module handed back, in words
@@ -445,7 +445,8 @@ pub fn grid_step(g: &mut crate::game::Game, n: u32, k: crate::scene_collision::G
         decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, share: &share, wind_keep: k.in_wind,
         wind_x: w.map_or(0.0, |w| w.x), wind_z: w.map_or(0.0, |w| w.z), wind_low: w.map_or(1.0, |w| w.low), wind_gain: w.map_or(0.0, |w| w.gain), wind_full_at: w.map_or(1.0, |w| w.full_at),
     };
-    let gk = sim::glow::K { sweep, sky, lamps: &lamps, rows: rows_for(g, Some(said)) };
+    let rows = sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(said.leave), steady: said.steady, exposure: crate::hours::exposure(g) };
+    let gk = sim::glow::K { sweep, sky, lamps: &lamps, rows: Some(rows) };
     sim::bricks::step(&mut g.smoke, &g.made, g.tab.boxes.world(), n, &bk, Some(&gk), &g.k)
 }
 
@@ -792,9 +793,9 @@ mod tests {
     #[test]
     fn a_question_says_how_the_rows_are_read() {
         let mut g = Box::new(Game::blank());
-        g.sim = 2;
+        g.light_home.rows = vec![Default::default(); 2];
         let rows = rows_for(&g, Some(LampRows { leave: 4.0, steady: true })).unwrap();
-        assert_eq!((rows.g, rows.leave, rows.steady), (2, 4, true));
+        assert_eq!((rows.lamps.len(), rows.leave, rows.steady), (2, 4, true));
         assert!(rows_for(&g, None).is_none());
     }
 

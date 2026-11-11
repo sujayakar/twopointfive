@@ -69,7 +69,43 @@ pub struct Mains {
 pub struct LightHome {
     pub mains: Mains,
     pub lamps: Vec<LightId>,
+    /// those lamps as a light question reads them, in the same order: that of the engine's list, which a sum of floats over them is made of, so nothing sorts them
+    pub rows: Vec<Lamp>,
 }
+
+/// A LAMP A LEVEL'S FIXTURE FEEDS (a fixture's own light, an area light of a flat fixture or a marking, a beacon's spot, a camera's cone), AS A LIGHT QUESTION READS IT. Lamps nobody's
+/// fixture feeds stay the question's own (a man's torch, a flash), each with how many of these stand before it in the engine's list.
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
+pub struct Lamp {
+    pub pos: V3,
+    pub range: f64,
+    pub radius: f64,
+    pub kind: f64,
+    pub dir: V3,
+    pub outer: f64,
+    pub inner: f64,
+    pub color: V3,
+    pub intensity: f64,
+    pub on: bool,
+    /// its steady self: what who asks what the PLACE lights takes (a fire's, a bad tube's)
+    pub steady: Option<Steady>,
+    /// which questions leave it out (PASSING: one of what the place lights; SCREEN: a sleeper's face)
+    pub leave: u32,
+    /// what it is by day (rust/sim light.rs by_day)
+    pub day: u32,
+    /// what feeds it, an area light's own strength (a beacon's: its peak), and the fixture it follows
+    pub feed: Feed,
+    pub base: f64,
+    pub target: FixtureId,
+}
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
+pub struct Steady { pub pos: V3, pub radius: f64, pub intensity: f64 }
+pub const PASSING: u32 = 2;
+pub const SCREEN: u32 = 4;
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, ToBytes)]
+pub enum Feed { #[default] Own, Area, Beacon, Cone }
+/// lamps fixtures feed, at most (a level over it is refused at load, by name)
+pub const LAMPS: usize = 256;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CameraState {

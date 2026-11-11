@@ -47,7 +47,7 @@ pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
 }
 
 /// Makes a player: his guns first (the field initialisers), then his body.
-pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
+pub(in crate::tick) fn player_new(g: &mut crate::game::Game, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
     let has_rifle = has_rifle.unwrap_or(true);
     let seat = seat.unwrap_or(0.0);
     let pistol = crate::weapons::pistol_new(g, None);
@@ -59,7 +59,6 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
         tint2: if js::truthy(seat) { [0.1, 0.2, 0.36] } else { [0.1, 0.32, 0.18] },
         pos,
         yaw: m::PI,
-        men: Some(men),
     };
     let c = crate::character::character_new(g, ch, desc);
     let mut p = crate::game::Player::new(c, has_rifle, pistol, rifle);
@@ -177,7 +176,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
 }
 
 /// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own).
-pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2: f64, route: RouteId, route_i: i32, flashlight: LightId, tint: V3, look: Option<&crate::game::GuardNewLook>) -> GuardId {
+pub fn guard_new(g: &mut crate::game::Game, ch: RigId, id_2: f64, route: RouteId, route_i: i32, flashlight: LightId, tint: V3, look: Option<&crate::game::GuardNewLook>) -> GuardId {
     let id = g.gd.push(Guard::blank());
     g.gd[id].witness = new_witness();
     g.gd[id].talk = new_talk(g);
@@ -194,7 +193,6 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
         tint2: look.and_then(|l| l.tint2).unwrap_or([0.02, 0.02, 0.025]),
         pos,
         yaw: match look.and_then(|l| l.yaw) { Some(y) => y, None => v3::yaw_to(pos, p1) },
-        men: Some(men),
     };
     let c = crate::character::character_new(g, ch, desc);
     g.gd[id].ch = c;

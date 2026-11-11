@@ -1296,7 +1296,6 @@ pub struct CharacterDesc {
     pub tint2: V3,
     pub pos: V3,
     pub yaw: f64,
-    pub men: Option<crate::Opaque>,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -1364,10 +1363,8 @@ pub struct Character {
     #[is(crate::character::Who::Guard(GuardId(0)))] pub who: crate::character::Who,
     /// whose man he is
     pub team: crate::teams::Team,
-    /// his row of the block's men. None (0xffffffff) once he has left, or for a man of no game
-    #[is(0xffffffff)] pub man_row: u32,
-    /// owner, rank, reason, since of a man with no row: the numbers he took with him (`man_leaves`)
-    pub man_kept: Option<[f64; 4]>,
+    /// whose man he is now: who has a hand on him (owner.rs)
+    pub hold: crate::owner::Hold,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
