@@ -579,7 +579,7 @@ mod tests {
     use super::*;
     // the pinned bits of dist_xz and path_len
     #[test]
-    fn flat_and_path_len_have_the_typescripts_bits() {
+    fn flat_and_path_len_keep_their_bits() {
         assert_eq!(dist_xz([1.1, 9.0, 2.3], [-4.7, 0.0, 8.9]).to_bits(), 0x4021929cde1931e6);
         assert_eq!(path_len([0.1, 0.0, 0.2], &[[1.3, 0.0, 2.7], [3.9, 5.0, -1.1], [-2.25, 0.0, 0.7]]).to_bits(), 0x402b92245733eab8);
     }

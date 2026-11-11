@@ -268,7 +268,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn point_and_blast_seeds_are_the_typescript_s() {
+    fn point_and_blast_seeds_are_as_pinned() {
         let cases: [(f64, V3, f64, f64); 6] = [
             (0.0, [0.0, 0.0, 0.0], 0.0, 0.0),
             (2654435761.0, [1.2345, -0.0005, 0.0005], 2481012589.0, 2481012589.0),
@@ -284,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn a_blast_s_draws_are_the_typescript_s() {
+    fn a_blast_s_draws_are_as_pinned() {
         let cases: [(u32, u32); 6] = [
             (0, 695872825),
             (1, 1435855270),
@@ -305,7 +305,7 @@ mod tests {
     ];
 
     #[test]
-    fn a_box_s_seeds_and_normal_are_the_typescript_s() {
+    fn a_box_s_seeds_and_normal_are_as_pinned() {
         let want: [(f64, f64, bool, [u64; 3]); 4] = [
             (3611120674.0, 455261860.0, true, [0x3ff0000000000000, 0x0, 0x8000000000000000]),
             (4014362709.0, 3716110216.0, true, [0x3fe49d6e694619b8, 0x0, 0x3fe87996529f9d92]),

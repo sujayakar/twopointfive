@@ -26,7 +26,6 @@ pub struct WallSkin {
     pub solid: Vec<u8>,
     #[is(1000000000.0)] pub room: f64,
     pub was: bool,
-    pub failed: bool,
     pub marked: JsSet<crate::Num>,
 }
 

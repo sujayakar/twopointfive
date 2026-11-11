@@ -1034,7 +1034,7 @@ mod tests {
     use super::*;
     /// the pinned words
     #[test]
-    fn check_word_is_the_typescripts() {
+    fn check_word_is_as_pinned() {
         assert_eq!(check_word("Alpha", 0.0, 1.75), WORD_ALPHA);
         assert_eq!(check_word("Élan squad", 625341585.0, 0.123456789), WORD_ELAN);
         assert_eq!(check_word("", 0.0, 0.0), WORD_EMPTY);

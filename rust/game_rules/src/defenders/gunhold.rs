@@ -1150,7 +1150,7 @@ mod tests {
 
     // the pinned bits of dist_xz
     #[test]
-    fn flat_matches_the_typescript() {
+    fn flat_is_as_pinned() {
         let d = dist_xz([1.25, 9.0, -3.5], [4.75, -2.0, 7.125]);
         assert_eq!(d.to_bits(), FLAT_BITS);
     }

@@ -411,7 +411,7 @@ mod tests {
 
     // The expected bits are pinned.
     #[test]
-    fn frame_is_the_typescripts() {
+    fn frame_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         assert_eq!(f.ux.to_bits(), 0x3fe87996529f9d92);
         assert_eq!(f.uz.to_bits(), 0x3fe49d6e694619b8);
@@ -420,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn crossing_is_the_typescripts() {
+    fn crossing_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         let (a, b) = ([3.03, 0.0, -0.38], [4.31, 0.0, -1.91]);
         let x = crosses_frame(&f, a, b).unwrap();

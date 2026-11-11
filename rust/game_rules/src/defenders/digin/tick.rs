@@ -847,7 +847,7 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
     #[test]
-    fn leg_dist_has_the_typescripts_bits() {
+    fn leg_dist_keeps_its_bits() {
         assert_eq!(leg_dist([1.3, 0.0, 2.7], [0.1, 0.0, -3.3], [7.7, 0.0, 4.9]).to_bits(), 0x400996784bec9bcf);
         assert_eq!(leg_dist([-5.5, 0.0, 0.33], [2.0, 0.0, 2.0], [2.0, 0.0, 2.0]).to_bits(), 0x401ebc15f4b30045);
         assert_eq!(leg_dist([9.1, 0.0, 9.2], [0.0, 0.0, 0.0], [1.1, 0.0, 0.7]).to_bits(), 0x40275861532b8544);

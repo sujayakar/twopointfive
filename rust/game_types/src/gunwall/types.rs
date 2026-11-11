@@ -19,8 +19,6 @@ pub struct Hold {
     pub a: V3,
     pub b: V3,
     pub hot: bool,
-    /// dealt when a hold starts
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

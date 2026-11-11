@@ -194,13 +194,13 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
     let bars = flagged(g, &col.boxes, flag.bar);
     rows.push(row("window's bars (a row a bar gone, in the game's block)", bars, ::sim::panes_cap(0) as f64));
     rows.push(row("doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors));
-    rows.push(row("a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
+    rows.push(row("a man a seat and the guards as the level is stood up (what a spawned unit is counted against the picture's budget of characters by)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
     let man_rows = men_most(g, civs);
     rows.push(row("rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64));
     let civ_cap = civ_most(g);
     let poses = men_most(g, civ_cap) * man_singles_of(g, g_2);
     rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, crate::anim_skeleton::pose_pool_room()));
-    rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap));
+    rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play, and every one is held to this number as they join)", civs, civ_cap));
     rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, crate::doors::DOOR_CONTACTS));
     rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));
     rows.push(row("lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps));

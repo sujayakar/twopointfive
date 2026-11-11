@@ -11,7 +11,7 @@ macro_rules! thr { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as
 
 /// `detonate_stun` with nobody on its list: the guards' list is emptied around the call and put back as it was, so the stun's blast finds no man
 /// to judge (who it hurts is decided by the caller, by which side of the door he is on). A man added to the emptied list during the call would be lost with it.
-fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) {
+fn detonate_stun_at_nobody(g: &mut Game, it: ItemId) {
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
     g.guards = all;
@@ -60,7 +60,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
     let spot = door_pt(g, d, w * 0.7, 0.2, into, Some(0.5));
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, spot, [0.0, 0.0, 0.0], Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     g.tab.item[it].fired = true;
-    seam_detonate_stun_nobody(g, it);
+    detonate_stun_at_nobody(g, it);
     if let Some(ii) = g.items.items.iter().position(|x| *x == it) { g.items.items.remove(ii); }
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);
     let fc = g.dr[d].frame_centre;
