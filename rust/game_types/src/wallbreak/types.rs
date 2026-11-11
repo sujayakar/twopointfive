@@ -46,6 +46,8 @@ pub struct BlastOpts {
     pub chaos: Option<bool>,
     pub breach: Option<f64>,
     pub hung: Option<crate::wallbreak::BlastOptsHung>,
+    /// how far it reaches glass and how hard, if not as it reaches the rest
+    pub glass: Option<[f64; 2]>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -76,9 +78,9 @@ pub struct BlastResult {
 pub struct BlastEvent {
     pub at: V3,
     pub radius: f64,
-    pub power: f64,
     pub who: f64,
-    pub res: crate::wallbreak::BlastResult,
+    /// how far it reaches glass and how hard
+    pub glass: [f64; 2],
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
