@@ -1032,7 +1032,7 @@ mod tests_2 {
     ];
     const LEN: u64 = 0x4023ea2894d21e60;
     #[test]
-    fn along_walks_as_the_typescript_does() {
+    fn along_gives_the_pinned_walks() {
         let path: [V3; 3] = [[1.7, 0.0, 2.9], [1.7, 0.0, 2.9], [-3.3, 1.0, 0.123]];
         let mut seen: Vec<[u64; 3]> = Vec::new();
         let l = along([0.3, 7.0, -1.1], &path, &mut |p, s| seen.push([p[0].to_bits(), p[2].to_bits(), s.to_bits()]));

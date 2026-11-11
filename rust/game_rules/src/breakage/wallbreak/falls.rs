@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box held by value, made a row.
-fn seam_box_push(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
+fn box_pushed(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
 
 // ---------------------------------------------------------------- local helpers
 
@@ -37,7 +37,7 @@ fn scratch() -> Vec<i32> { vec![0; 96] }
 pub(super) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell: &crate::scene_boxes::Box, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) {
     let (surf, hard) = { let r = &g.tab.wallbreak_breakable[b]; (r.surf, r.hard) };
     let as_ = if hard == Some(true) { Some(crate::break_table::Mat::Blockwork) } else { None };
-    let cell = seam_box_push(g, cell);
+    let cell = box_pushed(g, cell);
     let r = crate::break_table::breaks_shed_cell(g, surf, cell, dir, who, budget, as_);
 }
 

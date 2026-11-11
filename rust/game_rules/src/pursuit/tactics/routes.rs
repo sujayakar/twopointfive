@@ -705,7 +705,7 @@ mod tests {
     const DIST_POINT: u64 = 0x4025e3890c1ed489u64;
 
     #[test]
-    fn the_typescripts_own_bits() {
+    fn the_pinned_bits() {
         assert_eq!(dist_xz(FROM, T).to_bits(), FLAT);
         assert_eq!(v3::yaw_to(T, FROM).to_bits(), BEARING);
         assert_eq!(deg_apart(2.9, -3.1).to_bits(), DEG_APART);

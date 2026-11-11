@@ -196,7 +196,7 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
         None => (marks(if back { &MV2.reload.back } else { &MV2.reload.box_ }), None),
     };
     if let Some(k) = &keys {
-        crate::anim_skeleton::layer_fits("a reload's list of the hand's stations (gunreload.ts feedPath)", k.len() as f64, crate::anim_skeleton::LAYER_KEYS_MAX, None);
+        crate::anim_skeleton::layer_fits("a reload's list of the hand's stations", k.len() as f64, crate::anim_skeleton::LAYER_KEYS_MAX, None);
     }
     anim_layer(g, c, |s, an, k| ::sim::layers::reload_arm(s, an, t, w, &marks, keys.as_deref(), k));
 }

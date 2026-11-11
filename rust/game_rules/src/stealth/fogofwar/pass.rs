@@ -12,7 +12,7 @@ fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
-    let k = g.tab[b].mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
+    let k = g.tab[b].mkey.expect("fog: a box with no key");
     key_of_mkey(g, k)
 }
 

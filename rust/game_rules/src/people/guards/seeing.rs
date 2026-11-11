@@ -358,7 +358,7 @@ mod tests {
 
     /// Pinned bits of the motion factor and the player's ground velocity, on the same frames.
     #[test]
-    fn ground_track_and_motion_match_the_typescript() {
+    fn ground_track_and_motion_are_as_pinned() {
         let eye: V3 = [3.25, 0.0, -1.5];
         let lit = 0.4;
         let mut row = crate::guards::GuardsModGroundTrackValue { pos: [0.0, 0.0, 0.0], t: 10.0, vel: [0.0, 0.0, 0.0] };

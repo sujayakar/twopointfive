@@ -783,7 +783,7 @@ impl DoorsAsk for Play {
     fn frags_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.frags }
     fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool { game::squadthrow::squad_thrower(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag).is_some() }
     fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])> {
-        let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag, Some(true), None)?;
+        let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag)?;
         let q = t.post?;
         Some((t.gd, [q[0], q[2]]))
     }

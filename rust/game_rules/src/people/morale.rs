@@ -650,7 +650,7 @@ mod tests {
     }
     /// pinned bits
     #[test]
-    fn flat_is_the_typescripts() {
+    fn flat_is_as_pinned() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 0.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         assert_eq!(dist_xz([0.1, 0.0, -9.3], [7.77, 0.0, 0.004]).to_bits(), 0x40281da70b81d837);
     }

@@ -150,7 +150,7 @@ fn own_lamps(g: &Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&Game, f
     let mut rows = 0.0;
     for &l in &g.engine.lights.lights {
         if let Some(r) = g.tab.light[l].row {
-            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
+            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order", g.tab.light[l].name, r, rows); }
             rows += 1.0;
             continue;
         }

@@ -478,7 +478,7 @@ mod tests {
     fn blank() -> Box<Game> { Box::new(Game::blank()) }
     // pinned: (0x61A55 ^ imul(key, 2654435761)) >>> 0
     #[test]
-    fn the_gust_seed_is_the_typescripts() {
+    fn the_gust_seed_is_as_pinned() {
         assert_eq!(seed_mix_gust(3735928559.0).to_bits(), 0x41e397dc0d400000);
     }
     // panes.rs's ANNEALED, TEMPERED, LAMINATED: `PaneType` lists its words in another order

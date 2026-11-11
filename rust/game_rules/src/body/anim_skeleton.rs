@@ -17,9 +17,9 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
     let min = min.unwrap_or(0.0);
     if !(n >= min && n <= max) {
         if min > 0.0 {
-            panic!("posing: {} has {} entries and a layer of the Rust module takes {} to {} (rust/sim/src/layers and knobs.rs hold the lengths)", what, n, min, max);
+            panic!("posing: {} has {} entries and a layer takes {} to {} (rust/sim/src/layers and roles.rs hold the lengths)", what, n, min, max);
         }
-        panic!("posing: {} has {} entries and a layer of the Rust module takes at most {} (rust/sim/src/layers and knobs.rs hold the lengths)", what, n, max);
+        panic!("posing: {} has {} entries and a layer takes at most {} (rust/sim/src/layers and roles.rs hold the lengths)", what, n, max);
     }
 }
 
@@ -51,11 +51,11 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
     let (ch, set) = (g.ch[c].anim.rig, g.ch[c].anim.poses);
     let stray = g.tab.pose_set[set].stray;
     if stray != 0.0 {
-        panic!("posing: a man has {} pose(s) the pose pool had no room for, and a layer is posed only where all of his stand in the module (game/posehome.ts holds the pool's size)", stray);
+        panic!("posing: a man has {} pose(s) the pose pool had no room for, and a layer is posed only where all of his stand in the module", stray);
     }
     let slot = g.sim as f64;
     if !bench_rig(g, ch) {
-        panic!("posing: a layer was asked of a rig the module's bench does not hold (anim/skeleton.ts benchRig: the rig's nodes or its order are more than the bench has room for)");
+        panic!("posing: a layer was asked of a rig the bench does not hold: its nodes or its order are more than the bench has room for");
     }
     if g.m.anim_skeleton.layers.roles != Some(ch) {
         if g.m.anim_skeleton.layers.names.is_none() {
@@ -73,17 +73,17 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
         // a name the animator does not have, and a list or a table longer than the module holds, are found before a word is written
         for r in &names.roles {
             if cast_node(cast, r).is_none() {
-                panic!("posing: the Rust module asks for the node \"{}\" (rust/sim/src/knobs.rs) and the animator has none of that name", r);
+                panic!("posing: a layer asks for the node \"{}\" (rust/sim/src/roles.rs) and the animator has none of that name", r);
             }
         }
         for l in &names.lists {
             if cast_list(cast, l).is_none() {
-                panic!("posing: the Rust module asks for the list \"{}\" (rust/sim/src/knobs.rs) and the animator has none of that name", l);
+                panic!("posing: a layer asks for the list \"{}\" (rust/sim/src/roles.rs) and the animator has none of that name", l);
             }
         }
         for t in &names.nums {
             if cast_nums(cast, t).is_none() {
-                panic!("posing: the Rust module asks for the table \"{}\" (rust/sim/src/knobs.rs) and the animator has none of that name", t);
+                panic!("posing: a layer asks for the table \"{}\" (rust/sim/src/roles.rs) and the animator has none of that name", t);
             }
         }
         for l in &names.lists {
@@ -192,7 +192,7 @@ fn span_of(p: Pose) -> (usize, usize) {
         return (0, 0);
     }
     if p.at >= Pose::LOOSE {
-        panic!("posing: a pose of {} nodes has no place in the block: the pose pool had no room as it was made, or the state bridge carried a pose that was an array of its own and no body took it home with pose_take_home (game/levelfit.ts holds the pool's size)", p.nodes);
+        panic!("posing: a pose of {} nodes has no place in the block: the pose pool had no room as it was made, or a pose of its own was not taken home with pose_take_home (the level's fit holds the pool's size)", p.nodes);
     }
     (p.at as usize - ::sim::poses::HEAD / 4, ::sim::skeleton::singles(p.nodes as usize))
 }
@@ -350,7 +350,7 @@ pub(super) fn pose_set_new(g: &mut crate::game::Game, most: f64) -> PoseSetId {
 pub(super) fn pose_set_make(g: &mut crate::game::Game, id: PoseSetId, n: f64) -> crate::anim_skeleton::Pose {
     let most = g.tab.pose_set[id].most;
     if g.tab.pose_set[id].list.len() as f64 >= most {
-        panic!("posing: a set of {} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number: game/levelfit.ts fitRows)", most);
+        panic!("posing: a set of {} poses at most is asked for one more (the owner says how many it keeps as it makes the set, and a level is held to the pose pool by that number)", most);
     }
     // (a pose made while the set is at home is made in the pool; one made before stands outside it until the set goes home)
     let p = if g.tab.pose_set[id].home.is_some() { pose_pool_new(g, n as usize) } else { pose_new(g, n as usize) };
@@ -588,7 +588,7 @@ pub(super) fn clip_no(g: &mut crate::game::Game, clip: ClipId, nodes: f64) -> f6
     }
     let name = &g.art.clip[clip].name;
     if at < 0.0 {
-        panic!("posing: a layer samples the clip \"{}\" and the Rust module does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)", name);
+        panic!("posing: a layer samples the clip \"{}\" and the store does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)", name);
     }
     panic!("posing: a layer samples the clip \"{}\", which writes node {}, over a pose of {} nodes", name, need - 1.0, nodes);
 }
@@ -596,7 +596,7 @@ pub(super) fn clip_no(g: &mut crate::game::Game, clip: ClipId, nodes: f64) -> f6
 /// A character file's clips against what the module holds, as an animator is made.
 pub(super) fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes: f64) {
     if nodes > BENCH_NODES {
-        panic!("posing: a rig of {} nodes is more than the Rust module's bench holds ({}: anim/skeleton.ts BENCH_NODES with rust/sim/src/skeleton.rs), and a layer is posed nowhere else", nodes, BENCH_NODES);
+        panic!("posing: a rig of {} nodes is more than the bench holds ({}: rust/sim/src/skeleton.rs), and a layer is posed nowhere else", nodes, BENCH_NODES);
     }
     for c in clips {
         clip_no(g, *c, nodes);

@@ -57,7 +57,7 @@ fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bo
 
 /// `same` of two DIGIN tables.
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, reach_m, noticed_secs, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words

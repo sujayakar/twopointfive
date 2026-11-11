@@ -35,7 +35,7 @@ fn world_gather(g: &Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, 
 }
 
 /// a box's row
-fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
+fn box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     let x = &g.tab.boxes[b];
     (x.c, x.h, x.yaw)
 }
@@ -546,7 +546,7 @@ fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     let n = world_gather(g, x0, z0, x1, z1, Y_MIN, y1, &mut near) as usize;
     let mut kept = 0;
     for k in 0..n {   // keep only footprints that overlap the body's box
-        let (bc, bh, yaw) = seam_box_row(g, g.col.boxes[near[k] as usize]);   // (near holds places in the list wd.boxes)
+        let (bc, bh, yaw) = box_row(g, g.col.boxes[near[k] as usize]);   // (near holds places in the list wd.boxes)
         let (c, s) = (m::cos(yaw), m::sin(yaw));
         let (ex, ez) = (m::abs(c) * bh[0] + m::abs(s) * bh[2], m::abs(s) * bh[0] + m::abs(c) * bh[2]);
         if bc[0] + ex < x0 || bc[0] - ex > x1 || bc[2] + ez < z0 || bc[2] - ez > z1 || bc[1] - bh[1] > y1 { continue; }
@@ -565,7 +565,7 @@ fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     let mut nd = 0;
     let mut j = 0;
     while j < g.col.dynamic_boxes.len() && nd < room {
-        let (bc, bh, yaw) = seam_box_row(g, g.col.dynamic_boxes[j]);
+        let (bc, bh, yaw) = box_row(g, g.col.dynamic_boxes[j]);
         let reach = m::hyp2(bh[0], bh[2]);
         j += 1;
         if bc[0] + reach < x0 || bc[0] - reach > x1 || bc[2] + reach < z0 || bc[2] - reach > z1 { continue; }

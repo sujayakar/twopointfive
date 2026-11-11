@@ -30,7 +30,7 @@ pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroo
     if !same { g.m.stackroom.books = None; return; }
     let k = g.m.stackroom.books.as_mut().unwrap();
     if !near { k.near = None; }
-    // only the doors kept, in the order kept, as the copied map of ts:94 has them
+    // only the doors kept, in the order kept
     let mut back = JsMap::new();
     for (d, read) in floors.iter() {
         let mut pair = k.floors.delete(d).unwrap_or([None, None]);

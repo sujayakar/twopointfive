@@ -391,7 +391,7 @@ mod tests {
     fn v_bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
 
     #[test]
-    fn work_spot_has_the_typescripts_bits() {
+    fn work_spot_keeps_its_bits() {
         let (pos, yaw) = work_spot_at(A.0, u_a(), 1.0, 0.5, A.2 - 0.14);
         assert_eq!(v_bits(pos), [0x3ff8c2347a581444, 0, 0xc004c41f2bdfc5d1]);
         assert_eq!(yaw.to_bits(), 0x40038861baaa937e);
@@ -401,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn kick_spot_has_the_typescripts_bits() {
+    fn kick_spot_keeps_its_bits() {
         let along = kick_along(A.0, u_a(), A.2, [2.13, 0.0, -1.7]);
         let (pos, yaw) = work_spot_at(A.0, u_a(), 1.0, 0.76, along);
         assert_eq!(v_bits(pos), [0x3ff596d3c20bc618, 0, 0xc00361a20646bd1c]);
@@ -412,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn side_spot_has_the_typescripts_bits() {
+    fn side_spot_keeps_its_bits() {
         let k = side_kick();
         let (pos, yaw) = side_spot_at(A.0, u_a(), 1.0, A.2, k.past, k.out);
         assert_eq!(v_bits(pos), [0x3ffda0b2c9e3ae9c, 0, 0xc0023148d3bdbf18]);
@@ -423,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn pick_gap_has_the_typescripts_bits() {
+    fn pick_gap_keeps_its_bits() {
         let want = [0x3fe7887af8c4a25cu64, 0x3fe3ddc2be561185, 0x3fe9cca41d811a47, 0x3fe621ebe3128970];
         for (i, w) in want.iter().enumerate() { assert_eq!(pick_gap((i + 1) as f64).to_bits(), *w); }
     }

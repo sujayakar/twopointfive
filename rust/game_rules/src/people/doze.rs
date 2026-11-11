@@ -615,14 +615,14 @@ mod tests {
         h
     }
     #[test]
-    fn pulls_match_the_typescript_bits() {
+    fn pulls_keep_their_bits() {
         let v = build_pulls(0.5);
         assert_eq!(v.len(), PULLS_LEN);
         assert_eq!(v[0], [0.0, 0.0]);
         assert_eq!(fnv(&v), PULLS_FNV);
     }
     #[test]
-    fn a_new_record_holds_the_typescript_numbers() {
+    fn a_new_record_holds_its_numbers() {
         let d = blank(Phase::No, 3.0, 7.5);
         assert_eq!((d.say, d.lit, d.woke_at, d.seen, d.wp), (-1.0, -1.0, -1.0, 7.5, 3.0));
         assert!(d.chair.is_none() && d.mon.is_none() && d.why.is_none() && !d.mon_was);

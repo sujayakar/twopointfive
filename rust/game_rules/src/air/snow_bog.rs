@@ -49,7 +49,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn run_on_matches_the_typescript_bits() {
+    fn run_on_keeps_its_bits() {
         // the pinned bits at run = 2
         let cases: [(f64, u64); 6] = [
             (0.85, 0x3f970a3d70a3d70c),

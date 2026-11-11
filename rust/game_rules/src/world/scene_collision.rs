@@ -373,7 +373,7 @@ fn eye_line(row: &str, through: f64) {
 /// a sight pass opens: its `n` eyes are written next. More than a question names is a mistake by name.
 pub fn sight_open(n: f64) {
     if n > SIGHT_EYES {
-        panic!("fog: a sight pass of {} eyes, and a question names {} (rust/sim/src/fog.rs; the fog's own most is render/fogofwar.ts FOG_EYES)", js::num_str(n), js::num_str(SIGHT_EYES));
+        panic!("fog: a sight pass of {} eyes, and a question names {} (rust/sim/src/fog.rs; the fog's own most is FOG_EYES)", js::num_str(n), js::num_str(SIGHT_EYES));
     }
 }
 
@@ -637,7 +637,7 @@ pub fn nav_grid_is_blocked(g: &crate::game::Game, wx: f64, wz: f64) -> bool {
 fn nav_grid_there(g: &crate::game::Game) {
     let n = g.col.nav.blocked.len();
     if n > sim::nav::MAX_NAV {
-        panic!("the floor's grid has {} cells and a search of the Rust module holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it", n, sim::nav::MAX_NAV);
+        panic!("the floor's grid has {} cells and a search holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's, so the search's tables are to be made larger with it", n, sim::nav::MAX_NAV);
     }
     sim::nav::floor_is(&g.col.nav.blocked, g.col.nav.w as usize);
 }
@@ -757,7 +757,7 @@ mod tests {
     }
 
     #[test]
-    fn line_box_is_the_typescripts_to_the_bit() {
+    fn line_box_keeps_its_bits() {
         let (a, rd): (V3, V3) = ([1.25, 0.7, -2.5], [0.6, 0.0, 0.8]);
         let (c, h): (V3, V3) = ([3.0, 1.0, 1.0], [1.5, 1.0, 0.75]);
         let r = slab(a, rd, c, h, 0.7, None).unwrap();
@@ -798,7 +798,7 @@ mod tests {
     }
 
     #[test]
-    fn a_mistake_is_said_in_the_typescripts_words() {
+    fn a_mistake_is_said_in_its_words() {
         let tail = " — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)";
         assert_eq!(no_number(None, None, None), alloc::format!("a ray that is no number{}", tail));
         assert_eq!(no_number(Some([1.5, 0.0, -0.0]), Some([f64::NAN, 1.0, 2.0]), Some(3.0)), alloc::format!("a ray that is no number: from [1.5, 0, 0] along [NaN, 1, 2] for 3{}", tail));

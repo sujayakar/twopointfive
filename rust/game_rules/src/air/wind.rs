@@ -507,7 +507,7 @@ mod tests {
 
     // the pinned doubles of `storm_vel` / `storm_vel_roofs`
     #[test]
-    fn storm_vel_is_the_typescripts_bits() {
+    fn storm_vel_keeps_its_bits() {
         let cases: [(V3, V3, [u64; 3]); 5] = [
             ([1.3, 0.0, -0.7], [-4.2, 1.1, 3.3], [0x3fe9a89f6f5ccf01, 0, 0xbfdba1e6c6b2b78a]),
             ([1.0, 0.0, 0.0], [11.2, 0.0, 3.3], [0x3fc240795ceb2408, 0, 0]),
@@ -521,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    fn storm_vel_roofs_is_the_typescripts_bits() {
+    fn storm_vel_roofs_keeps_its_bits() {
         // the fourth has no width and the fifth lies past the first four: neither counts
         let roofs: Vec<Vec<f64>> = vec![vec![0.0, 0.0, 4.0, 4.0], vec![6.0, 0.0, 9.0, 4.0], vec![0.0, 6.0, 4.0, 9.0], vec![5.0, 5.0, 4.0, 9.0], vec![100.0, 100.0, 101.0, 101.0]];
         let cases: [(V3, V3, [u64; 3]); 4] = [
@@ -537,7 +537,7 @@ mod tests {
 
     // the pinned doubles of `jet_vel`: a jet at a floor, on the axis at a floor, sideways, under the floor, no speed
     #[test]
-    fn jet_vel_is_the_typescripts_bits() {
+    fn jet_vel_keeps_its_bits() {
         let down: V3 = [0.0, -1.0, 0.0];
         let pos: V3 = [1.0, 3.0, 2.0];
         let a = jet_vel(pos, down, 2.4, 2.0, 0.4227932187381618, 0.24, 5.0, 0.0, [1.3, 0.3, 2.2], None);
@@ -551,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn vnoise_is_the_typescripts_bits() {
+    fn vnoise_keeps_its_bits() {
         let cases: [(f64, f64, u64); 4] = [
             (12345.0, 0.3, 0xbfe4becb49ba5e35),
             (3735928559.0, 17.75, 0xbfe483b878000000),
