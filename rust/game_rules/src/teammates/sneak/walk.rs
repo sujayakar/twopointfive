@@ -481,7 +481,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cell_packs_as_the_typescript_does() {
+    fn a_cell_packs_as_pinned() {
         assert_eq!(walk_cell(0.3, 0.6), 1.0 + 4096.0 * 2.0);
         assert_eq!(walk_cell(-0.1, -0.1), -1.0 + 4096.0 * -1.0);
     }

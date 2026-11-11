@@ -402,7 +402,7 @@ mod tests {
 
     /// The pinned doubles of the closing lane, at point blank 2.
     #[test]
-    fn the_lane_at_arms_length_has_the_typescripts_bits() {
+    fn the_lane_at_arms_length_keeps_its_bits() {
         let rows: [(f64, f64, f64, u64); 5] = [
             (0.95, 0.6, 3.3, 0x3fe970a3d70a3d70),
             (0.45, 1.2, 1.5, 0x3fd3333333333333),

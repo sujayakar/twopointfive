@@ -56,7 +56,7 @@ fn skel_rag_pose(g: &mut Game, id: CharId) {
 fn skel_lies(g: &mut Game, id: CharId) { g.ch[id].skel.world = g.ch[id].world; }
 fn same_kind(a: &crate::inhand::InHandWord, b: &crate::inhand::InHandWord) -> bool { core::mem::discriminant(a) == core::mem::discriminant(b) }
 
-/// RAG_LIMBS with each row's name read as its node (`n[k]`): [node, parent row (−1 = the rigid trunk), from-particle, to-particle] (ts:4262)
+/// The ragdoll's limbs, each row's name read as its node: [node, parent row (−1 = the rigid trunk), from-particle, to-particle]
 fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
     rag_limbs().iter().map(|(k, parent, a, c)| {
         let node = match k.as_str() {
@@ -570,7 +570,7 @@ fn clear_fall(g: &mut Game, id: CharId) {
     let c = &mut g.ch[id];
     c.fall_as = None; c.fall_from = None; c.fall_tight = false; c.fall_ahead = 0.0;
 }
-/// the branches of the shove (ts:4645 to 4649)
+/// the branches of the shove
 fn use_shove(g: &mut Game, id: CharId, rag: RagdollId, rg: &crate::ragdoll::RAG, quiet: bool, fall: f64, f: V3, h: V3, j: f64, twist: f64, pa: V3) {
     if !quiet && fall < 0.5 {
         crate::ragdoll::ragdoll_add_rigid_velocity(g, rag, v3::mad(v3::scale(h, 0.8 * j), [0.0, -1.0, 0.0], 0.9), [pa[0] * 0.9 * j, twist * 0.6, pa[2] * 0.9 * j]);

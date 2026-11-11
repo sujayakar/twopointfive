@@ -958,7 +958,7 @@ mod tests {
     }
 
     #[test]
-    fn against_the_typescripts_own_bits() {
+    fn against_pinned_bits() {
         // the pinned bits of 1.7 * (5 / hypot(1.7, 9.3)), 9.3 * (…), cos(0.7), sin(0.7)
         let mut p = at_rest();
         (p.vx, p.vz) = (1.7, 9.3);

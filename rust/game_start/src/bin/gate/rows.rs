@@ -129,7 +129,7 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (start.clone(), "pin", "the start moved"), (start, "second", "a second start"), (way_row_name(), "first", "stands on way"),
         (format!("play {}", run), "pin", "moved from second"), (format!("play {}", run), "silent", "never happens"),
         // (what a player sees: the figures may not be blind to any of it. On the kill house, whose squad is under an order by then)
-        (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "die"),
+        (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "draws"),
         // (a word that moved with no figure: this row passes, and says so)
         (format!("play {}", held_run), "word", "only the words moved"),
         // (the panes want a level with panes; the rest stand on any)

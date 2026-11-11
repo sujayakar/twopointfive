@@ -12,7 +12,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_kit_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_kit::TutKitVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutKit(v) => v, _ => panic!("the run is not of levels/tut-kit.script.ts") } }
+fn tut_kit_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_kit::TutKitVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutKit(v) => v, _ => panic!("the run is not of the level tut-kit") } }
 
 /// the man on the gun, behind his two low walls in the gun court's far corner
 const GUNNER: &str = "Novak";

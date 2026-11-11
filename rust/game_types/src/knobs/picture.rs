@@ -2,13 +2,6 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum PictureKShow {
-    #[default] All,
-    Off,
-    Cursor,
-}
-
 /// the switch and every number of it (UNTUNED by play)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct PictureK {
@@ -49,8 +42,4 @@ pub struct PictureK {
     #[k(0.6)] pub step_after: f64,
     #[k(1.5)] pub step_rest: f64,
     #[k(5.0)] pub step_secs: f64,
-    /// the floor view of one man's picture: 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas
-    #[k(PictureKShow::Off)] pub show: PictureKShow,
-    /// the view's reach round the man (m)
-    #[k(9.0)] pub show_m: f64,
 }

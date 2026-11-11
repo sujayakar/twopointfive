@@ -415,7 +415,7 @@ mod tests {
     }
 
     #[test]
-    fn a_new_state_is_the_typescripts_not_zeroes() {
+    fn a_new_state_is_not_zeroes() {
         let s = new_state();
         assert_eq!((s.t, s.sneak_t, s.cue_t, s.sgn), (-1e9, -1e9, -1e9, 1.0));
         assert_eq!(s.why, "never asked");

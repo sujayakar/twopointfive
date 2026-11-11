@@ -11,7 +11,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of levels/tut-quiet.script.ts") } }
+fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of the level tut-quiet") } }
 
 /// where he looks from, where he smokes, and the lane's side of the level
 const LOOK: V3 = [26.4, 0.0, 17.75];

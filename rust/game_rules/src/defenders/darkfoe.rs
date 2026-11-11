@@ -50,7 +50,7 @@ pub fn dark_foe_blind(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let (pos, aim_yaw, me) = (g.ch[c].pos, g.ch[c].aim_yaw, g.ch[c].id);
     let eye: V3 = [pos[0], 1.5, pos[2]];
-    let mut skip = move |_: &Game, owner: f64| owner == me;   // (TS: mine(gd))
+    let mut skip = move |_: &Game, owner: f64| owner == me;   // (his own beam is no light to him)
     let mut n: i32 = 0;
     let mut lit: i32 = 0;
     for off in [0.0, -k.fan_rad, k.fan_rad] {
@@ -386,7 +386,7 @@ mod tests {
 
     /// the pinned bits of (id + salt) * 0.6180339887 and its frac
     #[test]
-    fn frac_has_the_typescripts_bits() {
+    fn frac_keeps_its_bits() {
         for (id, salt, whole, part) in [
             (12.0, 0.0, 0x401daa66d2bd94b0u64, 0x3fdaa66d2bd94b00u64),
             (17.0, 7.0, 0x402daa66d2bd94b0, 0x3feaa66d2bd94b00),

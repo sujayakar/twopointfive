@@ -612,7 +612,7 @@ mod tests {
 
     /// raycast through the grid, the brute force and the tests of every shape, against pinned bits
     #[test]
-    fn raycast_matches_the_typescripts_bits() {
+    fn raycast_keeps_its_bits() {
         let mut g = Game::blank();
         let mut x = Lcg(12345);
         world(&mut g, &mut x);
@@ -621,9 +621,9 @@ mod tests {
         let mut seen = 2166136261u32;
         { let r = ray_grid(&g).unwrap(); seen = fnv_f(seen, r.globals.len() as f64); seen = fnv_f(seen, r.start[r.start.len() - 1] as f64); }
         for i in 0..200 { let id = g.engine.world.statics[i]; let f = box_world_footprint(&mut g, id); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
-        assert_eq!(seen, TS_GRID, "grid and footprints");
+        assert_eq!(seen, GRID_WORD, "grid and footprints");
         let hits = rays(&mut g, &mut x);
-        assert_eq!(hits, TS_RAYS, "the rays through the grid");
+        assert_eq!(hits, RAYS_WORD, "the rays through the grid");
         // the same rays by the brute force: the grid changes no answer
         let mut x2 = Lcg(777);
         g.ray_grid = Default::default();
@@ -760,6 +760,6 @@ mod tests {
         assert!(box_drawn(&mut g, &all, trim), "trim asks only whether its box is hidden");
     }
 
-    const TS_GRID: u32 = 0x92b81bdb;
-    const TS_RAYS: u32 = 0x72cbf515;
+    const GRID_WORD: u32 = 0x92b81bdb;
+    const RAYS_WORD: u32 = 0x72cbf515;
 }
