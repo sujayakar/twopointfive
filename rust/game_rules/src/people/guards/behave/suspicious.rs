@@ -8,13 +8,13 @@ use crate::m;
 use crate::v3::{self, V3};
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
-use crate::game::{GuardTask, GuardTaskArm0Kind};
+use crate::game::{Errand, ErrandThing};
 
 pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     let &Sensed { c, staff, lvl, .. } = s;
     let upper = if hand_carry(g, gd) == crate::guards::InHand::Torch { UpperMode::Torch } else { UpperMode::Aim };
     let mut a = Acts { upper, ..Acts::still() };
-    if matches!(g.gd[gd].task, Some(GuardTask::CheckOn(_))) { check_on_tick(g, gd); }
+    if matches!(g.gd[gd].errand, Some(Errand::CheckOn(_))) { check_on_tick(g, gd); }
     keeps_to_his_errand(g, gd);
     let duty = if g.gd[gd].body_duty.is_some() { body_aftermath(g, gd, dt) } else { None };
     if let Some(d) = duty {
@@ -40,22 +40,22 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
 
 /// An errand keeps his fix on its place and his suspicion up, and one not checking on a man is over once he has looked about a while.
 fn keeps_to_his_errand(g: &mut Game, gd: GuardId) {
-    let task_at = match &g.gd[gd].task {
-        Some(GuardTask::Arm0(t)) => Some(t.pos),
-        Some(GuardTask::CheckOn(t)) => Some(t.pos),
+    let task_at = match &g.gd[gd].errand {
+        Some(Errand::At(t)) => Some(t.pos),
+        Some(Errand::CheckOn(t)) => Some(t.pos),
         None => None,
     };
     if let Some(at) = task_at {
         let off = match g.gd[gd].last_known { Some(lk) => v3::dist(lk, at) > 0.5, None => true };
         if off && g.gd[gd].awareness < 0.45 { crate::mind::fix(g, gd, Some(at), "guards"); }
         crate::mind::raise(g, gd, 0.2, "guards");
-        if !matches!(g.gd[gd].task, Some(GuardTask::CheckOn(_))) && g.gd[gd].search_t > 4.0 { g.gd[gd].task = None; }
+        if !matches!(g.gd[gd].errand, Some(Errand::CheckOn(_))) && g.gd[gd].search_t > 4.0 { g.gd[gd].errand = None; }
     }
 }
 
 /// Free to move: sent to the breaker he works its lever when he stands there, else he walks to his fix.
 fn goes_to_see(g: &mut Game, gd: GuardId, c: CharId, dt: f64, a: &mut Acts) {
-    let to_the_breaker = match &g.gd[gd].task { Some(GuardTask::Arm0(t)) => t.kind == GuardTaskArm0Kind::Breaker, _ => false };
+    let to_the_breaker = match &g.gd[gd].errand { Some(Errand::At(t)) => t.kind == ErrandThing::Breaker, _ => false };
     let lever = if to_the_breaker { crate::handwork::lever_stand(g, gd, dt) } else { None };
     if let Some(l) = lever {
         a.upper = UpperMode::None;
@@ -95,9 +95,9 @@ fn walks_to_his_fix(g: &mut Game, gd: GuardId, c: CharId, lk: V3, dt: f64, a: &m
         g.gd[gd].search_t = 0.0;
         if crate::whistle::whistle_soft(g, gd) { let to = g.k.whistle.walk_floor; crate::mind::raise(g, gd, to, "guards"); }
         crate::attention::attention_walk(g, gd);
-        let free = match &g.gd[gd].task { None => true, Some(GuardTask::CheckOn(_)) => true, _ => false };
+        let free = match &g.gd[gd].errand { None => true, Some(Errand::CheckOn(_)) => true, _ => false };
         if free && not_getting_anywhere(g, gd, dt, 4.0) {
-            if g.gd[gd].task.is_some() {
+            if g.gd[gd].errand.is_some() {
                 advance_check_on(g, gd);
             } else {
                 let here = g.ch[c].pos;

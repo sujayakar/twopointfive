@@ -83,7 +83,7 @@ pub(super) fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId,
     let at = g.pos_of(gd);
     let pos = g.cv[cid].cause_pos.unwrap_or(at); let armed = g.cv[cid].armed || cause == Some(CivCause::Body);
     crate::mind::raise(g, o, if armed { 0.8 } else { 0.55 }, "civilians"); crate::belief::word(g, o, pos);
-    g.gd[o].body_duty = None; g.gd[o].task = None;
+    g.gd[o].body_duty = None; g.gd[o].errand = None;
     g.gd[o].drop_path(); g.gd[o].stall_ref = None;
     if armed { crate::mind::set_state(g, o, GuardState::Search, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].react_t = 0.6; }
     else { if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Suspicious { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; } g.gd[o].react_t = 0.9; }
@@ -633,7 +633,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     g.gd[o].witness.saw_body = Some(WitnessSawBody { victim: name.clone(), breathing: !dead });
     if g.gd[o].script.is_none() {
         crate::mind::raise(g, o, 0.7, "civilians"); crate::belief::word(g, o, body);
-        g.gd[o].react_t = 1.2; g.gd[o].body_duty = None; g.gd[o].task = None;
+        g.gd[o].react_t = 1.2; g.gd[o].body_duty = None; g.gd[o].errand = None;
         g.gd[o].drop_path();
         if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Search { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].pieing = None; }
     }
@@ -651,7 +651,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
         g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), breathing: !dead });
         if g.gd[other].script.is_some() { continue; }
         crate::mind::raise(g, other, 0.45, "civilians");
-        if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
+        if g.gd[other].errand.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
     }
     g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
     let lvl = escalation_of(g);
@@ -685,7 +685,7 @@ pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
-    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && man.duty.free() && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
+    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.errand.is_none() && man.body_duty.is_none() && man.duty.free() && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
 }
 
 /// passing pleasantries, one a floor at a time

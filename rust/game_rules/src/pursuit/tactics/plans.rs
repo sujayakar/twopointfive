@@ -955,7 +955,7 @@ fn comes_to(g: &mut Game, o: GuardId, spot: V3) {
     man.stall_ref = None;
     man.body_duty = None;
     man.search_plan = None;
-    man.task = None;
+    man.errand = None;
     match man.state {
         S::Patrol => {
             crate::mind::set_state(g, o, S::Suspicious, "tactics");
