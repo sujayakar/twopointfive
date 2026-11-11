@@ -145,7 +145,6 @@ macro_rules! calls { ($made:ident) => { $made! {
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use super::field::Laid;
 use game::crosses::{Answer, Ty, Types};
 use game::view::{ActionRow, AheadView, CursorView, DebriefView, EndView, FloorView, HandsSaid, KnobRow, MapView, Met, OutcomeView, Recovered, RunView, SavesTold, SavesView, ShownRow, SoundPath, Tally, TickView};
 
