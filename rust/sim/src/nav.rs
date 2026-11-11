@@ -318,9 +318,10 @@ fn begin(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, 
 }
 /// the search's tables as they stood before it: every cell it wrote is in SEEN
 fn blank(n_seen: usize) {
-    let (g, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };
+    let (at, g, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(AT), &mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };
     for &c in &seen[..n_seen] {
         let c = c as usize & (MAX_NAV - 1);
+        at[c] = 0;
         g[c] = S::INF;
         came[c] = 0;
         closed[c] = 0;
@@ -378,22 +379,29 @@ fn tables() -> Tables {
 /// have its newest. The least is found by the least of every BLOCK of places.
 struct Open {
     n: usize,
+    /// the last place a cell stands at and, of a place, the one its cell stood at before (a place and one; 0 = none)
+    at: &'static mut [u32; MAX_NAV],
+    before: &'static mut [u32; MAX_OPEN],
     cell: &'static mut [u32; MAX_OPEN],
     score: &'static mut [S; MAX_OPEN],
     least: &'static mut [u32; MAX_OPEN / BLOCK + 1],
 }
 const BLOCK: usize = 16;
+static mut AT: [u32; MAX_NAV] = [0; MAX_NAV];
+static mut BEFORE: [u32; MAX_OPEN] = [0; MAX_OPEN];
 static mut SCORE: [S; MAX_OPEN] = [S::ZERO; MAX_OPEN];
 static mut LEAST: [u32; MAX_OPEN / BLOCK + 1] = [0; MAX_OPEN / BLOCK + 1];
 impl Open {
     fn empty() -> Open {
-        unsafe { Open { n: 0, cell: &mut *core::ptr::addr_of_mut!(OPEN), score: &mut *core::ptr::addr_of_mut!(SCORE), least: &mut *core::ptr::addr_of_mut!(LEAST) } }
+        unsafe { Open { n: 0, at: &mut *core::ptr::addr_of_mut!(AT), before: &mut *core::ptr::addr_of_mut!(BEFORE), cell: &mut *core::ptr::addr_of_mut!(OPEN), score: &mut *core::ptr::addr_of_mut!(SCORE), least: &mut *core::ptr::addr_of_mut!(LEAST) } }
     }
     /// one more, at the end
     #[inline(always)]
     fn push(&mut self, c: usize, f: f64) {
         let (n, b) = (self.n, self.n / BLOCK);
         self.cell[n] = c as u32;
+        self.before[n] = self.at[c];
+        self.at[c] = n as u32 + 1;
         put(self.score, n, f);
         if n % BLOCK == 0 || get(self.score, n) < get(self.score, self.least[b] as usize) {
             self.least[b] = n as u32;
@@ -402,19 +410,43 @@ impl Open {
     }
     /// a cell that stands here already has another score (a better one, but for what the single it is kept as rounds off)
     fn better(&mut self, c: usize, f: f64) {
-        for i in 0..self.n {
-            if self.cell[i] as usize == c {
-                let (l, was) = (self.least[i / BLOCK] as usize, get(self.score, i));
-                put(self.score, i, f);
-                let (v, least) = (get(self.score, i), get(self.score, l));
-                if l == i {
-                    if v > was {
-                        self.look(i / BLOCK);
-                    }
-                } else if v < least || (v == least && i < l) {
-                    self.least[i / BLOCK] = i as u32;
+        let mut p = self.at[c] as usize;
+        while p != 0 {
+            let i = p - 1;
+            p = self.before[i] as usize;
+            let (l, was) = (self.least[i / BLOCK] as usize, get(self.score, i));
+            put(self.score, i, f);
+            let (v, least) = (get(self.score, i), get(self.score, l));
+            if l == i {
+                if v > was {
+                    self.look(i / BLOCK);
                 }
+            } else if v < least || (v == least && i < l) {
+                self.least[i / BLOCK] = i as u32;
             }
+        }
+    }
+    /// what pointed at a place of cell `c`'s points at another, or at what that one pointed at (`to` none)
+    #[inline(always)]
+    fn point(&mut self, c: usize, from: usize, to: Option<usize>) {
+        let next = match to {
+            Some(to) => {
+                self.before[to] = self.before[from];
+                to as u32 + 1
+            }
+            None => self.before[from],
+        };
+        let mut p = self.at[c] as usize;
+        if p == from + 1 {
+            self.at[c] = next;
+            return;
+        }
+        while p != 0 {
+            if self.before[p - 1] as usize == from + 1 {
+                self.before[p - 1] = next;
+                return;
+            }
+            p = self.before[p - 1] as usize;
         }
     }
     /// the cell of the least score, the first of equals, off the list
@@ -430,8 +462,12 @@ impl Open {
         }
         let c = self.cell[mi] as usize;
         self.n -= 1;
-        self.cell[mi] = self.cell[self.n];
-        self.score[mi] = self.score[self.n];
+        self.point(c, mi, None);
+        if mi != self.n {
+            self.point(self.cell[self.n] as usize, self.n, Some(mi));
+            self.cell[mi] = self.cell[self.n];
+            self.score[mi] = self.score[self.n];
+        }
         self.look(mi / BLOCK);
         // (the last one's block has another least only if that was it)
         let b = self.n / BLOCK;
