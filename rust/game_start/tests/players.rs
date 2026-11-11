@@ -177,7 +177,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         let kept = game::savestate::control::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
         assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
-        p.g = kept.laid(p.g.sim);
+        p.lay(&kept);
         assert_eq!(p.words(), there, "seed {seed}: the moment put back is the moment");
         let again = play(&mut p, 100, 90);
         if let Some((k, parts)) = parting(&once, &again) { panic!("seed {seed}: from the moment put back the same hands part in {parts} at tick {k}"); }

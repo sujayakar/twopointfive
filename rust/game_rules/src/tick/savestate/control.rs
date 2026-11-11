@@ -292,8 +292,10 @@ pub fn over(g: &mut Game, mut new: Box<Game>) {
     new.serial_next = new.serial_next.max(g.serial_next);
     stand(g, new);
 }
-/// `new` is the game now
+/// `new` is the game now. What was made from the level is taken over (whose it is, it tells by the rows it was made from), but for the ways of the smoke that stood
 pub fn stand(g: &mut Game, mut new: Box<Game>) {
+    new.made = core::mem::take(&mut g.made);
+    sim::bricks::forget(&new.made.ways);
     core::mem::swap(g, &mut *new);
 }
 
@@ -403,7 +405,7 @@ pub fn restart(g: &mut Game) -> bool {
     let host = (g.host_cam, g.host_input);
     let mut new = first.image.laid(slot);
     new.serial_next = new.serial_next.max(g.serial_next);
-    core::mem::swap(g, &mut *new);
+    stand(g, new);
     was.write_under(g);
     // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
     let _ = crate::standing::stand_men(g, &first.men);
@@ -429,7 +431,7 @@ pub fn again(g: &mut Game, size: Option<u32>) -> bool {
     let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
     let mut new = first.image.laid(slot);
     new.serial_next = new.serial_next.max(g.serial_next);
-    core::mem::swap(g, &mut *new);
+    stand(g, new);
     put_cards(g, kit);
     (g.k, g.out, g.cmd_buf) = (k, out, cmd);
     // (a mission that refuses leaves the plain floor, and a stage on it is a picture of nothing)

@@ -174,7 +174,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
     let late = agree(&d, &p, "eight seconds in");
     assert!(late > early, "the scene: the cloud was to grow ({early} of 60 lines hidden, then {late})");
     let mut again = |p: &mut Play, asked: bool| {
-        p.g = then.laid(p.g.sim);
+        p.lay(&then);
         d.cut();
         if asked {
             assert!(d.smoke.unsaid());
@@ -202,13 +202,13 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let [x, z] = p.sam_at();
     game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
     let told = |d: &Drawn| d.events.sources.iter().filter(|s| s.says & 8 != 0).map(|s| (s.tick, s.serial, s.pos.map(f32::to_bits), s.radius, s.density, s.ttl, s.age)).collect::<Vec<_>>();
-    let lets = |p: &Play| sim::bricks::letting(p.g.sim).map(|e| e.at.map(|v| (v as f32).to_bits())).collect::<Vec<_>>();
+    let lets = |p: &Play| sim::bricks::letting(&p.g.smoke).map(|e| e.at.map(|v| (v as f32).to_bits())).collect::<Vec<_>>();
     let mut first = Vec::new();
     for _ in 0..300 { p.frame_shown(|p| { d.take(&p.g, want::events); first = told(&d); }); if !first.is_empty() { break; } }
     assert_eq!(first.len(), 1, "the can's own event");
     let began = game::savestate::control::Moment::of(&p.g);
     // (the tick that began it, put back: as its host keeps it, with nothing left to say)
-    p.g = began.laid(p.g.sim);
+    p.lay(&began);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -218,7 +218,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let then = game::savestate::control::Moment::of(&p.g);
     let of = lets(&p);
     p.run(3.0);
-    p.g = then.laid(p.g.sim);
+    p.lay(&then);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -257,7 +257,7 @@ fn what_goes_on_is_heard_as_it_stands() {
     step(&mut p, &mut d, 32 * 60);
     assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
     assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
-    p.g = then.laid(p.g.sim);
+    p.lay(&then);
     d.cut();
     d.take(&p.g, want::events);
     assert_eq!(heard(&d, "smokeHiss"), at, "put back, and the can is not heard as it stood");
@@ -301,7 +301,7 @@ fn the_smoke_keeps_its_color() {
     p.run(6.0);
     d.take(&p.g, want::smoke);
     assert!(dyes(&d).iter().filter(|w| **w != 0).count() > mixed.iter().filter(|w| **w != 0).count(), "the smoke that spread took its color along: {:x?}", dyes(&d));
-    p.g = then.laid(p.g.sim);
+    p.lay(&then);
     d.cut();
     game::sense::smoke_ways(&mut p.g);
     d.take(&p.g, want::smoke);
@@ -323,10 +323,10 @@ fn a_source_says_whether_the_game_holds_its_smoke() {
         (SmokeEmitter { look: Some(true), ..can.clone() }, false, "a look of one"),
         (SmokeEmitter { radius: 0.08, density: 24.0, ttl: 0.08, ..can.clone() }, false, "a shot's gas"),
     ] {
-        let before = sim::bricks::emitting(p.g.sim);
+        let before = p.g.smoke.emitters.len();
         game::smoke_types::smoke_system_like_emit(&mut p.g, &e);
         game::out_events::push_smoke_system_like_emit(&mut p.g, &e);
-        assert_eq!(sim::bricks::emitting(p.g.sim) > before, held, "{what}: the game's own smoke");
+        assert_eq!(p.g.smoke.emitters.len() > before, held, "{what}: the game's own smoke");
         let mut d = Drawn::default();
         d.take(&p.g, want::events);
         assert_eq!(d.events.sources.last().expect("the source is told").says & 8 != 0, held, "{what}: what the picture is told");

@@ -54,12 +54,10 @@ pub mod world;
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
-// ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
-// one that reads the tables made from the state names the block's `stamp` too (`state::stamp`), and a step the box world `w` it is
-// taken over and that copy's number `copy`
+// ---- the game's own smoke on the coarse grid (bricks.rs) and the light that comes round (glow.rs)
 
-// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the state in the game's block, the rule, a round's toll. A rule's call names its game, its world
-// and the time once (`panes::Ctx`), and what it let go is left in that for the caller.
+// ---- WHAT A PANE OF GLASS IS TO PLAY (panes.rs, pen.rs): the rule, a round's toll. A rule's call names its world and the time once (`panes::Ctx`), and what it let go
+// is left in that for the caller.
 /// the seed of a box of the world (`panes::box_seed`)
 pub fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64) -> u32 {
     let mut b = [0.0; world::REC];

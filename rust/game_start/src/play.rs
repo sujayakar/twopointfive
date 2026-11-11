@@ -250,6 +250,11 @@ impl Play {
         for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
         script.over()
     }
+    /// a moment put back: the game is that one again, where it stood
+    pub fn lay(&mut self, m: &game::savestate::control::Moment) {
+        let new = m.laid(self.g.sim);
+        game::savestate::control::stand(&mut self.g, new);
+    }
     /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());

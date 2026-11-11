@@ -42,7 +42,6 @@ pub static STEPS: &[Run] = &[
     // again, after whoever showed the last frame has read it)
     World(("box world listed", |g, _| crate::scene_boxes::box_world_listed(g))),
     World(("poses' home", |g, _| crate::posehome::pose_home_tend(g))),
-    World(("smoke's home", |g, _| crate::sense::smoke_home(g))),
     World(("quiet mission", |g, _| crate::quiet::quiet_mission_current(g))),
     World(("smoke", |g, t| crate::sense::smoke_step(g, t.dt))),
     World(("commands in", commands_in)),

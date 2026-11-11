@@ -3,7 +3,7 @@
 //!
 //! The hashes, the bearings and the chords are worked out by the game's own maths (rust/maths), so every machine finds the same piece at the same point.
 //!
-//! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes`. A pane with no row is whole: shut
+//! WHOSE THE STATE IS. The box world's (`World.panes`): a line or a ray reads a pane's row where it stands. A pane with no row is whole: shut
 //! everywhere.
 //!
 //! A ROW. Doubles (GD): nine a site, eight sites (u, v, the bearing of radial 0, the four base radii, the ring zone's radius, the share of merged
