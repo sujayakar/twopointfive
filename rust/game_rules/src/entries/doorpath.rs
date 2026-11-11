@@ -405,18 +405,18 @@ fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, q: V
     let pod = g.tab.doortools_door_op[w.op].pod.get(gd).copied();
     w.pod = q;
     if let Some(a) = a {
-        if let Some(post) = g.tab.orders_assignment[a].post {
+        if let Some(post) = g.tab.task[a].post {
             if v3::dist_xz(post, old) < 0.1 {
                 let goal: V3 = [q[0], post[1], q[2]];
-                g.tab.orders_assignment[a].post = Some(goal); if g.tab.orders_assignment[a].had == Some(goal) { g.tab.orders_assignment[a].had = None; }   // (`had` is asked by value: a mark he had that holds these numbers goes, and any other stays)
-                g.tab.orders_assignment[a].goal = goal;
+                g.tab.task[a].post = Some(goal); if g.tab.task[a].had == Some(goal) { g.tab.task[a].had = None; }   // (`had` is asked by value: a mark he had that holds these numbers goes, and any other stays)
+                g.tab.task[a].goal = goal;
                 if let Some(s) = g.gd[gd].script.as_mut() {
                     if let Some(sg) = s.goal {
                         if v3::dist_xz(sg, old) < 0.1 {
                             s.goal = Some(goal);
                             // (his goal is the order's goal now, so the order's next hand-over is no new leg,
                             //  whatever was pending on the assignment)
-                            g.tab.orders_assignment[a].new_leg = false;
+                            g.tab.task[a].new_leg = false;
                         }
                     }
                 }
@@ -585,7 +585,7 @@ pub(super) fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardI
 /// The order's own way round is this walk's while it lasts: taken off the order and kept.
 fn door_path_own(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -> bool {
     let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), w.gd) else { return false };
-    let row = &mut g.tab.orders_assignment[a];
+    let row = &mut g.tab.task[a];
     let Some(post) = row.post else { return false };
     if v3::dist_xz(post, w.pod) > 0.1 || row.via.is_empty() {
         return false;
@@ -605,10 +605,10 @@ fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: cra
         man.drop_path();
     }
     let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), w.gd) else { return };
-    let Some(post) = g.tab.orders_assignment[a].post else { return };
+    let Some(post) = g.tab.task[a].post else { return };
     let p = g.pos_of(w.gd);
     let side = g.tab.doortools_door_op[w.op].side;
-    if v3::dist_xz(post, w.pod) < 0.1 && g.tab.orders_assignment[a].via.is_empty() && !w.via.is_empty() && door_path_depth(g, w.door, side, &p) < 0.3 {
+    if v3::dist_xz(post, w.pod) < 0.1 && g.tab.task[a].via.is_empty() && !w.via.is_empty() && door_path_depth(g, w.door, side, &p) < 0.3 {
         // (from the corner nearest him on: never back to one he has passed)
         let mut k = 0;
         for i in 1..w.via.len() {
@@ -616,14 +616,14 @@ fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: cra
                 k = i;
             }
         }
-        g.tab.orders_assignment[a].via = w.via[k..].to_vec();
+        g.tab.task[a].via = w.via[k..].to_vec();
     }
 }
 
 /// His order's stuck clocks wait with him: a man waiting his turn is not a man who cannot get there.
 fn hold_clocks(g: &mut Game, gd: GuardId, t: f64, p: V3) {
     if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
-        let row = &mut g.tab.orders_assignment[a];
+        let row = &mut g.tab.task[a];
         row.mark_t = t;
         row.moved_t = t;
         row.mark[0] = p[0];
@@ -687,8 +687,8 @@ fn not_walking(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64)
     if g.gd[gd].script.is_some() && door_path_own(g, w) {
         // (back from the fight, the order laid its own way round again)
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
-        let goal = g.tab.orders_assignment[a].goal;
-        g.tab.orders_assignment[a].new_leg = false;   // (the goal it is told is the order's own)
+        let goal = g.tab.task[a].goal;
+        g.tab.task[a].new_leg = false;   // (the goal it is told is the order's own)
         let s = g.gd[gd].script.as_mut().unwrap();
         s.goal = Some(goal);
         s.arrived = Some(false);

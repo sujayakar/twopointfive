@@ -262,15 +262,15 @@ pub fn doors_side(g: &crate::game::Game, d: DoorId, from: V3) -> f64 {
     if u[0] * pz - u[1] * px >= 0.0 { 1.0 } else { -1.0 }
 }
 /// The lock is against you: latched, still locked, you on the keyed side, and nothing on your ring fits it
-// (a ring is asked through `squadcast::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
+// (a ring is asked through `group::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
 //  yes to every lock, and a plain `has` of the lock's name answers no for it: the response team's lead would boot a
 //  door his keys open and not go to the handle)
 pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    g.dr[d].leaf.locked && g.dr[d].leaf.latched && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
+    g.dr[d].leaf.locked && g.dr[d].leaf.latched && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::group::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 /// The lock is against you BUT for the key you carry
 pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    doors_locked_out(g, d, from, None) && (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
+    doors_locked_out(g, d, from, None) && (match keys { Some(k) => crate::group::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 
 #[cfg(test)]

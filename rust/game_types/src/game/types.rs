@@ -437,6 +437,12 @@ pub struct Game {
     /// each seat's own things, by its id
     #[is(crate::seats::sets_new())] pub sets: Tab<SeatId, crate::seats::SeatSet>,
     pub seats: Vec<SeatId>,
+    /// the group a pass is about: the seat's own, or the one `group::with` names
+    /// (a machine's own: in no bytes)
+    #[bytes(skip)]
+    #[is(GroupId(0))] pub group: GroupId,
+    /// every group, by its id
+    #[is(crate::group::groups_new())] pub groups: Tab<GroupId, crate::group::Group>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
@@ -451,8 +457,6 @@ pub struct Game {
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// what g.serial() deals next
     #[is(1)] pub serial_next: u32,
-    /// a second cast of the squad is in the seat's row (`squadcast::with_cast`)
-    pub in_cast: bool,
     /// the rows box_frame has dealt that are not free yet (boxes_frame_reset)
     pub box_frame_rows: Vec<FrameBoxId>,
     /// rows box_frame may deal again
@@ -979,26 +983,26 @@ pub struct TalkLast {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
-pub enum GuardTask {
-    Arm0(crate::game::GuardTaskArm0),
-    CheckOn(crate::game::GuardTaskCheckOn),
+pub enum Errand {
+    At(crate::game::ErrandAt),
+    CheckOn(crate::game::ErrandCheckOn),
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskArm0 {
-    pub kind: crate::game::GuardTaskArm0Kind,
+pub struct ErrandAt {
+    pub kind: crate::game::ErrandThing,
     pub pos: V3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum GuardTaskArm0Kind {
+pub enum ErrandThing {
     #[default] Breaker,
     Device,
     Rack,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskCheckOn {
+pub struct ErrandCheckOn {
     pub pos: V3,
     pub who: GuardId,
     pub wp: f64,
@@ -1033,11 +1037,10 @@ pub struct Guard {
     /// written whole: a new fix (`mind::fix`) counts in fix_stamp, one put back or carried over (`mind::fix_keep`) does not
     pub last_known: Option<V3>,
     #[is(-100.0)] pub last_seen_t: f64,
-    pub covers: Option<V3>,
     #[is(-100.0)] pub word_t: f64,
     pub led_at: Option<V3>,
-    pub hold: bool,
-    pub pinned: bool,
+    /// what he is held to
+    #[is(crate::duty::Duty::blank())] pub duty: crate::duty::Duty,
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
@@ -1071,7 +1074,6 @@ pub struct Guard {
     pub body_duty: Option<crate::game::GuardBodyDuty>,
     pub dropped: Option<ItemId>,
     #[is(f64::NEG_INFINITY)] pub handle_gate_t: f64,
-    pub stays_in_rooms: bool,
     pub fled: bool,
     #[is(-1.0)] pub gun_lost_at: f64,
     #[is(-1.0)] pub torch_lost_at: f64,
@@ -1131,7 +1133,8 @@ pub struct Guard {
     pub stall_ref: Option<V3>,
     pub stall_t: f64,
     pub script: Option<crate::game::GuardScript>,
-    pub task: Option<crate::game::GuardTask>,
+    /// what a man of the night staff is off to do
+    pub errand: Option<crate::game::Errand>,
     pub drawn: bool,
     /// may name a man who is dead or has left
     pub leader: Option<GuardId>,
@@ -1343,7 +1346,7 @@ pub struct Tabs {
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
     pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
-    pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
+    pub task: Tab<TaskId, crate::duty::Task>,
     pub doortools_room_search: Tab<DoortoolsRoomSearchId, crate::doortools::RoomSearch>,
     pub doortools_word: Tab<WordId, crate::doortools::Word>,
     pub doortools_door_gate: Tab<DoorGateId, crate::doortools::DoorGate>,

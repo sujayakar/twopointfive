@@ -278,10 +278,10 @@ fn a_walk_through_a_door_goes_by_his_own_seats_order() {
             let Some(m) = walker else { panic!("seed {s}, seat {seat}: CONTROL: five seconds after the word no man of his has a walk") };
             let a = game::orders::squad_orders_of(&game::seats::seat(&p.g, sn), m).expect("he is on the order");
             let pod = p.g.door_path.walks.get(m).unwrap().pod;
-            p.g.tab.orders_assignment[a].post = Some(pod);
-            p.g.tab.orders_assignment[a].via = vec![pod];
+            p.g.tab.task[a].post = Some(pod);
+            p.g.tab.task[a].via = vec![pod];
             p.frame();
-            assert!(p.g.tab.orders_assignment[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
+            assert!(p.g.tab.task[a].via.is_empty(), "seed {s}: seat {seat}'s man's walk did not take his order's way up");
         }
     }
 }

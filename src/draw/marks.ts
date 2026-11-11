@@ -8,9 +8,9 @@ export class DrawDecals extends Decals {
   private owed = true;
   constructor(device: GPUDevice, private D: Drawn) { super(device); this.queue = device.queue; }
   private queue: GPUQueue;
-  get count(): number { const D = this.D; return D.n[Section.decalHead] ? D.u[D.at[Section.decalHead] + DecalHead.count] : 0; }
+  override get count(): number { const D = this.D; return D.n[Section.decalHead] ? D.u[D.at[Section.decalHead] + DecalHead.count] : 0; }
   /** a frame is drawn: `game.frame` has left the rows where this frame has them */
-  frame(): void {
+  override frame(): void {
     const D = this.D; if (!D.n[Section.decalHead]) return;
     if (D.u[D.at[Section.decalHead] + DecalHead.moved]) this.owed = true;
     const o = D.at[Section.decalHead], s = this.stats; s.count = D.u[o + DecalHead.drawn]; s.listLen = D.u[o + DecalHead.listed]; s.dropped = D.u[o + DecalHead.dropped];

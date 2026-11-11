@@ -27,7 +27,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
     let x = Lines { lines: opening_lines(g, &opens, p, reach), opens, doors };
     let Some(from) = start_cell(g, &x, p, hint.unwrap_or(p)) else { return RoomRead { cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() } };
     let (cells, steps, edge) = flooded(g, &x, from, reach);
-    let own_ring = match ring { Some(_) => JsSet::new(), None => crate::orders::player_ring(g, g.player) };
+    let own_ring = match ring { Some(_) => JsSet::new(), None => crate::orders::squad_orders_ring(g, &crate::seats::here(g)) };
     let ring = ring.unwrap_or(&own_ring);
     let mut ways: Vec<RoomWay> = edge.iter().map(|(o, &c)| way_out(g, o, c, p, ring)).collect();
     let tab = &g.tab.cover_opening;

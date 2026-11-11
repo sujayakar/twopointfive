@@ -476,7 +476,7 @@ pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
     }).collect();
     let asked = contacts.iter().map(|k| Asked {
         man: if k.weak != Some(true) { crate::doorthrow::door_man(g, k.who) as i32 } else { 0 },
-        opens: k.keys.as_ref().map_or(0, |keys| ids.iter().enumerate().filter(|(_, &d)| crate::squadcast::ring_has(keys, &g.dr[d].lock_id)).fold(0, |b, (i, _)| b | 1u64 << i)),
+        opens: k.keys.as_ref().map_or(0, |keys| ids.iter().enumerate().filter(|(_, &d)| crate::group::ring_has(keys, &g.dr[d].lock_id)).fold(0, |b, (i, _)| b | 1u64 << i)),
     }).collect();
     let man = crate::cmd::seat_man(g, g.seats[0]);   // (the head of the span the settled man is pushed out of the statics over, of the first seat's man)
     let mut s = Step {

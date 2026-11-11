@@ -27,8 +27,8 @@ pub enum SilentBoot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SilentMod {
-    pub states: JsMap<PlayerId, crate::silent::State>,
-    pub seats: JsMap<PlayerId, crate::silent::SilentModSeatsValue>,
+    pub states: JsMap<GroupId, crate::silent::State>,
+    pub seats: JsMap<GroupId, crate::silent::SilentModSeatsValue>,
 }
 
 /// the counters this module keeps for the checks

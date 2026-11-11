@@ -28,7 +28,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
             Some(SquadOrdersHoldArcsItem { yaw, door: Some(door), .. }) => {   // (a door close by in his arc: the gun, and the light on it, is ON it)
                 let fc = g.dr[door].frame_centre;
                 let there = format!("holding · {}", door_words(g, door));
-                SquadOrdersAssignA {
+                crate::duty::TaskGiven {
                     order: String::from(ORDER.id), post: Some(posts[i]), face: Some(yaw), watch: Some([fc[0], 1.1, fc[2]]), door: Some(door),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
                     going: "holding".into(), there: there.into(),
@@ -39,14 +39,14 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
                 let watch: V3 = [posts[i][0] + m::sin(arc.yaw) * arc.reach, 1.1, posts[i][2] + m::cos(arc.yaw) * arc.reach];
                 let pl = crate::dialogue::watched_place(g, posts[i], [posts[i][0] + m::sin(arc.yaw) * arc.reach, 0.0, posts[i][2] + m::cos(arc.yaw) * arc.reach]);
                 let there = if truthy_str(&pl) { format!("holding · {}", pl.unwrap()) } else { String::from("holding") };
-                SquadOrdersAssignA {
+                crate::duty::TaskGiven {
                     order: String::from(ORDER.id), post: Some(posts[i]), face: Some(arc.yaw), watch: Some(watch),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
                     going: "holding".into(), there: there.into(),
                     ..Default::default()
                 }
             }
-            None => SquadOrdersAssignA {
+            None => crate::duty::TaskGiven {
                 order: String::from(ORDER.id), post: Some(posts[i]), face: Some(g.ch[g.gd[gd].ch].body_yaw),
                 stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
                 going: "holding".into(), there: "holding".into(),

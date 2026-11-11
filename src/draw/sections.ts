@@ -1,11 +1,11 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 3749123004;
+export const LAYOUT = 2018466319;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, dustAir = 13, leaves = 14, lights = 15, coming = 16, men = 17, insts = 18, bones = 19, caps = 20, doorways = 21, emits = 22, kicks = 23, pushes = 24, sources = 25, anchors = 26, beams = 27, sounds = 28, footfalls = 29, lasting = 30, heard = 31, rims = 32, fires = 33, fireTable = 34, decals = 35, decalKeys = 36, decalHead = 37, winds = 38, gusts = 39, heat = 40, air = 41, windRoofs = 42, roofs = 43, ceilings = 44, doorBoxes = 45, openPanes = 46, resets = 47, dust = 48, feet = 49, things = 50, blasts = 51, snowWords = 52, smoke = 53, smokeAt = 54, smokeBricks = 55, count = 56 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, coming = 15, men = 16, insts = 17, bones = 18, caps = 19, doorways = 20, emits = 21, kicks = 22, pushes = 23, sources = 24, anchors = 25, beams = 26, sounds = 27, footfalls = 28, lasting = 29, heard = 30, rims = 31, fires = 32, fireTable = 33, decals = 34, decalKeys = 35, decalHead = 36, winds = 37, gusts = 38, heat = 39, air = 40, windRoofs = 41, roofs = 42, ceilings = 43, doorBoxes = 44, openPanes = 45, resets = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -251,24 +251,22 @@ export const enum Head {
   items = 14,
   /** u32: the panes' broken cells are to be sent */
   panesMoved = 15,
-  /** u32: the weather's dust in the rooms is to be sent */
-  airMoved = 16,
   /** u32: the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count) */
-  serial = 17,
+  serial = 16,
   /** u32: which stuffs some box has been, a bit a stuff's number */
-  stuffs = 18,
+  stuffs = 17,
   /** f32: the boxes a ray's grid reaches past the cells they are registered in (metres) */
-  slack = 19,
+  slack = 18,
   /** u32: keyed boxes found a frame ago, met for the first time, and boxes with no key */
-  matched = 20,
+  matched = 19,
   /** u32 */
-  fresh = 21,
+  fresh = 20,
   /** u32 */
-  unkeyed = 22,
+  unkeyed = 21,
   /** u32: the order the statics are drawn in is of the list as it stood some frames ago */
-  orderStale = 23,
+  orderStale = 22,
   /** words a row */
-  row = 24,
+  row = 23,
 }
 
 /** a box's place */
@@ -365,6 +363,42 @@ export const enum Info {
   glass = 256,
   /** words a row */
   row = 640,
+}
+
+/** what is broken of a listed pane (all nought: it is whole) */
+export const enum Pane {
+  /** f32: how many sites it has been cut from */
+  sites = 0,
+  /** f32: 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web */
+  says = 1,
+  /** f32: 0: its own x runs across it; 1: its z does */
+  axis = 2,
+  /** f32: how far it has gone, to 1 */
+  damage = 3,
+  /** f32 × 2 */
+  half = 4,
+  /** f32 */
+  kind = 6,
+  /** f32 */
+  pad = 7,
+  /** f32 × 2: where the blow that diced it fell */
+  blow = 8,
+  /** f32: the clumps whose key is under this have let go */
+  openAt = 10,
+  /** f32 */
+  grain = 11,
+  /** f32 */
+  cols = 12,
+  /** f32 */
+  rows = 13,
+  /** f32 */
+  seed = 14,
+  /** f32 */
+  pad2 = 15,
+  /** f32 × 128: a site: its place, its turn and its ring's radius · its radials, seed, energy and how much is merged · the four rings' radii · the pieces that have fallen out, twelve bits a band, two bands a float */
+  site = 16,
+  /** words a row */
+  row = 144,
 }
 
 /** a door's leaf where the tick left it: what the picture's own plans ask of it (openings, places, what shuts smoke in) */

@@ -307,7 +307,7 @@ fn stand_rules(g: &mut Game) {
     g.lesson = crate::lesson::lesson_new();
     g.night_breach = crate::nightbreach::night_breach_new();
     g.room_clear = crate::roomclear::room_clear_scenario_new();
-    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].orders = crate::orders::squad_orders_new(v, None); });
+    stand_each_seat(g, &mut |v: &mut Game| { v.groups[v.group].orders = crate::orders::squad_orders_new(v); });
     g.fight = crate::roomfight::room_fight_new();
     g.cues = crate::cues::cues_new();
     g.squad_net = crate::squadnet::squad_net_new();
@@ -319,7 +319,7 @@ fn stand_rules(g: &mut Game) {
 
 /// each seat's own hands on its squad: the door tools after the orders (their rows are registered on the orders' menu), and what spends their charges after them
 fn stand_orders(g: &mut Game) {
-    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
+    stand_each_seat(g, &mut |v: &mut Game| { v.groups[v.group].tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
     stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)
     stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].work = crate::workthings::work_things_new(v); });

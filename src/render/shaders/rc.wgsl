@@ -55,7 +55,7 @@ fn parentSetup(slot: u32, corner: u32, P: vec3f, py: u32) {
     let ci = clamp(i0 + vec2i(cx, cz), vec2i(0), vec2i(rc.parentDims.xz) - 1);
     w = select(1.0 - f.x, f.x, cx == 1) * select(1.0 - f.y, f.y, cz == 1);
     lin = (u32(ci.y) * rc.parentDims.y + py) * rc.parentDims.x + u32(ci.x);
-    if ((frame.flags & FLAG_RC_VISWEIGHT) != 0u && w > 0.0) {
+    if ((frame.flags & FLAG_RC_VIS_WEIGHT) != 0u && w > 0.0) {
       let Q = probePos(vec3u(u32(ci.x), py, u32(ci.y)), rc.parentSpacing);
       let d = Q - P; let dist = length(d);
       if (dist > 1e-3 && occluded(P, d / dist, dist, 0u)) { w = 0.0; }

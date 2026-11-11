@@ -280,7 +280,7 @@ impl Play {
     pub fn ring_over_menu(&mut self) {
         let (input, at) = (self.host.input, self.g.seat);
         let r = game::cmdring::ring_open(&mut self.g, input, 800.0, 600.0, 0.0, None);
-        self.g.sets[at].orders.cmd_ring = Some(r);
+        self.g.groups[self.g.sets[at].group].orders.cmd_ring = Some(r);
     }
     /// The cursor on the place `at` (chest height), held there as the camera moves.
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
@@ -484,7 +484,7 @@ impl Play {
         self.g.ch[c].aim_yaw = yaw;
         self.g.cond[c].down = state == GuardState::Dead;
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
+        (h.duty.holds, h.duty.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
     }
     /// Every man of the other side but these is down.
@@ -524,7 +524,7 @@ impl Play {
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
-    pub fn menu(&self) -> Vec<String> { self.g.sets[self.g.seat].orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
+    pub fn menu(&self) -> Vec<String> { self.g.groups[self.g.group].orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
     /// is the order of that id on the squad's menu now
     pub fn on_menu(&self, id: &str) -> bool { self.menu().iter().any(|r| r == id) }
     /// the living men of the red pair, and of the blue (the menu's own call, `SquadOrders.men`)
@@ -583,7 +583,7 @@ impl Play {
     }
 
     /// the mark his order has for him, if it has one
-    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
+    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd)?; self.g.tab.task[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }

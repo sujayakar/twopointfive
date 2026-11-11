@@ -322,13 +322,13 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
     let mut bd = f64::INFINITY;
     for &id in &g.guards {
         let gd = &g.gd[id];
-        if gd.state != crate::game::GuardState::Patrol || gd.hold || gd.task.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
+        if gd.state != crate::game::GuardState::Patrol || gd.duty.holds || gd.errand.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
         let dd = v3::dist(g.ch[gd.ch].pos, goal);
         if dd < bd { bd = dd; best = Some(id); }
     }
     let id = best?;
     {
-        g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
+        g.gd[id].errand = Some(crate::game::Errand::At(crate::game::ErrandAt { kind: crate::game::ErrandThing::Device, pos: v3::copy(goal) }));
         crate::mind::fix(g, id, Some(v3::copy(goal)), "devices");
         crate::mind::raise(g, id, errand().awareness, "devices");
         crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");

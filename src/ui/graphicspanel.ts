@@ -6,7 +6,7 @@ import type { FollowCamera } from '../host/camera';
 import type { SmokeSystem } from '../smoke/smoke';
 import { DEG } from '../math/vec';
 import { charMatsSummary, resetCharMats } from '../render/charMaterials';
-import { DECAL_CAP, type Decals } from '../render/decals';
+import { DECAL_CAP, DECAL_MAX_PER_CELL, type Decals } from '../render/decals';
 import { KIND_DEFAULTS, P_KINDS } from '../render/particles';
 import { defaultRcConfig } from '../render/rc';
 import { pageSay } from '../view/pagesaid';
@@ -365,7 +365,7 @@ export function buildGraphics(panel: Panel, engine: Engine, smoke: SmokeSystem, 
   const dc = panel.section('Decals', { open: true, summary: () => S.decals ? `${G.marks.count}/${DECAL_CAP} marks · flag ${engine.decalsOn ? 'up' : 'down'}` : 'off' });
   panel.toggleBox(dc, 'decals', () => S.decals, v => { S.decals = v; G.marks.enabled = v; }, `The marks the encounter leaves — bullet holes where rounds stop, the stun charge's scorch (and its splashes up the walls), boot scuffs on kicked leaves, the chip a ring knocks out of the plaster — kept in a ${DECAL_CAP}-entry ring on the CPU (render/decals.ts), bucketed per 1 m cell, and drawn by the g-buffer's fragment stage into the albedo / normal it stores (decals.wgsl), so direct light, the bounce and the glossy floors all answer to them. Marks on doors and furniture ride the box. Off = the picture does not show them: the marks are still laid (they are the game's), nothing is uploaded and the g-buffer is as it was.`);
   rows.decals?.(dc);
-  panel.text(dc, () => { const st = G.marks.stats; return `decals ${G.marks.count}/${DECAL_CAP} · drawn ${st.count} · cell entries ${st.listLen}${st.dropped ? ` · ${st.dropped} dropped by caps` : ''} · uploads ${st.uploads} · flag ${engine.decalsOn ? 'up' : 'down'}`; });
+  panel.text(dc, () => { const st = G.marks.stats; return `decals ${G.marks.count}/${DECAL_CAP} · drawn ${st.count} · cell entries ${st.listLen} · busiest cell ${st.maxCell}/${DECAL_MAX_PER_CELL}${st.dropped ? ` · ${st.dropped} dropped by caps` : ''} · uploads ${st.uploads} · build ${st.buildMs.toFixed(2)} ms · flag ${engine.decalsOn ? 'up' : 'down'}`; });
   // GPU particles (experiment E4: render/particles.ts + rust/game_rules/src/breakage/particle_fx.rs)
   { const pp = panel.section('Particles', { open: false, summary: () => { const P = engine.particles; return !P ? 'no system' : `${engine.particlesOn ? 'ON' : 'off'} · alive ${P.stats.alive} · born ${P.stats.born}/f · queue ${P.pending.length}`; } });
     panel.toggleBox(pp, 'GPU particles', () => S.gpuParticles, v => { S.gpuParticles = v; }, 'sparks, debris chips, dust puffs and spent casings simulated in one compute pass (collide with the trace grid, lit by the light buffer + three shadow rays + the radiance cache) and splatted into the HDR target after the composite. Off = the CPU box sparks of game/sparks.ts exactly as they were and none of the new impact debris / dust / brass');

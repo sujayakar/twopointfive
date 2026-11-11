@@ -19,11 +19,11 @@ fn key_taken(g: &mut Game, input: InputId) {
     g.tab.input[input].pressed.delete(key);
 }
 /// The word was given a moment ago: the rest of a double tap.
-fn word_tapped(g: &Game) -> bool { g.time - g.sets[g.seat].door_tools.word_key_t < g.k.doortools.word_tap }
-fn word_given(g: &mut Game) { g.sets[g.seat].door_tools.word_key_t = g.time; }
+fn word_tapped(g: &Game) -> bool { g.time - g.groups[g.group].tools.word_key_t < g.k.doortools.word_tap }
+fn word_given(g: &mut Game) { g.groups[g.group].tools.word_key_t = g.time; }
 /// The word's row of the menu that is up.
 fn word_row(g: &Game) -> Option<usize> {
-    let menu = g.sets[g.seat].orders.menu.as_ref()?;
+    let menu = g.groups[g.group].orders.menu.as_ref()?;
     menu.rows.iter().position(|&d| g.tab.orders_order_def[d].word)
 }
 fn give_go(g: &mut Game, men: &[GuardId]) -> bool {
@@ -48,7 +48,7 @@ fn word_of_pair(g: &mut Game, input: InputId) -> bool {
         crate::orders::squad_orders_close(g);
         return true;
     }
-    let men = match g.sets[g.seat].orders.menu.as_ref().map(|x| x.target.clone()) {
+    let men = match g.groups[g.group].orders.menu.as_ref().map(|x| x.target.clone()) {
         Some(t) => crate::orders::squad_orders_recipients(g, &crate::seats::here(g), Some(&t), None),
         None => door_tools_word_men(g, &crate::seats::here(g)),
     };
@@ -65,7 +65,7 @@ fn word_of_pair(g: &mut Game, input: InputId) -> bool {
 fn word_of_pairs(g: &mut Game, input: InputId) -> bool {
     use crate::nightbreach::{night_breach_drill_ops, night_breach_state, NightBreachState as NB};
     let row = word_row(g);
-    let men = match g.sets[g.seat].orders.menu.as_ref().filter(|_| row.is_some()).map(|x| x.target.clone()) {
+    let men = match g.groups[g.group].orders.menu.as_ref().filter(|_| row.is_some()).map(|x| x.target.clone()) {
         Some(t) => crate::orders::squad_orders_recipients(g, &crate::seats::here(g), Some(&t), None),
         None => door_tools_word_men(g, &crate::seats::here(g)),
     };
@@ -110,5 +110,5 @@ fn drill_has_key(g: &Game) -> bool {
     use crate::nightbreach::{night_breach_drill_ops, night_breach_state, NightBreachState};
     if night_breach_state(g) != NightBreachState::Staged { return false; }
     let drill = night_breach_drill_ops(g);
-    word_tapped(g) || g.sets[g.seat].door_tools.ops.iter().any(|&o| any_shared(&drill, &dop!(g, o).men))
+    word_tapped(g) || g.groups[g.group].tools.ops.iter().any(|&o| any_shared(&drill, &dop!(g, o).men))
 }

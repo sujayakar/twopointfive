@@ -167,7 +167,7 @@ fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     }
     match (bi, row.room) {
         (Some(i), Some(room)) => g.tab.roomfight_room[room].entries[i].at,
-        _ => row.pt,
+        _ => crate::roomfight::watched(g, d),
     }
 }
 

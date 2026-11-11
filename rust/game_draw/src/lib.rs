@@ -95,8 +95,7 @@ sections! {
     cells: boxes::Word = boxes.grid.cells;
     items: boxes::Word = boxes.grid.items;
     info: boxes::Info = boxes.grid.info;
-    panes: boxes::Row4 = boxes.glass.cells;
-    dust_air: boxes::Row4 = boxes.air.rows;
+    panes: boxes::glass::Pane = boxes.glass.cells;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
     coming: lights::Coming = lights.coming;

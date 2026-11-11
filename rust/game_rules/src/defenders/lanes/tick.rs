@@ -280,7 +280,7 @@ fn guns_that_went_down_have_moved(g: &mut Game, k: &crate::knobs::LanesK) {
 fn note_their_posts(g: &mut Game) {
     for i in 0..g.fight.defs.len() {
         let d = g.fight.defs[i];
-        let (gd, station) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].station);
+        let (gd, station) = (g.tab.roomfight_def[d].gd, crate::roomfight::station(g, d));
         let st = s(g);
         if !st.post.has(gd) { st.post.set(gd, v3::copy(station)); }
     }

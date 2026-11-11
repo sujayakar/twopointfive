@@ -1,13 +1,13 @@
 // THE BOX WORLD OF A PAGE THAT HOLDS NO GAME: the renderer's tables, filled with the rows Rust left (rust/game_draw boxes). Nothing is packed here and no box
 // is an object, but for what the picture's own plans ask of a static (where it stands and what kind of thing it is: scene/boxes.ts PlanBox), which are told
 // where one changed, and of a door's leaf.
-import { BoxFlag, BoxWorld, GB_STRIDE, boxOf, stopsSky, type Box } from '../scene/boxes';
+import { BoxFlag, BoxWorld, boxOf, stopsSky, type Box } from '../scene/boxes';
 import { lookNeedBits } from '../render/gbuffer';
 import type { Vec3 } from '../math/vec';
 import type { CutPlane } from '../scene/cut';
 import type { Drawn } from './drawn';
 import { BoxMat, Capsule } from './gpu';
-import { Beam, Cut, Geo, Head, Info, Leaf, Mat, Row4, Section, Word } from './sections';
+import { Beam, Cut, Geo, Head, Info, Leaf, Mat, Pane, Row4, Section, Word } from './sections';
 
 /** the GPU's flag word (rust/game_draw boxes/pack.rs): what of it a plan asks */
 const KEPT = 0xe7 | BoxFlag.Glass, ROUND = 8, ROT = 64, CUT = 1 << 16;
@@ -40,8 +40,7 @@ export class DrawWorld extends BoxWorld {
     D.send(q, this.geoBuf, Section.geo, Geo.row, st, n - st); D.send(q, this.matBuf, Section.mat, Mat.row, st, n - st);
     // the tables behind the materials: marks, the panes' cells, the cut planes
     if (u[h + Head.marksMoved]) D.send(q, this.matBuf, Section.marks, Row4.row, 0, D.n[Section.marks], BoxMat.mark * 16);
-    if (u[h + Head.airMoved]) D.send(q, this.matBuf, Section.dustAir, Row4.row, 0, D.n[Section.dustAir], BoxMat.air * 16);
-    if (u[h + Head.panesMoved]) D.send(q, this.matBuf, Section.panes, Row4.row, 0, D.n[Section.panes], BoxMat.pane * 16);
+    if (u[h + Head.panesMoved]) D.send(q, this.matBuf, Section.panes, Pane.row, 0, D.n[Section.panes], BoxMat.pane * 16);
     if (this.cutOn) for (let k = 0; k < 2; k++) { const a = u[h + (k ? Head.cutFromOwn : Head.cutFrom)], b = u[h + (k ? Head.cutToOwn : Head.cutTo)]; if (b > a) D.send(q, this.matBuf, Section.cut, Cut.row, a, b - a, BoxMat.cut * 16 + a * Cut.row * 4); }
     D.send(q, this.visibleBuf, Section.visible, Word.row);
     this.visibleCount = u[h + Head.visible]; this.visibleCutCount = u[h + Head.visibleCut]; this.visibleCutTraced = u[h + Head.visibleCutTraced]; this.cutTraced = u[h + Head.cutTraced];
@@ -66,11 +65,11 @@ export class DrawWorld extends BoxWorld {
   private holed = new Map<number, number>();
   /** the panes' rows are others than they were: a pane that is open otherwise than it was last listed lets the smoke by somewhere else */
   private holes(): void {
-    const u = this.D.u, L = this.glassList, words = GB_STRIDE * 4;
+    const u = this.D.u, L = this.glassList, words = Pane.row;
     for (let k = 0; k < L.length; k++) {
-      const at = this.D.at[Section.panes] + k * words, fl = this.D.f[at + 1];
+      const at = this.D.at[Section.panes] + k * words, fl = this.D.f[at + Pane.says];
       let key = fl & GB_GONE ? 1 : 0;
-      if (fl & GB_OPEN && !key) for (let w = 0; w < words; w++) if (w !== 3) key = (Math.imul(key ^ u[at + w], 0x01000193) + w) | 0;   // (all but the damage, which opens nothing by itself)
+      if (fl & GB_OPEN && !key) for (let w = 0; w < words; w++) if (w !== Pane.damage) key = (Math.imul(key ^ u[at + w], 0x01000193) + w) | 0;   // (all but the damage, which opens nothing by itself)
       if (key === (this.holed.get(L[k]) ?? 0)) continue;
       this.holed.set(L[k], key);
       this.stands(this.statics[L[k]]);

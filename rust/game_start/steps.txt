@@ -14,11 +14,11 @@ clock: time
 sound paths: col
 duties anew: gd
 aim: ch cleared destr m.close m.guards m.lightswitch m.player m.wallcharge seats.aim_friend seats.aim_guard seats.aim_point seats.aim_snap seats.hover seats.interactables seats.nearby serial_next
-orders' keys: seats.orders
+orders' keys: groups.orders
 wand order:
-squad throw: m.squadthrow seats.orders tab.orders_order_def
+squad throw: m.squadthrow groups.orders tab.orders_order_def
 order rows:
-orders shown: seats.orders
+orders shown: groups.orders
 his own ring:
 aim settled: arms m.guards
 threat: ch seats.threat_proximity
@@ -31,22 +31,22 @@ grenades:
 weapons dealt: ch search_probe_n
 director:
 pair's key:
-charges' key: seats.door_tools seats.orders tab.orders_order_def
-mission's rules: box_frame_free ch chronicle cond ctl cues cv destr dice engine.lights events fa fight fx fx_seed gd keyed loose_poses m.enemysquads m.netquietfeed m.particle_fx m.unseen night_breach quiet rescue room_clear seats.door_tools seats.orders seats.work serial_next sim.men sim.poses staged tab.enemysquads_squad tab.frame_boxes tab.light tab.orders_assignment tab.ragdoll tab.rescueflow_region tab.roomfight_def tab.roomfight_room tab.wallbreak_breakable
+charges' key: groups.tools groups.orders tab.orders_order_def
+mission's rules: box_frame_free ch chronicle cond ctl cues cv destr dice engine.lights events fa fight fx fx_seed gd keyed loose_poses m.enemysquads m.netquietfeed m.particle_fx m.unseen night_breach quiet rescue room_clear groups.tools groups.orders seats.work serial_next sim.men sim.poses staged tab.enemysquads_squad tab.frame_boxes tab.light tab.task tab.ragdoll tab.rescueflow_region tab.roomfight_def tab.roomfight_room tab.wallbreak_breakable
 wall react: cover destr fight m.wallreact tab.cover_opening tab.roomfight_room tab.wallreact_breach
 entry points: cover entry tab.cover_opening
 cleared rooms: cleared
-door tools: ch dice door_path dr fight gd items keyed m.doortools m.handleside m.seenwalk m.unseen seats.door_tools seats.orders serial_next squad_net tab.doortools_door_op tab.doortools_known_threat tab.doortools_room_search tab.doortools_word tab.item tab.orders_assignment tab.roomfight_room
+door tools: ch dice door_path dr fight gd items keyed m.doortools m.handleside m.seenwalk m.unseen groups.tools groups.orders serial_next squad_net tab.doortools_door_op tab.doortools_known_threat tab.doortools_room_search tab.doortools_word tab.item tab.task tab.roomfight_room
 wall charges:
 rear watch: m.rearwatch
 cover: cover gd tab.cover_opening
-silent: m.silent seats.orders tab.orders_order_def
-pairs: pair seats.orders tab.orders_order_def
+silent: m.silent groups.orders tab.orders_order_def
+pairs: pair groups.orders tab.orders_order_def
 spotted: ch gd m.spotted
-squad orders: ch cover dice dr fight gd items keyed m.fireline m.frag m.orders m.picture m.seenwalk m.shutdoor m.sneak m.squad m.squadthrow m.teampace m.unseen seats.door_tools seats.orders serial_next squad_net tab.item tab.orders_assignment tab.roomfight_room
+squad orders: ch cover dice dr fight gd items keyed m.fireline m.frag m.orders m.picture m.seenwalk m.shutdoor m.sneak m.squad m.squadthrow m.teampace m.unseen groups.tools groups.orders serial_next squad_net tab.item tab.task tab.roomfight_room
 door paths: door_path gd
 power out: ch chronicle cues gd m.powerout
-room fight: arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights engine.world events fa falls fight fx fx_seed gd items keyed loose_poses m.coverfire m.destruction m.digin m.flinch m.glass m.glassbreak m.glasspen m.guards m.gunwall m.irlight m.laststand m.morale m.netquiet m.particle_fx m.squad m.tactics m.teampace m.unseen m.wallreact m.winbars recap serial_next shards sim.men sim.panes sim.smoke squad_net tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.props_prop tab.ragdoll tab.roomfight_def tab.roomfight_op tab.roomfight_room tab.tactics_danger_rec tab.wallbreak_breakable tracers
+room fight: arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights engine.world events fa falls fight fx fx_seed gd items keyed loose_poses m.coverfire m.destruction m.digin m.flinch m.glass m.glassbreak m.glasspen m.guards m.gunwall m.irlight m.laststand m.morale m.netquiet m.particle_fx m.squad m.tactics m.teampace m.unseen m.wallreact m.winbars recap serial_next shards sim.men sim.panes sim.smoke squad_net tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.props_prop tab.ragdoll tab.roomfight_def tab.task tab.roomfight_op tab.roomfight_room tab.tactics_danger_rec tab.wallbreak_breakable tracers
 orders' reasons: gd m.showwhy
 morale: box_frame_free ch chronicle cond cues destr dice engine.lights events fa fx fx_seed gd keyed m.morale m.particle_fx serial_next sim.men sim.smoke tab.debris_chunk tab.frame_boxes tab.light tab.wallbreak_breakable
 flinch: m.flinch m.morale

@@ -23,7 +23,7 @@ pub struct UnseenFollow {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct UnseenMod {
-    pub states: JsMap<PlayerId, crate::unseen::State>,
+    pub states: JsMap<GroupId, crate::unseen::State>,
     pub on_wall_at: JsMap<GuardId, f64>,
     pub kneel_at: JsMap<GuardId, f64>,
     pub placed: JsMap<GuardId, u32>,

@@ -58,12 +58,12 @@ fn lit(p: &mut Play, at: [f64; 2]) -> f64 {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None));
     p.ring_over_menu();
-    let rows = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().rows.clone();
+    let rows = p.g.groups[p.g.group].orders.menu.as_ref().unwrap().rows.clone();
     let i = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the ring") as f64;
-    p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = i;
+    p.g.groups[p.g.group].orders.menu.as_mut().unwrap().sel = i;
     i
 }
-fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone()) }
+fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.group).and_then(|s| s.plan.clone()) }
 
 /// THE RULE: what the menu shows of a shell is what its press gives: the man, and where it goes off. A spot too near to arm is refused in the words shown, and nothing is drawn of it.
 /// A FAILURE MEANS: the picture, the row and the order have gone back to asking for themselves.

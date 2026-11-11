@@ -1,10 +1,8 @@
 //! WHAT THE PICTURE IS TOLD (rust/game_draw), of games that stand. That a section says what the game has is each section's own test (`fog.rs` holds the fog's);
 //! these hold what is true of all of them: drawing a game changes nothing of it, what is drawn between two ticks stands between them, and nothing is drawn
 //! through a cut. `hold draw` draws every frame of a set of plays and says what it cost.
-mod world_ask;
 use game_draw::{want, Drawn};
 use game_start::play::{Opts, Play};
-use world_ask::WorldAsk;
 
 const ALL: u32 = u32::MAX;
 fn office(seed: u32) -> Play { Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }) }
@@ -100,32 +98,6 @@ fn nothing_is_drawn_through_a_cut() {
     let whole = man(&d, id).unwrap();
     d.frame(&p.g, 0.5, focus);
     assert_eq!(man(&d, id).unwrap(), whole, "he is drawn between a tick before the cut and the one after it");
-}
-
-/// THE RULE: the dust the picture is sent is the dust men see through: at every frame what a page has been sent of it is the game's own field, cell for cell, the shut room and the open door alike, and nothing
-/// is sent while nothing of it moves.
-/// CONTROL: a level in clear weather is sent none.
-/// A FAILURE MEANS: a storm stands where men are blinded and the room is drawn clear, or it stands in one place on the screen and in another for the eyes.
-#[test]
-fn the_dust_drawn_is_the_dust_eyes_see_through() {
-    let born = |weather: &str| { let mut p = Play::mission("records.json", &format!("?levelFile=records.json&weather={weather}"), &Opts { seed: 11, ..Default::default() }); p.g.ai_enabled = false; p.g.god_mode = true; p };
-    let mut p = born("dust");
-    let mut d = Drawn::default();
-    let mut page: Vec<f32> = vec![];
-    let mut sent = 0;
-    let door = p.g.doors.list.iter().copied().find(|&d| p.g.dr[d].def.exterior.unwrap_or(false) && !p.g.dr[d].leaf.locked).map(|d| p.g.dr[d].def.name.clone());
-    for k in 0..600 {
-        if k == 120 { if let Some(n) = &door { p.door_stands_open(n); } }
-        p.frame_shown(|p| { d.take(&p.g, ALL); d.frame(&p.g, 1.0, [20.0, 0.0, 14.0]); });
-        if head(&d).air_moved == 1 { page = d.boxes.air.rows.iter().flat_map(|r| r.w).collect(); sent += 1; }
-        let want: Vec<f32> = game::air_dust::air_grid(&p.g).iter().map(|&x| x as f32).collect();
-        assert!(!want.is_empty() && want.len() == page.len() && want == page, "frame {k}: the page has {} cells, the game {}", page.len(), want.len());
-    }
-    assert!(page.iter().any(|&x| x > 0.0 && x < 0.9) && sent > 2 && sent < 500, "the level is in no storm: {sent} sent");
-    drop(p);
-    let mut q = born("clear");
-    let mut e = Drawn::default();
-    for _ in 0..60 { q.frame_shown(|p| { e.take(&p.g, ALL); e.frame(&p.g, 1.0, [20.0, 0.0, 14.0]); }); assert_eq!(head(&e).air_moved, 0, "dust sent in clear weather"); }
 }
 
 /// THE RULE: the boxes' lists agree with their head, every static is told as changed once, and a frame whose boxes stand still keeps its grid.

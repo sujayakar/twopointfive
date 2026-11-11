@@ -236,8 +236,8 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
         let a = crate::orders::squad_orders_of(seat, man);
         let Some(a) = a else { continue };
         if crate::condition::down(g, g.gd[man].ch) { continue; }
-        if g.tab.orders_assignment[a].door != Some(d) { continue; }
-        let Some(post) = g.tab.orders_assignment[a].post else { continue };
+        if g.tab.task[a].door != Some(d) { continue; }
+        let Some(post) = g.tab.task[a].post else { continue };
         if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.pos_of(man), post) < 0.6 { return true; }
     }
     false

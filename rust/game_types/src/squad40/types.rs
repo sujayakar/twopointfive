@@ -22,7 +22,7 @@ pub struct Turn {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::LentBack>,
@@ -95,7 +95,7 @@ pub struct ShellPlan {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Squad40Mod {
-    pub states: JsMap<PlayerId, crate::squad40::State>,
+    pub states: JsMap<GroupId, crate::squad40::State>,
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
 }
 

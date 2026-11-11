@@ -8,7 +8,6 @@ use game::game::Game;
 use game::ids::*;
 use game::scene_boxes::Box;
 
-pub mod air;
 pub mod glass;
 pub mod grid;
 pub mod marks;
@@ -148,8 +147,6 @@ section! {
         pub items: u32,
         /// the panes' broken cells are to be sent
         pub panes_moved: u32,
-        /// the weather's dust in the rooms is to be sent
-        pub air_moved: u32,
         /// the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count)
         pub serial: u32,
         /// which stuffs some box has been, a bit a stuff's number
@@ -244,7 +241,6 @@ pub struct Boxes {
     pub rank: rank::Rank,
     pub grid: grid::Grid,
     pub glass: glass::Glass,
-    pub air: air::Air,
     pub leaves: Vec<Leaf>,
     pub beams: Vec<Beam>,
     pub wet: crate::wet::Wet,
@@ -274,7 +270,7 @@ impl Boxes {
     pub fn bare(&mut self, on: bool) { if on != self.look.bared { self.look.bared = on; self.epoch += 1; } }
     /// nothing is drawn through what went before: the game is another than the one last drawn
     pub fn hold(&mut self) { self.have = self.have.min(1); }
-    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); self.air.cut(); }
+    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[game::rig_props::CarriedBox]) {
@@ -400,13 +396,11 @@ impl Boxes {
         self.list(g, n);
         let moved = self.grid.build(&self.stood, n);
         self.glass.frame(g, focus, &mut self.grid.info[0], self.look.panes);
-        self.air.frame(g);
         let h = self.head.last_mut().unwrap();
         h.grid_moved = moved as u32;
         h.items = self.grid.count as u32;
         h.slack = self.grid.slack as f32;
         h.panes_moved = self.glass.moved as u32;
-        h.air_moved = self.air.moved as u32;
     }
 
     /// the lines of light nearest the view: the ones the air shows first, as many as its pass has room for

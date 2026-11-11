@@ -7,6 +7,7 @@
 // the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and a read-back.
 // WHO JUDGED WHICH NUMBER: the rows the maintainer moved on his GPU on 11-05 are named at POWDER and POWDER_DRAW below. Every other row was judged on Chromium's
 // software adapter, from pictures of the read-back field, and stands as he left it untouched in the panel.
+import { PowAt } from '../gpu/wgslrows';
 import { makeBuffer, makeShader, computePipelineAsync, laterHold } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
@@ -65,7 +66,7 @@ export function powderDrawWord(): number {
   return (b('gain') | b('thin') << 8 | b('thread') << 16 | b('grain') << 24) >>> 0;
 }
 
-const U_HEAD = 32, U_WORDS = U_HEAD + POW_KICKS * 8;   // powder_field.wgsl PowU: 128 bytes, then the kicks (2 × vec4f each)
+const U_HEAD = PowAt.kicks, U_WORDS = PowAt.words;
 interface Kick { x: number; z: number; force: number; age: number; dx: number; dz: number; seed: number }
 
 /** THE STEP'S PROGRAM IS THE DEVICE'S, COMPILED ONCE (the maintainer on shaders: "compile once", no compile at a moment of play). A field is thrown away when
@@ -136,13 +137,13 @@ export class PowderField {
     if (this.dead || !this.pipe || !(dt > 0)) return;
     dt = Math.min(dt, 1 / 30);
     const P = POWDER, f = this.uf, u = this.uu, keep = (life: number) => Math.exp(-dt / Math.max(life, 1e-3));
-    f[0] = dt; f[1] = time; f[2] = airLive ? P.velK : 0; f[3] = POW_RES;
-    f[4] = keep(P.life); f[5] = keep(P.lifeStill); f[6] = Math.max(0, P.pick * pickK) * dt; f[7] = Math.max(0, P.liftPick * pickK) * dt;
-    f[8] = Number.isFinite(ambient) ? Math.max(0, ambient) : 0; f[9] = P.gateLo; f[10] = Math.max(P.gateHi, P.gateLo + 1e-3); f[11] = keep(P.sink);
-    f[12] = Math.max(P.patch, 0.2); f[13] = Math.max(P.crest, 1 / POW_RES); f[14] = P.crestCut; f[15] = P.change;
-    f[16] = P.low; f[17] = P.liftHigh; f[18] = P.seed; f[19] = Math.max(0, P.clump) * dt;
-    u[20] = this.w; u[21] = this.h; u[22] = this.airW; u[23] = this.airH;
-    f[28] = AIR_RES; f[29] = 0; f[30] = 0; f[31] = 0;
+    f[PowAt.a] = dt; f[PowAt.a + 1] = time; f[PowAt.a + 2] = airLive ? P.velK : 0; f[PowAt.a + 3] = POW_RES;
+    f[PowAt.b] = keep(P.life); f[PowAt.b + 1] = keep(P.lifeStill); f[PowAt.b + 2] = Math.max(0, P.pick * pickK) * dt; f[PowAt.b + 3] = Math.max(0, P.liftPick * pickK) * dt;
+    f[PowAt.c] = Number.isFinite(ambient) ? Math.max(0, ambient) : 0; f[PowAt.c + 1] = P.gateLo; f[PowAt.c + 2] = Math.max(P.gateHi, P.gateLo + 1e-3); f[PowAt.c + 3] = keep(P.sink);
+    f[PowAt.d] = Math.max(P.patch, 0.2); f[PowAt.d + 1] = Math.max(P.crest, 1 / POW_RES); f[PowAt.d + 2] = P.crestCut; f[PowAt.d + 3] = P.change;
+    f[PowAt.e] = P.low; f[PowAt.e + 1] = P.liftHigh; f[PowAt.e + 2] = P.seed; f[PowAt.e + 3] = Math.max(0, P.clump) * dt;
+    u[PowAt.size] = this.w; u[PowAt.size + 1] = this.h; u[PowAt.size + 2] = this.airW; u[PowAt.size + 3] = this.airH;
+    f[PowAt.air] = AIR_RES; f[PowAt.air + 1] = 0; f[PowAt.air + 2] = 0; f[PowAt.air + 3] = 0;
     // the kicks: each gives its column over its life, most at the start, as a round that swells and travels a little
     let n = 0; const T = Math.max(P.kickSecs, 1e-3);
     for (const k of this.kicks) {
@@ -152,7 +153,7 @@ export class PowderField {
       f[o + 4] = P.kickHigh + P.kickHighK * k.force; f[o + 5] = k.seed; f[o + 6] = 0; f[o + 7] = 0; n++;
     }
     for (let i = this.kicks.length - 1; i >= 0; i--) if (this.kicks[i].age >= T) this.kicks.splice(i, 1);
-    u[24] = n; u[25] = 0; u[26] = 0; u[27] = 0;
+    u[PowAt.n] = n; u[PowAt.n + 1] = 0; u[PowAt.n + 2] = 0; u[PowAt.n + 3] = 0;
     this.device.queue.writeBuffer(this.ubo, 0, this.u, 0, (U_HEAD + n * 8) * 4);
     const pass = enc.beginComputePass({ label: 'powder', timestampWrites: ts?.('powder') }); pass.setBindGroup(0, this.bind); pass.setPipeline(this.pipe);
     pass.dispatchWorkgroups(Math.ceil(this.w / 8), Math.ceil(this.h / 8)); pass.end();

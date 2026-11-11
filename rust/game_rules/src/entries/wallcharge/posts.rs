@@ -39,7 +39,7 @@ pub(super) fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
             loop {
                 let a = g.sets[g.seat].wall_charge.alone;
                 g.sets[g.seat].wall_charge.alone = a - 1.0;
-                if !(a > 0.0 && g.sets[g.seat].door_tools.charges < g.k.doortools.charges) { break; }
+                if !(a > 0.0 && g.groups[g.group].tools.charges < g.k.doortools.charges) { break; }
                 crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsCan::Charge);
             }
         }
@@ -151,7 +151,7 @@ pub fn wall_charge_take(g: &mut crate::game::Game) -> f64 {
         return 0.0;
     }
     let p = wall_charge_price(g, &crate::seats::here(g));
-    if g.sets[g.seat].door_tools.charges < p { return -1.0; }
+    if g.groups[g.group].tools.charges < p { return -1.0; }
     let mut i = 0.0;
     while i < p { crate::doortools::door_tools_take(g, crate::doortools::DoorToolsCan::Charge); i += 1.0; }
     if g.sets[g.seat].wall_charge.roster.is_empty() { g.sets[g.seat].wall_charge.alone += p; }
@@ -868,7 +868,7 @@ pub(super) fn wall_charge_kept_for(g: &mut crate::game::Game, t: &crate::orders:
     use crate::orders::OrderTarget;
     if !g.sets[g.seat].wall_charge.keep.on { return None; }
     // `M.target === t`: the serial the menu's own target was stamped with as it opened; a target made by anyone else has serial 0
-    let own = match (g.sets[g.seat].orders.menu.as_ref().map(|m_| &m_.target), t) {
+    let own = match (g.groups[g.group].orders.menu.as_ref().map(|m_| &m_.target), t) {
         (Some(OrderTarget::Floor(a)), OrderTarget::Floor(b)) if b.serial != 0 && a.serial == b.serial => b.serial,
         _ => return None,
     };

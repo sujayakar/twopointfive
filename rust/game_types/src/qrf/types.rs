@@ -140,7 +140,8 @@ pub struct Qrf {
     pub seen_ids: JsSet<crate::Num>,
     pub aim_pts: JsMap<GuardId, V3>,
     pub stations: JsMap<GuardId, V3>,
-    pub cast: Option<crate::squadcast::SquadCast>,
+    /// the group it is at a door, once it has been at one
+    pub group: Option<GroupId>,
     pub op: Option<DoorOpId>,
     pub op_beat: f64,
     pub spent: Option<crate::qrf::QrfSpent>,

@@ -28,13 +28,13 @@ pub use missions::{breach, director, lesson, mission, nightbreach, opening, par,
 pub mod speech;
 pub use speech::{chronicle, cues, deathrecap, dialogue, doornames, showwhy, squadnet, told};
 pub mod squad_orders;
-pub use squad_orders::{cmdring, holdfire, orders, pairorders, pairup, planmode, ringlone, seenwalk, shutdoor, squad, squad40, squadcast, squadsmoke, squadthrow, stayask, wandorder, workstow, workthings};
+pub use squad_orders::{cmdring, holdfire, orders, pairorders, pairup, planmode, ringlone, seenwalk, shutdoor, squad, squad40, group, squadsmoke, squadthrow, stayask, wandorder, workstow, workthings};
 pub mod entries;
 pub use entries::{autopilot, bigkit, doorpath, doortools, entrypoints, roomfit, roomread, stackline, stackroom, wallcharge, wand};
 pub mod teammates;
 pub use teammates::{cleared, cover, irlaser, irlight, nvg, rearwatch, silent, sneak, spotted, teampace, unseen};
 pub mod people;
-pub use people::{attention, belief, civilians, condition, control, doze, flinch, floorseen, guards, morale, needs, owner, picture, runner, sense, startle, suppression, teams, mind};
+pub use people::{attention, belief, civilians, condition, control, doze, duty, flinch, floorseen, guards, morale, needs, owner, picture, runner, sense, startle, suppression, teams, mind};
 pub mod defenders;
 pub use defenders::{calmtorch, coverfire, darkdoor, darkfoe, digin, doorforce, gunhold, lanes, laststand, powerout, pressure, roomfight, smokebreak, wallreact};
 pub mod pursuit;

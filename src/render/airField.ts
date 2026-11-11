@@ -19,6 +19,7 @@
 //               the floor. Indoors there may be no wind at all: the caps and gates then go by the strongest source. Under a roof the vent is AIR.roofVent (a
 //               ceiling), so a room is nearly strict 2D: a draught in at its door curls and comes back out of it.
 // NEVER SEEN ON A GPU: every number below was judged on Chromium's software adapter, from streak pictures of the read-back field (the test page writes them).
+import { AirAt } from '../gpu/wgslrows';
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import airSrc from './shaders/air_field.wgsl' with { type: 'text' };
 
@@ -49,7 +50,7 @@ export const AIR = {
   scaleTime: 0.5,     // s over which that scale follows the drive (a gust rising, a door's draught ending)
 };
 
-const U_HEAD = 28, U_WORDS = U_HEAD + AIR_SRC_MAX * 8;   // air_field.wgsl AirU: 112 bytes, then the sources (2 × vec4f each)
+const U_HEAD = AirAt.src, U_WORDS = AirAt.words;
 const KERNELS = ['curl', 'advect', 'divergence', 'pressureRed', 'pressureBlack', 'project'] as const;
 
 // rgba16float → floats, for the read-back
@@ -166,16 +167,16 @@ export class AirField {
     const wxS = wx / k, wzS = wz / k, lenS = len / k, driveS = drive / k;
     if (!(this.t0 === this.t0)) this.t0 = time;
     const gate = Math.min(1, driveS);   // (confinement fades out under 1 m/s of drive: it feeds whatever spin there is, and still air must come to rest)
-    f[0] = wxS; f[1] = wzS; f[2] = dt; f[3] = this.t0 + this.clock; this.clock += dt;
-    u[4] = this.w; u[5] = this.h; u[6] = this.w + 1; f[7] = AIR_RES;
-    f[8] = 1 - Math.exp(-dt / Math.max(A.relaxTime, 1e-3)); f[9] = 1 - Math.exp(-dt / Math.max(A.roofRelaxTime, 1e-3));
-    f[10] = A.confine * dt * gate / AIR_RES; f[11] = A.turb * dt;
-    f[12] = Math.max(A.turbSize, 2 / AIR_RES); f[13] = A.turbRate;
-    f[14] = Math.max(0, A.vent) / (AIR_RES * AIR_RES * dt); f[15] = Math.min(1.95, Math.max(0.5, A.sor));
-    f[16] = Math.max(0.05, Math.min(A.maxSpeed, A.maxGain * driveS + A.maxFloor)); f[17] = A.liftGain; f[18] = A.liftMax; f[19] = 1 / dt;
-    f[20] = lenS; f[21] = A.seed; f[22] = (wxS - this.lastWind[0]) * A.follow; f[23] = (wzS - this.lastWind[1]) * A.follow;
+    f[AirAt.wind] = wxS; f[AirAt.wind + 1] = wzS; f[AirAt.dt] = dt; f[AirAt.time] = this.t0 + this.clock; this.clock += dt;
+    u[AirAt.size] = this.w; u[AirAt.size + 1] = this.h; u[AirAt.stride] = this.w + 1; f[AirAt.res] = AIR_RES;
+    f[AirAt.relax] = 1 - Math.exp(-dt / Math.max(A.relaxTime, 1e-3)); f[AirAt.relaxRoof] = 1 - Math.exp(-dt / Math.max(A.roofRelaxTime, 1e-3));
+    f[AirAt.confine] = A.confine * dt * gate / AIR_RES; f[AirAt.turb] = A.turb * dt;
+    f[AirAt.turbSize] = Math.max(A.turbSize, 2 / AIR_RES); f[AirAt.turbRate] = A.turbRate;
+    f[AirAt.sigma] = Math.max(0, A.vent) / (AIR_RES * AIR_RES * dt); f[AirAt.sor] = Math.min(1.95, Math.max(0.5, A.sor));
+    f[AirAt.cap] = Math.max(0.05, Math.min(A.maxSpeed, A.maxGain * driveS + A.maxFloor)); f[AirAt.liftGain] = A.liftGain; f[AirAt.liftMax] = A.liftMax; f[AirAt.invDt] = 1 / dt;
+    f[AirAt.windLen] = lenS; f[AirAt.seed] = A.seed; f[AirAt.dWind] = (wxS - this.lastWind[0]) * A.follow; f[AirAt.dWind + 1] = (wzS - this.lastWind[1]) * A.follow;
     this.lastWind[0] = wxS; this.lastWind[1] = wzS;
-    f[24] = driveS; u[25] = n; f[26] = Math.max(0, A.roofVent) / (AIR_RES * AIR_RES * dt); f[27] = k;
+    f[AirAt.drive] = driveS; u[AirAt.srcCount] = n; f[AirAt.sigmaRoof] = Math.max(0, A.roofVent) / (AIR_RES * AIR_RES * dt); f[AirAt.outScale] = k;
     const keep = 1 / Math.max(A.roofRelaxTime, 1e-3);
     for (let i = 0; i < n; i++) { const o = i * 8, q = U_HEAD + o, sig = Math.max(S[o + 4], 0.5 / AIR_RES), rate = S[o + 6];
       f[q] = S[o]; f[q + 1] = S[o + 1]; f[q + 2] = S[o + 2] / k; f[q + 3] = S[o + 3] / k; f[q + 4] = sig; f[q + 5] = S[o + 5] / k; f[q + 6] = 1 - Math.exp(-rate * dt); f[q + 7] = S[o + 5] / k / sig * rate / (rate + keep); }

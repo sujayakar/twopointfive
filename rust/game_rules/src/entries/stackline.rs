@@ -26,10 +26,10 @@ fn stack_line_sees(g: &crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
 }
 
 /// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.
-pub fn stack_line_pace(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId, left: f64, brisk: f64) -> Option<f64> {
+pub fn stack_line_pace(g: &crate::game::Game, gd: GuardId, a: TaskId, left: f64, brisk: f64) -> Option<f64> {
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) { return None; }
         let Some(shy) = row.shy else { return None; };
         if row.door != Some(shy) { return None; }

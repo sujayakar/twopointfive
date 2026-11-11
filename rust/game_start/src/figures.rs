@@ -23,7 +23,7 @@ fn bits(v: f64) -> String { format!("{:016x}", v.to_bits()) }
 /// what is in a gun: chambered and in the magazine, the spare magazines, the rounds it has fired
 fn rounds(g: &Game, gun: FirearmId) -> String { let f = &g.fa[gun]; format!("{} {} {} {}", f.chamber, f.mag.unwrap_or(-1.0), f.spare.iter().sum::<f64>(), f.shots_fired) }
 fn order_of(g: &Game, gd: GuardId) -> String {
-    for &s in &g.seats { if let Some(a) = game::orders::squad_orders_of(&game::seats::seat(g, s), gd) { return g.tab.orders_assignment[a].order.clone(); } }
+    for &s in &g.seats { if let Some(a) = game::orders::squad_orders_of(&game::seats::seat(g, s), gd) { return g.tab.task[a].order.clone(); } }
     String::new()
 }
 

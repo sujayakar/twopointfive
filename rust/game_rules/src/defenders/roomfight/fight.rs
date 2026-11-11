@@ -190,7 +190,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while gi < g.guards.len() {
         let x = g.guards[gi]; gi += 1;
         if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
-        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
+        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].duty.holds && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
         else if g.team(x).ours() && op_of(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
     let mut ei = 0;
@@ -260,8 +260,8 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
         let pr = crate::weather::hear_path(g, at, v3::add(op, [0.0, 1.5, 0.0]), None);
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.05) { continue; }
         let eye = g.ch[oc].bone_or(crate::character::Bone::Head, 1.65); if crate::scene_collision::segment_blocked(g, eye, at, None, None, None) { continue; }
-        if let Some(a) = crate::seats::order_of(g, og) {
-            let A = &g.tab.orders_assignment[a];
+        if let Some(a) = crate::duty::order(g, og) {
+            let A = &g.tab.task[a];
             if let (true, Some(ad), false, Some(aw)) = (A.arrived, A.door, A.spare.unwrap_or(false), A.watch) {
                 if ad != dr && dist_xz(aw, g.dr[ad].frame_centre) < 1.6 {
                     let turn = m::abs(v3::wrap_angle(v3::yaw_to(op, at) - g.ch[oc].aim_yaw));
@@ -286,10 +286,10 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
         if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
-        if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::control::set_hold(g, gd, true, "roomfight"); }
-        crate::control::set_pinned(g, gd, pinned0, "roomfight");
+        if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
+        crate::duty::pin(g, gd, pinned0, "roomfight");
     }
-    for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
+    for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; dropped(g, d); }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }
     g.fight.live = false; g.fight.defs = Vec::new(); g.fight.ops = Vec::new(); g.fight.called.clear(); g.fight.down_called.clear(); g.fight.blind_rounds = 0.0; g.fight.hot_t = -100.0; g.fight.reports = Vec::new();
     crate::digin::dig_in_reset(g);

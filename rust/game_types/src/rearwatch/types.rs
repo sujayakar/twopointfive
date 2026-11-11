@@ -11,7 +11,7 @@ pub struct RearPin {
     pub side: f64,
     pub op: Option<DoorOpId>,
     pub seen_t: f64,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub going: Option<bool>,
     pub raised: Option<bool>,
     pub out: Option<bool>,
@@ -31,12 +31,12 @@ pub struct RoomKeep {
 pub struct Book {
     pub pins: JsMap<GuardId, crate::rearwatch::RearPin>,
     pub by_op: JsMap<DoorOpId, GuardId>,
-    pub short: JsMap<OrdersAssignmentId, f64>,
-    pub let_off: JsSet<OrdersAssignmentId>,
+    pub short: JsMap<TaskId, f64>,
+    pub let_off: JsSet<TaskId>,
     pub log: Vec<String>,
     pub rows: f64,
     pub keeps: JsMap<GuardId, crate::rearwatch::RoomKeep>,
-    pub was: Vec<(GuardId, DoorId, OrdersAssignmentId)>,
+    pub was: Vec<(GuardId, DoorId, TaskId)>,
     pub shut: JsMap<DoorId, crate::rearwatch::BookShutValue>,
 }
 
@@ -69,7 +69,7 @@ pub struct RearWaysItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RearwatchMod {
-    pub books: JsMap<PlayerId, crate::rearwatch::Book>,
+    pub books: JsMap<GroupId, crate::rearwatch::Book>,
 }
 
 pub const EYE: f64 = 1.55;

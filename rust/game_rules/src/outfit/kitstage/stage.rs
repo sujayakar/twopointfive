@@ -58,8 +58,8 @@ pub(super) fn park(g: &mut Game) -> (u32, u32) {
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
         g.tab.light[light].enabled = false;
-        crate::control::set_hold(g, x, true, "kitstage");
-        crate::control::set_pinned(g, x, true, "kitstage");
+        crate::duty::hold(g, x, true, "kitstage");
+        crate::duty::pin(g, x, true, "kitstage");
         g.gd[x].heard_up_to = DEAF;
         crate::mind::set(g, x, 0.0, "kitstage");
         crate::mind::fix_keep(g, x, None, "kitstage");
@@ -226,7 +226,7 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
         let x = st.order[k];
         let is_open = acts::actor(g, st) == Some(x);
         let (p, low) = match st.mate { Some(p) if k == 0 && !is_open => (p, st.quiet), _ => (st.spots[k], false) };
-        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
+        let mine = crate::orders::squad_orders_of(&crate::seats::here(g), x).map_or(false, |a| g.tab.task[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
         super::walk::send(g, x, p, super::walk::faces(st, p), None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }

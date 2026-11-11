@@ -250,11 +250,11 @@ pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
 fn duty_has_lapsed(g: &mut Game, gd: GuardId, d0: crate::game::GuardBodyDuty) -> bool {
     use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
     let b = d0.body;
-    let errand = g.gd[gd].task.is_some() && !(d0.role == Role::Finder && d0.stage != Stage::Fan);
-    if g.gd[gd].hold || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
+    let errand = g.gd[gd].errand.is_some() && !(d0.role == Role::Finder && d0.stage != Stage::Fan);
+    if g.gd[gd].duty.holds || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
     if g.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) { return true; }
     let bp = body_pos(g, b);
-    if g.gd[gd].task.is_none() {
+    if g.gd[gd].errand.is_none() {
         if let Some(lk) = g.gd[gd].last_known {
             if v3::dist_xz(lk, d0.spot.unwrap_or(bp)) > 2.5 && v3::dist_xz(lk, bp) > 2.5 { return true; }
         }

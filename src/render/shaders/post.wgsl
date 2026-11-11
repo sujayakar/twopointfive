@@ -99,7 +99,7 @@ fn agx(cin: vec3f) -> vec3f {
   }
   if (post.bloom > 0.0 && dbg == 0u) { color += textureSampleLevel(bloomTex, linSamp, v.uv, 0.0).rgb * post.bloom; }
   var c: vec3f;
-  if ((frame.flags & FLAG_NIGHTVISION) != 0u && frame.post.x > 0.5) {
+  if ((frame.flags & FLAG_NIGHT_VISION) != 0u && frame.post.x > 0.5) {
     // image-intensifier tube (after twopointfive): a single-channel photon counter with huge log gain — near-black detail
     // lifts into view, anything bright slams into the ceiling; scintillation noise loudest where the signal is weakest;
     // faint row banding from the scan; white phosphor (P45) with a touch of green; an eyepiece edge only where post.nvOval asks for one. Uses the bloomed

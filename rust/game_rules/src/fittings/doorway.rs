@@ -308,7 +308,7 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 /// The mark his order gave him, if any.
 fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
     let a = crate::orders::squad_orders_of(seat, gd)?;
-    g.tab.orders_assignment[a].post
+    g.tab.task[a].post
 }
 
 /// On the mark his order gave him.

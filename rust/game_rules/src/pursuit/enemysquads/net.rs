@@ -136,7 +136,7 @@ fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) {
         let s = &g.tab.enemysquads_squad[q];
         s.rc.as_ref().unwrap().look.iter().any(|x| x.gd == m) || s.sent.iter().any(|x| x.gd == m) || d0.is_none() || from.map_or(false, |f| dist_xz(p, f) > 3.0)
     };
-    let at = if alive(g, m) && !out { Some(g.tab.roomfight_def[d0.unwrap()].station) } else { None };
+    let at = if alive(g, m) && !out { Some(crate::roomfight::station(g, d0.unwrap())) } else { None };
     went_silent(g, q, m, at);
     g.tab.enemysquads_squad[q].rc.as_mut().unwrap().promised.get_or_insert_with(JsSet::new).add(m);
     let free = g.tab.enemysquads_squad[q].state != SquadState::Alerted;
@@ -215,7 +215,7 @@ fn calls_tick(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> O
     if let (Some(body), true) = (done.body, g.tab.enemysquads_squad[q].rc.is_some()) {
         g.tab.enemysquads_squad[q].rc.as_mut().unwrap().known.add(body);
         if net_asks(g) {
-            let x = g.m.enemysquads.states.as_ref().and_then(|st| st.of.get(body)).copied();
+            let x = squad_id_of(g, body);
             if let Some(x) = x { if x != q { seen_to(g, x, body); } }
         }
         event(g, q, SquadEventWhat::Found, Some(done.by));
@@ -369,7 +369,7 @@ fn posts(g: &Game, x: EnemysquadsSquadId) -> Vec<Post> {
     let men = g.tab.enemysquads_squad[x].men.clone();
     for m in men {
         if let Some(d) = def_of(g, m) {
-            let s = g.tab.roomfight_def[d].station;
+            let s = crate::roomfight::station(g, d);
             if !p.iter().any(|a| dist_xz(a.at, s) < 2.5) { p.push(Post { at: v3::copy(s), m }); }
         }
     }
@@ -392,7 +392,7 @@ fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
     best
 }
 /// `st.of.get(m)!` (netCheck's sq)
-fn sq_of(g: &Game, m: GuardId) -> EnemysquadsSquadId { *the_state(g).of.get(m).unwrap() }
+fn sq_of(g: &Game, m: GuardId) -> EnemysquadsSquadId { squad_id_of(g, m).unwrap() }
 /// (netCheck's askFor)
 fn ask_for(g: &mut Game, x: EnemysquadsSquadId, by: GuardId) {
     let t = g.time;
@@ -722,7 +722,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
             }
         }
         let t = g.time;
-        let from = v3::copy(g.tab.roomfight_def[d].station);
+        let from = v3::copy(crate::roomfight::station(g, d));
         g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, t0: t, ..Sent::default() });
         crate::roomfight::loose_at(g, d, due.at);
         let (a, b) = (g.pos_of(due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
@@ -900,13 +900,13 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
                 x.want = -1.0; x.watch = -1.0;
                 x.home = v3::copy(aim);
             }
-            let (home_at, was) = { let x = &g.tab.roomfight_def[d]; (x.home, x.pt) };
+            let (home_at, was) = (g.tab.roomfight_def[d].home, crate::roomfight::watched(g, d));
             let to: V3 = [home_at[0], was[1], home_at[2]];
             crate::roomfight::def_move_pt(g, d, to);
             if !seen {
                 crate::belief::cover(g, gd, to);
-            } else if g.gd[gd].covers == Some(was) {
-                g.gd[gd].covers = Some(to);   // (`def_move_pt` above has done this already)
+            } else if g.gd[gd].duty.gun == Some(was) {
+                g.gd[gd].duty.gun = Some(to);   // (`def_move_pt` above has done this already)
             }
         }
         if there && !seen {
