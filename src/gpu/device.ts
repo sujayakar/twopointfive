@@ -33,8 +33,9 @@ let leaving = false;
 try { addEventListener('pagehide', () => { leaving = true; }); addEventListener('beforeunload', () => { leaving = true; }); addEventListener('pageshow', () => { leaving = false; }); } catch { /* no page */ }   // (pageshow: a page handed back as it was, or a leave that was called off, is not leaving)
 export type LostAct = 'quiet' | 'reload' | 'card';
 /** what a lost device asks for: `reason` as the browser gave it, `leaving` = the page is on its way out, `last` = when this tab last retried (ms, null = never),
- *  `tries` = how many retries this tab has made */
-export function lostAct(reason: string | undefined, leaving: boolean, last: number | null, now: number, retry: boolean, on = GPU_LOST.on, tries = last === null ? 0 : 1): LostAct {
+ *  `tries` = how many retries this tab has made, `carded` = a red card is up: it says why the page stopped, and stands */
+export function lostAct(reason: string | undefined, leaving: boolean, last: number | null, now: number, retry: boolean, on = GPU_LOST.on, tries = last === null ? 0 : 1, carded = false): LostAct {
+  if (carded) return 'quiet';
   if (!on) return 'card';
   if (leaving || reason === 'destroyed') return 'quiet';
   return retry && tries < GPU_LOST.tries && (last === null || now - last >= GPU_LOST.windowMs) ? 'reload' : 'card';
@@ -51,7 +52,7 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   // the tab's retries so far: 'count:when'
   let last: number | null = null, tries = 0;
   try { const w = countWhen(sessionStorage.getItem(GPU_LOST.key)); if (w) { tries = w.n; last = w.at; } } catch { /* no store: no retry is remembered, so none is made */ retry = false; }
-  const act = lostAct(info.reason, leaving, last, Date.now(), retry, GPU_LOST.on, tries);
+  const act = lostAct(info.reason, leaving, last, Date.now(), retry, GPU_LOST.on, tries, typeof document !== 'undefined' && document.getElementById('fatal')?.style.display === 'flex');
   if (act === 'quiet') { console.info(`WebGPU device gone (${info.reason ?? 'no reason given'}): ${info.message}`); return; }
   // (what the browser had in hand when the device went: the report names it)
   const facts = { reason: info.reason ?? '', ...flyingFacts(lostFlying(true)) };
