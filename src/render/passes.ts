@@ -1,6 +1,7 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { placeNone } from './placeField';
+import { BeamsAt, BeamSegAt, FireLookAt, FireRecAt, TaauAt } from '../gpu/wgslrows';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE } from '../gpu/device';
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
@@ -61,10 +62,10 @@ const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BIN
 export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypass: boolean; alpha: number; clipGamma: number; reactK: number; kSharp: number; velK: number; sharpen: number; camStill: boolean; particles: boolean; motionA: number   /** history de-blur under motion (taau.wgsl histSharp): 0 = off */
   histSharp?: number;
 }
-const TAAU_PARAM_BYTES = 128;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 9 scalars → 124, rounded to the struct's 16-byte alignment
+const TAAU_PARAM_BYTES = TaauAt.words * 4;
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
-/** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
-const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
+/** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (composite.wgsl `Beams`) */
+const BEAM_MAX = 8, FIRE_MAX = 4, FIRE_REC = FireRecAt.words * 4, FIRE_AT = BeamsAt.fireN * 4, FIRE_LOOK_AT = BeamsAt.fireLook * 4, FIRE_LOOK_FLOATS = FireLookAt.words, BEAM_BYTES = BeamsAt.words * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
 /** one open fire as the composite draws it (rust/game_rules/src/air/fire.rs makes them; shaders/fire.wgsl FireRec) */
 export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
@@ -268,7 +269,7 @@ export class LightingPasses {
   /** LASERS / TRACERS IN THE REFLECTIONS: those boxes are NoShadow (no ray meets one), so the reflection pass is handed the nearest BEAM_MAX of them as line segments
    *  (reflect.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
    *  Picture only: read off the list the picture is drawn from (what the fog of war hid or an infrared beam nobody's tube shows is not in it). Count 0 = the pass as it was. */
-  private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_SEG_BYTES / 4); private beamN = -1;
+  private beamBuf!: GPUBuffer; private beamData = new Float32Array(BeamsAt.fireN); private beamN = -1;
   /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (rust/game_rules/src/world/thinline.rs → its bead or null) is handed over
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
@@ -283,16 +284,16 @@ export class LightingPasses {
       for (const { b, bead } of found) { if (n >= BEAM_MAX) break;
         let zx: number, zy: number, zz: number;
         if (b.rot) { const [x, y, z, w] = b.rot; zx = 2 * (x * z + w * y); zy = 2 * (y * z - w * x); zz = 1 - 2 * (x * x + y * y); } else { zx = Math.sin(b.yaw); zy = 0; zz = Math.cos(b.yaw); }
-        const L = b.h[2], e = b.emissive ?? [0, 0, 0], o = BEAM_HEAD / 4 + n * 12, air = bead !== undefined;
-        F[o] = b.c[0] - zx * L; F[o + 1] = b.c[1] - zy * L; F[o + 2] = b.c[2] - zz * L; F[o + 3] = b.h[0];
-        F[o + 4] = b.c[0] + zx * L; F[o + 5] = b.c[1] + zy * L; F[o + 6] = b.c[2] + zz * L; F[o + 7] = air && bead ? 1 : 0;
+        const L = b.h[2], e = b.emissive ?? [0, 0, 0], o = BeamsAt.seg + n * BeamSegAt.words, air = bead !== undefined;
+        F[o + BeamSegAt.a] = b.c[0] - zx * L; F[o + BeamSegAt.a + 1] = b.c[1] - zy * L; F[o + BeamSegAt.a + 2] = b.c[2] - zz * L; F[o + BeamSegAt.a + 3] = b.h[0];
+        F[o + BeamSegAt.b] = b.c[0] + zx * L; F[o + BeamSegAt.b + 1] = b.c[1] + zy * L; F[o + BeamSegAt.b + 2] = b.c[2] + zz * L; F[o + BeamSegAt.b + 3] = air && bead ? 1 : 0;
         // a laser aimed at open ground: the game's reach does not meet the yard's floor, so the line ran on under it with no dot. In the air look it ends AT the ground, with its dot
-        if (air && F[o + 5] < 0 && F[o + 1] > 0) { const t = F[o + 1] / (F[o + 1] - F[o + 5]); F[o + 4] = F[o] + (F[o + 4] - F[o]) * t; F[o + 6] = F[o + 2] + (F[o + 6] - F[o + 2]) * t; F[o + 5] = 0; F[o + 7] = 1; }
-        F[o + 8] = e[0]; F[o + 9] = e[1]; F[o + 10] = e[2]; F[o + 11] = air ? opts.A : 0; n++; }
+        if (air && F[o + BeamSegAt.b + 1] < 0 && F[o + BeamSegAt.a + 1] > 0) { const t = F[o + BeamSegAt.a + 1] / (F[o + BeamSegAt.a + 1] - F[o + BeamSegAt.b + 1]); F[o + BeamSegAt.b] = F[o + BeamSegAt.a] + (F[o + BeamSegAt.b] - F[o + BeamSegAt.a]) * t; F[o + BeamSegAt.b + 2] = F[o + BeamSegAt.a + 2] + (F[o + BeamSegAt.b + 2] - F[o + BeamSegAt.a + 2]) * t; F[o + BeamSegAt.b + 1] = 0; F[o + BeamSegAt.b + 3] = 1; }
+        F[o + BeamSegAt.e] = e[0]; F[o + BeamSegAt.e + 1] = e[1]; F[o + BeamSegAt.e + 2] = e[2]; F[o + BeamSegAt.e + 3] = air ? opts.A : 0; n++; }
     }
-    if (n === 0 && this.beamN === 0 && F[5] === opts.wet && F[6] === Math.fround(opts.coats)) return;
-    U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = opts.coats; F[7] = 0;
-    this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
+    if (n === 0 && this.beamN === 0 && F[BeamsAt.k + 1] === opts.wet && F[BeamsAt.k + 2] === Math.fround(opts.coats)) return;
+    U[BeamsAt.n] = n; U[BeamsAt.p0] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[BeamsAt.k] = opts.rain; F[BeamsAt.k + 1] = opts.wet; F[BeamsAt.k + 2] = opts.coats; F[BeamsAt.k + 3] = 0;
+    this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, (BeamsAt.seg + n * BeamSegAt.words) * 4);
   }
   /** THE OPEN FIRES (rust/game_rules/src/air/fire.rs → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
    *  each one's flame, coals and drawn smoke along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
@@ -302,10 +303,10 @@ export class LightingPasses {
     if (n === 0 && this.fireN === 0) return;
     const F = this.fireData; new Uint32Array(F.buffer)[0] = n;
     for (let i = 0; i < n; i++) { const r = list![i], o = 4 + i * (FIRE_REC / 4);
-      F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
-      F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
-      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = 0;
-      F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = r.soot ?? 0; F[o + 15] = 0; }
+      F[o + FireRecAt.a] = r.pos[0]; F[o + FireRecAt.a + 1] = r.pos[1]; F[o + FireRecAt.a + 2] = r.pos[2]; F[o + FireRecAt.a + 3] = r.r;
+      F[o + FireRecAt.b] = r.h; F[o + FireRecAt.b + 1] = r.heat; F[o + FireRecAt.b + 2] = r.seed; F[o + FireRecAt.b + 3] = r.time;
+      F[o + FireRecAt.c] = r.wind[0]; F[o + FireRecAt.c + 1] = r.wind[1]; F[o + FireRecAt.c + 2] = r.flick; F[o + FireRecAt.c + 3] = 0;
+      F[o + FireRecAt.d] = r.bed ?? 0; F[o + FireRecAt.d + 1] = r.fog ?? 0; F[o + FireRecAt.d + 2] = r.soot ?? 0; F[o + FireRecAt.d + 3] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
   /** … and THE LOOK'S NUMBERS every fire is drawn with (rust/game_rules/src/air/fire.rs FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
@@ -874,12 +875,12 @@ export class LightingPasses {
   /** Per frame from engine.render (TAAU on): pack the resolve's uniform (struct TaauParams in taau.wgsl). The reset flag raised since the last frame is consumed here. */
   setTaauFrame(f: TaauFrame) {
     const d = this.taauData, fl = this.taauF32, u = this.taauU32;
-    fl.set(f.prevViewProjU, 0);
-    fl[16] = f.jitter[0]; fl[17] = f.jitter[1]; fl[18] = this.cw || this.width; fl[19] = this.ch || this.height; fl[20] = this.ow; fl[21] = this.oh;   // inSize = the size of the picture the resolve reads (= the output under sharp direct: a 1 : 1 resolve; the engine hands the jitter in those pixels)
-    fl[22] = f.alpha; fl[23] = f.clipGamma;
+    fl.set(f.prevViewProjU, TaauAt.prevViewProjU);
+    fl[TaauAt.jitter] = f.jitter[0]; fl[TaauAt.jitter + 1] = f.jitter[1]; fl[TaauAt.inSize] = this.cw || this.width; fl[TaauAt.inSize + 1] = this.ch || this.height; fl[TaauAt.outSize] = this.ow; fl[TaauAt.outSize + 1] = this.oh;   // inSize = the size of the picture the resolve reads (= the output under sharp direct: a 1 : 1 resolve; the engine hands the jitter in those pixels)
+    fl[TaauAt.alpha] = f.alpha; fl[TaauAt.clipGamma] = f.clipGamma;
     const flags = (this.taaReset ? TF.Reset : 0) | (f.bypass ? TF.Bypass : 0) | (f.particles ? TF.Particles : 0) | TF.Velocity;
-    u[24] = flags; fl[25] = f.reactK; fl[26] = f.kSharp; fl[27] = f.velK; fl[28] = f.camStill ? 1 : 0; fl[29] = Math.max(0, Math.min(1, f.motionA));   // (29 = TaauParams.motionA: the motion-sharpness term)
-    fl[30] = Math.max(0, Math.min(2, f.histSharp ?? 0)); fl[31] = 0;   // 30 = TaauParams.histSharp (the history de-blur under motion; 0 = off)
+    u[TaauAt.flags] = flags; fl[TaauAt.reactK] = f.reactK; fl[TaauAt.kSharp] = f.kSharp; fl[TaauAt.velK] = f.velK; fl[TaauAt.camStill] = f.camStill ? 1 : 0; fl[TaauAt.motionA] = Math.max(0, Math.min(1, f.motionA));   // (the motion-sharpness term)
+    fl[TaauAt.histSharp] = Math.max(0, Math.min(2, f.histSharp ?? 0)); // TaauParams.histSharp (the history de-blur under motion; 0 = off)
     this.device.queue.writeBuffer(this.taauParams, 0, d);
     this.taaReset = false; this.taaStats.lastFlags = flags;   // (the reset raised since the last frame is honoured by this one)
     if (f.sharpen !== this.taauSharpen) { this.taauSharpen = f.sharpen; this.writeFxaaParams(); }
