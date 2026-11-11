@@ -136,7 +136,7 @@ fn squads_let_go(g: &mut crate::game::Game, st: Option<&crate::enemysquads::Stat
         for m0 in g.tab.enemysquads_squad[q].men.clone() {
             let t = g.time;
             crate::owner::release(g, m0, all, t);
-            g.gd[m0].stays_in_rooms = false;
+            g.gd[m0].duty.rooms = false;
         }
     }
 }
@@ -171,7 +171,7 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
             of.set(m0, q);
             let t = g.time;
             crate::owner::claim(g, m0, crate::owner::by::SQUAD, t, None);
-            g.gd[m0].stays_in_rooms = stays;
+            g.gd[m0].duty.rooms = stays;
         }
     }
     if !squads.is_empty() {

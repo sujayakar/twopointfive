@@ -322,7 +322,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
     let mut bd = f64::INFINITY;
     for &id in &g.guards {
         let gd = &g.gd[id];
-        if gd.state != crate::game::GuardState::Patrol || gd.hold || gd.task.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
+        if gd.state != crate::game::GuardState::Patrol || gd.duty.holds || gd.task.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
         let dd = v3::dist(g.ch[gd.ch].pos, goal);
         if dd < bd { bd = dd; best = Some(id); }
     }

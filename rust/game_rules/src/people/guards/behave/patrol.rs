@@ -16,7 +16,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
     if g.gd[gd].body_duty.is_some() && g.gd[gd].awareness < 0.3 { g.gd[gd].body_duty = None; }
     if matches!(g.gd[gd].task, Some(crate::game::GuardTask::CheckOn(_))) { g.gd[gd].task = None; }
     let walk = g.tune.guard_walk * (if lvl >= 1.0 { 1.15 } else { 1.0 });
-    if g.gd[gd].hold {
+    if g.gd[gd].duty.holds {
         g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(g.gd[gd].look_phase * 0.5) * 0.2, 2.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         brake(g, gd, 8.0, dt);
@@ -55,7 +55,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
     g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
     let low = if g.gd[gd].drawn { -0.26 } else { -0.35 };
     g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, low, 3.0, dt);
-    if !g.gd[gd].hold && staff { lockdown_doors(g, gd, Some(lvl < 2.0)); }
+    if !g.gd[gd].duty.holds && staff { lockdown_doors(g, gd, Some(lvl < 2.0)); }
     crate::whistle::whistle_patrol_tick(g, gd);
     Acts { move_speed, upper, ..Acts::still() }
 }

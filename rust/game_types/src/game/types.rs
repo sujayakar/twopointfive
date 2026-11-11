@@ -1033,11 +1033,10 @@ pub struct Guard {
     /// written whole: a new fix (`mind::fix`) counts in fix_stamp, one put back or carried over (`mind::fix_keep`) does not
     pub last_known: Option<V3>,
     #[is(-100.0)] pub last_seen_t: f64,
-    pub covers: Option<V3>,
     #[is(-100.0)] pub word_t: f64,
     pub led_at: Option<V3>,
-    pub hold: bool,
-    pub pinned: bool,
+    /// what he is held to
+    #[is(crate::duty::Duty::blank())] pub duty: crate::duty::Duty,
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
@@ -1071,7 +1070,6 @@ pub struct Guard {
     pub body_duty: Option<crate::game::GuardBodyDuty>,
     pub dropped: Option<ItemId>,
     #[is(f64::NEG_INFINITY)] pub handle_gate_t: f64,
-    pub stays_in_rooms: bool,
     pub fled: bool,
     #[is(-1.0)] pub gun_lost_at: f64,
     #[is(-1.0)] pub torch_lost_at: f64,

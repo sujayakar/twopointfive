@@ -70,7 +70,7 @@ pub fn live(g: &crate::game::Game) -> bool {
 fn calm(g: &crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
-        && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
+        && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.duty.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
 }
 /// put his record on this game's books
 fn put(g: &mut crate::game::Game, gd: GuardId, d: crate::doze::Doze) {
@@ -261,7 +261,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     let ch = d.chair.unwrap();
     d.seen = g.time;
     flush(g, gd, d);
-    if !live(g) || !calm(g, gd) || g.gd[gd].hold
+    if !live(g) || !calm(g, gd) || g.gd[gd].duty.holds
         || g.gd[gd].wait < g.k.doze.rise_secs + g.k.doze.nod_secs + 4.0
         || (!g.tab.props_prop[ch].asleep && m::hyp2(g.tab.props_prop[ch].x - d.cx, g.tab.props_prop[ch].z - d.cz) > 0.15)
         || crate::guards::not_getting_anywhere(g, gd, dt, 6.0)

@@ -201,7 +201,7 @@ fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz
 pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, eyes_on: bool) -> crate::guards::PieDoorway {
     let pos = g.pos_of(gd);
     note_door_crossings(g, gd);
-    if g.gd[gd].pinned || eyes_on {
+    if g.gd[gd].duty.pinned || eyes_on {
         g.gd[gd].pieing = None;
         return crate::guards::PieDoorway { speed, look: None };
     }

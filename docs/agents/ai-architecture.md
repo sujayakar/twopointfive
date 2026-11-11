@@ -15,10 +15,11 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | record | where | what it holds |
 |---|---|---|
-| his row | `Guard`, `g.gd[gd]` | every man of any side but Sam (`g.pl`): `state`, `awareness`, `last_known`, `foe`, `script`, `hold`, `pinned`, `task`, his clocks |
+| his row | `Guard`, `g.gd[gd]` | every man of any side but Sam (`g.pl`): `state`, `awareness`, `last_known`, `foe`, `script`, `duty`, `task`, his clocks |
 | his body | `Character`, `g.ch[c]` | where he is, his bones, his animation |
 | his mind, written | `mind.rs` | the one door to awareness, state, fix and foe, and who last moved each (`Note`) |
-| his duty's aim | `belief.rs` | `covers`, said anew each tick; `gun_point`; a report that places him (`word`) |
+| what he is held to | `duty.rs` | `holds`, `pinned`, `rooms`, and `gun` |
+| where his gun goes | `belief.rs` | `duty.gun`, said anew each tick; `gun_point`; a report that places him (`word`) |
 | his senses | `guards/senses/`, `sense.rs`, `guards/feet.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
 | his eye | `attention.rs` | what small thing holds a calm man's eye (`stealth.md`) |
 | how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
@@ -81,13 +82,13 @@ A squad's man at rest is his squad's, and no rule moves him for it. `owner::clai
 above it in the list. `claim` itself refuses nobody, so the list decides only where a tasker asks `kept` first. His squad, the lights and
 the last man ask it; other rules ask `has` of those they give way to.
 
-**Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
+**Posts.** `holds` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `duty::hold` and `duty::pin`, which note the
 writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`.
 No rule writes his `mode` or works out whether he is there: `leg_ended` tells his sender that he arrived, has no way, met somebody or was taken
 off it. An `errand` tries again; one that `stays` has him stand at its end.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
-`room_fight_cover_passes`, `last_holds`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
+`room_fight_cover_passes`, `last_holds`, `duty.rooms`. A new rule that moves a man asks them for itself.
 
 **Dice.** `draw_of(g, "module::function#1", gd)` is a fixed function of the seed, the site, the man, the tick and how many times this site has drawn
 for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The block's die still steps once a
@@ -181,7 +182,7 @@ Agreed and not built. Assume none of it.
 - **Percepts:** senses hand over what was seen, heard or told, and that module alone decides what it does to him. `state` splits into his life, his
   alert level and the search walk.
 - **Five layers for all men:** all sense, then believe, then groups, then decide, then act, with nothing `kept_elsewhere`.
-- **A task with limits:** one task a man, given and released by name, carrying his post, bounds, route, arc and fire policy, read in one place. `hold`
+- **A task with limits:** one task a man, given and released by name, carrying his post, bounds, route, arc and fire policy, read in one place. `holds`
   and `pinned` become a post from a named tasker.
 - **The tasker list deciding:** a tasker takes a man only from one below it, the loser is told, and each rule's own give-way list goes.
 - **Grants by channel:** a rule proposes legs, aim and hands, each as a demand or a default, so a man goes on shooting while a rule moves him.

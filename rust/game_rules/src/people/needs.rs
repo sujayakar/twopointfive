@@ -161,8 +161,8 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
         && x.script.is_none()
         && x.task.is_none()
         && x.body_duty.is_none()
-        && !x.hold
-        && !x.pinned
+        && !x.duty.holds
+        && !x.duty.pinned
         && x.leader.is_none()
         && x.post.is_none()
         && g.guards.contains(&gd)
@@ -214,7 +214,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if x.script.is_some() {
         return Some(String::from("orders"));
     }
-    if x.hold || x.pinned {
+    if !x.duty.free() {
         return Some(String::from("held by a script"));
     }
     if x.leader.is_some() || x.post.is_some() {

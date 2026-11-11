@@ -8,7 +8,7 @@ use crate::v3::{self, V3};
 
 pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool) {
     // a kicked-in lock seen up close on a calm pass: one look per door
-    if staff && g.gd[gd].state == St::Patrol && !g.gd[gd].hold {
+    if staff && g.gd[gd].state == St::Patrol && !g.gd[gd].duty.holds {
         let mut i = 0;
         while i < g.doors.list.len() {
             let d = g.doors.list[i];

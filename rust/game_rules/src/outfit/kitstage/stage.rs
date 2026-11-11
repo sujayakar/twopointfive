@@ -58,8 +58,8 @@ pub(super) fn park(g: &mut Game) -> (u32, u32) {
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
         g.tab.light[light].enabled = false;
-        crate::control::set_hold(g, x, true, "kitstage");
-        crate::control::set_pinned(g, x, true, "kitstage");
+        crate::duty::hold(g, x, true, "kitstage");
+        crate::duty::pin(g, x, true, "kitstage");
         g.gd[x].heard_up_to = DEAF;
         crate::mind::set(g, x, 0.0, "kitstage");
         crate::mind::fix_keep(g, x, None, "kitstage");

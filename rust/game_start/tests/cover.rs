@@ -20,7 +20,7 @@ fn clinic(seed: u32, hour: &str) -> (Play, Vec<GuardId>) {
 fn a_man_who_stays_in_his_rooms_takes_cover_in_them() {
     for (seed, hour) in [(4, "midday"), (2, "midday")] {   // (the first deal is the one where cover took him out; on the second a man breaks and runs)
         let (mut p, foes) = clinic(seed, hour);
-        assert!(foes.iter().all(|&f| p.g.gd[f].stays_in_rooms), "the staging is wrong: a man free to leave");
+        assert!(foes.iter().all(|&f| p.g.gd[f].duty.rooms), "the staging is wrong: a man free to leave");
         p.sam_put([12.0, 15.6]);
         p.run(0.3);
         p.sam_takes_his_rifle();
@@ -43,7 +43,7 @@ fn floor_behind_a_shut_door_is_no_cover() {
     let (mut p, foes) = clinic(1, "night");
     let door = game::doors::doors_by_name(&p.g, "fire_exit").unwrap();
     let man = foes[8];
-    p.g.gd[man].stays_in_rooms = false;
+    p.g.gd[man].duty.rooms = false;
     let c = p.g.gd[man].ch;
     p.g.ch[c].pos = [32.2, 0.0, 9.2];
     let threat = [28.0, 0.0, 9.2];
@@ -53,7 +53,7 @@ fn floor_behind_a_shut_door_is_no_cover() {
     p.g.dr[door].leaf.latched = false;
     let open = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(open.map_or(false, |s| s[0] > 33.0), "the staging is wrong: the door off its latch and still no cover past it: {open:?}");
-    p.g.gd[man].stays_in_rooms = true;
+    p.g.gd[man].duty.rooms = true;
     let stays = game::suppression::cover_from(&mut p.g, man, threat);
     assert!(stays.map_or(true, |s| s[0] < 33.0), "told to stay in his rooms, the door open: cover at {stays:?}, outside them");
 }

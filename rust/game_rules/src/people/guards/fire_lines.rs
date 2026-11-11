@@ -251,7 +251,7 @@ fn duty_has_lapsed(g: &mut Game, gd: GuardId, d0: crate::game::GuardBodyDuty) ->
     use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
     let b = d0.body;
     let errand = g.gd[gd].task.is_some() && !(d0.role == Role::Finder && d0.stage != Stage::Fan);
-    if g.gd[gd].hold || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
+    if g.gd[gd].duty.holds || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
     if g.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) { return true; }
     let bp = body_pos(g, b);
     if g.gd[gd].task.is_none() {

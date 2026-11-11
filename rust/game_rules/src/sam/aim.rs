@@ -96,7 +96,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let brg = v3::yaw_to(c_pos, trunk);
     let tvel = if crate::character::is_player(g, pc) { crate::guards::player_ground_vel(g) } else { g.ch[pc].vel };
     let jumped = feed_target(&mut g.arms[g.gd[gd].ch].aim, c_pos, trunk, &tvel, dt, p.jump_deg, p.rate_tau);
-    if g.gd[gd].pinned && g.gd[gd].skill.is_none() {
+    if g.gd[gd].duty.pinned && g.gd[gd].skill.is_none() {
         g.arms[g.gd[gd].ch].aim.track = 1.0;
         return;
     }
@@ -213,7 +213,7 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
-    let brake = g.tune.aim_model && !g.gd[gd].pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
+    let brake = g.tune.aim_model && !g.gd[gd].duty.pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
     g.arms[g.gd[gd].ch].aim.braking = brake;
     brake
 }

@@ -385,8 +385,8 @@ fn holds_his_mark(g: &mut Game, h: GuardId, d: &Def) {
         let state = g.gd[h].state;
         crate::squad::end_guard_script(g, h, Some(state));
     }
-    crate::control::set_hold(g, h, true, "rescue");
-    crate::control::set_pinned(g, h, true, "rescue");
+    crate::duty::hold(g, h, true, "rescue");
+    crate::duty::pin(g, h, true, "rescue");
     if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 {
         let c = g.gd[h].ch;
         g.ch[c].body_yaw = v3::yaw_to(g.ch[c].pos, d.mark.aim_at);

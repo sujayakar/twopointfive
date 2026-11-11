@@ -894,10 +894,10 @@ mod tests {
         let d = g.tab.roomfight_def.push(Def::default());
         g.tab.roomfight_def[d].gd = gd;
         g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
-        g.gd[gd].covers = Some([1.0, 0.0, 1.0]);
+        g.gd[gd].duty.gun = Some([1.0, 0.0, 1.0]);
         g.gd[gd].last_known = Some([1.0, 0.0, 1.0]); // the same bits, but no stamp: a noise filed there is not the post
         move_pt(&mut g, d, [2.0, 0.0, 2.0]);
-        assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
+        assert_eq!(g.gd[gd].duty.gun, Some([2.0, 0.0, 2.0]));
         assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
     }
 

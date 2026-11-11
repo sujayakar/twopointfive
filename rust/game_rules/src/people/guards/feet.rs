@@ -234,7 +234,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
-    let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
+    let why = if !g.gd[gd].duty.free() || !g.ai_enabled {
         Some(Off::Posted)
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
         Some(Off::NotAlert)

@@ -660,7 +660,7 @@ impl DoorsAsk for Play {
     fn hands_on_lock(&self) -> Option<GuardId> { self.men().into_iter().find(|&m| self.g.ch[self.g.gd[m].ch].anim.lockpick) }
     fn said_count(&self, words: &str) -> (usize, bool) { let l: Vec<_> = self.said.iter().filter(|l| l.text.contains(words)).collect(); (l.len(), l.iter().all(|x| x.radio)) }
     fn compromised(&self) -> bool { game::silent::silent_compromised(&self.g, &game::seats::here(&self.g)) }
-    fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.hold, h.pinned) = (false, false); }
+    fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.duty.holds, h.duty.pinned) = (false, false); }
     fn sam_holds(&mut self, m: GuardId) -> bool {
         game::player::start_grab(&mut self.g, m, None);
         self.until(2.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()

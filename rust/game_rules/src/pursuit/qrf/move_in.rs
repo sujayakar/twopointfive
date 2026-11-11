@@ -275,7 +275,7 @@ fn arriving(g: &mut crate::game::Game) {
             Err(e) => { let short: String = e.chars().take(40).collect(); let what = format!("spawn-failed:{}:{}", i, short); note(g, &what); break; }
         };
         let seq = g.event_seq;
-        crate::control::set_hold(g, gd, false, "qrf");
+        crate::duty::hold(g, gd, false, "qrf");
         g.gd[gd].trained = true;
         crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
         crate::mind::set(g, gd, HUNT_AWARENESS, "qrf");
