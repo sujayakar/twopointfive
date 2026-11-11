@@ -443,7 +443,7 @@ mod tests {
         assert_eq!((m.rot(p, 2), m.pos(p, 2)), ([0.5, 0.25, -0.5, 1.0], [0.0, 3.0, 0.0]));
         assert_eq!(m.of(p).iter().filter(|v| **v != 0.0).count(), 5);
         assert!(m.of(q).iter().all(|v| *v == 0.0));
-        m.copy(q, p);
+        m.copy(p, q);
         assert_eq!(m.rot(q, 2), [0.5, 0.25, -0.5, 1.0]);
         let r = m.make();
         m.let_go(r);
