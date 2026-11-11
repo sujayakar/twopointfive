@@ -39,10 +39,7 @@ pub struct Plan {
     /// before the rooms a teammate is sent to throw the breaker, and he waits for the dark
     pub breaker: bool,
 }
-/// no defender left · he is down · out of time · nothing left to try
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum End { Taken, Sam, Cap, Spent }
-impl End { pub fn as_str(self) -> &'static str { match self { End::Taken => "taken", End::Sam => "sam", End::Cap => "cap", End::Spent => "spent" } } }
+pub use game::view::HandsEnd as End;
 
 /// seconds from a man showing to the first round
 const REACT: f64 = 0.6;

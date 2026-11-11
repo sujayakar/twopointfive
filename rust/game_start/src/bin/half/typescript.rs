@@ -1,13 +1,13 @@
 //! The TypeScript.
 use game::crosses::{self, Asked, Shape, Ty};
 use game::rows::RowTable;
-use game_start::host::{command, crosses as host, desk};
+use game_start::host::{calls::{self, Back, CALLS}, command, crosses as host, desk};
 
 /// the stamp of everything that crosses (game_face `face_draw_layout` answers the module's)
 pub fn stamp() -> u32 { crosses::stamp(&(game_draw::layout() + &host::text())) }
 
 pub fn files(stamp: u32) -> Vec<(&'static str, String)> {
-    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/gpu.ts", gpu()), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/view/read.ts", views())]
+    vec![("src/draw/sections.ts", sections(stamp)), ("src/draw/gpu.ts", gpu()), ("src/draw/commands.ts", commands()), ("src/draw/asks.ts", asks()), ("src/draw/face.ts", face()), ("src/view/read.ts", views())]
 }
 
 pub const WRITTEN: &str = "// Written by the program `half` (rust/game_start/src/bin/half)";
@@ -95,12 +95,87 @@ fn sections(stamp: u32) -> String {
     l.join("\n") + "\n"
 }
 
-/// what is asked for by number: its arguments, and what writes them
+/// what is handed, by Rust's name of its type: its type in TypeScript, and what writes `x` of it
+fn handed(ty: &str, x: &str) -> (String, String) {
+    let same = |ts: &str, w: &str| (String::from(ts), format!("this.{w}({x});"));
+    let inner = |t: &str| t.trim().trim_end_matches('>').to_string();
+    match ty.replace(' ', "").as_str() {
+        "u32" | "usize" => same("number", "u32"),
+        "i32" => same("number", "i32"),
+        "f64" => same("number", "f64"),
+        "bool" => same("boolean", "yes"),
+        "&str" => same("string", "text"),
+        "&[u8]" => same("Uint8Array", "bytes"),
+        "[f64;3]" => same("ArrayLike<number>", "three"),
+        "Vec<f64>" => same("ArrayLike<number>", "doubles"),
+        t @ ("GameNo" | "MomentNo") => same(t, "u32"),
+        t => match (t.strip_prefix("Option<").map(inner), t.strip_prefix("Vec<").map(inner)) {
+            (Some(t), _) => { let (ts, w) = handed(&t, x); (format!("{ts} | null"), format!("this.yes({x} !== null); if ({x} !== null) {w}")) }
+            (_, Some(t)) => { let (ts, w) = handed(&t, "v"); (format!("readonly {ts}[]"), format!("this.u32({x}.length); for (const v of {x}) {w}")) }
+            _ => panic!("{ty} is nothing that is handed (host/field.rs)"),
+        },
+    }
+}
+/// its arguments, and what writes them
+fn arguments(fields: &[(&str, &str)]) -> (String, String) {
+    let (args, writes): (Vec<_>, Vec<_>) = fields.iter().map(|(f, ty)| { let f = camel(f); let (ts, w) = handed(ty, &f); (format!("{f}: {ts}"), w) }).unzip();
+    (args.join(", "), writes.join(" "))
+}
+/// what is asked for by number
 fn asked(a: &Asked) -> (String, String) {
-    let kind = |ty: &str| match ty { "u32" => "u32", "i32" => "i32", "f64" => "f64", "&str" => "text", _ => panic!("{}: a field is u32, i32, f64 or text, not {ty}", a.name) };
-    let args: Vec<String> = a.fields.iter().map(|(f, ty)| format!("{}: {}", camel(f), if kind(ty) == "text" { "string" } else { "number" })).collect();
-    let writes: String = a.fields.iter().map(|(f, ty)| format!(" this.{}({});", kind(ty), camel(f))).collect();
-    (args.join(", "), format!("this.u32({});{writes}", a.n))
+    let (args, writes) = arguments(a.fields);
+    (args, format!("this.u32({}); {writes}", a.n).trim_end().to_string())
+}
+/// the module's calls
+fn face() -> String {
+    let (mut types, mut readers, mut body) = (Vec::new(), Vec::new(), Vec::new());
+    for (c, doc) in CALLS.iter().zip(calls::DOCS) {
+        let (mut args, mut writes) = arguments(c.args);
+        if c.held { args = if args.is_empty() { "h: GameNo".into() } else { format!("h: GameNo, {args}") }; }
+        if !writes.is_empty() { writes.push(' '); }
+        let call = format!("this.X.face_{}({}, {})", c.name, if c.held { "h" } else { "0" }, if c.args.is_empty() { "0, 0" } else { "this.at, this.sent()" });
+        let (ts, back) = match c.back {
+            Back::Nothing => ("void".into(), format!("{call};")),
+            Back::Number("bool") => ("boolean".into(), format!("return {call} !== 0;")),
+            Back::Number(n @ ("GameNo" | "MomentNo")) => (String::from(n), format!("return {call} as {n};")),
+            Back::Number(_) => ("number".into(), format!("return {call};")),
+            Back::Told(ty, _) => {
+                let ty = ty(&mut Default::default());
+                named(&ty, &mut types, &mut readers);
+                match &ty {
+                    Ty::Row(r) if r.is_empty() => ("void".into(), format!("this.told({call}, nothing);")),
+                    // (a run of numbers, whole: an array of its own)
+                    Ty::List(n) if matches!(**n, Ty::Number(_)) => { let Ty::Number(n) = **n else { unreachable!() }; let get = number(n).1; (format!("{get}Array<ArrayBuffer>"), format!("return this.told({call}, I => I.run({get}Array));")) }
+                    Ty::Named(n) => (n.to_string(), format!("return this.told({call}, read{n}In);")),
+                    t => { let (ts, rd) = read(t); (ts, format!("return this.told({call}, I => {rd});")) }
+                }
+            }
+        };
+        if !doc.is_empty() { body.push(format!("  /** {} */", said(doc))); }
+        body.push(format!("  {}({args}): {ts} {{ {writes}{back} }}", camel(c.name)));
+    }
+    types.sort();
+    readers.sort();
+    let mut l = vec![format!("{WRITTEN} from rust/game_start/src/host/calls.rs. To change a call, change it there."), "import type { Vec3 } from '../math/vec';".into(), "import { Wire, nothing, type Carrier } from './wire';".into(),
+        format!("import {{ {}, {} }} from '../view/read';", readers.iter().map(|n| format!("read{n}In")).collect::<Vec<_>>().join(", "), types.iter().map(|n| format!("type {n}")).collect::<Vec<_>>().join(", ")), String::new(),
+        "/** a game's number in the module, and a moment's: each is what the module answered with (0: none) */".into(), "export type GameNo = number & { readonly of: 'game' };".into(), "export type MomentNo = number & { readonly of: 'moment' };".into(), String::new(),
+        "/** the module's exports: the game, where it is of one, and where its arguments lie */".into()];
+    let names = |held: bool, by: &str| CALLS.iter().filter(|c| c.held || !held).map(|c| format!("'face_{}'", c.name)).collect::<Vec<_>>().join(by);
+    l.push(format!("export type FaceExports = Carrier & Record<{}, (h: number, p: number, n: number) => number>;", names(false, " | ")));
+    l.extend(["/** those that hold a game: none is asked of one lost to a panic */".into(), format!("export const HOLDS: ReadonlySet<string> = new Set([{}]);", names(true, ", ")), String::new(),
+        "/** THE MODULE, CALLED */".into(), "export class Face extends Wire<FaceExports> {".into()]);
+    l.extend(body);
+    l.extend(["}".into(), String::new()]);
+    l.join("\n")
+}
+/// the types an answer names itself, and those whose readers it is read by
+fn named(t: &Ty, types: &mut Vec<&'static str>, readers: &mut Vec<&'static str>) {
+    match t {
+        Ty::Named(n) => for l in [types, readers] { if !l.contains(n) { l.push(n); } },
+        Ty::Option(t) | Ty::List(t) => named(t, types, readers),
+        Ty::Row(r) => for t in r { named(t, types, readers); },
+        _ => {}
+    }
 }
 fn commands() -> String {
     let mut l = vec![format!("{WRITTEN} from rust/game_start/src/host/command.rs. To change a command, change it there."), "import { Writer } from './writer';".into(), String::new(),
@@ -147,13 +222,12 @@ fn asks() -> String {
 
 /// a number by Rust's name of it: the reader's, and how many bytes
 const NUMBERS: [(&str, &str, usize); 8] = [("f64", "Float64", 8), ("f32", "Float32", 4), ("u32", "Uint32", 4), ("i32", "Int32", 4), ("u16", "Uint16", 2), ("i16", "Int16", 2), ("u8", "Uint8", 1), ("i8", "Int8", 1)];
+fn number(n: &str) -> &'static (&'static str, &'static str, usize) { let n = if n == "usize" { "u32" } else { n }; NUMBERS.iter().find(|x| x.0 == n).unwrap_or_else(|| panic!("no number is a {n}")) }
 /// a type in TypeScript, and what reads one off `I`
 fn read(t: &Ty) -> (String, String) {
     match t {
         Ty::Number(n) => {
-            let n = if *n == "usize" { "u32" } else { n };
-            let (_, get, _) = NUMBERS.iter().find(|x| x.0 == n).unwrap_or_else(|| panic!("no number is a {n}"));
-            ("number".into(), format!("I.{}()", get.to_lowercase()))
+("number".into(), format!("I.{}()", number(n).1.to_lowercase()))
         }
         Ty::YesNo => ("boolean".into(), "I.bool()".into()),
         Ty::Text => ("string".into(), "I.str()".into()),
@@ -167,12 +241,15 @@ fn read(t: &Ty) -> (String, String) {
 fn views() -> String {
     let mut l = vec![format!("{WRITTEN}: THE VIEW, READ, the types an answer is of (rust/game_types/src/view and what they name) and their bytes, as plain values. To change one, change it there."),
         "import type { Vec3 } from '../math/vec';".into(), String::new(),
-        "class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }".into()];
+        "export class In { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }".into()];
     l.extend(NUMBERS.iter().map(|(_, get, w)| format!("  {}(): number {{ const v = this.dv.get{get}(this.p{}); this.p += {w}; return v; }}", get.to_lowercase(), if *w > 1 { ", true" } else { "" })));
     l.extend(["  bool(): boolean { return this.b[this.p++] !== 0; }", "  str(): string { const n = this.uint32(), s = DEC.decode(this.b.subarray(this.p, this.p + n)); this.p += n; return s; }",
+        "  /** a list of numbers as an array of its own */", "  run<T>(A: { new (b: ArrayBuffer): T; readonly BYTES_PER_ELEMENT: number }): T { const n = this.uint32() * A.BYTES_PER_ELEMENT, at = this.b.byteOffset + this.p; this.p += n; return new A((this.b.buffer as ArrayBuffer).slice(at, at + n)); }",
         "  list<T>(f: () => T): T[] { const n = this.uint32(), o: T[] = []; for (let i = 0; i < n; i++) o.push(f()); return o; }",
         "  word<T>(W: readonly T[], of: string): T { const k = this.uint16(); if (k >= W.length) throw new Error(`the view: no such word of ${of} (${k})`); return W[k]; } }", "const DEC = new TextDecoder();", ""].map(String::from));
-    let (whole, types) = host::answers();
+    let (asked, told, types) = host::answers();
+    let (mut own, mut whole) = (Vec::new(), Vec::new());
+    for t in &told { named(t, &mut own, &mut whole); }
     for (n, shape) in types.list {
         match shape {
             Shape::Words(w) => {
@@ -184,8 +261,8 @@ fn views() -> String {
             Shape::Record(r) => {
                 let f: Vec<(String, (String, String))> = r.iter().map(|(f, t)| (camel(f), read(t))).collect();
                 l.push(format!("export interface {n} {{ {} }}", f.iter().map(|(k, (ts, _))| format!("{k}: {ts}")).collect::<Vec<_>>().join("; ")));
-                l.push(format!("function read{n}In(I: In): {n} {{ return {{ {} }}; }}", f.iter().map(|(k, (_, rd))| format!("{k}: {rd}")).collect::<Vec<_>>().join(", ")));
-                if !whole.contains(&Ty::Named(n)) { continue; }
+                l.push(format!("{}function read{n}In(I: In): {n} {{ return {{ {} }}; }}", if whole.contains(&n) { "export " } else { "" }, f.iter().map(|(k, (_, rd))| format!("{k}: {rd}")).collect::<Vec<_>>().join(", ")));
+                if !asked.contains(&Ty::Named(n)) { continue; }
                 l.push(format!("export function read{n}(b: Uint8Array): {n} {{ const I = new In(b), r = read{n}In(I); if (I.p !== b.length) throw new Error(`the view: {n} is ${{b.length}} bytes and ${{I.p}} were read`); return r; }}"));
             }
         }

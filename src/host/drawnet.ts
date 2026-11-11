@@ -3,7 +3,7 @@
 import { HAND, sampleHand, type HandCamera, type HandCanvas, type HandInput } from '../draw/hand';
 import { CANT_PLAY, doorFromUrl, keyOff, movedTo, NETWAY, netStall, netTried, netTry, type NetDoor, type WalkRound } from '../net/door';
 import type { Foreseen } from '../net/foresee';
-import { NetGame, type NetFace } from '../net/modgame';
+import { NetGame } from '../net/modgame';
 import { startWhy, type NetStart } from '../net/start';
 import type { WireCmd } from '../net/wire';
 import { recipeSearch } from '../tape/address';
@@ -30,8 +30,8 @@ export class DrawNet {
   start(own: Pick<Start, 'level' | 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
     const S = this.said, C = this.game.commands, G = this.game, c = this.door.client;
     C.take(); G.start({ ...own, words: S.words, kept: S.kept, seed: S.seed, seats: S.seats }); G.walked = true;
-    this.net = new NetGame(G.X as unknown as NetFace, G.memory, G.h);
-    if (c.seat >= 0) G.X.face_show_seat(G.h, c.seat);
+    this.net = new NetGame(G.face, G.h);
+    if (c.seat >= 0) G.face.showSeat(G.h, c.seat);
     G.show();
   }
   /** this page can play: the server begins when every seat can */

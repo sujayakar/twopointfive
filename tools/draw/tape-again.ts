@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { faceHere } from '../blitz/face-build.ts';
-import { characterFiles } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { HAND } from '../../src/draw/hand';
 import { parseLines } from '../../src/tape/kept';
@@ -22,7 +22,7 @@ let why = '';
 for (let r = W.next(); r; r = W.next()) {
   if (r.kind === 'step') { g.numbersOf().set(r.hand); g.step(r.dt, r.keys); }
   else if (r.kind === 'order') { g.commands.put(r.bytes); g.tell(); }
-  else if (r.kind === 'hands') { const [seed, cap, breaker, ...route] = new TextDecoder().decode(r.plan).split('\n'); g.handsOff(seed ? { seed: Number(seed), cap: Number(cap), breaker: breaker === '1', route } : null); }
+  else if (r.kind === 'hands') g.handsOff(r.plan);
   else if (r.kind === 'end') why = r.why;
 }
 T.end(why); writeFileSync(to, gzipSync(T.whole(), { level: 9 })); console.log(`${S.levelName} ${S.words} · ${T.ticks} ticks · ${(gzipSync(T.whole()).length / 1024).toFixed(0)} KB`);

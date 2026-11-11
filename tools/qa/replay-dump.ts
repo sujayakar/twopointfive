@@ -33,7 +33,7 @@ export function tapeFacts(b: Uint8Array): TapeFacts {
     const at = (kind: string, text: string, weight: number, tick: number) => moments.push({ r: seconds, tick, kind, text, weight });
     if (row.kind === 'step') { seconds += row.dt; ticks = row.tick + 1; }
     else if (row.kind === 'try') { starts.push(seconds); down.clear(); at('try', 'the mission began again', 4, row.tick); }
-    else if (row.kind === 'hands' && row.plan.length) at('seat', 'a hands-off player took the seat', 2, row.tick);
+    else if (row.kind === 'hands' && row.plan) at('seat', 'a hands-off player took the seat', 2, row.tick);
     else if (row.kind === 'end') { ends = row.why; at('end', `the tape ends: ${quoted(row.why)}`, 7, row.tick); }
     else if (row.kind === 'figures') {
       shots = row.figures.shots;

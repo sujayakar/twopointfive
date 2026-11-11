@@ -1,6 +1,6 @@
 // WHAT THIS MACHINE KEEPS OF HOW IT PLAYS: one record before a game is made (the difficulty, its levers, the men's cards, the quiet picks, the panel's kept rows and picks), and the sandbox row and the
 // autosave switch once it stands. No word of an address is read here: the game lays the address over the record.
-import type { ActionRow, ShownRow } from './drawgame';
+import type { ActionRow, ShownRow } from '../view/read';
 import type { Commands } from '../draw/commands';
 import { KIT_KEPT } from '../view/desk';
 import { autosaveKept, sandboxKept } from './sandbox';

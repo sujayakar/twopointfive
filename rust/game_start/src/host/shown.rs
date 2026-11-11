@@ -1,6 +1,10 @@
 //! THE PANEL'S ROWS OF THE GAME'S NUMBERS: which numbers have a slider of their own, what it says and how far it goes. The page lays out what this list says and holds none of it.
 //! Every other number is still on the panel's search, by its name (knobs.rs). `scale` is what the row shows a number at (a chip's size in millimetres); `kept` numbers stay turned on this machine; `adv` rows wait behind the panel's 'all knobs'.
+use game::view::ShownRow;
 pub struct Row { pub name: &'static str, pub label: &'static str, pub section: &'static str, pub lo: f64, pub hi: f64, pub step: f64, pub scale: f64, pub kept: bool, pub adv: bool, pub title: &'static str }
+impl Row {
+    pub fn told(&self) -> ShownRow { ShownRow { name: self.name, label: self.label, section: self.section, title: self.title, lo: self.lo, hi: self.hi, step: self.step, scale: self.scale, def: super::knobs::shipped(self.name).unwrap_or(f64::NAN), kept: self.kept, adv: self.adv } }
+}
 
 pub static ROWS: &[Row] = &[
     Row { name: "tune.flash_intensity", label: "torch / unit light intensity", section: "Lights", lo: 0.0, hi: 300.0, step: 5.0, scale: 1.0, kept: false, adv: false, title: "every carried torch and every spawned unit's weapon light (teammates, scenario defenders, the response team)" },

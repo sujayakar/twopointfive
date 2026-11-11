@@ -2,7 +2,7 @@
 // page calls it at the end of each of its ticks (host/drawnet.ts) and so does a headless bot (tools/mp/bot.ts), on the game each has stood.
 //   A client's game stands at the last tick the server confirmed (client.ts), so the player's man answers a key only when its tick comes back — the way up,
 //   the server's buffer, the way down. But the records the seat has SENT are known here, and what they do to his walk and his aim does not wait on anybody
-//   else. So once a tick his walk is worked out through his seat's records the game has not had yet (client.ts unplayed) by the module's face_ahead: a
+//   else. So once a tick his walk is worked out through his seat's records the game has not had yet (client.ts unplayed) by the module's `ahead`: a
 //   pure working on a body of its own, by the tick's own lines for a man's legs and aim, that writes nothing to the game (no round, no door, no order, no
 //   throw: those are the game's to play). What it answers is where the picture draws him (rust/game_draw lead.rs) and how far ahead the camera looks; the WORLD is
 //   never ahead, and nothing of this is read by a tick. Where his legs are not his own (he is down, on a wall, his hands at work: `free`) the
@@ -12,15 +12,11 @@
 //   place and is brought over, FORESEE.ease of the distance left a tick later; past FORESEE.snap it is a cut.
 //   NOT AHEAD: a man who is down, a page that is catching up or has parted from its server, a watcher.
 import type { NetClient } from './client';
+import type { AheadView } from '../view/read';
 import type { WireCmd } from './wire';
 
 /** a man's place and the way his gun points */
 export interface Stand { pos: ArrayLike<number>; yaw: number }
-/** WHERE A SEAT'S MAN WOULD BE AFTER RECORDS THE GAME HAS NOT HAD, as the game answers it (the module's face_ahead), writing nothing: the man · is
- *  he down · where the game has him, his aim, the normal of a wall he holds (x z) and how near the nearest other body stands (m) · are his legs his own this tick · where the records take him, his
- *  aim there, what his seat's camera would follow with him there, the point the newest record aims at · his place after each record */
-export interface Ahead { id: number; down: boolean; at: [number, number, number]; yaw: number; wall: [number, number] | null; near: number; free: boolean; pos: [number, number, number]; aimYaw: number; follow: [number, number, number]; aim: [number, number, number] | null; path: ArrayLike<number>[] }
-
 /** `on`: the switch — off here as every switch is, raised by a networked page (door.ts tryFrom; `?netpredict=0` leaves it off) and by the scripted
  *  client's `--predict`. Off = his own man is drawn where the game has him. `max`: the most records a look ahead plays. `ease`: what
  *  is left, a tick later, of a correction's distance. `snap` (m): a correction longer than this is a cut. */
@@ -41,7 +37,7 @@ export class Foresee {
 
   /** the end of a tick of the host. `walk`: the host's game asked where its seat's man would be. `held`: the host has its hands off the picture (it is
    *  catching up). null = nobody is ahead */
-  look(walk: ((cmds: WireCmd[]) => Ahead) | null, c: NetClient, held = false): Foreseen | null {
+  look(walk: ((cmds: WireCmd[]) => AheadView) | null, c: NetClient, held = false): Foreseen | null {
     const off = this.off, wire = !FORESEE.on || !walk || c.seat < 0 || held || c.state !== 'playing' || c.bad || c.broken || c.bye ? null : c.unplayed(FORESEE.max);
     const t0 = performance.now(), now = wire && walk ? walk(wire.cmds) : null;
     if (!wire || !now || now.down) { off[0] = off[1] = off[2] = 0; return this.last = null; }

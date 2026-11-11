@@ -6,16 +6,17 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
+use game::view::MapKind;
 
 /// a man on the floor, as anybody who reads a run reads him: the players first in their seats' order, then the men, then the civilians
-pub struct Man { pub ch: CharId, pub team: String, pub kind: &'static str, pub down: bool, pub name: String, pub state: String, pub guard: Option<GuardId>, pub player: Option<(usize, PlayerId)> }
+pub struct Man { pub ch: CharId, pub team: String, pub kind: MapKind, pub down: bool, pub name: String, pub state: String, pub guard: Option<GuardId>, pub player: Option<(usize, PlayerId)> }
 
 /// everybody on the floor, seen or not
 pub fn men(g: &Game) -> Vec<Man> {
     let mut out = Vec::new();
-    for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: "player", down: g.cond[q.ch].down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
-    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: g.ch[m.ch].team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
-    for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: "civ", down: g.cond[m.ch].down, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
+    for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: MapKind::Player, down: g.cond[q.ch].down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
+    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: g.ch[m.ch].team.as_str().to_string(), kind: MapKind::Man, down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
+    for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: MapKind::Civ, down: g.cond[m.ch].down, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
     out
 }
 
@@ -84,7 +85,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
     out.push((String::from("draws"), format!("{}", g.dice.n)));
     for m in men(g) {
         let c = &g.ch[m.ch];
-        let who = match (m.player, m.kind) { (Some((i, _)), _) => format!("seat {}", i), (_, "civ") => format!("civilian {}", c.id), _ => format!("man {}", c.id) };
+        let who = match (m.player, m.kind) { (Some((i, _)), _) => format!("seat {}", i), (_, MapKind::Civ) => format!("civilian {}", c.id), _ => format!("man {}", c.id) };
         out.push((format!("{} where", who), format!("{} {} {}", bits(c.pos[0]), bits(c.pos[1]), bits(c.pos[2]))));
         out.push((format!("{} facing", who), format!("{} {}", bits(c.body_yaw), bits(c.aim_yaw))));
         if let Some((_, p)) = m.player {
