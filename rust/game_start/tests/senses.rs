@@ -26,15 +26,11 @@ fn through(p: &mut Play, a: [f64; 3], b: [f64; 3]) -> f64 { game::sense::smoke_b
 /// What the smoke's cells hold, with what was given back, against what was let out: the share that is not accounted for.
 fn unaccounted(p: &Play) -> f64 {
     use sim::bricks as b;
-    let st = &sim::state::state_read(p.g.sim).smoke.st;
-    let held: f64 = st[b::O_RHO..].iter().sum::<f64>() * b::CELL * b::CELL * b::CELL;
-    (held + st[b::H_GIVEN] - st[b::H_OUT]).abs() / st[b::H_OUT].max(1e-12)
+    let s = &p.g.smoke;
+    let held: f64 = s.rho.iter().sum::<f64>() * b::CELL * b::CELL * b::CELL;
+    (held + s.given - s.out).abs() / s.out.max(1e-12)
 }
-fn bricks(p: &Play) -> usize {
-    use sim::bricks as b;
-    let st = &sim::state::state_read(p.g.sim).smoke.st;
-    (0..b::MAX_BRICKS).filter(|k| st[b::O_KEYS + k * 2] != 0.0).count()
-}
+fn bricks(p: &Play) -> usize { p.g.smoke.bricks.iter().filter(|b| b.at.is_some()).count() }
 
 /// THE RULE: however much smoke there is, the grid holds it and answers for it: a canister on every three metres of the level, and every line across it
 /// is answered, every unit let out is in a cell or in the book.
@@ -80,10 +76,10 @@ fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     let bulb = p.g.targets.clone().into_iter().find(|&t| p.g.tab.fixture[t].on).expect("the bulb");
     p.g.tab.fixture[bulb].on = false;
     let mut most = 0;
-    for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept()[0]); }
+    for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept(&p.g.made.light)[0]); }
     let left = round(&mut p, at);
     assert!(left < 0.02 * lit, "five seconds after the bulb went out {:.0} % of its light is still on the walls", 100.0 * left / lit);
-    let (nx, nz) = sim::bricks::plan(p.g.sim);
+    let (nx, nz) = sim::bricks::plan(&p.g.smoke);
     assert!(most as f64 <= (nx * nz / 8.0).ceil(), "a step swept {most} of the level's {} metres", nx * nz);
 }
 /// The light at a point under a roof that comes round: the mean of the six faces.
@@ -156,12 +152,12 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     for b in p.g.engine.world.statics.clone() { p.g.tab.boxes.edit(b).albedo = [0.05, 0.05, 0.05]; }   // (and all of it is painted: a lamp breaks, a lot is soaked)
     p.run(0.2);
     let (kept, block) = (p.g.clone(), game_start::block::bytes(p.g.sim).to_vec());
-    let field = |p: &Play| -> Vec<u64> { sim::state::state_read(p.g.sim).smoke.st[sim::bricks::O_GLOW_MAX..sim::bricks::O_RHO].iter().map(|v| v.to_bits()).collect() };
+    let field = |p: &Play| -> Vec<u64> { let l = &p.g.smoke.glow; [&l.best, &l.mean, &l.all, &l.up, &l.place].into_iter().flatten().chain([&l.lamps, &l.at, &l.left]).map(|v| v.to_bits()).collect() };
     p.run(4.0);
     let want = field(&p);
     let slot = p.g.sim;
     sim::state::put(slot, &block);
-    p.g = kept.clone();
+    game::savestate::control::stand(&mut p.g, kept.clone());
     game::game::stand_in(&mut p.g, slot);
     p.run(4.0);
     let got = field(&p);
@@ -256,7 +252,7 @@ fn a_game_put_back_has_no_smoke_of_the_try_before() {
         if n > 0 {
             let slot = p.g.sim;
             sim::state::put(slot, &block);
-            p.g = kept.clone();
+            game::savestate::control::stand(&mut p.g, kept.clone());
             game::game::stand_in(&mut p.g, slot);
                     p.run(0.3);
             assert!(through(&mut p, a, b) == 1.0, "try {n}: {:.3} of the light comes through a room with nothing let out in it", through(&mut p, a, b));

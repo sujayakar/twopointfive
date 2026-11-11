@@ -11,12 +11,11 @@
 //!     and nothing else: each part asserts its size is the sum of its fields.
 //!   · ZEROS ARE A GAME WITH NOTHING IN IT. A new block is zeros with its head written; a part reads its zeros as "empty".
 //!   · no allocation: `GAMES` blocks, a fixed size each, so the module's memory never grows.
-//!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the smoke grid's bricks, the panes) is sized for the largest game, and its FIRST WORD is how
+//!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (none now) is sized for the largest game, and its FIRST WORD is how
 //!     many of its bytes are in use, that word included. No rule reads what lies past them (a moment copies the block whole all the same).
 //!
 //! WHO HOLDS A SLOT is the host's business (game_face `face_start` deals them, and a moment kept keeps a copy of a block's bytes and `put`s it back: game_rules
 //! savestate/control.rs `Moment`). A call that reads or writes state names its slot, `g`.
-use crate::bricks::Smoke;
 use crate::men::Men;
 use crate::lights::Lights;
 use crate::weather::Weather;
@@ -41,7 +40,6 @@ pub struct State {
     pub men: Men,
     pub lights: Lights,
     pub weather: Weather,
-    pub smoke: Smoke,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -53,12 +51,11 @@ pub struct Part {
     pub pool: bool,
 }
 /// THE PARTS, in the order of the fields (game_start block.rs PART_NAMES names them in the same order). Parts of a fixed length first, then the pools.
-pub const PARTS: [Part; 5] = [
+pub const PARTS: [Part; 4] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -108,7 +105,7 @@ pub fn state_read(g: usize) -> &'static State {
 /// how many times each slot's block was written whole (`put`)
 static mut PUTS: [u32; GAMES] = [0; GAMES];
 /// THE ONE WAY A BLOCK IS WRITTEN WHOLE: a new game's (no bytes: zeros under the layout's word), one put back, one moved here. Tables made from a block and
-/// kept beside it (bricks.rs, air.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
+/// kept beside it (air.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
 pub fn put(g: usize, bytes: &[u8]) {
     let n = if bytes.len() < LEN { bytes.len() } else { LEN };
     unsafe {

@@ -155,7 +155,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         if i == MOMENT.1 * 60 && !back {
             // (as the page's `hold` does: the game whole again of that moment, and nothing drawn through it)
             let (m, n, cursor) = kept.take().expect("the moment was kept");
-            p.g = m.laid(p.g.sim);
+            p.lay(&m);
             (next, p.cursor, back, i, over) = (n, cursor, true, MOMENT.0 * 60, false);
             d.cut();
         }

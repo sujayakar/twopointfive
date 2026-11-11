@@ -440,7 +440,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         (from, of) = if crate::scene_collision::segment_blocked(g, p, c2, None, None, None) { (p, None) } else { (c2, Some(Of::Quarter(jx as i32, jz as i32))) };
     }
     let u = under(g);
-    let open = u.open(g.sim, from, of);
+    let open = u.open(&g.made, from, of);
     if open.sky == 0 && open.sun | open.ground == 0 { return; }
     let mut leaves: Vec<BoxId> = Vec::new();
     for &db in g.col.dynamic_boxes.iter() {

@@ -46,21 +46,12 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs AT': 'SCRATCH · where a cell last stands in one search\'s open list, left blank after it', 'sim/src/nav.rs BEFORE': 'SCRATCH · where it stands beside',
   'sim/src/nav.rs SCORE': 'SCRATCH · one search\'s open cells\' scores', 'sim/src/nav.rs LEAST': 'SCRATCH · the least of each block of them',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
-  'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
-  'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world and asked again wherever a static row or a leaf moved (always what a fresh ask gives)',
-  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against', 'sim/src/bricks.rs PANES': 'COPY · the panes open somewhere that FACES was last asked against',
-  'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
-  'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and whether that state\'s faces were asked',
   'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
   'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
   'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
-  'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
-  'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
   'sim/src/dome.rs FAN': 'COPY · the ways up to the sky and down to the ground and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/dome.rs TABLES': 'COPY · which of those ways are open from a place, held to the statics by the marks of where they have changed (glow.rs Marks), and to the casters\' box and the sun',
   'sim/src/light.rs SET': 'SCRATCH · one sweep\'s lamps, gathered before its metres ask them',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
  *  LIST in its Cargo.lock: the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a

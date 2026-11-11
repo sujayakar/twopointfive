@@ -423,7 +423,8 @@ pub struct Game {
     pub engine: crate::host_api::HostApi,
     pub level: Arc<crate::scene_level::Level>,
     #[is(RigId(0))] pub rig: RigId,
-    pub smoke: crate::smoke_types::SmokeSystemLike,
+    /// the game's own smoke: what every eye, every lamp's light and the fog of war see through, with the light that comes round beside it
+    pub smoke: crate::smoke::Smoke,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
     pub aside: bool,
     pub rolls: Vec<crate::game::Roll>,
@@ -503,6 +504,9 @@ pub struct Game {
     /// (which of rust/sim's slots it stands in is the host's: in no bytes)
     #[bytes(skip)]
     pub sim: usize,
+    /// (made again from the rest: in no bytes)
+    #[bytes(skip)]
+    pub made: crate::made::Tables,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     #[is(crate::owned::Owned::new())] pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
