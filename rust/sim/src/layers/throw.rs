@@ -8,10 +8,10 @@ fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
     let b2 = v3::cross(hn, b1);
     v3::mad(v3::scale(b1, cos(psi)), b2, sin(psi))
 }
-/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is refused by name as the game loads)
+/// how many keys a table of the throw may have (game_types THROW_KEYS_MAX: a longer one is refused by name as the game loads)
 const THROW_KEYS: usize = 16;
 /// (seventeen counts, eleven tables of two numbers a key and six of four: the whole of it fits the bench's own numbers)
-/// the throw's tables as handed over, in the order character.ts throwLayer lists them (K1, K3) and throwLayerAsk writes them: eleven of (time, value) keys, then six of (time, vector) keys
+/// the throw's tables as handed over, in this order: eleven of (time, value) keys, then six of (time, vector) keys
 const TH_CHEST_YAW: usize = 0;
 const TH_PELVIS_YAW: usize = 1;
 const TH_PITCH: usize = 2;

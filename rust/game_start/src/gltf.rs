@@ -1,5 +1,5 @@
 //! THE CHARACTER FROM ITS FILES: the mannequin (its skeleton, skin, mesh and clips) and, where a cast file is given, the cast's meshes over it.
-//! `src/anim/gltf.ts` `loadGltfCharacter` and `loadGltfCast`, line for line, with the files' bytes handed in (the start reads no file itself).
+//! The files' bytes are handed in: the start reads no file itself.
 //! The rows go where the game keeps them: `g.art.rig`, `g.art.clip`, `g.art.mesh`, `g.art.cast` / `_cast_variant`.
 use crate::json::{self, Json};
 use alloc::{string::String, vec, vec::Vec};
@@ -38,7 +38,7 @@ fn base64(t: &[u8]) -> Vec<u8> {
     out
 }
 
-/// (gltf.ts openGltf: the text parsed, every buffer as bytes)
+/// the text parsed, every buffer as bytes
 fn open(f: GltfFile) -> Open {
     let g = json::parse(f.text).unwrap_or_else(|e| panic!("gltf: {}", e));
     let mut bins: Vec<Vec<u8>> = Vec::new();
@@ -51,7 +51,7 @@ fn open(f: GltfFile) -> Open {
 }
 
 impl Open {
-    /// accessor `i` as a tightly packed array (gltf.ts readAccessor: a byte stride is honoured)
+    /// accessor `i` as a tightly packed array (a byte stride is honored)
     fn accessor(&self, i: f64) -> Accessor {
         let a = self.g.get("accessors").at(i as usize);
         let bv = self.g.get("bufferViews").at(a.get("bufferView").num().expect("gltf: an accessor's view") as usize);
@@ -255,7 +255,7 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
 }
 
 /// THE CHARACTER A GAME STANDS ON, as rows of `g`: the mannequin, or with `cast` the cast's meshes over its skeleton, skin and clips
-/// (gltf.ts loadCharacterSet, but a cast off its contract is refused here and not passed over: a test should not stand on another mesh
+/// (a cast off its contract is refused here and not passed over: a test should not stand on another mesh
 /// than it asked for). Answers the character's row.
 pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> RigId {
     let base = load_base(mannequin);

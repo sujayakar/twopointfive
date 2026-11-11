@@ -43,7 +43,7 @@ table! { Role, ROLES, ROLE_NAMES;
     MIDDLE1_R = "middle1R",
 }
 
-// A LIST is some nodes of the rig in the rig's own parents-first order, by the animator's name for it (character.ts fkList: joints a layer reads, with every
+// A LIST is some nodes of the rig in the rig's own parents-first order, by the animator's name for it (joints a layer reads, with every
 // ancestor of theirs, so that a run forward of the list alone gives those joints what a whole run would). Written with the roles.
 table! { List, LISTS, LIST_NAMES;
     FK_ARMS = "fkArms",
@@ -53,7 +53,7 @@ table! { List, LISTS, LIST_NAMES;
     DIGITS_R = "digitsR",
 }
 
-// A rig's NUMBERS are what the animator worked out once from the character file and reads every frame (character.ts cast.nums: a table of doubles by the
+// A rig's NUMBERS are what the animator worked out once from the character file and reads every frame (a table of doubles by the
 // animator's name for it). Written with the roles, for the rig on the bench.
 table! { Num, NUMS, NUM_NAMES;
     JOG_SEAM = "jogSeam",

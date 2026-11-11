@@ -86,7 +86,7 @@ fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
     }
     Frame { o, x, y, z }
 }
-/// rigProps.ts applyAdj backwards — the parent frame whose child by `adj` is g
+/// the parent frame whose child by `adj` is g
 fn un_adj(g: &Frame, adj: &Adj) -> Frame {
     if !adj.0 {
         return *g;

@@ -5,8 +5,7 @@
 //! What a row is fed by (a fixture, the mains, a camera) and how that stands is the rules' (game_rules air/fixtures.rs), which write a row as it changes.
 use core::mem::size_of;
 
-/// lamps fixtures feed (a level over it is refused at load, by name). The fullest level today has 52. The same as light.rs MAX_LAMPS: the sweep and a question hold
-/// no more.
+/// lamps fixtures feed (a level over it is refused at load, by name).
 pub const ROWS: usize = 256;
 
 // a row's truths (`row_bits`): burning (the reader's gate is this, the first self's intensity > 0 and kind != 2: light.rs) · who asks what the PLACE lights leaves it

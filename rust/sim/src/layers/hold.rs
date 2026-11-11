@@ -624,7 +624,7 @@ fn disarm_first(g: usize, n: usize, tune: &Knobs, f: &Holding) -> bool {
     }
     true
 }
-/// CharacterAnimator.catchFix's arm: the catch's left hand put back where the hold's own arm had it, after the layers that still move his trunk.
+/// the catch fix's arm: the catch's left hand put back where the hold's own arm had it, after the layers that still move his trunk.
 pub fn catch_arm(g: usize, an: &Anim, x: &AnimHdFix) -> bool {
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &ARM_ROLES) {

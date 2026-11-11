@@ -8,7 +8,7 @@
 //! THE STATE is a part of the game's block (state.rs; `Smoke`): one row of doubles (`LEN`): a head (the plan in bricks, the emitters live, the steps
 //! taken), the emitters still letting out, which brick is where, the light that comes round (glow.rs), and LAST the density of every cell, a brick after
 //! another. It holds indices and numbers only, so it is the same bytes in any slot, in a snapshot or on another machine. The part is a POOL: its first
-//! word says how many of its bytes are the game's (the row up to the end of the highest brick that stands), and the host carries those and no more.
+//! word says how many of its bytes are the game's (the row up to the end of the highest brick that stands): no rule reads what lies past them.
 //! WHAT IS NOT STATE and is made again from the state and the box world, a set of tables a slot of the blocks: where each brick is (`INDEX`, from the
 //! state alone) and which faces of each cell are open (`FACES`: asked of the box world's lines once a cell; again round every leaf at every step, since a
 //! door swings, wherever a static's row is another, `SEEN`, and round a pane that is open otherwise than it was, `PANES`). So the faces are at every step what asking them all afresh would give: a game put back
@@ -428,7 +428,7 @@ pub fn empty(g: usize) {
 }
 
 /// is the way between two cells' centres open: nothing solid, no glass that is not open there and no leaf between them, asked both ways (a line that STARTS inside a box is not stopped by
-/// it — collision.ts segmentBlocked's own rule for an eye in a wall — so a cell inside a wall is shut off by the line that ends in it)
+/// it, the rule for an eye in a wall, so a cell inside a wall is shut off by the line that ends in it)
 fn open(w: &World, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
     clear(w, a, b, CELL, tune) && clear(w, b, a, CELL, tune)
 }
@@ -463,7 +463,7 @@ pub struct K {
     pub wind_keep: f64,
 }
 
-/// THE WIND'S SHARE a square metre of the plan (0 under a roof … 1 in the open: game/wind.ts stormShare, the footprints the picture's wind goes by),
+/// THE WIND'S SHARE a square metre of the plan (0 under a roof … 1 in the open: the footprints the picture's wind goes by),
 /// row by row, `2 · nbx` to a row: written by the host before a step that has wind and read by that step alone. Nothing of a game is kept here.
 static mut WIND: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 pub fn wind_addr() -> *mut f64 {

@@ -129,7 +129,7 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
     true
 }
 /// the chest twist still to come (yaw spread over spine1‥3, pitch at spine3), run backwards: its three turns undone about the spine's joints
-/// as they stood on the pose run forward when this was made (CharacterAnimator.untwist, doorLayer's pivots)
+/// as they stood on the pose run forward when this was made (the untwist, the door layer's pivots)
 #[derive(Clone, Copy, Default)]
 struct Untwist {
     ident: bool,
