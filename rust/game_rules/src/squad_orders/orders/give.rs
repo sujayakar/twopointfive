@@ -457,6 +457,7 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::du
     };
     let id = g.tab.task.push(row);
     g.sets[g.seat].orders.asg.set(gd, id);
+    g.gd[gd].duty.task = Some(id);
 }
 
 fn post_dist(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, centre: V3) -> f64 {

@@ -95,7 +95,7 @@ fn cover_spare(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
     let door = g.tab.task[a].door;
     for o in crate::seats::team_men(g, &crate::seats::here(g)) {
         if o == gd { continue; }
-        if let Some(b) = crate::seats::order_of(g, o) {
+        if let Some(b) = crate::duty::order(g, o) {
             let row = &g.tab.task[b];
             if row.post.is_some() && !row.spare.unwrap_or(false) && row.door == door { return true; }
         }
@@ -114,7 +114,7 @@ pub fn cover_eyes_free(g: &Game, gd: GuardId, a: TaskId) -> bool {
 /// Is this man free to be dealt an opening: the order he is under if so.
 fn cover_free(g: &mut Game, gd: GuardId) -> Option<TaskId> {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
-    let a = crate::seats::order_of(g, gd)?;
+    let a = crate::duty::order(g, gd)?;
     if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
     if crate::roomfight::room_fight_engaged(g, gd) || crate::cleared::walks_in(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
@@ -393,7 +393,7 @@ fn held_by(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
     let (at, door) = (g.tab.cover_opening[o].at, g.tab.cover_opening[o].door);
     for &gd in &cx.squad {
         if cx.men.contains(&gd) { continue; }
-        let a = match crate::seats::order_of(g, gd) { Some(a) => a, None => continue };
+        let a = match crate::duty::order(g, gd) { Some(a) => a, None => continue };
         let row = &g.tab.task[a];
         let post = match row.post { Some(p) => p, None => continue };
         if v3::dist_xz(g.pos_of(gd), post) > 1.5 { continue; }
@@ -1000,7 +1000,7 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, TaskId)], asg_of: &JsMap<Guar
 fn cover_prune_steps(g: &mut Game) {
     for gd in g.cover.steps.keys() {
         let sa = g.cover.steps.get(gd).unwrap().a;
-        let a = crate::seats::order_of(g, gd);
+        let a = crate::duty::order(g, gd);
         let gone = crate::condition::down(g, g.gd[gd].ch) || a != Some(sa) || (g.tab.task[sa].post.is_none() && !sam_stopped(g, gd));
         if gone { g.cover.steps.delete(gd); }
     }
@@ -1088,7 +1088,7 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     let j = match g.cover.jobs.get(gd).copied() { Some(j) => j, None => return };
     g.cover.jobs.delete(gd);
     if !taken && !j.off && script_aim_is(g, gd, j.aim) {
-        let a = crate::seats::order_of(g, gd).unwrap_or(j.a);
+        let a = crate::duty::order(g, gd).unwrap_or(j.a);
         let row = &g.tab.task[a];
         if row.spare.unwrap_or(false) && row.post.is_some() && row.from.is_some() {
             let t = g.time;
@@ -1185,7 +1185,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     let kv = *g.cover.kept.get(gd)?;
     let p = g.pos_of(gd);
     if m::abs(g.time - kv.t) >= g.k.rear.secs || !script_aim_is(g, gd, kv.j.aim) { return None; }
-    let a = crate::seats::order_of(g, gd)?;
+    let a = crate::duty::order(g, gd)?;
     g.cover.kept.get_mut(gd).unwrap().j.a = a;
     let mut j = kv.j;
     j.a = a;

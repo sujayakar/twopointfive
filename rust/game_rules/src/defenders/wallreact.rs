@@ -144,7 +144,7 @@ fn take_ask(g: &mut Game, row: &crate::wallbreak::LevelChange, b: Option<Wallrea
         while let Some(o) = ob {
             match g.tab.wallreact_breach[o].into { Some(n) => ob = Some(n), None => break }
         }
-        let a = crate::seats::order_of(g, gd);
+        let a = crate::duty::order(g, gd);
         let at = match a.and_then(|a| g.tab.task[a].post) { Some(post) => post, None => g.pos_of(gd) };
         let mut list = vec![Gone { rect: old.rect, b: ob, who: old.who }];
         list.extend(old.also.unwrap_or_default());
@@ -796,7 +796,7 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     if !crate::seats::team_active(g) { return out; }
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        if let Some(a) = crate::seats::order_of(g, gd) {
+        if let Some(a) = crate::duty::order(g, gd) {
             if g.tab.task[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
         }
     }

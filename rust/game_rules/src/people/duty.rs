@@ -18,6 +18,18 @@ pub fn pin(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
     d.pinned = on;
 }
 
+/// What he has been given to do, whoever's man he is: an order of his player's or of his squad's, or a post of the room fight's.
+pub fn task(g: &Game, gd: GuardId) -> Option<&Task> { g.gd[gd].duty.task.map(|a| &g.tab.task[a]) }
+
+/// The order he is under, in whichever group's book: his task, if it is one a book gave him.
+pub fn order(g: &Game, gd: GuardId) -> Option<TaskId> { g.gd[gd].duty.task.filter(|&a| !g.tab.task[a].order.is_empty()) }
+
+/// That task is done with; a man who has been given another since keeps it.
+pub fn done(g: &mut Game, gd: GuardId, task: Option<TaskId>) {
+    let d = &mut g.gd[gd].duty;
+    if d.task == task { d.task = None; }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
