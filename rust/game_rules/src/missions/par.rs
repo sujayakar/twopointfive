@@ -77,7 +77,7 @@ fn marks_now(g: &mut Game) -> Vec<ParMark> {
     let mut out: Vec<ParMark> = Vec::new();
     crate::seats::each_seat(g, &mut |g| {
         let p = g.player_pos(g.player);
-        out.push(ParMark { origin: p, order0: g.sets[g.seat].orders.log.last().map(|r| r.serial) });
+        out.push(ParMark { origin: p, order0: g.groups[g.group].orders.log.last().map(|r| r.serial) });
     });
     if let (Some(s), Some(first)) = (start, out.first_mut()) { first.origin = s; }
     out
@@ -90,7 +90,7 @@ fn done_since(g: &mut Game) -> (bool, bool) {
         if let Some(mk) = g.par.marks.get(i).copied() {
             let p = g.player_pos(g.player);
             moved |= crate::v3::dist_xz(p, mk.origin) > PAR_START_M;
-            ordered |= g.sets[g.seat].orders.log.last().map(|r| r.serial) != mk.order0;
+            ordered |= g.groups[g.group].orders.log.last().map(|r| r.serial) != mk.order0;
         }
         i += 1;
     });

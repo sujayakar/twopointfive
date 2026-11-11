@@ -13,7 +13,7 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 /// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
-    for (gd, a) in g.sets[g.seat].orders.asg.iter() {
+    for (gd, a) in g.groups[g.group].orders.asg.iter() {
         let row = &g.tab.task[*a];
         if row.post.is_none() && !men.contains(&gd) { taken.push(row.follow); }
     }

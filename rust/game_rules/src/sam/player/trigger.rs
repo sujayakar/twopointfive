@@ -114,7 +114,7 @@ fn launcher(g: &mut Game, t: Tick, go: Go, blocked: bool, was: Option<RifleAttac
     let load = crate::weapons::rifle_attachment(g, rifle)?;
     let left = crate::weapons::rifle_left(g, rifle, load) > 0.0;
     let called_off = crate::backkey::back_hit(g, t.input) || t.hit(g, "Blur") || t.hit(g, "Paused");
-    let kept = was.is_some() && !beat && (!blocked || owed) && !go.stunned && g.sets[g.seat].orders.menu.is_none() && left && !called_off;
+    let kept = was.is_some() && !beat && (!blocked || owed) && !go.stunned && g.groups[g.group].orders.menu.is_none() && left && !called_off;
     let pressed = !kept && t.rmb_hit(g) && !beat && !blocked && !go.stunned;
     let begun = pressed && left && g.fa[rifle].ring_cd <= 0.0;
     if pressed && !begun { at_the_gun(g, c, "dryFire", 0.4); }

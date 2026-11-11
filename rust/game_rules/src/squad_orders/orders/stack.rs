@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// the call marksKeep returned: puts back what it took
 fn marks_put_back(g: &mut Game, keep: crate::orders::MarksKeep) {
     let crate::orders::MarksKeep::Kept { leaf, stack_own, doorway, stackroom, glasspen, book } = keep;
-    g.sets[g.seat].orders.leaf_out_gave = leaf;
+    g.groups[g.group].orders.leaf_out_gave = leaf;
     g.m.doorway.stack_own = stack_own;
     g.stats.doorway = doorway;
     g.stats.stackroom = stackroom;
@@ -118,12 +118,12 @@ pub fn squad_orders_stack_posts_wait(g: &mut crate::game::Game, d: DoorId, side:
 /// stackSeen's `trial`: the chain asked with the whole order on hand `h`, nothing left behind but the glass rule's kept answers
 fn seen_trial(g: &mut Game, h: f64, ask: &mut dyn FnMut(&mut Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
     let keep = squad_orders_marks_keep(g, &crate::seats::here(g));
-    g.sets[g.seat].orders.file_hand = h;
-    g.sets[g.seat].orders.file_gave = false;
+    g.groups[g.group].orders.file_hand = h;
+    g.groups[g.group].orders.file_gave = false;
     let p = ask(g);
-    g.sets[g.seat].orders.file_hand = 0.0;
+    g.groups[g.group].orders.file_hand = 0.0;
     marks_put_back(g, keep);
-    if p.is_some() && g.sets[g.seat].orders.file_gave { p } else { None }
+    if p.is_some() && g.groups[g.group].orders.file_gave { p } else { None }
 }
 
 /// stackSeen's `sum`: the marks' exposure, ticking none of the picture's counts
@@ -137,7 +137,7 @@ fn seen_sum(g: &mut Game, men: &[GuardId], posts: &[crate::orders::StackPost]) -
 
 /// THE HAND OF THE DOOR NO KNOWN ENEMY SEES
 fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
-    if g.sets[g.seat].orders.cast.is_some() || g.sets[g.seat].orders.file_hand != 0.0 || men.is_empty() || !crate::picture::any_idea(g, men) { return ask(g); }
+    if !crate::group::is_seats(g) || g.groups[g.group].orders.file_hand != 0.0 || men.is_empty() || !crate::picture::any_idea(g, men) { return ask(g); }
     let dealt = match ask(g) { Some(x) => x, None => return None };
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
@@ -253,7 +253,7 @@ fn squad_orders_stack_posts_room(g: &mut crate::game::Game, d: DoorId, side: f64
 
 /// OWN MARK: where Sam stands by a mark men of the order are on and the plain answer moves one of those marks, the marks are asked again with Sam left out, and taken if none lands on him but those very marks
 pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> {
-    if g.sets[g.seat].orders.sam_out { return ask(g); }
+    if g.groups[g.group].orders.sam_out { return ask(g); }
     let c = g.pl[g.player].ch;
     let sam = g.ch[c].pos;
     let own = squad_orders_own_marks(g, &crate::seats::here(g), d, side, men);
@@ -265,9 +265,9 @@ pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f
     if let Some(pl) = &plain {
         if own.iter().all(|q| pl.iter().any(|p| v3::dist_xz(p.pos, *q) < OWN_EPS)) { return plain; }
     }
-    g.sets[g.seat].orders.sam_out = true;
+    g.groups[g.group].orders.sam_out = true;
     let blind = ask(g);
-    g.sets[g.seat].orders.sam_out = false;
+    g.groups[g.group].orders.sam_out = false;
     let c2 = stats(g);
     let took = match &blind {
         Some(b) => b.iter().all(|p| v3::dist_xz(sam, p.pos) >= 0.75 || own.iter().any(|q| v3::dist_xz(*q, p.pos) < OWN_EPS)),
@@ -311,16 +311,16 @@ pub fn squad_orders_own_marks(g: &crate::game::Game, seat: &crate::seats::SeatRe
 
 /// ORDERS.inWay: the words of a 'no room' refusal on a door; `ask` is asked once more as if Sam were not there, and leaves nothing behind
 pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> String {
-    if g.sets[g.seat].orders.sam_out { return String::from(plain); }
+    if g.groups[g.group].orders.sam_out { return String::from(plain); }
     let keep = squad_orders_marks_keep(g, &crate::seats::here(g));
-    let glass = g.sets[g.seat].orders.glass_at.clone();
-    let glass_sig = g.sets[g.seat].orders.glass_sig;
-    g.sets[g.seat].orders.sam_out = true;
+    let glass = g.groups[g.group].orders.glass_at.clone();
+    let glass_sig = g.groups[g.group].orders.glass_sig;
+    g.groups[g.group].orders.sam_out = true;
     let free = ask(g);
-    g.sets[g.seat].orders.sam_out = false;
+    g.groups[g.group].orders.sam_out = false;
     marks_put_back(g, keep);
-    g.sets[g.seat].orders.glass_at = glass;
-    g.sets[g.seat].orders.glass_sig = glass_sig;
+    g.groups[g.group].orders.glass_at = glass;
+    g.groups[g.group].orders.glass_sig = glass_sig;
     if free { String::from(IN_WAY_WORDS) } else { String::from(plain) }
 }
 
@@ -331,7 +331,7 @@ pub fn squad_orders_sam_place(g: &crate::game::Game, seat: &crate::seats::SeatRe
 
 /// where Sam stands, to the marks the door code makes; to another cast he is nowhere
 pub fn squad_orders_sam_stood(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
-    if seat.orders.cast.is_some() { return nowhere(); }
+    if !seat.group.by_a_player() { return nowhere(); }
     let c = g.pl[seat.player].ch;
     g.ch[c].pos
 }
@@ -347,7 +347,7 @@ fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side: f6
     let front: V3 = [c[0] + n[0] * jamb_out, 0.45, c[2] + n[1] * jamb_out];
     let sam = squad_orders_sam_place(g, &crate::seats::here(g));
     let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
-    let over = if g.sets[g.seat].orders.leaf_out_gave { Over::but_door(g, d) } else { Over::OWN };
+    let over = if g.groups[g.group].orders.leaf_out_gave { Over::but_door(g, d) } else { Over::OWN };
     let mut i = 0;
     while i < out.len() {
         let p = out[i].clone();
@@ -372,12 +372,12 @@ fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side: f6
 fn squad_orders_stack_posts_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let out = squad_orders_stack_posts_leaf_in(g, &Over::OWN, d, side, men, Some(ignore));
-    g.sets[g.seat].orders.leaf_out_gave = false;
+    g.groups[g.group].orders.leaf_out_gave = false;
     if out.is_some() || m::abs(g.dr[d].leaf.angle) < 0.3 || g.dr[d].leaf.off { return out; }
     let marks = squad_orders_stack_posts_leaf_in(g, &Over::but_door(g, d), d, side, men, Some(ignore));
     if marks.is_some() {
         g.m.doorway.stack_own.leaf += 1.0;
-        g.sets[g.seat].orders.leaf_out_gave = true;
+        g.groups[g.group].orders.leaf_out_gave = true;
     }
     marks
 }
@@ -392,11 +392,11 @@ fn squad_orders_stack_posts_leaf_in(g: &mut crate::game::Game, over: &Over, d: D
     }
     if as_.is_none() { as_ = squad_orders_stack_posts_on(g, over, d, side, men, ignore, false, None); }
     let out = match as_ { Some(x) => Some(x), None => squad_orders_stack_posts_on(g, over, d, side, men, ignore, false, Some(true)) };
-    let file_hand = g.sets[g.seat].orders.file_hand;
+    let file_hand = g.groups[g.group].orders.file_hand;
     if file_hand == 0.0 { return out; }
     let out = match out { Some(o) => o, None => return None };
     let file = squad_orders_stack_file_on(g, over, d, side, men, ignore, file_hand > 0.0, &out);
-    if file.is_some() { g.sets[g.seat].orders.file_gave = true; }
+    if file.is_some() { g.groups[g.group].orders.file_gave = true; }
     match file { Some(f) => Some(f), None => Some(out) }
 }
 
@@ -416,14 +416,14 @@ pub fn squad_orders_glass_eyes(g: &mut crate::game::Game, d: DoorId, side: f64, 
     let kept = kept.unwrap_or(true);
     if g.k.glasspen.stack_eyes <= 0.0 { return 0.0; }
     let sig = crate::glasspen::glass_toll_sig(g);
-    if sig != g.sets[g.seat].orders.glass_sig {
-        g.sets[g.seat].orders.glass_at.clear();
-        g.sets[g.seat].orders.glass_sig = sig;
+    if sig != g.groups[g.group].orders.glass_sig {
+        g.groups[g.group].orders.glass_at.clear();
+        g.groups[g.group].orders.glass_sig = sig;
     }
     let index = g.doors.list.iter().position(|x| *x == d).map_or(-1, |i| i as i64);
     let key = glass_key(index, side, pos);
     if kept {
-        if let Some(v) = g.sets[g.seat].orders.glass_at.get(key.clone()) { return *v; }
+        if let Some(v) = g.groups[g.group].orders.glass_at.get(key.clone()) { return *v; }
     }
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
@@ -441,7 +441,7 @@ pub fn squad_orders_glass_eyes(g: &mut crate::game::Game, d: DoorId, side: f64, 
         b += 0.75;
     }
     let v = crate::glasspen::shot_through_glass(g, &eyes, [pos[0], 1.3, pos[2]], None);
-    if kept { g.sets[g.seat].orders.glass_at.set(key, v); }
+    if kept { g.groups[g.group].orders.glass_at.set(key, v); }
     v
 }
 
@@ -589,10 +589,10 @@ pub fn squad_orders_hall_places(g: &mut crate::game::Game, over: &Over, d: DoorI
 pub fn squad_orders_stack_posts_on(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: &[GuardId], glass: bool, hall: Option<bool>) -> Option<Vec<crate::orders::StackPost>> {
     let hall = hall.unwrap_or(false);
     let out = squad_orders_stack_places(g, over, d, side, men, ignore, glass, hall);
-    if out.is_some() || g.sets[g.seat].orders.fur_in { return out; }
-    g.sets[g.seat].orders.fur_in = true;
+    if out.is_some() || g.groups[g.group].orders.fur_in { return out; }
+    g.groups[g.group].orders.fur_in = true;
     let again = squad_orders_stack_places(g, over, d, side, men, ignore, glass, hall);
-    g.sets[g.seat].orders.fur_in = false;
+    g.groups[g.group].orders.fur_in = false;
     again
 }
 
@@ -693,7 +693,7 @@ fn stack_face<'a>(g: &Game, over: &'a Over, door: (DoorId, f64), order: (&'a [Gu
     let front: V3 = [fc[0] + n[0] * jamb_out, 0.45, fc[2] + n[1] * jamb_out];
     let mut held: Vec<V3> = Vec::new();
     if squad_orders_big(g, &crate::seats::here(g)) {
-        for (gd, id) in g.sets[g.seat].orders.asg.iter() {
+        for (gd, id) in g.groups[g.group].orders.asg.iter() {
             if men.contains(&gd) || ignore.contains(&gd) || crate::condition::down(g, g.gd[gd].ch) { continue; }
             let a = &g.tab.task[*id];
             if a.door != Some(d) { continue; }
@@ -833,7 +833,7 @@ fn down_the_hall(g: &mut Game, f: &StackFace, out: &mut Vec<crate::orders::Stack
 /// Both jambs are shut: the level's own marks for this face if it has any (a man alone takes the first nobody stands on), else ones worked out from the floor.
 fn level_or_worked_marks(g: &mut Game, f: &StackFace) -> Option<Vec<crate::orders::StackPost>> {
     let (d, side, men, ignore) = (f.d, f.side, f.men, f.ignore);
-    let authored: Option<Vec<V3>> = g.sets[g.seat].orders.door_marks.iter().find(|m_| m_.door == d && m_.side == side).map(|m_| m_.stack.clone());
+    let authored: Option<Vec<V3>> = g.groups[g.group].orders.door_marks.iter().find(|m_| m_.door == d && m_.side == side).map(|m_| m_.stack.clone());
     let Some(stack) = authored.filter(|s| !s.is_empty()) else {
         let mut taken: Vec<V3> = vec![f.sam];
         taken.extend(squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore)));

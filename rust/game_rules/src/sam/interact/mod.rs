@@ -272,10 +272,10 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let armed = s.sel.down_t >= 0.0;
     let live = choosable(&g.sets[g.seat].nearby) || whistle_wedge(g, &crate::seats::here(g));
     if g.sets[g.seat].hand.sel.open && !live { shut_list(g); }
-    let s = &g.sets[g.seat];
+    let (s, o) = (&g.sets[g.seat], &g.groups[g.group].orders);
     let ring_up = s.hand.sel.open && s.hand.sel.ring.is_some();
-    if ring_up && (s.orders.menu.is_some() || s.orders.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
-    if armed && live && !s.hand.sel.open && s.orders.cmd_ring.is_none() && down && (wedge_digit(g, input) || s.hand.sel.down_t >= g.k.handring.hold_secs - 1e-6) { ring_opens(g, k); }
+    if ring_up && (o.menu.is_some() || o.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
+    if armed && live && !s.hand.sel.open && o.cmd_ring.is_none() && down && (wedge_digit(g, input) || s.hand.sel.down_t >= g.k.handring.hold_secs - 1e-6) { ring_opens(g, k); }
     if g.sets[g.seat].hand.sel.open && g.sets[g.seat].hand.sel.ring.is_some() { ring_tick(g, k); return; }
     light_moves(g, input);
     if k.back && armed { close_selector(g, true); return; }   // (the press is spent: nothing happens on its release)

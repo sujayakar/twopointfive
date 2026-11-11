@@ -28,7 +28,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
 | `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
 | `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
-| `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
+| `group.rs` | the groups: a player's squad and the response team (`qrf/`), each with its book of orders and its door tools. `group::with` makes a pass about another |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
 block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the game asks for, `KeyB` (`?bkey` leaves it on B).
@@ -38,7 +38,7 @@ block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the gam
 **A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
 under it wins, and a door counts by the doorway the ray looks through.
 
-**The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+**The book** is `SquadOrders`, a group's `orders` (`g.group` is the one a pass is about). `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
 `Task` (`duty.rs`): `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 

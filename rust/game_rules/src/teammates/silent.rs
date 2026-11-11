@@ -233,11 +233,11 @@ fn seat(g: &mut crate::game::Game) {
     g.m.silent.seats.set(key, SilentModSeatsValue { on });
     crate::orders::squad_orders_unregister(g, crate::orders::rows::loud::ORDER.id);
     crate::orders::squad_orders_unregister(g, crate::orders::rows::silent::ORDER.id);
-    if !on { g.sets[g.seat].orders.posture = None; return; }
+    if !on { g.groups[g.group].orders.posture = None; return; }
     let [silent, loud] = rows(g);
     crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);
-    g.sets[g.seat].orders.posture = Some(seam_posture());
+    g.groups[g.group].orders.posture = Some(seam_posture());
 }
 
 /// `posture.word`: what the posture's seam should call

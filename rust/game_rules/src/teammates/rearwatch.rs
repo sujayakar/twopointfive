@@ -288,7 +288,7 @@ fn squad_up(g: &Game) -> Vec<GuardId> {
 fn door_tool_stacks(g: &mut Game, key: PlayerId) -> (Vec<Group>, JsSet<GuardId>) {
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
-    for op in g.sets[g.seat].door_tools.ops.clone() {
+    for op in g.groups[g.group].tools.ops.clone() {
         let op_men = g.tab.doortools_door_op[op].men.clone();
         for &m in &op_men {
             taken.add(m);
@@ -900,8 +900,7 @@ fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// the fall-in leg: this man's feet stay where they are, in his seat's book.
 pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    // (view_of: his seat's book; a cast is one book, its own)
-    let key = if g.in_cast {
+    let key = if !seat_ref.group.by_a_player() {
         crate::seats::view_key(g, seat_ref)
     } else {
         let seat = crate::seats::view_of(g, gd);

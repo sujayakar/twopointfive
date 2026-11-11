@@ -10,20 +10,21 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// the row a second cast of the squad's code keeps in a table kept per view
-pub const CAST_KEY: PlayerId = PlayerId(u32::MAX);
+/// the row of a table kept a player for a pass about a group no player commands
+const NOBODYS: PlayerId = PlayerId(u32::MAX);
 
 /// is this call inside a seat's view, and not on the bare tick. with_seat raises Game.view_depth for the length of its call
 fn in_view(g: &crate::game::Game) -> bool { g.view_depth > 0 }
 
-/// which row of a table kept per view this pass reads: the man of the seat the pass is about, or CAST_KEY inside a second cast.
+/// Which row of a table kept a player this pass reads: the man of the seat it is about, or nobody's where it is about a group no player commands.
 pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
-    if g.in_cast { CAST_KEY } else { seat.player }
+    if seat.group.by_a_player() { seat.player } else { NOBODYS }
 }
 
 /// The pass is about this seat from here on. Its man is on `g.player` for the pass; the man of the seat it was about goes back to its row.
 fn stand_on(g: &mut Game, s: SeatId) {
     g.sets[g.seat].player = g.player;
+    if g.seat != s { g.group = g.sets[s].group; }
     g.seat = s;
     g.player = g.sets[s].player;
 }
@@ -31,12 +32,13 @@ fn stand_on(g: &mut Game, s: SeatId) {
 /// A PASS ABOUT ANOTHER SEAT. The seat it was about comes back after; the seat already about runs as it stands (so a nesting is fine). For the length of the call the
 /// game is "a seat's view" (`in_view`), the first seat's too.
 pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    let from = g.seat;
+    let (from, group) = (g.seat, g.group);
     stand_on(g, seat);
     g.view_depth += 1;
     let r = f(g);
     g.view_depth -= 1;
     stand_on(g, from);
+    g.group = group;
     r
 }
 
@@ -111,7 +113,8 @@ pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     while i < n {
         let s = crate::cmd::seat_new(g, Some(i));
         if i != 0.0 {
-            let own = set_of_game(g);
+            let mut own = set_of_game(g);
+            own.group = g.groups.push(crate::group::Group { commander: crate::group::Commander::Seat(s), ..g.groups[own.group].clone() });
             assert_eq!(g.sets.push(own), s, "a seat's set stands at its seat's id");
         }
         seats.push(s);
@@ -501,7 +504,7 @@ pub fn in_seat(g: &crate::game::Game, s: SeatId, gd: GuardId) -> bool {
 
 /// the game handed in has one squad's orders, the seat's
 pub fn one_book(g: &crate::game::Game) -> bool {
-    g.seats.len() == 1 || g.in_cast
+    g.seats.len() == 1 || !crate::group::is_seats(g)
 }
 
 /// the game as a teammate's own player sees it

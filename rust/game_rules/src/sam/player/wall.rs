@@ -512,7 +512,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].hands_full()
-        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.groups[g.group].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;

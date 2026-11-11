@@ -437,6 +437,12 @@ pub struct Game {
     /// each seat's own things, by its id
     #[is(crate::seats::sets_new())] pub sets: Tab<SeatId, crate::seats::SeatSet>,
     pub seats: Vec<SeatId>,
+    /// the group a pass is about: the seat's own, or the one `group::with` names
+    /// (a machine's own: in no bytes)
+    #[bytes(skip)]
+    #[is(GroupId(0))] pub group: GroupId,
+    /// every group, by its id
+    #[is(crate::group::groups_new())] pub groups: Tab<GroupId, crate::group::Group>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
@@ -451,8 +457,6 @@ pub struct Game {
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// what g.serial() deals next
     #[is(1)] pub serial_next: u32,
-    /// a second cast of the squad is in the seat's row (`squadcast::with_cast`)
-    pub in_cast: bool,
     /// the rows box_frame has dealt that are not free yet (boxes_frame_reset)
     pub box_frame_rows: Vec<FrameBoxId>,
     /// rows box_frame may deal again

@@ -31,10 +31,10 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     }
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
-    let after = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
+    let after = g.groups[g.group].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let def = row(g);
     let before = match after {
-        Some(a) => g.sets[g.seat].orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
+        Some(a) => g.groups[g.group].orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
         None => None,
     };
     crate::orders::squad_orders_register(g, def, before.as_deref());
@@ -167,7 +167,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
     crate::game::game_say(g, th.gd, "smoke out.", None, None);
     let callsign = g.gd[th.gd].callsign.clone();
     let serial = g.serial();
-    g.sets[g.seat].orders.log.push(crate::orders::SquadOrdersLogItem {
+    g.groups[g.group].orders.log.push(crate::orders::SquadOrdersLogItem {
         t: g.time,
         order: String::from(SMOKE_ORDER),
         who: vec![callsign.clone()],
