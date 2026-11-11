@@ -22,6 +22,25 @@ const CUT_PLANES: u32 = 8u;
 fn cutPlane(i: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + i * 9u + 0u + k]; }
 fn cutCore(i: u32) -> vec4f { return boxMat[CUT_BASE + i * 9u + 8u]; }   // the colour its cut faces show (w over 0: it has one), and what else is said of them in w
 
+// what is broken of a listed pane (all nought: it is whole): 36 rows a box
+const PANE_STRIDE: u32 = 36u;
+fn paneSites(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].x; }   // how many sites it has been cut from
+fn paneSays(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].y; }   // 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web
+fn paneAxis(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].z; }   // 0: its own x runs across it; 1: its z does
+fn paneDamage(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].w; }   // how far it has gone, to 1
+fn paneHalf(i: u32) -> vec2f { return boxMat[PANE_BASE + i * 36u + 1u].xy; }
+fn paneKind(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 1u].z; }
+fn panePad(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 1u].w; }
+fn paneBlow(i: u32) -> vec2f { return boxMat[PANE_BASE + i * 36u + 2u].xy; }   // where the blow that diced it fell
+fn paneOpenAt(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 2u].z; }   // the clumps whose key is under this have let go
+fn paneGrain(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 2u].w; }
+fn paneCols(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 3u].x; }
+fn paneRows(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 3u].y; }
+fn paneSeed(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 3u].z; }
+fn panePad2(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 3u].w; }
+const PANE_SITES: u32 = 32u;
+fn paneSite(i: u32, k: u32) -> vec4f { return boxMat[PANE_BASE + i * 36u + 4u + k]; }   // a site: its place, its turn and its ring's radius · its radials, seed, energy and how much is merged · the four rings' radii · the pieces that have fallen out, twelve bits a band, two bands a float
+
 // a mark's head; its cells follow, twelve to a float: 8 rows from `row` of the table
 const MARK_HEAD: u32 = 8u;
 fn markPlace(row: u32) -> vec4f { return boxMat[MARK_BASE + row + 0u]; }   // where it lies on the face and how many cells it is across and up
