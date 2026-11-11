@@ -58,7 +58,7 @@ fn contact_clear(g: &crate::game::Game, a: CharId, b: CharId) -> bool {
     !solid_between(g, from, to)
 }
 
-/// rayHit plus the contact shot: a muzzle already inside his body cylinder is a hit where it is. `contact` None is the TypeScript's `true`.
+/// The ray hit plus the contact shot: a muzzle already inside his body cylinder is a hit where it is. `contact` None always counts.
 pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, contact: Option<crate::combat::BodyHitContact>) -> f64 {
     let t = crate::character::character_ray_hit(g, c_2, ro, rd, tmax);
     if t >= 0.0 || !g.ch[c_2].alive || matches!(contact, Some(BodyHitContact::Entering)) { return t; }
@@ -66,7 +66,7 @@ pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, c
     let counts = match contact {
         None => true,
         Some(BodyHitContact::Entering) => false,
-        // fireWeapon's own test: nothing solid nearer along the bore than his middle, no panel between the two chests
+        // fire_weapon's own test: nothing solid nearer along the bore than his middle, no panel between the two chests
         Some(BodyHitContact::Muzzle { st0_t, muzzle, glass_arm, shooter }) => {
             let or = g.ch[c_2].pos;
             let h = g.ch[c_2].bone(crate::character::Bone::Hips).unwrap_or(or);

@@ -97,7 +97,7 @@ fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, 
     (goal, via, at, door)
 }
 
-/// Once a frame from rescue.ts tick(), after its defenders() and before its clock().
+/// Once a frame from the rescue's tick, straight after `rescue_defenders`.
 pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     if !rescue_flush_live(g) { return; }
     let b = plan_bounds(g);
@@ -205,7 +205,7 @@ fn rescue_flush_point_of(g: &crate::game::Game, goal: crate::rescueflush::Goal, 
     crate::rescueend::rescue_end_out(g)
 }
 
-/// Let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net.
+/// Let go to hunt it, as a roamer is let go to the noise; and his word on the net.
 fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescueflush::Goal, at: V3, n: f64, via: Option<&[V3]>) {
     let via: &[V3] = via.unwrap_or(&[]);
     crate::rescue::rescue_let_go(g, h);

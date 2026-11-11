@@ -22,10 +22,10 @@ pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u3
         w(row.color[0] * inten), w(row.color[1] * inten), w(row.color[2] * inten), w(w11), w(w12), w(volumetric), owner_word, w(radius)]
 }
 
-// ---- THE LIGHTS' LIST IS THE GAME'S (render/lights.ts LightSet: "this set is the game's and goes into every checkpoint"): its add / remove / flash and the fog's class
-// are translated, not no-ops. Round one made `remove` a boundary no-op: a light taken off the list went on lighting the estimate.
+// ---- THE LIGHTS' LIST IS THE GAME'S, and goes into every checkpoint: its add / remove / flash and the fog's class are rules, not the picture's. A light taken
+// off the list stops lighting the estimate.
 
-/// WHAT A LIGHT IS BESIDE AN HOUR'S (sim/light.rs by_day), by what it is called and how it burns.
+/// WHAT A LIGHT IS BESIDE AN HOUR'S (`by_day` in rust/sim/src/light.rs), by what it is called and how it burns.
 pub fn light_by_day(l: &crate::render_lights::RtLight) -> u32 {
     use sim::light::{DAY_FACE, DAY_FIXTURE, DAY_FLASH, DAY_HAND, DAY_NONE, DAY_VEHICLE};
     if l.kind == 2.0 || l.transient == Some(true) || l.group == "devices" || l.group == "sky" || l.name.starts_with("kitview") { return DAY_NONE; }
@@ -80,7 +80,7 @@ pub fn light_set_update(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`). Fields the TypeScript's literal leaves out are absent.
+/// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`).
 pub fn light_from_def(g: &mut crate::game::Game, d: &crate::scene_level::LightDef) -> LightId {
     use crate::scene_level::LightDefKind;
     let mut l = RtLight::default();

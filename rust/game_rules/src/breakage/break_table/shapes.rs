@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec, vec::Vec};
 
-/// INVENTED, for BREAK[mat]: the row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
+/// The row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
 pub(super) fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
 
 type P2 = [f64; 2];

@@ -38,7 +38,7 @@ pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props
     ];
     let d = m::PI / 180.0;
     let (mut x, mut y, mut z) = (f.x, f.y, f.z);
-    // the negated tests are the TypeScript's: a NaN angle does turn
+    // the tests are negated on purpose: a NaN angle does turn
     let ax = adj.rot[0] * d;
     if !(m::abs(ax) < 1e-6) {
         let q = v3::quat::axis_angle(f.x, ax);

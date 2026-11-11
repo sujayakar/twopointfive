@@ -401,7 +401,7 @@ fn haul_on(g: &mut Game, d: RoomfightDefId, m: &mut Man, rk: Option<RoomfightRoo
     }
 }
 
-/// roomfight.ts tickDef, every frame for every defender it runs
+/// every frame, for a defender the room fight runs on a level that digs in: not one held, broken or running, nor a lane's thrower
 pub(in crate::defenders) fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let gd = g.tab.roomfight_def[def].gd;
     if crate::condition::down(g, g.gd[gd].ch) || crate::mission::leads(g, gd) { return; }
@@ -769,7 +769,7 @@ pub(in crate::defenders) fn dig_in_set(g: &crate::game::Game, gd: GuardId) -> bo
     g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |x| x.phase == Phase::Set)
 }
 
-/// pressure.ts's fall-back seam: a spot beside a man of a room dug in that the team has not reached, and the door he comes in by; None = none
+/// the pressure rule's fall-back: a spot beside a man of a room dug in that the team has not reached, and the door he comes in by; None = none
 pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3) -> Option<crate::digin::DigInRefuge> {
     match g.m.digin.states.as_ref() { Some(s) if !s.rooms.is_empty() => {} _ => return None }
     let (gd, my_room) = (g.tab.roomfight_def[def].gd, g.tab.roomfight_def[def].room);
@@ -846,7 +846,6 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own bits, under bun with EXACT.on
     #[test]
     fn leg_dist_has_the_typescripts_bits() {
         assert_eq!(leg_dist([1.3, 0.0, 2.7], [0.1, 0.0, -3.3], [7.7, 0.0, 4.9]).to_bits(), 0x400996784bec9bcf);

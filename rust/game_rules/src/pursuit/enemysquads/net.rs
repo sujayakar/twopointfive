@@ -906,7 +906,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             if !seen {
                 crate::belief::cover(g, gd, to);
             } else if g.gd[gd].covers == Some(was) {
-                g.gd[gd].covers = Some(to);   // (`covers` IS D.pt in the TypeScript, and D.pt has just moved)
+                g.gd[gd].covers = Some(to);   // (`def_move_pt` above has done this already)
             }
         }
         if there && !seen {

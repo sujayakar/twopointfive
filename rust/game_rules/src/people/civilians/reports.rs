@@ -19,7 +19,7 @@ use crate::teams::Team;
 fn bubble_within(g: &Game, gd: GuardId, secs: f64) -> bool {
     match &g.gd[gd].bubble { Some(b) => g.time - b.t < secs, None => false }
 }
-/// a row of a chronicle's data, in the order the TypeScript's literal has it
+/// a value of a row of a chronicle's data
 enum Dv { T(String), B(bool) }
 fn data_c(rows: Vec<(&str, Dv)>) -> JsMap<String, Option<ChronicleDataValue>> {
     let mut d = JsMap::new();
@@ -325,7 +325,7 @@ pub fn civilian_grabbed(g: &mut crate::game::Game, gd: GuardId) {
     cv.cause = Some(CivCause::Grabbed); cv.cause_pos = Some(at); cv.armed = true;  cv.complied = false;
 }
 
-/// the fields every answer of hers shares (the TypeScript's `base`)
+/// the fields every answer of hers shares
 fn answer_base(text: String, id: &str, stage_n: f64, kind: Option<IntelKind>) -> DialoguePick {
     DialoguePick {
         text, id: String::from(id), kind, stage_n,

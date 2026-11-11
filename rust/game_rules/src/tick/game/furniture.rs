@@ -334,7 +334,7 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
         g.col.dynamic_boxes.clone()
     };
     crate::props::prop_system_update(g, dt, &mut contacts, &leaves);
-    // a contact's pos is the man's own in the TypeScript: what the step moved him by is his
+    // a contact's pos is a copy of the man's: what the step moved him by is his
     for (i, c) in chars.iter().enumerate() {
         g.ch[*c].pos[0] = contacts[i].pos[0];
         g.ch[*c].pos[2] = contacts[i].pos[2];

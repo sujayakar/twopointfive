@@ -14,7 +14,7 @@ macro_rules! tool {
     };
 }
 
-/// a write to the tool after a call out: the TypeScript holds the object, and a kick that call took away is written to nobody
+/// a write to the tool after a call out: a kick that call took away is written to nobody
 fn on_tool(g: &mut Game, pid: PlayerId, f: impl FnOnce(&mut crate::game::PlayerKickTool)) {
     if let Some(t) = g.pl[pid].kick_mut().and_then(|k| k.tool.as_mut()) {
         f(t);

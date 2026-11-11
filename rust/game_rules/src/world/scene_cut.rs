@@ -322,7 +322,7 @@ pub(super) fn cut_clip_of(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, 
 
 #[cfg(test)]
 mod tests {
-    //! The TypeScript's own bits (bun, EXACT on), by the same inputs.
+    //! Pinned bits, by fixed inputs.
     use super::*;
     const H: V3 = [1.5, 0.7, 2.1];
 
@@ -451,7 +451,7 @@ mod tests {
     }
     #[test]
     fn the_clip_keeps_its_old_answer_on_false() {
-        // the numbers were recorded on the TypeScript's kept record, which a false answer left as it stood: so the test keeps the last answer the same way
+        // the numbers are of a kept record, which a false answer leaves as it stands: so the test keeps the last answer the same way
         let w = wedge();
         let mut v = Vec::new();
         let mut was = (0.0, 0.0, -1.0);

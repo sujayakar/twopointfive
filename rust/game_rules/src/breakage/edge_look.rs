@@ -2,14 +2,14 @@
 //! A BROKEN WALL'S LOOK, whole: the standing pieces round a cut, the rubble at its foot, the soot. Every piece is a box keyed
 //! MKEY.look on the frame's list, which no ray of the game meets; but the fog of war keeps a record of every keyed loose thing of that list and caps its
 //! records, the boots scuff the rubble at rest, and the frame's room is budgeted with these boxes in it: so the tick does read what this lane writes, and
-//! the lane runs here as it runs in the TypeScript.
+//! the lane runs here.
 //!
-//! WHERE THE RUST IS NOT A PLAIN COPY:
-//! - A BREAKABLE IS HELD BY VALUE. The TypeScript's `dirty` map and `todo` list hold the wallbreak's own Breakable (an object: its cells are read as they
-//!   stand when the wall is dressed a frame later). The generated `BreakLike` is a copy, so every copy this lane holds of a breakable is written again
+//! WHAT TO KNOW:
+//! - A BREAKABLE IS HELD BY VALUE. The lane's `dirty` map and `todo` list hold `BreakLike` copies of the wallbreak's Breakable, and a wall is dressed a frame
+//!   later from its cells as they then stand, so every copy this lane holds of a breakable is written again
 //!   whenever cells of that breakable open (`opened`, the lane's one hook, is every way a cell opens).
 //! - A PIECE'S BOX is a row its holder keeps (`scene_boxes::box_kept`) and lets go when the piece is dropped (a wall dressed again, a cap, a reset).
-//! - `try … catch → fail` has no twin: a fault here is a panic with its place, not a look switched off.
+//! - A fault here is a panic with its place, not a look switched off.
 
 pub use ::game_types::edge_look::types;
 pub use types::*;
@@ -36,7 +36,7 @@ pub(super) fn break_like(g: &Game, b: WallbreakBreakableId) -> BreakLike {
 }
 
 /// What the frame's box list can take of a picture-only lane's boxes: the table, less the level's boxes, less what the frame keeps for its own (`FRAME_BOXES`, or
-/// `now`: what a lane has seen on the list as it stands), less `slack`. (src/game/edgeLook.ts:82 frameRoom, which took last frame's count: a host's)
+/// `now`: what a lane has seen on the list as it stands), less `slack`.
 pub(super) fn frame_room(g: &crate::game::Game, slack: f64, now: Option<f64>) -> f64 {
     let w = &g.engine.world;
     w.max_boxes - w.statics.len() as f64 - now.unwrap_or(crate::scene_boxes::FRAME_BOXES) - slack
@@ -44,7 +44,7 @@ pub(super) fn frame_room(g: &crate::game::Game, slack: f64, now: Option<f64>) ->
 
 /// Cells of a wall just opened: the look's one hook.
 pub(super) fn edge_look_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, fresh: &[f64], cause: &str, dir: Option<V3>, quiet: bool) {
-    // (the copies this lane already holds of this breakable read its cells as they now stand: the TypeScript holds the object)
+    // (the copies this lane already holds of this breakable read its cells as they now stand)
     { let e = &mut g.destr.edge_look;
       if let Some(d) = e.dirty.get_mut(crate::Num(b.id)) { d.open = b.open.clone(); }
       for q in e.todo.iter_mut() { if q.b.id == b.id && q.b.kind == b.kind { q.b.open = b.open.clone(); } } }
@@ -127,7 +127,7 @@ pub(super) fn edge_look_clear(g: &mut crate::game::Game) {
     let e = core::mem::replace(&mut g.destr.edge_look, EdgeLook::blank());
     for l in e.decor.values() { for &b in l { crate::scene_boxes::box_let_go(g, b); } }
     for r in e.rubble.iter() { crate::scene_boxes::box_let_go(g, r.box_); }
-    // (`room` is not put back by the TypeScript's clear: kept)
+    // (`room` is not put back by the clear: kept)
     g.destr.edge_look.room = e.room;
 }
 
@@ -287,5 +287,5 @@ fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, 
     }
 }
 
-/// The look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path).
+/// The look's books, all empty.
 pub(super) fn edge_look_new() -> crate::edge_look::EdgeLook { EdgeLook::blank() }

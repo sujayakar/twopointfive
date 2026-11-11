@@ -202,7 +202,7 @@ fn flash_card(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });
 }
 
-/// Gas, light and powder: the shot from effects.ts.
+/// Gas, light and powder: the shot's effects.
 fn gas_and_light(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
     g.fx_seed += 1.0;
     let gain = mf.light_gain * (if r.def.suppressed { crate::effects::shot().suppressed_gain } else { 1.0 });

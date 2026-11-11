@@ -163,7 +163,7 @@ pub(super) fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [
     [first as f64, second]
 }
 
-/// One entry's cost for expect_entries: the map's closure at digin.ts:264.
+/// One entry's cost for expect_entries.
 fn way_round(g: &Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight::Entry) -> f64 {
     let o = match crate::roomfight::room_fight_free_near(g, [e.at[0] + e.out[0] * 1.2, 0.0, e.at[2] + e.out[1] * 1.2]) {
         Some(o) => o,
@@ -208,10 +208,10 @@ struct SpotCtx {
     pos: V3,
 }
 
-/// Which side of the opening: sideOf at digin.ts:288.
+/// Which side of the opening.
 fn spot_side(x: &SpotCtx, p: V3) -> f64 { m::sign(x.n[0] * (p[2] - x.i[2]) - x.n[1] * (p[0] - x.i[0])) }
 
-/// The place's score; `hope`: asking no line, the best it could come to; `bar`: give up below this. score at digin.ts:293.
+/// The place's score; `hope`: asking no line, the best it could come to; `bar`: give up below this.
 fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f64) -> Option<f64> {
     let d = dist_xz(p, x.i);
     if !self_ && (d < 2.2 || d > 12.0) { return None; }
@@ -273,7 +273,7 @@ fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f6
     spot_rest(g, x, p, self_, s, back, hope)
 }
 
-/// Not seen from outside the door: outside at digin.ts:318.
+/// Not seen from outside the door.
 fn spot_outside(g: &Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
     let mut s = s;
     for (k, o) in x.outs.iter().enumerate() {
@@ -284,7 +284,7 @@ fn spot_outside(g: &Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
     s
 }
 
-/// The rest of the sum: rest at digin.ts:319.
+/// The rest of the sum.
 fn spot_rest(g: &Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope: bool) -> Option<f64> {
     let mut s = s + back;
     for o in x.others.iter() {
@@ -302,7 +302,7 @@ fn spot_rest(g: &Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope:
     Some(s)
 }
 
-/// Deep: the middle of the crossing floor he has in his sights from `p`. lookFrom at digin.ts:330.
+/// Deep: the middle of the crossing floor he has in his sights from `p`.
 fn spot_look(g: &Game, x: &SpotCtx, p: V3) -> Option<V3> {
     if !x.deep { return None; }
     let (mut sx, mut sz, mut k) = (0.0, 0.0, 0.0);
@@ -316,10 +316,10 @@ fn spot_look(g: &Game, x: &SpotCtx, p: V3) -> Option<V3> {
     if k != 0.0 { Some([sx / k, 0.0, sz / k]) } else { None }
 }
 
-/// A cell and its hope: `pre` at digin.ts:337.
+/// A cell and its hope.
 #[derive(Clone, Copy)]
 struct PreCell { p: V3, n: f64, hope: f64 }
-/// A real score: `cand` at digin.ts:345.
+/// A real score.
 #[derive(Clone, Copy)]
 struct CandCell { p: V3, s: f64, n: f64 }
 
@@ -577,7 +577,7 @@ pub(super) fn hand_waits(g: &Game, m: &crate::digin::Man, d_2: DoorId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits from the TypeScript's own lines under bun with EXACT.on
+    // the pinned bits of dist_xz and path_len
     #[test]
     fn flat_and_path_len_have_the_typescripts_bits() {
         assert_eq!(dist_xz([1.1, 9.0, 2.3], [-4.7, 0.0, 8.9]).to_bits(), 0x4021929cde1931e6);

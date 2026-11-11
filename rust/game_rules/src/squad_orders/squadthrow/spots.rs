@@ -550,7 +550,7 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
     who.truncate(8);
     if who.is_empty() { return None; }
     // (the search's marks are the row's, and stay there between searches: out of the row while the flood lends `g`; nothing a flood calls runs another walkSpot)
-    let n = w * h;   // (the grid's size is a number on the table, as in the TypeScript)
+    let n = w * h;
     let sc = match state(g).scratch.take() {
         Some(x) if x.n == n => x,
         _ => {
@@ -582,7 +582,7 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
 }
 
 /// THE THROW AS IT WOULD BE ORDERED NOW: the nearest man with a throw from where he stands, else the man with the shortest walk to one. Nothing is kept:
-/// what is kept of it is the menu's (plan.rs).   (squadthrow.ts squadThrowPlan; the page's checks still hand it the two words it no longer needs)
+/// what is kept of it is the menu's (plan.rs). Nothing reads `_fresh` and `_view`.
 pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, _fresh: Option<bool>, _view: Option<bool>) -> Option<crate::squadthrow::SquadThrower> {
     let th: Option<SquadThrower> = squad_thrower(g, men, at, kind).map(|t| SquadThrower { gd: t.gd, from: t.from, sol: t.sol, rest: t.rest, post: None });
     let clean = LobClean::Plan { kind, at };

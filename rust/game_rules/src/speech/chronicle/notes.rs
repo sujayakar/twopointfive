@@ -682,7 +682,7 @@ fn fmt_mmss(sec: f64) -> String {
     format!("{}:{}", pad2(m::floor(s / 60.0)), pad2(js::rem(s, 60.0)))
 }
 
-/// The whole debrief in one record. mission.ts reads its `grade` for the end line.
+/// The whole debrief in one record. The mission's end line reads its `grade`.
 pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::Debrief {
     let counts = run_counts(g, seat);
     let StealthScore { score, lines } = stealth_score(g, &counts);

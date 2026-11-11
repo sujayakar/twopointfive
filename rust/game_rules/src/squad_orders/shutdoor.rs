@@ -302,7 +302,7 @@ fn end(g: &mut Game, gd: GuardId, j: Job, line: Option<&str>) {
 fn clear_of(g: &Game, d: DoorId, p: V3) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(k().body))
 }
-/// The job is one row of the table, written in place in the TypeScript: every change of the local copy goes back to it.
+/// The job is one row of the table: every change of the local copy goes back to it.
 fn store(g: &mut Game, gd: GuardId, j: Job) {
     if let Some(row) = g.m.shutdoor.jobs.get_mut(gd) { *row = j; }
 }
@@ -326,7 +326,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         return;
     }
     if j.phase == JobPhase::Go {
-        // (the runner has called his walk off and told Sam so: orders.ts's stuck rule)
+        // (the runner has called his walk off and told Sam so)
         let stopped = match g.tab.orders_assignment[a].post { None => true, Some(post) => dist_xz(post, j.spot.pos) > 0.05 };
         let there = !stopped && dist_xz(p, j.spot.pos) < 0.4;
         if !stopped && !there && t - j.t0 <= k().go_cap { return; }

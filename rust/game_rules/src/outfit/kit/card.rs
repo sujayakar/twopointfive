@@ -1,5 +1,5 @@
-//! A man's card as the page shows it (src/ui/kitCard.ts draw, drawDense; kitNoise.ts; gunStats.ts; the rows' words of src/game/kit.ts buildRowsTree), and the
-//! few presses and store lines only the desk asks for. Only the card as a tree stands here: its other forms are gone from the rules.
+//! A man's card as the page shows it (`src/ui/kitCard.ts` draws it), with the words of its rows, and the
+//! few presses and store lines only the desk asks for. Only the card as a tree stands here.
 //!
 //! A read takes `&mut Game` only because the helpers do: it leaves the cards as they were.
 use super::rows::{same_value, value_text};
@@ -18,7 +18,7 @@ pub struct CardFor {
     pub no_fog: bool,
 }
 
-/// Where the launcher's load is worked from (slotsetup.ts loadKeys; the words of the build's own keys, as player.rs words them).
+/// Where the launcher's load is worked from (in the words of the build's own keys).
 const LOAD_KEYS: &str = "press 2, then 2";
 /// Where your light is worked from.
 const LIGHT_KEYS: &str = "its gun's key again, then 3";

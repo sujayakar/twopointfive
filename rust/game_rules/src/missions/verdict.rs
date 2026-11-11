@@ -94,7 +94,6 @@ fn roster(g: &mut Game) {
         let id = g.player_id(pl);
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let seat = crate::seats::seat_of_man(g, pl);
-        // (seats.ts SEAT_TONES: 'you', 'purple', by the seat's place)
         let tone = if (g.tab.cmd_seat[seat].index as usize) % 2 == 0 { Hue::You } else { Hue::Purple };
         let name = crate::seats::player_name(g, pl);
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
@@ -246,7 +245,6 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
         }
         if moved || super::par::fired(g) != g.verdict.fired0 || tail != g.verdict.order0 { g.verdict.t0 = g.time; }
     }
-    // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
     if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }
     watch(g);
     if let Some(end) = crate::mission::ended(g) { close(g, end); }

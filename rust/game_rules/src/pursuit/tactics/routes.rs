@@ -694,7 +694,6 @@ mod tests {
     const FROM: V3 = [0.3, 1.0, 0.7];
     const T: V3 = [11.0, 0.0, 3.0];
 
-    // printed by bun with EXACT.on from a verbatim copy of tactics.ts:166-168, 177-189, 211-216, 231-235, 336-340
     const FLAT: u64 = 0x4025e3890c1ed489u64;
     const BEARING: u64 = 0xbffc853be4bcdd19u64;
     const DEG_APART: u64 = 0x403039aec352e85fu64;

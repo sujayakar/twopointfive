@@ -191,7 +191,7 @@ fn deal_named(g: &crate::game::Game, cards: &[crate::kit::MemberKit]) -> bool {
 
 // ---------------------------------------------------------------- lines 463 to 559
 
-/// Five cards as `n` teammates carry them, shared out (kit.ts deal; the check's break word dropped)
+/// Five cards as `n` teammates carry them, shared out
 fn deal(cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64) -> Vec<crate::kit::MemberKit> {
     if n < 3.0 { return cards.to_vec(); }
     let mut out: Vec<MemberKit> = cards.to_vec();
@@ -246,7 +246,7 @@ fn lendable(g: &crate::game::Game, of: &[crate::kit::MemberKit], mine: bool) -> 
     mine && !deal_named(g, of)
 }
 
-/// The five cards as the team wears them. `cards: None` IS `KIT.members`: the TypeScript's `cards === KIT.members`.
+/// The five cards as the team wears them. `cards: None` is the team's own table (`members`).
 pub(super) fn kit_worn(g: &crate::game::Game, n: Option<f64>, cards: Option<&[crate::kit::MemberKit]>) -> Vec<crate::kit::MemberKit> {
     let n = n.unwrap_or(team_of(g));
     let is_table = cards.is_none();
@@ -275,10 +275,10 @@ pub(in crate::outfit) fn kit_issued_shown(g: &crate::game::Game, i: f64, n: Opti
     issued_card(g, i)
 }
 
-/// A card is read and changed as it is worn (kit.ts onWorn; `kitSave` and with it `store` dropped, no exception to catch)
+/// A card is read and changed as it is worn
 pub(super) fn on_worn<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, i: f64, f: &mut dyn FnMut(&mut crate::game::Game) -> T, taken: Option<&mut dyn FnMut(&mut crate::game::Game, T) -> bool>) -> T {
     if !(i > 0.0 && dealing(g) && team_of(g) >= 3.0) { return f(g); }
-    let w = kit_worn(g, None, None);   // (`now === KIT.members ? was : now`: by value the two hold the same cards)
+    let w = kit_worn(g, None, None);
     let was = members(g);
     for j in 1..MEMBERS { g.m.kit.kit.members[j] = w[j].clone(); }
     let r = f(g);

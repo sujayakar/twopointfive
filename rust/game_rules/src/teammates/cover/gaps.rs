@@ -113,7 +113,7 @@ pub(super) fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::k
 mod tests {
     use super::*;
 
-    /// gapsOf's own output under bun with EXACT on: name, alongX, solid given, then each opening (id, kind, at, n, half, pass, far as double bits) and the count and checksum of `solid`'s calls.
+    /// the pinned output of gaps_of: name, alongX, solid given, then each opening (id, kind, at, n, half, pass, far as double bits) and the count and checksum of `solid`'s calls.
     const TS: &str = "\
 doorway true false gap@2.00,1.25 gap 4000000000000000 3ff199999999999a 3ff4000000000000 0/1 3feae147ae147ae2 - -\n\
 doorway true false calls 0 0\n\

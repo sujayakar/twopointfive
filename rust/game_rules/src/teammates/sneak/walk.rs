@@ -28,7 +28,7 @@ pub(super) fn sneak_live(g: &mut crate::game::Game) -> bool {
     if !g.k.sneak.on { return false; }
     let was = g.m.sneak.live_at;
     if let Some(l) = was { if l.t == g.time { return l.v; } }
-    // L.t is written before the questions below: one that asks again this frame gets the old v, as in the TypeScript.
+    // The clock is written before the questions below: one that asks again this frame gets the old v.
     g.m.sneak.live_at = Some(SneakModLiveAtValue { t: g.time, v: match was { Some(l) => l.v, None => false } });
     let v = sneak_live_now(g);
     if let Some(l) = g.m.sneak.live_at.as_mut() { l.v = v; }
@@ -175,7 +175,7 @@ pub(super) fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, l
     c_2.lit
 }
 
-/// A defender's eye exactly as guards.ts canSeeChar builds it, its cones `wide` degrees wider.
+/// A defender's eye exactly as can_see_char builds it, its cones `wide` degrees wider.
 fn eye_for(g: &crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
     let c = g.gd[h].ch;
     let pos = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
@@ -198,7 +198,7 @@ pub(super) fn stand_in(p: V3, low: bool) -> crate::sneak::Target {
     Target::Spot { chest: [p[0], y[0], p[2]], head: [p[0], y[1], p[2]] }
 }
 
-/// guards.ts eyeContact asked of what the sneak's eye test takes: a man's own body, or a spot (standIn: alive, never the player, so only `blind` shuts the eye).
+/// eye contact asked of what the sneak's eye test takes: a man's own body, or a spot (alive, never the player, so only `blind` shuts the eye).
 fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
     match *pc {
         Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
@@ -247,7 +247,7 @@ pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: Guard
     read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.shown[g.gd[gd].ch].visibility, Some(low), Some(card))
 }
 
-/// The eye's rate on a man on a step: guards.ts sightGainOn's arithmetic.
+/// The eye's rate on a man on a step: the arithmetic of sight_gain_on.
 fn eye_rate(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: Option<bool>) -> f64 {
     let low = low.unwrap_or(true);
     let mut rate = g.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
@@ -322,7 +322,7 @@ fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f6
     v
 }
 
-/// The sneak's eye over any walk by `gd`: every living defender hostile to him and not dazzled, each as guards.ts builds his eye and, where `habit` gives it, as he mostly looks.
+/// The sneak's eye over any walk by `gd`: every living defender hostile to him and not dazzled, each with his eye as `eye_for` builds it and, where `habit` gives it, as he mostly looks.
 pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> Option<[f64; 2]>>) -> crate::sneak::SneakWalk {
     let mut habit = habit;
     let wide = g.k.sneak.cone_deg * g.k.sneak.skill;

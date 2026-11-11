@@ -38,7 +38,7 @@ fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     mk.push(if join { 0.0 } else { 1.0 });
     if join { ShellMark::Join } else if marks == 0 { ShellMark::First } else { ShellMark::More }
 }
-/// `GLASSPEN_HOOKS.crossed?.(g, x, who)`: the game hangs one value, the exit jet of shards.ts
+/// a round has crossed a pane: the exit jet of its shards
 fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
     let like = crate::shards::PaneCrossLike { bi: x.bi, type_: x.type_, exit: x.exit, dir_out: x.dir_out, take: x.take, e_out: x.e_out, hole: x.hole };
     crate::shards::glass_shards_crossed(g, like, who);

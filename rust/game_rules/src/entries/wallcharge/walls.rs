@@ -291,7 +291,7 @@ pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     if page == WALL_PAGE { vec![row] } else { rows.to_vec() }
 }
 
-/// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.
+/// The module and its two rows.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
     wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER, crate::orders::OrderDef {

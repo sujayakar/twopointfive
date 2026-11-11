@@ -2,7 +2,7 @@
 //! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT, whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
 //! the frame's list (MKEY.test + 0x4000 + i), and the fog of war keeps a record of every keyed loose thing of that list and caps its records, the
 //! frame's room is budgeted with them in it, and the men's kit starts behind them in the list (`rig_from`). So the tick reads what this lane writes,
-//! and the lane runs here, under its DRESS row, as it runs in the TypeScript.
+//! and the lane runs here, under its dress row.
 
 pub use ::game_types::moths::types;
 pub use types::*;
@@ -83,7 +83,7 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     let mut sum_act = 0.0; for x in g.moths.lamps.iter() { sum_act += x.act; }
     let quota: Vec<f64> = g.moths.lamps.iter().map(|x| if sum_act > 1e-6 { m::min(k.per_lamp, x.act * k.max / m::max(1.0, sum_act)) } else { 0.0 }).collect();
     let mut held: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { held[mo.lamp as usize] += 1.0; }
-    // (the TypeScript's `rankOf` is a Map by the moth: here by its place in the pool)
+    // (each moth's rank among its lamp's, by its place in the pool)
     let mut rank_of: Vec<f64> = Vec::with_capacity(g.moths.moths.len());
     { let mut seen: Vec<f64> = vec![0.0; n_l]; for mo in g.moths.moths.iter() { rank_of.push(seen[mo.lamp as usize]); seen[mo.lamp as usize] += 1.0; } }
     for i in 0..g.moths.moths.len() {

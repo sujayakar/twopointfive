@@ -411,7 +411,7 @@ fn first_open(g: &Game, cells: &[crate::Num]) -> Option<f64> {
     cells.iter().map(|c| c.0).find(|c| g.col.nav.blocked.get(*c as usize).copied() != Some(1))
 }
 
-/// rooms an earlier flood left sharing this room's cells: the TypeScript's one Set is a copy here, kept equal by hand
+/// rooms an earlier flood left sharing this room's cells: each holds its own copy, kept equal by hand
 fn sharing_cells(g: &Game, r: RoomfightRoomId) -> Vec<RoomfightRoomId> {
     let mine = g.tab.roomfight_room[r].cells.keys();
     if mine.is_empty() { return Vec::new(); }
@@ -689,7 +689,7 @@ fn wall_react_book(g: &mut Game) {
     let mut readied = false;
     for b in breaches_of(g) {
         if g.tab.wallreact_breach[b].ops < 0.0 { continue; }
-        // (ready() hands back the live list in the TypeScript; here it builds it, and the list is g.cover.openings)
+        // (cover_ready builds the list, and the list is g.cover.openings)
         if !readied { crate::cover::cover_ready(g); readied = true; }
         let o = match g.tab.wallreact_breach[b].opening {
             Some(o) => o,
@@ -921,7 +921,7 @@ fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, 
             cands.push([from[0] + m::sin(a * m::PI / 8.0) * r, 0.0, from[2] + m::cos(a * m::PI / 8.0) * r]);
         }
     }
-    let mut plans = 0; // (path searches a question: suppression.ts's own cover search stops at twelve)
+    let mut plans = 0; // (path searches a question: the cover search in people/suppression.rs stops at twelve)
     for p in cands {
         let r = dist_xz(from, p);
         if r > step_m + 2.0 { continue; }
@@ -1160,9 +1160,9 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let now = g.time;
     let at = g.pos_of(gd);
     let row = &mut g.tab.orders_assignment[a];
-    row.post = Some(to); if row.had == Some(to) { row.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
+    row.post = Some(to); if row.had == Some(to) { row.had = None; }   // (`had` is asked by value: a mark he had that holds THESE numbers would read as this new one, so that one goes; any other stays)
     row.goal = v3::copy(to);
-    row.new_leg = true;   // (a new array: an unguarded write, on Assignment.new_leg's list)
+    row.new_leg = true;   // (an unguarded write of the goal: see Assignment.new_leg)
     row.via.clear();
     row.arrived = false;
     row.moved_t = now;
@@ -1190,7 +1190,6 @@ fn wall_react_replan(g: &Game, team: crate::teams::Team, since: f64, men: &[Guar
 #[cfg(test)]
 mod tests {
     use super::*;
-    // The expected values are the TypeScript's own, run under bun with EXACT.on.
 
     #[test]
     fn wrap_has_the_typescripts_bits() {

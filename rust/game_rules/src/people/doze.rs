@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 
 // ---- the one record: GAMES and REC are one table here (g.m.doze.rec), since a game's guards are that game's
 
-/// a changed row back onto the books (doze.ts:81, D is a live object there). Nothing on a row already dropped, as a write to a detached object.
+/// a changed row back onto the books. Nothing on a row already dropped.
 fn flush(g: &mut Game, gd: GuardId, d: Doze) {
     if let Some(r) = g.m.doze.rec.get_mut(gd) { *r = d; }
 }

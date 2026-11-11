@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// A new man's row: the literal of attention.ts mem (`Mem::default()` has the wrong clocks).
+/// A new man's row (`Mem::default()` has the wrong clocks).
 fn fresh() -> Mem {
     Mem { hold: None, cand: None, lent: None, takes: Vec::new(), tick: -1e9, told_at: -1e9, line: -1, heard_t: -1e9, lent_off: -1e9, owed: -1e9, series: false }
 }
@@ -48,7 +48,7 @@ fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     crate::game::game_say(g, gd, &pool[i as usize], None, None);
 }
 
-/// Write a changed hold back to his row (`H` is the row's own object in the TypeScript).
+/// Write a changed hold back to his row.
 fn set_hold(g: &mut Game, gd: GuardId, h: Option<Hold>) { mem(g, gd).hold = h; }
 
 /// The hold on this man's attention right now, or none: a copy of the row's, so a change goes back by `set_hold`.

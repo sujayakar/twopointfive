@@ -321,7 +321,7 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
     }
 }
 
-/// The word a knocked thing's chunk is filed under, for clutter and binders.   (destruction.ts: `d.kind === 'binder' ? 'binder' : 'clutter'`, three sites)
+/// The word a knocked thing's chunk is filed under, for clutter and binders.
 fn knock_kind(kind: DKind) -> crate::debris::ChunkKind {
     if kind == DKind::Binder { crate::debris::ChunkKind::Binder } else { crate::debris::ChunkKind::Clutter }
 }

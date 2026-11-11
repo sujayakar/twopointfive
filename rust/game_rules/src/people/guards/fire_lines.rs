@@ -446,7 +446,7 @@ pub(super) fn pane_first(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     let h = match crate::scene_collision::raycast(g, from, v3::scale(d, 1.0 / l), l - 0.3) { Some(h) => h, None => return false };
     if !(h.index < 1e6) { return false; }
     let i = h.index as usize;
-    // (the level's list IS col.boxes in the TypeScript, game.ts: the one Rust keeps live is g.col.boxes; `?.` is a place past its end)
+    // (the level's list is g.col.boxes; a place past its end has no flags)
     let flags = match g.col.boxes.get(i).copied() { Some(b) => g.tab.boxes[b].flags, None => 0.0 };
     (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
 }
@@ -728,7 +728,7 @@ mod tests {
 
     fn bits(a: &[f64]) -> Vec<u64> { a.iter().map(|x| x.to_bits()).collect() }
 
-    // The expected words are the TypeScript's own: lineGeom and aimAhead's source run under bun with EXACT.on.
+    // The expected words are pinned.
     #[test]
     fn line_geom_is_the_typescripts_bits() {
         let x = line_geom_of([0.1, 1.4, 0.2], [3.3, 1.1, 4.9], [1.37, 0.91, 2.11], 0.0 + 0.05, 1.83, [0.7, 0.0, -0.4]).unwrap();

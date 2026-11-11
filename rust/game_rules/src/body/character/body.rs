@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- small private helpers ----
 
-/// a joint of `bones` that the TypeScript reads as there (undefined would throw at its first use)
+/// a joint of `bones` that must be there
 fn bone(g: &Game, id: CharId, k: Bone) -> V3 { *g.ch[id].bones.get(k).unwrap() }
 /// the Bone a string key names
 fn bone_of(name: &str) -> Option<Bone> { BONE_ORDER.iter().copied().find(|b| b.as_str() == name) }
@@ -208,7 +208,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
         c.anim.aim_yaw_offset = v3::clamp(v3::wrap_angle(c.aim_yaw - c.body_yaw), -1.9, 1.9);
         c.anim.aim_pitch = c.aim_pitch;
         c.anim.body_yaw_in = c.body_yaw;
-        c.anim.pos_in = POS_IN_IS_POS;   // (`this.anim.posIn = this.pos`: the animator holds the body's own array again)
+        c.anim.pos_in = POS_IN_IS_POS;   // (the animator holds the body's own place again)
     }
     anim_update(g, id, dt);
     let (pos, by) = (g.ch[id].pos, g.ch[id].body_yaw);
@@ -1125,22 +1125,20 @@ mod tests {
 }
 
 
-// ---- the animator's place: `anim.posIn = this.pos` is a REFERENCE to the body's position array
+// ---- the animator's place: `anim.pos_in` and the body's `pos`
 //
-// The TypeScript hands the animator the body's own `pos` array at every Character.update. Until the next update the animator reads THAT ARRAY: it
-// sees a write made in place (the collision's push, a door's shove), and it does NOT see a new array put in `pos`'s place (`c.pos = v3.mad(…)`, the
-// step of every man who walks; a snap, a lerp onto a spot): from the first such replacement of a tick to that tick's Character.update, `posIn` is
-// where the body stood before it. kitanim.ts asks in that window (kitSwap's `toModelP(shown.r)`: where the hands are, in the model's space), so a
+// The animator is handed the body's own position at every character update. Until the next update it reads THAT: it
+// sees a write made in place (the collision's push, a door's shove), and it does NOT see a replacement (`pos_replace`, the
+// step of every man who walks; a snap, a lerp onto a spot): from the first replacement of a tick to that tick's character update, `pos_in` is
+// where the body stood before it. A kit swap asks in that window (`anim_kit_swap`, `anim_to_model_p`: where the hands are, in the model's space), so a
 // man who changes guns while he walks starts the errand a step back.
 //
-// STAND-IN for a serial on the position (the types are generated): `Anim.pos_in` holds POS_IN_IS_POS while the animator's array IS the body's, and
-// the body's place as it was from the first replacement on. It belongs in a `pos_serial` on Character with the serial the animator was handed
-// (the device asked for a goal: a value with the serial of the object it is).
+// `Anim.pos_in` holds POS_IN_IS_POS while the animator's place is the body's, and the body's place as it was from the first replacement on.
 
-/// `anim.pos_in` while the animator's array is the body's own
+/// `anim.pos_in` while the animator's place is the body's own
 pub const POS_IN_IS_POS: V3 = [f64::NAN, f64::NAN, f64::NAN];
 
-/// A NEW ARRAY in `pos`'s place (the TypeScript's `c.pos = <a fresh array>`): the animator keeps the one it was handed.
+/// A replacement of `pos`: the animator keeps the place it was handed.
 pub fn pos_replace(g: &mut crate::game::Game, c: CharId, to: V3) {
     let ch = &mut g.ch[c];
     if ch.anim.pos_in[0].is_nan() { ch.anim.pos_in = ch.pos; }

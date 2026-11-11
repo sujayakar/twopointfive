@@ -55,7 +55,7 @@ fn adv(g: &mut Game, i: usize, pass: Option<f64>) -> bool {
     if i == 0 { dr!(g).wp_a = w; } else { dr!(g).wp_b = w; }
     r
 }
-/// One vector in the TypeScript: aimA is flows[0].aim, and while ordered onto it, the man's script.aimAt. A script now aiming at anything else keeps it.
+/// A flow's aim lives in `flows[i].aim`, in `aim_a` / `aim_b` and, while he is ordered onto it, in the man's `script.aim_at`, each a copy. A script now aiming at anything else keeps it.
 fn set_aim(g: &mut Game, i: usize, new: V3) {
     let old = dr!(g).flows[i].aim;
     dr!(g).flows[i].aim = new;

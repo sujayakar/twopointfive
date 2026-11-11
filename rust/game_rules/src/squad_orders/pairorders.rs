@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// the living row of a man's job: the TypeScript holds the object, a copy would lose the write
+/// the living row of a man's job: a copy would lose the write
 macro_rules! job { ($g:expr, $gd:expr) => { $g.pair.jobs.get_mut($gd).unwrap() } }
 /// the assignment under a man, by its ID
 macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
@@ -97,7 +97,7 @@ fn pair_orders_gripped(g: &Game, h: GuardId) -> bool {
     false
 }
 
-/// spotted.ts says the pair is CAUGHT   (PairOrders.caught)
+/// the spotted rule says the pair is CAUGHT
 fn pair_orders_caught(g: &mut Game) -> bool {
     if !g.k.spotted.on { return false; }
     for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
@@ -1067,7 +1067,7 @@ fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -> cr
             Some(pa) => { let pts = from_on(from, pa); crate::sneak::sneak_walk_cost(g, &mut w, &pts, pace, Some(to), None) <= budget }
             None => false,
         };
-        // (`ok` false with no path: the TypeScript's `||` stops there and never reads path!)
+        // (`ok` false with no path: `||` stops there and never reads path!)
         let keep_rest = !ok || len_of(&from_on(from, path.as_ref().unwrap())) > 0.8 * len_of(&from_on(from, &rest));
         if keep_rest {
             let t = g.time;
@@ -1168,7 +1168,7 @@ pub fn pair_grip_body(g: &mut crate::game::Game, h: GuardId) -> bool {
     pair_gripped(g, h)
 }
 
-/// The partner's hands (or spotted.ts's, under pairup's 'hands') are on this man: he sees nobody until they are off.
+/// The partner's hands (or the spotted rule's, while pair_up is on) are on this man: he sees nobody until they are off.
 pub fn pair_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
     (g.k.pair.on && pair_orders_gripped(g, h))
         || (crate::pairup::pair_up(g) && crate::spotted::spotted_gripped(g, h))
