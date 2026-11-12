@@ -92,7 +92,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
     else {
       let bi = u32(hit.idx);
       let bf = boxGeo[bi].flags;
-      if ((bf & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi) * select(1.0, kEmit, (bf & BOX_AREALIT) != 0u); }
+      if ((bf & GEO_EMISSIVE) != 0u) { L += boxEmissive(bi) * select(1.0, kEmit, (bf & GEO_AREA_LIT) != 0u); }
       albedo = boxAlbedoSec(bi);                                          // (= boxAlbedo unless the box's markings are folded in for the secondary rays)
       let ms = markSlotOf(bf);                                            // MARKINGS at the reflection hit (markings.wgsl): the face's pixel art band-limited by the cone, + its emission
       if (ms != 0u && frame.markCfg.w != 0.0) { let mh = markReflHit(ms, bi, Ph, hit.n, dir, hit.t, kEmit, boxAlbedo(bi)); albedo = mh.albedo; L += mh.L; }

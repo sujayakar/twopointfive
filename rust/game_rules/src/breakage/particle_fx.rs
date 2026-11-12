@@ -92,7 +92,7 @@ pub(super) fn hit_look(g: &crate::game::Game, hit: &crate::combat::RoundMet) -> 
 
 /// flags & BoxFlag.Glass
 fn is_pane(flags: f64) -> bool {
-    js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0
+    js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32 != 0
 }
 
 /// STUFF_SURF by the word; None = it is not one thing to a round. Exhaustive, so a new word fails to compile here. The test holds it to the skeleton's table.

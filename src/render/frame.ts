@@ -4,6 +4,7 @@ import commonSrc from './shaders/common.wgsl' with { type: 'text' };
 import glassOpenSrc from './shaders/glass_open.wgsl' with { type: 'text' };
 import rowsSrc from './shaders/rows.wgsl' with { type: 'text' };
 import boxMatSrc from './shaders/boxmat.wgsl' with { type: 'text' };
+import bitsSrc from './shaders/bits.wgsl' with { type: 'text' };
 import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
@@ -334,7 +335,7 @@ function roundRayWgsl(cut: boolean): string {
 /** WHAT HAS FALLEN OUT OF A PANE (shaders/glass_open.wgsl, one text: the scene's shaders and the smoke's solver): its rows are in a buffer called `boxMat` (boxmat.wgsl PANE_BASE) */
 export function glassOpenWgsl(): string { return glassOpenSrc + '\n'; }
 /** THE ROWS A SHADER READS THAT RUST LAYS OUT (written by the program `half`): their structs, and the tables that share `boxMat` with a reader a field */
-export function rowsWgsl(): string { return rowsSrc + '\n' + boxMatSrc + '\n'; }
+export function rowsWgsl(): string { return bitsSrc + '\n' + rowsSrc + '\n' + boxMatSrc + '\n'; }
 /** The text in front of every scene shader. `cut`: the CUT BOXES rule is compiled in (scene/cut.ts): wherever the switch is on, in EVERY module — one set of ray
  *  programs since 2026-11-07 (there was a second set with the rule, swapped in while a cut piece was alive). A tool may ask for the other text to size the rule. */
 export function scenePrelude(cut: boolean = cutConfig.on): string {

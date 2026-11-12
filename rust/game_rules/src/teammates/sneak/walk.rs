@@ -204,7 +204,7 @@ fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guar
         Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
             let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
-            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);
+            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag::GLASS as f64);
             crate::guards::EyeContact { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
         }
     }

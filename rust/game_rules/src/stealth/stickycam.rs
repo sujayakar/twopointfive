@@ -294,8 +294,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 /// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends.
 pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let pl = g.player;
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let device = crate::scene_boxes::mkey().device;
     for i in 0..g.pl[pl].cams.len() {
         let id = g.pl[pl].cams[i];

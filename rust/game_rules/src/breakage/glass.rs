@@ -25,7 +25,7 @@ fn normal_of(yaw: f64, h: V3) -> V3 {
 
 /// `flags & BoxFlag.Glass`, as a test
 fn glass_flagged(flags: f64) -> bool {
-    (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
+    (js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32) != 0
 }
 
 /// the blower's own noise: `pl.noise = max(pl.noise, GLASS.hearLevel)` where `who` is a man with a seat

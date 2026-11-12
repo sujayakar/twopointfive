@@ -907,8 +907,7 @@ fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
 
 /// The strips: one flat glowing bar on the corridor floor across each opening, in its state's colour (a hot one beats).
 fn rescue_flow_boxes(g: &mut crate::game::Game) {
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let colours = colour();
     let glow = g.rescue.flow.knobs.glow;
     let time = g.time;

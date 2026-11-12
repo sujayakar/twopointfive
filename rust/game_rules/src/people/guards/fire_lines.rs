@@ -448,7 +448,7 @@ pub(super) fn pane_first(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     let i = h.index as usize;
     // (the level's list is g.col.boxes; a place past its end has no flags)
     let flags = match g.col.boxes.get(i).copied() { Some(b) => g.tab.boxes[b].flags, None => 0.0 };
-    (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
+    (js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32) != 0
 }
 
 // ---------------------------------------------------------------- muzzle discipline

@@ -336,7 +336,7 @@ fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome
 
 /// The box the shadow casters stand in.
 fn box_of(g: &crate::game::Game) -> crate::hours::SkyStateBox {
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut b = SkyStateBox { x0: m::INF, x1: -m::INF, z0: m::INF, z1: -m::INF, top: 0.0 };
     let mut i = 0;
     while i < g.engine.world.statics.len() {

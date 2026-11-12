@@ -76,8 +76,7 @@ fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<boo
     let rec = if lit == Some(true) { g.fog_picture.face_recs.get(t).cloned() } else { None };
     let boxes = g.tab.fixture[t].boxes.clone();
     let base = g.tab.fixture[t].base_emissive;
-    let flag = crate::scene_boxes::box_flag();
-    let shows = js::to_i32(flag.area_lit) | js::to_i32(flag.no_shadow);
+    let shows = crate::scene_boxes::box_flag::AREA_LIT as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut i = 0;
     while i < boxes.len() {
         let at = i;

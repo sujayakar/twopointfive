@@ -156,7 +156,7 @@ fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::glassbreak::Fragmen
         let c = v3::mad(v3::mad(fr.mid, fr.u, off), n, 0.02);
         let bx = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
             c, h: [hu, hv, m::max(0.004, f.thickness / 2.0)], yaw: Some(0.0), rot: Some(rot), albedo: Some(plate_albedo(f.tint, under, f.type_)),
-            flags: Some(crate::scene_boxes::box_flag().dynamic), ..Default::default()
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default()
         });
         let vel = v3::add(f.velocity, v3::add(v3::scale(fr.u, (j - (k - 1.0) / 2.0) * 0.25), [(h(1.0) - 0.5) * 0.3, -0.2 * h(2.0), (h(3.0) - 0.5) * 0.3]));
         let w: V3 = [f.spin[0] * (0.6 + 0.8 * h(4.0)) + (h(5.0) - 0.5) * 2.0, f.spin[1] + (h(6.0) - 0.5) * 2.0, f.spin[2] * (0.6 + 0.8 * h(7.0)) + (h(8.0) - 0.5) * 2.0];
@@ -225,7 +225,7 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
     }
     let bx = g.tab.debris_chunk[ch].box_;
     g.tab.edit(bx).rough = Some(0.05);
-    g.tab.edit(bx).flags = js::or_bits(g.tab[bx].flags, crate::scene_boxes::box_flag().no_shadow);
+    g.tab.edit(bx).flags = js::or_bits(g.tab[bx].flags, crate::scene_boxes::box_flag::NO_SHADOW as f64);
     if let Some(cut) = cut {
         if g.k.shards.cut_body > 0.0 {
             let at = g.tab[bx].c;
@@ -435,7 +435,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
             let w_of = crate::scene_boxes::word_of(word);
             let child_box = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
                 c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: Some(yaw), rot: Some(rot), albedo: Some(v3::copy(balbedo)), stuff: w_of.stuff, does: w_of.does,
-                flags: Some(crate::scene_boxes::box_flag().dynamic), ..Default::default()
+                flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default()
             });
             let side = j - (k - 1.0) / 2.0;
             let vel = v3::add(cv, v3::add(v3::scale(l, side * (0.5 + 0.5 * h(20.0 + j))), [(h(30.0 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40.0 + j), (h(50.0 + j) - 0.5) * 0.5]));

@@ -408,7 +408,7 @@ fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let [lx, ly] = handle_on(w, height);
     let lz = t_ / 2.0 + 0.03;
     let handles = g.dr[d].handle_boxes.clone();
-    let seal = crate::scene_boxes::box_flag().sound_seal;
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as f64;
     {
         let mut row = g.tab.boxes.edit(b);
         row.flags = (js::to_i32(row.flags) & !js::to_i32(seal)) as f64;

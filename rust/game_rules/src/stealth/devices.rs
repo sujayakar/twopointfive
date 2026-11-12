@@ -207,7 +207,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     }
     if !ok { return; }
     let mut reach = len;
-    let no_shadow = crate::scene_boxes::box_flag().no_shadow;
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as f64;
     if let Some(wh) = crate::scene_boxes::box_world_raycast(g, v3::mad(d.from, dir, 0.03), dir, Some(reach), Some(no_shadow), None, None) { reach = m::min(reach, wh.t + 0.03); }
     if let Some(ph) = crate::props::prop_system_raycast(g, d.from, dir, reach) { reach = m::min(reach, ph.t); }
     // under the fog the sensor asks the floor, not the picture
@@ -505,9 +505,8 @@ pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 /// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.
 fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
-    let fl = crate::scene_boxes::box_flag();
-    let dyn_ = fl.dynamic;
-    let deco = js::or_bits(fl.dynamic, fl.no_shadow);
+    let dyn_ = crate::scene_boxes::box_flag::DYNAMIC as f64;
+    let deco = (crate::scene_boxes::box_flag::DYNAMIC | crate::scene_boxes::box_flag::NO_SHADOW) as f64;
     for c in g.devices.cameras.clone() {
         let d = g.tab.devices_camera_rt[c].def.clone();
         let target = g.tab.devices_camera_rt[c].target;

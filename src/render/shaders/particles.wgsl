@@ -782,7 +782,7 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
           if (snowNow()) { pool.parts[slot] = p; return; }   // (… the skipping flake: put back on the ground's air, lit as it was — the rest below is a drop's)
           let X = p.pos + rd * hit.t;
           var seen = true;
-          if (hit.idx != CAPSULE_HIT) { seen = (boxGeo[u32(hit.idx)].flags & BOX_NOPRIMARY) == 0u; }
+          if (hit.idx != CAPSULE_HIT) { seen = (boxGeo[u32(hit.idx)].flags & GEO_NO_PRIMARY) == 0u; }
           if (!seen || !rainOutdoors(X.xz) || (hit.idx != CAPSULE_HIT && hit.n.y < 0.35)) { pool.parts[slot].age = p.life; return; }   // the invisible roof / its dry column / a WALL met at a graze on the wind (water sheets down a wall, it does not crown on it): gone without a splash
           atomicAdd(&pool.hdr[2], 1u);
           p.pos = X + hit.n * 0.004; p.vel = vec3f(0.0);

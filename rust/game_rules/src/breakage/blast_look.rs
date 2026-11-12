@@ -90,8 +90,7 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
     let k = charge_look();
     let w = g.tab.wallcharge_set_wall_charge[s.c].wall.clone();
     let h = g.k.wallcharge.height;
-    let bf = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let yaw = if w.along_x { 0.0 } else { core::f64::consts::PI / 2.0 };
     fn bx(g: &mut Game, out: &mut Vec<AnyBoxId>, yaw: f64, flags: f64, c: V3, h: V3, albedo: V3, emissive: V3) {
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), emissive: Some(emissive), flags: Some(flags), ..Default::default() });

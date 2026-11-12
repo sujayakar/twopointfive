@@ -53,10 +53,14 @@ macro_rules! sections {
             s.push('\n');
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
             s.push_str(&gpu::text());
+            s.push_str(&game::bits::text(&BITS));
             s
         }
     };
 }
+
+/// the words whose bits a page or a shader reads by name
+pub const BITS: [&game::bits::BitsTable; 3] = [&game::scene_boxes::box_flag::TABLE, &boxes::pack::geo_flag::TABLE, &boxes::glass::pane_flag::TABLE];
 
 pub mod boxes;
 pub mod doorways;

@@ -357,7 +357,7 @@ fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3,
 
 /// `b.flags |= BoxFlag.AreaLit`: dome and panel glow is the screen's, the light is the analytic one.
 fn mark_area_lit(g: &mut Game, id: BoxId) {
-    let bit = js::to_i32(crate::scene_boxes::box_flag().area_lit);
+    let bit = crate::scene_boxes::box_flag::AREA_LIT as i32;
     let mut b = g.tab.boxes.edit(id);
     b.flags = (js::to_i32(b.flags) | bit) as f64;
 }
