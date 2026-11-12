@@ -30,11 +30,5 @@ pub fn none() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
 pub fn none_cams() -> Vec<StickyCamId> { Vec::new() }
 
-pub fn body() -> V3 { [0.05, 0.05, 0.055] }
-
-pub fn lens() -> V3 { [0.012, 0.012, 0.014] }
-
-pub fn lens_live() -> V3 { [0.42, 0.05, 0.04] }
-
 pub const CAM_KEY: f64 = 8388608.0;
 

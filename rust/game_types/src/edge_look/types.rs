@@ -74,6 +74,4 @@ pub struct EdgeLookMod {
 
 pub const MKEY_LOOK: f64 = 150994944.0;
 
-pub fn steel() -> V3 { [0.5, 0.52, 0.54] }
-
 pub fn up() -> V3 { [0.0, 1.0, 0.0] }

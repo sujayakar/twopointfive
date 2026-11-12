@@ -440,8 +440,8 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
         Some(crate::scene_materials::Surf::Metal) => mark = lane("dent"),
         Some(crate::scene_materials::Surf::Fabric) | Some(crate::scene_materials::Surf::Carpet) => mark = lane("shred"),
         Some(crate::scene_materials::Surf::Glass) => {
-            let c = crate::particle_fx::solid_glass_crack();
-            mark = LaneMark { look: c.look, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
+            let c = g.k.pfx.solid_glass;
+            mark = LaneMark { look: crate::particle_fx::SOLID_GLASS_LOOK, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
         }
         Some(_) => {
             crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, p, n, Some(0.013), Some(crate::render_decals::DecalOpts { clamp_to: Some(box_), attach, ..Default::default() }));

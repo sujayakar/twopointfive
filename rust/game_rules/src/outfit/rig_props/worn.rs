@@ -306,7 +306,7 @@ fn sam_kit(g: &Game, c: CharId, o: RigOpts, out: &mut Carried, hand: Option<V3>)
     if o.sheath == Some(true) { sheath_boxes(g, c, out, Some(!knife)); }
     match o.rifle {
         Some(RifleAt::Hand) if hand.is_some() => {
-            let lens = if o.rifle_light == Some(true) { v3::scale(rail_lens_color(), rig.sc20k.lens_glow) } else { [0.0, 0.0, 0.0] };
+            let lens = if o.rifle_light == Some(true) { v3::scale(g.k.colors.rail_lens, rig.sc20k.lens_glow) } else { [0.0, 0.0, 0.0] };
             sc20k_boxes(g, c, out, Some(rig.sc20k), Some(RifleAt::Hand), Some(lens), rifle_m4(), o.kit, o.fit, Some(false), None, o.rifle_black);
         }
         Some(RifleAt::Slung) => sc20k_boxes(g, c, out, Some(rig.sc20k), Some(RifleAt::Slung), Some([0.0, 0.0, 0.0]), rifle_m4(), None, Some(false), o.sling_front, o.sling_rest, o.rifle_black),

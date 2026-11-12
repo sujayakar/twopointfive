@@ -307,9 +307,9 @@ pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let c0 = v3::mad(c.pos, z, if c.vel.is_some() { 0.0 } else { 0.014 });
         let c1 = v3::mad(c.pos, z, if c.vel.is_some() { 0.02 } else { 0.034 });
         let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
-        let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
+        let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(g.k.colors.sticky_cam)), flags: Some(flags), mkey: Some(key), ..Default::default() });
         out.push(b0.into());
-        let paint = if sending(g, g.player, id) { lens_live() } else { lens() };
+        let paint = if sending(g, g.player, id) { g.k.colors.sticky_lens_live } else { g.k.colors.sticky_lens };
         let b1 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
         out.push(b1.into());
     }

@@ -2,7 +2,7 @@
 //! lights and the boxes say them). Every number here is a closed form of the game's clock, so a load or a rollback draws the same flame.
 use crate::Row;
 use alloc::vec::Vec;
-use game::fire::{burns, fire_flicker, fire_look_smoke, fire_seed, flame_wind, heat_of, is_fire, mouth_of};
+use game::fire::{burns, fire_flicker, fire_seed, flame_wind, heat_of, is_fire, mouth_of};
 use game::game::Game;
 use game::m;
 
@@ -71,7 +71,7 @@ pub fn fill(g: &Game, out: &mut Vec<Fire>, table: &mut Vec<FireTable>, bared: bo
 }
 
 fn numbers(g: &Game) -> FireTable {
-    let (k, c) = (&g.k.fire, fire_look_smoke());
+    let (k, c) = (&g.k.fire, g.k.fire.plume);
     let (l, s) = (&k.look, &k.smoke);
     let on = |b: bool| if b { 1.0 } else { 0.0 };
     let mut r = FireTable::ZERO;

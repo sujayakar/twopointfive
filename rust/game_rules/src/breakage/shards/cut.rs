@@ -12,9 +12,9 @@ pub(super) fn clamp_i(x: f64, lo: f64, hi: f64) -> f64 {
 }
 
 /// a plate's cut edge: the pane's tint taken k of the way to the edge green.
-pub(super) fn edge_colour(tint: V3, k: f64) -> V3 {
+pub(super) fn edge_colour(g: &crate::game::Game, tint: V3, k: f64) -> V3 {
     let q = m::min(1.0, k);
-    let e = crate::shards::edge_green();
+    let e = g.k.colors.glass_edge;
     [tint[0] + (e[0] - tint[0]) * q, tint[1] + (e[1] - tint[1]) * q, tint[2] + (e[2] - tint[2]) * q]
 }
 
@@ -28,7 +28,7 @@ pub(super) fn cut_face_albedo(g: &crate::game::Game, tint: V3, under: V3, type_:
         return [under[0] * tint[0], under[1] * tint[1], under[2] * tint[2]];
     }
     let q = if resting { m::min(1.0, m::max(0.0, g.k.shards.cut_rest_body)) } else { 0.0 };
-    let e = crate::shards::edge_green();
+    let e = g.k.colors.glass_edge;
     [tint[0] * k + (e[0] - tint[0] * k) * q, tint[1] * k + (e[1] - tint[1] * k) * q, tint[2] * k + (e[2] - tint[2] * k) * q]
 }
 
@@ -225,10 +225,11 @@ mod tests {
 
     #[test]
     fn a_cut_edge_goes_from_the_tint_to_the_edge_green_and_no_further() {
-        let green = crate::shards::edge_green();
-        near(edge_colour(TINT, 0.0), TINT);
-        near(edge_colour(TINT, 1.0), green);
-        near(edge_colour(TINT, 1.25), green);
+        let g = Game::blank();
+        let green = g.k.colors.glass_edge;
+        near(edge_colour(&g, TINT, 0.0), TINT);
+        near(edge_colour(&g, TINT, 1.0), green);
+        near(edge_colour(&g, TINT, 1.25), green);
         assert_eq!(clamp_i(1.5, 0.0, 1.0), 1.0);
         assert_eq!(clamp_i(5.0, 2.0, 1.0), 2.0);    // lo wins a crossed pair
     }
@@ -245,6 +246,7 @@ mod tests {
     #[test]
     fn a_cut_plate_is_dark_in_the_air_and_lifts_at_rest() {
         let mut g = Game::blank();
+        let green = g.k.colors.glass_edge;
         let mut run = |body: f64, see: f64, rest: f64, ty: PaneType, resting: bool| {
             g.k.shards.cut_body = body;
             g.k.shards.cut_see = see;
@@ -254,9 +256,9 @@ mod tests {
         near(run(0.0, 1.0, 0.3, PaneType::Laminated, true), plate_albedo(TINT, UNDER, PaneType::Laminated));    // no body: a plain plate
         near(run(0.37, 1.0, 0.3, PaneType::Annealed, false), v3::scale(TINT, 0.37));                            // in the air: the dark body
         near(run(0.37, 0.0, 0.3, PaneType::Annealed, true), times(UNDER, TINT));                                // at rest, opaque: the floor through the tint
-        near(run(0.37, 1.0, 1.7, PaneType::Annealed, true), crate::shards::edge_green());                       // at rest, seen into: lifted, no further than the edge
+        near(run(0.37, 1.0, 1.7, PaneType::Annealed, true), green);                       // at rest, seen into: lifted, no further than the edge
         let some = run(0.37, 1.0, 0.3, PaneType::Annealed, true);
-        assert!(some[1] > 0.37 * TINT[1] && some[1] < crate::shards::edge_green()[1], "{some:?}");
+        assert!(some[1] > 0.37 * TINT[1] && some[1] < green[1], "{some:?}");
     }
 
     /// A plate is laid along what it is long. A failure means a long dagger of glass gets a square box.
