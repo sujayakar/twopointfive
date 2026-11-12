@@ -598,7 +598,7 @@ fn next_through(g: &mut Game, op: DoorOpId, cx: &Cx) {
         o!(g, op).pod.set(q.gd, q.pod);
         // (the order's own assignment shies from its door: this one, that goes through it, does not)
         let a = crate::duty::TaskGiven {
-            order: String::from(o!(g, op).kind.as_str()), door: Some(cx.d), shy: None, post: Some(q.pod.pos), face: Some(q.pod.face), watch: None, thru: Some(cx.d), pace: Some(g.groups[g.group].orders.knobs.entry),
+            order: String::from(o!(g, op).kind.as_str()), door: Some(cx.d), shy: None, post: Some(q.pod.pos), face: Some(q.pod.face), watch: None, thru: Some(cx.d), pace: Some(g.k.orders.entry),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light_of(&crate::seats::here(g))), search: Some(true), going: format!("entering · {}", cx.name).into(), there: "holding the room".into(), ..Default::default()
         };
         crate::orders::squad_orders_assign(g, q.gd, &a);

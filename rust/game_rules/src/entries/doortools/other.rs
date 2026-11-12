@@ -300,7 +300,7 @@ fn on_door(g: &mut Game, op: DoorOpId, e: &Entry, gd: GuardId, post: Option<V3>)
         r.pod.set(gd, crate::entrypoints::Pod { pos: to, face: yaw, watch: None });
         r.on_pod.delete(gd);
         let d = r.door;
-        let (pace, light) = (g.groups[g.group].orders.knobs.entry, g.groups[g.group].tools.lights.unwrap_or(true));
+        let (pace, light) = (g.k.orders.entry, g.groups[g.group].tools.lights.unwrap_or(true));
         door_tools_assign(g, op, gd, &DoorToolsAssignA {
             post: Some(to), face: Some(yaw), watch: Some(w), shy: Some(None), thru: Some(d), pace: Some(pace), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
             light: Some(light), search: Some(true), going: format!("to the far door · {}", name).into(), there: format!("holding · {}", name).into(), ..Default::default()
