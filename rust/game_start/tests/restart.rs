@@ -100,7 +100,8 @@ fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     p.g.k.tune.teams = false;
     assert!(control::restart(&mut p.g));
     assert_eq!((p.g.staged.up, p.g.guards.len()), (active, guards), "the mission did not stand again");
-    assert!(!p.g.ai_enabled, "the switch went back with the game");
+    assert!(!p.g.ai_enabled, "the player's switch went back with the game");
+    assert!(p.g.k.tune.teams, "a number that is nobody's went over");
 }
 
 /// THE RULE: a second try begins with the first's numbers as the first began with them: the tables as the address, the difficulty and this machine's rows laid them. What a script, a staging or a
