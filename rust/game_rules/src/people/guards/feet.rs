@@ -93,7 +93,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
     let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
     let backing = gh.is_none() && dist < STANDOFF_MIN_M - 0.3;
-    let pace_base = if far || backing { g.tune.guard_investigate } else { g.tune.guard_walk };
+    let pace_base = if far || backing { g.k.tune.guard_investigate } else { g.k.tune.guard_walk };
     let pace_k = if crate::suppression::flinching(g, gd) { g.k.suppression.standoff_pace_k } else { 1.0 };
     let pace = pace_base * pace_k;
     let st = Standing { gd, s, c, dt, p, fs, aim, far, backing };
@@ -203,7 +203,7 @@ fn standoff_round(g: &mut Game, st: Standing, gun_hold: bool, pos: V3) -> bool {
     let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - gun_yaw));
     let w = g.gd[gd].weapon;
     g.fa[w].burst = None;
-    let held = g.tune.muzzle_discipline
+    let held = g.k.tune.muzzle_discipline
         && !(gun_hold && crate::gunhold::gun_hold_phase(g, gd) == Some(crate::gunhold::Phase::Line) && crate::gunhold::gun_hold_free(g, p));
     if g.gd[gd].reload_t >= 0.0 {
         tick_reload_beat(g, gd, dt);
@@ -269,7 +269,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
                 standoff_bark(g, gd, crate::guards::StandoffMoment::Dropped, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(b));
             }
         }
-        g.arms[g.gd[gd].ch].fire_cd = if g.tune.muzzle_discipline {
+        g.arms[g.gd[gd].ch].fire_cd = if g.k.tune.muzzle_discipline {
             SHIELD_RELEASE_BEAT_MIN + crate::dice::draw_of(g, "guards::standoff_upkeep#1", gd) * SHIELD_RELEASE_BEAT_JITTER
         } else {
             let cd = g.arms[g.gd[gd].ch].fire_cd;
@@ -588,7 +588,7 @@ fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guard
             return crate::guards::UnstickStep::Done;
         }
     }
-    g.gd[gd].speed = v3::damp(g.gd[gd].speed, g.tune.guard_walk * v3::clamp(d / 0.3, 0.4, 1.0), 6.0, dt);
+    g.gd[gd].speed = v3::damp(g.gd[gd].speed, g.k.tune.guard_walk * v3::clamp(d / 0.3, 0.4, 1.0), 6.0, dt);
     let speed = g.gd[gd].speed;
     let step = m::min(d, speed * dt);
     g.ch[c].pos[0] += dx / d * step;

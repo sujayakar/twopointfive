@@ -713,7 +713,7 @@ fn pair(g: &mut Game, net: &[StateNetItem], sit: &Situation) -> (Vec<RoomfightDe
 }
 /// At a run to a place, by those points and that door, tried again where he gets nowhere.
 pub(super) fn send_round(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, way: Vec<V3>) {
-    let pace = g.tune.guard_chase + 0.3;
+    let pace = g.k.tune.guard_chase + 0.3;
     let leg = crate::roomfight::Leg { by: door, ..crate::roomfight::Leg::errand(to, pace) };
     crate::roomfight::send_by(g, d, leg, way, crate::owner::by::SQUAD_LEG);
 }
@@ -978,7 +978,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) { continue; }   // (he was told that room is gone)
         let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
         let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(dist_xz(p, at), |w| crate::places::walk_len(p, &w));
-        new.push((g.tab.enemysquads_squad[q].due.len(), way / g.tune.guard_chase));
+        new.push((g.tab.enemysquads_squad[q].due.len(), way / g.k.tune.guard_chase));
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
     // they come together: the near man leaves when he will be there with the far one, if that is soon

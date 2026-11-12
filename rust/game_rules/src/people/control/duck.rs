@@ -34,7 +34,7 @@ impl Reaction for Rule {
 }
 
 fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
-    if !g.tune.suppression || crate::gunhold::standoff_on_feet(g, gd) { return None; }
+    if !g.k.tune.suppression || crate::gunhold::standoff_on_feet(g, gd) { return None; }
     let now = crate::suppression::head_down(g, gd, dt);
     if matches!(now, HeadDown::None) { return None; }
     let fire_wait = g.k.suppression.head_down_delay;
@@ -44,6 +44,6 @@ fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
     let cover = g.cond[g.gd[gd].ch].sup.cover.expect("a man shifting has his cover spot");
     // (while he cannot see or is reeling he goes nowhere, so that time is no part of what the shift may take: its clock waits with him)
     if super::man::blind(g, gd) || super::man::staggered(g, gd) { g.cond[g.gd[gd].ch].sup.displaced_at += dt; }
-    let pace = g.tune.guard_investigate * g.k.suppression.displace_pace;
+    let pace = g.k.tune.guard_investigate * g.k.suppression.displace_pace;
     Some(TakeCover { crouch: g.k.suppression.displace_crouch, fire_wait, threat, ..TakeCover::to(cover, pace) })
 }

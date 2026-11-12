@@ -51,7 +51,7 @@ fn a_sound_passes_a_hole_in_a_pane() {
     for s in [913u32, 914] {
         let mut p = Play::level("office.json", false, &Opts { seed: s, dress: true, ..Default::default() });
         p.g.god_mode = true;
-        p.g.tune.chaos = 0.5;
+        p.g.k.chaos.def = 0.5;
         p.run(0.08);
         for (k, m) in p.g.guards.clone().into_iter().enumerate() { p.parked_far(m, k); }
         let bi = p.pane_at(7.5, 10.0);

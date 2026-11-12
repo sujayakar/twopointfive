@@ -46,7 +46,7 @@ pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if exposure >= 1.0 { return g.k.roomfight.lamp; }
     let k = sim::light::by_day(crate::render_lights::light_by_day(light), light.intensity, light.peak_intensity, exposure) / light.intensity;
     let k = m::min(1.0, k * crate::guards::eyes_in(g, e));
-    m::max(0.0, g.k.roomfight.lamp + g.tune.vis_slope * m::log(k))
+    m::max(0.0, g.k.roomfight.lamp + g.k.tune.vis_slope * m::log(k))
 }
 
 /// Is the room fight running this frame?
@@ -88,7 +88,7 @@ pub fn room_fight_new() -> crate::roomfight::RoomFight {
 
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).
 pub fn room_fight_on(g: &crate::game::Game) -> bool {
-    if !(g.ai_enabled && g.tune.teams) { return false; }
+    if !(g.ai_enabled && g.k.tune.teams) { return false; }
     let show_runs = match g.director.run { Some(r) => !g.tab.director_run[r].ended, None => false };
     !(show_runs && !crate::rails::rails_live(g))
 }

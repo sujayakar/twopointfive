@@ -511,7 +511,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
 /// what this file's script holds him to this frame
 fn pose(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.pos_of(gd);
-    let chase = g.tune.guard_chase;
+    let chase = g.k.tune.guard_chase;
     let fled = g.gd[gd].fled;
     let r = run!(g, gd);
     let say = r.phase == RunPhase::Say;

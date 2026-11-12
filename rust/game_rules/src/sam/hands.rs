@@ -518,7 +518,7 @@ fn haul_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
 
 /// The same in m/s; over his shoulder he walks, at carryPace × his walk.
 pub(super) fn haul_speed(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    if haul_upright(g, seat) { g.tune.player_walk * g.k.hands.carry_pace } else { let k = g.tune.player_crouch; k * haul_pace(g, seat) }
+    if haul_upright(g, seat) { g.k.tune.player_walk * g.k.hands.carry_pace } else { let k = g.k.tune.player_crouch; k * haul_pace(g, seat) }
 }
 
 // ------------------------------------------------------------------------------------------------ a door

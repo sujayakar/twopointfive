@@ -171,7 +171,7 @@ pub(super) fn follow_leader(g: &mut crate::game::Game, gd: GuardId, dt: f64, wal
     }
     let p = g.ch[c].pos;
     let gap = v3::dist_xz(lp, p);
-    let speed = if gap > 4.5 { m::max(walk, g.tune.guard_investigate * 1.1) } else if gap > 2.0 { walk * 1.3 } else { walk };
+    let speed = if gap > 4.5 { m::max(walk, g.k.tune.guard_investigate * 1.1) } else if gap > 2.0 { walk * 1.3 } else { walk };
     let arrived = follow_path(g, gd, dt, speed);
     if arrived {
         let look_at = g.gd[gd].leader_still_t > 6.0 && gap < 2.2;
@@ -281,7 +281,7 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
 
 /// Stand an AI man of a side, held on a one-point route of his own. A refusal is the Err.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
-    if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
+    if !g.k.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
     if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units: the level's civilians block stands them up")); }
     let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
     let eight = crate::seats::budget_with_seats(g, MAX_CHARACTERS);   // (the eight is written for one player: a seat more, a man more)
@@ -324,7 +324,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         weapon: Some(weapon),
         keys: Some(Vec::new()),
     });
-    let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+    let (fi, f0, f1) = (g.k.tune.flash_intensity, g.k.tune.flash_inner, g.k.tune.flash_outer);
     let def = crate::rig_props::torch_light_def(g, &format!("unitlight{}", id), id, fi, f0, f1);
     let fl = crate::render_lights::light_set_add(g, def);
     let look = crate::game::GuardNewLook {

@@ -5,7 +5,7 @@ use game_derive::Knobs;
 /// The lane's knobs.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WindK {
-    /// tune.wind's default: the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)
+    /// the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)
     #[k(1.0)] pub def: f64,
     /// the level's diffusers, × their authored speed
     #[k(1.0)] pub vent_k: f64,

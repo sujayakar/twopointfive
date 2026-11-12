@@ -22,12 +22,12 @@ fn a_start_stands_with_what_its_address_says() {
     let (was_rate, was_lean) = (read(&plain.game, "sneak.seen_rate"), read(&plain.game, "fire.look.lean"));
     assert_ne!(was_lean, 0.07);
     drop(plain);
-    let s = stand("&qtwice=0&firelean=0&seenrate=0.5&knob.pressure.loud_secs=123&knob.tune.wind=0.25&training=green&nerve=brittle");
+    let s = stand("&qtwice=0&firelean=0&seenrate=0.5&knob.pressure.loud_secs=123&knob.wind.def=0.25&training=green&nerve=brittle");
     assert_eq!(read(&s.game, "cmdring.twice"), 0.0, "an off word");
     assert_eq!(read(&s.game, "fire.look.lean"), 0.07, "a word for the number from before its rule");
     assert_eq!(read(&s.game, "sneak.seen_rate"), 0.5, "a share");
     assert_ne!(was_rate, 0.5);
-    assert_eq!(s.game.k.pressure.loud_secs, 123.0, "a number of the tables by its name");
+    assert_eq!((s.game.k.pressure.loud_secs, s.game.k.wind.def), (123.0, 0.25), "a number of the tables by its name");
     assert!(matches!(s.game.k.morale.training, game::morale::Training::Green), "a pick");
     assert!(matches!(s.game.k.morale.nerve, game::morale::Nerve::Brittle), "a pick");
 }

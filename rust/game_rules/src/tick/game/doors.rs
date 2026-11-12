@@ -68,7 +68,7 @@ pub fn game_let_go(g: &mut crate::game::Game) {
 
 /// the light meter's mapping, irradiance → 0‥1 visibility
 pub fn game_visibility_of(g: &crate::game::Game, e: f64) -> f64 {
-    visibility_sum(g.tune.vis_slope, g.tune.vis_floor, e)
+    visibility_sum(g.k.tune.vis_slope, g.k.tune.vis_floor, e)
 }
 /// visibilityOf's sum
 fn visibility_sum(slope: f64, floor: f64, e: f64) -> f64 {

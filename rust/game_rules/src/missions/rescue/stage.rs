@@ -188,7 +188,7 @@ fn rescue_can_start(g: &crate::game::Game) -> Option<String> {
     if s.team.ops.as_ref().map_or(0, |o| o.len()) < 2 { return Some(String::from("this level's rescue block has no start marks for the pair (team.ops needs two)")); }
     if rescue_bounds(g).is_none() { return Some(format!("this level has no clear plan for the '{}' door", s.room.door)); }
     if crate::doors::doors_by_name(g, &s.room.door).is_none() { return Some(format!("the door '{}' is not in the level", s.room.door)); }
-    if !g.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
+    if !g.k.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) \u{2014} nobody would move")); }
     if let Some(run) = g.director.run {
         if !g.tab.director_run[run].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[run].name)); }

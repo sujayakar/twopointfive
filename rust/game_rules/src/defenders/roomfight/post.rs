@@ -89,7 +89,7 @@ pub fn send_by(g: &mut Game, d: RoomfightDefId, leg: Leg, mut way: Vec<V3>, by: 
 
 /// At a run to a place, by that door (or none), `more` over a chase.
 pub fn run(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, more: f64, by: By) {
-    let pace = g.tune.guard_chase + more;
+    let pace = g.k.tune.guard_chase + more;
     send(g, d, Leg { by: door, ..Leg::to(to, pace) }, by);
 }
 
