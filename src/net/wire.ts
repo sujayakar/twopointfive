@@ -66,10 +66,11 @@ export function wireOk(c: unknown): c is WireCmd {
   const w = c as WireCmd | null;
   return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && numsOk(w.n, SeatInput.row) && Number.isInteger(w.n[SeatInput.buttons]) && Number.isInteger(w.n[SeatInput.clicked]);
 }
-/** `w` with one-tick edges laid over its own (keys gone down, clicks, the wheel's turn): how an edge that missed its tick rides a later record. Also the plain
- *  copy of a record in the wire's own field order, with nothing else on it (`withEdges(w, [], 0, 0)`) */
-export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: number): WireCmd {
-  const out: WireCmd = { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], w.n[SeatInput.clicked] | c, w.n[SeatInput.wheel] + wheel) }, ps = w.p ? w.p.slice() : [];
+/** `w` with one-tick edges laid over its own (keys gone down, clicks, the wheel's turn), and the keys that were held as they were made (`k`: Shift under an
+ *  Enter): how an edge that missed its tick rides a later record. Also the plain copy of a record in the wire's own field order, with nothing else on it
+ *  (`withEdges(w, [], 0, 0)`) */
+export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: number, k: readonly string[] = []): WireCmd {
+  const more = k.filter(x => !w.k.includes(x)), out: WireCmd = { k: more.length ? [...w.k, ...more] : w.k, n: edged(w.n, w.n[SeatInput.buttons], w.n[SeatInput.clicked] | c, w.n[SeatInput.wheel] + wheel) }, ps = w.p ? w.p.slice() : [];
   for (const k of p) if (!ps.includes(k)) ps.push(k);
   if (ps.length) out.p = ps;
   return out;
