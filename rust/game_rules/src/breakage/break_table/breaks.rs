@@ -20,8 +20,7 @@ fn surf_mat_of_word(s: &str) -> Option<Mat> {
 }
 /// matOf(kind, box) for a box of the world
 fn mat_of_box(g: &Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
-    let box_ = MatOfBox { does: g.tab[b].does.map(|w| String::from(w.as_str())) };
-    mat_of(g, kind, &box_)
+    mat_of(kind, g.tab[b].does)
 }
 /// `c.mat ?? { mat: matOf(c.kind, c.box), gen: 0, paint: c.box.albedo }`
 fn meta_of(g: &Game, c: DebrisChunkId) -> BreakMeta {

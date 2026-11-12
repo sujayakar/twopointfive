@@ -13,8 +13,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 const { OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/tools/levels/lib/officeGen.ts`);
 const { rowWord, rowDoes: nameDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
-const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { DOES_DEFAULT } = await import(`${ROOT}/src/scene/materials.ts`);
+const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. tools/levels/lib/materials.ts)
+const { DOES_DEFAULT } = await import('./lib/does.ts');
 const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -68,7 +68,7 @@ if (gen.KEPT !== undefined) level.kept = gen.KEPT;
 // WHAT ITS LEAVES ARE PAINTED, a generator's `DOOR_PAINT` export (lib/doorPaint.ts): the file's doorPaint. With the skin left out they are as a leaf is made.
 if (gen.DOOR_PAINT && !(gen.finish && FLOOR_TO)) level.doorPaint = gen.DOOR_PAINT;
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
-// WHAT EACH BOX DOES (src/scene/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
+// WHAT EACH BOX DOES (tools/levels/lib/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
 // (tools/levels/doesWas.ts, frozen) HERE, before the skin repaints anything: a box in other clothes does what it did. Once more after the skin, for what the skin added.
 stampDoes(level);
 // THE SKIN (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here

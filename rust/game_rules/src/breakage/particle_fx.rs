@@ -45,7 +45,7 @@ fn dust_shipped(k: &crate::knobs::DustK) -> bool {
 
 /// What a round knocks out of a static: its word's surface, in any weather.
 pub fn surf_at(g: &crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
-    crate::scene_materials::does_of(g, g.tab.boxes[b].does).surf
+    crate::scene_materials::does_of_box(g, b).surf
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.

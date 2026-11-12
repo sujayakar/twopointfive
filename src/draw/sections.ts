@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1396248575;
+export const LAYOUT = 3362591112;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -1085,7 +1085,7 @@ export const enum SnowBlast {
 
 /** what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old */
 export const enum SnowWord {
-  /** u32 */
+  /** u32: SNOW_KINDS, one more than its number (0: none) */
   w = 0,
   /** words a row */
   row = 1,

@@ -126,7 +126,7 @@ fn struck(g: &Game, hit: &RoundMet) -> Struck {
     if index >= 1e6 { return of(Surf::Wood, box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]), None); }
     let box_ = box_at(g.col.boxes.len(), index).map(|k| g.col.boxes[k]);
     let surf = match box_ {
-        Some(b) if crate::scene_materials::does_of(g, g.tab.boxes[b].does).wall == Some(DoesWall::Screen) => Surf::Fabric,
+        Some(b) if crate::scene_materials::does_of_box(g, b).wall == Some(DoesWall::Screen) => Surf::Fabric,
         Some(b) => crate::particle_fx::surf_at(g, b),
         None => Surf::Concrete,
     };

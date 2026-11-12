@@ -27,7 +27,7 @@ is drawn is `render.md`.
 | `rust/game_start/src/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
 | `tools/qa/level-needs.ts`, `tools/qa/level-lint.ts`, `tools/levels/counts/` | what stands around a file, what reads off a file, the held counts |
 | `tools/qa/map-plan.ts` | a level's plan as an SVG |
-| `src/scene/materials.ts`, `stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, the palette, the men's dress, face marks, shapes |
+| `scene_materials/types.rs` (Rust), `src/scene/stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, palette, dress, marks, shapes |
 
 In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios.rs` are the records; `scene_materials.rs`, `scene_stuff.rs` and
 `scene_markings.rs` what a box is and wears; `scene_shapes/` and `scene_cut.rs` its form; `scene_look.rs` the men's dress; `scene_scenario_list/` the
@@ -75,7 +75,8 @@ bowed top), `cut` (planes in the box's own frame), `old`, and `with` (trim nobod
 `tools/levels/lib/carShapes.ts` holds the vehicles'.
 
 **Paint, stuff and does.** A box says two words, and neither comes from the other. `stuff` is how it is drawn (`BoxStuff`). `does` is what it is to a
-round, a charge and a blast: a row of `MATERIALS` in `materials.ts`, whose twin the rules read through `does_of`. A file's `materials{}` row gives
+round, a charge and a blast: a row of `materials!` in `rust/game_types/src/scene_materials/types.rs`, which the rules read through `does_of` and the
+level tools as `MATERIALS` (`tools/levels/lib/materials.ts`, written by `half`). A file's `materials{}` row gives
 `albedo`, finish and a default for both; the names' words are `PAINT_STUFF` and `PAINT_DOES`. `gwotAs` is one paint on a thing that does something
 else: a mud partition a charge cuts beside a mud shell. `finish` is usually `skinLevel`: same boxes, other paint, decals in group `look`.
 
@@ -140,8 +141,7 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 - **A new piece:** the kit's file, through `pieces`; a line in a showroom; `bun run tools/levels/library.ts --write`.
 - **A new paint:** a row of the palette, its words in `PAINT_STUFF` and `PAINT_DOES`. `GWOT_MATERIALS` is written whole, so its new row makes every
   file wearing it stale.
-- **A new word of what a thing does:** a row of `MATERIALS`, its twin in `rust/game_types/src/scene_materials/types.rs`, and the `words!` list in
-  `level.rs`.
+- **A new word of what a thing does:** a row of `materials!` in `rust/game_types/src/scene_materials/types.rs`, then `half`.
 
 ## What holds it
 

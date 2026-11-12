@@ -1333,7 +1333,6 @@ pub struct Mods {
     #[bytes(skip)]
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
-    pub scene_materials: crate::scene_materials::SceneMaterialsMod,
     pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,

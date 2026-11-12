@@ -8,7 +8,7 @@
 // without pulling the kit in.
 import type { Vec3 } from '../math/vec';
 import { namePaints, namePaint, sayPaint, doingAs, doesOfName, type BoxStuff } from './stuff';
-import type { DoesWord } from './materials';
+import type { DoesWord } from '../draw/names';
 
 /** THE PALETTE (linear albedo), by name — a generator that exports `MATERIALS = GWOT_MATERIALS` has these written into its level file's `materials` */
 export const GWOT_PALETTE = {
@@ -86,7 +86,7 @@ export const GWOT_SURFACE: Readonly<Partial<Record<GwotMat, 'carpet' | 'lino' | 
  *  lays one paint in two tones reaches for (gwotKit.ts rubble: a scatter's darker stones); a row with none here is laid in its one tone. Data, like the
  *  palette: a family joins by a row here, never by a case in a piece. */
 export const GWOT_DARKER: Readonly<Partial<Record<GwotMat, GwotMat>>> = { mudLight: 'mud', mud: 'mudDark' };
-/** THE PAINT `m` ON A THING THAT DOES `does` (a row of the table of materials: scene/materials.ts): the palette's own row where that is what the row's
+/** THE PAINT `m` ON A THING THAT DOES `does` (a row of the table of materials: rust/game_types/src/scene_materials): the palette's own row where that is what the row's
  *  name says anyway, else the same numbers as a paint of their own, known by the row's name and by what it does. Handed to a kit's add() it makes a box
  *  drawn exactly as the row and doing the other thing; in a level file the box wears the row and says its own `does`. */
 export function gwotAs(m: GwotMat, does: DoesWord): Vec3 { return doingAs(GWOT_PALETTE[m], does); }
@@ -97,7 +97,7 @@ export const GWOT_PAINTS: KitPaints = { paints: GWOT_PALETTE, finish: GWOT_FINIS
 /** THE KIT'S ROWS IN ANOTHER PALETTE'S PAINT. `of` says which row of `palette` each row of the kit wears (data: one line a row, and the compiler holds it
  *  to every row of the kit). What comes back is, for each kit row, that palette row's numbers as a paint of its own: KNOWN BY THE PALETTE ROW'S NAME (so a
  *  box of it is drawn as what that name is made of, or as `words` says the row is), with that row's finish, and DOING WHAT THE KIT'S ROW DOES (scene/stuff.ts
- *  PAINT_DOES; scene/materials.ts): a drum is steel to a round in coral as it was in red, and a partition a charge cuts is one in any plaster. Many kit
+ *  PAINT_DOES; rust/game_types/src/scene_materials): a drum is steel to a round in coral as it was in red, and a partition a charge cuts is one in any plaster. Many kit
  *  rows may wear one palette row; each is its own paint, since they do different things. Hand the answer to a kit through its host (gwotKit.ts
  *  GwotHost.paints) or to a look file's skin (tools/levels/gwotSkin.ts Skin.of). In a level file a box of it wears the palette's row by its numbers. */
 export function paintsOf(palette: Readonly<Record<string, Vec3>>, finish: Readonly<Record<string, { rough: number; metal?: boolean } | undefined>>, of: Readonly<Record<GwotMat, string>>, words: Readonly<Record<string, BoxStuff>> = {}): KitPaints {

@@ -20,7 +20,7 @@ fn run_on(bog: f64, run: f64) -> f64 {
 fn kind_of(g: &Game, b: BoxId) -> u8 {
     use crate::scene_materials::SnowKind;
     let found = &g.tab.boxes[b];
-    let paint = crate::scene_materials::does_of(g, found.does).snow;
+    let paint = crate::scene_materials::does_of(found.does).snow;
     if crate::render_snow_field::snow_thin_lay(g, b) {
         if paint == Some(SnowKind::SnowPacked) { SNOW_PACKED } else if paint == Some(SnowKind::SnowOld) { SNOW_OLD } else if crate::render_snow_field::snow_lay_bare(g, b) { SNOW_BARE } else { 0 }
     } else if paint == Some(SnowKind::Snow) && js::to_i32(found.flags) & crate::scene_boxes::box_flag::GLASS as i32 == 0 && found.c[1] + found.h[1] > 0.03 { SNOW_BANK } else { 0 }

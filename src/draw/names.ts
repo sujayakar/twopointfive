@@ -51,3 +51,11 @@ export type LightClassName = (typeof LIGHT_CLASSES)[number];
 /** whose table a man wears, by its number in Rust */
 export const SIDES = ['civilian', 'operator', 'defender', 'responder'] as const;
 export type SideName = (typeof SIDES)[number];
+
+/** what a box may say it does, by its number in Rust */
+export const DOES_WORDS = ['unnamed', 'wood', 'steel', 'enamel', 'fabric', 'carpet', 'grass', 'tarmac', 'plastic', 'plasterboard', 'partition', 'ceiling', 'laminate', 'pane', 'concrete', 'stone', 'lino', 'dark carpet', 'card', 'casing', 'frame', 'screen', 'plant', 'snow', 'packed snow', 'old snow', 'unnamed grey', 'unnamed dark', 'unnamed light', 'unnamed light grey', 'unnamed pale', 'unnamed pale grey', 'dark plastic', 'grey plastic', 'dark glass'] as const;
+export type DoesWord = (typeof DOES_WORDS)[number];
+
+/** lying snow, by how trodden it is, by its number in Rust */
+export const SNOW_KINDS = ['snow', 'snowPacked', 'snowOld'] as const;
+export type SnowKind = (typeof SNOW_KINDS)[number];
