@@ -167,7 +167,7 @@ fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::
     }
 }
 
-/// player.ts updatePlayer, ahead of the digits' own lines: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
+/// Ahead of the digits' own lines in the player's update: the digit of the gun in his hands opens its setup; with it up, a row's digit steps the row.
 /// A digit used here is taken out of the frame
 pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let pl = g.player;
@@ -191,7 +191,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             || g.time - s.seen > STALE
             || crate::handwork::sam_work(g).is_some()
             || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
-            || g.sets[g.seat].orders.menu.is_some()
+            || g.groups[g.group].orders.menu.is_some()
             || crate::interact::backable_interact(g, &crate::seats::here(g));
         if shut {
             up = None;

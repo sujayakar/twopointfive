@@ -286,7 +286,7 @@ async fn deed(b: &Bot, id: &str) {
         // whoever is sent comes through the doorway to the box, and is taken at it from behind
         "boxman" => {
             let n0 = b.sightings();
-            let sent = b.men().into_iter().find(|&x| b.up(x) && b.ask(|g| matches!(&g.gd[x].task, Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Breaker)));
+            let sent = b.men().into_iter().find(|&x| b.up(x) && b.ask(|g| matches!(&g.gd[x].errand, Some(game::game::Errand::At(t)) if t.kind == game::game::ErrandThing::Breaker)));
             let c = sent.unwrap_or_else(|| man(b, "table"));
             let came = b.until(|| { let q = b.man_at(c); (q[0] > 20.2 && dist_xz(q, [BOX[0], 0.0, BOX[2] - 0.6]) < 1.3) || b.state(c) == GuardState::Alert || !b.up(c) || !b.dark() }, 40.0).await;
             stood_still(b, c, 0.25, 4.0).await;   // he stops at the box, his back to the room: only then does anything move

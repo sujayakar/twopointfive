@@ -1,10 +1,12 @@
-//! HOW A SOUND REACHES A LISTENER — src/scene/collision.ts SoundPaths.propagate: straight where nothing solid stands between them (a jamb grazing a side ray
+//! HOW A SOUND REACHES A LISTENER: straight where nothing solid stands between them (a jamb grazing a side ray
 //! dulls it a touch), over the top of what is only chest high, and otherwise round by the floor (nav.rs: the listener's way to the source), measured leg by
-//! leg, with the last waypoint the listener still has a straight run to and whether a shut leaf lies across the way. The rule is the TypeScript's, statement
-//! for statement. It is asked in two halves because the TypeScript keeps a short memory of routed answers between them, and that memory stays the host's.
+//! leg, with the last waypoint the listener still has a straight run to and whether a shut leaf lies across the way.
+//!
+//! IT IS ASKED IN TWO HALVES, `direct` and then, only on its WALLED, `route`, because the host may keep a short memory of routed answers between them and so spare the search
+//! (game_rules scene_collision `heard_by`). That memory is the host's: nothing is kept here. `route` searches the floor nav.rs was last told of, so the host tells it first.
 //!
 //! Sound does not pass glass, and passes a hole in it: the line judges each pane where it meets
-//! it (lines.rs over glass.rs). The lengths are the game's own, so this answers only where EXACT.on.
+//! it (lines.rs over glass.rs). The lengths are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
 use crate::lines;

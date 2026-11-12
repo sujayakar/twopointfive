@@ -8,8 +8,6 @@ use crate::scene_level_data::PropKindName;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
-
 
 // ------------------------------------------------------------------ small helpers of this part
 
@@ -28,12 +26,12 @@ fn box_at(len: usize, i: f64) -> Option<usize> {
 fn lane(name: &str) -> LaneMark { *lane_mark().of(name).unwrap() }
 
 /// `for (const fn of [...this.blastListeners]) fn(ev)`, one of them; what a subscriber adds to `ev.res` stays in the event
-fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::BlastEvent) {
+fn tell_listener(g: &mut Game, over: &crate::ask::Over, l: &BlastListener, ev: &crate::wallbreak::BlastEvent) {
     match l {
         BlastListener::Glass => {
-            crate::glassbreak::glass_break_blast(g, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.radius), power: Some(ev.power), who: Some(ev.who) }));
+            crate::glassbreak::glass_break_blast(g, over, ev.at, Some(crate::glassbreak::GlassBlastOpts { radius: Some(ev.glass[0]), power: Some(ev.glass[1]), who: Some(ev.who) }));
         }
-        BlastListener::Bars => crate::winbars::bars_blast(g, *ev),
+        BlastListener::Bars => crate::winbars::bars_blast(g, over, *ev),
         BlastListener::Snow => { crate::snow_blast::snow_blast_at(g, &ev.at, ev.radius); }
     }
 }
@@ -192,7 +190,7 @@ pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
     crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts))
 }
 
-/// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.
+/// The call list, the doors, the walls and cover, the call list through what those opened, the furniture, then the lane's bang and pall.
 fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
     let chaos = chaos_of(g);
     let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, opened: 0.0 };
@@ -203,18 +201,21 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
     let power = opts.power.unwrap_or(1.0);
     let radius = opts.radius.unwrap_or(g.k.walls.blast.radius) * power;
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
-    let mut ev = crate::wallbreak::BlastEvent { at, radius, power, who, res };
-    for l in g.destr.blast_listeners.clone() { tell_listener(g, &l, &mut ev); }   // (a copy: as `[...this.blastListeners]`)
+    let ev = crate::wallbreak::BlastEvent { at, radius, who, glass: opts.glass.unwrap_or([radius, power]) };
+    let mut tell = |g: &mut Game, over: &crate::ask::Over| for l in g.destr.blast_listeners.clone() { tell_listener(g, over, &l, &ev); };
+    tell(g, &crate::ask::Over::OWN);
     crate::snow_blast::snow_blast_at(g, &at, radius);
-    res = ev.res;   // (the event's `res` IS `res` in the TypeScript)
-    let tear = radius * g.k.walls.blast.door_k;
-    res.doors += crate::doors::doors_blast(g, at, tear, who).len() as f64;
+    let torn = crate::doors::doors_blast(g, at, radius * g.k.walls.blast.door_k, who);
+    res.doors += torn.len() as f64;
     if crate::wallbreak::wall_break_on(g) {
         let w = crate::wallbreak::wall_break_blast(g, at, Some(opts));
         res.walls = w.walls;
         res.cover = w.cover;
         res.opened = w.opened;
     }
+    // (and again, through what it has just opened: one that took it whole before takes no more of it)
+    let leaves: Vec<BoxId> = torn.iter().map(|&d| g.dr[d].box_).collect();
+    tell(g, &crate::ask::Over::but(&leaves));
     let src = if opts.chaos == Some(false) { crate::furnblast::charge_source(radius) } else { crate::furnblast::BlastSource::Frag };
     crate::furnblast::furniture_blast(g, at, src, who, chaos);
     if opts.chaos != Some(false) {
@@ -255,7 +256,7 @@ pub(in crate::breakage) fn destruction_flags0(g: &crate::game::Game, i: f64) -> 
     crate::winbars::bar_flags0(g, i)
 }
 
-/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)
+/// Be told of every blast.
 pub(in crate::breakage) fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) {
     g.destr.blast_listeners.push(fn_);
 }
@@ -421,7 +422,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>) 
     let at: V3 = [pos[0], m::min(pos[1], 0.3) + 0.03, pos[2]];
     crate::render_particles::particles_impulse(g, at, t.radius, strength, Some(&crate::render_particles::ImpulseOpts { up: Some(t.up), ..Default::default() }));
     if !g.destr.debris.list.is_empty() {
-        // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on, as in the TypeScript)
+        // (a thump rocks a chunk, it does not re-blame it: `who` is not handed on)
         let imp = crate::sheet_model::ImpulseLike { pos: at, radius: t.radius * 0.5, strength, up: t.up, bias: [0.0, 0.0, 0.0] };
         crate::debris::debris_impulse(g, imp, None, None);
     }

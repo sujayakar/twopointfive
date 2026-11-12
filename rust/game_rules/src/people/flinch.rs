@@ -126,9 +126,9 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    /// The duck's share at the page's numbers, against the TypeScript's own bits (lerp, clamp and Math.max of vec.ts under EXACT).
+    /// The duck's share at the page's numbers, against pinned bits.
     #[test]
-    fn duck_share_matches_the_typescript_bits() {
+    fn duck_share_keeps_its_bits() {
         let rows: [(u64, u64); 8] = [
             (0x3faeb851eb851eb8, 0x3fdccccccccccccd),
             (0x3fb1eb851eb851ec, 0x3fde0387f1e03880),

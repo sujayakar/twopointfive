@@ -221,9 +221,9 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    /// The hand's beats on the page's numbers, against the TypeScript's handAt: (t, up, drawn, cycle, into's bits).
+    /// The hand's beats on the page's numbers: (t, up, drawn, cycle, into's bits).
     #[test]
-    fn hand_beats_are_the_typescripts() {
+    fn hand_beats_are_as_pinned() {
         let k = crate::knobs::SmokebreakK::page();
         let rows: [(f64, f64, bool, f64, u64); 17] = [
             (0f64, 0f64, false, -1f64, 0x0000000000000000),

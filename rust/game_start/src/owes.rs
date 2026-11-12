@@ -126,7 +126,7 @@ impl Owes {
     /// under an order with a mark he is not on, not in a fight, not blinded: does he want to be walking, and has the game given up on that walk
     fn under_order(&self, g: &Game, gd: GuardId, p: [f64; 3], t: f64) -> (bool, bool) {
         let seat = game::seats::here(g);
-        let Some(a) = game::orders::squad_orders_of(&seat, gd).map(|a| &g.tab.orders_assignment[a]) else { return (false, false); };
+        let Some(a) = game::orders::squad_orders_of(&seat, gd).map(|a| &g.tab.task[a]) else { return (false, false); };
         let h = &g.gd[gd];
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
         let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;

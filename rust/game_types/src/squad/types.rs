@@ -28,8 +28,6 @@ pub struct Clearing {
     pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
     #[is(GuardId(0))] pub a: GuardId,
     pub b: Option<GuardId>,
-    /// INVENTED: g.serial() where a clear is begun: a reader holds it by identity to know a new one began
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -186,7 +184,7 @@ pub struct OrderPatch {
     pub direct: Option<Option<bool>>,
     pub smoke: Option<Option<bool>>,
     pub over: Option<Option<crate::game::GuardScriptOver>>,
-    /// INVENTED: true only from a caller that passes a goal it keeps and moves: that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot
+    /// true only from a caller that passes a goal it keeps and moves: that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot
     pub held: bool,
 }
 

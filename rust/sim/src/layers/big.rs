@@ -51,7 +51,7 @@ fn line_mix(a: BigLine, b: BigLine, kk: f64, bow: Option<[f64; 3]>) -> BigLine {
         BigLine { g, d: dir_mix(a.d, b.d, kk) }
     }
 }
-/// CharacterAnimator.twisted: where a point posed below the chest ENDS UP after the chest twist still to come, and where spine2 itself does
+/// where a point posed below the chest ENDS UP after the chest twist still to come, and where spine2 itself does
 struct Twisted {
     e1: [f64; 4],
     e2: [f64; 4],
@@ -61,14 +61,14 @@ struct Twisted {
     p3t: [f64; 3],
 }
 impl Twisted {
-    fn of(fk: &Fk, tw_y: f64, tw_p: f64) -> Twisted {
+    fn of(rig: &Rig, fk: &Fk, tw_y: f64, tw_p: f64) -> Twisted {
         let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
         let mut e3 = q_yaw(tw_y * 0.4);
         if !falsy(tw_p) {
             let right = quat::rotate(e3, AX);
             e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
         }
-        let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
+        let (p1, p2, p3) = (fk.at(rig.role(SPINE1)), fk.at(rig.role(SPINE2)), fk.at(rig.role(SPINE3)));
         let p2t = v3::add(quat::rotate(e1, v3::sub(p2, p1)), p1);
         let p3t = v3::add(quat::rotate(e2, v3::sub(v3::add(quat::rotate(e1, v3::sub(p3, p1)), p1), p2t)), p2t);
         Twisted { e1, e2, e3, p1, p2t, p3t }
@@ -79,7 +79,7 @@ impl Twisted {
         v3::add(quat::rotate(self.e3, v3::sub(x2, self.p3t)), self.p3t)
     }
 }
-/// rigProps.ts bigBackOf for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
+/// for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
 fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua_l: [f64; 3], ua_r: [f64; 3], clear: f64) -> ([f64; 3], [f64; 3]) {
     let mut up = v3::sub(v3::lerp3(ua_l, ua_r, 0.5), hips);
     up = if v3::len(up) > 1e-3 { v3::normalize(up) } else { [0.0, 1.0, 0.0] };
@@ -170,54 +170,42 @@ struct BigBeat {
 
 /// The big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot straight into the pose, the
 /// head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
-pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) -> bool {
+pub fn big_layer(body: &mut Body, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) {
     let mut f = BigBeat { at0, tw_y, tw_p, ..BigBeat::default() };
     as_big(an, b, lg, &mut f);
     an.big_under = false;
     // ---- the beat as shares
     beat(an, blows, &mut f);
-    const LEGS: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
-    let Some(Some(n)) = with_pose(g, f.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEGS) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut hs) = hands_of(g, an) else {
-        return false;
-    };
+    let mut hs = hands_of(body, an);
     if f.ham {
-        if !ask_blend(g, f.at, f.at, 1.0, false, at_buf, n) {
-            return false;
-        }
+        body.copy(f.at, at_buf);
         an.big_under = true;
     }
     // ---- where the point is from where he stands, the trunk and the pelvis under it, the feet put back, the head onto the point
-    let Some(()) = with_pose(g, f.at, |d, rig, _n, fk| {
+    body.pose(f.at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        toward(fk, &mut f);
+        toward(rig, fk, &mut f);
         big_lean(&mut f);
         big_body(d, rig, fk, &f);
         let look_w = if f.ham { f.plant } else { f.in_hands };
         if look_w > 0.003 {
             fk_run(rig, d, fk.rot, fk.pos);
-            let tg = untwist(fk, tw_y, tw_p, at0);
+            let tg = untwist(rig, fk, tw_y, tw_p, at0);
             look_at(d, rig, fk, &f.gaze_local, tg, 0.8 * look_w, 0.0);
         }
-    }) else {
-        return false;
-    };
+    });
     // ---- the arms, by IK on a copy against the body as it now stands
-    if !ask_blend(g, f.at, f.at, 1.0, false, f.at_b, n) {
-        return false;
-    }
+    body.copy(f.at, f.at_b);
     let hh = &mut hs;
     let (at_back, grab_at) = (&mut an.big_at_back, &mut an.big_grab);
-    let done = with_pose(g, f.at_b, |d, rig, _n, fk| {
+    body.pose(f.at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        big_frame(fk, &mut f);
-        hands_now(fk, &mut f);
+        big_frame(rig, fk, &mut f);
+        hands_now(rig, fk, &mut f);
         // a fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle
         no_tool(&mut f);
         if f.ham {
-            hammer_place(fk, at_back, grab_at, &mut f);
+            hammer_place(rig, fk, at_back, grab_at, &mut f);
         } else {
             // (the rifle's own place over the shoulder: the fist there, the muzzle down his back)
             shotgun_place(tune, &mut f);
@@ -225,18 +213,12 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
         right_hand(d, rig, fk, &mut f);
         left_hand(d, rig, fk, &mut f);
         {
-            big_fingers(d, hh, &f);
+            big_fingers(rig, d, hh, &f);
         }
     });
-    if done.is_none() {
-        return false;
-    }
-    arm_mask(true);
-    if !ask_blend(g, f.at, f.at_b, 1.0, true, f.at, n) {
-        return false;
-    }
+    arm_mask(body, true);
+    body.blend(f.at, f.at_b, 1.0, true, f.at);
     hands_to(&hs, an);
-    true
 }
 
 /// The tool, the shotgun's grip, and where the beat is.
@@ -320,9 +302,9 @@ fn beat(an: &mut Anim, blows: &[f64], f: &mut BigBeat) {
 }
 
 /// Where the point is from where he stands, and what squares the chest as the pose has it onto it.
-fn toward(fk: &mut Fk, f: &mut BigBeat) {
+fn toward(rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     let BigBeat { at0, speed, .. } = *f;
-    let hips_n = role(HIPS);
+    let hips_n = rig.role(HIPS);
     let hp = fk.at(hips_n);
     let (mut tx, mut tz) = (at0[0] - hp[0], at0[2] - hp[2]);
     let reach = hypot2(tx, tz);
@@ -336,7 +318,7 @@ fn toward(fk: &mut Fk, f: &mut BigBeat) {
     let (tdir, tleft, psi) = ([tx, 0.0, tz], [tz, 0.0, -tx], clamp(atan2(tx, tz), -1.0, 1.0));
     // what squares the chest AS THE POSE UNDER IT HAS IT onto the point
     let turn_to = {
-        let f = trunk_frame(fk).2;
+        let f = trunk_frame(rig, fk).2;
         clamp(wrap_angle(psi - atan2(f[0], f[2])), -1.2, 1.2)
     };
     let still = 1.0 - smoothstep(0.2, 1.0, abs(speed));
@@ -370,20 +352,20 @@ fn big_lean(f: &mut BigBeat) {
 fn big_body(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &BigBeat) {
     let BigBeat { ham, plant, hips_n, tdir, tleft, still, chest_yaw, pel_yaw, pitch, sh_f, sh_s, drop, .. } = *f;
     if abs(chest_yaw) + abs(pel_yaw) + abs(pitch) + abs(sh_f) + abs(sh_s) + drop > 1e-5 {
-        let (fl_n, fr_n) = (role(FOOT_L), role(FOOT_R));
+        let (fl_n, fr_n) = (rig.role(FOOT_L), rig.role(FOOT_R));
         let (mut f_l, mut f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
         let ax_t = v3::cross(AY, tdir);
         // (the pelvis turn carries the whole spine; the spine joints add the rest)
         let seg = |kk: f64| quat::mul(q_yaw((chest_yaw - pel_yaw) * kk), quat::axis_angle(ax_t, pitch * kk));
         shift(d, rig, hips_n, &[tdir[0] * sh_f + tleft[0] * sh_s, -drop, tdir[2] * sh_f + tleft[2] * sh_s]);
         turn(d, rig, hips_n, q_yaw(pel_yaw));
-        turn(d, rig, role(SPINE1), seg(0.3));
-        turn(d, rig, role(SPINE2), seg(0.35));
-        turn(d, rig, role(SPINE3), seg(0.35));
+        turn(d, rig, rig.role(SPINE1), seg(0.3));
+        turn(d, rig, rig.role(SPINE2), seg(0.35));
+        turn(d, rig, rig.role(SPINE3), seg(0.35));
         // the head: back out of most of it (the look below puts the eyes on the point)
         let hq = |kk: f64| quat::mul(q_yaw(-chest_yaw * 0.8 * kk), quat::axis_angle(ax_t, -pitch * 0.8 * kk));
-        turn(d, rig, role(NECK), hq(0.4));
-        turn(d, rig, role(HEAD), hq(0.6));
+        turn(d, rig, rig.role(NECK), hq(0.4));
+        turn(d, rig, rig.role(HEAD), hq(0.6));
         if ham && plant > 0.0 {
             // a wider stance for the blow, the left foot toward the point: stepped out to, not slid
             let (kq, up) = (plant * still, BIGMOVE.hammer.stance.lift * sin(PI * plant) * still);
@@ -396,14 +378,14 @@ fn big_body(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &BigBeat) {
         }
         // feet back where the locomotion has them, soles as they were
         fk_run(rig, d, fk.rot, fk.pos);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
     }
 }
 
 /// The trunk's own frame.
-fn big_frame(fk: &mut Fk, f: &mut BigBeat) {
-    let (f_left, f_up, f_fwd) = trunk_frame(fk);
+fn big_frame(rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
+    let (f_left, f_up, f_fwd) = trunk_frame(rig, fk);
     (f.f_left, f.f_up, f.f_fwd) = (f_left, f_up, f_fwd);
 }
 
@@ -414,11 +396,11 @@ fn dir_t(f: &BigBeat, q: [f64; 3]) -> [f64; 3] {
 }
 
 /// The two hands as they are, and the point as this pose sees it.
-fn hands_now(fk: &mut Fk, f: &mut BigBeat) {
+fn hands_now(rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     let BigBeat { at0, tw_y, tw_p, .. } = *f;
-    let (hr_n, hl_n) = (role(HAND_R), role(HAND_L));
-    let (s_r, s_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
-    let hp_at = untwist(fk, tw_y, tw_p, at0);
+    let (hr_n, hl_n) = (rig.role(HAND_R), rig.role(HAND_L));
+    let (s_r, s_l) = (fk.at(rig.role(UPPER_ARM_R)), fk.at(rig.role(UPPER_ARM_L)));
+    let hp_at = untwist(rig, fk, tw_y, tw_p, at0);
     let arc = dir_t(f, BIGMOVE.arc);
     let (u_r, u_l) = (BigSpot { at: fk.at(hr_n), rot: fk.rot(hr_n), f: [0.0; 3], b: [0.0; 3] }, BigSpot { at: fk.at(hl_n), rot: fk.rot(hl_n), f: [0.0; 3], b: [0.0; 3] });
     (f.hr_n, f.hl_n, f.s_r, f.s_l, f.hp_at, f.arc, f.u_r, f.u_l) = (hr_n, hl_n, s_r, s_l, hp_at, arc, u_r, u_l);
@@ -447,21 +429,21 @@ fn no_tool(f: &mut BigBeat) {
 }
 
 /// The hammer: on his back, up, wound, over the top and down onto the point.
-fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBeat) {
+fn hammer_place(rig: &Rig, fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBeat) {
     let BigBeat { tw_y, tw_p, snug, clear, stowing, us, wind, sw, hit, grab, put, ue, eb, es, tdir, tleft, s_r, hp_at, arc, .. } = *f;
     let (back_r, held, ham_line);
     let off = |gp: [f64; 3], dv: [f64; 3]| BigLine { g: v3::add(s_r, dir_t(f, gp)), d: v3::normalize(dir_t(f, dv)) };
     // on his back, as the drawer has it: the fist takes it just under the head (snug: the back's frame as it WILL be after the chest twist still
     // to come, and the place that ENDS UP there)
     let tw = snug && (!falsy(tw_y) || !falsy(tw_p));
-    let (ua_l, ua_r) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
-    let (hips, th_l, th_r) = (fk.at(role(HIPS)), fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+    let (ua_l, ua_r) = (fk.at(rig.role(UPPER_ARM_L)), fk.at(rig.role(UPPER_ARM_R)));
+    let (hips, th_l, th_r) = (fk.at(rig.role(HIPS)), fk.at(rig.role(THIGH_L)), fk.at(rig.role(THIGH_R)));
     let (bo, bz) = if tw {
-        let twd = Twisted::of(fk, tw_y, tw_p);
+        let twd = Twisted::of(rig, fk, tw_y, tw_p);
         let (o, z) = big_back_of(hips, twd.p2t, th_l, th_r, twd.at(ua_l), twd.at(ua_r), clear);
-        (untwist(fk, tw_y, tw_p, o), untwist_dir(tw_y, tw_p, z))
+        (untwist(rig, fk, tw_y, tw_p, o), untwist_dir(tw_y, tw_p, z))
     } else {
-        big_back_of(hips, fk.at(role(SPINE2)), th_l, th_r, ua_l, ua_r, clear)
+        big_back_of(hips, fk.at(rig.role(SPINE2)), th_l, th_r, ua_l, ua_r, clear)
     };
     let head_at = BIGRIG.hammer.head_at;
     let back_l = BigLine { g: v3::mad(bo, bz, head_at - BIGMOVE.hammer.grab_at), d: bz };
@@ -533,7 +515,7 @@ fn right_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     let own = e3(ue / 0.2) * (if stowing { 1.0 - e3((us - put) / (1.0 - put)) } else { 1.0 });
     // a hand up by the shoulder: the elbow out and up, not folded into the ribs
     let high = smoothstep(-0.18, 0.1, r.at[1] - s_r[1]);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr_n, &r.at, Some(&dir_t(f, v3::lerp3([-0.5, -0.8, -0.3], [-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_R), rig.role(FOREARM_R), hr_n, &r.at, Some(&dir_t(f, v3::lerp3([-0.5, -0.8, -0.3], [-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
     f.own = own;
 }
 
@@ -558,16 +540,16 @@ fn left_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     if stowing {
         l = spot_mix(l, u_l, e3((us - BIGMOVE.unjoin * 0.5) / (0.92 - BIGMOVE.unjoin * 0.5)), None);
     }
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hl_n, &l.at, Some(&dir_t(f, [0.5, -0.85, -0.15])), 0.6 * own, Some(&l.rot), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), hl_n, &l.at, Some(&dir_t(f, [0.5, -0.85, -0.15])), 0.6 * own, Some(&l.rot), false);
     f.j = j;
 }
 
 /// The fingers open and shut on it.
-fn big_fingers(d: &mut [S], hh: &mut Hands, f: &BigBeat) {
+fn big_fingers(rig: &Rig, d: &mut [S], hh: &mut Hands, f: &BigBeat) {
     let BigBeat { stowing, us, grab, put, ue, j, .. } = *f;
     let gr = smoothstep(grab - 0.15, grab, ue) * (if stowing { 1.0 - smoothstep(put, put + 0.12, us) } else { 1.0 });
     let (open, shut) = ([BIGMOVE.open[0], BIGMOVE.open[1], BIGMOVE.open[2], BIGMOVE.open[3]], [BIGMOVE.fist[0], BIGMOVE.fist[1], BIGMOVE.fist[2], BIGMOVE.fist[3]]);
     let cu = |kk: f64| [lerp(open[0], shut[0], kk), lerp(open[1], shut[1], kk), lerp(open[2], shut[2], kk), lerp(open[3], shut[3], kk)];
-    hand(d, hh, 1, &cu(gr), lerp(0.25, 0.6, gr), 0.0);
-    hand(d, hh, 0, &cu(j), lerp(0.25, 0.6, j), 0.0);
+    hand(rig, d, hh, 1, &cu(gr), lerp(0.25, 0.6, gr), 0.0);
+    hand(rig, d, hh, 0, &cu(j), lerp(0.25, 0.6, j), 0.0);
 }

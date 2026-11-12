@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The scenario's knobs (Tab ▸ Sandbox ▸ Room clear, __roomclear.knobs; read at the next staging).
+/// The scenario's knobs, read at the next staging.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct RoomclearK {
     /// which placement the defenders are dealt (placeDefenders): 0 = the authored one on the first staging. Changed while it is up, the next staging deals the new

@@ -1,4 +1,4 @@
-//! HOLD: is this build the same game as that one? Natively, with no page, no TypeScript and no wire (README.md, "Hold").
+//! HOLD: is this build the same game as that one? Natively, with no page and no wire (README.md, "Hold").
 //!
 //!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…     play, and keep what the game was after every frame
 //!   hold check DIR [--but PART,…]                                                 play the same again on this build, and compare
@@ -7,7 +7,7 @@
 //!
 //! `keep` stands each level by the Rust start (`:clear` starts a room clear on it; a mission's id of the game's list stands that mission), plays it for N seconds (90) under each HAND and each
 //! seed (1), and writes for every frame the state's words (game::state_words: every part of the game that a host does not hand in)
-//! and a hash of each part of rust/sim's block, folded to one number, and one byte of each part. `check` builds nothing: it reads DIR's list of runs and its copies of the hands, plays
+//! folded to one number, and one byte of each part. `check` builds nothing: it reads DIR's list of runs and its copies of the hands, plays
 //! them on the build it is, and says for each run `the same after every frame`, or the first FRAME that differs and the PARTS that differ
 //! in it by their names. Exit 0 only if every run is the same. With no level named: the 21 of DEFAULT_LEVELS (13 as room clears); with no hand: every hand
 //! of `hands/`. A run is a process of its own (a game is one a process), four at a time.
@@ -133,7 +133,6 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let frames = (r.secs * 60.0).round() as usize;
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
-    // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
     let names = parts::names();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();
@@ -282,16 +281,26 @@ fn main() {
         "check" => std::fs::read_to_string(format!("{}/runs.txt", dir)).unwrap_or_else(|e| panic!("{}/runs.txt: {} (keep first)", dir, e)).lines().filter(|l| !l.trim().is_empty()).map(Run::of).collect(),
         _ => usage(),
     };
-    // every run a child, four at a time, reported in the list's order
+    // every run a child, as many at once as there are cores and the next as one ends, reported in the list's order
     let me = std::env::current_exe().unwrap();
-    let jobs = std::thread::available_parallelism().map_or(4, |n| n.get()).min(4);
-    let (mut bad, mut i) = (0, 0);
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let mut bad = 0;
     let mut good: Vec<usize> = Vec::new();
     let mut table: Vec<(String, f64, f64, Vec<String>)> = Vec::new();
-    while i < runs.len() {
-        let batch: Vec<(usize, std::process::Child)> = (i..runs.len().min(i + jobs)).map(|k| (k, std::process::Command::new(&me).arg("one").arg(dir).arg(verb).arg(runs[k].line()).arg(but.join(",")).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped()).spawn().unwrap())).collect();
-        for (k, c) in batch {
-            let o = c.wait_with_output().unwrap();
+    std::thread::scope(|all| {
+        for _ in 0..std::thread::available_parallelism().map_or(4, |n| n.get()) {
+            let (tx, next, me, runs, but) = (tx.clone(), &next, &me, &runs, &but);
+            all.spawn(move || loop {
+                let k = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if k >= runs.len() { return }
+                let _ = tx.send((k, std::process::Command::new(me).arg("one").arg(dir).arg(verb).arg(runs[k].line()).arg(but.join(",")).output().unwrap()));
+            });
+        }
+        let mut came: std::collections::BTreeMap<usize, std::process::Output> = std::collections::BTreeMap::new();
+        for k in 0..runs.len() {
+            while !came.contains_key(&k) { let (i, o) = rx.recv().expect("the children's threads"); came.insert(i, o); }
+            let o = came.remove(&k).unwrap();
             let said = String::from_utf8_lossy(&o.stdout).trim().to_string();
             let line = match o.status.code() {
                 Some(0) => { good.push(k); if verb == "check" { format!("the same after every frame · {}", said) } else { said } }
@@ -309,8 +318,7 @@ fn main() {
             }
             println!("{:<34} {}", runs[k].tag(), line);
         }
-        i += jobs;
-    }
+    });
     // (a run that could not be played is not in the list `check` plays: a level that does not stand as asked is said once, here)
     if verb == "keep" { std::fs::write(format!("{}/runs.txt", dir), good.iter().map(|&k| runs[k].line() + "\n").collect::<String>()).unwrap(); }
     if write { steps::write_file(&table.iter().map(|(n, _, _, p)| (n.clone(), { let mut p = p.clone(); p.sort(); p })).collect::<Vec<_>>()); }

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables)]
-//! THE FLOOR'S MESS is one arm of the marks (b_01.rs lays them, render_decals set.rs says when). No rule reads a mark.
+//! THE FLOOR'S MESS is one arm of the marks (render_decals/set.rs says when). No rule reads a mark.
 //! FLOOR MESS: what a blast and a broken thing LEAVE once the dust has gone out of the air. FILM where a burst's pall stood, a pale film of settled dust on the floor: a HEART at the
 //! burst and LOBES round it, each fitted to the room (none laid across something standing between it and the burst, each reaching only as far as the nearest thing standing between waist
 //! and head height, so the dust goes out through a doorway or the hole the blast made, never under a wall that held). The tops standing in a film take their own. RUBBLE: a chunk the pool

@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// Hand back `v`, and write it to the caller's `out` where one was given: the TypeScript's every path fills all three.
+/// Hand back `v`, and write it to the caller's `out` where one was given.
 fn put(out: Option<&mut V3>, v: V3) -> V3 {
     if let Some(o) = out {
         *o = v;
@@ -225,14 +225,14 @@ fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWin
     })
 }
 
-/// wind.ts:165 in1, :173 under: is (x, z) under any of the roofs (edges in)?
+/// Is (x, z) under any of the roofs (edges in)?
 fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
 }
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two.
 pub(super) fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
-    // weather.ts:240 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
+    // Before the wind is built its list is blank, with no `storm` row to write. A real one holds at least the storm.
     if g.wind.all.is_empty() {
         return;
     }
@@ -505,9 +505,9 @@ mod tests {
         [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()]
     }
 
-    // the doubles of the TypeScript's own stormVel / stormVelRoofs under bun with EXACT.on
+    // the pinned doubles of `storm_vel` / `storm_vel_roofs`
     #[test]
-    fn storm_vel_is_the_typescripts_bits() {
+    fn storm_vel_keeps_its_bits() {
         let cases: [(V3, V3, [u64; 3]); 5] = [
             ([1.3, 0.0, -0.7], [-4.2, 1.1, 3.3], [0x3fe9a89f6f5ccf01, 0, 0xbfdba1e6c6b2b78a]),
             ([1.0, 0.0, 0.0], [11.2, 0.0, 3.3], [0x3fc240795ceb2408, 0, 0]),
@@ -521,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    fn storm_vel_roofs_is_the_typescripts_bits() {
+    fn storm_vel_roofs_keeps_its_bits() {
         // the fourth has no width and the fifth lies past the first four: neither counts
         let roofs: Vec<Vec<f64>> = vec![vec![0.0, 0.0, 4.0, 4.0], vec![6.0, 0.0, 9.0, 4.0], vec![0.0, 6.0, 4.0, 9.0], vec![5.0, 5.0, 4.0, 9.0], vec![100.0, 100.0, 101.0, 101.0]];
         let cases: [(V3, V3, [u64; 3]); 4] = [
@@ -535,9 +535,9 @@ mod tests {
         }
     }
 
-    // the doubles of the TypeScript's own jetVel under bun with EXACT.on: a jet at a floor, on the axis at a floor, sideways, under the floor, no speed
+    // the pinned doubles of `jet_vel`: a jet at a floor, on the axis at a floor, sideways, under the floor, no speed
     #[test]
-    fn jet_vel_is_the_typescripts_bits() {
+    fn jet_vel_keeps_its_bits() {
         let down: V3 = [0.0, -1.0, 0.0];
         let pos: V3 = [1.0, 3.0, 2.0];
         let a = jet_vel(pos, down, 2.4, 2.0, 0.4227932187381618, 0.24, 5.0, 0.0, [1.3, 0.3, 2.2], None);
@@ -551,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn vnoise_is_the_typescripts_bits() {
+    fn vnoise_keeps_its_bits() {
         let cases: [(f64, f64, u64); 4] = [
             (12345.0, 0.3, 0xbfe4becb49ba5e35),
             (3735928559.0, 17.75, 0xbfe483b878000000),
@@ -599,7 +599,7 @@ mod tests {
         (g, id)
     }
 
-    // weather.ts:240 asks before the Wind is built: a blank one has no storm row to write
+    // asked before the wind is built: a blank one has no storm row to write
     #[test]
     fn a_reroof_before_the_wind_exists_is_nothing() {
         let mut g = Game::blank();

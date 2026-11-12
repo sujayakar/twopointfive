@@ -1,13 +1,14 @@
 //! THE STATE'S WORDS: a hash of the whole game, a word a part, for two machines of one game to be held to each other. A part is a field of the game (of its modules, its
-//! tables, a seat's set); what is in no word says so beside itself (`#[bytes(skip)]`): what a host hands in, a step's output, the picture's.
-use crate::bytes::{Parts, W};
+//! tables, a seat's set, a group); what is in no word says so beside itself (`#[bytes(skip)]`): what a host hands in, a step's output, the picture's.
+use crate::bytes::{Parts, ToBytes, W};
 use crate::game::{Game, Mods, Tabs};
 use crate::host_api::HostApi;
+use crate::group::Group;
 use crate::seats::SeatSet;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the game's own parts: those that are walked by their own fields, and a seat's set's (which lies in its seat's row), stand elsewhere in the list
-fn own(name: &str) -> bool { !matches!(name, "m" | "engine" | "tab" | "sets") && !SeatSet::NAMES.contains(&name) }
+fn own(name: &str) -> bool { !matches!(name, "m" | "engine" | "tab" | "sets" | "groups") && !SeatSet::NAMES.contains(&name) }
 
 /// each word's part, in the words' order
 pub fn state_names() -> Vec<String> {
@@ -17,6 +18,7 @@ pub fn state_names() -> Vec<String> {
     v.extend(of("engine.", HostApi::NAMES));
     v.extend(of("tab.", Tabs::NAMES));
     v.extend(of("seats.", SeatSet::NAMES));
+    v.extend(of("groups.", Group::NAMES));
     v
 }
 
@@ -37,8 +39,25 @@ pub fn state_words(g: &mut Game, o: &mut W, out: &mut Vec<u32>) {
             let mut k = at;
             set.parts(&mut |_, x| { out[k] = out[k].rotate_left(5) ^ say(x); k += 1; });
         }
+        // (and so is a part of the groups)
+        let at = out.len();
+        out.resize(at + Group::NAMES.len(), 0);
+        for (_, group) in g.groups.iter() {
+            let mut k = at;
+            group.parts(&mut |_, x| { out[k] = out[k].rotate_left(5) ^ say(x); k += 1; });
+        }
         o.b.clear();
     });
+}
+
+/// A WORD OF A TICK, for a host that holds two machines of one game to each other after every one: where every man and every leaf stands, the clock, the die's count. The whole game's words
+/// (`state_words`) are too dear for that and are asked now and then.
+pub fn tick_word(g: &Game) -> u32 {
+    let mut o = W::new();
+    (g.time, g.dice.n).w(&mut o);
+    for (_, c) in g.ch.iter() { (c.pos, c.body_yaw, c.aim_yaw).w(&mut o); }
+    for (_, d) in g.dr.iter() { d.leaf.angle.w(&mut o); }
+    word(&o.b)
 }
 
 /// eight bytes at a time, how many there are first

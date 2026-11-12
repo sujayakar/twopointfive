@@ -29,7 +29,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const scene: BenchScene | null = o.scene === 'none' ? { start: () => 'units are on the floor', active: () => false, stop() {}, heavy: () => false }
     : { start: () => { sceneT = 0; return null; }, active: () => sceneT >= 0 && sceneT < LEN, stop() { sceneStops++; sceneT = -1; }, heavy: () => o.scene !== 'calm' && sceneT >= 5000, said: () => `over at ${Math.round(Math.min(Math.max(sceneT, 0), LEN) / 1000)} s` };
   const SEQ = ['base', 'reflect', 'base', 'sharp', 'base']; let sw = -1, swFrames = 0, swStops = 0, swOpts: any = null;
-  const sweep: BenchSweep = { start(op) { swOpts = op; sw = 0; swFrames = 0; return 'sweeping'; }, active: () => sw >= 0, flipped: () => sw >= 0 ? SEQ[sw] : '', ...(o.settled ? { settled: () => sw >= 0 && swFrames >= 6 } : {}), progress: () => sw >= 0 ? `${sw + 1}/${SEQ.length}` : 'done', stop() { swStops++; sw = -1; } };
+  const sweep: BenchSweep = { start(op) { swOpts = op; sw = 0; swFrames = 0; return 'sweeping'; }, active: () => sw >= 0, flipped: () => sw >= 0 ? SEQ[sw] : '', words: () => sw < 0 ? '' : SEQ[sw] === 'sharp' ? 'sharp direct put back' : SEQ[sw] === 'reflect' ? 'reflections off' : '', ...(o.settled ? { settled: () => sw >= 0 && swFrames >= 6 } : {}), progress: () => sw >= 0 ? `${sw + 1}/${SEQ.length}` : 'done', stop() { swStops++; sw = -1; } };
   const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
   const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' }, get standsIn() { return o.stands !== undefined && now - born < o.stands; } };   // (`stands`: ms of the page's life in which a pass still draws a stand-in)
   let hidden = false, live = 0;
@@ -45,7 +45,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (bench.active) (bench.freezing ? frozenIn : liveIn).add(bench.state);
     if (bench.active && !bench.freezing && rec.recording) live++;
     if (!bench.freezing && sceneT >= 0) sceneT += cost;
-    if (rec.recording) frames.push({ t: now, dt: cost, fps: 1000 / cost, cpu: { update: 1, render: 1, other: 0.5 }, gpu: { direct: cost * 0.5, gather: cost * 0.3, ...(E.timer.enabled ? { [GBUFFER_PASS]: GBUF_MS } : {}) }, gpuSum: cost * 0.8, ...(E.timer.enabled ? { gpuUnion: +(cost * 0.9).toFixed(3) } : {}), res: [E.width, E.height], eff: S.renderScale, preset: Q.label, adaptive: true, cam: [0, 0, 0, 0, 0], n: {} });
+    if (rec.recording) frames.push({ t: now, dt: cost, fps: 1000 / cost, cpu: { update: 1, render: 1, other: 0.5 }, gpu: { direct: cost * 0.5, gather: cost * 0.3, post: cost * 0.6, ...(E.timer.enabled ? { [GBUFFER_PASS]: GBUF_MS } : {}) }, gpuSum: cost * 0.8, ...(E.timer.enabled ? { gpuUnion: +(cost * 0.9).toFixed(3) } : {}), res: [E.width, E.height], eff: S.renderScale, preset: Q.label, adaptive: true, cam: [0, 0, 0, 0, 0], n: {} });
     if (sw >= 0 && ++swFrames >= 12) { swFrames = 0; if (++sw >= SEQ.length) sw = -1; }
     bench.tick(cost / 1000);
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
@@ -78,7 +78,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(p.applied.join(' ') === 'verylow low medium high medium', `the presets from the bottom up, then the page's own again: ${p.applied.join(' ')}`);
   check(before(p) === was, 'everything is back as it stood: the settings, auto, the ladder\'s rungs, the smoke row');
   const F = Object.fromEntries((R.features ?? []).map(f => [f.id, f]));
-  check(!!F.reflect && Math.abs(F.reflect.ms - 2) < 0.01 && Math.abs((F.reflect.gpu ?? 0) - 1.8) < 0.01 && Math.abs(F.sharp.ms + 1) < 0.01 && F.reflect.label === 'reflections off', `each feature against the baselines beside it: reflections give back ${F.reflect?.ms}, sharp ${F.sharp?.ms}`);
+  check(!!F.reflect && Math.abs(F.reflect.ms - 2) < 0.01 && Math.abs((F.reflect.gpu ?? 0) - 1.8) < 0.01 && Math.abs(F.sharp.ms + 1) < 0.01 && F.reflect.label === 'reflections off' && F.sharp.label === 'sharp direct put back', `each feature against the baselines beside it: reflections give back ${F.reflect?.ms}, sharp ${F.sharp?.ms}`);
   check(p.swOpts?.inside === true && p.swOpts.rounds === 1 && p.asked === BENCH_FRAMES && BENCH_FRAMES >= 6 * 60 * 240, 'the sweep runs inside the take: one round, the recording left running, and the take has room for six minutes on a fast display');
   check(p.dumps === 1 && p.events.filter(e => e.kind === 'bench').length === 1 && JSON.parse(p.events.find(e => e.kind === 'bench')!.text).steps.length === 7, 'the take is stopped once, with the report in it as an event');
   const T = p.shown[0] ?? '', lines = T.split('\n');
@@ -86,7 +86,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(p.shown.length === 1 && p.veil === null && T === p.bench.report && p.went[0].take === false && p.went[0].result === false && !p.went[0].local, 'the card shows the report and is told the take and the result went nowhere (nobody listens here), the veil is gone');
   check(/Fake M9 Pro/.test(T) && /WebGPU says: fake metal-3/.test(T) && /Chrome 154 · macOS 15\.1\.0 arm/.test(T) && /on battery/.test(T) && /build abcdef01/.test(T), 'the report names the GPU, the browser, the system, the power and the build');
   check(/load\s+12\.4 s to the start card · shaders 9\.1 s \(212 of 212\) · longest freeze 6\.2 s · first frame 2\.1 s/.test(T), 'the report carries the boot: the start card, the shaders, the longest freeze, the first frame');
-  check(lines.length <= 40 && lines.every(l => l.length <= 150) && /reflections off/.test(T), `the report is short enough to paste (${lines.length} lines, longest ${Math.max(...lines.map(l => l.length))})`);
+  check(lines.length <= 40 && lines.every(l => l.length <= 150) && /reflections off/.test(T) && /heaviest GPU passes, ms: direct/.test(T), `the report is short enough to paste (${lines.length} lines, longest ${Math.max(...lines.map(l => l.length))})`);
 }
 { // a slow machine: the ladder is cut short and the features are not flipped
   const p = page({ slow: 20 }), was = before(p);

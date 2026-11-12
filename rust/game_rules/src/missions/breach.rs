@@ -55,7 +55,7 @@ fn adv(g: &mut Game, i: usize, pass: Option<f64>) -> bool {
     if i == 0 { dr!(g).wp_a = w; } else { dr!(g).wp_b = w; }
     r
 }
-/// One vector in the TypeScript: aimA is flows[0].aim, and while ordered onto it, the man's script.aimAt. A script now aiming at anything else keeps it.
+/// A flow's aim lives in `flows[i].aim`, in `aim_a` / `aim_b` and, while he is ordered onto it, in the man's `script.aim_at`, each a copy. A script now aiming at anything else keeps it.
 fn set_aim(g: &mut Game, i: usize, new: V3) {
     let old = dr!(g).flows[i].aim;
     dr!(g).flows[i].aim = new;
@@ -171,8 +171,8 @@ pub(super) fn breach_drill_start(g: &mut crate::game::Game) {
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "breach");
         crate::mind::set(g, gd, 0.0, "breach");
         if g.gd[gd].last_known.is_some() { crate::mind::fix(g, gd, None, "breach"); }
-        crate::control::set_hold(g, gd, false, "breach");
-        crate::control::set_pinned(g, gd, false, "breach");
+        crate::duty::hold(g, gd, false, "breach");
+        crate::duty::pin(g, gd, false, "breach");
         g.gd[gd].react_t = 0.0;
         g.gd[gd].script = None;
         let fa = g.gd[gd].weapon;

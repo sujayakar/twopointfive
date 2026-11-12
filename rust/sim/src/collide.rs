@@ -1,8 +1,9 @@
-//! A CIRCLE AGAINST THE BOX WORLD — a body's footprint pushed out of the statics, and which statics it touches (src/scene/collision.ts collideCircle,
-//! circleTouches, gather), over the box world's rows.
+//! A CIRCLE AGAINST THE BOX WORLD: a body's footprint pushed out of the statics (`circle`), and which statics it touches (`touches`), over the box world's rows.
 //!
-//! STATEMENT FOR STATEMENT, as lines.rs is: the same cells in the same order, a box met once a pass, the same pushes added in the same order — a body pushed
-//! out of two boxes ends where the TypeScript leaves it, to the bit. tools/qa/rust-check.ts holds the two together.
+//! IT KEEPS NOTHING. An answer is left in the question's scratch (world.rs `asking`: `pt`, `list`), for the caller to read before it asks anything else.
+//!
+//! THE ORDER IS PART OF THE ANSWER: the same cells in the same order, a box met once a pass, the pushes added in the order met. A body pushed out of two boxes ends where
+//! that order leaves it, so it is play, and changing it changes the game.
 //!
 //! What is not here: whether a broken pane can be walked through is a rule of the game's; a pane's row carries its answer
 //! (K_WALK), written as the rule changes it.
@@ -10,13 +11,13 @@
 use crate::world::*;
 use prim::{floor, sqrt};
 
-/// collision.ts gather's test of one static: is it out of the question (wholly above or below the span, hidden at runtime, a pane walked through)
+/// the gather's test of one static: is it out of the question (wholly above or below the span, hidden at runtime, a pane walked through)
 #[inline(always)]
 fn passed(b: &[f64], fl: u32, y0: f64, y1: f64) -> bool {
     b[R_C + 1] + b[R_H + 1] < y0 || b[R_C + 1] - b[R_H + 1] > y1 || fl & F_NO_SHADOW != 0 || (b[R_KIND] as u32) & K_WALK != 0
 }
 
-/// collision.ts collideCircle (its span's foot already lifted by the host: footBand): the circle of radius `r` at (px, pz) pushed out of the statics that
+/// the circle of radius `r` at (px, pz), its span's foot already lifted by the host, pushed out of the statics that
 /// overlap [y0, y1]. Where it ends is left in `pt`; 1 = it touched something.
 pub fn circle(w: &World, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: u32) -> u32 {
     let (o, s) = (w, asking());
@@ -149,7 +150,7 @@ pub fn gather(w: &World, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, c
     n
 }
 
-/// collision.ts circleTouches (its span's foot already lifted by the host): the statics a circle of radius `r` at (x, z) touches, at the front of `list`.
+/// the statics a circle of radius `r` at (x, z), its span's foot already lifted by the host, touches, at the front of `list`.
 /// −1 = the host's list could not hold what was gathered; else (how many touch) × 65536 + (how many were gathered: the host's list holds those past the
 /// touching ones as the gather left them, and so must its copy).
 pub fn touches(w: &World, x: f64, z: f64, r: f64, y0: f64, y1: f64, cap: usize) -> i32 {

@@ -117,7 +117,7 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
                 let at: Option<V3> = if b.turn { None } else { Some([p[0] + m::sin(y) * d, b.h_to, p[2] + m::cos(y) * d]) };
                 if let Some(w) = st.a.walks.iter_mut().find(|w| w.man == x) { w.watch = at; w.face = Some(face); }
                 if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
-                    let r = &mut g.tab.orders_assignment[a];
+                    let r = &mut g.tab.task[a];
                     if r.order == "cover" {
                         r.watch = at; r.face = Some(face);
                         r.upper = if at.is_some() { crate::character::UpperMode::Aim } else { crate::character::UpperMode::None };
@@ -200,13 +200,13 @@ pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd)
         let o = wrap(g.ch[c].aim_yaw - hy);
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), x);
         let walked = st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| !w.lane && w.k + 1 >= w.pts.len() && now >= w.at);
-        let cover = a.map_or(false, |a| g.tab.orders_assignment[a].order == "cover");
+        let cover = a.map_or(false, |a| g.tab.task[a].order == "cover");
         let ok = free && !(busy && (b_man == Some(x) || b_team || b_moved.contains(&x))) && walked && cover && flat(p, hp) <= K.on_slot && !st.a.swaps.iter().any(|w| w.man == x);
         let v = scan(g, st, Some(x), i + 1, ok, if m::abs(o) <= 8.0 * R { o } else { 0.0 });
         if ok {
-            g.tab.orders_assignment[a.unwrap()].watch = Some([p[0] + m::sin(hy + v) * 3.0, K.scan_y, p[2] + m::cos(hy + v) * 3.0]);
+            g.tab.task[a.unwrap()].watch = Some([p[0] + m::sin(hy + v) * 3.0, K.scan_y, p[2] + m::cos(hy + v) * 3.0]);
         } else if was && cover && b_man != Some(x) {
-            g.tab.orders_assignment[a.unwrap()].watch = None;
+            g.tab.task[a.unwrap()].watch = None;
         }
     }
     let c = g.pl[g.player].ch;

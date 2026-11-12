@@ -22,7 +22,7 @@ pub struct HandsK {
     #[k(0.46)] pub carry_head: f64,
     /// the head end has no leg sticks to stretch: it is 'wedged' when a held shoulder trails its hand by this (m)
     #[k(0.4)] pub slack_m: f64,
-    /// s it takes from the floor onto his shoulder · s back down onto the floor (a pin travels at most 2.4 m/s — ragdoll.ts PIN_STEP — and both are eased: the
+    /// s it takes from the floor onto his shoulder · s back down onto the floor (a pin travels at most 2.4 m/s — the ragdoll's `PIN_STEP` — and both are eased: the
     ///  peak is 1.5 × the 1.5 m over the time, so neither may be much under a second or the five pins fall out of step and the body is let go still in the air)
     #[k(1.0)] pub hoist_secs: f64,
     #[k(1.1)] pub lower_secs: f64,

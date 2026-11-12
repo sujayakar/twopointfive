@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-kit.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-kit: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_kit::types;
 pub use types::*;
@@ -12,7 +12,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_kit_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_kit::TutKitVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutKit(v) => v, _ => panic!("the run is not of levels/tut-kit.script.ts") } }
+fn tut_kit_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_kit::TutKitVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutKit(v) => v, _ => panic!("the run is not of the level tut-kit") } }
 
 /// the man on the gun, behind his two low walls in the gun court's far corner
 const GUNNER: &str = "Novak";
@@ -138,7 +138,7 @@ fn release_if_alive(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &c
     Ok(())
 }
 
-/// a beat that only waits and says a line: tut-kit.script.ts:153-158
+/// a beat that only waits and says a line
 fn wait_then_radio(g: &mut Game, r: DirectorRunId, at: &mut u16, secs: f64, names: &[&str], line: &str) -> Result<Option<crate::director::Cond>, String> {
     if *at == 0 {
         *at = 1;
@@ -148,7 +148,7 @@ fn wait_then_radio(g: &mut Game, r: DirectorRunId, at: &mut u16, secs: f64, name
     Ok(None)
 }
 
-/// a beat that sets a flag and gives a frame: tut-kit.script.ts:102-104
+/// a beat that sets a flag and gives a frame
 fn flag_then_frame(g: &mut Game, r: DirectorRunId, at: &mut u16, set: &mut dyn FnMut(&mut Game)) -> Result<Option<crate::director::Cond>, String> {
     if *at == 0 {
         set(g);

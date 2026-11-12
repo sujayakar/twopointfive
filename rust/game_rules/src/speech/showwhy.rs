@@ -41,11 +41,11 @@ fn blank(t: f64) -> crate::showwhy::Mem {
 
 /// This seat's state, made if there is none: the row itself.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
-    let (key, t) = (crate::seats::view_key(g, &crate::seats::here(g)), g.time);
+    let (key, t) = (g.player, g.time);
     g.m.showwhy.states.get_or_insert_with(key, || State { after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
 
-/// The row `st` of the TypeScript, by its key; the tick made it before anything here runs.
+/// His row of the table, by its key; the tick made it before anything here runs.
 fn st_row(g: &mut Game, pl: PlayerId) -> &mut crate::showwhy::State {
     g.m.showwhy.states.get_mut(pl).unwrap()
 }
@@ -204,7 +204,7 @@ fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId
         Some(a) => a,
         None => return false,
     };
-    if g.tab.doortools_door_op[op].mine.get(gd).copied() != Some(a) || !g.tab.orders_assignment[a].arrived {
+    if g.tab.doortools_door_op[op].mine.get(gd).copied() != Some(a) || !g.tab.task[a].arrived {
         return false;
     }
     if op_tgt(g, gd).is_some() {
@@ -239,8 +239,8 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
 
 /// STACK: the squeezes up the file of each order made and waiting, then the lead's fist.
 fn stacks(g: &mut crate::game::Game) {
-    for i in 0..g.sets[g.seat].door_tools.ops.len() {
-        let op = g.sets[g.seat].door_tools.ops[i];
+    for i in 0..g.groups[g.group].tools.ops.len() {
+        let op = g.groups[g.group].tools.ops[i];
         let men = g.tab.doortools_door_op[op].men.clone();
         if men.is_empty() || !men.iter().all(|&gd| crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd)) { continue; }
         if !waits(g, op) { g.m.showwhy.op_mem.delete(op); continue; }
@@ -361,10 +361,10 @@ fn line_shown(g: &mut Game, gd: GuardId, quiet: bool) {
 }
 
 /// DOOR, never in a fight: the player stands in the doorway he waits at. He is waved through, and asked to go.
-fn door_shown(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
+fn door_shown(g: &mut Game, gd: GuardId, a: TaskId) {
     let (k, t, pl) = (g.k.showwhy, g.time, g.player);
     let pc = g.pl[pl].ch;
-    let held = !g.tab.orders_assignment[a].arrived
+    let held = !g.tab.task[a].arrived
         && !crate::condition::down(g, pc)
         && crate::doorway::doorway_held_by(g, gd).as_deref() == Some("Player")
         && m::hyp2(g.ch[pc].vel[0], g.ch[pc].vel[2]) < 0.6
@@ -383,7 +383,7 @@ fn door_shown(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 }
 
 /// HURT: that he is hit, once a wound and not long after it; then that he cannot keep up, when the player runs on from him.
-fn hurt_owed(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
+fn hurt_owed(g: &mut Game, gd: GuardId, a: TaskId) {
     let (k, t, c) = (g.k.showwhy, g.time, g.gd[gd].ch);
     if !crate::condition::is_hurt(g, c, None) { return; }
     let (hurt_at, up_at) = (g.cond[c].hurt_at, g.cond[c].fold_until);

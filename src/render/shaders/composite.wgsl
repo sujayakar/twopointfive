@@ -248,12 +248,12 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
 // projected area; the STRONGEST is shadow-tested from the face it is on (+ smoke), the rest credited at half, unshadowed (dim by construction) — the dust
 // glow's recipe in fgather.wgsl glassShade, one ray instead of two. Plus the cached bounce arriving on both faces.
 // GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs; only called under GLASS_BREAK): the crack picture of pane slot k at world point X on it, footprint fp (m per px) — .x = crack line coverage,
-// .y = frost (crushed glass). The lines are the cuts of rust/game_rules/src/breakage/glass_pattern.rs themselves (gpCrackAt is this function's CPU reference): the two RADIALS of the sector the point is
+// .y = frost (crushed glass). The lines are the cuts of rust/sim/src/glass.rs themselves: the two RADIALS of the sector the point is
 // in — part of the way into the sheet until the pane has run, to the frame after — the CHORDS either side of its piece (the concentric cracks), past the rings of a run pane
 // the sector's branch crack and its dagger's snap, the territory line where two blows' cracks met, a laminated pane's tight web, the crushed crater of a blow too soft to punch
 // it, and the bright chipped RIM of any piece that borders a hole. A tempered pane letting go is crazed through into dice wherever it still stands. Antialiased over the footprint like the stars.
 fn gbLine(d: f32, w: f32, wt: f32) -> f32 { return (1.0 - smoothstep(w * 0.6, w * 1.6, d)) * wt; }
-/** distance to the nearest edge of the dice (rust/game_rules/src/breakage/glass_pattern.rs gp_dice_edge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
+/** distance to the nearest edge of the dice (F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
 fn gbDice(uv: vec2f, grain: f32, seed: u32) -> f32 {
   let p = uv / grain; let ip = vec2i(floor(p));
   var f1 = 1e9; var f2 = 1e9;
@@ -277,10 +277,10 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let uv = gbUV(k, gbLocal(k, X));
   let w = max(fp, 0.0006);
   if ((fl & 4u) != 0u) {   // a tempered pane on its way out: what still stands is dice — drawn while a die is a few pixels across, a milky sheet beyond that; brightest at the wave's edge
-    let dw = gbRow(k, 2u); let grain = max(dw.w, 1e-3);
+    let grain = max(paneGrain(k), 1e-3);
     let res = clamp(grain / (5.0 * w) - 0.2, 0.0, 1.0);
-    let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - dw.z);
-    return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(gbRow(k, 3u).z)), w, 0.9), res), front), 0.45 + 0.4 * front);
+    let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - paneOpenAt(k));
+    return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(paneSeed(k))), w, 0.9), res), front), 0.45 + 0.4 * front);
   }
   if (n == 0u) { return vec2f(0.0); }
   let web = (fl & 16u) != 0u; let full = (fl & 2u) != 0u && !web;
@@ -332,8 +332,8 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   }
   if (full && n >= 2u) {   // where this blow's cracks met the next one's
     var j2 = 0u; var d2 = 1e30; let d1 = dot(d, d) - S.rz * S.rz;
-    for (var j = 0u; j < n; j++) { if (j == me) { continue; } let a = gbRow(k, GB_HDR + j * 4u); let qv = uv - a.xy; let dq = dot(qv, qv) - a.w * a.w; if (dq < d2) { d2 = dq; j2 = j; } }
-    let cj = gbRow(k, GB_HDR + j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
+    for (var j = 0u; j < n; j++) { if (j == me) { continue; } let a = paneSite(k, j * 4u); let qv = uv - a.xy; let dq = dot(qv, qv) - a.w * a.w; if (dq < d2) { d2 = dq; j2 = j; } }
+    let cj = paneSite(k, j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
     let dd = (d2 - d1) / (2.0 * sep);
     acc.x = max(acc.x, gbLine(dd, w, 0.8 * heavy));
     if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv + (cj - S.c) / sep * (dd + 0.004))) { acc.y = min(acc.y, dd); }

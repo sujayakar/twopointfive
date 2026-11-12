@@ -63,7 +63,7 @@ section! {
 }
 
 /// WHAT THE PARTICLE POOL IS HANDED: the jets near the view, nearest first, then the storm. It wants a pool and where the view looks, so it is made here of the standing game and
-/// no game's record holds it. The page has the same rule; tools/draw/weather-check.ts holds the two together.
+/// no game's record holds it.
 fn for_particles(g: &Game) -> Vec<game::ids::WindWindSourceId> {
     use game::wind::WindSourceKind as K;
     let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);
@@ -138,9 +138,10 @@ impl Winds {
             for r in game::weather::roofs_among(statics.iter().map(|&id| (all[id].c, all[id].h))) { self.ceilings.push(Rect { r: r.map(|x| x as f32) }); }
         }
         for &d in &g.doors.list { let b = &all[g.dr[d].box_]; if b.rot.is_none() { self.leaves.push(crate::boxes::Leaf { c: b.c.map(|x| x as f32), h: b.h.map(|x| x as f32), yaw: b.yaw as f32, flags: b.flags as i64 as u32, key: d.ix() as u32 }); } }
-        if ::sim::state::state_read(g.sim).panes.used != 0 {
+        let panes = &all.world().panes;
+        if !panes.rows.is_empty() {
             let glass = game::scene_boxes::box_flag().glass as u32;
-            for (i, &id) in statics.iter().enumerate() { if all[id].flags as i64 as u32 & glass != 0 && ::sim::panes::open_fraction(g.sim, i as u32) > g.k.air_sim.glass_open { self.open.push(crate::boxes::Word { w: i as u32 }); } }
+            for (i, &id) in statics.iter().enumerate() { if all[id].flags as i64 as u32 & glass != 0 && ::sim::panes::open_fraction(panes, i as u32) > g.k.air_sim.glass_open { self.open.push(crate::boxes::Word { w: i as u32 }); } }
         }
     }
 }

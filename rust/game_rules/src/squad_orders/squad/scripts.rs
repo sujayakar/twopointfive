@@ -29,7 +29,7 @@ macro_rules! line_of {
 
 // ---- orders
 
-/// A new waypoint list for a man, and orders: the goal is always a fresh copy, so always a new leg. (squad.ts:247, with OrderPatch's null where the public route's patch has none)
+/// A new waypoint list for a man, and orders: the goal is always a fresh copy, so always a new leg.
 fn route_with(g: &mut Game, gd: GuardId, wps: &mut Vec<V3>, pts: &[V3], patch: OrderPatch) {
     wps.clear();
     for p in pts { wps.push(v3::copy(*p)); }
@@ -58,7 +58,7 @@ fn advance_man(g: &mut Game, id: RoomClearId, second: bool) -> bool {
     planted
 }
 
-/// ALIASING: the TypeScript's script holds the drill's own aim vector and the sweep moves it in place. Here the script holds a copy, so
+/// The script holds a copy of the drill's aim point, not the point the sweep moves, so
 /// each move of the drill's point is written through to a script still holding the point it had.
 fn aim_moved(g: &mut Game, gd: GuardId, was: V3, now: V3) {
     if let Some(s) = g.gd[gd].script.as_mut() {
@@ -386,7 +386,7 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
 pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderPatch) {
 
     if g.gd[gd].script.is_none() {
-        let serial = g.serial();   // (the one place a man's own script is made: doorpath.ts:178 asks by identity whether it is still his)
+        let serial = g.serial();   // (its serial is how a step tells this script from a later one)
         g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::default() });
     }
     if let Some(goal) = patch.goal {
@@ -490,7 +490,7 @@ pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             ch.aim_pitch = 0.0;
             g.gd[gd].speed = 0.0;
         }
-        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
+        crate::duty::hold(g, gd, false, "squad"); crate::duty::pin(g, gd, false, "squad");
         crate::mind::set_state(g, gd, crate::game::GuardState::Search, "squad");
         crate::mind::set(g, gd, 0.0, "squad"); crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; g.gd[gd].script = None;
         g.ch[c].anim.stance = if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady };

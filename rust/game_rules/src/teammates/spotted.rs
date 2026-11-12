@@ -107,7 +107,7 @@ pub fn spotted_by(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     }
 }
 
-/// roomfight.ts's fire gate, beside silent.ts's own: this round is held
+/// the room fight's fire gate, beside the silent posture's own: this round is held
 pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.spotted.on || !crate::silent::under_silence(g, gd) || crate::silent::reached(g, gd) || crate::silent::quiet_gun(g, gd) || crate::silent::urgent(g) { return false; }
     if g.m.spotted.men.get(gd).and_then(|r| r.take).map(|t| t.foe) == Some(h) { return true; }
@@ -141,13 +141,13 @@ fn danger_now(g: &crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     false
 }
 
-/// roomfight.ts's eyes: caught, he shoots on a sighting
+/// the room fight's eyes: caught, he shoots on a sighting
 pub fn spotted_keen(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.k.spotted.on || g.m.spotted.men.get(gd).map(|r| r.mode) != Some(crate::spotted::SpottedMode::Caught) || !crate::silent::under_silence(g, gd) { return false; }
     true
 }
 
-/// orders.ts, as it poses him: where his feet go and how he carries himself; None: as ordered
+/// as the orders pose him: where his feet go and how he carries himself; None: as ordered
 pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, aside: bool) -> Option<crate::spotted::SpottedFeet> {
     if !g.k.spotted.on { return None; }
     let (take, mode, by, eyes, spot, what, exposed) = match g.m.spotted.men.get(gd) {
@@ -412,10 +412,9 @@ fn hands(g: &mut crate::game::Game, gd: GuardId) {
     let (dx, dz) = (p[0] - hp[0], p[2] - hp[2]);
     let d = js::or(m::hyp2(dx, dz), 1.0);
     let mut t0 = tk.t0;
-    // (`T.spot[0] = …; T.spot[2] = …` IN PLACE. orders.ts hands that very object on as his goal (spottedFeet → order), so in the TypeScript his script's
-    //  goal and his settle watch's goal ARE the spot and creep with it: no new leg, the path and the watch kept. By value every creep read as a new goal.
-    //  So a goal and a watch that hold the spot's numbers as they were are written through, as qrf's write_station does for a station.
-    //  STAND-IN by value: equal numbers stand for the same object; it belongs to the identity device.)
+    // (The orders hand the spot on as his goal (spotted_feet → order), so his script's goal and his settle watch's goal creep with it: no new leg, the
+    //  path and the watch kept. Otherwise every creep would read as a new goal. So a goal and a watch that hold the spot's numbers as they were are
+    //  written through, as qrf's write_station does for a station: equal numbers stand for the same point.)
     let old_spot = tk.spot;
     let new_spot = [hp[0] + dx / d * 0.6, old_spot[1], hp[2] + dz / d * 0.6];
     if let Some(row) = man(g, gd).take.as_mut() { row.spot = new_spot; }
@@ -479,7 +478,7 @@ pub fn spotted_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
     false
 }
 
-/// once a frame, after silent.ts has the posture and before the orders pose the men
+/// once a frame, after the silent tick has the posture and before the orders pose the men
 pub fn spotted_tick(g: &mut crate::game::Game) {
     if !g.k.spotted.on || !crate::silent::squad_silent(g, &crate::seats::here(g)) { return; }
     let k = g.k.spotted;

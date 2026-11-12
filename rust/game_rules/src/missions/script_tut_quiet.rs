@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-quiet.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-quiet: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_quiet::types;
 pub use types::*;
@@ -11,7 +11,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of levels/tut-quiet.script.ts") } }
+fn tut_quiet_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_quiet::TutQuietVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQuiet(v) => v, _ => panic!("the run is not of the level tut-quiet") } }
 
 /// where he looks from, where he smokes, and the lane's side of the level
 const LOOK: V3 = [26.4, 0.0, 17.75];
@@ -55,7 +55,7 @@ pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crat
     Ok(TutQuietVars { walk: Some(walk), beam: Some(beam), past: Some(past) })
 }
 
-/// (tut-quiet.script.ts:34 beat 'lane') a voice behind the wall the player creeps along.
+/// beat 'lane': a voice behind the wall the player creeps along.
 pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
@@ -110,7 +110,7 @@ fn sam_inside(g: &Game, seat: &crate::seats::SeatRef, r: DirectorRunId, v: &Opti
     crate::director::director_inside_volume(g, seat, r, id, &crate::director::DirectorInsideVolumeWho::Sam)
 }
 
-/// what turns him from his smoke (tut-quiet.script.ts:80 heard, :82 turns)
+/// what turns him from his smoke
 fn turns(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate::director::Cond> {
     let heard = crate::director::EventFilter::Heard { by: u.clone(), run_level: RUN_LEVEL, run_within: RUN_WITHIN, walk_level: WALK_LEVEL, walk_within: WALK_WITHIN };
     vec![
@@ -301,7 +301,7 @@ pub(super) fn tut_quiet_night_test(g: &crate::game::Game, r: DirectorRunId, f: &
     }
 }
 
-/// (tut-quiet.script.ts:96 beat 'store') by ear, from the dark: two men in the lit room ahead.
+/// beat 'store': by ear, from the dark: two men in the lit room ahead.
 pub(super) fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_quiet::TutQuietStoreFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {

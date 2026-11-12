@@ -19,7 +19,7 @@ fn clear_plan_bounds(g: &Game, door: &str) -> Option<crate::scene_scenarios::Rec
     g.level.clear_plans.as_ref()?.iter().find(|p| p.door == door).and_then(|p| p.bounds).map(rect_of)
 }
 
-/// orders.ts doorWords, by id, or the name its level wrote for it
+/// a door's words, by id, or the name its level wrote for it
 pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
     let d = crate::doors::doors_by_name(g, id_2);
     let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };
@@ -309,25 +309,25 @@ fn rescue_marks(g: &mut crate::game::Game, on: bool) {
     let side = s.as_ref().and_then(|s| s.side.clone());
     let fd = match &s { Some(s) => crate::doors::doors_by_name(g, &s.room.door), None => None };
     let sd = match &side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
-    let mut i = g.sets[g.seat].orders.door_marks.len();
+    let mut i = g.groups[g.group].orders.door_marks.len();
     while i > 0 {
         i -= 1;
-        if sd == Some(g.sets[g.seat].orders.door_marks[i].door) { g.sets[g.seat].orders.door_marks.remove(i); }
+        if sd == Some(g.groups[g.group].orders.door_marks[i].door) { g.groups[g.group].orders.door_marks.remove(i); }
     }
-    g.sets[g.seat].door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
-    g.sets[g.seat].door_tools.lights = None;
+    g.groups[g.group].tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
+    g.groups[g.group].tools.lights = None;
     if !on { return; }
     if let (Some(sd), Some(x)) = (sd, side.as_ref()) {
         if let Some(stack) = x.stack.as_ref().filter(|st| !st.is_empty()) {
             let face = rescue_face_of(g, sd);
-            g.sets[g.seat].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
+            g.groups[g.group].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
                 door: sd, side: face, stack: stack.clone(),
                 standoff: x.standoff.clone().unwrap_or_else(|| stack.clone()),
             });
         }
     }
-    if let Some(d) = fd { g.sets[g.seat].door_tools.linked.push(d); }
-    if let Some(d) = sd { g.sets[g.seat].door_tools.linked.push(d); }
+    if let Some(d) = fd { g.groups[g.group].tools.linked.push(d); }
+    if let Some(d) = sd { g.groups[g.group].tools.linked.push(d); }
 }
 
 /// The face of one of the room's doors that is not the room's.
@@ -432,8 +432,8 @@ fn spawn_the_opposition(g: &mut Game, cast: &[CastRow]) -> Result<(), String> {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
             name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::default()
         })?;
-        crate::control::set_hold(g, gd, true, "rescue");
-        crate::control::set_pinned(g, gd, true, "rescue");
+        crate::duty::hold(g, gd, true, "rescue");
+        crate::duty::pin(g, gd, true, "rescue");
         g.staged.foes.push(gd);
         g.rescue.defs.set(gd, Def {
             role: c.role, in_room: c.in_room, mark: DefMark { aim_at: c.mark.aim_at },
@@ -483,8 +483,8 @@ fn spawn_the_team(g: &mut Game, s: &crate::scene_scenarios::RescueData) -> Resul
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;
-        crate::control::set_hold(g, gd, true, "rescue");
-        crate::control::set_pinned(g, gd, true, "rescue");
+        crate::duty::hold(g, gd, true, "rescue");
+        crate::duty::pin(g, gd, true, "rescue");
         g.gd[gd].trained = true;
         g.staged.team.push(gd);
         i += 1;
@@ -556,7 +556,7 @@ fn wind_the_clock_back(g: &mut Game) {
     g.rescue.noise_serial = None;
     g.rescue.alarm_at = f64::NAN;
     g.rescue.way = None;
-    g.rescue.last_order = g.sets[g.seat].orders.log.last().map(|o| o.serial);
+    g.rescue.last_order = g.groups[g.group].orders.log.last().map(|o| o.serial);
 }
 
 /// Sam at the start, facing in, rifle in his hands if he has one.

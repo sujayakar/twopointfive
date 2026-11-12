@@ -7,13 +7,13 @@ use crate::scene_level::Level;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
+/// Makes the game in `g`: the caller has set `g.engine`, `g.level` and `g.smoke` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
 /// Each part stands on those before it: what a part draws of the die, and the order the lists are filled in, hang on this order.
 pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) {
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
     g.light_home = crate::fixtures::LightHome::blank();
-    // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
+    // the level's boxes are g.col.boxes, as the caller left them. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
     if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }
     let n_seats = opts.and_then(|o| o.seats).unwrap_or(1.0);
@@ -24,7 +24,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.devices = crate::devices::devices_new(g);   // cameras + emitters join `targets`, before the authored switch states are said, below
     stand_guards(g, &level);
     stand_glass_and_air(g);
-    crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
+    crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (air/fixtures.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     stand_rules(g);
     stand_orders(g);
@@ -48,9 +48,9 @@ fn stand_world(g: &mut Game, ids: &[BoxId], n_seats: f64) {
 
 /// the first player, the loose furniture and thrown things, the weather, and the player's own light
 fn stand_player(g: &mut Game, ch: RigId, level: &Level) {
-    let (men, fn2000) = (g.men, g.fn2000);
+    let fn2000 = g.fn2000;
     let spawn = level.player_spawn;
-    g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
+    g.player = crate::game::player_new(g, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
     // loose furniture and thrown things: never collision occluders
     g.props = crate::props::prop_system_new(g, &level.props);
     g.items = crate::throwables::Throwables::blank();
@@ -149,7 +149,7 @@ fn panel_lights(g: &mut Game, ids: &[BoxId], t: FixtureId) {
     if kind != crate::fixtures::FixtureKind::Emissive { return; }
     for &bi in boxes.iter() {
         let (h, c, yaw) = { let b = &g.tab.boxes[ids[bi as usize]]; (b.h, b.c, b.yaw) };
-        let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (levelfit.ts: the one rule for which fixture box is an area light; the lamp bound asks it too)
+        let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (the one rule for which fixture box is an area light; the lamp bound asks it too)
         let (thin, a0, a1, area) = (panel.thin as usize, panel.a0 as usize, panel.a1 as usize, panel.area);
         // emitting side: ceiling fixtures face down; wall / desk fixtures whichever side is open
         let n: V3 = if thin == 1 {
@@ -271,14 +271,14 @@ fn stand_doors(g: &mut Game, level: &Level) {
 
 /// the guards, each with his torch on his route, and the lamps of the racks the errand is at
 fn stand_guards(g: &mut Game, level: &Level) {
-    let (men, rig) = (g.men, g.rig);
+    let rig = g.rig;
     let tints: [V3; 3] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     for (i, &r) in level.routes.iter().enumerate() {
         let id = 10.0 + i as f64;
         let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
         let def = crate::rig_props::torch_light_def(g, &format!("flashlight{}", i), id, fi, f0, f1);
         let fl = crate::render_lights::light_set_add(g, def);
-        let gd = crate::game::guard_new(g, men, rig, id, r, i as i32, fl, tints[i % tints.len()], None);
+        let gd = crate::game::guard_new(g, rig, id, r, i as i32, fl, tints[i % tints.len()], None);
         g.guards.push(gd);
     }
     crate::opening::opening_start(g);   // a man whose route starts on top of the way in is found down his beat instead
@@ -294,7 +294,7 @@ fn stand_glass_and_air(g: &mut Game) {
     crate::winbars::boot_bars(g);
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
-    g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
+    crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
     g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)
 }
 
@@ -307,7 +307,7 @@ fn stand_rules(g: &mut Game) {
     g.lesson = crate::lesson::lesson_new();
     g.night_breach = crate::nightbreach::night_breach_new();
     g.room_clear = crate::roomclear::room_clear_scenario_new();
-    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].orders = crate::orders::squad_orders_new(v, None); });
+    stand_each_seat(g, &mut |v: &mut Game| { v.groups[v.group].orders = crate::orders::squad_orders_new(v); });
     g.fight = crate::roomfight::room_fight_new();
     g.cues = crate::cues::cues_new();
     g.squad_net = crate::squadnet::squad_net_new();
@@ -319,7 +319,7 @@ fn stand_rules(g: &mut Game) {
 
 /// each seat's own hands on its squad: the door tools after the orders (their rows are registered on the orders' menu), and what spends their charges after them
 fn stand_orders(g: &mut Game) {
-    stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
+    stand_each_seat(g, &mut |v: &mut Game| { v.groups[v.group].tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
     stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)
     stand_each_seat(g, &mut |v: &mut Game| { v.sets[v.seat].work = crate::workthings::work_things_new(v); });

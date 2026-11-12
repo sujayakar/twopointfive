@@ -268,7 +268,6 @@ pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::
 
 pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
 
-/// `cause` defaults to 'shot' here, as the TypeScript's parameter does.
 pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::lighting::LightEventCause>, sw_at: Option<V3>) {
     let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     crate::lighting::light_event(g, t, Some(cause), sw_at)

@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-// ---- the lines: what the regular expressions of lesson.ts match, written out (no regex in the game). All works on bytes, as every pattern here
-// starts and ends on an ASCII character and a non-ASCII byte is no \w, as a non-ASCII unit is none in JavaScript.
+// ---- the lines: their patterns written out by hand (no regex in the game). All works on bytes, as every pattern here
+// starts and ends on an ASCII character and a non-ASCII byte is no word character.
 
 /// \b at `i`
 fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::js::is_word(b[i - 1])) != (i < b.len() && crate::js::is_word(b[i])) }
@@ -40,7 +40,7 @@ fn bare_line(line: &str) -> String {
 
 /// `s` between `head` and `tail`, at least a letter of it
 fn between<'a>(s: &'a str, head: &str, tail: &str) -> Option<&'a str> { s.strip_prefix(head)?.strip_suffix(tail).filter(|w| !w.is_empty()) }
-/// row `row` of lesson.ts TOKENS: its pattern on a name already of the letters lessonToken allows: the man's words
+/// row `row` of the token patterns, on a name already of the letters a token allows: the man's words
 fn token_hit(row: usize, n: &str) -> Option<&str> {
     match row {
         0 => between(n, "grab ", " from behind"),
@@ -128,7 +128,7 @@ fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] 
 fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
-    let d = g.tab.orders_assignment[a].door?;
+    let d = g.tab.task[a].door?;
     Some(g.dr[d].def.name.clone())
 }
 
@@ -147,7 +147,7 @@ fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
 /// `onStack(g, m) === door`
 fn stack_is(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, door: &str) -> bool { on_stack(g, seat, m).as_deref() == Some(door) }
 /// `!!g.orders.of(m)?.arrived`
-fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
+fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.task[a].arrived) }
 /// `g.orders.men(sel)`
 fn squad_men(g: &Game, seat: &crate::seats::SeatRef, sel: crate::orders::SquadOrdersMenSel) -> Vec<GuardId> { crate::orders::squad_orders_men(g, seat, Some(sel), None) }
 /// a text cell of a chronicle row (`e.data.<key>`)
@@ -159,7 +159,7 @@ fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1,
 /// a count kept in the step's map, as a test reads it
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
-/// one test asked: lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of)
+/// one test asked: the `ok` of each kind (the `check` of each is check_of)
 fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
@@ -384,7 +384,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(seat, m) else { return false };
-        let row = &g.tab.orders_assignment[id];
+        let row = &g.tab.task[id];
         crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| v3::dist_xz(w, a) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)
@@ -477,7 +477,7 @@ pub mod flags {
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking().is_some() }
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding().is_some() }
     /// the order menu is up
-    pub fn menu(g: &crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
+    pub fn menu(g: &crate::game::Game) -> bool { g.groups[g.group].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.sets[seat.id].hand.sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT
@@ -610,7 +610,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     if g.lesson.i >= l.steps.len() as f64 || g.mission.stage == crate::game::MissionStage::Failed || who_down(g, &crate::seats::here(g)) {
         return;
     }
-    // The row is lent out of `g.lesson.seen` while `g` is passed along beside it; nothing it calls reads `seen` (private in the TypeScript, read by `settling` only).
+    // The row is lent out of `g.lesson.seen` while `g` is passed along beside it; nothing it calls reads `seen`.
     let mut s = match g.lesson.seen.take() {
         Some(s) => s,
         None => lesson_fresh(g, &crate::seats::here(g), Some(1e-6)),

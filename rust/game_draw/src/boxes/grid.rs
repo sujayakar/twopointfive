@@ -1,11 +1,12 @@
 //! THE GRID EVERY RAY OF THE PICTURE WALKS (common.wgsl; src/scene/boxes.ts buildGrid says why each number is as it is): which boxes stand in each metre of
 //! the floor, how high, and how far the nearest of them is from a metre that is empty. A frame whose boxes register
 //! exactly as the last frame's did keeps its grid.
-use super::pack::{f16, f16_value, GLASS, NO_SHADOW};
-use super::Word;
-use alloc::vec;
+use super::pack::{GLASS, NO_SHADOW};
+use super::{Info, Word};
 use alloc::vec::Vec;
 use game::m;
+use crate::Row;
+use game::rows::{half, half_value};
 use game::scene_world::world;
 
 const W: usize = 40;
@@ -17,16 +18,9 @@ const GLOBALS: usize = 16;
 /// a global's bounds stand this far outside it, and the height span of a cell is judged this much tighter than it is packed
 const GLOBAL_PAD: f64 = 0.005;
 const ITEM_PAD_KEEP: f64 = 0.005;
-// the info block, in words (struct SceneInfo)
 pub const CAST: usize = 16;
 pub const CAPS: usize = 15;
-pub const BOUNDS: usize = 24;
-const GLOBALS_Y: usize = BOUNDS + CAST * 4;
-const GRID: usize = GLOBALS_Y + 32;
-const GLOBALS_B: usize = GRID + 4;
-pub const PANES: usize = GLOBALS_B + 128;
 pub const MAX_PANES: usize = 32;
-pub const INFO: usize = PANES + 4 + MAX_PANES * 12;
 
 /// where a box stands in the grid: its cells, its height's levels and the slices of it
 #[derive(Clone, Copy, PartialEq, Default)]
@@ -38,7 +32,8 @@ const GLOBAL: i32 = -2;
 pub struct Grid {
     pub cells: Vec<Word>,
     pub items: Vec<Word>,
-    pub info: Vec<Word>,
+    /// the scene's block: one row
+    pub info: Vec<Info>,
     /// items of the plain list (as many again are packed)
     pub count: usize,
     pub slack: f64,
@@ -82,7 +77,7 @@ impl Grid {
         let mut slack = 0.0;
         if b.rot.is_none() {
             // (the halves the GPU turns it by are not quite a turn: its traced outline is that much wider)
-            let (cs, sn) = (m::abs(f16_value(f16(m::cos(b.yaw)))), m::abs(f16_value(f16(m::sin(b.yaw)))));
+            let (cs, sn) = (m::abs(half_value(half(m::cos(b.yaw)))), m::abs(half_value(half(m::sin(b.yaw)))));
             if cs != 0.0 && sn != 0.0 {
                 let (det, h0, h2) = (cs * cs + sn * sn, b.h[0], b.h[2]);
                 slack = m::max(0.0, m::max((cs * h0 + sn * h2) / det - e[0], (sn * h0 + cs * h2) / det - e[2]));
@@ -164,34 +159,30 @@ impl Grid {
         }
     }
 
-    /// the info block: the header, the globals and their bounds
+    /// the scene's block: the header, the globals and their bounds
     fn say(&mut self, all: &[Stood]) {
-        if self.info.len() != INFO { self.info = vec![Word { w: 0 }; INFO]; }
-        let (k, info) = (world(), &mut self.info);
-        let f = |v: f64| (v as f32).to_bits();
-        info[0].w = all.len() as u32;
-        info[1].w = self.globals.len() as u32;
-        info[2].w = W as u32;
-        info[3].w = H as u32;
-        info[GRID].w = f(self.slack);
-        info[GRID + 1].w = f(k.grid_y_pad - ITEM_PAD_KEEP);
+        if self.info.is_empty() { self.info.push(Info::ZERO); }
+        let (k, info) = (world(), &mut self.info[0]);
+        (info.num_boxes, info.num_globals, info.grid_w, info.grid_h) = (all.len() as u32, self.globals.len() as u32, W as u32, H as u32);
+        (info.grid[0], info.grid[1]) = (self.slack as f32, (k.grid_y_pad - ITEM_PAD_KEEP) as f32);
         let pad = GLOBAL_PAD + self.slack;
         for i in 0..GLOBALS {
-            let (y, b) = (GLOBALS_Y + 2 * i, GLOBALS_B + 8 * i);
+            let (at, y, lo, hi) = (&mut info.globals[i / 4][i % 4], i / 2, 2 * i, 2 * i + 1);
+            let pair = 2 * (i % 2);
             let Some(&gi) = self.globals.get(i) else {
-                info[4 + i].w = 0;
-                for j in (y..y + 2).chain(b..b + 8) { info[j].w = 0; }
+                *at = 0;
+                info.globals_y[y][pair..pair + 2].fill(0.0);
+                (info.globals_b[lo], info.globals_b[hi]) = ([0.0; 4], [0.0; 4]);
                 continue;
             };
             let (c, e) = (all[gi as usize].c, all[gi as usize].extents());
-            info[4 + i].w = gi;
-            info[y].w = f(c[1] - e[1] - k.grid_y_pad);
-            info[y + 1].w = f(c[1] + e[1] + k.grid_y_pad);
-            for j in 0..3 { info[b + j].w = f(c[j] - e[j] - pad); info[b + 4 + j].w = f(c[j] + e[j] + pad); }
-            info[b + 3].w = 0;
-            info[b + 7].w = 0;
+            *at = gi;
+            info.globals_y[y][pair] = (c[1] - e[1] - k.grid_y_pad) as f32;
+            info.globals_y[y][pair + 1] = (c[1] + e[1] + k.grid_y_pad) as f32;
+            for j in 0..3 { info.globals_b[lo][j] = (c[j] - e[j] - pad) as f32; info.globals_b[hi][j] = (c[j] + e[j] + pad) as f32; }
+            (info.globals_b[lo][3], info.globals_b[hi][3]) = (0.0, 0.0);
         }
-        info[22].w = CAPS as u32;
-        info[23].w = self.count as u32;
+        info.caps_per_char = CAPS as u32;
+        info.items_b = self.count as u32;
     }
 }

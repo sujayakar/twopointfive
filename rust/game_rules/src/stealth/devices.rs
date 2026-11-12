@@ -322,13 +322,13 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
     let mut bd = f64::INFINITY;
     for &id in &g.guards {
         let gd = &g.gd[id];
-        if gd.state != crate::game::GuardState::Patrol || gd.hold || gd.task.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
+        if gd.state != crate::game::GuardState::Patrol || gd.duty.holds || gd.errand.is_some() || gd.held.is_some() || gd.script.is_some() || gd.unit.is_some() || gd.body_duty.is_some() { continue; }
         let dd = v3::dist(g.ch[gd.ch].pos, goal);
         if dd < bd { bd = dd; best = Some(id); }
     }
     let id = best?;
     {
-        g.gd[id].task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
+        g.gd[id].errand = Some(crate::game::Errand::At(crate::game::ErrandAt { kind: crate::game::ErrandThing::Device, pos: v3::copy(goal) }));
         crate::mind::fix(g, id, Some(v3::copy(goal)), "devices");
         crate::mind::raise(g, id, errand().awareness, "devices");
         crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
@@ -474,7 +474,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
         _ => { g.pl[pl].coding_over(); return; }
     };
     if !crate::doors::doors_locked_out(g, d, p, None) { g.pl[pl].coding_over(); return; }
-    // HANDWORK settled on: his finger on the pad's own keys (the page's branch; the plain clock is not translated)
+    // his finger on the pad's own keys
     let hands = crate::handwork::PadHandsPad { def: crate::handwork::PadHandsPadDef { pos: k.def.pos, code: k.def.code.clone(), yaw: k.def.yaw }, n: k.n };
     let more = crate::handwork::pad_hands(g, &hands, before, dt, CODE_SECS);
     if before + more < CODE_SECS {
@@ -494,7 +494,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     chron_device(g, ChronDeviceKind::CodeEntered, &row, Some(centre));
 }
 
-// ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)
+// ---------------------------------------------------------------- the boxes of the devices (a rule reads them: a ray takes a camera's body and bracket)
 /// The devices' boxes into the frame's list, keyed by ordinal.
 pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
@@ -558,7 +558,6 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
 }
 
-// ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {

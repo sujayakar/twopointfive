@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// the hold of this seat, where the TypeScript keeps `H`: re-read at every use, never held across a call that takes `g`
+/// the hold of this seat: re-read at every use, never held across a call that takes `g`
 macro_rules! hold {
     ($g:ident, $p:expr) => {
         $g.pl[$p].holding_mut().unwrap()

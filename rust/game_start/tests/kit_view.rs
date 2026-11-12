@@ -208,7 +208,7 @@ fn a_load_he_is_out_of_is_stepped_over() {
 }
 
 /// THE RULE: a card that leaves him the light says so in the game from the start: its row is in the setup and L works it. A card with none takes the row away, L does nothing, and the box
-/// never says a light is on. (On the page the box used to ask a TypeScript map.)
+/// never says a light is on.
 /// A FAILURE MEANS: the HUD offers a lamp the card did not give him, or the game lets him work one.
 #[test]
 fn a_card_without_the_light_has_no_lamp_to_work() {

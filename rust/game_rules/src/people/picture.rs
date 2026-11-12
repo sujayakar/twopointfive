@@ -1041,9 +1041,9 @@ mod tests {
         Idea { who: CharId(0), at: [0.0; 3], t, since: t, how, by: None, lost }
     }
 
-    /// the TypeScript's own bits (ideaWeight, ideaReach under EXACT, the page's numbers, g.time 37.3)
+    /// pinned bits of `idea_weight` and `idea_reach`, at the page's numbers and g.time 37.3
     #[test]
-    fn weight_and_reach_are_the_typescripts_bits() {
+    fn weight_and_reach_keep_their_bits() {
         let rows: [(f64, IdeaHow, bool, u64, u64); 6] = [
             (37.1, IdeaHow::Seen, false, 0x3ff0000000000000, 0x0000000000000000),
             (30.7, IdeaHow::Seen, false, 0x3feb17e4b17e4b19, 0x4016147ae147ae11),

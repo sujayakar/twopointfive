@@ -56,7 +56,7 @@ pub enum DoorToolKind {
 pub struct DoorToolsDoneItemLane {
     pub gd: GuardId,
     pub door: DoorId,
-    pub cover: OrdersAssignmentId,
+    pub cover: TaskId,
     pub back: crate::doortools::DoorToolsDoneItemLaneBack,
     pub at: Option<f64>,
 }
@@ -86,58 +86,7 @@ pub struct DoorToolsDoneItemLaneBackTries {
     pub side: f64,
     pub post: crate::orders::StackPost,
     pub at: V3,
-    pub on: crate::doortools::DoorToolsDoneItemLaneBackTriesOn,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DoorToolsDoneItemLaneBackTriesOn {
-    pub post: Option<V3>,
-    pub going: crate::orders::Doing,
-    pub order: String,
-    pub face: Option<f64>,
-    pub there: crate::orders::Doing,
-    pub t0: Option<f64>,
-    pub follow: Option<f64>,
-    pub watch: Option<V3>,
-    pub door: Option<DoorId>,
-    pub strafe: Option<bool>,
-    pub stance: Option<crate::character::Stance>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub stack_side: Option<f64>,
-    pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub set_line: Option<String>,
-    pub group: Option<f64>,
-    pub set_said: Option<bool>,
-    pub goal: Option<V3>,
-    pub arrived: Option<bool>,
-    pub held_set: Option<bool>,
-    pub held_fire: Option<bool>,
-    pub arr_t: Option<f64>,
-    pub moved_t: Option<f64>,
-    pub light: Option<bool>,
-    pub low: Option<bool>,
-    pub yield_t: Option<f64>,
-    pub face_now: Option<f64>,
-    pub search: Option<bool>,
-    pub search_t: Option<f64>,
-    pub via: Option<Vec<V3>>,
-    pub anchor: Option<V3>,
-    pub mark: Option<V3>,
-    pub mark_t: Option<f64>,
-    pub had: Option<V3>,
-    pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
-    pub thru: Option<DoorId>,
-    pub via_for: Option<V3>,
-    pub via_t: Option<f64>,
-    pub pace: Option<f64>,
-    pub spare: Option<bool>,
-    pub from: Option<V3>,
-    pub foe: Option<GuardId>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub fit: Option<crate::roomfit::Fit>,
-    pub tries: Option<alloc::boxed::Box<crate::doortools::DoorToolsDoneItemLaneBackTries>>,
+    pub on: alloc::boxed::Box<crate::duty::TaskGiven>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -340,7 +289,7 @@ pub struct DoorToolsStats {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorToolsHeldValue {
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub face: f64,
     pub d: f64,
     pub hit_t: f64,
@@ -379,7 +328,7 @@ pub struct DoorOp {
     pub frag_way_t: Option<f64>,
     pub leaf_a: Option<f64>,
     pub leaf_t: Option<f64>,
-    pub mine: JsMap<GuardId, OrdersAssignmentId>,
+    pub mine: JsMap<GuardId, TaskId>,
     pub post: JsMap<GuardId, crate::orders::StackPost>,
     pub kick: Option<crate::doortools::DoorToolsDoneItemKick>,
     pub no_gun: Option<bool>,
@@ -417,7 +366,7 @@ pub struct DoorOp {
     pub last_tossed: Option<f64>,
     pub other: Option<JsMap<DoorId, crate::doortools::DoorToolsDoneItemOtherValue>>,
     pub threat: Option<crate::doortools::DoorToolsDoneItemThreat>,
-    /// INVENTED by a review: see the proposals
+    /// why it ended (`door_tools_end`); None while it runs
     pub ended: Option<crate::doortools::Ended>,
 }
 

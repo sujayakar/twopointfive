@@ -69,7 +69,7 @@ fn deg_apart(a: f64, b: f64) -> f64 {
 /// A free man the tactics may move: alive, in the list, not held / choreographed / on his marks / pinned, not in the standoff.
 pub(super) fn free_man(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
-    !g.cond[o.ch].down && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
+    !g.cond[o.ch].down && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && o.duty.free() && o.standoff.is_none()
 }
 
 /// Eyes on his man lately: he is fighting or chasing by sight, not working a fix.
@@ -694,7 +694,6 @@ mod tests {
     const FROM: V3 = [0.3, 1.0, 0.7];
     const T: V3 = [11.0, 0.0, 3.0];
 
-    // printed by bun with EXACT.on from a verbatim copy of tactics.ts:166-168, 177-189, 211-216, 231-235, 336-340
     const FLAT: u64 = 0x4025e3890c1ed489u64;
     const BEARING: u64 = 0xbffc853be4bcdd19u64;
     const DEG_APART: u64 = 0x403039aec352e85fu64;
@@ -706,7 +705,7 @@ mod tests {
     const DIST_POINT: u64 = 0x4025e3890c1ed489u64;
 
     #[test]
-    fn the_typescripts_own_bits() {
+    fn the_pinned_bits() {
         assert_eq!(dist_xz(FROM, T).to_bits(), FLAT);
         assert_eq!(v3::yaw_to(T, FROM).to_bits(), BEARING);
         assert_eq!(deg_apart(2.9, -3.1).to_bits(), DEG_APART);

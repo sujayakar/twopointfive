@@ -9,11 +9,15 @@ pub enum DarkdoorKWho {
     Rest,
 }
 
-/// `who` = who is green: 'rest' (morale.ts trainingOf: the knob, the squad's key, the difficulty's mix) · 'all' · 'none'. Metres, seconds and shares as the head of
-/// the file names them; `openRad` = how far a leaf must stand off its frame to be an open door, `armSecs` how long a shut door he reached in the light stays his to
-/// balk at once it opens; `keepAw` = the awareness a waiting man's suspicion is held at (it must not drain away under him at the frame); `keepSecs` = how long a
-/// balk outlasts his walk not asking (a reaction beat, a clear shot), and `resumeSecs` how long after that the same door takes the same wait up again without a
-/// word. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
+/// A green man balks at a dark door. `who` = who is green: 'rest' (`training_of`: the knob, the squad's key, the difficulty's mix) · 'all' · 'none'. `stop_m` = how far along
+/// his way a door starts the balk; `pair_m` = how near a mate must be for the two to go together. THE DARK: a room reads dark when `dark_share` of `samples` of its floor cells read under
+/// `dark_at`, asked every `ask_secs`; a man `lit_by` over the room's mean, or at `dark_at`, stands in light. `open_rad` = how far a leaf must stand off its frame to be an open door,
+/// `arm_secs` how long a shut door he reached in the light stays his to balk at once it opens. WAITING: `stand_m` off the frame and `side_m` to the side; `keep_aw` = the awareness a
+/// waiting man's suspicion is held at (it must not drain away under him at the frame); `keep_secs` = how long a balk outlasts his walk not asking (a reaction beat, a clear shot),
+/// `resume_secs` how long after that the same door takes the same wait up again without a word; he calls at once and again every `call_secs` while nobody has answered, gives up at `wait_secs`, and a door he gave up is
+/// left `again_secs`. `sweep_secs` = how long his look takes across the frame; `seen_secs` = how lately a man seen keeps him off all this. THE MATE: within `mate_m`, the
+/// nearest `mate_try` asked; past `ear_m` by radio; he copies after `copy_secs`, is let go past `lag_secs` and goes along at most `with_secs`. at his `fed_up_n`th balk at a room inside
+/// `fed_up_secs` he goes in alone: he stands `nerve_secs`, then goes at `slow_k` of his pace. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DarkdoorK {
     #[k(DarkdoorKWho::Rest)] pub who: DarkdoorKWho,

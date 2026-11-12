@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 
-/// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript, statics appended later included. `level.boxes` is not a field in Rust.
+/// The level's boxes as IDs: `g.col.boxes`, statics appended later included.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 
 /// Paints a box's row.
@@ -275,14 +275,14 @@ pub fn weather_hear_mask(g: &crate::game::Game, ear: V3) -> f64 {
 pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let (Some(f), Some(_)) = (g.weather.fog_spec, g.weather.kind_now) else { return 1.0 };
     crate::air_dust::air_dust_ready(g);   // (the field stands before it is read: it is built when first asked)
-    let air = &::sim::weather::of_read(g.sim).air;
+    let air = &g.air_dust;
     let mut leak = 0.0;
-    if air.on != 0.0 {
+    if air.on {
         let n = m::min(24.0, m::max(4.0, m::ceil(v3::dist_xz(b, a) / 0.75)));
         let mut i = 0.0;
         while i < n {
             let t = (i + 0.5) / n;
-            leak += air.share_at(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
+            leak += ::sim::air::share_at(air, a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
             i += 1.0;
         }
         return m::exp(-fog_tau(f.sigma, f.h, a, b) * leak / n);
@@ -294,7 +294,7 @@ pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     m::exp(-fog_tau(f.sigma, f.h, a, b) * leak / 4.0)
 }
 
-/// Everything the storm's next minutes hang on; a stroke in progress is not carried. hours.ts holds a level's own storm in one, so it is a rule's call and not only a checkpoint's.
+/// Everything the storm's next minutes hang on; a stroke in progress is not carried. The hour holds a level's own storm in one, so it is a rule's call and not only a checkpoint's.
 pub(super) fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     let kind = g.weather.kind_now;
     WeatherSnap {
@@ -577,13 +577,13 @@ fn weather_teardown(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    // Bits from the TypeScript's own strokeMean, run under bun with EXACT.on (first pass): the same bits must come off the module's. The dice are the module's now, and tested there.
+    // The pinned bits of `stroke_mean`.
     fn stroke() -> Stroke {
         Stroke { pulses: vec![StrokePulsesItem { t0: 0.0, amp: 1.0, tau: 0.022 }, StrokePulsesItem { t0: 0.085, amp: 0.61, tau: 0.05 }, StrokePulsesItem { t0: 0.23, amp: 0.3, tau: 0.03 }] }
     }
 
     #[test]
-    fn the_envelope_is_the_typescripts_bits() {
+    fn the_envelope_keeps_its_bits() {
         let s = stroke();
         for (i, (a, b)) in SPANS.iter().enumerate() {
             assert_eq!(stroke_mean(&s, *a, *b).to_bits(), WANT_MEAN[i], "mean {}", i);
@@ -646,9 +646,9 @@ pub fn stroke_light(g: &crate::game::Game, p: V3, acc: &mut [f64; 6]) {
 mod tests_2 {
     use super::*;
 
-    /// `dirOf`'s doubles from the TypeScript, under bun with EXACT on.
+    /// `dir_of`'s pinned doubles.
     #[test]
-    fn dir_of_has_the_typescript_bits() {
+    fn dir_of_keeps_its_bits() {
         let rows: [(u64, u64, [u64; 3]); 5] = [
             (0x3fe6666666666666, 0x3fd999999999999a, [0xbfe2fcd60b856028, 0xbfd8ec3ae92b676b, 0x3fe68afcebc95d21]),
             (0x4002666666666666, 0x3ff199999999999a, [0xbfd5a5df199aaf8d, 0xbfec84c54c2d6338, 0xbfd3579379410117]),

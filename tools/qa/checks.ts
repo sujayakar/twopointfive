@@ -24,12 +24,12 @@ const ROWS: readonly Row[] = [
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'], ['lasting-check.ts', 'sound'],
   ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
-  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/gen.ts', 'build', '--check'],
+  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../gpu/wgsl-rows.ts', 'build', '--check'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
-  '../draw/doors-check.ts': 'the module', '../draw/hands-check.ts': 'the module', '../draw/reach-check.ts': 'the module, minutes', '../draw/keep-check.ts': 'the module', '../draw/net-check.ts': 'the module', '../draw/play-check.ts': 'the module, minutes', '../draw/tape-check.ts': 'the module, minutes', '../draw/walk-check.ts': 'the module',
+  '../draw/doors-check.ts': 'the module', '../draw/hands-check.ts': 'the module', '../draw/reach-check.ts': 'the module, minutes', '../draw/keep-check.ts': 'the module', '../draw/net-check.ts': 'the module', '../draw/panes-check.ts': 'the module', '../draw/play-check.ts': 'the module, minutes', '../draw/tape-check.ts': 'the module, minutes', '../draw/walk-check.ts': 'the module',
 };
 
 const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '') + (r[2] && !r[2].startsWith('--') ? `-${r[2]}` : '');   // (a file of sections has a row for each: shaders-fold)

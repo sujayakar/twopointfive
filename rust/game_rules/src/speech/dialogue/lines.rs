@@ -6,7 +6,7 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// INVENTED: DialogueCtx.tokens as the table `expand` reads, keyed by the words of TOKENS (`sawWhere`, as Token::as_str), a null token None. The TypeScript hands the one object to expand; Rust has a struct there and a map here.
+/// The context's tokens as the table `expand` reads, keyed by each token's word (`sawWhere`), an absent token None.
 pub(super) fn ctx_tokens_map(t: &crate::dialogue::DialogueCtxTokens) -> JsMap<String, Option<String>> {
     let mut o = JsMap::new();
     let rows: [(&str, &Option<String>); 23] = [("partner", &t.partner), ("victim", &t.victim), ("body", &t.body), ("missing", &t.missing), ("room", &t.room), ("sawWhere", &t.saw_where), ("heardWhere", &t.heard_where), ("route", &t.route), ("partnerRoute", &t.partner_route), ("post", &t.post), ("door", &t.door), ("caller", &t.caller), ("checker", &t.checker), ("checked", &t.checked), ("clearRoom", &t.clear_room), ("breakerRoom", &t.breaker_room), ("checkEta", &t.check_eta), ("minutes", &t.minutes), ("n", &t.n), ("up", &t.up), ("badge", &t.badge), ("code", &t.code), ("padDoor", &t.pad_door)];
@@ -115,7 +115,7 @@ pub(super) fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band)
 
 // ---------------------------------------------------------------- tokens, the line table
 
-/// A string the TypeScript's `||` would take: present and not empty.
+/// A string that counts as said: present and not empty.
 fn said(s: &Option<String>) -> Option<String> { s.as_ref().filter(|x| !x.is_empty()).cloned() }
 
 /// The words of a row as they are said to this man and by him.
@@ -209,7 +209,7 @@ pub(super) fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowle
     }
 }
 
-/// A fact behind a lead that runs on into it starts in lower case, unless it starts with 'I' or a man's name. By hand, the regexes of TS 366:
+/// A fact behind a lead that runs on into it starts in lower case, unless it starts with 'I' or a man's name. By hand, these patterns:
 /// `/[a-z—] $/` on the lead, `/^(?!I\b|\{(?:Checker|Checked|Missing|Partner|Victim|Caller|Body)\})(\{?)([A-Z])/` on the fact.
 fn run_on_text(lead: &str, fact: &str) -> String {
     let mut back = lead.chars().rev();

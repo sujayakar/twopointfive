@@ -164,8 +164,8 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
         for e in def!(g, xd).ev.iter_mut() {
             *e = 0.0;
         }
-        // (`X.pt[0] = at[0]; X.pt[2] = at[2]` in place, enemysquads.ts:778: a fix or a cover that IS the point moves with it)
-        { let was = def!(g, xd).pt; crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
+        // (a cover on the point moves with it)
+        { let was = crate::roomfight::watched(g, xd); crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
         send_round(g, xd, from, None, Vec::new());
         names.push(x);
     }
@@ -256,7 +256,7 @@ fn pair_off(g: &mut Game, c: StateWordCall, busy: bool) {
     w.call = None;
     w.out = Some(men.clone());
     for &d in &c.go {
-        let (gd, from) = (def!(g, d).gd, def!(g, d).station);
+        let (gd, from) = (def!(g, d).gd, crate::roomfight::station(g, d));
         let row = Sent { gd, from, role: SentRole::Look, phase: SentPhase::Loose, fix_at: c.at, t0: g.time, ..Sent::default() };
         sq!(g, c.q).sent.push(row);
         crate::roomfight::loose_at(g, d, c.at);
@@ -499,7 +499,7 @@ fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
     b.read = now;
     b.t
 }
-/// A looker's leg: pressure.ts's scripted leg, at the pace of a man going to look.
+/// A looker's leg: a scripted leg, at the pace of a man going to look.
 pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
     let pace = g.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::SQUAD_LEG);
@@ -707,7 +707,7 @@ fn on_the_air(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) -> bool {
     // a man in somebody's arm does not answer either
     for &x in men {
         if alive(g, x) && g.gd[x].held.is_some() && !rc!(g, q).looked.has(x) && !sq!(g, q).sent.iter().any(|s| s.gd == x) {
-            let station = def_of(g, x).map(|d| def!(g, d).station);
+            let station = def_of(g, x).map(|d| crate::roomfight::station(g, d));
             went_silent(g, q, x, station);
         }
     }
@@ -840,8 +840,8 @@ fn send_to_look(g: &mut Game, q: EnemysquadsSquadId) {
 }
 /// A man of squad Q set off to look for `who` at `at`: his record, with the post he leaves.
 pub(super) fn looker(g: &crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
-    let row = &def!(g, d);
-    crate::enemysquads::Looker { gd: row.gd, who, spot: at, from: row.station, t0: g.time, news0: sq!(g, q).news_t, ..Default::default() }
+    let (gd, from) = (def!(g, d).gd, crate::roomfight::station(g, d));
+    crate::enemysquads::Looker { gd, who, spot: at, from, t0: g.time, news0: sq!(g, q).news_t, ..Default::default() }
 }
 /// Every looker out for `who` turns for the post he left.
 fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId) {
@@ -1032,9 +1032,9 @@ pub(super) fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the word against the TypeScript's own (`(h ^ Math.floor(sum * 0x7fffff)) >>> 0`, run under bun)
+    /// the pinned words
     #[test]
-    fn check_word_is_the_typescripts() {
+    fn check_word_is_as_pinned() {
         assert_eq!(check_word("Alpha", 0.0, 1.75), WORD_ALPHA);
         assert_eq!(check_word("Élan squad", 625341585.0, 0.123456789), WORD_ELAN);
         assert_eq!(check_word("", 0.0, 0.0), WORD_EMPTY);

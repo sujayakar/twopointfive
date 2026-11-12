@@ -51,7 +51,7 @@ fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f6
     let t = v3::clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2, 0.0, t_max);
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < g.k.coverfire.lane + g.k.coverfire.cone_k * t * l
 }
-/// writes through his chew's row, if he still has one (in the TypeScript the object lives on whether the row holds it or not)
+/// writes through his chew's row, if he still has one
 fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     let row = g.m.coverfire.states.as_mut().and_then(|s| s.men.get_mut(gd)).and_then(|m| m.chew.as_mut());
     if let Some(cw) = row { f(cw); }
@@ -353,7 +353,7 @@ fn budget_of(g: &crate::game::Game, thru: bool, rounds: f64) -> f64 {
 
 /// a man with no feet of his own to weigh
 fn stays(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].pinned || g.gd[gd].hold || g.gd[gd].script.is_some()
+    !g.gd[gd].duty.free() || g.gd[gd].script.is_some()
 }
 
 // ---------------------------------------------------------------- the choice
@@ -661,7 +661,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let mut who: Option<CharId> = None;
     for item in known(g, gd, None) {
         if let Some(h) = crate::character::guard_of(g, item.k.who) {
-            if crate::silent::round_held(g, gd, h) {
+            if crate::duty::round_held(g, gd, h) {
                 bump(g, BumpK::HeldSilent);
                 continue;
             }

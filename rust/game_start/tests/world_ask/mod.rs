@@ -341,20 +341,20 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.duty.holds) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
-        (h.script, h.task, h.body_duty) = (None, None, None);
+        (h.script, h.errand, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
-        (h.script, h.task, h.body_duty) = (None, None, None);
+        (h.duty.holds, h.duty.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.script, h.errand, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);
     }
@@ -383,7 +383,7 @@ impl YardAsk for Play {
     fn camera_seen(&self) -> f64 { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].seen }
     fn beam_trips(&self, k: usize) -> f64 { self.g.tab.devices_laser_rt[self.g.devices.lasers[k]].trips as f64 }
     fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
-    fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
+    fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].errand, Some(game::game::Errand::At(game::game::ErrandAt { kind: game::game::ErrandThing::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
         let keys = ["KeyW", "KeyS", "KeyA", "KeyD"];
         let mut got = false;
@@ -455,7 +455,7 @@ impl FurnAsk for Play {
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
     fn keep(&self) -> Moment { Moment::of(&self.g) }
-    fn put_back(&mut self, k: &Moment) { self.g = k.laid(self.g.sim); }
+    fn put_back(&mut self, k: &Moment) { self.lay(k); }
 }
 
 /// The net
@@ -579,7 +579,7 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let hits = game::glass::glass_state(&mut p.g).hits;
     let [statics, props, nav] = p.level_as_it_stands();
     let g = &p.g;
-    let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
+    let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].errand.is_some()) }).collect();
     let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", g.dr[d].leaf.angle, g.dr[d].leaf.latched, g.dr[d].leaf.locked)).collect();
     let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
     vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
@@ -621,7 +621,7 @@ impl ReviewAsk for Play {
     }
     fn things(&self) -> Vec<ItemId> { self.g.items.items.clone() }
     fn things_gone(&mut self) { self.g.items.items.clear(); }
-    fn on_errand(&self, gd: GuardId) -> bool { self.g.gd[gd].task.is_some() }
+    fn on_errand(&self, gd: GuardId) -> bool { self.g.gd[gd].errand.is_some() }
     fn civ_state(&self, gd: GuardId) -> game::civilians::CivState { self.g.cv[self.g.gd[gd].civ.expect("a civilian")].state }
     fn civ_ko_rows(&self) -> usize { self.g.chronicle.events.iter().filter(|e| format!("{:?}", e.kind).contains("CivilianKo") || format!("{:?}", e.kind).contains("CivilianKO")).count() }
 }

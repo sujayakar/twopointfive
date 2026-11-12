@@ -308,7 +308,7 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 /// The mark his order gave him, if any.
 fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
     let a = crate::orders::squad_orders_of(seat, gd)?;
-    g.tab.orders_assignment[a].post
+    g.tab.task[a].post
 }
 
 /// On the mark his order gave him.
@@ -323,12 +323,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn leaf_cuts_as_the_typescript() {
-        // (width, angle, along, perp, answer): behindLeaf's lines (doorway.ts:231-234, not exported: copied to a script) run under bun with EXACT.on
+    fn leaf_cuts_as_pinned() {
+        // (width, angle, along, perp, answer)
         for (w, a, al, pe, want) in LEAF { assert_eq!(leaf_cuts(*w, *a, *al, *pe), *want, "{w} {a} {al} {pe}"); }
     }
     #[test]
-    fn flat_bits_as_the_typescript() {
+    fn flat_bits_as_pinned() {
         assert_eq!(v3::dist_xz([1.25, 9.0, -3.5], [0.1, -2.0, 7.3]).to_bits(), FLAT_BITS);
     }
     const LEAF: &[(f64, f64, f64, f64, bool)] = &[(0.9000, 1.5700, 0.2000, 0.6000, false), (0.9000, 1.5700, -0.3000, 0.6000, true), (0.9000, -1.2000, 0.1000, -0.5000, true), (0.9000, 1.2000, 0.1000, -0.5000, false), (1.2000, 0.7000, 0.5000, 0.1000, false), (0.9000, 1.5700, 0.4500, 0.0000, false), (0.9000, 2.0000, -0.4000, 0.3000, true), (0.9000, 0.0000, 0.2000, 0.0000, false), (0.9000, 1.5700, 1.4000, 0.3000, false)];

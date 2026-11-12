@@ -273,7 +273,7 @@ impl Events {
         }
         for &i in g.items.items.iter().filter(|&&i| g.tab.item[i].kind == t::ItemKind::Smoke && g.tab.item[i].fired && g.tab.item[i].emit_t > 0.0) {
             // (one let go under other numbers than a can's now: nobody knows how long ago)
-            let (left, all) = (g.tab.item[i].emit_t, game::combat::can_params(g).canister_duration);
+            let (left, all) = (g.tab.item[i].emit_t, game::combat::can_params().canister_duration);
             self.goes("smokeHiss", g.tab.item[i].serial as u32, game::v3::add(g.tab.item[i].pos, [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
         }
         let dark = g.light_home.mains.active;
@@ -341,7 +341,7 @@ impl Events {
     }
 }
 
-/// how tense the floor is, 0 to 1   (guards.ts tension, by the opposition's nerves)
+/// how tense the floor is, 0 to 1, by the opposition's nerves
 fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);

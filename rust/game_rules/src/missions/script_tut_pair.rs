@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-//! levels/tut-pair.script.ts translated: its define pass and a step function for each beat.
+//! The script of the level tut-pair: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_pair::types;
 pub use types::*;

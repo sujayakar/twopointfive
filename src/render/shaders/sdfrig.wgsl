@@ -6,7 +6,7 @@
 // until 2026-11-07 and went: a smooth-union closest hit for reflections, and a drawn soft-shadow query for the direct light.)
 // ---- §1 the round-cone primitive ----
 /** radius at end b: the fitted r1 in millimetres from misc's top byte, or the record's own r when nobody packed one (an untapered cone = the game's hand capsule) */
-fn coneRb(cp: Capsule) -> f32 { let q = cp.misc >> 24u; return select(f32(q) * RB_QUANT, cp.r, q == 0u); }
+fn coneRb(cp: Capsule) -> f32 { let q = capsuleWordRb(cp.misc); return select(f32(q) * RB_QUANT, cp.r, q == 0u); }
 
 /** exact signed distance from p to the round cone (a, ra) → (b, rb) — iq's sdRoundCone (one square root); the CPU twin is sdfrig.ts sdRoundCone */
 fn sdRoundCone(p: vec3f, a: vec3f, b: vec3f, ra: f32, rb: f32) -> f32 {

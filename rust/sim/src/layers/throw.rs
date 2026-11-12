@@ -8,10 +8,9 @@ fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
     let b2 = v3::cross(hn, b1);
     v3::mad(v3::scale(b1, cos(psi)), b2, sin(psi))
 }
-/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is refused by name as the game loads)
-const THROW_KEYS: usize = 16;
-/// (seventeen counts, eleven tables of two numbers a key and six of four: the whole of it fits the bench's own numbers)
-/// the throw's tables as handed over, in the order character.ts throwLayer lists them (K1, K3) and throwLayerAsk writes them: eleven of (time, value) keys, then six of (time, vector) keys
+/// how many keys a table of the throw may have
+pub const THROW_KEYS: usize = 16;
+/// the throw's tables as handed over, in this order: eleven of (time, value) keys, then six of (time, vector) keys
 const TH_CHEST_YAW: usize = 0;
 const TH_PELVIS_YAW: usize = 1;
 const TH_PITCH: usize = 2;
@@ -36,25 +35,19 @@ struct ThrowTables {
     k3: [[(f64, [f64; 3]); THROW_KEYS]; 6],
 }
 impl ThrowTables {
-    fn of(t: &Tables) -> Option<ThrowTables> {
+    fn of(t: &Tables) -> ThrowTables {
         let mut tb = ThrowTables { n1: [0; 11], k1: [[[0.0; 2]; THROW_KEYS]; 11], n3: [0; 6], k3: [[(0.0, [0.0; 3]); THROW_KEYS]; 6] };
         for (i, keys) in t.k1.iter().enumerate() {
-            if keys.len() < 2 || keys.len() > THROW_KEYS {
-                return None;
-            }
             tb.n1[i] = keys.len();
             tb.k1[i][..keys.len()].copy_from_slice(keys);
         }
         for (i, keys) in t.k3.iter().enumerate() {
-            if keys.len() < 2 || keys.len() > THROW_KEYS {
-                return None;
-            }
             tb.n3[i] = keys.len();
             for (to, (at, v)) in tb.k3[i].iter_mut().zip(keys) {
                 *to = (*at, [v[0], v[1], v[2]]);
             }
         }
-        Some(tb)
+        tb
     }
     fn c1(&self, i: usize, t: f64) -> f64 {
         curve(t, &self.k1[i][..self.n1[i]])
@@ -142,40 +135,28 @@ struct Throw {
 
 /// The throw (the overhand at its size, or the underhand toss; mirrored for the free hand's throw): body English straight into the pose with the feet
 /// put back, then both arms by IK on a copy along paths that begin and end on the live hands, in through per-arm masks.
-pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knobs) -> bool {
+pub fn throw_layer(body: &mut Body, an: &mut Anim, t: f64, tables: &Tables, tune: &Knobs) {
     let mut o = Throw { t, ..Throw::default() };
     let (at, at_b, _) = poses(an);
-    let Some(tb) = ThrowTables::of(tables) else {
-        return false;
-    };
+    let tb = ThrowTables::of(tables);
     as_thrown(an, &mut o);
     how_much(an, tune, &mut o);
-    const BODY: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &BODY) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut hs) = hands_of(g, an) else {
-        return false;
-    };
+    let mut hs = hands_of(body, an);
     // ---- what is underneath (feet to re-plant, each hand from its shoulder), then the body English
-    let Some(()) = with_pose(g, at, |d, rig, _n, fk| {
+    body.pose(at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        underneath(fk, &mut o);
+        underneath(rig, fk, &mut o);
         wind_up(tune, &tb, d, rig, &mut o);
         head_on_target(&tb, d, rig, &o);
         feet_back(d, rig, fk, &o);
-    }) else {
-        return false;
-    };
+    });
     // ---- arms, IK'd on a copy against the body as it now is
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    body.copy(at, at_b);
     let hh = &mut hs;
     let hang = &mut an.thr_hang;
-    let Some(()) = with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        shoulders(fk, &mut o);
+        shoulders(rig, fk, &mut o);
         hands_from(&mut o);
         throwing_points(&tb, tune, &mut o);
         toss_from_anywhere(tune, &mut o);
@@ -186,32 +167,24 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         throwing_arm(&tb, d, rig, fk, &mut o);
         gun_arm(d, rig, fk, &o);
         other_arm(&tb, d, rig, fk, &mut o);
-        fingers(d, hh, &o);
+        fingers(rig, d, hh, &o);
         weights_in(&mut o);
-    }) else {
-        return false;
-    };
+    });
     // (the clavicles themselves are already posed in the pose; the copy carries the same turn)
-    let (sl, sr) = (role(SHOULDER_L), role(SHOULDER_R));
+    let (sl, sr) = (body.rig.role(SHOULDER_L), body.rig.role(SHOULDER_R));
     if o.off {
-        ask_mask(&[(sl, o.w_r, true), (sr, 1.0, true), (sr, 0.0, false), (sl, 0.0, false)]);
+        body.mask(&[(sl, o.w_r, true), (sr, 1.0, true), (sr, 0.0, false), (sl, 0.0, false)]);
     } else {
-        ask_mask(&[(sr, o.w_r, true), (sl, o.w_l, true), (sr, 0.0, false), (sl, 0.0, false)]);
+        body.mask(&[(sr, o.w_r, true), (sl, o.w_l, true), (sr, 0.0, false), (sl, 0.0, false)]);
     }
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return false;
-    }
+    body.blend(at, at_b, 1.0, true, at);
     let left = &mut an.thr_last;
-    let last = with_pose(g, at, |d, rig, _n, fk| {
+    body.pose(at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (r, l) = (v3::sub(fk.at(role(HAND_R)), fk.at(role(UPPER_ARM_R))), v3::sub(fk.at(role(HAND_L)), fk.at(role(UPPER_ARM_L))));
+        let (r, l) = (v3::sub(fk.at(rig.role(HAND_R)), fk.at(rig.role(UPPER_ARM_R))), v3::sub(fk.at(rig.role(HAND_L)), fk.at(rig.role(UPPER_ARM_L))));
         *left = Some(AnimThrLast { r, l });
     });
-    if last.is_none() {
-        return false;
-    }
     hands_to(&hs, an);
-    true
 }
 
 /// Which swing, the underhand toss, or the overhand at its size (`full` = as authored).
@@ -248,11 +221,11 @@ fn how_much(an: &mut Anim, tune: &Knobs, o: &mut Throw) {
 }
 
 /// What is underneath: the feet to put back, each hand from its shoulder, and where the long hold has the trigger hand before the trunk winds.
-fn underneath(fk: &mut Fk, o: &mut Throw) {
+fn underneath(rig: &Rig, fk: &mut Fk, o: &mut Throw) {
     let Throw { off, .. } = *o;
-    let (fl_n, fr_n, hr_n, hl_n) = (role(FOOT_L), role(FOOT_R), role(HAND_R), role(HAND_L));
+    let (fl_n, fr_n, hr_n, hl_n) = (rig.role(FOOT_L), rig.role(FOOT_R), rig.role(HAND_R), rig.role(HAND_L));
     let (f_l, f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
-    let (u_r, u_l) = (v3::sub(fk.at(hr_n), fk.at(role(UPPER_ARM_R))), v3::sub(fk.at(hl_n), fk.at(role(UPPER_ARM_L))));
+    let (u_r, u_l) = (v3::sub(fk.at(hr_n), fk.at(rig.role(UPPER_ARM_R))), v3::sub(fk.at(hl_n), fk.at(rig.role(UPPER_ARM_L))));
     // (the free hand's throw: where the long hold has the trigger hand, before the trunk winds)
     let gun = if off { Some((fk.at(hr_n), fk.rot(hr_n))) } else { None };
     (o.fl_n, o.fr_n, o.f_l, o.f_r, o.r_l, o.r_r, o.u_r, o.u_l, o.gun) = (fl_n, fr_n, f_l, f_r, r_l, r_r, u_r, u_l, gun);
@@ -267,13 +240,13 @@ fn wind_up(tune: &Knobs, tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &mut Throw
     let (pitch, roll) = (tb.c1(TH_PITCH, t) * DEGR * k_t, tb.c1(TH_ROLL, t) * DEGR * k_t * sx);
     // crouched: sit up out of the clip's hunch to get the arm over, chest first
     let ext = if low { 0.0 } else { 18.0 * DEGR * cr * bump(t, 0.0, 0.12, 0.5, dur) * (if full { 1.0 } else { lerp(tune.throw_by.sit, 1.0, thr_far) }) * give };
-    let hips_n = role(HIPS);
+    let hips_n = rig.role(HIPS);
     shift(d, rig, hips_n, &[tb.c1(TH_PEL_X, t) * leg_k * k_t * sx, tb.c1(TH_PEL_Y, t) * leg_k * k_t, tb.c1(TH_PEL_Z, t) * leg_k * k_t]);
     turn(d, rig, hips_n, q_yaw(pel_yaw));
     let seg = |kk: f64, kp: f64, ke: f64| quat::mul(q_yaw(sp_yaw * kk), quat::mul(q_roll(roll * kk), q_pitch(pitch * kp - ext * ke)));
-    turn(d, rig, role(SPINE1), seg(0.3 + 0.12 * cr, 0.4, 0.25));
-    turn(d, rig, role(SPINE2), seg(0.35 + 0.13 * cr, 0.35, 0.3));
-    turn(d, rig, role(SPINE3), seg(0.35 - 0.25 * cr, 0.25, 0.45));
+    turn(d, rig, rig.role(SPINE1), seg(0.3 + 0.12 * cr, 0.4, 0.25));
+    turn(d, rig, rig.role(SPINE2), seg(0.35 + 0.13 * cr, 0.35, 0.3));
+    turn(d, rig, rig.role(SPINE3), seg(0.35 - 0.25 * cr, 0.25, 0.45));
     (o.chest_yaw, o.pitch, o.roll, o.ext) = (chest_yaw, pitch, roll, ext);
 }
 
@@ -281,23 +254,23 @@ fn wind_up(tune: &Knobs, tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &mut Throw
 fn head_on_target(tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &Throw) {
     let Throw { t, off, sx, k_t, chest_yaw, pitch, roll, ext, .. } = *o;
     let (hy, hr, hp) = (-chest_yaw * 0.85, -roll * 0.7, -pitch * 0.8 + ext);
-    turn(d, rig, role(NECK), quat::mul(q_yaw(hy * 0.4), quat::mul(q_roll(hr * 0.4), q_pitch(hp * 0.45))));
-    turn(d, rig, role(HEAD), quat::mul(q_yaw(hy * 0.6), quat::mul(q_roll(hr * 0.6), q_pitch(hp * 0.55))));
-    turn(d, rig, if off { role(SHOULDER_L) } else { role(SHOULDER_R) }, quat::mul(q_yaw(tb.c1(TH_CLAV_FWD, t) * DEGR * k_t * sx), q_roll(-tb.c1(TH_CLAV_UP, t) * DEGR * k_t * sx)));
+    turn(d, rig, rig.role(NECK), quat::mul(q_yaw(hy * 0.4), quat::mul(q_roll(hr * 0.4), q_pitch(hp * 0.45))));
+    turn(d, rig, rig.role(HEAD), quat::mul(q_yaw(hy * 0.6), quat::mul(q_roll(hr * 0.6), q_pitch(hp * 0.55))));
+    turn(d, rig, if off { rig.role(SHOULDER_L) } else { rig.role(SHOULDER_R) }, quat::mul(q_yaw(tb.c1(TH_CLAV_FWD, t) * DEGR * k_t * sx), q_roll(-tb.c1(TH_CLAV_UP, t) * DEGR * k_t * sx)));
 }
 
 /// Feet back where the locomotion has them, soles as they were.
 fn feet_back(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &Throw) {
     let Throw { fl_n, fr_n, f_l, f_r, r_l, r_r, .. } = *o;
     fk_run(rig, d, fk.rot, fk.pos);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
 }
 
 /// The shoulders as they now are; crouched, the follow-through stays up off the front knee.
-fn shoulders(fk: &mut Fk, o: &mut Throw) {
+fn shoulders(rig: &Rig, fk: &mut Fk, o: &mut Throw) {
     let Throw { cr, .. } = *o;
-    let (sh_r, sh_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
+    let (sh_r, sh_l) = (fk.at(rig.role(UPPER_ARM_R)), fk.at(rig.role(UPPER_ARM_L)));
     // crouched: the follow-through stays up off the front knee
     let low_k = 1.0 - 0.45 * cr;
     (o.sh_r, o.sh_l, o.low_k) = (sh_r, sh_l, low_k);
@@ -434,7 +407,7 @@ fn balance_path(o: &mut Throw) {
 /// The throwing arm.
 fn throwing_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Throw) {
     let Throw { t, off, fix_l, fix_r, sh_r, sh_l, off_r, .. } = *o;
-    let (ua_r, fa_r, hr_n, ua_l, fa_l, hl_n) = (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L));
+    let (ua_r, fa_r, hr_n, ua_l, fa_l, hl_n) = (rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R), rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L));
     let (ref_r, ref_l) = (SWIV_REF_R, SWIV_REF_L);
     if off {
         let to = mir(off_r);
@@ -471,15 +444,15 @@ fn other_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Thro
 }
 
 /// Closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in.
-fn fingers(d: &mut [S], hh: &mut Hands, o: &Throw) {
+fn fingers(rig: &Rig, d: &mut [S], hh: &mut Hands, o: &Throw) {
     let Throw { t, off, rel, low, .. } = *o;
     let (open, loose) = (smoothstep(rel - 0.025, rel + 0.03, t), smoothstep(0.34, 0.49, t));
     let c_r = |grip: f64, flat: f64, hng: f64| lerp(lerp(grip, flat, open), hng, loose);
-    hand(d, hh, if off { 0 } else { 1 }, &[c_r(0.5, 0.05, 0.25), c_r(0.55, 0.08, 0.3), c_r(0.62, 0.12, 0.35), c_r(0.7, 0.15, 0.42)], c_r(0.7, 0.1, 0.3), 0.0);
+    hand(rig, d, hh, if off { 0 } else { 1 }, &[c_r(0.5, 0.05, 0.25), c_r(0.55, 0.08, 0.3), c_r(0.62, 0.12, 0.35), c_r(0.7, 0.15, 0.42)], c_r(0.7, 0.1, 0.3), 0.0);
     let firm = bump(t, 0.22, 0.32, 0.5, 0.64);
     let c_l = |v: f64| lerp(v, v + 0.25, firm);
     if !low && !off {
-        hand(d, hh, 0, &[c_l(0.3), c_l(0.35), c_l(0.4), c_l(0.45)], lerp(0.3, 0.6, firm), 0.0);
+        hand(rig, d, hh, 0, &[c_l(0.3), c_l(0.35), c_l(0.4), c_l(0.45)], lerp(0.3, 0.6, firm), 0.0);
     }
 }
 

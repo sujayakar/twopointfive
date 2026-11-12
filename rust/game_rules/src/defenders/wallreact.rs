@@ -144,8 +144,8 @@ fn take_ask(g: &mut Game, row: &crate::wallbreak::LevelChange, b: Option<Wallrea
         while let Some(o) = ob {
             match g.tab.wallreact_breach[o].into { Some(n) => ob = Some(n), None => break }
         }
-        let a = crate::seats::order_of(g, gd);
-        let at = match a.and_then(|a| g.tab.orders_assignment[a].post) { Some(post) => post, None => g.pos_of(gd) };
+        let a = crate::duty::order(g, gd);
+        let at = match a.and_then(|a| g.tab.task[a].post) { Some(post) => post, None => g.pos_of(gd) };
         let mut list = vec![Gone { rect: old.rect, b: ob, who: old.who }];
         list.extend(old.also.unwrap_or_default());
         p.also = Some(wall_react_kept(g, at, &mut list));
@@ -177,7 +177,7 @@ fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
     }
     for it in wall_react_posts(g) {
         if take_own(g, it.gd, row) { continue; }
-        let post = g.tab.orders_assignment[it.a].post.unwrap();
+        let post = g.tab.task[it.a].post.unwrap();
         if rect_dist(post, row.rect) <= near { take_ask(g, row, b, &mut asked, it.gd); }
     }
 }
@@ -232,7 +232,7 @@ fn wall_react_sweep(g: &mut Game) {
         }
         if g.tab.wallreact_breach[b].ops >= 0.0 {
             for it in wall_react_posts(g) {
-                let a = &g.tab.orders_assignment[it.a];
+                let a = &g.tab.task[it.a];
                 if a.arrived { let at = a.post.unwrap(); sweep_ask(g, it.gd, at, b); }
             }
         }
@@ -385,7 +385,7 @@ fn wall_react_unflood(g: &mut Game) {
     g.fight.room_of_cell.clear();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
-        let at = if crate::condition::down(g, g.gd[gd].ch) { g.tab.roomfight_def[d].station } else { g.pos_of(gd) };
+        let at = if crate::condition::down(g, g.gd[gd].ch) { crate::roomfight::station(g, d) } else { g.pos_of(gd) };
         let room = crate::roomfight::room_fight_room_at(g, at);
         let ev = match room { Some(r) => vec![0.0; g.tab.roomfight_room[r].entries.len()], None => Vec::new() };
         let row = &mut g.tab.roomfight_def[d];
@@ -411,7 +411,7 @@ fn first_open(g: &Game, cells: &[crate::Num]) -> Option<f64> {
     cells.iter().map(|c| c.0).find(|c| g.col.nav.blocked.get(*c as usize).copied() != Some(1))
 }
 
-/// rooms an earlier flood left sharing this room's cells: the TypeScript's one Set is a copy here, kept equal by hand
+/// rooms an earlier flood left sharing this room's cells: each holds its own copy, kept equal by hand
 fn sharing_cells(g: &Game, r: RoomfightRoomId) -> Vec<RoomfightRoomId> {
     let mine = g.tab.roomfight_room[r].cells.keys();
     if mine.is_empty() { return Vec::new(); }
@@ -689,7 +689,7 @@ fn wall_react_book(g: &mut Game) {
     let mut readied = false;
     for b in breaches_of(g) {
         if g.tab.wallreact_breach[b].ops < 0.0 { continue; }
-        // (ready() hands back the live list in the TypeScript; here it builds it, and the list is g.cover.openings)
+        // (cover_ready builds the list, and the list is g.cover.openings)
         if !readied { crate::cover::cover_ready(g); readied = true; }
         let o = match g.tab.wallreact_breach[b].opening {
             Some(o) => o,
@@ -796,8 +796,8 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     if !crate::seats::team_active(g) { return out; }
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        if let Some(a) = crate::seats::order_of(g, gd) {
-            if g.tab.orders_assignment[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
+        if let Some(a) = crate::duty::order(g, gd) {
+            if g.tab.task[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
         }
     }
     out
@@ -921,7 +921,7 @@ fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, 
             cands.push([from[0] + m::sin(a * m::PI / 8.0) * r, 0.0, from[2] + m::cos(a * m::PI / 8.0) * r]);
         }
     }
-    let mut plans = 0; // (path searches a question: suppression.ts's own cover search stops at twelve)
+    let mut plans = 0; // (path searches a question: the cover search in people/suppression.rs stops at twelve)
     for p in cands {
         let r = dist_xz(from, p);
         if r > step_m + 2.0 { continue; }
@@ -1087,7 +1087,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (crate::wallreact::Reco
         if g.time - man.last_seen_t < 0.6 && man.last_known.map_or(false, |k| dist_xz(k, c) < 5.0) { return (R::Later, String::from("a man at arm's length")); }
         let mut to = wall_react_spot(g, gd, threat, pb);
         if let Some(q) = to {
-            if g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
+            if g.gd[gd].duty.rooms || crate::digin::dig_in_set(g, gd) {
                 if crate::roomfight::room_fight_room_at(g, q) != g.tab.roomfight_def[d].room { to = None; }
             }
         }
@@ -1115,7 +1115,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (crate::wallreact::Reco
 fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>) -> crate::wallreact::Reconsidered {
     use crate::game::GuardState;
     let man = &g.gd[gd];
-    if man.script.is_some() || man.pinned || man.standoff.is_some() || !g.tune.suppression { return crate::wallreact::Reconsidered::Fine; }
+    if man.script.is_some() || man.duty.pinned || man.standoff.is_some() || !g.tune.suppression { return crate::wallreact::Reconsidered::Fine; }
     if man.state != GuardState::Alert {
         return if man.state == GuardState::Search || man.state == GuardState::Suspicious { crate::wallreact::Reconsidered::Later } else { crate::wallreact::Reconsidered::Fine };
     }
@@ -1144,11 +1144,11 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let gd = p.gd;
     let v = crate::seats::view_of(g, gd);
     let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(&crate::seats::here(g), gd)) { Some(a) => a, None => return crate::wallreact::Reconsidered::Fine };
-    let post = match g.tab.orders_assignment[a].post { Some(q) => q, None => return crate::wallreact::Reconsidered::Fine };
-    if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
+    let post = match g.tab.task[a].post { Some(q) => q, None => return crate::wallreact::Reconsidered::Fine };
+    if crate::seats::with_seat(g, v, &mut |g| g.groups[g.group].tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
     if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return crate::wallreact::Reconsidered::Fine; }
-    if g.tab.orders_assignment[a].order == crate::wallcharge::WALL_ORDER && g.tab.orders_assignment[a].watch.is_some() { return crate::wallreact::Reconsidered::Fine; }
-    if g.tab.orders_assignment[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return crate::wallreact::Reconsidered::Later; }
+    if g.tab.task[a].order == crate::wallcharge::WALL_ORDER && g.tab.task[a].watch.is_some() { return crate::wallreact::Reconsidered::Fine; }
+    if g.tab.task[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return crate::wallreact::Reconsidered::Later; }
     let q = match wall_react_asks(g, gd, p, post, 1.2) { WallReactAsks::Text(_) => return crate::wallreact::Reconsidered::Fine, WallReactAsks::Arm1(q) => q };
     let threat = q.threat;
     let pb = q.x.b;
@@ -1159,10 +1159,10 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     let to = match to { Some(q) => q, None => { return crate::wallreact::Reconsidered::Later; } };
     let now = g.time;
     let at = g.pos_of(gd);
-    let row = &mut g.tab.orders_assignment[a];
-    row.post = Some(to); if row.had == Some(to) { row.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
+    let row = &mut g.tab.task[a];
+    row.post = Some(to); if row.had == Some(to) { row.had = None; }   // (`had` is asked by value: a mark he had that holds THESE numbers would read as this new one, so that one goes; any other stays)
     row.goal = v3::copy(to);
-    row.new_leg = true;   // (a new array: an unguarded write, on Assignment.new_leg's list)
+    row.new_leg = true;   // (an unguarded write of the goal: see Assignment.new_leg)
     row.via.clear();
     row.arrived = false;
     row.moved_t = now;
@@ -1190,10 +1190,9 @@ fn wall_react_replan(g: &Game, team: crate::teams::Team, since: f64, men: &[Guar
 #[cfg(test)]
 mod tests {
     use super::*;
-    // The expected values are the TypeScript's own, run under bun with EXACT.on.
 
     #[test]
-    fn wrap_has_the_typescripts_bits() {
+    fn wrap_keeps_its_bits() {
         for (a, bits) in [
             (0.0, 0x0000000000000000u64), (1.0, 0x3ff0000000000000), (-1.0, 0xbff0000000000000), (3.2, 0xc008aa5d0eeec096), (-3.2, 0x4008aa5d0eeec096),
             (m::PI, 0x400921fb54442d18), (-m::PI, 0x400921fb54442d18), (7.5, 0x3ff37812aeef4ba0), (-100.25, 0x3fd1fb54442d1840), (1e6, 0xbfd6e254d0ed6540),
@@ -1203,7 +1202,7 @@ mod tests {
     }
 
     #[test]
-    fn rect_dist_has_the_typescripts_bits() {
+    fn rect_dist_keeps_its_bits() {
         let r = [3.0, 4.0, 5.0, 6.0];
         assert_eq!(rect_dist([1.5, 0.0, 2.25], r).to_bits(), 0x4002706821902e9a);
         assert_eq!(rect_dist([4.0, 0.0, 5.0], r).to_bits(), 0);
@@ -1211,7 +1210,7 @@ mod tests {
     }
 
     #[test]
-    fn seg_rect_answers_as_the_typescript_does() {
+    fn seg_rect_gives_the_pinned_answers() {
         let r = [4.0, 4.0, 6.0, 6.0];
         assert!(seg_rect([0.0, 0.0, 0.0], [10.0, 0.0, 10.0], r, 0.45));
         assert!(!seg_rect([0.0, 0.0, 0.0], [10.0, 0.0, 0.0], r, 0.45));

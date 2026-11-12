@@ -38,7 +38,7 @@ fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     mk.push(if join { 0.0 } else { 1.0 });
     if join { ShellMark::Join } else if marks == 0 { ShellMark::First } else { ShellMark::More }
 }
-/// `GLASSPEN_HOOKS.crossed?.(g, x, who)`: the game hangs one value, the exit jet of shards.ts
+/// a round has crossed a pane: the exit jet of its shards
 fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
     let like = crate::shards::PaneCrossLike { bi: x.bi, type_: x.type_, exit: x.exit, dir_out: x.dir_out, take: x.take, e_out: x.e_out, hole: x.hole };
     crate::shards::glass_shards_crossed(g, like, who);
@@ -88,7 +88,7 @@ pub fn reset_glass_pen(g: &mut crate::game::Game) {
     if let Some(s) = g.m.glasspen.states.as_mut() {
         s.rev += 1.0;
     }
-    if !crate::glassbreak::glass_break_untouched(g) { ::sim::panes::clear_holes(g.sim); }
+    g.tab.boxes.panes().holes.clear();
 }
 
 /// a number that moves whenever what a round has to pay at any pane may have moved
@@ -100,7 +100,7 @@ pub fn glass_toll_sig(g: &crate::game::Game) -> f64 {
 /// remember a crossing on pane `bi`: the module keeps it, the oldest going past `holes`
 fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
-    crate::glassbreak::glass_break_asking(g, |cx, k| ::sim::pen::add_hole(cx.g, js::to_u32(bi), p, k));
+    ::sim::pen::add_hole(g.tab.boxes.panes(), js::to_u32(bi), p, &g.k);
 }
 
 // ---------------------------------------------------------------- the toll
@@ -116,7 +116,7 @@ fn crossing(x: &::sim::pen::Crossing) -> PaneCross {
 
 /// one pane on a round's flight: what it takes and where the round leaves it, or None: spent in it
 pub(super) fn pane_crossing(g: &crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
-    ::sim::pen::pane_crossing(&crate::glassbreak::glass_ctx(g), js::to_u32(bi), o, d, t, e, nth as usize, &g.k).map(|x| crossing(&x))
+    ::sim::pen::pane_crossing(g.tab.boxes.world(), js::to_u32(bi), o, d, t, e, nth as usize, &g.k).map(|x| crossing(&x))
 }
 
 // ---------------------------------------------------------------- the round's flight
@@ -187,7 +187,7 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
     let from = crate::combat::shoulder(g, c_2);
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
-    let w = ::sim::pen::arm_walk(&crate::glassbreak::glass_ctx(g), from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>()));
+    let w = ::sim::pen::arm_walk(g.tab.boxes.world(), from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>()));
     let (e, cross) = w?;
     if cross.is_empty() { return Some(ArmThroughGlass { e: energy, panes: 0.0 }); }
     let id = g.ch[c_2].id;
@@ -199,7 +199,7 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
 pub fn shot_passes(g: &crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool {
     let energy = energy.unwrap_or(g.k.glasspen.default_energy);
     let list: Vec<(u32, f64)> = panes.iter().map(|p| (js::to_u32(p.bi), p.t)).collect();
-    ::sim::pen::shot_passes(&crate::glassbreak::glass_ctx(g), a, rd, &list, energy, &g.k)
+    ::sim::pen::shot_passes(g.tab.boxes.world(), a, rd, &list, energy, &g.k)
 }
 
 /// glass is not cover: how many of `eyes` have a line of fire to `p` through glass, no door leaf in the way

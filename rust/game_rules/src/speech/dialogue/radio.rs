@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The row the TypeScript's `R` holds, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
+/// The game's radio row, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
 fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {
     g.m.dialogue.radio_by_game.as_mut().unwrap()
 }
@@ -121,7 +121,7 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
     }
     row(g).found = found;
     let mut i = row(g).queue.len();
-    while i > 0 {   // backward, with splice, as the TypeScript walks it
+    while i > 0 {   // backward, because a row may be taken out on the way
         i -= 1;
         let q = row(g).queue[i];
         if g.time < q.at { continue; }

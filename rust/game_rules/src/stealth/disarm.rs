@@ -10,7 +10,7 @@ fn sstep(a: f64, b: f64, t: f64) -> f64 {
     u * u * (3.0 - 2.0 * u)
 }
 
-/// player.ts startGrab, once the hold exists: the gun still in his hand is the disarm's to take.
+/// The grab, once the hold exists: the gun still in his hand is the disarm's to take.
 pub fn disarm_begin(g: &mut crate::game::Game) {
     let pl = g.player;
     let Some((gd, variant)) = g.pl[pl].holding().map(|h| (h.g, h.variant)) else { return };
@@ -236,7 +236,7 @@ pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
     crate::audio_iface::game_audio_like_play(g, "gunDown", Some(p), Some(gains.down * m::min(1.0, 0.5 + sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
-/// `S` is one object in the TypeScript, shared with the hold: a copy here, so each write is put back through the table.
+/// The strip in hand is a copy of the hold's, so each write is put back through the table.
 fn put_strip(g: &mut Game, pl: PlayerId, s: Strip) {
     if let Some(h) = g.pl[pl].holding_mut() { h.strip = Some(s); }
 }

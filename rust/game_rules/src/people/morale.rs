@@ -637,7 +637,7 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own truth: a steady man breaks alone AND dark; a green man alone, or lost with his leader down
+    /// a steady man breaks alone AND dark; a green man alone, or lost with his leader down
     #[test]
     fn who_may_break() {
         let m_ = |green, alone, dark, leader_down, lost| Mind { green, alone, dark, leader_down, lost, ..Mind::default() };
@@ -648,9 +648,9 @@ mod tests {
         assert!(may_break(m_(true, false, false, true, true)));
         assert!(!may_break(m_(true, false, true, true, false)));
     }
-    /// the TypeScript's own bits (bun, EXACT on)
+    /// pinned bits
     #[test]
-    fn flat_is_the_typescripts() {
+    fn flat_is_as_pinned() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 0.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         assert_eq!(dist_xz([0.1, 0.0, -9.3], [7.77, 0.0, 0.004]).to_bits(), 0x40281da70b81d837);
     }

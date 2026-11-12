@@ -1,7 +1,7 @@
 // WHAT THE RUST OF THE GAME MAY NOT SAY, where no compiler keeps it out. No cargo, no game: the sources are read.
 //   rules     no line of rust/sim or rust/maths (the world's numbers: lines, bodies, doors, light, the maths) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
 //             one arithmetic on every machine, and nothing kept where a snapshot does not see it
-//   statics   every `static mut` of rust/sim and rust/prim is a row here: the games' state, scratch of one call, or a copy proven where it is made
+//   statics   every `static mut` of rust/sim and rust/prim is a row here: scratch of one call, or a copy proven where it is made
 //   sides     every crate under rust/ is gameplay, dressing or both, and neither side links the other; a crate from outside has no side
 //   module    the crates the game's module is hashed from (tools/blitz/face-build.ts FACE_CRATES) are the crates its locks link: a crate left out would leave a stale module unseen
 //   bun run tools/qa/rust-rules-check.ts        exit 0 = it holds · 1 = a line says what does not        RUSTRULES_BREAK=1: one breach of each planted in memory: every line must FAIL
@@ -21,23 +21,14 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
   { re: /relaxed[-_]|_relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
-  { re: /\b(UnsafeCell|RefCell|Cell|OnceCell|Atomic\w+)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (the games\' state, scratch or a copy), so the build can say which' },
+  { re: /\b(UnsafeCell|RefCell|Cell|OnceCell|Atomic\w+)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (scratch or a copy), so the build can say which' },
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
-/** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS (rust/sim/src/state.rs): STATE = the games' blocks, the one place a game keeps anything from one
- *  call to the next (the host carries a block through every snapshot: rust/game_rules/src/tick/sim_state.rs) · SCRATCH = written and read inside one call · COPY = the host's own
- *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
+/** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS: SCRATCH = written and read inside one call · COPY = a table of numbers, or the host's own truth copied in and proven
+ *  there. No game keeps anything here (a moment of it is the game as a value), and a `static mut` with no row is red: state kept here is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
-  'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
   'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists; and what stopped the last line like it, asked first of the next, which changes no answer',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
-  'sim/src/clips.rs ALL': 'COPY · a character file\'s clips, authored data nothing writes after the file is loaded (src/anim/gltf.ts): copied in once by src/anim/skeleton.ts as a clip is first sampled, the same for every game and in no snapshot; the same for every game',
-  'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
-  'sim/src/roles.rs ROLE': 'COPY · the nodes of the rig on the bench by the animator\'s names for them, written by the host with the rig',
-  'sim/src/roles.rs LIST': 'COPY · the animator\'s lists of nodes to run forward, for the rig on the bench, written by the host with the rig',
-  'sim/src/roles.rs LIST_LEN': 'COPY · how many nodes each of those lists holds, written with them',
-  'sim/src/roles.rs NUM': 'COPY · the tables of numbers the animator worked out once from the character file, for the rig on the bench, written by the host with the rig',
-  'sim/src/roles.rs NUM_LEN': 'COPY · how many numbers each of those tables holds, written with them',
   'sim/src/panes.rs HELD_BITS': 'SCRATCH · one support pass\'s held pieces', 
   'sim/src/pattern.rs CACHE': 'SCRATCH · a pane\'s pieces, derived from its row and held against the numbers they were made from: compared on every ask, so no write has to say, and no state', 'sim/src/pattern.rs CLOCK': 'SCRATCH · which of those were asked for last',
   'sim/src/pattern.rs NBS': 'SCRATCH · one support pass\'s neighbours across the cracks', 'sim/src/pattern.rs NB_HEAD': 'SCRATCH · where each piece\'s list of them starts', 'sim/src/pattern.rs NB_TAIL': 'SCRATCH · and ends',
@@ -53,21 +44,9 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs AT': 'SCRATCH · where a cell last stands in one search\'s open list, left blank after it', 'sim/src/nav.rs BEFORE': 'SCRATCH · where it stands beside',
   'sim/src/nav.rs SCORE': 'SCRATCH · one search\'s open cells\' scores', 'sim/src/nav.rs LEAST': 'SCRATCH · the least of each block of them',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
-  'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
-  'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world and asked again wherever a static row or a leaf moved (always what a fresh ask gives)',
-  'sim/src/bricks.rs SEEN': 'COPY · the statics FACES was last asked against',
-  'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
-  'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and whether that state\'s faces were asked',
-  'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
-  'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
-  'sim/src/state.rs PUTS': 'SCRATCH · how many times a slot was written whole: whose the tables beside a block are',
-  'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
-  'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
   'sim/src/dome.rs FAN': 'COPY · the ways up to the sky and down to the ground and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/dome.rs TABLES': 'COPY · which of those ways are open from a place, held to the statics by the marks of where they have changed (glow.rs Marks), and to the casters\' box and the sun',
   'sim/src/light.rs SET': 'SCRATCH · one sweep\'s lamps, gathered before its metres ask them',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
  *  LIST in its Cargo.lock: the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a
@@ -96,9 +75,9 @@ if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs
   for (const l of [...sim, ...prim]) {
     if (/^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+(?!mut\b)\w+\s*:.*\b(\w*Cell|Atomic\w+|Mutex|RwLock|Once\w*|Lazy\w*)\b/.test(l.text)) bad.push(`${l.at} — a static written through a cell or a lock: what is kept between calls is a \`static mut\` with a row in STATICS`);
     const m = /^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+mut\s+(\w+)/.exec(l.text); if (!m) continue;
-    const key = `${l.file} ${m[1]}`; met.add(key); if (!(key in STATICS)) bad.push(`${l.at} — \`static mut ${m[1]}\` has no row in STATICS (here): a game's state belongs in its block (state.rs), and scratch or a copy says which it is`); }
+    const key = `${l.file} ${m[1]}`; met.add(key); if (!(key in STATICS)) bad.push(`${l.at} — \`static mut ${m[1]}\` has no row in STATICS (here): a game's state belongs on the game, and scratch or a copy says which it is`); }
   for (const k of Object.keys(STATICS)) if (!met.has(k)) bad.push(`STATICS names ${k}, which is not there`);
-  line(bad, 'statics: every `static mut` is the games\' state, scratch of one call or a proven copy', `${met.size} of them, a row each`); }
+  line(bad, 'statics: every `static mut` is scratch of one call or a proven copy', `${met.size} of them, a row each`); }
 const L = links(); if (BREAK) L.planted = ['outside', 'sim'];
 { const bad: string[] = [];
   for (const [c, deps] of Object.entries(L)) {

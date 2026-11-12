@@ -3,7 +3,7 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured
+/// which events a beat's `director_beat_on` takes: the filters the level scripts use, each with what it captured
 #[derive(Clone, Debug, ToBytes)]
 pub enum EventFilter {
     InBox { x0: f64, x1: f64, z0: f64, z1: f64 },
@@ -68,13 +68,13 @@ pub enum BeatFrame {
     TutTeamHouse(crate::script_tut_team::TutTeamHouseFrame),
     TutTeamOut(crate::script_tut_team::TutTeamOutFrame),
 }
-/// what a c.until asks (CondArm2.test): Script, a test of the beat's own script, answered by beat_test with the beat's frame; Burst, the stimulus.burst's cond at director.ts:1012: no row of r.bursts with this serial and left > 0
+/// what a `director_beat_until` asks: Script, a test of the beat's own script, answered by beat_test with the beat's frame; Burst, that a burst is over: no row of the run's bursts with this serial and left > 0
 #[derive(Clone, Debug, ToBytes)]
 pub enum CondTest {
     Script { id: u32 },
     Burst { serial: u32 },
 }
-/// what a level script's define pass names and its beats read: one arm a script (scriptgen.cjs)
+/// what a level script's define pass names and its beats read: one arm a script
 #[derive(Clone, Debug, ToBytes, Default)]
 pub enum ScriptVars {
     #[default] None,
@@ -124,7 +124,7 @@ pub struct Manifest {
     pub programs: JsMap<String, crate::director::ProgramDef>,
     pub expects: Vec<crate::director::ManifestExpectsItem>,
     pub systems: JsMap<&'static str, bool>,
-    /// INVENTED: the locals of the script's define pass
+    /// the locals of the script's define pass
     pub vars: crate::director::ScriptVars,
 }
 
@@ -403,7 +403,7 @@ pub struct Run {
     pub systems_saved: Option<JsMap<&'static str, bool>>,
     pub ended: bool,
     pub finishing: bool,
-    /// INVENTED: the manifest's, for a beat's step to read
+    /// the manifest's, for a beat's step to read
     pub vars: crate::director::ScriptVars,
 }
 
@@ -420,7 +420,7 @@ pub struct RunBurstsItem {
     pub cadence: f64,
     pub spread: f64,
     pub next: f64,
-    /// INVENTED by a review: see the proposals
+    /// dealt as the burst starts: `CondTest::Burst` knows it by this
     pub serial: u32,
 }
 impl Default for RunBurstsItem {

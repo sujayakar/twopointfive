@@ -12,7 +12,7 @@ fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
-    let k = g.tab[b].mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
+    let k = g.tab[b].mkey.expect("fog: a box with no key");
     key_of_mkey(g, k)
 }
 
@@ -20,7 +20,7 @@ pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
 pub(super) fn key_of_mkey(g: &Game, k: f64) -> f64 {
     let sys = sys_of(k);
     let low = js::to_u32(k) & 0xFFFFFF;
-    // (the second test is THING_PASS's `MKEY.skin >>> 24`, line 355: the skeleton's first value of the set stops at device: notes, Skeleton)
+    // (the second test: a skin's box is no thing either)
     if g.m.fogofwar.thing_pass.has(crate::Num(sys as f64)) || sys == sys_of(crate::scene_boxes::mkey().skin) { return -1.0; }
     if sys as f64 == THING_TEST {
         if low >= 0x4000 && low < 0x5000 { return -1.0; }
@@ -36,7 +36,7 @@ pub(super) fn is_prop(thing_key: f64) -> bool {
     m::floor(thing_key / 0x1000000 as f64) == PROP_SYS
 }
 
-/// A box copied for the picture's memory; its vectors are values in Rust, so nothing follows the live one.
+/// A box copied for the picture's memory; its vectors are values, so nothing follows the live one.
 /// (A copy the record keeps until it takes the thing afresh: `box_kept`, and `box_let_go` for the copies before it: thing_take.)
 pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
     let copy = g.tab[s].clone();
@@ -49,7 +49,6 @@ pub fn fog_through() -> f64 {
     (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
 }
 
-/// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new() -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
 }

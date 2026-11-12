@@ -2,10 +2,10 @@
 //! STATURE: the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
 //! capsules and every box a ray meets are untouched. What it writes that the tick's own state holds: `Box.dc / dh` of the boxes bolted to a man
 //! (rows of the frame's list, where the picture is to draw them) and the near end of his weapon laser (a box of the frame's list made from the
-//! DRAWN muzzle). Those are fields and boxes of the game's own tables, so they are written here, under the DRESS row, as the TypeScript writes them.
+//! DRAWN muzzle). Those are fields and boxes of the game's own tables, so they are written here, under the dress row `stature`.
 //!
 //! LEFT TO THE PICTURE'S SIDE: the joint palette, the shadow proxies and the round-cone fit as drawn (`drawn_joints`, `drawn_capsules`, `drawn_fit`):
-//! what the renderer is HANDED, which the Rust tick hands nobody.
+//! what the renderer is HANDED, which the tick hands nobody.
 
 pub use ::game_types::stature::types;
 pub use types::*;

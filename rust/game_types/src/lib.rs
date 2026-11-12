@@ -6,7 +6,14 @@ extern crate self as game_types;   // (what a derive writes names this crate fro
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
 pub mod boxworld;
+pub mod made;
+pub mod panes;
+pub mod smoke;
 pub mod bytes;
+pub mod crosses;
+#[macro_use]
+pub mod rows;
+pub mod handed;
 pub mod ids;
 pub mod js;
 pub mod query;
@@ -40,7 +47,7 @@ pub mod aimweight { pub mod types; pub use types::*; }
 pub mod air_dust { pub mod types; pub use types::*; }
 pub mod anim_characters { pub mod types; pub use types::*; }
 pub mod anim_gltf { pub mod types; pub use types::*; }
-pub mod anim_skeleton { pub mod types; pub use types::*; }
+pub mod anim_skeleton { pub mod roles; pub mod types; pub use types::*; }
 pub mod attention { pub mod types; pub use types::*; }
 pub mod audio_iface { pub mod types; pub use types::*; }
 pub mod autopilot { pub mod types; pub use types::*; }
@@ -63,6 +70,8 @@ pub mod cmd { pub mod types; pub use types::*; }
 pub mod cmdring { pub mod types; pub use types::*; }
 pub mod combat { pub mod types; pub use types::*; }
 pub mod condition { pub mod types; pub use types::*; }
+pub mod duty { pub mod types; pub use types::*; }
+pub mod group { pub mod types; pub use types::*; }
 pub mod consts { pub mod types; pub use types::*; }
 pub mod cover { pub mod types; pub use types::*; }
 pub mod coverfire { pub mod types; pub use types::*; }
@@ -200,7 +209,6 @@ pub mod samlook { pub mod types; pub use types::*; }
 pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
-pub mod scene_air_grid { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
@@ -246,7 +254,6 @@ pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }
 pub mod squad { pub mod types; pub use types::*; }
 pub mod squad40 { pub mod types; pub use types::*; }
-pub mod squadcast { pub mod types; pub use types::*; }
 pub mod squadnet { pub mod types; pub use types::*; }
 pub mod squadsmoke { pub mod types; pub use types::*; }
 pub mod squadthrow { pub mod types; pub use types::*; }
@@ -269,7 +276,7 @@ pub mod tracers { pub mod types; pub use types::*; }
 pub mod ui_missions { pub mod types; pub use types::*; }
 pub mod unseen { pub mod types; pub use types::*; }
 pub mod verdict { pub mod types; pub use types::*; }
-pub mod view { pub mod types; pub use types::*; }
+pub mod view { pub mod types; pub mod told; pub use types::*; pub use told::*; }
 pub mod walkahead { pub mod types; pub use types::*; }
 pub mod wallbreak { pub mod types; pub use types::*; }
 pub mod wallcharge { pub mod types; pub use types::*; }

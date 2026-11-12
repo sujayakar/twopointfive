@@ -38,7 +38,7 @@ fn is(d: &Data, k: &str, word: &str) -> bool {
     matches!(field(d, k), Some(ChronEventDataValue::Text(s)) if s == word)
 }
 
-/// `Number(d.k)`. A text field is read as a decimal only: no writer puts text in the fields asked (notes, Traps).
+/// `Number(d.k)`. A text field is read as a decimal only: no writer puts text in the fields asked.
 fn number(d: &Data, k: &str) -> f64 {
     match field(d, k) {
         None => f64::NAN,

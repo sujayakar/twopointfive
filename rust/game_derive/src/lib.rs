@@ -4,10 +4,12 @@
 //!   #[bytes(skip)]               on a field: it is in no bytes; its doc says why
 //!   #[bytes(parts)]              on a struct: its fields one at a time too, by name (`bytes::Parts`)
 //!
+//!   #[derive(Crosses)]           what it is, to a page (game_types `crosses`): a struct's fields by name, those in no bytes left out, an enum's plain words (its own `as_str`)
+//!
 //!   #[derive(Knobs)]             a table of numbers (game_types `knobs`): what it ships at, and each number by its dotted name
 //!   #[k(value)]                  on a field: what it ships at. A field with none is a table of its own
 //!
-//!   #[derive(Words)]             an enum's words (`as_str`)
+//!   #[derive(Words)]             an enum's words (`as_str`, and `WORDS`, all of them in their order)
 //!   #[word("…")]                 on an arm: its word, where that is not its name with a small first letter
 //!
 //!   #[derive(Blank)]             what a new record holds (`blank`, `Default`)
@@ -49,6 +51,41 @@ pub fn to_bytes(item: TokenStream) -> TokenStream {
         s += "} } ";
     }
     s.parse().unwrap()
+}
+/// what it is, to a page
+#[proc_macro_derive(Crosses, attributes(bytes))]
+pub fn crosses(item: TokenStream) -> TokenStream {
+    let (mut t, item) = (item.clone().into_iter().peekable(), item);
+    attributes(&mut t, &["parts"]);
+    visibility(&mut t);
+    let shape = match word(t.next()).as_str() {
+        "struct" => {
+            let (_, body) = named(item, "struct");
+            let fields: String = split(body).into_iter().filter_map(|f| {
+                let mut t = f.into_iter().peekable();
+                let skipped = !attributes(&mut t, &["skip"]).is_empty();
+                visibility(&mut t);
+                let name = word(t.next());
+                t.next();   // (its colon)
+                let ty = t.collect::<TokenStream>().to_string();
+                (!skipped).then(|| format!("({:?}, <{ty} as ::game_types::crosses::Crosses>::ty(t)), ", name.trim_start_matches("r#")))
+            }).collect();
+            format!("Record(::alloc::vec![{fields}])")
+        }
+        _ => {
+            let (name, body) = named(item, "enum");
+            let arms: String = split(body).into_iter().map(|arm| {
+                let mut t = arm.into_iter().peekable();
+                attributes(&mut t, &[]);
+                let arm = word(t.next());
+                if t.next().is_some() { panic!("what is told of an enum is plain words, and {name}::{arm} holds something"); }
+                format!("Self::{arm}.as_str(), ")
+            }).collect();
+            format!("Words(::alloc::vec![{arms}])")
+        }
+    };
+    let name = word(t.next());
+    format!("impl ::game_types::crosses::Crosses for {name} {{ fn ty(t: &mut ::game_types::crosses::Types) -> ::game_types::crosses::Ty {{ t.tell({name:?}, concat!(module_path!(), \"::\", {name:?}), |t| ::game_types::crosses::Shape::{shape}) }} }}").parse().unwrap()
 }
 /// what the walk knows of a field by its type: a number, a yes or no, a row of numbers, another table, or none of these (a list, a word): a value and nothing a person turns
 enum Holds { Number, YesNo, Row(usize), Table, Other }
@@ -106,18 +143,20 @@ pub fn knobs(item: TokenStream) -> TokenStream {
                  #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
              }}").parse().unwrap()
 }
-/// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says
+/// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says; and all of them in their order
 #[proc_macro_derive(Words, attributes(word))]
 pub fn words(item: TokenStream) -> TokenStream {
     let (name, body) = named(item, "enum");
-    let arms: String = split(body).into_iter().map(|arm| {
+    let (mut arms, mut words) = (String::new(), String::new());
+    for arm in split(body) {
         let mut t = arm.into_iter().peekable();
         let said = said(&mut t, "word");
         let arm = word(t.next());
         let w = said.unwrap_or_else(|| format!("{:?}", arm[..1].to_lowercase() + &arm[1..]));
-        format!("Self::{arm} => {w}, ")
-    }).collect();
-    format!("impl {name} {{ pub const fn as_str(self) -> &'static str {{ match self {{ {arms} }} }} }}").parse().unwrap()
+        arms += &format!("Self::{arm} => {w}, ");
+        words += &format!("{w}, ");
+    }
+    format!("impl {name} {{ pub const WORDS: &'static [&'static str] = &[{words}]; pub const fn as_str(self) -> &'static str {{ match self {{ {arms} }} }} }}").parse().unwrap()
 }
 /// what a new record holds (`blank`, and its `Default`): each field at its type's own start, or at what `#[is(…)]` says
 #[proc_macro_derive(Blank, attributes(is))]

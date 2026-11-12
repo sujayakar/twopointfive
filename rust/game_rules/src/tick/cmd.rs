@@ -123,7 +123,7 @@ enum Json {
     Other,
 }
 
-/// JSON.parse over the text's bytes. A text that is no JSON panics where the TypeScript throws.
+/// A JSON reader over the text's bytes. A text that is no JSON panics.
 struct JsonReader<'a> {
     t: &'a [u8],
     at: usize,
@@ -529,7 +529,7 @@ pub(super) fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd
     lens_from(&mut g.tab.camera[cam], v);
 }
 
-/// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.
+/// A player's seat: its Input and its camera, of the game's own.
 pub(super) fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     let input = crate::input::input_detached(g);
     let cam = g.tab.camera.push(crate::camera::FollowCamera::blank());

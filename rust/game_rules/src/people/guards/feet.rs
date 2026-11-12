@@ -29,7 +29,7 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
     g.tab.guards_standoff[s].orbit_goal = Some(p);
 }
 
-/// goTo's plan. `round` None is the TypeScript's `round === pen`: no second search.
+/// go_to's plan. `round` None: no second search.
 fn go_to_plan(g: &Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.pos_of(gd);
     let mut p = match pen {
@@ -234,7 +234,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
-    let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
+    let why = if !g.gd[gd].duty.free() || !g.ai_enabled {
         Some(Off::Posted)
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
         Some(Off::NotAlert)
@@ -658,9 +658,9 @@ mod tests {
     use super::*;
     use crate::game::GuardState;
 
-    // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
+    // pinned bits, at the page's GUARD_EYE
     #[test]
-    fn dist_term_is_the_typescripts_bits() {
+    fn dist_term_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
@@ -680,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn eye_reach_is_the_typescripts_bits() {
+    fn eye_reach_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),

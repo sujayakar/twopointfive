@@ -3,16 +3,13 @@
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
 //! lane's `out`). The pieces are on the frame's list, which the tick's own counts read (the fog's `rig_from` / `rig_to`):
-//! so the lane runs here as it runs in the TypeScript.
+//! so the lane runs here.
 //!
-//! WHERE THE RUST IS NOT A PLAIN COPY:
-//! - STAND-IN: THE LANE'S BOOKS ARE MADE ON FIRST USE (`ensure`). The TypeScript makes them in WallBreak's constructor, from the level as authored; the
-//!   bridge does not carry `WallBreak.skins`, so an imported game holds a blank one. `ensure` reads every box's flags AS AUTHORED (what the two lanes that
-//!   hide a static kept of it), so it answers the constructor's lists whenever it is asked. Belongs: the bridge (carry `cand` and `solid`), or the
-//!   import's own deal.
+//! WHAT TO KNOW:
+//! - THE LANE'S BOOKS ARE MADE ON FIRST USE (`ensure`), from the level as authored: `ensure` reads every box's flags AS AUTHORED (what the two lanes that
+//!   hide a static kept of it), so it gives the same lists whenever it is asked.
 //! - A piece is a row its sheet keeps (`scene_boxes::box_kept`) and lets go when it is cut again or made whole.
-//! - The three closures handed to the constructor (`own`, `brk`, `all`) are asks of the game by path.
-//! - `try … catch → fail`: a fault here is a panic with its place; `failed` is never raised.
+//! - A fault here is a panic with its place.
 
 pub use ::game_types::wallskin::types;
 pub use types::*;
@@ -58,7 +55,7 @@ fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f64; 4
     let part = |u: f64, v: f64| -> i64 { parts.iter().position(|r| inside(*r, u, v)).map(|i| i as i64).unwrap_or(-1) };
     let (us, vs) = (edges(hu, 0), edges(hv, 2));
     let mut out: Vec<Rect> = Vec::new();
-    // (the TypeScript's `last` is the row's rectangles themselves, already in `out`: here their places in it; its key is the row's outline as a string)
+    // (`last` is the last row's rectangles, by their places in `out`; its key is the row's outline)
     let (mut last_from, mut last_n) = (0usize, 0usize); let mut last_key: Vec<(f64, f64, i64)> = Vec::new();
     let col: Option<Vec<bool>> = if cols { Some((0..us.len() - 1).map(|i| (0..vs.len() - 1).any(|j| gone((us[i] + us[i + 1]) / 2.0, (vs[j] + vs[j + 1]) / 2.0))).collect()) } else { None };
     for j in 0..vs.len() - 1 {
@@ -79,7 +76,7 @@ fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f64; 4
     out
 }
 
-// ---------------------------------------------------------------- the three asks the TypeScript hands the constructor as closures
+// ---------------------------------------------------------------- what a static is to this rule
 
 /// Static j has a road of its own (a fixture's box, one of the lane's destructibles) and is no sheet of this rule.
 fn wall_skin_own(g: &crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
@@ -106,7 +103,7 @@ fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallS
     w
 }
 
-/// STAND-IN (the head of this file): the books made the first time anything of the lane is asked on a game that came without them
+/// the books made the first time anything of the lane is asked on a game that came without them
 fn ensure(g: &mut Game) {
     let authored = g.destr.walls.authored;
     if g.destr.walls.skins.solid.len() as f64 == authored { return; }
@@ -117,7 +114,6 @@ fn ensure(g: &mut Game) {
 
 /// Cells of B have just opened: every sheet lying on it is cut again as this frame's boxes are handed over.
 pub(super) fn wall_skin_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
-    if g.destr.walls.skins.failed { return; }
     for j in wall_skin_skins_of(g, b) { g.destr.walls.skins.dirty.add(crate::Num(j)); }
 }
 
@@ -127,7 +123,7 @@ pub(super) fn wall_skin_clear(g: &mut crate::game::Game) {
     for b in gone { crate::scene_boxes::box_let_go(g, b); }
     let s = &mut g.destr.walls.skins;
     s.cut.clear(); s.out.clear(); s.laid.clear(); s.seats.clear(); s.on.clear(); s.dirty.clear(); s.marked.clear();
-     s.room = 1e9; s.was = false; s.failed = false;
+     s.room = 1e9; s.was = false;
 }
 
 /// Once a frame, before the frame's box list is made again: what the list can still take of this lane's.
@@ -138,12 +134,10 @@ pub(super) fn wall_skin_update(g: &mut crate::game::Game) {
 
 /// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out.
 pub(super) fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let on = !g.destr.walls.skins.failed;
-    if !on && (!g.destr.walls.skins.cut.is_empty() || !g.destr.walls.skins.dirty.is_empty()) { let f = g.destr.walls.skins.failed; wall_skin_clear(g); g.destr.walls.skins.failed = f; }   // (put down under a standing game: the bands as authored)
-    if on && !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
+    if !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
         for b in g.destr.walls.list.clone() { if g.tab.wallbreak_breakable[b].open.iter().any(|x| *x != 0) { let bl = crate::edge_look::break_like(g, b); wall_skin_opened(g, &bl); } }
     }
-    g.destr.walls.skins.was = on;
+    g.destr.walls.skins.was = true;
     if !g.destr.walls.skins.dirty.is_empty() {
         let mut js_: Vec<f64> = g.destr.walls.skins.dirty.keys().into_iter().map(|k| k.0).collect();
         js::sort_by(&mut js_, |p, q| *p - *q);

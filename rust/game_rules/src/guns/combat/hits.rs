@@ -58,7 +58,7 @@ fn contact_clear(g: &crate::game::Game, a: CharId, b: CharId) -> bool {
     !solid_between(g, from, to)
 }
 
-/// rayHit plus the contact shot: a muzzle already inside his body cylinder is a hit where it is. `contact` None is the TypeScript's `true`.
+/// The ray hit plus the contact shot: a muzzle already inside his body cylinder is a hit where it is. `contact` None always counts.
 pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, contact: Option<crate::combat::BodyHitContact>) -> f64 {
     let t = crate::character::character_ray_hit(g, c_2, ro, rd, tmax);
     if t >= 0.0 || !g.ch[c_2].alive || matches!(contact, Some(BodyHitContact::Entering)) { return t; }
@@ -66,7 +66,7 @@ pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, c
     let counts = match contact {
         None => true,
         Some(BodyHitContact::Entering) => false,
-        // fireWeapon's own test: nothing solid nearer along the bore than his middle, no panel between the two chests
+        // fire_weapon's own test: nothing solid nearer along the bore than his middle, no panel between the two chests
         Some(BodyHitContact::Muzzle { st0_t, muzzle, glass_arm, shooter }) => {
             let or = g.ch[c_2].pos;
             let h = g.ch[c_2].bone(crate::character::Bone::Hips).unwrap_or(or);
@@ -643,14 +643,9 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The attached solver's canister tuning, or None behind a stand-in without any.
-fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
-    g.smoke.params
-}
-
-/// What a smoke can lets out: the attached solver's tuning, or its own numbers behind a stand-in without any.
-pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
-    smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 })
+/// What a smoke can lets out.
+pub fn can_params() -> crate::smoke_types::CanisterParams {
+    crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 }
 }
 
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.
@@ -661,7 +656,7 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
-        let p = can_params(g);
+        let p = can_params();
         seconds = p.canister_duration;
         let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton

@@ -6,10 +6,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: what skeleton 5 still cannot do
-
-/// A box held by value, as a row, for a stub that takes an ID. `g.tab.boxes.push(cell.clone())`.
-fn seam_box_push(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
+/// A box held by value, made a row.
+fn box_pushed(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
 
 // ---------------------------------------------------------------- local helpers
 
@@ -32,14 +30,14 @@ fn under(a: AABB, b: AABB) -> bool {
 fn touches(a: AABB, b: AABB, e: f64) -> bool {
     m::min(a.x1, b.x1) - m::max(a.x0, b.x0) > -e && m::min(a.y1, b.y1) - m::max(a.y0, b.y0) > -e && m::min(a.z1, b.z1) - m::max(a.z0, b.z0) > -e
 }
-/// the TypeScript's scratch Int32Array(96): a local, and its length still caps what gather lists
+/// a scratch of 96: a local, and its length still caps what gather lists
 fn scratch() -> Vec<i32> { vec![0; 96] }
 
 /// What a broken cell throws: this cell's pieces, chips and fines by its material's row.
 pub(super) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell: &crate::scene_boxes::Box, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) {
     let (surf, hard) = { let r = &g.tab.wallbreak_breakable[b]; (r.surf, r.hard) };
     let as_ = if hard == Some(true) { Some(crate::break_table::Mat::Blockwork) } else { None };
-    let cell = seam_box_push(g, cell);
+    let cell = box_pushed(g, cell);
     let r = crate::break_table::breaks_shed_cell(g, surf, cell, dir, who, budget, as_);
 }
 

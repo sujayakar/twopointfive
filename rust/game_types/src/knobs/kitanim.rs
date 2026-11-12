@@ -4,10 +4,9 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct KitanimK {
-    /// where the rifle lives when it is not in his hands (the maintainer, 10-10: "for "loud builds" … unequipping rifle should be putting it down in a sling, not
-    ///  over the back, right?"): 0 = by the mission — a squad's loud mission: let down on its sling in FRONT of him (quicker both ways: no trip over the shoulder);
-    ///  a quiet mission, the plain night: across his BACK, out of the way of his hands — the very test the sneaking suit is worn by (cast.ts sneakSuit, less the
-    ///  look's own switches) · 1 = always in front · 2 = always on his back. Part of `equip`: with that off (or the switch) it is the back, as the build had it.
+    /// where the rifle lives when it is not in his hands (the maintainer: "for "loud builds" … unequipping rifle should be putting it down in a sling, not
+    ///  over the back, right?"): 0 = by the mission — one that is a fight (`staged.facts.fight`): let down on its sling in FRONT of him (quicker both ways: no trip over the shoulder);
+    ///  any other: across his BACK, out of the way of his hands · 1 = always in front · 2 = always on his back.
     #[k(0.0)] pub sling: f64,
     /// the rifle hanging in front rests on a thigh that comes up under it (rigProps SLING_REST): how fast it is pushed up onto one / settles back down, 1/s (an
     ///  ease toward what the pose wants — a stride moves that a quarter turn in a few frames, and a hung rifle has weight); 0 = no ease, the pose's own answer
@@ -21,7 +20,7 @@ pub struct KitanimK {
     /// …and A CLICK MADE WHILE A CAN IS STILL COMING TO THE FIST IS KEPT for the whole fetch ('5, click' in one breath throws as the can arrives — it used to throw
     ///  nothing for up to two thirds of a second): the most such a click may wait, s. 0 = dropped, as it was.
     #[k(1.0)] pub throw_keep: f64,
-    /// the most a lock-out may be once no errand is running (= player.ts RIFLE_EQUIP_SECS, the build's own rifle beat; the probes hold the two equal)
+    /// the most a lock-out may be once no errand is running (the same as `RIFLE_EQUIP_SECS`, the rifle's own beat)
     #[k(0.45)] pub plain_lock: f64,
     /// the magazine changes, in seconds on the weapon's clock — written for the pistol's 1.6 s row and the rifle's 2.4 s row and scaled to whatever row the gun in
     ///  hand has. out = the old magazine leaves the gun · keep = it is in the dump pouch (tactical only) · in_ = the fresh one is seated · rack = slide / handle

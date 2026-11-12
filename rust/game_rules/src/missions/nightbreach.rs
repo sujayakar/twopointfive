@@ -11,13 +11,13 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
-/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
+/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (ten in a game of one).
 pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { crate::seats::budget_with_seats(g, SQUAD4_BUDGET) }
 
-/// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
-/// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
-/// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
-/// one: that wants the row's place kept beside `applied`, which the generated type has no field for.
+/// Is this start the one `applied` already, asked of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
+/// whole, by value. Another start with the same place for Sam is ANOTHER start and writes the knobs again (a knob moved by hand
+/// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field read as
+/// one: telling them apart would want the row's place kept beside `applied`.
 pub(crate) fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
     a.sam == b.sam && a.sam_yaw == b.sam_yaw && a.ops == b.ops && a.ops_yaw == b.ops_yaw
 }
@@ -34,7 +34,7 @@ fn in_his_book(g: &mut Game, gd: GuardId) -> bool {
     crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(&crate::seats::here(v), gd))
 }
 
-/// Teammate i's mark; Err is the TypeScript's throw.
+/// Teammate i's mark; Err where neither the level's team start nor its breach plan has one.
 fn mark_of(
     own: Option<&crate::scene_scenarios::TeamStart>,
     plan: Option<&crate::scene_level::BreachPlan>,
@@ -48,7 +48,7 @@ fn mark_of(
     own.or(from).or(stack).or(start).ok_or_else(|| format!("no mark for teammate {} (the level's team start, or its breach plan)", i + 1))
 }
 
-/// The search of standBy; Err is the TypeScript's throw.
+/// The search for a place to stand by the lead; Err where it finds none.
 fn stand_by_checked(g: &Game, lead: V3, taken: &[V3], yaw: f64) -> Result<V3, String> {
     let mut best: Option<V3> = None;
     let mut bs = f64::INFINITY;
@@ -240,8 +240,8 @@ fn spawn_the_garrison(g: &mut Game, marks: &[NightBreachMark], budget: Option<f6
         };
         let man = crate::guards::spawn_unit(g, &opts)?;
         g.staged.foes.push(man);
-        crate::control::set_hold(g, man, true, "nightbreach");
-        crate::control::set_pinned(g, man, true, "nightbreach");
+        crate::duty::hold(g, man, true, "nightbreach");
+        crate::duty::pin(g, man, true, "nightbreach");
     }
     Ok(())
 }
@@ -270,8 +270,8 @@ fn shut_the_plans_doors(g: &mut Game, p: &crate::scene_level::BreachPlan) {
 fn stand_easy(g: &mut Game, gd: GuardId) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "nightbreach");
     crate::mind::set(g, gd, 0.0, "nightbreach");
-    crate::control::set_hold(g, gd, false, "nightbreach");
-    crate::control::set_pinned(g, gd, false, "nightbreach");
+    crate::duty::hold(g, gd, false, "nightbreach");
+    crate::duty::pin(g, gd, false, "nightbreach");
     let c = g.gd[gd].ch;
     let patch = crate::squad::OrderPatch {
         goal: Some(None),
@@ -599,8 +599,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
                 let was = g.gd[h].state;
                 crate::squad::end_guard_script(g, h, Some(was));
             }
-            crate::control::set_hold(g, h, true, "nightbreach");
-            crate::control::set_pinned(g, h, true, "nightbreach");
+            crate::duty::hold(g, h, true, "nightbreach");
+            crate::duty::pin(g, h, true, "nightbreach");
             let Some(aim) = g.night_breach.marks.get(i).map(|m| m.aim_at) else { continue };
             if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 && g.gd[h].held.is_none() {
                 let c = g.gd[h].ch;
@@ -628,8 +628,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
             for o in night_breach_drill_ops(g) {
                 if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].script.is_some() && !in_his_book(g, o) {
                     crate::squad::end_guard_script(g, o, Some(crate::game::GuardState::Search));
-                    crate::control::set_hold(g, o, true, "nightbreach");
-                    crate::control::set_pinned(g, o, true, "nightbreach");
+                    crate::duty::hold(g, o, true, "nightbreach");
+                    crate::duty::pin(g, o, true, "nightbreach");
                 }
             }
             if night_breach_state(g) == NightBreachState::Recalled {

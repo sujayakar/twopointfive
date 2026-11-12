@@ -119,16 +119,10 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
     true
 }
 
-/// how many other men of this room are at it on entry `i`
-fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> usize {
-    let mut n = 0;
-    for x in g.fight.defs.clone() {
-        let xg = g.tab.roomfight_def[x].gd;
-        if x == me || crate::condition::down(g, g.gd[xg].ch) || g.tab.roomfight_def[x].room != Some(room) { continue; }
-        if phase_of(g, xg) == Phase::Idle { continue; }
-        if state_of(g).men.get(xg).unwrap().entry == i { n += 1; }
-    }
-    n
+/// the door he gets ready for: the one they are expected by, or the next likeliest if fewer have that
+fn his_door(g: &Game, d: RoomfightDefId, r: &RoomSt) -> f64 {
+    let on = |way: f64| crate::cover::on_way(g, r.room, way as usize, d);
+    if r.second >= 0.0 && on(r.expected) > on(r.second) { r.second } else { r.expected }
 }
 
 /// he has thought: the room's row, his door, the word, the furniture or the door, or cover
@@ -153,7 +147,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
     if r.expected < 0.0 { m.phase = Phase::Idle; return; }
     if !r.men.contains(&gd) { r.men.push(gd); }
     m.room = Some(room);
-    m.entry = if r.second >= 0.0 && on_entry(g, d, room, r.expected) > on_entry(g, d, room, r.second) { r.second } else { r.expected };
+    m.entry = his_door(g, d, &r);
     m.brace = -1.0;
     m.spot = None;
     fear(g, d, *m);
@@ -401,7 +395,7 @@ fn haul_on(g: &mut Game, d: RoomfightDefId, m: &mut Man, rk: Option<RoomfightRoo
     }
 }
 
-/// roomfight.ts tickDef, every frame for every defender it runs
+/// every frame, for a defender the room fight runs on a level that digs in: not one held, broken or running, nor a lane's thrower
 pub(in crate::defenders) fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let gd = g.tab.roomfight_def[def].gd;
     if crate::condition::down(g, g.gd[gd].ch) || crate::mission::leads(g, gd) { return; }
@@ -432,7 +426,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
     if now - last_seen >= 0.25 { m.eyes_t = None; } else if m.eyes_t.is_none() { m.eyes_t = Some(now); }
     let mode = g.tab.roomfight_def[d].mode;
     let my_room = g.tab.roomfight_def[d].room;
-    if mode == DefMode::Free { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
+    if matches!(mode, DefMode::Free | DefMode::Told) { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
     if mode == DefMode::Move {
         if m.phase == Phase::Haul {
             // HAULHOME: a man bringing the last hand in is planted: a leg another rule gives him then is not a haul
@@ -755,6 +749,13 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
+/// The door of his room he is getting ready for or dug in on, if he is at it.
+pub fn dig_in_way(g: &Game, d: RoomfightDefId) -> Option<f64> {
+    let row = &g.tab.roomfight_def[d];
+    let m = g.m.digin.states.as_ref()?.men.get(row.gd)?;
+    if matches!(m.phase, Phase::Idle | Phase::Think | Phase::ToRoom) || m.room != row.room { None } else { Some(m.entry) }
+}
+
 /// A man set off the door's line rests his gun on the floor they must cross (writes `pt`)
 pub(in crate::defenders) fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };
@@ -769,7 +770,7 @@ pub(in crate::defenders) fn dig_in_set(g: &crate::game::Game, gd: GuardId) -> bo
     g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |x| x.phase == Phase::Set)
 }
 
-/// pressure.ts's fall-back seam: a spot beside a man of a room dug in that the team has not reached, and the door he comes in by; None = none
+/// the pressure rule's fall-back: a spot beside a man of a room dug in that the team has not reached, and the door he comes in by; None = none
 pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3) -> Option<crate::digin::DigInRefuge> {
     match g.m.digin.states.as_ref() { Some(s) if !s.rooms.is_empty() => {} _ => return None }
     let (gd, my_room) = (g.tab.roomfight_def[def].gd, g.tab.roomfight_def[def].room);
@@ -846,9 +847,8 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own bits, under bun with EXACT.on
     #[test]
-    fn leg_dist_has_the_typescripts_bits() {
+    fn leg_dist_keeps_its_bits() {
         assert_eq!(leg_dist([1.3, 0.0, 2.7], [0.1, 0.0, -3.3], [7.7, 0.0, 4.9]).to_bits(), 0x400996784bec9bcf);
         assert_eq!(leg_dist([-5.5, 0.0, 0.33], [2.0, 0.0, 2.0], [2.0, 0.0, 2.0]).to_bits(), 0x401ebc15f4b30045);
         assert_eq!(leg_dist([9.1, 0.0, 9.2], [0.0, 0.0, 0.0], [1.1, 0.0, 0.7]).to_bits(), 0x40275861532b8544);

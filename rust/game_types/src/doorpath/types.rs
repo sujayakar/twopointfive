@@ -30,7 +30,7 @@ pub struct Walk {
     pub in_m: f64,
     pub pod0: V3,
     pub body_t: f64,
-    /// INVENTED by a review: see the proposals
+    /// dealt as the walk is laid: what holds a walk's serial asks by it whether the man's live walk is still that one
     pub serial: u32,
 }
 

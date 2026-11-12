@@ -38,8 +38,6 @@ id! {
     AnimGltfCastInfoId,
     /// GltfCharacter: g.art.rig
     RigId,
-    /// PoseSet: g.tab.pose_set
-    PoseSetId,
     /// Ragdoll: g.tab.ragdoll
     RagdollId,
     /// Character: g.ch
@@ -62,6 +60,8 @@ id! {
     DebrisChunkId,
     /// Seat: g.tab.cmd_seat
     SeatId,
+    /// Group: g.groups
+    GroupId,
     /// RtLight: g.tab.light
     LightId,
     /// Fixture: g.tab.fixture
@@ -78,8 +78,8 @@ id! {
     WindWindSourceId,
     /// DoorOp: g.tab.doortools_door_op
     DoorOpId,
-    /// Assignment: g.tab.orders_assignment
-    OrdersAssignmentId,
+    /// Task: g.tab.task
+    TaskId,
     /// RoomSearch: g.tab.doortools_room_search
     DoortoolsRoomSearchId,
     /// Word: g.tab.doortools_word

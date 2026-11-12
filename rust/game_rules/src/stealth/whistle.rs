@@ -26,7 +26,7 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
     row.glance_at = Some(v3::copy(at));
 }
 
-/// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).
+/// Read-only peek (None: no whistle has ever concerned this man).
 pub fn whistle_mem(g: &crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
     g.m.whistle.mem_of.get(gd).copied()
 }
@@ -97,7 +97,7 @@ fn mouth_of(g: &crate::game::Game, e: crate::game::GameEvent) -> V3 {
 fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     let state = g.gd[gd].state;
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
-    if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
+    if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].errand.is_some() { return false; }
     if crate::seats::is_man_id(g, who) {
         g.team(gd).theirs()
     } else {
@@ -105,7 +105,7 @@ fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     }
 }
 
-/// Who a whistle reached and which calm man is to answer it, worked out ONCE per event (its serial is the TypeScript's object identity).
+/// Who a whistle reached and which calm man is to answer it, worked out ONCE per event (told by its serial).
 fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f64) -> &'g mut crate::whistle::Resolution {
     let key = e.serial;
     if g.m.whistle.res_of.has(key) { return g.m.whistle.res_of.get_mut(key).unwrap(); }
@@ -151,7 +151,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     // already hunting: one more fix on where you are, nothing said
     let state = g.gd[gd].state;
     if state == GuardState::Alert || state == GuardState::Search || g.gd[gd].awareness >= 0.85 {
-        // (a word on the radio this tick stands over what he hears: belief.ts wordNow)
+        // (a word on the radio this tick stands over what he hears)
         if !crate::belief::word_now(g, gd) && (state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
             crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle");
         }

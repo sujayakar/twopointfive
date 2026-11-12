@@ -49,8 +49,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn run_on_matches_the_typescript_bits() {
-        // bogRun under EXACT, SNOWBOG.run = 2
+    fn run_on_keeps_its_bits() {
+        // the pinned bits at run = 2
         let cases: [(f64, u64); 6] = [
             (0.85, 0x3f970a3d70a3d70c),
             (0.34, 0x3fdbe0ded288ce6e),

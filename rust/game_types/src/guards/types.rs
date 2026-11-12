@@ -237,7 +237,7 @@ pub struct GuardsModUNSTICK {
 pub struct GuardsModLitSeenValue {
     pub t: f64,
     pub lit: bool,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub tgt: Option<crate::guards::LitSeenTgt>,
 }
 

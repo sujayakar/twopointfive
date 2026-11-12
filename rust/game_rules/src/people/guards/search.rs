@@ -25,7 +25,7 @@ fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
 /// m: the emitter radius of a torch
 pub const FLASHLIGHT_RADIUS: f64 = 0.07;
 
-fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
+fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<TaskId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
     let key = match (tgt, pt) {
         (Some(gd), _) => Some(LitSeenTgt::Man { gd }),
         (None, Some(_)) => Some(LitSeenTgt::Pt),
@@ -55,7 +55,7 @@ fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentI
     }
     if lit {
         if let Some(id) = a {
-            let (post, arrived) = (g.tab.orders_assignment[id].post, g.tab.orders_assignment[id].arrived);
+            let (post, arrived) = (g.tab.task[id].post, g.tab.task[id].arrived);
             if let Some(post) = post {
                 if !arrived && v3::dist_xz(pos, post) < g.k.lights.lit_mark_m {
                     lit = !place_dark(g, post[0], post[2]);
@@ -194,7 +194,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.team(gd).ours()
         && crate::roomfight::fight_live(g)
-        && crate::seats::order_of(g, gd).is_some()
+        && crate::duty::order(g, gd).is_some()
 }
 
 /// stands this floor point lit by the place's steady lights
@@ -259,7 +259,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
     let o = crate::roomfight::room_fight_op_of(g, gd);
     let o_row = o.map(|id| &g.tab.roomfight_op[id]);
-    let a_row = a.map(|id| &g.tab.orders_assignment[id]);
+    let a_row = a.map(|id| &g.tab.task[id]);
     let man = &g.gd[gd];
     let k = &g.k.lights;
     let pos = g.ch[man.ch].pos;
@@ -472,7 +472,7 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
     let dc = door_cells(g);
     let mut sx = m::floor(from[0] / cs);
     let mut sz = m::floor(from[2] / cs);
-    // (a NaN passes the bounds test in TypeScript and then reaches nothing: all Infinity, as here)
+    // (a NaN reaches nothing: all Infinity)
     if sx.is_nan() || sz.is_nan() || sx < 0.0 || sz < 0.0 || sx >= w || sz >= h {
         return FloodFrom { secs, metres };
     }
@@ -736,7 +736,7 @@ pub(super) fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits under EXACT, for one beam
+    /// pinned bits, for one beam
     #[test]
     fn beam_fan_bits() {
         const WANT: [[u64; 3]; 7] = [

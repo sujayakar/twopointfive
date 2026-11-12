@@ -72,7 +72,7 @@ fn rain_masks_a_sound() {
 }
 
 /// How much dust a place of the level's air holds.
-fn dust_at(p: &mut Play, at: [f64; 3]) -> f64 { sim::weather::of_read(p.g.sim).air.share_at(at[0], at[2]) }
+fn dust_at(p: &mut Play, at: [f64; 3]) -> f64 { sim::air::share_at(&p.g.air_dust, at[0], at[2]) }
 
 /// The outside door the rule works: a shut exterior door of the records office with a roof over the floor inside and open sky out.
 fn outside_door(p: &mut Play) -> (String, [f64; 3], [f64; 2]) {

@@ -12,12 +12,12 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 // ---- private helpers ----
 
-/// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
+/// the seed's word of a box's centre and half sizes
 fn box_word(c: V3, hs: V3) -> f64 {
     ::sim::panes_box_seed(c[0], c[1], c[2], hs[0], hs[1], hs[2]) as f64
 }
 
-/// the thin axis's world direction of a box of this turn and these half sizes (glass.ts:79 paneNormal, with the box read)
+/// the thin axis's world direction of a box of this turn and these half sizes
 fn normal_of(yaw: f64, h: V3) -> V3 {
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     if h[0] < h[2] { [cs, 0.0, -sn] } else { [sn, 0.0, cs] }
@@ -57,7 +57,7 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
 
 /// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand
 pub fn reset_glass(g: &mut crate::game::Game) {
-    ::sim::panes::forget_heard(g.sim);   // its first test is panesUntouched's: the part's first word
+    g.tab.boxes.panes().told.clear();
     let s = match g.m.glass.states.as_mut() { Some(s) => s, None => return };
     s.hits = 0.0;
     s.last_hit_t = -100.0;
@@ -104,18 +104,6 @@ pub(super) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f6
         [at[0] - n[0] * (r + off), 0.0, at[2] - n[2] * (r + off)],
     ]);
     g.events.push(e);
-}
-
-/// nearest point of box b (yawed, no rot) to p, and the distance
-fn nearest_on_box(g: &crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
-    let (yaw, c, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.c, row.h) };
-    let (cs, sn) = (m::cos(yaw), m::sin(yaw));
-    let (dx, dy, dz) = (p[0] - c[0], p[1] - c[1], p[2] - c[2]);
-    let lx = v3::clamp(cs * dx - sn * dz, -h[0], h[0]);
-    let ly = v3::clamp(dy, -h[1], h[1]);
-    let lz = v3::clamp(sn * dx + cs * dz, -h[2], h[2]);
-    let q: V3 = [c[0] + cs * lx + sn * lz, c[1] + ly, c[2] - sn * lx + cs * lz];
-    NearestOnBox { q, d: v3::dist(p, q) }
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
@@ -200,7 +188,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
         let since_any = time - s.crack_at;
         let sound = !(crack_gap > 0.0 && since_any >= 0.0 && since_any < crack_gap);
         if sound { s.crack_at = time; }
-        if live_gap > 0.0 && !::sim::panes::heard_gap(g.sim, js::to_u32(pane), who, time, live_gap) {
+        if live_gap > 0.0 && !::sim::panes::heard_gap(g.tab.boxes.panes(), js::to_u32(pane), who, time, live_gap) {
             if sound { crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(point), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + 0.08 * u + 0.3 * w })); }
             raise_noise(g, who);
             return res;
@@ -226,16 +214,14 @@ pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>,
     glass_impact(g, bi, hit_p, dir, 1.0, who, Some(cause), quiet, None).pane
 }
 
-/// stars every sheet whose nearest point is within `radius` of `at`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it
+/// stars every sheet a blast at `at` has a line to within `radius`, GLASS.bangCracks quiet hits each, seeded off the blast; how many panes took it
 pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f64 {
     let mut n = 0.0;
     for bi in glass_panes(g) {
         let bx = g.box_at(bi);
         if !is_sheet(g, bx) { continue; }   // solid glass does not craze
         let b = bx.unwrap();
-        let near = nearest_on_box(g, b, at);
-        if near.d > radius { continue; }
-        let q = near.q;
+        let Some(q) = ::sim::panes::blast_meets(g.tab.boxes.world(), &::sim::world::Over::with(true), js::to_u32(bi) as usize, at, radius, &g.k) else { continue };
         let word = box_seed(g, b);
         let mut s = js::to_u32(blast_seed(word, at));
         let (c, h, yaw) = { let row = &g.tab.boxes[b]; (row.c, row.h, row.yaw) };
@@ -281,10 +267,8 @@ pub fn update_glass(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    // Every expected value below is the TypeScript's own, under bun with EXACT.on.
-
     #[test]
-    fn point_and_blast_seeds_are_the_typescript_s() {
+    fn point_and_blast_seeds_are_as_pinned() {
         let cases: [(f64, V3, f64, f64); 6] = [
             (0.0, [0.0, 0.0, 0.0], 0.0, 0.0),
             (2654435761.0, [1.2345, -0.0005, 0.0005], 2481012589.0, 2481012589.0),
@@ -300,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn a_blast_s_draws_are_the_typescript_s() {
+    fn a_blast_s_draws_are_as_pinned() {
         let cases: [(u32, u32); 6] = [
             (0, 695872825),
             (1, 1435855270),
@@ -312,7 +296,7 @@ mod tests {
         for (s, next) in cases { assert_eq!(blast_step(s), next, "{}", s); }
     }
 
-    // bun's own values for four boxes: two sheets, a solid pane, a box that is no glass.
+    // pinned values for four boxes: two sheets, a solid pane, a box that is no glass.
     const FOUR: [(V3, V3, f64, f64); 4] = [
         ([1.2345, 1.5, -3.25], [0.02, 1.5, 2.0], 0.0, 131072.0),
         ([10.0, 0.4, 7.777], [1.1, 0.4, 0.05], 0.7, 131074.0),
@@ -321,7 +305,7 @@ mod tests {
     ];
 
     #[test]
-    fn a_box_s_seeds_and_normal_are_the_typescript_s() {
+    fn a_box_s_seeds_and_normal_are_as_pinned() {
         let want: [(f64, f64, bool, [u64; 3]); 4] = [
             (3611120674.0, 455261860.0, true, [0x3ff0000000000000, 0x0, 0x8000000000000000]),
             (4014362709.0, 3716110216.0, true, [0x3fe49d6e694619b8, 0x0, 0x3fe87996529f9d92]),

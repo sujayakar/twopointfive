@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 macro_rules! o { ($g:expr, $op:expr) => { $g.tab.wallcharge_wall_op[$op] } }
-macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
+macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.task[$a] } }
 
 mod enter;
 use enter::wall_charge_enter;
@@ -25,7 +25,7 @@ fn job(going: &str, there: &str) -> WallChargeAssignA { WallChargeAssignA { goin
 fn none_upper(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::None), ..a } }
 fn none_aim(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), ..a } }
 
-// ------------------------------------------------------------ underFire's two answers: the match where they are called (conventions 3; the captures are WallChargeFireAsk)
+// ------------------------------------------------------------ underFire's two answers (the captures are WallChargeFireAsk)
 /// a round's line, the wall about to go being no cover where it will open   (underFire's `line`)
 fn fire_line(g: &Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
     if !crate::scene_collision::segment_blocked(g, a, b, None, None, None) { return true; }
@@ -133,7 +133,7 @@ pub(super) fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate
     for &b in g.col.nav.blocked.iter() { h = h.wrapping_mul(31).wrapping_add(b as i32); }
     let stamp = format!("{}|{}|{}|{}|{}|{}|{}:{}|{},{}|1",
         g.pl[p].keys.keys().join(","), g.pl[p].codes.keys().join(","), locks, g.cleared.known, g.destr.walls.serial,
-        g.engine.world.geom_serial, g.col.nav.blocked.len(), h, g.sets[g.seat].orders.knobs.cleared_dear, g.sets[g.seat].orders.knobs.round_cap);
+        g.engine.world.geom_serial, g.col.nav.blocked.len(), h, g.groups[g.group].orders.knobs.cleared_dear, g.groups[g.group].orders.knobs.round_cap);
     let same = match &g.sets[g.seat].wall_charge.walks { Some(k) => k.menu == m && k.stamp == stamp && k.map.len() <= 512, None => false };
     if !same { g.sets[g.seat].wall_charge.walks = Some(WallChargeWalks { menu: m, stamp, map: JsMap::new() }); }
     WallChargeKept::Menu
@@ -142,7 +142,7 @@ pub(super) fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate
 // ------------------------------------------------------------ the order
 /// one man's job on this order, kept as the order's
 fn wall_charge_assign(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, a: &crate::wallcharge::WallChargeAssignA) {
-    let b = crate::orders::SquadOrdersAssignA {
+    let b = crate::duty::TaskGiven {
         post: a.post, going: a.going.clone(), order: a.order.clone().unwrap_or_else(|| String::from(WALL_ORDER)),
         face: a.face, there: a.there.clone(), t0: a.t0, follow: a.follow, watch: a.watch, door: a.door, strafe: a.strafe, stance: a.stance,
         upper: a.upper, stack_side: a.stack_side, move_: a.move_.clone(), set_line: a.set_line.clone(), group: a.group, set_said: a.set_said,
@@ -342,13 +342,13 @@ fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
 fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
     let w = o!(g, op).wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
-    let live: Vec<(GuardId, OrdersAssignmentId)> = o!(g, op).men.iter().filter_map(|&m| {
+    let live: Vec<(GuardId, TaskId)> = o!(g, op).men.iter().filter_map(|&m| {
         let a = o!(g, op).mine.get(m).copied()?;
         if asg!(g, a).post.is_some() { Some((m, a)) } else { None }
     }).collect();
     for &(_, a) in live.iter() { asg!(g, a).spare = Some(false); }
     if live.len() < 2 { return; }
-    let mut rows: Vec<(usize, f64, GuardId, OrdersAssignmentId)> = live.iter().enumerate().map(|(i, &(m, a))| (i, v3::dist_xz(asg!(g, a).post.unwrap(), at), m, a)).collect();
+    let mut rows: Vec<(usize, f64, GuardId, TaskId)> = live.iter().enumerate().map(|(i, &(m, a))| (i, v3::dist_xz(asg!(g, a).post.unwrap(), at), m, a)).collect();
     js::sort_by(&mut rows, |x, y| js::or(y.1 - x.1, y.0 as f64 - x.0 as f64));
     let take = if live.len() >= 4 { 2 } else { 1 };
     for &(_, _, m, a) in rows.iter().take(take) {
@@ -402,7 +402,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
         if any { g.tab.input[input].pressed.delete(key.clone()); }
         return;
     }
-    if let Some(rows) = g.sets[g.seat].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
+    if let Some(rows) = g.groups[g.group].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
         if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
     }
     let sam = g.player_pos(g.player);
@@ -410,7 +410,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     let wall = g.tab.wallcharge_set_wall_charge[c].wall.clone();
     let foot = wall_pt(g, &wall, 0.0, 0.0, None);
     let mine = v3::dist_xz(foot, sam);
-    for x in g.sets[g.seat].door_tools.set.clone() {
+    for x in g.groups[g.group].tools.set.clone() {
         if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) {
             let d = g.tab.doortools_set_charge[x].door;
             if v3::dist_xz(g.dr[d].frame_centre, sam) < mine { return; }
@@ -418,7 +418,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     }
     wall_charge_blow(g, Some(c), None);
     let mut word = false;
-    for x in g.sets[g.seat].door_tools.set.clone() { if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) { word = true; break; } }
+    for x in g.groups[g.group].tools.set.clone() { if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) { word = true; break; } }
     if word { g.tab.input[input].pressed.delete(key.clone()); } else { g.sets[g.seat].wall_charge.pressed = true; }   // (men waiting at a door get the word on this same press)
 }
 
@@ -566,7 +566,7 @@ fn entry_job(seat: &crate::seats::SeatRef, post: V3, face: f64, watch: Option<V3
 /// through the hole, each to his own point; then the room is theirs
 fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
     let tk = thick(g, w);
-    let light = g.sets[g.seat].door_tools.lights.unwrap_or(true);
+    let light = g.groups[g.group].tools.lights.unwrap_or(true);
     let into = v3::yaw_to(wall_pt(g, w, 0.0, 0.0, None), wall_pt(g, w, 0.0, -1.0, None));
     let mut i = o!(g, op).queue.len();
     while i > 0 {
@@ -649,7 +649,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
     let a = WallChargeAssignA {
         post: Some(if moved { at } else { pod.pos }),
         face: Some(if moved && door { v3::yaw_to(at, h.watch) } else { h.face }),
-        watch: Some(h.watch), pace: Some(g.sets[g.seat].orders.knobs.entry), light, search: Some(true), ..a
+        watch: Some(h.watch), pace: Some(g.groups[g.group].orders.knobs.entry), light, search: Some(true), ..a
     };
     wall_charge_assign(g, op, gd, &a);
 }

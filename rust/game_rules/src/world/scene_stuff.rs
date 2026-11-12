@@ -39,7 +39,7 @@ fn fin(p: &crate::scene_stuff::Paint) -> String {
 /// The paint this array is, if anybody said so.
 pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
     match albedo {
-        Some(row) => seam_paints_get(g, row),
+        Some(row) => paints_get(g, row),
         None => None,
     }
 }
@@ -57,7 +57,7 @@ pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crat
     }
 }
 
-fn seam_paints_get(g: &Game, row: &[f64]) -> Option<Paint> {
+fn paints_get(g: &Game, row: &[f64]) -> Option<Paint> {
     if row.len() < 3 { return None; }
     g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
 }

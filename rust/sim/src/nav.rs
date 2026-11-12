@@ -1,11 +1,12 @@
-//! A WAY ACROSS THE FLOOR — src/scene/collision.ts NavGrid.findPath (A* over the half-metre grid, then the greedy smoothing), nearestFree and
-//! walkable; with a penalty too, whose prices are asked as the search comes to need them (`start_priced`, `priced`). The rule is the TypeScript's, statement for statement: the same cells popped in the same order, the same ties, the same waypoints.
+//! A WAY ACROSS THE FLOOR: A* over the half-metre grid, then the greedy smoothing (`find_path`); with a penalty too, whose prices are asked as the search comes to need them
+//! (`start_priced`, `priced`). The cells are popped in a written order and the ties go a written way, so a way's waypoints are the same on every machine, and changing that
+//! order changes the game.
 //!
-//! The grid of shut cells is the host's (it bakes it and re-bakes it under a blast); it writes it here before it asks. Everything in this file is scratch of
-//! one question: the search's four tables stand blank between searches, as the TypeScript's do. The scores are KEPT in singles, as the TypeScript keeps them
-//! in Float32Arrays (single.rs), and worked out in doubles.
+//! WHAT IS HANDED. The grid of shut cells is the host's (it bakes it and re-bakes it under a blast); it writes it here (`floor_is`) before it asks. `floor_is` keeps a copy
+//! and what it derives until a cell differs. Everything else in this file is scratch of one question: the search's four tables stand blank between searches, and there is one
+//! search at a time (a price may not ask for another way). The scores are KEPT in singles (single.rs) and worked out in doubles.
 //!
-//! The lengths (the smoothing's, and the lines nearestFree asks) are the game's own, so this answers only where EXACT.on.
+//! The lengths (the smoothing's, and the lines `nearest_free` asks) are the game's own (rust/maths).
 
 use game_types::knobs::Knobs;
 use crate::lines;
@@ -23,7 +24,7 @@ pub const MAX_WAY: usize = 1 << 13;
 /// THE FLOOR A SEARCH CAN HOLD, in cells: what the host is told (`nav_cap(0)`) and the most `begin` takes. On a floor of no more cells than this no
 /// table here can be outgrown, whatever cap the caller puts on the search: a search closes a cell once and lists eight more at most as it does (so the
 /// open list and the list of cells written hold 1 + 8 × cells entries at most), and a way has no more waypoints than the floor has cells. The floor is
-/// the BUILD's (src/scene/world.ts WORLD: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
+/// the BUILD's (`scene_world::world()`: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
 /// once by the host, and never a level's.
 pub const MAX_FLOOR: usize = least(least(MAX_NAV, MAX_WAY), (MAX_OPEN - 1) / 8);
 const fn least(a: usize, b: usize) -> usize {
@@ -36,7 +37,7 @@ const fn least(a: usize, b: usize) -> usize {
 
 static mut SHUT: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut G: [S; MAX_NAV] = [S::ZERO; MAX_NAV];
-/// the cell a cell was reached from, PLUS ONE (0 = none: the TypeScript's −1)
+/// the cell a cell was reached from, PLUS ONE (0 = none)
 static mut CAME: [u32; MAX_NAV] = [0; MAX_NAV];
 static mut CLOSED: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut OPEN: [u32; MAX_OPEN] = [0; MAX_OPEN];
@@ -83,12 +84,11 @@ const SQRT2: f64 = 1.4142135623730951;
 pub const NO_WAY: i32 = -1;
 pub const ASK_HOST: i32 = -2;
 
-/// Math.ceil
 #[inline(always)]
 fn ceil(x: f64) -> f64 {
     -floor(-x)
 }
-/// collision.ts clampi over a floored coordinate, as a cell
+/// a floored coordinate held to the grid, as a cell
 #[inline(always)]
 fn cell_of(x: f64, cell: f64, n: usize) -> usize {
     let c = floor(x / cell);
@@ -114,14 +114,14 @@ impl Grid {
     fn cells(&self, v: f64) -> f64 {
         if self.cell == 0.5 { v * 2.0 } else { v / self.cell }
     }
-    /// NavGrid.isBlocked: off the grid is shut
+    /// off the grid is shut
     #[inline(always)]
     fn is_blocked(&self, shut: &[u8], wx: f64, wz: f64) -> bool {
         let (x, z) = (self.cells(wx), self.cells(wz));
         // (a floor over nought is what the cast leaves off)
         !(x >= 0.0 && z >= 0.0 && x < self.gw as f64 && z < self.gh as f64) || shut[z as usize * self.gw + x as usize] == 1
     }
-    /// NavGrid.walkable. `at`: how far along the last line asked was shut, where this one is asked first (and left so): whether a line is free hangs on no order
+    /// is the straight way from a to b free of shut cells. `at`: how far along the last line asked was shut, where this one is asked first (and left so): whether a line is free hangs on no order
     fn walkable(&self, shut: &[u8], a0: f64, a2: f64, b0: f64, b2: f64, at: &mut f64) -> bool {
         let (dx, dz) = (b0 - a0, b2 - a2);
         let len = hypot2(dx, dz);
@@ -146,7 +146,7 @@ impl Grid {
         }
         true
     }
-    /// NavGrid.nearestFree for a world point that asked: Ok(the cell, or none), Err = a line the host must judge
+    /// the free cell nearest a world point that asked: Ok(the cell, or none), Err = a line this module cannot walk
     fn nearest_free(&self, shut: &[u8], w: &World, gx: usize, gz: usize, wx: f64, wz: f64, tune: &Knobs) -> Result<Option<(usize, usize)>, ()> {
         let mut fallback: Option<(usize, usize)> = None;
         let mut extra: i32 = 1;
@@ -185,7 +185,7 @@ impl Grid {
     }
 }
 
-/// findPath(a, b, max_iter) with no penalty: how many waypoints were written (x z each, at way_addr) · NO_WAY (the TypeScript's null) · ASK_HOST
+/// the way from a to b with no penalty: how many waypoints were written (x z each, at way_addr) · NO_WAY · ASK_HOST
 #[allow(clippy::too_many_arguments)]
 pub fn find_path(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
     match begin(w, gw, gh, cell, a0, a2, b0, b2, max_iter, tune) {
@@ -193,7 +193,7 @@ pub fn find_path(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b
         Err(said) => said,
     }
 }
-/// findPath(a, b, max_iter, penalty): the search is set to its start, or what it says without one (Some). The way is `priced`'s to find.
+/// the way from a to b with a penalty: the search is set to its start, or what it says without one (Some). The way is `priced`'s to find.
 #[allow(clippy::too_many_arguments)]
 pub fn start_priced(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> Option<i32> {
     begin(w, gw, gh, cell, a0, a2, b0, b2, max_iter, tune).err()
@@ -203,7 +203,7 @@ pub fn priced(price: &mut dyn FnMut(usize) -> f64) -> i32 {
     go(&mut Priced { price, n: 0 })
 }
 
-/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH (collision.ts findPath's `penalty`: a multiplier, read as 1 where it is under 1). THE SEARCH IS
+/// WHAT A STEP INTO A CELL COSTS, TO ONE SEARCH (a multiplier, read as 1 where it is under 1). THE SEARCH IS
 /// WRITTEN ONCE, OVER THIS: a search with no penalty is the search whose every price is 1 (`Flat`).
 trait Prices {
     /// every price is 1: no cell is dear, so the smoothing has none to count along a leg
@@ -275,12 +275,12 @@ fn begin(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, 
     if unsafe { LIVE } {
         return Err(ASK_HOST);
     }
-    // (a floor of more cells than a search holds: the host has said so by name before it asks, NavGrid.there. Each side is under MAX_FLOOR before the
+    // (a floor of more cells than a search holds: the host has said so by name before it asks. Each side is under MAX_FLOOR before the
     //  two are multiplied: the product cannot wrap)
     if gw == 0 || gh == 0 || gw > MAX_FLOOR || gh > MAX_FLOOR || gw * gh > MAX_FLOOR {
         return Err(ASK_HOST);
     }
-    // (a point that is no number has no cell: the TypeScript's own answer for it, whatever that is, is the host's to give)
+    // (a point that is no number has no cell: the host says what that means)
     if !(a0 - a0 == 0.0 && a2 - a2 == 0.0 && b0 - b0 == 0.0 && b2 - b2 == 0.0) || !(cell > 0.0) {
         return Err(ASK_HOST);
     }
@@ -316,6 +316,17 @@ fn begin(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, 
     *run = Run { gw, gh, cell, a0, a2, start, goal, gx, gz, max_iter };
     Ok(())
 }
+/// THE TABLES AS THEY ARE WITH NO SEARCH BEGUN. A search stopped in its middle (a panic in one of its prices) leaves them taken and written: whoever goes on in this module after one says so here.
+pub fn afresh() {
+    unsafe {
+        (*core::ptr::addr_of_mut!(G)).fill(S::INF);
+        (*core::ptr::addr_of_mut!(CAME)).fill(0);
+        (*core::ptr::addr_of_mut!(CLOSED)).fill(0);
+        (*core::ptr::addr_of_mut!(AT)).fill(0);
+        (*core::ptr::addr_of_mut!(KNOWN)).fill(0);
+        (BLANK, LIVE) = (true, false);
+    }
+}
 /// the search's tables as they stood before it: every cell it wrote is in SEEN
 fn blank(n_seen: usize) {
     let (at, g, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(AT), &mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };
@@ -327,7 +338,7 @@ fn blank(n_seen: usize) {
         closed[c] = 0;
     }
 }
-/// NavGrid.dearAlong: the distinct cells along the straight leg a → b (sampled at half a cell) whose price is above plain floor
+/// the distinct cells along the straight leg a → b (sampled at half a cell) whose price is above plain floor
 fn dear_along<P: Prices>(src: &mut P, grid: &Grid, a0: f64, a2: f64, b0: f64, b2: f64) -> u32 {
     let (gw, gh) = (grid.gw as f64, grid.gh as f64);
     let (dx, dz) = (b0 - a0, b2 - a2);

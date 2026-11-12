@@ -21,12 +21,6 @@ export interface CutPlane { n: Vec3; d: number }
 export const MAX_CUT_PLANES = 8;
 /** PLANE rows of a box's record in the cut table (boxMat's tail from CUT_BASE: row CUT_BASE + bi × CUT_STRIDE + k = (n.xyz, d) of plane k < CUT_ROWS; an unused row = CUT_PAD) */
 export const CUT_ROWS = MAX_CUT_PLANES;
-/** vec4 rows a box OWNS in the cut table: its CUT_ROWS plane rows, then one CORE row = (the colour its cut faces show, 1) — or all zero: they show the box's own colour */
-export const CUT_STRIDE = CUT_ROWS + 1;
-/** the unused row: a zero normal ends the record for every reader (n = 0 keeps everything) */
-export const CUT_PAD: readonly [number, number, number, number] = [0, 0, 0, 1];
-/** the GPU flag bit of a box that has a record (common.wgsl GEO_CUT; bit 16 of the geo flags word — free up there: the CPU's bit 16, SoundSeal, is never uploaded) */
-export const BOX_CUT_BIT = 1 << 16;
 /** the switch (see the head of this file). Mutate only at boot (host/drawpage.ts initCutSwitch). */
 export const cutConfig = {
   on: false,
@@ -155,20 +149,6 @@ export interface CutGlass { see: number; rim: number; anim?: boolean }
  *  `coreStuff` (with `old`; the look page's number for what the core is made of, 0‥31: BoxWorld.coreStuffOf) adds 4096 × itself, above every bit here.
  *  `arc` (Box.cutArc; with `round`, and only where the record leaves its last row unused) rides in that unused row's w as CUT_PAD's 1 + arc: no reader of a
  *  plane looks past a zero normal. */
-/** where an old break's core says its stuff in the core row's w (packCut; gbuffer_cut.wgsl reads `(w >> 12) & 31`) */
-export const CUT_CORE_STUFF = 4096;
-export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, core?: Vec3, glass?: CutGlass, round = 0, old = false, arc = 0, coreStuff = 0) {
-  for (let k = 0; k < CUT_ROWS; k++) {
-    const c = k < cut.length ? cut[k] : undefined, q = o + k * 4;
-    if (c) { dst[q] = c.n[0]; dst[q + 1] = c.n[1]; dst[q + 2] = c.n[2]; dst[q + 3] = c.d; }
-    else { dst[q] = CUT_PAD[0]; dst[q + 1] = CUT_PAD[1]; dst[q + 2] = CUT_PAD[2]; dst[q + 3] = CUT_PAD[3]; }
-  }
-  if (arc > 0 && round >= 1 && cut.length < CUT_ROWS) dst[o + (CUT_ROWS - 1) * 4 + 3] = CUT_PAD[3] + arc;
-  const q = o + CUT_ROWS * 4;
-  if (core) { dst[q] = core[0]; dst[q + 1] = core[1]; dst[q + 2] = core[2]; dst[q + 3] = 1; } else { dst[q] = 0; dst[q + 1] = 0; dst[q + 2] = 0; dst[q + 3] = 0; }
-  if (glass) dst[q + 3] += 2 + (glass.anim ? 4 : 0) + 8 * Math.round(Math.min(3.75, Math.max(0, glass.rim)) * 4) + Math.min(0.98, Math.max(0, glass.see));
-  else dst[q + 3] += (round >= 1 && round <= 3 ? 1024 * round : 0) + (old ? 512 + CUT_CORE_STUFF * (coreStuff & 31) : 0);   // (Box.cutRound: 1024 × (1 + the axis); Box.cutOld: 512 — never with glass. 128 is a ROUND THING's own bit, scene/round.ts ROUND_CORE_W)
-}
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.

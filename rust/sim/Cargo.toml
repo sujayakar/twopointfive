@@ -1,4 +1,4 @@
-# The world's hot loops and each game's block. They stand on the types: a loop takes a record as it is.
+# The world's hot loops. They stand on the types: a loop takes a record as it is.
 [workspace]
 
 [package]

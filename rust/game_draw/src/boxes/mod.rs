@@ -2,11 +2,13 @@
 //! own, which a frame drawn between two ticks stands between where the two left them. Behind the rows: the list of what is drawn, the planes of what is cut,
 //! the table of painted marks, the panes of glass and the grid every ray walks (grid.rs). The page hands each to the GPU as it lies.
 use crate::Row;
+use game::rows::Half2;
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 use game::scene_boxes::Box;
 
+pub mod air;
 pub mod glass;
 pub mod grid;
 pub mod marks;
@@ -21,22 +23,87 @@ pub const MAX: usize = 4096;
 /// a move longer than this in one tick is a cut, and is not drawn through (metres)
 const SNAP: f64 = 1.5;
 
+game::packed! {
+    /// a box's word: its bits, whose it is, and the first row (from 1) of its marks
+    pub struct BoxWord: u32 {
+        low: 0, 8;
+        owner: 8, 8;
+        high: 16, 2;
+        mark: 18, 14;
+    }
+}
+game::packed! {
+    /// its finish: its roughness, whether it is bare metal and anisotropic, what it is made of, whether it moves, and a number of its own that shifts its map
+    pub struct Finish: f32 over rough {
+        metal: 1, 1;
+        aniso: 2, 1;
+        stuff: 3, 5;
+        moves: 8, 1;
+        own: 9, 6;
+    }
+}
+
 section! {
-    /// a box's place: cx cy cz, yaw's cosine and sine as halves · hx hy hz, flags
+    /// a box's place
     pub struct Geo {
-        pub w: [u32; 8],
+        /// its middle
+        pub c: [f32; 3],
+        /// its yaw's cosine and sine (a tilted box is turned by `Mat.rot`)
+        pub rot: Half2,
+        /// its half sizes
+        pub h: [f32; 3],
+        pub flags: BoxWord,
     }
 }
 section! {
-    /// its material: colour and cut height · emission and finish · rotation · the colour a secondary ray finds and its marks' gain
+    /// its material
     pub struct Mat {
-        pub w: [f32; 16],
+        pub albedo: [f32; 3],
+        /// above this height it is hidden from the eye, where it is cut away
+        pub cut_height: f32,
+        pub emits: [f32; 3],
+        pub finish_word: Finish,
+        pub rot: [f32; 4],
+        /// the colour a ray that does not see its marks finds
+        pub albedo_sec: [f32; 3],
+        /// what its marks' light is multiplied by
+        pub mark_gain: f32,
     }
 }
 section! {
-    /// its planes, where it is cut: eight of n and d, then the core's colour
+    /// its planes, where it is cut: each n and d, box-local, the side kept is n p <= d (a normal of nought ends them)
     pub struct Cut {
-        pub w: [f32; 36],
+        pub plane: [[f32; 4]; 8],
+        /// the colour its cut faces show (w over 0: it has one), and what else is said of them in w
+        pub core: [f32; 4],
+    }
+}
+section! {
+    /// the scene's block: how many boxes, the grid, the men's bounds, the panes
+    pub struct Info {
+        pub num_boxes: u32,
+        pub num_globals: u32,
+        pub grid_w: u32,
+        pub grid_h: u32,
+        /// the boxes too large for the grid, by their places
+        pub globals: [[u32; 4]; 4],
+        pub num_capsules: u32,
+        pub num_chars: u32,
+        pub caps_per_char: u32,
+        /// where the packed copies of the grid's items begin
+        pub items_b: u32,
+        /// a man's proxies' sphere
+        pub char_bounds: [[f32; 4]; 16],
+        /// a global's padded lowest and highest, two to a row
+        pub globals_y: [[f32; 4]; 8],
+        /// x: how far a traced box can reach outside the cells it is registered in (m); y: how much tighter a cell's height span is judged than it is packed
+        pub grid: [f32; 4],
+        /// a global's bounds in the world: its least corner, then its greatest, a little proud of it
+        pub globals_b: [[f32; 4]; 32],
+        /// x, y: how many panes
+        pub glass_info: [u32; 4],
+        /// a pane: its middle and its yaw's cosine, its half sizes and the sine, its tint and its place among the statics
+        pub glass: [[f32; 4]; 96],
     }
 }
 section! {
@@ -99,6 +166,8 @@ section! {
         pub items: u32,
         /// the panes' broken cells are to be sent
         pub panes_moved: u32,
+        /// the weather's dust in the rooms is to be sent
+        pub air_moved: u32,
         /// the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count)
         pub serial: u32,
         /// which stuffs some box has been, a bit a stuff's number
@@ -137,15 +206,13 @@ pub struct Look {
     pub coat: [f64; STUFFS],
 }
 /// the stuffs a box may say
-pub const STUFFS: usize = 32;
-/// the numbers of a look
-pub const LOOK: usize = 11 + 2 * STUFFS;
+pub use game::handed::STUFFS;
 impl Look {
-    pub fn read(v: &[f64]) -> Look {
-        let at = |i: usize| v[11 + i];
+    pub fn of(l: &game::handed::PageLook) -> Look {
+        let yes = |v: f64| v != 0.0;
         Look {
-            bared: false, on: v[0] != 0.0, marks: v[1] != 0.0, cut: v[2] != 0.0, round: v[3] != 0.0, motion: v[4] != 0.0, panes: v[5] != 0.0, mirrors: v[6] != 0.0, air: v[7] != 0.0, glass_lum: v[8], glass_rough: v[9], texel: v[10],
-            stuff: core::array::from_fn(|i| at(i) as u32), coat: core::array::from_fn(|i| at(STUFFS + i)),
+            bared: false, on: yes(l.on), marks: yes(l.marks), cut: yes(l.cut), round: yes(l.round), motion: yes(l.motion), panes: yes(l.panes), mirrors: yes(l.mirrors), air: yes(l.air),
+            glass_lum: l.glass_lum, glass_rough: l.glass_rough, texel: l.texel, stuff: l.stuff.map(|v| v as u32), coat: l.coat,
         }
     }
 }
@@ -159,7 +226,7 @@ impl Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
         for v in pack::sent(b, look).iter().chain(pack::emission(b, look.bared).iter()) { eat(v.to_bits()); }
-        eat(pack::finish(b, look).to_bits());
+        eat(pack::finish(b, false, look).0.to_bits() as u64);
         eat(pack::gain(b, look.bared).to_bits());
         eat(b.owner.to_bits());
         eat(b.stuff.map_or(99, |s| s as u64));
@@ -193,6 +260,7 @@ pub struct Boxes {
     pub rank: rank::Rank,
     pub grid: grid::Grid,
     pub glass: glass::Glass,
+    pub air: air::Air,
     pub leaves: Vec<Leaf>,
     pub beams: Vec<Beam>,
     pub wet: crate::wet::Wet,
@@ -222,7 +290,7 @@ impl Boxes {
     pub fn bare(&mut self, on: bool) { if on != self.look.bared { self.look.bared = on; self.epoch += 1; } }
     /// nothing is drawn through what went before: the game is another than the one last drawn
     pub fn hold(&mut self) { self.have = self.have.min(1); }
-    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
+    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); self.air.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, night: bool, again: bool, watched: &[game::rig_props::CarriedBox]) {
@@ -296,7 +364,7 @@ impl Boxes {
             let wide = thin.map(|t| (t.hw0, t.k * px)).filter(|&(hw0, hw)| hw > hw0);
             if let Some((hw0, hw)) = wide { for x in &mut h { if *x == hw0 { *x = hw; } } }
             pack::pack(b, c, h, true, &self.look, &mut self.marks, &mut self.geo[i], &mut self.mat[i], &mut self.cut[i]);
-            if let Some((hw0, hw)) = wide { for k in 4..7 { self.mat[i].w[k] *= (hw0 / hw) as f32; } }
+            if let Some((hw0, hw)) = wide { for e in &mut self.mat[i].emits { *e *= (hw0 / hw) as f32; } }
             let s = pack::stuff(b.stuff, &self.look);
             if s > 0 { self.stuffs |= 1 << s; }
             let f = pack::flags(b);
@@ -347,12 +415,14 @@ impl Boxes {
         self.lines(g, n, focus);
         self.list(g, n);
         let moved = self.grid.build(&self.stood, n);
-        self.glass.frame(g, focus, &mut self.grid.info, self.look.panes);
+        self.glass.frame(g, focus, &mut self.grid.info[0], self.look.panes);
+        self.air.frame(g);
         let h = self.head.last_mut().unwrap();
         h.grid_moved = moved as u32;
         h.items = self.grid.count as u32;
         h.slack = self.grid.slack as f32;
         h.panes_moved = self.glass.moved as u32;
+        h.air_moved = self.air.moved as u32;
     }
 
     /// the lines of light nearest the view: the ones the air shows first, as many as its pass has room for
@@ -376,7 +446,7 @@ impl Boxes {
             let (s, mat) = (&self.stood[n + k], &self.mat[n + k]);
             let f3 = |v: [f64; 3]| v.map(|x| x as f32);
             let air = match bead { None => 0, Some(None) => 1, Some(Some(_)) => 2 };
-            self.beams.push(Beam { c: f3(s.c), h: f3(s.h), rot: [mat.w[8], mat.w[9], mat.w[10], mat.w[11]], emits: [mat.w[4], mat.w[5], mat.w[6]], air });
+            self.beams.push(Beam { c: f3(s.c), h: f3(s.h), rot: mat.rot, emits: mat.emits, air });
             if air > 0 { self.unboxed.push((n + k) as u32); }
             if let Some(Some(b)) = bead { if let Some(j) = self.own.iter().position(|o| o.id == b) { self.unboxed.push((n + j) as u32); } }
         }

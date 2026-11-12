@@ -7,6 +7,7 @@
 //! WHICH BOXES HAVE A ROW. A static (the level's list, in its order), a leaf (a door's box), a part of the furniture in the level. Every other box (a piece of debris, a skin) has none,
 //! and is written without one.
 use crate::bytes::{ToBytes, W};
+use crate::made::next;
 use crate::ids::*;
 use crate::scene_boxes::Box as SBox;
 use crate::V3;
@@ -90,6 +91,8 @@ pub struct Thing {
 pub const VIEW_NONE: u32 = 0;
 pub const VIEW_BLOWN: u32 = 1;
 pub const VIEW_GIVES: u32 = 2;
+/// which view, its numbers, and the panes a burst meets (`World.view`, `view_at`, `view_met`)
+pub type View = (u32, [f64; 6], Vec<(u32, [f64; 3])>);
 
 /// THE ROWS, as the loops read them.
 #[derive(Clone, Debug, Default)]
@@ -124,11 +127,13 @@ pub struct World {
     pub things: Vec<Thing>,
     /// the level's sheets of glass, ascending
     pub sheets: Vec<Sheet>,
-    /// whose panes these are: the slot of the game's block that holds what is out of them, while glass is hung
-    pub panes: Option<usize>,
+    /// …and those of them that have been touched
+    pub panes: crate::panes::Panes,
     /// the view of the glass a judgment in hand takes (VIEW_*), and its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it
     pub view: u32,
     pub view_at: [f64; 6],
+    /// …and the panes a burst there has a line to, each with the point it meets (a view of what it would break alone)
+    pub view_met: Vec<(u32, [f64; 3])>,
     /// which writing of a static's row this is: no two alike in a process, so a table made from the statics is told by it
     pub wrote: u64,
     /// …and of how one stands (its place, its size, its turn), for a table that is made of that alone
@@ -234,11 +239,6 @@ pub fn filed(w: usize, cells: usize, list: &[(u32, [i32; 4])]) -> (Vec<u32>, Vec
 }
 /// every double by its bits (a −0 is not a 0)
 fn same(a: &[f64], b: &[f64]) -> bool { a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()) }
-/// the next writing's number
-fn next() -> u64 {
-    static N: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(1);
-    N.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
-}
 
 /// THE WORLD AS A QUESTION TAKES IT: the boxes as they stand, or as they would be. `leaves` = do the leaves stand; `but` = those that are let through; `open` = statics that are let
 /// through; `extra` = boxes that are not of the level and stand for this question (REC doubles each; a cut one's planes in `extra_cut`, its record's place there).
@@ -402,12 +402,18 @@ impl Boxes {
         self.rows.walk[bi] = on as u8;
         self.row(b);
     }
-    /// the glass that hangs: the slot of the block that holds what is out of it (None: no glass hangs), and the level's sheets
-    pub fn glass(&mut self, panes: Option<usize>, sheets: Vec<Sheet>) { (self.rows.panes, self.rows.sheets) = (panes, sheets); }
-    /// the game stands in this slot: its panes are there
-    pub fn stand_in(&mut self, slot: usize) { if let Some(g) = &mut self.rows.panes { *g = slot } }
+    /// the level's sheets of glass
+    pub fn glass(&mut self, sheets: Vec<Sheet>) { self.rows.sheets = sheets; }
+    /// the panes touched, to write
+    pub fn panes(&mut self) -> &mut crate::panes::Panes { &mut self.rows.panes }
+    /// the rows lent to a rule of the panes, which writes `panes` and asks lines of the rest
+    pub fn lent(&mut self) -> &mut World { &mut self.rows }
     /// the view of the glass the judgment in hand takes
-    pub fn view(&mut self, kind: u32, at: [f64; 6]) { (self.rows.view, self.rows.view_at) = (kind, at); }
+    /// → the one that was
+    pub fn view(&mut self, (kind, at, met): View) -> View {
+        let w = &mut self.rows;
+        (core::mem::replace(&mut w.view, kind), core::mem::replace(&mut w.view_at, at), core::mem::replace(&mut w.view_met, met))
+    }
 
     /// THE CHECK, against the lists as the game has them (a thing's id, its parts, where it stands): the first box that is in a list and not in its place here, or whose row is not
     /// the box as it stands, by what it is and its place
@@ -455,6 +461,7 @@ impl ToBytes for Boxes {
         self.rows.start.w(o);
         self.rows.items.w(o);
         self.rows.tilted.w(o);
+        self.rows.panes.w(o);
     }
 }
 

@@ -6,6 +6,9 @@ use alloc::{string::String, vec::Vec};
 /// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::LANE | by::SQUAD`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, crate::bytes::ToBytes)]
 pub struct By(pub u32);
+/// who has a man: a bit for each rule with a hand on him, the place of the top one in the ranks, which of its reasons it gave, and the game time it came to the top
+#[derive(Clone, Copy, Debug, Default, crate::bytes::ToBytes)]
+pub struct Hold { pub by: By, pub rank: u32, pub reason: u32, pub since: f64 }
 impl core::ops::BitOr for By { type Output = By; fn bitor(self, o: By) -> By { By(self.0 | o.0) } }
 impl By {
     /// no tasker: below every one

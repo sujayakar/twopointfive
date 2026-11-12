@@ -1,9 +1,7 @@
-//! THE ONE FILE OF THE SIMULATION THAT NAMES A SINGLE. The game's arithmetic is in doubles; a local pose is STORED in singles, because the TypeScript keeps it
-//! in a Float32Array. Reading one gives the double it stands for and writing one rounds the double to the nearest single, ties to
-//! even: exactly what a Float32Array does. The build's rule against the word stands everywhere else (tools/qa/rust-rules-check.ts RULES names this file as the
-//! exception).
+//! A STORED POSE VALUE. The game's arithmetic is in doubles; a local pose is STORED in singles. Reading one gives the double it stands
+//! for and writing one rounds the double to the nearest single, ties to even.
 //!
-//! ONE THING IS WORKED OUT IN SINGLES (the maintainer, 2026-11-03: "Singles, plain root for lengths"): the two bulk kernels of a pose, the blend of two poses and the step between two keys of a clip. Every operation there is ONE operation on
+//! ONE THING IS WORKED OUT IN SINGLES (the maintainer: "Singles, plain root for lengths"): the two bulk kernels of a pose, the blend of two poses and the step between two keys of a clip. Every operation there is ONE operation on
 //! singles rounded once (an add, a subtract, a multiply, a divide, a root: each exact by the standard, so a lane of four gives what one at a time gives), in the order written here, and a rotation's length is the plain root
 //! of the sum of squares. The kernels are at the foot of the file.
 
@@ -13,15 +11,26 @@
 pub struct S(f32);
 impl S {
     pub const ZERO: S = S(0.0);
-    /// what a Float32Array holds after `fill(Infinity)`
+    /// a single's infinity
     pub const INF: S = S(f32::INFINITY);
+    /// what the game keeps of a pose or a clip, as this file reads it
+    #[inline(always)]
+    pub fn of(d: &[f32]) -> &[S] {
+        // SAFETY: S is the single it stores (repr(transparent))
+        unsafe { core::slice::from_raw_parts(d.as_ptr() as *const S, d.len()) }
+    }
+    #[inline(always)]
+    pub fn of_mut(d: &mut [f32]) -> &mut [S] {
+        // SAFETY: as above, and the slice is lent whole
+        unsafe { core::slice::from_raw_parts_mut(d.as_mut_ptr() as *mut S, d.len()) }
+    }
 }
 /// the double a stored value stands for
 #[inline(always)]
 pub fn get(s: &[S], i: usize) -> f64 {
     s[i].0 as f64
 }
-/// store a double as a Float32Array does
+/// store a double: the nearest single, ties to even
 #[inline(always)]
 pub fn put(s: &mut [S], i: usize, v: f64) {
     s[i] = S(v as f32);
@@ -90,7 +99,7 @@ fn hand_on(store: &mut [S], from: usize, to: usize, n: usize, rows: usize) {
         }
     }
 }
-/// skeleton.ts blendPose in singles: out = a toward b by `w` (times the mask's weight of the node, where there is a mask). `a`, `b` and `out` are places on
+/// a pose blended in singles: out = a toward b by `w` (times the mask's weight of the node, where there is a mask). `a`, `b` and `out` are places on
 /// one store of poses of `rows` rows (out may be a's or b's), `n` the nodes. A weight of nought or less hands `a`'s numbers on and one of one or more `b`'s,
 /// with nothing worked out; a weight that is no number takes the blend, as the comparisons say. ONLY THE NODES' ROWS ARE WRITTEN: the rows past the last node
 /// stay as they stand.

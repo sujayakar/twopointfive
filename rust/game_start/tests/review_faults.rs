@@ -55,7 +55,7 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
     p.run(0.08);
     let men = p.g.guards.clone();
     let (k, n, r) = (men[0], men[1], men[2]);
-    for (m, at, face) in [(k, [19.5, 11.3], [30.0, 11.3]), (n, [26.0, 11.3], [10.0, 11.3]), (r, [31.0, 16.0], [31.0, 26.0])] { p.posted_calm(m, at, face); p.g.gd[m].hold = false; }
+    for (m, at, face) in [(k, [19.5, 11.3], [30.0, 11.3]), (n, [26.0, 11.3], [10.0, 11.3]), (r, [31.0, 16.0], [31.0, 26.0])] { p.posted_calm(m, at, face); p.g.gd[m].duty.holds = false; }
     p.sam_put([18.7, 11.3]);
     p.key_down("KeyC"); p.frame(); p.key_up("KeyC");
     p.frame();

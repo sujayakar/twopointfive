@@ -1,17 +1,14 @@
-//! THE START: a level file and the character's files in, a `Game` the tick can run out. `src/host/standup.ts standGame` on a host with no picture
-//! , in its order:
+//! THE START: a level file and the character's files in, a `Game` the tick can run out, in this order:
 //!
-//!   the block of rust/sim the game stands in, zeroed under the layout's word
 //!   the character's rows
 //!   the host: an empty box world and light set
 //!   the level file read
 //!   the level's marks, its statics into the world, its lights into the set
 //!   the die, seeded: the men's construction dice are its first draws
 //!   the Game's constructor
-//!   the state that still moves, at home in the block
 //!   the host's own Input and camera, the camera on the level's spawn
 //!
-//! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, later a host.
+//! One function, `stand`, for every way a game starts natively: a test's scene (`scene.rs` writes a level file), a level of `levels/`, a host.
 use crate::gltf::{self, GltfFile};
 use crate::json::Json;
 use crate::{level, passes};
@@ -38,8 +35,6 @@ pub struct StartOpts {
     pub seed: u32,
     /// how many players (1 or 2), for the life of the game
     pub seats: u32,
-    /// which of rust/sim's blocks the game stands in (one game a block at a time)
-    pub slot: usize,
     /// the mission to start on the stood level by the game's own `startScenario`, none = the level as its file has it
     pub scenario: Option<game::scene_scenario_list::ScenarioSpec>,
     /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`), started by
@@ -57,7 +52,7 @@ pub struct StartOpts {
     /// comes first makes what it wants
     pub ready: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false, ready: true } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, scenario: None, link: None, kept: Default::default(), dress: false, may_refuse: false, ready: true } } }
 
 pub use game::standing::Host;
 
@@ -70,11 +65,6 @@ pub struct Stood {
     pub refused: Option<String>,
 }
 
-/// a block for a game that had none: zeros under the layout's word (state.ts born; a slot another game stood in is that game's no more)
-fn born(slot: usize) {
-    sim::state::put(slot, &[]);
-}
-
 /// the level's statics into the host's box world and its lights into the light set
 fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
@@ -85,7 +75,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
 
-pub use game::standing::{canvas, host_new, settle};
+pub use game::standing::{canvas, host_new};
 
 /// THE HOST OF A GAME THAT WAS HANDED ITS ROWS ELSEWHERE (a start made by another host and brought across): the game's own `host_cam` and
 /// `host_input`, on this host's canvas. None where the game was handed none.
@@ -115,17 +105,14 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     // own hour and weather onto its words, and the weather the game is born in
     let mut address = o.link.as_deref().map(game::query::Query::parse);
     if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q); }
-    born(o.slot);
-    g.sim = o.slot;
     // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
     if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
-    // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
+    // the rows that only dress the picture, as this host has them (up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, no skin
     g.engine.world = game::scene_boxes::box_world_new(&mut g, None);
-    game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
     let mut loaded = level::load(&mut g, data);
     populate_host(&mut g, &mut loaded.boxes);
@@ -148,7 +135,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
             None => panic!("the game refused the {}: {}", o.scenario.as_ref().map_or("mission", |s| s.kind.as_str()), why),
         }
     }
-    if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
+    if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); }
     if o.ready { game::scene_collision::light_ready(&g, usize::MAX); }
     let host = host_of(&g).expect("the men's lines make the host's rows");
     game::savestate::control::stood(&mut g);   // (a copy of it kept now is of this stand)

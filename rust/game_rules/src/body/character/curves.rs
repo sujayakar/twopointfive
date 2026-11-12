@@ -81,57 +81,15 @@ pub(super) fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
 
-/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after, since a `pose_new` would hold a place in the pool for good where the TypeScript's scratch held none.
-pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
-    let rows = crate::anim_skeleton::pose_rows(out.nodes as f64);
-    let stale = match g.m.character.at0.get(clip) {
-        None => true,
-        Some(e) => e.rows != rows,
-    };
-    if stale {
-        let kept = crate::anim_skeleton::pose_cols(g, out).to_vec();
-        crate::anim_skeleton::pose_cols(g, out).fill(f32::NAN);
-        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out);
-        let (at, v) = keyed_slots(crate::anim_skeleton::pose_cols(g, out));
-        crate::anim_skeleton::pose_cols(g, out).copy_from_slice(&kept);
-        g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows, at, v });
-    }
-    // The row is taken out for the replay: pose_cols lends all of g, and a clone here would allocate for every man's aim, every frame.
-    let e = g.m.character.at0.get_mut(clip).unwrap();
-    let (at, v) = (core::mem::take(&mut e.at), core::mem::take(&mut e.v));
-    replay_slots(crate::anim_skeleton::pose_cols(g, out), &at, &v);
-    let e = g.m.character.at0.get_mut(clip).unwrap();
-    e.at = at;
-    e.v = v;
-}
-
-/// The slots a sample into NaNs wrote, and what it wrote there: a slot still NaN is one the clip does not key.
-fn keyed_slots(cols: &[f32]) -> (Vec<i32>, Vec<f32>) {
-    let mut at: Vec<i32> = Vec::new();
-    for i in 0..cols.len() {
-        if !cols[i].is_nan() { at.push(i as i32); }
-    }
-    let v: Vec<f32> = at.iter().map(|&i| cols[i as usize]).collect();
-    (at, v)
-}
-
-/// The same floats into the same slots, the rest left as it stands.
-fn replay_slots(d: &mut [f32], at: &[i32], v: &[f32]) {
-    for k in 0..at.len() {
-        d[at[k] as usize] = v[k];
-    }
-}
-
 /// `p` with the difference between two poses laid on it by w, on the joints of `only`.
-pub(super) fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
+pub(super) fn add_pose_delta(poses: &mut crate::anim_skeleton::Poses, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
     if w <= 0.0 { return; }
-    let nr = crate::anim_skeleton::pose_rows(p.nodes as f64) as usize;
-    for i in 0..p.nodes as usize {
+    let nr = poses.rows();
+    for i in 0..poses.nodes {
         if only[i] as f64 <= 0.0 { continue; }
-        // One borrow at a time, read before written: p may be `from` (the head comment of the TypeScript's says so), and three slices of one pool cannot be held.
-        let a = joint_of(crate::anim_skeleton::pose_cols(g, from), nr, i);
-        let b = joint_of(crate::anim_skeleton::pose_cols(g, to), nr, i);
-        let pc = crate::anim_skeleton::pose_cols(g, p);
+        // (read before written: p may be `from`)
+        let (a, b) = (joint_of(poses.of(from), nr, i), joint_of(poses.of(to), nr, i));
+        let pc = poses.of_mut(p);
         let q = delta_joint(joint_of(pc, nr, i), a, b, w);
         for c in 0..7 { pc[c * nr + i] = q[c]; }
     }
@@ -144,7 +102,7 @@ fn joint_of(cols: &[f32], nr: usize, i: usize) -> [f64; 7] {
     j
 }
 
-/// add_pose_delta's sums for one joint, as the TypeScript does them: in doubles, stored as singles once.
+/// add_pose_delta's sums for one joint: in doubles, stored as singles once.
 fn delta_joint(p: [f64; 7], a: [f64; 7], b: [f64; 7], w: f64) -> [f32; 7] {
     let mut o = [0.0f32; 7];
     for c in 0..3 { o[c] = (p[c] + (b[c] - a[c]) * w) as f32; }
@@ -174,7 +132,7 @@ pub(super) fn bump(t: f64, a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     v3::smoothstep(a, b, t) * (1.0 - v3::smoothstep(c_2, d, t))
 }
 
-/// A carriage flattened into spring channels (CharacterAnimator.lg.ch; indices: LC).
+/// A carriage flattened into spring channels (indices: LC).
 fn long_flat(s: crate::character::LongShape) -> Vec<f64> {
     vec![s.side, s.up, s.fwd, s.pitch, s.aim_k, s.yaw, s.blade, s.lean, s.head_yaw, s.head_pitch, s.head_roll, s.elbow_r[0], s.elbow_r[1], s.elbow_r[2], s.elbow_l[0], s.elbow_l[1], s.elbow_l[2], s.pole_w, s.sway, s.anchor, s.steady]
 }
@@ -270,30 +228,6 @@ mod tests_2 {
         let mut flipped = b;
         for c in 3..7 { flipped[c] = -flipped[c]; }
         assert!(m::abs(yaw_of(delta_joint(p, a, flipped, 0.5)) - yaw_of(half)) < 1e-5, "{}", yaw_of(delta_joint(p, a, flipped, 0.5)));
-    }
-
-    /// A sample into NaNs: the slots it wrote are found, and replay into a pose leaving the rest of it as it stands.
-    #[test]
-    fn sample_at0_finds_and_replays_the_slots() {
-        let mut sampled = vec![f32::NAN; 40];
-        sampled[1] = 0.25; sampled[7] = -0.0; sampled[39] = 3.0;
-        let (at, v) = keyed_slots(&sampled);
-        assert_eq!(at, vec![1, 7, 39]);
-        assert_eq!(v.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), vec![0.25f32.to_bits(), (-0.0f32).to_bits(), 3.0f32.to_bits()]);
-        let mut out = vec![9.0f32; 40];
-        replay_slots(&mut out, &at, &v);
-        let mut want = vec![9.0f32; 40];
-        want[1] = 0.25; want[7] = -0.0; want[39] = 3.0;
-        assert_eq!(out.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), want.iter().map(|x| x.to_bits()).collect::<Vec<u32>>());
-    }
-
-    /// No weight is no read of any pose (a stub would panic).
-    #[test]
-    fn add_pose_delta_not_for_no_weight() {
-        let mut g = crate::game::Game::blank();
-        let z = crate::anim_skeleton::Pose::blank();
-        add_pose_delta(&mut g, z, z, z, 0.0, &[]);
-        add_pose_delta(&mut g, z, z, z, -1.0, &[]);
     }
 
     /// After a choke run to its end he lets the body go slowly while he stands there; moving, busy, or with a gun, he lets go at once.

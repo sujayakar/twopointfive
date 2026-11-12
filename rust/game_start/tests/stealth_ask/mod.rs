@@ -394,13 +394,13 @@ impl StealthAsk for Play {
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
     }
     fn mains_out(&self) -> bool { self.g.light_home.mains.active }
-    fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Breaker, .. })))) }
-    fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].task { Some(game::game::GuardTask::Arm0(k)) => k.pos, _ => panic!("no errand") } }
+    fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].errand, Some(game::game::Errand::At(game::game::ErrandAt { kind: game::game::ErrandThing::Breaker, .. })))) }
+    fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].errand { Some(game::game::Errand::At(k)) => k.pos, _ => panic!("no errand") } }
     fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]) {
         let floor = self.g.k.whistle.walk_floor;
         let (at, h) = (self.at(gd), &mut self.g.gd[gd]);
         if h.state == game::game::GuardState::Dead { return; }
-        h.task = None;
+        h.errand = None;
         h.state = game::game::GuardState::Suspicious;
         h.last_known = Some(spot);
         h.awareness = if (at[0] - spot[0]).hypot(at[1] - spot[2]) > 1.2 { floor } else { h.awareness.min(floor) };
@@ -421,16 +421,16 @@ impl StealthAsk for Play {
     }
     fn parked(&mut self, gd: GuardId) {
         let h = &mut self.g.gd[gd];
-        h.hold = true;
-        h.pinned = true;
+        h.duty.holds = true;
+        h.duty.pinned = true;
         self.g.cond[h.ch].blind_until = 1e9;
         h.heard_up_to = 1e12;
     }
     fn let_go(&mut self, gd: GuardId) {
         let seq = self.g.event_seq;
         let h = &mut self.g.gd[gd];
-        h.hold = false;
-        h.pinned = false;
+        h.duty.holds = false;
+        h.duty.pinned = false;
         self.g.cond[h.ch].blind_until = -1.0;
         h.heard_up_to = seq;
     }
@@ -464,7 +464,7 @@ impl StealthAsk for Play {
         h.last_seen_t = -100.0;
         h.sight_t = -100.0;
         h.search_t = 0.0;
-        h.task = None;
+        h.errand = None;
         h.script = None;
     }
     fn pursuit(&self) -> Vec<(Vec<(GuardId, game::tactics::RoleKind, f64)>, game::tactics::PlanPhase)> {
@@ -503,8 +503,7 @@ impl StealthAsk for Play {
         self.g.tab.enemysquads_squad[q].rooms.iter().any(|r| { let b = &r.bounds; at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 })
     }
     fn wand_jobs(&self) -> Vec<GuardId> {
-        let k = game::seats::view_key(&self.g, &game::seats::here(&self.g));
-        self.g.m.wandorder.states.get(k).map_or(Vec::new(), |st| st.jobs.keys())
+        self.g.m.wandorder.states.get(self.g.group).map_or(Vec::new(), |st| st.jobs.keys())
     }
     fn mates_lenses(&mut self) -> usize { game::wandorder::mate_wand_eyes(&mut self.g).len() }
     fn pair_silent(&mut self) {

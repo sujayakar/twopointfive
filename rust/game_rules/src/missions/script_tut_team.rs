@@ -1,5 +1,5 @@
 #![allow(unused_variables, unused_imports)]
-//! levels/tut-team.script.ts: the squad's tutorial mission on the ground. Its define pass, a step function for each beat, its three helpers.
+//! The script of the level tut-team: the squad's tutorial mission on the ground. Its define pass, a step function for each beat, its three helpers.
 
 pub use ::game_types::script_tut_team::types;
 pub use types::*;
@@ -11,7 +11,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_team_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_team::TutTeamVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutTeam(v) => v, _ => panic!("the run is not of levels/tut-team.script.ts") } }
+fn tut_team_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_team::TutTeamVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutTeam(v) => v, _ => panic!("the run is not of the level tut-team") } }
 
 /// the roadblock's three posts, and the names its men answer to (POSTS)
 const POSTS: [(&str, V3); 3] = [("Tango 6", [34.0, 0.0, 21.6]), ("Tango 7", [34.9, 0.0, 23.6]), ("Tango 8", [32.4, 0.0, 23.2])];
@@ -131,7 +131,6 @@ fn pick(g: &mut Game, r: DirectorRunId, len: usize) -> usize {
     let roll = crate::director::director_beat_rand(g, r);
     m::min(n - 1.0, m::floor(roll * n)) as usize
 }
-/// a + c.rand() * (b - a) (rake's closure mix, tut-team.script.ts:74)
 fn mix(g: &mut Game, r: DirectorRunId, a: f64, b: f64) -> f64 {
     a + crate::director::director_beat_rand(g, r) * (b - a)
 }

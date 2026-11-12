@@ -3,7 +3,7 @@
 // Direct light = U × visibility. U — every light's analytic contribution at the pixel: cone, falloff, N·L, emitter shape (evalLight) — is exact and
 // history-free wherever it is evaluated, and it is where every HARD edge of the direct term lives (light-pool boundaries, cone edges, the lit / unlit
 // break at a box corner); visibility is the stochastic part (shadow rays → the ratio-space denoiser), soft by nature except at contact. So this pass
-// re-scores U per OUTPUT pixel off the output-size g-buffer — the SAME statements the internal-resolution estimator runs (direct.wgsl / restir.wgsl:
+// re-scores U per OUTPUT pixel off the output-size g-buffer — the SAME statements the internal-resolution estimator runs (restir.wgsl:
 // stage the light list, cull it to the 8×8 tile's box losslessly, evalLight every survivor, split by emitter class) — and multiplies it by the
 // visibility RATIO r̂ = S ∕ U the internal pass + its denoiser settled on, joint-bilateral upsampled from the 2×2 internal texels round the pixel
 // (bilinear × same-plane × same-orientation; the ratio taken as Σw·S ∕ Σw·U — the U-weighted mean of the taps' own ratios, so a tap outside this
@@ -25,8 +25,7 @@
 // class's value is the mix, by that slope, of the upsampled-ratio value and the taps' own mean S. Taps alike in U (nearly everywhere) leave the ratio value untouched.
 // Group 0 is the OUTPUT frame block (frame.screen = the output size, worldFromDepth takes output pixels); the internal size is textureDimensions(iDepth).
 // (direct_common.wgsl is prepended: lightReachesBox for the tile cull, shadowSample for the sliver rays. `SLIVER_RAYS` is a const passes.ts prepends: the pass is compiled twice so the
-//  plain pipeline carries no tracer at all — the traced one is dispatched while settings.sharpSliver asks for rays. The output-res EDGE rays, an experiment no
-//  tier turned on, went 2026-11-07 with their mask kernel sharp_edge.wgsl.)
+//  plain pipeline carries no tracer at all — the traced one is dispatched while settings.sharpSliver asks for rays.)
 @group(1) @binding(0) var oDepth: texture_depth_2d;      // OUTPUT-size g-buffer: depth, packed normal
 @group(1) @binding(1) var oNormal: texture_2d<f32>;
 @group(1) @binding(2) var iDepth: texture_depth_2d;      // its INTERNAL view (gdown.wgsl: internal texel i ≡ output texel ⌊(i + ½)·out∕in⌋)
@@ -67,7 +66,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let sliverRule = cfgZ & 3u; let sliverCap = (cfgZ >> 8u) & 127u;
   let occlFit = ((cfgZ >> 15u) & 1u) != 0u;                    // HIDDEN LIGHT (header; settings.dnShadowOccl)
   if (lidx < 2u) { atomicStore(&wgSliver[lidx], 0u); }   // (ordered before any lane's vote by the light-list barriers below)
-  // ---- the tile's light list: direct.wgsl's lossless cull, statement for statement (a light off the list scores !ok at every live pixel of the tile) ----
+  // ---- the tile's light list: restir.wgsl's lossless cull, statement for statement (a light off the list scores !ok at every live pixel of the tile) ----
   var nIter = nL;
   wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
   workgroupBarrier();

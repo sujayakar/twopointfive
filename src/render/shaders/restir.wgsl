@@ -1,7 +1,6 @@
 // A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
-// ReSTIR DI direct lighting (renderer v3 Phase 2a): the direct-light estimator (the leader / tail one it replaced, direct.wgsl, went 2026-11-07).
-// Same inputs, same four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
-// total), so dtemporal / softblur / composite consume it unchanged. What differs is how S is estimated:
+// ReSTIR DI direct lighting: the direct-light estimator. Four outputs (per emitter class c ∈ {0 sharp, 1 broad}: S = shadowed estimate + signed penumbra hint, U = exact unshadowed
+// total): the denoiser and sharp direct read them, the composite S as the denoiser hands it back. How S is estimated:
 //
 //   Every light the tile can see is still scored unshadowed per pixel (evalLight, exact — that is U, and it is the candidate pdf). Per class the
 //   integrand is Σ_i E_i·V_i over the class's lights; the only unknown is visibility V. Instead of K leaders × stratified rays + a tail ray, each
@@ -83,7 +82,7 @@
 //                a history validated somewhere else; full memory the moment it rests; (c, 1024) spatial reuse at every pixel whose motion exceeds ru.mot.z px, with at least cfg.y >> 8 taps
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
-// Kept from direct.wgsl: the tile light list (the tile light list, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
+// Beside the reservoirs: the tile light list, reach masks (a walled-off light is in U, never a candidate, dark in S), glass
 // transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
 // ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
@@ -113,7 +112,7 @@ struct RestirU {
 @group(2) @binding(2) var<uniform> ru: RestirU;
 
 var<workgroup> wgLights: array<Light, 64>;
-// per-tile light culling — the same statements as direct.wgsl (its exactness argument holds word for word: a culled light scores !ok at every live pixel)
+// per-tile light culling, exact: a culled light scores !ok at every live pixel
 var<workgroup> wgP: array<vec4f, 64>;
 var<workgroup> wgRowMin: array<vec4f, 8>;
 var<workgroup> wgRowMax: array<vec4f, 8>;
@@ -236,7 +235,7 @@ fn traceSample(s: u32, Po: vec3f, N: vec3f, owner: u32, iu: u32, iv: u32) -> vec
 fn targetAt(s: u32, P: vec3f, N: vec3f, masked: bool) -> f32 { if (masked && lightReachLevel(s, P) == 0u) { return 0.0; } let e = evalLightDirect(wgLights[s], P, N); return select(0.0, luminance(e.E), e.ok); }
 /** the hue (colour ÷ its luminance) of light slot `s`: evalLight scales the light's colour by a scalar, so this is the hue of its irradiance anywhere it reaches */
 fn hueOf(s: u32) -> vec3f { let cl = wgLights[s].color; return cl / max(luminance(cl), 1e-6); }
-/** penumbra hint (px) from a blocked ray's width `pw` (m) for a light carrying `share` of the class's luminance — direct.wgsl's rule */
+/** penumbra hint (px) from a blocked ray's width `pw` (m) for a light carrying `share` of the class's luminance */
 fn hintPx(pw: f32, pxPerMetre: f32, share: f32) -> f32 { return max(0.75, pw * pxPerMetre * min(1.0, share * 2.0)); }
 
 @compute @workgroup_size(8, 8)
@@ -275,7 +274,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   // (the barriers of the light-list block below order these writes before any lane reads wgBelief)
 
-  // ---- per-tile light list (the tile light list) — as direct.wgsl ----
+  // ---- per-tile light list ----
   var nIter = nL;
   wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
   workgroupBarrier();
@@ -406,7 +405,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // U.a = the luminance of the light this pixel BELIEVES visible (Uv: live, not tile-dark, not its darkSlot) — the v3 shadow denoiser keys its light-motion / light-jump
     // cues on it (denoise.wgsl shTemporal): a fluorescent's stroke is an 85 % change of what actually reaches the desk under it but only ~20 % of U, which on this
     // floor is three-quarters street lamp behind the outer wall (in U by its reach through the windows, dark by every ray) — keyed on U the jump never registered.
-    // Nothing else reads U.a (softblur / composite / fgather take .rgb; direct.wgsl writes 1.0 there and the denoiser then falls back to U itself).
+    // Nothing else reads U.a (the denoiser's last step and sharp direct take .rgb).
     textureStore(outSharpU, gxy, vec4f(U0, luminance(Uv[0] + Ut[0])));   // (+ the transient stratum: a flash arriving or gone IS a light-jump for the cue; the hue Uv keeps to the persistent lights)
     textureStore(outBroadU, gxy, vec4f(U1, luminance(Uv[1] + Ut[1])));
   } else if (onScreen) {

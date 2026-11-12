@@ -32,7 +32,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
             _ => (crate::dialogue::watched_place(g, p, watch).unwrap_or_else(|| String::from("that way")), None),
         };
         let words = format!("covering {}", place);
-        let a = SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(yaw), watch: Some(watch), door,
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
             going: words.clone().into(), there: words.into(),

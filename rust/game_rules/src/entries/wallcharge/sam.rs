@@ -290,7 +290,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     crate::furnblast::furniture_warm(g);
 }
 
-/// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145
+/// The charge Sam is setting by hand, for whoever stands him at it.
 pub fn wall_charge_sam_job(g: &crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
     let height = g.k.wallcharge.height;
     let (wall, at) = g.pl[g.player].wall_work().map(|s| (s.wall.clone(), s.at))?;

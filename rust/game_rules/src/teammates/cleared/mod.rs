@@ -273,9 +273,9 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
 mod tests {
     use super::*;
 
-    /// The metres against the TypeScript's own bits (cleared.ts dearAlong under EXACT, a cell dear where its x is even).
+    /// The pinned metres of `cleared_rooms_dear_along`, a cell dear where its x is even.
     #[test]
-    fn dear_along_keeps_the_typescripts_bits() {
+    fn dear_along_keeps_its_bits() {
         let mut g = Game::blank();
         let cell = g.col.nav.cell;
         assert_eq!(cell, 0.5);

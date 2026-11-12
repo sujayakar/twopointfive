@@ -870,7 +870,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           { pos: [30.0, 0, 7.2], watch: 'ab', aimAt: [27.16, 1.1, 8.9] },            // between the desk and the bed
         ] },
     ],
-    // WHO HOLDS WHAT (squad-format.md: the data says who and where, never what a squad does when)
+    // WHO HOLDS WHAT (the data says who and where, never what a squad does when)
     squads: [
       { id: 'yard', name: 'Yard', rooms: ['garage', 'shed'], rally: [6.2, 0, 20.9] },                             // the two outbuildings on the west yard: the men who come across it (five in two rooms)
       { id: 'gate', name: 'Gate', rooms: ['hut'], rally: [28.2, 0, 22.6], mayLeave: false },                       // the gate guard in his hut: one man, he stays (he used to be the Yard's third room, and its man who came round by the forecourt door of the garage)

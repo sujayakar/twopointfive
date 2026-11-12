@@ -38,7 +38,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+Glass and bars: the rules in `rust/sim/src/` (`panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs`), the state `World.panes`.
 A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
 `rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
@@ -69,8 +69,8 @@ the box world's room, the cells stay shut and it answers no.
 under a standing upper. `destruction_round` does the rest. `coverfire.rs` lets a man spend rounds on what hides an enemy he knows of, by asking the same
 engine.
 
-**A blast.** `destruction_blast` runs its listeners (`BlastListener`: the glass and the bars), snow in the way, `doors_blast`, `wall_break_blast`,
-`furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
+**A blast.** `destruction_blast` tells its listeners (`BlastListener`: glass, bars), runs snow, `doors_blast`,
+`wall_break_blast`, tells them again through what opened, `furniture_blast`; then, for a burst but not a charge (the option `chaos` false), `destruction_bang`, `destruction_pall_burst`, `mess_burst`.
 `wall_break_plan_of` is the plan: columns in line within `hole_k` × radius go whole, within `port_k` lose their upper part, cover cells within
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 
@@ -101,7 +101,7 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
 `way_off` slides it the shortest free way clear of all of him.
 
-**Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
+**Glass.** A pane's state is a row of `World.panes`. `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
 float. The rule lists the pieces that let go; `glass_break_drain` hands each to `glass_shards_release`, the picture's half. Each landing and the glass
 it leaves are kept in `falls.rs`, where `step` makes a footfall louder and grinds the litter. A pane is a wall to feet until what stands below
@@ -122,7 +122,7 @@ density is real, so men's eyes read it as the picture does. `destruction_dust_pu
 time.
 
 **Restart and load.** A restart runs `glass_break_reset`, `destruction_reset` (it calls `wall_break_reset`, `furniture_reset`) and `decals_clear`. A
-load puts back a clone of the whole game and its block (`savestate/`), so nothing has to be told.
+load puts back a clone of the whole game (`savestate/`), so nothing has to be told.
 
 ## Rules that hold
 

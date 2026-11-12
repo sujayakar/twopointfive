@@ -29,15 +29,15 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
     );
     let t = g.time;
-    if let Some(hit) = g.sets[g.seat].orders.reached.get(key.clone()) {
+    if let Some(hit) = g.groups[g.group].orders.reached.get(key.clone()) {
         if m::abs(t - hit.t) < 1.0 {
             return SquadOrdersAsked { why: hit.why.clone(), lock: hit.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) };
         }
     }
-    if g.sets[g.seat].orders.reached.len() > 96 { g.sets[g.seat].orders.reached.clear(); }
+    if g.groups[g.group].orders.reached.len() > 96 { g.groups[g.group].orders.reached.clear(); }
     let r = squad_orders_route(g, gd, to, None, None, Some(true));
     let kept = SquadOrdersReachedValue { t, why: r.why.clone(), lock: r.lock.map(|l| SquadOrdersReachedValueLock { door: l.door, side: l.side }) };
-    g.sets[g.seat].orders.reached.set(key, kept);
+    g.groups[g.group].orders.reached.set(key, kept);
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
@@ -58,7 +58,7 @@ pub(super) fn squad_orders_has_line(g: &crate::game::Game, gd: GuardId, t: &crat
 
 // ------------------------------------------------------------ men to spots
 
-/// orders.ts:2506 `find`: the spot's file
+/// the spot's file
 fn find(root: &mut [usize], i: usize) -> usize {
     if root[i] == i { return i; }
     let r = find(root, root[i]);
@@ -66,7 +66,7 @@ fn find(root: &mut [usize], i: usize) -> usize {
     r
 }
 
-/// orders.ts:2518 `walk`: the metres of his way there
+/// the metres of his way there
 fn file_walk(g: &Game, gd: GuardId, to: V3) -> f64 {
     let p = g.pos_of(gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
@@ -125,7 +125,7 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
     Some(FileCross::Tight { file, tight, l, spots: spots.to_vec(), cost })
 }
 
-/// orders.ts:2522 the function fileCross returns: what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another
+/// what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another
 fn file_cross_cost(f: &FileCross, at: &[usize]) -> f64 {
     let FileCross::Tight { file, tight, l, spots, cost } = f;
     // x would have to get past y: y's mark lies on x's walk to his own, and y is on it before x comes by
@@ -141,7 +141,7 @@ fn file_cross_cost(f: &FileCross, at: &[usize]) -> f64 {
     c
 }
 
-/// orders.ts:2532 what `rec` of pair() walks over and keeps
+/// what `pair_rec` walks over and keeps
 struct PairDeal<'a> {
     men: &'a [GuardId],
     spots: &'a [V3],
@@ -158,7 +158,7 @@ struct PairDeal<'a> {
     bc0: f64,
 }
 
-/// orders.ts:2533 `new Set(l.map(m => groups[cur[m]])).size`: Set's SameValueZero, where a missing row is one value of its own
+/// how many groups these men's spots are in: a missing row is one value of its own, and NaN is one too
 fn group_count(groups: &[f64], cur: &[usize], l: &[usize]) -> f64 {
     let mut seen: Vec<Option<f64>> = Vec::with_capacity(l.len());
     for &m_ in l {
@@ -173,7 +173,7 @@ fn group_count(groups: &[f64], cur: &[usize], l: &[usize]) -> f64 {
     seen.len() as f64
 }
 
-/// orders.ts:2532 `rec`: every way of dealing the men from man `i` on
+/// every way of dealing the men from man `i` on
 fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
     if i == s.men.len() {
         let mut c = walk;
@@ -264,10 +264,10 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
+        let w = if g.tab.task[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
-        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.words.clone() } else { g.tab.orders_assignment[a].going.words.clone() };
+        let word = if squad_orders_shown_there(g, a) { g.tab.task[a].there.words.clone() } else { g.tab.task[a].going.words.clone() };
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert { return String::from("in contact"); }
         return match w {
             Some(w) if !w.is_empty() => format!("{} · {}", word, w),
@@ -331,7 +331,7 @@ pub fn squad_orders_hover_words(g: &crate::game::Game, t: Option<&crate::orders:
 
 // ------------------------------------------------------------ ORDERS.propRound
 
-/// orders.ts:2647 `doors`: the doors a way crosses, each once, in the order it crosses them
+/// the doors a way crosses, each once, in the order it crosses them
 fn way_doors(g: &Game, from: V3, w: &[V3]) -> Vec<DoorId> {
     let mut out: Vec<DoorId> = Vec::new();
     let mut q = from;
@@ -457,7 +457,7 @@ pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
     door_id_words(&name)
 }
 
-/// orders.ts:2692 the words of a door's id; nothing the game holds is read
+/// the words of a door's id; nothing the game holds is read
 fn id_words(id: &str) -> String {
     let said = door_said();
     let mut t: Vec<String> = id.split('_').map(|x| said.of(x).cloned().unwrap_or_else(|| String::from(x))).collect();

@@ -6,9 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
-
-// ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
+// ---- the body keep_off_guards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, seat: &crate::seats::SeatRef, m: &Option<&mut Legs>) -> V3 {
     match m { Some(l) => l.char.pos, None => g.seat_pos(seat) }
 }
@@ -305,7 +303,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
         let p = &g.pl[pl];
         if p.wall.is_some() || g.cond[p.ch].down || p.tow.is_some() || p.planted() { return false; }
     }
-    // one object in the TypeScript, two shapes in the skeleton: findWall's flag comes back to the caller's, whatever it found
+    // two shapes of one flag: find_wall's comes back to the caller's, whatever it found
     let mut fw = why.as_deref().map(|w| FindWallWhy { blocked: w.blocked });
     let found = find_wall(g, Some(false), fw.as_mut(), only);
     if let (Some(w), Some(fw)) = (why, fw) { w.blocked = fw.blocked; }
@@ -514,7 +512,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].hands_full()
-        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.groups[g.group].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;

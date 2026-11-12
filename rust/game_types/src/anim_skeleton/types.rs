@@ -3,46 +3,53 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// A POSE IS A HANDLE: its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
-#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
-pub struct Pose { pub at: u32, pub nodes: u32 }
-impl Pose {
-    pub fn blank() -> Self { Pose { at: 0, nodes: 0 } }
+/// A POSE OF A MAN'S: which of his it is
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, ToBytes)]
+pub struct Pose { pub at: u32 }
+
+/// THE POSES A MAN KEEPS, one after another. A pose is ten columns of singles (tx ty tz, qx qy qz qw, sx sy sz), a node a row; the rows are whole fours, and those past the last node stay zeros.
+#[derive(Clone, Debug, Default, ToBytes)]
+pub struct Poses { pub nodes: usize, pub d: Vec<f32> }
+/// poses a man keeps at most
+const MOST: usize = 16;
+impl Poses {
+    pub fn of_rig(nodes: usize) -> Poses { Poses { nodes, d: Vec::new() } }
+    /// rows of a column
+    pub fn rows(&self) -> usize { (self.nodes + 3) & !3 }
+    /// singles of a pose
+    fn one(&self) -> usize { self.rows() * 10 }
+    /// one more pose, all zeros
+    pub fn make(&mut self) -> Pose {
+        let at = self.d.len() / self.one();
+        assert!(at < MOST, "a man is asked to keep one pose more than {MOST}");
+        self.d.resize(self.d.len() + self.one(), 0.0);
+        Pose { at: at as u32 }
+    }
+    /// the last one made, let go
+    pub fn let_go(&mut self, p: Pose) { let n = self.one(); assert_eq!(self.d.len(), (p.at as usize + 1) * n, "a pose let go that is not the last made"); self.d.truncate(p.at as usize * n); }
+    pub fn of(&self, p: Pose) -> &[f32] { &self.d[p.at as usize * self.one()..][..self.one()] }
+    pub fn of_mut(&mut self, p: Pose) -> &mut [f32] { let n = self.one(); &mut self.d[p.at as usize * n..][..n] }
+    /// pose `from` into pose `to`
+    pub fn copy(&mut self, from: Pose, to: Pose) { let n = self.one(); self.d.copy_within(from.at as usize * n..(from.at as usize + 1) * n, to.at as usize * n); }
+    /// node i's rotation
+    pub fn rot(&self, p: Pose, i: usize) -> Quat { rot_in(self.of(p), i) }
+    pub fn set_rot(&mut self, p: Pose, i: usize, q: Quat) {
+        let n = self.rows();
+        let d = self.of_mut(p);
+        for (c, v) in q.into_iter().enumerate() { d[(3 + c) * n + i] = v as f32; }
+    }
+    /// node i's origin
+    pub fn pos(&self, p: Pose, i: usize) -> V3 { pos_in(self.of(p), i) }
 }
-impl Default for Pose { fn default() -> Self { Self::blank() } }
+/// a node's rotation and origin in one pose's singles
+pub fn rot_in(d: &[f32], i: usize) -> Quat { let n = d.len() / 10; [d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64] }
+pub fn pos_in(d: &[f32], i: usize) -> V3 { let n = d.len() / 10; [d[i] as f64, d[n + i] as f64, d[2 * n + i] as f64] }
 /// A BODY'S WORLD OF JOINTS. tmp and local were scratch; ibms and jointViews views of the rig; ownRot was how globalRot's rows were reused without allocating. `world`: where he stood as he was posed last, which with the joints is all a picture skins him by
 #[derive(Clone, Debug, ToBytes)]
 pub struct SkeletonInstance { pub rig: RigId, pub globals: Vec<crate::v3::m4::Mat4>, pub global_rot: Vec<Quat>, pub world: crate::v3::m4::Mat4 }
 impl SkeletonInstance {
     pub fn blank() -> Self { SkeletonInstance { rig: RigId(0), globals: Vec::new(), global_rot: Vec::new(), world: crate::v3::m4::create() } }
 }
-/// the rig's named nodes and lists, as a layer is handed them: keys are literals in the code
-#[derive(Clone, Debug, ToBytes)]
-pub struct LayerCast { pub nodes: JsMap<&'static str, usize>, pub lists: JsMap<&'static str, Vec<i32>>, pub nums: JsMap<&'static str, Vec<f64>> }
-impl LayerCast {
-    pub fn blank() -> Self { LayerCast { nodes: JsMap::new(), lists: JsMap::new(), nums: JsMap::new() } }
-}
-/// A POSE THE TYPESCRIPT KEEPS OUTSIDE THE POOL, as the bridge carries it (Game.loose_poses). In Rust every pose lives in the pool: `pose_take_home` gives it a place when a body first needs one.
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
-impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
-
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct PoseSet {
-    pub list: Vec<crate::anim_skeleton::Pose>,
-    pub most: f64,
-    pub home: Option<crate::Opaque>,
-    pub stray: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct ClipSide {
-    pub lines: Vec<u8>,
-    /// what the clip store (rust/sim/src/clips.rs) knows this clip by: folded from the clip alone, so the same on every host. On no wire and in no file: it is worked out again where it is 0.
-    pub word: u32,
-    pub need: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TwistSpec {
     pub node: f64,
@@ -61,25 +68,6 @@ pub struct NodeOverride {
 pub struct PoseFK {
     pub rot: Vec<Quat>,
     pub pos: Vec<V3>,
-    #[is(RigId(0))] pub rig: RigId,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AnimSkeletonModPOSEBENCH {
-    pub rig: Option<RigId>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AnimSkeletonModLAYERS {
-    pub roles: Option<RigId>,
-    pub names: Option<crate::anim_skeleton::AnimSkeletonModLAYERSNames>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AnimSkeletonModLAYERSNames {
-    pub roles: Vec<String>,
-    pub lists: Vec<String>,
-    pub nums: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -89,26 +77,6 @@ pub struct BuildMaskEntriesItem {
     pub subtree: bool,
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct AnimSkeletonMod {
-    /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
-    /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { roles: None, names: None })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
-    pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
-}
-
-pub const BENCH_NODES: f64 = 128.0;
-
-pub const BENCH_SLOT: f64 = 1280.0;
-
-pub const LAYER_KEYS_MAX: f64 = 48.0;
-
 pub fn ident() -> Quat { [0.0, 0.0, 0.0, 1.0] }
 
-pub const LINES: f64 = 8.0;
 impl Default for SkeletonInstance { fn default() -> Self { Self::blank() } }
-impl Default for LayerCast { fn default() -> Self { Self::blank() } }

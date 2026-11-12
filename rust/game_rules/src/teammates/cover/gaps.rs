@@ -113,8 +113,8 @@ pub(super) fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::k
 mod tests {
     use super::*;
 
-    /// gapsOf's own output under bun with EXACT on: name, alongX, solid given, then each opening (id, kind, at, n, half, pass, far as double bits) and the count and checksum of `solid`'s calls.
-    const TS: &str = "\
+    /// the pinned output of gaps_of: name, alongX, solid given, then each opening (id, kind, at, n, half, pass, far as double bits) and the count and checksum of `solid`'s calls.
+    const PINNED: &str = "\
 doorway true false gap@2.00,1.25 gap 4000000000000000 3ff199999999999a 3ff4000000000000 0/1 3feae147ae147ae2 - -\n\
 doorway true false calls 0 0\n\
 doorway true true gap@2.00,1.25 gap 4000000000000000 3ff199999999999a 3ff4000000000000 0/1 3feae147ae147ae2 - -\n\
@@ -161,7 +161,7 @@ twin false true calls 2 cf655555555546be";
     ];
 
     #[test]
-    fn gaps_match_the_typescript_bits() {
+    fn gaps_keep_their_bits() {
         let mut k = crate::knobs::CoverK::default();
         (k.gap_cells, k.through_rows, k.alcove_rows, k.bridge) = (3.0, 3.0, 3.0, 3.0);
         let mut out: Vec<String> = Vec::new();
@@ -187,7 +187,7 @@ twin false true calls 2 cf655555555546be";
                 }
             }
         }
-        let want: Vec<&str> = TS.lines().collect();
+        let want: Vec<&str> = PINNED.lines().collect();
         assert_eq!(out.iter().map(|s| s.as_str()).collect::<Vec<_>>(), want);
     }
 }

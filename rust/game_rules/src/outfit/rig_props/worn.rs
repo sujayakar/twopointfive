@@ -194,7 +194,7 @@ fn weapon_of(id: crate::weapons::GunModelId) -> crate::weapons::WeaponId {
     }
 }
 
-/// A model's Seg as the rig's: the two modules each have a type for the one TypeScript Seg.
+/// A model's Seg as the rig's: the two modules each have a type for it.
 fn of_model(s: crate::gunlook::Seg) -> Seg {
     Seg { l0: s.l0, l1: s.l1, thick: s.thick, tall: s.tall, adj: s.adj.map(|a| Adj { off: a.off, rot: a.rot }) }
 }

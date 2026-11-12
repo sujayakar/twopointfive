@@ -13,7 +13,7 @@ fn fresh() -> State {
 
 /// This view's row, made if missing.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     g.m.holdfire.states.get_or_insert_with(key, fresh)
 }
 
@@ -69,7 +69,7 @@ fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// His shot or his order has started the fight. A stamp from a roster that is gone, or from ahead of the clock, is no lift.
 fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if let Some(lift_t) = g.m.holdfire.states.get(key).map(|s| s.lift_t) {
         if lift_t > f64::NEG_INFINITY {
             let gone = g.time < lift_t || {
@@ -139,7 +139,7 @@ pub(super) fn hold_fire_silent(g: &crate::game::Game, seat: &crate::seats::SeatR
 
 /// The lift that stands is his 'go loud'; the sneak's hold holds nobody either.
 pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,
@@ -147,7 +147,7 @@ pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
     if !(loud_t > f64::NEG_INFINITY) || !hold_fire_lifted(g) {
         return false;
     }
-    // Read again: hold_fire_lifted can clear the stamp on the row the TypeScript goes on holding.
+    // Read again: hold_fire_lifted can clear the stamp on the row.
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,

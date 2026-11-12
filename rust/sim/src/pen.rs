@@ -1,15 +1,15 @@
 //! WHAT A PANE IS TO A ROUND: what a sheet takes from a round crossing it, how the round turns, where it
 //! leaves, the flight over panes, and the through-holes rounds have left. One rule for a round and for a line-of-fire question: a man fires through a pane exactly
-//! when his round would get through it. Statement for statement with the rule it replaced. What a round does next and what it files is the caller's.
+//! when his round would get through it. What a round does next and what it files is the caller's.
 //!
-//! WHAT IS STATE. The holes (panes.rs `Hole`): a part of the panes' run in the game's block, a row a pane a round has been through.
+//! WHAT IS STATE. The holes (`Panes.holes`): a row a pane a round has been through.
 use game_types::knobs::Knobs;
 use alloc::vec::Vec;
 use crate::collide;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
-use crate::panes::{self, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
-use crate::world::{asking, clamp, js_abs, js_max, js_min, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
+use crate::panes::{self, Hole, Panes, point_seed, type_of_pane, box_seed, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
+use crate::world::{asking, clamp, js_abs, js_max, js_min, World, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
 const PI: f64 = core::f64::consts::PI;
@@ -43,8 +43,7 @@ pub struct Crossing {
     pub into: i32,
 }
 #[inline]
-fn sheet_box<'a>(c: &Ctx<'a>, bi: usize) -> Option<&'a [f64]> {
-    let o = c.w;
+fn sheet_box(o: &World, bi: usize) -> Option<&[f64]> {
     if bi >= o.boxes() || o.flags[bi] & F_GLASS == 0 {
         return None;
     }
@@ -55,27 +54,17 @@ fn sheet_box<'a>(c: &Ctx<'a>, bi: usize) -> Option<&'a [f64]> {
         None
     }
 }
-fn near_hole(g: usize, bi: u32, p: [f64; 3], tune: &Knobs) -> bool {
-    let ps = crate::panes::pn(g);
-    let r = tune.glasspen.hole_r;
-    let r2 = r * r;
-    for h in 0..ps.nh as usize {
-        let row = ps.hole(h);
-        if row.bi == bi {
-            for i in 0..row.n as usize {
-                let (dx, dy, dz) = (row.p[3 * i] - p[0], row.p[3 * i + 1] - p[1], row.p[3 * i + 2] - p[2]);
-                if dx * dx + dy * dy + dz * dz < r2 {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-    false
+fn near_hole(p: &Panes, bi: u32, at: [f64; 3], tune: &Knobs) -> bool {
+    let r2 = tune.glasspen.hole_r * tune.glasspen.hole_r;
+    let near = |h: &[f64; 3]| {
+        let (dx, dy, dz) = (h[0] - at[0], h[1] - at[1], h[2] - at[2]);
+        dx * dx + dy * dy + dz * dz < r2
+    };
+    p.holes.iter().find(|h| h.bi == bi).is_some_and(|h| h.at.iter().any(near))
 }
 /// What sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight; None: the round is spent in it
-pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize, tune: &Knobs) -> Option<Toll> {
-    let b = sheet_box(c, bi as usize)?;
+pub fn pane_toll(w: &World, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize, tune: &Knobs) -> Option<Toll> {
+    let b = sheet_box(w, bi as usize)?;
     if nth as f64 >= js_min(MAX_CROSS as f64, tune.glasspen.max_panes) {
         return None;
     }
@@ -89,8 +78,8 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
     if co < tune.glasspen.graze_cos {
         return None;
     }
-    let hole = near_hole(c.g, bi, at, tune);
-    let ty = match type_of_pane(c, bi, tune) {
+    let hole = near_hole(&w.panes, bi, at, tune);
+    let ty = match type_of_pane(w, bi, tune) {
         NO_TYPE => ANNEALED,
         t => t,
     };
@@ -107,11 +96,11 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
     Some(Toll { ty, n, cos: co, take, e_out, hole })
 }
 /// What a round leaving the glass at `p` along `d` is born inside: −1 open air · −2 a static a round stops in · else the index of another sheet of glass
-fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
-    let n = collide::gather(c.w, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, 64);
+fn born_in(w: &World, p: [f64; 3], d: [f64; 3], me: u32, tune: &Knobs) -> i32 {
+    let n = collide::gather(w, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, 64);
     let mut sheet = -1;
     for i in 0..n {
-        let o = c.w;
+        let o = w;
         let bi = asking().list[i];
         if bi == me {
             continue;
@@ -171,17 +160,17 @@ fn mad(a: [f64; 3], b: [f64; 3], s: f64) -> [f64; 3] {
     [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
 }
 /// One pane on a round's flight: what it takes and where the round leaves it; None: spent in it
-pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64, nth: usize, tune: &Knobs) -> Option<Crossing> {
+pub fn pane_crossing(w: &World, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64, nth: usize, tune: &Knobs) -> Option<Crossing> {
     let at = mad(o, d, t);
-    let to = pane_toll(c, bi, at, d, e, nth, tune)?;
-    let b = sheet_box(c, bi as usize)?;
-    let te = match line_box(c.w, at[0], at[1], at[2], d[0], d[1], d[2], b) {
+    let to = pane_toll(w, bi, at, d, e, nth, tune)?;
+    let b = sheet_box(w, bi as usize)?;
+    let te = match line_box(w, at[0], at[1], at[2], d[0], d[1], d[2], b) {
         Some(s) => s.1,
         None => -1.0,
     };
     let thru = (if te > 0.0 { te } else { 2.0 * js_min(b[R_H], b[R_H + 2]) / to.cos }) + EXIT_EPS;
     let exit = mad(at, d, thru);
-    let into = born_in(c, exit, d, bi, tune);
+    let into = born_in(w, exit, d, bi, tune);
     if into == -2 {
         return None;
     }
@@ -190,15 +179,15 @@ pub fn pane_crossing(c: &Ctx, bi: u32, o: [f64; 3], d: [f64; 3], t: f64, e: f64,
     Some(Crossing { t: to, bi, at_t: t, at, exit, dir_in: d, dir_out, e_in: e, turn_deg, thru, into })
 }
 #[inline]
-fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
-    lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, -1, true, out, tune)
+fn ray(w: &World, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4], tune: &Knobs) -> i32 {
+    lines::ray_rule(w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, -1, true, out, tune)
 }
 /// The arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
-fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) -> bool {
+fn arm_in_hole(w: &World, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) -> bool {
     let mut any = false;
-    for s in 0..panes::sheet_count(c) as usize {
-        let bi = panes::sheet_bi(c, s) as usize;
-        let o = c.w;
+    let o = w;
+    for s in &w.sheets {
+        let bi = s.bi as usize;
         let b = &o.rec[bi * REC..bi * REC + REC];
         let s = match line_box(o, from[0], from[1], from[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s,
@@ -216,8 +205,8 @@ fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64, tune: &Knobs) ->
     any
 }
 /// The walk of a man's arm whose muzzle is already past the glass: the energy left and the panes it took, in order (none and in a hole: `energy`). None: something a
-/// round stops in is across the arm (the old rule stands).
-pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, tune: &Knobs) -> Option<(f64, Vec<Crossing>)> {
+/// round stops in is across the arm.
+pub fn arm_walk(w: &World, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy: f64, tune: &Knobs) -> Option<(f64, Vec<Crossing>)> {
     let dd = [muzzle[0] - from[0], muzzle[1] - from[1], muzzle[2] - from[2]];
     let len = hypot3(dd[0], dd[1], dd[2]);
     if len < 1e-3 {
@@ -231,7 +220,7 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
     while k8 < 8 && t0 < len {
         k8 += 1;
         let mut h = [0.0; 4];
-        let m = ray(c, o, rd, len - t0, &mut h, tune);
+        let m = ray(w, o, rd, len - t0, &mut h, tune);
         if m < 0 {
             break;
         }
@@ -239,15 +228,15 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
             return None;
         }
         let at = mad(o, rd, h[0]);
-        let to = match pane_toll(c, m as u32, at, dir, e, out.len(), tune) {
+        let to = match pane_toll(w, m as u32, at, dir, e, out.len(), tune) {
             Some(t) => t,
             None => return None,
         };
-        let b = match sheet_box(c, m as usize) {
+        let b = match sheet_box(w, m as usize) {
             Some(b) => b,
             None => return None,
         };
-        let te = match line_box(c.w, at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
+        let te = match line_box(w, at[0], at[1], at[2], rd[0], rd[1], rd[2], b) {
             Some(s) => s.1,
             None => 0.0,
         };
@@ -259,15 +248,15 @@ pub fn arm_walk(c: &Ctx, from: [f64; 3], muzzle: [f64; 3], dir: [f64; 3], energy
         o = mad(at, rd, thru);
     }
     if out.is_empty() {
-        return if arm_in_hole(c, from, rd, len, tune) { Some((energy, out)) } else { None };
+        return if arm_in_hole(w, from, rd, len, tune) { Some((energy, out)) } else { None };
     }
     Some((e, out))
 }
 /// Does a round of `energy` get through every one of the panes a line of fire meets (static, metres along it to where it enters each, nearest first)
-pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes: &[(u32, f64)], energy: f64, tune: &Knobs) -> bool {
+pub fn shot_passes(w: &World, a: [f64; 3], rd: [f64; 3], panes: &[(u32, f64)], energy: f64, tune: &Knobs) -> bool {
     let mut e = energy;
     for (i, &(bi, t)) in panes.iter().enumerate() {
-        match pane_toll(c, bi, mad(a, rd, t), rd, e, i, tune) {
+        match pane_toll(w, bi, mad(a, rd, t), rd, e, i, tune) {
             Some(t) => e = t.e_out,
             None => return false,
         }
@@ -275,29 +264,14 @@ pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes: &[(u32, f64)], ene
     true
 }
 /// A crossing remembered on the pane, the oldest forgotten past GLASSPEN.holes
-pub fn add_hole(g: usize, bi: u32, p: [f64; 3], tune: &Knobs) {
-    let ps = crate::panes::pn(g);
-    ps.stand();
-    let row = panes_hole_row(g, bi);
-    let cap = js_min(panes::HOLE_PTS as f64, tune.glasspen.holes) as usize;
-    let h = ps.hole(row);
-    if h.n as usize >= cap {
-        h.p.copy_within(3..3 * cap, 0);
-        h.n = cap as u32 - 1;
+pub fn add_hole(p: &mut Panes, bi: u32, at: [f64; 3], tune: &Knobs) {
+    let i = p.holes.iter().position(|h| h.bi == bi).unwrap_or_else(|| {
+        p.holes.push(Hole { bi, at: Vec::new() });
+        p.holes.len() - 1
+    });
+    let h = &mut p.holes[i].at;
+    if h.len() >= js_min(panes::HOLE_PTS as f64, tune.glasspen.holes) as usize {
+        h.remove(0);
     }
-    let n = h.n as usize;
-    h.p[3 * n] = p[0];
-    h.p[3 * n + 1] = p[1];
-    h.p[3 * n + 2] = p[2];
-    h.n += 1;
-}
-/// pane `bi`'s row of holes, made if it has none
-pub fn panes_hole_row(g: usize, bi: u32) -> usize {
-    let ps = crate::panes::pn(g);
-    for h in 0..ps.nh as usize {
-        if ps.hole(h).bi == bi {
-            return h;
-        }
-    }
-    ps.add_hole_row(bi)
+    h.push(at);
 }

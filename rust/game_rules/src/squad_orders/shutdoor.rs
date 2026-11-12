@@ -118,7 +118,7 @@ fn walk(g: &crate::game::Game, gd: GuardId, p: V3) -> f64 {
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).
 fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match crate::orders::squad_orders_of(seat, gd) { Some(a) => a, None => return false };
-    let row = &g.tab.orders_assignment[a];
+    let row = &g.tab.task[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
 }
 
@@ -238,7 +238,7 @@ pub(super) fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]
 fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor::Spot) {
     let name = crate::orders::door_words(g, d);
     let fc = g.dr[d].frame_centre;
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(SHUT_ID),
         post: Some(spot.pos),
         face: Some(spot.yaw),
@@ -266,7 +266,7 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     if j.map_or(false, |j| j.back) {
-        let a = crate::orders::SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(99.0),
@@ -282,7 +282,7 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
         Some(j) => alloc::format!("holding · by {}", crate::orders::door_words(g, j.door)),
         None => String::from("holding"),
     };
-    let a = crate::orders::SquadOrdersAssignA {
+    let a = crate::duty::TaskGiven {
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
@@ -302,15 +302,15 @@ fn end(g: &mut Game, gd: GuardId, j: Job, line: Option<&str>) {
 fn clear_of(g: &Game, d: DoorId, p: V3) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(k().body))
 }
-/// The job is one row of the table, written in place in the TypeScript: every change of the local copy goes back to it.
+/// The job is one row of the table: every change of the local copy goes back to it.
 fn store(g: &mut Game, gd: GuardId, j: Job) {
     if let Some(row) = g.m.shutdoor.jobs.get_mut(gd) { *row = j; }
 }
 
 /// The order's stages, once a frame for its man before he is posed.
-pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let mut j = match g.m.shutdoor.jobs.get(gd).copied() {
-        Some(j) if g.tab.orders_assignment[a].door == Some(j.door) => j,
+        Some(j) if g.tab.task[a].door == Some(j.door) => j,
         _ => { finish(g, gd, None); return; }   // (a guard: the order's issue sets both)
     };
     let d = j.door;
@@ -326,8 +326,8 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         return;
     }
     if j.phase == JobPhase::Go {
-        // (the runner has called his walk off and told Sam so: orders.ts's stuck rule)
-        let stopped = match g.tab.orders_assignment[a].post { None => true, Some(post) => dist_xz(post, j.spot.pos) > 0.05 };
+        // (the runner has called his walk off and told Sam so)
+        let stopped = match g.tab.task[a].post { None => true, Some(post) => dist_xz(post, j.spot.pos) > 0.05 };
         let there = !stopped && dist_xz(p, j.spot.pos) < 0.4;
         if !stopped && !there && t - j.t0 <= k().go_cap { return; }
         if there && !clear_of(g, d, p) {   // (the last strides to his place, out of the leaf's way)
@@ -368,8 +368,8 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let hd = handle_of(g, d);
     let face = v3::yaw_to(p, hd);
-    g.tab.orders_assignment[a].face = Some(face);
-    g.tab.orders_assignment[a].watch = None;   // squared up to the handle, the gun off the leaf that is coming
+    g.tab.task[a].face = Some(face);
+    g.tab.task[a].watch = None;   // squared up to the handle, the gun off the leaf that is coming
     if j.phase == JobPhase::Shut {
         let way = in_the_way(g, d, Some(gd), None);
         if way.is_some() || !clear_of(g, d, p) {

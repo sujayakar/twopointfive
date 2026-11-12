@@ -127,9 +127,8 @@ mod tests {
         std::thread::Builder::new().stack_size(1 << 30).spawn(f).unwrap().join().unwrap();
     }
 
-    // Bits from the TypeScript's own functions under bun with EXACT.on.
     #[test]
-    fn head_matches_the_typescript() {
+    fn head_is_as_pinned() {
         let rows: [(f64, u64); 9] = [
             (0.0, 0x0000000000000000),
             (1e-7, 0x0000000000000000),
@@ -145,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn lean_matches_the_typescript() {
+    fn lean_is_as_pinned() {
         big_stack(|| {
         let mut g = Game::blank();
         g.k.sprintdoor = crate::knobs::SprintdoorK::page();
@@ -198,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn after_a_bash_matches_the_typescript() {
+    fn after_a_bash_is_as_pinned() {
         big_stack(|| {
         let (mut g, pl, c, d) = stage();
         sprint_door_after(&mut g, pl, &contact(d, false));
@@ -213,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn after_a_bash_and_a_rip_matches_the_typescript() {
+    fn after_a_bash_and_a_rip_is_as_pinned() {
         big_stack(|| {
         let (mut g, pl, c, d) = stage();
         sprint_door_after(&mut g, pl, &contact(d, true));

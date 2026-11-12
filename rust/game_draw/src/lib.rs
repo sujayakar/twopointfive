@@ -1,11 +1,11 @@
 //! WHAT THE PICTURE IS TOLD, AND NOTHING ELSE OF THE GAME. A page that draws this game holds no game: after a tick it is told what to draw as a list of
 //! SECTIONS, each a run of flat rows in this module's memory, read where they lie. A section is declared once (`section!`) and filled by a function that
 //! takes the game shared, so drawing cannot change it; this crate is above the rules and no rule can name it. The page's offsets into a row are made from
-//! the same declaration by `bun run tools/draw/gen.ts`.
+//! the same declaration by the program `half` (game_start/src/bin/half).
 //!
-//! To add a section: a file beside this one with its `section!` and its `fill`, a line in `sections!` below, then `tools/draw/gen.ts`.
+//! To add a section: a file beside this one with its `section!` and its `fill`, a line in `sections!` below, then `half`.
 //!
-//! - A field is a word or a run of words: `f32`, `u32`, `i32`, or an array of one. So a row has no padding and lies as it is declared.
+//! - What a row's field may be: `game_types::rows`.
 //! - A row whose only reader is the GPU is written here as the GPU reads it: the page hands the rows over and packs nothing.
 //! - A row holds values, never a reference into the game: what it says of another row is that row's place in its own section, or a key that means one
 //!   thing for as long as the thing stands.
@@ -14,32 +14,16 @@ extern crate alloc;
 use alloc::{string::String, vec::Vec};
 use game::game::Game;
 
-/// a type that is nothing but words
-pub trait Words: Copy { const ZERO: Self; }
-impl Words for f32 { const ZERO: f32 = 0.0; }
-impl Words for u32 { const ZERO: u32 = 0; }
-impl Words for i32 { const ZERO: i32 = 0; }
-impl<T: Words, const N: usize> Words for [T; N] { const ZERO: [T; N] = [T::ZERO; N]; }
+pub use game::rows::{Row, RowTable};
 
-/// a row of a section: its fields in their order, as the page's offsets are made from them
-pub trait Row: Copy { const FIELDS: &'static [(&'static str, &'static str)]; const ZERO: Self; }
-
-/// A SECTION'S ROW, declared: the struct as it lies in memory and the names its offsets are made from
-macro_rules! section {
-    ($(#[$m:meta])* pub struct $name:ident { $($(#[$fm:meta])* pub $f:ident: $t:ty,)* }) => {
-        $(#[$m])* #[repr(C)] #[derive(Clone, Copy, Debug, PartialEq)] pub struct $name { $($(#[$fm])* pub $f: $t,)* }
-        impl crate::Row for $name {
-            const FIELDS: &'static [(&'static str, &'static str)] = &[$((stringify!($f), stringify!($t)),)*];
-            const ZERO: Self = $name { $($f: <$t as crate::Words>::ZERO,)* };
-        }
-    };
-}
+/// A SECTION'S ROW, declared (`game_types::rows`)
+macro_rules! section { ($($t:tt)*) => { game::row! { $($t)* } }; }
 
 /// AN EVENT'S ROW, declared: a section's, behind the id that names it. The tick it happened in, its kind (which section it is in) and its place among its kind in
 /// that tick: the same id whenever that tick is run, so a host plays it once, and one that does not come again un-happened.
 macro_rules! event {
-    ($(#[$m:meta])* pub struct $name:ident { $($(#[$fm:meta])* pub $f:ident: $t:ty,)* }) => {
-        section! { $(#[$m])* pub struct $name { pub tick: u32, pub serial: u32, $($(#[$fm])* pub $f: $t,)* } }
+    ($(#[doc = $d:expr])* pub struct $name:ident { $($(#[doc = $fd:expr])* pub $f:ident: $t:ty,)* }) => {
+        section! { $(#[doc = $d])* pub struct $name { pub tick: u32, pub serial: u32, $($(#[doc = $fd])* pub $f: $t,)* } }
     };
 }
 
@@ -50,7 +34,8 @@ macro_rules! groups {
         enum Group { $($name,)* }
         #[allow(non_upper_case_globals)]
         pub mod want { $(pub const $name: u32 = 1 << super::Group::$name as u32;)* }
-        const WANTS: &str = concat!("want" $(, " ", stringify!($name))*);
+        /// their names, in the order of their bits
+        pub const GROUPS: &[&str] = &[$(stringify!($name)),*];
     };
 }
 
@@ -59,11 +44,15 @@ macro_rules! sections {
     ($($name:ident: $t:ty = $($at:ident).+;)*) => {
         /// where each section lies, in their order: its address and how many rows
         fn table(d: &Drawn, out: &mut Vec<u32>) { out.clear(); $({ let v: &Vec<$t> = &d.$($at).+; out.push(v.as_ptr() as usize as u32); out.push(v.len() as u32); })* }
-        /// the declarations as text, a line a section: what the page's offsets were made from is held to it as the module is loaded
+        /// each section by its name, with its row: what the page's offsets are written from (game_start/src/bin/half)
+        pub fn sections() -> Vec<(&'static str, RowTable)> { alloc::vec![$((stringify!($name), game::rows::table::<$t>())),*] }
+        /// the declarations as text, a line a section: what the page's offsets were written from is held to it as the module is loaded
         pub fn layout() -> String {
-            let mut s = String::from(WANTS);
+            let mut s = String::from("want");
+            for g in GROUPS { s.push(' '); s.push_str(g); }
             s.push('\n');
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
+            s.push_str(&gpu::text());
             s
         }
     };
@@ -75,6 +64,7 @@ pub mod dust;
 pub mod events;
 pub mod fires;
 pub mod fog;
+pub mod gpu;
 pub mod lead;
 pub mod watched;
 pub mod lights;
@@ -104,8 +94,9 @@ sections! {
     marks: boxes::Row4 = boxes.marks.rows;
     cells: boxes::Word = boxes.grid.cells;
     items: boxes::Word = boxes.grid.items;
-    info: boxes::Word = boxes.grid.info;
-    panes: boxes::Row4 = boxes.glass.cells;
+    info: boxes::Info = boxes.grid.info;
+    panes: boxes::glass::Pane = boxes.glass.cells;
+    dust_air: boxes::Row4 = boxes.air.rows;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
     coming: lights::Coming = lights.coming;
@@ -149,9 +140,6 @@ sections! {
     smoke_at: boxes::Word = smoke.at;
     smoke_bricks: smoke::SmokeBrick = smoke.bricks;
 }
-
-/// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
-pub const LOOK: usize = boxes::LOOK + 5;
 
 /// what one host of one game draws it from
 #[derive(Default)]
@@ -241,7 +229,7 @@ impl Drawn {
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
     pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.lead.rest(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
-    pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); self.men.dry_look = men[4] == 0.0; }
+    pub fn look(&mut self, l: &game::handed::PageLook) { self.boxes.set_look(boxes::Look::of(l)); self.men.swaps = l.swaps.map(|v| v as u32); self.men.dry_look = l.wet == 0.0; }
     pub fn table(&mut self) -> &[u32] {
         let mut t = core::mem::take(&mut self.table);
         table(self, &mut t);

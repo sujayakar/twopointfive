@@ -36,14 +36,14 @@ pub(crate) fn has_over(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 
-/// O.ov.aimAt IS O.aim and s.over IS O.ov in the TypeScript: after a write to either, the script's copy follows
+/// the script keeps a copy of the op's overlay, whose aim_at is the op's aim: after a write to either, the copy follows
 pub(super) fn over_follow(g: &mut Game, o: RoomfightOpId) {
     let over = over_of(g, o);
     let gd = g.tab.roomfight_op[o].gd;
     if let Some(s) = g.gd[gd].script.as_mut() { if s.over.is_some() { s.over = Some(over); } }
 }
 
-/// the script's copy of O.ov (OpOv and GuardScriptOver are one object in the TypeScript; its aimAt is O.aim)
+/// the script's copy of the op's overlay; its aim_at is the op's aim
 pub(super) fn over_of(g: &Game, o: RoomfightOpId) -> crate::game::GuardScriptOver {
     let (aim, ov) = (g.tab.roomfight_op[o].aim, g.tab.roomfight_op[o].ov);
     crate::game::GuardScriptOver { aim_at: aim, face: ov.face, walk: ov.walk }
@@ -332,7 +332,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     if let Some(to) = tracked(g, o, h, dt, speed, dist, brg, sk) { fires(g, o, h, to, dt, speed, dist, sk); }
 }
 
-/// THE TRACK (aim.ts's law, this side's K): whether a round may go now, and at what point of him
+/// THE TRACK (the aim law, this side's K): whether a round may go now, and at what point of him
 fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist: f64, brg: f64, sk: &FightSkill) -> Option<V3> {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -359,7 +359,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
     g.tab.roomfight_op[o].wall_t = 0.0;
     if !on { g.tab.roomfight_op[o].block_t = m::max(0.0, g.tab.roomfight_op[o].block_t - dt); } // off him, the count runs back down
     if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || crate::control::man::changing_magazine(g, gd) || crate::gunslots::side_locked(g, gd) || !on { return None; }
-    if crate::silent::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
+    if crate::duty::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
         room_fight_speak(g, o, "eyes on. holding.", Some(8.0));
         return None;
     }
@@ -486,7 +486,7 @@ struct CueLook {
     eye: V3,
     gone: Option<GuardId>,
     arc: Option<f64>,
-    a: Option<OrdersAssignmentId>,
+    a: Option<TaskId>,
     on_way_to_door: bool,
     look: Option<OpTurn>,
 }
@@ -521,9 +521,9 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     // the man he has just walked on from: only the eye loop turns him back
     let gone = match g.tab.roomfight_op[o].pass { Some(p) if p.no_shot.unwrap_or(false) && g.time < p.until => Some(p.h), _ => None };
-    let a = crate::seats::order_of(g, gd);
+    let a = crate::duty::order(g, gd);
     let arc = arc_of_his_hold(g, c, a);
-    let on_way_to_door = match a { Some(id) => g.tab.orders_assignment[id].door.is_some() && !g.tab.orders_assignment[id].arrived, None => false };
+    let on_way_to_door = match a { Some(id) => g.tab.task[id].door.is_some() && !g.tab.task[id].arrived, None => false };
     let s = CueLook { o, gd, c, eye, gone, arc, a, on_way_to_door, look };
     let mut cause = round_from_a_man_in_his_line(g, s);
     if cause.is_none() { cause = man_a_mates_muzzle_is_on(g, s); }
@@ -561,8 +561,8 @@ fn look_follows_the_steps(g: &mut Game, o: RoomfightOpId) -> Option<OpTurn> {
 }
 
 /// The way an order to hold has him watching, once he has got there.
-fn arc_of_his_hold(g: &Game, c: CharId, a: Option<OrdersAssignmentId>) -> Option<f64> {
-    let row = &g.tab.orders_assignment[a?];
+fn arc_of_his_hold(g: &Game, c: CharId, a: Option<TaskId>) -> Option<f64> {
+    let row = &g.tab.task[a?];
     match row.watch { Some(w) if crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
 }
 
@@ -641,7 +641,7 @@ fn door_opened_in_his_sight(g: &mut Game, s: CueLook, nothing_else: bool) -> Opt
 }
 
 /// The nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his to the shooter.
-fn room_fight_door_shot(g: &crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
+fn room_fight_door_shot(g: &crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<TaskId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
     let r_k = g.k.roomfight;
     let p = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
     let mut best: Option<RoomFightDoorShot> = None;
@@ -659,7 +659,7 @@ fn room_fight_door_shot(g: &crate::game::Game, o: RoomfightOpId, eye: V3, gone: 
             if only.map_or(false, |x| x != d) { continue; } // a door he is already looking at keeps his look until it lapses
             if !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) <= 0.1) { continue; } // a shut leaf is no opening
             if let Some(id) = a { // a gun an order has on ANOTHER door keeps it
-                let row = &g.tab.orders_assignment[id];
+                let row = &g.tab.task[id];
                 if let (true, Some(ad), false, Some(w)) = (row.arrived, row.door, row.spare.unwrap_or(false), row.watch) {
                     if ad != d && dist_xz(w, g.dr[ad].frame_centre) < 1.6 { continue; }
                 }
@@ -872,7 +872,7 @@ mod tests {
     }
     fn at_bearing(a: f64) -> V3 { [m::sin(a) * 5.0, 0.0, m::cos(a) * 5.0] }
 
-    /// `s.over` IS `O.ov` and its aimAt IS O.aim in the TypeScript: what the runner reads must follow every write of `point`.
+    /// The script's overlay and its aim_at are copies of the op's: what the runner reads must follow every write of `point`.
     #[test]
     fn the_scripts_overlay_follows_the_op() {
         let (mut g, gd, o) = man_with_overlay();
@@ -891,13 +891,12 @@ mod tests {
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
-        let d = g.tab.roomfight_def.push(Def::default());
-        g.tab.roomfight_def[d].gd = gd;
-        g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
-        g.gd[gd].covers = Some([1.0, 0.0, 1.0]);
+        let task = g.tab.task.push(crate::duty::Task { watch: Some([1.0, 0.0, 1.0]), ..Default::default() });
+        let d = g.tab.roomfight_def.push(Def { gd, task, ..Def::default() });
+        g.gd[gd].duty.gun = Some([1.0, 0.0, 1.0]);
         g.gd[gd].last_known = Some([1.0, 0.0, 1.0]); // the same bits, but no stamp: a noise filed there is not the post
         move_pt(&mut g, d, [2.0, 0.0, 2.0]);
-        assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
+        assert_eq!(g.gd[gd].duty.gun, Some([2.0, 0.0, 2.0]));
         assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
     }
 

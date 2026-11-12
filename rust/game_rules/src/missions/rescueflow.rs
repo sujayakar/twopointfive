@@ -53,7 +53,7 @@ pub(super) fn rescue_flow_reset(g: &mut crate::game::Game) {
 }
 
 /// Is this assignment one the flow gave.
-pub(super) fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
+pub(super) fn rescue_flow_gave(g: &crate::game::Game, a: Option<TaskId>) -> bool {
     match a {
         Some(a) => g.rescue.flow.mine.has(a),
         None => false,
@@ -384,7 +384,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(seat, op) else { continue };
-        let Some(post) = g.tab.orders_assignment[a].post else { continue };
+        let Some(post) = g.tab.task[a].post else { continue };
         if dist_xz(g.pos_of(op), post) > 1.2 {
             continue;
         }
@@ -397,7 +397,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
                 continue;
             }
         }
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         let on_door = match row.door {
             Some(d) => o.door.as_deref() == Some(g.dr[d].def.name.as_str()),
             None => false,
@@ -431,7 +431,7 @@ struct FlowNow {
 #[derive(Clone, Copy)]
 struct OnJob {
     kind: JobKind,
-    a: OrdersAssignmentId,
+    a: TaskId,
     t0: f64,
     on_t: f64,
     said_hot: bool,
@@ -602,7 +602,7 @@ fn job_turn(g: &mut Game, gd: GuardId, now: &FlowNow) {
 }
 
 /// His job ends here: he is down or F has him (what was queued behind a man down is wanted again), or Sam's own order has him.
-fn off_the_job(g: &mut Game, gd: GuardId, job_a: OrdersAssignmentId, t: f64) -> bool {
+fn off_the_job(g: &mut Game, gd: GuardId, job_a: TaskId, t: f64) -> bool {
     let down = crate::condition::down(g, g.gd[gd].ch);
     if down || crate::rescue::rescue_owns(g, gd) {
         let gone = g.rescue.flow.jobs.delete(gd);
@@ -639,7 +639,7 @@ fn corridor_man_turn(g: &mut Game, gd: GuardId, now: &FlowNow) {
 
 /// The moment he got to his mark, written the frame he does; NaN until then.
 fn on_his_mark_since(g: &mut Game, gd: GuardId, job: &OnJob, pos: V3, t: f64) -> f64 {
-    if job.on_t.is_nan() && (g.tab.orders_assignment[job.a].arrived || dist_xz(pos, job.mark) < 0.6) {
+    if job.on_t.is_nan() && (g.tab.task[job.a].arrived || dist_xz(pos, job.mark) < 0.6) {
         g.rescue.flow.jobs.get_mut(gd).unwrap().on_t = t;
         return t;
     }
@@ -775,7 +775,7 @@ fn hold_the_corridor(g: &mut Game, f: &crate::scene_scenarios::RescueFlowData, n
     crate::orders::squad_orders_assign(
         g,
         gd,
-        &crate::orders::SquadOrdersAssignA {
+        &crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::cover::ORDER.id),
             post: Some(v3::copy(o.mark)),
             face: Some(v3::yaw_to(o.mark, watch)),
@@ -809,7 +809,7 @@ fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteO
     }
 }
 
-/// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody.
+/// One partner, silent, not found out: the flow sends nobody.
 fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     crate::pairup::pair_up(g) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }
@@ -831,7 +831,7 @@ fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         if fight_ai_has(g, gd) || crate::roomfight::room_fight_engaged(g, gd) {
             continue;
         }
-        out.push((gd, g.tab.orders_assignment[a].follow));
+        out.push((gd, g.tab.task[a].follow));
     }
     js::sort_by(&mut out, |a, b| b.1 - a.1);
     out.into_iter().map(|x| x.0).collect()
@@ -844,7 +844,7 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
     crate::orders::squad_orders_assign(
         g,
         gd,
-        &crate::orders::SquadOrdersAssignA {
+        &crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::cover::ORDER.id),
             post: Some(v3::copy(o.mark)),
             face: Some(v3::yaw_to(o.mark, o.watch)),
@@ -875,7 +875,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
     crate::orders::squad_orders_assign(
         g,
         gd,
-        &crate::orders::SquadOrdersAssignA {
+        &crate::duty::TaskGiven {
             order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(9.0),

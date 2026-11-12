@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct SpottedK {
-    /// THE switch (off = the build as it was; ?spotted on the URL, SPOTTED=1 in the harness's environment, Tab ▸ Sandbox ▸ Spotted)
+    /// THE switch: off here, raised by the pair-up rule
     #[k(false)] pub on: bool,
     /// ---- suspicious
     /// … and still (following only), while Sam is within `leashM`
@@ -19,7 +19,6 @@ pub struct SpottedK {
     #[k(5.0)] pub ear_m: f64,
     /// he stays down this long after the last such man has settled or dropped (s)
     #[k(1.5)] pub linger_secs: f64,
-    #[k(3.0)] pub brace_secs: f64,
     /// a roused man who has turned to him inside `takeM` is taken by hand: `takeSecs` with his hands on him inside `takeReach` (m)
     #[k(2.2)] pub take_m: f64,
     #[k(1.05)] pub take_reach: f64,

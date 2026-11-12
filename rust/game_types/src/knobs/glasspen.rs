@@ -4,7 +4,7 @@ use crate::js::*;
 use alloc::string::String;
 use game_derive::Knobs;
 
-/// the numbers (Tab ▸ Renderer fx ▸ Glass has the switch; the rest are constants until somebody has played it)
+/// the numbers
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct GlasspenK {
     /// a round's energy at the muzzle by weapon row (1 = a 5.56 rifle round), and by class for a row not listed

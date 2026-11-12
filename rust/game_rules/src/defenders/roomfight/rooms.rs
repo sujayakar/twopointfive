@@ -54,7 +54,7 @@ pub fn room_fight_room_at(g: &mut crate::game::Game, p: V3) -> Option<RoomfightR
     }
     for &c in &q { g.fight.fill_mark[c as usize] = 0; }
     let room = match merge {
-        Some(r) => {   // (a room wallreact absorbed holds this one's Set in the TypeScript: it gets the same cells)
+        Some(r) => {   // (a room wallreact absorbed shares this one's cells, each with its own copy: it gets the same new cells)
             let same: Vec<_> = g.fight.rooms.iter().copied().filter(|o| *o != r && g.tab.roomfight_room[*o].cells.keys() == g.tab.roomfight_room[r].cells.keys()).collect();
             for c in cells.keys() { g.tab.roomfight_room[r].cells.add(c); for o in &same { g.tab.roomfight_room[*o].cells.add(c); } }
             r

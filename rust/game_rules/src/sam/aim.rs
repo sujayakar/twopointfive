@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// Back to nothing; `last_shot` stays, as in the TypeScript.
+/// Back to nothing; `last_shot` stays.
 pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.track = 0.0;
     this.tgt_key = String::new();
@@ -96,7 +96,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let brg = v3::yaw_to(c_pos, trunk);
     let tvel = if crate::character::is_player(g, pc) { crate::guards::player_ground_vel(g) } else { g.ch[pc].vel };
     let jumped = feed_target(&mut g.arms[g.gd[gd].ch].aim, c_pos, trunk, &tvel, dt, p.jump_deg, p.rate_tau);
-    if g.gd[gd].pinned && g.gd[gd].skill.is_none() {
+    if g.gd[gd].duty.pinned && g.gd[gd].skill.is_none() {
         g.arms[g.gd[gd].ch].aim.track = 1.0;
         return;
     }
@@ -213,7 +213,7 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
-    let brake = g.tune.aim_model && !g.gd[gd].pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
+    let brake = g.tune.aim_model && !g.gd[gd].duty.pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
     g.arms[g.gd[gd].ch].aim.braking = brake;
     brake
 }
@@ -355,7 +355,6 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
     let tgt = m::min(p.target_move_cap, g.arms[g.pl[pl].ch].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
     let own = feet_of(g, &g.arms[g.pl[pl].ch].aim, &c_vel, p.steady_pace) * p.shooter_move_k;
-    // AIM_HOOKS.playerExternalK as player.ts:258 sets it at load, the only value it ever holds.
     let k = if crate::game::player_braced(g, pl) { g.k.rifle_spread.brace_k } else { 1.0 };
     let kk = if k.is_finite() { m::max(0.0, k) } else { 1.0 };
     crate::aim::PlayerAim { spread: (base * settle + tgt) * kk + own * v3::lerp(kk, 1.0, v3::clamp(1.0 - g.k.aimcost.brace_feet, 0.0, 1.0)), track, base, settle, tgt, own }

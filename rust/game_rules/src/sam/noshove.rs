@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
     match crate::orders::squad_orders_of(seat, gd) {
-        Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
+        Some(a) => g.tab.task[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
     }
 }
 
-/// player.ts updatePlayer, first thing: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player.
+/// first thing in the player's update: nobody has moved him yet this frame; his own legs start here. `None` = the seat's player.
 pub fn no_shove_begin(g: &mut Game, pl: Option<&mut crate::player::Legs>) {
     let now = g.time;
     match pl {
@@ -55,7 +55,7 @@ fn note_on(shoved: &mut [f64; 2], shoved_t: &mut f64, shoved_from: &mut [f64; 2]
     shoved[0] += dx; shoved[1] += dz;
 }
 
-/// player.ts keepOffGuards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more.
+/// the keep-off from guards, of a man the rule has at (mx, mz), `l` from the player: how far the player is put back, what his OWN legs closed on the man and no more.
 pub(super) fn no_shove_back(g: &Game, seat: &crate::seats::SeatRef, mx: f64, mz: f64, l: f64, pl: Option<&crate::player::Legs>) -> f64 {
     let (shoved, shoved_t, shoved_from) = match pl {
         Some(pl) => (pl.shoved, pl.shoved_t, pl.shoved_from),
@@ -90,13 +90,13 @@ fn own_step(pos: V3, sx: f64, sz: f64, sl: f64, shoved_from: [f64; 2]) -> [f64; 
     [mx + sx / sl * t, mz + sz / sl * t]
 }
 
-/// squad.ts runGuardScript, after his step and its collisions: he stood at (x0, z0) before it. He goes round the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs).
+/// after his script's step and its collisions: he stood at (x0, z0) before it. He goes around the player, stops short, squeezes past or steps back out. True: held short this frame (the caller stands his legs).
 pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bool {
     if !falling_in_yields(g, &crate::seats::here(g), gd) { return false; }
     let (ring, back) = (g.k.noshove.ring, g.k.noshove.back);
     let c = g.gd[gd].ch;
     let pc = g.pl[g.player].ch;
-    let s = g.ch[pc].pos;   // (the TypeScript's live alias; only this man's body moves below, so a copy reads the same)
+    let s = g.ch[pc].pos;   // (a copy: only this man's body moves below)
     let (x1, z1) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let l1 = m::hyp2(x1 - s[0], z1 - s[2]);
     if l1 >= ring { return false; }
@@ -122,7 +122,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
         g.gd[gd].path_i += 1;
     }
     let goal = script_goal(g, gd);
-    // `wp !== goal` of the TypeScript is "wp is a corner of his path": no path holds the goal object itself (a path's points are the nav's own)
     let corner = if g.gd[gd].path_i < g.gd[gd].path.len() { Some(g.gd[gd].path[g.gd[gd].path_i]) } else { None };
     let wp = if corner.is_some() { corner } else { goal };
     let (mx, mz) = (x1 - x0, z1 - z0);

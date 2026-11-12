@@ -19,8 +19,6 @@ pub struct Hold {
     pub a: V3,
     pub b: V3,
     pub hot: bool,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

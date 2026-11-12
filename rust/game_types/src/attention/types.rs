@@ -34,8 +34,6 @@ pub struct Hold {
     pub ears: f64,
     pub noises: f64,
     pub yaw: Option<f64>,
-    /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
-    pub serial: u32,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

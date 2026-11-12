@@ -1,7 +1,7 @@
 // THE DEFAULT LOOK — 2010s GWOT (the levels goal: "lean into 2010s GWOT for the assets to just have something default"): mud-brick and render, dust and
 // gravel, rugs and cots and oil drums for the places (tools/levels/lib/gwotKit.ts is the kit, tools/levels/gwotSkin.ts dresses the loud levels' files in it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). The men's dress is LOOK ONLY:
 // no weapon number is touched and no dice are drawn by any of it. A level's paint is that level's file: a wall's colour is in the light that comes round a room, which
-// a man's eye reads (sim/glow.rs), so paint plays.
+// a man's eye reads (rust/sim/src/glow.rs), so paint plays.
 // It says what the men wear and how a leaf is painted, never which file a level is.
 // No imports here: scene/, game/ and the tools all read it.
 

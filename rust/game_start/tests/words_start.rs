@@ -1,10 +1,8 @@
 //! THE ADDRESS'S WORDS AT A START (game_start host/words.rs), through the door the page's start goes by.
 //! (A file of its own: this stand holds no `Play`, so it must not run beside the tests that do: the character's clips are one store of the process.)
 use game_start::files;
-use game_start::handed::stand_handed;
+use game_start::handed::{stand_handed, Handed};
 use game_start::stand::StartOpts;
-
-fn pack(parts: &[&[u8]]) -> Vec<u8> { let mut b = (parts.len() as u32).to_le_bytes().to_vec(); for p in parts { b.extend((p.len() as u32).to_le_bytes()); b.extend(*p); } b }
 
 /// THE RULE: what an address says of a number is on the game when it stands, and that holds for a word read off the list, for a number by name and for a pick; a number the tables don't hold is passed
 /// over. A FAILURE MEANS: a word for a switch does nothing on the page, or a level laid the old number over it. The control is the same stand with no words.
@@ -15,8 +13,8 @@ fn a_start_stands_with_what_its_address_says() {
     let level = files::level_text("depot.json");
     let stand = |words: &str| {
         let link = format!("?levelFile=depot.json&roomclear&squad4{words}");
-        let b = pack(&[level.as_bytes(), link.as_bytes(), a.mannequin.text.as_bytes(), a.mannequin.bin.unwrap(), a.cast.map_or(&b""[..], |c| c.text.as_bytes()), a.cast_look.map_or(&b""[..], |c| c.text.as_bytes()), b""]);
-        stand_handed(&b, &StartOpts { seed: 1, slot: 1, ..Default::default() })
+        let h = Handed { level: level.as_bytes(), words: &link, mannequin: a.mannequin.text.as_bytes(), mannequin_bin: a.mannequin.bin.unwrap(), cast: a.cast.map_or("", |c| c.text).as_bytes(), cast_look: a.cast_look.map_or("", |c| c.text).as_bytes(), kept: "" };
+        stand_handed(&h, &StartOpts { seed: 1, ..Default::default() })
     };
     let plain = stand("");
     let read = |g: &game::game::Game, n: &str| game_start::host::knobs::get(g, n).unwrap();

@@ -1,18 +1,15 @@
-//! THE START ITSELF: a level of `levels/` stands and runs with nothing made by TypeScript, and a game stood again in the same process is the
-//! same game (rust/sim keeps blocks and tables in statics: a stand must leave nothing of the game before it).
+//! THE START ITSELF: a level of `levels/` stands and runs, and a game stood again in the same process is the
+//! same game (a stand must leave nothing of the game before it).
 use game_start::play::{Opts, Play};
 
-/// a hash of each part of rust/sim's block in slot 0, and how many draws the game has taken
-fn block(p: &Play) -> (Vec<u32>, f64) { (game_start::block::part_hashes(0), p.g.dice.n) }
-
-/// A real level's room clear, run for ten seconds: the block after it.
-fn kit_yard(seed: u32) -> (Vec<u32>, f64) {
+/// A real level's room clear, run for ten seconds: every part of it after.
+fn kit_yard(seed: u32) -> Vec<u32> {
     let mut p = Play::level("kit-yard.json", true, &Opts { seed, ..Default::default() });
     assert_eq!(p.mates().len(), 4, "the room clear stages four teammates");
     assert!(p.hostiles_by([20.0, 14.0]).len() >= 4, "…and the level's garrison: {}", p.roll());
     p.run(10.0);
     assert!((p.time() - 10.0).abs() < 1e-6);
-    block(&p)
+    p.words()
 }
 
 /// A FAILURE MEANS: a stand left something of the last game behind (a static table of rust/sim or of the game crate that a new game does not
@@ -110,4 +107,18 @@ fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
     }
     let places: Vec<String> = faults::of(&grown).iter().map(|f| f.split(": ").next().unwrap().to_string()).collect();
     assert_eq!(places, ["doors[0].auto", "devices[0].colour", "elevators"]);
+}
+
+/// THE RULE: the word two machines hold each other to after every tick moves with any man who stands or looks elsewhere, with a leaf that swings, with the clock and with a draw of the die.
+#[test]
+fn a_ticks_word_moves_with_whoever_stands_elsewhere() {
+    use game::state_words::tick_word;
+    let p = Play::level("kit-yard.json", true, &Opts::default());
+    let was = tick_word(&p.g);
+    let moved = |f: &dyn Fn(&mut game::game::Game)| { let mut g = p.g.clone(); f(&mut g); tick_word(&g) != was };
+    assert_eq!(tick_word(&p.g.clone()), was, "a copy says the same");
+    let c = p.g.gd[p.g.guards[0]].ch;
+    assert!(moved(&|g| g.ch[c].pos[2] += 1e-9) && moved(&|g| g.ch[c].body_yaw += 1e-9) && moved(&|g| g.ch[c].aim_yaw += 1e-9), "a man");
+    let d = p.g.doors.list[0];
+    assert!(moved(&|g| g.dr[d].leaf.angle += 1e-9) && moved(&|g| g.time += 1e-9) && moved(&|g| g.dice.n += 1.0), "a leaf, the clock, the die");
 }

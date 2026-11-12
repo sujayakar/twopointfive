@@ -10,20 +10,18 @@ use game_derive::Knobs;
 ///   WALK    the crouch walk, hands empty: the hand opposite the forward foot comes forward low to knee height, fingers open; the other elbow goes back past
 ///           the hip. Read off the feet themselves, so it holds the stride he stopped in.
 ///   RISE    standing up: the hips come up as they always did and the ARMS follow over `riseSecs`, hanging low and forward until the trunk is up. Crouching
-///           down: the elbows flare for the beat it takes the hands to come forward to the idle's place. Arms only: his trunk and head are the build's.
+///           down: the elbows flare for the beat it takes the hands to come forward to the idle's place. Arms only: his trunk and head do as they do without it.
 ///   CREEP   the close-in mode near a man: each step of the left foot led by the free (left) hand reaching low and forward. The right hand is
 ///           the knife's and the ready tell takes the left when it wants it.
 ///   CABLE   the look under a door: OVER the lock work's kneel, and it IS the pose (`bones`, the capsules and his eye go down with what is drawn): he shuffles half a step of pose in,
 ///           folds the trunk, bows the head below the shoulder line toward the foot of the door, shoulders rounded in, one arm forward and low at the gap, the
-///           other by the knee. Out with the head first. `anim.lockpick`, wand.ts's rules, lens, clocks and rows are untouched.
-/// One switch, STEALTHPOSE.on — the page: on (`?nostealthpose` = as it was); the frozen harness stand: off (`TPS_STEALTHPOSE=1` on) — and a half for each of
-/// the five. No pace, key, reach, range or clock moves: `pos`, the yaws and the gait's cadence are the build's. What DOES differ for the simulation with it on
-/// (so the frozen stand holds it off): poses feed the game — his arms are somewhere else (capsules), and the idle's sway moves his pelvis, chest and head a
+///           other by the knee. Out with the head first. `anim.lockpick`, the wand's rules, lens, clocks and rows are untouched.
+/// No pace, key, reach, range or clock moves: `pos`, the yaws and the gait's cadence are untouched. What DOES differ for the simulation:
+/// poses feed the game — his arms are somewhere else (capsules), and the idle's sway moves his pelvis, chest and head a
 /// centimetre. Outside the look under a door the trunk is never rounded and the pelvis never sunk; in it his head is some 30 cm lower than the lock work's kneel, never higher. No dice. No state of its own: the
-/// animator's eased weights are the animator's (not in a checkpoint).
-/// THIS FILE IS A LEAF (character.ts imports it, and character.ts is a leaf of the game's import graph): the table and the feed's shape only. The feed itself —
-/// `stealthFeed(g)`, what the GAME knows — is stealthfeed.ts; character.ts `stealthLayer` / `stealthPicture` do the rest and stand down, eased, for whatever
-/// else the animator itself knows has his arms. Nothing fed = nothing posed: with the switch off the layer is never entered.
+/// animator's eased weights are the animator's.
+/// The feed — `stealth_feed`, what the GAME knows — is in the body's stealthfeed; the animator's `anim_stealth_layer` / `anim_stealth_picture` do the rest and stand down, eased, for whatever
+/// else the animator itself knows has his arms. Nothing fed = nothing posed.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct StealthposeK {
     /// the idle's weight shift: seconds a cycle · metres the pelvis goes to each side · metres the hands drift

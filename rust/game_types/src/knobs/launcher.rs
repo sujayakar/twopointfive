@@ -15,13 +15,13 @@ pub struct RingK {
     /// where on a man is 'out cold': the hit point no lower than this far under his neck joint (the throat, the jaw, the skull, the top of the sternum — CT-generous);
     ///  anything lower staggers. The body is Character.rayHit's cylinder (0.28 about the hips, soles to crown), the same body a round finds.
     #[k(0.07)] pub ko_below_neck: f64,
-    /// the stagger: seconds doubled over (Guard.staggerUntil — rooted, gun down, no round; guards.ts), his trigger dead at least this long, the awareness it leaves him
+    /// the stagger: seconds doubled over (rooted, gun down, no round), his trigger dead at least this long, the awareness it leaves him
     ///  with (0.92: alert — somebody just shot him with something), and how far back along the ring's line his fix on 'where from' is put when he has no better one
     #[k(1.5)] pub stagger: f64,
     #[k(1.5)] pub stagger_fire_cd: f64,
     #[k(0.92)] pub stagger_aware: f64,
     #[k(4.0)] pub stagger_back: f64,
-    /// hearing ('prop' events, the room's business — guards.ts hearingCheck's door / furniture branch: ~9 m of path at 0.45, ~6 at 0.3): the launcher going off AT
+    /// hearing ('prop' events, the room's business — the hearing's door / furniture branch: at most ~10 m of path at 0.45, ~9 at 0.3): the launcher going off AT
     ///  THE SHOOTER, the ring clacking off a wall / a desk at the impact (who 0: a noise the room cannot explain — men go and look at IT, which is half of what the thing
     ///  is for), a man folding under a head hit (the takedown's 0.3, at him), the thump and yelp of a body hit
     #[k(0.45)] pub launch_noise: f64,

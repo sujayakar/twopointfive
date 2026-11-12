@@ -471,28 +471,26 @@ fn sourceExpansion(k: Bk, Pw: vec3f) -> f32 {
 }
 
 // ------------------------------------------------------------------ link: neighbours, who reaches this brick, and — new or dirtied — its obstacles
-struct BoxGeoS { c: vec3f, rot: u32, h: vec3f, flags: u32 };
-@group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeoS>;
+@group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeo>;
 @group(2) @binding(2) var<storage, read> sgridCells: array<u32>;
 @group(2) @binding(3) var<storage, read> sgridItems: array<u32>;
-struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
-@group(2) @binding(4) var<uniform> sscene: SceneInfoS;
+@group(2) @binding(4) var<uniform> sscene: SceneInfo;
 struct SealS { info: vec4u, boxes: array<vec4f, 64> };   // ≤ 32 sealing door leaves: (c, cos yaw), (h, sin yaw)
 @group(2) @binding(5) var<uniform> sseal: SealS;
+@group(2) @binding(11) var<storage, read> boxMat: array<vec4f>;   // the box world's material buffer, for the panes' rows behind it alone
 
-fn insideBox(p: vec3f, b: BoxGeoS) -> bool {
-  let cs = unpack2x16float(b.rot);
+fn insideBox(p: vec3f, b: BoxGeo) -> bool {
+  let cs = boxGeoRot(b);
   let d = p - b.c;
   let l = vec3f(cs.x * d.x - cs.y * d.z, d.y, cs.y * d.x + cs.x * d.z);
   return all(abs(l) <= b.h + vec3f(0.01));
 }
 fn insideSheet(p: vec3f, a: vec4f, b: vec4f, fat: f32) -> bool {
-  let d = p - a.xyz;
-  let l = vec3f(a.w * d.x - b.w * d.z, d.y, b.w * d.x + a.w * d.z);
+  let l = paneLocal(p, a, b);
   let hh = vec3f(select(b.x, max(b.x, fat), b.x < b.z), b.y, select(max(b.z, fat), b.z, b.x < b.z));
   return all(abs(l) <= hh + vec3f(0.01));
 }
-/** smoke.wgsl bakeObstacles' test at one point: statics off the trace grid, glass panes and sealing door leaves fattened to a closed layer of cells */
+/** the test at one point: statics off the trace grid, and what of the glass panes has not fallen out (render/shaders/glass_open.wgsl, the picture's own rule) and sealing door leaves, fattened to a closed layer of cells */
 fn solidAt(p: vec3f, voxel: f32) -> bool {
   for (var g = 0u; g < sscene.numGlobals; g++) {
     let b = sboxGeo[sscene.globals[g >> 2u][g & 3u]];
@@ -509,7 +507,10 @@ fn solidAt(p: vec3f, voxel: f32) -> bool {
       if (insideBox(p, b)) { return true; }
     }
   }
-  for (var j = 0u; j < min(sscene.glassInfo.x, 32u); j++) { if (insideSheet(p, sscene.glass[j * 3u], sscene.glass[j * 3u + 1u], 0.55 * voxel)) { return true; } }
+  for (var j = 0u; j < min(sscene.glassInfo.x, 32u); j++) {
+    let a = sscene.glass[j * 3u]; let b = sscene.glass[j * 3u + 1u];
+    if (insideSheet(p, a, b, 0.55 * voxel) && !glassCellOpen(j, paneLocal(p, a, b))) { return true; }
+  }
   for (var j = 0u; j < min(sseal.info.x, 32u); j++) { if (insideSheet(p, sseal.boxes[j * 2u], sseal.boxes[j * 2u + 1u], 0.6 * voxel)) { return true; } }
   return false;
 }

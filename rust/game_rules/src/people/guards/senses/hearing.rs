@@ -42,7 +42,7 @@ pub fn hearing_check(g: &mut Game, gd: GuardId, ear: Option<f64>, eyes: Option<b
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
     let dull = keen * ear;
     let c = g.gd[gd].ch;
-    // By live index: a line said or a rule called on the way may file an event, and it is walked as the TypeScript's for … of walks it.
+    // By live index: a line said or a rule called on the way may file an event, and that one is walked too.
     let mut next = 0;
     while next < g.events.len() {
         let at_e = next;
@@ -220,7 +220,7 @@ fn loud(g: &mut Game, gd: GuardId, s: &Sound) {
                 "grenade! that was a grenade!"
             } else if e.charge == Some(true) {
                 if crate::teams::defender_words(g, gd) { "that was a charge — they're breaching!" } else { "that was a charge!" }
-            } else if g.gd[gd].hold || g.gd[gd].pinned {
+            } else if !g.gd[gd].duty.free() {
                 "flashbang!"
             } else {
                 "flashbang! go, go!"
@@ -313,7 +313,7 @@ fn was_calm(g: &Game, gd: GuardId) -> bool {
     st == crate::game::GuardState::Patrol || st == crate::game::GuardState::Suspicious
 }
 
-/// hearingCheck's `small`: what reached him and counted goes in his memory, and attention.ts is told which small thing it was.
+/// What reached him and counted goes in his memory, and the attention rule is told which small thing it was.
 fn small(g: &mut Game, gd: GuardId, cur: &crate::game::GameEvent, where_: V3) {
     let now = g.time;
     let h = &mut g.gd[gd].witness.heard;

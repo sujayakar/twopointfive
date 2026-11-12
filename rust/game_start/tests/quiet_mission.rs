@@ -88,7 +88,7 @@ fn the_offices_rack_is_reached_from_its_face() {
     p.sam_put(p.free_near([f[0], f[2] + 0.6], 0.6));
     p.until(3.0, |p| p.mission_stage() != Stage::Infiltrate).expect("at the rack and the mission does not know it");
     game::mission::drive_pulled(&mut p.g);
-    let sent = |p: &Play| p.g.guards.iter().find_map(|&m| match &p.g.gd[m].task { Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Rack => Some(t.pos), _ => None });
+    let sent = |p: &Play| p.g.guards.iter().find_map(|&m| match &p.g.gd[m].errand { Some(game::game::Errand::At(t)) if t.kind == game::game::ErrandThing::Rack => Some(t.pos), _ => None });
     p.until(12.0, |p| sent(p).is_some()).expect("12 s and nobody is sent to look");
     let at = sent(&p).unwrap();
     assert!(at[0] > e.area.x0 && at[0] < e.area.x1 && at[2] > e.area.z0 && at[2] < e.area.z1, "he is sent out of the room: {at:?}");

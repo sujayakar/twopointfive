@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds.
+/// The kit's row, made if there is none: nothing but empty lists.
 fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
     g.m.irlight.kits.get_or_insert_with(Kit::default)
 }
@@ -395,9 +395,9 @@ mod tests {
         crate::render_lights::RtLight { pos, dir, intensity, radius, owner, range, outer_deg, inner_deg, enabled, ..crate::render_lights::RtLight::default() }
     }
 
-    /// irLightAt's sums against the TypeScript's own bits (irlight.ts under bun, EXACT on). Every lens stands too near the point to ask the world (tmax <= 0.05).
+    /// The pinned bits of ir_light_at's sums. Every lens stands too near the point to ask the world (tmax <= 0.05).
     #[test]
-    fn ir_light_at_has_the_typescripts_bits() {
+    fn ir_light_at_keeps_its_bits() {
         let mut g = Game::blank();
         let lights = [
             test_light([1.25, 1.62, -0.75], [0.17364817766693033, -0.17364817766693033, 0.9698463103929542], 3.7, 0.04, 7.0, 40.0, 62.0, 37.0, true),
@@ -416,7 +416,7 @@ mod tests {
         assert_eq!(ir_light_at(&mut g, p, Some(11.0)).to_bits(), 0x407ce08afd1d7c50);
     }
 
-    /// a new lamp holds the TypeScript literal's values and the knobs' shape; `out` writes the row it is given, and with no lamp does nothing
+    /// a new lamp holds these values and the knobs' shape; `out` writes the row it is given, and with no lamp does nothing
     #[test]
     fn lamp_and_out_write_the_row() {
         let mut g = Game::blank();

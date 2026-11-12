@@ -378,7 +378,7 @@ fn reach_fresh(g: &mut Game, to_sun: V3) {
     g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_ };
 }
 
-/// What a question of the sky's ways is of (sim/dome.rs).
+/// What a question of the sky's ways reads: the boxes, the casters, the way to the sun, the knobs.
 fn under(g: &Game) -> ::sim::dome::Under<'_> {
     let r = &g.m.hours.reach;
     ::sim::dome::Under { w: g.tab.boxes.world(), casters: casters(&r.box_), to_sun: r.to_sun, tune: &g.k }
@@ -393,7 +393,7 @@ fn sun_of(g: &Game, st: &Sky) -> f64 {
     }
 }
 
-/// The sky as the light under a roof is worked out from it (sim/glow.rs).
+/// The sky as the light under a roof is worked out from it.
 pub fn sky_now(g: &crate::game::Game) -> ::sim::glow::Sky {
     let st = sky_in_force(g);
     ::sim::glow::Sky { to_sun: st.to_sun, sun: sun_of(g, &st), zenith: sky_lum(g, 1.0, st.dome), horizon: sky_lum(g, 0.0, st.dome) }
@@ -440,7 +440,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         (from, of) = if crate::scene_collision::segment_blocked(g, p, c2, None, None, None) { (p, None) } else { (c2, Some(Of::Quarter(jx as i32, jz as i32))) };
     }
     let u = under(g);
-    let open = u.open(g.sim, from, of);
+    let open = u.open(&g.made, from, of);
     if open.sky == 0 && open.sun | open.ground == 0 { return; }
     let mut leaves: Vec<BoxId> = Vec::new();
     for &db in g.col.dynamic_boxes.iter() {
@@ -477,12 +477,10 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
     row.peak_intensity = x;
 }
 
-// ---------------------------------------------------------------- seams: what the skeleton still lacks
-
 
 #[cfg(test)]
 mod tests {
-    /// the night's haze is the one the TypeScript ships
+    /// the night's haze is the one src/settings.ts gives
     #[test]
     fn the_nights_haze_is_the_shipped_one() {
         let text = include_str!("../../../../../src/settings.ts");
@@ -492,7 +490,7 @@ mod tests {
     }
 
     use super::*;
-    // the TypeScript's own bits: bun, with EXACT.on, off src/game/hours.ts and its ray code
+    // pinned bits
     const SUN_SOFT: &[(u64, u64, u64)] = &[
     (0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000),
     (0x3fa999999999999a, 0x3fefffc4ae7f7f16, 0x0000000000000000),
@@ -583,7 +581,7 @@ mod tests {
     fn def(id: HourId) -> HourDef { hours().of(id.as_str()).unwrap().clone() }
 
     #[test]
-    fn cloud_sun_and_soft_are_the_typescripts_bits() {
+    fn cloud_sun_and_soft_keep_their_bits() {
         for &(c, s, f) in SUN_SOFT {
             let c = f64::from_bits(c);
             assert_eq!(cloud_sun(c).to_bits(), s);
@@ -591,7 +589,7 @@ mod tests {
         }
     }
     #[test]
-    fn cloud_light_and_total_are_the_typescripts_bits() {
+    fn cloud_light_and_total_keep_their_bits() {
         for &(id, c, a, b, t) in LIGHT {
             let (d, c) = (def(id), f64::from_bits(c));
             let [x, y] = cloud_light(&d, c);
@@ -600,7 +598,7 @@ mod tests {
         }
     }
     #[test]
-    fn greyed_is_the_typescripts_bits() {
+    fn greyed_keeps_its_bits() {
         for &(id, a, b) in GREYED {
             let d = def(id);
             assert_eq!(b3(greyed(d.sun.color, 0.37, Some(1.3))), a);
@@ -608,20 +606,19 @@ mod tests {
         }
     }
     #[test]
-    fn to_sun_is_the_typescripts_bits() {
+    fn to_sun_keeps_its_bits() {
         for &(id, a) in TO_SUN { assert_eq!(b3(to_sun_of(&def(id))), a); }
     }
     #[test]
-    fn rays_are_the_typescripts_bits() {
+    fn rays_keep_their_bits() {
         let f = ::sim::dome::fan();
         for (r, &(d, c)) in f.sky.iter().chain(f.ground.iter()).zip(RAYS.iter()) {
             assert_eq!(b3(r.d), d);
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
     }
-    // the words checked against the TypeScript's own functions under bun
     #[test]
-    fn hour_words_are_read_as_the_typescript_reads_them() {
+    fn hour_words_are_read_as_pinned() {
         assert_eq!(hour_id_of(Some("MidDay")), HourId::Midday);
         assert_eq!(hour_id_of(Some("sunset")), HourId::Dusk);
         assert_eq!(hour_id_of(Some("constructor")), HourId::Night);

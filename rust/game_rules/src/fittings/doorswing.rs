@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A drill plan as the deal reads it: door, fling, room, bounds (Level.breach and Level.clearPlans are one list in the TypeScript, two Rust structs)
+/// A drill plan as the deal reads it: door, fling, room, bounds (a level's `breach` and `clear_plans`, two structs, are read as one list)
 type Plan = (String, f64, Option<String>, Option<crate::doorswing::Rect>);
 
 /// What the deal reads of the level, copied out once so a rule can call what takes `g` (nothing writes the level during the deal).
@@ -554,7 +554,7 @@ mod tests {
         assert_eq!(comp, [0, 0, -1, 1, 1, 0, 0, -1, 1, 1]);
     }
 
-    /// Spots of leafCut's grid, as the TypeScript's alOf and peOf.
+    /// Spots of `leaf_cut`'s grid.
     #[test]
     fn leaf_grid_spots() {
         assert_eq!((-LEAF_WIN + 3.0 * LEAF_STEP).to_bits(), al_of(81 * 2 + 3, 81).to_bits());
@@ -595,9 +595,9 @@ mod tests {
         p
     }
 
-    /// Every rule of `tries` and the outside rule against the TypeScript's own dealSwings on one made-up level (scene and answers from bun, doorswing.ts with `col` null; the box world and setSwing are stubs here, so the leaf room rule is not reached).
+    /// Every rule of `first_rule` and the outside rule on one made-up level, against pinned answers. The leaf room rule, in the deal's loop, is not reached.
     #[test]
-    fn rules_answer_as_the_typescript() {
+    fn rules_give_the_pinned_answers() {
         let mut g = Game::blank();
         door(&mut g, "floor", [10.0, 4.0], 1.6, -1.6, |d| d.exterior = Some(true));
         door(&mut g, "authored", [10.0, 6.0], 1.6, -1.6, |d| d.swing = Some(-1.0));

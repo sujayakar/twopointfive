@@ -58,7 +58,7 @@ fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crat
     Some(own_spot(&s))
 }
 
-/// A level's own place as a NeedSpot. (needs.ts ownSpot; `owned`'s cache is dropped, the value is a function of `s`)
+/// A level's own place as a NeedSpot.
 fn own_spot(s: &crate::needs::OwnSpotS) -> crate::needs::NeedSpot {
     NeedSpot { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
@@ -78,7 +78,7 @@ fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloo
     g.m.needs.floor_of.get_or_insert_with(|| NeedsModFloorOfValue { last_depart_at: -1e9 })
 }
 
-/// The last few things that happened. (needs.ts log; NEEDS_DEBUG's sink is host work)
+/// A string's hash as a fraction, 0 to 1.
 fn frac(s: &str) -> f64 {
     js::rem(crate::dice::hash_str(s), 100000.0) / 100000.0
 }
@@ -159,10 +159,10 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
         && x.awareness < awareness
         && x.held.is_none()
         && x.script.is_none()
-        && x.task.is_none()
+        && x.errand.is_none()
         && x.body_duty.is_none()
-        && !x.hold
-        && !x.pinned
+        && !x.duty.holds
+        && !x.duty.pinned
         && x.leader.is_none()
         && x.post.is_none()
         && g.guards.contains(&gd)
@@ -204,17 +204,17 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if x.body_duty.is_some() {
         return Some(String::from("a body"));
     }
-    if let Some(task) = x.task.as_ref() {
+    if let Some(task) = x.errand.as_ref() {
         let kind = match task {
-            crate::game::GuardTask::Arm0(a) => a.kind.as_str(),
-            crate::game::GuardTask::CheckOn(_) => "checkOn",
+            crate::game::Errand::At(a) => a.kind.as_str(),
+            crate::game::Errand::CheckOn(_) => "checkOn",
         };
         return Some(format!("an errand ({})", kind));
     }
     if x.script.is_some() {
         return Some(String::from("orders"));
     }
-    if x.hold || x.pinned {
+    if !x.duty.free() {
         return Some(String::from("held by a script"));
     }
     if x.leader.is_some() || x.post.is_some() {
@@ -754,7 +754,7 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
 mod tests {
     use super::*;
 
-    /// `pathLen` against the TypeScript's own bits (EXACT on).
+    /// `path_len` against pinned bits.
     #[test]
     fn path_len_bits() {
         let from = [1.25, 0.0, -3.5];

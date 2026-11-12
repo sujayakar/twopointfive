@@ -73,7 +73,10 @@ pub fn fill(g: &Game, out: &mut Vec<Fog>, bared: bool) {
     f.flat = m::max(0.0, k.flat) as f32;
     f.full = 1;
     f.full_flat = m::max(0.0, k.flat * k.full_fill) as f32;
+    // THE AIR IS THE PLACE: smoke is drawn over floor the team does not see too, dimmed with the ground behind it (the maintainer, on a fire with no flame in the fog: 'I think we
+    // should at least show everything in the environment visible at the start of the level all the time?'). What a hidden man smokes or fires is not filed at all.
     f.air = 1;
+    // WHAT OTHERS LEFT BEHIND STAYS AS THE TEAM LAST SAW IT: a lamp put out unseen keeps its face, a thing seen lying there stays in the picture.
     f.kept = 1;
     eyes(g, f);
     lamps(g, f);
@@ -138,7 +141,7 @@ fn lamps(g: &Game, f: &mut Fog) {
         // a fire's lamp wanders with its flames and is as big as they are: the fog has it where the level hung it, the size the level gave it
         let row = &g.tab.light[l];
         let (pos, radius) = match row.steady { Some(ref s) => (s.pos, s.radius), None => (row.pos, row.radius) };
-        f.lights[i * 16..i * 16 + 16].copy_from_slice(&game::render_lights::pack_light(row, pos, radius, strength, row.kind as u32, 0.0, 0));
+        f.lights[i * 16..i * 16 + 16].copy_from_slice(game::rows::words(&game::render_lights::pack_light(row, pos, radius, strength, row.kind as u32, 0.0, 0)));
     }
 }
 

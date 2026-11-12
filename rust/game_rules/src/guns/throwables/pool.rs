@@ -390,16 +390,14 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
                 crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.5, sp / 12.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.7 }));
             }
         }
-        // he40.ts:123
         ItemBounce::ShellSkitter => {
             if sp > 1.0 {
                 crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.7, sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
             }
         }
         ItemBounce::Mag => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), None),
-        // player.ts:382, guards.ts:2782
         ItemBounce::MagRate { belt } => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: if belt { 0.6 } else { 0.8 } })),
-        // combat.ts:423 dropFromHand; who 0: nobody living made it, a clatter the room cannot explain
+        // who 0: nobody living made it, a clatter the room cannot explain
         ItemBounce::Dropped { kind, quiet } => {
             if sp < 0.7 {
                 return;

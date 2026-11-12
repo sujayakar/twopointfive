@@ -6,7 +6,7 @@ use crate::ids::*;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// the script startle.ts lent for the frame, as the run left it, put back on his row: startle.ts:133 reads its `arrived`.
+/// the script lent for the frame, as the run left it, put back on his row: the tick reads its `arrived`.
 pub(super) fn startle_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(s)) = (ran, g.m.startle.state_of.get_mut(gd)) { if s.script.is_some() { s.script = Some(ran); } }
 }
@@ -188,7 +188,7 @@ fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if crate::morale::training_of(g, gd) != crate::morale::TrainingOf::Green || far > g.k.startle.run_m || far < g.k.startle.near_m || crate::morale::has_mate(g, gd) { return false; }
     let clear_secs = g.k.startle.clear_secs;
     if let Some(post) = crate::roomfight::room_fight_bolt(g, gd, clear_secs) { return post; }
-    if g.gd[gd].pinned || g.gd[gd].standoff.is_some() || !g.tune.suppression { return false; }
+    if g.gd[gd].duty.pinned || g.gd[gd].standoff.is_some() || !g.tune.suppression { return false; }
     let Some(p) = crate::suppression::cover_from(g, gd, threat) else { return false };
     let pos = g.ch[c].pos;
     let way = crate::scene_collision::nav_grid_find_path(g, pos, p, None, None);

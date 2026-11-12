@@ -17,7 +17,7 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     *slot = Some(slot.unwrap_or(0.0) + 1.0);
 }
 
-/// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.
+/// The same chokepoint, by value: a man's post is a copy of the level's row.
 fn same_post(a: &crate::scene_level::Chokepoint, b: &crate::scene_level::Chokepoint) -> bool {
     a.name == b.name && a.pos == b.pos && a.yaw == b.yaw
 }
@@ -279,10 +279,10 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
     }
 }
 
-/// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.
+/// Stand an AI man of a side, held on a one-point route of his own. A refusal is the Err.
 pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
     if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
-    if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
+    if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units: the level's civilians block stands them up")); }
     let chars = crate::seats::seat_count(g) + g.guards.len() as f64;   // (a man a seat, and everybody else who stands)
     let eight = crate::seats::budget_with_seats(g, MAX_CHARACTERS);   // (the eight is written for one player: a seat more, a man more)
     let cap = m::min(crate::guards::MAX_SKINNED, m::max(eight, o.budget.unwrap_or(0.0)));
@@ -290,11 +290,11 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         if cap > eight {
             return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and this caller's budget is {} — despawn a unit or reset the guards first", chars, g.guards.len(), cap));
         }
-        return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), eight));
+        return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} — despawn a unit or reset the guards first", chars, g.guards.len(), eight));
     }
     let steady = g.engine.lights.lights.iter().filter(|&&l| g.tab.light[l].ttl < 0.0).count() as f64;
     if steady + 1.0 > crate::render_lights::MAX_LIGHTS {
-        return Err(format!("spawnUnit: {} steady lights already exist and the light buffer holds {} (render/lights.ts) — his weapon light would never upload; despawn a unit first", steady, crate::render_lights::MAX_LIGHTS));
+        return Err(format!("spawnUnit: {} steady lights already exist and the light buffer holds {} — his weapon light would never upload; despawn a unit first", steady, crate::render_lights::MAX_LIGHTS));
     }
     let mut used: Vec<f64> = Vec::new();
     for pl in crate::seats::men(g) { let c = g.pl[pl].ch; used.push(g.ch[c].id); }
@@ -333,11 +333,11 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
         name: Some(name.clone()),
         team: Some(o.team),
     };
-    let (men, rig) = (g.men, g.rig);
+    let rig = g.rig;
     let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().of(o.team.as_str()).unwrap() };
-    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
+    let gd = crate::game::guard_new(g, rig, id, route, -1, fl, tint, Some(&look));
     g.gd[gd].unit = Some(crate::game::UnitInfo { light: o.light != Some(false), pair: o.pair, seat: None });
-    crate::control::set_hold(g, gd, true, "guards");
+    crate::duty::hold(g, gd, true, "guards");
     g.gd[gd].heard_up_to = g.event_seq;
     let c = g.gd[gd].ch;
     crate::character::character_update(g, c, 0.0);
@@ -376,10 +376,8 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if let Some(s) = g.gd[o].standoff { if g.tab.guards_standoff[s].pair == gd { g.gd[o].standoff = None; } }
         if g.gd[o].body_duty.as_ref().map_or(false, |b| b.body == gd) { g.gd[o].body_duty = None; }
         if g.gd[o].leader == Some(gd) { g.gd[o].leader = None; }
-        if matches!(&g.gd[o].task, Some(crate::game::GuardTask::CheckOn(t)) if t.who == gd) { g.gd[o].task = None; }
+        if matches!(&g.gd[o].errand, Some(crate::game::Errand::CheckOn(t)) if t.who == gd) { g.gd[o].errand = None; }
     }
-    let c = g.gd[gd].ch;
-    crate::sim_men_store::man_leaves(g, c);
     true
 }
 

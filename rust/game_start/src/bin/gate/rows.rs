@@ -21,7 +21,7 @@ pub const SEED: u32 = 9;
 pub const RUN_SECS: usize = 40;
 const BETWEEN_SECS: usize = 10;
 const MOMENTS: [usize; 5] = [3, 9, 15, 21, 27];
-/// the moments that are also loaded into a fresh slot
+/// the moments that are also loaded where another game stood
 const LOADS: [usize; 2] = [9, 21];
 const AFTER_MOMENT_SECS: usize = 3;
 /// the idle seconds of a second start, and of the mission stood between the two
@@ -129,14 +129,14 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (start.clone(), "pin", "the start moved"), (start, "second", "a second start"), (way_row_name(), "first", "stands on way"),
         (format!("play {}", run), "pin", "moved from second"), (format!("play {}", run), "silent", "never happens"),
         // (what a player sees: the figures may not be blind to any of it. On the kill house, whose squad is under an order by then)
-        (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "die"),
+        (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "draws"),
         // (a word that moved with no figure: this row passes, and says so)
         (format!("play {}", held_run), "word", "only the words moved"),
         // (the panes want a level with panes; the rest stand on any)
         (format!("play {}", run_name(4)), "glass", "glass"), (format!("play {}", held_run), "lamps", "lamp"), (format!("play {}", held_run), "smoke", "smoke"), (format!("play {}", held_run), "destroyed", "destroyed"),
         (format!("again {}", run), "second", "the second run"),
-        (format!("save {}", run), "block", "put back, parts"),
-        (format!("load {}", run), "block", "loaded into"),
+        (format!("save {}", run), "lost", "put back, parts"),
+        (format!("load {}", run), "lost", "loaded into"),
         // (a run whose statics move: the mirror has something to skip)
         (format!("draw {}", moved), "told", "drawing the game changed it"), (format!("draw {}", moved), "mark", "the page's"), (format!("draw {}", moved), "head", "the boxes' head says"), (format!("draw {}", moved), "opened", "just opened"),
         (seats.clone(), "pin", "moved from second"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
@@ -355,9 +355,9 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("aside") { let c = p.g.gd[man].ch; p.g.ch[c].pos[0] += 0.01; }
     if f.breaks("round") { let gun = p.g.gd[man].weapon; p.g.fa[gun].chamber -= 1.0; }
     if f.breaks("door") { let d = p.g.doors.list[0]; let a = p.g.dr[d].leaf.angle; p.g.dr[d].leaf.angle = a + 0.1; }
-    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
+    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.task[a].order = String::from("planted"); }
     if f.breaks("die") { p.g.dice.n += 1.0; }
-    if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
+    if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; p.g.tab.boxes.panes().holes.push(sim::panes::Hole { bi, at: vec![[0.0; 3]] }); }
     if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }
     if f.breaks("smoke") { let c = p.g.pos_of(man); game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
     if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes.edit(b).flags = 3.0; }
@@ -406,53 +406,49 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
     if kinds.contains(&"draw") { crate::draw::row(&name("draw"), k, &series, f); }
 }
 
-/// THE GAME PUT BACK IS THE GAME THAT WENT ON: each moment stands again, the even ones in the run's own slot and the odd ones in slot 1, and is played under the same hand from its frame on:
+/// THE GAME PUT BACK IS THE GAME THAT WENT ON: each moment stands again and is played under the same hand from its frame on:
 /// every part of every frame the same as the run's had. A host's hand is outside the game: where its next line is, and where its cursor lies, go back with the game.
-/// BREAK: a moment whose block bytes are the run's end's.
+/// BREAK: `lost` a moment has lost its men's poses.
 fn save_row(name: &str, p: &mut Play, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
     let mut did = vec![(0, String::new()); hand.lines.len()];
-    let home = p.g.sim;
-    let end = game_start::block::bytes(home).to_vec();
     let mut fail = Vec::new();
-    'moments: for (m, k) in kept.iter_mut().enumerate() {
-        if f.breaks("block") { k.moment.block.clone_from(&end); }
-        p.g = k.moment.laid(if m % 2 == 0 { home } else { 1 });
+    'moments: for k in kept.iter_mut() {
+        if f.breaks("lost") { let g = &mut k.moment.game; for c in g.ch.ids() { g.ch[c].poses.d.fill(0.0); } }
+        p.lay(&k.moment);
         p.cursor = k.cursor;
         let mut next = k.next;
         for (i, was) in k.words.iter().enumerate() {
             frame_of(p, hand, k.at + i, &mut next, &mut did);
             parts::words(&mut p.g, &mut w, &mut row);
-            if &row != was { fail.push(format!("the moment of {} s in slot {}, put back, parts at frame {} of it ({:.2} s on) in {}", k.at / 60, p.g.sim, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'moments; }
+            if &row != was { fail.push(format!("the moment of {} s, put back, parts at frame {} of it ({:.2} s on) in {}", k.at / 60, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'moments; }
         }
     }
     say(name, t.elapsed().as_secs_f64(), &fail, "");
 }
 
-/// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game in a slot nobody was in, and played
+/// A LOAD IS THE GAME THAT WENT ON: the value a save keeps, the run's game gone and another mission stood and played in the process, stood as a page stands a kept game, and played
 /// under the hand from its kept place: every part of every frame the run's. (A fault this road has had: a calm guard's torch came on for three seconds.)
-/// BREAK: `block` one byte of the block's die is another.
+/// BREAK: `lost` the moment has lost its men's poses.
 fn load_row(name: &str, k: usize, hand: &Hand, kept: &mut [Kept], names: &[String], f: Flags) {
     let t = Instant::now();
     let (mut w, mut row) = (game::bytes::W::new(), Vec::new());
     let mut did = vec![(0, String::new()); hand.lines.len()];
     let mut fail = Vec::new();
     let other = mission(RUNS[(k + 1) % RUNS.len()].0);
-    let mut slot = sim::state::GAMES;
     'loads: for m in kept.iter_mut().filter(|m| LOADS.contains(&(m.at / 60))) {
-        if f.breaks("block") { m.moment.block[sim::state::PARTS[1].off] ^= 1; }
+        if f.breaks("lost") { let g = &mut m.moment.game; for c in g.ch.ids() { g.ch[c].poses.d.fill(0.0); } }
         let mut q = stand(&other, SEED, 1);
         q.run(OTHER_SECS as f64);
-        slot -= 1;
-        q.g = m.moment.laid(slot);
+        q.lay(&m.moment);
         q.host = game_start::stand::host_of(&q.g).expect("a stood game was handed its host's rows");
         q.cursor = m.cursor;
         let mut next = m.next;
         for (i, was) in m.words.iter().enumerate() {
             frame_of(&mut q, hand, m.at + i, &mut next, &mut did);
             parts::words(&mut q.g, &mut w, &mut row);
-            if &row != was { fail.push(format!("the moment of {} s, loaded into slot {}, parts at frame {} of it ({:.2} s on) in {}", m.at / 60, slot, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'loads; }
+            if &row != was { fail.push(format!("the moment of {} s, loaded into another game's place, parts at frame {} of it ({:.2} s on) in {}", m.at / 60, i + 1, (i + 1) as f64 / 60.0, named(&parts::differ(names, was, &row)))); break 'loads; }
         }
     }
     say(name, t.elapsed().as_secs_f64(), &fail, "");
@@ -549,7 +545,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
         }
         None
     };
-    if let Some(why) = moment.take().and_then(|m| { p.g = m.laid(p.g.sim); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
+    if let Some(why) = moment.take().and_then(|m| { p.lay(&m); replay(&mut p, 0, SEATS_MOMENT.0 * 60, SEATS_MOMENT.1 * 60, f.breaks("moment")) }) { fail.push(format!("a moment of the fight put back {}", why)); }
     drop(p);
     for shown in [0, 1] {
         let mut q = stand(&e, SEED, 2);

@@ -202,7 +202,6 @@ fn cubeNormal(vi: u32) -> vec3f {
 // The rows past the tints are the WET look (rust/game_rules/src/air/wet.rs → anim/characters.ts setInstance; all zero for a dry man or with settings.wetChars off — fsSkin then
 // stores exactly what it always stored): wet = (coat 0‥1, beads 0‥1, the rain rate the drops were fed at, a per-man clock offset in s), wetK = (bead density,
 // bead radius m, run / trail length m, coat roughness soaked), wetK2 = (coat roughness dry, darken exponent, darken multiplier, specular gain).
-struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec2f, parts: u32, pad: u32 };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — rust/game_rules/src/air/wet.rs wetLineRow
 @group(1) @binding(1) var<storage, read> jointMats: array<mat4x4f>;
 @group(1) @binding(2) var<storage, read> chars: array<CharInst>;
 // CHARACTER MATERIALS (render/charMaterials.ts → anim/characters.ts setMaterials): CHAR_MAT_ROWS vec4 rows per instance. Row 0 = (on, grime height, grime band, crease

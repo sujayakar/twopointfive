@@ -31,13 +31,13 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     crate::pairorders::watch_issue(g, men, t)
 }
 
-/// (pairorders.ts:232 the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him)
-fn tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    let h = match g.tab.orders_assignment[a].foe { Some(h) => h, None => return };
+/// the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him
+fn tick(g: &mut Game, gd: GuardId, a: TaskId) {
+    let h = match g.tab.task[a].foe { Some(h) => h, None => return };
     if crate::condition::down(g, g.gd[h].ch) || !g.guards.contains(&h) { crate::pairorders::pair_orders_stand(g, gd, "holding", None); return; }
     if !crate::pairorders::pair_orders_sees(g, gd, h) { return; }   // (behind something: the gun stays on where he last saw him)
     let (c, p) = (g.pos_of(h), g.pos_of(gd));
-    let aa = &mut g.tab.orders_assignment[a];
+    let aa = &mut g.tab.task[a];
     if let Some(w) = &mut aa.watch { w[0] = c[0]; w[2] = c[2]; }
     aa.face = Some(crate::v3::yaw_to(p, c));
 }

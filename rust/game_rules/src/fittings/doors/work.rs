@@ -6,11 +6,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name.
+/// A door's sound, heard and played.
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
-/// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
 fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
@@ -222,7 +221,7 @@ pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::Do
     emit(g, d, sound, pos, who, level);
 }
 
-/// The subscriber game.ts:1208 hangs on the doors: a torn leaf is a row in the destruction's change feed.
+/// A torn leaf is a row in the destruction's change feed.
 fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::wallbreak::LevelChangeCause) {
     let c = g.dr[d].frame_centre;
     let r = g.dr[d].def.width / 2.0 + 0.1;
@@ -383,7 +382,7 @@ pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys:
 mod tests {
     use super::*;
 
-    // every number below is the TypeScript's own, printed under bun with EXACT.on from doors.ts on a fresh `new Doors`
+    // every number below is pinned
     const A: ([f64; 2], f64, f64) = ([1.25, -3.5], 0.7, 0.95);
     const C: ([f64; 2], f64, f64) = ([-1.0, -0.8], 0.7, 0.95);
     const U_A: [u64; 2] = [0x3fe87996529f9d92, 0x3fe49d6e694619b8];
@@ -392,7 +391,7 @@ mod tests {
     fn v_bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
 
     #[test]
-    fn work_spot_has_the_typescripts_bits() {
+    fn work_spot_keeps_its_bits() {
         let (pos, yaw) = work_spot_at(A.0, u_a(), 1.0, 0.5, A.2 - 0.14);
         assert_eq!(v_bits(pos), [0x3ff8c2347a581444, 0, 0xc004c41f2bdfc5d1]);
         assert_eq!(yaw.to_bits(), 0x40038861baaa937e);
@@ -402,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn kick_spot_has_the_typescripts_bits() {
+    fn kick_spot_keeps_its_bits() {
         let along = kick_along(A.0, u_a(), A.2, [2.13, 0.0, -1.7]);
         let (pos, yaw) = work_spot_at(A.0, u_a(), 1.0, 0.76, along);
         assert_eq!(v_bits(pos), [0x3ff596d3c20bc618, 0, 0xc00361a20646bd1c]);
@@ -413,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn side_spot_has_the_typescripts_bits() {
+    fn side_spot_keeps_its_bits() {
         let k = side_kick();
         let (pos, yaw) = side_spot_at(A.0, u_a(), 1.0, A.2, k.past, k.out);
         assert_eq!(v_bits(pos), [0x3ffda0b2c9e3ae9c, 0, 0xc0023148d3bdbf18]);
@@ -424,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn pick_gap_has_the_typescripts_bits() {
+    fn pick_gap_keeps_its_bits() {
         let want = [0x3fe7887af8c4a25cu64, 0x3fe3ddc2be561185, 0x3fe9cca41d811a47, 0x3fe621ebe3128970];
         for (i, w) in want.iter().enumerate() { assert_eq!(pick_gap((i + 1) as f64).to_bits(), *w); }
     }

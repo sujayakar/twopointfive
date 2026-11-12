@@ -79,7 +79,7 @@ pub struct PairOrdersWaysValue {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairordersModPAIRLOGItem {
     pub what: String,
-    /// INVENTED: g.serial() at the push: lesson.ts:113 holds a row as a cursor by identity
+    /// dealt at the push: the lesson holds a row as a cursor by it
     pub serial: u32,
 }
 

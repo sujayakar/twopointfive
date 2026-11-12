@@ -9,9 +9,8 @@ use alloc::{string::String, vec, vec::Vec};
 
 type Ray = crate::scene_collision::Raycast;
 
-// ---------------------------------------------------------------- seam: what the skeleton still cannot do (notes.md, Skeleton)
-/// `g.level.boxes[i]`: a level box's half size, its centre and its flags, by its place in the level's list. That list is `g.col.boxes`.
-fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
+/// A level box's centre, its half size and its flags, by its place in the level's list (`g.col.boxes`).
+fn level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
 /// Is this fixture one a wall switch works: on the mains and a light of the room.
@@ -21,7 +20,7 @@ fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
     if f.kind == crate::fixtures::FixtureKind::Analytic { return f.light.is_some(); }
     if f.kind != crate::fixtures::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
     let first = f.boxes[0] as usize;
-    let (c, h, _) = seam_level_box(g, first);
+    let (c, h, _) = level_box(g, first);
     h[1] <= h[0] && h[1] <= h[2] && c[1] > 1.5
 }
 
@@ -54,7 +53,7 @@ fn wall_ray(g: &crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::s
 fn solid(g: &Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
-    let (c, half, flags) = seam_level_box(g, h.index as usize);
+    let (c, half, flags) = level_box(g, h.index as usize);
     if js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
     c[1] + half[1] >= WALL_TOP
 }
@@ -144,7 +143,7 @@ fn plate_near(g: &mut crate::game::Game, d: DoorId, room: f64) -> Option<crate::
     None
 }
 
-/// `fewest`'s rule on plain numbers. A plate is told from another by its place in `ps`, not by its value (TypeScript: `keep.includes(p)`, by identity).
+/// `fewest`'s rule on plain numbers. A plate is told from another by its place in `ps`, not by its value.
 fn fewest_of(ps: &[Plate], per_room: f64, apart_m: f64) -> Vec<Plate> {
     let mut keep: Vec<usize> = if ps.is_empty() { Vec::new() } else { vec![0] };
     while (keep.len() as f64) < per_room {
@@ -489,7 +488,7 @@ mod tests {
 
     #[test]
     fn fewest_tells_equal_plates_apart_by_place() {
-        // two plates at one spot: the TypeScript's `includes` is by identity, so the second is a candidate (and too near to keep)
+        // two plates at one spot: the second is a candidate by its place, and with no distance asked between them it is kept
         assert_eq!(xs(&fewest_of(&[plate(0.0), plate(0.0)], 2.0, 0.0)), vec![0.0, 0.0]);
     }
 }

@@ -15,7 +15,7 @@ fn now_of(was: &str) -> String {
 
 // ---------------------------------------------------------------- stats, the men
 
-/// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`, and the TypeScript's Game as it is built).
+/// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`).
 fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhold::GunHoldStats {
     g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
 }
@@ -37,7 +37,7 @@ fn men_on(g: &crate::game::Game, held: GuardId) -> Vec<GuardId> {
 }
 
 /// Take a hold's Known out of the table for a call that needs `g` and it together (the row keeps its place, a placeholder in it). Nothing
-/// reached while it is out reads the table: see notes, Traps.
+/// reached while it is out reads the table.
 fn lend_known(g: &mut Game, key: u32) -> Option<Known> {
     g.m.gunhold.knowns.get_mut(key).map(core::mem::take)
 }
@@ -1148,9 +1148,9 @@ pub fn gun_hold_phase(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunho
 mod tests {
     use super::*;
 
-    // the TypeScript's own bits: bun, EXACT.on, Math.hypot(a[0] - b[0], a[2] - b[2])
+    // the pinned bits of dist_xz
     #[test]
-    fn flat_matches_the_typescript() {
+    fn flat_is_as_pinned() {
         let d = dist_xz([1.25, 9.0, -3.5], [4.75, -2.0, 7.125]);
         assert_eq!(d.to_bits(), FLAT_BITS);
     }

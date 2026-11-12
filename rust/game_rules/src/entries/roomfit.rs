@@ -373,23 +373,23 @@ pub fn fit_groups(fits: &[crate::roomfit::Fit]) -> Vec<f64> {
 }
 
 /// He takes the deal's watch into his order.
-fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit::Fit) {
-    let row = &mut g.tab.orders_assignment[a];
+fn take(g: &mut crate::game::Game, a: TaskId, f: &crate::roomfit::Fit) {
+    let row = &mut g.tab.task[a];
     row.watch = f.watch.map(v3::copy);
     row.face = Some(match (f.watch, row.post) { (Some(watch), Some(post)) => v3::yaw_to(post, watch), _ => f.face });
     row.there = if f.words.is_empty() { String::from("in position").into() } else { alloc::format!("in position · {}", f.words).into() };
 }
 
 /// Once a frame for each man under 'move': he takes his watch up over the last steps onto his mark; standing, he looks again once a second.
-pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let k = g.k.roomfit;
     let (post, f_on, f_next_t, f_at, f_front) = {
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         let (Some(f), Some(post)) = (row.fit.as_ref(), row.post) else { return; };
         (post, f.on, f.next_t, f.at, f.front)
     };
-    if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { // (he could not get there, and says so: the deal was for a mark he never reached)
-        g.tab.orders_assignment[a].fit = None;
+    if g.tab.task[a].there.at == crate::orders::At::StoppedShort { // (he could not get there, and says so: the deal was for a mark he never reached)
+        g.tab.task[a].fit = None;
         return;
     }
     let c = g.gd[gd].ch;
@@ -397,22 +397,22 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     if !f_on {
         if v3::dist_xz(p, post) > k.watch_in_m || crate::scene_collision::solid_blocked(g, [p[0], 1.3, p[2]], [post[0], 1.3, post[2]], None) { return; }
         let next_t = g.time + k.again_secs * (1.0 + js::rem(g.ch[c].id, 4.0) * 0.25);
-        let f = g.tab.orders_assignment[a].fit.as_mut().unwrap();
+        let f = g.tab.task[a].fit.as_mut().unwrap();
         f.on = true;
         f.next_t = next_t;
         let f = f.clone();
         take(g, a, &f);
         return;
     }
-    if g.time < f_next_t || !g.tab.orders_assignment[a].arrived { return; }
+    if g.time < f_next_t || !g.tab.task[a].arrived { return; }
     let next_t = g.time + k.again_secs;
-    g.tab.orders_assignment[a].fit.as_mut().unwrap().next_t = next_t;
+    g.tab.task[a].fit.as_mut().unwrap().next_t = next_t;
     // what the weights hang on: the rooms known, the ways there are (a hole is one), the leaves, who else holds a deal: nothing of it changed, nothing to weigh
     let mut mates: Vec<(V3, Option<String>)> = Vec::new();
     for man in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if man == gd { continue; }
         let Some(b) = crate::orders::squad_orders_of(&crate::seats::here(g), man) else { continue; };
-        let row = &g.tab.orders_assignment[b];
+        let row = &g.tab.task[b];
         if let (Some(fit), Some(pos)) = (row.fit.as_ref(), row.post) { mates.push((pos, fit.key.clone())); }
     }
     let keys: Vec<&str> = mates.iter().map(|o| o.1.as_deref().unwrap_or("-")).collect();
@@ -428,26 +428,26 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         }
     }
     {
-        let f = g.tab.orders_assignment[a].fit.as_mut().unwrap();
+        let f = g.tab.task[a].fit.as_mut().unwrap();
         if sig == f.sig { return; }
         f.sig = sig;
     }
     // from the point the order named: the same things, by the same names, as the deal weighed
     let r = crate::roomread::room_read(g, f_at, Some(k.reach), Some(post), None);
     let threats = threats_of(g, &r, f_at, f_front, None);
-    let (f_key, f_w) = { let f = g.tab.orders_assignment[a].fit.as_ref().unwrap(); (f.key.clone(), f.w) };
+    let (f_key, f_w) = { let f = g.tab.task[a].fit.as_ref().unwrap(); (f.key.clone(), f.w) };
     let mine = threats.iter().find(|t| f_key.as_deref() == Some(t.key.as_str()));
     // (a stretch of floor whose bearing a swinging leaf has shifted by one is still his, at what it weighed)
     let cur = match mine {
         Some(t) => t.w,
         None => match f_key.as_deref() { Some(key) if key.starts_with("floor:") || key.starts_with("run:") => f_w, _ => 0.0 },
     };
-    if let Some(t) = mine { g.tab.orders_assignment[a].fit.as_mut().unwrap().w = t.w; }
+    if let Some(t) = mine { g.tab.task[a].fit.as_mut().unwrap().w = t.w; }
     for t in threats.iter() { // (heaviest first)
         if t.w <= cur * k.sticky + 0.02 { break; }
         if f_key.as_deref() == Some(t.key.as_str()) || mates.iter().any(|o| o.1.as_deref() == Some(t.key.as_str())) || !sees(g, post, t) { continue; }
         if mates.iter().any(|o| off_line(o.0, post, t.at) < k.lane_m) { continue; }
-        let f = g.tab.orders_assignment[a].fit.as_mut().unwrap();
+        let f = g.tab.task[a].fit.as_mut().unwrap();
         f.watch = Some(v3::copy(t.at));
         f.words = t.words.clone();
         f.key = Some(t.key.clone());

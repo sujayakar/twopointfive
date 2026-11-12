@@ -6,7 +6,7 @@
 //   · a level file's MATERIAL ROW (levelData.ts MaterialData.stuff), written by the exporter from this table: the file says it, and the loader asks no table;
 //   · a BOX or a prop's part (Box.stuff, a file's `stuff` on a box), where it is another thing than its paint's row says, or wears a paint written as numbers.
 // A box takes its own word, else its row's, when the file is loaded (levelLoad.ts), and a kit's add() does the same for a box it makes with a named paint
-// (paintOf below). The look draws what Box.stuff says and nothing else (render/gbuffer.ts lookWordOf): a box that says nothing is plain. NOTHING ANYWHERE
+// (paintOf below). The look draws what Box.stuff says and nothing else (rust/game_draw boxes/pack.rs finish): a box that says nothing is plain. NOTHING ANYWHERE
 // ASKS A COLOUR WHAT IT IS MADE OF. (Until 11-04 the look matched a box's colour against the 2010s palette, exactly and darkened in one piece, and the kits
 // found a paint's finish by its numbers: a wall repainted a slightly different grey was silently another material. tools/levels/stuffWas.ts keeps that rule,
 // frozen, for one job: bringing a level file written before forward, each box saying what it was drawn as.)
@@ -232,7 +232,7 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
  *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
  *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (a piece the game breaks off a thing
  *  is given the thing's own finish and flag, rust/game_rules/src/breakage/break_table; what a thing DOES is its other word, scene/materials.ts, and reads neither).
- *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
+ *  WHERE: read by the one function that hands a box's finish to the GPU (rust/game_draw boxes/pack.rs finish), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.
  *  THE SWITCH: COATFINISH.on — ON in the page, OFF in the module. A picture only. */
@@ -247,7 +247,7 @@ export const coatRough = (word: BoxStuff | undefined): number | undefined => COA
  *  box DOES is its other word (Box.does, scene/materials.ts: a kit vehicle's window does what 'dark glass' does) and is neither asked nor touched. So it
  *  goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the game still finds the box's own colour
  *  where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone). The pack sends it dark, in the one place it
- *  sends a wet box darker (scene/boxes.ts sentAlbedo), and no rougher than `rough` (matWord). Darker and smoother stay as they are. NEUTRAL, not the
+ *  sends a wet box darker (rust/game_draw boxes/pack.rs sent), and no rougher than `rough`. Darker and smoother stay as they are. NEUTRAL, not the
  *  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target (render/shaders/gbuffer.wgsl), and a channel on a rounding
  *  edge would flicker.
  *  `lum` and `rough` ride in the table.

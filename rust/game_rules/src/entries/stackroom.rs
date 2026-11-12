@@ -30,7 +30,7 @@ pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroo
     if !same { g.m.stackroom.books = None; return; }
     let k = g.m.stackroom.books.as_mut().unwrap();
     if !near { k.near = None; }
-    // only the doors kept, in the order kept, as the copied map of ts:94 has them
+    // only the doors kept, in the order kept
     let mut back = JsMap::new();
     for (d, read) in floors.iter() {
         let mut pair = k.floors.delete(d).unwrap_or([None, None]);
@@ -236,8 +236,8 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
         let a = crate::orders::squad_orders_of(seat, man);
         let Some(a) = a else { continue };
         if crate::condition::down(g, g.gd[man].ch) { continue; }
-        if g.tab.orders_assignment[a].door != Some(d) { continue; }
-        let Some(post) = g.tab.orders_assignment[a].post else { continue };
+        if g.tab.task[a].door != Some(d) { continue; }
+        let Some(post) = g.tab.task[a].post else { continue };
         if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.pos_of(man), post) < 0.6 { return true; }
     }
     false
@@ -266,7 +266,7 @@ fn on_wall(th: f64, side: f64, hand: f64) -> (f64, f64) {
     (m::atan2(fx, fz), if nx * fz - nz * fx >= 0.0 { 1.0 } else { -1.0 })
 }
 
-/// the floor of a face as the rule reads it (rearwatch.ts asks it, as do the QA tools)
+/// the floor of a face as the rule reads it (the rear watch asks it)
 pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::stackroom::StackRoomProbe {
     let f = floor_of(g, d, side);
     crate::stackroom::StackRoomProbe {

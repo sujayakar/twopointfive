@@ -2,8 +2,8 @@
 //! (`stand.rs`) and the host's own frame; nothing writes the game's state behind a rule's back. What a test asks of a man it asks through the
 //! readers at the foot of this file, so that when a field moves (the AI's rework will move several) one line here follows it and no test does.
 //!
-//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps its blocks and several tables in statics, so two games on two threads would write each
-//! other's state: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
+//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps scratch in statics, so two games on two threads would write each
+//! other's: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
 use crate::json::Json;
 use crate::scene::Scene;
 use crate::stand::{self, Host, StartOpts, Stood};
@@ -98,7 +98,7 @@ fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_
 fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play {
     // (a second game stood by the thread that holds the first would wait on itself for ever: said, not waited for)
     if HOLDS.with(|h| h.get()) { panic!("one game at a time: this test still holds a Play. Drop it (`drop(p)`, or end its block) before standing another"); }
-    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
+    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on nothing of it)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
@@ -250,7 +250,12 @@ impl Play {
         for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
         script.over()
     }
-    /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
+    /// a moment put back: the game is that one again, where it stood
+    pub fn lay(&mut self, m: &game::savestate::control::Moment) {
+        let new = m.laid();
+        game::savestate::control::stand(&mut self.g, new);
+    }
+    /// Every part of the game's state, a word a part (`parts::names` names them): what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
         crate::parts::words(&mut self.g, &mut w, &mut out);
@@ -280,7 +285,7 @@ impl Play {
     pub fn ring_over_menu(&mut self) {
         let (input, at) = (self.host.input, self.g.seat);
         let r = game::cmdring::ring_open(&mut self.g, input, 800.0, 600.0, 0.0, None);
-        self.g.sets[at].orders.cmd_ring = Some(r);
+        self.g.groups[self.g.sets[at].group].orders.cmd_ring = Some(r);
     }
     /// The cursor on the place `at` (chest height), held there as the camera moves.
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
@@ -484,7 +489,7 @@ impl Play {
         self.g.ch[c].aim_yaw = yaw;
         self.g.cond[c].down = state == GuardState::Dead;
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
+        (h.duty.holds, h.duty.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
     }
     /// Every man of the other side but these is down.
@@ -524,7 +529,7 @@ impl Play {
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
-    pub fn menu(&self) -> Vec<String> { self.g.sets[self.g.seat].orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
+    pub fn menu(&self) -> Vec<String> { self.g.groups[self.g.group].orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
     /// is the order of that id on the squad's menu now
     pub fn on_menu(&self, id: &str) -> bool { self.menu().iter().any(|r| r == id) }
     /// the living men of the red pair, and of the blue (the menu's own call, `SquadOrders.men`)
@@ -583,7 +588,7 @@ impl Play {
     }
 
     /// the mark his order has for him, if it has one
-    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
+    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd)?; self.g.tab.task[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }

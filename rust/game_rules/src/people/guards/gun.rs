@@ -113,7 +113,7 @@ pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn Fn
 }
 
 /// The lamps, the sun's beam or the moon's, the stroke, onto six faces, with the sky's under the open sky; the best of them. Under a roof the sky is what the
-/// openings show of it, and with all that comes round it is the field's (sim/glow.rs): its mean with the best face of the beams, or its own best face.
+/// openings show of it, and with all that comes round it is the field's (`sim::glow`): its mean with the best face of the beams, or its own best face.
 fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
     let mut acc = lamps_on(g, p, skip_owner, steady_only, leave);
     crate::hours::sun_light(g, p, &mut acc);
@@ -138,7 +138,7 @@ fn lamp_asked(g: &crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnM
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
 fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
+    let leave = if steady_only { (js::to_i32(leave) | crate::fixtures::PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -150,7 +150,7 @@ fn own_lamps(g: &Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&Game, f
     let mut rows = 0.0;
     for &l in &g.engine.lights.lights {
         if let Some(r) = g.tab.light[l].row {
-            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
+            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order", g.tab.light[l].name, r, rows); }
             rows += 1.0;
             continue;
         }
@@ -505,7 +505,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         }
         g.fa[w].burst = Some(crate::weapons::BurstState { left: n, next_t: 0.0, idx: 0.0, t: g.time, off });
     }
-    // `b` is the TypeScript's own local: a burst something else ends under the calls below is written no more, and b is still read
+    // `b` is a local: a burst something else ends under the calls below is written no more, and b is still read
     let mut b = g.fa[w].burst.unwrap();
     b.t = g.time;
     g.fa[w].burst = Some(b);
@@ -711,7 +711,7 @@ pub fn bubble_secs(text: &str) -> f64 {
 mod tests {
     use super::*;
 
-    /// bubbleSecs against the TypeScript's own bits; an em dash is one unit, a clef two.
+    /// `bubble_secs` against pinned bits; an em dash is one unit, a clef two.
     #[test]
     fn bubble_secs_bits() {
         let rows: [(&str, u64); 5] = [

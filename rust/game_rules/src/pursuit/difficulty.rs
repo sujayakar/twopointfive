@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- what the part's own tables hold
 
-/// DIFFICULTIES in the TypeScript's order; the enum sorts its words, so never walk by the enum.
+/// The levels, lowest first; the enum sorts its words, so never walk by the enum.
 const DIFFICULTIES_ROWS: [Difficulty; 2] = [Difficulty::Standard, Difficulty::Hard];
 
 /// the `Cone && '.' + Cone` of difficultyWords, HARD.cone being settled on.
@@ -57,7 +57,7 @@ fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bo
 
 /// `same` of two DIGIN tables.
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, reach_m, noticed_secs, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words
@@ -482,8 +482,8 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     Some(DifficultyAsked { level, levers, digin, pressure, cone })
 }
 
-/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; what a machine keeps
-/// goes under it: game_start `host::lay`)
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the single-switch flags over whatever those wrote. (What a machine keeps
+/// goes under it: game_start `host::lay`.)
 pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
     if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
     for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }

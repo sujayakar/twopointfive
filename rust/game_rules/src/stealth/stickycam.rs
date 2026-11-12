@@ -204,7 +204,7 @@ pub(super) fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
     let pl = seat.player;
     if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
-    // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
+    // (under the fog's cone a camera's wedge is no wider than an eye's)
     let wide = if g.k.fog.cone { m::min(g.k.sticky.fov_deg, crate::fogofwar::field_deg(g)) } else { g.k.sticky.fov_deg };
     let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
     for c in live {

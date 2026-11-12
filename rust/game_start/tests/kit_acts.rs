@@ -55,7 +55,7 @@ fn with_way(level: &str, way: &str, set: &str) -> String {
     let mut scen = d.get("scenarios").clone();
     scen.set_member("kitView", json::parse(&block).unwrap());
     d.set_member("scenarios", scen);
-    let dir = std::env::temp_dir().join("kit-acts-test");
+    let dir = std::env::temp_dir().join(format!("kit-acts-{}-{:?}", std::process::id(), std::thread::current().id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join(format!("{}.json", if way.contains("gate") { "gap" } else { "span" }));
     std::fs::write(&path, json::to_line(&d)).unwrap();
@@ -274,7 +274,7 @@ fn a_card_changed_is_written_live() {
     // counts: on the pools
     tell(&mut p, &mut |m| m.bangs = 3.0, 1, -1);
     p.frame();
-    assert!(p.g.sets[p.g.seat].door_tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.sets[p.g.seat].door_tools.bangs);
+    assert!(p.g.groups[p.g.group].tools.bangs >= 3.0, "the count is in the squad's bag: {}", p.g.groups[p.g.group].tools.bangs);
     assert_eq!(st(&p).a.restages, serial, "no restage for any of it");
     // Sam's gun and counts
     kitstage::open(&mut p.g, 0, "weapon");

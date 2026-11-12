@@ -15,7 +15,7 @@ fn running(g: &Game) -> Option<DirectorRunId> {
     g.director.run.filter(|&r| !g.tab.director_run[r].ended)
 }
 
-/// A BeatFailure with no try over it: TS 626's filters and tests, 672 and 786 throw straight through Director.tick. The frame dies as it does there.
+/// A beat's failure where nothing above can fail the beat (a filter, a test): the frame dies.
 fn uncaught<T>(r: Result<T, String>) -> T {
     match r {
         Ok(v) => v,
@@ -36,7 +36,7 @@ fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBe
 fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
     if g.team(gd) == crate::teams::Team::Guard { crate::game::GuardState::Search } else { crate::game::GuardState::Alert }
 }
-/// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word (TS 505)
+/// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word
 fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
     let s = match asked {
         Some(x) => x,
@@ -400,7 +400,7 @@ fn director_resume(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveB
     n > 0.0
 }
 
-/// A c.on's filter: the closures of levels/*.script.ts, by what each captured. (a throw from `c.query.pos` in Heard is uncaught there: TS 627)
+/// Does the event pass a wait's filter. (`Heard` panics if its man cannot be found)
 fn filter_holds(g: &Game, r: DirectorRunId, f: &EventFilter, e: &EventView) -> bool {
     let p = e.pos;
     match f {
@@ -541,7 +541,7 @@ fn unit_guard(g: &Game, r: DirectorRunId, id: f64) -> Option<GuardId> {
     }
 }
 
-/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts.
+/// A scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from `combat::fire_weapon`.
 fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     let mut i = 0;
     while i < g.tab.director_run[r].bursts.len() {
@@ -588,7 +588,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands.
+/// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) `doors_kick_in` does the boot's work from where he stands.
 fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
         return;
@@ -666,7 +666,7 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
     }
 }
 
-// The Query's methods: closures in the TypeScript (TS 845-856), with the skeleton's names: a beat calls them.
+// The Query's methods: a beat calls them.
 pub(in crate::missions) fn director_query_alive(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     unit_guard(g, r, u.id).map_or(false, |gd| !crate::condition::down(g, g.gd[gd].ch))
 }
@@ -681,7 +681,6 @@ pub(in crate::missions) fn director_query_pos_unit(g: &crate::game::Game, r: Dir
     let gd = director_guard_of(g, r, u)?;
     Ok(v3::copy(g.pos_of(gd)))
 }
-/// (director.ts Query.door; DOORWAY.oneWay is settled on: swing is the door's)
 pub(in crate::missions) fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {

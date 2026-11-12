@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
-import { characterFiles } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 import { freshStart, standStart } from '../mp/stand.ts';
 import { drawEnd } from '../../src/host/drawend';
 import { DrawGame } from '../../src/host/drawgame';
@@ -17,7 +17,7 @@ import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
-import { FIRST, type WireCmd } from '../../src/net/wire';
+import { inputNumbers, type WireCmd } from '../../src/net/wire';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
@@ -57,7 +57,7 @@ let seen = 0, asleep = false, stall = false, off = false, level = 0, worst = 0, 
 function beat(): void {
   now += 1000 / 60; while (wire.length && wire[0].at <= now) wire.shift()!.go();
   if (!stall) server.advance();
-  b.beat({ ...FIRST, k: [bKeys[Math.floor(b.sent / 50) % 4]], v: [B.ticks ? 2 : 0, 0, 12, 0, 0.96, 21, 0.6, 16 / 9, 0] }, now); b.walk({ step: c => B.step(c), word: () => B.word() });
+  b.beat({ k: [bKeys[Math.floor(b.sent / 50) % 4]], n: inputNumbers({ mouse: [640, 360], size: [1280, 720, 1280, 720], target: [B.ticks ? 2 : 0, 0, 12], yaw: 0, pitch: 0.96, distance: 21, fov: 0.6, aspect: 16 / 9 }) }, now); b.walk({ step: c => B.step(c), word: () => B.word() });
   if (asleep) return;
   const was = game.ticks, before = row() >= 0 ? two(row() + Man.at) : null;
   if (net.tick(input, cam, canvas, off, () => { seen++; })) level++;
@@ -92,6 +92,9 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // asleep for four seconds, and back
 { const ok = c.wordsOk, was = seen, ticks = game.ticks; asleep = true; run(240); asleep = false; let n = 0; while (c.behind > 2 && n++ < 100) beat(); run(30);
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
+// a ring left standing as a card goes up
+{ input.keys.clear(); run(60); input.pressed.add('KeyB'); input.keys.add('KeyB'); run(60); input.keys.clear(); run(30); const ring = game.view().ring !== null; off = true; run(40); const gone = game.view().ring === null; off = false; run(40);
+  line(ring && gone && game.view().ring === null && !c.bad, 'a ring left standing is put away as a card goes up', `stood ${ring}, gone under the card ${gone}`); }
 // his hands off under a card
 { input.keys.add('KeyW'); run(30); off = true; run(20); const p = game.view().me, a = game.at(p)!; run(30); const z = game.at(p)!; line(far([a[0], a[2]], [z[0], z[2]]) < 0.02 && !c.bad, 'under a card his hands are off, and the game goes on', `${walked} ticks seen in all before it`); }
 // what a card calls the players

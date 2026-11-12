@@ -15,15 +15,14 @@ const LESSON: &str = "?levelFile=tut-road.json";
 const ROW: &str = "wind.vent_k";
 const CARDS: &str = r#"{"v":2,"members":[{"weapon":"pistol","trim":"red"},{"primary":"mp7"},{},{},{}]}"#;
 
-/// one stand at a time: the tests of this file share the block of a slot
+/// one stand at a time: (these stands hold no `Play`)
 static ONE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 fn one() -> std::sync::MutexGuard<'static, ()> { ONE.lock().unwrap_or_else(|p| p.into_inner()) }
 
-/// (slot 1: these stands hold no `Play`, whose games stand in slot 0)
 fn stood(level: &str, link: &str, kept: &str) -> Stood {
     let ch = files::CharacterFiles::read();
     let data = json::parse(&files::level_text(level)).expect("a level's file");
-    stand(&data, ch.assets(), &StartOpts { seed: 1, slot: 1, link: Some(String::from(link)), kept: Kept::read(kept).expect("a record"), may_refuse: true, ..Default::default() })
+    stand(&data, ch.assets(), &StartOpts { seed: 1, link: Some(String::from(link)), kept: Kept::read(kept).expect("a record"), may_refuse: true, ..Default::default() })
 }
 fn depot(words: &str, kept: &str) -> Stood { stood("depot.json", &format!("{LINK}{words}"), kept) }
 fn card(s: &Stood) -> String { s.game.m.kit.kit.members[1].primary.clone() }

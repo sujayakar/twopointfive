@@ -6,11 +6,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seam: what skeleton 5 still cannot say (see notes.md)
-
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }
-/// `this.look?.on`: EDGE is lent by reference in the TypeScript and read live, so `look` says only that somebody is there
+/// EDGE's `on`, read live; `look` says only that somebody is there
 fn look_on(g: &Game) -> bool { g.destr.breaks.look.is_some() && g.m.edge_look.edge.on }
 /// SURF_MAT[surf as Surf]: a word that is no Surf finds nothing
 fn surf_mat_of_word(s: &str) -> Option<Mat> {

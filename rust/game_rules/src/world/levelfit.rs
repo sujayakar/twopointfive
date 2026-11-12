@@ -8,7 +8,7 @@ use crate::m;
 use crate::boxworld::{MAX_BOXES, MAX_CELLS, MAX_CUTS, MAX_ITEMS, MAX_LEAVES, MAX_SHEETS, MAX_THINGS, MAX_TILTED};
 use alloc::{string::String, vec, vec::Vec};
 
-// ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
+// ---- the terms of the count: called by the bodies below
 
 /// Men a game holds at once, at most.
 fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
@@ -37,7 +37,7 @@ pub fn level_caps() -> crate::levelfit::LevelFit {
         cameras: crate::fixtures::CAMERAS as f64,
         lasers: crate::fixtures::LASERS as f64,
         beacons: crate::fixtures::BEACONS as f64,
-        lamps: ::sim::lights::ROWS as f64,
+        lamps: crate::fixtures::LAMPS as f64,
     }
 }
 
@@ -125,23 +125,6 @@ fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
     n
 }
 
-/// Singles of the pool one man fills at most, over the men who stand; 0 for a thing with no cast. Written here on the Stood's own lists: posehome.ts's two functions have no other caller and are still stubs.
-fn man_singles_of(g: &Game, s: &crate::levelfit::Stood) -> f64 {
-    let (Some(guards), Some(civilians)) = (&s.guards, &s.civilians) else { return 0.0 };
-    if s.seats.is_none() || s.player.is_none() { return 0.0; }
-    let mut bodies: Vec<CharId> = Vec::new();
-    for pl in crate::seats::men(g) { bodies.push(g.pl[pl].ch); }
-    for &gd in guards.iter() { bodies.push(g.gd[gd].ch); }
-    for &c in civilians.iter() { bodies.push(g.gd[c].ch); }
-    let mut worst = 0.0;
-    for c in bodies {
-        let set = g.ch[c].anim.poses;
-        let most = crate::anim_skeleton::pose_set_most(g, set);
-        if most > worst { worst = most; }
-    }
-    worst
-}
-
 /// One row of the count.
 fn row(what: &str, has: f64, cap: f64) -> crate::levelfit::FitRow {
     crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
@@ -190,19 +173,13 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
         row("sheets of glass (a row a pane that is no longer whole)", big.sheets, cap.sheets),
     ];
     let clumps = clumps_most(g, &lv.boxes);
-    rows.push(row("clumps the largest sheet of glass dices into", clumps, ::sim::panes_cap(1) as f64));
-    let bars = flagged(g, &col.boxes, flag.bar);
-    rows.push(row("window's bars (a row a bar gone, in the game's block)", bars, ::sim::panes_cap(0) as f64));
+    rows.push(row("clumps the largest sheet of glass dices into", clumps, ::sim::pattern::MAX_CLUMPS as f64));
     rows.push(row("doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors));
-    rows.push(row("a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
-    let man_rows = men_most(g, civs);
-    rows.push(row("rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64));
+    rows.push(row("a man a seat and the guards as the level is stood up (what a spawned unit is counted against the picture's budget of characters by)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
     let civ_cap = civ_most(g);
-    let poses = men_most(g, civ_cap) * man_singles_of(g, g_2);
-    rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, crate::anim_skeleton::pose_pool_room()));
-    rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap));
+    rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play, and every one is held to this number as they join)", civs, civ_cap));
     rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, crate::doors::DOOR_CONTACTS));
-    rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));
+    rows.push(row("light fixtures", big.fixtures, cap.fixtures));
     rows.push(row("lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps));
     rows.push(row("cameras", big.cameras, cap.cameras));
     rows.push(row("tripwires", big.lasers, cap.lasers));
@@ -210,7 +187,7 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
     rows
 }
 
-// ---- the functions translated code calls
+// ---- the functions the rest of the game calls
 
 /// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.
 pub fn civ_most(g: &crate::game::Game) -> f64 {

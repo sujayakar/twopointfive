@@ -1,7 +1,7 @@
 //! The finger and thumb joints, last of all.
 use super::*;
 
-/// character.ts qAng between two tables of doubles
+/// the angle between two rotations, off two tables of doubles
 #[inline(always)]
 fn q_ang_of(a: &[f64], i: usize, b: &[f64], k: usize) -> f64 {
     let dot = abs(a[i] * b[k] + a[i + 1] * b[k + 1] + a[i + 2] * b[k + 2] + a[i + 3] * b[k + 3]);
@@ -47,29 +47,21 @@ fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
 /// The hand pass, after every other layer and on the digit joints alone: a hand the library keyed as a fist and no layer has shaped is opened to the
 /// man's relaxed hand, by how much of it is the fist, how free the hand is and how little a layer made of it; the thumb of a hand that is not the fist
 /// goes to the relaxed thumb; and a drilled man's trigger finger lies straight along the frame until he fires.
-pub fn hands_pass(g: usize, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) -> bool {
+pub fn hands_pass(body: &mut Body, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) {
     let (at, held, trained) = (an.p_a.at as usize, an.grip, an.trained);
-    let Some(tb) = &an.hn_flat else {
-        return false;
-    };
+    let tb = an.hn_flat.as_ref().expect("a man's hands are posed before they were read off his rig");
     let hn = &mut an.hn;
     let (fist, open, own, thumb, trig) = (&tb[..120], &tb[120..240], &tb[240..250], &tb[250..274], &tb[274..]);
-    if digits(0).len() != HAND_DIGITS || digits(1).len() != HAND_DIGITS {
-        return false;
-    }
     let base: [[f64; 60]; 2] = core::array::from_fn(|sd| core::array::from_fn(|i| hn.base[sd][i] as f64));
     let far = HAND.far * DEGR;
-    with_pose(g, at, |d, _rig, n, _fk| {
-        if digits(0).iter().chain(digits(1)).any(|&i| i as usize >= n) {
-            return false;
-        }
+    body.pose(at, |d, rig, _fk| {
         for sd in 0..2 {
             hn.grip[sd] = damp(hn.grip[sd], if held[sd] { 1.0 } else { 0.0 }, 14.0, dt);
             let free = (1.0 - clamp(full[sd], 0.0, 1.0)) * (1.0 - hn.grip[sd]);
             if free <= 0.003 {
                 continue;
             }
-            let (ns, b, fs, op, nt, ow) = (digits(sd), &base[sd], &fist[sd * 60..sd * 60 + 60], &open[sd * 60..sd * 60 + 60], &hn.note[sd], &own[sd * 5..sd * 5 + 5]);
+            let (ns, b, fs, op, nt, ow) = (rig.digits(sd), &base[sd], &fist[sd * 60..sd * 60 + 60], &open[sd * 60..sd * 60 + 60], &hn.note[sd], &own[sd * 5..sd * 5 + 5]);
             for dg in 0..5 {
                 let kk = dg * 12;
                 let (o0, o1, o2) = (ns[dg * 3] as usize, ns[dg * 3 + 1] as usize, ns[dg * 3 + 2] as usize);
@@ -108,12 +100,10 @@ pub fn hands_pass(g: usize, an: &mut Anim, dt: f64, full: [f64; 2], gun_r: f64) 
         hn.gun = damp(hn.gun, clamp(gun_r, 0.0, 1.0), 18.0, dt);
         let tr = hn.gun * smoothstep(HAND.trig_trained, HAND.trig_trained + 0.1, trained) * hn.off;
         if tr > 0.003 {
-            let ns = digits(1);
+            let ns = rig.digits(1);
             for j in 0..3 {
                 q_turn_to(d, ns[3 + j] as usize, trig, j * 4, tr);
             }
         }
-        true
     })
-    .unwrap_or(false)
 }
