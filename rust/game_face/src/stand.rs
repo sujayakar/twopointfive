@@ -1,5 +1,5 @@
 //! A GAME: started, stepped, let go, held to another.
-use super::{moment, put, saves, Held, GAMES};
+use super::{let_go, moment, put, saves, Held};
 use game_start::handed::Handed;
 use game_start::host::calls::GameNo;
 
@@ -15,7 +15,7 @@ pub fn ready(x: &Held, lines: u32) -> bool { !game::scene_collision::light_ready
 pub fn drop(game: GameNo) {
     saves::shelf_off(game);
     moment::off(game);
-    GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((game as usize).wrapping_sub(1)) { *x = None; });
+    let_go(game);
 }
 pub fn show_seat(x: &mut Held, seat: u32) { let s = x.g.seats[seat as usize]; game::seats::show_seat(&mut x.g, s); }
 

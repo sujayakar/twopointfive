@@ -49,7 +49,7 @@ pub fn recover(h: GameNo, newest: bool) -> Option<Recovered> {
     let of = kept_of(h);
     let (key, e) = of.iter().find(|(key, _)| newest || key == START).cloned()?;
     // (a game that still stands under the lost number is let go, and what is kept of it is not)
-    super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
+    super::let_go(h);
     let mut g = e.image.laid();
     g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
     let n = super::put(Held::new(g));

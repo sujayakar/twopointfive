@@ -55,7 +55,12 @@ impl Held {
 }
 
 thread_local! {
+    /// by number less one: none is in a call, lost to a panic in one, or dropped
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
+    /// the numbers of those dropped. A lost game's is its own: it may stand again in it
+    static FREE: RefCell<Vec<u32>> = const { RefCell::new(Vec::new()) };
+    /// a call is under way: one that begins and finds this so is the next after one that never came back
+    static IN_CALL: Cell<bool> = const { Cell::new(false) };
     static PANIC: RefCell<String> = const { RefCell::new(String::new()) };
     static OUT: RefCell<W> = const { RefCell::new(W::new()) };
     static HOOKED: Cell<bool> = const { Cell::new(false) };
@@ -72,11 +77,16 @@ fn hook() {
 fn put(mut h: Held) -> u32 {
     GAMES.with(|v| {
         let mut v = v.borrow_mut();
-        let i = v.iter().position(|x| x.is_none()).unwrap_or_else(|| { v.push(None); v.len() - 1 });
-        h.no = i as u32 + 1;
-        v[i] = Some(h);
-        i as u32 + 1
+        h.no = FREE.with(|f| f.borrow_mut().pop()).unwrap_or_else(|| { v.push(None); v.len() as u32 });
+        let no = h.no;
+        v[no as usize - 1] = Some(h);
+        no
     })
+}
+/// the game of a number is gone, and the number is another's to have
+fn let_go(h: u32) {
+    let known = GAMES.with(|v| v.borrow_mut().get_mut((h as usize).wrapping_sub(1)).map(|x| *x = None).is_some());
+    FREE.with(|f| { let mut f = f.borrow_mut(); if known && !f.contains(&h) { f.push(h); } });
 }
 fn with<R>(h: u32, f: impl FnOnce(&mut Held) -> R) -> R {
     // the game is taken out for the call, so a panic inside leaves no borrow behind (and no game: its state is whatever the panic left)
@@ -142,10 +152,14 @@ macro_rules! shims {
             #[export_name = concat!("face_", stringify!($name))]
             unsafe extern "C" fn call(h: u32, p: *const u8, n: usize) -> f64 {
                 let _ = h;
+                // (what a call that never came back left of the scratch every game shares)
+                if IN_CALL.with(|c| c.replace(true)) { game::scene_collision::searches_afresh(); }
                 let mut r = Bytes::of(bytes(p, n));
                 $(let $a = <$t as Field>::read(&mut r);)*
                 let _ = &mut r;
-                shims!(@back shims!(@held $how h $name $($a)*) $(, -> $n)? $(, => $told)?)
+                let back = shims!(@back shims!(@held $how h $name $($a)*) $(, -> $n)? $(, => $told)?);
+                IN_CALL.with(|c| c.set(false));
+                back
             }
         };
     )* };

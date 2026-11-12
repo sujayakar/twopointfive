@@ -138,7 +138,7 @@ macro_rules! calls { ($made:ident) => { $made! {
     /// a word of where every man and leaf stands: what two machines of one game hold to each other after each tick
     reads tick_word() -> u32;
 
-    /// A PLANTED PANIC, for the check of the road back from one: inside the game, as a rule of the tick would
+    /// A PLANTED PANIC, for the check of the road back from one: inside the game, as a rule of the tick would, in the middle of a search for a way
     does debug_panic();
 } } }
 
