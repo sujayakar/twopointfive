@@ -1029,6 +1029,7 @@
     { "id": "store", "hinge": [22, 6.82], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true, "swing": 1 },
     { "id": "bunk", "hinge": [29, 15.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "swing": 1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.08, 0.24, 0.16], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

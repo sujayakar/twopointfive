@@ -612,6 +612,7 @@
     { "id": "store", "hinge": [18, 8.32], "closedDir": 1.5707963267948966, "width": 0.86, "maxAngle": 1.5, "swing": 1 },
     { "id": "office", "hinge": [24, 10.82], "closedDir": 1.5707963267948966, "width": 0.86, "swing": 1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.08, 0.24, 0.16], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

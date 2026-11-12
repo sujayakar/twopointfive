@@ -29,8 +29,11 @@ import { livedPieces, INK } from './livedPieces';
 import { livedQuiet } from './lived-quiet';
 import { livedTrain } from './lived-train';
 import { PANEL_GREY, madeOf, saidAs } from '../../src/scene/stuff';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'library-hall';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const NOTES = 'The showroom of the older kits: one of every piece of the office kit, livedKit, livedPieces, lived-quiet and lived-train on an open floor. Regenerate: bun run tools/levels/export.ts library-hall';
 
 /** the look's palette goes into the file's `materials` (tools/levels/export.ts): three of the kits here paint from it */

@@ -1,6 +1,6 @@
 //! THE TEAM & KIT PICTURE'S BLOCK AS A LEVEL FILE SAYS IT (`scenarios.kitView`). The game keeps none of it: the picture is planned and stood from the file's own tree (`kit_plan.rs`, `kit_set.rs`,
 //! `kit_stage.rs`), and these are the records a file is held to (`file.rs`, `faults.rs`).
-use crate::file::{BoxData, DoorData, LightData};
+use crate::file::{BoxData, DoorData, DoorPaintData, LightData};
 use crate::json::Json;
 use crate::read::{At, FromJson};
 use crate::{json_struct, json_words};
@@ -11,9 +11,9 @@ use game::V3;
 /// the block: a way for each of the team's starts, and the sets a way may stand on
 pub struct KitView { pub ways: Vec<KitViewWay>, pub sets: Option<JsMap<String, KitViewSet>> }
 json_struct!(KitView { ways: "ways", sets: "sets" });
-/// a piece of floor of its own, in the level format's own records
-pub struct KitViewSet { pub boxes: Vec<BoxData>, pub doors: Option<Vec<DoorData>>, pub lights: Option<Vec<LightData>>, pub ref_: [f64; 2] }
-json_struct!(KitViewSet { boxes: "boxes", doors: "doors", lights: "lights", ref_: "ref" });
+/// a piece of floor of its own, in the level format's own records (its leaves in the level's paint, where it says none)
+pub struct KitViewSet { pub boxes: Vec<BoxData>, pub doors: Option<Vec<DoorData>>, pub door_paint: Option<DoorPaintData>, pub lights: Option<Vec<LightData>>, pub ref_: [f64; 2] }
+json_struct!(KitViewSet { boxes: "boxes", doors: "doors", door_paint: "doorPaint", lights: "lights", ref_: "ref" });
 /// one way: what it is anchored on, where the team stands, what it hides and how it is lit
 pub struct KitViewWay {
     pub door: Option<String>, pub side: Option<f64>, pub pin: Option<KitViewWayPin>, pub slots: Option<Vec<Option<[f64; 3]>>>, pub light: Option<KitViewLight>,

@@ -50,8 +50,11 @@ import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../s
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES, RUST_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'pass';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass';
 /** the kit's palette and the snow paints go into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
@@ -137,7 +140,7 @@ export const PASS_STRUCTURE: StructureData = {
  *  on the road, the wicket in the truck gate under its one lamp, the lorry behind the wall, snow on everything. The level's own two starts stand in the open dark
  *  with no door near them; the set is what the place looks like from the road. */
 const PASS_KITVIEW: KitViewData = {
-  sets: { gate: { ref: [19, 19],
+  sets: { gate: { ref: [19, 19], doorPaint: RUST_LEAVES(),
     doors: [{id: 'ps_wicket', hinge: [18.32, 16], closedDir: 0, width: 0.86, exterior: true}],
     lights: [{id: 'ps_lamp', kind: 'spot', pos: [18.05, 2.84, 16], dir: [0.12, -1, 0.05], color: [1, 0.72, 0.42], intensity: 30, range: 8, innerDeg: 36, outerDeg: 72, group: 'ps', enabled: true, volumetric: 0.15, radius: 0.12, mains: false, broad: true, fixture: 'ps_lamp_box'}],
     boxes: [

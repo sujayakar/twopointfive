@@ -41,10 +41,11 @@ import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen'
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
-import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
+import { PANEL_GREY, saidAs, drawnAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
 
@@ -258,6 +259,8 @@ function norm(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'killhouse';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.26, 0.12, 0.42], drawnAs('wood', [0.55, 0.43, 0.27]));
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES} — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the floor's.`;
 /** the range's marking paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it;

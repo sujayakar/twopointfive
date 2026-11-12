@@ -1220,6 +1220,7 @@
     { "id": "strong_room", "hinge": [18, 10.32], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true },
     { "id": "office", "hinge": [11.32, 17], "closedDir": 0, "width": 0.86, "swing": -1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.2, 0.2, 0.22] }, "inside": { "albedo": [0.47, 0.36, 0.22], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

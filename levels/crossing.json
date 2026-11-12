@@ -1089,6 +1089,7 @@
     { "id": "gate_ne", "hinge": [36, 6.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "gate_w", "hinge": [4, 21.32], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true }
   ],
+  "doorPaint": { "outside": { "albedo": [0.3, 0.075, 0.04], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [
     { "id": "lanew", "name": "laneW", "points": [[14.3, 0, 17.5], [15.6, 0, 18.4], [16.7, 0, 17.2]], "wait": [4, 0, 70] },
     { "id": "lanee", "name": "laneE", "points": [[26.7, 0, 17.5], [25.4, 0, 18.4], [24.3, 0, 17.2]], "wait": [4, 0, 70] },

@@ -127,6 +127,8 @@ export interface Level {
   /** rooms the lockdown pair knows how to clear (rust/game_rules/src/people/guards plan_clears picks the nearest to the last fix; optional like the posts) */
   clearPlans?: RoomClearPlan[];
   doors: LevelDoorDef[];
+  /** what its leaves are painted (rust/game_rules/src/fittings/doors/paint.rs) — absent = as a leaf is made, in the office's colours */
+  doorPaint?: import('./levelRows').DoorPaintData;
   /** cameras / keypads / laser tripwires (rust/game_rules/src/stealth/devices.rs); optional like the posts — the viewer's stage and older levels have none */
   devices?: DeviceDef[];
   /** HVAC supply vents (rust/game_rules/src/air/wind.rs): the ceiling diffusers whose jets move the particles and the smoke; optional — a level with none has still air indoors */
