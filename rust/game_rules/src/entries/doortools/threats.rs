@@ -77,7 +77,7 @@ pub(super) fn door_tools_shove(g: &mut crate::game::Game, op: DoorOpId) {
     let id = g.ch[c].id;
     g.dr[d].leaf.last_who = id;
     let dp = crate::doors::door_pos(g, d);
-    if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, "doorCreak", Some(dp), Some(0.5), None); } else { crate::audio_iface::game_audio_like_play(g, "doorBash", Some(dp), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 })); }
+    if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorCreak, Some(dp), Some(0.5), None); } else { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(dp), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 })); }
     door_tools_beat_is(g, op, crate::doortools::Beat::Shove, "shove");
 }
 

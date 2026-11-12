@@ -4,10 +4,10 @@
 //!
 //! What the air and the smoke are asked for is two things, whoever asks: a push of the air, and a source of smoke. A source that also drives the air names its
 //! push.
-use alloc::string::String;
 use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
+use game::audio_iface::LastingSfx;
 use game::out_events::OutEvent as E;
 use game::smoke_types::{SmokeEmitter, SmokeEmitterMode, SmokePush};
 
@@ -110,7 +110,7 @@ event! {
 event! {
     /// a sound
     pub struct Sound {
-        /// its name's number (`face_draw_name`)
+        /// its name's number (`Sfx`)
         pub name: u32,
         /// it has a place; 0 = it is in the ears
         pub placed: u32,
@@ -136,7 +136,7 @@ event! {
 section! {
     /// a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room
     pub struct Lasting {
-        /// the sound's name's number (`face_draw_name`), and which of that name it is
+        /// its name's number (`LastingSfx`), and which of that name it is
         pub name: u32,
         pub id: u32,
         pub at: [f32; 3],
@@ -183,8 +183,6 @@ pub struct Events {
     pub footfalls: Vec<Footfall>,
     pub lasting: Vec<Lasting>,
     pub heard: Vec<Heard>,
-    /// every name a sound has had, by its number
-    pub names: Vec<String>,
     rain: f32,
     /// what the live sources ride: the anchor's key, the thing, and how long it is asked for
     rides: Vec<(u32, Track, f64)>,
@@ -240,7 +238,7 @@ impl Events {
                 });
             }
             E::GameAudioLikePlay(e) => {
-                let name = self.name(&e.name);
+                let name = e.name as u32;
                 let (o, serial) = (e.opts.as_ref(), self.sounds.len() as u32);
                 self.sounds.push(Sound {
                     tick, serial, name, placed: e.pos.is_some() as u32, pos: e.pos.map_or([0.0; 3], f3), gain: opt(e.gain),
@@ -259,29 +257,25 @@ impl Events {
         }
     }
 
-    /// a sound's name's number
-    fn name(&mut self, name: &str) -> u32 { (match self.names.iter().position(|n| n == name) { Some(i) => i, None => { self.names.push(String::from(name)); self.names.len() - 1 } }) as u32 }
-
     /// what sounds for as long as it goes on
     fn lasting(&mut self, g: &Game) {
         use game::throwables as t;
         const FOREVER: f64 = f64::NAN;
         self.lasting.clear();
-        for r in g.rolls.iter().filter(|r| r.voice > 0.0) { self.goes("chairRoll", r.voice as u32, [r.x, 0.05, r.z], game::game::roll_voice().gain, r.k, [FOREVER; 2], 0.0); }
+        for r in g.rolls.iter().filter(|r| r.voice > 0.0) { self.goes(LastingSfx::ChairRoll, r.voice as u32, [r.x, 0.05, r.z], game::game::roll_voice().gain, r.k, [FOREVER; 2], 0.0); }
         for (ix, &f) in g.targets.iter().enumerate() {
-            if game::fire::is_fire(g, f) && game::fire::burns(g, f) { self.goes("fireBed", ix as u32, game::fire::mouth_of(g, f).pos, g.k.fire.bed, game::fire::heat_of(g, f) * 2.0 / 3.0, [FOREVER; 2], 0.0); }
+            if game::fire::is_fire(g, f) && game::fire::burns(g, f) { self.goes(LastingSfx::FireBed, ix as u32, game::fire::mouth_of(g, f).pos, g.k.fire.bed, game::fire::heat_of(g, f) * 2.0 / 3.0, [FOREVER; 2], 0.0); }
         }
         for &i in g.items.items.iter().filter(|&&i| g.tab.item[i].kind == t::ItemKind::Smoke && g.tab.item[i].fired && g.tab.item[i].emit_t > 0.0) {
             // (one let go under other numbers than a can's now: nobody knows how long ago)
             let (left, all) = (g.tab.item[i].emit_t, game::combat::can_params().canister_duration);
-            self.goes("smokeHiss", g.tab.item[i].serial as u32, game::v3::add(g.tab.item[i].pos, [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
+            self.goes(LastingSfx::SmokeHiss, g.tab.item[i].serial as u32, game::v3::add(g.tab.item[i].pos, [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
         }
         let dark = g.light_home.mains.active;
-        for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.as_str(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }
+        for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.into(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }
     }
-    fn goes(&mut self, name: &str, id: u32, at: [f64; 3], gain: f64, hard: f64, [age, left]: [f64; 2], reach: f64) {
-        let name = self.name(name);
-        self.lasting.push(Lasting { name, id, at: f3(at), gain: gain as f32, hard: hard as f32, age: age as f32, left: left as f32, reach: reach as f32 });
+    fn goes(&mut self, name: LastingSfx, id: u32, at: [f64; 3], gain: f64, hard: f64, [age, left]: [f64; 2], reach: f64) {
+        self.lasting.push(Lasting { name: name as u32, id, at: f3(at), gain: gain as f32, hard: hard as f32, age: age as f32, left: left as f32, reach: reach as f32 });
     }
 
     /// a source of smoke, and what it does to the air

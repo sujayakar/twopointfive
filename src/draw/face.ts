@@ -9,9 +9,9 @@ export type GameNo = number & { readonly of: 'game' };
 export type MomentNo = number & { readonly of: 'moment' };
 
 /** the module's exports: the game, where it is of one, and where its arguments lie */
-export type FaceExports = Carrier & Record<'face_stamp' | 'face_reserve' | 'face_start' | 'face_ready' | 'face_drop' | 'face_show_seat' | 'face_step' | 'face_out_clear' | 'face_hand' | 'face_commands' | 'face_hands_off' | 'face_hands_on' | 'face_hands_said' | 'face_hands_trace' | 'face_networked' | 'face_record' | 'face_ahead' | 'face_draw' | 'face_draw_over' | 'face_frame' | 'face_draw_look' | 'face_draw_lead' | 'face_draw_as' | 'face_draw_hold' | 'face_draw_cut' | 'face_traffic' | 'face_draw_name' | 'face_tick_view' | 'face_cursor_view' | 'face_debrief_view' | 'face_end_view' | 'face_run_view' | 'face_verdict' | 'face_floor' | 'face_map' | 'face_tally' | 'face_knobs' | 'face_shown' | 'face_shown_now' | 'face_actions' | 'face_sight' | 'face_solid' | 'face_ray' | 'face_hear' | 'face_way' | 'face_light' | 'face_saves' | 'face_saves_told' | 'face_recover_what' | 'face_recover' | 'face_moment' | 'face_moment_back' | 'face_moment_drop' | 'face_desk_machine' | 'face_desk_ask' | 'face_state_names' | 'face_state_words' | 'face_die_n' | 'face_tick_word' | 'face_debug_panic', (h: number, p: number, n: number) => number>;
+export type FaceExports = Carrier & Record<'face_stamp' | 'face_reserve' | 'face_start' | 'face_ready' | 'face_drop' | 'face_show_seat' | 'face_step' | 'face_out_clear' | 'face_hand' | 'face_commands' | 'face_hands_off' | 'face_hands_on' | 'face_hands_said' | 'face_hands_trace' | 'face_networked' | 'face_record' | 'face_ahead' | 'face_draw' | 'face_draw_over' | 'face_frame' | 'face_draw_look' | 'face_draw_lead' | 'face_draw_as' | 'face_draw_hold' | 'face_draw_cut' | 'face_traffic' | 'face_tick_view' | 'face_cursor_view' | 'face_debrief_view' | 'face_end_view' | 'face_run_view' | 'face_verdict' | 'face_floor' | 'face_map' | 'face_tally' | 'face_knobs' | 'face_shown' | 'face_shown_now' | 'face_actions' | 'face_sight' | 'face_solid' | 'face_ray' | 'face_hear' | 'face_way' | 'face_light' | 'face_saves' | 'face_saves_told' | 'face_recover_what' | 'face_recover' | 'face_moment' | 'face_moment_back' | 'face_moment_drop' | 'face_desk_machine' | 'face_desk_ask' | 'face_state_names' | 'face_state_words' | 'face_die_n' | 'face_tick_word' | 'face_debug_panic', (h: number, p: number, n: number) => number>;
 /** those that hold a game: none is asked of one lost to a panic */
-export const HOLDS: ReadonlySet<string> = new Set(['face_ready', 'face_show_seat', 'face_step', 'face_out_clear', 'face_hand', 'face_commands', 'face_hands_off', 'face_hands_on', 'face_hands_said', 'face_hands_trace', 'face_networked', 'face_record', 'face_ahead', 'face_draw', 'face_draw_over', 'face_frame', 'face_draw_look', 'face_draw_lead', 'face_draw_as', 'face_draw_hold', 'face_draw_cut', 'face_traffic', 'face_draw_name', 'face_tick_view', 'face_cursor_view', 'face_debrief_view', 'face_end_view', 'face_run_view', 'face_verdict', 'face_floor', 'face_map', 'face_tally', 'face_knobs', 'face_shown_now', 'face_actions', 'face_sight', 'face_solid', 'face_ray', 'face_hear', 'face_way', 'face_light', 'face_saves', 'face_saves_told', 'face_moment', 'face_state_words', 'face_die_n', 'face_tick_word', 'face_debug_panic']);
+export const HOLDS: ReadonlySet<string> = new Set(['face_ready', 'face_show_seat', 'face_step', 'face_out_clear', 'face_hand', 'face_commands', 'face_hands_off', 'face_hands_on', 'face_hands_said', 'face_hands_trace', 'face_networked', 'face_record', 'face_ahead', 'face_draw', 'face_draw_over', 'face_frame', 'face_draw_look', 'face_draw_lead', 'face_draw_as', 'face_draw_hold', 'face_draw_cut', 'face_traffic', 'face_tick_view', 'face_cursor_view', 'face_debrief_view', 'face_end_view', 'face_run_view', 'face_verdict', 'face_floor', 'face_map', 'face_tally', 'face_knobs', 'face_shown_now', 'face_actions', 'face_sight', 'face_solid', 'face_ray', 'face_hear', 'face_way', 'face_light', 'face_saves', 'face_saves_told', 'face_moment', 'face_state_words', 'face_die_n', 'face_tick_word', 'face_debug_panic']);
 
 /** THE MODULE, CALLED */
 export class Face extends Wire<FaceExports> {
@@ -19,7 +19,7 @@ export class Face extends Wire<FaceExports> {
   stamp(): number { return this.X.face_stamp(0, 0, 0); }
   /** room asked for and given back, so that no step has to grow the memory to find it */
   reserve(bytes: number): void { this.u32(bytes); this.X.face_reserve(0, this.at, this.sent()); }
-  /** A GAME FROM ITS START (game_start `handed`): the level file's text, the address's words (empty: none), the mannequin's gltf and its buffer, the cast's gltf and the look's (empty: none), what the machine keeps (empty: nothing). No state crosses. Flags: 1 the rows that dress the picture are up, 2 the host makes what `ready` makes. */
+  /** A GAME FROM ITS START (game_start `handed`): the level file's text, the address's words (empty: none), the mannequin's gltf and its buffer, the cast's gltf and the look's (empty: none), what the machine keeps (empty: nothing). No state crosses. Flags: `StartFlag`. */
   start(level: Uint8Array, words: string, mannequin: Uint8Array, mannequinBin: Uint8Array, cast: Uint8Array, castLook: Uint8Array, kept: string, seed: number, seats: number, flags: number): GameNo { this.bytes(level); this.text(words); this.bytes(mannequin); this.bytes(mannequinBin); this.bytes(cast); this.bytes(castLook); this.text(kept); this.u32(seed); this.u32(seats); this.u32(flags); return this.X.face_start(0, this.at, this.sent()) as GameNo; }
   /** what the first step wants and such a start leaves, so many lines of it (the light under the roofs): there is more. A step that finds it wanting makes the rest */
   ready(h: GameNo, lines: number): boolean { this.u32(lines); return this.X.face_ready(h, this.at, this.sent()) !== 0; }
@@ -27,7 +27,7 @@ export class Face extends Wire<FaceExports> {
   drop(game: GameNo): void { this.u32(game); this.X.face_drop(0, this.at, this.sent()); }
   /** which seat this machine shows, by its place in the game's list */
   showSeat(h: GameNo, seat: number): void { this.u32(seat); this.X.face_show_seat(h, this.at, this.sent()); }
-  /** ONE TICK of every seat on what was handed. Flags: 8 the save controller's turn */
+  /** ONE TICK of every seat on what was handed. Flags: `StepFlag` */
   step(h: GameNo, dt: number, flags: number): void { this.f64(dt); this.u32(flags); this.told(this.X.face_step(h, this.at, this.sent()), nothing); }
   /** the host has taken (or does not want) what the tick told it: the list is a step's output and no part of the state, so nothing else empties it */
   outClear(h: GameNo): void { this.X.face_out_clear(h, 0, 0); }
@@ -67,8 +67,6 @@ export class Face extends Wire<FaceExports> {
   drawCut(h: GameNo): void { this.X.face_draw_cut(h, 0, 0); }
   /** the floors' traffic map (game_draw `traffic`), worked out as it is asked: once, as a level opens */
   traffic(h: GameNo): Uint8Array<ArrayBuffer> { return this.told(this.X.face_traffic(h, 0, 0), I => I.run(Uint8Array)); }
-  /** a name that crosses by its number (a sound's) */
-  drawName(h: GameNo, number: number): string { this.u32(number); return this.told(this.X.face_draw_name(h, this.at, this.sent()), I => I.str()); }
   /** what a HUD is told of the game as its last tick left it, about the seat this machine shows */
   tickView(h: GameNo): TickView { return this.told(this.X.face_tick_view(h, 0, 0), readTickViewIn); }
   /** what the cursor is on, about a seat (none: the one this machine shows) */

@@ -21,4 +21,3 @@ pub fn draw_as(x: &mut Held, bared: bool, tube: Option<bool>) { x.g.fog_picture.
 pub fn draw_hold(x: &mut Held) { x.drawn.hold(); }
 pub fn draw_cut(x: &mut Held) { x.drawn.cut(); }
 pub fn traffic(x: &Held) -> Vec<u8> { game_draw::traffic::map(&x.g) }
-pub fn draw_name(x: &Held, number: u32) -> String { x.drawn.events.names.get(number as usize).cloned().unwrap_or_default() }

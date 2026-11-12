@@ -179,11 +179,11 @@ pub(super) fn sam_hand(g: &mut Game, st: &mut KitStage, cmd: &mut crate::cmd::Pl
     g.hand_at = st.a.led.and_then(|l| l.at);
     let Some(led) = st.a.led else { return };
     let pl = g.player;
-    if led.low && !g.pl[pl].crouch { st.a.press.push("KeyC"); }
+    if led.low && !g.pl[pl].crouch { st.a.press.push(crate::input::Key::C); }
     let Some(to) = led.to else { return };
     let p = g.player_pos(pl);
     if flat(p, to) <= 0.1 { return; }
-    for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(alloc::string::String::from(key)); } }
+    for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(key.text()); } }
 }
 /// the half step a man takes toward the front of the door for a throw or his light: from where he lives, `metres` at most toward the old post
 pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {

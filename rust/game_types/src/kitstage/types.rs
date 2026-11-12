@@ -239,7 +239,7 @@ pub struct Acts {
     /// Sam led: what his hand is at until it is let go of (None: his rest)
     pub led: Option<Led>,
     /// this tick's hand on Sam's own controls, and his cursor
-    pub press: Vec<&'static str>, pub clicked: f64, pub cursor: Option<V3>,
+    pub press: Vec<crate::input::types::Key>, pub clicked: f64, pub cursor: Option<V3>,
     /// FOR THE CHECKS: the last beat over · why the last one asked for did not begin · beats cut · rounds fired · Sam staggered, a teammate dazzled · men the hold put right · the plain restages · a pick waited on
     pub last: Option<BeatOver>, pub refused: Option<String>, pub cuts: u32, pub shots: u32, pub hits_sam: u32, pub hits_team: u32, pub pins: u32, pub restages: u32,
 }

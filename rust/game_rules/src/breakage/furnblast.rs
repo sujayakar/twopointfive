@@ -54,7 +54,7 @@ fn emit_debris(g: &mut Game, pos: V3, dir: V3, count: f64, speed: f64, size: f64
         speed, speed_jit: Some(0.7), spread: Some(1.1), life: 18.0, life_jit: Some(0.3), size, size_jit: Some(0.6), aspect: Some(aspect), color: Some(color), owner: Some(owner), ..Default::default()
     });
 }
-fn land_sfx(row: &BreakRow) -> Vec<crate::debris::ChunkSfxItem> { row.land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect() }
+fn land_sfx(row: &BreakRow) -> Vec<crate::debris::ChunkSfxItem> { row.land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name, rate: s.rate, gain: s.gain }).collect() }
 
 // ---------------------------------------------------------------- the file's free functions
 /// what a breaching charge is to the furniture, by its breaking radius

@@ -52,7 +52,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind,
     crate::game::game_say(g, gd, pool[i], Some(radio), None);
     if radio {
         let at = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 

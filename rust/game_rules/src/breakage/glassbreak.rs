@@ -116,7 +116,7 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment
     if f.heard {
         let dicing = f.kind == FragmentKind::Clump || f.kind == FragmentKind::Sheet;
         let rate = if dicing { 0.7 } else { 1.25 + 0.3 * crate::debris::hash01(f.key + v.key) };
-        crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GlassCrack, Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
         crate::glass::glass_event(g, g.box_at(f.bi).unwrap(), f.centre, 1.0, f.who);
     }
     if crate::shards::shards_live(g) {

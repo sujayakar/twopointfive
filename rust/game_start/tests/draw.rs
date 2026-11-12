@@ -2,6 +2,7 @@
 //! these hold what is true of all of them: drawing a game changes nothing of it, what is drawn between two ticks stands between them, and nothing is drawn
 //! through a cut. `hold draw` draws every frame of a set of plays and says what it cost.
 mod world_ask;
+use game::audio_iface::LastingSfx;
 use game_draw::{want, Drawn};
 use game_start::play::{Opts, Play};
 use world_ask::WorldAsk;
@@ -270,31 +271,31 @@ fn what_goes_on_is_heard_as_it_stands() {
     p.g.god_mode = true;
     p.run(0.2);
     let mut d = Drawn::default();
-    let heard = |d: &Drawn, name: &str| d.events.lasting.iter().filter(|l| d.events.names[l.name as usize] == name).map(|l| (l.id, l.at, if l.age.is_nan() { -1.0 } else { l.age }, if l.left.is_nan() { -1.0 } else { l.left })).collect::<Vec<_>>();
+    let heard = |d: &Drawn, name: LastingSfx| d.events.lasting.iter().filter(move |l| l.name == name as u32).map(|l| (l.id, l.at, if l.age.is_nan() { -1.0 } else { l.age }, if l.left.is_nan() { -1.0 } else { l.left })).collect::<Vec<_>>();
     d.take(&p.g, want::events);
-    let fires = heard(&d, "fireBed");
-    assert!(!fires.is_empty() && heard(&d, "smokeHiss").is_empty(), "the pass has a brazier that burns, and no can: {fires:?}");
+    let fires = heard(&d, LastingSfx::FireBed);
+    assert!(!fires.is_empty() && heard(&d, LastingSfx::SmokeHiss).is_empty(), "the pass has a brazier that burns, and no can: {fires:?}");
     let [x, z] = p.sam_at();
     game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
     let mut events = Vec::new();
-    let mut step = |p: &mut Play, d: &mut Drawn, n: usize| for _ in 0..n { p.frame_shown(|p| d.take(&p.g, want::events)); events.extend(d.events.sounds.iter().map(|s| d.events.names[s.name as usize].clone())); };
+    let mut step = |p: &mut Play, d: &mut Drawn, n: usize| for _ in 0..n { p.frame_shown(|p| d.take(&p.g, want::events)); events.extend(d.events.sounds.iter().map(|s| s.name)); };
     step(&mut p, &mut d, 300);
-    let at = heard(&d, "smokeHiss");
+    let at = heard(&d, LastingSfx::SmokeHiss);
     assert!(at.len() == 1 && at[0].2 > 1.0 && (at[0].2 + at[0].3 - 32.0).abs() < 0.1, "the can, its age and what it has left: {at:?}");
     let then = game::savestate::control::Moment::of(&p.g);
     step(&mut p, &mut d, 32 * 60);
-    assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
-    assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
+    assert!(heard(&d, LastingSfx::SmokeHiss).is_empty() && heard(&d, LastingSfx::FireBed).len() == fires.len(), "burnt out, and the brazier burns on");
+    assert!(events.contains(&(game::audio_iface::Sfx::SmokePop as u32)) && !events.contains(&(game::audio_iface::Sfx::FireBed as u32)), "told by events: {events:?}");
     p.lay(&then);
     d.cut();
     d.take(&p.g, want::events);
-    assert_eq!(heard(&d, "smokeHiss"), at, "put back, and the can is not heard as it stood");
-    assert_eq!(heard(&d, "fireBed"), fires);
+    assert_eq!(heard(&d, LastingSfx::SmokeHiss), at, "put back, and the can is not heard as it stood");
+    assert_eq!(heard(&d, LastingSfx::FireBed), fires);
     drop(p);
     // what hums in the office's rooms, off its own file: with the mains out the wind alone
     let mut p = office(5);
     p.run(0.2);
-    let hums = |p: &Play, d: &mut Drawn| { d.take(&p.g, want::events); ["hum", "servers", "buzz", "wind"].map(|n| heard(d, n).len()) };
+    let hums = |p: &Play, d: &mut Drawn| { d.take(&p.g, want::events); [LastingSfx::Hum, LastingSfx::Servers, LastingSfx::Buzz, LastingSfx::Wind].map(|n| heard(d, n).len()) };
     let mut d = Drawn::default();
     assert_eq!(hums(&p, &mut d), [1, 1, 2, 2]);
     game::lighting::set_blackout(&mut p.g, 9.0, game::lighting::SetBlackoutCause::Ocp);

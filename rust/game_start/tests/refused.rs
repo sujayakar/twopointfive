@@ -49,14 +49,14 @@ fn across(p: &Play) -> usize { p.mates().iter().filter(|&&m| p.at(m)[1] < 15.85)
 fn menu_on(p: &mut Play, at: [f64; 2]) -> (game::orders::Menu, Vec<String>) {
     p.point_at(at);
     p.frame();
-    let key = p.g.k.cmdring.key.clone();
+    let key = p.g.k.cmdring.key.as_str();
     p.key_down(&key);
     p.until(2.0, |p| p.view().ring.is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}"));
     let (m, first) = (p.g.groups[p.g.group].orders.menu.clone().unwrap(), p.view().ring.unwrap().wedges.into_iter().map(|w| w.text).collect());
     p.key_up(&key);
-    p.key_down(game::backkey::BACK_KEY);
+    p.key_down(game::backkey::BACK_KEY.as_str());
     p.frame();
-    p.key_up(game::backkey::BACK_KEY);
+    p.key_up(game::backkey::BACK_KEY.as_str());
     p.run(0.1);
     (m, first)
 }

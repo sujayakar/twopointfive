@@ -281,7 +281,7 @@ fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<Pla
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
     let level: String = match d.alarm { Some(x) => String::from(x.as_str()), None => crate::scene_level_data::device_defaults().alarm };
-    crate::audio_iface::game_audio_like_play(g, "alarmChirp", Some(d.from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::AlarmChirp, Some(d.from), Some(0.7), None);
     if let Some(pl) = by { g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
     let sent: Option<GuardId>;
     if level == "alarm" {
@@ -339,13 +339,13 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None);
     let c = g.gd[id].ch;
     let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), None);
     Some(id)
 }
 /// Control's voice on the net.
 fn control(g: &mut crate::game::Game, text: &str) {
     crate::cues::cues_radio(g, &format!("CONTROL — {}", text));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.55), None);
     let mut row: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
     row.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(String::from("CONTROL"))));
     row.set(String::from("text"), Some(crate::chronicle::ChronicleDataValue::Text(String::from(text))));
@@ -454,7 +454,7 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
 /// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.
 pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let k = match devices_pad_of(g, d) { Some(k) => k, None => return };
-    crate::audio_iface::game_audio_like_play(g, "deny", Some(k.def.pos), Some(0.45), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Deny, Some(k.def.pos), Some(0.45), None);
     let pl = g.player;
     let c = g.pl[pl].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
@@ -483,7 +483,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     }
     // accepted
     g.pl[pl].coding_over();
-    crate::audio_iface::game_audio_like_play(g, "padOpen", Some(k.def.pos), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PadOpen, Some(k.def.pos), Some(0.6), None);
     let mut keys: JsSet<String> = JsSet::new();
     keys.add(g.dr[d].lock_id.clone());
     let who = g.player_id(pl);

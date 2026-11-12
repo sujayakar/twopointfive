@@ -181,7 +181,7 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
 fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet) {
     let most = g.k.he40.spent_speed_max;
     crate::flight::to_item(g, crate::throwables::ItemKind::Shell, sh.shooter, at, vel, most, crate::throwables::ItemBounce::ShellSkitter);
-    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.he40.dud_noise;
     if met != ShellEndMet::Man { crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, None); }   // (a man is its noise)

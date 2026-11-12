@@ -19,10 +19,10 @@ pub struct FeedBeat {
     pub pull: bool,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct FeedCue {
     pub t: f64,
-    pub sfx: String,
+    pub sfx: crate::audio_iface::Sfx,
     pub gain: f64,
     pub rate: f64,
 }

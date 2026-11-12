@@ -156,7 +156,7 @@ fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
         let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
         crate::game::game_say(g, gd, line, Some(true), None);
         let at = head_or_pos(g, c);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
     }
     if g.gd[gd].search_t > 14.0 {
         crate::mind::set_state(g, gd, St::Suspicious, "guards");

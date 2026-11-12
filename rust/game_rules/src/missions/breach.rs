@@ -387,7 +387,7 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
         g.dr[d].leaf.last_who = id;
         if on_it && !g.dr[d].leaf.off {
             let at = crate::doors::door_pos(g, d);
-            crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
             let p = g.ch[c].pos;
             crate::particle_fx::kick_dust_fx(g, d, p);
         }
@@ -421,7 +421,7 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
         let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, from, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() }));
         dr!(g).can = Some(it);
         g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-        crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
         dr!(g).t_toss = t;
         breach_drill_beat(g, "toss");
         let (rm, rf, tm, tf) = (dr!(g).plan.retreat.mark, dr!(g).plan.retreat.face, dr!(g).plan.toss.mark, dr!(g).plan.toss.face);

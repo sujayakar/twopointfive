@@ -18,7 +18,7 @@ fn lamp_up(g: &Game, st: &KitStage) -> bool {
 }
 fn gun_def(g: &Game, seat: &crate::seats::SeatRef) -> crate::weapons::WeaponId { let pl = seat.player; g.fa[if g.pl[pl].slot == SlotKind::Rifle { g.pl[pl].rifle } else { g.pl[pl].pistol }].def }
 fn in_hand(g: &Game, seat: &crate::seats::SeatRef) -> bool { matches!(g.pl[seat.player].slot, SlotKind::Pistol | SlotKind::Rifle) }
-fn draw_key(g: &Game, seat: &crate::seats::SeatRef) -> &'static str { if g.pl[seat.player].slot == SlotKind::Rifle { "Digit2" } else { "Digit1" } }
+fn draw_key(g: &Game, seat: &crate::seats::SeatRef) -> crate::input::Key { if g.pl[seat.player].slot == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 } }
 
 /// HIS SUPPRESSED GUN PUTS THE LAMP OUT: from the crouch the gun comes out, he rises on the lamp, one round (the game's own: the lamp is a target of its list), and the pool dies. The dark is held: the fill lifts and he walks through where the pool was. Then the room is staged again. Refused where there is no lamp burning or the gun is not suppressed.
 pub(super) fn gun_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {

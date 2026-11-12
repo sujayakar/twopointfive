@@ -129,6 +129,8 @@ models and animations. `STYLE.md` is the look as rules, `docs/level-format.md` t
 - **A command or a setting:** `rust/game_start/src/host/command.rs`, then `half`.
 - **A question a host asks the game:** a line in `rust/game_start/src/host/calls.rs`, a function of its name in `rust/game_face/src/`, the answer's struct in
   `rust/game_types/src/view/told.rs`, then `half`: the page calls `Face` (`src/draw/face.ts`).
+- **A word's bits both sides read by name:** `bits!` (`rust/game_types/src/bits.rs`), a line in `game_draw::BITS`, then `half` (`src/draw/bits.ts`, `src/render/shaders/bits.wgsl`).
+- **A name both sides spell** (a sound, a key): the enum's arm, a line in `game_draw::NAMES` for a new list, then `half` (`src/draw/names.ts`).
 - **A level:** its generator under `tools/levels/`, then `tools/levels/export.ts`.
 - After Rust changes a page needs the module built: `bun run tools/blitz/face-build.ts`. The dev server serves the one it finds.
 

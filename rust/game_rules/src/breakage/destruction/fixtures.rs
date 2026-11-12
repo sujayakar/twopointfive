@@ -255,7 +255,7 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     if !destruction_break_target(g, t) {
         if crate::carlamps::lamp_glass(g, t) && g.tab.fixture[t].broken {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
             let pos = g.tab.fixture[t].pos;
-            crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.8), None);
             lens_shatter(g, t, from);
             let name = g.tab.fixture[t].name.clone();
             dlog(g, &format!("lens {} broken ({})", name, why));
@@ -268,7 +268,7 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     dlog(g, &format!("fixture {} out ({})", name, why));
     let pos = g.tab.fixture[t].pos;
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
-    crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         lens_shatter(g, t, from);
     } else {

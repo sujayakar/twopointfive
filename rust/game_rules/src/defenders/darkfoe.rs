@@ -112,7 +112,7 @@ fn has_word(g: &crate::game::Game, gd: GuardId) -> bool {
 pub(super) fn click(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(pos), Some(0.25), None);
 }
 
 /// Lit floor in plain view of a point within `edgeM`: eight ways, at half of it and at all of it.

@@ -312,8 +312,8 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
     }
     let time = g.time;
     crate::fixtures::light_home_flip(g, &sw.targets, on, time, true);
-    crate::audio_iface::game_audio_like_play(g, "click", Some(sw.pos), Some(0.8), None);
-    if !on { crate::audio_iface::game_audio_like_play(g, "lightOff", Some(sw.pos), Some(0.5), None); }
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(sw.pos), Some(0.8), None);
+    if !on { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightOff, Some(sw.pos), Some(0.5), None); }
     if g.m.lightswitch.states.is_some() {
         g.m.lightswitch.states.as_mut().unwrap().hands.retain(|h| h.c != by);
         let plant = plants(g, by);

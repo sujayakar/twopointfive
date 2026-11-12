@@ -285,7 +285,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let row = SetWallCharge { wall: s.wall, t: g.time, by: String::from(crate::ownblow::SAM_BY), paid, free };
     let id = g.tab.wallcharge_set_wall_charge.push(row);
     g.sets[g.seat].wall_charge.set.push(id);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(at), Some(0.6), None);
     crate::furnblast::furniture_warm(g);
 }
 

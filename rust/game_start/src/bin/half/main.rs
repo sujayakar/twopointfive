@@ -6,6 +6,7 @@
 //! To change one, change its declaration: a section in `game_draw`, a command in `host/command.rs`, an ask in `host/desk.rs`, a view in `game_types`,
 //! a row a shader reads in `game_draw::gpu`, a word's bits where they stand (`bits!`).
 mod bits;
+mod names;
 mod typescript;
 mod wgsl;
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ fn main() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let stamp = typescript::stamp();
     let mut off = Vec::new();
-    for (file, text) in typescript::files(stamp).into_iter().chain(wgsl::files()).chain(bits::files()) {
+    for (file, text) in typescript::files(stamp).into_iter().chain(wgsl::files()).chain(bits::files()).chain(names::files()) {
         let at = root.join(file);
         if std::fs::read_to_string(&at).is_ok_and(|t| t == text) { continue; }
         off.push(file);

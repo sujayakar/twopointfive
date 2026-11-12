@@ -17,6 +17,7 @@ import { menuTheme } from './theme';
 import { findMeRows } from './findme';
 import { cloudRows } from './cloudrows';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
+import type { GameKey } from '../draw/names';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a fresh page: what Reset puts back)
@@ -365,7 +366,7 @@ const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : 
 /** THE GUN'S SETUP (rust/game_rules/src/outfit/slotsetup.rs), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
 const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };
-const SETUP_ROW: Record<string, string> = { Z: 'KeyZ', L: 'KeyL' };
+const SETUP_ROW: Record<string, GameKey> = { Z: 'KeyZ', L: 'KeyL' };
 const setupSmall = (cap: string, small?: string): string | undefined => !SETUP_SMALL[cap] || (SETUP_ROW[cap] && keysOf(SETUP_ROW[cap]).length) ? small : SETUP_SMALL[cap];
 /** the camera's cap (the two rows that say Ctrl): Ctrl, or Space while the board leaves the Space bar spare (host/keymap.ts camKey). A plain cap — the
  *  camera's key is no row and cannot be moved — and never keyCapEl's 'Space', which is the action's row wherever that is */

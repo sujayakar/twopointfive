@@ -457,7 +457,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
         let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 

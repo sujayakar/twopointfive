@@ -587,7 +587,7 @@ impl DoorsAsk for Play {
     fn key_tapped_on(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.run(2.0 / 60.0);
         self.key_up(&key);
@@ -734,7 +734,7 @@ impl DoorsAsk for Play {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
         self.key_down("ShiftLeft");
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.run(2.0 / 60.0);
         self.key_up(&key);
@@ -746,7 +746,7 @@ impl DoorsAsk for Play {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
         self.key_down("ShiftLeft");
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.until(1.5, |p| p.ring_up()).is_some()
     }
@@ -760,7 +760,7 @@ impl DoorsAsk for Play {
         self.keys_let_go();
         row.1
     }
-    fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.clone(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
+    fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.as_str(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
     fn smoke_left(&self) -> f64 { game::squadsmoke::squad_smoke_left(&self.g, &game::seats::here(&self.g)) }
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)> {
         let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Smoke).collect();
