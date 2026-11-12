@@ -432,7 +432,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
     if now - last_seen >= 0.25 { m.eyes_t = None; } else if m.eyes_t.is_none() { m.eyes_t = Some(now); }
     let mode = g.tab.roomfight_def[d].mode;
     let my_room = g.tab.roomfight_def[d].room;
-    if mode == DefMode::Free { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
+    if matches!(mode, DefMode::Free | DefMode::Told) { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
     if mode == DefMode::Move {
         if m.phase == Phase::Haul {
             // HAULHOME: a man bringing the last hand in is planted: a leg another rule gives him then is not a haul
