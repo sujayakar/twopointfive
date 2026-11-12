@@ -152,9 +152,9 @@ fn take_aim_at_a_hostage(g: &mut Game, cap: GuardId) {
     }
     let at = chest_of(g, v);
     let def = crate::roomfight::def_of(g, cap);
-    if let Some(d) = def { g.fight.defs.retain(|&x| x != d); }
-    let held = g.gd[cap].hold;
-    crate::control::set_hold(g, cap, false, "rescue");
+    if let Some(d) = def { crate::roomfight::dropped(g, d); }
+    let held = g.gd[cap].duty.holds;
+    crate::duty::hold(g, cap, false, "rescue");
     if g.gd[cap].script.is_some() {
         let st = g.gd[cap].state;
         crate::squad::end_guard_script(g, cap, Some(st));
@@ -188,7 +188,7 @@ fn rescue_end_act(g: &mut crate::game::Game) {
     if !crate::condition::down(g, g.gd[by].ch) && g.gd[by].script.is_some() {
         crate::squad::end_guard_script(g, by, Some(crate::game::GuardState::Alert));
     }
-    if !crate::condition::down(g, g.gd[by].ch) { crate::control::set_hold(g, by, a.hold, "rescue"); }
+    if !crate::condition::down(g, g.gd[by].ch) { crate::duty::hold(g, by, a.hold, "rescue"); }
     if let Some(d) = a.def {
         if g.guards.contains(&by) && !g.fight.defs.iter().any(|&x| g.tab.roomfight_def[x].gd == by) {
             g.fight.defs.push(d);

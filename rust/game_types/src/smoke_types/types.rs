@@ -97,11 +97,6 @@ pub struct CanisterParams {
     pub canister_speed: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct SmokeSystemLike {
-    pub params: Option<crate::smoke_types::CanisterParams>,
-}
-
 pub const WIND_GPU_MAX: f64 = 8.0;
 
 /// which lattice an emitter lands on; none = by its kind: the page's smoke (src/smoke/smoke.ts `levelOf`) puts a canister on the coarse one and everything else on the fine

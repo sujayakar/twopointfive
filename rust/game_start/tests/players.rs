@@ -11,7 +11,7 @@ fn man(p: &Play, seat: usize) -> PlayerId { game::cmd::seat_man(&p.g, p.g.seats[
 fn body(p: &Play, seat: usize) -> CharId { p.g.pl[man(p, seat)].ch }
 fn at(p: &Play, seat: usize) -> [f64; 3] { p.g.ch[body(p, seat)].pos }
 fn pair(p: &Play, seat: usize) -> Vec<GuardId> { game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[seat])) }
-fn orders(p: &Play, seat: usize) -> Vec<Option<OrdersAssignmentId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
+fn orders(p: &Play, seat: usize) -> Vec<Option<TaskId>> { pair(p, seat).iter().map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, p.g.seats[seat]), m)).collect() }
 /// a player's keys and trigger as he holds them, his view on his man, his cursor on a place of the world
 fn hands(p: &mut Play, seat: usize, keys: &[&str], on: Option<[f64; 3]>, fire: bool) {
     let s = p.g.seats[seat];
@@ -177,7 +177,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         let kept = game::savestate::control::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
         assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
-        p.g = kept.laid(p.g.sim);
+        p.lay(&kept);
         assert_eq!(p.words(), there, "seed {seed}: the moment put back is the moment");
         let again = play(&mut p, 100, 90);
         if let Some((k, parts)) = parting(&once, &again) { panic!("seed {seed}: from the moment put back the same hands part in {parts} at tick {k}"); }

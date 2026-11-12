@@ -627,7 +627,7 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     if g.cues.squelch_due {
         g.cues.squelch_due = false;
         let squelch = g.k.cues.squelch;
-        if squelch > 0.0 { crate::audio_iface::game_audio_like_play(g, "radio", None, Some(squelch), None); }
+        if squelch > 0.0 { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(squelch), None); }
     }
 }
 
@@ -673,7 +673,7 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
         }
         Did::FallsBack => {
             cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Fallback);
-            let station = g.tab.roomfight_def[d].station;
+            let station = crate::roomfight::station(g, d);
             let from = crate::dialogue::place_name(g, station);
             cues_man(g, gd).from = from.clone();
             cues_man(g, gd).said_t = -100.0;

@@ -1,11 +1,11 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 3458102093;
+export const LAYOUT = 865776799;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, coming = 15, men = 16, insts = 17, bones = 18, caps = 19, doorways = 20, emits = 21, kicks = 22, pushes = 23, sources = 24, anchors = 25, beams = 26, sounds = 27, footfalls = 28, lasting = 29, heard = 30, rims = 31, fires = 32, fireTable = 33, decals = 34, decalKeys = 35, decalHead = 36, winds = 37, gusts = 38, heat = 39, air = 40, windRoofs = 41, roofs = 42, ceilings = 43, doorBoxes = 44, openPanes = 45, resets = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, dustAir = 13, leaves = 14, lights = 15, coming = 16, men = 17, insts = 18, bones = 19, caps = 20, doorways = 21, emits = 22, kicks = 23, pushes = 24, sources = 25, anchors = 26, beams = 27, sounds = 28, footfalls = 29, lasting = 30, heard = 31, rims = 32, fires = 33, fireTable = 34, decals = 35, decalKeys = 36, decalHead = 37, winds = 38, gusts = 39, heat = 40, air = 41, windRoofs = 42, roofs = 43, ceilings = 44, doorBoxes = 45, openPanes = 46, resets = 47, dust = 48, feet = 49, things = 50, blasts = 51, snowWords = 52, smoke = 53, smokeAt = 54, smokeBricks = 55, count = 56 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -251,22 +251,24 @@ export const enum Head {
   items = 14,
   /** u32: the panes' broken cells are to be sent */
   panesMoved = 15,
+  /** u32: the weather's dust in the rooms is to be sent */
+  airMoved = 16,
   /** u32: the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count) */
-  serial = 16,
+  serial = 17,
   /** u32: which stuffs some box has been, a bit a stuff's number */
-  stuffs = 17,
+  stuffs = 18,
   /** f32: the boxes a ray's grid reaches past the cells they are registered in (metres) */
-  slack = 18,
+  slack = 19,
   /** u32: keyed boxes found a frame ago, met for the first time, and boxes with no key */
-  matched = 19,
+  matched = 20,
   /** u32 */
-  fresh = 20,
+  fresh = 21,
   /** u32 */
-  unkeyed = 21,
+  unkeyed = 22,
   /** u32: the order the statics are drawn in is of the list as it stood some frames ago */
-  orderStale = 22,
+  orderStale = 23,
   /** words a row */
-  row = 23,
+  row = 24,
 }
 
 /** a box's place */
@@ -369,7 +371,7 @@ export const enum Info {
 export const enum Pane {
   /** f32: how many sites it has been cut from */
   sites = 0,
-  /** f32: 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web */
+  /** f32: `PaneFlag`, as a number */
   says = 1,
   /** f32: 0: its own x runs across it; 1: its z does */
   axis = 2,
@@ -423,9 +425,9 @@ export const enum Light {
   key = 0,
   /** u32: 0 a point, 1 a spot, 2 the sky's, 3 a panel */
   kind = 1,
-  /** u32: what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
+  /** u32: LIGHT_CLASSES */
   class = 2,
-  /** u32: 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own) */
+  /** u32: LightFlag */
   says = 3,
   /** u32 */
   owner = 4,
@@ -639,7 +641,7 @@ export const enum AirPush {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward, 5 a round's path, 6 a walking man's stride */
+  /** u32: PUSH_SHAPES */
   shape = 2,
   /** f32 × 3 */
   pos = 3,
@@ -657,7 +659,7 @@ export const enum AirPush {
   expand = 15,
   /** f32: how long it goes on (0: the one tick) */
   ttl = 16,
-  /** u32: 0 every lattice, 1 the fine one, 2 the coarse */
+  /** u32: LATTICES */
   lattice = 17,
   /** words a row */
   row = 18,
@@ -675,9 +677,9 @@ export const enum SmokeSource {
   push = 3,
   /** u32: what it rides, if anything (`anchors`; 0: it stays) */
   anchor = 4,
-  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those */
+  /** u32: SourceFlag */
   says = 5,
-  /** u32 */
+  /** u32: LATTICES */
   lattice = 6,
   /** f32 × 3 */
   pos = 7,
@@ -739,7 +741,7 @@ export const enum Sound {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: its name's number (`face_draw_name`) */
+  /** u32: its name's number (`Sfx`) */
   name = 2,
   /** u32: it has a place; 0 = it is in the ears */
   placed = 3,
@@ -779,7 +781,7 @@ export const enum Footfall {
 
 /** a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room */
 export const enum Lasting {
-  /** u32: the sound's name's number (`face_draw_name`), and which of that name it is */
+  /** u32: its name's number (`LastingSfx`), and which of that name it is */
   name = 0,
   /** u32 */
   id = 1,
@@ -909,9 +911,9 @@ export const enum DecalHead {
 
 /** a source of moving air */
 export const enum Wind {
-  /** u32: 0 a jet, 1 the storm */
+  /** u32: WIND_KINDS */
   kind = 0,
-  /** u32: 1 the storm is a field cut roof by roof · 2 the air of a fire */
+  /** u32: WindFlag */
   says = 1,
   /** u32: which particles it moves, a bit a kind (0: the usual) */
   kinds = 2,
@@ -985,7 +987,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the smoke · 2 the cans venting stop, what they let out left in the air */
+  /** u32: ResetFlag */
   what = 2,
   /** words a row */
   row = 3,
@@ -1013,7 +1015,7 @@ export const enum DustLook {
 export const enum Foot {
   /** u32 */
   id = 0,
-  /** u32 */
+  /** u32: FootFlag */
   says = 1,
   /** f32 × 3 */
   pos = 2,
@@ -1049,7 +1051,7 @@ export const enum Thing {
   key = 1,
   /** u32 */
   part = 2,
-  /** u32: 1 at rest · 2 lying on something that is not the ground */
+  /** u32: ThingFlag */
   says = 3,
   /** f32 × 3 */
   c = 4,
@@ -1118,18 +1120,3 @@ export const enum SmokeBrick {
   /** words a row */
   row = 161,
 }
-
-/** what a box may say it is made of, by its number in Rust */
-export const STUFFS = ['carpet', 'grass', 'rubber', 'metal', 'glass', 'wood', 'plastic', 'fabric', 'steel', 'enamel', 'tarmac', 'mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'sheet', 'cloth', 'paint', 'veneer', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'plain', 'waits'] as const;
-
-/** what a particle is, by its number in Rust */
-export const PKINDS = ['rain', 'dust', 'casing', 'sheet', 'spark', 'debris', 'shard'] as const;
-
-/** how particles are thrown, by its number in Rust */
-export const EMIT_SHAPES = ['cone', 'burst', 'ring', 'puff', 'rainDisc'] as const;
-
-/** what smoke comes from, by its number in Rust */
-export const SMOKE_KINDS = ['flash', 'wisp', 'canister', 'burst', 'cloud', 'jet', 'trail', 'vent', 'puff', 'breath'] as const;
-
-/** what a floor is, by its number in Rust */
-export const FLOORS = ['carpet', 'lino', 'stone', 'tile', 'asphalt', 'grass'] as const;

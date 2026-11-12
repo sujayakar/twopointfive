@@ -174,9 +174,8 @@ impl<'a> Cell<'a> {
     }
 
     fn box_of(&self, g: &mut Game, at: V3, cut: &Cut, q: Quat, col: V3, serial: f64) -> FrameBoxId {
-        let fl = crate::scene_boxes::box_flag();
         let b = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c: at, h: cut.h, rot: Some(q), albedo: Some(col), stuff: self.p.stuff, does: self.p.does,
-            flags: Some((js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64),
+            flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
             mkey: Some(MKEY_LOOK + 8388608.0 + (js::to_i32(serial) & 0x7fffff) as f64), ..Default::default() });
         crate::scene_boxes::box_kept(g, b)
     }
@@ -187,7 +186,7 @@ impl<'a> Cell<'a> {
         if !crate::break_table::breaks_shape_loose(g, bx.into(), &self.b.surf, (self.b.id * 4096.0 + self.c) * 32.0 + i) { return None; }
         let at = g.tab.frame_boxes[bx].c;
         let long = m::max(cut.h[0], cut.h[2]);
-        let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+        let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
         if long >= 0.15 && !edge_look_in_beam(g, at, long) { let x = &mut g.tab.frame_boxes[bx]; x.flags = (js::to_i32(x.flags) & !no_shadow) as f64; }
         if let (true, true, Some(cc)) = (self.blast, self.f.is_some(), g.tab.frame_boxes[bx].cut_core) {
             let ch = &self.e.cut_heap;

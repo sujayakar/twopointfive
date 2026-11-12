@@ -1,5 +1,5 @@
 //! THE LEVEL'S LIGHTS: whether a fixture is on, broken or blinded, what the mains are doing, the one number a fixture burns at this tick (its `factor`), the lamp each
-//! fixture feeds as a light question reads it (rust/sim lights.rs), and a camera's and a tripwire's own machine.
+//! fixture feeds as a light question reads it (`Lamp`), and a camera's and a tripwire's own machine.
 //!
 //! What men do about the dark is not here (lighting.rs, powerout.rs), nor how a fixture looks when it breaks (fixture_break.rs), nor where a lens looks at a man from:
 //! THE MACHINE NEVER ASKS THE LIGHT.
@@ -11,7 +11,6 @@ use crate::js::{self, JsMap};
 use crate::m;
 use crate::v3::V3;
 use alloc::{string::String, vec::Vec};
-use ::sim::lights::{Lights, ROWS, R_AREA, R_BEACON, R_CONE, R_ON, R_OWN, R_PASSING, R_ROLE, R_SCREEN, R_STEADY};
 
 /// fixtures, beacons, cameras, tripwires a level holds (one over any of these is refused at load, by name)
 pub const FIXTURES: usize = 256;
@@ -28,16 +27,6 @@ const LASER_COOLDOWN: f64 = 4.0;
 /// the cone starts this far out of the lens (the beam starts at the lens face)
 const CONE_AHEAD: f64 = 0.1;
 
-/// the lamps' rows of this game (no borrow of `g`: it may be held across a read of `g`, never across a call that writes them)
-#[inline(always)]
-fn lights(g: &Game) -> &'static mut Lights {
-    &mut ::sim::state::state(g.sim).lights
-}
-/// the same, to read
-#[inline(always)]
-fn lights_read(g: &Game) -> &'static Lights {
-    &::sim::state::state_read(g.sim).lights
-}
 /// a lamp's row
 #[inline(always)]
 fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
@@ -62,111 +51,67 @@ fn row_of(g: &Game, l: LightId) -> usize {
 
 /// The rows, stood once as the level is built, in the list's order: every lamp a fixture feeds gets one and no other lamp has a row.
 pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[FixtureId], cones: &[(LightId, FixtureId)]) {
-    let mut who: JsMap<LightId, (u32, FixtureId, f64)> = JsMap::new();
+    let mut who: JsMap<LightId, (Feed, FixtureId, f64)> = JsMap::new();
     for &t in targets {
         let f = &g.tab.fixture[t];
         if let Some(l) = f.light {
-            who.set(l, (R_OWN, t, 0.0));
+            who.set(l, (Feed::Own, t, 0.0));
         }
         if let Some(area) = &f.area_lights {
             for a in area {
-                who.set(a.light, (R_AREA, t, a.base));
+                who.set(a.light, (Feed::Area, t, a.base));
             }
         }
     }
     for b in &g.beacons {
         let base = g.tab.light[b.light].peak_intensity;
-        who.set(b.light, (R_BEACON, b.target, base));
+        who.set(b.light, (Feed::Beacon, b.target, base));
     }
     for &(light, target) in cones {
-        who.set(light, (R_CONE, target, 0.0));
+        who.set(light, (Feed::Cone, target, 0.0));
     }
-    let mut r: usize = 0;
-    g.light_home.lamps = Vec::new();
+    (g.light_home.lamps, g.light_home.rows) = (Vec::new(), Vec::new());
     for &l in list {
         g.tab.light[l].row = None;
-        let w = who.get(l).copied();
-        let (role, t, base) = match w {
-            Some(w) => w,
-            None => continue,
-        };
+        let Some((feed, target, base)) = who.get(l).copied() else { continue };
         if js::truthy(g.tab.light[l].owner) {
             panic!("the lamp '{}' has an owner, and a fixture feeds it: `skipOwner` is the question's, and only the question's own lamps have one", g.tab.light[l].name);
         }
-        if r >= ROWS {
-            panic!("a level of more than {} lamps on its fixtures got past game/levelfit.ts", ROWS);
+        if g.light_home.rows.len() >= LAMPS {
+            panic!("a level of more than {} lamps on its fixtures got past the level's fit", LAMPS);
         }
-        g.tab.light[l].row = Some(r as f64);
+        g.tab.light[l].row = Some(g.light_home.rows.len() as f64);
         g.light_home.lamps.push(l);
-        let i = t.0;
-        let monitors = g.tab.fixture[t].group == "monitors";
-        let day = crate::render_lights::light_by_day(&g.tab.light[l]) << sim::lights::R_DAY;
-        let rows = lights(g);
-        rows.row_base[r] = base;
-        rows.row_target[r] = i;
-        rows.row_bits[r] = role | if role == R_BEACON { R_PASSING } else { 0 } | if role == R_AREA && monitors { R_SCREEN } else { 0 } | day;
+        let screen = feed == Feed::Area && g.tab.fixture[target].group == "monitors";
+        let leave = if feed == Feed::Beacon { PASSING } else { 0 } | if screen { SCREEN } else { 0 };
+        g.light_home.rows.push(Lamp { feed, target, base, leave, day: crate::render_lights::light_by_day(&g.tab.light[l]), ..Lamp::default() });
         light_home_feed(g, l);
-        r += 1;
     }
-    lights(g).rows = r as u32;
     // (a beacon's spot and a camera's cone must each have a row)
     for l in g.beacons.iter().map(|b| b.light).chain(cones.iter().map(|c| c.0)) { row_of(g, l); }
 }
 
 /// A lamp's whole record into its row, as the lamp stands. Nothing for a lamp with no row.
-pub fn light_home_feed(g: &crate::game::Game, l: LightId) {
-    let r = match lamp_row(g, l) {
-        Some(r) => r,
-        None => return,
-    };
+pub fn light_home_feed(g: &mut Game, l: LightId) {
+    let Some(r) = lamp_row(g, l) else { return };
     let lamp = &g.tab.light[l];
-    let c = lights(g);
-    c.x[r] = lamp.pos[0];
-    c.y[r] = lamp.pos[1];
-    c.z[r] = lamp.pos[2];
-    c.range[r] = lamp.range;
-    c.radius[r] = lamp.radius;
-    c.kind[r] = lamp.kind;
-    c.dx[r] = lamp.dir[0];
-    c.dy[r] = lamp.dir[1];
-    c.dz[r] = lamp.dir[2];
-    c.outer[r] = lamp.outer_deg;
-    c.inner[r] = lamp.inner_deg;
-    c.r[r] = lamp.color[0];
-    c.g[r] = lamp.color[1];
-    c.b[r] = lamp.color[2];
-    c.intensity[r] = lamp.intensity;
-    match &lamp.steady {
-        Some(s) => {
-            c.sx[r] = s.pos[0];
-            c.sy[r] = s.pos[1];
-            c.sz[r] = s.pos[2];
-            c.s_radius[r] = s.radius;
-            c.s_intensity[r] = s.intensity;
-        }
-        None => {
-            c.sx[r] = 0.0;
-            c.sy[r] = 0.0;
-            c.sz[r] = 0.0;
-            c.s_radius[r] = 0.0;
-            c.s_intensity[r] = 0.0;
-        }
-    }
+    let c = &mut g.light_home.rows[r];
     // (a lamp that has come to burn as a fire does is one beside the hour, too)
-    if lamp.steady.is_some() != (c.row_bits[r] & R_STEADY != 0) {
-        c.row_bits[r] = (c.row_bits[r] & !(7 << sim::lights::R_DAY)) | crate::render_lights::light_by_day(lamp) << sim::lights::R_DAY;
-    }
-    c.row_bits[r] = (c.row_bits[r] & !(R_ON | R_STEADY)) | if lamp.enabled { R_ON } else { 0 } | if lamp.steady.is_some() { R_STEADY } else { 0 };
+    let day = if lamp.steady.is_some() != c.steady.is_some() { crate::render_lights::light_by_day(lamp) } else { c.day };
+    *c = Lamp {
+        pos: lamp.pos, range: lamp.range, radius: lamp.radius, kind: lamp.kind, dir: lamp.dir, outer: lamp.outer_deg, inner: lamp.inner_deg, color: lamp.color, intensity: lamp.intensity,
+        on: lamp.enabled, steady: lamp.steady.map(|s| Steady { pos: s.pos, radius: s.radius, intensity: s.intensity }), day, ..*c
+    };
 }
 
 /// …of a lamp somebody moves each tick (a fire's): only while it burns; out, its record is the picture's alone.
-pub(super) fn light_home_feed_burning(g: &crate::game::Game, l: LightId) {
+pub(super) fn light_home_feed_burning(g: &mut Game, l: LightId) {
     if g.tab.light[l].enabled {
         light_home_feed(g, l);
         return;
     }
     if let Some(r) = lamp_row(g, l) {
-        lights(g).row_bits[r] &= !R_ON;
+        g.light_home.rows[r].on = false;
     }
 }
 
@@ -229,11 +174,9 @@ fn supply(time: f64, dark: f64) -> f64 {
 const DIP: f64 = 0.15;
 fn dip(time: f64) -> bool { m::sin(time * 3.1) + m::sin(time * 7.3 + 2.0) * 0.6 > 1.15 && m::sin(time * 90.0) > 0.0 }
 /// a bad tube's steady self: the tube without its dips, for who asks what the place lights
-fn tube(l: &mut Lights, r: usize, flicker: bool, time: f64) {
+fn tube(l: &mut Lamp, flicker: bool, time: f64) {
     if !flicker { return; }
-    (l.sx[r], l.sy[r], l.sz[r], l.s_radius[r]) = (l.x[r], l.y[r], l.z[r], l.radius[r]);
-    l.s_intensity[r] = if dip(time) { l.intensity[r] / DIP } else { l.intensity[r] };
-    l.row_bits[r] |= R_STEADY;
+    l.steady = Some(Steady { pos: l.pos, radius: l.radius, intensity: if dip(time) { l.intensity / DIP } else { l.intensity } });
 }
 
 /// what a tick of the lights did that the game has to answer for
@@ -242,7 +185,6 @@ pub(super) struct Stepped { pub ran_out: bool, pub hand: bool, pub fixed: bool }
 /// the panel.
 pub(super) fn lights_step(g: &mut Game, dt: f64, near: bool, fumble: f64) -> Stepped {
     let time = g.time;
-    let rows = lights(g);
     let mut ev = Stepped { ran_out: false, hand: false, fixed: false };
     let l = &mut g.light_home.mains;
     if l.active && !l.permanent && time >= l.until {
@@ -271,9 +213,8 @@ pub(super) fn lights_step(g: &mut Game, dt: f64, near: bool, fumble: f64) -> Ste
         let (c, s) = (m::cos(a), m::sin(a));
         let h = m::hyp3(c, -0.5, s);
         let h = if h != 0.0 { h } else { 1.0 };
-        (rows.dx[r], rows.dy[r], rows.dz[r]) = (c / h, -0.5 / h, s / h);
-        let peak = rows.row_base[r];
-        rows.burn(r, on && f.factor > 0.0, peak);
+        let l = &mut g.light_home.rows[r];
+        (l.dir, l.on, l.intensity) = ([c / h, -0.5 / h, s / h], on && f.factor > 0.0, l.base);
     }
     for t in g.tab.fixture.ids() {
         let x = &mut g.tab.fixture[t];
@@ -286,35 +227,27 @@ pub(super) fn lights_step(g: &mut Game, dt: f64, near: bool, fumble: f64) -> Ste
         if f > 0.0 && x.flicker && dip(time) { f *= DIP; }
         x.factor = f;
     }
-    for r in 0..rows.rows as usize {
-        let role = rows.row_bits[r] & R_ROLE;
-        if role != R_OWN && role != R_AREA { continue; }
-        let x = &g.tab.fixture[FixtureId(rows.row_target[r])];
-        let whole = if role == R_OWN { x.base_intensity } else { rows.row_base[r] };
-        rows.burn(r, x.factor > 0.001, whole * x.factor);
-        tube(rows, r, x.flicker, time);
+    for l in &mut g.light_home.rows {
+        let x = &g.tab.fixture[l.target];
+        let whole = match l.feed { Feed::Own => x.base_intensity, Feed::Area => l.base, Feed::Beacon | Feed::Cone => continue };
+        (l.on, l.intensity) = (x.factor > 0.001, whole * x.factor);
+        tube(l, x.flicker, time);
     }
     ev
 }
 
 /// What the step worked out, to what the picture reads: a lamp's burning, and a beacon's turn.
 pub(super) fn light_home_paint(g: &mut crate::game::Game) {
-    for r in 0..g.light_home.lamps.len() {
-        let c = lights_read(g);
-        let b = c.row_bits[r];
-        let role = b & R_ROLE;
-        if role == R_CONE {
+    for (&id, l) in g.light_home.lamps.iter().zip(&g.light_home.rows) {
+        if l.feed == Feed::Cone {
             continue;
         }
-        let (i, dir) = (c.intensity[r], [c.dx[r], c.dy[r], c.dz[r]]);
-        let l = g.light_home.lamps[r];
-        let lamp = &mut g.tab.light[l];
-        lamp.enabled = b & R_ON != 0;
-        lamp.intensity = i;
-        if role == R_AREA {
-            lamp.peak_intensity = i;
-        } else if role == R_BEACON {
-            lamp.dir = dir;
+        let lamp = &mut g.tab.light[id];
+        (lamp.enabled, lamp.intensity) = (l.on, l.intensity);
+        match l.feed {
+            Feed::Area => lamp.peak_intensity = l.intensity,
+            Feed::Beacon => lamp.dir = l.dir,
+            Feed::Own | Feed::Cone => {}
         }
     }
 }
@@ -340,13 +273,11 @@ pub fn camera_pan(g: &mut Game, id: CameraRtId, dt: f64, live: bool, cones: bool
     let cp = m::cos(c.pitch);
     let look = [m::sin(c.yaw) * cp, m::sin(c.pitch), m::cos(c.yaw) * cp];
     if let Some(r) = g.tab.light[cone].row.map(|r| r as usize) {
-        let (l, at) = (lights(g), g.tab.devices_camera_rt[id].def.pos);
-        (l.dx[r], l.dy[r], l.dz[r]) = (look[0], look[1], look[2]);
-        (l.x[r], l.y[r], l.z[r]) = (at[0] + look[0] * CONE_AHEAD, at[1] + look[1] * CONE_AHEAD, at[2] + look[2] * CONE_AHEAD);
-        let i0 = l.intensity[r];
-        l.burn(r, ok && cones, i0);
+        let at = g.tab.devices_camera_rt[id].def.pos;
+        let l = &mut g.light_home.rows[r];
+        (l.on, l.dir, l.pos) = (ok && cones, look, [at[0] + look[0] * CONE_AHEAD, at[1] + look[1] * CONE_AHEAD, at[2] + look[2] * CONE_AHEAD]);
         let lamp = &mut g.tab.light[cone];
-        (lamp.enabled, lamp.pos, lamp.dir) = (ok && cones, [l.x[r], l.y[r], l.z[r]], look);
+        (lamp.enabled, lamp.pos, lamp.dir) = (l.on, l.pos, l.dir);
     }
     let c = &mut g.tab.devices_camera_rt[id];
     let mut down = false;

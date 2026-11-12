@@ -27,13 +27,13 @@ const safeName = (sid: string) => sid.replace(/[^\w.-]/g, '_').replace(/^\.+/, '
 export interface TapeFacts { build: string; level: string; words: string; seed: number; ticks: number; seconds: number; shots: number; moments: Moment[]; runs: string[]; ends: string }
 export interface Moment { r: number | null; tick: number | null; kind: string; text: string; weight: number }
 export function tapeFacts(b: Uint8Array): TapeFacts {
-  const walk = new HandWalk(b, b.length < 12 ? 0 : new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(8, true)), S = walk.start;
+  const walk = new HandWalk(b, true), S = walk.start;
   const moments: Moment[] = [], down = new Set<number>(), starts = [0]; let seconds = 0, ticks = 0, shots = 0, ends = '';
   for (let row = walk.next(); row; row = walk.next()) {
     const at = (kind: string, text: string, weight: number, tick: number) => moments.push({ r: seconds, tick, kind, text, weight });
     if (row.kind === 'step') { seconds += row.dt; ticks = row.tick + 1; }
     else if (row.kind === 'try') { starts.push(seconds); down.clear(); at('try', 'the mission began again', 4, row.tick); }
-    else if (row.kind === 'hands' && row.plan.length) at('seat', 'a hands-off player took the seat', 2, row.tick);
+    else if (row.kind === 'hands' && row.plan) at('seat', 'a hands-off player took the seat', 2, row.tick);
     else if (row.kind === 'end') { ends = row.why; at('end', `the tape ends: ${quoted(row.why)}`, 7, row.tick); }
     else if (row.kind === 'figures') {
       shots = row.figures.shots;

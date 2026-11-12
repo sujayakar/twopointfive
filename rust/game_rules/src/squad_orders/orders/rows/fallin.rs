@@ -13,8 +13,8 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 /// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
-    for (gd, a) in g.sets[g.seat].orders.asg.iter() {
-        let row = &g.tab.orders_assignment[*a];
+    for (gd, a) in g.groups[g.group].orders.asg.iter() {
+        let row = &g.tab.task[*a];
         if row.post.is_none() && !men.contains(&gd) { taken.push(row.follow); }
     }
     let sam = g.player_pos(g.player);
@@ -37,7 +37,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     for (gd, _) in sorted {
         while taken.contains(&k) { k += 1.0; }
         taken.push(k);
-        let a = SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(ORDER.id), post: None, follow: Some(k), face: None,
             stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
             going: "falling in".into(), there: "with you".into(),

@@ -404,7 +404,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
         g.gd[gd].standoff = None;
         g.gd[gd].muzzle_down = false;
     }
-    crate::control::set_hold(g, gd, true, "runner"); crate::control::set_pinned(g, gd, true, "runner");
+    crate::duty::hold(g, gd, true, "runner"); crate::duty::pin(g, gd, true, "runner");
     let e = known(g, gd);
     let mate = pick_mate(g, gd);
     if let Some(ma) = mate {
@@ -621,8 +621,8 @@ fn stays_dry_and_calm(g: &mut Game, gd: GuardId) {
     g.fa[w].chamber = 0.0;
     g.fa[w].mag = Some(0.0);
     g.fa[w].burst = None;
-    crate::control::set_hold(g, gd, true, "runner");
-    crate::control::set_pinned(g, gd, true, "runner");
+    crate::duty::hold(g, gd, true, "runner");
+    crate::duty::pin(g, gd, true, "runner");
     if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
     crate::mind::set(g, gd, 0.0, "runner");
     crate::mind::foe(g, gd, None, "runner");
@@ -833,7 +833,7 @@ mod tests {
 
     /// pinned bits
     #[test]
-    fn flat_and_path_len_have_the_typescripts_bits() {
+    fn flat_and_path_len_keep_their_bits() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         let path = [[1.7, 0.0, 3.9], [-2.3, 0.0, 4.1], [-2.3, 0.0, 4.1], [5.5, 1.0, -0.7]];
         assert_eq!(crate::places::walk_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);

@@ -25,7 +25,7 @@ fn normal_of(yaw: f64, h: V3) -> V3 {
 
 /// `flags & BoxFlag.Glass`, as a test
 fn glass_flagged(flags: f64) -> bool {
-    (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
+    (js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32) != 0
 }
 
 /// the blower's own noise: `pl.noise = max(pl.noise, GLASS.hearLevel)` where `who` is a man with a seat
@@ -57,7 +57,7 @@ pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::Gl
 
 /// beside decals.clear(): the floor's last 'glass' events go (the module's), then the encounter's hit count, last-hit clock and log; the pane list and the seen set stand
 pub fn reset_glass(g: &mut crate::game::Game) {
-    ::sim::panes::forget_heard(g.sim);   // its first test is panesUntouched's: the part's first word
+    g.tab.boxes.panes().told.clear();
     let s = match g.m.glass.states.as_mut() { Some(s) => s, None => return };
     s.hits = 0.0;
     s.last_hit_t = -100.0;
@@ -188,8 +188,8 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
         let since_any = time - s.crack_at;
         let sound = !(crack_gap > 0.0 && since_any >= 0.0 && since_any < crack_gap);
         if sound { s.crack_at = time; }
-        if live_gap > 0.0 && !::sim::panes::heard_gap(g.sim, js::to_u32(pane), who, time, live_gap) {
-            if sound { crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(point), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + 0.08 * u + 0.3 * w })); }
+        if live_gap > 0.0 && !::sim::panes::heard_gap(g.tab.boxes.panes(), js::to_u32(pane), who, time, live_gap) {
+            if sound { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GlassCrack, Some(point), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + 0.08 * u + 0.3 * w })); }
             raise_noise(g, who);
             return res;
         }
@@ -201,7 +201,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     }
     // the crack: at the hole, on the floor's ears as its own kind; small panes ring higher
     let area = 4.0 * h[1] * m::max(h[0], h[2]);
-    crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(point), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + m::min(0.22, 0.4 / m::max(0.5, area)) + 0.08 * u }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GlassCrack, Some(point), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.94 + m::min(0.22, 0.4 / m::max(0.5, area)) + 0.08 * u }));
     let hear_level = g.k.glass.hear_level;
     glass_event(g, b, point, hear_level, who);
     raise_noise(g, who);
@@ -268,7 +268,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn point_and_blast_seeds_are_the_typescript_s() {
+    fn point_and_blast_seeds_are_as_pinned() {
         let cases: [(f64, V3, f64, f64); 6] = [
             (0.0, [0.0, 0.0, 0.0], 0.0, 0.0),
             (2654435761.0, [1.2345, -0.0005, 0.0005], 2481012589.0, 2481012589.0),
@@ -284,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn a_blast_s_draws_are_the_typescript_s() {
+    fn a_blast_s_draws_are_as_pinned() {
         let cases: [(u32, u32); 6] = [
             (0, 695872825),
             (1, 1435855270),
@@ -305,7 +305,7 @@ mod tests {
     ];
 
     #[test]
-    fn a_box_s_seeds_and_normal_are_the_typescript_s() {
+    fn a_box_s_seeds_and_normal_are_as_pinned() {
         let want: [(f64, f64, bool, [u64; 3]); 4] = [
             (3611120674.0, 455261860.0, true, [0x3ff0000000000000, 0x0, 0x8000000000000000]),
             (4014362709.0, 3716110216.0, true, [0x3fe49d6e694619b8, 0x0, 0x3fe87996529f9d92]),

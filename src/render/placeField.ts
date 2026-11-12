@@ -10,6 +10,7 @@
 // imports no game code.
 // THE BUFFER IS READ AS A UNIFORM by the composite: the fragment stage has no sampled texture left to bind (render/passes.ts compEntries).
 // NEVER SEEN ON A GPU: judged on Chromium's software adapter, from stills and the read-back map.
+import { PlaceAt } from '../gpu/wgslrows';
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import { WORLD } from '../scene/world';
 import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceMap } from '../scene/placePlan';
@@ -100,9 +101,9 @@ export class PlaceField {
     const P = PLACE, first = this.fresh || snap; this.fresh = false;
     const kappa = (P.reach * PLACE_RES) ** 2, ease = (s: number) => (dt > 0 ? 1 - Math.exp(-Math.min(dt, 0.25) / Math.max(s, 1e-3)) : 0);
     for (let k = 0; k < 2; k++) {
-      const f = this.uf, u = this.uu; u[0] = k; u[1] = first ? 1 : 0; f[2] = kappa; f[3] = P.omega;
-      f[4] = sam ? (sam[0] - WORLD.rcMin[0]) * PLACE_RES : -1; f[5] = sam ? (sam[1] - WORLD.rcMin[2]) * PLACE_RES : -1; f[6] = ease(P.open); f[7] = ease(P.close);
-      f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = 0; f[11] = ease(P.skyEase); f[12] = P.skyShare; f[13] = P.near; f[14] = P.nearDoor;
+      const f = this.uf, u = this.uu; u[PlaceAt.parity] = k; u[PlaceAt.snap] = first ? 1 : 0; f[PlaceAt.kappa] = kappa; f[PlaceAt.omega] = P.omega;
+      f[PlaceAt.sam] = sam ? (sam[0] - WORLD.rcMin[0]) * PLACE_RES : -1; f[PlaceAt.sam + 1] = sam ? (sam[1] - WORLD.rcMin[2]) * PLACE_RES : -1; f[PlaceAt.eyeOpen] = ease(P.open); f[PlaceAt.eyeClose] = ease(P.close);
+      f[PlaceAt.y] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[PlaceAt.dark] = P.dark; f[PlaceAt.spare] = 0; f[PlaceAt.skyEase] = ease(P.skyEase); f[PlaceAt.skyShare] = P.skyShare; f[PlaceAt.near] = P.near; f[PlaceAt.nearDoor] = P.nearDoor;
       this.device.queue.writeBuffer(this.ubo[k], 0, this.u);
     }
     const n = first ? P.settle : P.sweeps, gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);

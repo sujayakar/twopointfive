@@ -51,66 +51,52 @@ struct Sneaks {
 
 /// The crouch's own arms: a free man low has his hands down ahead of his knees, never a held frame (the weight goes foot to foot at a stand, the hands
 /// drift), swinging with the crouch walk, the left leading its foot in the close-in mode, the elbows flaring as he sinks and the arms rising after him.
-pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, w_move: f64, tw_y: f64, tw_p: f64, tune: &Knobs) -> bool {
+pub fn stealth_layer(body: &mut Body, an: &mut Anim, dt: f64, busy: bool, crouch: f64, w_move: f64, tw_y: f64, tw_p: f64, tune: &Knobs) {
     let mut o = Sneaks { dt, busy, crouch, w_move, tw_y, tw_p, ..Sneaks::default() };
     as_sneaks(an, &mut o);
-    let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2]) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut st) = an.sp else {
-        return false;
-    };
+    let mut st = an.sp.expect("he is posed low and has no low pose");
     comes_up(&mut st, &mut o);
     arms_crouch(&mut st, tune, &mut o);
     if st.w_a <= 0.003 || o.up <= 0.003 {
         st.lead = 0.0;
         an.sp = Some(st);
-        return true;
+        return;
     }
-    let code = with_pose(g, o.at, |d, rig, _n, fk| {
-        fk.part(rig, d, list(FK_LEGS));
+    body.pose(o.at, |d, rig, fk| {
+        fk.part(rig, d, rig.list(FK_LEGS));
         // at a stand: never a held frame, the weight goes foot to foot with the feet where they were
         sways_by(&mut o);
         if !(o.sway > 0.003) {
-            return true;
+            return;
         }
         weight_sways(tune, d, rig, fk, &o);
-        true
-    })
-    .unwrap_or(false);
-    if !code {
-        return false;
-    }
+    });
     if o.w <= 0.003 {
         st.lead = 0.0;
         an.sp = Some(st);
-        return code;
+        return;
     }
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
-        return false;
-    }
+    let mut h = hands_of(body, an);
+    body.copy(o.at, o.at_b);
     let hh = &mut h;
     let mut arm_w = [0.0f64; 2];
     let aw = &mut arm_w;
-    with_pose(g, o.at_b, |d, rig, _n, fk| {
+    body.pose(o.at_b, |d, rig, fk| {
         rounds(d, rig, &o);
         fk_run(rig, d, fk.rot, fk.pos);
-        arms_swing(&mut st, tune, fk, &mut o);
+        arms_swing(rig, &mut st, tune, fk, &mut o);
         for side in 0..2usize {
-            whose_arm(side, &mut o);
+            whose_arm(rig, side, &mut o);
             if o.w_arm <= 0.003 {
                 continue;
             }
-            arm_point(&mut st, fk, side, &mut o);
+            arm_point(rig, &mut st, fk, side, &mut o);
             arm_solved(&mut st, hh, aw, d, rig, fk, side, &o);
         }
     });
-    let l = |i: usize| if arm_w[0] > 0.003 { role(i) } else { usize::MAX };
-    let r = |i: usize| if arm_w[1] > 0.003 { role(i) } else { usize::MAX };
-    ask_mask(&[
+    let l = |i: usize| if arm_w[0] > 0.003 { body.rig.role(i) } else { usize::MAX };
+    let r = |i: usize| if arm_w[1] > 0.003 { body.rig.role(i) } else { usize::MAX };
+    body.mask(&[
         (l(SHOULDER_L), arm_w[0], false),
         (l(UPPER_ARM_L), arm_w[0], false),
         (l(FOREARM_L), arm_w[0], false),
@@ -120,12 +106,9 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
         (r(FOREARM_R), arm_w[1], false),
         (r(HAND_R), arm_w[1], true),
     ]);
-    if !ask_blend(g, o.at, o.at_b, 1.0, true, o.at, n) {
-        return false;
-    }
+    body.blend(o.at, o.at_b, 1.0, true, o.at);
     hands_to(&h, an);
     an.sp = Some(st);
-    true
 }
 
 /// How he holds himself.
@@ -173,29 +156,29 @@ fn sways_by(o: &mut Sneaks) {
 /// At a stand, never a held frame: the weight goes foot to foot with the feet where they were.
 fn weight_sways(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &Sneaks) {
     let Sneaks { t, sway, .. } = *o;
-    let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+    let (foot_l, foot_r) = (rig.role(FOOT_L), rig.role(FOOT_R));
     let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
     let ph = t * 2.0 * PI / max(0.5, tune.stealthpose.sway_secs);
-    shift(d, rig, role(HIPS), &[tune.stealthpose.sway_m * sway * sin(ph), 0.0, tune.stealthpose.sway_m * 0.35 * sway * sin(ph * 2.0 + 0.6)]);
-    fk.part(rig, d, list(FK_LEGS));
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+    shift(d, rig, rig.role(HIPS), &[tune.stealthpose.sway_m * sway * sin(ph), 0.0, tune.stealthpose.sway_m * 0.35 * sway * sin(ph * 2.0 + 0.6)]);
+    fk.part(rig, d, rig.list(FK_LEGS));
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
 }
 
 /// The shoulders rounded.
 fn rounds(d: &mut [S], rig: &Rig, o: &Sneaks) {
     let Sneaks { w, .. } = *o;
     let rnd = STEALTH.round * DEGR * w;
-    turn(d, rig, role(SHOULDER_L), q_yaw(-rnd));
-    turn(d, rig, role(SHOULDER_R), q_yaw(rnd));
+    turn(d, rig, rig.role(SHOULDER_L), q_yaw(-rnd));
+    turn(d, rig, rig.role(SHOULDER_R), q_yaw(rnd));
 }
 
 /// The walk: the hand comes forward with the other foot; in the close-in mode the free hand leads its own foot.
-fn arms_swing(st: &mut game_types::character::AnimSp, tune: &Knobs, fk: &mut Fk, o: &mut Sneaks) {
+fn arms_swing(rig: &Rig, st: &mut game_types::character::AnimSp, tune: &Knobs, fk: &mut Fk, o: &mut Sneaks) {
     let Sneaks { dt, cs, wm, t, .. } = *o;
-    let (kl, kr) = (fk.at(role(SHIN_L)), fk.at(role(SHIN_R)));
+    let (kl, kr) = (fk.at(rig.role(SHIN_L)), fk.at(rig.role(SHIN_R)));
     let (k_hi, k_z) = (max(kl[1], kr[1]), max(kl[2], kr[2]));
-    let (fz_l, fz_r) = (fk.at(role(FOOT_L))[2], fk.at(role(FOOT_R))[2]);
+    let (fz_l, fz_r) = (fk.at(rig.role(FOOT_L))[2], fk.at(rig.role(FOOT_R))[2]);
     // the walk: + = the right foot ahead, so the LEFT hand comes forward
     st.sw += (clamp((fz_r - fz_l) / STEALTH.walk.stride, -1.0, 1.0) * wm - st.sw) * min(1.0, dt * STEALTH.walk.rate);
     let s = st.sw;
@@ -209,31 +192,31 @@ fn arms_swing(st: &mut game_types::character::AnimSp, tune: &Knobs, fk: &mut Fk,
 }
 
 /// Which arm, and how much of it is his to move: the knife hand is the close-in mode's; with his arms out the left is the carriage's too.
-fn whose_arm(side: usize, o: &mut Sneaks) {
+fn whose_arm(rig: &Rig, side: usize, o: &mut Sneaks) {
     let Sneaks { cs, ready_w, wide_s, hands_down, w, kl, kr, s, .. } = *o;
     let (sg, kn, sf) = if side == 0 { (1.0, kl, 0.0) } else { (-1.0, kr, 1.0) };
     let a_ = sg * s;
-    let (up_n, fo_n, ha_n) = if side == 0 { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) } else { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) };
+    let (up_n, fo_n, ha_n) = if side == 0 { (rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L)) } else { (rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R)) };
     let w_arm = w * (1.0 - ready_w) * (if side == 0 { 1.0 - cs * wide_s * clamp(hands_down, 0.0, 1.0) } else { 1.0 - cs });
     (o.sg, o.kn, o.sf, o.a_, o.up_n, o.fo_n, o.ha_n, o.w_arm) = (sg, kn, sf, a_, up_n, fo_n, ha_n, w_arm);
 }
 
 /// Where the hand goes: over the knee, forward and back with the walk, by the foot it leads; beyond the arm it is reached toward, never locked out.
-fn arm_point(st: &mut game_types::character::AnimSp, fk: &mut Fk, side: usize, o: &mut Sneaks) {
+fn arm_point(rig: &Rig, st: &mut game_types::character::AnimSp, fk: &mut Fk, side: usize, o: &mut Sneaks) {
     let Sneaks { tw_y, tw_p, cs, kl, k_hi, k_z, lt, dr, sg, kn, sf, a_, up_n, fo_n, ha_n, .. } = *o;
     let (wf, wb) = (STEALTH.walk.fwd, STEALTH.walk.back);
     let (s0, fo, ha) = (fk.at(up_n), fk.at(fo_n), fk.at(ha_n));
     let len = (v3::dist(fo, s0) + v3::dist(ha, fo)) * 0.97;
     let (d1, d2, d3) = (dr * sin(lt * 0.83 + sf * 2.1), dr * sin(lt * 1.31 + sf * 1.3 + 0.7), dr * sin(lt * 0.57 + sf * 0.9 + 1.9));
-    let mut to = untwist(fk, tw_y, tw_p, [kn[0] + sg * STEALTH.idle.out + d1, max(STEALTH.idle.floor, k_hi - STEALTH.idle.below) + d2, max(kn[2] + STEALTH.idle.fwd, k_z + STEALTH.idle.lead) + d3]);
+    let mut to = untwist(rig, fk, tw_y, tw_p, [kn[0] + sg * STEALTH.idle.out + d1, max(STEALTH.idle.floor, k_hi - STEALTH.idle.below) + d2, max(kn[2] + STEALTH.idle.fwd, k_z + STEALTH.idle.lead) + d3]);
     if a_ > 0.0 {
-        to = v3::lerp3(to, untwist(fk, tw_y, tw_p, [kn[0] * 0.6 + sg * wf[0], max(STEALTH.idle.floor, k_hi + wf[1]), k_z + wf[2]]), a_);
+        to = v3::lerp3(to, untwist(rig, fk, tw_y, tw_p, [kn[0] * 0.6 + sg * wf[0], max(STEALTH.idle.floor, k_hi + wf[1]), k_z + wf[2]]), a_);
     } else if a_ < 0.0 {
         to = v3::lerp3(to, [s0[0] + sg * wb[0], s0[1] + wb[1], s0[2] + wb[2]], -a_);
     }
     if side == 0 && cs > 0.003 {
         let behind = [s0[0] + wb[0], s0[1] + wb[1] + 0.06, s0[2] + wb[2] * STEALTH.creep.swing];
-        let ahead = untwist(fk, tw_y, tw_p, [kl[0] * 0.5 + STEALTH.creep.at[0], max(STEALTH.creep.floor, k_hi + STEALTH.creep.at[1]), k_z + STEALTH.creep.at[2]]);
+        let ahead = untwist(rig, fk, tw_y, tw_p, [kl[0] * 0.5 + STEALTH.creep.at[0], max(STEALTH.creep.floor, k_hi + STEALTH.creep.at[1]), k_z + STEALTH.creep.at[2]]);
         to = v3::lerp3(to, v3::lerp3(behind, ahead, st.lead), cs);
     }
     // (beyond the arm: reached toward, never locked out)
@@ -253,7 +236,7 @@ fn arm_solved(st: &mut game_types::character::AnimSp, hh: &mut Hands, aw: &mut [
     let r = hand_rot(&fixes[side], [sg * fing[0], fing[1], fing[2]], [sg * back[0], back[1], back[2]]);
     two_bone_ik(rig, d, fk.rot, fk.pos, up_n, fo_n, ha_n, &to, Some(&[sg * (pole[0] + flare - bk), pole[1] + flare * 0.5 + bk * 0.4, pole[2] - bk]), 0.8, Some(&r), false);
     let c = STEALTH.idle.curl;
-    hand(d, hh, side, &[c, c + 0.04, c + 0.08, c + 0.12], STEALTH.idle.thumb, STEALTH.idle.spread);
+    hand(rig, d, hh, side, &[c, c + 0.04, c + 0.08, c + 0.12], STEALTH.idle.thumb, STEALTH.idle.spread);
     aw[side] = w_arm;
 }
 /// A goggle nod shown as a lift of the head, as big less a little whichever way the nod went, and smooth through nothing
@@ -263,8 +246,8 @@ fn nod_lift(n: f64) -> f64 {
 }
 /// a goggle nod's tip of the HEAD joint (+ = chin down) about the level axis square to where he faces, `head` being the head
 /// as it will be drawn, so the gaze stays in its own upright plane
-fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
-    let hd = role(HEAD);
+fn nv_tip(rig: &Rig, d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
+    let hd = rig.role(HEAD);
     let gh = quat::mul(*head, *rest_inv);
     let z = quat::rotate(gh, [0.0, 0.0, 1.0]);
     let l = hypot2(z[0], z[2]);
@@ -274,34 +257,29 @@ fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
 /// The look under a door: on the pose at `at` (a copy of the finished pose, which is then MADE the pose) he shuffles in and sinks with his feet where
 /// they were, the trunk folds, the head bows at the foot of the leaf, a goggle nod under way is posed on it, and the hands go low: the right wrist at
 /// the gap, the left by its knee.
-pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &Knobs) -> bool {
+pub fn cable_pose(body: &mut Body, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &Knobs) {
     let (at, at_b, lp, lock_z, nod, gaze_local) = (pic, an.p_b.at as usize, clamp(an.lp_w.x, 0.0, 1.0), an.lockpick_at[2], an.nv_nod, an.gaze_local);
     let (tw, hri, fix_l, fix_r, nv_a) = (an.nv_tw, an.head_rest_inv, an.hand_fix[0], an.hand_fix[1], &mut an.nv_a);
-    let Some(nod_up) = an.sp.as_mut().map(|s| &mut s.nod_up) else {
-        return false;
-    };
-    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
-            return None;
-        }
-        let (hips, foot_l, foot_r, hd) = (role(HIPS), role(FOOT_L), role(FOOT_R), role(HEAD));
+    let nod_up = &mut an.sp.as_mut().expect("he looks under a door and has no low pose").nod_up;
+    body.pose(at, |d, rig, fk| {
+        let (hips, foot_l, foot_r, hd) = (rig.role(HIPS), rig.role(FOOT_L), rig.role(FOOT_R), rig.role(HEAD));
         // the shuffle in, all of him, then the sink over feet put back where they were
         shift(d, rig, hips, &[0.0, 0.0, tune.stealthpose.cable_step * e]);
-        fk.part(rig, d, list(FK_LEGS));
+        fk.part(rig, d, rig.list(FK_LEGS));
         let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
         shift(d, rig, hips, &[0.0, -STEALTH.cable.sink * e, 0.0]);
-        fk.part(rig, d, list(FK_LEGS));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        fk.part(rig, d, rig.list(FK_LEGS));
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
         let bow = (STEALTH.cable.undo * lp + tune.stealthpose.cable_bow) * DEGR * e;
-        turn(d, rig, role(SPINE1), q_pitch(bow * 0.36));
-        turn(d, rig, role(SPINE2), q_pitch(bow * 0.39));
-        turn(d, rig, role(SPINE3), q_pitch(bow * 0.25));
+        turn(d, rig, rig.role(SPINE1), q_pitch(bow * 0.36));
+        turn(d, rig, rig.role(SPINE2), q_pitch(bow * 0.39));
+        turn(d, rig, rig.role(SPINE3), q_pitch(bow * 0.25));
         // (on the way out the head is level again before the back is)
-        turn(d, rig, role(NECK), q_pitch(-bow * 0.25 * (1.0 - eh)));
+        turn(d, rig, rig.role(NECK), q_pitch(-bow * 0.25 * (1.0 - eh)));
         turn(d, rig, hd, q_pitch(-bow * 0.3 * (1.0 - eh)));
-        turn(d, rig, role(SHOULDER_L), q_yaw(-STEALTH.cable.round * DEGR * e));
-        turn(d, rig, role(SHOULDER_R), q_yaw(STEALTH.cable.round * DEGR * e));
+        turn(d, rig, rig.role(SHOULDER_L), q_yaw(-STEALTH.cable.round * DEGR * e));
+        turn(d, rig, rig.role(SHOULDER_R), q_yaw(STEALTH.cable.round * DEGR * e));
         fk_run(rig, d, fk.rot, fk.pos);
         let gap = [0.0, 0.04, max(lock_z + 0.05, fk.at(hd)[2] + STEALTH.cable.ahead)];
         look_at(d, rig, fk, &gaze_local, gap, eh, 0.0);
@@ -318,33 +296,23 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
             if !lift && nod > 0.0 {
                 tip = min(nod, max(0.0, STEALTH.cable.nod_max * DEGR - asin(clamp(-quat::rotate(quat::mul(head, hri), [0.0, 0.0, 1.0])[1], -1.0, 1.0))));
             }
-            nv_tip(d, &head, &hri, tip);
+            nv_tip(rig, d, &head, &hri, tip);
             *nv_a = tip;
         }
-        Some(n)
-    }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
-    let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
-        fk_run(rig, d, fk.rot, fk.pos);
-        let kl = fk.at(role(SHIN_L));
-        let (rr, rl) = (hand_rot(&fix_r, [0.05, -0.35, 0.94], [-0.3, 0.9, 0.3]), hand_rot(&fix_l, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &[STEALTH.cable.gap[0], STEALTH.cable.gap[1], lock_z - STEALTH.cable.short], Some(&[-0.6, 0.1, -0.75]), 0.8, Some(&rr), false);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &[kl[0] + STEALTH.cable.knee[0], kl[1] + STEALTH.cable.knee[1], kl[2] + STEALTH.cable.knee[2]], Some(&[0.8, 0.0, -0.6]), 0.8, Some(&rl), false);
-        hand(d, hh, 1, &[0.5, 0.6, 0.7, 0.75], 0.5, 0.0);
-        hand(d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
     });
-    arms_mask();
-    if !ask_blend(g, at, at_b, e, true, at, n) {
-        return false;
-    }
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
+    let hh = &mut h;
+    body.pose(at_b, |d, rig, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let kl = fk.at(rig.role(SHIN_L));
+        let (rr, rl) = (hand_rot(&fix_r, [0.05, -0.35, 0.94], [-0.3, 0.9, 0.3]), hand_rot(&fix_l, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R), &[STEALTH.cable.gap[0], STEALTH.cable.gap[1], lock_z - STEALTH.cable.short], Some(&[-0.6, 0.1, -0.75]), 0.8, Some(&rr), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &[kl[0] + STEALTH.cable.knee[0], kl[1] + STEALTH.cable.knee[1], kl[2] + STEALTH.cable.knee[2]], Some(&[0.8, 0.0, -0.6]), 0.8, Some(&rl), false);
+        hand(rig, d, hh, 1, &[0.5, 0.6, 0.7, 0.75], 0.5, 0.0);
+        hand(rig, d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
+    });
+    arms_mask(body);
+    body.blend(at, at_b, e, true, at);
     hands_to(&h, an);
-    true
 }

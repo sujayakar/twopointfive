@@ -70,7 +70,7 @@ pub fn live(g: &crate::game::Game) -> bool {
 fn calm(g: &crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
-        && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
+        && m.script.is_none() && m.errand.is_none() && m.body_duty.is_none() && !m.duty.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
 }
 /// put his record on this game's books
 fn put(g: &mut crate::game::Game, gd: GuardId, d: crate::doze::Doze) {
@@ -261,7 +261,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     let ch = d.chair.unwrap();
     d.seen = g.time;
     flush(g, gd, d);
-    if !live(g) || !calm(g, gd) || g.gd[gd].hold
+    if !live(g) || !calm(g, gd) || g.gd[gd].duty.holds
         || g.gd[gd].wait < g.k.doze.rise_secs + g.k.doze.nod_secs + 4.0
         || (!g.tab.props_prop[ch].asleep && m::hyp2(g.tab.props_prop[ch].x - d.cx, g.tab.props_prop[ch].z - d.cz) > 0.15)
         || crate::guards::not_getting_anywhere(g, gd, dt, 6.0)
@@ -421,7 +421,7 @@ fn got_up_by_something(g: &mut Game, gd: GuardId, mut d: Doze, ch: PropId, c: Ch
         wake(g, gd, crate::doze::DozeWhy::Net, None);
         return true;
     }
-    if !live(g) || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() || g.gd[gd].body_duty.is_some() || !crate::close::close_has_seat(g, gd) {
+    if !live(g) || g.gd[gd].script.is_some() || g.gd[gd].errand.is_some() || g.gd[gd].body_duty.is_some() || !crate::close::close_has_seat(g, gd) {
         wake(g, gd, crate::doze::DozeWhy::Alarm, None);
         return true;
     }
@@ -551,7 +551,7 @@ fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.char_id(gd);
     let team = g.team(gd);
     let mut skip = move |g: &Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::fixtures::SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner
@@ -615,14 +615,14 @@ mod tests {
         h
     }
     #[test]
-    fn pulls_match_the_typescript_bits() {
+    fn pulls_keep_their_bits() {
         let v = build_pulls(0.5);
         assert_eq!(v.len(), PULLS_LEN);
         assert_eq!(v[0], [0.0, 0.0]);
         assert_eq!(fnv(&v), PULLS_FNV);
     }
     #[test]
-    fn a_new_record_holds_the_typescript_numbers() {
+    fn a_new_record_holds_its_numbers() {
         let d = blank(Phase::No, 3.0, 7.5);
         assert_eq!((d.say, d.lit, d.woke_at, d.seen, d.wp), (-1.0, -1.0, -1.0, 7.5, 3.0));
         assert!(d.chair.is_none() && d.mon.is_none() && d.why.is_none() && !d.mon_was);

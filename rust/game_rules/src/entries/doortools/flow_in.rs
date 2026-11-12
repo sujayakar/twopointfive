@@ -228,7 +228,7 @@ struct Refused { whys: Vec<String>, far: bool }
 /// The points dealt to `gd`, and to the man who goes with him: by himself only where nobody would have to go along.
 fn dealt(g: &mut Game, op: DoorOpId, f: &Piece, squad: &Squad, gd: GuardId, men: &[GuardId], first: V3, two: Option<(V3, V3)>, walks: &mut Walks) -> Result<Vec<(GuardId, crate::entrypoints::Pod)>, Refused> {
     let p = two.map_or(first, |t| t.0);
-    let said = |g: &Game| { let d = &g.sets[g.seat].door_tools; (d.away_why.clone(), d.away_far) };
+    let said = |g: &Game| { let d = &g.groups[g.group].tools; (d.away_why.clone(), d.away_far) };
     let mate = match door_tools_away(g, gd, p, men, walks, Some(op)) {
         DoorToolsAway::Guard(x) => x,
         _ => {

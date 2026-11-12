@@ -29,15 +29,15 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
     );
     let t = g.time;
-    if let Some(hit) = g.sets[g.seat].orders.reached.get(key.clone()) {
+    if let Some(hit) = g.groups[g.group].orders.reached.get(key.clone()) {
         if m::abs(t - hit.t) < 1.0 {
             return SquadOrdersAsked { why: hit.why.clone(), lock: hit.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) };
         }
     }
-    if g.sets[g.seat].orders.reached.len() > 96 { g.sets[g.seat].orders.reached.clear(); }
+    if g.groups[g.group].orders.reached.len() > 96 { g.groups[g.group].orders.reached.clear(); }
     let r = squad_orders_route(g, gd, to, None, None, Some(true));
     let kept = SquadOrdersReachedValue { t, why: r.why.clone(), lock: r.lock.map(|l| SquadOrdersReachedValueLock { door: l.door, side: l.side }) };
-    g.sets[g.seat].orders.reached.set(key, kept);
+    g.groups[g.group].orders.reached.set(key, kept);
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
@@ -264,10 +264,10 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
+        let w = if g.tab.task[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
-        let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.words.clone() } else { g.tab.orders_assignment[a].going.words.clone() };
+        let word = if squad_orders_shown_there(g, a) { g.tab.task[a].there.words.clone() } else { g.tab.task[a].going.words.clone() };
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert { return String::from("in contact"); }
         return match w {
             Some(w) if !w.is_empty() => format!("{} · {}", word, w),

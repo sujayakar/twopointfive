@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
 import { toolDesk } from '../desk.ts';
-import { characterFiles } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
 import { FollowCamera } from '../../src/host/camera';
@@ -42,7 +42,7 @@ for (const S of BENCH_SCENES.filter(s => !only.length || only.includes(s.id))) f
   if (!ok) fails++;
   if (carded) console.log(`    ${carded}`); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${S.id} (${S.scn}, seed ${seed}): ${h ? `${h.end ?? 'cut'} at ${h.t.toFixed(0)} s, ${h.given} orders, ${h.up} of ${h.of} up, ${h.left} defenders left of ${left0}` : 'nobody played'}${words1 ? `\n    ${words1}` : ''} · ${(ms / Math.max(1, ticks)).toFixed(2)} ms a tick, ${((performance.now() - t0) / 1000).toFixed(0)} s`);
   if (trace && h) console.log(game.handsTrace());
-  try { if (game.h) game.X.face_drop(game.h); } catch { /* lost */ }
+  try { if (game.h) game.face.drop(game.h); } catch { /* lost */ }
 }
 console.log(`=== hands: ${fails ? `${fails} FAILED` : 'ALL PASS'} ===`);
 process.exit(fails ? 1 : 0);

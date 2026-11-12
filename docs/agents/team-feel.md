@@ -30,7 +30,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | `coverfire.rs` | rounds into breakable cover at a man known to be behind it |
 | `nvg.rs`, `irlight.rs` | whether the team is dark and each man's goggles; the infrared flood on the goggles |
 | `irlaser.rs` | Sam's infrared laser |
-| `silent.rs` | the silent posture, and `round_held`, the one question every fire hold goes through |
+| `silent.rs` | the silent posture. `round_held`, the one question every fire hold goes through, is `duty.rs` |
 | `holdfire.rs` | nobody fires first, whatever the posture |
 | `unseen.rs`, `sneak/` | the team sneaking because Sam is; the partner's careful follow |
 | `spotted.rs` | what a silent man does when a defender is onto him |

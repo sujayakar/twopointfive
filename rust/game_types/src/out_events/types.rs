@@ -52,7 +52,7 @@ pub struct OutGameAudioLikeFootstep {
 
 #[derive(Clone, Debug)]
 pub struct OutGameAudioLikePlay {
-    pub name: String,
+    pub name: crate::audio_iface::Sfx,
     pub pos: Option<V3>,
     pub gain: Option<f64>,
     pub opts: Option<crate::out_events::OutPlayOpts>,

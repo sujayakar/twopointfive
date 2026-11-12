@@ -52,7 +52,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind,
     crate::game::game_say(g, gd, pool[i], Some(radio), None);
     if radio {
         let at = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 
@@ -71,7 +71,7 @@ fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.
 fn own(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
+    x.script.is_none() && x.duty.free() && x.standoff.is_none() && x.errand.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.
@@ -703,7 +703,7 @@ mod tests {
 
     /// the static here and `lines()` are the same words in the same order
     #[test]
-    fn lines_are_the_skeletons() {
+    fn the_lines_are_the_same_words_in_the_same_order() {
         let t = crate::darkdoor::lines();
         for &(k, say, he, they) in LINES.iter() {
             let row = t.of(k.as_str()).unwrap();
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn a_new_row_is_the_typescripts_literal_not_blank() {
+    fn a_new_row_is_its_own_start_not_blank() {
         let s = fresh_fear();
         assert_eq!((s.door, s.side, s.left, s.armed, s.arm_t), (-1.0, 1.0, -1e9, -1.0, -1e9));
     }

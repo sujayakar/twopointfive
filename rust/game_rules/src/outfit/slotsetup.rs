@@ -15,9 +15,9 @@ fn slot_digit(gun: SetupGun) -> i32 {
     slot_key(gun) as i32
 }
 
-/// the key's code of a digit (`Digit${d}`)
-fn digit_code(d: i32) -> String {
-    alloc::format!("Digit{}", d)
+/// the key of a digit (a gun's or a row's: one of the board's)
+fn digit_code(d: i32) -> crate::input::Key {
+    crate::input::Key::digit(d).expect("a digit of the kit's is a key")
 }
 
 /// the gun of his named by the setup's word
@@ -111,9 +111,9 @@ pub(super) fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
             SetupKind::Load => g.fa[g.pl[seat.player].rifle].attachments.iter().zip(r.opts.iter()).map(|(a, o)| load_word(*a, o.left.unwrap_or(0.0), o.on)).collect(),
             SetupKind::Light => vec![word("LIGHT", r.opts.iter().any(|o| o.id == "on" && o.on))],
         };
-        crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
+        crate::view::KitSetupRow { key: digit_code(r.key as i32).text(), words }
     }).collect();
-    Some(crate::view::KitSetup { rows, back: crate::backkey::BACK_KEY.to_uppercase() })
+    Some(crate::view::KitSetup { rows, back: crate::backkey::BACK_KEY.as_str().to_uppercase() })
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up
@@ -154,13 +154,13 @@ fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &cr
     }
     let muzzle = g.ch[g.pl[pl].ch].muzzle;
     let gain = if row.kind == SetupKind::Light { 0.6 } else { 0.7 };
-    crate::audio_iface::game_audio_like_play(g, "click", Some(muzzle), Some(gain), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(muzzle), Some(gain), None);
 }
 
 /// a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on
 fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
     for gun in [SetupGun::Pistol, SetupGun::Rifle] {
-        if Some(gun) != in_hand && crate::input::input_hit(g, input, &digit_code(slot_digit(gun))) {
+        if Some(gun) != in_hand && crate::input::input_hit(g, input, digit_code(slot_digit(gun))) {
             let t = g.time;
             g.sets[g.seat].hand.setup_key = Some(crate::game::PlayerSetupKey { gun, t });
         }
@@ -191,7 +191,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             || g.time - s.seen > STALE
             || crate::handwork::sam_work(g).is_some()
             || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
-            || g.sets[g.seat].orders.menu.is_some()
+            || g.groups[g.group].orders.menu.is_some()
             || crate::interact::backable_interact(g, &crate::seats::here(g));
         if shut {
             up = None;
@@ -204,14 +204,14 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
             live.seen = now;
         }
         let shut = crate::backkey::back_take(g, input)
-            || crate::input::input_hit(g, input, "Paused")
+            || crate::input::input_hit(g, input, crate::input::Key::Paused)
             || crate::input::input_lmb_hit(g, input)
             || crate::input::input_rmb_hit(g, input)
-            || crate::input::input_hit(g, input, "KeyR")
+            || crate::input::input_hit(g, input, crate::input::Key::R)
             || g.pl[pl].last_fire_t >= s.t;
         if shut {
             g.sets[g.seat].hand.setup = None;
-            g.tab.input[input].pressed.delete(digit_code(slot_digit(s.gun)));
+            g.tab.input[input].pressed.delete(digit_code(slot_digit(s.gun)).text());
             draw_press(g, input, gun);
             return;
         }
@@ -221,18 +221,18 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
                 break;
             }
             let code = digit_code(d);
-            if !crate::input::input_hit(g, input, &code) {
+            if !crate::input::input_hit(g, input, code) {
                 continue;
             }
             match rows.iter().find(|r| r.key == d as f64) {
                 Some(row) => {
-                    g.tab.input[input].pressed.delete(code);
+                    g.tab.input[input].pressed.delete(code.text());
                     step_row(g, s.gun, row);
                     g.sets[g.seat].hand.setup = None;
                 }
                 None => {
                     if d == slot_digit(s.gun) {
-                        g.tab.input[input].pressed.delete(code);
+                        g.tab.input[input].pressed.delete(code.text());
                     }
                     g.sets[g.seat].hand.setup = None;
                 }
@@ -247,10 +247,10 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
         None => return,
     };
     let code = digit_code(slot_digit(gun));
-    if !crate::input::input_hit(g, input, &code) {
+    if !crate::input::input_hit(g, input, code) {
         return;
     }
-    g.tab.input[input].pressed.delete(code);
+    g.tab.input[input].pressed.delete(code.text());
     let (hand_t, hand_own) = match g.pl[pl].setup_hand {
         Some(h) => (h.t, h.own),
         None => (0.0, None), // never: the first lines of this function set it
@@ -262,5 +262,5 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let t = g.time;
     g.sets[g.seat].hand.setup = Some(crate::game::PlayerSetup { gun, t, seen: t });
     let muzzle = g.ch[g.pl[pl].ch].muzzle;
-    crate::audio_iface::game_audio_like_play(g, "click", Some(muzzle), Some(0.35), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(muzzle), Some(0.35), None);
 }

@@ -28,7 +28,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
     let s = g.pl[g.player].holding().and_then(|h| h.strip);
     if leads(g, s) { return; }
-    crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GrabCatch, Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
 
 /// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap.
@@ -77,7 +77,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
             g.sets[g.seat].hand.catch_due = None;
             let c = match h.as_ref() { Some(h) => g.gd[h.g].ch, None => pl_ch };
             let at = v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]);
-            crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GrabCatch, Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
         }
     }
     let (Some(h), Some(mut s)) = (h, s0) else { return };
@@ -145,7 +145,7 @@ fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
     g.gd[gd].gun_lost_at = g.time;
     let gains = disarm_gain();
     let rate = (if long(s.kind.as_str()) { gains.long } else { 1.0 }) * (if s.rap { 1.12 } else { 1.0 });
-    crate::audio_iface::game_audio_like_play(g, "gunStrip", Some(s.at), Some(gains.strip), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GunStrip, Some(s.at), Some(gains.strip), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     if s.rap {
         let_go(g, it, c, None);
         s.gone = true;
@@ -233,7 +233,7 @@ pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
     if clatters > 1.0 { return; }
     let gains = disarm_gain();
     let rate = if long(g.tab.item[it].kind.as_str()) { gains.long } else { 1.0 };
-    crate::audio_iface::game_audio_like_play(g, "gunDown", Some(p), Some(gains.down * m::min(1.0, 0.5 + sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GunDown, Some(p), Some(gains.down * m::min(1.0, 0.5 + sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
 /// The strip in hand is a copy of the hold's, so each write is put back through the table.

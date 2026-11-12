@@ -56,7 +56,7 @@ pub(in crate::sam) fn release_body(g: &mut crate::game::Game, laid: Option<bool>
     let c = g.pl[pl].ch;
     g.ch[c].anim.haul = None;
     let at = g.ch[b].bone(crate::character::Bone::FootL).unwrap_or(g.ch[b].pos);
-    crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(if laid { 0.12 } else { 0.3 }), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyFall, Some(at), Some(if laid { 0.12 } else { 0.3 }), None);
 }
 
 /// A body in tow: pinned at his hands by the ankles, and he faces its hips; torn out of his hands if it wedges.
@@ -122,7 +122,7 @@ fn scrape(g: &mut Game, t: Tick, rag: RagdollId, hips: V3, speed: f64) {
     tow.noise_t -= dt;
     if tow.noise_t > 0.0 { return; }
     tow.noise_t = 0.55;
-    crate::audio_iface::game_audio_like_play(g, "propScrape", Some(hips), Some(0.25), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PropScrape, Some(hips), Some(0.25), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     prop_noise(g, [hips[0], 0.0, hips[2]], 0.22);
 }
 

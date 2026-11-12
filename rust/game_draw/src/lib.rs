@@ -53,10 +53,33 @@ macro_rules! sections {
             s.push('\n');
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
             s.push_str(&gpu::text());
+            s.push_str(&game::bits::text(&BITS));
+            for n in &NAMES { s.push_str(n.list); for w in n.words { s.push(' '); s.push_str(w); } s.push('\n'); }
             s
         }
     };
 }
+
+/// the words whose bits a page or a shader reads by name
+pub const BITS: [&game::bits::BitsTable; 11] = [&game::scene_boxes::box_flag::TABLE, &boxes::pack::geo_flag::TABLE, &boxes::glass::pane_flag::TABLE, &game::handed::start_flag::TABLE, &game::handed::step_flag::TABLE,
+    &events::source_flag::TABLE, &lights::light_flag::TABLE, &winds::wind_flag::TABLE, &resets::reset_flag::TABLE, &snow::foot_flag::TABLE, &snow::thing_flag::TABLE];
+/// names both sides spell: the page's list of them, the type it makes of that, the enum's words in their order (where one crosses as a number, by that), and what they are
+pub struct Named { pub list: &'static str, pub ty: &'static str, pub words: &'static [&'static str], pub doc: &'static str }
+pub const NAMES: [Named; 13] = [
+    Named { list: "SFX", ty: "SfxName", words: game::audio_iface::Sfx::WORDS, doc: "a sound played once, which the game asks for or the mixer picks" },
+    Named { list: "LASTINGS", ty: "LastingName", words: game::audio_iface::LastingSfx::WORDS, doc: "a sound that goes on" },
+    Named { list: "KEYS", ty: "GameKey", words: game::input::Key::WORDS, doc: "a key the game asks for, by its code" },
+    Named { list: "STUFFS", ty: "StuffName", words: game::scene_stuff::BoxStuff::WORDS, doc: "what a box may say it is made of" },
+    Named { list: "PKINDS", ty: "PKindName", words: game::render_particles::PKind::WORDS, doc: "what a particle is" },
+    Named { list: "EMIT_SHAPES", ty: "EmitShapeName", words: game::render_particles::EmitShape::WORDS, doc: "how particles are thrown" },
+    Named { list: "SMOKE_KINDS", ty: "SmokeKindName", words: game::smoke_types::SmokeEmitterKind::WORDS, doc: "what smoke comes from" },
+    Named { list: "FLOORS", ty: "FloorName", words: game::floor::FloorMat::WORDS, doc: "what a floor is" },
+    Named { list: "PUSH_SHAPES", ty: "PushShapeName", words: events::PushShape::WORDS, doc: "how the air is pushed" },
+    Named { list: "LATTICES", ty: "LatticeName", words: events::Lattice::WORDS, doc: "which of the smoke's lattices take it" },
+    Named { list: "WIND_KINDS", ty: "WindKindName", words: winds::WindKind::WORDS, doc: "what a source of moving air is" },
+    Named { list: "LIGHT_CLASSES", ty: "LightClassName", words: lights::LightClass::WORDS, doc: "what a light is by day" },
+    Named { list: "SIDES", ty: "SideName", words: game::anim_gltf::CastSide::WORDS, doc: "whose table a man wears" },
+];
 
 pub mod boxes;
 pub mod doorways;
@@ -96,6 +119,7 @@ sections! {
     items: boxes::Word = boxes.grid.items;
     info: boxes::Info = boxes.grid.info;
     panes: boxes::glass::Pane = boxes.glass.cells;
+    dust_air: boxes::Row4 = boxes.air.rows;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
     coming: lights::Coming = lights.coming;
@@ -139,9 +163,6 @@ sections! {
     smoke_at: boxes::Word = smoke.at;
     smoke_bricks: smoke::SmokeBrick = smoke.bricks;
 }
-
-/// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
-pub const LOOK: usize = boxes::LOOK + 5;
 
 /// what one host of one game draws it from
 #[derive(Default)]
@@ -231,7 +252,7 @@ impl Drawn {
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
     pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.lead.rest(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
-    pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); self.men.dry_look = men[4] == 0.0; }
+    pub fn look(&mut self, l: &game::handed::PageLook) { self.boxes.set_look(boxes::Look::of(l)); self.men.swaps = l.swaps.map(|v| v as u32); self.men.dry_look = l.wet == 0.0; }
     pub fn table(&mut self) -> &[u32] {
         let mut t = core::mem::take(&mut self.table);
         table(self, &mut t);

@@ -37,7 +37,7 @@ impl Script for Marred<'_> {
 }
 fn as_he_is(_: &Game, _: &mut PlayerCmd) {}
 /// the squad's key is deaf: its press is dropped
-fn deaf(g: &Game, cmd: &mut PlayerCmd) { let k = &g.k.orders.quick_key; cmd.pressed.retain(|x| x != k); cmd.keys.retain(|x| x != k); }
+fn deaf(g: &Game, cmd: &mut PlayerCmd) { let k = g.k.orders.quick_key.as_str(); cmd.pressed.retain(|x| x != k); cmd.keys.retain(|x| x != k); }
 /// from the third step on nothing he does reaches the game
 fn nothing_from_the_third(g: &Game, cmd: &mut PlayerCmd) {
     if g.lesson.i < 2.0 { return; }

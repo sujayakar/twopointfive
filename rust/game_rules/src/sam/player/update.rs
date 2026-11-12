@@ -14,9 +14,9 @@ impl Tick {
         let p = &g.pl[pl];
         Tick { pl, c: p.ch, gun: p.pistol, rifle: p.rifle, input, cam, dt }
     }
-    pub fn hit(&self, g: &Game, code: &str) -> bool { crate::input::input_hit(g, self.input, code) }
-    pub fn down(&self, g: &Game, code: &str) -> bool { crate::input::input_down(g, self.input, code) }
-    pub fn shift(&self, g: &Game) -> bool { self.down(g, "ShiftLeft") || self.down(g, "ShiftRight") }
+    pub fn hit(&self, g: &Game, key: crate::input::Key) -> bool { crate::input::input_hit(g, self.input, key) }
+    pub fn down(&self, g: &Game, key: crate::input::Key) -> bool { crate::input::input_down(g, self.input, key) }
+    pub fn shift(&self, g: &Game) -> bool { self.down(g, crate::input::Key::ShiftLeft) || self.down(g, crate::input::Key::ShiftRight) }
     pub fn lmb(&self, g: &Game) -> bool { crate::input::input_lmb(g, self.input) }
     pub fn lmb_hit(&self, g: &Game) -> bool { crate::input::input_lmb_hit(g, self.input) }
     pub fn rmb(&self, g: &Game) -> bool { crate::input::input_rmb(g, self.input) }
@@ -97,7 +97,7 @@ fn begin(g: &mut Game, t: Tick) -> Option<crate::weapons::RifleAttachment> {
 /// Enter, once he is down or the mission is lost (with Shift, at any time): the mission again, from this run's newest checkpoint if he is
 /// down and has one, else, and with Shift, from its start. True: the rest of the tick is not played.
 fn again_key(g: &mut Game, t: Tick) -> bool {
-    if !t.hit(g, "Enter") { return false; }
+    if !t.hit(g, crate::input::Key::Enter) { return false; }
     let (down, shift) = (crate::condition::down(g, t.c), t.shift(g));
     if !down && !shift && g.mission.stage != crate::game::MissionStage::Failed { return false; }
     if down && !shift && newest_checkpoint_loaded(g) { return true; }
@@ -212,7 +212,7 @@ fn steer(g: &mut Game, t: Tick) -> Go {
     if rooted { (x, z) = (0.0, 0.0); }
     let l = m::hyp2(x, z);
     if l > 0.0 { x /= l; z /= l; }
-    if t.hit(g, "KeyC") && g.pl[pl].dragging().is_none() { own_legs(g, pl, |g, m| crouch_key(g, m)); }
+    if t.hit(g, crate::input::Key::C) && g.pl[pl].dragging().is_none() { own_legs(g, pl, |g, m| crouch_key(g, m)); }
     let led = g.pl[pl].haul().is_some() || g.pl[pl].door_move().is_some();   // (what he pulls goes its own way: it is his keys that ask for the run)
     let sprint = t.runs(g) && if led { own } else { l > 0.0 && stalk.is_none() };
     Go { x, z, l, sprint, stalk, stunned, rooted }
@@ -223,7 +223,7 @@ fn wall_keys(g: &mut Game, t: Tick, go: Go) {
     let Tick { pl, dt, input, cam, .. } = t;
     let Go { x, z, l, .. } = go;
     if !go.rooted {
-        if t.hit(g, "KeyQ") { wall_key(g, t, go); } else { wall_snap_pending(g, dt, cam, go.sprint); }
+        if t.hit(g, crate::input::Key::Q) { wall_key(g, t, go); } else { wall_snap_pending(g, dt, cam, go.sprint); }
         if g.k.wallsnap.press && go.stalk.is_none() && !crate::rails::rails_locks_wall(g) { wall_press(g, dt, input, cam, x, z, l, go.sprint); }
     }
     let ran_on = wall_ran_on(g, pl, input);

@@ -11,12 +11,27 @@ use game::m;
 const SITES: usize = 8;
 const SITE: usize = 4;
 
+game::bits! {
+    /// what is so of a broken pane (`Pane.says`)
+    pub mod pane_flag as PaneFlag {
+        /// something of it has fallen out
+        OPEN = 1,
+        /// its cracks run to the frame
+        RUN = 2,
+        /// it lets go in clumps
+        DICING = 4,
+        /// all of it has fallen out
+        GONE = 8,
+        /// its breaks are a web (a laminated sheet)
+        WEB = 16,
+    }
+}
 section! {
     /// what is broken of a listed pane (all nought: it is whole)
     pub struct Pane {
         /// how many sites it has been cut from
         pub sites: f32,
-        /// 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web
+        /// `PaneFlag`, as a number
         pub says: f32,
         /// 0: its own x runs across it; 1: its z does
         pub axis: f32,
@@ -100,18 +115,18 @@ impl Glass {
 
 /// what is broken of static `bi`, into its rows; false = it is whole
 fn broken(g: &Game, bi: u32, out: &mut Pane) -> bool {
-    let p = sim::panes::pn(g.sim);
+    let p = &g.tab.boxes.world().panes;
     let Some(at) = p.row_of(bi) else { return false };
-    let r = sim::panes::row_ref(g.sim, at);
+    let r = &p.rows[at];
     let flags = r.w[W_FLAGS];
     let (sites, gone, dice) = ((flags >> 8) as usize, flags & GONE != 0, flags & DICE != 0);
     if sites == 0 && !dice && !gone { return false; }
     let open = gone || r.n_open > 0 || (dice && r.d_next > 0);
-    let says = open as u32 | if flags & RUN != 0 { 2 } else { 0 } | if dice && !gone { 4 } else { 0 } | if gone { 8 } else { 0 } | if r.ty == 2 { 16 } else { 0 };
+    let says = [(open, pane_flag::OPEN), (flags & RUN != 0, pane_flag::RUN), (dice && !gone, pane_flag::DICING), (gone, pane_flag::GONE), (r.ty == 2, pane_flag::WEB)].iter().fold(0, |w, &(is, bit)| if is { w | bit } else { w });
     (out.sites, out.says, out.axis, out.damage) = (sites as f32, says as f32, (r.u_axis != 0) as u32 as f32, r.damage as f32);
     (out.half, out.kind) = ([r.hu as f32, r.hv as f32], r.ty as f32);
     if dice {
-        (out.blow, out.open_at, out.grain) = ([r.d[D_DICE] as f32, r.d[D_DICE + 1] as f32], sim::panes::dice_threshold(g.sim, bi) as f32, g.k.glassbreak.dice_grain as f32);
+        (out.blow, out.open_at, out.grain) = ([r.d[D_DICE] as f32, r.d[D_DICE + 1] as f32], sim::panes::dice_threshold(r) as f32, g.k.glassbreak.dice_grain as f32);
         (out.cols, out.rows, out.seed) = (r.w[W_COLS] as f32, r.w[W_ROWS] as f32, r.w[W_DICE_SEED] as f32);
     }
     for i in 0..sites.min(SITES) {

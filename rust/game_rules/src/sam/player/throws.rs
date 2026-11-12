@@ -114,5 +114,5 @@ pub(super) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::Throw
     crate::character::anim_throw_item(g, c, Some(dist), Some(m::hyp2(sol.v0[0], sol.v0[2])));
     g.pl[pl].pending_throw = Some(crate::game::PlayerPendingThrow { t: crate::character::THROW_RELEASE, sol: sol.clone(), kind });
     let at = throw_origin(g, &crate::seats::here(g));
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(at), Some(0.7), None);
 }

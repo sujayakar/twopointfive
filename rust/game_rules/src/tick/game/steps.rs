@@ -41,8 +41,6 @@ pub static STEPS: &[Run] = &[
     // (on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and the rows of the frames gone by are free
     // again, after whoever showed the last frame has read it)
     World(("box world listed", |g, _| crate::scene_boxes::box_world_listed(g))),
-    World(("poses' home", |g, _| crate::posehome::pose_home_tend(g))),
-    World(("smoke's home", |g, _| crate::sense::smoke_home(g))),
     World(("quiet mission", |g, _| crate::quiet::quiet_mission_current(g))),
     World(("smoke", |g, t| crate::sense::smoke_step(g, t.dt))),
     World(("commands in", commands_in)),
@@ -95,6 +93,7 @@ pub static STEPS: &[Run] = &[
     World(("pairs", |g, t| crate::pairorders::pair_orders_tick(g, t.dt))),
     Seats(&[("spotted", |g, _| crate::spotted::spotted_tick(g))]),
     Seats(&[("squad orders", |g, _| crate::orders::squad_orders_tick(g))]),
+    World(("their orders", |g, t| crate::group::groups_tick(g, t.dt))),
     World(("door paths", |g, t| crate::doorpath::door_path_tick(g, t.dt))),
     World(("power out", |g, t| crate::powerout::power_out_tick(g, t.dt))),
     World(("room fight", |g, t| crate::roomfight::room_fight_tick(g, t.dt))),

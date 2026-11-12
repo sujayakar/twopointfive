@@ -22,7 +22,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `character/` | a man: his animator (`Anim`), the order of its layers, his turn, his bones, his falls |
-| `anim_skeleton.rs`, `posehome.rs` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
+| `anim_skeleton.rs` | poses, masks, sampling a clip, blending, joint matrices; a layer lent a man (`anim_layer`) |
 | `ragdoll.rs` | the dead body: sixteen weighted points, sticks, floor and walls |
 | `condition.rs` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
 | `stealthfeed.rs`, `kitanim.rs`, `handwork.rs` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
@@ -32,8 +32,8 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | file | what it does |
 |---|---|
 | `rust/sim/src/layers/` | the layers themselves, a file a family, each pose written in place |
-| `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
-| `rust/sim/src/roles.rs` | the named nodes of a rig a layer reads (its numbers are the game's own tables, by their names) |
+| `rust/sim/src/skeleton.rs`, `clips.rs` | a man as a layer poses him (`Body`), blends and the two-bone solve; a clip sampled |
+| `rust/game_types/src/anim_skeleton/` | a man's poses (`Poses`), the named nodes and lists of a rig (`roles.rs`), his joints in the model |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
 | `rust/game_draw/src/men.rs` | what the picture is told of a man: sections `Man`, `Inst`, `Bones`, `Cap` |
 | `src/draw/men.ts`, `src/anim/characters.ts`, `src/anim/gltf.ts` | those sections handed to the GPU; the mesh's buffers; the mesh read for the page |
@@ -61,13 +61,14 @@ goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stan
 thigh, shin and foot. `life_layer`'s standing lock and `run_plant` stay under it, because the layers above are posed over their legs. No address word; never seen on a GPU.
 A round and the cursor's ray meet a leg where it is drawn, and a man falls from where his legs are: a change of play, `tests/poses.rs` its check, `missions` before and after.
 
-**A layer** is a function of `rust/sim/src/layers/` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only
-this call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
-A long one reads as a list of its stages, each a function under it; what a stage hands on to the next is a struct over it (`Throw`, `Feet`). `anim_update_standing` is one too
+**A layer** is a function of `rust/sim/src/layers/` that works on his poses where they lie: it takes him lent (`body: &mut Body`: his poses, his rig, the bones a pose is run forward
+into), his animation (`an: &mut Anim`), the knob tables (`tune`) and what only this call knows. `body.pose(at, |d, rig, fk| …)` is one pose of his, and `rig.role(NAME)` a node.
+What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`. A long one reads as
+a list of its stages, each a function under it; what a stage hands on to the next is a struct over it (`Throw`, `Feet`). `anim_update_standing` is one too
 (`character/stages.rs`). Vectors are the game's own (`v3`, `quat`).
 
-**A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
-a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
+**A pose** is ten columns of singles, a row a node, rows in whole fours. A man owns his (`Character.poses`, one after another; `Pose` is which). The bones are nobody's after the layer
+that ran them (`g.bones`, in no bytes). Clips are read with the character files and shared (`g.art`).
 
 **Poses feed the game.** `character_read_bones` writes `bones`, `gun_dir` and `muzzle`, and rounds leave that muzzle. `character_capsules` is what a round
 (`character_ray_hit`) meets, and the same fifteen capsules are the proxies he casts shadows with. Arm layers that only look (the reload hand, bound wrists, the clutch) keep the
@@ -143,7 +144,6 @@ Native tests in `rust/game_start/tests/`:
 
 | file | what it holds |
 |---|---|
-| `clip_store.rs` | forty games hold one set of clips |
 | `eyes.rs` | his pose turns his eyes and does not tip them |
 | `men_under_fire.rs` | the duck at a close round, the start of a surprised man |
 | `hands.rs` | a magazine change goes on whoever has the rest of him |

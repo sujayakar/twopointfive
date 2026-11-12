@@ -29,7 +29,7 @@ with no module at all.
 
 ## One tick
 
-1. **The hand.** `src/draw/hand.ts` samples keys, mouse and camera; `face_hand` takes it. What a player or a panel does that is no input
+1. **The hand.** `src/draw/hand.ts` samples keys, mouse and camera into two rows (`SeatInput`, `SeatLens`); `face_hand` takes them. What a player or a panel does that is no input
    (a setting, a kit, an order from a card) goes as a command: `src/draw/commands.ts`, read by `rust/game_start/src/host/command.rs`.
 2. **The step.** `face_step` runs `game_update`, which steps every seat. The tick is one table of steps in order,
    `STEPS` in `rust/game_rules/src/tick/game/steps.rs`: the seats' aim and orders, the missions, the squad's rules, the rules that act
@@ -127,6 +127,10 @@ models and animations. `STYLE.md` is the look as rules, `docs/level-format.md` t
   (`rust/game_start/README.md` has a ten-line example). It lands on.
 - **Something new to draw:** a section in `rust/game_draw/src/`, then the program `half`, then a reader in `src/draw/`.
 - **A command or a setting:** `rust/game_start/src/host/command.rs`, then `half`.
+- **A question a host asks the game:** a line in `rust/game_start/src/host/calls.rs`, a function of its name in `rust/game_face/src/`, the answer's struct in
+  `rust/game_types/src/view/told.rs`, then `half`: the page calls `Face` (`src/draw/face.ts`).
+- **A word's bits both sides read by name:** `bits!` (`rust/game_types/src/bits.rs`), a line in `game_draw::BITS`, then `half` (`src/draw/bits.ts`, `src/render/shaders/bits.wgsl`).
+- **A name both sides spell** (a sound, a key): the enum's arm, a line in `game_draw::NAMES` for a new list, then `half` (`src/draw/names.ts`).
 - **A level:** its generator under `tools/levels/`, then `tools/levels/export.ts`.
 - After Rust changes a page needs the module built: `bun run tools/blitz/face-build.ts`. The dev server serves the one it finds.
 

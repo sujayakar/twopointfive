@@ -32,7 +32,7 @@ pub fn shoulder(g: &Game, c: CharId) -> V3 {
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.
 pub fn solid_between(g: &Game, from: V3, to: V3) -> bool {
-    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag::SOUND_SEAL as f64)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
@@ -541,8 +541,7 @@ pub fn laser_reach(g: & crate::game::Game, c_2: CharId, self_: Option<GuardId>, 
     let from = v3::mad(g.ch[c_2].muzzle, dir, 0.02);
     if !dir[0].is_finite() || v3::len(dir) < 0.5 { return None; }
     let mut l = 30.0;
-    let flags = crate::scene_boxes::box_flag();
-    let skip = js::or_bits(flags.no_shadow, flags.glass);
+    let skip = (crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::GLASS) as f64;
     let owner = (js::to_i32(g.ch[c_2].id) & 0xff) as f64;
     let wh = crate::scene_boxes::box_world_raycast(g, from, dir, Some(l), Some(skip), Some(owner), None);
     if let Some(h) = &wh { l = h.t; }
@@ -582,8 +581,7 @@ pub fn beam_boxes(from: V3, dir: V3, l: f64, out: &mut Carried, dot: bool, ir: b
     let up: V3 = if m::abs(dir[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
     let x = v3::normalize(v3::cross(up, dir));
     let y = v3::cross(dir, x);
-    let flags = crate::scene_boxes::box_flag();
-    let box_flags = js::or_bits(flags.no_shadow, flags.dynamic);
+    let box_flags = (crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::DYNAMIC) as f64;
     let line = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
         h: [HW, HW, l / 2.0],
@@ -643,14 +641,9 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The attached solver's canister tuning, or None behind a stand-in without any.
-fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
-    g.smoke.params
-}
-
-/// What a smoke can lets out: the attached solver's tuning, or its own numbers behind a stand-in without any.
-pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
-    smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 })
+/// What a smoke can lets out.
+pub fn can_params() -> crate::smoke_types::CanisterParams {
+    crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 }
 }
 
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.
@@ -661,7 +654,7 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
-        let p = can_params(g);
+        let p = can_params();
         seconds = p.canister_duration;
         let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
@@ -672,7 +665,7 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     g.tab.item[it].emit_t = seconds;
     let pos = g.tab.item[it].pos;
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
-    crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::SmokePop, Some(pos), Some(0.9), None);
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);
 }

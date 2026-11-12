@@ -184,7 +184,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let calm = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && man.body_duty.is_none()
-        && man.task.is_none()
+        && man.errand.is_none()
         && man.awareness < g.k.attention.calm_aw
         && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
@@ -312,7 +312,7 @@ fn hold_as_it_stands(g: &mut Game, gd: GuardId, hh: Hold, f: ThisFrame, now: f64
 
 /// Looking from his post: free to, he goes to it; his mind elsewhere or his time up ends it; else his suspicion stays up and he tells when he is nearly done.
 fn looks_on(g: &mut Game, gd: GuardId, mut hh: Hold, suspicious: bool, f: ThisFrame, now: f64) -> Option<Hold> {
-    if suspicious && !g.gd[gd].hold && on_it(g, gd, &hh) {
+    if suspicious && !g.gd[gd].duty.holds && on_it(g, gd, &hh) {
         hh.mode = HoldMode::Go;
         hh.until = -1.0;
         hh.told = false;
@@ -393,9 +393,9 @@ fn takes_it(g: &mut Game, gd: GuardId, cand: MemCand, h: Option<Hold>, now: f64)
     }
     let full = secs_for(g, cand.kind);
     let secs = full * m::pow(g.k.attention.wear_k, (nth - 1) as f64);
-    let posted = g.gd[gd].hold;
+    let posted = g.gd[gd].duty.holds;
     let until = if posted { now + m::max(0.0, g.gd[gd].react_t) + secs } else { -1.0 };
-    let made = Hold { at: v3::copy(cand.at), kind: cand.kind, mode: if posted { HoldMode::Look } else { HoldMode::Go }, t0: now, secs, full, until, glimpse: 0.0, told: false, nth, ears: g.k.attention.ear_k, noises: 1.0, yaw: None, serial: g.serial() };
+    let made = Hold { at: v3::copy(cand.at), kind: cand.kind, mode: if posted { HoldMode::Look } else { HoldMode::Go }, t0: now, secs, full, until, glimpse: 0.0, told: false, nth, ears: g.k.attention.ear_k, noises: 1.0, yaw: None };
     set_hold(g, gd, Some(made));
     log(g, "taken", log_h(&made));
     let wary_now = nth > 1 && cand.kind != DrawKind::Whistle;
@@ -419,7 +419,7 @@ fn spent_on_it(g: &mut Game, gd: GuardId, foe_lines: bool) {
 /// A calm man's glance at what he was whistled over: a look until the glance is over.
 fn glances_at_it(g: &mut Game, gd: GuardId, cand: MemCand, until: f64, now: f64) -> Hold {
     let secs = until - now;
-    let made = Hold { at: v3::copy(cand.at), kind: cand.kind, mode: HoldMode::Look, t0: now, secs, full: secs, until, glimpse: 0.0, told: true, nth: 1, ears: g.k.attention.ear_k, noises: 1.0, yaw: None, serial: g.serial() };
+    let made = Hold { at: v3::copy(cand.at), kind: cand.kind, mode: HoldMode::Look, t0: now, secs, full: secs, until, glimpse: 0.0, told: true, nth: 1, ears: g.k.attention.ear_k, noises: 1.0, yaw: None };
     set_hold(g, gd, Some(made));
     log(g, "look", log_h(&made));
     made
@@ -429,7 +429,7 @@ fn glances_at_it(g: &mut Game, gd: GuardId, cand: MemCand, until: f64, now: f64)
 fn take_up_what_is_lent(g: &mut Game, gd: GuardId, l: MemLent, now: f64) {
     let lent_off = mem(g, gd).lent_off;
     if g.gd[gd].state == crate::game::GuardState::Patrol && now >= lent_off && g.gd[gd].awareness < g.k.attention.break_gain {
-        let made = Hold { at: l.at, kind: DrawKind::Lent, mode: HoldMode::Lent, t0: now, secs: 0.0, full: 0.0, until: -1.0, glimpse: 0.0, told: true, nth: 1, ears: l.ears, noises: l.noises, yaw: None, serial: g.serial() };
+        let made = Hold { at: l.at, kind: DrawKind::Lent, mode: HoldMode::Lent, t0: now, secs: 0.0, full: 0.0, until: -1.0, glimpse: 0.0, told: true, nth: 1, ears: l.ears, noises: l.noises, yaw: None };
         set_hold(g, gd, Some(made));
         log(g, "lent", log_h(&made));
     }
@@ -506,7 +506,7 @@ mod tests {
         let now = g.time;
         let row = g.m.attention.mem_of.get_or_insert_with(gd, fresh);
         row.tick = now;
-        row.hold = Some(Hold { at: [0.0, 0.0, 10.0], kind: DrawKind::Noise, mode, t0: now, secs: 5.0, full: 5.0, until, glimpse: 0.0, told: true, nth: 1, ears: 0.5, noises: 1.0, yaw: None, serial: 0 });
+        row.hold = Some(Hold { at: [0.0, 0.0, 10.0], kind: DrawKind::Noise, mode, t0: now, secs: 5.0, full: 5.0, until, glimpse: 0.0, told: true, nth: 1, ears: 0.5, noises: 1.0, yaw: None });
     }
 
     #[test]

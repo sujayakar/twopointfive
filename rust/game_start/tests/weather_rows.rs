@@ -73,7 +73,7 @@ fn a_snow_level_says_what_lies_on_it() {
     assert!(d.snow.words.iter().any(|w| w.w == 1), "the pass has fresh snow");
     let me = p.g.player_id(p.g.player) as u32;
     let f = d.snow.feet.iter().find(|f| f.id == me).expect("Sam stands on it");
-    assert_eq!(f.says & game_draw::snow::ALIVE, game_draw::snow::ALIVE);
+    assert_eq!(f.says & game_draw::snow::foot_flag::ALIVE, game_draw::snow::foot_flag::ALIVE);
     drop(p);
     let mut o = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, ..Default::default() });
     for _ in 0..4 { o.frame(); }

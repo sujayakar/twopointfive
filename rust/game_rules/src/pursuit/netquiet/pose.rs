@@ -58,7 +58,7 @@ mod tests {
 
     /// The pinned bits of look_from, with an eye slack of 4.
     #[test]
-    fn look_from_matches_the_typescripts_bits() {
+    fn look_from_keeps_its_bits() {
         let a = look_from([1.25, 0.0, -3.5], 0.7, 0.785, 0.45, 0.6, 4.0);
         assert_eq!(a.map(f64::to_bits), [0x3ff389b644e69a79, 0, 0x4003ffdb8fe90650]);
         let b = look_from([-2.0, 0.0, 4.75], -2.3, -0.7, 1.01, 1.9, 4.0);

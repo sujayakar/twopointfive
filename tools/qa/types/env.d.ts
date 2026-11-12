@@ -147,7 +147,7 @@ declare const Bun: {
   gunzipSync(data: Uint8Array | ArrayBuffer): Uint8Array;
   inspect(v: unknown, opts?: any): string;
   build(opts: Record<string, any>): Promise<{ success: boolean; outputs: any[]; logs: any[] }>;
-  Transpiler: new (opts?: Record<string, any>) => { transformSync(code: string, loader?: string): string; scan(code: string): any };
+  Transpiler: new (opts?: Record<string, any>) => { transformSync(code: string, loader?: string): string; scan(code: string): any; scanImports(code: string): { path: string; kind: string }[] };
   CryptoHasher: new (algo: string) => { update(data: string | ArrayBufferView): any; digest(enc?: string): any };
   stdin: BunFile; stdout: BunFile; stderr: BunFile;
   /** the shell tag (`await Bun.$`…``): left wide */

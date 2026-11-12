@@ -238,9 +238,9 @@ fn a_big_source_takes_the_place_of_the_least_when_the_list_is_full() {
     let small = SmokeEmitter { density: 1.0, ttl: 5.0, ..can_like([11.0, 0.2, 9.0], 5.0) };
     assert!(game::sense::smoke_held(&p.g, &small), "the staging: the small source is one the game holds");
     for _ in 0..sim::bricks::MAX_EMIT { game::sense::smoke_emit(&mut p.g, &small); }
-    assert_eq!(sim::bricks::emitting(p.g.sim), sim::bricks::MAX_EMIT, "the staging: the list is full");
+    assert_eq!(p.g.smoke.emitters.len(), sim::bricks::MAX_EMIT, "the staging: the list is full");
     let spot = [16.0, 0.2, 14.0];
-    let there = |p: &Play, s: [f64; 3]| sim::bricks::letting(p.g.sim).any(|e| e.at == s);
+    let there = |p: &Play, s: [f64; 3]| sim::bricks::letting(&p.g.smoke).any(|e| e.at == s);
     let late = [15.0, 0.2, 14.0];
     game::sense::smoke_emit(&mut p.g, &SmokeEmitter { pos: late, ..small.clone() });
     assert!(!there(&p, late), "the control: one no bigger than the rest took a place");
@@ -290,7 +290,7 @@ fn sources_told_to_stop_let_out_no_more_and_what_is_in_the_air_stays() {
         p.run(2.0);
         let held = -across(&p, 14.0, 0.3, 12.0).ln();
         if shut { game::sense::smoke_shut(&mut p.g); }
-        let letting = sim::bricks::letting(p.g.sim).count();
+        let letting = sim::bricks::letting(&p.g.smoke).count();
         let at_once = -across(&p, 14.0, 0.3, 12.0).ln();
         p.run(3.0);
         (held, at_once, letting, st_out(&p), -across(&p, 14.0, 0.3, 12.0).ln())
@@ -303,7 +303,7 @@ fn sources_told_to_stop_let_out_no_more_and_what_is_in_the_air_stays() {
     assert!(out_shut < 0.6 * out_on, "three seconds on the book says {out_shut:.2} let out when told to stop, and {out_on:.2} when not");
 }
 /// what has been let out, by the grid's own book
-fn st_out(p: &Play) -> f64 { sim::state::state_read(p.g.sim).smoke.st[sim::bricks::H_OUT] }
+fn st_out(p: &Play) -> f64 { p.g.smoke.out }
 
 /// THE RULE: a line above the top of the grid meets no smoke, whatever stands in the top cells under it. CONTROL: the same line down in those cells does.
 /// A FAILURE MEANS: a man on a roof or a lamp high up is hidden by smoke that stands well below his line.

@@ -201,7 +201,7 @@ fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz
 pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, eyes_on: bool) -> crate::guards::PieDoorway {
     let pos = g.pos_of(gd);
     note_door_crossings(g, gd);
-    if g.gd[gd].pinned || eyes_on {
+    if g.gd[gd].duty.pinned || eyes_on {
         g.gd[gd].pieing = None;
         return crate::guards::PieDoorway { speed, look: None };
     }
@@ -411,7 +411,7 @@ mod tests {
 
     // The expected bits are pinned.
     #[test]
-    fn frame_is_the_typescripts() {
+    fn frame_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         assert_eq!(f.ux.to_bits(), 0x3fe87996529f9d92);
         assert_eq!(f.uz.to_bits(), 0x3fe49d6e694619b8);
@@ -420,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn crossing_is_the_typescripts() {
+    fn crossing_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         let (a, b) = ([3.03, 0.0, -0.38], [4.31, 0.0, -1.91]);
         let x = crosses_frame(&f, a, b).unwrap();

@@ -433,7 +433,7 @@ fn takes_it_for_the_team(g: &mut Game, live: &[RoomfightDefId], speaker: GuardId
         return true;
     }
     if crate::mission::captor(g).is_some() {
-        stay(g, speaker, "power's out — that's them! Stay on your doors!", "men holding hostages take the dark for the assault (rescue.ts: every one of them has learned of the team by it)", true);
+        stay(g, speaker, "power's out — that's them! Stay on your doors!", "men holding hostages take the dark for the assault (every one of them has learned of the team by it)", true);
         return true;
     }
     if st(g).lost {
@@ -517,13 +517,13 @@ fn party_man(gd: GuardId, role: ManRole, goal: V3, from: V3, watch: Option<V3>) 
 fn name_the_party(g: &mut Game, go: &[(RoomfightDefId, WayTo)], lever: V3) {
     let lead = &go[0];
     let lead_gd = g.tab.roomfight_def[lead.0].gd;
-    let lead_from = g.tab.roomfight_def[lead.0].station;
+    let lead_from = crate::roomfight::station(g, lead.0);
     st(g).men.push(party_man(lead_gd, ManRole::Lever, lever, lead_from, None));
     if let Some(second) = go.get(1) {
         let from = g.pos_of(lead_gd);
         let gd = g.tab.roomfight_def[second.0].gd;
         let c = cover_spot(g, gd, lever, &lead.1.path, from);
-        let station = g.tab.roomfight_def[second.0].station;
+        let station = crate::roomfight::station(g, second.0);
         st(g).men.push(party_man(gd, ManRole::Cover, c.spot, station, Some(c.watch)));
     }
     let go_at = g.time + g.k.powerout.beat;
@@ -965,12 +965,12 @@ mod tests {
     use super::*;
     // the pinned bits of dist_xz
     #[test]
-    fn flat_is_the_typescripts_bits() {
+    fn flat_keeps_its_bits() {
         assert_eq!(dist_xz([1.5, 0.0, -2.25], [0.1, 7.0, 3.3]).to_bits(), 0x4016e539e098fe40);
         assert_eq!(dist_xz([12.3, 1.0, 4.56], [-7.89, 0.0, 0.123]).to_bits(), 0x4034abfab1c8e1b8);
     }
     #[test]
-    fn frac_is_the_typescripts_bits() {
+    fn frac_keeps_its_bits() {
         assert_eq!(v3::frac(7.0 * 0.6180339887).to_bits(), 0x3fd4e115043ec120);
         assert_eq!(v3::frac(123.0 * 0.6180339887).to_bits(), 0x3f929df017341000);
         assert_eq!(v3::frac(-1.25).to_bits(), 0x3fe8000000000000);

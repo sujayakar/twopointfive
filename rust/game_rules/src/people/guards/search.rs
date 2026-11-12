@@ -25,7 +25,7 @@ fn place_dark(g: &mut Game, x: f64, z: f64) -> bool {
 /// m: the emitter radius of a torch
 pub const FLASHLIGHT_RADIUS: f64 = 0.07;
 
-fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
+fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<TaskId>, tgt: Option<GuardId>, pt: Option<V3>) -> bool {
     let key = match (tgt, pt) {
         (Some(gd), _) => Some(LitSeenTgt::Man { gd }),
         (None, Some(_)) => Some(LitSeenTgt::Pt),
@@ -55,7 +55,7 @@ fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentI
     }
     if lit {
         if let Some(id) = a {
-            let (post, arrived) = (g.tab.orders_assignment[id].post, g.tab.orders_assignment[id].arrived);
+            let (post, arrived) = (g.tab.task[id].post, g.tab.task[id].arrived);
             if let Some(post) = post {
                 if !arrived && v3::dist_xz(pos, post) < g.k.lights.lit_mark_m {
                     lit = !place_dark(g, post[0], post[2]);
@@ -194,7 +194,7 @@ pub(super) fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn light_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.team(gd).ours()
         && crate::roomfight::fight_live(g)
-        && crate::seats::order_of(g, gd).is_some()
+        && crate::duty::order(g, gd).is_some()
 }
 
 /// stands this floor point lit by the place's steady lights
@@ -259,7 +259,7 @@ pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
     let o = crate::roomfight::room_fight_op_of(g, gd);
     let o_row = o.map(|id| &g.tab.roomfight_op[id]);
-    let a_row = a.map(|id| &g.tab.orders_assignment[id]);
+    let a_row = a.map(|id| &g.tab.task[id]);
     let man = &g.gd[gd];
     let k = &g.k.lights;
     let pos = g.ch[man.ch].pos;

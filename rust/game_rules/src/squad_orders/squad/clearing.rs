@@ -11,10 +11,10 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
 
 /// gd.task.pos, which every arm of the union has
-fn task_pos(t: &crate::game::GuardTask) -> V3 {
+fn task_pos(t: &crate::game::Errand) -> V3 {
     match t {
-        crate::game::GuardTask::Arm0(x) => x.pos,
-        crate::game::GuardTask::CheckOn(x) => x.pos,
+        crate::game::Errand::At(x) => x.pos,
+        crate::game::Errand::CheckOn(x) => x.pos,
     }
 }
 /// Clearing.name's body, with no `g`: a plan is often borrowed out of `g` when it is named
@@ -130,7 +130,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let dark = cl!(g).dark;
     if g.light_home.mains.active && !dark {
         for &gd in &men {
-            let (aw, to) = match &g.gd[gd].task { Some(t) => (0.42, Some(task_pos(t))), None => (0.34, None) };
+            let (aw, to) = match &g.gd[gd].errand { Some(t) => (0.42, Some(task_pos(t))), None => (0.34, None) };
             break_off(g, gd, aw, to);
         }
         cl!(g).stage = ClearStage::Done;
@@ -314,12 +314,12 @@ fn in_the_drill(g: &mut Game, dt: f64) -> bool {
 /// the muster's `free`
 fn muster_free(g: &Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
-    man.task.is_none() && man.script.is_none()
+    man.errand.is_none() && man.script.is_none()
         && (man.state == crate::game::GuardState::Patrol || (man.state == crate::game::GuardState::Suspicious && man.body_duty.as_ref().map_or(false, |d| d.stage == crate::game::GuardBodyDutyStage::Fan)))
 }
 /// the muster's `busy`
 fn muster_busy(g: &Game, gd: Option<GuardId>) -> bool {
-    match gd { Some(gd) => g.gd[gd].body_duty.is_some() || g.gd[gd].task.is_some(), None => false }
+    match gd { Some(gd) => g.gd[gd].body_duty.is_some() || g.gd[gd].errand.is_some(), None => false }
 }
 
 /// Nobody is scripted yet: wait for both to be calm and free, then the word and off.
@@ -396,7 +396,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         crate::game::game_say(g, by, &line, None, None);
         let c = g.gd[by].ch;
         let at_ear = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
         return replanned;
     }
     false
@@ -461,7 +461,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
             g.gd[gd].body_duty = None;
             crate::mind::cap(g, gd, 0.25, "squad");
         }
-        crate::control::set_hold(g, gd, false, "squad"); crate::control::set_pinned(g, gd, false, "squad");
+        crate::duty::hold(g, gd, false, "squad"); crate::duty::pin(g, gd, false, "squad");
         cl!(g).aw[i] = g.gd[gd].awareness;
         let mark = p.stack[i];
         let mut end: V3 = v3::copy(mark);

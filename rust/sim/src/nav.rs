@@ -316,6 +316,17 @@ fn begin(w: &World, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, 
     *run = Run { gw, gh, cell, a0, a2, start, goal, gx, gz, max_iter };
     Ok(())
 }
+/// THE TABLES AS THEY ARE WITH NO SEARCH BEGUN. A search stopped in its middle (a panic in one of its prices) leaves them taken and written: whoever goes on in this module after one says so here.
+pub fn afresh() {
+    unsafe {
+        (*core::ptr::addr_of_mut!(G)).fill(S::INF);
+        (*core::ptr::addr_of_mut!(CAME)).fill(0);
+        (*core::ptr::addr_of_mut!(CLOSED)).fill(0);
+        (*core::ptr::addr_of_mut!(AT)).fill(0);
+        (*core::ptr::addr_of_mut!(KNOWN)).fill(0);
+        (BLANK, LIVE) = (true, false);
+    }
+}
 /// the search's tables as they stood before it: every cell it wrote is in SEEN
 fn blank(n_seen: usize) {
     let (at, g, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(AT), &mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };

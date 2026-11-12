@@ -27,8 +27,8 @@ pub struct SeatHand {
 #[bytes(parts)]
 pub struct SeatSet {
     pub player: PlayerId,
-    pub orders: crate::orders::SquadOrders,
-    pub door_tools: crate::doortools::DoorTools,
+    /// his squad
+    pub group: GroupId,
     pub work: crate::workthings::WorkThings,
     pub wall_charge: crate::wallcharge::WallCharge,
     pub aim_point: V3,
@@ -51,8 +51,7 @@ impl Default for SeatSet {
     fn default() -> Self {
         SeatSet {
             player: PlayerId(0),
-            orders: crate::orders::SquadOrders::blank(),
-            door_tools: crate::doortools::DoorTools::blank(),
+            group: GroupId(0),
             work: crate::workthings::WorkThings::blank(),
             wall_charge: crate::wallcharge::WallCharge::blank(),
             aim_point: [0.0, 0.0, 0.0],

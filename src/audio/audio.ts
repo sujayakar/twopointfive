@@ -8,6 +8,7 @@ import type { WorldAsk } from '../view/worldask';
 import { Vec3, v3 } from '../math/vec';
 import type { GameAudioLike } from './iface';
 import { FLOOR, type FloorMat } from './floors';
+import type { LastingName } from '../draw/names';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
 import { Music, WebAudioMusicBackend } from './music';
@@ -22,7 +23,7 @@ interface Voice { v: BackendVoice; positional: boolean; /** made by `again()`: t
   /** a voice HELD for a thing that sounds for as long as it goes on */ held?: Held; }
 /** A THING THAT SOUNDS FOR AS LONG AS IT GOES ON, as the game has it now (rust/game_draw Lasting): which one, where, how loud, how hard it goes (0‥1), how long it has gone on and how much longer it
  *  will (s; Infinity = nobody knows). Told whole every tick and whenever the game jumps: no event begins or ends one, so a load, a seek or a join is heard as it stands. */
-export interface LastingSound { name: string; id: number; pos: Vec3; gain: number; hard: number; age: number; left: number; /** how far off there is nothing of it (0 = as far as it carries) */ reach: number }
+export interface LastingSound { name: LastingName; id: number; pos: Vec3; gain: number; hard: number; age: number; left: number; /** how far off there is nothing of it (0 = as far as it carries) */ reach: number }
 interface Going { of: LastingSound; voice: Voice | null; /** the most the tap was told of it (−1 = nothing) */ told: -1 | 0 | 1 | 2; culled?: boolean }
 interface Held { of: LastingSound; rate: number; occ: number }
 /** what each is held by: the stretch of its buffer that repeats (a take shorter than it loops whole), or a loop made here under a filter of its own; its level and pitch by how it goes. `room` = what hums in
@@ -32,7 +33,7 @@ const unit = (k: number) => Math.min(1, Math.max(0, k));
 /** quieter and lower as it slows, so a chair coasting to rest winds down instead of cutting off; a thing that goes at nothing makes no sound */
 const byHard = { gain: (r: LastingSound) => Math.min(1, unit(r.hard) / 0.08) * (0.3 + 0.7 * unit(r.hard)), rate: (r: LastingSound) => 0.8 + 0.3 * unit(r.hard) };
 const hum = (kind: AmbienceKind): LastingKind => ({ ...AMBIENCE[kind], distance: AMBIENCE_DISTANCE, room: true, gain: r => r.hard, rate: () => 1 });
-const LASTING: Record<string, LastingKind> = {
+const LASTING: Record<LastingName, LastingKind> = {
   chairRoll: { loopAt: ROLL_LOOP, ...byHard },
   fireBed: { loopAt: FIRE_LOOP, ...byHard },
   smokeHiss: { made: sc => noiseBuffer(sc, HISS.seconds), filter: HISS.filter, distance: HISS.distance, gain: r => HISS.peak * unit(r.age / HISS.rise) * unit(r.left / HISS.tail), rate: () => 1 },
@@ -188,7 +189,7 @@ export class AudioEngine implements GameAudioLike {
     this.backend?.setListener(pos, this.camFwd);
   }
 
-  play(name: string, pos: Vec3 | null, gain = 1, opts: Record<string, unknown> = {}) {
+  play(name: SfxName, pos: Vec3 | null, gain = 1, opts: Record<string, unknown> = {}) {
     const b = this.backend, tap = this.tap;
     if (b && (this.enabled || tap)) warmOne(name);   // (SFX_WARM: a voice asked for before its turn is made now — where it will be played, or its length told)
     if (!b || !this.enabled) {   // (the mixer is off: the lanes are still told what was asked for — of a name the table holds, where there is a table to ask, as below)

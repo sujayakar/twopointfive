@@ -10,14 +10,14 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
 fn tossing_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     let t = g.m.squadthrow.states.get(key).and_then(|s| s.last.get(gd).copied()).unwrap_or(-1e9);
     toss_window(g, t)
 }
 
 /// `s?.walks.has(gd)`: on his way to a throw already (makes no row)
 fn walking_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    let key = crate::seats::view_key(g, seat);
+    let key = seat.group_id;
     g.m.squadthrow.states.get(key).map_or(false, |s| s.walks.has(gd))
 }
 
@@ -344,7 +344,7 @@ fn spreads_from_cell(g: &mut Game, s: &mut Search, run: &mut FloodRun, cell: &Fl
 
 /// how many are left in the one bag
 pub(in crate::squad_orders) fn left(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
-    if kind == SquadThrowKind::Frag { g.sets[g.seat].door_tools.frags } else { g.sets[g.seat].door_tools.bangs }
+    if kind == SquadThrowKind::Frag { g.groups[g.group].tools.frags } else { g.groups[g.group].tools.bangs }
 }
 
 /// the order menu's one word for this can
@@ -370,7 +370,7 @@ pub(super) fn roll_of(g: &crate::game::Game, kind: crate::squadthrow::SquadThrow
 /// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine
 pub(in crate::squad_orders) fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::doortools::Phase as DoorPhase;
-    if g.sets[g.seat].door_tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
+    if g.groups[g.group].tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
     if g.sets[g.seat].wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
     let c = g.gd[gd].ch;
     if crate::workthings::work_hand(g, c).is_some() { return true; }
@@ -517,13 +517,13 @@ pub(in crate::squad_orders) fn may_walk(g: &crate::game::Game, seat: &crate::sea
     // (a room fight drives a teammate in 'patrol' with no yield stamp: the man it has a gun on is its `tgt`; a stack's or a stand-off's rear man keeps the squad's back)
     if g.gd[gd].state == crate::game::GuardState::Alert { return false; }
     if let Some(a) = a {
-        if g.tab.orders_assignment[a].yield_t >= 0.0 { return false; }
+        if g.tab.task[a].yield_t >= 0.0 { return false; }
     }
     if crate::roomfight::room_fight_op_of(g, gd).map_or(false, |o| g.tab.roomfight_op[o].tgt.is_some()) { return false; }
     match a {
         Some(a) => {
-            if g.tab.orders_assignment[a].spare == Some(true) { return false; }
-            let order = g.tab.orders_assignment[a].order.as_str();
+            if g.tab.task[a].spare == Some(true) { return false; }
+            let order = g.tab.task[a].order.as_str();
             crate::orders::rows::id_is(order, crate::orders::Is::Resumed)
         }
         None => true,
@@ -582,8 +582,8 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
 }
 
 /// THE THROW AS IT WOULD BE ORDERED NOW: the nearest man with a throw from where he stands, else the man with the shortest walk to one. Nothing is kept:
-/// what is kept of it is the menu's (plan.rs). Nothing reads `_fresh` and `_view`.
-pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, _fresh: Option<bool>, _view: Option<bool>) -> Option<crate::squadthrow::SquadThrower> {
+/// what is kept of it is the menu's (plan.rs).
+pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Option<crate::squadthrow::SquadThrower> {
     let th: Option<SquadThrower> = squad_thrower(g, men, at, kind).map(|t| SquadThrower { gd: t.gd, from: t.from, sol: t.sol, rest: t.rest, post: None });
     let clean = LobClean::Plan { kind, at };
     if let Some(t) = &th { if lob_clean(g, &clean, t) { return th; } }

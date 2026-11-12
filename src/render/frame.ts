@@ -4,55 +4,23 @@ import commonSrc from './shaders/common.wgsl' with { type: 'text' };
 import glassOpenSrc from './shaders/glass_open.wgsl' with { type: 'text' };
 import rowsSrc from './shaders/rows.wgsl' with { type: 'text' };
 import boxMatSrc from './shaders/boxmat.wgsl' with { type: 'text' };
+import bitsSrc from './shaders/bits.wgsl' with { type: 'text' };
 import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H } from '../scene/airGrid';
 import { LOOK_MIRRORS, LOOK_MIRROR_PLAIN, LOOK_WORDS } from './lookTex';
 import { MESH_MAX_CHARS } from './meshbvh';
+import { FrameAt, FrameFlags, LevelSw } from '../gpu/wgslrows';
+export { FrameFlags, LevelSw };
 import { cutConfig } from '../scene/cut';
 import { smokeGrid, smokeReadConsts } from '../smoke/smokeGrid';
 import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
 
-/** Byte size of the per-frame uniform block = struct Frame in common.wgsl. Layout past the 416 bytes of scalars/vec4s the renderer always had (offsets in BYTES; f[]/u[] index = byte ÷ 4):
- *    416  cardCfg    vec4u              (u[104‥107])  torch bounce cards: x = count this frame; y, z = weather kinds' 3rd / 4th roof footprint packed (1 = a kind with no third roof), w = their fog packed (0 0 0 = no kind)
- *    432  cardSlots  array<vec4u, 2>    (u[108‥115])  the 8 light slots the cards are built from
- *    464  weatherA   vec4f              (f[116‥119])  rain rate, shear x, shear z, wetness
- *    480  weatherB   vec4f              (f[120‥123])  flash rgb, rain top
- *    496  weatherC   vec4f              (f[124‥127])  interior footprint x0 z0 x1 z1 = the first roof (the level's own roofs in force: + two packed roofs in cardCfg.yz and, under a kind, the fog in .w @420, u[105‥107])
- *    512  glassCfg   vec4f              (f[128‥131])  glass: reflection ×, tint depth, dust glow ×, refraction's index (0 = off)
- *    528  weatherD   vec4f              (f[132‥135])  a second no-rain footprint (the office's west stair tower; else the level's second roof) x0 z0 x1 z1
- *    544  volCfg     vec4u              (u[136‥139])  volumetric caps: x = lights per march step / per haze ray (1 or more), y = shadow-ray refresh period (steps), z = march step (tenths of a voxel), w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps; 0 = 8) | bits 8‥11 free
- *    560  prevCam    vec4f              (f[140‥143])  previous frame's camera position (w free)
- *    576  rtCfg      vec4f              (f[144‥147])  RT reflections: max roughness traced, rays per pixel, wet-ground anisotropy (+ 2 × the wet ground's break-up in tenths), the reflection target's divisor (0 = the pass is OFF this frame)
- *    592  matCfg     vec4f              (f[148‥151])  materials: analytic-highlight gain, reflection strength, per-ray luminance bound, detail-layer amount (0 = the g-buffer's detail layer off)
- *    608  p5Cfg      vec4u              (u[152‥155])  renderer v3 phase 5 (ultra extras): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's mesh / hit-reuse bits (all 0 = the passes as they were); w = the lowest light slot holding a TRANSIENT light this frame (gather_common's subtraction walk starts there; 0 when none is alive — review R2.2)
- *    624  jitter     vec4f              (f[156‥159])  this frame's TAAU jitter (internal px) xy, the previous render's zw
- *    640  markCfg    vec4f              (f[160‥163])  markings: base texel m (0 = off), contrast, emission ×, evaluate-at-reflection-hits
- *    656  sharpCfg   vec4f              (f[164‥167])  SHARP DIRECT (decoupled resolution): internal size xy, OUTPUT (g-buffer / composite) size zw — z 0 = off: every pass exactly as it was
- *    672  sharpCfgB  vec4f              (f[168‥171])  sharp direct's knob: w = the same-plane weight's k (xyz free)
- *    688  sharpCfgC  vec4f              (f[172‥175])  DECOUPLED JITTER under sharp direct (settings.sharpDecouple): xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px — every internal ↔ output texel map adds it; 0 = the two rasters share one jitter (the sharp path as it was); zw spare
- *    704  rigCfg     vec4f              (f[176‥179])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M) · 256 the mesh in the direct light's rays alone (common.wgsl occluded); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
- *    720  rigCfgB    vec4f              (f[180‥183])  free (the smooth-union and soft-query knobs went 2026-11-07)
- *    736  giCfg      vec4f              (f[184‥187])  four FREE words (the young-history gather rays read them until 2026-11-07; no shader reads them now, the writer below still copies what it is given)
- *    752  weatherE   vec4f              (f[188‥191])  PARTICLE RAIN (src/picture/rain.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
- *    768  weatherF   vec4f              (f[192‥195])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
- *    784  shadeCfg   vec4f              (f[196‥199])  THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade; the one exposure model's, place_common.wgsl lookExpoFor, and the word composite.wgsl asks before it reads a pixel's place): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = open air's mean radiance from the sky alone (the model's open air until the place field is live), z = spare (the most the rows before the model brought a pixel up), w = open ground's irradiance from the sky alone (luminances; the shoulder's white where the Contrast row says none). Zeros = the picture as it was
- *    800  veilA      vec4f              (f[200‥203])  THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame): xy = 1 ∕ the floor plan the powder's field covers (its width, its depth, m), z = how much of the powder is drawn 0‥1 (0 = none, every statement of it skipped), w = what the sun (or the moon) puts on level ground, as luminance
- *    816  veilB      vec4f              (f[204‥207])  xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height (x z; 0 = no sun: no lit side, no shade under it)
- *    832  eyeCfg     vec4f              (f[208‥211])  THE LOOK PROTOTYPE, one exposure (render/lookexpo.ts lookExpoFrame; place_common.wgsl lookExpoFor): x = the most a place is brought up, the night's exposure over the hour's (1 = none said, or a night), y = 1 (it was the day's share: the model asks no hour since 11-04), z = the power of the eyes' darkness the open is overexposed by (the Glare outside row), w = −1 − the Eyes follow Sam row: UNDER 0 = THE MODEL IS ON (composite.wgsl lookShadeGain, volumetrics.wgsl airShow), zeros = no pixel takes a gain by its place
- *    848  gradeCfg   vec4f              (f[212‥215])  THE LOOK PROTOTYPE, the day's contrast is the open air's (render/lookgrade.ts; place_common.wgsl lookExpoFor and lookRoll): x = 1 ∕ the contrast the tone map turns the day's stops by (0 = none is undone), y = the radiance the turn is about (sunlit ground, before the exposure). A place is toned as the open air is and then shown as much darker as it is to be; z = spare (the read of the cache on this side of a wall, gone 11-04 with the guess it served: composite.wgsl lookPlaceLevels), w = spare (the Room contrast row's, gone with the rows the model replaced)
- *    864  lampCfg    vec4f              (f[216‥219])  THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros = every floor and glow as it was): x = × the night's lamp strength a fixture is drawn at this hour (render/photometry.ts: the hour's exposure), which the direct estimators' fixed floor is held at the same share of, y = × a glowing face's drawn strength as a RAY takes it (the gather, the cache: its night light at the day's lamp strength, not the glass as the eye sees it)
- *    880  sideCfg    vec4u              (u[220‥223])  THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros = every cache read as it
- *                                                was): x = 1 the words below are this frame's level · y, z = the smoke lab's drawing rows (FrameParams.smokeDraw; zeros = as it was) · w = the look panel's Snow wisps drawing rows (FrameParams.powderDraw; 0 = as it was)
- *    896  placeCfg   vec4f              (f[224‥227])  THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain): x = how far a pixel's own light caps its place's gain (0 = every pixel of a place by the place's gain, as it was; 1 = never by more than a place holding the pixel's light would get); y = the slot of the light list's first portal + 1, 0 with none (common.wgsl skyKeep: the bounce's rays ask which sky is theirs only then, and walk the list from there); z, w = the eyes' widest (render/lookexpo.ts lookExpoBound: the dim level in the night's units, never 0 while the model is on, and the most a place under it is shown by over the night's exposure).
- *    912  levelCfg   vec4u              (u[228‥231])  WHAT THE LEVEL RAISES (LevelSw below; common.wgsl lv): x = its switches, a bit each — the weather kinds' reads, the snow, the snow's look rows. They were constants of the scene prelude, so a level with another set was other shader text and every program that read one compiled again at that level's start; as data, every level asks for the one text
- *    928  sides      array<vec4u, 1750> (u[232‥7231]) its words, a u32 a cell of the floor plan (render/wallSides.ts placeSides; common.wgsl sideAt)
- *  28928  sideCols   array<vec4u, 140>  (u[7232‥7791]) the place of each probe column of the cache's first cascade, a nibble a column, room for the finest cascade the debugger offers (wallSides.ts WallSides.cols; lighting_common.wgsl diceTapsBy)
- *  31168  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES, and IN FRONT OF `sides` with FRAME_HEAD_BYTES raised: only the head is sent every frame (a member put after the tables reaches the GPU when a door comes to rest). tools/qa/frame-layout.ts checks all of it. */
-export const FRAME_BYTES = 31168;
+/** the per-frame uniform block is `struct Frame` in common.wgsl, which says what each word is; its offsets here are written from it (tools/gpu/wgsl-rows.ts) */
+export const FRAME_BYTES = FrameAt.words * 4;
 /** the bytes before the look prototype's two tables (levelCfg and all before it): what a frame sends when the tables have not changed (engine.ts) */
-export const FRAME_HEAD_BYTES = 928;
+export const FRAME_HEAD_BYTES = FrameAt.sides * 4;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
@@ -87,15 +55,6 @@ export interface WeatherFrame {
 }
 export const noWeather = (): WeatherFrame => ({ rain: 0, shearX: 0, shearZ: 0, wet: 0, flash: [0, 0, 0], rainTop: 4.5, interior: [0, 0, 0, 0], annex: [0, 0, 0, 0], nearFade: [0, 0, 0, 0] });
 
-export const FrameFlags = {
-  Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, RcRoom: 32768 /* THE LOOK PROTOTYPE, light keeps to its room (engine.ts, the look panel's row `rooms`): a cache ray's hit takes its bounced light from the cell the ray itself came through (lighting_common.wgsl hitRadiance), beside the cascades' hand-over overlap (render/rc.ts overlap) */,
-  Gloss: 2097152 /* EXPERIMENT: traced glossy reflections on floors flagged BoxFlag.Gloss (one reflection ray per gloss texel in the final gather, its own half-res specular texture + history + one blur pass, added un-multiplied by albedo in composite) — default off; off stores / filters / reads nothing (set from settings.gloss) */,
-  Decals: 4194304 /* decals (E1): the g-buffer's fragment stage applies the marks in render/decals.ts (bullet holes, scorches, scuffs, chips) to the albedo / normal / gloss-keep it stores — set from settings.decals while any decal exists; off = fsBox exactly as it was */,
-  MeshShadows: 8388608 /* EXPERIMENT: every shadow / occlusion ray (direct pass, gather hits, cascades, beams, probes) tests characters against their skinned triangle mesh — a per-character refit BVH written by render/meshShadows.ts each frame, walked in common.wgsl meshShadowT — instead of the 15 analytic capsules; primary visibility and closest-hit shading (gather / gloss hits) stay as they are. Default off (settings.meshShadows); needs meshBinding.enabled; off is the untouched capsule path. */,
-  Particles: 16777216 /* GPU particles (E4) (render/particles.ts — sparks, debris chips, dust, casings simulated in a compute pass and splatted into the HDR target after the composite). Set from settings.gpuParticles ∧ a Particles attached; no scene shader reads it (the pass graph does) — it rides in the flags word so the HUD / captures say which path drew the sparks. Off = the CPU box sparks exactly as they were. */,
-  BounceCards: 33554432 /* torch bounce cards (settings.torchBounceCards): each carried spot light's footprint on the surface it hits is rebuilt every frame as a one-sided analytic emitter (cards.wgsl) that the final gather samples with one shadow ray instead of discovering the hotspot with its cosine rays — which exclude that light's direct term where they land inside the footprint, so nothing is counted twice (fgather.wgsl). Off = no card pass, nothing sampled or excluded: bit-identical. */,
-  Glass: 268435456 /* glass panes (E3) — boxes flagged BoxFlag.Glass are kept out of the raster and the trace grid and listed in SceneInfo.glass; composite lays Fresnel reflection (traced in the final gather like the gloss floors, sharing their specular texture + history + à-trous pass), the pane's tint and a dust glow over what the G-buffer shows behind them, and the direct pass tints light that crossed a pane (set from settings.glass; off = no pane list at all: empty openings, the level as it was) */,
-} as const;
 
 export interface FrameParams {
   viewProj: Mat4; invViewProj: Mat4; prevViewProj: Mat4;
@@ -172,66 +131,66 @@ const frameViews = new WeakMap<ArrayBuffer, { f: Float32Array; u: Uint32Array; b
 function viewsOf(buf: ArrayBuffer) { let v = frameViews.get(buf); if (!v) { v = { f: new Float32Array(buf), u: new Uint32Array(buf), b: new Uint8Array(buf) }; frameViews.set(buf, v); } return v; }
 export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   const { f, u } = viewsOf(dst);
-  f.set(p.viewProj, 0); f.set(p.invViewProj, 16); f.set(p.prevViewProj, 32);
-  f.set(p.camPos, 48); f[51] = p.time;
-  f.set(p.camDir, 52); f[55] = p.dt;
-  f[56] = p.width; f[57] = p.height; f[58] = 1 / p.width; f[59] = 1 / p.height;
-  u[60] = p.frameIdx; u[61] = p.numLights; u[62] = p.flags; f[63] = p.exposure;
-  f.set(p.skyZenith, 64); f[67] = p.hazeDensity;
-  f.set(p.skyHorizon, 68); f[71] = p.rcInterval0;
-  u[72] = p.rcC0Dims[0]; u[73] = p.rcC0Dims[1]; u[74] = p.rcC0Dims[2]; u[75] = p.rcNumCascades;
-  u[76] = p.rcD0; u[77] = p.rcFrameParity; u[78] = p.numSmoke; u[79] = p.debugView;
-  f[80] = p.indirectScale; f[81] = p.emissiveScale; u[82] = p.volSteps; f[83] = p.secMinE;
-  f[84] = p.capColor[0]; f[85] = p.capColor[1]; f[86] = p.capColor[2]; f[87] = p.capColor[3];
-  f[88] = p.post[0]; f[89] = p.post[1]; f[90] = p.post[2]; f[91] = p.post[3];
-  f[92] = p.rcJitter[0]; f[93] = p.rcJitter[1]; f[94] = 0;   /* (free: the old estimator's adaptive minimum until 2026-11-07) */ f[95] = p.numTransient;
-  f[96] = p.directCfg[0]; f[97] = p.directCfg[1]; f[98] = p.directCfg[2]; f[99] = p.directCfg[3];
-  f[100] = p.lossyCfg[0]; f[101] = p.lossyCfg[1]; f[102] = p.lossyCfg[2]; f[103] = p.lossyCfg[3];
+  f.set(p.viewProj, FrameAt.viewProj); f.set(p.invViewProj, FrameAt.invViewProj); f.set(p.prevViewProj, FrameAt.prevViewProj);
+  f.set(p.camPos, FrameAt.camPos); f[FrameAt.time] = p.time;
+  f.set(p.camDir, FrameAt.camDir); f[FrameAt.dt] = p.dt;
+  f[FrameAt.screen] = p.width; f[FrameAt.screen + 1] = p.height; f[FrameAt.invScreen] = 1 / p.width; f[FrameAt.invScreen + 1] = 1 / p.height;
+  u[FrameAt.frameIdx] = p.frameIdx; u[FrameAt.numLights] = p.numLights; u[FrameAt.flags] = p.flags; f[FrameAt.exposure] = p.exposure;
+  f.set(p.skyZenith, FrameAt.skyZenith); f[FrameAt.hazeDensity] = p.hazeDensity;
+  f.set(p.skyHorizon, FrameAt.skyHorizon); f[FrameAt.rcInterval0] = p.rcInterval0;
+  u[FrameAt.rcC0Dims] = p.rcC0Dims[0]; u[FrameAt.rcC0Dims + 1] = p.rcC0Dims[1]; u[FrameAt.rcC0Dims + 2] = p.rcC0Dims[2]; u[FrameAt.rcNumCascades] = p.rcNumCascades;
+  u[FrameAt.rcD0] = p.rcD0; u[FrameAt.rcFrameParity] = p.rcFrameParity; u[FrameAt.numSmoke] = p.numSmoke; u[FrameAt.debugView] = p.debugView;
+  f[FrameAt.indirectScale] = p.indirectScale; f[FrameAt.emissiveScale] = p.emissiveScale; u[FrameAt.volSteps] = p.volSteps; f[FrameAt.secMinE] = p.secMinE;
+  f.set(p.capColor, FrameAt.capColor);
+  f.set(p.post, FrameAt.post);
+  f[FrameAt.rcJitter] = p.rcJitter[0]; f[FrameAt.rcJitter + 1] = p.rcJitter[1]; f[FrameAt.rcJitter + 2] = 0;   /* (free: the old estimator's adaptive minimum until 2026-11-07) */ f[FrameAt.rcJitter + 3] = p.numTransient;
+  f.set(p.directCfg, FrameAt.directCfg);
+  f.set(p.lossyCfg, FrameAt.lossyCfg);
   const nc = Math.min(p.cardSlots.length, MAX_CARDS);
-  u[104] = nc; u[105] = 0; u[106] = 0; u[107] = 0;                     // cardCfg: x = card count this frame
-  for (let k = 0; k < MAX_CARDS; k++) u[108 + k] = k < nc ? p.cardSlots[k] >>> 0 : 0;   // cardSlots: array<vec4u, 2> = 8 light slots
+  u[FrameAt.cardCfg] = nc; u[FrameAt.cardCfg + 1] = 0; u[FrameAt.cardCfg + 2] = 0; u[FrameAt.cardCfg + 3] = 0;                     // cardCfg: x = card count this frame
+  for (let k = 0; k < MAX_CARDS; k++) u[FrameAt.cardSlots + k] = k < nc ? p.cardSlots[k] >>> 0 : 0;   // cardSlots: array<vec4u, 2> = 8 light slots
   const w = p.weather;
-  f[116] = w.rain; f[117] = w.shearX; f[118] = w.shearZ; f[119] = w.wet;                 // weatherA @464
-  f[120] = w.flash[0]; f[121] = w.flash[1]; f[122] = w.flash[2]; f[123] = w.rainTop;   // weatherB @480
-  f[124] = w.interior[0]; f[125] = w.interior[1]; f[126] = w.interior[2]; f[127] = w.interior[3];   // weatherC @496
-  f[128] = p.glassCfg[0]; f[129] = p.glassCfg[1]; f[130] = p.glassCfg[2]; f[131] = p.glassCfg[3];   // glassCfg @512
-  f[132] = w.annex[0]; f[133] = w.annex[1]; f[134] = w.annex[2]; f[135] = w.annex[3];   // weatherD @528
-  u[105] = (w.roofC ?? 0) >>> 0; u[106] = (w.roofD ?? 0) >>> 0; u[107] = (w.fog ?? 0) >>> 0;   // cardCfg.yzw @420: the weather kinds' extra roofs + fog (0 0 0 = none, as these words always were)
-  u[136] = p.volCfg[0] >>> 0; u[137] = p.volCfg[1] >>> 0; u[138] = p.volCfg[2] >>> 0; u[139] = (p.volCfg[3] | (((p.wxAirSteps ?? 0) & 31) << 24)) >>> 0;   // volCfg @544
-  f[140] = p.prevCamPos[0]; f[141] = p.prevCamPos[1]; f[142] = p.prevCamPos[2]; f[143] = 0;    // prevCam @560 (w free)
-  f[144] = p.rtCfg[0]; f[145] = p.rtCfg[1]; f[146] = p.rtCfg[2]; f[147] = p.rtCfg[3];           // rtCfg @576
-  f[148] = p.matCfg[0]; f[149] = p.matCfg[1]; f[150] = p.matCfg[2]; f[151] = p.matCfg[3];       // matCfg @592
-  u[152] = p.p5Cfg[0] >>> 0; u[153] = p.p5Cfg[1] >>> 0; u[154] = p.p5Cfg[2] >>> 0; u[155] = p.p5Cfg[3] >>> 0;   // p5Cfg @608
-  f[156] = p.jitter[0]; f[157] = p.jitter[1]; f[158] = p.jitter[2]; f[159] = p.jitter[3];       // jitter @624
-  f[160] = p.markCfg[0]; f[161] = p.markCfg[1]; f[162] = p.markCfg[2]; f[163] = p.markCfg[3];   // markCfg @640
-  f[164] = p.sharpCfg[0]; f[165] = p.sharpCfg[1]; f[166] = p.sharpCfg[2]; f[167] = p.sharpCfg[3];   // sharpCfg @656
-  f[168] = p.sharpCfgB[0]; f[169] = p.sharpCfgB[1]; f[170] = p.sharpCfgB[2]; f[171] = p.sharpCfgB[3];   // sharpCfgB @672
-  f[172] = p.sharpCfgC[0]; f[173] = p.sharpCfgC[1]; f[174] = p.sharpCfgC[2]; f[175] = p.sharpCfgC[3];   // sharpCfgC @688
-  f[176] = p.rigCfg[0]; f[177] = p.rigCfg[1]; f[178] = p.rigCfg[2]; f[179] = p.rigCfg[3];               // rigCfg @704
-  f[180] = p.rigCfgB[0]; f[181] = p.rigCfgB[1]; f[182] = p.rigCfgB[2]; f[183] = p.rigCfgB[3];           // rigCfgB @720
-  const gc = p.giCfg ?? ZERO4; f[184] = gc[0]; f[185] = gc[1]; f[186] = gc[2]; f[187] = gc[3];   // giCfg @736 (p.giCfg; absent = zeros = the gather as it was)
+  f[FrameAt.weatherA] = w.rain; f[FrameAt.weatherA + 1] = w.shearX; f[FrameAt.weatherA + 2] = w.shearZ; f[FrameAt.weatherA + 3] = w.wet;                 // weatherA
+  f[FrameAt.weatherB] = w.flash[0]; f[FrameAt.weatherB + 1] = w.flash[1]; f[FrameAt.weatherB + 2] = w.flash[2]; f[FrameAt.weatherB + 3] = w.rainTop;   // weatherB
+  f.set(w.interior, FrameAt.weatherC);   // weatherC
+  f.set(p.glassCfg, FrameAt.glassCfg);   // glassCfg
+  f.set(w.annex, FrameAt.weatherD);   // weatherD
+  u[FrameAt.cardCfg + 1] = (w.roofC ?? 0) >>> 0; u[FrameAt.cardCfg + 2] = (w.roofD ?? 0) >>> 0; u[FrameAt.cardCfg + 3] = (w.fog ?? 0) >>> 0;   // cardCfg.yzw @420: the weather kinds' extra roofs + fog (0 0 0 = none, as these words always were)
+  u[FrameAt.volCfg] = p.volCfg[0] >>> 0; u[FrameAt.volCfg + 1] = p.volCfg[1] >>> 0; u[FrameAt.volCfg + 2] = p.volCfg[2] >>> 0; u[FrameAt.volCfg + 3] = (p.volCfg[3] | (((p.wxAirSteps ?? 0) & 31) << 24)) >>> 0;   // volCfg
+  f[FrameAt.prevCam] = p.prevCamPos[0]; f[FrameAt.prevCam + 1] = p.prevCamPos[1]; f[FrameAt.prevCam + 2] = p.prevCamPos[2]; f[FrameAt.prevCam + 3] = 0;    // prevCam (w free)
+  f.set(p.rtCfg, FrameAt.rtCfg);           // rtCfg
+  f.set(p.matCfg, FrameAt.matCfg);       // matCfg
+  u[FrameAt.p5Cfg] = p.p5Cfg[0] >>> 0; u[FrameAt.p5Cfg + 1] = p.p5Cfg[1] >>> 0; u[FrameAt.p5Cfg + 2] = p.p5Cfg[2] >>> 0; u[FrameAt.p5Cfg + 3] = p.p5Cfg[3] >>> 0;   // p5Cfg
+  f.set(p.jitter, FrameAt.jitter);       // jitter
+  f.set(p.markCfg, FrameAt.markCfg);   // markCfg
+  f.set(p.sharpCfg, FrameAt.sharpCfg);   // sharpCfg
+  f.set(p.sharpCfgB, FrameAt.sharpCfgB);   // sharpCfgB
+  f.set(p.sharpCfgC, FrameAt.sharpCfgC);   // sharpCfgC
+  f.set(p.rigCfg, FrameAt.rigCfg);               // rigCfg
+  f.set(p.rigCfgB, FrameAt.rigCfgB);           // rigCfgB
+  const gc = p.giCfg ?? ZERO4; f.set(gc, FrameAt.giCfg);   // giCfg (p.giCfg; absent = zeros = the gather as it was)
   const nf = w.nearFade ?? ZERO4;
-  f[188] = nf[0]; f[189] = nf[1]; f[190] = nf[2]; f[191] = nf[3];   // weatherE @752 (particle rain's near-field disc; a WeatherFrame written before the field existed reads as zeros)
+  f.set(nf, FrameAt.weatherE);   // weatherE (particle rain's near-field disc; a WeatherFrame written before the field existed reads as zeros)
   const pf = w.phase ?? ZERO4;
-  f[192] = pf[0]; f[193] = pf[1]; f[194] = pf[2]; f[195] = pf[3];   // weatherF @768 (particle rain v2: the drop's phase for the lattice; zeros = isotropic as it was)
-  const sh = p.shadeCfg ?? ZERO4; f[196] = sh[0]; f[197] = sh[1]; f[198] = sh[2]; f[199] = sh[3];   // shadeCfg @784 (the look prototype's shade row; absent = zeros = off)
-  const va = p.veilA ?? ZERO4; f[200] = va[0]; f[201] = va[1]; f[202] = va[2]; f[203] = va[3];   // veilA @800 (the look prototype's loose snow in the air; absent = zeros = none)
-  const vb = p.veilB ?? ZERO4; f[204] = vb[0]; f[205] = vb[1]; f[206] = vb[2]; f[207] = vb[3];   // veilB @816
-  const ey = p.eyeCfg ?? ZERO4; f[208] = ey[0]; f[209] = ey[1]; f[210] = ey[2]; f[211] = ey[3];   // eyeCfg @832 (the look prototype's one exposure model; absent = zeros = off)
-  const gr = p.gradeCfg ?? ZERO4; f[212] = gr[0]; f[213] = gr[1]; f[214] = gr[2]; f[215] = gr[3];   // gradeCfg @848 (the look prototype's Contrast row, which the one exposure model tones a place by; absent = zeros = nothing undone)
-  const lc = p.lampCfg ?? ZERO4; f[216] = lc[0]; f[217] = lc[1]; f[218] = lc[2]; f[219] = lc[3];   // lampCfg @864 (the look prototype's Light stays in its room row by day; absent = zeros = off)
-  const sc = p.sideCols ?? null, sd = p.sides ?? null; u[220] = sd && sc ? 1 : 0; u[221] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0; u[222] = p.smokeDraw ? p.smokeDraw[1] >>> 0 : 0; u[223] = (p.powderDraw ?? 0) >>> 0; if (sd) u.set(sd, 232); if (sd && sc) u.set(sc, 7232);
-  const pc = p.placeCfg ?? ZERO4; f[224] = pc[0]; f[225] = pc[1]; f[226] = pc[2]; f[227] = pc[3];   // placeCfg @896 (the look prototype's Light in order row; absent = zeros = off)
-  u[228] = levelSwitches(); u[229] = 0; u[230] = 0; u[231] = 0;   // levelCfg @912: what the level raises, read here off the page's own switches so that no caller can leave it out. The last member of the head: the two tables above follow it   // sideCfg @880, sides @896 (the look prototype's Walls have two sides row; absent = the flag down, the words left as they lay)
+  f.set(pf, FrameAt.weatherF);   // weatherF (particle rain v2: the drop's phase for the lattice; zeros = isotropic as it was)
+  const sh = p.shadeCfg ?? ZERO4; f.set(sh, FrameAt.shadeCfg);   // shadeCfg (the look prototype's shade row; absent = zeros = off)
+  const va = p.veilA ?? ZERO4; f.set(va, FrameAt.veilA);   // veilA (the look prototype's loose snow in the air; absent = zeros = none)
+  const vb = p.veilB ?? ZERO4; f.set(vb, FrameAt.veilB);   // veilB
+  const ey = p.eyeCfg ?? ZERO4; f.set(ey, FrameAt.eyeCfg);   // eyeCfg (the look prototype's one exposure model; absent = zeros = off)
+  const gr = p.gradeCfg ?? ZERO4; f.set(gr, FrameAt.gradeCfg);   // gradeCfg (the look prototype's Contrast row, which the one exposure model tones a place by; absent = zeros = nothing undone)
+  const lc = p.lampCfg ?? ZERO4; f.set(lc, FrameAt.lampCfg);   // lampCfg (the look prototype's Light stays in its room row by day; absent = zeros = off)
+  const sc = p.sideCols ?? null, sd = p.sides ?? null; u[FrameAt.sideCfg] = sd && sc ? 1 : 0; u[FrameAt.sideCfg + 1] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0; u[FrameAt.sideCfg + 2] = p.smokeDraw ? p.smokeDraw[1] >>> 0 : 0; u[FrameAt.sideCfg + 3] = (p.powderDraw ?? 0) >>> 0; if (sd) u.set(sd, FrameAt.sides); if (sd && sc) u.set(sc, FrameAt.sideCols);
+  const pc = p.placeCfg ?? ZERO4; f.set(pc, FrameAt.placeCfg);   // placeCfg (the look prototype's Light in order row; absent = zeros = off)
+  u[FrameAt.levelCfg] = levelSwitches(); u[FrameAt.levelCfg + 1] = 0; u[FrameAt.levelCfg + 2] = 0; u[FrameAt.levelCfg + 3] = 0;   // levelCfg: what the level raises, read here off the page's own switches so that no caller can leave it out. The last member of the head: the two tables above follow it   // sideCfg, sides @896 (the look prototype's Walls have two sides row; absent = the flag down, the words left as they lay)
 }
 
-/** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT
+/** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen replaced by the output size — what the passes that run at the OUTPUT
  *  resolution under sharp direct (the g-buffer raster, the unshadowed-direct + composite kernels, the TAA resolve, the particles' splat) bind as group 0, so `frame.screen`, worldFromDepth and every
  *  pixel-footprint term mean THEIR pixel there with no shader knowing the difference. */
 export function writeFrameOut(dst: ArrayBuffer, src: ArrayBuffer, outW: number, outH: number, mats?: { viewProj: Mat4; invViewProj: Mat4; prevViewProj: Mat4 }) {
   viewsOf(dst).b.set(viewsOf(src).b);
-  const f = viewsOf(dst).f; f[56] = outW; f[57] = outH; f[58] = 1 / outW; f[59] = 1 / outH;
-  if (mats) { f.set(mats.viewProj, 0); f.set(mats.invViewProj, 16); f.set(mats.prevViewProj, 32); f[156] = 0; f[157] = 0; f[158] = 0; f[159] = 0; }   // (+ frame.jitter @624 zeroed: this raster has none) — DECOUPLED JITTER: the output raster's own (unjittered) matrices — the g-buffer, U, the composite, GBAA and the 1 : 1 resolve then run on a still raster while the internal terms keep their jitter
+  const f = viewsOf(dst).f; f[FrameAt.screen] = outW; f[FrameAt.screen + 1] = outH; f[FrameAt.invScreen] = 1 / outW; f[FrameAt.invScreen + 1] = 1 / outH;
+  if (mats) { f.set(mats.viewProj, FrameAt.viewProj); f.set(mats.invViewProj, FrameAt.invViewProj); f.set(mats.prevViewProj, FrameAt.prevViewProj); f.fill(0, FrameAt.jitter, FrameAt.jitter + 4); }   // (+ frame.jitter @624 zeroed: this raster has none) — DECOUPLED JITTER: the output raster's own (unjittered) matrices — the g-buffer, U, the composite, GBAA and the 1 : 1 resolve then run on a still raster while the internal terms keep their jitter
 }
 
 /** Whether the mesh-shadow buffer (render/meshShadows.ts: per-character refit triangle BVHs + skinned corners, ONE read-only storage buffer at binding 13) is
@@ -263,9 +222,6 @@ export const snowConfig = { on: false };
  *  (shaders/snow.wgsl, render/snowField.ts). `wisps` → `lv(SNOW_WISPS)`: the particle shaders' half of the wisps the wind runs over the ground
  *  (src/picture/snow/fx.ts). false = no such statement runs. */
 export const snowLookConfig = { surface: false, wisps: false, tracks: false, glow: false, sparkle: false, grains: false, under: false };   // (`grains` → `lv(SNOW_GRAINS)`: the particle shaders' half of the fine grains that ride the air field, render/airField.ts; `tracks` → `lv(SNOW_TRACKS)`: snow.wgsl reads the trail texture; `glow` → `lv(SNOW_GLOW)`: the lighting shaders' wrap on snow pixels; `sparkle` → `lv(SNOW_SPARKLE)`: composite.wgsl's facet flashes on lit fresh snow; `under` → `lv(SNOW_UNDER)`: a flake asks the roofs as one)
-/** the bits of the frame block's `levelCfg.x`, and the names the shaders ask them by (`lv(NAME)`; the scene prelude writes these as its consts, so the two
- *  cannot come to differ) */
-export const LevelSw = { WX_KINDS: 1, WX_SNOW: 2, SNOW_SURF: 4, SNOW_WISPS: 8, SNOW_TRACKS: 16, SNOW_GLOW: 32, SNOW_SPARKLE: 64, SNOW_GRAINS: 128, SNOW_UNDER: 256 } as const;
 /** what the page's level raises, as that word */
 export function levelSwitches(): number {
   const S = LevelSw;   // (each table named whole where it is read: the checks of a row ask which files read it)
@@ -379,11 +335,11 @@ function roundRayWgsl(cut: boolean): string {
 /** WHAT HAS FALLEN OUT OF A PANE (shaders/glass_open.wgsl, one text: the scene's shaders and the smoke's solver): its rows are in a buffer called `boxMat` (boxmat.wgsl PANE_BASE) */
 export function glassOpenWgsl(): string { return glassOpenSrc + '\n'; }
 /** THE ROWS A SHADER READS THAT RUST LAYS OUT (written by the program `half`): their structs, and the tables that share `boxMat` with a reader a field */
-export function rowsWgsl(): string { return rowsSrc + '\n' + boxMatSrc + '\n'; }
+export function rowsWgsl(): string { return bitsSrc + '\n' + rowsSrc + '\n' + boxMatSrc + '\n'; }
 /** The text in front of every scene shader. `cut`: the CUT BOXES rule is compiled in (scene/cut.ts): wherever the switch is on, in EVERY module — one set of ray
  *  programs since 2026-11-07 (there was a second set with the rule, swapped in while a cut piece was alive). A tool may ask for the other text to size the rule. */
 export function scenePrelude(cut: boolean = cutConfig.on): string {
-  const commonText = `${Object.entries(LevelSw).map(([k, v]) => `const ${k}: u32 = ${v}u;`).join(' ')}   // what a level raises, as bits of frame.levelCfg.x: a shader asks lv(NAME) (render/frame.ts LevelSw; common.wgsl lv) — data, so every level is one text\nconst RAIN_SCALE: bool = ${rainScaleConfig.on ? 'true' : 'false'};   // a splash ring drawn wider than its line keeps its light, not its brightness (render/frame.ts rainScaleConfig): false = as bright however wide, as it was\nconst RAIN_WALLS: bool = ${rainWallsConfig.on ? 'true' : 'false'};   // rain shows in front of a wall's outer face and its top (render/frame.ts rainWallsConfig): false = hidden wherever the surface is inside a roof's rectangle, as it was\nconst LOOK_MIRROR_PLAIN: f32 = ${LOOK_MIRROR_PLAIN.toFixed(4)}; const LOOK_MIRRORS = array<f32, ${LOOK_WORDS}>(${LOOK_MIRRORS.map(v => v.toFixed(4)).join(', ')});   // what a coat mirrors head-on: a plain one, and each word a box may say (lookTex.ts STUFFS, a stuff's mirrors; common.wgsl boxStuff): the reflection pass's alone\nconst LOOK_BOUNCE: f32 = ${lookConfig.bounce.toFixed(3)};\nconst WALL_SIDES: bool = ${wallSidesConfig.on ? 'true' : 'false'};   // every read of the radiance cache keeps to its side of a wall by the floor plan, in place of the four older guards (render/frame.ts wallSidesConfig; shaders/lighting_common.wgsl diceTaps): false = each guard as it was\nconst BOUNCE_WALLS: bool = ${bounceWallsConfig.on ? 'true' : 'false'};   // the radiance cache is never read through a wall off a man (render/frame.ts bounceWallsConfig; shaders/lighting_common.wgsl diceWalledPoint): false = a probe spacing along his normal, as it was\nconst SHARP_CAP: bool = ${sharpCapConfig.on ? 'true' : 'false'};   // sharp direct bounds a class by its live lights' unshadowed sum (render/frame.ts sharpCapConfig; shaders/sharp_direct.wgsl): false = no bound, as it was\nconst REFL_WALLS: bool = ${reflWallsConfig.on ? 'true' : 'false'};   // a metal never mirrors the room behind a wall (render/frame.ts reflWallsConfig; shaders/reflect.wgsl): false = the cache a probe spacing along the hit's normal, as it was\nconst SUN_GLINT: bool = ${sunGlintConfig.on ? 'true' : 'false'};   // the sun's (and the moon's) highlight on a smooth finish (render/frame.ts sunGlintConfig; shaders/reflect.wgsl rtGlints): false = a directional light gives none, as it was\nconst GLINT_PICK: bool = ${glintPickConfig.on ? 'true' : 'false'};   // the lamps' highlights past the three strongest: one picked by its weight stands for them (render/frame.ts glintPickConfig; shaders/reflect.wgsl rtGlints): false = the fourth strongest and the rest at half, unshadowed, as it was\nconst RT_HI_REACH: f32 = ${highlightConfig.reach.toFixed(3)};   // how far the highlights reach: 1 = their own fade on every preset (common.wgsl RT_HI_FADE), 0 = where the mirror fades (render/frame.ts highlightConfig; common.wgsl rtHiFade)\nconst RAIN_SHADOW: bool = ${rainShadowConfig.on ? 'true' : 'false'};   // rain asks a shadow ray where a light's reach mask is not sure (render/frame.ts rainShadowConfig): false = lit by the mask alone, as it was\nconst WX_EDGE: bool = ${weatherEdgeConfig.on ? 'true' : 'false'};   // the weather's veil at the building's shell (render/frame.ts weatherEdgeConfig): false = composite.wgsl fogs by the surface point alone, as it always did\nconst ROUND_BOXES: bool = ${cutConfig.on ? 'true' : 'false'};   // round things (scene/round.ts): a box flagged GEO_ROUND is a cylinder to isectBox — false = that branch and roundNormalAt are dead code\nconst GLASS_BREAK: bool = ${glassBreakConfig.on ? 'true' : 'false'};   // glass breaking (render/frame.ts glassBreakConfig): false = the cell-table reads in glassTrace / glassTransmit / composite are dead code\nconst CUT_BOXES: bool = ${cut ? 'true' : 'false'};   // cut boxes (scene/cut.ts cutConfig): a box flagged GEO_CUT is clipped by its planes (boxmat.wgsl cutPlane): isectBox, boxNormalFromCode, the g-buffer's cut pass — false = dead code there\n` + commonSrc + '\n' + glassOpenWgsl() + smokeReadConsts(smokeGrid()) + smokeReadSrc;   // (+ every smoke read: the lattices' numbers as consts — smoke/smokeGrid.ts — then shaders/smoke_read.wgsl)
+  const commonText = `const RAIN_SCALE: bool = ${rainScaleConfig.on ? 'true' : 'false'};   // a splash ring drawn wider than its line keeps its light, not its brightness (render/frame.ts rainScaleConfig): false = as bright however wide, as it was\nconst RAIN_WALLS: bool = ${rainWallsConfig.on ? 'true' : 'false'};   // rain shows in front of a wall's outer face and its top (render/frame.ts rainWallsConfig): false = hidden wherever the surface is inside a roof's rectangle, as it was\nconst LOOK_MIRROR_PLAIN: f32 = ${LOOK_MIRROR_PLAIN.toFixed(4)}; const LOOK_MIRRORS = array<f32, ${LOOK_WORDS}>(${LOOK_MIRRORS.map(v => v.toFixed(4)).join(', ')});   // what a coat mirrors head-on: a plain one, and each word a box may say (lookTex.ts STUFFS, a stuff's mirrors; common.wgsl boxStuff): the reflection pass's alone\nconst LOOK_BOUNCE: f32 = ${lookConfig.bounce.toFixed(3)};\nconst WALL_SIDES: bool = ${wallSidesConfig.on ? 'true' : 'false'};   // every read of the radiance cache keeps to its side of a wall by the floor plan, in place of the four older guards (render/frame.ts wallSidesConfig; shaders/lighting_common.wgsl diceTaps): false = each guard as it was\nconst BOUNCE_WALLS: bool = ${bounceWallsConfig.on ? 'true' : 'false'};   // the radiance cache is never read through a wall off a man (render/frame.ts bounceWallsConfig; shaders/lighting_common.wgsl diceWalledPoint): false = a probe spacing along his normal, as it was\nconst SHARP_CAP: bool = ${sharpCapConfig.on ? 'true' : 'false'};   // sharp direct bounds a class by its live lights' unshadowed sum (render/frame.ts sharpCapConfig; shaders/sharp_direct.wgsl): false = no bound, as it was\nconst REFL_WALLS: bool = ${reflWallsConfig.on ? 'true' : 'false'};   // a metal never mirrors the room behind a wall (render/frame.ts reflWallsConfig; shaders/reflect.wgsl): false = the cache a probe spacing along the hit's normal, as it was\nconst SUN_GLINT: bool = ${sunGlintConfig.on ? 'true' : 'false'};   // the sun's (and the moon's) highlight on a smooth finish (render/frame.ts sunGlintConfig; shaders/reflect.wgsl rtGlints): false = a directional light gives none, as it was\nconst GLINT_PICK: bool = ${glintPickConfig.on ? 'true' : 'false'};   // the lamps' highlights past the three strongest: one picked by its weight stands for them (render/frame.ts glintPickConfig; shaders/reflect.wgsl rtGlints): false = the fourth strongest and the rest at half, unshadowed, as it was\nconst RT_HI_REACH: f32 = ${highlightConfig.reach.toFixed(3)};   // how far the highlights reach: 1 = their own fade on every preset (common.wgsl RT_HI_FADE), 0 = where the mirror fades (render/frame.ts highlightConfig; common.wgsl rtHiFade)\nconst RAIN_SHADOW: bool = ${rainShadowConfig.on ? 'true' : 'false'};   // rain asks a shadow ray where a light's reach mask is not sure (render/frame.ts rainShadowConfig): false = lit by the mask alone, as it was\nconst WX_EDGE: bool = ${weatherEdgeConfig.on ? 'true' : 'false'};   // the weather's veil at the building's shell (render/frame.ts weatherEdgeConfig): false = composite.wgsl fogs by the surface point alone, as it always did\nconst ROUND_BOXES: bool = ${cutConfig.on ? 'true' : 'false'};   // round things (scene/round.ts): a box flagged GEO_ROUND is a cylinder to isectBox — false = that branch and roundNormalAt are dead code\nconst GLASS_BREAK: bool = ${glassBreakConfig.on ? 'true' : 'false'};   // glass breaking (render/frame.ts glassBreakConfig): false = the cell-table reads in glassTrace / glassTransmit / composite are dead code\nconst CUT_BOXES: bool = ${cut ? 'true' : 'false'};   // cut boxes (scene/cut.ts cutConfig): a box flagged GEO_CUT is clipped by its planes (boxmat.wgsl cutPlane): isectBox, boxNormalFromCode, the g-buffer's cut pass — false = dead code there\n` + commonSrc + '\n' + glassOpenWgsl() + smokeReadConsts(smokeGrid()) + smokeReadSrc;   // (+ every smoke read: the lattices' numbers as consts — smoke/smokeGrid.ts — then shaders/smoke_read.wgsl)
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';

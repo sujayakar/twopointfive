@@ -1,14 +1,15 @@
 //! WHAT OF THE SKY REACHES A PLACE UNDER IT: fifteen ways up and eight down to the ground about it, asked of the statics from the middle of the place's half metre (or of its
 //! quarter, where something stands between the place and that), and which of them are open. What the light is worth that comes by them is the rules' (game_rules hours).
 //!
-//! The answer is kept, a table a slot of the games, no state: the ways that pass something which has changed since are asked again, those and no more (`glow::Marks`: every
+//! The answer is kept, no state: the ways that pass something which has changed since are asked again, those and no more (`glow::Marks`: every
 //! static that is written is marked on the plan).
 
 use game_types::knobs::Knobs;
-use crate::glow::{self, Marks};
+use crate::glow::{self, Cast, Marks};
 use crate::lines;
 use crate::maths::{cos, sin};
-use crate::state::GAMES;
+use alloc::vec::Vec;
+use game_types::made::Tables;
 use crate::world::{js_max, js_min, World, F_GLASS};
 use prim::floor;
 
@@ -60,7 +61,7 @@ pub fn fan() -> &'static Fan {
 }
 
 /// the box the shadow casters stand in
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct Casters {
     pub x0: f64,
     pub x1: f64,
@@ -106,16 +107,15 @@ struct Kept {
 const NONE: Kept = Kept { of: 0, key: 0, open: Open { sky: 0, sun: 0, ground: 0 } };
 const HALVES: usize = glow::MAX_HALF;
 const QUARTERS: usize = 4096;
+#[derive(Default)]
 struct Table {
-    half: [Kept; HALVES],
-    quarter: [Kept; QUARTERS],
+    half: Vec<Kept>,
+    quarter: Vec<Kept>,
     /// which standing of the statics these are of
     stood: u32,
     casters: Casters,
     to_sun: [f64; 3],
 }
-static mut TABLES: [Table; GAMES] = [const { Table { half: [NONE; HALVES], quarter: [NONE; QUARTERS], stood: 0, casters: Casters { x0: 0.0, x1: 0.0, z0: 0.0, z1: 0.0, top: 0.0 }, to_sun: [0.0; 3] } }; GAMES];
-
 /// what a question is of: the statics, the box they stand in, where the sun is
 pub struct Under<'a> {
     pub w: &'a World,
@@ -171,15 +171,16 @@ impl Under<'_> {
         let p = along(at, d, len);
         m.passed(at, d, len, true, since) || (self.to_sun[1] > 0.0 && m.passed(p, self.to_sun, self.casters.reach(p, self.to_sun), true, since))
     }
-    /// WHICH WAYS ARE OPEN FROM `at`. `of`: the half metre or the quarter whose middle that is, whose answer is kept for the game in slot `g`
-    pub fn open(&self, g: usize, at: [f64; 3], of: Option<Of>) -> Open {
-        let t = unsafe { &mut (*core::ptr::addr_of_mut!(TABLES))[g] };
-        let marks = glow::marks(g, self.w);
+    /// WHICH WAYS ARE OPEN FROM `at`. `of`: the half metre or the quarter whose middle that is, whose answer is kept
+    pub fn open(&self, made: &Tables, at: [f64; 3], of: Option<Of>) -> Open {
+        made.light.with(|c: &mut Cast| made.sky.with(|t: &mut Table| self.kept(t, glow::marks(c, self.w), at, of)))
+    }
+    fn kept(&self, t: &mut Table, marks: Option<&Marks>, at: [f64; 3], of: Option<Of>) -> Open {
         let stood = marks.map_or(0, |m| m.stood);
-        if t.casters != self.casters || t.to_sun != self.to_sun || t.stood != stood {
+        if t.casters != self.casters || t.to_sun != self.to_sun || t.stood != stood || t.half.is_empty() {
             (t.casters, t.to_sun, t.stood) = (self.casters, self.to_sun, stood);
-            t.half.fill(NONE);
-            t.quarter.fill(NONE);
+            (t.half.clear(), t.quarter.clear());
+            (t.half.resize(HALVES, NONE), t.quarter.resize(QUARTERS, NONE));
         }
         let kept = match (of, marks) {
             (Some(Of::Half(x, z)), Some(m)) if m.on(x, z) => Some((&mut t.half[z as usize * m.nx * 2 + x as usize], 0)),

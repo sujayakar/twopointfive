@@ -2,15 +2,14 @@
 // tables by what he wears, worked out again only when that changes; his proxies go to the box world's list in the colours of those.
 import type { CharacterRenderer } from '../anim/characters';
 import type { GltfCharacter } from '../anim/gltf';
-import { CHAR_MAT_FLOATS, charMatsVersion, charSlots, proxyAlbedos, writeCharPalette, type CharSide } from '../render/charMaterials';
+import { CHAR_MAT_FLOATS, charMatsVersion, charSlots, proxyAlbedos, writeCharPalette } from '../render/charMaterials';
 import { fitRig } from '../render/sdfrig';
 import type { Vec3 } from '../math/vec';
 import { BoxWorld } from '../scene/boxes';
 import type { Drawn } from './drawn';
+import { SIDES } from './names';
 import { Bones, Cap, Inst, Man, Section } from './sections';
 
-/** a man's side by its number in the section */
-export const SIDES: readonly CharSide[] = ['civilian', 'operator', 'defender', 'responder'];
 type Fit = { r0: Float32Array; r1: Float32Array; pad?: number };
 /** what a man is dressed by, and what that came to */
 interface Look { version: number; side: number; suit: number; parts: number; tints: Float32Array; dry: number; pal: Float32Array; caps: Vec3[]; stature: number; fit: Fit | null; put: (out: Float32Array, at: number) => void }

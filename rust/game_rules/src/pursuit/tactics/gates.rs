@@ -304,7 +304,7 @@ fn begin_toss(g: &mut crate::game::Game, gd: GuardId, gate: &mut crate::tactics:
         fuse: Some(99.0), who: Some(who), heading: Some(v3::yaw_of(sol.v0)), ..Default::default()
     }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
     crate::game::game_say(g, thrower, "bang out", None, None);
     if thrower != gd {
         let row = s(g).gates.get(thrower).cloned();

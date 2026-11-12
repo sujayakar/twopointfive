@@ -1,10 +1,8 @@
 # WHAT EACH STEP OF THE TICK WRITES, in the tick's order (STEPS in game_rules/src/tick/game/steps.rs): the parts of the game it was seen to change. Made by `hold steps DIR --write`.
 # A step that writes another part is a red row of the gate: a new coupling, to be meant and added here, or not made.
 box world listed: box_frame_free box_frame_rows m.thinline
-poses' home:
-smoke's home: sim.smoke
 quiet mission:
-smoke: sim.smoke
+smoke: smoke
 commands in:
 rails' gate:
 opening:
@@ -14,16 +12,16 @@ clock: time
 sound paths: col
 duties anew: gd
 aim: ch cleared destr m.close m.guards m.lightswitch m.player m.wallcharge seats.aim_friend seats.aim_guard seats.aim_point seats.aim_snap seats.hover seats.interactables seats.nearby serial_next
-orders' keys: seats.orders
+orders' keys: groups.orders
 wand order:
-squad throw: m.squadthrow seats.orders tab.orders_order_def
+squad throw: groups.orders m.squadthrow tab.orders_order_def
 order rows:
-orders shown: seats.orders
+orders shown: groups.orders
 his own ring:
 aim settled: arms m.guards
 threat: ch seats.threat_proximity
-suppression: arms ch cond dice gd keyed m.morale m.suppression
-player: arms ch cond fa m.character m.gunwall m.player m.stalk pl seats.hand sim.poses tab.light tab.pose_set tab.ragdoll
+suppression: arms ch chronicle cond cues dice gd keyed m.morale m.suppression
+player: arms ch cond fa m.character m.gunwall m.player m.stalk pl seats.hand tab.light tab.ragdoll
 player's look: ch m.samlook
 sponge rounds:
 sticky cameras:
@@ -31,29 +29,30 @@ grenades:
 weapons dealt: ch search_probe_n
 director:
 pair's key:
-charges' key: seats.door_tools seats.orders tab.orders_order_def
-mission's rules: box_frame_free ch chronicle cond ctl cues cv destr dice engine.lights events fa fight fx fx_seed gd keyed loose_poses m.enemysquads m.netquietfeed m.particle_fx m.unseen night_breach quiet rescue room_clear seats.door_tools seats.orders seats.work serial_next sim.men sim.poses staged tab.enemysquads_squad tab.frame_boxes tab.light tab.orders_assignment tab.ragdoll tab.rescueflow_region tab.roomfight_def tab.roomfight_room tab.wallbreak_breakable
-wall react: cover destr fight m.wallreact tab.cover_opening tab.roomfight_room tab.wallreact_breach
+charges' key: groups.orders groups.tools tab.orders_order_def
+mission's rules: box_frame_free ch chronicle cond ctl cues cv destr dice engine.lights events fa fight fx fx_seed gd groups.orders groups.tools keyed m.enemysquads m.morale m.netquietfeed m.particle_fx m.squad m.unseen night_breach quiet rescue room_clear seats.work serial_next smoke staged tab.enemysquads_squad tab.frame_boxes tab.light tab.ragdoll tab.rescueflow_region tab.roomfight_def tab.roomfight_room tab.task tab.wallbreak_breakable
+wall react: col cover destr fight gd m.wallreact tab.cover_opening tab.roomfight_room tab.wallreact_breach
 entry points: cover entry tab.cover_opening
 cleared rooms: cleared
-door tools: ch dice door_path dr fight gd items keyed m.doortools m.handleside m.seenwalk m.unseen seats.door_tools seats.orders serial_next squad_net tab.doortools_door_op tab.doortools_known_threat tab.doortools_room_search tab.doortools_word tab.item tab.orders_assignment tab.roomfight_room
+door tools: ch col destr dice door_path dr engine.lights events falls fight fx_seed gd groups.orders groups.tools items keyed m.blast_look m.destruction m.doortools m.handleside m.seenwalk m.unseen serial_next smoke sparks squad_net tab.boxes tab.debris_chunk tab.doortools_door_op tab.doortools_known_threat tab.doortools_room_search tab.doortools_word tab.item tab.light tab.roomfight_room tab.task
 wall charges:
-rear watch: m.rearwatch
+rear watch: m.rearwatch tab.task
 cover: cover gd tab.cover_opening
-silent: m.silent seats.orders tab.orders_order_def
-pairs: pair seats.orders tab.orders_order_def
+silent: groups.orders m.silent tab.orders_order_def
+pairs: groups.orders pair tab.orders_order_def
 spotted: ch gd m.spotted
-squad orders: ch cover dice dr fight gd items keyed m.fireline m.frag m.orders m.picture m.seenwalk m.shutdoor m.sneak m.squad m.squadthrow m.teampace m.unseen seats.door_tools seats.orders serial_next squad_net tab.item tab.orders_assignment tab.roomfight_room
+squad orders: ch cover dice dr fight gd groups.orders groups.tools items keyed m.fireline m.frag m.orders m.picture m.seenwalk m.shutdoor m.sneak m.squad m.squadthrow m.teampace m.unseen serial_next squad_net tab.boxes tab.item tab.roomfight_room tab.task
+their orders: arms ch door_path dr gd groups.orders groups.tools m.coverfire m.doortools m.gunwall m.handleside m.squad serial_next tab.doortools_door_op tab.doortools_room_search tab.task
 door paths: door_path gd
 power out: ch chronicle cues gd m.powerout
-room fight: arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights engine.world events fa falls fight fx fx_seed gd items keyed loose_poses m.coverfire m.destruction m.digin m.flinch m.glass m.glassbreak m.glasspen m.guards m.gunwall m.irlight m.laststand m.morale m.netquiet m.particle_fx m.squad m.tactics m.teampace m.unseen m.wallreact m.winbars recap serial_next shards sim.men sim.panes sim.smoke squad_net tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.props_prop tab.ragdoll tab.roomfight_def tab.roomfight_op tab.roomfight_room tab.tactics_danger_rec tab.wallbreak_breakable tracers
+room fight: arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights engine.world events fa falls fight fx fx_seed gd items keyed m.coverfire m.destruction m.digin m.flinch m.glass m.glassbreak m.glasspen m.guards m.gunwall m.irlight m.laststand m.morale m.netquiet m.particle_fx m.squad m.tactics m.teampace m.unseen m.wallreact m.winbars recap serial_next shards smoke squad_net tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.props_prop tab.ragdoll tab.roomfight_def tab.roomfight_op tab.roomfight_room tab.tactics_danger_rec tab.task tab.wallbreak_breakable tracers
 orders' reasons: gd m.showwhy
-morale: box_frame_free ch chronicle cond cues destr dice engine.lights events fa fx fx_seed gd keyed m.morale m.particle_fx serial_next sim.men sim.smoke tab.debris_chunk tab.frame_boxes tab.light tab.wallbreak_breakable
+morale: box_frame_free ch chronicle cond cues destr dice dr engine.lights events fa fx fx_seed gd keyed m.morale m.particle_fx serial_next smoke tab.boxes tab.debris_chunk tab.frame_boxes tab.light tab.wallbreak_breakable tracers
 flinch: m.flinch m.morale
-runner: ch ctl dice engine.lights fa gd guards items keyed m.digin m.morale m.runner sim.men tab.item tab.roomfight_def
+runner: ch ctl dice engine.lights fa gd guards items keyed m.digin m.morale m.runner tab.item tab.roomfight_def
 dark door: m.darkdoor
-net quiet: ch chronicle ctl cues dice gd keyed m.morale m.netquiet m.netquietfeed m.squad serial_next sim.men tab.roomfight_def
-lanes: ch chronicle ctl cues fight gd m.frag m.lanes m.squad serial_next sim.men tab.lanes_lane tab.roomfight_def
+net quiet: ch chronicle ctl cues dice gd keyed m.morale m.netquiet m.netquietfeed m.squad serial_next tab.roomfight_def
+lanes: ch chronicle col ctl cues fight gd m.frag m.lanes m.squad serial_next tab.lanes_lane tab.roomfight_def tab.task
 dark foe: m.darkfoe
 night vision: m.nvg
 tactics: ch chronicle ctl cues gd m.tactics tab.tactics_danger_rec tab.tactics_plan tab.tactics_role
@@ -61,38 +60,38 @@ doze: dice gd keyed m.attention m.doze tab.boxes tab.fixture tab.props_prop
 close work: ch gd
 needs: m.needs
 frag throws: ch col dice gd items keyed m.frag tab.item
-frags: ch col gd m.frag m.unseen sim.men squad_net tab.boxes
-guards: arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights event_seq events fa falls fx fx_seed gd items keyed last_sting_t loose_poses m.attention m.calmtorch m.character m.close m.coverfire m.darkdoor m.destruction m.doorforce m.doorway m.doze m.frag m.glass m.glassbreak m.glasspen m.guards m.gunwall m.handleside m.lanes m.lighting m.morale m.particle_fx m.picture m.runner m.squad m.startle m.tactics m.teampace m.unseen pl recap search_probe_n serial_next shards shown sim.men sim.panes sim.poses sim.smoke stood_down tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.pose_set tab.ragdoll tab.roomfight_def tab.tactics_danger_rec tab.tactics_plan tab.tactics_role tab.wallbreak_breakable tracers
+frags: ch col gd m.frag m.unseen squad_net tab.boxes
+guards: alarm arms box_frame_free ch chronicle col cond ctl cues destr dice dr engine.lights escalation escalation_t event_seq events fa falls fx fx_seed gd items keyed last_sting_t m.attention m.calmtorch m.character m.close m.coverfire m.darkdoor m.destruction m.doorforce m.doorway m.doze m.frag m.glass m.glassbreak m.glasspen m.guards m.gunwall m.handleside m.lanes m.lighting m.morale m.netquiet m.particle_fx m.picture m.runner m.squad m.startle m.suppression m.tactics m.teampace m.unseen mission pl recap search_probe_n serial_next shards shown smoke stood_down tab.boxes tab.debris_chunk tab.frame_boxes tab.item tab.light tab.ragdoll tab.roomfight_def tab.tactics_danger_rec tab.tactics_plan tab.tactics_role tab.wallbreak_breakable tracers
 picture: col m.picture
 doors forced: m.doorforce
 cover fire: ch gd m.coverfire squad_net
-civilians: alarm ch chronicle col ctl cues cv destr event_seq events gd m.civilians shown sim.poses tab.pose_set tab.ragdoll
-escalation: alarm ch ctl dice gd keyed m.dialogue m.guards
-response team: ch chronicle cues dice gd keyed qrf
-doors: ch door_hand_recs door_owns door_was doors dr events m.doorblast m.doorway m.unseen serial_next sim.poses tab.boxes tab.ragdoll tmp_v
+civilians: alarm ch chronicle col ctl cues cv destr event_seq events gd m.civilians shown tab.ragdoll
+escalation: alarm ch ctl cues dice gd keyed m.dialogue m.guards
+response team: arms ch chronicle col cond ctl cues dice dr engine.lights fa gd groups.commander groups.orders groups.ring groups.side groups.tools guards keyed load m.guards m.handleside m.picture mission qrf serial_next shown tab.game_talk tab.light tab.orders_order_def tab.route tab.task
+doors: ch door_hand_recs door_owns door_was doors dr events m.doorblast m.doorway m.unseen serial_next tab.boxes tab.ragdoll tmp_v
 lenses: tab.light
 infrared: engine.lights m.irlight tab.light
 mission: chronicle mission
 par: par
 lesson:
 rails:
-props: ch destr dice events keyed props roll_seq rolls serial_next sim.poses tab.boxes tab.debris_chunk tab.props_prop
-destruction: box_frame_free destr events falls serial_next shards sim.smoke tab.boxes tab.debris_chunk tab.frame_boxes
+props: ch destr dice events keyed props roll_seq rolls serial_next tab.boxes tab.debris_chunk tab.props_prop
+destruction: box_frame_free box_frame_rows destr events falls serial_next shards smoke tab.boxes tab.debris_chunk tab.frame_boxes
 air dust: air_dust
 events forgotten: events
 light switches: m.lightswitch
-fixtures: sim.lights tab.boxes tab.fixture tab.light
-fire: m.fire sim.lights tab.boxes tab.light
-devices: sim.lights tab.devices_camera_rt tab.devices_laser_rt tab.light
+fixtures: light_home tab.boxes tab.fixture tab.light
+fire: light_home m.fire tab.boxes tab.light
+devices: light_home tab.devices_camera_rt tab.devices_laser_rt tab.light
 weather: engine.lights engine.weather tab.boxes tab.light weather
 takedowns: m.character
 disarm:
 wetness: ch m.wet
 wind: tab.wind_wind_source wind
 moths: moths tab.boxes
-items: arms ch col cond ctl cv destr dice dr engine.lights engine.world events falls fx_seed gd items keyed loose_poses m.blast_look m.destruction m.doorblast m.frag m.glassbreak m.morale m.netquiet m.tactics m.wallreact m.winbars pl props serial_next shards sim.panes sim.poses sim.smoke sparks tab.boxes tab.debris_chunk tab.fixture tab.furnblast_member tab.item tab.light tab.props_prop tab.ragdoll tab.tactics_danger_rec tab.wallbreak_breakable
-glass: m.glass sim.panes
-glass breaks: destr events falls glass_break m.glassbreak serial_next shards sim.panes tab.boxes tab.debris_chunk tab.wind_wind_source wind
+items: arms ch col cond ctl cv destr dice dr engine.lights engine.world events falls fx_seed gd items keyed m.blast_look m.destruction m.doorblast m.frag m.glassbreak m.morale m.netquiet m.tactics m.wallreact m.winbars pl props serial_next shards smoke sparks tab.boxes tab.debris_chunk tab.fixture tab.furnblast_member tab.item tab.light tab.props_prop tab.ragdoll tab.tactics_danger_rec tab.wallbreak_breakable
+glass: m.glass tab.boxes
+glass breaks: destr events falls glass_break m.glassbreak serial_next shards tab.boxes tab.debris_chunk tab.wind_wind_source wind
 shards: destr events falls serial_next shards tab.boxes tab.debris_chunk
 fog of war: engine.lights fog_of_war tab.boxes tab.light
 men and boxes: box_frame_free box_frame_rows ch destr dyn_boxes engine.lights engine.world fog_of_war fx m.anim_gltf m.cast m.fixture_break m.particle_fx m.rig_props m.stature m.thinline sparks tab.boxes tab.frame_boxes tab.light tracers

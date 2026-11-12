@@ -15,10 +15,11 @@ import { buildLookPanel, type SkyTurns } from '../ui/lookpanel';
 import { netRows } from '../ui/netrows';
 import { Panel } from '../ui/panel';
 import { rainRows } from '../ui/rainrows';
-import type { ActionRow, DrawGame } from './drawgame';
+import type { DrawGame } from './drawgame';
+import type { ActionRow } from '../view/read';
 import { keepPick, keepRow } from './machine';
 import type { DrawHud } from './drawhud';
-import { gameCode, typedInto } from './keymap';
+import { DEBUG_KEY, gameCode, typedInto } from './keymap';
 
 /** rows shown at once: a word narrows them */
 const SHOWN = 40;
@@ -82,7 +83,7 @@ function actionRows(panel: Panel, game: DrawGame, secs: Map<string, HTMLElement>
     switch (a.kind) {
       case 'press': panel.buttons(sec, a.label, [{ text: 'do it', run: () => act(a.name, 0, ''), title }]); break;
       case 'each': panel.buttons(sec, a.label, a.words.map(w => ({ text: w, run: () => act(a.name, 0, w), title }))); break;
-      case 'choice': panel.select(sec, a.label, a.words, () => { const r = rows()[i]; return r.kind === 'choice' ? Math.max(0, r.words.indexOf(r.now)) : 0; }, v => { game.pick(a.name, a.words[v]); game.tell(); at = -1; keepPick(a.name, a.words[v]); }, title); break;
+      case 'choice': panel.select(sec, a.label, a.words, () => { const r = rows()[i]; return Math.max(0, r.words.indexOf(r.now)); }, v => { game.pick(a.name, a.words[v]); game.tell(); at = -1; keepPick(a.name, a.words[v]); }, title); break;
       case 'count': { let n = a.start; panel.slider(sec, a.label, a.lo, a.hi, a.step, () => n, v => { n = v; }, title); panel.buttons(sec, a.label, [{ text: 'do it', run: () => act(a.name, n, ''), title }]); break; }
       case 'reload': panel.buttons(sec, a.label, a.words.map(w => ({ text: w, run: () => { const u = new URL(location.href), was = u.searchParams.get(a.word); if (a.words[0] === w ? was === null : was === w) return; if (a.words[0] === w) u.searchParams.delete(a.word); else u.searchParams.set(a.word, w); location.href = u.href; }, title }))); break;
     } });
@@ -103,7 +104,7 @@ export function debuggerPanel(d: DebuggerDeps): Panel {
   buildLookPanel(panel, d.engine, () => d.hud().fps, false, skyOf(d.game));
   if (d.net) netRows(panel, d.net);
   d.input.keyVeto = e => d.card(e) || panel.onKey(e);
-  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== 'Backquote' || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
+  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== DEBUG_KEY || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
   (window as unknown as { __panel: Panel }).__panel = panel;
   return panel;
 }

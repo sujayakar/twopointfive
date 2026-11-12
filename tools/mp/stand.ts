@@ -2,15 +2,17 @@
 //   freshStart(setup)   the start of a game for an address: its level's file, its seats, its die, its difficulty
 //   standStart(start)   THE game a server or a client plays, stood from the start's bytes as every page stands it. As many as the module has room for.
 //   buildName()         the build this checkout is
+import { StartFlag } from '../../src/draw/bits';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WireCmd, Outcome } from '../../src/net/wire.ts';
-import type { Ahead } from '../../src/net/foresee.ts';
+import { Face } from '../../src/draw/face.ts';
+import type { AheadView } from '../../src/view/read.ts';
 import { startWhy, type NetStart } from '../../src/net/start.ts';
-import { NetGame, type NetFace } from '../../src/net/modgame.ts';
+import { NetGame } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
 import { toolDesk, toolModule } from '../desk.ts';
-import { characterFiles, pack } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -26,20 +28,6 @@ export function freshStart(setup: StartSetup): NetStart {
   return start;
 }
 
-interface StartFace extends NetFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
-/** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
-const DRESS = 1;
-
-/** every call of the face: a trap (a panic, the stack run out) is thrown as the panic's words */
-function guarded(raw: Record<string, unknown>, memory: WebAssembly.Memory): StartFace {
-  const out: Record<string, unknown> = {}, R = raw as unknown as StartFace;
-  for (const k of Object.keys(raw)) { const f = raw[k]; out[k] = typeof f !== 'function' || !k.startsWith('face_') ? f : (...a: unknown[]): unknown => {
-    try { return f(...a); } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
-      let words = ''; try { words = new TextDecoder().decode(new Uint8Array(memory.buffer, R.face_panic_ptr() >>> 0, R.face_panic_len() >>> 0)); } catch { /* the trap's own words, then */ }
-      throw new Error(`the game stopped in ${k}: ${words || (e as Error).message}`); } }; }
-  return out as unknown as StartFace;
-}
-
 /** a networked game as a machine with no page holds it */
 export interface Stood {
   readonly seats: number; readonly ticks: number;
@@ -52,28 +40,25 @@ export interface Stood {
   /** which seat this machine shows: nothing a tick reads */
   show(seat: number): void;
   /** where a seat's man would be after records the game has not had; with none, where the game has him */
-  ahead(seat: number, cmds: WireCmd[]): Ahead;
+  ahead(seat: number, cmds: WireCmd[]): AheadView;
 }
 
 /** `bent`: a check's. This machine's word of the part so named is not the game's, as if that part of its game were another */
 export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
   const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
-  const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
-  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new TextEncoder().encode(start.kept)]);
-  const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
-  const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
-  X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);
-  if (bent) { const said = (n: number): Uint8Array => new Uint8Array(memory.buffer, X.face_out_ptr() >>> 0, n), words = X.face_state_words.bind(X);
-    const at = Array.from({ length: X.face_state_n() }, (_, i) => { X.face_state_name(i); return new TextDecoder().decode(said(X.face_out_len() >>> 0).slice()); }).indexOf(bent); if (at < 0) throw new Error(`the game has no part ${bent}`);
-    X.face_state_words = n => { words(n); said(at * 4 + 1)[at * 4] ^= 1; }; }
-  const game = new NetGame(X, memory, h), keep = wordsKept();
+  const face = new Face(new WebAssembly.Instance(toolModule()).exports), [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
+  const h = face.start(new Uint8Array(readFileSync(level)), start.words, mannequin, mannequinBin, cast, castLook, start.kept, start.seed, start.seats, StartFlag.Dress);
+  face.reserve(64 * 1048576);
+  if (bent) { const at = face.stateNames().indexOf(bent), words = face.stateWords.bind(face); if (at < 0) throw new Error(`the game has no part ${bent}`);
+    face.stateWords = h => { const w = words(h); w[at] ^= 1; return w; }; }
+  const game = new NetGame(face, h), keep = wordsKept();
   game.clear();
   return {
     seats: start.seats, get ticks() { return game.ticks; },
     step(cmds) { game.step(cmds); game.clear(); if (keep && wordTick(game.ticks - 1)) keep(game.ticks, game.whole(true)); },
     word: () => game.word(), ended: () => game.ended(),
-    show: seat => X.face_show_seat(h, seat),
+    show: seat => face.showSeat(h, seat),
     ahead: (seat, cmds) => game.ahead(seat, cmds),
   };
 }

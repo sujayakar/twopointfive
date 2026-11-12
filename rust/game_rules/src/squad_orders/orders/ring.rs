@@ -8,8 +8,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the frame's input: what the order input takes out of it
 
-fn pressed_delete(g: &mut Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.delete(String::from(code))
+fn pressed_delete(g: &mut Game, input: InputId, key: crate::input::Key) -> bool {
+    g.tab.input[input].pressed.delete(key.text())
 }
 fn mouse(g: &Game, input: InputId) -> (f64, f64) {
     let i = &g.tab.input[input];
@@ -27,7 +27,7 @@ fn buttons_off(g: &mut Game, input: InputId, bits: i32) {
 }
 /// `input.down('ShiftLeft') || input.down('ShiftRight')`
 fn shift_down(g: &Game, input: InputId) -> bool {
-    crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")
+    crate::input::input_down(g, input, crate::input::Key::ShiftLeft) || crate::input::input_down(g, input, crate::input::Key::ShiftRight)
 }
 /// `if (input === g.seat.input) g.seat.swallow(1)`
 fn swallow_if_seat(g: &mut Game, input: InputId) {
@@ -59,7 +59,7 @@ fn opts_men(men: Vec<GuardId>, ack: Option<String>) -> GiveOpts {
 }
 /// `R.lit = 0; R.armed = false`, and `R.more` as given
 fn unlight(g: &mut Game, more: Option<bool>) {
-    if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() {
+    if let Some(r) = g.groups[g.group].orders.cmd_ring.as_mut() {
         if more.is_some() { r.more = more; }
         r.lit = 0.0;
         r.armed = false;
@@ -70,18 +70,18 @@ fn ring_more(r: Option<crate::cmdring::RingState>) -> bool {
 }
 /// `this.seats(this.menu!, R)`
 fn seats_now(g: &Game, r: Option<crate::cmdring::RingState>) -> SquadOrdersSeats {
-    let m = g.sets[g.seat].orders.menu.clone().unwrap();
+    let m = g.groups[g.group].orders.menu.clone().unwrap();
     squad_orders_seats(g, &m, r)
 }
 fn away(g: &mut Game) {
-    g.sets[g.seat].orders.menu = None;
-    g.sets[g.seat].orders.cmd_ring = None;
+    g.groups[g.group].orders.menu = None;
+    g.groups[g.group].orders.cmd_ring = None;
 }
 
 /// THE RING'S INPUT, ahead of the menu's own: the frame's order input is the ring's if true.
 pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
-    if g.sets[g.seat].orders.cmd_ring.is_some() && g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; }
-    if g.sets[g.seat].orders.cmd_ring.is_none() { return no_ring_yet(g, input, cam, canvas); }
+    if g.groups[g.group].orders.cmd_ring.is_some() && g.groups[g.group].orders.menu.is_none() { g.groups[g.group].orders.cmd_ring = None; }
+    if g.groups[g.group].orders.cmd_ring.is_none() { return no_ring_yet(g, input, cam, canvas); }
     // what its rows say, all at one moment: every wedge of this frame is laid out over these words, the tick's and a HUD's
     super::read_words(g);
     let still = ring_stays_on_its_point(g, input, cam, canvas);
@@ -89,9 +89,9 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     let hand = hand_this_frame(g, input);
     if !rows_fresh(g) { return true; }
     if hand.blur || hand.back { away(g); return true; }
-    if ring_more(g.sets[g.seat].orders.cmd_ring) && seats_now(g, None).over.is_empty() { unlight(g, Some(false)); }
+    if ring_more(g.groups[g.group].orders.cmd_ring) && seats_now(g, None).over.is_empty() { unlight(g, Some(false)); }
     if hand.rmb {
-        if ring_more(g.sets[g.seat].orders.cmd_ring) { unlight(g, Some(false)); }
+        if ring_more(g.groups[g.group].orders.cmd_ring) { unlight(g, Some(false)); }
         else { away(g); }
         return true;
     }
@@ -106,12 +106,12 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
 
 /// With no ring up: the key down and let go is a tap; still down when the hold is over, the ring goes up.
 fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
-    if let Some(p) = g.sets[g.seat].orders.cmd_press.clone() { return key_still_held(g, input, cam, canvas, &p); }
-    let key = g.k.cmdring.key.clone();
-    if !crate::input::input_hit(g, input, &key) || !squad_orders_ring_free(g, &crate::seats::here(g), input) { return false; }
-    pressed_delete(g, input, &key);
+    if let Some(p) = g.groups[g.group].orders.cmd_press.clone() { return key_still_held(g, input, cam, canvas, &p); }
+    let key = g.k.cmdring.key;
+    if !crate::input::input_hit(g, input, key) || !squad_orders_ring_free(g, &crate::seats::here(g), input) { return false; }
+    pressed_delete(g, input, key);
     let add = crate::planmode::goals_on(g, &crate::seats::here(g)) && shift_down(g, input);
-    if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, &key) {
+    if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, key) {
         let t = squad_orders_target_under(g, input, cam, canvas);
         squad_orders_tap_give(g, &t, input, Some(add));
         return true;
@@ -119,7 +119,7 @@ fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_
     if g.k.cmdring.hold_secs > 0.0 {
         let t0 = g.time;
         let t = squad_orders_target_under(g, input, cam, canvas);
-        g.sets[g.seat].orders.cmd_press = Some(SquadOrdersCmdPress { t0, t, add: if add { Some(true) } else { None } });
+        g.groups[g.group].orders.cmd_press = Some(SquadOrdersCmdPress { t0, t, add: if add { Some(true) } else { None } });
         if squad_orders_ring_digit(g, input) { squad_orders_ring_input(g, input, cam, canvas); }
         return true;
     }
@@ -132,17 +132,17 @@ fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_
 
 /// The press goes on: let go it is a tap; a digit, or the hold over, puts the ring up on what the press was on.
 fn key_still_held(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, p: &SquadOrdersCmdPress) -> bool {
-    let key = g.k.cmdring.key.clone();
-    if crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused") { g.sets[g.seat].orders.cmd_press = None; return false; }
-    if !crate::input::input_down(g, input, &key) {
-        g.sets[g.seat].orders.cmd_press = None;
+    let key = g.k.cmdring.key;
+    if crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused) { g.groups[g.group].orders.cmd_press = None; return false; }
+    if !crate::input::input_down(g, input, key) {
+        g.groups[g.group].orders.cmd_press = None;
         let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g, &crate::seats::here(g));
         squad_orders_tap_give(g, &p.t, input, Some(goal));
         return true;
     }
     let digit = squad_orders_ring_digit(g, input);
     if !digit && g.time - p.t0 < crate::cmdring::ring_hold_secs(g) - 1e-6 { return false; }
-    g.sets[g.seat].orders.cmd_press = None;
+    g.groups[g.group].orders.cmd_press = None;
     if !squad_orders_back_free(g, &crate::seats::here(g)) { return false; }
     let add = p.add.unwrap_or(false) || shift_down(g, input);
     let Some(part) = goal_part_or_nobody(g, &p.t, add) else { return true };
@@ -154,16 +154,16 @@ fn key_still_held(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::ho
 /// It stays on its point: its middle put back over the place it was opened on. True: the hand has not moved, and a cursor that has not moved lights no other wedge.
 fn ring_stays_on_its_point(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     let (w, h) = (canvas.client_width, canvas.client_height);
-    let Some(at) = g.sets[g.seat].orders.cmd_ring.unwrap().at else { return false };
+    let Some(at) = g.groups[g.group].orders.cmd_ring.unwrap().at else { return false };
     let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
     if front {
         // ring_pin reads only the table of numbers on g: R goes back as it comes out
-        let mut r = g.sets[g.seat].orders.cmd_ring.unwrap();
+        let mut r = g.groups[g.group].orders.cmd_ring.unwrap();
         crate::cmdring::ring_pin(g, &mut r, sx, sy, w, h);
-        g.sets[g.seat].orders.cmd_ring = Some(r);
+        g.groups[g.group].orders.cmd_ring = Some(r);
     }
     let (mx, my) = mouse(g, input);
-    let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() else { return false };
+    let Some(r) = g.groups[g.group].orders.cmd_ring.as_mut() else { return false };
     let still = r.mx == Some(mx) && r.my == Some(my);
     r.mx = Some(mx);
     r.my = Some(my);
@@ -184,13 +184,13 @@ struct RingHand {
 /// The frame's keys are the ring's while it is up: taken out of the input, the digits and the wheel all of them.
 fn hand_this_frame(g: &mut Game, input: InputId) -> RingHand {
     let back = crate::backkey::back_take(g, input);
-    let blur = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
+    let blur = crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused);
     let rmb = crate::input::input_rmb_hit(g, input);
     if rmb { clicked_off(g, input, 4); }
     let lmb = crate::input::input_lmb_hit(g, input);
     let mut digit = 0.0;
     for d in 1..=9 {
-        if pressed_delete(g, input, &format!("Digit{}", d)) && !js::truthy(digit) { digit = d as f64; }
+        if crate::input::Key::digit(d).is_some_and(|k| pressed_delete(g, input, k)) && !js::truthy(digit) { digit = d as f64; }
     }
     g.tab.input[input].wheel = 0.0;
     RingHand { back, blur, rmb, lmb, digit }
@@ -199,37 +199,37 @@ fn hand_this_frame(g: &mut Game, input: InputId) -> RingHand {
 /// The menu's rows read again. False: the menu has gone, and the ring with it.
 fn menu_survives_a_read(g: &mut Game) -> bool {
     squad_orders_refresh(g);
-    if g.sets[g.seat].orders.menu.is_some() { return true; }
-    g.sets[g.seat].orders.cmd_ring = None;
+    if g.groups[g.group].orders.menu.is_some() { return true; }
+    g.groups[g.group].orders.cmd_ring = None;
     false
 }
 
 /// Rows gone stale are read again; a row that came or went under the ring makes the wedges other rows, and none is lit until the hand lights one. False: the menu has gone.
 fn rows_fresh(g: &mut Game) -> bool {
-    let read_t = g.sets[g.seat].orders.menu.as_ref().unwrap().read_t;
+    let read_t = g.groups[g.group].orders.menu.as_ref().unwrap().read_t;
     let stale = g.time - read_t >= g.k.orders.refresh_secs || {
-        let menu = g.sets[g.seat].orders.menu.clone().unwrap();
+        let menu = g.groups[g.group].orders.menu.clone().unwrap();
         squad_orders_due(g, &menu)
     };
     if !stale { return true; }
-    let r = g.sets[g.seat].orders.cmd_ring;
+    let r = g.groups[g.group].orders.cmd_ring;
     let was = seats_now(g, r).row;
     if !menu_survives_a_read(g) { return false; }
-    let r = g.sets[g.seat].orders.cmd_ring;
+    let r = g.groups[g.group].orders.cmd_ring;
     if seats_now(g, r).row != was { unlight(g, None); }
     true
 }
 
 /// On a man the orders are his, and the ring starts again for him; anywhere else the click gives the lit wedge (Some(true)). None: the menu has gone.
 fn left_click(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> Option<bool> {
-    let part = g.sets[g.seat].orders.menu.as_ref().unwrap().part.is_some();
+    let part = g.groups[g.group].orders.menu.as_ref().unwrap().part.is_some();
     let k = if squad_orders_sams(&crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
     clicked_off(g, input, 1);
     buttons_off(g, input, 1);
     swallow_if_seat(g, input);
     if k < 0.0 { return Some(true); }
-    g.sets[g.seat].orders.who = match g.sets[g.seat].orders.who { Who::Num(w) if w == k => Who::All, _ => Who::Num(k) };
-    let menu = g.sets[g.seat].orders.menu.as_mut().unwrap();
+    g.groups[g.group].orders.who = match g.groups[g.group].orders.who { Who::Num(w) if w == k => Who::All, _ => Who::Num(k) };
+    let menu = g.groups[g.group].orders.menu.as_mut().unwrap();
     if let OrderTarget::None(n) = &menu.target {
         if n.man.is_some() {
             let at = n.at;
@@ -237,7 +237,7 @@ fn left_click(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_h
         }
     }
     if !menu_survives_a_read(g) { return None; }
-    if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() {
+    if let Some(r) = g.groups[g.group].orders.cmd_ring.as_mut() {
         r.more = Some(false);
         r.lit = 1.0;
         r.armed = false;
@@ -259,25 +259,25 @@ fn wedge_lit(g: &mut Game, input: InputId, digit: f64, still: bool) -> Option<We
     let lone = crate::ringlone::lone_key(g, &mut |g: &mut Game| squad_orders_ring_keys(g));
     let time = g.time;
     // ring_want reads only the table of numbers on g: R goes back as it comes out
-    let mut r = g.sets[g.seat].orders.cmd_ring.unwrap();
+    let mut r = g.groups[g.group].orders.cmd_ring.unwrap();
     let want0 = crate::cmdring::ring_want(g, &mut r, input, digit, time, Some(lone), None);
-    g.sets[g.seat].orders.cmd_ring = Some(r);
-    let lit_now = g.sets[g.seat].orders.cmd_ring.unwrap().lit;
+    g.groups[g.group].orders.cmd_ring = Some(r);
+    let lit_now = g.groups[g.group].orders.cmd_ring.unwrap().lit;
     let want = if still && !js::truthy(digit) && want0 != lit_now { 0.0 } else { want0 };
     if !js::truthy(want) || want == lit_now { return Some(WedgeLit { want, turned: false }); }
     let mut turned = false;
-    let r = g.sets[g.seat].orders.cmd_ring;
+    let r = g.groups[g.group].orders.cmd_ring;
     let seat = seats_now(g, r);
     let i = seat_at(&seat.row, want);
     let first = !ring_more(r);
     if first && (want == 1.0 || (js::truthy(digit) && seat.same.get(want as usize).is_some_and(|&x| x >= 0.0))) {
-        g.sets[g.seat].orders.cmd_ring.as_mut().unwrap().lit = 1.0;
+        g.groups[g.group].orders.cmd_ring.as_mut().unwrap().lit = 1.0;
     } else if want == seat.more {
         unlight(g, Some(true));
         turned = true;
         if !menu_survives_a_read(g) { return None; }
     } else if i >= 0.0 {
-        g.sets[g.seat].orders.cmd_ring.as_mut().unwrap().lit = want;
+        g.groups[g.group].orders.cmd_ring.as_mut().unwrap().lit = want;
     }
     squad_orders_ring_sel(g);
     Some(WedgeLit { want, turned })
@@ -286,11 +286,11 @@ fn wedge_lit(g: &mut Game, input: InputId, digit: f64, still: bool) -> Option<We
 /// It stays up without its key: a digit's own wedge is given at once, a left click gives the lit one, and so does the key again once the press that opened it has come up;
 /// that press coming up gives only a wedge the cursor is out on.
 fn lit_wedge_is_given(g: &mut Game, input: InputId, digit: f64, click: bool, lit: WedgeLit) -> bool {
-    let key = g.k.cmdring.key.clone();
-    let lit_now = g.sets[g.seat].orders.cmd_ring.unwrap().lit;
-    let again = g.sets[g.seat].orders.cmd_ring.unwrap().free.unwrap_or(false) && pressed_delete(g, input, &key);
-    let key_down = crate::input::input_down(g, input, &key);
-    let latch = crate::cmdring::ring_latch(g.sets[g.seat].orders.cmd_ring.as_mut().unwrap(), key_down, again, !js::truthy(digit) && lit.want > 0.0 && lit.want == lit_now);
+    let key = g.k.cmdring.key;
+    let lit_now = g.groups[g.group].orders.cmd_ring.unwrap().lit;
+    let again = g.groups[g.group].orders.cmd_ring.unwrap().free.unwrap_or(false) && pressed_delete(g, input, key);
+    let key_down = crate::input::input_down(g, input, key);
+    let latch = crate::cmdring::ring_latch(g.groups[g.group].orders.cmd_ring.as_mut().unwrap(), key_down, again, !js::truthy(digit) && lit.want > 0.0 && lit.want == lit_now);
     let by_digit = digit > 0.0 && !lit.turned && lit_now == digit;
     if latch != crate::cmdring::RingLatch::Give && !by_digit && !(click && !lit.turned) { return false; }
     !(click && !js::truthy(lit_now))
@@ -298,13 +298,13 @@ fn lit_wedge_is_given(g: &mut Game, input: InputId, digit: f64, click: bool, lit
 
 /// The lit wedge is given: the first wedge is the quick key's own order, every other one its row's.
 fn give_the_lit_wedge(g: &mut Game) {
-    let r = g.sets[g.seat].orders.cmd_ring;
-    let n = g.sets[g.seat].orders.menu.clone().unwrap();
+    let r = g.groups[g.group].orders.cmd_ring;
+    let n = g.groups[g.group].orders.menu.clone().unwrap();
     let lit = r.unwrap().lit;
     let i = seat_at(&squad_orders_seats(g, &n, r).row, lit);
-    g.sets[g.seat].orders.cmd_ring = None;
+    g.groups[g.group].orders.cmd_ring = None;
     if !ring_more(r) && lit == 1.0 {
-        g.sets[g.seat].orders.menu = None;
+        g.groups[g.group].orders.menu = None;
         if n.part.is_some() {
             squad_orders_part_give(g, &mut |g: &mut Game| {
                 if crate::autopilot::quick(g, &n.target, Some(&n.men)) { None } else { Some(String::from("refused")) }
@@ -314,9 +314,9 @@ fn give_the_lit_wedge(g: &mut Game) {
         }
     } else if js::truthy(lit) && i >= 0.0 {
         squad_orders_pick(g, Some(i));
-        g.sets[g.seat].orders.menu = None;
+        g.groups[g.group].orders.menu = None;
     } else {
-        g.sets[g.seat].orders.menu = None;
+        g.groups[g.group].orders.menu = None;
     }
 }
 
@@ -324,7 +324,7 @@ fn give_the_lit_wedge(g: &mut Game) {
 fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
     let mut d = 1.0;
     while d <= g.k.cmdring.wedges {
-        if crate::input::input_hit(g, input, &format!("Digit{}", d as i32)) { return true; }
+        if crate::input::Key::digit(d as i32).is_some_and(|k| crate::input::input_hit(g, input, k)) { return true; }
         d += 1.0;
     }
     false
@@ -335,7 +335,7 @@ fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
     if !squad_orders_open(g, Some(t), g_2.map(|p| p.men.as_slice())) { return false; }
     let (w, h) = (canvas.client_width, canvas.client_height);
     let r = crate::cmdring::ring_open(g, input, w, h, t0, None);
-    g.sets[g.seat].orders.cmd_ring = Some(r);
+    g.groups[g.group].orders.cmd_ring = Some(r);
     squad_orders_ring_sel(g);
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
     if let Some(cam) = cam {
@@ -343,7 +343,7 @@ fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
         if front {
             let (mx, my) = mouse(g, input);
-            if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() {
+            if let Some(r) = g.groups[g.group].orders.cmd_ring.as_mut() {
                 r.at = Some(at);
                 r.ox = Some(mx - sx);
                 r.oy = Some(my - sy);
@@ -391,12 +391,12 @@ pub(in crate::squad_orders) fn squad_orders_back_free(g: &crate::game::Game, sea
 
 /// The menu's own highlight follows the lit wedge.
 fn squad_orders_ring_sel(g: &mut crate::game::Game) {
-    let r = match (&g.sets[g.seat].orders.menu, g.sets[g.seat].orders.cmd_ring) {
+    let r = match (&g.groups[g.group].orders.menu, g.groups[g.group].orders.cmd_ring) {
         (Some(_), Some(r)) if js::truthy(r.lit) => r,
         _ => return,
     };
     let i = seat_at(&seats_now(g, Some(r)).row, r.lit);
-    if i >= 0.0 { g.sets[g.seat].orders.menu.as_mut().unwrap().sel = i; }
+    if i >= 0.0 { g.groups[g.group].orders.menu.as_mut().unwrap().sel = i; }
 }
 
 /// The open menu's rows by wedge, or on 'more' the rest of them from wedge 1. A function of the menu's record: the tick's wedges and a HUD's are the same over the
@@ -442,11 +442,11 @@ pub(super) fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders
     let on_himself = matches!(t, OrderTarget::None(OrderTargetNone { man: None, .. }));
     if !on_himself && crate::cmdring::ring_hold_secs(g) > 0.0 && crate::rails::rails_tap_off(g) { return; }
     if goal.unwrap_or(false) {
-        g.sets[g.seat].orders.tap_was = None;
+        g.groups[g.group].orders.tap_was = None;
         crate::planmode::plan_goal(g, t);
         return;
     }
-    let was = g.sets[g.seat].orders.tap_was.take();
+    let was = g.groups[g.group].orders.tap_was.take();
     let now = g.time;
     let (x, y) = mouse(g, input);
     let same = match &was {
@@ -464,7 +464,7 @@ pub(super) fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders
             }
         }
     }
-    g.sets[g.seat].orders.tap_was = Some(SquadOrdersTapWas { at: now, t: t.clone(), x, y });
+    g.groups[g.group].orders.tap_was = Some(SquadOrdersTapWas { at: now, t: t.clone(), x, y });
     crate::autopilot::auto_quick(g, t);
 }
 
@@ -480,7 +480,7 @@ fn squad_orders_all_in(g: &mut crate::game::Game) {
     let mut every = true;
     for &gd in &men {
         let fell_in = match squad_orders_of(&crate::seats::here(g), gd) {
-            Some(a) => { let a = &g.tab.orders_assignment[a]; crate::orders::rows::id_is(&a.order, crate::orders::Is::Follows) && a.post.is_none() }
+            Some(a) => { let a = &g.tab.task[a]; crate::orders::rows::id_is(&a.order, crate::orders::Is::Follows) && a.post.is_none() }
             None => false,
         };
         if !fell_in { every = false; break; }
@@ -530,7 +530,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
 
 /// The digits the ring has a wedge on, a bit each (0: no ring). All the game reads of a ring's picture.
 fn squad_orders_ring_keys(g: &crate::game::Game) -> f64 {
-    let (r, menu) = match (g.sets[g.seat].orders.cmd_ring, g.sets[g.seat].orders.menu.clone()) {
+    let (r, menu) = match (g.groups[g.group].orders.cmd_ring, g.groups[g.group].orders.menu.clone()) {
         (Some(r), Some(menu)) => (r, menu),
         _ => return 0.0,
     };
@@ -558,32 +558,32 @@ pub(super) fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
         let gd = g.guards[at];
         at += 1;
         if squad_orders_mine(g, &crate::seats::here(g), gd) {
-            if g.sets[g.seat].orders.roster.get(i) != Some(&gd) { same = false; }
+            if g.groups[g.group].orders.roster.get(i) != Some(&gd) { same = false; }
             i += 1;
         }
     }
-    if !same || i != g.sets[g.seat].orders.roster.len() {
+    if !same || i != g.groups[g.group].orders.roster.len() {
         let squad = squad_orders_squad(g, &crate::seats::here(g));
-        g.sets[g.seat].orders.roster = squad.clone();
-        g.sets[g.seat].orders.who = Who::All;
-        g.sets[g.seat].orders.menu = None;
-        g.sets[g.seat].orders.trail.clear();
-        for gd in g.sets[g.seat].orders.asg.keys() {
+        g.groups[g.group].orders.roster = squad.clone();
+        g.groups[g.group].orders.who = Who::All;
+        g.groups[g.group].orders.menu = None;
+        g.groups[g.group].orders.trail.clear();
+        for gd in g.groups[g.group].orders.asg.keys() {
             if !squad.contains(&gd) { squad_orders_drop(g, gd); }
         }
     }
-    let stands = match g.sets[g.seat].orders.who {
-        Who::Num(k) => g.sets[g.seat].orders.roster.get(k as usize).map_or(true, |&gd| !crate::condition::down(g, g.gd[gd].ch)),
+    let stands = match g.groups[g.group].orders.who {
+        Who::Num(k) => g.groups[g.group].orders.roster.get(k as usize).map_or(true, |&gd| !crate::condition::down(g, g.gd[gd].ch)),
         Who::All => true,
         Who::Red => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Red), None).is_empty(),
         Who::Blue => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Blue), None).is_empty(),
     };
     if !stands {
         // the man the orders went to is down: a menu that was theirs goes with them, never on to everybody else
-        g.sets[g.seat].orders.who = Who::All;
-        g.sets[g.seat].orders.menu = None;
+        g.groups[g.group].orders.who = Who::All;
+        g.groups[g.group].orders.menu = None;
     }
-    g.sets[g.seat].orders.roster.clone()
+    g.groups[g.group].orders.roster.clone()
 }
 
 /// Sam is standing.
@@ -592,7 +592,9 @@ pub fn squad_orders_sam_stopped(seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// A man's order goes, and with it the pin the fight seam put on him.
-pub(super) fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
-    g.sets[g.seat].orders.asg.delete(gd);
-    if g.sets[g.seat].orders.ours.delete(gd) { crate::control::set_pinned(g, gd, false, "orders"); }
+pub fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
+    let his = g.groups[g.group].orders.asg.get(gd).copied();
+    g.groups[g.group].orders.asg.delete(gd);
+    crate::duty::done(g, gd, his);
+    if g.groups[g.group].orders.ours.delete(gd) { crate::duty::pin(g, gd, false, "orders"); }
 }

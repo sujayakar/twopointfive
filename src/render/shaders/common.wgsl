@@ -55,40 +55,40 @@ struct Frame {
 };
 
 /// Is this level's switch up? `bit` = one of the scene prelude's level words (WX_KINDS, WX_SNOW, SNOW_SURF, SNOW_WISPS, SNOW_TRACKS, SNOW_GLOW, SNOW_SPARKLE,
-/// SNOW_GRAINS, SNOW_UNDER: render/frame.ts LevelSw). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
+/// SNOW_GRAINS, SNOW_UNDER, below). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
 /// is never taken.
 fn lv(bit: u32) -> bool { return (frame.levelCfg.x & bit) != 0u; }
+// LEVEL SWITCHES: what a level raises, a bit each of levelCfg.x (written by render/frame.ts levelSwitches from the page's own switches)
+const WX_KINDS: u32 = 1u;
+const WX_SNOW: u32 = 2u;
+const SNOW_SURF: u32 = 4u;
+const SNOW_WISPS: u32 = 8u;
+const SNOW_TRACKS: u32 = 16u;
+const SNOW_GLOW: u32 = 32u;
+const SNOW_SPARKLE: u32 = 64u;
+const SNOW_GRAINS: u32 = 128u;
+const SNOW_UNDER: u32 = 256u;
 
 const FLAG_DIRECT: u32 = 1u;
 const FLAG_INDIRECT: u32 = 2u;
 const FLAG_VOLUMETRICS: u32 = 4u;
 const FLAG_SMOKE: u32 = 8u;
-const FLAG_RC_VISWEIGHT: u32 = 16u;
+const FLAG_RC_VIS_WEIGHT: u32 = 16u;
 const FLAG_SMOKE_SHADOWS: u32 = 64u;
 const FLAG_REACH_MASK: u32 = 32u;  // per-light reach masks over the level's 1 m cells (reach.ts): a light whose mask excludes the shading point's cell is skipped as if evalLight were !ok
 const FLAG_BOUNCE: u32 = 128u;
 const FLAG_DITHER: u32 = 256u;
-const FLAG_SOFTSHADOW: u32 = 512u;
-const FLAG_NIGHTVISION: u32 = 1024u;
+const FLAG_SOFT_SHADOW: u32 = 512u;
+const FLAG_NIGHT_VISION: u32 = 1024u;
 const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
-const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries BOX_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
+const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries GEO_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
 const FLAG_DECALS: u32 = 4194304u;      // experiment E1 (default on in its branch): the g-buffer's fragment stage applies render/decals.ts's marks (decals.wgsl) to the stored albedo / normal / gloss-keep; off = nothing read
 const FLAG_MESH_SHADOWS: u32 = 8388608u; // ultra: occluded() / occludedT() test characters against their skinned triangle mesh (meshShadowT below: per-character refit BVH in meshData, render/meshShadows.ts) instead of the round-cone proxies; off = the proxy loops (occludedCapsules / traceCapsules)
 const FLAG_PARTICLES: u32 = 16777216u;   // experiment: the GPU particle system is live this frame (render/particles.ts + shaders/particles*.wgsl: its own compute pass and a splat into the HDR target after the composite) — informational for the scene passes, none of which reads it
 const FLAG_BOUNCE_CARDS: u32 = 33554432u; // torch bounce cards (default off): the final gather samples each carried spot's footprint as an analytic one-bounce emitter (cards.wgsl builds them, fgather.wgsl samples them and excludes the light's direct term where its rays land inside a footprint); off = nothing built, sampled or excluded
 const FLAG_GLASS: u32 = 268435456u;    // glass panes (E3, SceneInfo.glass) — composite tints / reflects over what stands behind them and draws the crack decals on them, fgather traces their mirror ray, direct tints light through them; off = scene.glassInfo.x is 0 and nobody loops
 
-const BOX_NOPRIMARY: u32 = 1u;
-const BOX_NOSHADOW: u32 = 2u;
-const BOX_CUTAWAY: u32 = 4u;
-const BOX_EMISSIVE: u32 = 16u;
-const BOX_AREALIT: u32 = 32u;     // emission carried by an analytic area light instead (see Light kind 3)
-const BOX_ROT: u32 = 64u;         // fully rotated box: orientation is the quaternion boxRot(i), not the packed yaw (hand props, sparks, tumbling canisters)
-const BOX_GLOSS: u32 = 128u;      // polished floor finish: its on-screen top face gets a traced reflection ray under FLAG_GLOSS (boxes.ts BoxFlag.Gloss)
-const GEO_ROUND: u32 = 8u;        // ROUND THINGS (scene/round.ts; only ever raised in a build compiled with ROUND_BOXES): the box is the cylinder about its own y, radius h.x — to a program with the cut rule, the prism its rows of the cut table stand round it (ROUND_AS_CUT) (boxes.ts BOX_ROUND_BIT — the CPU's Dynamic bit, which is not sent then)
-const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised in a build compiled with CUT_BOXES): the box is clipped by the planes in its rows of the cut table (boxMat from CUT_BASE)
-const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
 // Character shadow / reflection proxies: ROUND CONES (segment a→b, radius r at a; the radius at b rides in misc's top byte — sdfrig.wgsl coneRb; 0 there = r again, an
@@ -356,7 +356,7 @@ fn safeInv(v: vec3f) -> vec3f {
   return vec3f(select(1.0 / v.x, 1e20, abs(v.x) < 1e-20), select(1.0 / v.y, 1e20, abs(v.y) < 1e-20), select(1.0 / v.z, 1e20, abs(v.z) < 1e-20));
 }
 
-// Ray vs yawed (or, with BOX_ROT, fully rotated) box `bi`. Returns vec2(t, code). t < 0 → miss. code: axis*2 + (1 if local normal negative), 7 = origin inside.
+// Ray vs yawed (or, with GEO_ROT, fully rotated) box `bi`. Returns vec2(t, code). t < 0 → miss. code: axis*2 + (1 if local normal negative), 7 = origin inside.
 // invRd = safeInv(rd) from the caller; axisFast (the unrotated fast path): a box with yaw 0 packs rot as exactly (1.0, 0.0) = 0x3C00, and for those the
 // local frame IS the world frame — 1·x − 0·z evaluates to x exactly whatever the contraction, so lo = p, ld = rd and inv = invRd bit for bit —
 // which skips two half unpacks, both rotations and the three divisions for two thirds of all items and every global. Lossless; off = always rotate.
@@ -441,13 +441,13 @@ fn isectRound(lo: vec3f, ld: vec3f, R: f32, tNy: f32, tFy: f32, tBox: f32, tmax:
 /** the normal of a round box's SIDE at world point wp on it: straight out from its axis (a yaw about that axis changes nothing; a tilted one goes through its own frame) */
 fn roundNormalAt(b: BoxGeo, bi: u32, wp: vec3f) -> vec3f {
   let p = wp - b.c;
-  if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
+  if ((b.flags & GEO_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
   return normalize(vec3f(p.x, 0.0, p.z) + vec3f(1e-9, 0.0, 0.0));
 }
 fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
-  if ((b.flags & BOX_ROT) != 0u) { let qi = vec4f(-boxRot(bi).xyz, boxRot(bi).w); lo = quatRotate(qi, p); ld = quatRotate(qi, rd); inv = safeInv(ld); }   // rare: one extra fetch + two quaternion rotations
+  if ((b.flags & GEO_ROT) != 0u) { let qi = vec4f(-boxRot(bi).xyz, boxRot(bi).w); lo = quatRotate(qi, p); ld = quatRotate(qi, rd); inv = safeInv(ld); }   // rare: one extra fetch + two quaternion rotations
   else if (b.rot == ROT_IDENTITY) { lo = p; ld = rd; inv = invRd; }
   else { let cs = boxGeoRot(b); lo = vec3f(cs.x * p.x - cs.y * p.z, p.y, cs.y * p.x + cs.x * p.z); ld = vec3f(cs.x * rd.x - cs.y * rd.z, rd.y, cs.y * rd.x + cs.x * rd.z); inv = safeInv(ld); }
   let tA = (-b.h - lo) * inv; let tB = (b.h - lo) * inv;
@@ -469,7 +469,7 @@ fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
   let c = u32(code);
   let sgn = select(1.0, -1.0, (c & 1u) == 1u);
   let axis = c >> 1u;
-  if ((b.flags & BOX_ROT) != 0u) { var ln = vec3f(0.0); ln[axis] = sgn; return quatRotate(boxRot(bi), ln); }
+  if ((b.flags & GEO_ROT) != 0u) { var ln = vec3f(0.0); ln[axis] = sgn; return quatRotate(boxRot(bi), ln); }
   let cs = boxGeoRot(b);
   if (axis == 0u) { return vec3f(cs.x, 0.0, -cs.y) * sgn; }   // local +x → world (cos,0,-sin)
   if (axis == 1u) { return vec3f(0.0, sgn, 0.0); }

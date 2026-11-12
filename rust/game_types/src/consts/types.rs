@@ -15,4 +15,4 @@ pub const DRIVE_REACH: f64 = 1.1;
 
 pub const DRIVE_SECS: f64 = 3.5;
 
-pub const INTERACT_KEY: &str = "Space";
+pub const INTERACT_KEY: crate::input::types::Key = crate::input::types::Key::Space;

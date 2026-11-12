@@ -8,7 +8,9 @@
 //   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, what the host's machine keeps), which every machine
 //   hands the game's own start in the module.
 // Host-neutral: no DOM, no bun, no game.
+import { SeatInput } from '../draw/input';
 import { numWord, wordNum } from './numtext';
+import type { GameKey } from '../draw/names';
 import type { NetStart } from './start';
 
 /** `proto`: the wire's version (a hello of another is refused). `hz`: ticks a second (the fixed step's). `wordEvery`: ticks between state words. `lead`: how many
@@ -20,7 +22,7 @@ import type { NetStart } from './start';
  *  and `slipAt` how far behind the server lets its game's clock slip instead. `tapeChunk`: ticks a message when a joiner is sent the run so far. `watchers`: the
  *  most connections with no seat. `maxText`: the longest message a server reads from a client (a record is a few hundred characters). `retryMs`: how long a
  *  server waits on a backed-up connection that never says it has drained before it tries the run so far again. */
-export const NET = { proto: 2, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
+export const NET = { proto: 3, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
 /** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; src/host/myname.ts): text with something to read in it — a letter, a digit or a
  *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
  *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
@@ -38,9 +40,23 @@ export function cleanName(raw: unknown): string {
   return READS.test(cut) ? cut : '';
 }
 
-/** a seat's record as it travels: keys held · keys gone down · buttons held · buttons gone down · the wheel · the cursor · the view's size (CSS w h, backing w h) ·
- *  the view's pose (look-at x y z, yaw, pitch, distance, fov, aspect, aim lead). The one-tick EDGES are `p`, `c` and `w`: absent = none */
-export interface WireCmd { k: string[]; p?: string[]; b: number; c?: number; w?: number; m: [number, number]; s: [number, number, number, number]; v: number[]; }
+/** a seat's record as it travels: keys held · keys gone down · his input's numbers, as they are handed (src/draw/input.ts SeatInput). The one-tick EDGES are `p`, the buttons gone down
+ *  and the wheel */
+export interface WireCmd { k: string[]; p?: string[]; n: number[]; }
+/** a record's numbers, by what each is */
+export function inputNumbers(o: { buttons?: number; clicked?: number; wheel?: number; mouse: readonly number[]; size: readonly number[]; target: ArrayLike<number>; yaw: number; pitch: number; distance: number; fov: number; aspect: number; aimLead?: number }): number[] {
+  const n = new Array<number>(SeatInput.row).fill(0);
+  n[SeatInput.buttons] = o.buttons ?? 0; n[SeatInput.clicked] = o.clicked ?? 0; n[SeatInput.wheel] = o.wheel ?? 0; [n[SeatInput.mx], n[SeatInput.my]] = o.mouse; [n[SeatInput.w], n[SeatInput.h], n[SeatInput.pw], n[SeatInput.ph]] = o.size;
+  for (let i = 0; i < 3; i++) n[SeatInput.target + i] = o.target[i];
+  n[SeatInput.yaw] = o.yaw; n[SeatInput.pitch] = o.pitch; n[SeatInput.distance] = o.distance; n[SeatInput.fov] = o.fov; n[SeatInput.aspect] = o.aspect; n[SeatInput.aimLead] = o.aimLead ?? 0;
+  return n;
+}
+/** numbers with these three in them (the same numbers, where they are) */
+function edged(n: number[], buttons: number, clicked: number, wheel: number): number[] {
+  if (n[SeatInput.buttons] === buttons && n[SeatInput.clicked] === clicked && n[SeatInput.wheel] === wheel) return n;
+  const out = n.slice(); out[SeatInput.buttons] = buttons; out[SeatInput.clicked] = clicked; out[SeatInput.wheel] = wheel;
+  return out;
+}
 
 const keysOk = (a: unknown): a is string[] => Array.isArray(a) && a.every(k => typeof k === 'string');
 const numsOk = (a: unknown, n: number): a is number[] => Array.isArray(a) && a.length === n && a.every(x => typeof x === 'number' && Number.isFinite(x));
@@ -48,27 +64,25 @@ const numsOk = (a: unknown, n: number): a is number[] => Array.isArray(a) && a.l
  *  many keys, how long a name, how far a view may be from its man are the game's own referee's to say, and a message's length is NET.maxText's) */
 export function wireOk(c: unknown): c is WireCmd {
   const w = c as WireCmd | null;
-  return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && Number.isInteger(w.b) && (w.c === undefined || Number.isInteger(w.c))
-    && (w.w === undefined || (typeof w.w === 'number' && Number.isFinite(w.w))) && numsOk(w.m, 2) && numsOk(w.s, 4) && numsOk(w.v, 9);
+  return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && numsOk(w.n, SeatInput.row) && Number.isInteger(w.n[SeatInput.buttons]) && Number.isInteger(w.n[SeatInput.clicked]);
 }
 /** `w` with one-tick edges laid over its own (keys gone down, clicks, the wheel's turn): how an edge that missed its tick rides a later record. Also the plain
  *  copy of a record in the wire's own field order, with nothing else on it (`withEdges(w, [], 0, 0)`) */
 export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: number): WireCmd {
-  const out: WireCmd = { k: w.k, b: w.b, m: w.m, s: w.s, v: w.v }, ps = w.p ? w.p.slice() : [];
+  const out: WireCmd = { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], w.n[SeatInput.clicked] | c, w.n[SeatInput.wheel] + wheel) }, ps = w.p ? w.p.slice() : [];
   for (const k of p) if (!ps.includes(k)) ps.push(k);
-  const cs = (w.c ?? 0) | c, ws = (w.w ?? 0) + wheel;
-  if (ps.length) out.p = ps; if (cs) out.c = cs; if (ws) out.w = ws;
+  if (ps.length) out.p = ps;
   return out;
 }
 /** `w` with its one-tick edges taken off: what a seat's tick runs on when no record of its own came for it (the keys and the buttons stay held, the view stays) */
-export function heldOf(w: WireCmd): WireCmd { return { k: w.k, b: w.b, m: w.m, s: w.s, v: w.v }; }
+export function heldOf(w: WireCmd): WireCmd { return { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], 0, 0) }; }
 /** `w` with nothing held either: a seat nobody is sitting in (its view stays where it was) */
-export function idleOf(w: WireCmd): WireCmd { return { k: [], b: 0, m: w.m, s: w.s, v: w.v }; }
+export function idleOf(w: WireCmd): WireCmd { return { k: [], n: edged(w.n, 0, 0, 0) }; }
 /** THE HANDS COME OFF (a card went up over the player's game, his tab was hidden): nothing held, and the game's own one-tick word for it, 'Paused',
  *  so the tick that takes it lets go UNSENT what a button let go would have done — a held launcher's round, a held list's row */
-export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused'], b: 0, m: w.m, s: w.s, v: w.v }; }
+export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused' satisfies GameKey], n: edged(w.n, 0, 0, 0) }; }
 /** the record of a seat that has never sent one: nothing held, a plain view over the origin (the referee holds the look-at near the seat's own man) */
-export const FIRST: WireCmd = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] };
+export const FIRST: WireCmd = { k: [], n: inputNumbers({ mouse: [640, 360], size: [1280, 720, 1280, 720], target: [0, 0, 0], yaw: 0, pitch: 0.96, distance: 21, fov: 0.6, aspect: 16 / 9 }) };
 
 /** a message as text and back, numbers to the bit */
 export const netText = (m: unknown): string => JSON.stringify(m, numWord);

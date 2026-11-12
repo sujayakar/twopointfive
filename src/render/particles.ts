@@ -14,6 +14,7 @@
 //   splat       group 0 = the scene group (only `frame` is touched) + group 1 = { pool (read-only storage, VERTEX), the same uniform block, g-buffer depth,
 //               the volumetric texture } → +1 storage buffer in the vertex stage (3 with the scene's two `all`-visible ones), +0 in the fragment stage.
 import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync } from '../gpu/device';
+import { EmitBlockAt, EmitRecAt, ImpulseRecAt, WindowAt } from '../gpu/wgslrows';
 import { Vec3 } from '../math/vec';
 import { scenePrelude, glassBreakConfig } from './frame';
 import { SHEET, IMP_RESPONSE, type ImpulseResponse } from './sheetModel';
@@ -29,7 +30,7 @@ import { placeNone } from './placeField';
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the splat (as in front of the composite and every volumetric march, render/passes.ts)
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 
-export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain' | 'shard';
+export type PKind = import('../draw/names').PKindName;
 export const P_KINDS: readonly PKind[] = ['spark', 'debris', 'dust', 'casing', 'sheet', 'rain', 'shard'];
 export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, casing: 3, sheet: 4, rain: 5, shard: 6 };
 /** which ring a kind is dealt from: 0 = SHORT-lived (seconds at most), 1 = LONG (chips, brass and paper that lie there) — a spark storm never evicts resting brass — 2 = RAIN (the particle rain's
@@ -63,7 +64,7 @@ const P_BYTES = 80, HDR_BYTES = 64;   // (P_BYTES = struct Particle in particles
 /** the uniform block: header (counts + windows + 2 kind rows and 1 impulse-response row per kind — particles_common.wgsl EmitBlock kp / ki) · MAX_EMITS emit records · MAX_IMPULSES impulse
  *  records (uploaded only on frames that carry any) · the TAIL (the rain ring's Window, 4 u32 — EmitBlock.rainWin — + the rain LOOK rows rainCfg‥rainCfgF, 6 × vec4f: EmitBlock's last members,
  *  their own small upload). KP_FLOAT / KI_FLOAT = the kind rows' / the impulse-response rows' first float in the block. */
-export const REC_BYTES = 112, BLOCK_HDR_BYTES = 48 + P_KINDS.length * 48, KP_FLOAT = 12, KI_FLOAT = 12 + P_KINDS.length * 8, IMP_BYTES = 64, IMP_OFFSET = BLOCK_HDR_BYTES + MAX_EMITS * REC_BYTES, BLOCK_TAIL_AT = IMP_OFFSET + MAX_IMPULSES * IMP_BYTES, BLOCK_TAIL_BYTES = 16 + 6 * 16, BLOCK_BYTES = BLOCK_TAIL_AT + BLOCK_TAIL_BYTES;
+export const REC_BYTES = EmitRecAt.words * 4, BLOCK_HDR_BYTES = EmitBlockAt.recs * 4, KP_FLOAT = EmitBlockAt.kp, KI_FLOAT = EmitBlockAt.ki, IMP_BYTES = ImpulseRecAt.words * 4, IMP_OFFSET = EmitBlockAt.imps * 4, BLOCK_TAIL_AT = EmitBlockAt.rainWin * 4, BLOCK_BYTES = EmitBlockAt.words * 4, BLOCK_TAIL_BYTES = BLOCK_BYTES - BLOCK_TAIL_AT;
 /** PARTICLE RAIN v2 — the LOOK the rain kind's kernels read off the block's tail (src/picture/rain.ts PRAIN mirrors into it every frame; particles_common.wgsl rainCfg‥rainCfgF words them).
  *  Shading: iso / fwdK / fwdG (the drop's phase), glintK / glintRough / glintCap (the strand glint and its bound), gain, tailKeep; the splat: refract (0 = off) / refractReachM / refractTaps /
  *  refractClamp / refractDepth / refractPaint (0‥1: how much of the picture a read taken beside the streak keeps; 1 = all of it, as it was; 0 = its light only), lenJit / brightJit / minPx; the wind: windK (× the air on a drop), sheetAmp / sheetLen + the sheets' running offset bandOffX / Z (m, ∫ air dt). */
@@ -90,7 +91,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/breakage/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
-export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
+export type EmitShape = import('../draw/names').EmitShapeName;
 const SHAPE_ID: Record<EmitShape, number> = { cone: 0, burst: 1, ring: 2, puff: 3, rainDisc: 4 };   // rainDisc (particles.wgsl emit): born at pos.y (− up to a metre) uniformly over the OUTDOOR part of the disc of radius `radius` about pos.xz — the GPU rejects the interior / annex footprints itself — moving along dir at speed
 /** One emit's numbers (what the record carries; see EmitRec in particles_common.wgsl). speed m/s, spread = cone half-angle (rad) | burst spread, life s, size m
  *  (a spark's streak thickness, a chip's width, a puff's birth radius, a case's diameter), jitters 0‥1, lift = burst / ring vertical share, radius = ring radius,
@@ -370,17 +371,17 @@ export class Particles {
       const base = this.headMono[ring] % R.size; this.headMono[ring] += e.count;
       const o = e.o; const lifeMax = o.life * (1 + (o.lifeJit ?? 0.35)) + dt + 0.1;
       this.fifo[ring].push({ expire: this.simT + lifeMax, end: this.headMono[ring] });
-      const b = (BLOCK_HDR_BYTES + n * REC_BYTES) / 4;
-      f[b] = e.pos[0]; f[b + 1] = e.pos[1]; f[b + 2] = e.pos[2]; u[b + 3] = e.count;
-      f[b + 4] = e.dir[0]; f[b + 5] = e.dir[1]; f[b + 6] = e.dir[2]; f[b + 7] = o.speed;
+      const b = EmitBlockAt.recs + n * EmitRecAt.words;
+      f[b + EmitRecAt.pos] = e.pos[0]; f[b + EmitRecAt.pos + 1] = e.pos[1]; f[b + EmitRecAt.pos + 2] = e.pos[2]; u[b + EmitRecAt.count] = e.count;
+      f[b + EmitRecAt.dir] = e.dir[0]; f[b + EmitRecAt.dir + 1] = e.dir[1]; f[b + EmitRecAt.dir + 2] = e.dir[2]; f[b + EmitRecAt.speed] = o.speed;
       const shardAsChip = e.kind === 'shard' && !glassBreakConfig.on;   // a build compiled without glass breaking has no shard branches (SHARDS_ON false): its glass flies and draws as a tinted chip (same LONG ring)
-      f[b + 8] = e.kind === 'sheet' || (e.kind === 'shard' && !shardAsChip) ? (o.tumble ?? 6) : (o.radius ?? 0); f[b + 9] = o.aspect ?? 1; f[b + 10] = o.nrmJit ?? 0.35; u[b + 11] = born;   // posB: ring radius | the sheet's tumble cap, aspect (1 = every old emit exactly as it was), the sheet's normal scatter
-      const va = o.vadd ?? [0, 0, 0]; f[b + 12] = va[0]; f[b + 13] = va[1]; f[b + 14] = va[2]; u[b + 15] = SHAPE_ID[o.shape ?? 'cone'];
-      f[b + 16] = o.spread ?? 0.5; f[b + 17] = o.life; f[b + 18] = o.size; f[b + 19] = o.speedJit ?? 0.55;
-      f[b + 20] = o.lifeJit ?? 0.35; f[b + 21] = o.lift ?? 0; f[b + 22] = o.sizeJit ?? 0.3; f[b + 23] = o.posJit ?? 0;
-      u[b + 24] = ((shardAsChip ? KIND_ID.debris : KIND_ID[e.kind]) | (((o.owner ?? 0) & 255) << 8) | (ring << 16) | (e.ours ? 1 << 18 : 0)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
-      if (e.kind === 'spark' && o.ember !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.ember)) * 254) << 24)) >>> 0;   // (EMBER: the same byte on a spark — EmitOpts.ember)
-      if (e.kind === 'dust' && o.steam !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.steam)) * 254) << 24)) >>> 0;   // (STEAM: the top byte under 255 — EmitOpts.steam)
+      f[b + EmitRecAt.posB] = e.kind === 'sheet' || (e.kind === 'shard' && !shardAsChip) ? (o.tumble ?? 6) : (o.radius ?? 0); f[b + EmitRecAt.posB + 1] = o.aspect ?? 1; f[b + EmitRecAt.posB + 2] = o.nrmJit ?? 0.35; u[b + EmitRecAt.first] = born;   // posB: ring radius | the sheet's tumble cap, aspect (1 = every old emit exactly as it was), the sheet's normal scatter
+      const va = o.vadd ?? [0, 0, 0]; f[b + EmitRecAt.vadd] = va[0]; f[b + EmitRecAt.vadd + 1] = va[1]; f[b + EmitRecAt.vadd + 2] = va[2]; u[b + EmitRecAt.shape] = SHAPE_ID[o.shape ?? 'cone'];
+      f[b + EmitRecAt.p] = o.spread ?? 0.5; f[b + EmitRecAt.p + 1] = o.life; f[b + EmitRecAt.p + 2] = o.size; f[b + EmitRecAt.p + 3] = o.speedJit ?? 0.55;
+      f[b + EmitRecAt.q] = o.lifeJit ?? 0.35; f[b + EmitRecAt.q + 1] = o.lift ?? 0; f[b + EmitRecAt.q + 2] = o.sizeJit ?? 0.3; f[b + EmitRecAt.q + 3] = o.posJit ?? 0;
+      u[b + EmitRecAt.k] = ((shardAsChip ? KIND_ID.debris : KIND_ID[e.kind]) | (((o.owner ?? 0) & 255) << 8) | (ring << 16) | (e.ours ? 1 << 18 : 0)) >>> 0; u[b + EmitRecAt.k + 1] = e.seed >>> 0; u[b + EmitRecAt.k + 2] = base >>> 0; u[b + EmitRecAt.k + 3] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      if (e.kind === 'spark' && o.ember !== undefined) u[b + EmitRecAt.k + 3] = ((u[b + EmitRecAt.k + 3] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.ember)) * 254) << 24)) >>> 0;   // (EMBER: the same byte on a spark — EmitOpts.ember)
+      if (e.kind === 'dust' && o.steam !== undefined) u[b + EmitRecAt.k + 3] = ((u[b + EmitRecAt.k + 3] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.steam)) * 254) << 24)) >>> 0;   // (STEAM: the top byte under 255 — EmitOpts.steam)
       born += e.count; n++; this.stats.emitted += e.count; this.rateAcc += e.count;
     }
     this.queue = waiting;   // (non-sparks first, then sparks, each in arrival order — what the next frame deals from)
@@ -397,15 +398,15 @@ export class Particles {
       const o = e.o; const lifeMax = o.life * (1 + (o.lifeJit ?? 0.35)) + dt + 0.1;
       this.rainFifo.push({ expire: this.simT + lifeMax, end: this.rainHead });
       // (the record's words = the statements in the loop above, ring 2 — keep the two in step)
-      const b = (BLOCK_HDR_BYTES + n * REC_BYTES) / 4;
-      f[b] = e.pos[0]; f[b + 1] = e.pos[1]; f[b + 2] = e.pos[2]; u[b + 3] = cnt;
-      f[b + 4] = e.dir[0]; f[b + 5] = e.dir[1]; f[b + 6] = e.dir[2]; f[b + 7] = o.speed;
-      f[b + 8] = o.radius ?? 0; f[b + 9] = o.aspect ?? 1; f[b + 10] = o.nrmJit ?? 0.35; u[b + 11] = born;
-      const va = o.vadd ?? [0, 0, 0]; f[b + 12] = va[0]; f[b + 13] = va[1]; f[b + 14] = va[2]; u[b + 15] = SHAPE_ID[o.shape ?? 'cone'];
-      f[b + 16] = o.spread ?? 0.5; f[b + 17] = o.life; f[b + 18] = o.size; f[b + 19] = o.speedJit ?? 0.55;
-      f[b + 20] = o.lifeJit ?? 0.35; f[b + 21] = o.lift ?? 0; f[b + 22] = o.sizeJit ?? 0.3; f[b + 23] = o.posJit ?? 0;
-      u[b + 24] = (KIND_ID[e.kind] | (((o.owner ?? 0) & 255) << 8) | (2 << 16)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
-      if (o.top !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | ((Math.round(o.top) & 255) << 24)) >>> 0;   // (a rain-kind record's own top byte — EmitOpts.top: how a wisp of snow is drawn)
+      const b = EmitBlockAt.recs + n * EmitRecAt.words;
+      f[b + EmitRecAt.pos] = e.pos[0]; f[b + EmitRecAt.pos + 1] = e.pos[1]; f[b + EmitRecAt.pos + 2] = e.pos[2]; u[b + EmitRecAt.count] = cnt;
+      f[b + EmitRecAt.dir] = e.dir[0]; f[b + EmitRecAt.dir + 1] = e.dir[1]; f[b + EmitRecAt.dir + 2] = e.dir[2]; f[b + EmitRecAt.speed] = o.speed;
+      f[b + EmitRecAt.posB] = o.radius ?? 0; f[b + EmitRecAt.posB + 1] = o.aspect ?? 1; f[b + EmitRecAt.posB + 2] = o.nrmJit ?? 0.35; u[b + EmitRecAt.first] = born;
+      const va = o.vadd ?? [0, 0, 0]; f[b + EmitRecAt.vadd] = va[0]; f[b + EmitRecAt.vadd + 1] = va[1]; f[b + EmitRecAt.vadd + 2] = va[2]; u[b + EmitRecAt.shape] = SHAPE_ID[o.shape ?? 'cone'];
+      f[b + EmitRecAt.p] = o.spread ?? 0.5; f[b + EmitRecAt.p + 1] = o.life; f[b + EmitRecAt.p + 2] = o.size; f[b + EmitRecAt.p + 3] = o.speedJit ?? 0.55;
+      f[b + EmitRecAt.q] = o.lifeJit ?? 0.35; f[b + EmitRecAt.q + 1] = o.lift ?? 0; f[b + EmitRecAt.q + 2] = o.sizeJit ?? 0.3; f[b + EmitRecAt.q + 3] = o.posJit ?? 0;
+      u[b + EmitRecAt.k] = (KIND_ID[e.kind] | (((o.owner ?? 0) & 255) << 8) | (2 << 16)) >>> 0; u[b + EmitRecAt.k + 1] = e.seed >>> 0; u[b + EmitRecAt.k + 2] = base >>> 0; u[b + EmitRecAt.k + 3] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      if (o.top !== undefined) u[b + EmitRecAt.k + 3] = ((u[b + EmitRecAt.k + 3] & 0xffffff) | ((Math.round(o.top) & 255) << 24)) >>> 0;   // (a rain-kind record's own top byte — EmitOpts.top: how a wisp of snow is drawn)
       born += cnt; rainBorn += cnt; n++; rainRecs++; this.rainStats.emitted += cnt;
     }
     this.rainQueue.length = 0;
@@ -425,14 +426,14 @@ export class Particles {
       this.rainWin[0] = RAIN_RING.start; this.rainWin[1] = RAIN_RING.size; this.rainWin[2] = this.rainTail % RAIN_RING.size; this.rainWin[3] = lv; live += lv;
       this.rainStats.live = lv; this.rainStats.born = rainBorn; this.rainStats.records = rainRecs;
       if (lv > 0 || rainBorn > 0 || this.rainTailLive) {   // (only while the ring holds anything, and once more to say it emptied — an engine that never rains never writes it: the tail reads zero = live 0)
-        const tu = this.rainTailU, tf = this.rainTailF, L = this.rainLook;
-        tu[0] = this.rainWin[0]; tu[1] = this.rainWin[1]; tu[2] = this.rainWin[2]; tu[3] = lv;
-        tf[4] = L.iso; tf[5] = L.fwdK; tf[6] = L.fwdG; tf[7] = L.glintK;                                            // rainCfg  (the phase + the glint's weight)
-        tf[8] = L.glintRough; tf[9] = L.glintCap; tf[10] = L.gain; tf[11] = L.tailKeep;                              // rainCfgB (the glint's width / cap, the gain, the tail's share)
-        tf[12] = this.rainSceneCopy === 'none' ? 0 : Math.min(1, Math.max(0, L.refract)) + 2 * Math.round(100 * Math.min(1, Math.max(0, L.refractPaint))); tf[13] = L.refractReachM; tf[14] = L.refractClamp; tf[15] = L.refractDepth;   // rainCfgC (refraction: 0 with nothing to sample, + 2 × the paint a displaced read keeps in hundredths; the probe's reach m; the fetch's luminance clamp; the depth guard m)
-        tf[16] = L.lenJit; tf[17] = L.brightJit; tf[18] = L.minPx + Math.min(4, Math.max(2, Math.round(L.refractTaps))) * 16; tf[19] = L.windK;      // rainCfgD (spread, the px floor + taps × 16, the wind's ×) …
-        tf[20] = L.sheetAmp; tf[21] = Math.max(0.5, L.sheetLen); tf[22] = L.bandOffX; tf[23] = L.bandOffZ;          // rainCfgE (… and the sheets: amplitude, scale, running offset xz)
-        tf[24] = Math.max(L.maxPx, L.minPx); tf[25] = Math.max(1, L.boostCap); tf[26] = Math.max(0.2, L.nearFadeM); tf[27] = L.beadAmp;   // rainCfgF (the width ceiling px, its brightness ×-cap, the near fade's reach, the beads' amplitude)
+        const tu = this.rainTailU, tf = this.rainTailF, L = this.rainLook, T = EmitBlockAt.rainWin as number;   // (the tail is a block of its own: its words are counted from where it starts)
+        tu[WindowAt.start] = this.rainWin[0]; tu[WindowAt.size] = this.rainWin[1]; tu[WindowAt.tail] = this.rainWin[2]; tu[WindowAt.live] = lv;
+        tf[EmitBlockAt.rainCfg - T] = L.iso; tf[EmitBlockAt.rainCfg - T + 1] = L.fwdK; tf[EmitBlockAt.rainCfg - T + 2] = L.fwdG; tf[EmitBlockAt.rainCfg - T + 3] = L.glintK;                                            // rainCfg  (the phase + the glint's weight)
+        tf[EmitBlockAt.rainCfgB - T] = L.glintRough; tf[EmitBlockAt.rainCfgB - T + 1] = L.glintCap; tf[EmitBlockAt.rainCfgB - T + 2] = L.gain; tf[EmitBlockAt.rainCfgB - T + 3] = L.tailKeep;                              // rainCfgB (the glint's width / cap, the gain, the tail's share)
+        tf[EmitBlockAt.rainCfgC - T] = this.rainSceneCopy === 'none' ? 0 : Math.min(1, Math.max(0, L.refract)) + 2 * Math.round(100 * Math.min(1, Math.max(0, L.refractPaint))); tf[EmitBlockAt.rainCfgC - T + 1] = L.refractReachM; tf[EmitBlockAt.rainCfgC - T + 2] = L.refractClamp; tf[EmitBlockAt.rainCfgC - T + 3] = L.refractDepth;   // rainCfgC (refraction: 0 with nothing to sample, + 2 × the paint a displaced read keeps in hundredths; the probe's reach m; the fetch's luminance clamp; the depth guard m)
+        tf[EmitBlockAt.rainCfgD - T] = L.lenJit; tf[EmitBlockAt.rainCfgD - T + 1] = L.brightJit; tf[EmitBlockAt.rainCfgD - T + 2] = L.minPx + Math.min(4, Math.max(2, Math.round(L.refractTaps))) * 16; tf[EmitBlockAt.rainCfgD - T + 3] = L.windK;      // rainCfgD (spread, the px floor + taps × 16, the wind's ×) …
+        tf[EmitBlockAt.rainCfgE - T] = L.sheetAmp; tf[EmitBlockAt.rainCfgE - T + 1] = Math.max(0.5, L.sheetLen); tf[EmitBlockAt.rainCfgE - T + 2] = L.bandOffX; tf[EmitBlockAt.rainCfgE - T + 3] = L.bandOffZ;          // rainCfgE (… and the sheets: amplitude, scale, running offset xz)
+        tf[EmitBlockAt.rainCfgF - T] = Math.max(L.maxPx, L.minPx); tf[EmitBlockAt.rainCfgF - T + 1] = Math.max(1, L.boostCap); tf[EmitBlockAt.rainCfgF - T + 2] = Math.max(0.2, L.nearFadeM); tf[EmitBlockAt.rainCfgF - T + 3] = L.beadAmp;   // rainCfgF (the width ceiling px, its brightness ×-cap, the near fade's reach, the beads' amplitude)
         this.device.queue.writeBuffer(this.emitBuf, BLOCK_TAIL_AT, this.rainTailBuf);
         this.rainTailLive = lv > 0 || rainBorn > 0;
       }
@@ -445,11 +446,11 @@ export class Particles {
       if (live > 0) {
         ni = this.impN; const occ = this.impulseOcclusion ? 1 : 0;
         for (let i = 0; i < ni; i++) {
-          const r = this.imps[i]; const b = (IMP_OFFSET + i * IMP_BYTES) / 4;
-          f[b] = r.pos[0]; f[b + 1] = r.pos[1]; f[b + 2] = r.pos[2]; f[b + 3] = r.radius;
-          f[b + 4] = r.bias[0]; f[b + 5] = r.bias[1]; f[b + 6] = r.bias[2]; f[b + 7] = r.strength;
-          f[b + 8] = r.eye[0]; f[b + 9] = r.eye[1]; f[b + 10] = r.eye[2]; f[b + 11] = r.up;
-          u[b + 12] = r.kinds >>> 0; u[b + 13] = r.seed >>> 0; u[b + 14] = (r.flags & occ) >>> 0; u[b + 15] = 0;
+          const r = this.imps[i]; const b = EmitBlockAt.imps + i * ImpulseRecAt.words;
+          f[b + ImpulseRecAt.pos] = r.pos[0]; f[b + ImpulseRecAt.pos + 1] = r.pos[1]; f[b + ImpulseRecAt.pos + 2] = r.pos[2]; f[b + ImpulseRecAt.radius] = r.radius;
+          f[b + ImpulseRecAt.bias] = r.bias[0]; f[b + ImpulseRecAt.bias + 1] = r.bias[1]; f[b + ImpulseRecAt.bias + 2] = r.bias[2]; f[b + ImpulseRecAt.strength] = r.strength;
+          f[b + ImpulseRecAt.eye] = r.eye[0]; f[b + ImpulseRecAt.eye + 1] = r.eye[1]; f[b + ImpulseRecAt.eye + 2] = r.eye[2]; f[b + ImpulseRecAt.up] = r.up;
+          u[b + ImpulseRecAt.kinds] = r.kinds >>> 0; u[b + ImpulseRecAt.seed] = r.seed >>> 0; u[b + ImpulseRecAt.iflags] = (r.flags & occ) >>> 0; u[b + ImpulseRecAt.spare] = 0;
         }
         this.stats.impFrames++;
       } else this.stats.impIdle += this.impN;
@@ -464,30 +465,30 @@ export class Particles {
       for (let si = 0; si < nAll; si++) { const s = si < nWind ? this.winds[si] : this.heat[si - nWind];   // (the wind's, then the look page's fires: no list is made)
         if (nw >= room) break;
         if (!(s.speed > 0)) continue;
-        const b = (IMP_OFFSET + (ni + nw) * IMP_BYTES) / 4;
+        const b = EmitBlockAt.imps + (ni + nw) * ImpulseRecAt.words;
         if (s.kind === 'storm') {
           // (ROOF BY ROOF, rust/game_rules/src/air/wind.rs WX_OWN.wind: the record's two rectangles are the level's first two roofs and iflags bit 5 sends the kernel to the Frame for the
           // other two — frame.cardCfg.y / .z, where the rain's own test reads them (rust/game_rules/src/air/weather.rs writes the wind's roofs and the Frame's from one list); bit 4 = the
           // rule is on at all: the wisps read the field. Neither bit: the record as it always was)
           const R = s.roofs; const I = R ? R[0] : s.interior ?? [0, 0, 0, 0], A = R ? R[1] ?? [0, 0, 0, 0] : s.annex ?? [0, 0, 0, 0];
-          f[b] = I[0]; f[b + 1] = I[1]; f[b + 2] = I[2]; f[b + 3] = I[3];
-          f[b + 4] = s.dir[0]; f[b + 5] = s.dir[1]; f[b + 6] = s.dir[2]; f[b + 7] = s.speed;
-          f[b + 8] = A[0]; f[b + 9] = A[1]; f[b + 10] = A[2]; f[b + 11] = A[3];
-          u[b + 14] = 2 | (1 << 2) | (s.field ? 16 : 0) | (R ? 32 : 0);
+          f[b + ImpulseRecAt.pos] = I[0]; f[b + ImpulseRecAt.pos + 1] = I[1]; f[b + ImpulseRecAt.pos + 2] = I[2]; f[b + ImpulseRecAt.radius] = I[3];
+          f[b + ImpulseRecAt.bias] = s.dir[0]; f[b + ImpulseRecAt.bias + 1] = s.dir[1]; f[b + ImpulseRecAt.bias + 2] = s.dir[2]; f[b + ImpulseRecAt.strength] = s.speed;
+          f[b + ImpulseRecAt.eye] = A[0]; f[b + ImpulseRecAt.eye + 1] = A[1]; f[b + ImpulseRecAt.eye + 2] = A[2]; f[b + ImpulseRecAt.up] = A[3];
+          u[b + ImpulseRecAt.iflags] = 2 | (1 << 2) | (s.field ? 16 : 0) | (R ? 32 : 0);
         } else {
-          f[b] = s.pos[0]; f[b + 1] = s.pos[1]; f[b + 2] = s.pos[2]; f[b + 3] = s.reach;
-          f[b + 4] = s.dir[0]; f[b + 5] = s.dir[1]; f[b + 6] = s.dir[2]; f[b + 7] = s.speed;
-          f[b + 8] = s.tanSpread; f[b + 9] = s.r0; f[b + 10] = s.dMax; f[b + 11] = s.floorY ?? -1e9;
-          u[b + 14] = 2 | (s.heat ? 64 : 0);
+          f[b + ImpulseRecAt.pos] = s.pos[0]; f[b + ImpulseRecAt.pos + 1] = s.pos[1]; f[b + ImpulseRecAt.pos + 2] = s.pos[2]; f[b + ImpulseRecAt.radius] = s.reach;
+          f[b + ImpulseRecAt.bias] = s.dir[0]; f[b + ImpulseRecAt.bias + 1] = s.dir[1]; f[b + ImpulseRecAt.bias + 2] = s.dir[2]; f[b + ImpulseRecAt.strength] = s.speed;
+          f[b + ImpulseRecAt.eye] = s.tanSpread; f[b + ImpulseRecAt.eye + 1] = s.r0; f[b + ImpulseRecAt.eye + 2] = s.dMax; f[b + ImpulseRecAt.up] = s.floorY ?? -1e9;
+          u[b + ImpulseRecAt.iflags] = 2 | (s.heat ? 64 : 0);
         }
-        u[b + 12] = (s.kinds ?? WIND_KINDS_DEFAULT) >>> 0; u[b + 13] = kA; u[b + 15] = kB;
+        u[b + ImpulseRecAt.kinds] = (s.kinds ?? WIND_KINDS_DEFAULT) >>> 0; u[b + ImpulseRecAt.seed] = kA; u[b + ImpulseRecAt.spare] = kB;
         nw++;
       }
     }
     if (ni + nw > 0) this.device.queue.writeBuffer(this.emitBuf, IMP_OFFSET, this.block, IMP_OFFSET, (ni + nw) * IMP_BYTES);
     // header: counts, seed, flags (+ the impulse and wind counts), windows, per-kind numbers, per-kind impulse response
-    u[0] = n; u[1] = born; u[2] = hashU32(this.frameNo + 7) ; u[3] = (this.shadowRays ? 1 : 0) | (this.collide ? 2 : 0) | (this.fog ? 4 : 0) | (this.shardRestFrost ? 8 : 0) | (ni << 8) | (nw << 16) | (this.sparkBounce ? 0x1000000 : 0);
-    for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) u[4 + r * 4 + k] = this.win[r][k] >>> 0;
+    u[EmitBlockAt.numRecs] = n; u[EmitBlockAt.totalNew] = born; u[EmitBlockAt.frameSeed] = hashU32(this.frameNo + 7); u[EmitBlockAt.flags] = (this.shadowRays ? 1 : 0) | (this.collide ? 2 : 0) | (this.fog ? 4 : 0) | (this.shardRestFrost ? 8 : 0) | (ni << 8) | (nw << 16) | (this.sparkBounce ? 0x1000000 : 0);
+    for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) u[EmitBlockAt.win + r * WindowAt.words + k] = this.win[r][k] >>> 0;
     P_KINDS.forEach((k, i) => { const p = this.params[k]; const o = KP_FLOAT + i * 8; f[o] = p.gravity; f[o + 1] = p.drag; f[o + 2] = p.restitution; f[o + 3] = p.keep; f[o + 4] = p.sleepV; f[o + 5] = p.holdOrFade; f[o + 6] = p.shutterOrGrowth; f[o + 7] = p.brightOrOpacity;
       const q = this.impulseResponse[k]; const oi = KI_FLOAT + i * 4; f[oi] = q.gain; f[oi + 1] = q.upK; f[oi + 2] = q.vMax; f[oi + 3] = q.wake; });
     this.device.queue.writeBuffer(this.emitBuf, 0, this.block, 0, BLOCK_HDR_BYTES + n * REC_BYTES);

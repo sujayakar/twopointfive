@@ -14,6 +14,7 @@
 // NOT EASED, AND THAT MAY SHOW: by the picture the rim follows this frame's light on him, so a muzzle flash that lights him takes the rim for the frames
 // it lasts. Nobody has seen whether that reads as right (he is lit) or as a blink; the resolve after this pass softens it.
 // WHAT CARRIES A MAN'S OWNER AND IS NOT HIM: a round of his own for the frame it leaves the muzzle, a charge while his hands set it. They take the rim too.
+import { OutlineAt } from '../gpu/wgslrows';
 import { makeShader } from '../gpu/device';
 import outlineSrc from './shaders/outline.wgsl' with { type: 'text' };
 
@@ -122,9 +123,9 @@ export class OutlinePass {
     const x0 = Math.max(0, Math.floor(M.rect[0] * w)), y0 = Math.max(0, Math.floor(M.rect[1] * h)), x1 = Math.min(w, Math.ceil(M.rect[2] * w)), y1 = Math.min(h, Math.ceil(M.rect[3] * h));
     if (!(x1 > x0 && y1 > y0)) return false;   // (he is off the picture, or behind the lens)
     const k = 1 / Math.max(exposure, 1e-4);
-    this.uf[0] = M.ink[0] * k; this.uf[1] = M.ink[1] * k; this.uf[2] = M.ink[2] * k; this.uf[3] = OUTLINE.opacity * Math.min(1, F.whole);
-    this.uu[4] = M.owner & 0xff; this.uf[5] = outlineRadius(h, M.times);
-    this.uf[8] = OUTLINE.lit; this.uf[9] = OUTLINE.dark; this.uf[10] = exposure;
+    this.uf[OutlineAt.ink] = M.ink[0] * k; this.uf[OutlineAt.ink + 1] = M.ink[1] * k; this.uf[OutlineAt.ink + 2] = M.ink[2] * k; this.uf[OutlineAt.ink + 3] = OUTLINE.opacity * Math.min(1, F.whole);
+    this.uu[OutlineAt.owner] = M.owner & 0xff; this.uf[OutlineAt.radius] = outlineRadius(h, M.times);
+    this.uf[OutlineAt.fade] = OUTLINE.lit; this.uf[OutlineAt.fade + 1] = OUTLINE.dark; this.uf[OutlineAt.fade + 2] = exposure;
     this.device.queue.writeBuffer(this.ubuf!, i * SLOT, this.udata);
     this.sc[i * 4] = x0; this.sc[i * 4 + 1] = y0; this.sc[i * 4 + 2] = x1 - x0; this.sc[i * 4 + 3] = y1 - y0; this.offs[i] = i * SLOT;
     return true;

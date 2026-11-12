@@ -252,7 +252,7 @@ fn in_the_guns_hold_the_buttons_are_a_round_and_the_ocp() {
     let (r0, c0, heard) = (rounds(&p), charge(&p), p.sounds.len());
     click(&mut p, Button::Right);
     assert_eq!(rounds(&p), r0, "the right button: no round");
-    assert!(p.sounds[heard..].iter().any(|x| x.name == "deny") && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
+    assert!(p.sounds[heard..].iter().any(|x| x.name == game::audio_iface::Sfx::Deny) && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
 
     // a light of the room under the reticle
     let eye = p.sam_at();
@@ -323,7 +323,7 @@ fn each_carriage_is_a_pose_of_its_own() {
     p.g.god_mode = true;
     let at = p.sam_at();
     let man = game::guards::spawn_unit(&mut p.g, &game::guards::UnitOpts { team: game::teams::Team::Guard, pos: [at[0] + 3.0, 0.0, at[1]], yaw: Some(0.0), weapon: Some(game::weapons::WeaponId::Aks74u), carbine_rig: Some(true), light: Some(false), ..Default::default() }).unwrap();
-    p.g.gd[man].hold = true;
+    p.g.gd[man].duty.holds = true;
     let c = p.g.gd[man].ch;
     p.run(0.5);
     let mut hands: Vec<[f64; 3]> = Vec::new();

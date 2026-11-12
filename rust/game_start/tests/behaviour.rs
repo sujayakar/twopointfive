@@ -153,7 +153,7 @@ fn a_posted_defender_holds_his_room_when_a_shot_is_fired_outside() {
         let east = p.defender_at(east_post(s));
         p.run(0.5);
         p.sam_fires_at([11.0 + nudge(s, 9), 16.0], 0.6);   // (one round into the west room's wall, from the yard)
-        assert!(p.sounds.iter().filter(|x| x.name.starts_with("rifle")).count() == 1 && !p.sounds.iter().any(|x| x.name == "launcher"), "seed {s}: Sam fired one rifle round and nothing else: the sounds were {:?}", p.sounds.iter().map(|x| x.name.as_str()).collect::<Vec<_>>());
+        assert!(p.sounds.iter().filter(|x| x.name == game::audio_iface::Sfx::RifleSuppressed).count() == 1 && !p.sounds.iter().any(|x| x.name == game::audio_iface::Sfx::Launcher), "seed {s}: Sam fired one rifle round and nothing else: the sounds were {:?}", p.sounds.iter().map(|x| x.name).collect::<Vec<_>>());
         let heard = p.until(3.0, |p| p.state(east) != GuardState::Patrol).unwrap_or_else(|| panic!("seed {s}: 3 s after a shot in the yard the defender next door is calm"));
         if let Some(t) = p.always(10.0, |p| inside(p.at(east)) && p.up(east)) { let a = p.at(east); panic!("seed {s}: he heard it after {heard:.2} s and {t:.2} s later he is at ({:.1}, {:.1}), outside the room he holds, or down", a[0], a[1]); }
         drop(p);
@@ -191,7 +191,7 @@ fn a_guard_who_hears_a_shot_behind_a_shut_door_turns_to_it_and_goes() {
         let was = p.at(post);
         assert_eq!(p.state(post), GuardState::Patrol, "seed {s}: the sentry is calm before the shot (the shut door hides Sam from him)");
         p.sam_fires_at([25.9, 13.25], 0.6);   // (one round into the east room's far wall)
-        assert!(p.sounds.iter().filter(|x| x.name.starts_with("rifle")).count() == 1 && !p.sounds.iter().any(|x| x.name == "launcher"), "seed {s}: Sam fired one rifle round and nothing else: the sounds were {:?}", p.sounds.iter().map(|x| x.name.as_str()).collect::<Vec<_>>());
+        assert!(p.sounds.iter().filter(|x| x.name == game::audio_iface::Sfx::RifleSuppressed).count() == 1 && !p.sounds.iter().any(|x| x.name == game::audio_iface::Sfx::Launcher), "seed {s}: Sam fired one rifle round and nothing else: the sounds were {:?}", p.sounds.iter().map(|x| x.name).collect::<Vec<_>>());
         p.until(1.0, |p| p.state(post) == GuardState::Alert).unwrap_or_else(|| panic!("seed {s}: a second after a rifle shot next door the sentry is {:?}", p.state(post)));
         assert!(p.lines(post).iter().any(|l| l.contains("shot")), "seed {s}: he says what he heard: {:?}", p.lines(post));
         let fix = p.fix(post).unwrap_or_else(|| panic!("seed {s}: alert and no place he believes the shooter is"));

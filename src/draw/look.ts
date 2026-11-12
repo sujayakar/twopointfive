@@ -1,19 +1,20 @@
-// WHAT THE PAGE SAYS OF ITS LOOK to whoever packs the rows (rust/game_draw boxes::Look reads the same numbers in the same order).
+// WHAT THE PAGE SAYS OF ITS LOOK to whoever packs the rows (rust/game_draw boxes::Look).
 import { lookStuffOf } from '../render/lookTex';
 import { SOLIDGLASS, coatRough, type BoxStuff } from '../scene/stuff';
 import type { BoxWorld } from '../scene/boxes';
 import type { RenderSettings } from '../settings';
 import { placeholderTints } from '../render/charMaterials';
-import { SIDES } from './men';
-import { STUFFS } from './sections';
+import { PageLook, pageLook, type Doubles } from './input';
+import { SIDES, STUFFS } from './names';
 
-const N = STUFFS.length, AT = 11, out = new Float64Array(AT + 2 * N + SIDES.length + 1);
-/** (one array, written again by every ask) */
-export function lookNumbers(S: RenderSettings, W: BoxWorld, cast: boolean): Float64Array {
-  out[0] = 1; out[1] = S.markings ? 1 : 0; out[2] = W.cutOn ? 1 : 0; out[3] = W.cutOn ? 1 : 0; out[4] = S.motionIds !== false ? 1 : 0; out[5] = S.glass ? 1 : 0;
-  out[6] = S.beamReflect && S.rtReflect ? 1 : 0; out[7] = S.beamAir && S.debugView === 0 ? 1 : 0; out[8] = SOLIDGLASS.on ? SOLIDGLASS.lum : -1; out[9] = SOLIDGLASS.rough; out[10] = Math.max(0.005, Math.min(0.2, S.markingTexel));
-  for (let i = 0; i < N; i++) { out[AT + i] = lookStuffOf(STUFFS[i]); out[AT + N + i] = coatRough(STUFFS[i] as BoxStuff) ?? -1; }
-  for (let i = 0; i < SIDES.length; i++) out[AT + 2 * N + i] = cast ? placeholderTints(SIDES[i]) : 0;
-  out[AT + 2 * N + SIDES.length] = S.wetChars ? 1 : 0;
+const out = pageLook(), yes = (v: unknown): number => v ? 1 : 0;
+/** (one row, written again by every ask) */
+export function lookNumbers(S: RenderSettings, W: BoxWorld, cast: boolean): Doubles<'PageLook'> {
+  out[PageLook.on] = 1; out[PageLook.marks] = yes(S.markings); out[PageLook.cut] = out[PageLook.round] = yes(W.cutOn); out[PageLook.motion] = yes(S.motionIds !== false); out[PageLook.panes] = yes(S.glass);
+  out[PageLook.mirrors] = yes(S.beamReflect && S.rtReflect); out[PageLook.air] = yes(S.beamAir && S.debugView === 0);
+  out[PageLook.glassLum] = SOLIDGLASS.on ? SOLIDGLASS.lum : -1; out[PageLook.glassRough] = SOLIDGLASS.rough; out[PageLook.texel] = Math.max(0.005, Math.min(0.2, S.markingTexel));
+  for (let i = 0; i < STUFFS.length; i++) { out[PageLook.stuff + i] = lookStuffOf(STUFFS[i]); out[PageLook.coat + i] = coatRough(STUFFS[i] as BoxStuff) ?? -1; }
+  for (let i = 0; i < SIDES.length; i++) out[PageLook.swaps + i] = cast ? placeholderTints(SIDES[i]) : 0;
+  out[PageLook.wet] = yes(S.wetChars);
   return out;
 }

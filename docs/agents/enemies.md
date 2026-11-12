@@ -30,7 +30,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `suppression.rs`, `flinch.rs`, `startle.rs`, `morale.rs`, `runner.rs`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
 | `darkdoor.rs`, `darkfoe.rs`, `calmtorch.rs`, `powerout.rs` | men and the dark |
 | `gunhold.rs`, `gunroles.rs`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
-| `qrf/`, `squadcast.rs` | the response team, and its room drill by the squad's own code |
+| `qrf/` | the response team: a group (`group.rs`) that works its doors by the squad's own code |
 | `needs.rs`, `doze.rs`, `smokebreak.rs` | men at their ease |
 | `civilians/`, `rescueflush.rs` | civilians and hostages; a rescue's men coming for the hostages |
 
@@ -73,8 +73,10 @@ night breach's are cut by the rooms they stand in (`squads_by_rooms`), trained; 
 (`leads`: with the hostages, or on the captor's word) are nobody else's. After a thinking beat `decide` picks `Barricade`, `Flank` or `Help`,
 with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
 beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). Men called to a room of theirs
-are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`); another room hit before they
-are off, they go there, and a man whose own it is stays (`due_here`). `radio_check` finds a drop nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
+are there together (`TOGETHER_SECS`): two or more of a drilled squad (`group::drilled`: a steady man of it up) go round to one of its doors out of
+the line of the guns they know of (`set_out`), wait there (`formed`) and go in by the squad's door tools (`together.rs`, mode `Told`). Else each goes
+by himself, and one alone stays on his door when nobody of theirs is up in it (`tick_due`); another room
+hit before they are off, they go there, and a man whose own it is stays (`due_here`). `radio_check` finds a drop nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
 
 **The room fight's other rules.** On Hard the last man up in a room gives it up by another door (`last_man`, `tick_out`), and the last of them all keeps
 his (`last_holds`). `dig_in_tick` runs `begin`, `start_brace`, `haul`, `wedge` and `to_cover`, each
@@ -112,8 +114,9 @@ and `gun_hold_free` opens the clean line at Sam's back once he has fired from be
 
 **Response team.** A level has one only if its file has a `ResponseData` block (`has_response`). `update_qrf` calls it on a locked-down floor that
 heard gunfire or found two bodies, or on a silent net (`silent_net`). `dealt` draws way, size and time; `read_net` keeps what the net says, its word
-of the team until it sees him. `QrfState` runs on: `arriving` musters the men, `deploy` throws the door, then `pick_target`, stack and breach or
-`start_drill`, and `maybe_perimeter`. There is one wave (`request_qrf`). A block's `raid` brings it on the defenders' side in a room clear.
+of the team until it sees him. `QrfState` runs on: `arriving` musters the men, `deploy` throws the door, then `pick_target`: to a room by the
+squad's door tools (`start_drill`), to a place by its order to move there (`told`), and `maybe_perimeter`. There is one wave (`request_qrf`). A
+block's `raid` brings it on the defenders' side in a room clear.
 
 **At ease.** `needs_tick` fills four kinds of `NeedKind` and sends one man at a time after `announce`; a shot ends it (`cancel_trip`). In
 `doze_patrol` a calm staff man with a wait of `min_wait` to `max_wait` sits. `doze_deaf` sleeps him with dull ears and no eyes; noise, light on his

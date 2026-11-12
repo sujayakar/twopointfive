@@ -296,8 +296,8 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
         })?;
         crate::mind::set_state(g, man, crate::game::GuardState::Patrol, "quiet");
         crate::mind::set(g, man, 0.0, "quiet");
-        crate::control::set_hold(g, man, false, "quiet");
-        crate::control::set_pinned(g, man, false, "quiet");
+        crate::duty::hold(g, man, false, "quiet");
+        crate::duty::pin(g, man, false, "quiet");
         let face = g.ch[g.gd[man].ch].body_yaw;
         crate::squad::order(g, man, crate::squad::OrderPatch {
             goal: Some(None),

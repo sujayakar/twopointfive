@@ -50,7 +50,7 @@ pub struct Walk {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::WalkBack>,
@@ -138,7 +138,7 @@ pub struct Lent {
     pub mates: Vec<GuardId>,
     pub gd: GuardId,
     pub t: crate::orders::OrderTarget,
-    pub a: Option<OrdersAssignmentId>,
+    pub a: Option<TaskId>,
     pub home: V3,
     pub home_yaw: f64,
     pub back: Option<crate::squadthrow::LentBack>,
@@ -363,7 +363,7 @@ pub struct FragCatchesBurst {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadthrowMod {
-    pub states: JsMap<PlayerId, crate::squadthrow::State>,
+    pub states: JsMap<GroupId, crate::squadthrow::State>,
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
 }
