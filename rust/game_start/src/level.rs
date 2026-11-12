@@ -196,6 +196,7 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     };
     level.mark_texel = f.meta.mark_texel;
     level.kept = f.meta.kept;
+    level.snow = f.snow == Some(true);
     level.door_paint = f.door_paint.map(|p| {
         let side = |x: LeafPaintData| LeafPaint { albedo: x.albedo, stuff: paint.stuff(&Said { material: None, albedo: None, rough: None, metal: None, stuff: x.stuff.as_deref(), does: None }) };
         DoorPaint { outside: side(p.outside), inside: side(p.inside) }

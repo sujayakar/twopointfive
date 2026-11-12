@@ -173,13 +173,13 @@ impl FromJson for Nothing {
 }
 
 pub struct LevelFile {
-    pub version: f64, pub name: String, pub script: Option<LevelScriptFn>, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
+    pub version: f64, pub name: String, pub script: Option<LevelScriptFn>, pub snow: Option<bool>, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
     pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub door_paint: Option<DoorPaintData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
     pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>, pub hums: Option<Vec<HumDef>>,
     pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub plans: Plans, pub scenarios: Option<Scenarios>,
 }
 json_struct!(LevelFile {
-    version: "version", name: "name", script: "script", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors", door_paint: "doorPaint",
+    version: "version", name: "name", script: "script", snow: "snow", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors", door_paint: "doorPaint",
     routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", hums: "hums", connectors: "connectors", mission: "mission",
     breaker: "breaker", beacons: "beacons", sky: "sky", plans: "plans", scenarios: "scenarios",
 });

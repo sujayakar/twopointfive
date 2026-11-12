@@ -30,7 +30,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
         // one man and his rifle (tools/levels/tut-road.ts): one snowed-in mountain road, where every wreck and wall on the way up is the cover for the next key. Lit for the night: three
         // fires, two trucks' lamps and a thin moon on snow
         ScenarioEntry {
-            level: said("tut-road.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
+            level: said("tut-road.json"), snow: true, group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
             place: said("A snowed-in road below the pass, at night"), lean: Some(Lean::Loud), defenders: Some(6.0),
             blurb: said("You're alone on the pass road with your rifle. Get past a sentry, a locked hut and a machine gun, then go out through the upper gate."),
             scene: said("A fuel convoy was hit on the pass road, and its escort stopped answering the radio. You're going up alone to see what's left, and the people who hit it are still on the road."),
@@ -39,7 +39,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
         },
         // the squad, with him on the ground (tools/levels/tut-team.ts: the tunnel station's floor, the player behind his own truck): one order and one word
         ScenarioEntry {
-            level: said("tut-team.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
+            level: said("tut-team.json"), snow: true, group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night),
             place: said("A road tunnel's station, under snow"), lean: Some(Lean::Loud), defenders: Some(5.0), squads: Some(true),
             blurb: said("Your squad is pinned down on the road with you. Get them through the gate, then lead them door by door."),
             scene: said("The people who hit the convoy fell back to a road tunnel. You and your squad went after them and ran straight into their roadblock at the station by the tunnel's mouth."),
@@ -67,7 +67,7 @@ pub fn tutorial_missions() -> Vec<ScenarioEntry> {
         },
         // (its light is the lesson: a midday left on the link would put the lamps out and the lane in sun)
         ScenarioEntry {
-            level: said("tut-quiet.json"), group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night), off_list: Some(true),
+            level: said("tut-quiet.json"), snow: true, group: Some(MissionGroup::Tutorial), hour: Some(HourId::Night), off_list: Some(true),
             place: said("A money changer's shop on a snowy night"), lean: Some(Lean::Quiet), defenders: Some(3.0),
             blurb: said("You go in alone. Slip through the dark to the strongroom, then leave the way you came in."),
             scene: said("The people who hit the convoy were paid through a money changer's shop in town, and his ledger shows who paid them. The ledger is in the strongroom. Nobody can know you were there."),
@@ -210,7 +210,7 @@ pub fn scenarios() -> Vec<ScenarioEntry> {
         // made for snow (tools/levels/pass.ts): what falls is the weather's, keyed on the level's name, so the row names none. The one gate is lit and watched through windows from two sides of the
         // yard; the other way in is the kitchen's back door, outside the wall
         ScenarioEntry {
-            level: said("pass.json"), group: Some(MissionGroup::Strongholds), untuned: Some(true),
+            level: said("pass.json"), snow: true, group: Some(MissionGroup::Strongholds), untuned: Some(true),
             place: said("A teahouse and truck halt on a pass road, under snow"), lean: Some(Lean::Loud), defenders: Some(8.0), squads: Some(true),
             ways: list(&["the road, in the dark beside the gate", "the back of the halt, on the kitchen's door"]),
             blurb: said("The only gate is lit, with a truck snowed in just inside. Lit windows watch the yard, the kitchen has a back door, and there's a generator."),

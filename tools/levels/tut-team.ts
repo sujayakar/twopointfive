@@ -21,6 +21,8 @@ import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATER
 import { GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-team';
+/** it is built for snow */
+export const SNOW = true;
 /** the script it is played by */
 export const SCRIPT = 'tut-team';
 /** what its leaves are painted */

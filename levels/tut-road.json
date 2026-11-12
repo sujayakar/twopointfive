@@ -2,6 +2,7 @@
   "version": 2,
   "name": "tut-road",
   "script": "tut-road",
+  "snow": true,
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-road.ts build → tools/levels/export.ts", "notes": "The tutorial's first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post's wall and gateway, the hut, the sandbags under a machine gun, the roadblock's wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }

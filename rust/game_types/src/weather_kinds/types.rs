@@ -43,8 +43,6 @@ pub struct WeatherKindsMod {
 
 pub fn weather_kinds() -> Vec<String> { alloc::vec![String::from("clear"), String::from("overcast"), String::from("rain"), String::from("downpour"), String::from("fog"), String::from("dust")] }
 
-pub fn snow_levels() -> Vec<String> { alloc::vec![String::from("pass"), String::from("tut-team"), String::from("tut-quiet"), String::from("tut-road")] }
-
 pub const ROOF_Q: f64 = 0.2;
 
 pub const WEATHER_KEY: &str = "weather";

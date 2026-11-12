@@ -131,6 +131,8 @@ export interface LevelData {
   name: string;
   /** the script it is played by (rust/game_rules/src/missions/script_tut_*.rs) — absent = none */
   script?: string;
+  /** it is built for snow: born in it, and in no other weather — absent = it is not */
+  snow?: boolean;
   meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number; /** HOW KEPT THE PLACE IS, 0‥1 (absent = 0, every level before the key): 0 = left to the weather and the years, 1 = cleaned and painted last night. One word for the whole level, read by the look's surfaces and its painted marks (render/shaders/look.wgsl lookKept) */ kept?: number };
   floors: FloorData[];
   materials: Record<string, MaterialData>;
@@ -174,7 +176,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'script', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'doorPaint', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
+  top: ['version', 'name', 'script', 'snow', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'doorPaint', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -237,7 +239,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
   const mats: Record<string, MaterialData> = {}; for (const k of Object.keys(d.materials)) mats[k] = pick(d.materials[k], KEYS.material);   // (insertion order of materials is kept: it is the palette's authored order)
   const rect = (r: Rect): Rect => pick(r, KEYS.rect);
   return {
-    version: d.version, name: d.name, ...(d.script !== undefined ? { script: d.script } : {}),
+    version: d.version, name: d.name, ...(d.script !== undefined ? { script: d.script } : {}), ...(d.snow !== undefined ? { snow: d.snow } : {}),
     meta: { ...pick(d.meta, KEYS.meta), ...(d.meta.bounds ? { bounds: pick(d.meta.bounds, KEYS.bounds) } : {}) },
     floors: d.floors.map(f => pick(f, KEYS.floor)),
     materials: mats,

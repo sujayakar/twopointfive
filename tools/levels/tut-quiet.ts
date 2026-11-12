@@ -93,6 +93,8 @@ import { toned, PANEL_GREY } from '../../src/scene/stuff';
 import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-quiet';
+/** it is built for snow */
+export const SNOW = true;
 /** the script it is played by */
 export const SCRIPT = 'tut-quiet';
 /** what its leaves are painted */

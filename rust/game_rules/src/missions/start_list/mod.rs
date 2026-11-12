@@ -57,7 +57,7 @@ impl Mission {
     /// Standard | Hard changes something on it: a squad scenario's defenders read it
     fn diff_live(&self) -> bool { self.entry.is_some() && !self.is_quiet() }
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
-    fn own_weather(&self, g: &Game) -> bool { weather_kinds::snow_level(g, self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
+    fn own_weather(&self) -> bool { self.entry.as_ref().is_some_and(|e| e.snow) }
     /// the hour and the weather a row is always started in
     fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {
@@ -277,7 +277,7 @@ impl Sitting {
         let quiet = m.quiet_row();
         let href = quietfog::quiet_fog_href(g, &href, quiet);
         let href = hours::hour_href(&href, self.hour);
-        let wx = if m.own_weather(g) { None } else { self.weather };
+        let wx = if m.own_weather() { None } else { self.weather };
         way_search(&weather_kinds::weather_search(&href, wx), self.way_of(m))
     }
 
@@ -395,7 +395,7 @@ impl Sitting {
     }
 
     fn hour_row(&self, g: &Game, m: &Mission) -> Setting {
-        let wx = if m.own_weather(g) { None } else { m.row_weather().or(self.weather) };
+        let wx = if m.own_weather() { None } else { m.row_weather().or(self.weather) };
         Setting {
             key: String::from("hour"), label: String::from("Hour"), live: true, shown: m.row_hour().is_none(), moved: false,
             note: hours::hour_note(self.hour, wx.is_some(), m.row_weather().is_some()),
@@ -405,7 +405,7 @@ impl Sitting {
 
     fn weather_row(&self, g: &Game, m: &Mission) -> Setting {
         Setting {
-            key: String::from("weather"), label: String::from("Weather"), live: true, shown: !m.own_weather(g) && m.row_weather().is_none(), moved: false,
+            key: String::from("weather"), label: String::from("Weather"), live: true, shown: !m.own_weather() && m.row_weather().is_none(), moved: false,
             note: weather_kinds::weather_note(g, self.weather, m.row_hour().unwrap_or(self.hour)),
             choices: weather_kinds::WEATHER_ROW.iter().map(|k| choice(k.map_or("default", |k| k.as_str()), &weather_kinds::weather_title(g, *k), String::new(), self.weather == *k, true)).collect(),
         }

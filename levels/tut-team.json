@@ -2,6 +2,7 @@
   "version": 2,
   "name": "tut-team",
   "script": "tut-team",
+  "snow": true,
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-team.ts build → tools/levels/export.ts", "notes": "The squad's tutorial mission on the ground: the tunnel station of tut-sky, box for box, with the player on the road behind his own truck and a mission of one order and one word. Regenerate: bun run tools/levels/export.ts tut-team" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
