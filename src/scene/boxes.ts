@@ -232,7 +232,7 @@ export class BoxWorld {
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each. */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
   /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
-  addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
+  addCapsuleRows(f: ArrayLike<number>, u: ArrayLike<number>, at: number, owner: number, colours: readonly Vec3[], fb: ArrayLike<number>, b: number): void {
     if (this.charCount >= BoxWorld.castCap) return;
     const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
     for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];

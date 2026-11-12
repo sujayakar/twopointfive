@@ -98,7 +98,7 @@ coat (`wet_step` keeps it, and only `rust/game_draw/src/men.rs` reads it); drips
 air; the picture's air; a fire's flame and plume; moths.
 
 **How the split is held.** `game_draw` takes the game shared and `src/picture/` writes nothing back, so drawing cannot change a game
-(`the_snow_rows_change_nothing`). `tools/draw/ban.ts` keeps rules out of `src/`. A host says `StartOpts.dress`: a page has it up, a host with no
+(`the_snow_rows_change_nothing`). `tools/draw/ban.ts` holds who in `src/` makes the game do anything. A host says `StartOpts.dress`: a page has it up, a host with no
 picture down. This system reads two rows of `DressModDRESS`, `wind` and `moths`, both in the tick, because the moths are boxes of the frame's list. A
 cut (a load, a restart) starts each `src/picture/` part again from the rows.
 

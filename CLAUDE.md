@@ -30,7 +30,8 @@ from its idea to its row: `.claude/skills/level/SKILL.md`.
 ## Rules every session needs
 
 - **Where a rule goes.** A rule of play is Rust, in its module under `rust/game_rules/src/`, with its numbers under
-  `rust/game_types/src/knobs/`. None is written in `src/` (`tools/draw/ban.ts`, the build's first step).
+  `rust/game_types/src/knobs/`. None is written in `src/`: the page asks the game and draws the answer. `tools/draw/ban.ts`, the
+  build's first step, is red on a file that makes the game do something and isn't one of those it names, or that writes its memory.
 - **A new rule lands on,** with a native test that fails without it. It gets an off word only if somebody asks for one.
 - **Strong general systems.** No special case for one level, one door or one man where a system can carry it.
 - **The same inputs make the same game.** No clock, no die but the game's own (`rust/game_rules/src/tick/dice.rs`), no order that is not written
