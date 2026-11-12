@@ -513,7 +513,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
         if let (true, Some(stop)) = (way_pin, stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
             s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now });
             g.gd[gd].drop_path();
-            let pace = g.tune.guard_chase;
+            let pace = g.k.tune.guard_chase;
             crate::roomfight::send(g, d, crate::roomfight::Leg::errand(stop, pace), crate::owner::by::LANE);
             crate::belief::word(g, gd, l_from);
             if first { round_shout(g, gd); }
@@ -855,7 +855,7 @@ fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     held_off(g, gd);
     peek_on(g, gd, row);
     g.gd[gd].drop_path();
-    let fast = g.k.lanes.pin_pace - g.tune.guard_chase;
+    let fast = g.k.lanes.pin_pace - g.k.tune.guard_chase;
     crate::roomfight::run(g, d, pick.to, None, fast, crate::owner::by::LANE);
     {   // (his gun on where the fire came from before he is round the corner)
         let (guns, from) = (g.tab.lanes_lane[l].guns.clone(), g.tab.lanes_lane[l].from);
@@ -1023,7 +1023,7 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
     use crate::frag::FragThrowAt;
     use crate::lanes::FragPlace;
     let id = g.tab.lanes_lane[l].id;
-    let pace = g.k.lanes.peek_pace - g.tune.guard_chase;
+    let pace = g.k.lanes.peek_pace - g.k.tune.guard_chase;
     let big_n = if f.going { m::max(1.0, m::round(g.k.lanes.frag_step_m / 0.3)) + 1.0 } else { 1.0 };
     if let Some(was) = f.at {
         if winding(g, gd, *f) { return; }
@@ -1100,7 +1100,7 @@ fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     held_off(g, best);
     peek_on(g, best, row);
     g.gd[best].drop_path();
-    let fast = g.k.lanes.peek_pace - g.tune.guard_chase;
+    let fast = g.k.lanes.peek_pace - g.k.tune.guard_chase;
     crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);
 }
 

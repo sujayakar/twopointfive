@@ -548,7 +548,7 @@ fn quiet_with_a_partner(s: u32) -> Play {
     let mut p = Play::mission("bazaar.json", "?levelFile=bazaar.json&quiet&squad=1", &Opts { seed: s, ..Default::default() });
     p.sam_unhurt();
     p.g.player_invisible = true;
-    p.g.tune.civilian_kill_fails = false;
+    p.g.k.tune.civilian_kill_fails = false;
     p.run(0.5);
     p
 }
@@ -583,7 +583,7 @@ fn a_civilian_put_down_is_said_by_a_teammate() {
         drop(p);
 
         let mut p = office(s);
-        p.g.tune.civilian_kill_fails = false;
+        p.g.k.tune.civilian_kill_fails = false;
         let m = p.g.civilians[0];
         p.falls_as(m, DownKind::Struck, true, DownBy::Player);
         p.frame();

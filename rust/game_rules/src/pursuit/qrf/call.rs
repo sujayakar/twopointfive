@@ -337,7 +337,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
         return false;
     }
     let panel = reason == crate::qrf::QrfReason::Panel;
-    if !g.tune.qrf && !panel { return false; }
+    if !g.k.tune.qrf && !panel { return false; }
     if !live(g) && !panel { return false; }
     if !has_response(g) { note(g, "no-team:this level has none"); return false; }
     if room_for(g) < 2.0 {

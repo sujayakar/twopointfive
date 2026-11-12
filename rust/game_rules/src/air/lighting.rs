@@ -282,7 +282,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                     crate::weapons::ocp_use(&mut g.pl[p].ocp);
                     let muzzle = g.ch[g.pl[p].ch].muzzle;
                     crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
-                    g.gd[gd].light_dead_until = g.time + g.tune.ocp_duration * 0.7;
+                    g.gd[gd].light_dead_until = g.time + g.k.tune.ocp_duration * 0.7;
                     let c = g.gd[gd].ch;
                     let what = alloc::format!("{}'s torch", g.gd[gd].callsign);
                     let pos = g.ch[c].pos;
@@ -325,7 +325,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         crate::weapons::ocp_use(&mut g.pl[p].ocp);
         let muzzle = g.ch[c].muzzle;
         crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
-        let secs = g.tune.ocp_duration * 2.5;
+        let secs = g.k.tune.ocp_duration * 2.5;
         crate::game::game_set_blackout(g, secs, crate::lighting::SetBlackoutCause::Ocp);
         return;
     }
@@ -336,7 +336,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     crate::weapons::ocp_use(&mut g.pl[p].ocp);
     let muzzle = g.ch[g.pl[p].ch].muzzle;
     crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
-    let until = g.time + g.tune.ocp_duration;
+    let until = g.time + g.k.tune.ocp_duration;
     g.tab.fixture[t].blind_until = until;
     if kind != crate::fixtures::FixtureKind::Device {
         crate::game::game_light_event(g, t, Some(crate::lighting::LightEventCause::Ocp), None);

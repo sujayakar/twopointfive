@@ -249,7 +249,7 @@ fn the_stage_a_mans_card_and_the_floor_under_him_are_the_games() {
         let at = p.sam_at();
         let word = v.marks.floor.expect("the floors differ");
         assert_eq!(format!("{word:?}").to_lowercase(), game::floor::floor_of(&p.g, [at[0], 0.0, at[1]]).as_str(), "seed {seed}");
-        p.g.tune.floor_materials = false;
+        p.g.k.tune.floor_materials = false;
         assert_eq!(p.view().marks.floor, None, "seed {seed}: the floors all one: nothing is said of them");
     }
 }

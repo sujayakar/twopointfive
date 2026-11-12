@@ -348,7 +348,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let _ = state_of(g, gd);   // makes the row if it is new; every read and write below goes through the table
     let c = g.gd[gd].ch;
     let t = g.time;
-    let pace = m::min(g.tune.guard_investigate, g.k.doormanners.step);
+    let pace = m::min(g.k.tune.guard_investigate, g.k.doormanners.step);
     let (step, step_by, step_rest) = { let st = g.m.doorway.states.get(gd).unwrap(); (st.step, st.step_by, st.step_rest) };
     if let Some(step) = step {
         if t > step_by || step_to(g, gd, step, pace, dt, false) {

@@ -153,7 +153,7 @@ fn a_broken_man_caught_dry_drops_it_and_runs() {
                 let from = p.at(t);
                 p.run(2.0);
                 assert!(dist(p.at(t), from) > 2.0, "seed {s}: two seconds on he is {:.2} m from where he dropped it", dist(p.at(t), from));
-                assert!(p.speed(t) <= p.g.tune.guard_chase + 0.3, "seed {s}: never faster than a chase: {:.2}", p.speed(t));
+                assert!(p.speed(t) <= p.g.k.tune.guard_chase + 0.3, "seed {s}: never faster than a chase: {:.2}", p.speed(t));
                 assert_eq!(p.rounds_fired(t), fired, "seed {s}: a round left his gun after the shout");
                 assert!(p.fled(t), "seed {s}: he is not marked as run");
             }

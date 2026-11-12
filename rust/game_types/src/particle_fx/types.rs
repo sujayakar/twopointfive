@@ -72,26 +72,6 @@ pub struct FxStateTinksItem {
     pub rate: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ParticleFxModDUST {
-    pub count: f64,
-    pub size: f64,
-    pub life: f64,
-    pub speed: f64,
-    pub rise: f64,
-    pub spread: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ParticleFxModDUSTLOOK {
-    pub opacity: f64,
-    pub growth: f64,
-    pub fade_in: f64,
-    pub soft: f64,
-    pub wrap: f64,
-    pub ambient: f64,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SOLIDGLASSCRACK {
     pub look: f64,
@@ -99,43 +79,6 @@ pub struct SOLIDGLASSCRACK {
     pub rifle: f64,
     pub pellet: f64,
     pub strength: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ParticleFxModPFX {
-    pub impact_scale_rifle: f64,
-    pub spark_size: f64,
-    pub spark_life: f64,
-    pub spark_spread: f64,
-    pub chip_speed: f64,
-    pub chip_life: f64,
-    pub chip_size: f64,
-    pub chip_spread: f64,
-    pub dust_speed: f64,
-    pub dust_life: f64,
-    pub dust_size: f64,
-    pub muzzle_spark_size: f64,
-    pub bang_sparks: f64,
-    pub bang_spark_size: f64,
-    pub bang_ring: f64,
-    pub bang_ring_radius: f64,
-    pub bang_ring_speed: f64,
-    pub bang_ring_life: f64,
-    pub bang_ring_size: f64,
-    pub bang_puff: f64,
-    pub kick_dust: f64,
-    pub kick_splinters: f64,
-    pub lock_splinters: f64,
-    pub lock_splinters_back: f64,
-    pub lock_screws: f64,
-    pub tube_shards: f64,
-    pub bulb_shards: f64,
-    pub tube_sparks: f64,
-    pub breaker_sparks: f64,
-    pub clack_sparks: f64,
-    pub casing_life: f64,
-    pub tink_gain: f64,
-    pub ember_size: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -190,9 +133,6 @@ pub struct EmberFxO {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ParticleFxMod {
-    #[is(crate::particle_fx::ParticleFxModDUST { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 })] pub dust: crate::particle_fx::ParticleFxModDUST,
-    #[is(crate::particle_fx::ParticleFxModDUSTLOOK { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 })] pub dust_look: crate::particle_fx::ParticleFxModDUSTLOOK,
-    #[is(crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 })] pub pfx: crate::particle_fx::ParticleFxModPFX,
     pub state: Option<crate::particle_fx::FxState>,
 }
 

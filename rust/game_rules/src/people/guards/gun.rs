@@ -479,7 +479,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
-        let wide = g.tune.suppress_first && opening && {
+        let wide = g.k.tune.suppress_first && opening && {
             let foe = match g.gd[gd].foe {
                 Some(f) => f,
                 None => g.pl[g.player].ch,
@@ -653,7 +653,7 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         g.tab.light[fl].enabled = false;
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
-    let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+    let (peak, inner, outer) = (g.k.tune.flash_intensity, g.k.tune.flash_inner, g.k.tune.flash_outer);
     let radius = FLASHLIGHT_RADIUS;
     let row = &mut g.tab.light[fl];
     row.peak_intensity = peak;

@@ -298,7 +298,7 @@ pub fn camera_pan(g: &mut Game, id: CameraRtId, dt: f64, live: bool, cones: bool
 /// …AND ITS HALF AFTER: what the picture had. `visible`: the eye test from the lens has him, at `gain` lit-seconds a second, with his feet at `p`. The integrator,
 /// then what it does about it: is he suspected, is he reported.
 pub fn camera_see(g: &mut Game, id: CameraRtId, dt: f64, visible: bool, gain: f64, p: V3) -> (bool, bool) {
-    let (time, suspicion, alarm) = (g.time, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
+    let (time, suspicion, alarm) = (g.time, g.k.tune.camera_suspicion_secs, g.k.tune.camera_alarm_secs);
     let c = &mut g.tab.devices_camera_rt[id];
     if visible && gain > 0.02 {
         c.seen = m::min(alarm + 1.0, c.seen + gain * dt);

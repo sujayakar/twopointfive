@@ -92,7 +92,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     use crate::teams::Team;
     use crate::weapons::{GunModelId, WeaponId};
     let dt = dt.unwrap_or(0.0);
-    let deal = g.tune.carbine_guards;
+    let deal = g.k.tune.carbine_guards;
     let mut grip: Option<AnimLongGrip> = None; let mut grip20k: Option<AnimLongGrip> = None;
     let mut grip_own: Vec<(GunModelId, Option<AnimLongGrip>, Option<f64>)> = Vec::new();
     let mut i = 0;
@@ -220,7 +220,7 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
     //  (a charge's slab being placed, a stack's marker), so without this every such frame would leave a row for good.)
     // (his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
     if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }
-    if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
+    if !g.k.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
     crate::tracers::tracers_update(g, dt, &mut out);
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);

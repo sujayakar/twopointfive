@@ -450,7 +450,7 @@ fn lays_rounds_on_it(g: &mut Game, gd: GuardId, b: &Belief, to: Option<V3>, pos:
     let dist = dist_xz(pos, aim);
     let on = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * (match g.gd[gd].skill { Some(sk) => sk.settle_k, None => 1.0 });
-    let aim_model = g.tune.aim_model;
+    let aim_model = g.k.tune.aim_model;
     let st = stand!(g, gd);
     st.lay = if !aim_model { if on { 1.0 } else { 0.0 } } else if on { m::min(1.0, st.lay + dt / settle) } else { m::max(0.0, st.lay - p.lose_rate * dt) };   // (his lay on the spot, kept while he listens too)
     let (lay, fired_t, next) = (st.lay, st.fired_t, st.next);
@@ -494,7 +494,7 @@ fn fires_through_it(g: &mut Game, gd: GuardId, d: DoorId, shot: DoorShot, dt: f6
         let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
         g.arms[g.gd[gd].ch].fire_cd = (cd + die * jitter) * mo.gap;
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * (match g.gd[gd].skill { Some(sk) => sk.spread_k, None => 1.0 });
-        let opts = if g.tune.aim_model {
+        let opts = if g.k.tune.aim_model {
             crate::combat::FireOpts { steady: Some(true), spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) + mo.spread), ..Default::default() }
         } else {
             crate::combat::FireOpts { spread: Some(mo.spread), ..Default::default() }
@@ -550,7 +550,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
         if !g.gd[gd].duty.free() { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
         if g.time - kk.t0 > g.k.doorforce.walk_secs { return kick_end(g, gd, d, b, Some("the walk took too long"), false); }
         crate::guards::go_to(g, gd, kk.spot, None);
-        let speed = g.tune.guard_investigate;
+        let speed = g.k.tune.guard_investigate;
         let arrived = crate::guards::follow_path(g, gd, dt, speed);
         let dist = dist_xz(g.ch[c].pos, kk.spot);
         if dist < 0.3 || (arrived && dist < 0.6) {

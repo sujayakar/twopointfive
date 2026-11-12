@@ -28,11 +28,9 @@ fn is_tracer_round(g: &crate::game::Game, w: FirearmId) -> bool {
 }
 
 /// The pool: every slot made once, with its lamp. The lights are `g.engine.lights`, reached by path.
-pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers {
-    let params = match params { Some(p) => p, None => crate::effects::tracer_fx() };
+pub fn tracers_new(g: &mut crate::game::Game) -> crate::tracers::Tracers {
     let mut this = Tracers::blank();
-    this.params = params;
-    let n = m::max(1.0, js::to_i32(params.max_live) as f64);
+    let n = m::max(1.0, js::to_i32(g.k.tracers.max_live) as f64);
     let mut i = 0.0;
     while i < n {
         let box_ = crate::scene_boxes::make_box(g, &streak_box_p());
@@ -44,10 +42,10 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
             dir: [0.0, -1.0, 0.0],
             color: [1.0, 0.5, 0.2],
             intensity: 0.0,
-            range: params.light_range,
+            range: g.k.tracers.light_range,
             inner_deg: 0.0,
             outer_deg: 180.0,
-            radius: params.light_radius,
+            radius: g.k.tracers.light_radius,
             volumetric: 1.0,
             owner: 0.0,
             enabled: true,
@@ -90,7 +88,7 @@ pub(super) fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def
         let Some(w) = w else { return false; };
         if !(g.fa[w].def == def.id && is_tracer_round(g, w)) { return false; }
     }
-    if !(t_hit >= g.tracers.params.min_path) || !t_hit.is_finite() { return false; }
+    if !(t_hit >= g.k.tracers.min_path) || !t_hit.is_finite() { return false; }
     let color = match spec { Some(t) => t.color, None => [1.0, 0.42, 0.12] };
     tracers_spawn(g, muzzle, dir, t_hit, impact, color, owner);
     true
@@ -112,7 +110,7 @@ fn slot_at(g: &mut Game) -> usize {
 
 /// Starts a streak in a slot, with a head light if the budget of lights has one to spare.
 pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impact: crate::tracers::TracerImpact, color: V3, owner: f64) {
-    let p = g.tracers.params;
+    let p = g.k.tracers;
     let i = slot_at(g);
     let dl = js::or(m::hyp3(dir[0], dir[1], dir[2]), 1.0);
     let t = &mut g.tracers.pool[i];
@@ -162,7 +160,7 @@ fn release_at(g: &mut Game, i: usize) {
 /// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out.
 pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId>) {
     if g.tracers.live == 0.0 { return; }
-    let p = g.tracers.params;
+    let p = g.k.tracers;
     let (mut live, mut lit) = (0.0, 0.0);
     let hw = p.thickness * 0.5;
     for i in 0..g.tracers.pool.len() {
@@ -210,7 +208,7 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId
 /// The splash where a tracer stops in geometry, its shooter's doing: a few sparks back off the surface and a brief glow. Nothing in a man, nothing for a round that met nothing.
 fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     if t.impact != TracerImpact::Solid { return; }
-    let p = g.tracers.params;
+    let p = g.k.tracers;
     let at = [t.from[0] + t.dir[0] * (t.l - 0.03), t.from[1] + t.dir[1] * (t.l - 0.03), t.from[2] + t.dir[2] * (t.l - 0.03)];
     let was = crate::fogofwar::fog_of_war_begin(g, Some(t.owner));
     if p.ember_sparks > 0.0 {
@@ -249,7 +247,7 @@ mod tests {
     fn game(n: u32) -> Box<Game> {
         let mut g = Box::new(Game::blank());
         g.tracers = Tracers::blank();
-        g.tracers.params.max_lights = 0.0;
+        g.k.tracers.max_lights = 0.0;
         for i in 0..n {
             let mut t = Tracer::default();
             t.lamp = LightId(i);
@@ -311,9 +309,9 @@ mod tests {
     #[test]
     fn each_slot_is_made_with_its_own_lamp() { on_a_big_stack(|| {
         let mut g = Box::new(Game::blank());
-        let (before, mut p) = (g.tab.light.len(), crate::effects::tracer_fx());
-        p.max_live = 2.9;
-        let t = tracers_new(&mut g, Some(p));
+        let before = g.tab.light.len();
+        g.k.tracers.max_live = 2.9;
+        let t = tracers_new(&mut g);
         assert_eq!((t.pool.len(), g.tab.light.len() - before, t.pool[0].dir, t.pool[0].color), (2, 2, [0.0, 0.0, 1.0], [1.0, 0.5, 0.2]));
         assert!(t.pool[0].lamp != t.pool[1].lamp && t.pool[0].light.is_none() && g.engine.lights.lights.is_empty());
         assert!(t.pool[0].box_ != t.pool[1].box_);
@@ -321,8 +319,8 @@ mod tests {
         assert_eq!((b.c, b.h, b.albedo, b.emissive, b.flags), ([0.0, -10.0, 0.0], [0.006, 0.006, 0.05], [0.04, 0.03, 0.02], [0.0; 3], 10.0));
         let l = &g.tab.light[t.pool[1].lamp];
         assert_eq!((l.pos, l.dir, l.range, l.radius, l.ttl, l.fixture_box, l.outer_deg, l.enabled), ([0.0, -10.0, 0.0], [0.0, -1.0, 0.0], 4.0, 0.06, 30.0, -1.0, 180.0, true));
-        p.max_live = 0.0; // never fewer than one
-        assert_eq!(tracers_new(&mut g, Some(p)).pool.len(), 1);
+        g.k.tracers.max_live = 0.0; // never fewer than one
+        assert_eq!(tracers_new(&mut g).pool.len(), 1);
     }) }
 
     /// A lit streak's light rides 5 cm behind the head, its age held at 0, and the count of lit heads is the walk's.
@@ -344,7 +342,7 @@ mod tests {
     #[test]
     fn a_streak_is_a_thin_lit_box_behind_the_head() { on_a_big_stack(|| {
         let mut g = game(1);
-        let p = g.tracers.params;
+        let p = g.k.tracers;
         let mut def = g.weapon(crate::weapons::WeaponId::Fiveseven).clone();
         def.tracer = Some(crate::weapons::TracerSpec { every: 3.0, last_n: 3.0, color: [1.0, 0.6, 0.25] });
         let (from, dir, l): (V3, V3, f64) = ([1.25, 1.5, -3.75], [0.6, 0.0, 0.8], 7.3);

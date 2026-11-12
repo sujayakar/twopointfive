@@ -87,7 +87,7 @@ fn stack(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     gate.look = Some(inside); gate.crouch = 0.0;
     let spot = gate.spot;
     let face = if dist_xz(g.ch[c].pos, spot) < 1.2 { Some(gate.face) } else { None };
-    let speed = g.tune.guard_investigate;
+    let speed = g.k.tune.guard_investigate;
     let there = step_gate(g, gd, gate, dt, spot, speed, face);
     if there || gate.t > 5.0 {
         gate.t = 0.0;
@@ -101,7 +101,7 @@ fn wait(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     stand_gate(g, gd, dt, Some(gate.face)); gate.look = Some(inside); gate.crouch = 0.5;
     let mate = gate_mate(g, gate, crate::tactics::GateRole::Second, gd);
     let set = match &mate { Some(mm) => mm.g.phase == GatePhase::Stacked, None => false };
-    if set || gate.t >= g.tune.door_wait {
+    if set || gate.t >= g.k.tune.door_wait {
         gate.thrower = if stuns_of(g, gd) > 0.0 { Some(gd) } else {
             match &mate { Some(mm) if set && stuns_of(g, mm.gd) > 0.0 => Some(mm.gd), _ => None }
         };
@@ -138,7 +138,7 @@ fn at_the_handle(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3
         }
     };
     if let Some(h) = h {
-        let speed = g.tune.guard_investigate;
+        let speed = g.k.tune.guard_investigate;
         let stepped = step_gate(g, gd, gate, dt, h.pos, speed, Some(h.yaw)) && crate::handleside::tool_step(g, gd, h.pos);
         if !stepped && gate.t < 3.0 { gate.look = Some(inside); gate.crouch = 0.4; return false; }
         gate.near_a = g.dr[d].def.width; gate.spot = h.pos; gate.face = h.yaw; gate.t = 0.0;
@@ -248,7 +248,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
         let a = along_of(g, d, leg);
         door_pt(g, d, a + (if a > w / 2.0 { 1.5 } else { -1.5 }), -3.0, gate.side, Some(1.0))
     });
-    let speed = g.tune.guard_chase;
+    let speed = g.k.tune.guard_chase;
     let there = step_gate(g, gd, gate, dt, leg, speed, None);
     let pos = g.ch[c].pos;
     if crate::handleside::side_at(g, d, pos) != gate.side { gate.crossed = true; }
@@ -330,7 +330,7 @@ pub(super) fn tick_gates(g: &mut crate::game::Game) {
 
 /// A gated man's eyes and muzzle and how low he is; None for everybody else.
 pub fn tactics_look(g: &crate::game::Game, gd: GuardId) -> Option<crate::tactics::TacticsLook> {
-    if !g.tune.tactics { return None; }
+    if !g.k.tune.tactics { return None; }
     let row = g.m.tactics.states.as_ref()?.gates.get(gd)?;
     Some(TacticsLook { aim: row.look?, crouch: row.crouch })
 }

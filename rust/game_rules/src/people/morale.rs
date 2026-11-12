@@ -90,7 +90,7 @@ fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None);
     let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None);
-    m::max(a, b) < g.tune.vis_floor
+    m::max(a, b) < g.k.tune.vis_floor
 }
 
 /// has he company

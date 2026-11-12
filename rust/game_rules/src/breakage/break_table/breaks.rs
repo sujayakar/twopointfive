@@ -8,8 +8,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }
-/// EDGE's `on`, read live; `look` says only that somebody is there
-fn look_on(g: &Game) -> bool { g.destr.breaks.look.is_some() && g.m.edge_look.edge.on }
+/// `edge_look.on`, read live; `look` says only that somebody is there
+fn look_on(g: &Game) -> bool { g.destr.breaks.look.is_some() && g.k.edge_look.on }
 /// SURF_MAT[surf as Surf]: a word that is no Surf finds nothing
 fn surf_mat_of_word(s: &str) -> Option<Mat> {
     use crate::scene_materials::Surf;
@@ -208,7 +208,7 @@ fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     }
     if row.dust > 0.0 {
         let count = m::max(1.0, m::round(row.dust * m::max(0.5, m::min(1.5, r / 0.25))));
-        let pfx = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
+        let pfx = (g.k.pfx.dust_speed, g.k.pfx.dust_life, g.k.pfx.dust_size);
         let color = v3::lerp3(breaks_tint(inside, me.paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, bc, [0.0, 1.0, 0.0], count, crate::render_particles::EmitOpts {
             shape: Some(crate::render_particles::EmitShape::Puff), speed: pfx.0 * 0.6, speed_jit: Some(0.5), lift: Some(0.05), life: pfx.1, life_jit: Some(0.3), size: pfx.2, size_jit: Some(0.35), pos_jit: Some(m::max(0.08, m::min(0.3, r * 0.6))), color: Some(color), ..Default::default()
@@ -247,7 +247,7 @@ fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
 /// The row's dust and sparks at `at`.
 fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, inside: crate::break_table::Inside, paint: V3, at: V3, dir: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    let (dust_speed, dust_life, dust_size) = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
+    let (dust_speed, dust_life, dust_size) = (g.k.pfx.dust_speed, g.k.pfx.dust_life, g.k.pfx.dust_size);
     if row.dust > 0.0 {
         let color = v3::lerp3(breaks_tint(inside, paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, at, dir, m::round(row.dust * k), crate::render_particles::EmitOpts {
@@ -255,7 +255,7 @@ fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
         });
     }
     if row.sparks > 0.0 {
-        let (spread, life, size) = (g.m.particle_fx.pfx.spark_spread, g.m.particle_fx.pfx.spark_life, g.m.particle_fx.pfx.spark_size);
+        let (spread, life, size) = (g.k.pfx.spark_spread, g.k.pfx.spark_life, g.k.pfx.spark_size);
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, dir, m::round(row.sparks * k), crate::render_particles::EmitOpts {
             speed: 4.0, speed_jit: Some(0.6), spread: Some(spread), life, life_jit: Some(0.4), size, ..Default::default()
         });

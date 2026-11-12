@@ -97,7 +97,7 @@ fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 /// Live play: devices sense.
 fn sensing(g: &crate::game::Game) -> bool {
-    g.ai_enabled && g.tune.devices && !g.staged.facts.fight
+    g.ai_enabled && g.k.tune.devices && !g.staged.facts.fight
 }
 /// Lit-seconds per second a camera's integrator fills at.
 fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
@@ -116,7 +116,7 @@ pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
 pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
     for c in g.devices.cameras.clone() { update_camera(g, c, dt, live); }
-    for l in g.devices.lasers.clone() { let on = live && g.tune.lasers; update_laser(g, l, dt, on); }
+    for l in g.devices.lasers.clone() { let on = live && g.k.tune.lasers; update_laser(g, l, dt, on); }
     crate::seats::each_seat(g, &mut |v: &mut Game| update_coding(v, dt));
 }
 /// One camera's frame: the pan, the feed dropping, the picture, what it does about it.
@@ -124,7 +124,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let c = c_2;
     let d = g.tab.devices_camera_rt[c].def.clone();
     let index = g.tab.devices_camera_rt[c].index;
-    let cones = g.tune.device_cones;
+    let cones = g.k.tune.device_cones;
     let (ok, down) = crate::fixtures::camera_pan(g, c, dt, live, cones);
     if down && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
     if !ok || !live { return; }
@@ -524,7 +524,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let hot = seen > 0.02;
         let blink = if g.tab.devices_camera_rt[c].state != crate::fixtures::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
-            v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
+            v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.k.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::default() }).into());
     }

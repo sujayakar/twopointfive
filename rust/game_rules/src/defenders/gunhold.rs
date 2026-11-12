@@ -880,7 +880,7 @@ fn runs_for_cover(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
         return stands_still(g, f, f.low, false);
     }
     let scramble = scrambles_off(g, f);
-    let chase = g.tune.guard_chase;
+    let chase = g.k.tune.guard_chase;
     let arrived = if scramble { crate::guards::step_along_path(g, f.gd, f.dt, chase) } else { crate::guards::follow_path(g, f.gd, f.dt, chase) };
     if arrived {
         let peek_t = next_peek(g, crate::dice::Who::Man(f.gd), f.now);
@@ -1021,7 +1021,7 @@ fn starts_a_look(g: &mut Game, f: Feet) {
 /// The look: to its edge, a while there, and back; a man under fire breaks it off.
 fn peeks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
     if st(g, f.s).peek_end < 0.0 {
-        let walk = g.tune.guard_walk;
+        let walk = g.k.tune.guard_walk;
         let there = crate::guards::follow_path(g, f.gd, f.dt, walk);
         if there || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.2) {
             let peek_secs = g.k.gunhold.peek_secs;
@@ -1072,7 +1072,7 @@ fn ends_the_look(g: &mut Game, f: Feet) {
 /// The walk back to his spot after a look.
 fn comes_back(g: &mut Game, f: Feet) -> Option<GunHoldFeet> {
     let done = st(g, f.s).spot.is_none() || {
-        let investigate = g.tune.guard_investigate;
+        let investigate = g.k.tune.guard_investigate;
         crate::guards::follow_path(g, f.gd, f.dt, investigate) || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.2)
     };
     if done {
@@ -1098,7 +1098,7 @@ fn flanks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
     if gives_up_the_way(g, f, k) {
         return stands_still(g, f, f.low, true);
     }
-    let speed = if here { g.tune.guard_chase } else { g.tune.guard_investigate };
+    let speed = if here { g.k.tune.guard_chase } else { g.k.tune.guard_investigate };
     let arrived = crate::guards::follow_path(g, f.gd, f.dt, speed);
     if arrived || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 2.5) {
         let row = st(g, f.s);

@@ -13,9 +13,9 @@ fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
     crate::scene_materials::does_of(g, word)
 }
 
-/// The knob as the systems read it: tune.chaos, from 0 to 1.
+/// How much breaks, as the systems read it: from 0 to 1.
 pub fn chaos_of(g: &crate::game::Game) -> f64 {
-    let c = g.tune.chaos;
+    let c = g.k.chaos.def;
     m::max(0.0, m::min(1.0, c))
 }
 
@@ -26,12 +26,7 @@ pub(super) fn loud_now(g: &crate::game::Game) -> bool {
 
 /// Impulses at all: chaos above 0 and the switch.
 pub(in crate::breakage) fn impulses_on(g: &crate::game::Game) -> bool {
-    chaos_of(g) > 0.0 && g.tune.debris_impulses
-}
-
-/// What of the kept knob is the game's: the first value. What a machine kept is the browser's storage, the host's.
-pub fn load_chaos(g: &mut crate::game::Game) {
-    g.tune.chaos = g.k.chaos.def;
+    chaos_of(g) > 0.0 && g.k.tune.debris_impulses
 }
 
 /// The impulses' strength scale off the knob.
