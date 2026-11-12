@@ -234,7 +234,7 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
         }
         g.tab.edit(bx).cut = cut.cut.clone();
         if cut.cut.is_some() {
-            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(meta.tint, g.k.shards.cut_edge); g.tab.edit(bx).cut_core = Some(e); }
+            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(g, meta.tint, g.k.shards.cut_edge); g.tab.edit(bx).cut_core = Some(e); }
             if g.k.shards.cut_see > 0.0 || g.k.shards.cut_rim > 0.0 {
                 g.tab.edit(bx).cut_glass = Some(crate::scene_cut::CutGlass { see: g.k.shards.cut_see, rim: g.k.shards.cut_rim, anim: Some(true) });
             }

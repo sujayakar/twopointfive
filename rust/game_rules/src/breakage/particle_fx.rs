@@ -134,7 +134,7 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::comb
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
     let look = hit_look(g, &hit);
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
-    let r = impact_row(surf);
+    let r = impact_row(g, surf);
     let pfx = g.k.pfx;
     let chips = if surf == crate::scene_materials::Surf::Metal { 0.0 } else if solid { SOLID_GLASS_CHIPS } else { r.chips };
     let k = if def.cls == crate::weapons::WeaponClass::Pistol { 1.0 } else { pfx.impact_scale_rifle };
@@ -162,13 +162,13 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::comb
 }
 
 /// IMPACT[surf]: the table has every word of Surf.
-fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactRecipe {
-    *crate::particle_fx::impact().of(surf.as_str()).unwrap()
+fn impact_row(g: &Game, surf: crate::scene_materials::Surf) -> crate::knobs::ImpactKRow {
+    *g.k.impact.on.of(surf.as_str()).unwrap()
 }
 
 /// The muzzle's unburnt powder.
 pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter: CharId) {
-    let s = crate::effects::shot();
+    let s = g.k.effects.shot;
     if !crate::effects::flags().shot_sparks || s.spark_count <= 0.0 { return; }
     let d = v3::normalize(dir);
     let (vel, id) = (g.ch[shooter].vel, g.ch[shooter].id);
@@ -180,7 +180,7 @@ pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter:
 
 /// The stun charge coming apart: the fragments, a ring of dust along the floor, a puff over the can.
 pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
-    let s = crate::effects::sparks();
+    let s = g.k.effects.sparks;
     let pfx = g.k.pfx;
     if !crate::blast_look::blast_sparks(g, at) {
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, [0.0, 1.0, 0.0], pfx.bang_sparks, Emit {
@@ -301,34 +301,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 // ---------------------------------------------------------------- spent cases
 
 /// The empty a row's gun throws, or None.
-fn casing_of(def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
-    let c = casing_row(def.id)?;
-    Some(c)
-}
-
-/// CASINGS[id]
-fn casing_row(id: crate::weapons::WeaponId) -> Option<crate::particle_fx::CasingSpec> {
-    use crate::weapons::WeaponId;
-    let t = crate::particle_fx::casings();
-    match id {
-        WeaponId::Fiveseven => t.fiveseven,
-        WeaponId::Guard9mm => t.guard9mm,
-        WeaponId::Aks74u => t.aks74u,
-        WeaponId::Ak74m => t.ak74m,
-        WeaponId::Akms => t.akms,
-        WeaponId::Fn2000 => t.fn2000,
-        WeaponId::M870 => t.m870,
-        WeaponId::Mk12 => t.mk12,
-        WeaponId::Mp7 => t.mp7,
-        WeaponId::Mk46 => t.mk46,
-        WeaponId::M1014 => t.m1014,
-        WeaponId::Hk45 => t.hk45,
-        WeaponId::G18 => t.g18,
-        WeaponId::Pkm => t.pkm,
-        WeaponId::Mk18bare => t.mk18bare,
-        WeaponId::G19bare => t.g19bare,
-    }
-}
+fn casing_of(g: &Game, def: &crate::weapons::WeaponDef) -> Option<crate::knobs::CasingsKRow> { g.k.casings.of.get(def.id).copied() }
 
 /// The module's row for this game, made if there is none.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxState {
@@ -337,7 +310,7 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxS
 
 /// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down.
 pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapons::WeaponDef) {
-    let Some(c) = casing_of(def) else { return; };
+    let Some(c) = casing_of(g, def) else { return; };
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
@@ -415,8 +388,9 @@ mod tests {
     /// Every surface has what a round knocks out of it, or a shot at it brings the game down.
     #[test]
     fn every_surface_has_an_impact() {
+        let g = crate::game::Game::blank();
         for s in [crate::scene_materials::Surf::Carpet, crate::scene_materials::Surf::Metal, crate::scene_materials::Surf::Glass, crate::scene_materials::Surf::Wood, crate::scene_materials::Surf::Plastic, crate::scene_materials::Surf::Cardboard, crate::scene_materials::Surf::Drywall, crate::scene_materials::Surf::Concrete, crate::scene_materials::Surf::Fabric, crate::scene_materials::Surf::Foliage] {
-            let _ = impact_row(s);
+            let _ = impact_row(&g, s);
         }
     }
 
