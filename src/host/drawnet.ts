@@ -46,7 +46,7 @@ export class DrawNet {
   tick(input: HandInput, cam: HandCamera, canvas: HandCanvas, off: boolean, after: () => void): boolean {
     const { door, game, net } = this, c = door.client, now = performance.now(), N = game.numbersOf(), keys = sampleHand(N, input, cam, canvas), seat = Math.max(0, c.seat);
     door.wake(this.round);
-    if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now, !off); else c.beat(recordOf(N, keys), now); }
+    if (c.seat >= 0 && c.state !== 'waiting') { if (off || door.far) c.rest(now, !off); else c.beat(recordOf(N, keys, input.keys), now); }
     let over = false;
     const n = door.walk({ step: cmds => { const seen = !door.far; game.shownHand(seat, keys); net.step(cmds); game.stepped(seen, over); over = true; if (seen) after(); }, word: () => net.word() }, this.round);
     const level = this.level; this.level = false;
@@ -59,9 +59,10 @@ export class DrawNet {
   get lead(): { by: number[]; aim: [number, number, number] | null } | null { return this.ahead; }
 }
 
-/** a hand as it travels */
-function recordOf(hand: Hand, keys: string): WireCmd {
-  const [held, down] = keys.split('\n').map(l => l.split(' ').filter(Boolean)), out: WireCmd = { k: held, n: Array.from(hand.input) };
+/** a hand as it travels: of what it holds, what is held under a press and let go since goes by itself (`now`: what is held still) */
+function recordOf(hand: Hand, keys: string, now: ReadonlySet<string>): WireCmd {
+  const [held, down] = keys.split('\n').map(l => l.split(' ').filter(Boolean)), under = held.filter(k => !now.has(k)), out: WireCmd = { k: held.filter(k => now.has(k)), n: Array.from(hand.input) };
   if (down.length) out.p = down;
+  if (under.length) out.u = under;
   return out;
 }
