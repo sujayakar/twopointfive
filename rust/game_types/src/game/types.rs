@@ -332,8 +332,6 @@ pub struct Game {
     pub search_probe_n: f64,
     pub time: f64,
     pub dice: crate::dice::Draws,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
     pub light_home: crate::fixtures::LightHome,
     pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,

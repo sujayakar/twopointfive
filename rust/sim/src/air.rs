@@ -14,7 +14,7 @@ use crate::maths::{cos, hypot2, sin};
 use crate::world::{js_abs, js_ceil, js_max, js_min, K_ROT, REC, R_C, R_H, R_KIND, R_YAW, World};
 use prim::floor;
 
-/// the plan: half-metre cells over the 40 × 28 m world (the host holds its own numbers to these as it stands up: game_rules air/air_dust.rs)
+/// the plan: half-metre cells over the 40 × 28 m world (a test holds it to the world: game_rules air/air_dust.rs)
 pub const AIR_W: usize = 80;
 pub const AIR_H: usize = 56;
 pub const AIR_CELL: f64 = 0.5;
@@ -74,8 +74,8 @@ pub fn begin(d: &mut AirDust, on: bool) {
     d.on = on;
     d.acc = 0.0;
     d.cur = 0;
-    d.plan = AirPlan { under: d.plan.under.clone(), leaf: vec![0; N * 2], read: None };
-    d.open = vec![0; N * 2];
+    d.plan = AirPlan { under: d.plan.under.clone(), leaf: Vec::new(), read: None };
+    d.open = Vec::new();
 }
 /// no weather in the air: every cell the open air's
 pub fn clear(d: &mut AirDust) {
@@ -182,15 +182,15 @@ fn leaves(p: &mut AirPlan, wo: &World) {
         }
     }
 }
-/// One step of the equation → the most any cell moved
-fn step_once(d: &mut AirDust, dt: f64, tune: &Knobs) -> f64 {
+/// One step of the equation → the most any cell moved (`next`: room for the cells' new shares)
+fn step_once(d: &mut AirDust, next: &mut Vec<f64>, dt: f64, tune: &Knobs) -> f64 {
     let AirDust { share, open, plan, leak, .. } = d;
     let leak = *leak;
     let ks = js_min(0.2, js_max(0.0, or_zero(tune.airdust.diffuse)) * dt / (AIR_CELL * AIR_CELL));
     let r = js_min(0.5, js_max(0.0, or_zero(tune.airdust.settle)) * dt);
     let mut moved = 0.0;
     let through = |e: usize| open[e] != 0 && plan.leaf[e] == 0;
-    let mut next = Vec::with_capacity(plan.under.cells.len());
+    next.clear();
     for &i in &plan.under.cells {
         let i = i as usize;
         let v = share[i];
@@ -216,7 +216,7 @@ fn step_once(d: &mut AirDust, dt: f64, tune: &Knobs) -> f64 {
         next.push(w);
     }
     for (&i, w) in plan.under.cells.iter().zip(next) {
-        share[i as usize] = w;
+        share[i as usize] = *w;
     }
     moved
 }
@@ -225,6 +225,8 @@ pub fn seed(d: &mut AirDust, leak: f64, roofed: impl Fn(f64, f64) -> bool) {
     d.leak = leak;
     let (indoor, lists) = under(roofed);
     d.plan.under = Arc::new(lists);
+    d.plan.leaf = vec![0; N * 2];
+    d.open = vec![0; N * 2];
     d.share = indoor.into_iter().map(|is| if is { leak } else { 1.0 }).collect();
 }
 /// …and with the switch on: every opening asked, the leaves read, and run on until it stands still (the level opens with the dust already in its open doorways)
@@ -235,8 +237,9 @@ pub fn settle(d: &mut AirDust, wo: &World, tune: &Knobs) {
     }
     leaves(&mut d.plan, wo);
     let h = step_secs(tune);
+    let mut next = Vec::new();
     for _ in 0..1500 {
-        if !(step_once(d, h, tune) > 1e-4) {
+        if !(step_once(d, &mut next, h, tune) > 1e-4) {
             break;
         }
     }
@@ -245,13 +248,13 @@ pub fn settle(d: &mut AirDust, wo: &World, tune: &Knobs) {
 pub fn update(d: &mut AirDust, wo: &World, dt: f64, tune: &Knobs) {
     let h = step_secs(tune);
     d.acc += dt;
-    let mut n = 0;
+    let (mut n, mut next) = (0, Vec::new());
     while d.acc >= h && n < 4 {
         n += 1;
         d.acc -= h;
         recheck(d, wo, h, tune);
         leaves(&mut d.plan, wo);
-        step_once(d, h, tune);
+        step_once(d, &mut next, h, tune);
     }
     if d.acc > h {
         d.acc = h;

@@ -179,7 +179,7 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
     let civ_cap = civ_most(g);
     rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play, and every one is held to this number as they join)", civs, civ_cap));
     rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, crate::doors::DOOR_CONTACTS));
-    rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));
+    rows.push(row("light fixtures", big.fixtures, cap.fixtures));
     rows.push(row("lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps));
     rows.push(row("cameras", big.cameras, cap.cameras));
     rows.push(row("tripwires", big.lasers, cap.lasers));

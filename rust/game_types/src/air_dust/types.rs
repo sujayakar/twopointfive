@@ -13,9 +13,9 @@ pub struct AirDust {
     pub acc: f64,
     /// the re-check's place in the plan's edges
     pub cur: usize,
-    /// a cell's share (none at all: no weather has had dust in it, and it is the open air's everywhere)
+    /// a cell's share (none at all: no dust in the air, and it is the open air's everywhere)
     pub share: Vec<f64>,
-    /// by edge: no static stands across it
+    /// by edge: no static stands across it (none at all with no dust)
     pub open: Vec<u8>,
     /// (made from the roofs and the leaves: in no bytes)
     #[bytes(skip)]
