@@ -201,7 +201,7 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     });
     // the scenarios' block and the footsteps' map: the runtime's own types, as they are written
     level.scenarios = f.scenarios.map(|s| s.kept); level.surfaces = f.surfaces;
-    level.script = game::director::level_script_of(&name);   // (a level that carries a script, by the file's name)
+    level.script = f.script;
     g.level = Arc::new(level);
     g.m.scene_level_load.level_names = Some(name.clone());
     Loaded { name, boxes }
