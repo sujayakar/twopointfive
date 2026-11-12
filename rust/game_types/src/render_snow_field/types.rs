@@ -3,8 +3,4 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct SnowPaintOfB {
-    pub does: Option<String>,
-}
 

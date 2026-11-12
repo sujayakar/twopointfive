@@ -27,7 +27,7 @@ import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, MAX_MARKS_PER_BO
 const H = WORLD.ceilingY;
 
 import { GWOT_PAINTS, GWOT_DARKER, ROUGH_CLOTH, type GwotMat, type KitPaints } from '../../../src/scene/gwotPalette';
-import type { DoesWord } from '../../../src/scene/materials';
+import type { DoesWord } from '../../../src/draw/names';
 import { pieces } from './library';
 import { tonedAs, wordFor, saidAs, doesOfName, paintOf, doingAs } from '../../../src/scene/stuff';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, gwotAs, lookPaintOf, paintsOf, type GwotMat, type KitPaints } from '../../../src/scene/gwotPalette';
@@ -160,7 +160,7 @@ export function gwotKit(host: GwotHost) {
    *  those two paints of the kit's own palette (rust/game_rules/src/air/carlamps.rs). So lenses are laid in them and never in a paint the host hands over */
   const LENS = { head: matIn(GWOT_PAINTS, 'plasticWhite'), tail: matIn(GWOT_PAINTS, 'truckRed') };
   const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: carShapes.ts carCoat)
-  /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of scene/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */
+  /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of lib/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */
   const as = (m: GwotMat, does: DoesWord): Mat => ({ ...M[m], albedo: asPaint(m, does) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
    *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: a tone says nothing of what it does (stuff.ts tonedAs: to a round a toned row

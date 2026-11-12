@@ -7,7 +7,7 @@
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
-import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
+import { DOES_DEFAULT, doesSaid } from './does';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
@@ -49,7 +49,7 @@ export function loadLevel(data: LevelData): Level {
   /** what a box or a part is made of: its own word, else its material row's; nothing for plain (a box that says nothing is plain) */
   const stuffOf = (o: { stuff?: string }, m: MaterialData | undefined): BoxStuff | undefined => { const w = o.stuff ?? m?.stuff; return w === undefined || w === 'plain' ? undefined : w as BoxStuff; };
   /** the same for a box, or a shape's piece, that names its row itself (ONE reader for both, as finishOf is) */
-  /** … and what it DOES (scene/materials.ts): its own word, else its material row's, written onto the box here, once; nothing for the default row. Never from `stuff`, never from the colour */
+  /** … and what it DOES (lib/materials.ts): its own word, else its material row's, written onto the box here, once; nothing for the default row. Never from `stuff`, never from the colour */
   const doesOf = (o: { does?: string }, m: MaterialData | undefined): { does?: DoesWord } => doesSaid(o.does ?? m?.does);
   const saidOf = (o: { stuff?: string; does?: string; material?: string }): { stuff?: BoxStuff; does?: DoesWord } => { const m = o.material !== undefined ? mats.get(o.material) : undefined, w = stuffOf(o, m); return { ...(w !== undefined ? { stuff: w } : {}), ...doesOf(o, m) }; };
   // boxes, in file order (index i of the file IS static box i)
@@ -198,7 +198,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
    *  nothing over a row that says something; a box with an inline albedo writes its word unless it is plain */
   const says = (b: { stuff?: string; does?: string }, p: { material?: string }): { stuff?: string; does?: string } => {
     const row = p.material !== undefined ? materials[p.material] : undefined, mine = b.stuff ?? 'plain', rows = row?.stuff ?? 'plain';
-    // … and what it DOES (scene/materials.ts), the same way: per box only where it is another row than its material's, the default row's word where it
+    // … and what it DOES (lib/materials.ts), the same way: per box only where it is another row than its material's, the default row's word where it
     // does nothing over a row that says something
     const does = b.does ?? DOES_DEFAULT, rowDoes = row?.does ?? DOES_DEFAULT;
     return { ...(mine !== rows ? { stuff: mine } : {}), ...(does !== rowDoes ? { does } : {}) };

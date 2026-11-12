@@ -9,6 +9,7 @@ import type { Engine } from '../../engine';
 import type { Drawn } from '../../draw/drawn';
 import type { DrawWinds } from '../../draw/winds';
 import { FootFlag } from '../../draw/bits';
+import { SNOW_KINDS } from '../../draw/names';
 import { Foot, Section, SnowBlast, SnowWord } from '../../draw/sections';
 import type { AirPicture } from '../air';
 import type { Roofs } from '../rain';
@@ -20,7 +21,6 @@ import { SnowSight } from './sight';
 import { clearSnowTracks, formSnowTracks, makeSnowTracks, TRACK_RES, updateSnowTracks, type Man, type SnowTracks } from './tracks';
 import { SNOW_LOOK } from './look';
 
-const WORDS = [undefined, 'snow', 'packed snow', 'old snow'] as (Box['does'])[];
 /** the wind a snow level's ripples lie along (rust/game_rules/src/air/weather_kinds.rs WEATHER_PRESETS.snow) */
 const RIPPLE: [number, number] = [0.8, 0.3];
 
@@ -38,7 +38,7 @@ export function readMen(D: Drawn, L: Man[], made: Map<number, Man>): void {
 }
 
 /** every static is told what snow it is: the one reading the field, the air and the dig all ask */
-export function sayOf(D: Drawn, B: Box[]): void { for (let i = 0, o = D.at[Section.snowWords], n = Math.min(B.length, D.n[Section.snowWords]); i < n; i++, o += SnowWord.row) B[i].does = WORDS[D.u[o + SnowWord.w]]; }
+export function sayOf(D: Drawn, B: Box[]): void { for (let i = 0, o = D.at[Section.snowWords], n = Math.min(B.length, D.n[Section.snowWords]); i < n; i++, o += SnowWord.row) { const w = D.u[o + SnowWord.w]; B[i].snow = w ? SNOW_KINDS[w - 1] : undefined; } }
 
 export class SnowPicture {
   field: SnowField | null = null; tracks: SnowTracks | null = null;

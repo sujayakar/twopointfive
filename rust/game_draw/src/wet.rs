@@ -115,7 +115,7 @@ impl Wet {
             let mut o = b.clone();
             if o.wet_k.is_none() {
                 o.wet_k = Some(if b.metal == Some(true) { 1.0 } else { WET_ALBEDO });
-                if !soaks(g, b) { o.flags = (crate::boxes::pack::flags(b) | box_flag::GLOSS) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
+                if !soaks(b) { o.flags = (crate::boxes::pack::flags(b) | box_flag::GLOSS) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
             }
             self.dressed[at] = Some((was, o));
         }
@@ -124,4 +124,4 @@ impl Wet {
 }
 
 /// does what this box is made of soak water up: no film on it, no puddle
-fn soaks(g: &Game, b: &Box) -> bool { matches!(game::scene_materials::does_of(g, b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }
+fn soaks(b: &Box) -> bool { matches!(game::scene_materials::does_of(b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }

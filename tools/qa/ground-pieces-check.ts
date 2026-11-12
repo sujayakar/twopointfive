@@ -7,7 +7,7 @@
 // Each piece is laid alone in a kit stood up empty, as tools/levels/library.ts lays a piece for the catalogue. WHAT IS HELD, over EVERY row of the palette
 // (a row added tomorrow is asked the same):
 //   1 a scatter   rubble in a row is that row: every stone wears the row's paint or its darker row's (gwotPalette.ts GWOT_DARKER) with the row's finish,
-//                 bare metal included, and to a round every stone does what the row does (Box.does: scene/materials.ts); a row with a darker row shows both tones
+//                 bare metal included, and to a round every stone does what the row does (Box.does: lib/materials.ts); a row with a darker row shows both tones
 //   2 the ground  groundAt answers what `ground` laid: the higher finish where two overlap, the later of two as high, nothing where it laid none
 //   3 a hearth    on every finish `ground` lays the trodden ash is that ground's own paint darker (no channel under half of it, none over it: never a
 //                 black square on pale earth); on ground the kit did not lay it takes the ground it is told, and told nothing it THROWS
@@ -20,7 +20,7 @@ import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, type GwotMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
-import { DOES_DEFAULT } from '../../src/scene/materials';
+import { DOES_DEFAULT } from '../levels/lib/does';
 import { standKit as stand, laid, lines, ROWS, type Kit } from './kit-stand';
 import { isLived } from '../levels/lib/lived';
 import { livedTail } from '../levels/livedKit';

@@ -5,7 +5,8 @@
 use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
-use crate::level::{does_word, stuff_word, Said};
+use crate::level::{stuff_word, Said};
+use game::scene_materials::DoesWord;
 use crate::passes::{planes_of, Form, ARC_PLANES};
 use crate::read::Faults;
 use alloc::collections::{BTreeMap, BTreeSet};
@@ -175,7 +176,7 @@ impl<'a> Rules<'a> {
     /// what a record says it is made of and does are words there are
     fn words(&self, w: &str, stuff: Option<&str>, does: Option<&str>) {
         if let Some(s) = stuff { if s != "plain" && stuff_word(s).is_none() { self.say(format!("{w}.stuff"), format!("'{s}' is nothing a box is made of")); } }
-        if let Some(d) = does { if d != "unnamed" && does_word(d).is_none() { self.say(format!("{w}.does"), format!("'{d}' is no row of the table of materials that says what a thing does")); } }
+        if let Some(d) = does { if d != "unnamed" && DoesWord::named(d).is_none() { self.say(format!("{w}.does"), format!("'{d}' is no row of the table of materials that says what a thing does")); } }
     }
     /// one paint: a material of the file, or a colour. `or`: in a Team & kit picture's box a material may be alternatives 'a|b', and the first the file has is it
     fn paint(&self, w: &str, o: &Said, or: bool) {

@@ -56,7 +56,7 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
  *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
  *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it.
- *  `does` = WHAT THE PAINT IS TO A ROUND, A CHARGE AND A BLAST (scene/materials.ts: a row of the table of materials that has a `does`): every box and
+ *  `does` = WHAT THE PAINT IS TO A ROUND, A CHARGE AND A BLAST (lib/materials.ts: a row of the table of materials that has a `does`): every box and
  *  prop's part that wears the row does that, unless it says its own (BoxData.does). Absent = the default row. The rules' alone, never worked out from
  *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }

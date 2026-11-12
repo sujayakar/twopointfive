@@ -34,7 +34,7 @@ export interface BoxData {
    *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
    *  look, and what a round's hit looks like: rust/game_rules/src/breakage/particle_fx.rs HITSTUFF): no rule of the game reads it. */
   stuff?: string;
-  /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
+  /** Box.does: what the box does, where its material's row does not say it (lib/materials.ts); absent = what its material's row says, and the default
    *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
   does?: string;
   flags?: FlagName[];

@@ -5,7 +5,7 @@
 // Every box a piece adds goes in the group 'lived.<room>' of the room last named with P.room(id); every loose prop is renamed 'lived.<room>.<thing><n>' — the two
 // tags of a lived thing. A generator calls these LAST (after its last kept box, prop, light and fixture: tools/levels/export.ts holds the order).
 // No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (a paint of it says what the thing does: scene/stuff.ts PAINT_DOES,
-// scene/materials.ts); the colours named here are accents only.
+// lib/materials.ts); the colours named here are accents only.
 // A piece's FRONT is its local +Z and its back −Z (the wall side): yaw 0 = on a north wall facing south, π = on a south wall, π/2 = on a west wall facing east,
 // −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (rust/game_rules/src/breakage/destruction index): a pale thin NoShadow sheet with its
 // longer half 0.08‥0.2 above 0.3 m is PAPER (flies); a small solid (half ≤ 0.17, ≤ 20 l) standing 0.7‥1.6 m up is CLUTTER (knocked off) — the pieces say which they make.
