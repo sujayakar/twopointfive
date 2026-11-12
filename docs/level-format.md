@@ -29,7 +29,8 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
 ## The file's head
 
 - `version` number. Must be 2; a file that says anything else is told that alone.
-- `name` text. The level's name. `level_script_of` finds its script by it, and the look and the snow go by it (`place_of`, `snow_level`).
+- `name` text. The level's name. The snow goes by it (`snow_level`).
+- `script` word, default none: `tut-kit`, `tut-pair`, `tut-queue`, `tut-quiet`, `tut-road` or `tut-team`. The script the level is played by (`director/`).
 - `meta` record, may be empty.
   - `generator` text. The generator's path; `tools/qa/level-needs.ts` asks that it is in the tree.
   - `bounds` record of `min` and `max`, both V3. The world the level must fit; `tools/levels/lib/lint.ts` reads it, and `WORLD` stands in when it is absent.

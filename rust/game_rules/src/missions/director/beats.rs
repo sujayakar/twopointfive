@@ -169,17 +169,3 @@ pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut c
     };
     Ok(())
 }
-
-/// the script of the level of this name
-pub fn level_script_of(name: &str) -> Option<crate::scene_level::LevelScriptFn> {
-    use crate::scene_level::LevelScriptFn as S;
-    match name {
-        "tut-kit" => Some(S::TutKit),
-        "tut-pair" => Some(S::TutPair),
-        "tut-queue" => Some(S::TutQueue),
-        "tut-quiet" => Some(S::TutQuiet),
-        "tut-road" => Some(S::TutRoad),
-        "tut-team" => Some(S::TutTeam),
-        _ => None,
-    }
-}
