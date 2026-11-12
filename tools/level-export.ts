@@ -16,6 +16,7 @@ const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelL
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
 const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
+const { lampsOf } = await import(`${ROOT}/tools/levels/lib/carLamps.ts`);
 const { GREEN_LEAVES } = await import(`${ROOT}/tools/levels/lib/doorPaint.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
@@ -36,6 +37,7 @@ level.doorPaint = GREEN_LEAVES();   // (its leaves, in the look's green outside 
 
 // 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts),
 //    one floor, the traceable world bounds
+Object.assign(level, lampsOf(level.boxes));   // (its vehicles' lamps: the file's vehicleLamps)
 stampDoes(level);   // (Box.does, as tools/levels/export.ts gives it: each box the word its colour had, unless its maker said one)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; does?: string }> = {};
 { const seen = new Map<string, string>();

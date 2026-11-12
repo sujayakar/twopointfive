@@ -338,6 +338,8 @@ pub struct Level {
     pub surfaces: Option<crate::scene_level_data::SurfacesData>,
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
+    /// in its boxes' order
+    pub vehicle_lamps: Vec<crate::carlamps::VehicleLamp>,
     pub sky: crate::scene_level::LevelSky,
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,

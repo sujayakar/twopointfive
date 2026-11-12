@@ -53,6 +53,8 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
   - `fumble` number, over 0 and at most 7; default 2.2 s. How long a man works at a tripped panel before the mains come back (`lighting.rs`).
 - `beacons` list of records: emergency beacons, a spot light turning at a dome (`game/`).
   - `pos` V3. `box` box id of the dome, and that box must be in a switchable.
+- `vehicleLamps` list of records, default none: the lamps of parked vehicles, targets a round breaks (`carlamps.rs`). One burns where its box glows.
+  - `box` box id of its lens, a box to a lamp. `what` is `head lamp` or `tail lamp`.
 - `mission` record: the plain night's one thread, which every file carries. A quiet mission lays its own dealt spot over it (`quiet.rs`).
   - `playerSpawn` V3. Where Sam starts on the plain night.
   - `objectives` list holding exactly one of each `kind`:
@@ -90,8 +92,8 @@ index holds without them.
 `boxes` is a list of records, and the box at index i of the file is static box i of the game. Read by `load` into `make_box`.
 
 - `id` text, unique. What every other record names it by.
-- `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it, and `carlamps.rs`
-  goes by what the kits write. A door's frame is plain boxes in group `doorframe.<id>`.
+- `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it.
+  A door's frame is plain boxes in group `doorframe.<id>`.
 - `c` V3, the center. `h` V3, half sizes, each at least 0.
 - `yaw` number; default 0. Turn about +y.
 - `rot` four numbers x, y, z, w, a unit quaternion; default none. For a tilted thing. Takes no `markings` and no `shape`.

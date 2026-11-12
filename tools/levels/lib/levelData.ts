@@ -164,6 +164,8 @@ export interface LevelData {
   breaker: { pos: Vec3; panel: string; led: string; fumble?: number };
   /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/tick/game slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
+  /** the lamps of its parked vehicles, each by the box its lens is: a target a round breaks (rust/game_rules/src/air/carlamps.rs) — absent = none */
+  vehicleLamps?: { box: string; what: 'head lamp' | 'tail lamp' }[];
   sky: SkyData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
   /** what the playtest scenarios take from this level (lib/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
@@ -176,7 +178,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'script', 'snow', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'doorPaint', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
+  top: ['version', 'name', 'script', 'snow', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'doorPaint', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'vehicleLamps', 'sky', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -190,7 +192,7 @@ export const KEYS = {
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'name', 'area', 'door'], drive: ['id', 'kind', 'name', 'holder', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'name', 'door', 'x', 'z', 'out'],
-  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'],
+  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], vehicleLamp: ['box', 'what'], sky: ['zenith', 'horizon'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)
 } as const;
@@ -262,6 +264,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     mission: { ...pick(d.mission, KEYS.mission), objectives: d.mission.objectives.map(o => o.kind === 'reach' ? { ...pick(o, KEYS.reach), area: rect(o.area) } : o.kind === 'drive' ? pick(o, KEYS.drive) : pick(o, KEYS.exfil)) },
     breaker: pick(d.breaker, KEYS.breaker),
     beacons: d.beacons.map(b => pick(b, KEYS.beacon)),
+    ...(d.vehicleLamps ? { vehicleLamps: d.vehicleLamps.map(l => pick(l, KEYS.vehicleLamp)) } : {}),
     sky: pick(d.sky, KEYS.sky),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
     ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — lib/scenarios.ts is their shape)

@@ -182,6 +182,8 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     level.devices = Some(f.devices); level.vents = f.vents; level.hums = f.hums; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
     level.breaker = LevelBreaker { pos: f.breaker.pos, boxes: vec![bx(&f.breaker.panel), bx(&f.breaker.led)], fumble: f.breaker.fumble };
     level.beacons = f.beacons.iter().map(|b| LevelBeaconsItem { pos: b.pos, box_: bx(&b.box_) }).collect();
+    level.vehicle_lamps = f.vehicle_lamps.iter().flatten().map(|l| game::carlamps::VehicleLamp { box_: bx(&l.box_), what: l.what }).collect();
+    level.vehicle_lamps.sort_by(|a, b| a.box_.total_cmp(&b.box_));
     level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(f.plans.room_clear.into_iter().map(|p| p.plan).collect());
     level.volumes = Some(f.volumes).filter(|v| !v.is_empty());
     level.marks = f.marks.filter(|m| !m.is_empty());

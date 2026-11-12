@@ -635,6 +635,16 @@
   "beacons": [
     { "id": "beacon0", "pos": [16, 2.7, 14.2], "box": "sw_beacon0" }
   ],
+  "vehicleLamps": [
+    { "box": "box_0196", "what": "head lamp" },
+    { "box": "box_0197", "what": "tail lamp" },
+    { "box": "box_0198", "what": "head lamp" },
+    { "box": "box_0199", "what": "tail lamp" },
+    { "box": "box_0283", "what": "head lamp" },
+    { "box": "box_0284", "what": "tail lamp" },
+    { "box": "box_0285", "what": "head lamp" },
+    { "box": "box_0286", "what": "tail lamp" }
+  ],
   "sky": { "zenith": [0.015, 0.025, 0.05], "horizon": [0.045, 0.05, 0.07] },
   "plans": {
     "roomClear": []
