@@ -29,7 +29,8 @@ const start = freshStart({ search: '?levelFile=compound.json&roomclear&squad4&se
 
 // ---- the server, and the wire: what is sent arrives two of the clock's ticks later
 const S = await standStart(start), WAY = 2 * 1000 / 60, wire: { at: number; go: () => void }[] = [], later = (go: () => void): void => { wire.push({ at: now + WAY, go }); };
-const server = new NetServer({ now: () => now, step: c => S.step(c), word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
+let shifted = 0; const shift = (w: WireCmd): boolean => [...w.k, ...w.u ?? []].includes('ShiftLeft');   // (the server's ticks with Shift held in the first seat)
+const server = new NetServer({ now: () => now, step: c => { if (shift(c[0])) shifted++; S.step(c); }, word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
@@ -93,8 +94,12 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // the same two keys down and up again inside a bunch of ticks the page ran at once, and in a record that came to the server too late
 { const tap = (k: string[], down: boolean): void => { for (const x of k) if (down) { input.keys.add(x); input.pressed.add(x); } else input.keys.delete(x); }, bunch = (n: number, at: number): void => { for (let i = 0; i < n; i++) { if (i === at) tap(['ShiftLeft', 'Enter'], true); net.tick(input, cam, canvas, off, () => { seen++; }); if (i === at) { tap(['ShiftLeft', 'Enter'], false); input.pressed.clear(); } } };
   const got: boolean[] = []; for (const at of [0, 2, 5, 9]) { const s = stood(); bunch(10, at); run(90); got.push(stood() !== s); }
-  const L = new SeatLine(), hand = (k: string[]): WireCmd => ({ ...FIRST, k }); L.put(5, { ...hand(['ShiftLeft', 'Enter']), p: ['Enter'] }, 9); L.put(9, hand([]), 9); const took = [L.take(9, true), L.take(10, true)], late = took[0].k.includes('ShiftLeft') && (took[0].p ?? []).join() === 'Enter' && took[1].k.length === 0 && !took[1].p;
-  line(got.every(Boolean) && late && !c.bad, 'two keys pressed together and let go are taken together, however the press travelled', `in a bunch ${got.join(' ')} \u00b7 too late for its tick ${late}`); }
+  // (and the press is the last thing said: on no tick after it is Shift held, whether it came late, came on time with its Shift already up, or rode a held beat)
+  const hand = (k: string[], p?: string[], u?: string[]): WireCmd => ({ ...FIRST, k, ...(p ? { p } : {}), ...(u ? { u } : {}) }), taken = (w: WireCmd): boolean => shift(w) && (w.p ?? []).join() === 'Enter', up = (w: WireCmd): boolean => !shift(w) && !w.p;
+  const L = new SeatLine(); L.put(5, hand(['ShiftLeft', 'Enter'], ['Enter']), 9); L.put(9, hand([]), 9); const late = taken(L.take(9, true)) && up(L.take(10, true));
+  const Q = new SeatLine(); Q.put(9, hand([], ['Enter'], ['ShiftLeft', 'Enter']), 9); const last = taken(Q.take(9, true)) && up(Q.take(10, true)) && up(Q.take(11, true));
+  const was = stood(); bunch(10, 6); shifted = 0; asleep = true; run(8); asleep = false; run(1); asleep = true; run(60); asleep = false; const rode = shifted; { let n = 0; while (c.behind > 2 && n++ < 100) beat(); } run(60); const again = stood() !== was;
+  line(got.every(Boolean) && late && last && again && rode === 1 && !c.bad, 'two keys pressed together and let go are taken together, however the press travelled', `in a bunch ${got.join(' ')} \u00b7 too late for its tick ${late} \u00b7 nothing said after it ${last}, on a held beat ${again}, Shift held for ${rode} tick${rode === 1 ? '' : 's'}`); }
 // and between two of the page's own frames, by the page's own listeners: Shift and Enter down and up again before a tick took a hand
 { const win = Object.assign(new EventTarget(), { top: null, self: null }), el = Object.assign(new EventTarget(), { getBoundingClientRect: () => ({ left: 0, top: 0 }) }), G = globalThis as Record<string, unknown>;
   for (const k of ['HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement']) G[k] ??= class { }; const had = G.window; G.window = win;

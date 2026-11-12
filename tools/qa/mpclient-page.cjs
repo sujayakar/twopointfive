@@ -126,9 +126,9 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     const k = BACK[way], t0 = performance.now(), out = () => { const r = C.pending[C.pending.length - 1]; return !!r && r[1].k.includes(k); };
     for (let i = 0; (i < 2 || S().far || !out()) && performance.now() - t0 < 30000; i++) { step(10, [k]); await tick0(); }
     const a = pos(), down = man().down; if (rest) C.rest(performance.now());
-    // (past the last tick he said anything for, half a second let him come to a stand: what the server does with a man nobody speaks for)
-    const lastSaid = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
-    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; host.step(c); if (!quiet && t >= lastSaid + 30) quiet = pos(); }, word: () => host.word() }, max);
+    // (past the last tick he said anything for — the tick the server took his hands off on, which on a loaded box comes long after the one that was said for — half a second let him come to a stand: what the server does with a man nobody speaks for)
+    let end = rest ? Infinity : Math.max(C.confirmed, ...C.pending.map(q => q[0])); const was = C.walk; let quiet = null;
+    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; if (rest && c[C.seat].p && c[C.seat].p.includes('Paused')) { end = t; quiet = null; } host.step(c); if (!quiet && t >= end + 30) quiet = pos(); }, word: () => host.word() }, max);
     await new Promise(r => setTimeout(r, 3500));
     const behind = S().behind, far = await level([]), b = pos(); C.walk = was;
     return { behind, far, key: k, down, room: +room.toFixed(2), walked: +gone(b, a).toFixed(2), after: quiet ? +gone(b, quiet).toFixed(2) : -1 };

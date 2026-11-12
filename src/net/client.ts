@@ -12,8 +12,8 @@
 //   in a bunch (two ticks of one drawn frame) go to the ticks that follow, up to NET.burst ahead; past that a beat is held, its edges riding the next record.
 //   What was sent and is not confirmed yet is kept (`pending`): the records a prediction of the seat's own man plays ahead of the confirmed world.
 import { SeatInput } from '../draw/input';
-import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
-import { NET, netText, netParse, heldOf, restOf, withEdges, cleanName } from './wire';
+import type { Edges, Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
+import { NET, NO_EDGES, anyEdge, edgesOf, netText, netParse, heldOf, restOf, withEdges, cleanName } from './wire';
 
 /** the host's game as the client drives it: one confirmed tick on every seat's record, and the state word after the last */
 export interface ClientHost { step(cmds: WireCmd[]): void; word(): string; }
@@ -48,7 +48,7 @@ export class NetClient {
   private prev: (WireCmd | null)[] = [];
   /** pace notes about ticks before this one are not acted on (the margin moved, or the sending began again, after they were sent for) */
   private settle = 0;
-  private carry: { p: string[]; c: number; w: number; k: string[] } = { p: [], c: 0, w: 0, k: [] };
+  private carry: Edges = NO_EDGES;
 
   constructor(private send: (text: string) => void, readonly who: { game: string; build: string; key?: string; name?: string }) {}
 
@@ -91,9 +91,9 @@ export class NetClient {
   /** `must`: a record that is never held back for the beat's pace (the hands coming off: the host may not beat again for as long as that lasts) */
   private out(w: WireCmd, now: number, must = false): void {
     if (this.seat < 0 || this.state === 'waiting' || this.bye || this.broken || this.bad || this.ahead !== this.ahead) return;   // (…nor once the stream is gone or this game has parted from the server's: nothing would hear it, or it would be aimed at a world that is not there)
-    { const { p, c, w: wheel, k } = this.carry; if (p.length || c || wheel) { w = withEdges(w, p, c, wheel, must ? [] : k); this.carry = { p: [], c: 0, w: 0, k: [] }; } }   // (a held beat's edges ride this record, with what was held under them; hands that come off hold nothing)
+    if (anyEdge(this.carry)) { w = withEdges(w, must ? { ...this.carry, u: [] } : this.carry); this.carry = NO_EDGES; }   // (a held beat's edges ride this record; hands that come off hold nothing under them)
     const due = Math.floor(now * NET.hz / 1000 + this.ahead) + this.margin, t = Math.max(due, this.sendTick);
-    if (t > due + NET.burst && !must) { this.holds++; const C = this.carry; if (w.p) for (const k of w.p) if (!C.p.includes(k)) C.p.push(k); C.c |= w.n[SeatInput.clicked]; C.w += w.n[SeatInput.wheel]; if (w.p || w.n[SeatInput.clicked]) for (const k of w.k) if (!C.k.includes(k)) C.k.push(k); return; }
+    if (t > due + NET.burst && !must) { this.holds++; this.carry = edgesOf(this.carry, w); return; }
     if (this.sent && t > this.sendTick) this.skips += t - this.sendTick;
     if (!this.sent || t > this.sendTick + NET.burst) this.settle = t;   // (the sending begins, or begins again after a gap: notes about ticks before this one are not about these records)
     this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.off = must; this.send(netText({ k: 'in', t, c: w }));
