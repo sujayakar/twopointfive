@@ -57,7 +57,7 @@ impl Mission {
     /// Standard | Hard changes something on it: a squad scenario's defenders read it
     fn diff_live(&self) -> bool { self.entry.is_some() && !self.is_quiet() }
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
-    fn own_weather(&self) -> bool { weather_kinds::snow_level(self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
+    fn own_weather(&self) -> bool { self.entry.as_ref().is_some_and(|e| e.snow) }
     /// the hour and the weather a row is always started in
     fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {

@@ -134,3 +134,16 @@ fn wet_ground_is_the_rows_and_not_the_box() {
         assert!(!wet.iter().any(|&i| i >= h.from && i < h.to), "a wet box is sent again every tick: {}..{}", h.from, h.to);
     }
 }
+
+/// THE RULE: a mission's row says its level is built for snow where the level's file does, and nowhere else. A FAILURE MEANS: the list offers a weather the level will not be in, or offers none of one it would.
+#[test]
+fn a_row_says_snow_as_its_level_does() {
+    let mut snow = 0;
+    for e in game::scene_scenario_list::all_missions() {
+        let file = e.level.as_deref().unwrap_or("office.json");
+        let level = game_start::json::parse(&game_start::files::level_text(file)).expect(file);
+        assert_eq!(e.snow, level.get("snow").bool() == Some(true), "{} on {file}", e.id);
+        snow += e.snow as u32;
+    }
+    assert!(snow >= 4);
+}

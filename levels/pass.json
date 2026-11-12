@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "pass",
+  "snow": true,
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/pass.ts build → tools/levels/export.ts", "notes": "The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }

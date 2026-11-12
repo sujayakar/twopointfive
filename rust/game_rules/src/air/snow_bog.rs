@@ -26,20 +26,14 @@ fn kind_of(g: &Game, b: BoxId) -> u8 {
 }
 /// THE SNOW OF A LEVEL that has any, as the level stands
 pub fn lie(g: &mut Game) {
-    if !snow_bog_may(g) { return; }
+    if !g.level.snow { return; }
     let kinds: Vec<u8> = g.col.boxes.iter().map(|&b| kind_of(g, b)).collect();
     g.tab.boxes.snow(kinds);
 }
 
-/// May the ground bog anything in this game now.
-pub fn snow_bog_may(g: &crate::game::Game) -> bool {
-    let name = crate::scene_level_load::level_name_of(g);
-    crate::weather_kinds::snow_level(name.as_deref())
-}
-
 /// How boggy the ground is where a thing touched down, 0 to 1, over the level's snow and the weather's roofs.
 pub fn snow_bog_at(g: &Game, x: f64, y: f64, z: f64) -> f64 {
-    if !snow_bog_may(g) { return 0.0; }
+    if !g.level.snow { return 0.0; }
     ::sim::snow::bog_at(&g.weather.roof_rects, g.tab.boxes.world(), x, y, z, &g.k)
 }
 

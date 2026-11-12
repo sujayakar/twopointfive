@@ -25,7 +25,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `hours/` | the hours (`hours()`), one laid over the level and taken off, cloud on the light, the sky's light on a man |
-| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
+| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`) |
 | `weather.rs` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `weather_air_trans` |
 | `air_dust.rs` | the fog's share in each half-meter cell, carried through openings and settling back |
 | `wind.rs` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
@@ -64,7 +64,7 @@ and past half cover spreads the disc and grays both (`under_weather`). `HourStat
 
 **Which weather is in force** is settled as the game is made (`weather_new`):
 
-1. A level named in `snow_levels` is born in snow and refuses any other kind (`weather_level_kind`, `set_kind_at`).
+1. A level whose file says `snow` is born in snow and refuses any other kind (`weather_level_kind`, `set_kind_at`).
 2. A picked kind: its preset's storm, rain, wind and fog, under the level's own roofs. `Weather.live` is up, and only then do ears and eyes change.
 3. No pick, on a level with quiet missions of its own (`own_floor`): dry and still (`weather_own_night`).
 4. No pick, otherwise: the old storm (`legacy`), rain and lightning, cut by the level's own roofs (`Weather.own`, `sync_roofs`), or by the fixed
@@ -160,7 +160,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 - **A kind:** its row in `WeatherKindsMod::blank`. A new one is also a word of `WeatherKind`, `weather_kinds()`, `ALL_KINDS`, `WEATHER_ROW` and
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
-- **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
+- **A snow level:** its generator's `SNOW`, its row's `snow`, its boxes painted by word (the `level` skill).
 - **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
 - **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `half`, then the reader.

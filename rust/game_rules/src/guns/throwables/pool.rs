@@ -344,7 +344,7 @@ fn settles(it: &mut Item) {
 /// One tick of the pool: it walks from the newest down, then what the steps told is done in order.
 pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     if g.items.items.is_empty() { return; }
-    let snow = if crate::snow_bog::snow_bog_may(g) {
+    let snow = if g.level.snow {
         // lying snow: the level's table in the box world, the rule's numbers and the roofs in force
         let roofs = &g.weather.roof_rects;
         debug_assert!(roofs.len() <= ::sim::snow::MAX_ROOFS, "more roofs over the snow than a walk is handed");

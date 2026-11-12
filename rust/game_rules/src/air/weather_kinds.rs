@@ -31,14 +31,6 @@ fn is_weather_kind(s: Option<&str>) -> bool {
     }
 }
 
-/// Is the level called `name` one built for snow, with the switch on?
-pub fn snow_level(name: Option<&str>) -> bool {
-    match name {
-        Some(n) => !n.is_empty() && snow_levels().iter().any(|l| l == n),
-        None => false,
-    }
-}
-
 /// A kind a checkpoint may carry: one of the row's, or a level's own.
 pub(super) fn is_any_kind(g: &crate::game::Game, s: Option<crate::weather_kinds::WeatherKind>) -> bool {
     match s {
@@ -260,10 +252,6 @@ mod tests {
         assert_eq!(weather_title(&mut g, None), "As it is");
         assert_eq!(weather_words(&mut g, Some(WeatherKind::Fog)), "ground fog, so nobody can see past about twenty meters outdoors");
         assert_eq!(weather_words(&mut g, None), "the level's own weather, as it has always played");
-        assert!(snow_level(Some("tut-road")));
-        assert!(!snow_level(Some("office")));
-        assert!(!snow_level(Some("")));
-        assert!(!snow_level(None));
     }
 
 }
