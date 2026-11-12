@@ -285,7 +285,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
-        if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
+        if matches!(mode, DefMode::Move | DefMode::Told) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
         if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
         crate::duty::pin(g, gd, pinned0, "roomfight");
     }
