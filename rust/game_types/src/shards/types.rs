@@ -117,4 +117,3 @@ pub struct CutPlateBox {
     pub poly: Vec<[f64; 2]>,
 }
 
-pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

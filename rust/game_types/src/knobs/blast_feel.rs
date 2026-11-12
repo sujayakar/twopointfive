@@ -129,16 +129,16 @@ pub struct BlastFeelKFireChunks {
 }
 
 /// One round of the dark smoke that follows the fire.
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct BlastFeelKFireSootItem {
     /// frames (at 60 a second) after the blast
-    pub after: f64,
+    #[k(0.0)] pub after: f64,
     /// puffs by way
-    pub count: Vec<f64>,
+    #[k(Vec::new())] pub count: Vec<f64>,
     /// m/s, and 0.6 of it again straight out of the wall
-    pub speed: f64,
+    #[k(0.0)] pub speed: f64,
     /// m: a puff's birth radius
-    pub size: f64,
+    #[k(0.0)] pub size: f64,
     /// s
-    pub life: f64,
+    #[k(0.0)] pub life: f64,
 }

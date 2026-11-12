@@ -90,7 +90,7 @@ impl Lay<'_> {
             fc: x.c, f_yaw: x.yaw, f_rough: x.rough,
             out: Vec::new(), key: (js::to_i32(b.id) & 0x3fff) << 9,
             bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(),
-            frame_c: if b.surf == "wood" { v3::scale(p.paint, 0.8) } else { steel() },
+            frame_c: if b.surf == "wood" { v3::scale(p.paint, 0.8) } else { g.k.colors.torn_steel },
             p,
         }
     }
