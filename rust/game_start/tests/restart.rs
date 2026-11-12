@@ -112,7 +112,7 @@ fn a_second_try_begins_with_the_firsts_numbers() {
     let numbers = |p: &Play| { let mut l = Vec::new(); p.g.k.walk(&mut String::new(), &mut |name, _, v| l.push((String::from(name), v))); l };
     for (level, words) in [("tut-team.json", "?levelFile=tut-team.json&roomclear&squad4"), ("bazaar.json", "?levelFile=bazaar.json&quiet"), ("compound.json", "?levelFile=compound.json&roomclear&squad4&hard")] {
         let mut p = Play::mission(level, words, &Opts { seed: 2, ..Default::default() });
-        let first = numbers(&p);
+        let (first, held) = (numbers(&p), format!("{:?}", p.g.m.quietfog));
         p.run(2.0);
         p.g.k.tune.guard_chase = 9.0;
         p.g.k.tune.needs = !p.g.k.tune.needs;
@@ -122,6 +122,7 @@ fn a_second_try_begins_with_the_firsts_numbers() {
         let again = numbers(&p);
         let moved: Vec<_> = again.iter().zip(&first).filter(|(a, b)| a != b && !(a.1.is_nan() && b.1.is_nan())).collect();
         assert!(moved.is_empty(), "{level}: the second try has the first's: {moved:?}");
+        assert_eq!(format!("{:?}", p.g.m.quietfog), held, "{level}: what the fog stood at before the mission is the first try's own fog");
     }
 }
 
