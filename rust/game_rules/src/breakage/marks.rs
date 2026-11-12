@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 //! THE MARKS AN ENCOUNTER LEAVES, one arm a place something hits something: which surface took it (a static, a door leaf, a piece of furniture: the last two ride the box
 //! they are on), refusing the surfaces a mark would float on (light-only geometry, glowing fixtures, glass-thin trims). Nothing here draws from the game's die.
 
@@ -7,12 +5,10 @@ pub use ::game_types::marks::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
-
-#[allow(unused_imports)]
 use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 

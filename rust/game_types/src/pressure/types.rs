@@ -1,7 +1,6 @@
 //! The types of `pressure`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 /// a man who has given his room up: on his way out, then planted beyond it
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

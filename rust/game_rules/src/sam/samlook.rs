@@ -1,10 +1,9 @@
 pub use ::game_types::samlook::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// This seat's row, made if it is missing.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::samlook::St {

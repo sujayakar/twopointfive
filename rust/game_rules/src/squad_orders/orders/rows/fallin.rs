@@ -4,14 +4,14 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::{js, m, v3};
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 pub const ORDER: Row = Row { is: &[Is::Follows, Is::LooksAbout, Is::Resumed], ..Row::new("fallIn", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 
 /// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
     for (gd, a) in g.groups[g.group].orders.asg.iter() {
         let row = &g.tab.task[*a];

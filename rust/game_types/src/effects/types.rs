@@ -1,7 +1,5 @@
 //! The types of `effects`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, bytes::ToBytes, ids::*, V3};
 
 /// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body, a blast's trail off its spark (which answers nothing once the spark dies or its slot is reused)
 #[derive(Clone, Debug)]
@@ -75,5 +73,4 @@ pub struct Bang {
 }
 
 pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_air: 3.0, height: 0.07, dazzle_radius: 8.0, dazzle_seconds: 6.0, dazzle_min: 2.0 } }
-
 

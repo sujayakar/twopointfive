@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String};
 
 // ------------------------------------------------------------ the sums
 
@@ -183,11 +182,11 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
     let into = g.ch[c].gun_look;
     let (held, other) = if in_hands { (rifle_def, pistol_def) } else { (pistol_def, rifle_def) };
     let (held, other) = (g.weapon(held).clone(), g.weapon(other).clone());
-    let look = crate::gunlook::gun_look_of(g, into, Some(&held), Some(&other), None);
+    let look = crate::gunlook::gun_look_of(into, Some(&held), Some(&other), None);
     g.ch[c].gun_look = look;
     let own = if in_hands { g.ch[c].gun_look.and_then(|l| l.hand) } else { None };
     if in_hands {
-        let model = match own { Some(id) => crate::rig_props::model_grip(g, id, Some(true)), None => None };
+        let model = match own { Some(id) => crate::rig_props::model_grip(id, Some(true)), None => None };
         let (wrist, fingers, back) = match model {
             Some(h) => (h.wrist, h.fingers, h.back),
             None => { let h = crate::rig_props::sc20k_grip(Some(true)); (h.wrist, h.fingers, h.back) }

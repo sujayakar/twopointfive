@@ -2,10 +2,10 @@ pub use ::game_types::shotgun::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way.
 pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, c: CharId, t: f64, dir: V3) -> bool {
@@ -221,6 +221,7 @@ fn own_side_asked(g: &mut Game, d: DoorId, side: f64, at: V3, w: f64, avoid: &[V
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     fn m870_shell(g: &Game) -> crate::shotgun::Shell {

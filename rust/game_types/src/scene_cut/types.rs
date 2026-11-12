@@ -1,7 +1,6 @@
 //! The types of `scene_cut`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CutPlane {

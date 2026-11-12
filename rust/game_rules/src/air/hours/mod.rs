@@ -4,10 +4,10 @@ pub mod turns;
 pub mod told;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- the hours' words
 
@@ -476,7 +476,6 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
     row.intensity = x;
     row.peak_intensity = x;
 }
-
 
 #[cfg(test)]
 mod tests {

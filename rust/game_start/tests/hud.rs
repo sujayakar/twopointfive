@@ -49,17 +49,17 @@ fn a_rows_second_line_is_its_keys_and_what_no_key_gives() {
 fn the_list_is_the_rows_the_tick_built_and_lights_what_the_key_does() {
     for seed in SEEDS {
         let (mut p, door) = play(seed);
-        let I = p.view().interact;
-        assert!(I.rows.is_empty() && I.lit == -1.0 && I.ring.is_none() && !I.open, "seed {seed}: nothing in reach on the yard: {I:?}");
+        let seen = p.view().interact;
+        assert!(seen.rows.is_empty() && seen.lit == -1.0 && seen.ring.is_none() && !seen.open, "seed {seed}: nothing in reach on the yard: {seen:?}");
         at_door(&mut p, door);
-        let I = p.view().interact;
+        let seen = p.view().interact;
         let hv = p.g.sets[p.g.seat].hover.clone().expect("a door a stride away is the highlight");
-        assert_eq!(I.rows[0].label, hv.line1, "seed {seed}");
-        assert_eq!(I.lit, 0.0, "seed {seed}: what the key would do is the line that is lit: {I:?}");
-        assert_eq!(I.rows[0].kind, ThingKind::Door, "seed {seed}");
-        assert!(I.rows[0].in_reach && I.rows[0].dist.is_none() && !I.rows[0].opts.is_empty() && !I.rows[0].opts[0].key.is_empty(), "seed {seed}: {:?}", I.rows[0]);
-        let R = I.ring.expect("the ring is on the door");
-        assert_eq!((R.kind, R.at), (ThingKind::Door, hv.pos), "seed {seed}");
+        assert_eq!(seen.rows[0].label, hv.line1, "seed {seed}");
+        assert_eq!(seen.lit, 0.0, "seed {seed}: what the key would do is the line that is lit: {seen:?}");
+        assert_eq!(seen.rows[0].kind, ThingKind::Door, "seed {seed}");
+        assert!(seen.rows[0].in_reach && seen.rows[0].dist.is_none() && !seen.rows[0].opts.is_empty() && !seen.rows[0].opts[0].key.is_empty(), "seed {seed}: {:?}", seen.rows[0]);
+        let round = seen.ring.expect("the ring is on the door");
+        assert_eq!((round.kind, round.at), (ThingKind::Door, hv.pos), "seed {seed}");
     }
 }
 
@@ -103,8 +103,8 @@ fn the_dots_are_the_ticks_things_and_the_highlight_rings_one() {
         assert!(p.view().interact.dots.iter().all(|d| !d.ringed), "seed {seed}");
         // his own charge on that door, its row lit: the ring stays the gun's, so the door's dot stands
         p.g.sets[p.g.seat].hover = Some(Interactable { kind: K::Charge, ..hv });
-        let I = p.view().interact;
-        assert!(I.ring.is_none() && I.dots.iter().all(|d| !d.ringed), "seed {seed}: {I:?}");
+        let seen = p.view().interact;
+        assert!(seen.ring.is_none() && seen.dots.iter().all(|d| !d.ringed), "seed {seed}: {seen:?}");
     }
 }
 
@@ -139,16 +139,16 @@ fn a_thing_on_a_man_names_him_and_a_body_stays_at_its_place() {
         let feet = p.g.pos_of(gd);
         let on = |kind| Interactable { kind, guard: Some(gd), pos: [feet[0], feet[1] + 1.35, feet[2]], ..Interactable::default() };
         p.g.sets[p.g.seat].hover = Some(on(K::Guard));
-        let R = p.view().interact.ring.expect("a ring on him");
-        assert_eq!(R.man, Some(p.id_of(gd)), "seed {seed}");
-        assert!((R.up - 1.35).abs() < 1e-9, "seed {seed}: {R:?}");
+        let round = p.view().interact.ring.expect("a ring on him");
+        assert_eq!(round.man, Some(p.id_of(gd)), "seed {seed}");
+        assert!((round.up - 1.35).abs() < 1e-9, "seed {seed}: {round:?}");
         p.g.sets[p.g.seat].hover = Some(on(K::Body));
-        let R = p.view().interact.ring.expect("a ring on the body");
-        assert!(R.man.is_none() && R.at[1] == feet[1] + 1.35, "seed {seed}: {R:?}");
+        let round = p.view().interact.ring.expect("a ring on the body");
+        assert!(round.man.is_none() && round.at[1] == feet[1] + 1.35, "seed {seed}: {round:?}");
         p.g.sets[p.g.seat].interactables = vec![on(K::Held), on(K::Body), on(K::Guard)];
-        let D = p.view().interact.dots;
-        assert_eq!(D.len(), 2, "seed {seed}: no dot of a living man");
-        assert!(D[0].man == Some(p.id_of(gd)) && (D[0].up - 1.35).abs() < 1e-9 && D[1].man.is_none(), "seed {seed}: {D:?}");
+        let dots = p.view().interact.dots;
+        assert_eq!(dots.len(), 2, "seed {seed}: no dot of a living man");
+        assert!(dots[0].man == Some(p.id_of(gd)) && (dots[0].up - 1.35).abs() < 1e-9 && dots[1].man.is_none(), "seed {seed}: {dots:?}");
     }
 }
 
@@ -197,20 +197,20 @@ fn each_seat_is_told_its_own_list() {
 fn the_look_is_the_tables_as_they_stand() {
     for seed in SEEDS {
         let (mut p, _) = play(seed);
-        let (L, k) = (p.view().look, &p.g.k);
-        assert_eq!(L.ring.places, k.cmdring.wedges, "seed {seed}");
-        assert_eq!((L.ring.hole, L.ring.rim), (game::ringlone::RING_HOLE, game::ringlone::RING_RIM), "seed {seed}");
+        let (said, k) = (p.view().look, &p.g.k);
+        assert_eq!(said.ring.places, k.cmdring.wedges, "seed {seed}");
+        assert_eq!((said.ring.hole, said.ring.rim), (game::ringlone::RING_HOLE, game::ringlone::RING_RIM), "seed {seed}");
         let (b, l) = (game::ringlone::ring_box(), game::ringlone::lone());
-        assert_eq!((L.ring.box_x, L.ring.box_y), (b.x, b.y), "seed {seed}");
-        let P = &L.ring.lone;
-        assert_eq!([P.r, P.h, P.pad, P.letter, P.max, P.lead], [l.r, l.h, l.pad, l.char, l.max, l.lead], "seed {seed}: the drawing follows the numbers the tick hit-tests");
-        let Q = &L.plan;
-        assert_eq!([Q.fresh_secs, Q.walk_dim, Q.rest_dim, Q.ring_m, Q.sector_m, Q.sector_deg, Q.reask_secs, Q.others],
+        assert_eq!((said.ring.box_x, said.ring.box_y), (b.x, b.y), "seed {seed}");
+        let alone = &said.ring.lone;
+        assert_eq!([alone.r, alone.h, alone.pad, alone.letter, alone.max, alone.lead], [l.r, l.h, l.pad, l.char, l.max, l.lead], "seed {seed}: the drawing follows the numbers the tick hit-tests");
+        let planned = &said.plan;
+        assert_eq!([planned.fresh_secs, planned.walk_dim, planned.rest_dim, planned.ring_m, planned.sector_m, planned.sector_deg, planned.reask_secs, planned.others],
             [k.plan.fresh_secs, k.plan.walk_dim, k.plan.rest_dim, k.plan.ring_m, k.plan.sector_m, k.plan.sector_deg, k.plan.reask_secs, k.plan.others], "seed {seed}");
-        assert_eq!((L.net.edge, L.net.near, L.net.edge_in), (k.squadnet.edge, k.squadnet.near, k.squadnet.edge_in), "seed {seed}");
-        assert_eq!((L.attention.ring_m, L.attention.way_reask), (k.attention.ring_m, k.attention.way_reask), "seed {seed}");
-        assert_eq!((L.line_clear, L.mark_clear), (k.rails.line_clear, k.rails.mark_clear), "seed {seed}");
-        let was = L;
+        assert_eq!((said.net.edge, said.net.near, said.net.edge_in), (k.squadnet.edge, k.squadnet.near, k.squadnet.edge_in), "seed {seed}");
+        assert_eq!((said.attention.ring_m, said.attention.way_reask), (k.attention.ring_m, k.attention.way_reask), "seed {seed}");
+        assert_eq!((said.line_clear, said.mark_clear), (k.rails.line_clear, k.rails.mark_clear), "seed {seed}");
+        let was = said;
         p.g.k.plan.ring_m = 0.7; p.g.k.plan.others = 0.0; p.g.k.squadnet.edge = !p.g.k.squadnet.edge; p.g.k.rails.mark_clear = !p.g.k.rails.mark_clear; p.g.k.cmdring.wedges = 6.0;
         let look = p.view().look;
         assert_eq!((look.plan.ring_m, look.plan.others), (0.7, 0.0), "seed {seed}");
@@ -296,15 +296,15 @@ fn a_held_attention_is_told_with_its_way_and_its_fog() {
         game::attention::mem(&mut p.g, gd).hold = Some(hold(HoldMode::Go, -1.0, t));
         let path: Vec<[f64; 3]> = vec![[at[0] - 2.0, 0.0, at[2]], [at[0] - 1.0, 0.0, at[2] + 1.0], [at[0], 0.0, at[2]]];
         p.g.gd[gd].path = path.clone(); p.g.gd[gd].path_i = 1; p.g.gd[gd].path_goal = Some(at);
-        let L = p.view().attention.into_iter().next().expect("the man whose attention is taken");
-        assert_eq!(L.man, p.id_of(gd), "seed {seed}");
-        assert_eq!((L.at[0], L.at[2]), (at[0], at[2]), "seed {seed}");
-        assert!(L.walking && L.walks && !L.ending && !L.worn && L.left == 1.0 && L.mode == game::view::AttentionMode::Go, "seed {seed}: {L:?}");
-        assert_eq!(L.own.as_deref(), Some(&path[1..]), "seed {seed}: the rest of his own path");
+        let said = p.view().attention.into_iter().next().expect("the man whose attention is taken");
+        assert_eq!(said.man, p.id_of(gd), "seed {seed}");
+        assert_eq!((said.at[0], said.at[2]), (at[0], at[2]), "seed {seed}");
+        assert!(said.walking && said.walks && !said.ending && !said.worn && said.left == 1.0 && said.mode == game::view::AttentionMode::Go, "seed {seed}: {said:?}");
+        assert_eq!(said.own.as_deref(), Some(&path[1..]), "seed {seed}: the rest of his own path");
         // a path to somewhere else is not his way to this: the floor is asked
         p.g.gd[gd].path_goal = Some([at[0] + 9.0, 0.0, at[2]]);
-        let L = p.view().attention.into_iter().next().unwrap();
-        assert!(L.walks && L.own.is_none(), "seed {seed}: {L:?}");
+        let said = p.view().attention.into_iter().next().unwrap();
+        assert!(said.walks && said.own.is_none(), "seed {seed}: {said:?}");
         // the rule off: straight
         p.g.k.attention.way = false;
         assert!(!p.view().attention[0].walks, "seed {seed}");
@@ -312,8 +312,8 @@ fn a_held_attention_is_told_with_its_way_and_its_fog() {
         // at the thing the ring runs down, and he says when he is done
         let t = p.g.time;
         game::attention::mem(&mut p.g, gd).hold = Some(hold(HoldMode::Go, t + 2.5, t));
-        let L = p.view().attention.into_iter().next().unwrap();
-        assert!(!L.walking && !L.walks && (L.left - 0.5).abs() < 1e-9 && L.ending == (2.5 <= p.g.k.attention.tell_secs), "seed {seed}: {L:?}");
+        let said = p.view().attention.into_iter().next().unwrap();
+        assert!(!said.walking && !said.walks && (said.left - 0.5).abs() < 1e-9 && said.ending == (2.5 <= p.g.k.attention.tell_secs), "seed {seed}: {said:?}");
         game::attention::mem(&mut p.g, gd).hold = Some(hold(HoldMode::Look, t + 0.1, t));
         assert!(p.view().attention[0].ending, "seed {seed}: the last beat");
         // the fog

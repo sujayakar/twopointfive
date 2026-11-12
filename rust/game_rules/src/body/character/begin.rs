@@ -2,12 +2,11 @@ use super::*;                      // your own module: its types, its other part
 use crate::anim_gltf::{Art, GltfCharacter};
 use crate::anim_skeleton::{PoseFK, Poses};
 use ::game_types::anim_skeleton::roles::{Roles, ROLE_NAMES};
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// the rig's named nodes in their order: the key a layer asks for, the node's name
 fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
@@ -180,7 +179,7 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> (crate::characte
     its_grip(&art, rig, &mut a, &mut poses);
     its_idle(&art, rig, &mut a, &mut poses);
     crouch_gait(&art, rig, &mut a, &mut poses);
-    jog_seam(&art, rig, &mut a, &mut poses);
+    jog_seam(&art, &mut a, &mut poses);
     jog_gait(&art, rig, &mut a, &mut poses);
     sprint_gait(&art, rig, &mut a, &mut poses);
     let (s1, s2, rest) = (a.p_b, a.p_c, a.rest);
@@ -331,7 +330,7 @@ fn crouch_gait(art: &Art, rig: &GltfCharacter, a: &mut Anim, poses: &mut Poses) 
 }
 
 /// The run clip's loop seam: each keyed channel's gap, first less last, spread round the cycle at sample time (sampleJog).
-fn jog_seam(art: &Art, rig: &GltfCharacter, a: &mut Anim, poses: &mut Poses) {
+fn jog_seam(art: &Art, a: &mut Anim, poses: &mut Poses) {
     let (s1, s2, rest) = (a.p_b, a.p_c, a.rest);
     let cj = kept(a, "Jog_Fwd_Loop");
     let cj_dur = art.clip[cj].duration;

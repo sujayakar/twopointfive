@@ -1,7 +1,6 @@
 //! The types of `packside`.
-#![allow(unused_imports)]
-use crate::{Blank, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::V3;
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PackExt {

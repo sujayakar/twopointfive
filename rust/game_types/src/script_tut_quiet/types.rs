@@ -1,7 +1,5 @@
 //! The frames of the tut-quiet level's script (rust/game_rules/src/missions/script_tut_quiet.rs): where each beat stands, and the locals that live across a yield.
-#![allow(unused_imports, unused_variables, unused_mut)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::bytes::ToBytes;
 
 ///  the beat 'lane': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]

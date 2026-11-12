@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 fn hunting(g: &Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
@@ -162,7 +161,7 @@ pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guard
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
+    let view = crate::seats::view_key(&crate::seats::here(g));
     let p = g.player_pos(g.player);
     let now = g.time;
     let Some(row) = g.m.guards.ground_track.get_mut(view) else {

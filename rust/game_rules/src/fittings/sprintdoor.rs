@@ -1,6 +1,5 @@
 pub use ::game_types::sprintdoor::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 
@@ -119,6 +118,7 @@ pub fn sprint_door_head(off: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
     extern crate std;
 

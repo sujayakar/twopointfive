@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 /// `this.run === R && !R.ended`
 fn live(g: &Game, r: DirectorRunId) -> bool {
@@ -273,17 +273,14 @@ fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[
             continue;
         }
         let t = g.tab.director_run[r].def.triggers[i].clone();
-        let mut ev: Option<EventView> = None;
         let go = match t.kind {
             TriggerDefKind::Start => false,
             TriggerDefKind::After => g.tab.director_run[r].t >= t.secs.unwrap(),
             TriggerDefKind::Event => {
-                ev = trigger_event(&t, fresh);
-                ev.is_some()
+                trigger_event(&t, fresh).is_some()
             }
             TriggerDefKind::Signal => {
-                ev = fresh.iter().find(|e| e.kind == EventViewKind::Signal && e.name == t.name).cloned();
-                ev.is_some()
+                fresh.iter().any(|e| e.kind == EventViewKind::Signal && e.name == t.name)
             }
             TriggerDefKind::Enter => {
                 let who = match &t.who {

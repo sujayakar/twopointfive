@@ -12,7 +12,7 @@ pub const ORDER: Row = Row {
     ..Row::new("smokeThere", label, crate::squadsmoke::row_smoke_issue)
 };
 
-fn label(g: &mut Game, t: &OrderTarget) -> String {
+fn label(g: &mut Game, _: &OrderTarget) -> String {
     format!("smoke there · {} left", crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g)))
 }
 

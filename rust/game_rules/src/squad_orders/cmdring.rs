@@ -1,8 +1,7 @@
 pub use ::game_types::cmdring::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
 use alloc::{string::String, vec, vec::Vec};
 

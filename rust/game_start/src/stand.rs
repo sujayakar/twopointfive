@@ -115,7 +115,7 @@ pub fn stand_laid(data: &Json, assets: Assets, o: &StartOpts, laid: &dyn Fn(&mut
     // the rows that only dress the picture, as this host has them (up on a page, down on a host that draws nothing)
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, no skin
-    g.engine.world = game::scene_boxes::box_world_new(&mut g, None);
+    g.engine.world = game::scene_boxes::box_world_new(None);
     g.engine.lights = game::render_lights::LightSet::blank();
     let mut loaded = level::load(&mut g, data);
     populate_host(&mut g, &mut loaded.boxes);

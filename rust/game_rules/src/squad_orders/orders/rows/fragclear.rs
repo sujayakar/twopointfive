@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
@@ -11,7 +11,7 @@ pub const ORDER: Row = Row {
     ..Row::new("fragClear", label, issue)
 };
 
-fn label(g: &mut Game, t: &OrderTarget) -> String { format!("frag and clear · {} left", g.groups[g.group].tools.frags) }
+fn label(g: &mut Game, _: &OrderTarget) -> String { format!("frag and clear · {} left", g.groups[g.group].tools.frags) }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if g.groups[g.group].tools.frags <= 0.0 { return Err(Some(String::from("no frags left."))); }
@@ -22,7 +22,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 /// a bang and clear with a frag for the bang: `frag_next` is up for this one call
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     g.groups[g.group].tools.frag_next = true;
     let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::BangClear, men, t);
     g.groups[g.group].tools.frag_next = false;

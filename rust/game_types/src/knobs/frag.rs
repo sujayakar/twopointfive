@@ -1,6 +1,5 @@
 //! The numbers of frag.
 use crate::bytes::ToBytes;
-use alloc::string::String;
 use game_derive::Knobs;
 
 /// Every number of the grenade. fuse: seconds from leaving the hand (the player's); orderFuse: a teammate's on an order — cooked a beat, it has less far to go.

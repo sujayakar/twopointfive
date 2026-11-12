@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 
@@ -724,6 +724,7 @@ fn step_that_opens_it(g: &Game, w: StepLook, s: f64) -> Option<V3> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     fn bits(a: &[f64]) -> Vec<u64> { a.iter().map(|x| x.to_bits()).collect() }

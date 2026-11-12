@@ -2,7 +2,7 @@ pub use ::game_types::effects::types;
 pub use types::*;
 use crate::game::Game;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 type Emitter = crate::smoke_types::SmokeEmitter;

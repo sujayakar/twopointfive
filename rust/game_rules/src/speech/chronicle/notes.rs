@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ private helpers
 
@@ -596,15 +596,6 @@ fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chr
     }
 }
 
-/// A blank record: what the probes' synthetic runs start from.
-fn blank_counts() -> crate::chronicle::RunCounts {
-    RunCounts {
-        elapsed: 0.0, stage: String::from("infiltrate"), done: false, failed: false, sandbox: false, blackout: false, seen: 0.0, seen_up: 0.0, alarms: 0.0, esc1: 0.0, esc2: 0.0, bodies: 0.0,
-        kills: 0.0, kos: 0.0, shots: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, kicked: 0.0, picked: 0.0, keys: 0.0, intel: 0.0, questioned: 0.0, roster: 3.0,
-        hits: 0.0, down: false, loads: 0.0, thrown: 0.0, grabs: 0.0, dropped: 0.0, devices: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0,
-    }
-}
-
 /// `n === 1 ? a : b`
 fn plural<'a>(n: f64, one: &'a str, many: &'a str) -> &'a str { if n == 1.0 { one } else { many } }
 fn take(lines: &mut Vec<ScoreLine>, pts: f64, label: String) {
@@ -748,6 +739,15 @@ pub(super) fn door_written(g: &crate::game::Game, door: &str) -> Option<String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// a blank record: what a test's run starts from
+    fn blank_counts() -> crate::chronicle::RunCounts {
+        RunCounts {
+            elapsed: 0.0, stage: String::from("infiltrate"), done: false, failed: false, sandbox: false, blackout: false, seen: 0.0, seen_up: 0.0, alarms: 0.0, esc1: 0.0, esc2: 0.0, bodies: 0.0,
+            kills: 0.0, kos: 0.0, shots: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, kicked: 0.0, picked: 0.0, keys: 0.0, intel: 0.0, questioned: 0.0, roster: 3.0,
+            hits: 0.0, down: false, loads: 0.0, thrown: 0.0, grabs: 0.0, dropped: 0.0, devices: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0,
+        }
+    }
 
     /// A FAILURE MEANS: the debrief says "1 times", a clock with a sign or a rating off its band.
     #[test]

@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
 /// How much breaks, as the systems read it: from 0 to 1.
 pub fn chaos_of(g: &crate::game::Game) -> f64 {
@@ -42,11 +41,6 @@ pub(super) fn dlog(g: &mut crate::game::Game, s: &str) {
     if log.len() > 200 {
         log.drain(0..100);
     }
-}
-
-/// A cap of n() events in any one-second window.
-fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
-    RateCap { n, ..RateCap::blank() }
 }
 
 /// One more event at time t, if the window has room.
@@ -573,7 +567,7 @@ mod tests {
         let mut k = crate::knobs::ChaosK::default();
         k.papers_per_sec = 1.0;
         k.puffs_per_sec = 5.0;
-        let mut c = rate_cap_new(RateCapN::Paper);
+        let mut c = RateCap { n: RateCapN::Paper, ..RateCap::blank() };
         assert!(rate_cap_take(&mut c, 0.0, &k));
         assert!(!rate_cap_take(&mut c, 0.5, &k));
         // the panel raised the cap: the window starts afresh

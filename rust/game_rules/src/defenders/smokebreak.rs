@@ -2,9 +2,9 @@ pub use ::game_types::smokebreak::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A blank row of counts.
 fn fresh() -> crate::smokebreak::SmokeBreakStats {

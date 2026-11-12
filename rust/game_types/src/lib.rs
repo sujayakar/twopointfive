@@ -1,6 +1,6 @@
 //! The game's data: every module's types and their defaults, the IDs, the knob tables. It runs no rule, and depends on nothing of the game.
 #![no_std]
-#![allow(dead_code, unused_variables, unused_imports, non_snake_case, non_camel_case_types, non_upper_case_globals, unused_mut)]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
@@ -193,7 +193,6 @@ pub mod render_fogofwar { pub mod types; pub use types::*; }
 pub mod render_frame { pub mod types; pub use types::*; }
 pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
-pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }

@@ -1,11 +1,10 @@
-use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
 use crate::scene_level::Level;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// Makes the game in `g`: the caller has set `g.engine`, `g.level` and `g.smoke` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
 /// Each part stands on those before it: what a part draws of the die, and the order the lists are filled in, hang on this order.
@@ -251,7 +250,7 @@ fn stand_doors(g: &mut Game, level: &Level) {
         height: None,
         thickness: None,
     }).collect();
-    g.doors = crate::doors::doors_new(g, &door_defs, &mut game_on_door_event);
+    g.doors = crate::doors::doors_new(g, &door_defs);
     crate::doors::paint_leaves(g);   // (a level's leaves wear its paint from their first moment: doors/paint.rs)
     let list: Vec<DoorId> = g.doors.list.clone();
     g.props.doorways = list.iter().map(|&d| {

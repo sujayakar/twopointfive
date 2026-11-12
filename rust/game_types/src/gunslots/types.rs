@@ -1,6 +1,5 @@
 //! The types of `gunslots`.
-#![allow(unused_imports)]
-use crate::{Words, ids::*, js::*, Quat, V3};
+use crate::Words;
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]

@@ -2,10 +2,10 @@ pub use ::game_types::weapons::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// A row's turn weight: its own `handling`, else its class's.
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 {

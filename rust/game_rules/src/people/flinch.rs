@@ -1,10 +1,8 @@
 pub use ::game_types::flinch::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec};
+use crate::v3::{self, V3};
 
 /// A man of the room fight's on its own walk carries a script that is not choreography.
 fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -124,6 +122,8 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
     use super::*;
 
     /// The duck's share at the page's numbers, against pinned bits.

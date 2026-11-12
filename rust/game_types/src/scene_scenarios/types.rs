@@ -1,6 +1,5 @@
 //! The types of `scene_scenarios`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, crosses::Crosses, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

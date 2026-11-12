@@ -4,7 +4,7 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::{self, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LooksAbout, Is::Resumed, Is::KeepsLane, Is::WalksLow],
@@ -30,7 +30,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     }
 }
 /// 'move'.issue: a place and a watch each that fit the room, or the line abreast
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     let t_at = t.at();
     let pc = crate::group::lead(g, &crate::seats::here(g)).unwrap_or(g.pl[g.player].ch);
     let sam = g.ch[pc].pos;

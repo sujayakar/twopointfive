@@ -1,9 +1,7 @@
 pub use ::game_types::workstow::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use alloc::boxed::Box;
 
 /// A charge is going on by your own hands.
 fn sam_job(g: &crate::game::Game) -> bool {
@@ -131,6 +129,8 @@ pub fn stow_fight(g: &crate::game::Game, gd: GuardId, a: Option<crate::workstow:
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
     use super::*;
 
     fn man() -> (Box<Game>, GuardId, CharId) {

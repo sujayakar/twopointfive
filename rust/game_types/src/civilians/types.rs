@@ -1,6 +1,5 @@
 //! The types of `civilians`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on: a man, or a CivSpot of the level by its place in the level's list

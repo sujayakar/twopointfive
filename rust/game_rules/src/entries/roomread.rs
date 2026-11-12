@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 use crate::Num;
@@ -131,7 +131,7 @@ fn way_out(g: &mut Game, o: CoverOpeningId, c: f64, p: V3, ring: &JsSet<String>)
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     /// A cell's number on the grid is one key whichever sign its nought has.
     #[test]

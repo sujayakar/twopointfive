@@ -1,10 +1,8 @@
 use super::*;
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, Quat};
+use alloc::{vec, vec::Vec};
 
 /// When key k (0..3) of a code is pressed, on a verb `dur` long.
 pub fn work_key_beat(k: f64, dur: f64) -> f64 {

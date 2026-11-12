@@ -5,7 +5,7 @@
 //! `waits_on_key` repeats the rules of the press as a reader (the pair's mark first, then the nearest set charge of a wall or a door's, then the word, the drill and the rescue's entry).
 use super::*;
 use crate::doortools::Phase;
-use crate::game::{Game, GuardState};
+use crate::game::Game;
 use crate::ids::*;
 use crate::seats::SeatRef;
 use crate::v3;

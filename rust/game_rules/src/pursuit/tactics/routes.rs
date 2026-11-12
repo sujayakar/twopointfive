@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// The closure tacticsPenalty returned, called: a cell of the doorways costs door_mult, a cell of the avoid-set at least CORRIDOR_COST, any other 1.
 fn pen_at(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {

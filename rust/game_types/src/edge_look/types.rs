@@ -1,5 +1,4 @@
 //! The types of `edge_look`.
-#![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 

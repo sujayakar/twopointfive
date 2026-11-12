@@ -1,7 +1,6 @@
 //! The types of `stature`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]

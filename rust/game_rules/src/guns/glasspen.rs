@@ -2,9 +2,9 @@ pub use ::game_types::glasspen::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::js;
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- local helpers
 
@@ -234,6 +234,7 @@ pub fn glass_on_line(g: &crate::game::Game, a: V3, b: V3) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     fn seg(o: V3, t0: f64, len: f64) -> RoundSeg { RoundSeg { o, d: [1.0, 0.0, 0.0], t0, len, e: 1.0 } }

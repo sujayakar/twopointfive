@@ -16,7 +16,7 @@
 //!   #[is(value)]                 on a field: what it starts at, where that is not its type's own start
 //!
 //! It reads a declaration as tokens and needs no parser of the language: attributes, names, and where one field ends.
-extern crate proc_macro;
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 /// a declaration as far as it is read

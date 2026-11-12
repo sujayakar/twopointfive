@@ -1,11 +1,9 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::sparks::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
 
 // SPARKS ARE NOT THE PICTURE'S ALONE. A burst hangs a smoke trail on each spark by `Track::Spark { slot, gen_ }` (tick/effects.rs), and the CPU smoke is what the

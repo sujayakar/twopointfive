@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! A FIXTURE THAT BROKE: its tray swinging down by one end and tearing out, its diffuser and glass on the floor, the torn
 //! lead's glow. "Picture only: nothing play asks about" by its rays; but every piece is a KEYED box of the frame's list (MKEY.test + 0x5000 + …), and
 //! the fog of war keeps a record of every keyed loose thing of that list and caps its records, the frame's room is budgeted with them in it, and the
@@ -13,10 +12,10 @@ pub use ::game_types::fixture_break::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 use crate::v3::quat;
 

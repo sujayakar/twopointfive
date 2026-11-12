@@ -1,13 +1,11 @@
 //! THE ROOM FIGHT: its tick, what is heard in it, what it keeps of the whole, and the small questions asked of it.
-#![allow(unused_imports)]
 use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// Hard's drilled defenders: where the mission's men are drilled, on Hard.
 pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
@@ -158,7 +156,6 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     out
 }
 
-
 /// a man off `g.guards` by his body's number (`g.guards.find(x => x.char.id === e.who)`)
 pub(super) fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { let w = who?; g.guards.iter().copied().find(|&x| g.char_id(x) == w) }
 
@@ -178,10 +175,10 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     for i in 0..g.seats.len() {
         let s = g.seats[i]; let man = crate::cmd::seat_man(g, s); let p = g.player_pos(man);
         while g.fight.sams.len() <= i { g.fight.sams.push(RoomFightSamsItem { x: 0.0, z: 0.0, t: f64::NEG_INFINITY, v: [0.0, 0.0], known: 0.0 }); }
-        let now = g.time; let A = &mut g.fight.sams[i]; let since = now - A.t;
-        if since > 1e-4 && since < 0.25 { let k = 1.0 - m::exp(-since / 0.12); A.v[0] += ((p[0] - A.x) / since - A.v[0]) * k; A.v[1] += ((p[2] - A.z) / since - A.v[1]) * k; A.known += since; }
-        else if since != 0.0 { A.v = [0.0, 0.0]; A.known = 0.0; }
-        A.x = p[0]; A.z = p[2]; A.t = now;
+        let now = g.time; let row = &mut g.fight.sams[i]; let since = now - row.t;
+        if since > 1e-4 && since < 0.25 { let k = 1.0 - m::exp(-since / 0.12); row.v[0] += ((p[0] - row.x) / since - row.v[0]) * k; row.v[1] += ((p[2] - row.z) / since - row.v[1]) * k; row.known += since; }
+        else if since != 0.0 { row.v = [0.0, 0.0]; row.known = 0.0; }
+        row.x = p[0]; row.z = p[2]; row.t = now;
     }
     let guards = g.guards.clone();
     g.fight.defs.retain(|&d| guards.contains(&g.tab.roomfight_def[d].gd));
@@ -261,8 +258,8 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.05) { continue; }
         let eye = g.ch[oc].bone_or(crate::character::Bone::Head, 1.65); if crate::scene_collision::segment_blocked(g, eye, at, None, None, None) { continue; }
         if let Some(a) = crate::duty::order(g, og) {
-            let A = &g.tab.task[a];
-            if let (true, Some(ad), false, Some(aw)) = (A.arrived, A.door, A.spare.unwrap_or(false), A.watch) {
+            let row = &g.tab.task[a];
+            if let (true, Some(ad), false, Some(aw)) = (row.arrived, row.door, row.spare.unwrap_or(false), row.watch) {
                 if ad != dr && dist_xz(aw, g.dr[ad].frame_centre) < 1.6 {
                     let turn = m::abs(v3::wrap_angle(v3::yaw_to(op, at) - g.ch[oc].aim_yaw));
                     if turn < post_turn { post_turn = turn; post = Some(o); post_at = Some(at); }
@@ -284,7 +281,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
         room_fight_restore(g, o); room_fight_hand_back(g, o);
     }
     for d in g.fight.defs.clone() {
-        let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
+        let (gd, mode, pinned0) = { let def_row = &g.tab.roomfight_def[d]; (def_row.gd, def_row.mode, def_row.pinned0) };
         if matches!(mode, DefMode::Move | DefMode::Told) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
         if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
         crate::duty::pin(g, gd, pinned0, "roomfight");
@@ -303,6 +300,7 @@ pub fn room_fight_reset(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     #[test]

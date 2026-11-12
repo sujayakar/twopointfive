@@ -4,7 +4,7 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::V3;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Stacks, Is::Resumed, Is::KeepsLane],
@@ -30,7 +30,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     Ok(())
 }
 /// 'stack'.issue
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Some(String::from("no door")) };
     let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
         Some(p) => p,

@@ -1,6 +1,5 @@
-use crate::game::Game;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.
 pub(super) fn peek_eye(g: &crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
@@ -61,6 +60,7 @@ fn eye_at(own: crate::fogofwar::FogEye, p: V3, look: V3) -> crate::fogofwar::Fog
 
 #[cfg(test)]
 mod tests {
+    use crate::v3;
     use super::*;
 
     // A wall along x with him on its +z side, half a metre off it at x 2: its face runs from x -3 to x 4.

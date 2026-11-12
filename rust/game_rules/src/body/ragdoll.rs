@@ -2,10 +2,10 @@ pub use ::game_types::ragdoll::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::{Quat, V3};
+use alloc::vec::Vec;
 
 const N: usize = RAG_COUNT as usize;
 /// collision radii (m)

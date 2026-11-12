@@ -1,15 +1,13 @@
 pub use ::game_types::carlamps::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3;
+use alloc::{string::String, vec, vec::Vec};
 
 /// One lamp box that fits a generator's lamp: its place in the list and in `sigs()`.
 #[derive(Clone, Copy)]
 struct Cand { i: usize, s: usize }
-
 
 /// What each generator writes for a lamp.
 fn sigs() -> Vec<crate::carlamps::LampSig> {
@@ -127,6 +125,8 @@ pub(super) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use crate::v3::V3;
     use super::*;
     use crate::fixtures::Fixture;
 

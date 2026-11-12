@@ -2,9 +2,9 @@ pub use ::game_types::breach::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 type OP = crate::squad::OrderPatch;
@@ -730,7 +730,6 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn live_lines_by_charge_and_key() {

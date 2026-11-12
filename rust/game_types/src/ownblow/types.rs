@@ -1,7 +1,6 @@
 //! The types of `ownblow`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{ids::*, V3};
+use alloc::string::String;
 
 /// what the nearest charge of his own does when set off: a door's goes by door_tools_trigger(g, Some(d)), a wall's by wall_charge_blow(g, Some(w), None), its result dropped
 #[derive(Clone, Debug)]

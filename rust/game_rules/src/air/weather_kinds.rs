@@ -1,11 +1,8 @@
 pub use ::game_types::weather_kinds::types;
 pub use types::*;
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// Every word of WeatherKind: the enum has no parser, and `weather_of` holds no game to walk WEATHER_PRESETS' keys with.
 const ALL_KINDS: [WeatherKind; 7] = [
@@ -35,7 +32,7 @@ fn is_weather_kind(s: Option<&str>) -> bool {
 }
 
 /// Is the level called `name` one built for snow, with the switch on?
-pub fn snow_level(g: &crate::game::Game, name: Option<&str>) -> bool {
+pub fn snow_level(name: Option<&str>) -> bool {
     match name {
         Some(n) => !n.is_empty() && snow_levels().iter().any(|l| l == n),
         None => false,
@@ -177,27 +174,21 @@ mod tests {
     /// Pinned words and bits.
     #[test]
     fn fog_words_and_depths() {
-        let rows: [(WeatherKind, f64, f64, f64, [u64; 7], [u64; 3], u64); 3] = [
+        let rows: [(WeatherKind, f64, f64, f64, [u64; 7]); 3] = [
             (
                 WeatherKind::Downpour, 1072507924.0, 1609378836.0, 535637012.0,
                 [0x3f947ae147ae147b, 0x4018000000000000, 0x3fc2492492492492, 0x3febbbbbbbbbbbbc, 0x3fedddddddddddde, 0x3ff0000000000000, 0x3fe8000000000000],
-                [0x3fdfc530d53c74cf, 0x3f78d76aeb699239, 0x3fc25a8d430445b1],
-                0x3fe32064036c29b3,
             ),
             (
                 WeatherKind::Fog, 1341007217.0, 2146313585.0, 535700849.0,
                 [0x3fbced916872b021, 0x4004000000000000, 0x3fc2492492492492, 0x3fedddddddddddde, 0x3fedddddddddddde, 0x3ff0000000000000, 0x3ff0000000000000],
-                [0x40016803806ab703, 0x3f916c2528868b1d, 0x3fd8c7950998461c],
-                0x400b0426de6f2e19,
             ),
             (
                 WeatherKind::Dust, 1221546014.0, 2026852382.0, 416239646.0,
                 [0x3f9eb851eb851eb8, 0x4020000000000000, 0x3fd2492492492492, 0x3ff0000000000000, 0x3fe999999999999a, 0x3fe1111111111111, 0x3ff0000000000000],
-                [0x3fe8f3947f8a029f, 0x3f851cbc5e4e517b, 0x3fd07d7a66688a0e],
-                0x3fecb09605223e8c,
             ),
         ];
-        for (k, word, up, down, un, taus, flat) in rows {
+        for (k, word, up, down, un) in rows {
             let f = fog(k);
             let w = pack_fog(Some(f));
             assert_eq!(w, word);
@@ -269,10 +260,10 @@ mod tests {
         assert_eq!(weather_title(&mut g, None), "As it is");
         assert_eq!(weather_words(&mut g, Some(WeatherKind::Fog)), "ground fog, so nobody can see past about twenty meters outdoors");
         assert_eq!(weather_words(&mut g, None), "the level's own weather, as it has always played");
-        assert!(snow_level(&mut g, Some("tut-road")));
-        assert!(!snow_level(&mut g, Some("office")));
-        assert!(!snow_level(&mut g, Some("")));
-        assert!(!snow_level(&mut g, None));
+        assert!(snow_level(Some("tut-road")));
+        assert!(!snow_level(Some("office")));
+        assert!(!snow_level(Some("")));
+        assert!(!snow_level(None));
     }
 
 }

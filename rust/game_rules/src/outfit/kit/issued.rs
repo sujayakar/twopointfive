@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec::Vec};
 
 /// how many cards the table holds, as an index
 const CARDS: usize = KIT_MEMBERS as usize;
@@ -437,6 +437,7 @@ pub(super) fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     /// kitSmokes counts the men who come, never your card; kitBig yields to a wall charge.

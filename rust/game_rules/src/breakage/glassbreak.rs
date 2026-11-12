@@ -4,10 +4,10 @@ pub use ::game_types::glassbreak::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, vec::Vec};
 
 /// the one gate every entry point takes first. GLASSFX.on is settled on.
 pub fn glass_break_live(g: &crate::game::Game) -> bool {
@@ -454,6 +454,7 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
     fn blank() -> Box<Game> { Box::new(Game::blank()) }
     // pinned: (0x61A55 ^ imul(key, 2654435761)) >>> 0

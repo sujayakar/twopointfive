@@ -109,7 +109,7 @@ impl Wet {
     pub fn is(&self, i: u32) -> bool { !self.list.is_empty() && self.list.binary_search(&i).is_ok() }
     /// the box as the renderer has it while wet: darker where it is not bare metal, and with a water's film where it does not drink. `was` = the box itself as it stands: it is
     /// dressed again only where that moved, so the rows of a wet box are packed again only when it changed
-    pub fn dressed(&mut self, g: &Game, i: u32, b: &Box, was: Was) -> &Box {
+    pub fn dressed(&mut self, i: u32, b: &Box, was: Was) -> &Box {
         let at = self.list.binary_search(&i).unwrap();
         if !matches!(&self.dressed[at], Some((w, _)) if *w == was) {
             let mut o = b.clone();

@@ -6,7 +6,7 @@ pub use ::game_types::owner::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 
 /// the word changed: if who has him changed, he has him from now, for its first reason or the one given
 fn settle(g: &mut Game, gd: GuardId, word: By, t: f64, why: Option<u32>) {

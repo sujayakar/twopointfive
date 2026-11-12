@@ -1,10 +1,9 @@
 pub use ::game_types::aim::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::string::String;
 
 /// Back to nothing; `last_shot` stays.

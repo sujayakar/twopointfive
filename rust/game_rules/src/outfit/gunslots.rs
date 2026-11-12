@@ -1,10 +1,8 @@
 pub use ::game_types::gunslots::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::js;
+use alloc::{string::String, vec::Vec};
 
 /// The pick of that id, or None.
 fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
@@ -194,6 +192,8 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
     use super::*;
     use crate::weapons::WeaponId as W;
 

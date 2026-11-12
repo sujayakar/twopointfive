@@ -1,12 +1,11 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::packside::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec::Vec};
 
 fn bit_of(parts: &[String], name: &str) -> u32 {
     match parts.iter().position(|p| p == name) { Some(i) => 1u32 << i, None => 0 }

@@ -5,7 +5,6 @@ use crate::game::{Deed, Game, GuardState};
 use crate::ids::*;
 use crate::m;
 use crate::v3::{self, V3};
-use alloc::vec::Vec;
 
 /// The way in a strike or a grab is made by: the one asked, else what he could do from where he stands.
 fn way_in(g: &Game, gd: GuardId, way: Option<CloseKind>) -> CloseKind {
@@ -125,10 +124,9 @@ pub fn grab_variant(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crat
 }
 
 /// He takes hold of a man: drops whatever his hands had, and the man is frozen for the beat the grab closes in. From here he is `held`.
-pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseKind>) {
+pub fn start_grab(g: &mut crate::game::Game, gd: GuardId) {
     let p = g.player;
     let (c, gc) = (g.pl[p].ch, g.gd[gd].ch);
-    let kind = way_in(g, gd, way);
     let man = &g.gd[gd];
     if matches!(man.state, GuardState::Dead | GuardState::Alert) || man.held.is_some() || g.cond[c].down || g.pl[p].planted() { return; }
     if g.pl[p].crouch && !can_stand(g) { return; }

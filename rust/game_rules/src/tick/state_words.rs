@@ -5,7 +5,7 @@ use crate::game::{Game, Mods, Tabs};
 use crate::host_api::HostApi;
 use crate::group::Group;
 use crate::seats::SeatSet;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 /// the game's own parts: those that are walked by their own fields, and a seat's set's (which lies in its seat's row), stand elsewhere in the list
 fn own(name: &str) -> bool { !matches!(name, "m" | "engine" | "tab" | "sets" | "groups") && !SeatSet::NAMES.contains(&name) }

@@ -1,11 +1,10 @@
 pub use ::game_types::close::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 /// What a new State holds.
 fn fresh_state() -> crate::close::State {
@@ -494,6 +493,7 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
     use crate::close::{CloseId as I, CloseKind as K};
     use alloc::boxed::Box;

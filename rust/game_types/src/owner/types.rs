@@ -1,7 +1,4 @@
 //! WHOSE MAN HE IS: the taskers that may have a man, as a set.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
 
 /// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::LANE | by::SQUAD`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, crate::bytes::ToBytes)]

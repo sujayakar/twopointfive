@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! THE ROOM FIGHT: defenders who hold rooms (defender.rs) against a squad (operative.rs), and what both ask: the rooms (rooms.rs), who is in the line of a
 //! round (line.rs), the fight as a whole (fight.rs).
 
@@ -16,9 +15,8 @@ pub mod post;
 pub use post::{told, dropped, station, watched, loose_at, at_post, back_on, def_of, fights_as_he_goes, is_loose, loose, on_leg, on_leg_of, leg_ended, sent_to, run, send, send_by, Leg};
 pub mod rooms;
 pub use rooms::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A DEFENDER'S WATCHED POINT MOVES (the one place it is written in place: roomfight's parts, the enemy squads and the lights-out rule all come
 /// here). What his duty has his gun on (`covers`) is that point, so it moves with it; kept as a copy, equal numbers stand for "the same point".

@@ -1,6 +1,5 @@
 //! What falls and what it leaves: the landings waiting, and the glass lying on the floor. The rules are `rust/sim/src/falls.rs`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Words, V3};
+use crate::{bytes::ToBytes, V3};
 use alloc::vec::Vec;
 
 /// is the floor told of a landing

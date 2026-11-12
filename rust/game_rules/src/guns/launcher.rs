@@ -1,12 +1,11 @@
 pub use ::game_types::launcher::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::flight::Met;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// A table of the ring's as a Ballistics (launchVel and arcSolve read only these numbers).
 fn ballistics_of(k: &crate::knobs::RingK) -> Ballistics {

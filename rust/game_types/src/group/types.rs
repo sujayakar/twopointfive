@@ -1,7 +1,6 @@
 //! The types of `group`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, ids::*, js::*};
+use alloc::string::String;
 
 /// A GROUP: men somebody commands together, whichever side they are on. A player's squad is one (in a game of two each player has his own), and so is the response team.
 /// What a pass over the squad's code is about is a group (`g.group`): its book of orders, its door work.

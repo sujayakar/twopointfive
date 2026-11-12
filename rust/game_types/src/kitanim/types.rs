@@ -1,7 +1,5 @@
 //! The types of `kitanim`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, bytes::ToBytes, js::*};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BeatRow {

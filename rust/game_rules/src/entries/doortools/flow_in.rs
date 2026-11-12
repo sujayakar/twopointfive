@@ -1,11 +1,10 @@
 //! THE BIGGEST PIECE OF A ROOM'S FLOOR NOBODY HAS LOOKED AT IS GONE INTO, by a pair where one can go, the man nearest it first; and where it would be too far from the rest, they close up on him.
 use super::*;
-use super::flow::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, dist_xz as flat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// The search it is of, its floor's points and which point is on a cell of the nav grid, and the piece: its points and their middle.

@@ -1,9 +1,8 @@
 pub use ::game_types::samstun::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// Can a stun show on the player at all: up.
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
@@ -83,6 +82,7 @@ pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// A game with the page's knobs, its clock at 11, and a player with a body.

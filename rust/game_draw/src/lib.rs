@@ -10,6 +10,7 @@
 //! - A row holds values, never a reference into the game: what it says of another row is that row's place in its own section, or a key that means one
 //!   thing for as long as the thing stands.
 #![no_std]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 use alloc::{string::String, vec::Vec};
 use game::game::Game;

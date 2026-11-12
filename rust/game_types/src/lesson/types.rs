@@ -1,6 +1,5 @@
 //! The types of `lesson`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS, read whole from a level file's `{ is: '<kind>', … }` (game_start `records.rs`), each word typed: a word no type holds refuses the level

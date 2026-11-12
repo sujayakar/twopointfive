@@ -7,7 +7,7 @@ pub use gather::*;
 pub mod sam_lines;
 pub use sam_lines::*;
 pub mod scripts;
-pub use scripts::*;
+use scripts::*;
 pub mod radio;
 pub use radio::*;
 pub mod ambient;

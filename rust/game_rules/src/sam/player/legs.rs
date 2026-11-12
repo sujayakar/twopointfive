@@ -48,7 +48,7 @@ pub fn legs_own(g: &crate::game::Game) -> bool {
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.
 fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
-    let mut max_speed = if ml == 0.0 { 0.0 }
+    let max_speed = if ml == 0.0 { 0.0 }
         else if m.sprinting { g.k.tune.player_sprint }
         else if let Some(t) = m.tow { if t.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.k.tune.player_crouch * 0.6 } }
         else if m.dash { g.k.crouchrun.pace }

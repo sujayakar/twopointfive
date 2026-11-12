@@ -3,10 +3,10 @@ use super::*;                      // your own module: its types, its other part
 use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// goTo's own planner: the floor's way as this man's feet will find it, at his prices when there is a man.
 fn find_way(g: &mut Game, a: V3, b: V3, nodes: f64, who: Option<GuardId>) -> Option<Vec<V3>> {
@@ -51,23 +51,22 @@ struct Judged {
     d: f64,
     e: f64,
     r: Option<BlastResult>,
-    behind: Option<BlastHitBehind>,
 }
 fn judge_at(g: &mut Game, b: &Burst, id: f64, d: f64, shows: Shows) -> Judged {
-    if d > b.wound { return Judged { d, e: 0.0, r: None, behind: None }; }
+    if d > b.wound { return Judged { d, e: 0.0, r: None }; }
     let was = match &b.before { Some(m) => m.get(crate::Num(id)).copied(), None => None };
     let now = match was { Some(w) if !(w <= 0.0) => w, _ => shows_now(g, &Over::OWN, b.from, shows) };
     let e = was.unwrap_or(now);
     if e <= 0.0 {
-        if now > 0.0 { return Judged { d, e: now, r: Some(BlastResult::Stunned), behind: Some(BlastHitBehind::Cover) }; }
+        if now > 0.0 { return Judged { d, e: now, r: Some(BlastResult::Stunned) }; }
         let from = b.from;
         let through = if !b.torn.is_empty() { shows_now(g, &Over::but(&b.torn), from, shows) } else { 0.0 };
-        return if through > 0.0 { Judged { d, e: through, r: Some(BlastResult::Stunned), behind: Some(BlastHitBehind::Door) } } else { Judged { d, e, r: Some(BlastResult::Shielded), behind: None } };
+        return if through > 0.0 { Judged { d, e: through, r: Some(BlastResult::Stunned) } } else { Judged { d, e, r: Some(BlastResult::Shielded) } };
     }
-    if d <= b.lethal { return Judged { d, e, r: Some(if e >= 0.5 { BlastResult::Killed } else { BlastResult::Wounded }), behind: None }; }
+    if d <= b.lethal { return Judged { d, e, r: Some(if e >= 0.5 { BlastResult::Killed } else { BlastResult::Wounded }) }; }
     let t = (d - b.lethal) / m::max(1e-3, b.wound - b.lethal);
     let p = g.k.frag.wound_kill * (1.0 - t) * (1.0 - t) * (if e >= 0.5 { 1.0 } else { 0.4 });
-    Judged { d, e, r: Some(if hash01(b.serial, id) < p { BlastResult::Killed } else { BlastResult::Wounded }), behind: None }
+    Judged { d, e, r: Some(if hash01(b.serial, id) < p { BlastResult::Killed } else { BlastResult::Wounded }) }
 }
 fn judge(g: &mut Game, b: &Burst, feet: V3, head: V3, id: f64) -> Judged {
     let d = v3::dist(b.from, [feet[0], feet[1] + 0.9, feet[2]]);
@@ -204,7 +203,6 @@ fn seen_and_heard(g: &mut Game, b: &Burst) {
     let from = b.from;
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
-    let flags = crate::effects::flags();
     let l = crate::effects::spawn_burst(g, from, seed);
     crate::particle_fx::bang_fx(g, from);
     let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);

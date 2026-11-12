@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// A row of the books, by its key, for a write: the book stays in the table because `rear_ways` reads it through `g`.

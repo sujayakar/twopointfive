@@ -5,9 +5,9 @@ pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
@@ -655,7 +655,6 @@ struct OnErrand {
     from: V3,
     heard0: f64,
     lever: Option<usize>,
-    at_lever: bool,
 }
 
 /// one man of the party a step on; false = he is off the list.
@@ -677,7 +676,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     let from = man(g, i).from;
     let heard0 = man(g, i).heard0;
     let at_lever = role == ManRole::Lever && man(g, i).phase == Phase::There;
-    let o = OnErrand { i, gd, d, role, from, heard0, lever, at_lever };
+    let o = OnErrand { i, gd, d, role, from, heard0, lever };
     let how = crate::roomfight::leg_ended(g, d, crate::owner::by::BREAKER);
     if matches!(how, Some(crate::roomfight::LegEnd::Contact | crate::roomfight::LegEnd::Taken)) {
         // (met on the way: the room fight's man)

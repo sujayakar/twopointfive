@@ -1,10 +1,8 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::js::{self, JsMap};
+use alloc::{string::String, vec, vec::Vec};
 
 /// A line that can be said now: the row, its resolved text and its weight.
 type Eligible = (crate::dialogue::SamLine, String, f64);
@@ -38,7 +36,7 @@ fn sam_stage_of(s: crate::dialogue::StageKey, gives: bool) -> crate::dialogue::S
 }
 
 /// Sam's facts for SAM_NEEDS, off the man's context plus the hold's variant. CLOSE.noKnife is settled on: `knife` is never true.
-fn sam_facts(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
+fn sam_facts(ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
     use crate::character::HoldVariant;
     use crate::dialogue::SamNeed;
     let f = &ctx.facts;
@@ -127,7 +125,7 @@ fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
         ],
         None => vec![sam_lines_where(|l| l.s.as_str() == cat.as_str())],
     };
-    let facts = sam_facts(g, ctx, variant);
+    let facts = sam_facts(ctx, variant);
     let c = choose_sam_line(g, &tiers, ctx, &facts, mem, rnd);
     match c {
         Some(c) => SamPick { text: c.text },
@@ -154,7 +152,7 @@ pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
     let tiers = [sam_lines_where(|l| l.s == SamLineS::Key)];
-    let facts = sam_facts(g, &ctx, variant);
+    let facts = sam_facts(&ctx, variant);
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
@@ -168,7 +166,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     let rnd: &mut dyn FnMut(&mut Game) -> f64 = match rnd { Some(r) => r, None => &mut die };
     let ctx = gather(g, gd);
     let tiers = [sam_lines_where(|l| l.s == SamLineS::Open && l.needs.as_ref().is_some_and(|n| n.contains(&SamNeed::Gun)))];
-    let facts = sam_facts(g, &ctx, crate::character::HoldVariant::Gun);
+    let facts = sam_facts(&ctx, crate::character::HoldVariant::Gun);
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
@@ -359,15 +357,14 @@ mod tests {
 
     #[test]
     fn sams_facts_read_the_floor_and_the_hold_and_the_knife_is_gone() {
-        let mut g = Game::blank();
         let mut ctx = crate::dialogue::DialogueCtx::default();
-        let f = sam_facts(&mut g, &ctx, crate::character::HoldVariant::Arm);
+        let f = sam_facts(&ctx, crate::character::HoldVariant::Arm);
         assert_eq!(f.get(SamNeed::Arm), Some(&true));
         assert_eq!(f.get(SamNeed::Gun), Some(&false));
         assert_eq!(f.get(SamNeed::Knife), Some(&false));   // CLOSE.noKnife, with the arm on him too
         assert_eq!(f.get(SamNeed::Calm), Some(&true));
         ctx.facts.lockdown = Some(true);
-        let f = sam_facts(&mut g, &ctx, crate::character::HoldVariant::Gun);
+        let f = sam_facts(&ctx, crate::character::HoldVariant::Gun);
         assert_eq!(f.get(SamNeed::Alarm), Some(&true));    // a lockdown is an alarm
         assert_eq!(f.get(SamNeed::Calm), Some(&false));
         assert_eq!(f.get(SamNeed::Lockdown), Some(&true));

@@ -7,9 +7,9 @@ pub const WAND_ORDER: &str = crate::orders::rows::wand::ORDER.id;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.

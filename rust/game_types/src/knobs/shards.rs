@@ -1,7 +1,6 @@
 //! The numbers of shards.
 use crate::bytes::ToBytes;
 use crate::js::*;
-use alloc::string::String;
 use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]

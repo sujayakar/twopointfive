@@ -1,9 +1,6 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::irlaser::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use alloc::vec::Vec;
 
 /// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
 /// down.

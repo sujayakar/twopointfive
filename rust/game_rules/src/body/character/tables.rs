@@ -1,9 +1,8 @@
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.
 pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {

@@ -1,7 +1,6 @@
 //! The types of `ragdoll`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, Quat, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, Default)]
 pub struct RagdollWorld {
@@ -72,14 +71,6 @@ pub struct RAG {
 pub fn rag() -> crate::ragdoll::RAG { crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 } }
 
 pub const RAG_COUNT: f64 = 16.0;
-
-
-
-
-
-
-
-
 
 pub const HIP_CONE_COS: f64 = 0.25881904510252074;
 

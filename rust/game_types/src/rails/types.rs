@@ -1,6 +1,5 @@
 //! The types of `rails`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -61,5 +60,4 @@ pub const STEP_EYE_ID: f64 = 198.0;
 pub const NOTE_SECS: f64 = 2.6;
 
 pub const MENU_M: f64 = 6.0;
-
 

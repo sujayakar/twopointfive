@@ -1,9 +1,8 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::cast::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use alloc::{string::String, vec::Vec};
 
 // What each man wears is part of the game and not only of the picture, because his kit is placed off it: a cast's parts feed

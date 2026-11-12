@@ -1,7 +1,5 @@
 //! The types of `gunroles`.
-#![allow(unused_imports)]
-use crate::{Words, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, ids::*, V3};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum GunRole {

@@ -1,9 +1,6 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 pub use ::game_types::smoke_types::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// (SmokeSystemLike.round) a round's straight leg through the air, for the host's solver to stir: one line along it
 pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len: f64) { g.out.push(crate::out_events::OutEvent::SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound { from, dir, len })); }

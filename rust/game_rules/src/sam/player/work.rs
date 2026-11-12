@@ -1,11 +1,10 @@
 //! WORK HE STANDS OR KNEELS AT: a lock, the wand, a code, a job of his hands, a door kicked.
 use super::*;
-use crate::game::{Deed, Game};
+use crate::game::Deed;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// The 'pick the lock' row: drop what the hands were doing and start working the lock.
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {

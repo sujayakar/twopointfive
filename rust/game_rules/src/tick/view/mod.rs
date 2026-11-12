@@ -11,17 +11,16 @@ pub use ::game_types::view::{told, types};
 pub use told::*;
 pub use types::*;
 pub mod marks;
-pub use marks::*;
+use marks::*;
 pub mod throws;
 pub use throws::*;
 pub mod rings;
-pub use rings::*;
+pub(crate) use rings::*;
 pub mod plan;
 pub use plan::*;
 pub mod look;
-pub use look::*;
+use look::*;
 use crate::game::Game;
-use crate::ids::*;
 
 fn stage_word(s: crate::game::MissionStage) -> Stage {
     use crate::game::MissionStage as M;

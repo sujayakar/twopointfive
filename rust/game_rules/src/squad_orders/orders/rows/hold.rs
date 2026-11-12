@@ -5,14 +5,14 @@ use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::m;
 use crate::v3::V3;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row { is: &[Is::Holds, Is::LooksAbout, Is::Resumed, Is::KeepsLane], ..Row::new("hold", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("hold position") }
 
 /// 'hold'.issue: a running man plants a stride on; the squad of four take an approach each
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     let mut posts: Vec<V3> = Vec::with_capacity(men.len());
     for &gd in men {
         let c = g.gd[gd].ch;

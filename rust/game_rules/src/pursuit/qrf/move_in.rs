@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 /// where a man with no foe named looks: the player nearest him
@@ -648,7 +648,7 @@ fn bodies_found_there(g: &mut crate::game::Game, m: GuardId, o: GuardId, bp: V3)
 
 /// A response man went down since last frame: the nearest of theirs with him in view says so on the net.
 fn man_down(g: &mut crate::game::Game) {
-    use crate::game::GuardState;
+    
     let mut theirs = g.qrf.men.clone();
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { theirs.push(r.gd); } }
     for &d in &theirs {

@@ -10,7 +10,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap};
 use crate::m;
 use crate::v3::V3;
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 
 /// fixtures, beacons, cameras, tripwires a level holds (one over any of these is refused at load, by name)
 pub const FIXTURES: usize = 256;

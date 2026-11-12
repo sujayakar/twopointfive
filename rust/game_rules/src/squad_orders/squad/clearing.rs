@@ -2,10 +2,9 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// `this` of a Clearing method: the one at `g.clearing`; every caller has just tested it, and nothing a method calls clears it.
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
@@ -28,7 +27,6 @@ fn plan_name(p: Option<&crate::scene_level::RoomClearPlan>) -> String {
 fn rank(r: Perceive) -> i32 {
     match r { Perceive::Alert => 3, Perceive::Body => 2, Perceive::Suspicious => 1 }
 }
-
 
 /// What a man of the pair made of the frame: his ears and eyes are his own (guards/senses); somebody he has walked into and a colleague on the floor are here.
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<crate::squad::Perceive> {

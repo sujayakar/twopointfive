@@ -311,7 +311,7 @@ impl Boxes {
         let mut cut_at = (u32::MAX, 0u32);
         self.wet.follow(g);
         for i in 0..n {
-            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(g, i as u32, &all[st[i]], was) } else { &all[st[i]] };
+            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(i as u32, &all[st[i]], was) } else { &all[st[i]] };
             let now = Was::of(b, &self.look);
             if !whole && self.was[i] == now { continue; }
             let anew = i >= self.was.len();

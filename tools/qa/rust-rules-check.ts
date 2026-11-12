@@ -4,6 +4,7 @@
 //   statics   every `static mut` of rust/sim and rust/prim is a row here: scratch of one call, or a copy proven where it is made
 //   sides     every crate under rust/ is gameplay, dressing or both, and neither side links the other; a crate from outside has no side
 //   module    the crates the game's module is hashed from (tools/blitz/face-build.ts FACE_CRATES) are the crates its locks link: a crate left out would leave a stale module unseen
+//   warnings  no file of a crate turns the compiler's word for unused, dead or misnamed code off (one item may), and every crate's own root makes it an error where the game is played or gated
 //   bun run tools/qa/rust-rules-check.ts        exit 0 = it holds · 1 = a line says what does not        RUSTRULES_BREAK=1: one breach of each planted in memory: every line must FAIL
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -62,9 +63,9 @@ function links(): Record<string, string[]> {
     } }
   return out;
 }
-/** every source line of a crate, its comment off */
-function code(crate: string): { at: string; file: string; text: string }[] {
-  const out: { at: string; file: string; text: string }[] = [], walk = (d: string): void => { for (const n of readdirSync(d).sort()) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) { const file = relative(WORK, p); readFileSync(p, 'utf8').split('\n').forEach((raw, i) => out.push({ at: `rust/${file}:${i + 1}`, file, text: raw.replace(/\/\/.*$/, '') })); } } };
+/** every source line of a crate, its comment off (or whole) */
+function code(crate: string, whole = false): { at: string; file: string; text: string }[] {
+  const out: { at: string; file: string; text: string }[] = [], walk = (d: string): void => { for (const n of readdirSync(d).sort()) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) { const file = relative(WORK, p); readFileSync(p, 'utf8').split('\n').forEach((raw, i) => out.push({ at: `rust/${file}:${i + 1}`, file, text: whole ? raw : raw.replace(/\/\/.*$/, '') })); } } };
   walk(join(WORK, crate, 'src')); return out; }
 const sim = [...code('sim'), ...code('maths')], prim = code('prim');
 if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs', text: 'static mut PLANTED: f64 = x.sin();' });
@@ -91,5 +92,11 @@ const L = links(); if (BREAK) L.planted = ['outside', 'sim'];
 { const want = new Set<string>(), walk = (c: string): void => { if (want.has(c)) return; want.add(c); for (const d of L[c] ?? []) walk(d); }; walk('game_face');
   const have = BREAK ? FACE_CRATES.slice(1) : [...FACE_CRATES], bad = [...want].filter(c => !have.includes(c as never)).map(c => `the module links ${c}, and FACE_CRATES has no such row`); for (const c of have) if (!want.has(c)) bad.push(`FACE_CRATES names ${c}, which the module does not link`);
   line(bad, 'module: what it is hashed from is what it links', [...want].sort().join(' ')); }
+{ const bad: string[] = [], crates = Object.keys(SIDES); let read = 0;
+  const off = (at: string, raw: string): void => { if (/^\s*#!\[\s*(cfg_attr\([^\]]*)?allow\([^\]]*\b(unused\w*|dead_code|warnings|nonstandard_style|non_\w+)\b/.test(raw)) bad.push(`${at} — the compiler's word is off for a whole file`); };
+  for (const c of crates) { for (const l of code(c, true)) { read++; off(l.at, l.text); }
+    if (!code(c, true).some(l => l.file === `${c}/src/lib.rs` && l.text.startsWith('#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]'))) bad.push(`rust/${c}/src/lib.rs does not make a warning an error where the game is played or gated`); }
+  if (BREAK) off('rust/planted/src/planted.rs:1', '#![allow(unused_imports)]');
+  line(bad, 'warnings: no file turns the compiler\'s word for unused code off', `${crates.length} crates, ${read} lines`); }
 console.log(`=== rust-rules-check: ${red ? `${red} FAIL` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

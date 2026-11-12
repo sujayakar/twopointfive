@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! STATURE: the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
 //! capsules and every box a ray meets are untouched. What it writes that the tick's own state holds: `Box.dc / dh` of the boxes bolted to a man
 //! (rows of the frame's list, where the picture is to draw them) and the near end of his weapon laser (a box of the frame's list made from the
@@ -9,12 +8,11 @@
 
 pub use ::game_types::stature::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 fn hash01(n: f64) -> f64 {
     // (`(n | 0) * 0x9E3779B1` is a product of doubles, then `x ^= x >>> 15` takes it to an int32)

@@ -1,6 +1,5 @@
 //! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, crosses::Crosses, V3};
 use alloc::{string::String, vec::Vec};
 
 /// whose words the mission's line is

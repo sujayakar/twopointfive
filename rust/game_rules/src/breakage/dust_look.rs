@@ -1,5 +1,4 @@
-#![allow(unused_imports, unused_variables)]
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// The scattering tint of a surface's dust (reached by the stun grenade's tile drop, tick 1621). A pure table; the solver never reads the field.
 pub(super) fn dust_tint(surf: crate::scene_materials::Surf) -> V3 {

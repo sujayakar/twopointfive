@@ -3,10 +3,10 @@ pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 // ------------------------------------------------------------ small helpers
 /// a man's row, made by spotted_tick before anything here asks for it; it borrows all of `g`: use it for a few lines and let it go
@@ -66,7 +66,7 @@ fn ours(g: &crate::game::Game, h: GuardId) -> bool {
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs`
-fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
+fn has_them(g: &crate::game::Game, h: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     g.gd[h].state == crate::game::GuardState::Alert && since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, h)
 }
@@ -500,7 +500,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
             let (mine, his) = (g.team(gd), g.team(h));
             if crate::condition::down(g, g.gd[h].ch) || !mine.foe_of(his) { continue; }
             let d = dist_xz(g.pos_of(gd), g.pos_of(h));
-            if has_them(g, &crate::seats::here(g), h) {
+            if has_them(g, h) {
                 if d < k.caught_m && d < bd { bd = d; by = Some(h); }
             } else if g.gd[h].state == crate::game::GuardState::Suspicious && d < k.wary_m {
                 let r = man(g, gd);
@@ -564,6 +564,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
     use crate::spotted::SpottedMode as Mode;
 
@@ -600,6 +601,5 @@ mod tests {
         assert_eq!(g.m.spotted.men.get(gd).unwrap().since, 7.0);
         assert_eq!(g.stats.spotted.caught, 1);
     }
-
 
 }

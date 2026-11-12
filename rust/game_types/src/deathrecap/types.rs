@@ -1,6 +1,5 @@
 //! The types of `deathrecap`: every death explains itself (rust/game_rules/src/speech/deathrecap.rs).
-#![allow(unused_imports)]
-use crate::{Words, Blank, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Words, Blank, bytes::ToBytes, crosses::Crosses, ids::*, js::*};
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]

@@ -1,7 +1,6 @@
 //! The types of `stickycam`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StickyCam {

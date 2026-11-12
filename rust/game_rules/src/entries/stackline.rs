@@ -1,7 +1,6 @@
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
 fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {

@@ -1,14 +1,13 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
-
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
@@ -65,7 +64,6 @@ fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { g.ch[c].bone_or(crate::cha
 
 /// `men as players`
 fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
-
 
 /// Once a tick after everybody has moved: the eyes, then seen or not for every man off the team, then the doors.
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {

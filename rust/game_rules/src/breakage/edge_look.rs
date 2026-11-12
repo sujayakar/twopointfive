@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! A BROKEN WALL'S LOOK, whole: the standing pieces round a cut, the rubble at its foot, the soot. Every piece is a box keyed
 //! MKEY.look on the frame's list, which no ray of the game meets; but the fog of war keeps a record of every keyed loose thing of that list and caps its
 //! records, the boots scuff the rubble at rest, and the frame's room is budgeted with these boxes in it: so the tick does read what this lane writes, and
@@ -15,10 +14,10 @@ pub use ::game_types::edge_look::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use crate::v3::quat;
 

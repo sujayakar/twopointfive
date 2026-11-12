@@ -1,11 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3;
+use alloc::{string::String, vec, vec::Vec};
 
 // ---- what stands between a body and the skeleton's calls
 
@@ -377,7 +375,7 @@ pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, spe
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
     let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
     let idle = ::sim::layers::At { clip: idle, t: idle_t };
-    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; ::sim::layers::At { clip, t: t } };
+    let at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; ::sim::layers::At { clip, t: t } };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
     crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));

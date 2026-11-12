@@ -1,6 +1,5 @@
 //! The types of `scene_level`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
 /// which level's script this is, by the level file's name; the body is its rust/game_rules/src/missions/script_tut_*.rs, its define pass called by a match

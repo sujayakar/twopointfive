@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ------------------------------------------------------------------ private helpers
 /// the box a breakable stands in for
@@ -474,10 +474,7 @@ pub(super) fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreak
     }
     let n_fresh = fresh.len() as f64;
     pos[0] /= n_fresh; pos[1] /= n_fresh; pos[2] /= n_fresh;
-    let dead = { let r = &g.tab.wallbreak_breakable[b]; r.n_open == r.open.len() as f64 };
     let kind = if b_kind == BKind::Cover { LevelChangeKind::Cover } else if sill { LevelChangeKind::Hole } else { LevelChangeKind::Port };
-    if b_kind == BKind::Cover {
-    } else if sill {  } else {  }
     // what stood on it, what hung from it
     let mut rects: Vec<[f64; 4]> = vec![[x0, z0, x1, z1]];
     wall_break_settle(g, b, AABB { x0, x1, z0, z1, y0: 0.0, y1: 0.0 }, dir, who, quiet, &mut rects);

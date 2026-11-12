@@ -1,7 +1,5 @@
-use crate::game::Game;
 use crate::ids::*;
-use crate::v3::{self, Quat, V3};
-use alloc::boxed::Box;
+use crate::v3::{self, V3};
 
 /// The tick's first word: what a man covers is said anew each tick by the duty that holds him to it.
 pub fn duties_anew(g: &mut crate::game::Game) {
@@ -76,6 +74,8 @@ pub fn word_now(g: &crate::game::Game, gd: GuardId) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
     use super::*;
 
     fn stand() -> (Box<Game>, GuardId) {

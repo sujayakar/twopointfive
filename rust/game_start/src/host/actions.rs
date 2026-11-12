@@ -63,7 +63,7 @@ fn soak(g: &mut Game, c: game::ids::CharId) {
 }
 
 /// a floor spot for a man stood by the panel: where, what he covers, and on a room clear the room and mark he counts for
-struct Spot { pos: [f64; 3], aim_at: [f64; 3], room: Option<String>, watch: String, mark: f64 }
+struct Spot { pos: [f64; 3], aim_at: [f64; 3], room: Option<String>, mark: f64 }
 const SPACING_M: f64 = 1.0;
 const PROP_CLEAR_M: f64 = 0.45;
 const SAM_CLEAR_M: f64 = 8.0;
@@ -87,7 +87,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
         let rooms: Vec<_> = g.staged.rooms.iter().map(|r| r.def.clone()).collect();
         let mut lists: Vec<Vec<Spot>> = Vec::new();
         for r in &rooms {
-            let mut spots: Vec<Spot> = r.marks.iter().enumerate().filter(|(k, _)| !g.room_clear.placement.iter().any(|p| p.room == r.id && p.mark == *k as f64)).map(|(k, q)| Spot { pos: q.pos, aim_at: q.aim_at, room: Some(r.id.clone()), watch: q.watch.clone(), mark: k as f64 }).collect();
+            let mut spots: Vec<Spot> = r.marks.iter().enumerate().filter(|(k, _)| !g.room_clear.placement.iter().any(|p| p.room == r.id && p.mark == *k as f64)).map(|(k, q)| Spot { pos: q.pos, aim_at: q.aim_at, room: Some(r.id.clone()), mark: k as f64 }).collect();
             let (b, mut floor) = (&r.bounds, Vec::new());
             let mut x = b.x0 + 0.7;
             while x <= b.x1 - 0.7 {
@@ -96,7 +96,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
                     let pos = [m::round(x * 100.0) / 100.0, 0.0, m::round(z * 100.0) / 100.0];
                     let eye = [pos[0], 1.6, pos[2]];
                     let q = r.marks.iter().find(|q| !game::scene_collision::wall_between(g, eye, q.aim_at)).or(r.marks.first());
-                    if let Some(q) = q { floor.push(Spot { pos, aim_at: q.aim_at, room: Some(r.id.clone()), watch: q.watch.clone(), mark: -1.0 }); }
+                    if let Some(q) = q { floor.push(Spot { pos, aim_at: q.aim_at, room: Some(r.id.clone()), mark: -1.0 }); }
                     z += 0.8;
                 }
                 x += 0.8;
@@ -123,7 +123,7 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
         if out.len() >= n { break; }
         if !free(g, pos, &taken) || game::scene_collision::nav_grid_find_path(g, sam, pos, None, None).is_none() { continue; }
         taken.push(pos);
-        out.push(Spot { pos, aim_at: [sam[0], 1.1, sam[2]], room: None, watch: String::new(), mark: -1.0 });
+        out.push(Spot { pos, aim_at: [sam[0], 1.1, sam[2]], room: None, mark: -1.0 });
     }
     out
 }

@@ -1,10 +1,8 @@
-#![allow(unused_variables)]
 pub use ::game_types::render_decals::types;
 pub use types::*;
 pub mod set;
 pub use set::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A rule asks for a mark (set.rs says what becomes of it).
 pub fn decals_add(g: &mut crate::game::Game, kind: crate::render_decals::DecalKind, pos: V3, normal: V3, size: Option<f64>, opts: Option<crate::render_decals::DecalOpts>) {

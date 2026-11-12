@@ -1,7 +1,6 @@
 //! The types of `roomread`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RoomWay {

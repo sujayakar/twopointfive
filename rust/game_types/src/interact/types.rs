@@ -1,7 +1,5 @@
 //! The types of `interact`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 #[derive(Clone, Debug, Default)]
 pub struct EmptyThing {
