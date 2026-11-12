@@ -167,8 +167,8 @@ pub enum KitThing {
 #[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct KitSlot {
     pub thing: crate::view::KitThing,
-    /// the code of the key that brings it
-    pub key: String,
+    /// the key that brings it
+    pub key: crate::input::Key,
     /// a gun's short name, a can's word (empty hands have none)
     pub name: String,
     /// a gun's rounds ready, how many cans
@@ -182,7 +182,7 @@ pub struct KitSlot {
     /// its key is a row of the setup that is open
     pub taken: bool,
 }
-impl Default for KitSlot { fn default() -> Self { KitSlot { thing: KitThing::Hands, key: String::new(), name: String::new(), count: 0.0, absent: false, spent: false, up: false, taken: false } } }
+impl Default for KitSlot { fn default() -> Self { KitSlot { thing: KitThing::Hands, key: crate::handslot::HANDSLOT_KEY, name: String::new(), count: 0.0, absent: false, spent: false, up: false, taken: false } } }
 
 /// a position a thing on a gun can be set to, in the HUD's words
 #[derive(Clone, Debug, Default, ToBytes, Crosses)]
@@ -230,10 +230,10 @@ pub struct KitGun {
 }
 
 /// a row of the setup that is open
-#[derive(Clone, Debug, Default, ToBytes, Crosses)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct KitSetupRow {
-    /// the code of its key
-    pub key: String,
+    /// its key
+    pub key: crate::input::Key,
     pub words: Vec<crate::view::KitWord>,
 }
 
