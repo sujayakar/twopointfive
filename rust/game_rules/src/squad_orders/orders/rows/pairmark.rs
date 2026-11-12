@@ -7,6 +7,8 @@ use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair, Is::Take],
+    targets: &[TargetKind::Foe],
+    ack: &["moving up on him.", "on him. your mark."],
     can: Some(crate::pairorders::row_take_can),
     only: Some(crate::pairorders::row_take_only),
     valid: Some(crate::pairorders::row_take_valid),

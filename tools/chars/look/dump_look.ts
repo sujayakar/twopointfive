@@ -50,14 +50,14 @@ const variantFor = (team: string, trained: boolean, id: number, isSam = false) =
 
 interface Man { who: string; team: string; trained: boolean; tint: V3; tint2: V3; id: number; sam?: boolean; from: string }
 const men: Man[] = [];
-men.push({ who: 'Sam', team: 'player', trained: false, tint: TEAM_TINT.player, tint2: TEAM_TINT2.player, id: PLAYER_ID, sam: true, from: 'guards.ts TEAM_TINT/TEAM_TINT2.player, consts.ts PLAYER_ID' });
-SQUAD4.forEach((s, i) => men.push({ who: s.name, team: 'operative', trained: false, tint: s.tint, tint2: s.tint2, id: UNIT_ID0 + i, from: `nightbreach.ts SQUAD4[${i}], id = spawnUnit's first free from UNIT_ID0 (the four are spawned first, in roster order)` }));
+men.push({ who: 'Sam', team: 'player', trained: false, tint: TEAM_TINT.player, tint2: TEAM_TINT2.player, id: PLAYER_ID, sam: true, from: 'TEAM_TINT / TEAM_TINT2.player, PLAYER_ID' });
+SQUAD4.forEach((s, i) => men.push({ who: s.name, team: 'operative', trained: false, tint: s.tint, tint2: s.tint2, id: UNIT_ID0 + i, from: `squad4()[${i}], id = spawnUnit's first free from UNIT_ID0 (the four are spawned first, in roster order)` }));
 // the office shift: the game gives route i the id 10 + i and tints[i % 3]; tint2 = the guard team's
-for (let i = 0; i < 3; i++) men.push({ who: `shift guard ${i} (route ${i})`, team: 'guard', trained: false, tint: SHIFT[i % SHIFT.length], tint2: TEAM_TINT2.guard, id: 10 + i, from: 'game.ts guards: id 10 + route index, tints[i % 3]; tint2 = TEAM_TINT2.guard' });
+for (let i = 0; i < 3; i++) men.push({ who: `shift guard ${i} (route ${i})`, team: 'guard', trained: false, tint: SHIFT[i % SHIFT.length], tint2: TEAM_TINT2.guard, id: 10 + i, from: 'the guards as a game is made: id 10 + route index, tints[i % 3]; tint2 = TEAM_TINT2.guard' });
 // hostile units (the room clear's defenders): spawned after the four, so ids UNIT_ID0 + 4 …; team colours
 for (let i = 0; i < 5; i++) men.push({ who: `Tango ${i + 1}`, team: 'hostile', trained: false, tint: TEAM_TINT.hostile, tint2: TEAM_TINT2.hostile, id: UNIT_ID0 + 4 + i, from: 'spawnUnit team hostile after the four-man squad: TEAM_TINT/TEAM_TINT2.hostile' });
-for (let i = 0; i < 2; i++) men.push({ who: `QRF-${i + 1}`, team: 'guard', trained: true, tint: QRF.tint, tint2: QRF.tint2, id: UNIT_ID0 + i, from: 'qrf.ts spawnUnit tints; id = first free from UNIT_ID0 with only the shift on the floor' });
-civDefs.forEach((c, i) => men.push({ who: `${c.name} (${c.kind})`, team: 'civilian', trained: false, tint: c.tint, tint2: c.tint2 ?? [0.06, 0.06, 0.08], id: CIV_ID0 + i, from: 'levels/office.json civilians[], civilians.ts CIV_ID0 + i' }));
+for (let i = 0; i < 2; i++) men.push({ who: `QRF-${i + 1}`, team: 'guard', trained: true, tint: QRF.tint, tint2: QRF.tint2, id: UNIT_ID0 + i, from: 'the response team\'s tints; id = first free from UNIT_ID0 with only the shift on the floor' });
+civDefs.forEach((c, i) => men.push({ who: `${c.name} (${c.kind})`, team: 'civilian', trained: false, tint: c.tint, tint2: c.tint2 ?? [0.06, 0.06, 0.08], id: CIV_ID0 + i, from: 'levels/office.json civilians[], CIV_ID0 + i' }));
 
 // one man per variant: the FIRST in the list above that the game would deal that variant (so: Sam, the four, the shift before the Tangos, QRF-1/2, Marta/Owen)
 const smooth = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };

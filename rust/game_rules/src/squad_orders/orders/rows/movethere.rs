@@ -8,6 +8,8 @@ use alloc::{string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LooksAbout, Is::Resumed, Is::KeepsLane, Is::WalksLow],
+    targets: &[TargetKind::Floor],
+    ack: &["moving.", "on it."],
     can: Some(can),
     valid: Some(valid),
     tick: Some(crate::roomfit::fit_tick),

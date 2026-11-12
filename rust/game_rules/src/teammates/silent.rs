@@ -197,22 +197,8 @@ pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::
 
 /// the posture's two rows on the menu: made anew at each call
 fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
-        ..Default::default()
-    }));
-    let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::silent::ORDER.id) }),
-        ..Default::default()
-    }));
-    [silent, loud]
+    use crate::orders::rows;
+    [&rows::silent::ORDER, &rows::loud::ORDER].map(|r| crate::orders::squad_orders_row(g, rows::def(r)))
 }
 
 /// the word that follows 'loud' on the HUD

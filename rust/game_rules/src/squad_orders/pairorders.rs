@@ -260,43 +260,16 @@ pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, _: &[GuardId
     }
     Ok(())
 }
-/// one of the two take rows
-fn take_row(g: &mut Game, row: &'static crate::orders::Row, ack: [&str; 2]) -> OrdersOrderDefId {
-    let def = crate::orders::rows::def(row, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Foe],
-        ack: Some(vec![String::from(ack[0]), String::from(ack[1])]),
-        ..Default::default()
-    });
-    crate::orders::squad_orders_row(g, def)
-}
-
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
 fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
-    let mark = take_row(g, &rows::pairmark::ORDER, ["moving up on him.", "on him. your mark."]);
-    let watch = crate::orders::squad_orders_row(g, rows::def(&rows::pairwatch::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Foe],
-        ack: Some(vec![String::from("eyes on him."), String::from("i've got him.")]),
-        ..Default::default()
-    }));
-    let now = take_row(g, &rows::pairtake::ORDER, ["on him.", "moving up on him."]);
-    let dark = crate::orders::squad_orders_row(g, rows::def(&rows::pairdark::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        ack: Some(vec![String::from("moving."), String::from("on it.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::movethere::ORDER.id) }),
-        ..Default::default()
-    }));
-    vec![mark, watch, now, dark]
+    [&rows::pairmark::ORDER, &rows::pairwatch::ORDER, &rows::pairtake::ORDER, &rows::pairdark::ORDER].into_iter().map(|r| crate::orders::squad_orders_row(g, rows::def(r))).collect()
 }
 
 /// the mark's own row: 'go' under the word's header   (PairOrders.goRow)
 fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::rows;
-    crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER, crate::orders::OrderDef {
-        word: true, free: Some(true),
-        targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
-        ..Default::default()
-    }))
+    crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER))
 }
 
 /// a row here given while the squad is loud: silent first, with the squad's own line for it   (PairOrders.quietFirst)

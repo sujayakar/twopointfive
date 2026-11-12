@@ -7,6 +7,9 @@ use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
+    targets: &[TargetKind::Door],
+    ack: &["on it.", "breaching."],
+    page: Some(crate::doortools::TOOLS_PAGE),
     valid: Some(valid),
     gone: Some(gone),
     ..Row::new("bigClear", label, issue)
