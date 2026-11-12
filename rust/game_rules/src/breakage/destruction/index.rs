@@ -7,12 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 
-/// What a box does, by its word.
-fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = g.tab.boxes[b].does;
-    crate::scene_materials::does_of(g, word)
-}
-
 /// How much breaks, as the systems read it: from 0 to 1.
 pub fn chaos_of(g: &crate::game::Game) -> f64 {
     let c = g.k.chaos.def;
@@ -181,11 +175,11 @@ fn thing_of(g: &Game, b: BoxId, in_fixture: bool) -> Option<DKind> {
     let (max_h, min_h, bottom) = (m::max_n(&h), m::min_n(&h), row.c[1] - h[1]);
     let dark = row.emissive[0] + row.emissive[1] + row.emissive[2] == 0.0;
     let shadowless = js::has_bits(flags, crate::scene_boxes::box_flag::NO_SHADOW as i32);
-    let does = does_of_box(g, b);
-    if shadowless && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
+    let does = crate::scene_materials::does_of_box(g, b);
+    if shadowless && h[1] <= 0.03 && does.paper && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
         return Some(DKind::Paper);
     }
-    if does.screen.unwrap_or(false) && min_h <= 0.012 {
+    if does.screen && min_h <= 0.012 {
         return Some(if max_h > 0.35 || (bottom > 1.2 && max_h > 0.3) { DKind::Tv } else { DKind::Screen });
     }
     if !shadowless && !in_fixture && max_h <= 0.17 && h[0] * h[1] * h[2] * 8.0 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark {
@@ -202,7 +196,7 @@ fn housing_of(g: &Game, screen: usize) -> Option<usize> {
     for i in screen.saturating_sub(6)..core::cmp::min(g.col.boxes.len(), screen + 6) {
         let b = BoxId::from_ix(i);
         let row = &g.tab.boxes[b];
-        if i == screen || m::abs(row.yaw - s.yaw) > 1e-3 || row.h[0] < s.h[0] || row.h[1] < s.h[1] || row.h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
+        if i == screen || m::abs(row.yaw - s.yaw) > 1e-3 || row.h[0] < s.h[0] || row.h[1] < s.h[1] || row.h[2] > 0.05 || !crate::scene_materials::does_of_box(g, b).casing {
             continue;
         }
         let dd = v3::dist(row.c, s.c);
@@ -276,7 +270,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
             g.destr.items.delete(i);
             continue;
         }
-        if !does_of_box(g, b).casing.unwrap_or(false) {
+        if !crate::scene_materials::does_of_box(g, b).casing {
             continue;
         }
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();

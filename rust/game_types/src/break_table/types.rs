@@ -178,11 +178,6 @@ pub struct CellGrid {
     pub box_: BoxId,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct MatOfBox {
-    pub does: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksShare {
     pub thrown: f64,

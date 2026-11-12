@@ -1,6 +1,6 @@
 // A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its own `build` (the floor), lets the exporter dress it
 // exactly as it dresses any level, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
-//   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (src/scene/materials.ts, Box.does):
+//   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (tools/levels/lib/materials.ts, Box.does):
 //               every box has its word before the first repaint (tools/levels/doesWas.ts stampDoes, the exporter's own step) and a repaint leaves it, so
 //               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;
 //   · DECALS    appended LAST under the group 'look': NoShadow boxes only, EVERY ONE FROM THE FLOOR UP (rugs, patches and wear on the ground, the damp foot
@@ -19,7 +19,7 @@ import { GWOT_PAINTS, GWOT_PALETTE, ROUGH_CLOTH, lookPaintOf, type GwotMat, type
 import { OFFICE_PALETTE } from './lib/officeGen';
 import { gwotKit, type GwotHost, type GwotKit, type RugStyle } from './lib/gwotKit';
 import { MARKING_TEXEL, mkHash } from '../../src/scene/markings';
-import { doesOf } from '../../src/scene/materials';
+import { doesOf } from './lib/does';
 import { stampDoes } from './doesWas';
 import { DRESS_GROUP, isLived } from './lib/lived';
 import { saidAs, tonedAs, worded, repainted, type BoxStuff } from '../../src/scene/stuff';
@@ -52,7 +52,7 @@ export interface SkinCtx {
   y0: number; y1: number; thin: number; long: number;
   /** stands from the floor to (near) the ceiling */
   full: boolean;
-  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, rust/game_rules/src/breakage/furnblast.rs) */
+  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: lib/materials.ts, rust/game_rules/src/breakage/furnblast.rs) */
   steel: boolean;
   /** 0‥1, the same for every box of this group */
   gh: number;
@@ -167,7 +167,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], maxH = Math.max(b.h[0], b.h[1], b.h[2]);
     const lit = b.emissive[0] + b.emissive[1] + b.emissive[2] > 0;
     if (lit || fixture.has(i) || g === DRESS_GROUP || (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || (maxH <= 0.2 && y0 > 0.3) || ((b.flags & BoxFlag.NoShadow) && y1 > 0.1) || inLook(b.albedo, S.of)) { st.kept++; continue; }
-    const name = officeNameOf(b.albedo), steel = !name && !!doesOf(b).steel;
+    const name = officeNameOf(b.albedo), steel = !name && doesOf(b).steel;
     const c: SkinCtx = { i, b, group: g, name, y0, y1, thin: Math.min(b.h[0], b.h[2]) * 2, long: Math.max(b.h[0], b.h[2]) * 2, full: y0 <= 0.1 && y1 >= 2.2, steel, gh: (hashStr(g) % 4096) / 4096 };
     const picked = S.pick?.(c), ownAt = picked === undefined && name === undefined ? (S.own ?? []).findIndex(([a]) => a[0] === b.albedo[0] && a[1] === b.albedo[1] && a[2] === b.albedo[2]) : -1;
     const own = ownAt >= 0 ? S.own![ownAt][1] : undefined; if (ownAt >= 0) ownWorn.add(ownAt);

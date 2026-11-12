@@ -105,11 +105,11 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
 
     // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
     let k_ = g.k.winbars;
-    let (bc, bh, yaw, albedo, does) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw, r.albedo, r.does.map(|w| String::from(w.as_str()))) };
+    let (bc, bh, yaw, albedo, does) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw, r.albedo, r.does) };
     let n = m::max(1.0, m::round(k_.pieces));
     let y0 = bc[1] - bh[1];
     let h = 2.0 * bh[1];
-    let cls = crate::furnblast::break_class_of(g, &crate::furnblast::BreakClassOfB { does });
+    let cls = crate::scene_materials::does_of(does).breaks;
     let land = crate::furnblast::furn_break_row(cls).land;
     let seed = seed_word(crate::glass::box_seed(g, b), v3::clamp((at[1] - y0) / h, 0.0, 1.0));
     let mut cuts = vec![0.0];
