@@ -46,7 +46,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<CloseK
     g.ch[gc].vel = [0.0, 0.0, 0.0];
     g.gd[gd].drop_path();
     let at = v3::add(g.ch[gc].pos, [0.0, 1.3, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 /// Both his hands go to a man.
 fn hands_to_man(g: &mut Game, p: PlayerId) {

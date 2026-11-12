@@ -16,7 +16,7 @@ The command that tells whether a change holds, from one native test up to the re
 | `rust/game_face/prebuilt/` | the checked-in module and `SOURCES`, the hash of what it was built from |
 | `rust/game_start/tests/` | the native tests |
 | `rust/game_start/src/bin/gate/`, `rust/game_start/pins.txt` | `gate`, and what its rows are held to |
-| `rust/game_start/src/bin/` | also `hold.rs` (with `rust/game_start/hands/`), `missions.rs`, `levels.rs`, `blastcost.rs` (what a wall blast's tick costs) |
+| `rust/game_start/src/bin/` | also `hold.rs` (with `rust/game_start/hands/`), `missions.rs`, `levels.rs`, `blastcost.rs` (what a wall blast's tick costs), `half/` (the page's half) |
 | `tools/qa/checks.ts` | every check that stands no game of its own: one table, by group |
 | `tools/qa/pages.ts`, `tools/qa/page.cjs` | the page scripts' table and runner, and what each script shares |
 | `src/host/drawpage.ts` | the page, and the `window` hooks at the foot of its `main` |
@@ -73,6 +73,8 @@ each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 
 
 - `hold keep DIR`, then `hold check DIR` on the changed tree: for a change meant to change no play. It names the first frame and the parts that differ.
 - `missions > before.tsv`, the same to `after.tsv`, then `missions diff before.tsv after.tsv`: for a change meant to change play, never a claim about how hard a mission is.
+- `half`: writes the page's half (`sections.ts`, `commands.ts`, `asks.ts`, `face.ts`, `input.ts` and `gpu.ts` of `src/draw/`, `src/view/read.ts`, the shaders' rows) from what Rust declares;
+  `half --check` is red where a file would change, as `tests/half.rs` is, and a module of another stamp is refused as a page loads.
 - `levels second-way | sight | walked | stacks | stands | doors | charges | names | rain`: the level tool, exit 1 a FAIL line.
 
 **Checks.** `bun run tools/qa/checks.ts [group | name …] [--list]`, groups `picture`, `shaders`, `page`, `menus`, `sound`, `levels`, `words`, `build`. Each is a file run in its
@@ -90,12 +92,11 @@ only by name. It starts one dev server with no backend and runs a script at a ti
 A drawn frame is very slow there. So a script steps with nothing drawn, and one about keys stubs the renderer with `__engine.render = () => {}`: it saw no picture at all, so say so.
 Playwright's clicks hang on the software adapter: click by script.
 
-**`tools/draw/`**, by `bun run`. The build runs `ban.ts` and `checks.ts` runs `gen.ts --check`; run the others a change touches.
+**`tools/draw/`**, by `bun run`. The build runs `ban.ts`; run the others a change touches.
 
 | file | what it says |
 |---|---|
 | `ban.ts` | the page imports no game code and nothing a level is made with; the build's first step |
-| `gen.ts`, with `--check` | writes the page's offsets and commands from the Rust declarations; `--check` is red where a file would change |
 | `held.ts`, `unused.ts` | what the pages are built from and what holds the other files; declarations nothing uses (`TS_LIB` or the vendored compiler) |
 | `play-check.ts` | every mission on the module: started, stepped, drawn, saved, loaded, lost to a planted panic, restarted |
 | `hands-check.ts`, `net-check.ts`, `keep-check.ts` | the benchmark's scenes played hands-off; a game of two on the page's half; a run kept in beats |
@@ -160,7 +161,7 @@ context has none of it, and a person's browser may. An address word wins over wh
 - **A gate row:** a kind in `rows.rs` (`all` or `long`), a job in `Job`, and a row in `breaks` with the words its failure must hold. Then a whole `gate pin`, since only that writes the list of rows.
 - **A check:** a file in `tools/qa/` with a usage line and a red path, and a row of `ROWS` in `checks.ts`.
 - **A page script:** `page({ name })` from `page.cjs`, `P.open`, `check`, `P.end`, and a row of `PAGES` in `pages.ts` with the minutes it took (0 means not read).
-- **A section, command or view:** the Rust declaration, then `bun run tools/draw/gen.ts`.
+- **A section, command or view:** the Rust declaration, then `cargo run --profile gate --bin half` in `rust/game_start`.
 - **Rust the page should play with no cargo:** `bun run tools/blitz/face-build.ts --prebuilt` where cargo runs, in the same commit. No check asks this; `--where` says how it stands.
 - **A hook or an address word:** the foot of `main` in `drawpage.ts`; a rule's word in `words.rs`. A word about the visit and not the run goes in `VISIT_FLAGS`.
 

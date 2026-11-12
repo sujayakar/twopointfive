@@ -152,7 +152,7 @@ pub(super) fn note(g: &mut crate::game::Game, what: &str) {
 /// Control's voice: a line on the net with nobody in the building saying it.
 pub(super) fn control(g: &mut crate::game::Game, text: &str) {
     crate::cues::cues_radio(g, &alloc::format!("CONTROL — {}", text));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.55), None);
 }
 
 /// Control's voice, with a row in the run's timeline.
@@ -188,7 +188,7 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
     let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
 
@@ -337,7 +337,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
         return false;
     }
     let panel = reason == crate::qrf::QrfReason::Panel;
-    if !g.tune.qrf && !panel { return false; }
+    if !g.k.tune.qrf && !panel { return false; }
     if !live(g) && !panel { return false; }
     if !has_response(g) { note(g, "no-team:this level has none"); return false; }
     if room_for(g) < 2.0 {

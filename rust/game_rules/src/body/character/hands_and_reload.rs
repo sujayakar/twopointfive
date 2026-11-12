@@ -9,11 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- what stands between a body and the skeleton's calls
 
-/// `pose.rot(i)`, a node by the list's usize
-fn rot(g: &Game, pose: crate::anim_skeleton::Pose, i: usize) -> Quat { crate::anim_skeleton::pose_rot(g, pose, i as f64) }
-/// `pose.setRot(i, q)`, a node by the list's usize
-fn set_rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize, q: Quat) { crate::anim_skeleton::pose_set_rot(g, pose, i as f64, q) }
-
 // ---- the layers' columns: get / put, in the order the module's layer is handed them
 
 // ---- the action clip
@@ -56,31 +51,30 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
 
 /// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
-    let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
-    anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
 }
 
 // ---- MOVES
 
 /// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs.
 pub(super) fn anim_mv_pre(g: &mut crate::game::Game, c: CharId, dt: f64, move_w: f64, stand_w: f64) -> crate::character::MvGait {
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_pre(s, an, dt, move_w, stand_w, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::mv_pre(s, an, dt, move_w, stand_w, k));
     g.ch[c].anim.mv_out
 }
 
 /// A lean round an edge, eased.
-pub(super) fn anim_lean_body(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::lean_body(s, an, dt)); }
+pub(super) fn anim_lean_body(g: &mut crate::game::Game, c: CharId, dt: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::lean_body(s, an, dt)); }
 
 /// The gaze stabiliser's working out: the yaw the neck and head take out this frame.
 pub(super) fn anim_gaze_keep(g: &mut crate::game::Game, c: CharId, dt: f64, want_w: f64, crouch_pose: f64, w_sprint: f64) -> f64 {
     let mut fix = 0.0;
-    anim_layer(g, c, |s, an, _| ::sim::layers::gaze_keep(s, an, dt, want_w, crouch_pose, w_sprint, &mut fix));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::gaze_keep(s, an, dt, want_w, crouch_pose, w_sprint, &mut fix));
     fix
 }
 
 /// The trunk's share, into pA right before the long gun's own trunk set.
 pub(super) fn anim_mv_trunk(g: &mut crate::game::Game, c: CharId, w: f64, o: crate::character::MvGait, aim_pass: bool) {
-    if w >= 0.003 { anim_layer(g, c, |s, an, k| ::sim::layers::mv_trunk(s, an, w, o, aim_pass, k)); }
+    if w >= 0.003 { crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::mv_trunk(s, an, w, o, aim_pass, k)); }
 }
 
 /// MOVES, the second pass: the arms the fight does not read, after every other layer: the magazine change, the hand to his ribs, a figure kept down.
@@ -195,20 +189,17 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
         Some(FeedPath::Arm0(p)) => (marks(if back { &MV2.reload.back } else { &MV2.reload.box_ }), Some(p.keys)),
         None => (marks(if back { &MV2.reload.back } else { &MV2.reload.box_ }), None),
     };
-    if let Some(k) = &keys {
-        crate::anim_skeleton::layer_fits("a reload's list of the hand's stations (gunreload.ts feedPath)", k.len() as f64, crate::anim_skeleton::LAYER_KEYS_MAX, None);
-    }
-    anim_layer(g, c, |s, an, k| ::sim::layers::reload_arm(s, an, t, w, &marks, keys.as_deref(), k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::reload_arm(s, an, t, w, &marks, keys.as_deref(), k));
 }
 
 /// A pistol's magazine change, the support hand's.
-fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
+fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
 /// The support hand pressed to his ribs.
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
 
 /// A figure kept down: wrists behind the back, or hands on the head.
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -223,7 +214,7 @@ pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 
 /// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis.
 fn anim_mv_post_body(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, k));
 }
 
 /// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss.
@@ -231,7 +222,7 @@ fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
     let an = &g.ch[c].anim;
     let (m, p) = (&an.mvs, &an.mv_po);
     if !(p.stw > 0.003) && !p.gun && !(p.dzw > 0.003) && !(m.ts_t >= 0.0) { return; }
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_arms(s, an, dt, gate, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_arms(s, an, dt, gate, k));
 }
 
 // ---- procedural layers
@@ -251,23 +242,23 @@ pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_
             if j == 0 && js::truthy(spread) {
                 q = v3::quat::mul(v3::quat::axis_angle(az(), (fi as f64 - 1.2) * spread * sign * 9.0 * DEGR), q);
             }
-            let r = v3::quat::normalize(v3::quat::mul(rot(g, rest, node), q));
-            set_rot(g, pose, node, r);
+            let r = v3::quat::normalize(v3::quat::mul(g.ch[c].poses.rot(rest, node), q));
+            g.ch[c].poses.set_rot(pose, node, r);
         }
     }
     for j in 0..g.ch[c].anim.thumbs[sd].len() {
         let node = g.ch[c].anim.thumbs[sd][j];
-        let r = v3::quat::normalize(v3::quat::mul(rot(g, rest, node), v3::quat::axis_angle(ax(), thumb * TJ[j] * DEGR)));
-        set_rot(g, pose, node, r);
+        let r = v3::quat::normalize(v3::quat::mul(g.ch[c].poses.rot(rest, node), v3::quat::axis_angle(ax(), thumb * TJ[j] * DEGR)));
+        g.ch[c].poses.set_rot(pose, node, r);
     }
     if !g.ch[c].anim.hn.quiet {
-        let n = crate::anim_skeleton::pose_rows(pose.nodes as f64);
+        let n = g.ch[c].poses.rows() as f64;
         let b = core::mem::take(&mut g.ch[c].anim.hn.base[sd]);   // (lent out for the sums, as the pose's columns are asked of g beside it; nothing between here and its return reads it)
         for gi in 0..5 {
             let k = gi * 3;
             let ns = &g.ch[c].anim.hn.nodes[sd];
             let (n0, n1, n2) = (ns[k] as f64, ns[k + 1] as f64, ns[k + 2] as f64);
-            let d = crate::anim_skeleton::pose_cols(g, pose);
+            let d = g.ch[c].poses.of_mut(pose);
             let sum = (q_ang(d, 3.0 * n + n0, n, &b, (k * 4) as f64) + q_ang(d, 3.0 * n + n1, n, &b, (k * 4 + 4) as f64) + q_ang(d, 3.0 * n + n2, n, &b, (k * 4 + 8) as f64)) / 3.0;
             let nt = &mut g.ch[c].anim.hn.note[sd];
             nt[gi] = m::min(nt[gi] as f64, sum) as f32;
@@ -277,7 +268,7 @@ pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_
 }
 
 /// MOVES, crouched: the kneeling foot's toe brought back onto the floor.
-pub(super) fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::toes_up(s, an, w)); }
+pub(super) fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::toes_up(s, an, w)); }
 
 /// The man's own small hash of `k` to −1‥1 (handsBuild's `h`): the die of how his hands hang, drawing nothing from the game's.
 fn hand_hash(seed: f64, k: f64) -> f64 {
@@ -292,9 +283,9 @@ fn hand_hash(seed: f64, k: f64) -> f64 {
 fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     use v3::quat;
     let hd = &HAND;
-    let (seed, nodes, rest) = (g.ch[c].anim.hn.seed, g.ch[c].anim.p_a.nodes, g.ch[c].anim.rest);
-    let p = crate::anim_skeleton::pose_new(g, nodes as usize);   // (its own scratch, once a man)
-    crate::anim_skeleton::pose_copy(g, p, rest);
+    let (seed, rest) = (g.ch[c].anim.hn.seed, g.ch[c].anim.rest);
+    let p = g.ch[c].poses.make();   // (a scratch, once a man)
+    g.ch[c].poses.copy(rest, p);
     let h = |k: usize| hand_hash(seed, k as f64);
     g.ch[c].anim.hn.quiet = true;
     g.ch[c].anim.hn.open = Vec::new();
@@ -306,27 +297,27 @@ fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
         let th = g.ch[c].anim.thumbs[sd].clone();
         let t0 = th[0];
         // the thumb up toward the palm's plane, about the fingers' axis
-        let r = quat::normalize(quat::mul(quat::axis_angle(ay(), sign * hd.thumb_in * DEGR), rot(g, p, t0)));
-        set_rot(g, p, t0, r);
+        let r = quat::normalize(quat::mul(quat::axis_angle(ay(), sign * hd.thumb_in * DEGR), g.ch[c].poses.rot(p, t0)));
+        g.ch[c].poses.set_rot(p, t0, r);
         // …brought in toward the fingers' line, and its two outer joints bent
-        let along = quat::rotate(rot(g, p, t0), ay());
+        let along = quat::rotate(g.ch[c].poses.rot(p, t0), ay());
         let ax = v3::cross(along, ay());
         let al = v3::len(ax);
         if al > 1e-4 && js::truthy(hd.thumb_close) {
-            let r = quat::normalize(quat::mul(quat::axis_angle(v3::scale(ax, 1.0 / al), hd.thumb_close * DEGR), rot(g, p, t0)));
-            set_rot(g, p, t0, r);
+            let r = quat::normalize(quat::mul(quat::axis_angle(v3::scale(ax, 1.0 / al), hd.thumb_close * DEGR), g.ch[c].poses.rot(p, t0)));
+            g.ch[c].poses.set_rot(p, t0, r);
         }
-        let mut up = rot(g, p, t0);
+        let mut up = g.ch[c].poses.rot(p, t0);
         if js::truthy(hd.thumb_bend) {
             for j in [1usize, 2] {
-                let dd = quat::rotate(quat::mul(up, rot(g, p, th[j])), ay());
+                let dd = quat::rotate(quat::mul(up, g.ch[c].poses.rot(p, th[j])), ay());
                 let bx = v3::cross(dd, ay());
                 let bl = v3::len(bx);
                 if bl > 1e-4 {
-                    let r = quat::normalize(quat::mul(quat::axis_angle(quat::rotate(quat::conj(up), v3::scale(bx, 1.0 / bl)), hd.thumb_bend * DEGR), rot(g, p, th[j])));
-                    set_rot(g, p, th[j], r);
+                    let r = quat::normalize(quat::mul(quat::axis_angle(quat::rotate(quat::conj(up), v3::scale(bx, 1.0 / bl)), hd.thumb_bend * DEGR), g.ch[c].poses.rot(p, th[j])));
+                    g.ch[c].poses.set_rot(p, th[j], r);
                 }
-                up = quat::mul(up, rot(g, p, th[j]));
+                up = quat::mul(up, g.ch[c].poses.rot(p, th[j]));
             }
         }
         let mut o = vec![0.0f32; 60];
@@ -334,13 +325,13 @@ fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
             let node = g.ch[c].anim.hn.nodes[sd][k] as usize;
             let f = &g.ch[c].anim.hn.fist[sd];
             let fq = [f[k * 4] as f64, f[k * 4 + 1] as f64, f[k * 4 + 2] as f64, f[k * 4 + 3] as f64];
-            let q = quat::mul(quat::conj(fq), rot(g, p, node));
+            let q = quat::mul(quat::conj(fq), g.ch[c].poses.rot(p, node));
             for i in 0..4 { o[k * 4 + i] = q[i] as f32; }
         }
         g.ch[c].anim.hn.open.push(o);
         for k in 0..3 {
             let node = g.ch[c].anim.hn.nodes[sd][k] as usize;
-            let q = rot(g, p, node);
+            let q = g.ch[c].poses.rot(p, node);
             for i in 0..4 { g.ch[c].anim.hn.thumb[sd][k * 4 + i] = q[i] as f32; }
         }
     }
@@ -348,19 +339,19 @@ fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
         let node = g.ch[c].anim.fingers[1][0][j];
         let mut q = quat::axis_angle(ax(), hd.trig[j] * DEGR);
         if j == 0 { q = quat::mul(quat::axis_angle(az(), -hd.trig_spread * DEGR), q); }
-        let r = quat::normalize(quat::mul(rot(g, rest, node), q));
+        let r = quat::normalize(quat::mul(g.ch[c].poses.rot(rest, node), q));
         for i in 0..4 { g.ch[c].anim.hn.trig[j * 4 + i] = r[i] as f32; }
     }
     g.ch[c].anim.hn.quiet = false;
     g.ch[c].anim.hn.built = seed;
-    crate::anim_skeleton::pose_done(g, p);   // (the scratch is dropped)
+    g.ch[c].poses.let_go(p);
 }
 
 /// The hand pass: digit joints of pA only.
 pub(super) fn anim_hands_pass(g: &mut crate::game::Game, c: CharId, dt: f64, full_l: f64, full_r: f64, gun_r: f64) {
     if g.ch[c].anim.hn.built != g.ch[c].anim.hn.seed { anim_hands_build(g, c); }
     hand_tables_now(&mut g.ch[c].anim);
-    anim_layer(g, c, |s, an, _| ::sim::layers::hands_pass(s, an, dt, [full_l, full_r], gun_r));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::hands_pass(s, an, dt, [full_l, full_r], gun_r));
 }
 
 /// The kept run of doubles current for the man's hand tables (made again when the tables are)
@@ -380,16 +371,16 @@ fn hand_tables_now(an: &mut Anim) {
 }
 
 /// Stance, body half.
-pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, speed: f64, stand: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::stance_body(s, an, w, speed, stand)); }
+pub(super) fn anim_stance_body(g: &mut crate::game::Game, c: CharId, w: f64, speed: f64, stand: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::stance_body(s, an, w, speed, stand)); }
 
 /// The stand pose: the idle and over it the cycle.
 pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_idle: f64, w_walk: f64, w_jog: f64, w_sprint: f64) {
     let (idle, idle_t) = (clip_of(g, c, "Idle_Loop"), g.ch[c].anim.idle_t);
-    let idle = clip_at(g, c, idle, idle_t);
-    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; clip_at(g, c, clip, t) };
+    let idle = ::sim::layers::At { clip: idle, t: idle_t };
+    let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.art.clip[clip].duration; ::sim::layers::At { clip, t: t } };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
-    anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
 }
 
 /// The crouch laid over the stand pose.

@@ -84,7 +84,7 @@ fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, me
   let metalPix = metalIn > 0.5;
   if (!(floorPix || skirtPix || dustPix || metalPix)) { return o; }
   let b = boxGeo[bi];
-  if ((b.flags & BOX_EMISSIVE) != 0u) { return o; }                     // a lit fixture's face is its light, not a surface anybody wears
+  if ((b.flags & GEO_EMISSIVE) != 0u) { return o; }                     // a lit fixture's face is its light, not a surface anybody wears
   // box-local position; which face this is; the distance to that face's nearest edge (the second face pair's inward distance)
   let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - b.c);

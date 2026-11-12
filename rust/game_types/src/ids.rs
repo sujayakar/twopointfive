@@ -38,8 +38,6 @@ id! {
     AnimGltfCastInfoId,
     /// GltfCharacter: g.art.rig
     RigId,
-    /// PoseSet: g.tab.pose_set
-    PoseSetId,
     /// Ragdoll: g.tab.ragdoll
     RagdollId,
     /// Character: g.ch

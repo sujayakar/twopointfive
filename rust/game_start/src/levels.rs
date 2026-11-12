@@ -227,7 +227,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
     } }
     let wedgeable: Vec<Vec<usize>> = (0..rooms.len()).map(|i| if manned[i] { (0..doors.len()).filter(|&k| doors[k].into == Some(i) && doors[k].plain.is_empty()).collect() } else { vec![] }).collect();
     // windows: a sheet a round opens and a man walks through, with floor of two rooms at its faces
-    let glass = game::scene_boxes::box_flag().glass as i64;
+    let glass = game::scene_boxes::box_flag::GLASS as i64;
     let mut windows: Vec<Window> = Vec::new();
     for bi in 0..g.col.boxes.len() {
         let id = g.col.boxes[bi];
@@ -646,8 +646,7 @@ fn doors(levels: &[String], rows: bool) -> Verdicts {
             if rows { v.note(format!("      {level} {}: air {clear:.2} by {head:.2}, leaf {width:.2} by {tall:.2}", d.name)); }
             if !why.is_empty() { bad.push(format!("{}: {}", d.name, why.join("; "))); }
         }
-        let flag = game::scene_boxes::box_flag();
-        let skip = flag.no_shadow as i64 | flag.dynamic as i64 | flag.glass as i64;
+        let skip = game::scene_boxes::box_flag::NO_SHADOW as i64 | game::scene_boxes::box_flag::DYNAMIC as i64 | game::scene_boxes::box_flag::GLASS as i64;
         for bi in 0..g.col.boxes.len() {
             let (c, h, yaw, flags) = { let b = &g.tab.boxes[g.col.boxes[bi]]; (b.c, b.h, b.yaw, b.flags as i64) };
             if flags & skip != 0 || (2.0 * yaw).sin().abs() > 1e-3 { continue; }

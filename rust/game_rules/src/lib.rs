@@ -4,13 +4,13 @@
 extern crate alloc;
 pub use game_types::*;
 pub mod tick;
-pub use tick::{audio_iface, camera, cmd, effects, env, game, input, out_events, savestate, seats, standing, sim_men_store, state_words, view, walkahead, dice};
+pub use tick::{audio_iface, camera, cmd, effects, env, game, input, out_events, savestate, seats, standing, state_words, view, walkahead, dice};
 pub mod world;
 pub use world::{ask, floor, levelfit, places, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
 pub mod air;
 pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, weather, weather_kinds, wet, wind};
 pub mod body;
-pub use body::{anim_gltf, anim_skeleton, character, packside, posehome, ragdoll, stealthfeed};
+pub use body::{anim_gltf, anim_skeleton, character, packside, ragdoll, stealthfeed};
 pub mod outfit;
 pub use outfit::{cast, char_look, gear, gunlook, gunslots, issue, kit, kitanim, kitload, kitstage, loadout, rig_props, slotsetup, stature};
 pub mod guns;

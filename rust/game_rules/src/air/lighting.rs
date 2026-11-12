@@ -133,8 +133,8 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
 pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::lighting::SetBlackoutCause) {
     let Some(fresh) = crate::fixtures::mains_trip(g, seconds) else { return };
     let bp = g.level.breaker.pos;
-    crate::audio_iface::game_audio_like_play(g, "powerDown", Some(bp), Some(1.0), None);
-    crate::audio_iface::game_audio_like_play(g, "powerDown", None, Some(0.35), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PowerDown, Some(bp), Some(1.0), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PowerDown, None, Some(0.35), None);
     if cause != crate::lighting::SetBlackoutCause::Debug && crate::mission::mission_live(g) {
         g.mission.stats.blackout = true;
         crate::chronicle::chron_blackout(g, cause.as_str());
@@ -186,7 +186,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
             }
             crate::game::game_say(g, best, "power's out — checking the breaker", Some(true), None);
             let p = g.pos_of(best);
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(p), Some(0.6), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(p), Some(0.6), None);
         }
     }
     if fresh {
@@ -202,8 +202,8 @@ pub fn end_blackout(g: &mut crate::game::Game) {
 /// The mains have come back (the module has said so): what goes with it.
 fn mains_back(g: &mut crate::game::Game) {
     let bp = g.level.breaker.pos;
-    crate::audio_iface::game_audio_like_play(g, "powerUp", Some(bp), Some(1.0), None);
-    crate::audio_iface::game_audio_like_play(g, "powerUp", None, Some(0.3), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PowerUp, Some(bp), Some(1.0), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PowerUp, None, Some(0.3), None);
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -268,7 +268,7 @@ pub fn ocpable(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let p = g.player;
     if !crate::weapons::ocp_ready(&g.pl[p].ocp) {
-        crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Deny, None, Some(0.5), None);
         return;
     }
     let t = match t {
@@ -281,8 +281,8 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                     }
                     crate::weapons::ocp_use(&mut g.pl[p].ocp);
                     let muzzle = g.ch[g.pl[p].ch].muzzle;
-                    crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
-                    g.gd[gd].light_dead_until = g.time + g.tune.ocp_duration * 0.7;
+                    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
+                    g.gd[gd].light_dead_until = g.time + g.k.tune.ocp_duration * 0.7;
                     let c = g.gd[gd].ch;
                     let what = alloc::format!("{}'s torch", g.gd[gd].callsign);
                     let pos = g.ch[c].pos;
@@ -294,11 +294,11 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                         crate::mind::fix(g, gd, Some(v3::add(pos, v3::scale(fwd, 2.0))), "lighting");
                     }
                     let pos = g.ch[c].pos;
-                    crate::audio_iface::game_audio_like_play(g, "lightOff", Some(pos), Some(0.6), None);
+                    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightOff, Some(pos), Some(0.6), None);
                     return;
                 }
             }
-            crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Deny, None, Some(0.5), None);
             return;
         }
     };
@@ -315,17 +315,17 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                 None => false,
             })
         {
-            crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Deny, None, Some(0.5), None);
             return;
         }
         if g.light_home.mains.active {
-            crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Deny, None, Some(0.5), None);
             return;
         }
         crate::weapons::ocp_use(&mut g.pl[p].ocp);
         let muzzle = g.ch[c].muzzle;
-        crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
-        let secs = g.tune.ocp_duration * 2.5;
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
+        let secs = g.k.tune.ocp_duration * 2.5;
         crate::game::game_set_blackout(g, secs, crate::lighting::SetBlackoutCause::Ocp);
         return;
     }
@@ -335,8 +335,8 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     }
     crate::weapons::ocp_use(&mut g.pl[p].ocp);
     let muzzle = g.ch[g.pl[p].ch].muzzle;
-    crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
-    let until = g.time + g.tune.ocp_duration;
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Ocp, Some(muzzle), Some(1.0), None);
+    let until = g.time + g.k.tune.ocp_duration;
     g.tab.fixture[t].blind_until = until;
     if kind != crate::fixtures::FixtureKind::Device {
         crate::game::game_light_event(g, t, Some(crate::lighting::LightEventCause::Ocp), None);
@@ -344,7 +344,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let tg = crate::chronicle::FixtureNameTg { name, group: g.tab.fixture[t].group.clone() };
     let what = crate::chronicle::fixture_name(&tg);
     crate::chronicle::chron_ocp(g, &what, tpos);
-    crate::audio_iface::game_audio_like_play(g, "lightOff", Some(tpos), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightOff, Some(tpos), Some(0.7), None);
 }
 
 /// Every fixture of a group on or off.

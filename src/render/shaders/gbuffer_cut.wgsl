@@ -1,6 +1,6 @@
 // G-buffer raster of CUT BOXES (scene/cut.ts): appended to gbuffer.wgsl in a SECOND module that exists only in a build compiled with the cut switch
 // (render/gbuffer.ts) — gbuffer.wgsl itself, and the plain boxes' pipeline, are untouched. A cut box is the convex solid
-//   { |p| ≤ h }  ∩  { n_k · p ≤ d_k }   (box-local p; the planes in its CUT_ROWS plane rows of the cut table, common.wgsl cutPlaneRow)
+//   { |p| ≤ h }  ∩  { n_k · p ≤ d_k }   (box-local p; the planes in its CUT_PLANES plane rows of the cut table, boxmat.wgsl cutPlane)
 // and is drawn as its PLANES: the box's six faces (the cube's 36 vertices, as vsBox) + one quad per cut plane, lying in that plane and big enough to cover the
 // box's whole cross-section; the fragment stage then DISCARDS whatever lies outside the solid — a box-face fragment beyond any cut plane, a cut-face fragment
 // outside the box or beyond another plane. Along a pixel's ray a convex solid is entered through exactly one of its planes, at a point inside all the others, so
@@ -35,7 +35,7 @@ struct BoxCutVOut {
     lc = cubeCorner(vi) * h; ln = cubeNormal(vi); face = f32(f);
     if (f == 2u && c.y + h.y >= CEIL_Y - 0.03 && c.y - h.y < CEIL_Y - 0.5) { cap = true; }   // (vsBox's section-cut rule for a top face flush under the ceiling slab)
   } else {
-    let k = (vi - 36u) / 6u; let pl = cutPlaneRow(bi, k); let n = pl.xyz;
+    let k = (vi - 36u) / 6u; let pl = cutPlane(bi, k); let n = pl.xyz;
     face = 8.0 + f32(k); ln = n; lc = vec3f(0.0);
     if (dot(n, n) < 0.25) { dead = true; }                  // an unused row: no quad
     else {
@@ -82,7 +82,7 @@ struct BoxCutVOut {
 /** ROUND: the axis (0‥2) this prism stands for a round thing about, −1 = an ordinary cut box. Two writers (the core row's w, scene/cut.ts packCut): a ROUND THING of
  *  the level (scene/round.ts, ROUND_CORE_W = 128: about the box's own y, and every ray meets the cylinder inside the prism) and the look page's trials (Box.cutRound,
  *  1024 × (1 + the axis): a prism every ray meets as it is). No ray reads either here. */
-fn cutRoundAxis(bi: u32) -> i32 { let w = u32(max(cutCoreRow(bi).w, 0.0)); if ((w & 128u) != 0u) { return 1; } return i32((w >> 10u) & 3u) - 1; }
+fn cutRoundAxis(bi: u32) -> i32 { let w = u32(max(cutCore(bi).w, 0.0)); if ((w & 128u) != 0u) { return 1; } return i32((w >> 10u) & 3u) - 1; }
 
 /** GBAA across a cut: one edge candidate — a line where `coord` (some linear function of the box-local position, screen gradient g per pixel) reaches `edge`.
  *  boxEdgeOffset's arithmetic per candidate: the perpendicular distance in pixels picks the nearest, which is stored along its major screen axis. */
@@ -101,8 +101,8 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // ---- the cut: is this fragment on the solid? + the nearest edge of the face it lies on, for GBAA (the box's own edges and the lines the planes draw)
   let h = v.hf.xyz; let own = i32(v.hf.w + 0.5) - 8;        // ≥ 0: this fragment lies on cut plane `own`; < 0: on a box face
   var gone = false; var best = 1e9; var ed = vec2f(1.0, 1.0);
-  for (var k = 0; k < i32(CUT_ROWS); k++) {
-    let pl = cutPlaneRow(bi, u32(k));
+  for (var k = 0; k < i32(CUT_PLANES); k++) {
+    let pl = cutPlane(bi, u32(k));
     if (dot(pl.xyz, pl.xyz) < 0.25) { break; }
     if (k == own) { continue; }
     let s = pl.w - dot(pl.xyz, v.lc);                       // metres inside plane k (negative = cut away)
@@ -123,7 +123,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // GLASS (Box.cutGlass, the core row's w: scene/cut.ts packCut): the box's two faces across its own z (a glass plate is thin along z: cutPrism) are a SCREEN DOOR — a share of their pixels is left to what is behind, fewer
   // toward a grazing view (a sheet seen edge-on mirrors) — inside a rim, which with the cut faces and the box's side faces shows the core: the bright edge of sheet
   // glass. The pattern is per pixel, stepped along the TAAU jitter's cycle when asked, so the resolve averages the door to a tint. Picture only.
-  let core = cutCoreRow(bi); let cw = u32(max(core.w, 0.0));
+  let core = cutCore(bi); let cw = u32(max(core.w, 0.0));
   // ROUND (a ROUND THING, scene/round.ts, about the box's own y; or Box.cutRound, scene/shapes.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
   // point (the silhouette and every ray keep the flat faces); marks and the look's paint read them as the box face that normal leans to (flatN: a rule that
   // runs ALONG a face is asked a quarter of the round at a time, and what it leans the normal by is turned back onto the round), the look with the distance
@@ -135,7 +135,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     // packCut), so a box cut to a few facets of a wide circle turns its normal about THAT axis: a bowed roof, a fender. Its paint is read straight down each
     // quarter (no unrolling: the arc is shallow); only its facets and its top turn (the box's own upright faces and its underside stay flat) and its ends get no
     // drum's rim.
-    let last = cutPlaneRow(bi, CUT_ROWS - 1u); arc = select(0.0, max(last.w - 1.0, 0.0), rax != 1 && dot(last.xyz, last.xyz) < 0.25);
+    let last = cutPlane(bi, CUT_PLANES - 1u); arc = select(0.0, max(last.w - 1.0, 0.0), rax != 1 && dot(last.xyz, last.xyz) < 0.25);
     var r = v.lc; r[rax] = 0.0; r.y += arc; let rl = length(r);
     if (abs(ln[rax]) < 0.5 && rl > 1e-4 && !(arc > 0.0 && own < 0 && ln.y < 0.5)) {
       side = true; r = r / rl; n = quatRotate(q, r);

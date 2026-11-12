@@ -153,7 +153,7 @@ pub fn raise_escalation(g: &mut crate::game::Game, to: f64, except: Option<Guard
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, &line, Some(true), None);
         let at = head_or_pos(g, sp);
-        crate::audio_iface::play_at(g, "radio", at, 0.7);
+        crate::audio_iface::play_at(g, crate::audio_iface::Sfx::Radio, at, 0.7);
     }
     if lvl >= 2.0 {
         assign_lockdown(g, prev >= 2.0, except);
@@ -252,7 +252,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     g.gd[gd].stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None);
     let at = head_or_pos(g, gd);
-    crate::audio_iface::play_at_rate(g, "radio", at, 0.5, 1.05);
+    crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::Radio, at, 0.5, 1.05);
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.
 pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
@@ -299,7 +299,7 @@ pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);
         crate::game::game_say(g, gd, &line, Some(true), None);
         let at = head_or_pos(g, gd);
-        crate::audio_iface::play_at_rate(g, "radio", at, 0.4, 1.05);
+        crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::Radio, at, 0.4, 1.05);
     }
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.
@@ -314,7 +314,7 @@ fn check_on_done(g: &mut crate::game::Game, gd: GuardId, m: GuardId, capped: boo
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    crate::audio_iface::play_at(g, "radio", at, 0.7);
+    crate::audio_iface::play_at(g, crate::audio_iface::Sfx::Radio, at, 0.7);
     if !g.gd[m].missing_raised {
         g.gd[m].missing_raised = true;
         let post = post_of(g, m);
@@ -374,7 +374,7 @@ fn next_check_soon(g: &mut Game) {
 fn on_the_radio(g: &mut Game, c: GuardId, line: &str, vol: f64) {
     crate::game::game_say(g, c, line, Some(true), None);
     let at = head_or_pos(g, c);
-    crate::audio_iface::play_at(g, "radio", at, vol);
+    crate::audio_iface::play_at(g, crate::audio_iface::Sfx::Radio, at, vol);
 }
 /// Nobody calls the check while a fight or a clearing is on, or just after an alarm.
 fn net_too_busy(g: &Game, living: &[GuardId]) -> bool {
@@ -516,13 +516,13 @@ pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
         crate::game::game_say(g, gd, &ask, Some(true), None);
         let answer = format!("{} — on me, close up", me);
         crate::game::game_say(g, l, &answer, Some(true), None);
-        crate::audio_iface::play_at(g, "radio", eye, 0.5);
+        crate::audio_iface::play_at(g, crate::audio_iface::Sfx::Radio, eye, 0.5);
         return;
     }
     if rollcall_state(g).stage != RollcallStage::Idle || g.gd[l].found || checker_for(g, l).is_some() { return; }
     let line = format!("{}? …I've lost {} — he was just ahead of me. {}, sound off", him, him, him);
     crate::game::game_say(g, gd, &line, Some(true), None);
-    crate::audio_iface::play_at(g, "radio", eye, 0.6);
+    crate::audio_iface::play_at(g, crate::audio_iface::Sfx::Radio, eye, 0.6);
     if g.gd[l].missed_at < 0.0 { g.gd[l].missed_at = g.time; }
     let now = g.time;
     let r = rollcall_state(g);
@@ -599,8 +599,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
     if rooms.is_empty() {
         return false;
     }
-    let mut c = crate::squad::clearing_new(g, &rooms, a, b);
-    c.serial = g.serial();
+    let c = crate::squad::clearing_new(g, &rooms, a, b);
     g.clearing = Some(c);
     true
 }
@@ -632,7 +631,7 @@ fn step_down_escalation(g: &mut crate::game::Game) {
     if let Some(sp) = sp {
         crate::game::game_say(g, sp, if lvl >= 1.0 { "ease off — singles, back on your routes; weapons stay out" } else { "stand down, back to normal" }, Some(true), None);
         let at = head_or_pos(g, sp);
-        crate::audio_iface::play_at_rate(g, "radio", at, 0.6, 0.95);
+        crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::Radio, at, 0.6, 0.95);
     }
 }
 

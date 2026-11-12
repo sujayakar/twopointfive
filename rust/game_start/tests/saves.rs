@@ -1,4 +1,4 @@
-//! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game and its block, as the page's
+//! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game, as the page's
 //! module does, and puts one back.
 use game::savestate::control::{self, Do};
 use game_start::play::{Opts, Play};
@@ -91,10 +91,28 @@ fn back_at_the_runs_first_step_the_saves_stay() {
     let of = control::stood(&mut h.p.g);
     let kept = control::kept_of(of);
     let (_, first) = kept.iter().find(|(k, _)| k == control::START).expect("the run's first step is kept");
-    let (shelf, new) = (h.p.g.saves.shelf.clone(), first.image.laid(h.p.g.sim));
+    let (shelf, new) = (h.p.g.saves.shelf.clone(), first.image.laid());
     control::over(&mut h.p.g, new);
     h.p.g.saves.shelf = shelf;
     h.frame();
     assert!(h.p.g.saves.shelf.m.has(key.clone()), "the shelf let it go");
     assert!(control::kept_of(of).iter().any(|(k, _)| *k == key), "the game kept under it is gone");
+}
+
+/// THE RULE: the tables of numbers come with the save, the tune with the rest: what a mission or a difficulty set then is what stands. (What the player turned since, the page turns again: it
+/// knows its rows by name.)
+/// A FAILURE MEANS: a level's script shuts the response team out, and after a load it comes.
+#[test]
+fn a_save_brings_its_own_numbers() {
+    let mut h = Host::office(8);
+    h.run(0.5);
+    let then = (false, 1.25);
+    (h.p.g.k.tune.qrf, h.p.g.k.walls.sill) = then;
+    control::ask_save(&mut h.p.g);
+    h.frame();
+    (h.p.g.k.tune.qrf, h.p.g.k.walls.sill) = (true, 0.5);
+    assert_eq!(control::ask_load(&mut h.p.g, "manual.0"), None);
+    h.frame();
+    assert_eq!(h.backs, 1);
+    assert_eq!((h.p.g.k.tune.qrf, h.p.g.k.walls.sill), then, "a number stayed as it was turned after the save");
 }

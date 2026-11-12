@@ -40,7 +40,7 @@ pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool)
             crate::mind::fix(g, gd, Some(spot), "guards");
             g.gd[gd].drop_path();
             crate::game::game_say(g, gd, if off { "this door's off its hinges…" } else { "this lock's been kicked in…" }, None, None);
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(eye), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
             break;
         }
     }

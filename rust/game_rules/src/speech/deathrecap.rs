@@ -283,7 +283,7 @@ fn ear(g: &Game, c: CharId, a: V3) -> bool {
     if straight > EARS_PATH_M { return false; }
     let Some(path) = crate::scene_collision::nav_grid_find_path(g, b, a, Some(6000.0), None) else { return false; };
     if path.is_empty() { return false; }
-    let seal = crate::scene_boxes::box_flag().sound_seal;
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as f64;
     let (mut len, mut door, mut pa) = (0.0, false, [b[0], 1.0, b[2]]);
     for q in path {
         let pb = [q[0], 1.0, q[2]];

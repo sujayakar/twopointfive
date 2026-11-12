@@ -78,41 +78,26 @@ struct OnWall {
 /// parked on the hold's own spots, on the move on the hold's own step or the turned cycle narrowed toward the wall, each sole kept where it stood in the
 /// world through a take until its turn to step. `at_c`: the standing idle sampled over the rest pose (its spine, and its pelvis) · `at_b`: the crouched
 /// idle sampled the same way, read only under the hold's own step (gw > 1e-4): the host samples both until the clip sampler is the module's.
-pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouch_idle: f64, tune: &Knobs) -> bool {
+pub fn wall_body(body: &mut Body, an: &mut Anim, w: f64, p0: [f64; 3], idle: ClipId, crouch_idle: ClipId, tune: &Knobs) {
     let mut o = OnWall { w, p0, ..OnWall::default() };
-    const ROLES: [usize; 16] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     as_on_wall(an, &mut o);
     // the idles underneath, sampled here: the standing one's spine and pelvis, the crouched one's pelvis
-    let Some(nodes) = with_pose(g, o.at, |_d, _rig, nodes, _fk| nodes) else {
-        return false;
-    };
-    if !sample_on_rest(g, o.at_rest, o.at_c, nodes, idle, o.idle_t, true) {
-        return false;
-    }
-    let Some(Some(under)) = with_pose(g, o.at_c, |d, _rig, nodes, _fk| {
-        if !cast(nodes, &ROLES) {
-            return None;
-        }
-        Some([SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, HIPS].map(|r| own_rot(d, role(r))))
-    }) else {
-        return false;
-    };
+    sample_on_rest(body, o.at_rest, o.at_c, idle, o.idle_t, true);
+    let under = body.pose(o.at_c, |d, rig, _fk| {
+        [SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, HIPS].map(|r| own_rot(d, rig.role(r)))
+    });
     let hips_low = if o.gw > 1e-4 {
-        if !sample_on_rest(g, o.at_rest, o.at_b, nodes, crouch_idle, o.idle_t, true) {
-            return false;
-        }
-        let Some(q) = with_pose(g, o.at_b, |d, _rig, _nodes, _fk| own_rot(d, role(HIPS))) else {
-            return false;
-        };
+        sample_on_rest(body, o.at_rest, o.at_b, crouch_idle, o.idle_t, true);
+        let q = body.pose(o.at_b, |d, rig, _fk| own_rot(d, rig.role(HIPS)));
         q
     } else {
         [0.0; 4]
     };
     let (gait, held, wtk) = (&mut an.wall_gait, &mut an.wtk_hold, &mut an.wtk);
-    with_pose(g, o.at, |d, rig, _nodes, fk| {
+    body.pose(o.at, |d, rig, fk| {
         wall_now(d, rig, fk, &mut o);
         // 1. the spine toward the standing idle's, joint by joint
-        wall_spine(d, &under, &o);
+        wall_spine(rig, d, &under, &o);
         // 2. the pelvis
         wall_pelvis(tune, d, rig, fk, gait, &under, hips_low, &o);
         // 3. the spine measured and put, twice over
@@ -133,11 +118,9 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
             Some(gf) if o.gw > 1e-4 => v3::normalize(v3::lerp3(knee_pole(&t.1), gf.2, o.gw)),
             _ => knee_pole(&t.1),
         };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), o.foot_l, &o.t_l.0, Some(&pole_of(&o.t_l, &o.g_l)), 0.6, Some(&o.t_l.1), false);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), o.foot_r, &o.t_r.0, Some(&pole_of(&o.t_r, &o.g_r)), 0.6, Some(&o.t_r.1), true);
-        true
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), o.foot_l, &o.t_l.0, Some(&pole_of(&o.t_l, &o.g_l)), 0.6, Some(&o.t_l.1), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), o.foot_r, &o.t_r.0, Some(&pole_of(&o.t_r, &o.g_r)), 0.6, Some(&o.t_r.1), true);
     })
-    .unwrap_or(false)
 }
 
 /// How he stands on the wall, its normal into the room and his right along it, and the sidle's share.
@@ -193,8 +176,8 @@ fn as_on_wall(an: &mut Anim, o: &mut OnWall) {
 
 /// The joints, and the clip's feet underneath.
 fn wall_now(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
-    let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
-    let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+    let (hips, s1, s2, s3, nk, hd) = (rig.role(HIPS), rig.role(SPINE1), rig.role(SPINE2), rig.role(SPINE3), rig.role(NECK), rig.role(HEAD));
+    let (foot_l, foot_r) = (rig.role(FOOT_L), rig.role(FOOT_R));
     // what is underneath: the clip's feet
     fk_run(rig, d, fk.rot, fk.pos);
     let (f_l, f_r, r_l, r_r) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
@@ -202,9 +185,9 @@ fn wall_now(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
 }
 
 /// The spine toward the standing idle's, joint by joint.
-fn wall_spine(d: &mut [S], under: &[[f64; 4]; 8], o: &OnWall) {
+fn wall_spine(rig: &Rig, d: &mut [S], under: &[[f64; 4]; 8], o: &OnWall) {
     let OnWall { w, s1, s2, s3, nk, hd, .. } = *o;
-    for (j, (i, share)) in [(s1, 0.9), (s2, 0.9), (s3, 0.9), (nk, 0.85), (hd, 0.85), (role(SHOULDER_L), 0.7), (role(SHOULDER_R), 0.7)].into_iter().enumerate() {
+    for (j, (i, share)) in [(s1, 0.9), (s2, 0.9), (s3, 0.9), (nk, 0.85), (hd, 0.85), (rig.role(SHOULDER_L), 0.7), (rig.role(SHOULDER_R), 0.7)].into_iter().enumerate() {
         let q = quat::nlerp(own_rot(d, i), under[j], share * w);
         set_own_rot(d, i, &q);
     }
@@ -241,8 +224,8 @@ fn chest_yaw_of(o: &OnWall, fk: &Fk) -> f64 {
 }
 
 /// Which way the shoulders are turned.
-fn shoulder_yaw_of(fk: &Fk) -> f64 {
-    let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+fn shoulder_yaw_of(rig: &Rig, fk: &Fk) -> f64 {
+    let (a, b) = (fk.at(rig.role(UPPER_ARM_L)), fk.at(rig.role(UPPER_ARM_R)));
     atan2(b[2] - a[2], a[0] - b[0])
 }
 
@@ -255,7 +238,7 @@ fn wall_lean(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
     let (turn_deg, lean_deg, gaze_deg) = (lerp(WALL_POSE.chest_turn, WALL_POSE.peek.turn, e), lerp(lerp(WALL_POSE.lean[0], WALL_POSE.lean[1], cr), WALL_POSE.peek.tilt, e), lerp(WALL_POSE.gaze, WALL_POSE.peek.gaze, e));
     for _pass in 0..2 {
         fk_run(rig, d, fk.rot, fk.pos);
-        let dy = wrap_angle(ny - s * turn_deg * DEGR - (twist - aim_yaw * aim_w) - lerp(shoulder_yaw_of(fk), chest_yaw_of(o, fk), e)) * w;
+        let dy = wrap_angle(ny - s * turn_deg * DEGR - (twist - aim_yaw * aim_w) - lerp(shoulder_yaw_of(rig, fk), chest_yaw_of(o, fk), e)) * w;
         turn(d, rig, s1, q_yaw(dy * 0.3));
         turn(d, rig, s2, q_yaw(dy * 0.35));
         turn(d, rig, s3, q_yaw(dy * 0.35));
@@ -447,27 +430,20 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
 }
 /// The wall hold's arms: both palms laid on the face beside the hips, fingers down and out along it, the elbows where the pose says; mended (WALLSNAP),
 /// the wrists hang beside the hips, a resting hand on the plaster with the thumb beside the index.
-pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> bool {
+pub fn wall_arms(body: &mut Body, an: &mut Anim, w: f64) {
     let (at, at_b, _) = poses(an);
     let (cr, side_x, peek, yaw, gait, park, fixes) = (an.crouch, an.wst.side.x, an.wst.peek.x, an.wall_yaw, an.wall_gait, an.wst.park.x, [an.hand_fix[0], an.hand_fix[1]]);
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS]) { Some(n) } else { None }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    let code = with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         let (w_cr, s, pk) = (clamp(cr, 0.0, 1.0), clamp(side_x, -1.0, 1.0), clamp(peek, 0.0, 1.0));
         let e = pk * pk * (3.0 - 2.0 * pk);
         // the wall's normal (into the room) and his right along the wall, model space
         let nn = [sin(yaw), 0.0, cos(yaw)];
         let tr = [-nn[2], 0.0, nn[0]];
         fk_run(rig, d, fk.rot, fk.pos);
-        let hips = fk.at(role(HIPS));
+        let hips = fk.at(rig.role(HIPS));
         let (hx, hy, hz) = (hips[0], hips[1] + lerp(WALL_POSE.mend.up[0], WALL_POSE.mend.up[1], w_cr), hips[2]);
         let along0 = lerp(WALL_POSE.mend.along[0], WALL_POSE.mend.along[1], w_cr) - WALL_POSE.mend.sway * cos(gait * 2.0 * PI) * (1.0 - clamp(park, 0.0, 1.0)) * lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], w_cr);
         let (e_out, e_room, e_down) = (WALL_POSE.mend.elbow.out, WALL_POSE.mend.elbow.room, WALL_POSE.mend.elbow.down);
@@ -484,22 +460,14 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> bool {
             let fix = fixes[side];
             let r = hand_rot(&fix, [tr[0] * sg * splay, -1.0, tr[2] * sg * splay], nn);
             let pole = [tr[0] * sg * e_out + nn[0] * e_room, -e_down, tr[2] * sg * e_out + nn[2] * e_room];
-            let (up, fore, hnd) = if side == 1 { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) } else { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) };
+            let (up, fore, hnd) = if side == 1 { (rig.role(UPPER_ARM_R), rig.role(FOREARM_R), rig.role(HAND_R)) } else { (rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L)) };
             two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hnd, &p, Some(&pole), 0.9, Some(&r), false);
-            hand(d, hh, side, &[WALL_POSE.mend.curl[0], WALL_POSE.mend.curl[1], WALL_POSE.mend.curl[2], WALL_POSE.mend.curl[3]], WALL_POSE.mend.thumb, WALL_POSE.mend.fan);
+            hand(rig, d, hh, side, &[WALL_POSE.mend.curl[0], WALL_POSE.mend.curl[1], WALL_POSE.mend.curl[2], WALL_POSE.mend.curl[3]], WALL_POSE.mend.thumb, WALL_POSE.mend.fan);
             // the thumb beside the index, out of the plaster
-            turn(d, rig, digits(side)[0] as usize, quat::axis_angle(quat::rotate(fk.rot(hnd), AY), sg * WALL_POSE.mend.thumb_in * DEGR));
+            turn(d, rig, rig.digits(side)[0] as usize, quat::axis_angle(quat::rotate(fk.rot(hnd), AY), sg * WALL_POSE.mend.thumb_in * DEGR));
         }
-        true
-    })
-    .unwrap_or(false);
-    if !code {
-        return false;
-    }
-    arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n) {
-        return false;
-    }
+    });
+    arms_mask(body);
+    body.blend(at, at_b, w, true, at);
     hands_to(&h, an);
-    code
 }

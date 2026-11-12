@@ -13,8 +13,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    js::or_bits(f.no_primary, f.no_shadow)
+    (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range
@@ -295,7 +294,7 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
         if g.tab.fixture[t].boxes.iter().any(|&b| b == i) && !g.tab.fixture[t].broken {
             if destruction_break_target(g, t) {
                 let pos = g.tab.fixture[t].pos;
-                crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.6), None);
+                crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.6), None);
             }
         }
     }
@@ -441,8 +440,8 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
         Some(crate::scene_materials::Surf::Metal) => mark = lane("dent"),
         Some(crate::scene_materials::Surf::Fabric) | Some(crate::scene_materials::Surf::Carpet) => mark = lane("shred"),
         Some(crate::scene_materials::Surf::Glass) => {
-            let c = crate::particle_fx::solid_glass_crack();
-            mark = LaneMark { look: c.look, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
+            let c = g.k.pfx.solid_glass;
+            mark = LaneMark { look: crate::particle_fx::SOLID_GLASS_LOOK, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
         }
         Some(_) => {
             crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, p, n, Some(0.013), Some(crate::render_decals::DecalOpts { clamp_to: Some(box_), attach, ..Default::default() }));
@@ -470,7 +469,7 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
         if !g.tab.fixture[t].broken {
             let lit = destruction_break_target(g, t);
             let pos = g.tab.fixture[t].pos;
-            crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
                 crate::render_lights::light_set_flash(g, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
                 let name = g.tab.fixture[t].name.clone();

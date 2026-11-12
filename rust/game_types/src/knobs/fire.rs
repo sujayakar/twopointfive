@@ -2,6 +2,7 @@
 use crate::bytes::ToBytes;
 use alloc::string::String;
 use alloc::vec::Vec;
+use crate::V3;
 use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
@@ -79,9 +80,10 @@ pub struct FireK {
     /// lamp, the lean, the lamp's wider shift, twice the cracks), so with those on the picture is not the one he tuned: the nearest to that is
     /// `?firereact=0&firelean=0&firebright=0&firesway=0`. `wander` is not his 0.07: his note asking for shadows that move came with it (FIRE_WANDER).
     pub look: FireKLook,
-    /// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
-    ///  flame's height (its foot, a radius lower, stays over a standing man's head on a drum), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-    ///  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke
+    pub plume: FireKPlume,
+    /// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): its source's least width in cells, what it lets out a second, how hot, how fast it
+    ///  leaves, how hard the air is dragged along and how much its way wobbles; filed afresh every `every` s for that long. Where it stands and how wide is `plume`'s.
+    ///  `on` and `view_r` (m) are the picture's: a fire's painted soot hands over to its smoke only with the one, and within the other of what the view looks at
     pub smoke: FireKSmoke,
     /// THE SOUND: the bed's level at the fire (heard for as long as it burns) and each crack's (× how hard the crack is)
     #[k(0.85)] pub bed: f64,
@@ -129,14 +131,12 @@ pub struct FireKLook {
     #[k(40.0)] pub steps: f64,
 }
 
-/// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
-///  flame's height (its foot, a radius lower, stays over a standing man's head on a drum), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-///  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke
+/// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): its source's least width in cells, what it lets out a second, how hot, how fast it
+///  leaves, how hard the air is dragged along and how much its way wobbles; filed afresh every `every` s for that long. Where it stands and how wide is `plume`'s.
+///  `on` and `view_r` (m) are the picture's: a fire's painted soot hands over to its smoke only with the one, and within the other of what the view looks at
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct FireKSmoke {
     #[k(true)] pub on: bool,
-    #[k(1.9)] pub up: f64,
-    #[k(0.26)] pub radius: f64,
     #[k(4.0)] pub cells: f64,
     #[k(1.0)] pub density: f64,
     #[k(21.0)] pub temp: f64,
@@ -145,5 +145,58 @@ pub struct FireKSmoke {
     #[k(0.5)] pub jitter: f64,
     #[k(1.0)] pub every: f64,
     #[k(18.0)] pub view_r: f64,
-    #[k(0.12)] pub lean: f64,
 }
+
+/// THE COLUMN OVER A FIRE: the smoke it lets out on the solver (a steady source and, a few a second, puffs of thicker, hotter gas), the way its embers leave, and its hot air
+/// on the falling snow. The picture alone. Density and heat are the solver's units (see `FireKSmoke`), and "how hard it burns" is the fire's heat, 1 at full strength.
+#[derive(Clone, Copy, Debug, ToBytes, Knobs)]
+pub struct FireKPlume {
+    /// the steady source: how high its middle is over the coals, as a share of `height` · its radius (m) · × `smoke.density` and how hard it burns
+    #[k(0.8)] pub up: f64,
+    #[k(0.2)] pub radius: f64,
+    #[k(0.8)] pub density: f64,
+    /// seconds from one puff to the next
+    #[k(0.42)] pub puff_every: f64,
+    /// how long a puff blows (s): up to full in 0.06 s, fading over its last quarter
+    #[k(0.26)] pub puff_secs: f64,
+    /// how high a puff's middle is over the coals, as a share of `height` · its radius (m)
+    #[k(0.95)] pub puff_up: f64,
+    #[k(0.24)] pub puff_radius: f64,
+    /// m: a puff starts up to this far off the column's middle, dealt on each level axis, and the same two numbers tip the way it leaves
+    #[k(0.09)] pub puff_off: f64,
+    /// what it lets out a second, × how hard the fire burns: density · heat. Then how fast it leaves (m/s). All three also × a share dealt each puff, 0.7‥1.3
+    #[k(3.2)] pub puff_density: f64,
+    #[k(30.0)] pub puff_temp: f64,
+    #[k(1.25)] pub puff_speed: f64,
+    /// how hard it drags the air along · how fast it swells as it leaves (1/s)
+    #[k(9.0)] pub puff_push: f64,
+    #[k(2.2)] pub puff_expand: f64,
+    /// the color of the smoke, from both sources
+    #[k([0.46, 0.48, 0.53])] pub soot: V3,
+    /// per second: how fast the soot painted in the flame hands over to this column as the fire comes near (`smoke.view_r`), and back (0.5 = two seconds)
+    #[k(0.5)] pub soot_ease: f64,
+    /// the embers: where they start over the coals, as a share of the flame's height · their half-angle (radians; a hard crack adds up to 0.6) · how far off the middle they start, as a
+    /// share of the mouth's radius · × `ember_speed` (a hard crack makes that up to 2.6 times faster)
+    #[k(0.72)] pub ember_up: f64,
+    #[k(0.2)] pub ember_spread: f64,
+    #[k(0.4)] pub ember_jit: f64,
+    #[k(1.5)] pub ember_speed: f64,
+    /// the hot air, as the falling snow meets it
+    pub snow: FireKPlumeSnow,
+}
+
+/// A FIRE'S HOT AIR ON THE FALLING SNOW: a jet up the flame's leaning middle, where the look has `fire_snow` on. It carries the flakes and melts them. The picture alone.
+#[derive(Clone, Copy, Debug, ToBytes, Knobs)]
+pub struct FireKPlumeSnow {
+    /// m/s at the mouth, × how hard the fire burns. The melt reads the air's speed as a share of a fixed 2.6, so this moves the melt too
+    #[k(2.6)] pub speed: f64,
+    /// m of climb at which it has slowed to half
+    #[k(2.2)] pub reach: f64,
+    /// m it widens per meter of climb
+    #[k(0.2)] pub spread: f64,
+    /// its radius at the mouth, as a share of the fire's mouth
+    #[k(1.3)] pub mouth: f64,
+    /// m of climb where it stops, fading out from 70% of that. Nothing past it feels the jet
+    #[k(4.5)] pub top: f64,
+}
+

@@ -27,20 +27,19 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - 
 
 /// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them.
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
-    let k = moths(); let mut out = Moths::blank();
+    let k = g.k.moths; let mut out = Moths::blank();
     for t in g.targets.clone() {
         let (kind, group, light) = { let f = &g.tab.fixture[t]; (f.kind, f.group.clone(), f.light) };
         let Some(l) = light else { continue; };
         let (lk, lp) = { let x = &g.tab.light[l]; (x.kind, x.pos) };
         if kind == crate::fixtures::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
     }
-    let fl = crate::scene_boxes::box_flag();
     let mut i = 0.0;
     while i < k.max && !out.lamps.is_empty() {
         let hs = |n: f64| h01(i * 7919.0 + n * 131.0);
         // body along local +X (the heading), the span across local Z: rolling about the body flickers the span seen from above
         let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: [0.0, -50.0, 0.0], h: [0.006, 0.0025, k.wing], albedo: Some(k.albedo),
-            flags: Some((js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64), rough: Some(0.8), mkey: Some(crate::scene_boxes::mkey().test + 16384.0 + i), ..Default::default() });
+            flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64), rough: Some(0.8), mkey: Some(crate::scene_boxes::mkey().test + 16384.0 + i), ..Default::default() });
         let az = hs(9.0) * m::PI * 2.0;
         out.moths.push(Moth { lamp: js::rem(i, out.lamps.len() as f64), r: k.r_min + (k.r_max - k.r_min) * hs(1.0),
             omega: (k.omega_min + (k.omega_max - k.omega_min) * hs(2.0)) * (if hs(3.0) < 0.5 { -1.0 } else { 1.0 }), ph: hs(4.0) * 6.283, bob_f: 0.7 + 1.6 * hs(5.0), bob_ph: hs(6.0) * 6.283,
@@ -60,8 +59,8 @@ pub fn moths_clear(g: &mut crate::game::Game) {
 /// Once a frame: move the moths.
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
-    let k = moths();
-    let on = g.tune.moths;
+    let k = g.k.moths;
+    let on = g.k.tune.moths;
     let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { g.weather.rain_rate } } else { 0.0 };   // (no moths at a lamp in falling snow)
     // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
     for li in 0..g.moths.lamps.len() {

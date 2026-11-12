@@ -4,3 +4,5 @@ pub mod gaps;
 pub use gaps::*;
 pub mod deal;
 pub use deal::*;
+pub mod posts;
+pub use posts::*;

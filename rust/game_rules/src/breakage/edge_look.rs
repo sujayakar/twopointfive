@@ -48,7 +48,7 @@ pub(super) fn edge_look_opened(g: &mut crate::game::Game, b: &crate::edge_look::
     { let e = &mut g.destr.edge_look;
       if let Some(d) = e.dirty.get_mut(crate::Num(b.id)) { d.open = b.open.clone(); }
       for q in e.todo.iter_mut() { if q.b.id == b.id && q.b.kind == b.kind { q.b.open = b.open.clone(); } } }
-    if !g.m.edge_look.edge.on { return; }
+    if !g.k.edge_look.on { return; }
     edge_look_dress(g, b, fresh, cause, dir, quiet);
 }
 
@@ -59,7 +59,7 @@ fn edge_look_dress(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f
     if wall { g.destr.edge_look.dirty.set(crate::Num(b.id), b.clone()); }
     let f = if wall { Some(edge_look_frame(g, b)) } else { None };
     let blast = cause == "blast";
-    if quiet || g.m.edge_look.edge.spread <= 0.0 {
+    if quiet || g.k.edge_look.spread <= 0.0 {
         for &c in fresh { edge_look_shed(g, b, f, c, dir, quiet, blast); }
         edge_look_cap(g);
     } else {
@@ -114,7 +114,7 @@ fn at_c(c: V3, f: &Frame, u: f64, y: f64, v: f64) -> V3 { [c[0] + f.along[0] * u
 
 /// The oldest litter goes first past the cap.
 fn edge_look_cap(g: &mut crate::game::Game) {
-    let most = g.m.edge_look.edge.max_rubble;
+    let most = g.k.edge_look.max_rubble;
     while g.destr.edge_look.rubble.len() as f64 > most {
         let r = g.destr.edge_look.rubble.remove(0);
         if r.t < r.t_2 { g.destr.edge_look.flying -= 1.0; }
@@ -133,11 +133,11 @@ pub(super) fn edge_look_clear(g: &mut crate::game::Game) {
 
 /// Once a frame: the frame's room, a wall dressed or a few cells shed, the fragments in flight moved.
 pub(super) fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
-    g.destr.edge_look.room = frame_room(g, g.m.edge_look.edge.box_slack, None);
+    g.destr.edge_look.room = frame_room(g, g.k.edge_look.box_slack, None);
     if !g.destr.edge_look.held {
         if !g.destr.edge_look.dirty.is_empty() { edge_look_flush(g); }
         else if !g.destr.edge_look.todo.is_empty() {
-            let n = core::cmp::max(1, js::to_i32(g.m.edge_look.edge.spread)) as usize;
+            let n = core::cmp::max(1, js::to_i32(g.k.edge_look.spread)) as usize;
             let n = n.min(g.destr.edge_look.todo.len());
             let take: Vec<EdgeLookTodoItem> = g.destr.edge_look.todo.drain(0..n).collect();
             for q in take.iter() { edge_look_shed(g, &q.b, q.f, q.c, q.dir, false, q.blast); }
@@ -188,7 +188,7 @@ pub(super) fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::Fo
     let mut book = g.destr.edge_look.foot_book;
     crate::debris::debris_feet(g, men, k, Some(&list), Some(&mut book));
     g.destr.edge_look.foot_book = book;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let frame = js::to_i32(m::floor(g.time * 60.0));
     for (i, &c) in list.iter().enumerate() {
         let slid = !g.tab.debris_chunk[c].rest;
@@ -249,9 +249,9 @@ fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, 
     if k1 < 0.0 { return; }
     let (ua, ub) = (-f.l / 2.0 + f.w * k0, -f.l / 2.0 + f.w * (k1 + 1.0));
     let (uc, half) = ((ua + ub) / 2.0, (ub - ua) / 2.0);
-    let s = g.m.edge_look.edge.scorch;
+    let s = g.k.edge_look.scorch;
     match g.destr.edge_look.blasted.get_mut(crate::Num(b.id)) { Some(bl) => bl.push([uc, half]), None => { g.destr.edge_look.blasted.set(crate::Num(b.id), vec![[uc, half]]); } }
-    let dir = match dir { Some(d) if g.m.edge_look.edge.scorch_decals => d, _ => return };
+    let dir = match dir { Some(d) if g.k.edge_look.scorch_decals => d, _ => return };
     let far = if v3::dot(dir, f.nrm) >= 0.0 { 1.0 } else { -1.0 };
     let floor = m::max(0.0, f.y0);
     let yc = floor + m::min(1.05, (f.y_top - floor) * 0.45);

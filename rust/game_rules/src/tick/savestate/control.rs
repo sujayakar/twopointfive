@@ -1,5 +1,5 @@
 //! THE SAVE CONTROLLER, for a host that keeps games in memory: when a game is kept, under which name, and what becomes of one that is put back. What is kept is
-//! the host's (a clone of the whole game and its block of rust/sim's): this says when, and the host answers with the game kept or put back.
+//! the host's (a clone of the whole game): this says when, and the host answers with the game kept or put back.
 //!
 //! `tick` runs once after every step, on the frame as it now stands. Autosaves and saves by hand are two rings, neither of which pushes the other out; a run's saves are
 //! its own, and a fresh run starts with none. F5 is read off the step's own record. A run is the mission that is up (`Mission.serial`). The books are the game's own `saves`, and go back with a game put
@@ -179,7 +179,7 @@ pub fn tick(g: &mut Game, dt: f64) -> Option<Do> {
         return g.saves.authored.take().and_then(|label| write(g, SlotInfoSlot::Auto, &label, true));
     }
     g.saves.authored = None;
-    if crate::cmd::seat_pressed(g, "F5") && !crate::condition::down(g, g.pl[g.player].ch) { ask_save(g); }
+    if crate::cmd::seat_pressed(g, crate::input::Key::F5) && !crate::condition::down(g, g.pl[g.player].ch) { ask_save(g); }
     let hand = if core::mem::take(&mut g.saves.hand) { write(g, SlotInfoSlot::Manual, "by hand", false) } else { None };
     let auto = turn(g, dt, hand.is_none());
     hand.or(auto)
@@ -267,33 +267,29 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     Some(Do::Keep { key, label: String::from(label) })
 }
 
-/// A MOMENT OF A GAME: the game as a value and its block of rust/sim, between two ticks. Stood again it is the game that went on from there. Every game kept is one of these, for a
-/// save, a run's start, a walk of a tape, a test or the gate to go back to; there is one way to put it back.
+/// A MOMENT OF A GAME: the game as a value, between two ticks. Stood again it is the game that went on from there. Every game kept is one of these, for a save, a run's start, a walk of
+/// a tape, a test or the gate to go back to; there is one way to put it back (`stand`).
 #[derive(Clone)]
-pub struct Moment { pub game: Box<Game>, pub block: Vec<u8> }
+pub struct Moment { pub game: Box<Game> }
 impl Moment {
     /// the moment a game stands at
     pub fn of(g: &Game) -> Moment {
         let mut game = Box::new(g.clone());
         game.out.clear();
-        let block = unsafe { core::slice::from_raw_parts(::sim::state::addr(g.sim) as *const u8, core::mem::size_of::<::sim::state::State>()) }.to_vec();
-        Moment { game, block }
+        Moment { game }
     }
-    /// the moment in `slot`, and a game that holds it.
-    pub fn laid(&self, slot: usize) -> Box<Game> {
-        ::sim::state::put(slot, &self.block);
-        let mut g = self.game.clone();
-        crate::game::stand_in(&mut g, slot);
-        g
-    }
+    /// a game that stands at it
+    pub fn laid(&self) -> Box<Game> { self.game.clone() }
 }
 /// The game `g` is this one now, standing where it stood: the serial counter never goes back in a game (what was dealt after is still held on the host's side, and a number means one thing)
 pub fn over(g: &mut Game, mut new: Box<Game>) {
     new.serial_next = new.serial_next.max(g.serial_next);
     stand(g, new);
 }
-/// `new` is the game now
+/// `new` is the game now. What was made from the level is taken over (whose it is, it tells by the rows it was made from), but for the ways of the smoke that stood
 pub fn stand(g: &mut Game, mut new: Box<Game>) {
+    new.made = core::mem::take(&mut g.made);
+    sim::bricks::forget(&new.made.ways);
     core::mem::swap(g, &mut *new);
 }
 
@@ -307,11 +303,12 @@ pub struct First { image: Moment, men: crate::standing::Men }
 /// EVERY GAME THE CONTROL KEEPS OF A STAND: the first, what a stage goes back to, and what was kept as it ran
 #[derive(Default)]
 struct Held { first: Option<Rc<First>>, stage: Option<Rc<crate::kitstage::KitStage>>, kept: BTreeMap<String, Kept>, used: u64 }
-/// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game dropped may stand again from a kept copy of itself (a panic's way back, a tool's slot given up), and is the same stand.
+/// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game lost may stand again from a kept copy of itself, and is the same stand.
 static mut IMAGES: BTreeMap<u32, Held> = BTreeMap::new();
 static mut STANDS: u32 = 0;
 static mut USES: u64 = 0;
-const STANDS_HELD: usize = ::sim::state::GAMES + 4;
+/// (a process of more games at once than this keeps no saves, and no restart, of those that went longest unasked)
+const STANDS_HELD: usize = 16;
 /// which stand this game is of: a game kept and put back is of its own, one imported is a new one
 pub fn stood(g: &mut Game) -> u32 {
     if g.saves.stood == 0 { g.saves.stood = unsafe { STANDS += 1; STANDS }; }
@@ -319,7 +316,6 @@ pub fn stood(g: &mut Game) -> u32 {
 }
 fn held(stood: u32) -> &'static mut Held {
     let all = unsafe { &mut *core::ptr::addr_of_mut!(IMAGES) };
-    // (a game that runs asks every step, so it is never the one let go)
     while all.len() >= STANDS_HELD && !all.contains_key(&stood) {
         let Some(last) = all.iter().min_by_key(|(_, h)| h.used).map(|(k, _)| *k) else { break };
         all.remove(&last);
@@ -350,13 +346,15 @@ pub fn kept_of(stood: u32) -> Vec<(String, Kept)> {
     of
 }
 
-/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the tune, the men's kit, the die, whatever hands out a number, the tallies, the tables as they are now and how far each lens is out. Row numbers go back with the game
+/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the men's kit, the die, whatever hands out a number, the tallies
+/// and how far each lens is out. The tables of numbers are the first moment's (what they ship at, the address, the difficulty and the rows this machine keeps), before a man stood: what a
+/// mission's script wrote in the try is the try's. What the player turned in it the page turns again, by name, as after a load.
 pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, aside: bool,
-    tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
-    kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
+    props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
+    kit: crate::kit::KitMod, pending: Option<crate::quiet::QuietDeal>,
     dice: crate::dice::Draws, fx_seed: f64, roll_seq: f64, event_seq: f64,
-    saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
+    saves_on: bool, stats: crate::game::Stats, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
     shown: Option<SeatId>, remote: Vec<bool>,
 }
@@ -364,27 +362,26 @@ impl Survivors {
     pub fn of(g: &Game) -> Survivors {
         Survivors {
             god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, aside: g.aside,
-            tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
-            kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
+            props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
+            kit: g.m.kit.clone(), pending: g.quiet.pending.clone(),
             dice: g.dice, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
-            saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
+            saves_on: g.saves.enabled, stats: g.stats.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
             shown: g.local_seat, remote: g.seats.iter().map(|&s| g.tab.cmd_seat[s].remote).collect(),
         }
     }
-    /// what the men's lines read and write on: the tables, the die, the counts and what the host is owed. They go on from here, so this is written once, before them
+    /// what the men's lines read and write on: the die, the counts and what the host is owed. They go on from here, so this is written once, before them
     fn write_under(&self, g: &mut Game) {
         put_cards(g, self.kit.clone());
-        g.m.difficulty = self.difficulty.clone();
         g.quiet.pending = self.pending.clone();
         (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice, self.fx_seed, self.roll_seq, self.event_seq);
-        (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
+        (g.stats, g.out, g.cmd_buf) = (self.stats.clone(), self.out.clone(), self.cmd_buf.clone());
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses,
     /// whose hands come from another machine
     fn write_over(&self, g: &mut Game) {
         (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.aside) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.aside);
-        (g.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune.clone(), self.props_on, self.friction, self.fog_on, self.fog_viewer);
+        (g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.props_on, self.friction, self.fog_on, self.fog_viewer);
         g.saves.enabled = self.saves_on;
         let cams: Vec<_> = g.tab.camera.ids().collect();
         for (c, (d, want)) in cams.into_iter().zip(self.lens.iter()) { g.tab.camera[c].distance = *d; g.tab.camera[c].desired_distance = *want; }
@@ -395,15 +392,13 @@ impl Survivors {
 pub fn ask_restart(g: &mut Game) { g.saves.again = true; }
 /// THE MISSION OVER, from outside a step: the level stands again and the men are stood on it by the stand's own lines, with what an evening keeps; a new run, the view cut to the fresh man. False where the game keeps no level (it has lost its place among the stands held)
 pub fn restart(g: &mut Game) -> bool {
-    let (slot, of) = (g.sim, stood(g));
+    let of = stood(g);
     let Some(first) = held(of).first.clone() else { return false };
-    // (the switches a quiet run took are its own, and an evening keeps what stood under them)
-    crate::quiet::quiet_mission_release(g);
     let was = Survivors::of(g);
     let host = (g.host_cam, g.host_input);
-    let mut new = first.image.laid(slot);
+    let mut new = first.image.laid();
     new.serial_next = new.serial_next.max(g.serial_next);
-    core::mem::swap(g, &mut *new);
+    stand(g, new);
     was.write_under(g);
     // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
     let _ = crate::standing::stand_men(g, &first.men);
@@ -424,14 +419,14 @@ fn put_cards(g: &mut Game, kit: crate::kit::KitMod) {
 }
 /// A STAGE'S WAY OF STARTING OVER: the mission stands again by the stand's own lines, in the size asked, die, sky and all, so a picture of the same cards is the same picture, with only the cards, the tables and what the host is owed. False where no stage was kept
 pub fn again(g: &mut Game, size: Option<u32>) -> bool {
-    let (slot, of) = (g.sim, stood(g));
+    let of = stood(g);
     let (Some(first), Some(stage)) = (held(of).first.clone(), held(of).stage.clone()) else { return false };
-    let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
-    let mut new = first.image.laid(slot);
+    let (kit, out, cmd) = (g.m.kit.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
+    let mut new = first.image.laid();
     new.serial_next = new.serial_next.max(g.serial_next);
-    core::mem::swap(g, &mut *new);
+    stand(g, new);
     put_cards(g, kit);
-    (g.k, g.out, g.cmd_buf) = (k, out, cmd);
+    (g.out, g.cmd_buf) = (out, cmd);
     // (a mission that refuses leaves the plain floor, and a stage on it is a picture of nothing)
     let mut men = first.men.clone();
     if let (Some(n), Some(q)) = (size, men.words.as_mut()) { q.set("squad", &alloc::format!("{n}")); }
@@ -479,7 +474,7 @@ pub fn after_step(g: &mut Box<Game>, dt: f64, asked: Vec<crate::out_events::OutE
     for e in asked { match e { E::CheckpointsKeep(e) => keep(g, &e.label), E::CheckpointsRequest(e) => request(g, &e.why, &e.label), _ => {} } }
     let back = restart_asked(g);
     let mut told = Told { back, cut: core::mem::replace(&mut g.restart_cut, false), ..Told::default() };
-    let (slot, of) = (g.sim, stood(g));
+    let of = stood(g);
     match tick(g, dt) {
         Some(Do::Keep { key, label }) => {
             checkpoint(g, &label);
@@ -489,7 +484,7 @@ pub fn after_step(g: &mut Box<Game>, dt: f64, asked: Vec<crate::out_events::OutE
         }
         Some(Do::Back { key }) => {
             let was = abandoned(g);
-            told.said = Some(match images(of).get(&key).map(|e| e.image.laid(slot)) {
+            told.said = Some(match images(of).get(&key).map(|e| e.image.laid()) {
                 Some(new) => { over(g, new); told.back = true; told.cut = true; put_back(g, &key, was) }
                 None => gone(g, &key),
             });
@@ -508,11 +503,12 @@ fn checkpoint(g: &mut Game, label: &str) {
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Save, Some(label));
 }
 
-/// What the abandoned game hands to the one put back: what is the host's and the run's as it is NOW, and not the saved moment's to take back.
-pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, labels: bool, tune: crate::game::GameTune }
+/// What the abandoned game hands to the one put back: what is the host's and the run's as it is NOW, and not the saved moment's to take back. Not the tables of numbers: what a
+/// mission or a difficulty set comes with the save, and what the player turned is turned again by the host that knows the rows by name.
+pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, labels: bool }
 pub fn abandoned(g: &Game) -> Abandoned {
     let c = &g.chronicle.counts;
-    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug, tune: g.tune.clone() }
+    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug }
 }
 /// There is no game kept under this key any more: it is off the shelf. What the player is told of it.
 fn gone(g: &mut Game, key: &str) -> String {
@@ -541,7 +537,7 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     g.saves.due = None;
     g.saves.authored = None;
     g.saves.last_save_t = g.time;
-    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.show_debug, g.tune) = (was.god, was.ai, was.ammo, was.unseen, was.labels, was.tune);
+    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.show_debug) = (was.god, was.ai, was.ammo, was.unseen, was.labels);
     g.chronicle.counts.loads = was.loads;
     g.chronicle.counts.saves = was.kept;
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Load, Some(&label));

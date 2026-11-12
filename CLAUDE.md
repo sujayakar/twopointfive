@@ -21,7 +21,7 @@ bun run typecheck      # src/ (with no vendored compiler: a system tsc --noEmit 
 bun run tools/qa/checks.ts [group|name …]     # picture, shaders, page, menus, sounds, levels, words, these pages: a minute
 bun run tools/qa/pages.ts [group|name …]      # the real page in a browser on the software adapter, one script at a time
 bun run tools/blitz/face-build.ts             # the module, after a change under rust/
-bun run tools/draw/gen.ts                     # the page's half, after a change to what is drawn, told or commanded
+(cd rust/game_start && cargo run --profile gate --bin half)    # the page's half, after a change to what is drawn, told or commanded
 ```
 
 In full, with exit codes, hooks and address words: `docs/agents/qa.md`. A page driven from scratch: `.claude/skills/verify/SKILL.md`. A level,
@@ -34,7 +34,7 @@ from its idea to its row: `.claude/skills/level/SKILL.md`.
 - **A new rule lands on,** with a native test that fails without it. It gets an off word only if somebody asks for one.
 - **Strong general systems.** No special case for one level, one door or one man where a system can carry it.
 - **The same inputs make the same game.** No clock, no die but the game's own (`rust/game_rules/src/tick/dice.rs`), no order that is not written
-  down, all state reachable from `Game` or in its block.
+  down, all state reachable from `Game`.
 - **One model for the picture and the AI.** What a man senses is what the picture shows. No number off the GPU reaches a rule.
 - **No GPU here.** Native tests see no picture and hear nothing; a page script runs on the software adapter. Say what was checked and how,
   and "never seen on a GPU" of the rest. "Verified" in full means driven in a real browser with no console or GPU errors.

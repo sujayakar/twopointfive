@@ -216,7 +216,7 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     book.stir.get_or_insert_with(Vec::new).push(ix as f64);
     let pos = mouth_of(g, t).pos;
     let volume = g.k.fire.crack * heat_of(g, t);
-    crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::FireCrack, Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
 }
 
 /// The steady row of a fire's lamp: what it is as the level hung it. Made the first time the lamp is a fire's.
@@ -283,7 +283,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_seed_and_h01_match_the_typescript() {
+    fn the_seed_and_h01_are_as_pinned() {
         let cases: [(f64, f64, u64); 5] = [
             (1.25, -3.5, 0x3feae7da80000000),
             (0.0, 0.0, 0x3fe3af6980000000),
@@ -297,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn the_cracks_match_the_typescript() {
+    fn the_cracks_are_as_pinned() {
         let k = crate::knobs::FireK::page();
         let one = |seed, time, back| {
             let v = pops_with(&k, seed, time, back);
@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn the_flicker_matches_the_typescript() {
+    fn the_flicker_is_as_pinned() {
         let k = crate::knobs::FireK::page();
         let cases: [(f64, f64, u64); 5] = [
             (0.3, 10.0, 0x3ff035f24fcffb2c),
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn the_flame_axis_matches_the_typescript() {
+    fn the_flame_axis_is_as_pinned() {
         let k = crate::knobs::FireK::page();
         let cases: [(f64, [f64; 2], [u64; 4]); 3] = [
             (0.5, [1.5, -0.75], [0x3fb7c74a5a234cee, 0xbfa7c74a5a234cee, 0x3fd1d577c39a79b3, 0xbfc1d577c39a79b3]),
@@ -571,7 +571,7 @@ impl Blaze {
 
     /// Its hot air, as the falling snow meets it.
     fn hot_air(&self, g: &Game) -> crate::smoke_types::WindGpuSource {
-        let w = fire_look_smoke().snow;
+        let w = g.k.fire.plume.snow;
         let a = axis_at(g, self.flame_h * 0.5, self.wind);
         let n = m::hyp3(a[2], 1.0, a[3]);
         crate::smoke_types::WindGpuSource {
@@ -608,14 +608,14 @@ impl Blaze {
             if !(p.at > clock.was && p.at <= clock.time) { continue; }
             let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * self.heat;
             let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
-            crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(self.mouth.pos), Some(gain), Some(&opts));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::FireCrack, Some(self.mouth.pos), Some(gain), Some(&opts));
             if g.k.fire.embers > 0.0 && crack > 0.0 { self.throw(g, m::round(crack * (0.4 + 0.6 * p.hard)), p.hard); }
         }
     }
 
     /// `n` embers off it, counted in the book, by its own seed and not the particles' serial.
     fn throw(&self, g: &mut Game, n: f64, hard: f64) {
-        let fl = fire_look_smoke();
+        let fl = g.k.fire.plume;
         let nth = book(g).embers;
         let k = &g.k.fire;
         let up = self.flame_h * fl.ember_up;
@@ -651,7 +651,7 @@ impl Blaze {
             let e = self.gas(g);
             smoke_emit(g, &e);
         }
-        let every = fire_look_smoke().puff_every;
+        let every = g.k.fire.plume.puff_every;
         if due(every) {
             let e = self.puff(g, m::floor(clock.time / every));
             smoke_emit(g, &e);
@@ -660,7 +660,7 @@ impl Blaze {
 
     /// The steady source.
     fn gas(&self, g: &Game) -> crate::smoke_types::SmokeEmitter {
-        let (b, l) = (&g.k.fire.smoke, fire_look_smoke());
+        let (b, l) = (&g.k.fire.smoke, g.k.fire.plume);
         let p = self.mouth.pos;
         let up = g.k.fire.height * l.up;
         let a = axis_at(g, up, self.wind);
@@ -680,7 +680,7 @@ impl Blaze {
 
     /// The `nth` puff.
     fn puff(&self, g: &Game, nth: f64) -> crate::smoke_types::SmokeEmitter {
-        let l = fire_look_smoke();
+        let l = g.k.fire.plume;
         let luck = |j: f64| h01(self.si + nth * 31.0 + j);
         let ox = (luck(11.0) - 0.5) * 2.0 * l.puff_off;
         let oz = (luck(12.0) - 0.5) * 2.0 * l.puff_off;
@@ -724,19 +724,19 @@ mod tests_2 {
     use super::*;
     // The pinned numbers, at the table's wander 0.14, wander_up 0.1, lift 0.5, depth 0.4, coals 0.26, coal_swing 0.6.
     #[test]
-    fn lamp_wanders_across_on_the_typescript_bits() {
+    fn lamp_wanders_across_on_the_pinned_bits() {
         assert_eq!(wander_across(3.25, 0.14, 0.83, 0.1937, 2.9, 0.7711, 123.456).to_bits(), 0x400aeb1a98f0afd6);
         assert_eq!(wander_across(-7.5, 0.14, 0.71, 0.5021, 3.3, 0.0313, 987.654321).to_bits(), 0xc01e8a3e54d176b0);
     }
     #[test]
-    fn lamp_height_is_capped_at_the_swing_on_the_typescript_bits() {
+    fn lamp_height_is_capped_at_the_swing_on_the_pinned_bits() {
         assert_eq!(wander_height(1.13, 0.5, 0.1, 1.07, 0.4).to_bits(), 0x3ffa5c28f5c28f5c);
         assert_eq!(wander_height(1.13, 0.5, 0.1, 1.6, 0.4).to_bits(), 0x3ffbae147ae147ae);   // a crack's kick, past the swing
         assert_eq!(wander_height(1.13, 0.5, 0.1, 0.6, 0.4).to_bits(), 0x3ff87ae147ae147a);
         assert_eq!(wander_height(1.13, 0.5, 0.1, 0.81, 0.4).to_bits(), 0x3ff951eb851eb852);
     }
     #[test]
-    fn coals_breathe_on_the_typescript_bits() {
+    fn coals_breathe_on_the_pinned_bits() {
         assert_eq!(coal_share(1.0, 0.26, 0.6, 1.31).to_bits(), 0x3fd3bc2b94d94079);
         assert_eq!(coal_share(0.37, 0.26, 0.6, 0.83).to_bits(), 0x3fb61d7f6cc7a978);
     }

@@ -1,5 +1,5 @@
 // WHAT A BOX WAS DRAWN AS BEFORE IT HAD TO SAY SO: the look's rule up to 2026-11-04, FROZEN.
-// Until then the look decided what a box is made of in three steps (render/gbuffer.ts lookWordOf, lookNamed, lookStuff, as they were): the box's own word;
+// Until then the look decided what a box is made of in three steps (as they were): the box's own word;
 // else the NAME of the first row of the level file that has the box's colour, by the table of names, unless that name was one of six that are more than one
 // thing; else its COLOUR, matched against the 2010s palette exactly and then darkened in one piece. Nothing in src/ does that any more (scene/stuff.ts: what a
 // thing is made of is said). This file keeps the old rule, with the tables it read copied in as they stood, for one job and no other:

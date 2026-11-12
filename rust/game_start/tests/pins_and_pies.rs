@@ -16,7 +16,7 @@ fn yard(s: u32, rule: bool) -> (Play, GuardId) {
     sc.bulb(10.0, 14.0).bulb(20.0, 14.0).bulb(26.0, 14.0);
     sc.sentry("post", [20.0, 14.0], [10.0, 14.0]).sam(9.0, 14.0);
     let mut p = Play::scene(&sc, &Opts { seed: s, ..Default::default() });
-    p.g.god_mode = true; p.g.tune.suppression = rule;
+    p.g.god_mode = true; p.g.k.tune.suppression = rule;
     let gd = p.guard("post");
     p.sam_takes_his_rifle();
     p.run(0.3);
@@ -145,7 +145,7 @@ fn hunting_men_slice_the_doorways_on_their_path() {
         }
         assert!(crossed, "{door}: he never went through: {} phases {phases:?}", p.roll());
         assert!(phases.iter().any(|w| w == "Slice") && phases.iter().any(|w| w == "Cross"), "{door}: phases {phases:?}");
-        assert!(fastest <= p.g.tune.guard_walk + 0.12, "{door}: {fastest} m/s inside 1.5 m of the sill");
+        assert!(fastest <= p.g.k.tune.guard_walk + 0.12, "{door}: {fastest} m/s inside 1.5 m of the sill");
         assert!((hi - lo).to_degrees() >= 60.0, "{door}: his look swept {} degrees", (hi - lo).to_degrees());
         drop(p);
     }

@@ -36,7 +36,7 @@ The page's half, in `src/audio/` unless it says:
 | `mixlaw.ts` | the law for one placed voice, read by the mixer and the sounds page; the default volumes |
 | `backend.ts`, `webaudio.ts` | what plays a buffer: `AudioBackend`, `WebAudioBackend`, `masterChain`, the rain bed |
 | `loops.ts`, `floors.ts` | what hums in a room (`AMBIENCE`) and the canister's hiss as data; `FLOOR`, which sample and how bright |
-| `sfx.ts`, `synth.ts` | the sound table (`buildSfx`, `SfxName`, `HEARD`) and its instruments (`Voice`) |
+| `sfx.ts`, `synth.ts` | the sound table (`buildSfx`, `HEARD`; `SfxName` is Rust's `Sfx`) and its instruments (`Voice`) |
 | `sfxWas.ts`, `sfxAlt.ts` | the older table, frozen (`WAS_IN_GAME`); other takes to choose from (`altTake`) |
 | `music.ts`, `pieces.ts`, `setlist.ts` | the score's sequencer (`Music`), its pieces (`PIECES`), each level's list (`SETLISTS`) |
 | `musicBackend.ts`, `acoustic.ts` | the score's voices (`WebAudioMusicBackend`); plucked and struck models |
@@ -48,7 +48,7 @@ The page's half, in `src/audio/` unless it says:
 
 ## How it works
 
-**The road of a sound.** A rule calls `game_audio_like_play` with a name, a place (or none: a sting, the radio), a gain and perhaps `PlayOpts`. That
+**The road of a sound.** A rule calls `game_audio_like_play` with a name (`Sfx`), a place (or none: a sting, the radio), a gain and perhaps `PlayOpts`. That
 pushes an `OutEvent` on `g.out`. `rust/game_draw/src/events.rs` turns the tick's events into rows, each with its tick and a serial. `DrawEvents` plays a
 row once (`Played`), so a tick run again does not sound twice, and calls `AudioEngine.play`. No rule reads the mixer back.
 
@@ -61,8 +61,8 @@ row once (`Played`), so a tick run again does not sound twice, and calls `AudioE
 - Walled off and over 28 m straight, or with no way round: `sealed`, through the mass. Muffle 1, a quarter carried, and the path taken as half again
   the straight distance.
 - Otherwise `route` walks the floor (`find_path`, from listener to source). The sound seems to come from the last waypoint the listener still has a straight
-  line to, at the path's whole length (`apparent`). Muffle is 0.35, or 0.85 if a shut leaf lies across the way. A leaf is `sound_seal` while nearly
-  shut (`SOUND_SEAL` in `doors/step.rs`).
+  line to, at the path's whole length (`apparent`). Muffle is 0.35, or 0.85 if a shut leaf lies across the way. A leaf is `SOUND_SEAL` while nearly
+  shut (`doors/step.rs`).
 
 `carry` is what the rules take from it. Whole glass stops a sound and a hole lets it through, where the level's pane rule is up. Rules ask through
 `hear_path` in `weather.rs`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:
@@ -80,7 +80,8 @@ outdoors), and held voices are re-aimed along their paths, at once where the gam
 
 **What lasts.** A sound that goes on is told as it stands, never by an event: a `Lasting` row every tick, and at the first of a game put back, for a can that pours
 (`smokeHiss`, with its age and what it has left), a fire that burns (`fireBed`), a chair that rolls (`game_roll_tick` measures its real movement, so a pinned one is
-silent) and what hums in the level's rooms (its `hums`, off with the mains). `AudioEngine.lasting` holds one looping voice a row: the nearest `MAX_LASTING`, the hums
+silent) and what hums in the level's rooms (its `hums`, off with the mains). A row names its voice by `LastingSfx`'s number, which is a voice of the table or one
+the mixer makes of itself (`smokeHiss`, a hum). `AudioEngine.lasting` holds one looping voice a row: the nearest `MAX_LASTING`, the hums
 over and above. A row gone fades out; a clock that stands still, or frames that stop coming, is silence. So a load, a seek and a join are heard as they stand. The rain
 bed is `Heard.rain`, each tick. A roll files no event for men; a rolling chair's scrape plays no `propScrape` but still files one.
 
@@ -130,11 +131,12 @@ the recorded picture. On a voice built from instruments the card lists its layer
 - **A number in a rule:** `rust/game_types/src/knobs/` (`fire.rs` has the fire's gains), `roll_voice` for the chair; many are bare gains at the call. `SOUNDS`
   in `src/sounds/catalog.ts` copies gains from those calls: move it too.
 - **The law, the budget:** `mixlaw.ts`, the head of `audio.ts`.
-- **A new voice:** its name in `SfxName`, a row in `buildSfx` with a seed of its own, its level in `HEARD`, a row in `SOUNDS` (the typecheck is red without
-  it), then the rule's call. A name not in the table plays nothing and says nothing. `bun run tools/qa/checks.ts sound`, then
+- **A new voice:** a variant of `Sfx` (`rust/game_types/src/audio_iface/types.rs`, the one list: a name that is not in it does not compile on either side), `half`
+  (`SFX` and `SfxName` in `src/draw/names.ts`), a row in `buildSfx` with a seed of its own, its level in `HEARD`, a row in `SOUNDS` (the typecheck is red without
+  them), then the rule's call. `bun run tools/qa/checks.ts sound`, then
   `node tools/draw/sound-tapes.cjs --cover`, which says what no replay reaches and what was asked for that is no row.
 - **Another take:** a row of `TAKES` in `sfxAlt.ts`. An older voice back: a name in `WAS_IN_GAME`.
-- **Something new to say of a sound:** an arm of `PlayOpts`, `play_opts`, `OutPlayOpts`, the `Sound` row, `tools/draw/gen.ts`, then the reading in
+- **Something new to say of a sound:** an arm of `PlayOpts`, `play_opts`, `OutPlayOpts`, the `Sound` row, `half`, then the reading in
   `src/draw/events.ts`. Rebuild with `bun run tools/blitz/face-build.ts`.
 - **A floor:** `floor()` in `rust/game_types/src/floor/` for the rules, `FLOOR` in `floors.ts` for sample and brightness. Change both; nothing compares them.
 - **A piece:** a `Piece` in `pieces.ts`, added to `PIECES`.

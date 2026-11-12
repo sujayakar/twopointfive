@@ -1,6 +1,7 @@
 // The GPU smoke simulation (smoke.wgsl has the design): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
 // smoke is, out of one pool. Nothing is placed, refused, recycled, migrated or retired on the CPU — an emitter is handed to the GPU in world coordinates and the GPU makes the bricks it
 // needs. Exposes a SmokeBinding for the renderer. (Until 2026-10 this file was eight 64³ boxes placed by the CPU: git history has them.)
+import { EmitterAt, LevelAt, SpAt, WindAt, WindSrcAt } from '../gpu/wgslrows';
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import { Vec3, v3 } from '../math/vec';
 import { Engine, SmokeBinding, FrameFlags } from '../engine';
@@ -12,7 +13,7 @@ import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
-import { glassOpenWgsl, lookConfig } from '../render/frame';
+import { glassOpenWgsl, lookConfig, rowsWgsl } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
 // WIND (rust/game_rules/src/air/wind.rs): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
@@ -42,11 +43,9 @@ export interface SmokeParams {
 }
 export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, bend: 1.5, pull: 6, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
 
-const MAX_EMITTERS = 64, EMITTER_WORDS = 16;
-const SP_HEADER_WORDS = 44, SP_LEVEL_WORDS = 16, SP_DIRTY_WORDS = 64, SP_WINDB_WORDS = 32;
-const SP_EMIT_AT = SP_HEADER_WORDS + SP_LEVEL_WORDS + SP_DIRTY_WORDS + SP_WINDB_WORDS;
-const SP_BYTES = (SP_EMIT_AT + MAX_EMITTERS * EMITTER_WORDS) * 4;
-const WIND_SRC_BYTES = 64, WIND_HDR_BYTES = 48, WIND_BLOCK_BYTES = WIND_HDR_BYTES + WIND_GPU_MAX * WIND_SRC_BYTES;
+const MAX_EMITTERS = 64;
+const SP_BYTES = (SpAt.emitters + MAX_EMITTERS * EmitterAt.words) * 4;
+const WIND_SRC_BYTES = WindSrcAt.words * 4, WIND_HDR_BYTES = WindAt.src * 4, WIND_BLOCK_BYTES = WIND_HDR_BYTES + WIND_GPU_MAX * WIND_SRC_BYTES;
 const MAX_SEALERS = 32, SEAL_BYTES = 16 + MAX_SEALERS * 32, SEAL_MOVE = 0.03, SEAL_TURN = 0.05;
 const MAX_DIRTY = 8;
 const META_STRIDE = 42, A_HEADER = 32, M_HEADER = 16, STAT_WORDS = 64;
@@ -160,7 +159,7 @@ export class SmokeSystem implements SmokeSystemLike {
     this.gArgs = device.createBindGroup({ layout: this.gArgsL, entries: [buf(6, this.argsBuf)] });
     this.gPub = device.createBindGroup({ layout: this.gPubL, entries: [{ binding: 7, resource: this.atlas.createView() }, { binding: 8, resource: this.page.createView() }] });
     this.gBox = device.createBindGroup({ layout: this.gBoxL, entries: [buf(9, this.domBuf), buf(10, this.statBuf)] });
-    this.mod = makeShader(device, wgslWorldConsts() + glassOpenWgsl() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
+    this.mod = makeShader(device, wgslWorldConsts() + rowsWgsl() + glassOpenWgsl() + smokeSolverConsts(g) + windFieldSrc + '\n' + windForceSrc + '\n' + smokeSrc, 'smoke');
     this.binding = { uniform: this.domBuf, atlasView: this.atlas.createView(), count: 0, pageView: this.page.createView(), encode: (enc, ts) => this.encode(enc, ts) };
   }
 
@@ -347,42 +346,42 @@ export class SmokeSystem implements SmokeSystemLike {
     const em = whole ? [] : [...all.filter(expands), ...all.filter(e => !expands(e))];   // (nothing is let out, and nothing waits, while the game's smoke is taken whole)
     const omega = Math.min(OMEGA_MAX, Math.max(OMEGA_MIN, +P.omega || 0)); this.stats.omega = omega;
     const calmMax = whole ? 1 : X.calmMax >= 4 ? 4 : X.calmMax >= 2 ? 2 : 1;
-    u[0] = em.length; u[1] = em.filter(expands).length; u[2] = this.stepNo; u[3] = Math.max(calmMax > 1 ? 8 : 1, X.keep | 0);   // (a brick that waits must step once more, to tell the readers it is empty, before its slot goes)
-    f[4] = dt; f[5] = this.time; f[6] = P.buoyancy; f[7] = P.weight;
-    f[8] = P.vortConf; f[9] = P.velDamp; f[10] = P.densDecay; f[11] = P.tempDecay;
-    f[12] = P.turbulence; f[13] = omega; f[14] = Math.max(0, X.flushEps); u[15] = X.ring | 0;
-    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
-    f[20] = X.softLo; f[21] = Math.max(X.softHi, X.softLo + 0.01); f[22] = X.softEps; f[23] = X.softDecay;
-    f[24] = Math.max(0, X.thinDecay); f[25] = Math.max(1e-4, X.thinBelow); f[26] = X.readSkip ? 1 : 0; f[27] = Math.min(0.4, Math.max(0, +X.fresh || 0));
-    const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
-    f[32] = Math.max(0, +P.calmCells || 0); f[33] = Math.max(0, +X.farCells || 0); u[34] = calmMax; f[35] = calmMax > 1 ? DT_CAP_WAIT : DT_MAX;
-    f[36] = this.bentPlan ? Math.max(0, +P.bend || 0) : 0; f[37] = whole ? 1 : 0; f[38] = Math.max(0, +X.fineDecay || 0); f[39] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
-    const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8; f[43] = Math.max(0, +P.pull || 0);   // (its floors and its air go with the fade: one row off = all three)
-    g.levels.forEach((L, l) => { const o = SP_HEADER_WORDS + l * 8; u[o] = L.dims[0]; u[o + 1] = L.dims[1]; u[o + 2] = L.dims[2]; u[o + 3] = L.pageBase; f[o + 4] = L.voxel; u[o + 5] = L.texY; u[o + 6] = L.tile; u[o + 7] = L.tileBase; });
-    const dAt = SP_HEADER_WORDS + SP_LEVEL_WORDS;
+    u[SpAt.numEmitters] = em.length; u[SpAt.numExpand] = em.filter(expands).length; u[SpAt.stepNo] = this.stepNo; u[SpAt.keep] = Math.max(calmMax > 1 ? 8 : 1, X.keep | 0);   // (a brick that waits must step once more, to tell the readers it is empty, before its slot goes)
+    f[SpAt.dt] = dt; f[SpAt.time] = this.time; f[SpAt.buoyancy] = P.buoyancy; f[SpAt.weight] = P.weight;
+    f[SpAt.vortConf] = P.vortConf; f[SpAt.velDamp] = P.velDamp; f[SpAt.densDecay] = P.densDecay; f[SpAt.tempDecay] = P.tempDecay;
+    f[SpAt.turbulence] = P.turbulence; f[SpAt.omega] = omega; f[SpAt.flushEps] = Math.max(0, X.flushEps); u[SpAt.ring] = X.ring | 0;
+    f[SpAt.stirConf] = Math.max(0, +P.stirConf || 0) * this.stirK; u[SpAt.numDirty] = this.bakeAll ? 0 : this.dirty.length; u[SpAt.bakeAll] = this.bakeAll ? 1 : 0;
+    f[SpAt.softLo] = X.softLo; f[SpAt.softHi] = Math.max(X.softHi, X.softLo + 0.01); f[SpAt.softEps] = X.softEps; f[SpAt.softDecay] = X.softDecay;
+    f[SpAt.thinDecay] = Math.max(0, X.thinDecay); f[SpAt.thinBelow] = Math.max(1e-4, X.thinBelow); f[SpAt.readSkip] = X.readSkip ? 1 : 0; f[SpAt.fresh] = Math.min(0.4, Math.max(0, +X.fresh || 0));
+    const vf = this.engine.viewFocus; f[SpAt.viewX] = vf[0]; f[SpAt.viewZ] = vf[2]; f[SpAt.viewR] = Math.max(1, X.viewR); f[SpAt.viewBias] = Math.min(1, Math.max(0, X.viewBias));
+    f[SpAt.calmCells] = Math.max(0, +P.calmCells || 0); f[SpAt.farCells] = Math.max(0, +X.farCells || 0); u[SpAt.calmMax] = calmMax; f[SpAt.dtCap] = calmMax > 1 ? DT_CAP_WAIT : DT_MAX;
+    f[SpAt.bend] = this.bentPlan ? Math.max(0, +P.bend || 0) : 0; f[SpAt.whole] = whole ? 1 : 0; f[SpAt.fineDecay] = Math.max(0, +X.fineDecay || 0); f[SpAt.fineShare] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
+    const lets = f[SpAt.fineDecay] > 0; f[SpAt.fineEps] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[SpAt.fineHeat] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[SpAt.fineRing] = lets ? Math.max(1, X.fineRing | 0) : 8; f[SpAt.pull] = Math.max(0, +P.pull || 0);   // (its floors and its air go with the fade: one row off = all three)
+    g.levels.forEach((L, l) => { const o = SpAt.levels + l * LevelAt.words; u[o + LevelAt.dims] = L.dims[0]; u[o + LevelAt.dims + 1] = L.dims[1]; u[o + LevelAt.dims + 2] = L.dims[2]; u[o + LevelAt.pageBase] = L.pageBase; f[o + LevelAt.voxel] = L.voxel; u[o + LevelAt.texY] = L.texY; u[o + LevelAt.tile] = L.tile; u[o + LevelAt.tileBase] = L.tileBase; });
+    const dAt = SpAt.dirty;
     this.dirty.forEach((d, i) => { const o = dAt + i * 8; f[o] = d.lo[0]; f[o + 1] = d.lo[1]; f[o + 2] = d.lo[2]; f[o + 3] = 0; f[o + 4] = d.hi[0]; f[o + 5] = d.hi[1]; f[o + 6] = d.hi[2]; f[o + 7] = 0; });
     this.dirty.length = 0; this.bakeAll = false;
     // wind: struct WindBlock's records (wind_force.wgsl) + a bound each; which bricks a source reaches is the GPU's to find (link)
-    const wf = this.windF, wu = this.windU, wAt = dAt + SP_DIRTY_WORDS; let n = 0;
+    const wf = this.windF, wu = this.windU, wAt = SpAt.windBound; let n = 0;
     for (const s of this.windNear()) {
-      const o = (WIND_HDR_BYTES + n * WIND_SRC_BYTES) / 4;
+      const o = WindAt.src + n * WindSrcAt.words;
       if (s.kind === 'storm') {
         const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, rust/game_rules/src/air/wind.rs WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
-        for (let k = 0; k < 8; k++) wf[4 + k] = R?.[2 + (k >> 2)]?.[k & 3] ?? 0;
-        wf[o] = I[0]; wf[o + 1] = I[1]; wf[o + 2] = I[2]; wf[o + 3] = I[3]; wf[o + 4] = s.dir[0]; wf[o + 5] = s.dir[1]; wf[o + 6] = s.dir[2]; wf[o + 7] = s.speed;
-        wf[o + 8] = A[0]; wf[o + 9] = A[1]; wf[o + 10] = A[2]; wf[o + 11] = A[3]; wu[o + 12] = 1;
+        for (let k = 0; k < 8; k++) wf[WindAt.spare + k] = R?.[2 + (k >> 2)]?.[k & 3] ?? 0;
+        wf[o + WindSrcAt.pos] = I[0]; wf[o + WindSrcAt.pos + 1] = I[1]; wf[o + WindSrcAt.pos + 2] = I[2]; wf[o + WindSrcAt.reach] = I[3]; wf[o + WindSrcAt.dir] = s.dir[0]; wf[o + WindSrcAt.dir + 1] = s.dir[1]; wf[o + WindSrcAt.dir + 2] = s.dir[2]; wf[o + WindSrcAt.speed] = s.speed;
+        wf[o + WindSrcAt.aux] = A[0]; wf[o + WindSrcAt.aux + 1] = A[1]; wf[o + WindSrcAt.aux + 2] = A[2]; wf[o + WindSrcAt.aux + 3] = A[3]; wu[o + WindSrcAt.kind] = 1;
         f[wAt + n * 4 + 3] = -1;
       } else {
-        wf[o] = s.pos[0]; wf[o + 1] = s.pos[1]; wf[o + 2] = s.pos[2]; wf[o + 3] = s.reach; wf[o + 4] = s.dir[0]; wf[o + 5] = s.dir[1]; wf[o + 6] = s.dir[2]; wf[o + 7] = s.speed;
-        wf[o + 8] = s.tanSpread; wf[o + 9] = s.r0; wf[o + 10] = s.dMax; wf[o + 11] = s.floorY ?? -1e9; wu[o + 12] = 0;
+        wf[o + WindSrcAt.pos] = s.pos[0]; wf[o + WindSrcAt.pos + 1] = s.pos[1]; wf[o + WindSrcAt.pos + 2] = s.pos[2]; wf[o + WindSrcAt.reach] = s.reach; wf[o + WindSrcAt.dir] = s.dir[0]; wf[o + WindSrcAt.dir + 1] = s.dir[1]; wf[o + WindSrcAt.dir + 2] = s.dir[2]; wf[o + WindSrcAt.speed] = s.speed;
+        wf[o + WindSrcAt.aux] = s.tanSpread; wf[o + WindSrcAt.aux + 1] = s.r0; wf[o + WindSrcAt.aux + 2] = s.dMax; wf[o + WindSrcAt.aux + 3] = s.floorY ?? -1e9; wu[o + WindSrcAt.kind] = 0;
         f[wAt + n * 4] = s.bound.c[0]; f[wAt + n * 4 + 1] = s.bound.c[1]; f[wAt + n * 4 + 2] = s.bound.c[2]; f[wAt + n * 4 + 3] = s.bound.r;
       }
-      wu[o + 13] = s.kind === 'storm' && s.roofs ? 1 : 0; wu[o + 14] = 0; wu[o + 15] = 0; n++;
+      wu[o + WindSrcAt.spare0] = s.kind === 'storm' && s.roofs ? 1 : 0; wu[o + WindSrcAt.spare1] = 0; wu[o + WindSrcAt.spare2] = 0; n++;
     }
-    wu[0] = n; wf[1] = Math.max(0, this.windRelax); wf[2] = 0.02; wf[3] = 0; this.stats.windSrcs = n;
+    wu[WindAt.count] = n; wf[WindAt.relax] = Math.max(0, this.windRelax); wf[WindAt.minW] = 0.02; wf[WindAt.pad0] = 0; this.stats.windSrcs = n;
     this.engine.device.queue.writeBuffer(this.windBuf, 0, this.windData, 0, WIND_HDR_BYTES + n * WIND_SRC_BYTES);
     em.forEach((e, i) => {
-      const o = SP_EMIT_AT + i * EMITTER_WORDS; const kind: string = e.kind ?? 'push';
+      const o = SpAt.emitters + i * EmitterAt.words; const kind: string = e.kind ?? 'push';
       let dens = e.density ?? 0, temp = e.temperature ?? 0, expand = P.expansion ? (e.expand ?? 0) : 0;
       const age = e.age ?? 0, ttl = e.ttl ?? 1;
       const envAt = (a: number): number => {
@@ -400,16 +399,16 @@ export class SmokeSystem implements SmokeSystemLike {
       dens *= env * (kind === 'canister' ? P.densityScale : P.fxDensityScale ?? 1); temp *= env; expand *= env;
       const j = (e.line ?? 0) > 0 ? 0 : e.jitter ?? (kind === 'flash' || kind === 'push' || kind === 'burst' ? 0.08 : 0.35); const jd = v3.normalize([e.dir[0] + (sysRandom() - 0.5) * j, e.dir[1] + (sysRandom() - 0.5) * j, e.dir[2] + (sysRandom() - 0.5) * j]);
       const sp = e.speed * (kind === 'push' ? 1 : e.jitter !== undefined ? 1 + (sysRandom() - 0.5) * e.jitter : 0.75 + sysRandom() * 0.5);
-      f[o] = e.pos[0]; f[o + 1] = e.pos[1]; f[o + 2] = e.pos[2]; f[o + 3] = e.radius;
-      f[o + 4] = jd[0]; f[o + 5] = jd[1]; f[o + 6] = jd[2]; f[o + 7] = sp;
-      f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : (e.line ?? 0) > 0 ? 3 : 0;
-      f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, (e.body ?? 0) > 0 ? e.body! : e.line ?? 0);
+      f[o + EmitterAt.pos] = e.pos[0]; f[o + EmitterAt.pos + 1] = e.pos[1]; f[o + EmitterAt.pos + 2] = e.pos[2]; f[o + EmitterAt.radius] = e.radius;
+      f[o + EmitterAt.dir] = jd[0]; f[o + EmitterAt.dir + 1] = jd[1]; f[o + EmitterAt.dir + 2] = jd[2]; f[o + EmitterAt.speed] = sp;
+      f[o + EmitterAt.density] = dens; f[o + EmitterAt.temperature] = temp; u[o + EmitterAt.level] = e.level; f[o + EmitterAt.mode] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : (e.line ?? 0) > 0 ? 3 : 0;
+      f[o + EmitterAt.push] = e.push ?? LEGACY_PUSH; f[o + EmitterAt.expand] = expand; f[o + EmitterAt.tall] = Math.max(0, (e.body ?? 0) > 0 ? e.body! : e.line ?? 0);
       // what it raises (smoke.wgsl WHAT IS IN A CELL): not the game's own smoke = the first byte full; 1 − tint in the other three (look only: smoke/dustTint.ts's switch)
       const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on && kind !== 'canister' ? e.tint : undefined;
-      u[o + 14] = ((e.held ? 0 : 255) | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
+      u[o + EmitterAt.kind] = ((e.held ? 0 : 255) | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
     });
     if (!whole) this.pushes.length = 0;
-    this.engine.device.queue.writeBuffer(this.spBuf, 0, this.spData, 0, (SP_EMIT_AT + Math.max(1, em.length) * EMITTER_WORDS) * 4);
+    this.engine.device.queue.writeBuffer(this.spBuf, 0, this.spData, 0, (SpAt.emitters + Math.max(1, em.length) * EmitterAt.words) * 4);
     return em.length;
   }
   private ensureLinkBG() {

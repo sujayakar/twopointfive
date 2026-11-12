@@ -24,9 +24,9 @@ fn marks_door(g: &Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
 // ---------------------------------------------------------------- the calls
 /// What this call gets: the way in, how many, how long, off the game's own die.
 pub(super) fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
-    let qrf_eta = g.tune.qrf_eta;
+    let qrf_eta = g.k.tune.qrf_eta;
     let r = response_of(g);
-    let sandbox = v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0);
+    let sandbox = v3::clamp(m::round(g.k.tune.qrf_size), 2.0, 4.0);
     let r = match r {
         Some(r) if reason != crate::qrf::QrfReason::Panel => r,
         _ => return crate::qrf::Dealt { way: 0.0, men: sandbox, eta: qrf_eta },
@@ -154,8 +154,8 @@ fn callers_hear(g: &mut crate::game::Game, at: V3) {
 /// Nobody has been asked for yet: a raid's callers, the silent net, then gunfire or bodies under an alarm ask for the team.
 fn before_the_call(g: &mut crate::game::Game, rd: bool) {
     use crate::qrf::QrfReason;
-    if !g.tune.qrf || !live(g) || !g.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
-    if !g.tune.qrf || !live(g) { return; }
+    if !g.k.tune.qrf || !live(g) || !g.k.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
+    if !g.k.tune.qrf || !live(g) { return; }
     if rd {
         if !raid_over(g) && g.time - g.qrf.loud_t < LOUD_MEMORY_SECS && raid_voice(g).is_some() && !request_qrf(g, QrfReason::Gunfire) {
             g.qrf.raid_t = -1e9;
@@ -163,7 +163,7 @@ fn before_the_call(g: &mut crate::game::Game, rd: bool) {
         }
         return;
     }
-    if g.tune.qrf_silent && silent_net(g) { return; }
+    if g.k.tune.qrf_silent && silent_net(g) { return; }
     if crate::guards::escalation_of(g) < 2.0 { return; }
     if g.time - g.qrf.loud_t < LOUD_MEMORY_SECS { request_qrf(g, QrfReason::Gunfire); }
     else if bodies_found(g) >= 2.0 { request_qrf(g, QrfReason::Bodies); }
@@ -171,7 +171,7 @@ fn before_the_call(g: &mut crate::game::Game, rd: bool) {
 
 /// How many are wanted: what was dealt, or the sandbox's own number.
 fn team_size(g: &crate::game::Game) -> f64 {
-    if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) }
+    if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.k.tune.qrf_size), 2.0, 4.0) }
 }
 
 /// The call was asked for long enough ago: the team is rolling, and control says how many, by where and how long.
@@ -278,7 +278,7 @@ fn arriving(g: &mut crate::game::Game) {
         note(g, "nobody");
         return;
     }
-    if mk.stairs { crate::audio_iface::game_audio_like_play(g, "stairBoots", Some([mk.muster[0][0], 0.3, mk.muster[0][2]]), Some(0.75), None); }
+    if mk.stairs { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StairBoots, Some([mk.muster[0][0], 0.3, mk.muster[0][2]]), Some(0.75), None); }
     let clear = match word(&mk.clear) { Some(c) => format!(" {},", c), None => String::new() };
     let lead = g.qrf.men[0];
     let text = format!("{} at {} — {} of us, ten seconds.{} check your fire", mk.tag, mk.name, count, clear);
@@ -319,7 +319,7 @@ fn deploy(g: &mut crate::game::Game) {
     let door = marks_door(g, &mk);
     let lead = alive(g).first().copied();
     if let (Some(d), Some(l)) = (door, lead) { fling_open(g, d, l); }
-    if let Some(d) = door { if mk.stairs { let at = g.dr[d].frame_centre; crate::audio_iface::game_audio_like_play(g, "stairDoor", Some(at), Some(1.0), None); } }
+    if let Some(d) = door { if mk.stairs { let at = g.dr[d].frame_centre; crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StairDoor, Some(at), Some(1.0), None); } }
     if crate::mission::mission_live(g) {
         g.mission.stats.qrf = m::max(g.mission.stats.qrf, 1.0);
         g.mission.stats.qrf_at = g.mission.stats.elapsed;
@@ -344,7 +344,7 @@ fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
     let who = g.char_id(by);
     g.dr[d].leaf.last_who = who;
     let at = door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
 
 // ---------------------------------------------------------------- the men, every frame

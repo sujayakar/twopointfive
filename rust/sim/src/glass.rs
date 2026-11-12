@@ -3,7 +3,7 @@
 //!
 //! The hashes, the bearings and the chords are worked out by the game's own maths (rust/maths), so every machine finds the same piece at the same point.
 //!
-//! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes`. A pane with no row is whole: shut
+//! WHOSE THE STATE IS. The box world's (`World.panes`): a line or a ray reads a pane's row where it stands. A pane with no row is whole: shut
 //! everywhere.
 //!
 //! A ROW. Doubles (GD): nine a site, eight sites (u, v, the bearing of radial 0, the four base radii, the ring zone's radius, the share of merged
@@ -236,9 +236,9 @@ fn to_uv(b: &[f64], x: f64, y: f64, z: f64) -> (f64, f64) {
 /// IS STATIC `bi`, A PANE OF GLASS, OPEN AT (x, y, z) — the game's rule: a piece has fallen out there, or
 /// the view in hand counts the glass there out (glass a burst would break is no glass to the man reckoning it). With no glass hung every pane is shut.
 pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
-    let Some(g) = o.panes else { return false };
-    let gives = || o.view == VIEW_GIVES && crate::panes::gives(g, o, bi, x, y, z, tune);
-    let Some((d, w)) = crate::panes::row_for(g, bi as u32) else { return gives() };
+    let gives = || o.view == VIEW_GIVES && crate::panes::gives(o, bi, x, y, z, tune);
+    let Some(row) = crate::panes::row_for(&o.panes, bi as u32) else { return gives() };
+    let (d, w) = (&row.d, &row.w);
     let fl = w[GW_FLAGS];
     if fl & G_GONE != 0 {
         return true;

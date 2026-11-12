@@ -57,7 +57,7 @@ fn face_off_wall(g: &mut Game, t: Tick, w: crate::player::WallHold) {
     let Tick { pl, c, dt, .. } = t;
     let away = m::atan2(w.n[0], w.n[2]);
     let moving = m::abs(w.v) > 0.3;
-    let pace = if g.pl[pl].crouch { g.tune.player_crouch } else { crate::player::WALL_PACE };
+    let pace = if g.pl[pl].crouch { g.k.tune.player_crouch } else { crate::player::WALL_PACE };
     let turn = v3::smoothstep(0.1, 0.9, m::abs(w.v) / m::max(0.3, pace));
     if !wall_take_yaw(g, pl) { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, away - w.side * crate::player::WALL_TURN * turn, 10.0 * dt); }
     let out = if w.at_edge == w.side { crate::player::WALL_LOOK } else if moving { 15.0 * v3::DEG } else { 8.0 * v3::DEG };

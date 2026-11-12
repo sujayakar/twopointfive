@@ -178,8 +178,7 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
 /// …asked of the game shared
 fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option<crate::wallcharge::WallSpot> {
     let n = m::min(g.destr.walls.authored, g.col.boxes.len() as f64) as usize;
-    let f = crate::scene_boxes::box_flag();
-    let skip = js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic);
+    let skip = crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
     let mut best: Option<crate::wallcharge::WallSpot> = None;
     let mut bd = g.k.wallcharge.pick_m + 1e-6;
     for i in 0..n {

@@ -169,6 +169,10 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: its game is nowhere near stood)
     await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__net); await page.evaluate(() => window.__ready);
     const out = await page.evaluate(drive, { N, BREAK, NO_AHEAD, PICK: BAD_WAY ? 0 : 3, WORDS: !!WORDS });
+    const turns = await page.evaluate(() => { const P = window.__panel, was = P.visible; if (!was) P.toggle();
+      const says = [...P.root.querySelectorAll('.textrow')].some(e => /can't be turned in a co-op game/.test(e.textContent)), off = [...P.root.querySelectorAll('input')].filter(e => e.disabled).length, shut = P.root.querySelectorAll('.sbody[inert]').length;
+      if (!was) P.toggle(); return { says, off, shut }; });
+    line(turns.says && turns.off > 10 && turns.shut > 2, `numbers: the debugger ${turns.says ? 'says they' : 'DOES NOT SAY they'} can't be turned in a co-op game (${turns.off} of its knobs and ${turns.shut} sections shut)`);
     const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30), differ = S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine}; --words DIR, then tools/mp/words-diff.ts, names the parts)` : '';
     line(moved.has('roomclear') === /roomclear/.test(setup.scenario) && moved.get('seed') === String(setup.seed) && moved.has('net') && !moved.has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (?${moved.toString().slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);

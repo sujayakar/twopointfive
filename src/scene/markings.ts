@@ -21,14 +21,12 @@ export const MARKING_TEXEL = 0.025;
 export const MAX_MARKS_PER_BOX = 4;
 export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; 
 /** GPU table: vec4f rows in the tail of BoxWorld.matBuf; a record = MARK_HEAD_ROWS header rows + ceil(W·H / 48) cell rows (12 cells a float, exact small integers) */
-export const MARK_HEAD_ROWS = 8; export const CELLS_PER_FLOAT = 12; export const CELLS_PER_ROW = 48;
-export const MARK_TABLE_ROWS = 6144;   // 96 KB of table (the office packs ≈ 1.5k rows)
-export const MARK_SLOT_SHIFT = 18; export const MARK_SLOT_MAX = (1 << 14) - 1;   // the 1-based first-record ROW in the flags word's top 14 bits
+export const MARK_HEAD_ROWS = 8;  export const CELLS_PER_ROW = 48;
+export const MARK_SLOT_MAX = (1 << 14) - 1;   // the 1-based first-record ROW in the flags word's top 14 bits
 
 export type MarkFace = '+x' | '-x' | '+y' | '-y' | '+z' | '-z';
 export const MARK_FACES: readonly MarkFace[] = ['+x', '-x', '+y', '-y', '+z', '-z'];   // index = the g-buffer's face order (gbuffer.wgsl cubeCorner)
 export type MarkRes = 'fine' | 'base' | 'coarse';
-export const MARK_RES: readonly MarkRes[] = ['fine', 'base', 'coarse'];
 export const RES_K: Record<MarkRes, number> = { fine: 0.5, base: 1, coarse: 2 };
 
 /** One palette entry = a MATERIAL: `albedo` absolute linear rgb, else `mul` × the box's own albedo (absent both = the box's albedo untouched — a roughness-only
@@ -308,35 +306,3 @@ export function markStats(m: MarkingDef, base: Vec3, texelBase = MARKING_TEXEL):
 }
 /** rows the packed record takes */
 export const markRecordRows = (m: MarkingDef) => MARK_HEAD_ROWS + Math.ceil(m.size[0] * m.size[1] / CELLS_PER_ROW);
-/** The GPU record at vec4 row `row` of `out` (a Float32Array of the whole table): plain floats only — every packed field a small exact integer, no bit
- *  pattern a float load could renormalise (markings.wgsl markLoad reads it back the same way):
- *    row 0: U0 V0 W H                    row 1: meta, f1 f2 f3      meta = face + 8·res + 32·last + 64·anyEmit + 128·areaLit + 256·emask + 2048·palFlags (bit k: entry k+1 changes albedo; bit 3+k: it sets roughness)
- *    rows 2‥7: entry k = (albedo.rgb, rough) then (emit.rgb, 0)     rows 8…: the cells, 12 a float (2 bits each, cell j·W + i, j from the bottom), 48 a row */
-export function packMarking(out: Float32Array, row: number, m: MarkingDef, st: MarkStats, last: boolean, anyEmit: boolean, areaLit: boolean) {
-  const o = row * 4; out.fill(0, o, o + markRecordRows(m) * 4);
-  let palFlags = 0; for (let k = 0; k < 3; k++) { const p = m.pal[k]; if (!p) continue; if (p.albedo || (p.mul !== undefined && p.mul !== 1)) palFlags |= 1 << k; if (p.rough !== undefined) palFlags |= 8 << k; }
-  const meta = faceIndex(m.face) + 8 * MARK_RES.indexOf(m.res ?? 'base') + 32 * (last ? 1 : 0) + 64 * (anyEmit ? 1 : 0) + 128 * (areaLit ? 1 : 0) + 256 * st.emask + 2048 * palFlags;
-  out[o] = m.at[0]; out[o + 1] = m.at[1]; out[o + 2] = m.size[0]; out[o + 3] = m.size[1];
-  out[o + 4] = meta; out[o + 5] = st.f[0]; out[o + 6] = st.f[1]; out[o + 7] = st.f[2];
-  for (let k = 0; k < 3; k++) {
-    const p = m.pal[k]; const b = o + 8 + k * 8; const a = st.alb[k];
-    out[b] = a[0]; out[b + 1] = a[1]; out[b + 2] = a[2]; out[b + 3] = p?.rough ?? -1;
-    out[b + 4] = p?.emit?.[0] ?? 0; out[b + 5] = p?.emit?.[1] ?? 0; out[b + 6] = p?.emit?.[2] ?? 0; out[b + 7] = 0;
-  }
-  const [W, H] = m.size; const cb = o + MARK_HEAD_ROWS * 4;
-  for (let j = 0; j < H; j++) { const rowStr = m.cells[H - 1 - j]; for (let i = 0; i < W; i++) { const e = CELL_CHARS.indexOf(rowStr[i]); if (e <= 0) continue; const c = j * W + i; out[cb + Math.floor(c / CELLS_PER_FLOAT)] += e << (2 * (c % CELLS_PER_FLOAT)); } }
-}
-/** markings whose emission has been registered as an analytic light (rust/game_rules/src/tick/game): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
-export const AREA_LIT_MARKS = new WeakSet<MarkingDef>();
-export function faceAreas(h: Vec3): { areas: number[]; total: number } {
-  const areas = MARK_FACES.map((_, f) => { const { hu, hv } = faceHalf(h, f); return 4 * hu * hv; });
-  return { areas, total: areas.reduce((s, a) => s + a, 0) };
-}
-/** The albedo the SECONDARY rays should see for a marked box: its base albedo + every marking's mean change × (its area ÷ the box's total surface) — the same
- *  energy the per-pixel evaluation returns averaged over the box, at zero ray-path cost. */
-export function secondaryAlbedo(base: Vec3, h: Vec3, marks: readonly MarkingDef[], texelBase = MARKING_TEXEL): Vec3 {
-  const { total } = faceAreas(h); if (total <= 0) return [base[0], base[1], base[2]];
-  const out: Vec3 = [base[0], base[1], base[2]];
-  for (const m of marks) { const st = markStats(m, base, texelBase); const w = Math.min(st.area / total, 1); out[0] += st.dAlbedo[0] * w; out[1] += st.dAlbedo[1] * w; out[2] += st.dAlbedo[2] * w; }
-  return [Math.min(Math.max(out[0], 0), 1), Math.min(Math.max(out[1], 0), 1), Math.min(Math.max(out[2], 0), 1)];
-}

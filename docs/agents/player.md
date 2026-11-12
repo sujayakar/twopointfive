@@ -141,7 +141,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 ## To change it
 
 - **A number:** its table in `knobs/`, by the panel or `?knob.aimweight.heft=2`. Paces are `player_walk`, `player_sprint`, `player_crouch` in
-  `GameTune`, and `knobs/player.rs`.
+  `TuneK`, and `knobs/player.rs`.
 - **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.

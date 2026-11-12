@@ -23,7 +23,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | his senses | `guards/senses/`, `sense.rs`, `guards/feet.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
 | his eye | `attention.rs` | what small thing holds a calm man's eye (`stealth.md`) |
 | how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
-| whose man he is | `owner.rs`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
+| whose man he is | `owner.rs`, `taskers!` in its types | one word on his body (`owner.rs`), a bit a tasker |
 | who has his body | `control/` | `Control`, the list of rules and the arbiter (`g.ctl`) |
 | what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`) | his side; his squad; his place in a room fight |
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |
@@ -90,7 +90,7 @@ his squad's rooms (`duty::bars`), and `duty::round_held` is asked before a round
 way, met somebody or was taken off it. An `errand` tries again; one that `stays` has him stand at its end.
 
 **Dice.** `draw_of(g, "module::function#1", gd)` is a fixed function of the seed, the site, the man, the tick and how many times this site has drawn
-for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The block's die still steps once a
+for him this tick. So a new draw about one man moves no other man's draw, whatever order the men are walked in. The die's count still steps once a
 draw, as a witness, so `hold` sees a new draw in its `dice` part.
 
 **Debugging.** `control_line` says it in one line: Alvarez: shaken by a blast for 0.4 s · said no: a live grenade, broke and ran · a covered lane has

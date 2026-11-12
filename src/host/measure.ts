@@ -23,7 +23,7 @@ export interface MeasureDeps { gpu: Gpu; engine: Engine; smoke: SmokeSystem; qua
 function measured(game: DrawGame, engine: Engine, smoke: SmokeSystem, marks: () => number): MeasuredGame {
   const D = game.drawn;
   return {
-    get guards() { return game.tally().men.map(([state, lit]) => ({ state, flashlight: { enabled: lit !== 0 } })); },
+    get guards() { return game.tally().men.map(m => ({ state: m.state, flashlight: { enabled: m.lit } })); },
     get weather() { const W = engine.weather; return { rainRate: W.rain, strokeT: 0 }; }, smoke, decals: { get count() { return marks(); } },
     get qrf() { return { state: game.tally().qrf }; }, get escalation() { return game.tally().escalation; },
     get saves() { const t = game.tally(); return { stats: { autosaves: t.autosaves, manual: t.manual, loads: t.loads } }; },

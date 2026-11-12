@@ -36,7 +36,7 @@ pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
 fn quick_note(g: &Game, seat: &SeatRef) -> Option<Note> {
     let text = seat.orders.shown.quick.clone()?;
     if crate::rails::rails_locks(g, "order") || (crate::cmdring::ring_hold_secs(g) > 0.0 && crate::rails::rails_teaches_hold(g)) { return None; }
-    Some(Note { key: crate::view::key_cap(&g.k.orders.quick_key), text })
+    Some(Note { key: crate::view::key_cap(g.k.orders.quick_key.as_str()), text })
 }
 fn pair_word(p: crate::game::PairId) -> Pair {
     match p { crate::game::PairId::Red => Pair::Red, crate::game::PairId::Blue => Pair::Blue }

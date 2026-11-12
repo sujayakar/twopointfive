@@ -1,10 +1,10 @@
 //! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// whose words the mission's line is
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum MissionOf {
     /// the stealth mission's own stages
     Stages,
@@ -17,7 +17,7 @@ pub enum MissionOf {
 }
 
 /// the mission's one line, and the place its marker stands on
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct MissionView {
     pub of: crate::view::MissionOf,
     pub text: String,
@@ -26,7 +26,7 @@ pub struct MissionView {
 impl Default for MissionView { fn default() -> Self { MissionView { of: MissionOf::Stages, text: String::new(), pos: None } } }
 
 /// what a row of the radio strip is
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum RadioKind {
     /// a line on a net
     Net,
@@ -35,7 +35,7 @@ pub enum RadioKind {
 }
 
 /// a row of the radio strip
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct RadioRow {
     pub kind: crate::view::RadioKind,
     pub text: String,
@@ -45,7 +45,7 @@ pub struct RadioRow {
 impl Default for RadioRow { fn default() -> Self { RadioRow { kind: RadioKind::Net, text: String::new(), age: 0.0 } } }
 
 /// how a line sounds
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum BubbleTone {
     Calm,
     /// a man who may find you out
@@ -57,7 +57,7 @@ pub enum BubbleTone {
 }
 
 /// where a line goes
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum BubblePlace {
     /// over him, and nowhere while that is off the screen
     Over,
@@ -68,7 +68,7 @@ pub enum BubblePlace {
 }
 
 /// a line being said on the floor
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct BubbleView {
     /// his character's id (None: a man who went down, called from `at`)
     pub man: Option<f64>,
@@ -88,7 +88,7 @@ pub struct BubbleView {
 }
 impl Default for BubbleView { fn default() -> Self { BubbleView { man: None, text: String::new(), edge: String::new(), age: 0.0, dur: 0.0, radio: false, tone: BubbleTone::Calm, place: BubblePlace::Over, at: [0.0, 0.0, 0.0] } } }
 /// a tutorial mission's one big line
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RailPrompt {
     pub line: String,
     /// which step's pip is lit (from 1), of how many
@@ -101,14 +101,14 @@ pub struct RailPrompt {
 }
 
 /// a tutorial step's card: why, where the line says what
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RailCard {
     pub title: Option<String>,
     pub text: String,
 }
 
 /// what a tutorial mission's frame lets the player do and tells him, for the step that is up
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RailsView {
     /// (None: the run is over)
     pub prompt: Option<crate::view::RailPrompt>,
@@ -132,7 +132,7 @@ pub struct RailsView {
 }
 
 /// the lesson that is live on the mission that is up
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct LessonView {
     /// the step that is up, from 0, and how many there are
     pub step: u32,
@@ -152,7 +152,7 @@ pub struct LessonView {
 }
 
 /// what a place in the kit's strip holds
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum KitThing {
     /// his hands, empty
     Hands,
@@ -164,11 +164,11 @@ pub enum KitThing {
 }
 
 /// a place in the kit's strip, what the key brings
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct KitSlot {
     pub thing: crate::view::KitThing,
-    /// the code of the key that brings it
-    pub key: String,
+    /// the key that brings it
+    pub key: crate::input::Key,
     /// a gun's short name, a can's word (empty hands have none)
     pub name: String,
     /// a gun's rounds ready, how many cans
@@ -182,10 +182,10 @@ pub struct KitSlot {
     /// its key is a row of the setup that is open
     pub taken: bool,
 }
-impl Default for KitSlot { fn default() -> Self { KitSlot { thing: KitThing::Hands, key: String::new(), name: String::new(), count: 0.0, absent: false, spent: false, up: false, taken: false } } }
+impl Default for KitSlot { fn default() -> Self { KitSlot { thing: KitThing::Hands, key: crate::handslot::HANDSLOT_KEY, name: String::new(), count: 0.0, absent: false, spent: false, up: false, taken: false } } }
 
 /// a position a thing on a gun can be set to, in the HUD's words
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitWord {
     pub text: String,
     /// it is the one that is up
@@ -195,7 +195,7 @@ pub struct KitWord {
 }
 
 /// the pistol's OCP
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitOcp {
     /// 1 full
     pub charge: f64,
@@ -203,7 +203,7 @@ pub struct KitOcp {
 }
 
 /// the gun that is up, as its box shows it
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitGun {
     /// rounds in the magazine
     pub mag: f64,
@@ -230,15 +230,15 @@ pub struct KitGun {
 }
 
 /// a row of the setup that is open
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct KitSetupRow {
-    /// the code of its key
-    pub key: String,
+    /// its key
+    pub key: crate::input::Key,
     pub words: Vec<crate::view::KitWord>,
 }
 
 /// the setup of the gun in his hands, while it is open
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitSetup {
     pub rows: Vec<crate::view::KitSetupRow>,
     /// the key that backs out of it
@@ -246,7 +246,7 @@ pub struct KitSetup {
 }
 
 /// the big slot: what is worked at a door, on the door's own key
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitBig {
     pub name: String,
     /// where it is worked
@@ -256,7 +256,7 @@ pub struct KitBig {
 }
 
 /// WHAT A SEAT'S MAN CARRIES AND THE STATE HE IS IN, AS THE KIT'S COLUMN SHOWS IT
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KitView {
     /// the strip, in its order (no places: a game no host steps)
     pub slots: Vec<crate::view::KitSlot>,
@@ -276,7 +276,7 @@ pub struct KitView {
 }
 
 /// the colour a mark over a man is drawn in
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum HeadTone {
     Calm,
     /// out cold, and breathing
@@ -287,7 +287,7 @@ pub enum HeadTone {
 }
 
 /// a man on the floor, as the HUD marks him
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct ManMark {
     /// his character's id
     pub man: f64,
@@ -304,7 +304,7 @@ pub struct ManMark {
 impl Default for ManMark { fn default() -> Self { ManMark { man: -1.0, text: String::new(), tone: HeadTone::Calm, civ: false, hidden: false, debug: String::new() } } }
 
 /// where an enemy who has gone out of the team's sight was last seen
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct SeenMark {
     /// his character's id
     pub man: f64,
@@ -316,7 +316,7 @@ pub struct SeenMark {
 }
 
 /// a stuck camera of the seat's own, while the fog is live
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct CamMark {
     pub at: V3,
     /// it is the one sending a picture
@@ -324,7 +324,7 @@ pub struct CamMark {
 }
 
 /// a defender's live grenade the team has been cued on (the cue is one a grenade, and made about the first man: in a game of two the second is told of the same)
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct FragMark {
     pub at: V3,
     /// seconds left on its fuse
@@ -332,7 +332,7 @@ pub struct FragMark {
 }
 
 /// WHAT THE HUD MARKS ON THE FLOOR AND SAYS OF THE SEAT'S MAN
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct MarksView {
     /// every man on the floor the HUD may mark, hidden or not: guards first, then the civilians shown
     pub men: Vec<crate::view::ManMark>,
@@ -356,7 +356,7 @@ pub struct MarksView {
 }
 
 /// what the auto-aim has snapped to
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum RingOn {
     /// nothing: the bare point
     Free,
@@ -367,7 +367,7 @@ pub enum RingOn {
 }
 
 /// the aim model's cone at the ring
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct AimCone {
     /// its half width, radians
     pub spread: f64,
@@ -383,7 +383,7 @@ pub struct AimCone {
 }
 
 /// the gun's ring, when nothing Space acts on holds the reticle
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Crosses)]
 pub struct AimRing {
     /// where it stands: where the gun points while it swings, else what it snapped to, else the cursor's point
     pub at: V3,
@@ -400,14 +400,14 @@ pub struct AimRing {
 impl Default for AimRing { fn default() -> Self { AimRing { at: [0.0; 3], on: RingOn::Free, trail: false, shut: false, wish: None, cone: None } } }
 
 /// the gun's own small circle, while the reticle's ring is on a thing Space acts on: a round goes there
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct GunDot {
     pub at: V3,
     pub shut: bool,
 }
 
 /// what a thing in the air would reach, flat on the floor round a point
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct ThrowReachView {
     pub at: V3,
     pub kill: f64,
@@ -416,7 +416,7 @@ pub struct ThrowReachView {
 }
 
 /// the arc he is aiming
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ThrowView {
     pub points: Vec<V3>,
     pub land: V3,
@@ -428,7 +428,7 @@ pub struct ThrowView {
 }
 
 /// WHAT THE HUD DRAWS OF THE SEAT'S AIM
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct AimView {
     pub ring: Option<crate::view::AimRing>,
     pub dot: Option<crate::view::GunDot>,
@@ -438,7 +438,7 @@ pub struct AimView {
 }
 
 /// what a man wears and carries that the drawer draws
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Crosses)]
 pub struct WornView {
     /// his character's id
     pub man: f64,
@@ -448,7 +448,7 @@ pub struct WornView {
 impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles: false, big: None } } }
 
 /// WHAT A SEAT'S HUD IS TOLD OF THE GAME AS A TICK LEFT IT: a section for each kind of thing a HUD words. Nothing in it is kept by the game.
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TickView {
     pub mission: crate::view::MissionView,
     /// the lesson that is live. (None: none is)
@@ -498,14 +498,14 @@ pub struct TickView {
 }
 
 /// which pair of the squad a man is of
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum Pair {
     Red,
     Blue,
 }
 
 /// one man's line on the squad's block
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct MateLine {
     /// his character's id
     pub man: f64,
@@ -523,7 +523,7 @@ pub struct MateLine {
 }
 
 /// a line of the squad's block
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct Note {
     /// the key that does it ('' = none): the default key's letter, the page names the player's own
     pub key: String,
@@ -531,7 +531,7 @@ pub struct Note {
 }
 
 /// WHAT A SEAT'S HUD IS TOLD OF ITS SQUAD
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct SquadView {
     /// loud or quiet, at a glance
     pub posture: Option<String>,
@@ -547,7 +547,7 @@ pub struct SquadView {
 }
 
 /// what kind of thing an order would be about
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum UnderKind {
     Floor,
     Door,
@@ -556,7 +556,7 @@ pub enum UnderKind {
     Foe,
 }
 /// a wall a charge might go on, by its place in the level's boxes
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct UnderWall {
     pub index: f64,
     pub along_x: bool,
@@ -567,7 +567,7 @@ pub struct UnderWall {
     pub outer: bool,
 }
 /// what a point or the cursor is on, as an order would be about it
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct Under {
     pub kind: crate::view::UnderKind,
     pub at: V3,
@@ -582,7 +582,7 @@ pub struct Under {
 impl Default for Under { fn default() -> Self { Under { kind: UnderKind::None, at: [0.0; 3], door: None, side: 0.0, man: -1.0, wall: None, thing: None } } }
 
 /// WHAT A SEAT'S HUD IS TOLD OF WHAT ITS CURSOR IS ON, as the frame is drawn
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct CursorView {
     /// (None: no squad answers to this seat)
     pub under: Option<crate::view::Under>,
@@ -600,7 +600,7 @@ pub struct HostNow {
 }
 
 /// one row of the card's timeline, in words
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct DebriefRow {
     pub t: f64,
     pub kind: crate::chronicle::ChronKind,
@@ -613,7 +613,7 @@ pub struct DebriefRow {
 impl Default for DebriefRow { fn default() -> Self { DebriefRow { t: 0.0, kind: crate::chronicle::ChronKind::Objective, room: String::new(), pos: [0.0; 3], text: String::new(), down: false } } }
 
 /// WHAT THE END CARD SHOWS OF A RUN: asked once, as the card opens. Large, so it is no section of `TickView`.
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct DebriefView {
     pub debrief: crate::chronicle::Debrief,
     pub rows: Vec<crate::view::DebriefRow>,
@@ -626,7 +626,7 @@ pub struct DebriefView {
 }
 
 /// WHAT A MACHINE KEEPS OF A RUN: asked as a try begins and as the run ends. The game says what there is to keep, and a page keeps it.
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RunView {
     /// the try has begun (an order, a stride, a round), on a run that may be kept
     pub begun: bool,
@@ -650,21 +650,21 @@ pub struct RunView {
 }
 
 /// a card's two weights: how readily its man moves, and how little of him is seen
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct CardLoad {
     pub mob: f64,
     pub con: f64,
 }
 
 /// a bar of what a gun is good at, 0 to 1, and where the gun he is issued stands on it
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct CardBar {
     pub now: f64,
     pub issued: f64,
 }
 
 /// a gun a slot could hold
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct CardPick {
     pub id: String,
     pub word: String,
@@ -682,7 +682,7 @@ pub struct CardPick {
 }
 
 /// what a row of a card is
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum CardKind {
     Count,
     Flag,
@@ -690,7 +690,7 @@ pub enum CardKind {
 }
 
 /// a row of a man's card
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Crosses)]
 pub struct CardRow {
     pub field: String,
     pub label: String,
@@ -736,14 +736,14 @@ pub struct CardRow {
 impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
 
 /// pouches, full and in all
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct CardPouches {
     pub used: f64,
     pub total: f64,
 }
 
 /// a man's card as it is shown: the rows it has as it stands, a gun before what rides on it
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct CardView {
     pub who: f64,
     pub changed: bool,
@@ -771,7 +771,7 @@ pub struct CardView {
 }
 
 /// a text this machine keeps, by the name it is kept under
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct KeptText {
     pub key: String,
     /// empty: kept no longer
@@ -779,7 +779,7 @@ pub struct KeptText {
 }
 
 /// what a press on a card did: taken, or why not; what it walked past; the rows it moved; and what is kept from now
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct Pressed {
     pub ok: bool,
     pub why: String,
@@ -789,7 +789,7 @@ pub struct Pressed {
 }
 
 /// a size of the team
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TeamSize {
     pub n: f64,
     /// it can be picked on this mission
@@ -802,7 +802,7 @@ pub struct TeamSize {
 }
 
 /// a named kit of the squad's row
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TeamKit {
     pub id: String,
     pub name: String,
@@ -813,7 +813,7 @@ pub struct TeamKit {
 }
 
 /// a thing a man carries, as his chip draws it
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TeamThing {
     pub field: String,
     pub value: String,
@@ -825,7 +825,7 @@ pub struct TeamThing {
 }
 
 /// a place of the team
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TeamMan {
     /// somebody comes in it
     pub here: bool,
@@ -850,7 +850,7 @@ pub struct TeamMan {
 }
 
 /// the team as it would go on the mission the cards are for
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct TeamView {
     pub size: f64,
     pub sizes: Vec<crate::view::TeamSize>,
@@ -876,7 +876,7 @@ pub struct TeamView {
 }
 
 /// one thing a setting can be
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct SettingChoice {
     pub id: String,
     pub label: String,
@@ -888,7 +888,7 @@ pub struct SettingChoice {
 }
 
 /// a setting of a mission before it is played: the difficulty, one of its levers, the hour, the weather, the way in
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct Setting {
     pub key: String,
     pub label: String,
@@ -904,7 +904,7 @@ pub struct Setting {
 }
 
 /// a mission as the list has it
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct StartRow {
     pub id: String,
     pub title: String,
@@ -944,7 +944,7 @@ pub struct StartRow {
 }
 
 /// the list of missions, in the order the page draws them
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct StartView {
     pub rows: Vec<crate::view::StartRow>,
     /// the mission the address names (empty: none)
@@ -958,7 +958,7 @@ pub struct StartView {
 }
 
 /// a mission as its row of the table has it, for who reads the rows themselves and draws no card. What a row does not say is empty
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct MissionRow {
     pub id: String,
     pub title: String,
@@ -995,13 +995,13 @@ pub struct MissionRow {
 }
 
 /// every mission there is: the plain solo night, then the tables in their order
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct MissionsView {
     pub rows: Vec<crate::view::MissionRow>,
 }
 
 /// a mission's sheet
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct SheetView {
     pub id: String,
     pub settings: Vec<crate::view::Setting>,
@@ -1015,7 +1015,7 @@ pub struct SheetView {
 }
 
 /// what a mission's page says of it while it loads
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct BriefView {
     /// the row of the list (empty: the address starts none, and the rest is empty too)
     pub id: String,
@@ -1040,7 +1040,7 @@ pub struct BriefView {
 }
 
 /// what the pause and end cards say of the short list, on a page one of its rows started
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ShortView {
     /// the row the address is (empty: none, and the rest is empty too)
     pub now: String,
@@ -1061,11 +1061,11 @@ pub struct ShortView {
 }
 
 /// what is thrown
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum ThrowKind { #[default] Frag, Stun, Shell }
 
 /// a throw of a man of the seat's, ordered or only offered by the lit row: who, his walk, the arc, where it rests and what it reaches there
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ThrowLine {
     /// his character's id
     pub man: f64,
@@ -1085,11 +1085,11 @@ pub struct ThrowLine {
 }
 
 /// a colour by its name
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum Tone { #[default] Red, Blue, Gold }
 
 /// one wedge of a ring, on its digit
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RingWedge {
     pub key: f64,
     pub text: String,
@@ -1100,7 +1100,7 @@ pub struct RingWedge {
 }
 
 /// a ring that stays on its point: the place, where its middle stands from it, and how near the view's edge it may stand (px)
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct RingPin {
     pub at: V3,
     pub ox: f64,
@@ -1110,7 +1110,7 @@ pub struct RingPin {
 }
 
 /// the squad's ring as it stands
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RingView {
     pub x: f64,
     pub y: f64,
@@ -1125,7 +1125,7 @@ pub struct RingView {
 }
 
 /// his own ring as it stands
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct HandRingView {
     pub x: f64,
     pub y: f64,
@@ -1136,7 +1136,7 @@ pub struct HandRingView {
 }
 
 /// a tap's answer: what it says, what it was beside (its kind's word, 'wall': nothing), and how far off a door a step short is
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct EmptyView {
     pub word: String,
     pub kind: crate::view::ThingKind,
@@ -1144,7 +1144,7 @@ pub struct EmptyView {
 }
 
 /// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`scene_collision::way_host`)
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanWay {
     /// his feet
     pub from: V3,
@@ -1155,7 +1155,7 @@ pub struct PlanWay {
 }
 
 /// a man with a mark
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanMan {
     pub man: f64,
     pub tag: String,
@@ -1175,7 +1175,7 @@ pub struct PlanMan {
 }
 
 /// who an open menu goes to
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, ToBytes, Crosses)]
 pub struct PlanWho {
     pub man: f64,
     pub at: V3,
@@ -1183,15 +1183,15 @@ pub struct PlanWho {
 }
 
 /// what waits on a key
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum WaitWhy { #[default] Stack, Tool, Charge, Thr, Drill, Wall, Pair }
 
 /// how a door's key is drawn: none · it waits on the key and is not set · they stand there and the press sends them
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum KeyCap { #[default] None, Dark, Lit }
 
 /// something waiting on the player's key: a doorway's two jambs (a wall's foot), whose it is, the key that sends it and whether that key would send this one now
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanDoor {
     pub door: Option<String>,
     pub a: V3,
@@ -1204,7 +1204,7 @@ pub struct PlanDoor {
 }
 
 /// a throw on the plan: as `ThrowLine`, the arc on along the floor to its rest
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanThrow {
     pub man: f64,
     pub tag: String,
@@ -1219,7 +1219,7 @@ pub struct PlanThrow {
 }
 
 /// one seat's plan
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct SeatPlan {
     pub men: Vec<crate::view::PlanMan>,
     pub who: Vec<crate::view::PlanWho>,
@@ -1231,37 +1231,37 @@ pub struct SeatPlan {
 }
 
 /// the plan on the floor: the seat's own whole, then each other player's, what is only its own player's left out and a wait the seat's own lists left to that
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanView {
     pub own: crate::view::SeatPlan,
     pub others: Vec<crate::view::SeatPlan>,
 }
 
 /// what sort of thing the key is about
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum ThingKind { #[default] Cam, Guard, Breaker, Door, Light, Body, Objective, Held, Wall, Switch, Charge, Cancel }
 
 /// the mission's stage
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum Stage { Drive, #[default] Infiltrate, Exfil, Done, Failed }
 
 /// what a held attention is: he goes over, he only looks, or another rule has lent it
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum AttentionMode { #[default] Go, Look, Lent }
 
 /// what a floor is, as a man's feet are heard on it
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes, Words, Crosses)]
 pub enum FloorWord { #[default] Carpet, Lino, Stone, Tile, Asphalt, Grass }
 
 /// a line of a row of his list: the key that does it ('' = a line no key gives), by its default name for the page to name as bound
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RowOpt {
     pub key: String,
     pub text: String,
 }
 
 /// a row of his list
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ListRow {
     /// what sort of thing it is about
     pub kind: crate::view::ThingKind,
@@ -1280,7 +1280,7 @@ pub struct ListRow {
 }
 
 /// the thing the highlighted row is about, which the HUD rings
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ThingRing {
     pub kind: crate::view::ThingKind,
     pub at: V3,
@@ -1293,7 +1293,7 @@ pub struct ThingRing {
 }
 
 /// a thing the key could act on, whether or not it is in reach
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct ThingDot {
     pub kind: crate::view::ThingKind,
     pub at: V3,
@@ -1308,7 +1308,7 @@ pub struct ThingDot {
 }
 
 /// his list as the panel shows it, and the things on the floor it is about
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct InteractView {
     pub rows: Vec<crate::view::ListRow>,
     /// the highlighted row among them (-1: none)
@@ -1321,7 +1321,7 @@ pub struct InteractView {
 }
 
 /// the alarm's stage
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct AlarmView {
     /// 1 heightened, 2 lockdown
     pub level: f64,
@@ -1332,7 +1332,7 @@ pub struct AlarmView {
 }
 
 /// how a ring with one row is drawn: the numbers the game reads the cursor by (ringlone)
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct LoneLook {
     pub r: f64,
     pub h: f64,
@@ -1345,7 +1345,7 @@ pub struct LoneLook {
 }
 
 /// the numbers of a ring as the game reads a cursor by them
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct RingLook {
     /// the places on the wheel
     pub places: f64,
@@ -1359,7 +1359,7 @@ pub struct RingLook {
 }
 
 /// the plan on the floor's numbers
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct PlanLook {
     pub fresh_secs: f64,
     pub walk_dim: f64,
@@ -1373,7 +1373,7 @@ pub struct PlanLook {
 }
 
 /// where a line from off the screen goes
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct NetLook {
     /// at the edge of the view on his side (false: near you)
     pub edge: bool,
@@ -1382,14 +1382,14 @@ pub struct NetLook {
 }
 
 /// a held attention's numbers
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct AttentionLook {
     pub ring_m: f64,
     pub way_reask: f64,
 }
 
 /// the rule tables' numbers that say how the HUD lays out what it is told. Whatever a rule of the tick reads is read here too, so a page holds no second copy of it
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct HudLook {
     pub ring: crate::view::RingLook,
     pub plan: crate::view::PlanLook,
@@ -1402,7 +1402,7 @@ pub struct HudLook {
 }
 
 /// one man's held attention: a thread from his feet to the place and a ring there
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct AttentionLine {
     /// his character's id
     pub man: f64,

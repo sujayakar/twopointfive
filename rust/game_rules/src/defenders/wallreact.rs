@@ -1101,7 +1101,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (crate::wallreact::Reco
         let now = g.time;
         g.tab.roomfight_def[d].moved_at = now;
         g.m.wallreact.wall_react.watching.delete(gd);
-        let pace = g.tune.guard_chase;
+        let pace = g.k.tune.guard_chase;
         crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, crate::owner::By::NOBODY);
         g.m.wallreact.wall_react.moved_t.set(gd, now);
         crate::game::game_say(g, gd, "cover's gone — moving!", None, None);
@@ -1115,7 +1115,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (crate::wallreact::Reco
 fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>) -> crate::wallreact::Reconsidered {
     use crate::game::GuardState;
     let man = &g.gd[gd];
-    if man.script.is_some() || man.duty.pinned || man.standoff.is_some() || !g.tune.suppression { return crate::wallreact::Reconsidered::Fine; }
+    if man.script.is_some() || man.duty.pinned || man.standoff.is_some() || !g.k.tune.suppression { return crate::wallreact::Reconsidered::Fine; }
     if man.state != GuardState::Alert {
         return if man.state == GuardState::Search || man.state == GuardState::Suspicious { crate::wallreact::Reconsidered::Later } else { crate::wallreact::Reconsidered::Fine };
     }
@@ -1192,7 +1192,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn wrap_has_the_typescripts_bits() {
+    fn wrap_keeps_its_bits() {
         for (a, bits) in [
             (0.0, 0x0000000000000000u64), (1.0, 0x3ff0000000000000), (-1.0, 0xbff0000000000000), (3.2, 0xc008aa5d0eeec096), (-3.2, 0x4008aa5d0eeec096),
             (m::PI, 0x400921fb54442d18), (-m::PI, 0x400921fb54442d18), (7.5, 0x3ff37812aeef4ba0), (-100.25, 0x3fd1fb54442d1840), (1e6, 0xbfd6e254d0ed6540),
@@ -1202,7 +1202,7 @@ mod tests {
     }
 
     #[test]
-    fn rect_dist_has_the_typescripts_bits() {
+    fn rect_dist_keeps_its_bits() {
         let r = [3.0, 4.0, 5.0, 6.0];
         assert_eq!(rect_dist([1.5, 0.0, 2.25], r).to_bits(), 0x4002706821902e9a);
         assert_eq!(rect_dist([4.0, 0.0, 5.0], r).to_bits(), 0);
@@ -1210,7 +1210,7 @@ mod tests {
     }
 
     #[test]
-    fn seg_rect_answers_as_the_typescript_does() {
+    fn seg_rect_gives_the_pinned_answers() {
         let r = [4.0, 4.0, 6.0, 6.0];
         assert!(seg_rect([0.0, 0.0, 0.0], [10.0, 0.0, 10.0], r, 0.45));
         assert!(!seg_rect([0.0, 0.0, 0.0], [10.0, 0.0, 0.0], r, 0.45));

@@ -10,7 +10,6 @@ pub mod out_events;
 pub mod savestate;
 pub mod seats;
 pub mod standing;
-pub mod sim_men_store;
 pub mod state_words;
 pub mod view;
 pub mod walkahead;

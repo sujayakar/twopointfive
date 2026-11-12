@@ -47,8 +47,8 @@ pub(super) fn ops(g: &Game) -> Vec<GuardId> { g.staged.team.iter().copied().filt
 /// EVERYBODY WHO IS NOT THE TEAM, far off, dark, held, calm and deaf, the level's devices inert, and the alarm a stray noise placed dropped while the floor is at 0. A blast is made inside the step, so the mark
 /// on a man's ears is set past any number an event can get, and renewed here. Answers what it had to put right: men found roused, the alarm's marks dropped.
 pub(super) fn park(g: &mut Game) -> (u32, u32) {
-    g.tune.devices = false;
-    g.tune.lasers = false;
+    g.k.tune.devices = false;
+    g.k.tune.lasers = false;
     for i in 0..g.events.len() { if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); } }
     let (mut k, mut men, mut alarms) = (0.0, 0, 0);
     let all: Vec<GuardId> = g.guards.iter().chain(g.civilians.iter()).copied().collect();
@@ -136,8 +136,7 @@ pub(super) fn quiet_roofs(g: &Game, p: &Planned) -> Vec<usize> {
     if !QK.roofs || p.indoors { return Vec::new(); }
     let (mid, n, lim) = (p.anchor.mid, p.anchor.n, p.wall.face + QK.roof_eave);
     let out_of = |x: f64, z: f64| (x - mid[0]) * n[0] + (z - mid[1]) * n[1];
-    let f = box_flag();
-    let (np, not) = (js::to_i32(f.no_primary), js::to_i32(f.no_shadow) | js::to_i32(f.emissive) | js::to_i32(f.area_lit));
+    let (np, not) = (box_flag::NO_PRIMARY as i32, box_flag::NO_SHADOW as i32 | box_flag::EMISSIVE as i32 | box_flag::AREA_LIT as i32);
     let mut got = Vec::new();
     for (i, &id) in g.col.boxes.iter().enumerate() {
         let b = &g.tab.boxes[id];
@@ -389,7 +388,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
         acts::before_step(g, &mut st, cmd);
         super::walk::sam_hand(g, &mut st, cmd);
         // (Sam's own keys, for this tick; the cursor where the director asked for it)
-        for k in st.a.press.drain(..) { cmd.pressed.push(String::from(k)); }
+        for k in st.a.press.drain(..) { cmd.pressed.push(k.text()); }
         cmd.clicked = st.a.clicked;
         st.a.clicked = 0.0;
         if let Some(q) = st.a.cursor { if let Some((x, y)) = cursor_of(cmd, q) { cmd.mx = x; cmd.my = y; } }

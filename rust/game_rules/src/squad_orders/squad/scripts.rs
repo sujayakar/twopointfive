@@ -143,7 +143,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let mut s = g.gd[gd].script.unwrap();
     let c = g.gd[gd].ch;
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-    let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
+    let ordered = match s.speed { Some(x) => x, None => g.k.tune.guard_walk };
     let speed = crate::guards::team_pace(g, gd, ordered);
     let legs = crate::guards::team_legs(g, gd, speed);
     let fight_face = fight_face_while_walking(g, gd, &s);
@@ -608,7 +608,7 @@ fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
         let who = g.ch[c].id;
         g.dr[d].leaf.last_who = who;
         let at = crate::doors::door_pos(g, d);
-        crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
     }
     let row = &mut g.tab.squad_room_clear[id];
     row.t_kick = t;
@@ -793,7 +793,7 @@ fn boot_lands(g: &mut Game, beat: &mut Beat) {
     g.dr[d].leaf.last_who = who;
     if on_it && !g.dr[d].leaf.off {
         let at = crate::doors::door_pos(g, d);
-        crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
         crate::marks::kick_scuff(g, d, p);
         crate::particle_fx::kick_dust_fx(g, d, p);
     }

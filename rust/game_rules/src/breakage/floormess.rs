@@ -52,8 +52,7 @@ fn h(x: f64, z: f64, k: f64) -> f64 {
 fn look_of(d: &crate::render_decals::Mark) -> f64 { if d.kind == DecalKind::Damage { m::floor(d.param) } else { -1.0 } }
 /// may a top take a film: lit geometry that is not a glowing fixture
 fn takes(b: &WorldBox) -> bool {
-    let f = box_flag();
-    js::to_u32(b.flags) & js::to_u32(f.no_primary + f.no_shadow) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
+    js::to_u32(b.flags) & (box_flag::NO_PRIMARY | box_flag::NO_SHADOW) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
 }
 /// how far a film centred here may reach: to the nearest thing STANDING (any static whose span meets the band from waist to head height), measured to the box itself, and `want` at most. 0 = the centre is inside one.
 fn fit(g: &Game, x: f64, z: f64, want: f64) -> f64 {

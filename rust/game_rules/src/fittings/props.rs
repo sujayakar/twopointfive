@@ -79,7 +79,7 @@ fn prop_new(g: &mut Game, def: &Arc<crate::scene_level::PropDef>, id_2: f64) -> 
             h: [p.h[0], p.h[1], p.h[2]],
             yaw: Some(0.0),
             albedo: Some(p.albedo),
-            flags: Some(crate::scene_boxes::box_flag().dynamic),
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
             mkey: Some(crate::scene_boxes::mkey().prop + id_2 * 16.0 + j as f64),
             marks,
             stuff: p.stuff.clone(),
@@ -958,7 +958,7 @@ mod tests {
     }
 
     #[test]
-    fn against_the_typescripts_own_bits() {
+    fn against_pinned_bits() {
         // the pinned bits of 1.7 * (5 / hypot(1.7, 9.3)), 9.3 * (…), cos(0.7), sin(0.7)
         let mut p = at_rest();
         (p.vx, p.vz) = (1.7, 9.3);

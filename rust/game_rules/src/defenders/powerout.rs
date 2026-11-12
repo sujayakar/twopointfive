@@ -222,7 +222,7 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, lever: V3, way: &[V3], fro
 
 /// out on the party's errand, at the pace of a man going to look: there, he stands there.
 fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let pace = g.tune.guard_investigate;
+    let pace = g.k.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::BREAKER);
 }
 
@@ -433,7 +433,7 @@ fn takes_it_for_the_team(g: &mut Game, live: &[RoomfightDefId], speaker: GuardId
         return true;
     }
     if crate::mission::captor(g).is_some() {
-        stay(g, speaker, "power's out — that's them! Stay on your doors!", "men holding hostages take the dark for the assault (rescue.ts: every one of them has learned of the team by it)", true);
+        stay(g, speaker, "power's out — that's them! Stay on your doors!", "men holding hostages take the dark for the assault (every one of them has learned of the team by it)", true);
         return true;
     }
     if st(g).lost {
@@ -907,7 +907,7 @@ fn step_off(g: &mut crate::game::Game, fight: bool) {
         let why = alloc::format!("{}, {} m off, {} s after the lights went", how, js::to_fixed(dist_xz(g.pos_of(gd), goal), 0), js::to_fixed(g.time - st(g).since, 1));
         event(g, PowerOutEventWhat::Go, Some(gd), &why);
     }
-    let at = g.time + st(g).way_m / m::max(0.5, g.tune.guard_investigate) + g.k.powerout.overdue;
+    let at = g.time + st(g).way_m / m::max(0.5, g.k.tune.guard_investigate) + g.k.powerout.overdue;
     st(g).overdue_at = at;
 }
 
@@ -965,12 +965,12 @@ mod tests {
     use super::*;
     // the pinned bits of dist_xz
     #[test]
-    fn flat_is_the_typescripts_bits() {
+    fn flat_keeps_its_bits() {
         assert_eq!(dist_xz([1.5, 0.0, -2.25], [0.1, 7.0, 3.3]).to_bits(), 0x4016e539e098fe40);
         assert_eq!(dist_xz([12.3, 1.0, 4.56], [-7.89, 0.0, 0.123]).to_bits(), 0x4034abfab1c8e1b8);
     }
     #[test]
-    fn frac_is_the_typescripts_bits() {
+    fn frac_keeps_its_bits() {
         assert_eq!(v3::frac(7.0 * 0.6180339887).to_bits(), 0x3fd4e115043ec120);
         assert_eq!(v3::frac(123.0 * 0.6180339887).to_bits(), 0x3f929df017341000);
         assert_eq!(v3::frac(-1.25).to_bits(), 0x3fe8000000000000);

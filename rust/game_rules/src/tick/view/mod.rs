@@ -5,9 +5,10 @@
 //! It is about the seat it is HANDED (`SeatRef`): any seat of the game, standing on it or not, so a machine asks about the one it shows.
 //!
 //! A SECTION IS FILLED BY ITS RULE'S OWN MODULE (`mission::objective`), by the functions the tick runs: nothing is worded or judged twice. No rule calls
-//! this module. A new section: its struct in game_types, its line here, `bun run tools/draw/gen.ts`, and the HUD's read of it.
+//! this module. A new section: its struct in game_types, its line here, the program `half`, and the HUD's read of it.
 
-pub use ::game_types::view::types;
+pub use ::game_types::view::{told, types};
+pub use told::*;
 pub use types::*;
 pub mod marks;
 pub use marks::*;

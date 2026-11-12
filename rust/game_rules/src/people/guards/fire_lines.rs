@@ -252,7 +252,7 @@ fn duty_has_lapsed(g: &mut Game, gd: GuardId, d0: crate::game::GuardBodyDuty) ->
     let b = d0.body;
     let errand = g.gd[gd].errand.is_some() && !(d0.role == Role::Finder && d0.stage != Stage::Fan);
     if g.gd[gd].duty.holds || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP { return true; }
-    if g.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) { return true; }
+    if g.k.tune.tactics && crate::tactics::body_duty_blocked(g, gd, b) { return true; }
     let bp = body_pos(g, b);
     if g.gd[gd].errand.is_none() {
         if let Some(lk) = g.gd[gd].last_known {
@@ -284,7 +284,7 @@ fn goes_to_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
         return crate::guards::BodyAftermath { move_: 0.0, aim: Some(if see_body { on_body } else { [bp[0], 1.0, bp[2]] }) };
     }
     go_to(g, gd, sp, None);
-    let speed = g.tune.guard_investigate;
+    let speed = g.k.tune.guard_investigate;
     let arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
     let move_ = g.gd[gd].speed;
     if arrived || (d_b < 2.6 && see_body && v3::dist_xz(g.ch[c].pos, sp) < 1.5) {
@@ -364,7 +364,7 @@ fn fans_out(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
     let mut arrived = g.gd[gd].search_t > 0.0;
     if !arrived {
         go_to(g, gd, sp, None);
-        let speed = g.tune.guard_walk * 1.3;
+        let speed = g.k.tune.guard_walk * 1.3;
         arrived = follow_path(g, gd, dt, speed) || not_getting_anywhere(g, gd, dt, 3.0);
         move_ = g.gd[gd].speed;
     }
@@ -448,7 +448,7 @@ pub(super) fn pane_first(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     let i = h.index as usize;
     // (the level's list is g.col.boxes; a place past its end has no flags)
     let flags = match g.col.boxes.get(i).copied() { Some(b) => g.tab.boxes[b].flags, None => 0.0 };
-    (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
+    (js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32) != 0
 }
 
 // ---------------------------------------------------------------- muzzle discipline
@@ -664,7 +664,7 @@ fn step_goes_on(g: &mut Game, gd: GuardId, c: CharId, dt: f64) -> bool {
         step_ended(g, gd);
         return false;
     }
-    let speed = v3::damp(g.gd[gd].speed, g.tune.guard_investigate * v3::clamp(d / 0.45, 0.35, 1.0), 6.0, dt);
+    let speed = v3::damp(g.gd[gd].speed, g.k.tune.guard_investigate * v3::clamp(d / 0.45, 0.35, 1.0), 6.0, dt);
     g.gd[gd].speed = speed;
     let step = m::min(d, speed * dt);
     g.ch[c].pos[0] += dx / d * step;
@@ -730,7 +730,7 @@ mod tests {
 
     // The expected words are pinned.
     #[test]
-    fn line_geom_is_the_typescripts_bits() {
+    fn line_geom_keeps_its_bits() {
         let x = line_geom_of([0.1, 1.4, 0.2], [3.3, 1.1, 4.9], [1.37, 0.91, 2.11], 0.0 + 0.05, 1.83, [0.7, 0.0, -0.4]).unwrap();
         assert_eq!(bits(&[x.t, x.e, x.d, x.clear]), [0x3fd9d0d69e66051a, 0x3f99c0d942568028, 0x3f99c0d94256801b, 0x3fe2f094994da159]);
         let x = line_geom_of([0.1, 1.4, 0.2], [0.4, 0.9, 9.1], [0.31, 0.2, 5.77], 0.2 + 0.05, 0.2 + 1.75, [2.1, 0.0, 1.9]).unwrap();
@@ -739,7 +739,7 @@ mod tests {
     }
 
     #[test]
-    fn aim_ahead_is_the_typescripts_bits() {
+    fn aim_ahead_keeps_its_bits() {
         assert_eq!(bits(&aim_ahead_of([0.2, 1.45, -0.3], -0.4, 0.77)), [0x40046fa613722776, 0x3f947ae147ae1480, 0x4001067c11618aec]);
         assert_eq!(bits(&aim_ahead_of([1.1, 0.1 + 1.4, 2.2], 0.05, -2.3)), [0xc0136ec85ce57064, 0x3ffe65b7a8bfd90f, 0xc008fd061a86f980]);
     }

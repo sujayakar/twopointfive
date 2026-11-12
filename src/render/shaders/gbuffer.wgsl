@@ -97,7 +97,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   var c = b.c; var h = b.h;
   var cap = false;
   let face = vi / 6u;
-  if ((b.flags & BOX_CUTAWAY) != 0u) {
+  if ((b.flags & GEO_CUTAWAY) != 0u) {
     let bottom = c.y - h.y; let fullTop = c.y + h.y; let ch = boxCutHeight(bi);
     if (ch < bottom + 0.05) { h = vec3f(0.0); }             // entirely above the cut: collapse (nothing rasterized)
     let top = min(fullTop, max(bottom + 0.02, ch));
@@ -106,7 +106,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   }
   // top faces flush under the (hidden) ceiling slab read as architectural section cuts
   if (face == 2u && c.y + h.y >= CEIL_Y - 0.03 && c.y - h.y < CEIL_Y - 0.5) { cap = true; }
-  let q = boxRot(bi);                                       // = the box's yaw for ordinary boxes; BOX_ROT boxes (hand props, sparks, canisters) may carry a full 3D rotation
+  let q = boxRot(bi);                                       // = the box's yaw for ordinary boxes; GEO_ROT boxes (hand props, sparks, canisters) may carry a full 3D rotation
   let lc = cubeCorner(vi) * h;
   let ln = cubeNormal(vi);
   let wp = c + quatRotate(q, lc);
@@ -123,7 +123,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   var wpPrev = wp;
   if (pslot == 0u) {
     let pg1 = prevBoxes[bi * 2u + 1u];
-    if ((b.flags & BOX_CUTAWAY) == 0u && all(bitcast<vec3f>(pg1.xyz) == b.h) && ((pg1.w ^ b.flags) & 0xFF00u) == 0u) {
+    if ((b.flags & GEO_CUTAWAY) == 0u && all(bitcast<vec3f>(pg1.xyz) == b.h) && ((pg1.w ^ b.flags) & 0xFF00u) == 0u) {
       let pc = bitcast<vec3f>(prevBoxes[bi * 2u].xyz); let pq = bitcast<vec4f>(prevBoxes[PREV_MAT_BASE + bi * 4u + 2u]);
       wpPrev = pc + quatRotate(pq, lc);
     }
@@ -137,7 +137,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   }
   o.wpPrev = wpPrev;
   o.mark = markSlotOf(b.flags);
-  o.lc = lc; o.hf = vec4f(h, select(f32(face), -1.0, cap || (b.flags & BOX_CUTAWAY) != 0u));   // (a section cap / the viewer's cut wall: no edge — the diagram's outline is not a surface's)
+  o.lc = lc; o.hf = vec4f(h, select(f32(face), -1.0, cap || (b.flags & GEO_CUTAWAY) != 0u));   // (a section cap / the viewer's cut wall: no edge — the diagram's outline is not a surface's)
   return o;
 }
 
@@ -169,7 +169,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   }
   if (GBUF_SNOW && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
     let snowPaint = snowIsPaint(v.albedo);
-    let snowGround = gn.y > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
+    let snowGround = gn.y > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & GEO_EMISSIVE) == 0u;
     if (snowGround || snowPaint || (v.hf.y < 0.016 && v.wp.y < 0.035)) {
       let sb = snowBox(v.wp, select(n, gn, lookTilt), bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
       if (sb.gone) { discard; }
@@ -202,7 +202,6 @@ fn cubeNormal(vi: u32) -> vec3f {
 // The rows past the tints are the WET look (rust/game_rules/src/air/wet.rs → anim/characters.ts setInstance; all zero for a dry man or with settings.wetChars off — fsSkin then
 // stores exactly what it always stored): wet = (coat 0‥1, beads 0‥1, the rain rate the drops were fed at, a per-man clock offset in s), wetK = (bead density,
 // bead radius m, run / trail length m, coat roughness soaked), wetK2 = (coat roughness dry, darken exponent, darken multiplier, specular gain).
-struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec2f, parts: u32, pad: u32 };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — rust/game_rules/src/air/wet.rs wetLineRow
 @group(1) @binding(1) var<storage, read> jointMats: array<mat4x4f>;
 @group(1) @binding(2) var<storage, read> chars: array<CharInst>;
 // CHARACTER MATERIALS (render/charMaterials.ts → anim/characters.ts setMaterials): CHAR_MAT_ROWS vec4 rows per instance. Row 0 = (on, grime height, grime band, crease

@@ -240,7 +240,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// the bar across each doorway
     fn doors(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for e in self.by.iter() {
             let (ja, jb) = jambs(g, e.door);
             let mut now = false;
@@ -257,7 +257,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// the bar along each wall with a charge of his own
     fn wall_charges(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for &c in &self.walls {
             let sc = &g.tab.wallcharge_set_wall_charge[c];
             let now = p.up && !p.pair_first && !p.row_key && p.wall_first && Some(c) == p.wall;

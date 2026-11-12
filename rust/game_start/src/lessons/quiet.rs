@@ -78,8 +78,8 @@ async fn deed(b: &Bot, id: &str) {
         "whistle" => {
             let (a, n0) = (man(b, "court"), b.sightings());
             let secs = b.ask(|g| g.k.handring.hold_secs);
-            b.down(game::consts::INTERACT_KEY);
-            b.hold(&[game::consts::INTERACT_KEY], secs + 0.1, || false).await;
+            b.down(game::consts::INTERACT_KEY.as_str());
+            b.hold(&[game::consts::INTERACT_KEY.as_str()], secs + 0.1, || false).await;
             if b.seen(|_, s| s.hand.sel.ring.is_none()) { b.fail(String::from("the interaction key kept down put no ring up")).await; }
             b.press("Digit5", 0).await;
             let t0 = b.t();
@@ -189,12 +189,12 @@ async fn deed(b: &Bot, id: &str) {
             let blown = || b.ask(|g| g.stats.whistle.blown);
             let w0 = blown();
             b.press("KeyV", 6).await;
-            b.hold(&[game::consts::INTERACT_KEY], 0.6, || false).await;
+            b.hold(&[game::consts::INTERACT_KEY.as_str()], 0.6, || false).await;
             let ring = b.seen(|_, s| s.hand.sel.open);
             b.click(LEFT, Some(b.chest(h))).await;
             b.ticks(20).await;
             if ring || blown() > w0 { b.fail(format!("in the store {} (a whistle would bring the hall's man round to him)", if blown() > w0 { "he whistled" } else { "the interaction key held put the hand's ring up" })).await; }
-            if b.seen(|_, s| s.hand.sel.open) { b.press(game::backkey::BACK_KEY, 3).await; }
+            if b.seen(|_, s| s.hand.sel.open) { b.press(game::backkey::BACK_KEY.as_str(), 3).await; }
             b.say(format!("  in the corner: lit {:.2}; {} {:?}, aware {:.2}, {:.1} m off", b.lit(), b.called(h), b.state(h), b.awareness(h), dist_xz(b.pos(), b.man_at(h))));
             b.unseen(n0, h, "coming into the store").await;
         }
@@ -255,7 +255,7 @@ async fn deed(b: &Bot, id: &str) {
         }
         // the rifle away again: the hands' own key
         "sling" => {
-            b.press(game::handslot::HANDSLOT_KEY, 10).await;
+            b.press(game::handslot::HANDSLOT_KEY.as_str(), 10).await;
             b.until(|| b.me(|p| p.holstered), 3.0).await;
             if !b.me(|p| p.holstered) { b.fail(String::from("the hands' key did not put the rifle away")).await; }
         }

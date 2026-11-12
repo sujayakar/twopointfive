@@ -16,7 +16,7 @@ fn glazing(s: u32, kinds: [PaneType; 3]) -> (Play, [f64; 3], Vec<GuardId>) {
     let mut p = Play::level("office.json", false, &Opts { seed: s, ..Default::default() });
     p.g.god_mode = true;
     p.g.ai_enabled = false;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.sam_put([24.0, 17.6]);
     p.frame();
     let panes = [p.pane_at(6.5, GLAZING_Z), p.pane_at(7.5, GLAZING_Z), p.pane_at(8.5, GLAZING_Z)];
@@ -131,7 +131,7 @@ fn cut_by_a_pane(kind: PaneType, sill: bool, more: Vec<Json>) -> (Play, f64) {
     let mut p = scene_with(&s, all, &Opts::default());
     p.sam_unhurt();
     p.sam_unseen();
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.1);
     let bi = p.pane_at(18.0, 12.0);
     p.pane_is(bi, kind);
@@ -140,7 +140,7 @@ fn cut_by_a_pane(kind: PaneType, sill: bool, more: Vec<Json>) -> (Play, f64) {
 /// between the pane and a burst to be at x 17.2, a slab from floor to ceiling and wall to wall: 30 cm of concrete, or a partition
 fn slab(does: &str) -> Vec<Json> { vec![a_box_of("slab", [17.6, 1.5, 12.0], [if does == "concrete" { 0.15 } else { 0.06 }, 1.5, 4.0], "wall", does)] }
 /// is a pane not as it was: a piece out, or a row of it made, as any blow makes one
-fn touched(p: &mut Play, bi: f64) -> bool { p.pane_open(bi) > 0.0 || (sim::state::state_read(p.g.sim).panes.used != 0 && sim::panes::row_index(p.g.sim, bi as u32) >= 0) }
+fn touched(p: &mut Play, bi: f64) -> bool { p.pane_open(bi) > 0.0 || p.g.tab.boxes.world().panes.row_of(bi as u32).is_some() }
 /// does a man reckon that a burst on the floor at (x, 12) would take the glass at a point of the pane out of the way
 fn reckoned_out(p: &mut Play, x: f64, bi: f64, y: f64, view: game::glassbreak::GlassBreakViewOfKind) -> bool {
     let (from, size) = ([x, 0.05 + p.g.k.frag.lift, 12.0], game::glassbreak::GlassBlastOpts { radius: Some(p.g.k.frag.glass_m), power: Some(p.g.k.frag.glass_power), who: None });
@@ -200,7 +200,7 @@ fn a_burst_breaks_the_glass_behind_a_door_it_took_off() {
         let mut p = scene_with(&s, vec![a_box("pane", [19.0, 1.5, 13.0], [0.02, 1.5, 1.5], "white", &["Glass"])], &Opts::default());
         p.sam_unhurt();
         p.sam_unseen();
-        p.g.tune.chaos = 0.5;
+        p.g.k.chaos.def = 0.5;
         p.run(0.1);
         let bi = p.pane_at(19.0, 13.0);
         p.pane_is(bi, PaneType::Tempered);

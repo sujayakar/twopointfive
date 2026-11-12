@@ -204,19 +204,18 @@ fn seen_and_heard(g: &mut Game, b: &Burst) {
     let from = b.from;
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
-    let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
-    let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) };
-    let l = crate::effects::spawn_burst(g, from, seed, Some(o));
+    let flags = crate::effects::flags();
+    let l = crate::effects::spawn_burst(g, from, seed);
     crate::particle_fx::bang_fx(g, from);
     let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(b.who));
     if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
-    crate::audio_iface::game_audio_like_play(g, "stunBang", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StunBang, Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
     crate::marks::bang_scorch(g, from);
     let ears = g.pl[crate::seats::host_man(g)].ch;
     let eye = g.ch[ears].bone_or(crate::character::Bone::Head, 1.6);
     if !crate::condition::down(g, ears) && v3::dist(eye, from) < b.wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
-        crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / b.wound, 0.2, 0.7)), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::EarRing, None, Some(v3::clamp(1.1 - v3::dist(eye, from) / b.wound, 0.2, 0.7)), None);
     }
 }
 

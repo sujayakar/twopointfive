@@ -1,7 +1,6 @@
 // THE RUST GAME'S MODULE, for a host that holds no game: fetched, compiled and called. Every game the page has is a number (a handle) the module answers;
 // what it draws lies in the module's memory (src/draw/drawn.ts). A trap inside a call is the module's abort on a panic, whose words it kept.
 
-export type Face = Record<string, (...a: number[]) => number>;
 /** a failure that is told to the player in its own words */
 export class FaceError extends Error { constructor(m: string) { super(m); this.name = 'RustGameError'; } }
 

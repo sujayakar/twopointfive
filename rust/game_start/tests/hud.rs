@@ -249,7 +249,7 @@ fn the_stage_a_mans_card_and_the_floor_under_him_are_the_games() {
         let at = p.sam_at();
         let word = v.marks.floor.expect("the floors differ");
         assert_eq!(format!("{word:?}").to_lowercase(), game::floor::floor_of(&p.g, [at[0], 0.0, at[1]]).as_str(), "seed {seed}");
-        p.g.tune.floor_materials = false;
+        p.g.k.tune.floor_materials = false;
         assert_eq!(p.view().marks.floor, None, "seed {seed}: the floors all one: nothing is said of them");
     }
 }
@@ -290,7 +290,7 @@ fn a_held_attention_is_told_with_its_way_and_its_fog() {
         let gd = p.hostiles()[0];
         assert!(p.view().attention.is_empty(), "seed {seed}: nobody's attention is taken yet");
         let at = { let c = p.at(gd); [c[0] + 3.0, 0.0, c[1]] };
-        let hold = |mode: HoldMode, until: f64, t: f64| Hold { at, kind: DrawKind::Noise, mode, t0: t, secs: 5.0, until, full: 5.0, glimpse: 0.0, told: false, nth: 1, ears: 1.0, noises: 1.0, yaw: None, serial: 1 };
+        let hold = |mode: HoldMode, until: f64, t: f64| Hold { at, kind: DrawKind::Noise, mode, t0: t, secs: 5.0, until, full: 5.0, glimpse: 0.0, told: false, nth: 1, ears: 1.0, noises: 1.0, yaw: None };
         // on his way over, on his own path: the rest of that path
         let t = p.g.time;
         game::attention::mem(&mut p.g, gd).hold = Some(hold(HoldMode::Go, -1.0, t));

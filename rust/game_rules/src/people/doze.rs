@@ -551,7 +551,7 @@ fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.char_id(gd);
     let team = g.team(gd);
     let mut skip = move |g: &Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::fixtures::SCREEN as f64));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner
@@ -615,14 +615,14 @@ mod tests {
         h
     }
     #[test]
-    fn pulls_match_the_typescript_bits() {
+    fn pulls_keep_their_bits() {
         let v = build_pulls(0.5);
         assert_eq!(v.len(), PULLS_LEN);
         assert_eq!(v[0], [0.0, 0.0]);
         assert_eq!(fnv(&v), PULLS_FNV);
     }
     #[test]
-    fn a_new_record_holds_the_typescript_numbers() {
+    fn a_new_record_holds_its_numbers() {
         let d = blank(Phase::No, 3.0, 7.5);
         assert_eq!((d.say, d.lit, d.woke_at, d.seen, d.wp), (-1.0, -1.0, -1.0, 7.5, 3.0));
         assert!(d.chair.is_none() && d.mon.is_none() && d.why.is_none() && !d.mon_was);

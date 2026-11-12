@@ -511,7 +511,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
 /// what this file's script holds him to this frame
 fn pose(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.pos_of(gd);
-    let chase = g.tune.guard_chase;
+    let chase = g.k.tune.guard_chase;
     let fled = g.gd[gd].fled;
     let r = run!(g, gd);
     let say = r.phase == RunPhase::Say;
@@ -833,7 +833,7 @@ mod tests {
 
     /// pinned bits
     #[test]
-    fn flat_and_path_len_have_the_typescripts_bits() {
+    fn flat_and_path_len_keep_their_bits() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         let path = [[1.7, 0.0, 3.9], [-2.3, 0.0, 4.1], [-2.3, 0.0, 4.1], [5.5, 1.0, -0.7]];
         assert_eq!(crate::places::walk_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);

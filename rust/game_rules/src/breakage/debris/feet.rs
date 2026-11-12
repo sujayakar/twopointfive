@@ -222,7 +222,7 @@ impl Lying {
         let Some(f) = g.tab.debris_chunk[self.c].sfx.first().cloned() else { return };
         g.destr.debris.scuff_at = g.time;
         let gain = m::min(1.0, k.scuff * f.gain * (0.6 + 0.6 * s.speed / m::max(0.1, k.v_max)));
-        crate::audio_iface::game_audio_like_play(g, &f.name, Some(self.at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: f.rate * (1.15 + 0.2 * luck(nth, 7.0)) }));
+        crate::audio_iface::game_audio_like_play(g, f.name, Some(self.at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: f.rate * (1.15 + 0.2 * luck(nth, 7.0)) }));
     }
 }
 

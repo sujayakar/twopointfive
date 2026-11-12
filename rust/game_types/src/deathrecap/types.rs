@@ -1,9 +1,9 @@
 //! The types of `deathrecap`: every death explains itself (rust/game_rules/src/speech/deathrecap.rs).
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, Blank, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum RecapCause {
     #[default] Blast,
     Round,
@@ -12,7 +12,7 @@ pub enum RecapCause {
 }
 
 /// one man of a run, as a take names him
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RecapMan {
     pub id: f64,
     pub name: String,
@@ -20,7 +20,7 @@ pub struct RecapMan {
     pub kind: crate::deathrecap::RecapManKind,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum RecapManKind {
     #[default] Player,
     Civ,
@@ -28,7 +28,7 @@ pub enum RecapManKind {
 }
 
 /// One of ours going down. Plan coordinates [x, z], metres; `gaze` in radians, 0 = +z (the aim yaw he had the sample before he fell).
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RecapDeath {
     pub t: f64,
     pub victim: f64,
@@ -55,7 +55,7 @@ pub struct RecapDeath {
 }
 
 /// a round, or a burst. `at` = the shooter's feet
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RecapShot {
     pub t: f64,
     pub kind: crate::deathrecap::RecapShotKind,
@@ -67,7 +67,7 @@ pub struct RecapShot {
     pub loud: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum RecapShotKind {
     #[default] Blast,
     Bang,
@@ -76,7 +76,7 @@ pub enum RecapShotKind {
 
 /// One sample of the floor. men: MAN_STRIDE floats a man = id, x, z, aim yaw, bits (1 down, 2 roused: alert or searching, 4 crouched). doors: 2 a door = the
 /// leaf's direction (NaN = off its hinges).
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RecapFrame {
     pub t: f64,
     pub n: f64,
@@ -85,7 +85,7 @@ pub struct RecapFrame {
 }
 
 /// A death with its own last seconds: frames from `t0` to `t1` (the death at `death.t`), the rounds and blasts in them, every one of ours lost in them.
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RecapTake {
     pub death: crate::deathrecap::RecapDeath,
     pub t0: f64,
@@ -98,7 +98,7 @@ pub struct RecapTake {
 }
 
 /// where a door hangs
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, Debug, ToBytes, Default, Crosses)]
 pub struct RecapDoor {
     pub hinge: [f64; 2],
     pub width: f64,
@@ -148,7 +148,7 @@ pub struct RecapDue {
 }
 
 /// What the end card may show: the takes, and the one it opens on (the last player to go down, else the last of ours).
-#[derive(Clone, Debug, Default, ToBytes)]
+#[derive(Clone, Debug, Default, ToBytes, Crosses)]
 pub struct DeathRecap {
     pub takes: Vec<crate::deathrecap::RecapTake>,
     pub main: f64,

@@ -18,7 +18,7 @@ Each crate is its own cargo workspace and target folder.
 | `rust/maths/` | the game's own maths and its die. `no_std` | `prim` |
 | `rust/game_derive/` | the `ToBytes` and `Knobs` derives | nothing |
 | `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `maths`, `prim`, `game_derive` |
-| `rust/sim/` | hot loops, over records and columns; each game's block. `no_std` | `game_types`, `maths`, `prim` |
+| `rust/sim/` | hot loops, over records and slices. `no_std` | `game_types`, `maths`, `prim` |
 | `rust/game_rules/` | the rules; its crate name is `game`. `no_std` | `game_types`, `sim`, `prim` |
 | `rust/game_draw/` | what the picture is told. `no_std` | `game`, `sim` |
 | `rust/game_start/` | a game from a level file, a host's work round a step (`src/host/`); tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
@@ -54,14 +54,11 @@ Each crate is its own cargo workspace and target folder.
 - **What a game's copies share.** A kept moment is a copy of the game, so what was read once and is not played with stands behind an `Arc`: `g.art`,
   `g.level`, a piece of furniture's `def`, a box's `marks`, the ray grid. A copy takes the pointer; who writes the level says `Arc::make_mut`. A list that never
   changes is a function (`sam_lines()`), not a field.
-- **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
-  its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
-  `sim::state::state_read(g.sim)` and `sim::state::state`.
-- **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`) and the smoke's and air's tables (`rust/sim`, outside the block) are made
-  from the game: in no bytes.
-- **A moment** (`Moment`) is `g.clone()` and the block's bytes: a save, a walk of a tape, a recovery. So `Game` clones whole and a block stands in any
-  slot.
+- **What `rust/sim` steps** is a record on `Game` (`g.smoke`, `g.air_dust`, the panes in the box world, a man's poses, `g.light_home.rows`), and a loop takes the record or a slice of it.
+  Nothing of a game is in `rust/sim`: its statics are scratch of one call, or tables of numbers.
+- **Made again.** The box world's rows (`game_types/src/boxworld.rs`, beside the boxes on `Game`; the touched panes in them are state), the tables of `g.made` (`Made`: the smoke's
+  ways, the light under a roof, the sky's) and the air's are made from the game: in no bytes. A copy has none of `g.made`; a game laid over another takes it over (`stand`).
+- **A moment** (`Moment`) is `g.clone()`: a save, a walk of a tape, a recovery. So `Game` clones whole, and as many games stand as memory holds.
 - **Seats.** A seat's own things are its row of `g.sets` (`SeatSet`). `g.seat` and `g.player` say which seat a pass is about and its man: in a tick the first
   (`on_first_bare`), and `with_seat(g, s, &mut |g| …)` moves them for a pass about another. A function holding the game shared takes a `SeatRef` (`seats::seat`,
   `seats::here`). A map kept per seat is keyed by `view_key`.
@@ -113,7 +110,7 @@ compares (`astray`): a native test, never the module.
 - **A loop over every box, ray or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
   layout to be more cache and simd friendly". `rust/sim/src/world.rs` is the shape: a row a box, the hot numbers together. A thing with rules of its
   own is one record with its rules beside it (`props.rs`, `guns/throwables/pool.rs`, `rust/sim/src/falls.rs`): the tick was no slower for it.
-- **A part of a game's block has a fixed size** (`MAX_BOXES`, a part's `CAP`); a level past a cap is refused by name (`doors_new`).
+- **A list a question walks may have a cap** (`MAX_BOXES`, `LAMPS`); a level past one is refused by name (`doors_new`).
 - **Too many arguments for a call** go through a scratch `static mut` (`ASKING` in `world.rs`). Nothing in scratch outlives the call.
 - **Ask in a batch.** A sight pass hands its eyes over once (`sight_open`, `sight_eye`, `eyes_see`).
 
@@ -126,8 +123,8 @@ compares (`astray`): a native test, never the module.
 ### When it panics
 
 The module aborts, so a host sees a trap; `hook` has kept the words with file and line (`face_panic_ptr`). `with` took the game out for the call, so
-that game is gone; other games and every save stand. `guarded` in `src/host/drawgame.ts` turns the trap into `GameLost` and refuses all calls but
-those in `STILL`. The card offers `face_recover`: the newest save or the run's first step. So use let-else for what
+that game is gone; other games and every save stand. `src/draw/wire.ts` turns the trap into what its host throws (`GameLost`, in `src/host/drawgame.ts`), and
+a lost game is refused every call that holds one (`HOLDS`). The card offers `face_recover`: the newest save or the run's first step. So use let-else for what
 may be absent, and panic only on what must never happen, in words that name the thing.
 
 ### Gameplay and dressing
@@ -143,7 +140,7 @@ and neither side may link the other. Inside the rules:
 
 ## Rules that hold
 
-- **All state is reachable from `Game` or in its block.** The rules hold no `static mut`.
+- **All state is reachable from `Game`.** The rules hold no `static mut` but the saves (`control.rs` IMAGES), which outlive a game lost to a panic.
 - **The rules cannot name `game_draw` or `game_face`,** and a section's fill takes `&Game`, so drawing changes nothing.
 - **A rule's state is stepped by the tick alone.** What a host asks between ticks moves no word.
 
@@ -153,17 +150,17 @@ and neither side may link the other. Inside the rules:
   `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a row of `STEPS`; a test.
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
   A seat's field also goes in `SeatRef`.
-- **A column:** a field of its part in `rust/sim`, inside its size assert. A new part is a `State` field, a `PARTS` row and a `PART_NAMES` name
-  (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
-- **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
+- **A `static mut`** of `rust/sim` is no state: it needs its row in `rust-rules-check.ts` STATICS, saying SCRATCH or COPY.
+- **A knob:** `#[k(value)] pub name: f64` in its table.
+  A row, a list or a map of numbers is reached part by part (`fixture_break.pops.4`). A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
   `game_start/src/host/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
 - **A question:** the walk in `rust/sim`, over a `&World`; its call in `scene_collision.rs`, of `&Game`; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
 - **An event.** For the rules: a `GameEvent` on `g.events`, kept half a second. For the host: an arm of `OutEvent`, a function in
-  `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `tools/draw/gen.ts` and `src/draw/events.ts`.
-- **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields `f32`, `u32`, `i32` or arrays of them; values, never references),
-  a line in `sections!`, `tools/draw/gen.ts`, a reader in `src/draw/`.
+  `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `half` and `src/draw/events.ts`.
+- **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields by `game_types::rows`; values, never references),
+  a line in `sections!`, `half`, a reader in `src/draw/`.
 - **A call of the face:** `#[no_mangle] pub extern "C" fn` in its file of `game_face/src/` and on that file's head list, using `with` or `with_ref`,
   answering by `out`. `Face` is untyped, so a wrong name in the page fails only when called.
 
@@ -183,7 +180,7 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 
 ## What holds it
 
-- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `bun run tools/draw/gen.ts --check`: the page's
+- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `half --check` (`rust/game_start`, `cargo run --profile gate --bin half`): the page's
   offsets.
 - `gate`: the rows `again` (a second run in one process), `save` and `load` (a `Moment` put back) and `draw`. `tools/draw/play-check.ts` panics a game
   in the module and recovers it.

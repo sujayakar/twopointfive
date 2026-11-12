@@ -58,7 +58,7 @@ impl<'a> Cells<'a> {
 
 /// What lays one wall's pieces: its frame, what it is painted from, and the boxes so far.
 struct Lay<'a> {
-    w: Cells<'a>, f: Frame, e: EdgeLookModEDGE, p: Painted,
+    w: Cells<'a>, f: Frame, e: crate::knobs::EdgeLookK, p: Painted,
     fc: V3, f_yaw: f64, f_rough: Option<f64>,
     out: Vec<Bx>, key: i32,
     /// the charges' gaps along it
@@ -86,11 +86,11 @@ impl Lay<'_> {
         let p = painted(g, b);
         let x = &g.tab.boxes[b.box_];
         Lay {
-            w: Cells::of(f, b), f, e: g.m.edge_look.edge,
+            w: Cells::of(f, b), f, e: g.k.edge_look,
             fc: x.c, f_yaw: x.yaw, f_rough: x.rough,
             out: Vec::new(), key: (js::to_i32(b.id) & 0x3fff) << 9,
             bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(),
-            frame_c: if b.surf == "wood" { v3::scale(p.paint, 0.8) } else { steel() },
+            frame_c: if b.surf == "wood" { v3::scale(p.paint, 0.8) } else { g.k.colors.torn_steel },
             p,
         }
     }
@@ -111,10 +111,9 @@ impl Lay<'_> {
         let f = &self.f;
         let (c, s) = (m::cos(th), m::sin(th));
         let e1: V3 = [f.along[0] * c, s, f.along[2] * c]; let e2: V3 = [-f.along[0] * s, c, -f.along[2] * s]; let e3 = v3::cross(e1, e2);
-        let fl = crate::scene_boxes::box_flag();
         crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
             c: at_c(self.fc, f, u, y, v), h: [a, hb, ht], yaw: Some(self.f_yaw), rot: Some(quat::from_basis(e1, e2, e3)), albedo: Some(albedo),
-            flags: Some((js::to_i32(fl.dynamic) | (if solid { 0 } else { js::to_i32(fl.no_shadow) })) as f64),
+            flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | (if solid { 0 } else { crate::scene_boxes::box_flag::NO_SHADOW as i32 })) as f64),
             mkey: Some(MKEY_LOOK + (key & 0x7fffff) as f64), rough: self.f_rough, stuff: self.p.stuff, does: self.p.does, ..Default::default() })
     }
     /// A plate of what the wall is built on, which is not the wall: a wall that stands by itself shows none.
@@ -316,7 +315,7 @@ fn dress(g: &mut Game, id: f64, out: Vec<Bx>) {
 
 /// Over the level's cap it is the walls dressed longest ago that go bare (`id` is the newest, whatever it was before).
 fn undress(g: &mut Game, id: f64) {
-    let most = g.m.edge_look.edge.max_decor;
+    let most = g.k.edge_look.max_decor;
     let mut total = 0.0; for x in g.destr.edge_look.decor.values() { total += x.len() as f64; }
     let mut at = 0;
     while let Some(old) = g.destr.edge_look.decor.next_key(&mut at) {

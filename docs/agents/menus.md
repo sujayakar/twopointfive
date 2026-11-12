@@ -56,6 +56,10 @@ pasted address starts the same run.
 card is open uses the thing under the highlight at the door. Changes go by message (`kv`: kit, sel, pause, frame), and the window answers boot, ready or none.
 
 **A key has a code and a place.** `Input` asks `gameCode` what a key is before filing it. The game goes on asking for the codes it always did, and a tape holds those codes.
+
+**A code is an arm of Rust's `Key`** (`game_types/src/input/types.rs`), its word the browser code: `input_hit(g, input, Key::F)`. `half` gives the page `GameKey`
+(`src/draw/names.ts`), and `keymap.ts` names a row by that or its own `PageKey`. `Input`'s sets, a hand, a tape and the wire stay text.
+
 On the page (`gameKeysBoot`) they stand so:
 
 | the game asks for | what it means | on the board |
@@ -126,8 +130,8 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
   `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
 - **A setting:** a `flip`, `seg` or `range` in its tab's branch of `render`, kept by `keep`. One a game holds goes on `OptionsGame` and `settingsOf`, with a command in
   `rust/game_start/src/host/command.rs` and a word in `rust/game_draw/src/view.rs`.
-- **Something a card asks:** a line of `asks!` with the next number, then `bun run tools/draw/gen.ts`.
-- **Something the HUD says:** its struct in `rust/game_types/src/view/types.rs`, filled by its rule's own module, its line in `tick_view`, `bun run tools/draw/gen.ts`, the read in
+- **Something a card asks:** a line of `asks!` with the next number, then the program `half`.
+- **Something the HUD says:** its struct in `rust/game_types/src/view/types.rs` (it derives `Crosses`), filled by its rule's own module, its line in `tick_view`, `half`, the read in
   `overlay.ts`. After Rust, `bun run tools/blitz/face-build.ts`.
 - **A debugger row:** a `Row` in `shown.rs` or an `Action` in `actions.rs`. A knob needs nothing: it is on the search by its name.
 - **Other words a screen reads**: `?kitbrief=0`, `?stillkit`, `?kitloud`, `?loadbrief=0`, `?settle=0`, `?textsize=0`, `?cards=0`, `?reel`, `?loadout=`.

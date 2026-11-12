@@ -15,15 +15,16 @@ import { buildLookPanel, type SkyTurns } from '../ui/lookpanel';
 import { netRows } from '../ui/netrows';
 import { Panel } from '../ui/panel';
 import { rainRows } from '../ui/rainrows';
-import type { ActionRow, DrawGame } from './drawgame';
+import type { DrawGame } from './drawgame';
+import type { ActionRow } from '../view/read';
 import { keepPick, keepRow } from './machine';
 import type { DrawHud } from './drawhud';
-import { gameCode, typedInto } from './keymap';
+import { DEBUG_KEY, gameCode, typedInto } from './keymap';
 
 /** rows shown at once: a word narrows them */
 const SHOWN = 40;
 /** the panel's own row protocol for a list that is laid again as its words change: one row to the panel, its values read again as the panel reads its rows, and the keyboard given back */
-function knobRows(panel: Panel, sec: HTMLElement, game: DrawGame): void {
+function knobRows(panel: Panel, sec: HTMLElement, game: DrawGame, shut: boolean): void {
   const row = document.createElement('div'), find = document.createElement('input'), list = document.createElement('div');
   const inner = document.createElement('div'); inner.style.cssText = 'flex:1 1 100%;min-width:0;';
   row.className = 'row'; row.title = 'every knob of the rules';
@@ -39,6 +40,7 @@ function knobRows(panel: Panel, sec: HTMLElement, game: DrawGame): void {
       v.type = k.yes ? 'checkbox' : 'number'; if (!k.yes) v.step = 'any'; v.style.cssText = 'font:inherit;width:8em;background:#15130f;color:inherit;border:1px solid #4a4232;';
       const read = (m: Map<string, number>): void => { if (document.activeElement === v) return; const x = m.get(k.name) ?? 0; if (k.yes) v.checked = x !== 0; else if (v.value !== String(x)) v.value = String(x); };
       v.addEventListener('change', () => { const x = k.yes ? (v.checked ? 1 : 0) : v.valueAsNumber; if (Number.isFinite(x)) { game.turn(k.name, x); game.tell(); } v.blur(); });
+      v.disabled = shut; if (shut) v.style.opacity = '0.45';
       read(new Map([[k.name, k.value]])); reads.push(read); list.append(name, v);
     }
     const more = document.createElement('div'); more.textContent = hits.length > SHOWN ? `and ${hits.length - SHOWN} more of ${all.length}` : `${hits.length} of ${all.length}`; more.style.cssText = 'grid-column:1/3;opacity:0.6;'; list.append(more);
@@ -82,7 +84,7 @@ function actionRows(panel: Panel, game: DrawGame, secs: Map<string, HTMLElement>
     switch (a.kind) {
       case 'press': panel.buttons(sec, a.label, [{ text: 'do it', run: () => act(a.name, 0, ''), title }]); break;
       case 'each': panel.buttons(sec, a.label, a.words.map(w => ({ text: w, run: () => act(a.name, 0, w), title }))); break;
-      case 'choice': panel.select(sec, a.label, a.words, () => { const r = rows()[i]; return r.kind === 'choice' ? Math.max(0, r.words.indexOf(r.now)) : 0; }, v => { game.pick(a.name, a.words[v]); game.tell(); at = -1; keepPick(a.name, a.words[v]); }, title); break;
+      case 'choice': panel.select(sec, a.label, a.words, () => { const r = rows()[i]; return Math.max(0, r.words.indexOf(r.now)); }, v => { game.pick(a.name, a.words[v]); game.tell(); at = -1; keepPick(a.name, a.words[v]); }, title); break;
       case 'count': { let n = a.start; panel.slider(sec, a.label, a.lo, a.hi, a.step, () => n, v => { n = v; }, title); panel.buttons(sec, a.label, [{ text: 'do it', run: () => act(a.name, n, ''), title }]); break; }
       case 'reload': panel.buttons(sec, a.label, a.words.map(w => ({ text: w, run: () => { const u = new URL(location.href), was = u.searchParams.get(a.word); if (a.words[0] === w ? was === null : was === w) return; if (a.words[0] === w) u.searchParams.delete(a.word); else u.searchParams.set(a.word, w); location.href = u.href; }, title }))); break;
     } });
@@ -92,8 +94,12 @@ export interface DebuggerDeps { game: DrawGame; engine: Engine; smoke: SmokeSyst
 export function debuggerPanel(d: DebuggerDeps): Panel {
   const panel = new Panel();
   panel.system('Rules', { icon: '⚑', short: 'Rules', title: 'the sandbox\'s actions, the game\'s numbers, and every knob of the rules by its name' });
-  knobRows(panel, panel.section('Knobs', { open: true }), d.game);
-  { const secs = new Map<string, HTMLElement>(); actionRows(panel, d.game, secs); shownRows(panel, d.game, secs); }
+  // (a game that is walked takes no command but its own: a networked one is the server's, a replay the tape's. The rows are there to read)
+  const why = d.net ? 'Numbers can\'t be turned in a co-op game.' : d.game.walked ? 'Numbers can\'t be turned while a replay plays.' : '';
+  const knobs = panel.section('Knobs', { open: true }), secs = new Map<string, HTMLElement>();
+  if (why) panel.text(knobs, () => why);
+  knobRows(panel, knobs, d.game, why !== ''); actionRows(panel, d.game, secs); shownRows(panel, d.game, secs);
+  if (why) for (const s of secs.values()) { s.inert = true; s.style.opacity = '0.45'; s.title = why; }
   { const o = d.over; if (o) { const s = panel.section('HUD', { open: true });
     panel.toggleBox(s, 'show AI debug labels', () => o.page.debug, v => { d.game.commands.labels(v ? 1 : 0); d.game.tell(); o.told(); }, 'state / awareness tags over the guards');
     panel.toggleBox(s, 'light fixture dots', () => o.overlay.showLightDots, v => { o.overlay.showLightDots = v; }); } }
@@ -103,7 +109,7 @@ export function debuggerPanel(d: DebuggerDeps): Panel {
   buildLookPanel(panel, d.engine, () => d.hud().fps, false, skyOf(d.game));
   if (d.net) netRows(panel, d.net);
   d.input.keyVeto = e => d.card(e) || panel.onKey(e);
-  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== 'Backquote' || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
+  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== DEBUG_KEY || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
   (window as unknown as { __panel: Panel }).__panel = panel;
   return panel;
 }

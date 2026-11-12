@@ -17,7 +17,7 @@ fn post_or_pos(g: &Game, op: DoorOpId, m: GuardId) -> V3 {
     match g.tab.doortools_door_op[op].post.get(m) { Some(p) => p.pos, None => g.pos_of(m) }
 }
 /// DOORTOOLS.blowKey.replace('Key', '')
-pub(crate) fn blow_letter(g: &Game) -> String { g.k.doortools.blow_key.replacen("Key", "", 1) }
+pub(crate) fn blow_letter(g: &Game) -> String { g.k.doortools.blow_key.as_str().replacen("Key", "", 1) }
 fn by_sam(g: &Game, c: ChargeId) -> bool { g.tab.doortools_set_charge[c].by == crate::ownblow::SAM_BY }
 /// this.ops.some(o => o.kind === 'charge' && o.door === d)
 fn charge_order_on(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> bool {
@@ -372,7 +372,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let id = g.tab.doortools_set_charge.push(row);
     g.groups[g.group].tools.set.push(id);
     let at = crate::doors::door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(at), Some(0.6), None);
 }
 
 /// The charges that stand set: drawn; one whose door has come open or off its hinges is off it, back in the count.
@@ -884,7 +884,7 @@ fn door_tools_stack_tucked(g: &mut crate::game::Game, d: DoorId, side: f64, men:
 pub(super) fn door_tools_holders(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, side: f64, men: &[GuardId]) -> Vec<GuardId> {
     if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return Vec::new(); }
     let fc = g.dr[d].frame_centre;
-    let jamb_out = seat.orders.knobs.jamb_out;
+    let jamb_out = g.k.orders.jamb_out;
     let mut out: Vec<GuardId> = Vec::new();
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if men.contains(&gd) { continue; }
@@ -911,7 +911,7 @@ pub(super) fn door_tools_step_backs(g: &mut crate::game::Game, d: DoorId, side: 
     let must = must.unwrap_or(false);
     let width = g.dr[d].def.width;
     let fc = g.dr[d].frame_centre;
-    let (off, jamb_past) = (g.groups[g.group].orders.knobs.jamb_out, g.groups[g.group].orders.knobs.jamb_past);
+    let (off, jamb_past) = (g.k.orders.jamb_out, g.k.orders.jamb_past);
     let room_back = g.k.doortools.room_back.clone();
     let backblast_m = g.k.doortools.backblast_m;
     let mut out: JsMap<GuardId, crate::orders::StackPost> = JsMap::new();

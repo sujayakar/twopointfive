@@ -90,7 +90,7 @@ fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None);
     let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None);
-    m::max(a, b) < g.tune.vis_floor
+    m::max(a, b) < g.k.tune.vis_floor
 }
 
 /// has he company
@@ -533,7 +533,7 @@ fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
         g.fa[w].burst = None;
         crate::character::anim_reload(g, c, None, None);
         let pos = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(pos), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(pos), Some(0.5), None);
     }
     g.gd[gd].reload_t = m::max_n(&[g.gd[gd].reload_t, row.dur, g.k.morale.reload_secs]);
     bark(g, gd, LineKind::Out, false, Some(true));
@@ -650,7 +650,7 @@ mod tests {
     }
     /// pinned bits
     #[test]
-    fn flat_is_the_typescripts() {
+    fn flat_is_as_pinned() {
         assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 0.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         assert_eq!(dist_xz([0.1, 0.0, -9.3], [7.77, 0.0, 0.004]).to_bits(), 0x40281da70b81d837);
     }

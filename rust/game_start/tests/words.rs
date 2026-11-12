@@ -35,6 +35,11 @@ fn a_write_moves_the_word_of_its_own_part() {
     assert_eq!(moved(&mut p, |g| g.gd[gd].duty.holds = !g.gd[gd].duty.holds), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.gd[gd].path.push([1.0, 0.0, 1.0])), ["gd"]);
     assert_eq!(moved(&mut p, |g| g.k.pressure.loud_secs += 1.0), ["k"]);
+    let c = p.g.gd[gd].ch;
+    assert_eq!(moved(&mut p, |g| g.ch[c].hold.since += 1.0), ["ch"]);
+    assert_eq!(moved(&mut p, |g| g.light_home.mains.active = !g.light_home.mains.active), ["light_home"]);
+    assert_eq!(moved(&mut p, |g| g.light_home.rows[0].intensity += 1.0), ["light_home"]);
+    assert_eq!(moved(&mut p, |g| g.air_dust.leak += 1.0), ["air_dust"]);
     // (a system's own slot, which only its module can name)
     assert_eq!(moved(&mut p, |g| game::mind::raise(g, gd, 0.5, "here")), ["gd", "ctl"]);
     // (a seat's set, of the seat that stands on Game and of the other)
@@ -88,4 +93,31 @@ fn what_is_a_machines_own_moves_no_word() {
     assert!(moved(&mut p, |g| g.out.push(game::out_events::OutEvent::SmokeCansShut)).is_empty(), "what it told its picture");
     let cam = p.g.host_cam.expect("the host's camera");
     assert!(moved(&mut p, |g| g.tab.camera[cam].yaw += 1.0).is_empty(), "where it looks");
+}
+
+/// THE FIELDS OF THE GAME THAT ARE IN NO WORD, each for the reason its own doc gives: a host's own, the picture's, what a step told its host, or made again from the rest.
+const SAID_BY_NOBODY: [(&str, &[&str]); 3] = [
+    ("Game", &[
+        "kit_stage", "hand_at", "host_cam", "host_input", "fog_picture", "saves", "seat", "group", "local_seat", "alone_own", "cmd_buf", "out", "art", "stats", "made", "mark_set", "bones", "ray_grid", "feel",
+    ]),
+    ("Tabs", &["input", "camera"]),
+    ("Mods", &["math_exact", "render_frame"]),
+];
+/// THE RULE: a field of the game is in its words but for those said above.
+/// A FAILURE MEANS: a field left the words (an attribute over the field that went before it fell to this one), so two machines, a hold and a save's check no longer see it; or one was meant to and is
+/// not said here.
+#[test]
+fn a_field_is_out_of_the_words_only_by_name() {
+    let source = include_str!("../../game_types/src/game/types.rs");
+    for (name, said) in SAID_BY_NOBODY {
+        let from = source.find(&format!("pub struct {name} {{")).unwrap_or_else(|| panic!("no struct {name}"));
+        let body = &source[from..from + source[from..].find("\n}\n").expect("its end")];
+        let (mut skipped, mut found) = (false, Vec::new());
+        for line in body.lines().map(str::trim).filter(|l| !l.starts_with("//")) {
+            skipped |= line.contains("#[bytes(skip)]");
+            let Some(at) = line.find("pub ") else { continue };
+            if core::mem::take(&mut skipped) { found.push(line[at + 4..].split(':').next().unwrap()); }
+        }
+        assert_eq!(found, said, "the fields of {name} that are in no word");
+    }
 }

@@ -52,7 +52,7 @@ fn under(p: &Play) -> OrderTarget {
 }
 /// the key tapped, Shift held or not, as a hand presses it: the row it logged, if it logged one
 fn tap(p: &mut Play, shift: bool) -> Option<String> {
-    let (key, n) = (p.g.k.cmdring.key.clone(), p.g.groups[p.g.group].orders.log.len());
+    let (key, n) = (p.g.k.cmdring.key.as_str(), p.g.groups[p.g.group].orders.log.len());
     if shift { p.key_down("ShiftLeft"); p.frame(); }
     p.key_down(&key);
     p.frame();
@@ -63,7 +63,7 @@ fn tap(p: &mut Play, shift: bool) -> Option<String> {
 }
 /// Shift and the key kept down until the ring is up
 fn wheel(p: &mut Play) {
-    let key = p.g.k.cmdring.key.clone();
+    let key = p.g.k.cmdring.key.as_str();
     p.key_down("ShiftLeft");
     p.frame();
     p.key_down(&key);
@@ -71,7 +71,7 @@ fn wheel(p: &mut Play) {
 }
 /// a wedge of the ring given by its digit, and every key let go: the row it logged
 fn wedge(p: &mut Play, key: f64) -> Option<String> {
-    let (k, n, d) = (p.g.k.cmdring.key.clone(), p.g.groups[p.g.group].orders.log.len(), format!("Digit{}", key as i32));
+    let (k, n, d) = (p.g.k.cmdring.key.as_str(), p.g.groups[p.g.group].orders.log.len(), format!("Digit{}", key as i32));
     p.key_down(&d);
     p.frame();
     p.key_up(&d);

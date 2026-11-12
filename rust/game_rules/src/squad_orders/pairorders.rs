@@ -352,8 +352,8 @@ fn pair_orders_reset(g: &mut Game) {
 // ------------------------------------------------------------ once a frame
 /// F: the mark, while somebody waits on it; the press is used here and a menu that is up goes away   (PairOrders.input)
 pub fn pair_orders_input(g: &mut Game, input: InputId) {
-    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.holds("KeyF") || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
-    g.tab.input[input].pressed.delete(String::from("KeyF"));
+    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.holds(crate::input::Key::F.as_str()) || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
+    g.tab.input[input].pressed.delete(crate::input::Key::F.text());
     crate::orders::squad_orders_close(g);
     pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::F));
 }
@@ -505,7 +505,7 @@ fn pair_orders_body_lit(g: &mut Game, o: GuardId, foe: GuardId, at: V3) -> bool 
     let eye = eye_of(g, o);
     let d = m::hyp3(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);
     let (near_m, far_m, lit, lit_near) = (g.k.body_light.near_m, g.k.body_light.far_m, g.k.body_light.lit, g.k.body_light.lit_near);
-    let bar = if !g.tune.body_light || d <= near_m { -1.0 } else { lit_near + (lit - lit_near) * m::min(1.0, (d - near_m) / m::max(0.1, far_m - near_m)) };
+    let bar = if !g.k.tune.body_light || d <= near_m { -1.0 } else { lit_near + (lit - lit_near) * m::min(1.0, (d - near_m) / m::max(0.1, far_m - near_m)) };
     let vis = g.shown[g.gd[foe].ch].visibility;
     m::max(vis, pair_orders_lit_at(g, at)) >= bar
 }

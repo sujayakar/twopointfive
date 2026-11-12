@@ -228,7 +228,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     if !crate::rescue::rescue_up(g) { return; }
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
-    if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
+    if crate::input::input_hit(g, input, crate::input::Key::F) { rescue_order_door(g); }
     rescue_hear(g);
     rescue_defenders(g);
     crate::rescueflush::rescue_flush_tick(g);
@@ -603,7 +603,7 @@ fn turn_him_loose(g: &mut Game, h: GuardId, to: V3) {
 
 /// Off his post on the room fight's 'move'.
 fn rescue_crew_move(g: &mut crate::game::Game, f: RoomfightDefId, goal: V3, by: Option<DoorId>) {
-    let pace = g.tune.guard_chase + 0.3;
+    let pace = g.k.tune.guard_chase + 0.3;
     crate::roomfight::send(g, f, crate::roomfight::Leg { by, ..crate::roomfight::Leg::to(goal, pace) }, crate::owner::by::MISSION);
 }
 

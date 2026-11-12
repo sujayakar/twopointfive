@@ -10,18 +10,34 @@ use game::m;
 use game::out_events::OutEvent;
 use game::scene_materials::SnowKind;
 
-/// a `says` word's bits for a man: alive, the fog hides him, dead (a body), and which bones he has
-pub const ALIVE: u32 = 1;
-pub const HIDDEN: u32 = 2;
-pub const DEAD: u32 = 4;
-pub const BONES: u32 = 8;
-const LEFT_TOE: u32 = 16;
-const RIGHT_TOE: u32 = 32;
+game::bits! {
+    /// what is said of a man, as what stands on the snow
+    pub mod foot_flag as FootFlag {
+        ALIVE = 1,
+        /// the fog hides him
+        HIDDEN = 2,
+        /// a body
+        DEAD = 4,
+        /// and which bones he has
+        BONES = 8,
+        LEFT_TOE = 16,
+        RIGHT_TOE = 32,
+    }
+}
+game::bits! {
+    /// what is said of a part of a thing that moves over the ground
+    pub mod thing_flag as ThingFlag {
+        RESTS = 1,
+        /// it lies on something that is not the ground
+        LIES_ON = 2,
+    }
+}
 
 section! {
     /// a man, as what stands on the snow and breathes over it
     pub struct Foot {
         pub id: u32,
+        /// FootFlag
         pub says: u32,
         pub pos: [f32; 3],
         pub vel: [f32; 3],
@@ -44,7 +60,7 @@ section! {
         pub kind: u32,
         pub key: u32,
         pub part: u32,
-        /// 1 at rest · 2 lying on something that is not the ground
+        /// ThingFlag
         pub says: u32,
         pub c: [f32; 3],
         pub h: [f32; 3],
@@ -109,14 +125,14 @@ impl Snow {
         let Some(hips) = b(Bone::Hips) else { return };
         let mut r = Foot::ZERO;
         r.id = c.id as u32;
-        r.says = c.alive as u32 * ALIVE | hid as u32 * HIDDEN | dead as u32 * DEAD | BONES;
+        r.says = game::bits::of([(foot_flag::ALIVE, c.alive), (foot_flag::HIDDEN, hid), (foot_flag::DEAD, dead), (foot_flag::BONES, true)]);
         (r.pos, r.vel, r.yaw, r.hips) = (f3(c.pos), f3(c.vel), c.body_yaw as f32, hips);
         r.chest = b(Bone::Chest).unwrap_or(hips);
         r.head = b(Bone::Head).unwrap_or(r.chest);
         r.foot_l = b(Bone::FootL).unwrap_or(hips);
         r.foot_r = b(Bone::FootR).unwrap_or(hips);
-        match b(Bone::ToeL) { Some(t) => { r.toe_l = t; r.says |= LEFT_TOE; } None => r.toe_l = r.foot_l }
-        match b(Bone::ToeR) { Some(t) => { r.toe_r = t; r.says |= RIGHT_TOE; } None => r.toe_r = r.foot_r }
+        match b(Bone::ToeL) { Some(t) => { r.toe_l = t; r.says |= foot_flag::LEFT_TOE; } None => r.toe_l = r.foot_l }
+        match b(Bone::ToeR) { Some(t) => { r.toe_r = t; r.says |= foot_flag::RIGHT_TOE; } None => r.toe_r = r.foot_r }
         r.facing = f3(game::character::character_head_dir(g, id));
         self.feet.push(r);
     }
@@ -128,7 +144,7 @@ impl Snow {
             for (i, part) in p.def.parts.iter().enumerate() {
                 let Some(&bx) = p.boxes.get(i) else { continue };
                 let b = &g.tab.boxes[bx];
-                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: rest as u32, at: [p.x as f32, p.z as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
+                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: game::bits::of([(thing_flag::RESTS, rest)]), at: [p.x as f32, p.z as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
             }
         }
     }
@@ -138,7 +154,7 @@ impl Snow {
             let it = &g.tab.item[id];
             let mut t = Thing::ZERO;
             (t.kind, t.key) = (1, id.ix() as u32);
-            t.says = it.settled as u32 | ((it.on != 0) as u32) << 1;
+            t.says = game::bits::of([(thing_flag::RESTS, it.settled), (thing_flag::LIES_ON, it.on != 0)]);
             t.c = [it.pos[0] as f32, it.pos[1] as f32, it.pos[2] as f32];
             t.at = [t.c[0], t.c[2]];
             t.vel = [it.vel[0] as f32, it.vel[1] as f32, it.vel[2] as f32];
@@ -152,7 +168,7 @@ impl Snow {
             let (c, b) = (&g.tab.debris_chunk[id], &g.tab[g.tab.debris_chunk[id].box_]);
             let mut t = Thing::ZERO;
             (t.kind, t.key) = (2, id.ix() as u32);
-            t.says = c.rest as u32 | (c.on.is_some() as u32) << 1;
+            t.says = game::bits::of([(thing_flag::RESTS, c.rest), (thing_flag::LIES_ON, c.on.is_some())]);
             t.c = b.c.map(|x| x as f32);
             t.at = [t.c[0], t.c[2]];
             t.h = b.h.map(|x| x as f32);

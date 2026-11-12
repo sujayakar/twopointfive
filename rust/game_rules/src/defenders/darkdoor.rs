@@ -52,7 +52,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind,
     crate::game::game_say(g, gd, pool[i], Some(radio), None);
     if radio {
         let at = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 
@@ -570,7 +570,7 @@ fn waits_on_his_spot(g: &mut Game, gd: GuardId, d: DoorId, dt: f64, speed: f64) 
         let yaw = v3::yaw_to(p, to);
         let back = d_s < 1.6 && m::cos(yaw - face) < 0.3;
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, if back { face } else { yaw }, 5.5 * dt);
-        let want = m::min(speed, g.tune.guard_investigate) * v3::clamp(d_s / 0.8, 0.35, 1.0) * (if back { 0.6 } else { v3::clamp(m::cos(yaw - g.ch[c].body_yaw) * 1.5, 0.15, 1.0) });
+        let want = m::min(speed, g.k.tune.guard_investigate) * v3::clamp(d_s / 0.8, 0.35, 1.0) * (if back { 0.6 } else { v3::clamp(m::cos(yaw - g.ch[c].body_yaw) * 1.5, 0.15, 1.0) });
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, want, 4.0, dt);
         let sp = g.gd[gd].speed;
         g.ch[c].vel = [m::sin(yaw) * sp, 0.0, m::cos(yaw) * sp];
@@ -703,7 +703,7 @@ mod tests {
 
     /// the static here and `lines()` are the same words in the same order
     #[test]
-    fn lines_are_the_skeletons() {
+    fn the_lines_are_the_same_words_in_the_same_order() {
         let t = crate::darkdoor::lines();
         for &(k, say, he, they) in LINES.iter() {
             let row = t.of(k.as_str()).unwrap();
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn a_new_row_is_the_typescripts_literal_not_blank() {
+    fn a_new_row_is_its_own_start_not_blank() {
         let s = fresh_fear();
         assert_eq!((s.door, s.side, s.left, s.armed, s.arm_t), (-1.0, 1.0, -1e9, -1.0, -1e9));
     }

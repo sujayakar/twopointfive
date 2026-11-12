@@ -8,8 +8,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the frame's input: what the order input takes out of it
 
-fn pressed_delete(g: &mut Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.delete(String::from(code))
+fn pressed_delete(g: &mut Game, input: InputId, key: crate::input::Key) -> bool {
+    g.tab.input[input].pressed.delete(key.text())
 }
 fn mouse(g: &Game, input: InputId) -> (f64, f64) {
     let i = &g.tab.input[input];
@@ -27,7 +27,7 @@ fn buttons_off(g: &mut Game, input: InputId, bits: i32) {
 }
 /// `input.down('ShiftLeft') || input.down('ShiftRight')`
 fn shift_down(g: &Game, input: InputId) -> bool {
-    crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")
+    crate::input::input_down(g, input, crate::input::Key::ShiftLeft) || crate::input::input_down(g, input, crate::input::Key::ShiftRight)
 }
 /// `if (input === g.seat.input) g.seat.swallow(1)`
 fn swallow_if_seat(g: &mut Game, input: InputId) {
@@ -107,11 +107,11 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
 /// With no ring up: the key down and let go is a tap; still down when the hold is over, the ring goes up.
 fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     if let Some(p) = g.groups[g.group].orders.cmd_press.clone() { return key_still_held(g, input, cam, canvas, &p); }
-    let key = g.k.cmdring.key.clone();
-    if !crate::input::input_hit(g, input, &key) || !squad_orders_ring_free(g, &crate::seats::here(g), input) { return false; }
-    pressed_delete(g, input, &key);
+    let key = g.k.cmdring.key;
+    if !crate::input::input_hit(g, input, key) || !squad_orders_ring_free(g, &crate::seats::here(g), input) { return false; }
+    pressed_delete(g, input, key);
     let add = crate::planmode::goals_on(g, &crate::seats::here(g)) && shift_down(g, input);
-    if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, &key) {
+    if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, key) {
         let t = squad_orders_target_under(g, input, cam, canvas);
         squad_orders_tap_give(g, &t, input, Some(add));
         return true;
@@ -132,9 +132,9 @@ fn no_ring_yet(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_
 
 /// The press goes on: let go it is a tap; a digit, or the hold over, puts the ring up on what the press was on.
 fn key_still_held(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, p: &SquadOrdersCmdPress) -> bool {
-    let key = g.k.cmdring.key.clone();
-    if crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused") { g.groups[g.group].orders.cmd_press = None; return false; }
-    if !crate::input::input_down(g, input, &key) {
+    let key = g.k.cmdring.key;
+    if crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused) { g.groups[g.group].orders.cmd_press = None; return false; }
+    if !crate::input::input_down(g, input, key) {
         g.groups[g.group].orders.cmd_press = None;
         let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g, &crate::seats::here(g));
         squad_orders_tap_give(g, &p.t, input, Some(goal));
@@ -184,13 +184,13 @@ struct RingHand {
 /// The frame's keys are the ring's while it is up: taken out of the input, the digits and the wheel all of them.
 fn hand_this_frame(g: &mut Game, input: InputId) -> RingHand {
     let back = crate::backkey::back_take(g, input);
-    let blur = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
+    let blur = crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused);
     let rmb = crate::input::input_rmb_hit(g, input);
     if rmb { clicked_off(g, input, 4); }
     let lmb = crate::input::input_lmb_hit(g, input);
     let mut digit = 0.0;
     for d in 1..=9 {
-        if pressed_delete(g, input, &format!("Digit{}", d)) && !js::truthy(digit) { digit = d as f64; }
+        if crate::input::Key::digit(d).is_some_and(|k| pressed_delete(g, input, k)) && !js::truthy(digit) { digit = d as f64; }
     }
     g.tab.input[input].wheel = 0.0;
     RingHand { back, blur, rmb, lmb, digit }
@@ -286,10 +286,10 @@ fn wedge_lit(g: &mut Game, input: InputId, digit: f64, still: bool) -> Option<We
 /// It stays up without its key: a digit's own wedge is given at once, a left click gives the lit one, and so does the key again once the press that opened it has come up;
 /// that press coming up gives only a wedge the cursor is out on.
 fn lit_wedge_is_given(g: &mut Game, input: InputId, digit: f64, click: bool, lit: WedgeLit) -> bool {
-    let key = g.k.cmdring.key.clone();
+    let key = g.k.cmdring.key;
     let lit_now = g.groups[g.group].orders.cmd_ring.unwrap().lit;
-    let again = g.groups[g.group].orders.cmd_ring.unwrap().free.unwrap_or(false) && pressed_delete(g, input, &key);
-    let key_down = crate::input::input_down(g, input, &key);
+    let again = g.groups[g.group].orders.cmd_ring.unwrap().free.unwrap_or(false) && pressed_delete(g, input, key);
+    let key_down = crate::input::input_down(g, input, key);
     let latch = crate::cmdring::ring_latch(g.groups[g.group].orders.cmd_ring.as_mut().unwrap(), key_down, again, !js::truthy(digit) && lit.want > 0.0 && lit.want == lit_now);
     let by_digit = digit > 0.0 && !lit.turned && lit_now == digit;
     if latch != crate::cmdring::RingLatch::Give && !by_digit && !(click && !lit.turned) { return false; }
@@ -324,7 +324,7 @@ fn give_the_lit_wedge(g: &mut Game) {
 fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
     let mut d = 1.0;
     while d <= g.k.cmdring.wedges {
-        if crate::input::input_hit(g, input, &format!("Digit{}", d as i32)) { return true; }
+        if crate::input::Key::digit(d as i32).is_some_and(|k| crate::input::input_hit(g, input, k)) { return true; }
         d += 1.0;
     }
     false
@@ -592,7 +592,7 @@ pub fn squad_orders_sam_stopped(seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// A man's order goes, and with it the pin the fight seam put on him.
-pub(super) fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
+pub fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
     let his = g.groups[g.group].orders.asg.get(gd).copied();
     g.groups[g.group].orders.asg.delete(gd);
     crate::duty::done(g, gd, his);

@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
 /// `g.audio.play(name, at, vol)`
-fn audio(g: &mut Game, name: &str, at: Option<V3>, vol: f64) { crate::audio_iface::game_audio_like_play(g, name, at, Some(vol), None) }
+fn audio(g: &mut Game, name: crate::audio_iface::Sfx, at: Option<V3>, vol: f64) { crate::audio_iface::game_audio_like_play(g, name, at, Some(vol), None) }
 /// what they are doing at doors
 fn tools(g: &mut Game) -> &mut crate::doortools::DoorTools { let id = g.qrf.group.unwrap(); &mut g.groups[id].tools }
 /// a pass of the squad's code about them
@@ -246,9 +246,9 @@ pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId)
     let room = crate::dialogue::room_name(g, fix);
     radio(g, Some(voice), &format!("{} — contact, {}! push him", tag, room));
     let head = head_or_pos(g, seer);
-    audio(g, "radio", Some(head), 0.8);
+    audio(g, crate::audio_iface::Sfx::Radio, Some(head), 0.8);
     if g.time - g.last_sting_t > 8.0 {
-        audio(g, "alertSting", None, 0.75);
+        audio(g, crate::audio_iface::Sfx::AlertSting, None, 0.75);
         g.last_sting_t = g.time;
     }
     let callsign = g.gd[seer].callsign.clone();
@@ -303,7 +303,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 
 /// Tier 2's trigger past deployment: one of theirs down, enough men down, a running gunfight.
 pub(super) fn maybe_perimeter(g: &mut crate::game::Game) {
-    if !g.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
+    if !g.k.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
     if !marks_of(g).map_or(false, |mk| !mk.posts.is_empty()) { return; }   // (this place has no second tier)
     let mut down = 0usize;
     for i in 0..g.guards.len() {
@@ -330,13 +330,13 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     if !has_response(g) { return false; }   // (the posts are the office's lot)
     let mk = marks_of(g).unwrap();
     if mk.posts.is_empty() { return false; }
-    let want = m::min(v3::clamp(m::round(g.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
+    let want = m::min(v3::clamp(m::round(g.k.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
     let now = g.time;
     g.qrf.perim = Some(Perimeter {
-        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
+        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.k.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
     let lit = if g.targets.iter().any(|t| g.tab.fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
-    let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);
+    let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.k.tune.perimeter_eta), lit);
     control(g, &word);
     crate::lighting::set_group(g, "exterior", true);   // the lot's lamps, all of them: back as authored on a restart
     if crate::mission::mission_live(g) { g.mission.stats.qrf = 2.0; }
@@ -465,7 +465,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 crate::game::game_say(g, gd, "CONTACT — outside!", None, None);
                 radio(g, Some(gd), &format!("contact outside — {}, he's coming out!", post.name));
                 if g.time - g.last_sting_t > 8.0 {
-                    audio(g, "alertSting", None, 0.75);
+                    audio(g, crate::audio_iface::Sfx::AlertSting, None, 0.75);
                     g.last_sting_t = g.time;
                 }
                 note(g, &format!("perim-contact:{}", post.name));

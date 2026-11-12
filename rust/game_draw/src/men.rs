@@ -42,9 +42,23 @@ section! {
     }
 }
 section! {
-    /// a man's instance, as the skinning reads it: tint, bones' place · tint2, owner · wet coat · its knobs · the waterline, the parts he wears
+    /// a man's instance, as the skinning reads it
     pub struct Inst {
-        pub w: [u32; 24],
+        pub tint: [f32; 3],
+        /// where his bones begin
+        pub joint_offset: u32,
+        pub tint2: [f32; 3],
+        pub owner: u32,
+        /// the wet coat: how wet, its beads, how much of it is rain, its phase
+        pub wet: [f32; 4],
+        /// its numbers: beads' density and size, a trail's length, the roughness wet · dry, how it darkens and by what, its shine · the waterline (bind-pose m above the sole
+        /// the coat reaches) and the wicking band above it
+        pub wet_k: [f32; 4],
+        pub wet_k2: [f32; 4],
+        pub wet_k3: [f32; 2],
+        /// the cast's parts he wears, a bit a part
+        pub parts: u32,
+        pub pad: u32,
     }
 }
 section! {
@@ -56,7 +70,9 @@ section! {
 section! {
     /// one of his proxies: an end and its radius, the other end, and whose it is
     pub struct Cap {
-        pub w: [f32; 7],
+        pub a: [f32; 3],
+        pub r: f32,
+        pub b: [f32; 3],
         pub owner: u32,
     }
 }
@@ -128,21 +144,21 @@ impl Men {
         });
         self.bounds.push(self.men[at].bound);
         // ---- his instance
-        let w = |v: f64| (v as f32).to_bits();
         let swap = self.swaps[side as usize];
         let (t, t2) = (if swap & 1 != 0 { c.tint2 } else { c.tint }, if swap & 2 != 0 { c.tint2 } else { c.tint });
         let mut i = Inst::ZERO;
-        for k in 0..3 { i.w[k] = w(t[k]); i.w[4 + k] = w(t2[k]); }
-        i.w[3] = (at * JOINTS) as u32;
-        i.w[7] = c.id as u32;
+        (i.tint, i.joint_offset, i.tint2, i.owner) = (f3(t), (at * JOINTS) as u32, f3(t2), c.id as u32);
         if wet {
             let k = &g.k.wet;
             let phase = { let p = c.id * 0.7548777; (p - m::floor(p)) * 40.0 };
             let line = if c.wet_line.is_finite() { m::max(0.0, c.wet_line) } else { LINE_ALL };
-            let row = [c.wet, c.beads, c.wet_rain, phase, k.bead_density, k.bead_size, k.trail_len, k.rough_wet, k.rough_dry, k.darken, k.darken_mul, k.spec_gain, line, m::max(0.005, k.line_band)];
-            for (n, v) in row.iter().enumerate() { i.w[8 + n] = w(*v); }
+            let f4 = |v: [f64; 4]| v.map(|x| x as f32);
+            i.wet = f4([c.wet, c.beads, c.wet_rain, phase]);
+            i.wet_k = f4([k.bead_density, k.bead_size, k.trail_len, k.rough_wet]);
+            i.wet_k2 = f4([k.rough_dry, k.darken, k.darken_mul, k.spec_gain]);
+            i.wet_k3 = [line as f32, m::max(0.005, k.line_band) as f32];
         }
-        i.w[22] = c.parts as u32;
+        i.parts = c.parts as u32;
         self.insts.push(i);
         // ---- his bones, scaled about his feet where he is drawn taller or shorter
         let mut bones = Bones::ZERO;
@@ -156,10 +172,10 @@ impl Men {
         self.now.push(bones);
         // ---- his proxies
         for k in 0..CAPS {
-            let mut r = Cap { w: [0.0, -100.0, 0.0, 0.0, 0.0, -100.0, 0.0], owner: c.id as u32 };
+            let mut r = Cap { a: [0.0, -100.0, 0.0], r: 0.0, b: [0.0, -100.0, 0.0], owner: c.id as u32 };
             if let Some(v) = caps.caps.get(k) {
                 let (a, z) = if v[3] > 0.0 { (x([v[0], v[1], v[2]]), x([v[4], v[5], v[6]])) } else { ([v[0], v[1], v[2]], [v[4], v[5], v[6]]) };
-                r.w = [a[0] as f32, a[1] as f32, a[2] as f32, (if v[3] > 0.0 { v[3] * s } else { v[3] }) as f32, z[0] as f32, z[1] as f32, z[2] as f32];
+                (r.a, r.r, r.b) = (f3(a), (if v[3] > 0.0 { v[3] * s } else { v[3] }) as f32, f3(z));
             }
             self.now_caps.push(r);
         }
@@ -172,8 +188,8 @@ impl Men {
         (r.feet, r.head) = (by.pt32(r.feet), by.pt32(r.head));
         for m in self.bones[k].w.chunks_exact_mut(16) { by.mat(m); }
         for c in &mut self.caps[k * CAPS..(k + 1) * CAPS] {
-            if c.w[3] <= 0.0 { continue; }
-            for at in [0, 4] { let p = by.pt32([c.w[at], c.w[at + 1], c.w[at + 2]]); c.w[at..at + 3].copy_from_slice(&p); }
+            if c.r <= 0.0 { continue; }
+            (c.a, c.b) = (by.pt32(c.a), by.pt32(c.b));
         }
         let b = by.pt32([r.bound[0], r.bound[1], r.bound[2]]);
         r.bound[..3].copy_from_slice(&b);
@@ -194,7 +210,7 @@ impl Men {
             for i in 0..JOINTS * 16 { q.w[i] = p.w[i] + (q.w[i] - p.w[i]) * a; }
             for i in 0..CAPS {
                 let (p, q) = (&self.before_caps[j * CAPS + i], &mut self.caps[k * CAPS + i]);
-                if p.w[3] > 0.0 && q.w[3] > 0.0 { for n in [0, 1, 2, 4, 5, 6] { q.w[n] = p.w[n] + (q.w[n] - p.w[n]) * a; } }
+                if p.r > 0.0 && q.r > 0.0 { for n in 0..3 { q.a[n] = p.a[n] + (q.a[n] - p.a[n]) * a; q.b[n] = p.b[n] + (q.b[n] - p.b[n]) * a; } }
             }
         }
     }

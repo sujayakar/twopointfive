@@ -1,5 +1,4 @@
 // THE PAGE OF A TAPE (`?playtape=<kept visit | file>`): where the tape comes from, and the address it plays at: the run's own words, for a page reads its picture off its address.
-import { HAND } from '../draw/hand';
 import { PLAYTAPE, recipeSearch } from '../tape/address';
 import { HandWalk, TapeRefused } from '../tape/handtape';
 import { handsOf, keptHands } from '../tape/keep';
@@ -28,7 +27,7 @@ export const keptName = (s: string): boolean => /^\d{8}T\d{6}-\w+$/.test(s);
 export async function keptBeside(sid: string): Promise<{ notes: ReplayNote[]; other: boolean }> { const r = (await keptStore().rows()).find(x => x.sid === sid); return { notes: r?.notes?.slice() ?? [], other: !!r && otherModule(r.module) }; }
 /** the address this tape plays at, or null: this page is at it */
 export function tapeAddress(bytes: Uint8Array, q: URLSearchParams): string | null {
-  const S = new HandWalk(bytes, HAND.count).start, own: Record<string, string> = { [PLAYTAPE]: q.get(PLAYTAPE) ?? '' }; { const at = q.get('at'); if (at !== null) own.at = at; }
+  const S = new HandWalk(bytes).start, own: Record<string, string> = { [PLAYTAPE]: q.get(PLAYTAPE) ?? '' }; { const at = q.get('at'); if (at !== null) own.at = at; }
   const to = recipeSearch({ search: S.words, seed: S.seed }, q, own);
   return new URLSearchParams(to).toString() === q.toString() ? null : to;
 }

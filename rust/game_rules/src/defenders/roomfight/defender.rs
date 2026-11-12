@@ -66,6 +66,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
     let mode = g.tab.roomfight_def[d].mode;
     if mode == DefMode::Move { room_fight_tick_move(g, d, dt); return; }
     if mode == DefMode::Free { room_fight_tick_free(g, d); return; }
+    if mode == DefMode::Told { return; }
     if g.gd[gd].script.is_some() && crate::director::director_lesson_runs(g) { g.tab.roomfight_def[d].staged = Some(true); return; }
     if g.tab.roomfight_def[d].staged == Some(true) {
         g.tab.roomfight_def[d].staged = Some(false); crate::duty::hold(g, gd, true, "roomfight");
@@ -160,17 +161,8 @@ fn room_fight_entry_toward(g: &crate::game::Game, d: RoomfightDefId, at: V3) -> 
 fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let s = hostile_skill(g);
     let room = g.tab.roomfight_def[d].room; let ent = entries_of(g, room);
-    let (mut best, mut bs) = (-1.0, g.k.roomfight.fear_min);
-    let c = g.gd[gd].ch; let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
-    for (i, e) in ent.iter().enumerate() {
-        let n = i as f64;
-        if ev_at(g, d, i) <= 0.02 { continue; }
-        let view = if crate::scene_collision::segment_blocked(g, eye, [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5], None, None, None) { 0.6 } else { 1.0 };
-        let mut mates = 0.0;
-        for &x in &g.fight.defs { let X = &g.tab.roomfight_def[x]; if x != d && !crate::condition::down(g, g.gd[X.gd].ch) && X.room == room && X.mode == DefMode::Hold && X.watch == n { mates += 1.0; } }
-        let sc = ev_at(g, d, i) * view - g.k.roomfight.crowd * mates + (if n == g.tab.roomfight_def[d].watch { g.k.roomfight.sticky } else { 0.0 });
-        if sc > bs { bs = sc; best = n; }
-    }
+    let dealt = crate::cover::way_dealt(g, gd);
+    let best = dealt.or_else(|| crate::cover::on_his_own(g, d)).map_or(-1.0, |i| i as f64);
     if best != g.tab.roomfight_def[d].want {
         let at = g.time + pick(g, crate::dice::Who::Def(d), s.shift); let D = &mut g.tab.roomfight_def[d];
         D.want = best; D.want_at = at;
@@ -180,8 +172,9 @@ fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if !ent.is_empty() && g.time >= g.tab.roomfight_def[d].glance_next && g.time - g.gd[gd].last_seen_t > 2.0 && g.time - g.tab.roomfight_def[d].noise_t > 3.0 && !crate::enemysquads::squad_drill(g).map_or(false, |k| k.drill_angles) {
         let watch = g.tab.roomfight_def[d].watch;
-        let mut others: Vec<f64> = (0..ent.len()).map(|i| i as f64).filter(|&i| i != watch).collect();
-        if watch >= 0.0 { others.push(-1.0); }
+        // (a man who splits the ways with his mates glances at what none of them has)
+        let others: Vec<f64> = if dealt.is_some() { crate::cover::left_open(g, d) } else { (0..ent.len()).map(|i| i as f64).chain([-1.0]).filter(|&i| i != watch).collect() };
+        if others.is_empty() { return; }
         let r = crate::dice::draw_def(g, "roomfight::room_fight_choose_watch#1", d);
         let to = others.get(m::floor(r * others.len() as f64) as usize).copied().unwrap_or(-1.0);
         let until = g.time + pick(g, crate::dice::Who::Def(d), s.glance);
@@ -261,7 +254,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     }
     if g.gd[h].held.is_none() { cover_pt(g, d); }
     if g.tab.roomfight_def[d].burst.broke {
-        if g.tune.suppression { g.cond[g.gd[h].ch].sup.down_t = m::max(g.cond[g.gd[h].ch].sup.down_t, 0.2); }
+        if g.k.tune.suppression { g.cond[g.gd[h].ch].sup.down_t = m::max(g.cond[g.gd[h].ch].sup.down_t, 0.2); }
         return;
     }
     if !g.fight.blind_fire || g.tab.roomfight_def[d].burst.n >= bl.rounds || g.time < g.tab.roomfight_def[d].burst.next { return; }
@@ -270,7 +263,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     g.tab.roomfight_def[d].burst.next = next;
     let c = g.gd[h].ch;
     if g.gd[h].held.is_some() || crate::control::man::staggered(g, h) || g.ch[c].gun_dir[1] < -bl.low_gun { return; }
-    if g.tune.suppression && (g.cond[g.gd[h].ch].sup.v >= g.k.suppression.pinned || g.cond[g.gd[h].ch].sup.latched || g.cond[g.gd[h].ch].sup.down_t > 0.0) { return; }
+    if g.k.tune.suppression && (g.cond[g.gd[h].ch].sup.v >= g.k.suppression.pinned || g.cond[g.gd[h].ch].sup.latched || g.cond[g.gd[h].ch].sup.down_t > 0.0) { return; }
     let gun = g.gd[h].weapon;
     if !crate::weapons::firearm_fire(g, gun) { return; }
     let at = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
@@ -300,12 +293,12 @@ pub fn room_fight_room_lost(g: &mut crate::game::Game, d: RoomfightDefId) -> boo
         let xc = g.gd[xg].ch;
         let b = g.ch[xc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[xc].pos);
         if crate::scene_collision::segment_blocked(g, eye, [b[0], 0.3, b[2]], None, None, None) { continue; }
-        if dist_xz(b, g.ch[c].pos) < 5.0 || !g.tune.body_light || crate::guards::body_visibility(g, xg) >= g.k.body_light.lit { dead += 1.0; }
+        if dist_xz(b, g.ch[c].pos) < 5.0 || !g.k.tune.body_light || crate::guards::body_visibility(g, xg) >= g.k.body_light.lit { dead += 1.0; }
     }
     let sup_v = g.cond[g.gd[gd].ch].sup.v;
-    let pressed = g.time - g.gd[gd].last_seen_t < 4.0 || (g.tune.suppression && sup_v >= g.k.suppression.flinch) || g.time - g.gd[gd].witness.heard.last_shot_t < 2.5;
+    let pressed = g.time - g.gd[gd].last_seen_t < 4.0 || (g.k.tune.suppression && sup_v >= g.k.suppression.flinch) || g.time - g.gd[gd].witness.heard.last_shot_t < 2.5;
     let frac = dead / m::max(1.0, dead + up);
-    let alone = dead + up <= 1.0 && g.tune.suppression && g.cond[g.gd[gd].ch].sup.latched && g.cond[g.gd[gd].ch].sup.pinned_t > 1.2;
+    let alone = dead + up <= 1.0 && g.k.tune.suppression && g.cond[g.gd[gd].ch].sup.latched && g.cond[g.gd[gd].ch].sup.pinned_t > 1.2;
     pressed && ((dead > 0.0 && frac >= g.tab.roomfight_def[d].nerve) || alone)
 }
 
@@ -365,7 +358,7 @@ struct Way { spot: V3, door: DoorId, l: f64, safe: bool }
 pub enum WayOut { ToSquad(V3), By(DoorId, V3), ToCover(V3) }
 impl WayOut {
     pub fn leg(self, g: &Game) -> Leg {
-        let chase = g.tune.guard_chase;
+        let chase = g.k.tune.guard_chase;
         match self {
             WayOut::ToSquad(to) => Leg::to(to, chase + 0.3),
             WayOut::By(door, to) => Leg { by: Some(door), ..Leg::to(to, chase + 0.3) },
@@ -537,7 +530,7 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, fighting: bool
     g.tab.roomfight_def[d].home = home;
     move_pt(g, d, [home[0], 0.0, home[2]]);
     cover_pt(g, d);
-    if move_kind == DefMoveKind::Cover && g.tune.suppression { g.cond[g.gd[gd].ch].sup.down_t = m::max(g.cond[g.gd[gd].ch].sup.down_t, 1.0); } // into cover: a breath with his head down
+    if move_kind == DefMoveKind::Cover && g.k.tune.suppression { g.cond[g.gd[gd].ch].sup.down_t = m::max(g.cond[g.gd[gd].ch].sup.down_t, 1.0); } // into cover: a breath with his head down
     tell_news(g, News::Man(gd, Did::Plants { fighting }));
 }
 

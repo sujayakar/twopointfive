@@ -181,7 +181,7 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
 fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet) {
     let most = g.k.he40.spent_speed_max;
     crate::flight::to_item(g, crate::throwables::ItemKind::Shell, sh.shooter, at, vel, most, crate::throwables::ItemBounce::ShellSkitter);
-    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.he40.dud_noise;
     if met != ShellEndMet::Man { crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, None); }   // (a man is its noise)
@@ -281,8 +281,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight.
 pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let item = crate::throwables::shell_item();
     let mut i = 0;
     while i < g.shells.len() {

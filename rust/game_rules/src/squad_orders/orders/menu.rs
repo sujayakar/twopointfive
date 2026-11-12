@@ -75,7 +75,6 @@ pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
 /// The built-in rows of the menu and the night breach's owner.
 pub fn squad_orders_new(g: &mut crate::game::Game) -> crate::orders::SquadOrders {
     let mut s = SquadOrders::blank();
-    s.knobs = g.k.orders.clone();
     let words = |w: &[&str]| -> Option<Vec<String>> { Some(w.iter().map(|x| String::from(*x)).collect()) };
     let rows = [
         rows::def(&rows::movethere::ORDER, OrderDef {

@@ -273,7 +273,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
     g.gd[gd].pieing = Some(p);
     let mut out = speed;
     if before < PIE_SLOW_M + 0.3 && before > -0.1 {   // the brake: a stride and he is at a walk
-        out = m::min(speed, g.tune.guard_walk);
+        out = m::min(speed, g.k.tune.guard_walk);
         if g.gd[gd].speed > out { g.gd[gd].speed = v3::damp(g.gd[gd].speed, out, 14.0, dt); }
     }
     // the look pivots about the near jamb's edge: the slice round past the far jamb as he closes, then, stepping through, hard back to the corner behind the near jamb
@@ -411,7 +411,7 @@ mod tests {
 
     // The expected bits are pinned.
     #[test]
-    fn frame_is_the_typescripts() {
+    fn frame_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         assert_eq!(f.ux.to_bits(), 0x3fe87996529f9d92);
         assert_eq!(f.uz.to_bits(), 0x3fe49d6e694619b8);
@@ -420,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn crossing_is_the_typescripts() {
+    fn crossing_is_as_pinned() {
         let f = frame_from(0.7, [3.25, -1.5], 1.1);
         let (a, b) = ([3.03, 0.0, -0.38], [4.31, 0.0, -1.91]);
         let x = crosses_frame(&f, a, b).unwrap();

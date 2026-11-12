@@ -68,7 +68,7 @@ pub fn game_let_go(g: &mut crate::game::Game) {
 
 /// the light meter's mapping, irradiance → 0‥1 visibility
 pub fn game_visibility_of(g: &crate::game::Game, e: f64) -> f64 {
-    visibility_sum(g.tune.vis_slope, g.tune.vis_floor, e)
+    visibility_sum(g.k.tune.vis_slope, g.k.tune.vis_floor, e)
 }
 /// visibilityOf's sum
 fn visibility_sum(slope: f64, floor: f64, e: f64) -> f64 {
@@ -320,7 +320,7 @@ fn act_grab(g: &mut Game, act: Option<&Interactable>, dt: f64, input: InputId) {
     let rmb_on = g.pl[pl].holstered && free;
     let rmb_down = crate::input::input_rmb(g, input);
     let rmb_hit = crate::input::input_rmb_hit(g, input);
-    let dropped = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
+    let dropped = crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused);
     let rb = crate::close::close_rmb(g, rmb_on, rmb_down, rmb_hit, dt, in_reach.is_some(), choke_on, dropped);
     let clicked: Option<Interactable> = if rb.is_some() { in_reach } else { None };
     let via_click: Option<GuardId> = clicked.as_ref().and_then(|c| c.guard);

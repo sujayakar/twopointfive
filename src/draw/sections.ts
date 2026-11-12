@@ -1,11 +1,11 @@
-// Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
+// Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
-/** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1040239375;
+/** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
+export const LAYOUT = 1396248575;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, coming = 15, men = 16, insts = 17, bones = 18, caps = 19, doorways = 20, emits = 21, kicks = 22, pushes = 23, sources = 24, anchors = 25, beams = 26, sounds = 27, footfalls = 28, lasting = 29, heard = 30, rims = 31, fires = 32, fireTable = 33, decals = 34, decalKeys = 35, decalHead = 36, winds = 37, gusts = 38, heat = 39, air = 40, windRoofs = 41, roofs = 42, ceilings = 43, doorBoxes = 44, openPanes = 45, resets = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, dustAir = 13, leaves = 14, lights = 15, coming = 16, men = 17, insts = 18, bones = 19, caps = 20, doorways = 21, emits = 22, kicks = 23, pushes = 24, sources = 25, anchors = 26, beams = 27, sounds = 28, footfalls = 29, lasting = 30, heard = 31, rims = 32, fires = 33, fireTable = 34, decals = 35, decalKeys = 36, decalHead = 37, winds = 38, gusts = 39, heat = 40, air = 41, windRoofs = 42, roofs = 43, ceilings = 44, doorBoxes = 45, openPanes = 46, resets = 47, dust = 48, feet = 49, things = 50, blasts = 51, snowWords = 52, smoke = 53, smokeAt = 54, smokeBricks = 55, count = 56 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -251,44 +251,66 @@ export const enum Head {
   items = 14,
   /** u32: the panes' broken cells are to be sent */
   panesMoved = 15,
+  /** u32: the weather's dust in the rooms is to be sent */
+  airMoved = 16,
   /** u32: the game's own count of what broke of the statics (the fog's thin bits are read off the list of that count) */
-  serial = 16,
+  serial = 17,
   /** u32: which stuffs some box has been, a bit a stuff's number */
-  stuffs = 17,
+  stuffs = 18,
   /** f32: the boxes a ray's grid reaches past the cells they are registered in (metres) */
-  slack = 18,
+  slack = 19,
   /** u32: keyed boxes found a frame ago, met for the first time, and boxes with no key */
-  matched = 19,
+  matched = 20,
   /** u32 */
-  fresh = 20,
+  fresh = 21,
   /** u32 */
-  unkeyed = 21,
+  unkeyed = 22,
   /** u32: the order the statics are drawn in is of the list as it stood some frames ago */
-  orderStale = 22,
+  orderStale = 23,
   /** words a row */
-  row = 23,
+  row = 24,
 }
 
-/** a box's place: cx cy cz, yaw's cosine and sine as halves · hx hy hz, flags */
+/** a box's place */
 export const enum Geo {
-  /** u32 × 8 */
-  w = 0,
+  /** f32 × 3: its middle */
+  c = 0,
+  /** two halves: its yaw's cosine and sine (a tilted box is turned by `Mat.rot`) */
+  rot = 3,
+  /** f32 × 3: its half sizes */
+  h = 4,
+  /** u32 */
+  flags = 7,
   /** words a row */
   row = 8,
 }
 
-/** its material: colour and cut height · emission and finish · rotation · the colour a secondary ray finds and its marks' gain */
+/** its material */
 export const enum Mat {
-  /** f32 × 16 */
-  w = 0,
+  /** f32 × 3 */
+  albedo = 0,
+  /** f32: above this height it is hidden from the eye, where it is cut away */
+  cutHeight = 3,
+  /** f32 × 3 */
+  emits = 4,
+  /** f32 */
+  finishWord = 7,
+  /** f32 × 4 */
+  rot = 8,
+  /** f32 × 3: the colour a ray that does not see its marks finds */
+  albedoSec = 12,
+  /** f32: what its marks' light is multiplied by */
+  markGain = 15,
   /** words a row */
   row = 16,
 }
 
-/** its planes, where it is cut: eight of n and d, then the core's colour */
+/** its planes, where it is cut: each n and d, box-local, the side kept is n p <= d (a normal of nought ends them) */
 export const enum Cut {
-  /** f32 × 36 */
-  w = 0,
+  /** f32 × 32 */
+  plane = 0,
+  /** f32 × 4: the colour its cut faces show (w over 0: it has one), and what else is said of them in w */
+  core = 32,
   /** words a row */
   row = 36,
 }
@@ -307,6 +329,78 @@ export const enum Row4 {
   w = 0,
   /** words a row */
   row = 4,
+}
+
+/** the scene's block: how many boxes, the grid, the men's bounds, the panes */
+export const enum Info {
+  /** u32 */
+  numBoxes = 0,
+  /** u32 */
+  numGlobals = 1,
+  /** u32 */
+  gridW = 2,
+  /** u32 */
+  gridH = 3,
+  /** u32 × 16: the boxes too large for the grid, by their places */
+  globals = 4,
+  /** u32 */
+  numCapsules = 20,
+  /** u32 */
+  numChars = 21,
+  /** u32 */
+  capsPerChar = 22,
+  /** u32: where the packed copies of the grid's items begin */
+  itemsB = 23,
+  /** f32 × 64: a man's proxies' sphere */
+  charBounds = 24,
+  /** f32 × 32: a global's padded lowest and highest, two to a row */
+  globalsY = 88,
+  /** f32 × 4: x: how far a traced box can reach outside the cells it is registered in (m); y: how much tighter a cell's height span is judged than it is packed */
+  grid = 120,
+  /** f32 × 128: a global's bounds in the world: its least corner, then its greatest, a little proud of it */
+  globalsB = 124,
+  /** u32 × 4: x, y: how many panes */
+  glassInfo = 252,
+  /** f32 × 384: a pane: its middle and its yaw's cosine, its half sizes and the sine, its tint and its place among the statics */
+  glass = 256,
+  /** words a row */
+  row = 640,
+}
+
+/** what is broken of a listed pane (all nought: it is whole) */
+export const enum Pane {
+  /** f32: how many sites it has been cut from */
+  sites = 0,
+  /** f32: `PaneFlag`, as a number */
+  says = 1,
+  /** f32: 0: its own x runs across it; 1: its z does */
+  axis = 2,
+  /** f32: how far it has gone, to 1 */
+  damage = 3,
+  /** f32 × 2 */
+  half = 4,
+  /** f32 */
+  kind = 6,
+  /** f32 */
+  pad = 7,
+  /** f32 × 2: where the blow that diced it fell */
+  blow = 8,
+  /** f32: the clumps whose key is under this have let go */
+  openAt = 10,
+  /** f32 */
+  grain = 11,
+  /** f32 */
+  cols = 12,
+  /** f32 */
+  rows = 13,
+  /** f32 */
+  seed = 14,
+  /** f32 */
+  pad2 = 15,
+  /** f32 × 128: a site: its place, its turn and its ring's radius · its radials, seed, energy and how much is merged · the four rings' radii · the pieces that have fallen out, twelve bits a band, two bands a float */
+  site = 16,
+  /** words a row */
+  row = 144,
 }
 
 /** a door's leaf where the tick left it: what the picture's own plans ask of it (openings, places, what shuts smoke in) */
@@ -331,9 +425,9 @@ export const enum Light {
   key = 0,
   /** u32: 0 a point, 1 a spot, 2 the sky's, 3 a panel */
   kind = 1,
-  /** u32: what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
+  /** u32: LIGHT_CLASSES */
   class = 2,
-  /** u32: 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own) */
+  /** u32: LightFlag */
   says = 3,
   /** u32 */
   owner = 4,
@@ -415,10 +509,28 @@ export const enum Man {
   row = 26,
 }
 
-/** a man's instance, as the skinning reads it: tint, bones' place · tint2, owner · wet coat · its knobs · the waterline, the parts he wears */
+/** a man's instance, as the skinning reads it */
 export const enum Inst {
-  /** u32 × 24 */
-  w = 0,
+  /** f32 × 3 */
+  tint = 0,
+  /** u32: where his bones begin */
+  jointOffset = 3,
+  /** f32 × 3 */
+  tint2 = 4,
+  /** u32 */
+  owner = 7,
+  /** f32 × 4: the wet coat: how wet, its beads, how much of it is rain, its phase */
+  wet = 8,
+  /** f32 × 4: its numbers: beads' density and size, a trail's length, the roughness wet · dry, how it darkens and by what, its shine · the waterline (bind-pose m above the sole the coat reaches) and the wicking band above it */
+  wetK = 12,
+  /** f32 × 4 */
+  wetK2 = 16,
+  /** f32 × 2 */
+  wetK3 = 20,
+  /** u32: the cast's parts he wears, a bit a part */
+  parts = 22,
+  /** u32 */
+  pad = 23,
   /** words a row */
   row = 24,
 }
@@ -433,8 +545,12 @@ export const enum Bones {
 
 /** one of his proxies: an end and its radius, the other end, and whose it is */
 export const enum Cap {
-  /** f32 × 7 */
-  w = 0,
+  /** f32 × 3 */
+  a = 0,
+  /** f32 */
+  r = 3,
+  /** f32 × 3 */
+  b = 4,
   /** u32 */
   owner = 7,
   /** words a row */
@@ -525,7 +641,7 @@ export const enum AirPush {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward, 5 a round's path, 6 a walking man's stride */
+  /** u32: PUSH_SHAPES */
   shape = 2,
   /** f32 × 3 */
   pos = 3,
@@ -543,7 +659,7 @@ export const enum AirPush {
   expand = 15,
   /** f32: how long it goes on (0: the one tick) */
   ttl = 16,
-  /** u32: 0 every lattice, 1 the fine one, 2 the coarse */
+  /** u32: LATTICES */
   lattice = 17,
   /** words a row */
   row = 18,
@@ -561,9 +677,9 @@ export const enum SmokeSource {
   push = 3,
   /** u32: what it rides, if anything (`anchors`; 0: it stays) */
   anchor = 4,
-  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those */
+  /** u32: SourceFlag */
   says = 5,
-  /** u32 */
+  /** u32: LATTICES */
   lattice = 6,
   /** f32 × 3 */
   pos = 7,
@@ -625,7 +741,7 @@ export const enum Sound {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: its name's number (`face_draw_name`) */
+  /** u32: its name's number (`Sfx`) */
   name = 2,
   /** u32: it has a place; 0 = it is in the ears */
   placed = 3,
@@ -665,7 +781,7 @@ export const enum Footfall {
 
 /** a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room */
 export const enum Lasting {
-  /** u32: the sound's name's number (`face_draw_name`), and which of that name it is */
+  /** u32: its name's number (`LastingSfx`), and which of that name it is */
   name = 0,
   /** u32 */
   id = 1,
@@ -747,24 +863,18 @@ export const enum Fire {
 export const enum FireTable {
   /** f32 × 16: fire.wgsl FireLook, in its order */
   look = 0,
-  /** f32: how far off the view a flame is drawn, how many, the flame's height and how far the wind leans it */
+  /** f32: how far off the view a flame is drawn, and how many are */
   drawR = 16,
   /** f32 */
   max = 17,
+  /** f32: its smoke is drawn at all · for a fire this near the view (m) · how fast its soot hands over to it (a share a second) */
+  smoke = 18,
   /** f32 */
-  height = 18,
+  viewR = 19,
   /** f32 */
-  tall = 19,
-  /** f32 */
-  lean = 20,
-  /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
-  smoke = 21,
-  /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
-  column = 33,
-  /** f32 × 3 */
-  soot = 47,
+  sootEase = 20,
   /** words a row */
-  row = 50,
+  row = 21,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
@@ -795,9 +905,9 @@ export const enum DecalHead {
 
 /** a source of moving air */
 export const enum Wind {
-  /** u32: 0 a jet, 1 the storm */
+  /** u32: WIND_KINDS */
   kind = 0,
-  /** u32: 1 the storm is a field cut roof by roof · 2 the air of a fire */
+  /** u32: WindFlag */
   says = 1,
   /** u32: which particles it moves, a bit a kind (0: the usual) */
   kinds = 2,
@@ -871,7 +981,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the smoke · 2 the cans venting stop, what they let out left in the air */
+  /** u32: ResetFlag */
   what = 2,
   /** words a row */
   row = 3,
@@ -899,7 +1009,7 @@ export const enum DustLook {
 export const enum Foot {
   /** u32 */
   id = 0,
-  /** u32 */
+  /** u32: FootFlag */
   says = 1,
   /** f32 × 3 */
   pos = 2,
@@ -935,7 +1045,7 @@ export const enum Thing {
   key = 1,
   /** u32 */
   part = 2,
-  /** u32: 1 at rest · 2 lying on something that is not the ground */
+  /** u32: ThingFlag */
   says = 3,
   /** f32 × 3 */
   c = 4,
@@ -1004,18 +1114,3 @@ export const enum SmokeBrick {
   /** words a row */
   row = 161,
 }
-
-/** what a box may say it is made of, by its number in Rust */
-export const STUFFS = ['carpet', 'grass', 'rubber', 'metal', 'glass', 'wood', 'plastic', 'fabric', 'steel', 'enamel', 'tarmac', 'mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'sheet', 'cloth', 'paint', 'veneer', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'plain', 'waits'] as const;
-
-/** what a particle is, by its number in Rust */
-export const PKINDS = ['rain', 'dust', 'casing', 'sheet', 'spark', 'debris', 'shard'] as const;
-
-/** how particles are thrown, by its number in Rust */
-export const EMIT_SHAPES = ['cone', 'burst', 'ring', 'puff', 'rainDisc'] as const;
-
-/** what smoke comes from, by its number in Rust */
-export const SMOKE_KINDS = ['flash', 'wisp', 'canister', 'burst', 'cloud', 'jet', 'trail', 'vent', 'puff', 'breath'] as const;
-
-/** what a floor is, by its number in Rust */
-export const FLOORS = ['carpet', 'lino', 'stone', 'tile', 'asphalt', 'grass'] as const;

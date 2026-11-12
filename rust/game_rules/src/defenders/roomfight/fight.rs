@@ -46,7 +46,7 @@ pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if exposure >= 1.0 { return g.k.roomfight.lamp; }
     let k = sim::light::by_day(crate::render_lights::light_by_day(light), light.intensity, light.peak_intensity, exposure) / light.intensity;
     let k = m::min(1.0, k * crate::guards::eyes_in(g, e));
-    m::max(0.0, g.k.roomfight.lamp + g.tune.vis_slope * m::log(k))
+    m::max(0.0, g.k.roomfight.lamp + g.k.tune.vis_slope * m::log(k))
 }
 
 /// Is the room fight running this frame?
@@ -88,7 +88,7 @@ pub fn room_fight_new() -> crate::roomfight::RoomFight {
 
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).
 pub fn room_fight_on(g: &crate::game::Game) -> bool {
-    if !(g.ai_enabled && g.tune.teams) { return false; }
+    if !(g.ai_enabled && g.k.tune.teams) { return false; }
     let show_runs = match g.director.run { Some(r) => !g.tab.director_run[r].ended, None => false };
     !(show_runs && !crate::rails::rails_live(g))
 }
@@ -285,7 +285,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
-        if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
+        if matches!(mode, DefMode::Move | DefMode::Told) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
         if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::duty::hold(g, gd, true, "roomfight"); }
         crate::duty::pin(g, gd, pinned0, "roomfight");
     }
@@ -402,7 +402,7 @@ mod tests {
 
     /// The pinned doubles of the closing lane, at point blank 2.
     #[test]
-    fn the_lane_at_arms_length_has_the_typescripts_bits() {
+    fn the_lane_at_arms_length_keeps_its_bits() {
         let rows: [(f64, f64, f64, u64); 5] = [
             (0.95, 0.6, 3.3, 0x3fe970a3d70a3d70),
             (0.45, 1.2, 1.5, 0x3fd3333333333333),

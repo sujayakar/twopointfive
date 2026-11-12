@@ -16,7 +16,7 @@ pub(super) fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64,
 
 /// How many puffs a site's asking for `count` comes to, and its numbers, by the table; none = no dust at all.
 pub(super) fn dust_asked(g: &crate::game::Game, count: f64, o: crate::render_particles::EmitOpts) -> Option<(f64, crate::render_particles::EmitOpts)> {
-    let k = g.m.particle_fx.dust;
+    let k = g.k.dust;
     let n = dust_count(k.count, count);
     if n <= 0.0 { return None; }
     if dust_shipped(&k) { return Some((n, o)); }
@@ -37,7 +37,7 @@ fn dust_count(factor: f64, count: f64) -> f64 {
 }
 
 /// The shipped table: the site's own record goes untouched.
-fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
+fn dust_shipped(k: &crate::knobs::DustK) -> bool {
     k.size == 1.0 && k.life == 1.0 && k.speed == 1.0 && k.rise == 1.0 && k.spread == 1.0
 }
 
@@ -92,7 +92,7 @@ pub(super) fn hit_look(g: &crate::game::Game, hit: &crate::combat::RoundMet) -> 
 
 /// flags & BoxFlag.Glass
 fn is_pane(flags: f64) -> bool {
-    js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0
+    js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32 != 0
 }
 
 /// STUFF_SURF by the word; None = it is not one thing to a round. Exhaustive, so a new word fails to compile here. The test holds it to the skeleton's table.
@@ -134,8 +134,8 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::comb
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
     let look = hit_look(g, &hit);
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
-    let r = impact_row(surf);
-    let pfx = g.m.particle_fx.pfx;
+    let r = impact_row(g, surf);
+    let pfx = g.k.pfx;
     let chips = if surf == crate::scene_materials::Surf::Metal { 0.0 } else if solid { SOLID_GLASS_CHIPS } else { r.chips };
     let k = if def.cls == crate::weapons::WeaponClass::Pistol { 1.0 } else { pfx.impact_scale_rifle };
     let n = v3::normalize(hit.n);
@@ -162,17 +162,17 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::comb
 }
 
 /// IMPACT[surf]: the table has every word of Surf.
-fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactRecipe {
-    *crate::particle_fx::impact().of(surf.as_str()).unwrap()
+fn impact_row(g: &Game, surf: crate::scene_materials::Surf) -> crate::knobs::ImpactKRow {
+    *g.k.impact.on.of(surf.as_str()).unwrap()
 }
 
 /// The muzzle's unburnt powder.
 pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter: CharId) {
-    let s = crate::effects::shot();
+    let s = g.k.effects.shot;
     if !crate::effects::flags().shot_sparks || s.spark_count <= 0.0 { return; }
     let d = v3::normalize(dir);
     let (vel, id) = (g.ch[shooter].vel, g.ch[shooter].id);
-    let size = g.m.particle_fx.pfx.muzzle_spark_size;
+    let size = g.k.pfx.muzzle_spark_size;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(muzzle, d, 0.04), [d[0], d[1] + 0.08, d[2]], s.spark_count, Emit {
         speed: s.spark_speed, speed_jit: Some(0.55), spread: Some(s.spark_cone), life: s.spark_life, life_jit: Some(0.35), size, vadd: Some(vel), owner: Some(id), ..Emit::default()
     });
@@ -180,8 +180,8 @@ pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter:
 
 /// The stun charge coming apart: the fragments, a ring of dust along the floor, a puff over the can.
 pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
-    let s = crate::effects::sparks();
-    let pfx = g.m.particle_fx.pfx;
+    let s = g.k.effects.sparks;
+    let pfx = g.k.pfx;
     if !crate::blast_look::blast_sparks(g, at) {
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, [0.0, 1.0, 0.0], pfx.bang_sparks, Emit {
             shape: Some(crate::render_particles::EmitShape::Burst), spread: Some(s.spread), lift: Some(s.lift), speed: s.speed, speed_jit: Some(0.55), life: s.life, life_jit: Some(0.35), size: pfx.bang_spark_size, ..Emit::default()
@@ -198,7 +198,7 @@ pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
 /// A boot through the lock: plaster dust and splinters off the jamb, blown away from the kicker.
 pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
-    let pfx = g.m.particle_fx.pfx;
+    let pfx = g.k.pfx;
     let u: V3 = [m::cos(cd), 0.0, m::sin(cd)];
     let jamb: V3 = [hinge[0] + u[0] * (width - 0.06), 1.0, hinge[1] + u[2] * (width - 0.06)];
     let mut mv: V3 = [-u[2], 0.0, u[0]];
@@ -216,7 +216,7 @@ pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
 
 /// A tube, panel or lamp shot out: pale glass and phosphor raining off it, a puff of powder, a fizz off the ballast.
 pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::FixtureShatterFxT, from: V3) {
-    let pfx = g.m.particle_fx.pfx;
+    let pfx = g.k.pfx;
     let b: Option<BoxId> = t.boxes.first().and_then(|&i| js_ix(g.engine.world.statics.len(), i)).map(|i| g.engine.world.statics[i]);
     let (at, spread): (V3, f64) = match b {
         Some(b) => {
@@ -242,7 +242,7 @@ pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::Fix
 pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensShatterFxT, from: V3) {
     let out = v3::normalize([from[0] - t.pos[0], 0.0, from[2] - t.pos[2]]);
     let l = t.lens.unwrap_or([0.9, 0.9, 0.9]);
-    let n = g.m.particle_fx.pfx.bulb_shards;
+    let n = g.k.pfx.bulb_shards;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::mad(t.pos, out, 0.05), [out[0] * 0.6, -0.5, out[2] * 0.6], n, Emit {
         speed: 1.4, speed_jit: Some(0.8), spread: Some(0.9), life: 25.0, life_jit: Some(0.3), size: 0.005, size_jit: Some(0.7), aspect: Some(1.8), pos_jit: Some(0.08), color: Some([0.3 + l[0] * 0.65, 0.3 + l[1] * 0.65, 0.3 + l[2] * 0.65]), ..Emit::default()
     });
@@ -251,7 +251,7 @@ pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensSha
 /// The breaker shot: a hard burst of sparks out of the panel, molten copper dripping, a cough of soot.
 pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
     let out = v3::normalize([from[0] - at[0], 0.15, from[2] - at[2]]);
-    let n = g.m.particle_fx.pfx.breaker_sparks;
+    let n = g.k.pfx.breaker_sparks;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(at, out, 0.06), out, n, Emit {
         speed: 5.5, speed_jit: Some(0.65), spread: Some(0.9), life: 0.7, life_jit: Some(0.5), size: 0.003, ..Emit::default()
     });
@@ -266,7 +266,7 @@ pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
 /// A lock kicked through: long splinters of the jamb and the strike plate's screws, a few back past the boot.
 pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
-    let pfx = g.m.particle_fx.pfx;
+    let pfx = g.k.pfx;
     let u: V3 = [m::cos(cd), 0.0, m::sin(cd)];
     let keep: V3 = [hinge[0] + u[0] * (width + 0.02), 1.0, hinge[1] + u[2] * (width + 0.02)];
     let mut mv: V3 = [-u[2], 0.0, u[0]];
@@ -284,7 +284,7 @@ pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
 
 /// The ring airfoil meeting a wall or a desk: a few sparks off the clack.
 pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
-    let pfx = g.m.particle_fx.pfx;
+    let pfx = g.k.pfx;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::add(at, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], pfx.clack_sparks, Emit {
         speed: 2.5, speed_jit: Some(0.6), spread: Some(1.3), life: 0.3, life_jit: Some(0.4), size: pfx.spark_size, ..Emit::default()
     });
@@ -292,7 +292,7 @@ pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
 
 /// The tracer's ember where it stops in geometry: the same few sparks back off the surface.
 pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_fx::EmberFxO) {
-    let size = g.m.particle_fx.pfx.ember_size;
+    let size = g.k.pfx.ember_size;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, dir, o.count, Emit {
         speed: o.speed, speed_jit: Some(0.55), spread: Some(o.cone), life: o.life, life_jit: Some(0.35), size, ..Emit::default()
     });
@@ -301,34 +301,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 // ---------------------------------------------------------------- spent cases
 
 /// The empty a row's gun throws, or None.
-fn casing_of(def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
-    let c = casing_row(def.id)?;
-    Some(c)
-}
-
-/// CASINGS[id]
-fn casing_row(id: crate::weapons::WeaponId) -> Option<crate::particle_fx::CasingSpec> {
-    use crate::weapons::WeaponId;
-    let t = crate::particle_fx::casings();
-    match id {
-        WeaponId::Fiveseven => t.fiveseven,
-        WeaponId::Guard9mm => t.guard9mm,
-        WeaponId::Aks74u => t.aks74u,
-        WeaponId::Ak74m => t.ak74m,
-        WeaponId::Akms => t.akms,
-        WeaponId::Fn2000 => t.fn2000,
-        WeaponId::M870 => t.m870,
-        WeaponId::Mk12 => t.mk12,
-        WeaponId::Mp7 => t.mp7,
-        WeaponId::Mk46 => t.mk46,
-        WeaponId::M1014 => t.m1014,
-        WeaponId::Hk45 => t.hk45,
-        WeaponId::G18 => t.g18,
-        WeaponId::Pkm => t.pkm,
-        WeaponId::Mk18bare => t.mk18bare,
-        WeaponId::G19bare => t.g19bare,
-    }
-}
+fn casing_of(g: &Game, def: &crate::weapons::WeaponDef) -> Option<crate::knobs::CasingsKRow> { g.k.casings.of.get(def.id).copied() }
 
 /// The module's row for this game, made if there is none.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxState {
@@ -337,14 +310,14 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxS
 
 /// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down.
 pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapons::WeaponDef) {
-    let Some(c) = casing_of(def) else { return; };
+    let Some(c) = casing_of(g, def) else { return; };
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
     let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bone(crate::character::Bone::HandR).unwrap_or(muzzle) } else { muzzle };
     let port = v3::mad(v3::mad(v3::mad(base, f.z, c.ahead), f.y, c.up), right, c.right);
     let dir = v3::normalize(v3::add(v3::add(v3::scale(right, c.dir[0]), v3::scale(f.y, c.dir[1])), v3::scale(f.z, c.dir[2])));
-    let life = g.m.particle_fx.pfx.casing_life;
+    let life = g.k.pfx.casing_life;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Casing, port, dir, 1.0, Emit {
         speed: c.speed, speed_jit: Some(0.3), spread: Some(0.25), life, life_jit: Some(0.1), size: c.diameter, size_jit: Some(0.0), vadd: Some(vel), owner: Some(id), color: Some(c.color), ..Emit::default()
     });
@@ -362,7 +335,7 @@ fn tink_rate(n: f64) -> f64 { 0.9 + js::rem(n * 7.0, 11.0) * 0.03 }
 /// Once a frame: the cases due to land are heard landing.
 pub fn update_particle_fx(g: &mut crate::game::Game) {
     let mut i = match &g.m.particle_fx.state { Some(st) if !st.tinks.is_empty() => st.tinks.len(), _ => return };
-    let gain = g.m.particle_fx.pfx.tink_gain;
+    let gain = g.k.pfx.tink_gain;
     let now = g.time;
     while i > 0 {
         i -= 1;
@@ -370,7 +343,7 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
         let k = st.tinks[i];
         if k.t > now { continue; }
         st.tinks.remove(i);
-        crate::audio_iface::game_audio_like_play(g, "casingTink", Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CasingTink, Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate }));
     }
 }
 
@@ -415,8 +388,9 @@ mod tests {
     /// Every surface has what a round knocks out of it, or a shot at it brings the game down.
     #[test]
     fn every_surface_has_an_impact() {
+        let g = crate::game::Game::blank();
         for s in [crate::scene_materials::Surf::Carpet, crate::scene_materials::Surf::Metal, crate::scene_materials::Surf::Glass, crate::scene_materials::Surf::Wood, crate::scene_materials::Surf::Plastic, crate::scene_materials::Surf::Cardboard, crate::scene_materials::Surf::Drywall, crate::scene_materials::Surf::Concrete, crate::scene_materials::Surf::Fabric, crate::scene_materials::Surf::Foliage] {
-            let _ = impact_row(s);
+            let _ = impact_row(&g, s);
         }
     }
 

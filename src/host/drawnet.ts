@@ -1,9 +1,9 @@
 // A NETWORKED GAME ON THE PAGE THAT DRAWS (net/door.ts has the server and how fast, net/modgame.ts the game): what the player did goes up as a record, the ticks the server has confirmed are walked, and his own
 // man is drawn ahead of them by the records still on their way. Nothing of this page is written to the game but its records.
-import { HAND, sampleHand, type HandCamera, type HandCanvas, type HandInput } from '../draw/hand';
+import { sampleHand, type Hand, type HandCamera, type HandCanvas, type HandInput } from '../draw/hand';
 import { CANT_PLAY, doorFromUrl, keyOff, movedTo, NETWAY, netStall, netTried, netTry, type NetDoor, type WalkRound } from '../net/door';
 import type { Foreseen } from '../net/foresee';
-import { NetGame, type NetFace } from '../net/modgame';
+import { NetGame } from '../net/modgame';
 import { startWhy, type NetStart } from '../net/start';
 import type { WireCmd } from '../net/wire';
 import { recipeSearch } from '../tape/address';
@@ -30,8 +30,8 @@ export class DrawNet {
   start(own: Pick<Start, 'level' | 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
     const S = this.said, C = this.game.commands, G = this.game, c = this.door.client;
     C.take(); G.start({ ...own, words: S.words, kept: S.kept, seed: S.seed, seats: S.seats }); G.walked = true;
-    this.net = new NetGame(G.X as unknown as NetFace, G.memory, G.h);
-    if (c.seat >= 0) G.X.face_show_seat(G.h, c.seat);
+    this.net = new NetGame(G.face, G.h);
+    if (c.seat >= 0) G.face.showSeat(G.h, c.seat);
     G.show();
   }
   /** this page can play: the server begins when every seat can */
@@ -60,9 +60,8 @@ export class DrawNet {
 }
 
 /** a hand as it travels */
-function recordOf(N: Float64Array, keys: string): WireCmd {
-  const [held, down] = keys.split('\n').map(l => l.split(' ').filter(Boolean)), out: WireCmd = { k: held, b: N[HAND.buttons], m: [N[HAND.mx], N[HAND.my]], s: [N[HAND.w], N[HAND.h], N[HAND.pw], N[HAND.ph]],
-    v: [N[HAND.target], N[HAND.target + 1], N[HAND.target + 2], N[HAND.yaw], N[HAND.pitch], N[HAND.distance], N[HAND.fov], N[HAND.aspect], N[HAND.aimLead]] };
-  if (down.length) out.p = down; if (N[HAND.clicked]) out.c = N[HAND.clicked]; if (N[HAND.wheel]) out.w = N[HAND.wheel];
+function recordOf(hand: Hand, keys: string): WireCmd {
+  const [held, down] = keys.split('\n').map(l => l.split(' ').filter(Boolean)), out: WireCmd = { k: held, n: Array.from(hand.input) };
+  if (down.length) out.p = down;
   return out;
 }

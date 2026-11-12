@@ -155,11 +155,10 @@ pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crat
 
 /// What a cursor ray lands on of the scene, through glass and past the men
 fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
-    let f = crate::scene_boxes::box_flag();
-    let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
+    let skip = (crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::GLASS as i32) as f64;
     if let Some(h) = first {
         if let Some(b) = crate::scene_boxes::box_world_at(g, h.index as usize) {
-            if !js::truthy(g.tab[b].owner) && (js::to_i32(g.tab[b].flags) & js::to_i32(f.glass)) == 0 {
+            if !js::truthy(g.tab[b].owner) && (js::to_i32(g.tab[b].flags) & crate::scene_boxes::box_flag::GLASS as i32) == 0 {
                 return SquadOrdersSceneHit { t: h.t, index: h.index };
             }
         }
@@ -706,21 +705,21 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         g.groups[g.group].orders.view.input = None;
         return;
     }
-    if g.groups[g.group].orders.tap_was.is_some() && (crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Thawed")) { g.groups[g.group].orders.tap_was = None; }
+    if g.groups[g.group].orders.tap_was.is_some() && (crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Thawed)) { g.groups[g.group].orders.tap_was = None; }
     set_view(g, input);
     if squad_orders_sams(&crate::seats::here(g)) {
         g.groups[g.group].orders.who = Who::All;
     } else {
-        let who_key = g.k.orders.who_key.clone();
-        if crate::input::input_hit(g, input, &who_key) {
+        let who_key = g.k.orders.who_key;
+        if crate::input::input_hit(g, input, who_key) {
             let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_step_who(g, 1.0, Some(&t));
         }
     }
     crate::planmode::goal_input(g, input, cam, canvas);
     if squad_orders_ring_input(g, input, cam, canvas) { return; }
-    let quick = g.k.orders.quick_key.clone();
-    if crate::input::input_hit(g, input, &quick) {
+    let quick = g.k.orders.quick_key;
+    if crate::input::input_hit(g, input, quick) {
         let t = squad_orders_target_under(g, input, cam, canvas);
         squad_orders_tap_give(g, &t, input, None);
     }

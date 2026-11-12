@@ -74,8 +74,6 @@ pub fn budget_with_seats(g: &crate::game::Game, for_one: f64) -> f64 { for_one -
 /// A staging stands its team first and then as many of its defenders, in the order of their marks, as this leaves (a game of one: all of them).
 pub fn floor_room(g: &crate::game::Game) -> f64 { crate::guards::MAX_SKINNED - seat_count(g) - g.guards.len() as f64 }
 
-/// with the pass about the first seat: is it over his view? A pass over his view and a pass over the bare Game look alike but for `in_view`
-fn seam_in_first_seat_view(g: &Game) -> bool { crate::seats::in_view(g) }
 
 // ---------------------------------------------------------------- small helpers
 
@@ -312,10 +310,10 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
         let spawn = v3::copy(g.level.player_spawn);
         let at = spot_beside(g, spawn, index);
         let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let p = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
+        let rig = g.rig;
+        let p = crate::game::player_new(g, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
-        let (owner, intensity) = (g.player_id(p), g.tune.player_light);
+        let (owner, intensity) = (g.player_id(p), g.k.tune.player_light);
         let def = crate::rig_props::rail_light_def(g, owner, intensity);
         g.pl[p].light = crate::render_lights::light_set_add(g, def);
     }
@@ -433,7 +431,7 @@ pub fn faced_view(g: &crate::game::Game, gd: GuardId) -> SeatId {
 
 /// the game as the man behind this body has it; never moves `faces`
 pub fn view_of_body(g: &crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> SeatId {
-    if g.seats.len() == 1 || g.seat != g.seats[0] || seam_in_first_seat_view(g) { return g.seat; }
+    if g.seats.len() == 1 || g.seat != g.seats[0] || crate::seats::in_view(g) { return g.seat; }
     if let Some(seat) = view_of_id(g, c_2.id) { return seat; }
     let mut found = None;
     for i in 0..g.guards.len() {
@@ -596,7 +594,7 @@ mod tests {
     }
 
     #[test]
-    fn a_seat_number_prints_as_the_typescript_s() {
+    fn a_seat_number_prints_as_pinned() {
         assert_eq!(alloc::format!("Player {}", 1.0_f64 + 1.0), "Player 2");
     }
 }

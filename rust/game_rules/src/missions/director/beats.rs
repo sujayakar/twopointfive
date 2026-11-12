@@ -158,14 +158,6 @@ pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: Director
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
 
-pub mod util {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-
-}
-
 /// the define pass of the level this names, its locals left on the manifest
 pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
     use crate::scene_level::LevelScriptFn as S; use crate::director::ScriptVars as V;

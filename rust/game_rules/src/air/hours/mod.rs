@@ -336,7 +336,7 @@ fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome
 
 /// The box the shadow casters stand in.
 fn box_of(g: &crate::game::Game) -> crate::hours::SkyStateBox {
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut b = SkyStateBox { x0: m::INF, x1: -m::INF, z0: m::INF, z1: -m::INF, top: 0.0 };
     let mut i = 0;
     while i < g.engine.world.statics.len() {
@@ -440,7 +440,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         (from, of) = if crate::scene_collision::segment_blocked(g, p, c2, None, None, None) { (p, None) } else { (c2, Some(Of::Quarter(jx as i32, jz as i32))) };
     }
     let u = under(g);
-    let open = u.open(g.sim, from, of);
+    let open = u.open(&g.made, from, of);
     if open.sky == 0 && open.sun | open.ground == 0 { return; }
     let mut leaves: Vec<BoxId> = Vec::new();
     for &db in g.col.dynamic_boxes.iter() {
@@ -581,7 +581,7 @@ mod tests {
     fn def(id: HourId) -> HourDef { hours().of(id.as_str()).unwrap().clone() }
 
     #[test]
-    fn cloud_sun_and_soft_are_the_typescripts_bits() {
+    fn cloud_sun_and_soft_keep_their_bits() {
         for &(c, s, f) in SUN_SOFT {
             let c = f64::from_bits(c);
             assert_eq!(cloud_sun(c).to_bits(), s);
@@ -589,7 +589,7 @@ mod tests {
         }
     }
     #[test]
-    fn cloud_light_and_total_are_the_typescripts_bits() {
+    fn cloud_light_and_total_keep_their_bits() {
         for &(id, c, a, b, t) in LIGHT {
             let (d, c) = (def(id), f64::from_bits(c));
             let [x, y] = cloud_light(&d, c);
@@ -598,7 +598,7 @@ mod tests {
         }
     }
     #[test]
-    fn greyed_is_the_typescripts_bits() {
+    fn greyed_keeps_its_bits() {
         for &(id, a, b) in GREYED {
             let d = def(id);
             assert_eq!(b3(greyed(d.sun.color, 0.37, Some(1.3))), a);
@@ -606,11 +606,11 @@ mod tests {
         }
     }
     #[test]
-    fn to_sun_is_the_typescripts_bits() {
+    fn to_sun_keeps_its_bits() {
         for &(id, a) in TO_SUN { assert_eq!(b3(to_sun_of(&def(id))), a); }
     }
     #[test]
-    fn rays_are_the_typescripts_bits() {
+    fn rays_keep_their_bits() {
         let f = ::sim::dome::fan();
         for (r, &(d, c)) in f.sky.iter().chain(f.ground.iter()).zip(RAYS.iter()) {
             assert_eq!(b3(r.d), d);
@@ -618,7 +618,7 @@ mod tests {
         }
     }
     #[test]
-    fn hour_words_are_read_as_the_typescript_reads_them() {
+    fn hour_words_are_read_as_pinned() {
         assert_eq!(hour_id_of(Some("MidDay")), HourId::Midday);
         assert_eq!(hour_id_of(Some("sunset")), HourId::Dusk);
         assert_eq!(hour_id_of(Some("constructor")), HourId::Night);

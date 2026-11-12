@@ -138,7 +138,7 @@ fn lamp_asked(g: &crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnM
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
 fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
+    let leave = if steady_only { (js::to_i32(leave) | crate::fixtures::PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -150,7 +150,7 @@ fn own_lamps(g: &Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&Game, f
     let mut rows = 0.0;
     for &l in &g.engine.lights.lights {
         if let Some(r) = g.tab.light[l].row {
-            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
+            if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order", g.tab.light[l].name, r, rows); }
             rows += 1.0;
             continue;
         }
@@ -399,7 +399,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let def = g.weapon(g.fa[w].def).clone();
     if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(at), Some(0.5), None);
     }
 }
 
@@ -479,7 +479,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
-        let wide = g.tune.suppress_first && opening && {
+        let wide = g.k.tune.suppress_first && opening && {
             let foe = match g.gd[gd].foe {
                 Some(f) => f,
                 None => g.pl[g.player].ch,
@@ -653,7 +653,7 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         g.tab.light[fl].enabled = false;
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
-    let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+    let (peak, inner, outer) = (g.k.tune.flash_intensity, g.k.tune.flash_inner, g.k.tune.flash_outer);
     let radius = FLASHLIGHT_RADIUS;
     let row = &mut g.tab.light[fl];
     row.peak_intensity = peak;

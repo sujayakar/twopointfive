@@ -105,10 +105,10 @@ fn beside_trim() -> Vec<([f64; 3], [f64; 3])> {
 fn blown(level: &str, points: &[([f64; 3], [f64; 3])]) -> Vec<String> {
     let mut p = Play::level(level, false, &Opts { seed: 1, ..Default::default() });
     p.g.god_mode = true;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.drop_all_but(&[]);
     let own = p.g.col.boxes.iter().position(|&b| p.g.tab.boxes[b].piece == Some(true)).unwrap_or(p.g.col.boxes.len());
-    let hidden = game::js::to_i32(game::scene_boxes::box_flag().no_primary);
+    let hidden = game::scene_boxes::box_flag::NO_PRIMARY as i32;
     let mut out = Vec::new();
     for &(at, from) in points {
         if let Some(w) = game::wallcharge::wall_at(&mut p.g, at, Some(from)).filter(|w| w.ok) {
