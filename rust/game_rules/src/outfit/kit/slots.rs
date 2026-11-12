@@ -37,7 +37,7 @@ fn gun_view(g: &Game, pl: PlayerId, gun: SetupGun) -> KitGun {
 
 /// a place in the strip for a can
 fn can_slot(thing: KitThing, key: crate::input::Key, name: &str, count: f64, up: bool) -> KitSlot {
-    KitSlot { thing, key: key.text(), name: String::from(name), count, spent: count <= 0.0, up, ..KitSlot::default() }
+    KitSlot { thing, key, name: String::from(name), count, spent: count <= 0.0, up, ..KitSlot::default() }
 }
 
 /// the big slot's row: what he carries and whether a door in reach offers it
@@ -51,10 +51,10 @@ fn big_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<KitBig> {
 pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
     let (pl, p) = (seat.player, &g.pl[seat.player]);
     let up = |k: SlotKind| p.slot == k && !p.holstered;
-    let gun_slot = |thing, key: crate::input::Key, id: FirearmId, k: SlotKind| KitSlot { thing, key: key.text(), name: crate::gear::gear_text(&g.weapon(g.fa[id].def).short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
-    let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, crate::input::Key::Digit2, p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: crate::input::Key::Digit2.text(), name: String::from("—"), absent: true, ..KitSlot::default() } };
+    let gun_slot = |thing, key: crate::input::Key, id: FirearmId, k: SlotKind| KitSlot { thing, key, name: crate::gear::gear_text(&g.weapon(g.fa[id].def).short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
+    let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, crate::input::Key::Digit2, p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: crate::input::Key::Digit2, name: String::from("—"), absent: true, ..KitSlot::default() } };
     let mut slots = vec![
-        KitSlot { thing: KitThing::Hands, key: crate::handslot::HANDSLOT_KEY.text(), up: p.holstered, ..KitSlot::default() },
+        KitSlot { thing: KitThing::Hands, key: crate::handslot::HANDSLOT_KEY, up: p.holstered, ..KitSlot::default() },
         gun_slot(KitThing::Pistol, crate::input::Key::Digit1, p.pistol, SlotKind::Pistol),
         rifle,
         can_slot(KitThing::Smoke, crate::input::Key::Digit3, "smoke", p.canisters, up(SlotKind::Smoke)),
