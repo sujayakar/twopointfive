@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::JsSet;
 use crate::m;
 use crate::v3::V3;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
