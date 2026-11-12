@@ -4,6 +4,23 @@ use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 
+/// what a light is by day: drawn as it is, a fixture, in a hand, a vehicle's, a flash, a glowing face (sim light.rs DAY_*, by their numbers)
+#[derive(Clone, Copy, PartialEq, game::Words)]
+pub enum LightClass { None, Fixture, Hand, Vehicle, Flash, Face }
+const _: () = { use sim::light::*; assert!(DAY_NONE == LightClass::None as u32 && DAY_FIXTURE == LightClass::Fixture as u32 && DAY_HAND == LightClass::Hand as u32 && DAY_VEHICLE == LightClass::Vehicle as u32 && DAY_FLASH == LightClass::Flash as u32 && DAY_FACE == LightClass::Face as u32) };
+game::bits! {
+    /// what is said of a light
+    pub mod light_flag as LightFlag {
+        BURNS = 1,
+        TRANSIENT = 2,
+        BROAD = 4,
+        /// a carried spot
+        CARD = 8,
+        INFRARED = 16,
+        /// a hand's, Sam's own
+        MOVES = 32,
+    }
+}
 section! {
     /// a light
     pub struct Light {
@@ -11,9 +28,9 @@ section! {
         pub key: u32,
         /// 0 a point, 1 a spot, 2 the sky's, 3 a panel
         pub kind: u32,
-        /// what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face
+        /// LIGHT_CLASSES
         pub class: u32,
-        /// 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own)
+        /// LightFlag
         pub says: u32,
         pub owner: u32,
         /// the marked box and the mark it is the light of (under 0: none)
@@ -80,11 +97,11 @@ impl Lights {
         if !again {
             for u in &mut self.unseen { u.1 += 1; }
             self.unseen.retain(|u| u.1 <= HELD);
-            for n in &self.now { if n.ttl >= 0.0 && n.says & 1 != 0 && n.intensity > 0.0 && !self.before.iter().any(|b| b.key == n.key) { self.unseen.push((n.key, 0)); } }
+            for n in &self.now { if n.ttl >= 0.0 && n.says & light_flag::BURNS != 0 && n.intensity > 0.0 && !self.before.iter().any(|b| b.key == n.key) { self.unseen.push((n.key, 0)); } }
         }
         self.coming.clear();
         if let Some(d) = game::weather::weather_next_way(g) { self.coming.push(Coming { dir: d.map(|x| x as f32), radius: game::weather::STROKE_RADIUS as f32 }); }
-        let at = self.now.iter().position(|n| n.says & 16 != 0).unwrap_or(self.now.len());
+        let at = self.now.iter().position(|n| n.says & light_flag::INFRARED != 0).unwrap_or(self.now.len());
         for (k, s) in spent.into_iter().enumerate() { self.now.insert(at + k, s); }
         if again { return; }
         self.have = (self.have + 1).min(2);
@@ -121,7 +138,7 @@ fn row(g: &Game, id: LightId, ir: bool, bared: bool) -> Light {
         key: id.ix() as u32,
         kind: l.kind as u32,
         class: game::render_lights::light_by_day(l),
-        says: l.enabled as u32 | ((l.ttl >= 0.0 || l.transient == Some(true)) as u32) << 1 | (l.broad as u32) << 2 | (l.card as u32) << 3 | (ir as u32) << 4 | ((hand || l.group == "player") as u32) << 5,
+        says: game::bits::of([(light_flag::BURNS, l.enabled), (light_flag::TRANSIENT, l.ttl >= 0.0 || l.transient == Some(true)), (light_flag::BROAD, l.broad), (light_flag::CARD, l.card), (light_flag::INFRARED, ir), (light_flag::MOVES, hand || l.group == "player")]),
         owner: l.owner as u32,
         mark: l.mark_ref.map_or(-1, |m| m as i32),
         pos: f3(l.pos), dir: f3(l.dir), color: f3(l.color),

@@ -14,7 +14,7 @@ export interface SmokeEmitter {
   ttl: number; age: number;
   /** moving source; returning null parks it (or kills it when `confined`) */
   track?: () => { pos: Vec3; dir: Vec3 } | null;
-  kind: 'flash' | 'wisp' | 'canister' | 'burst' | 'cloud' | 'jet' | 'trail' | 'vent' | 'puff' | 'breath';   // breath: a man's breath in the cold (src/picture/snow/breath.ts BREATHSTEAM): a `look` source that rides his mouth by `trackVel` · puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (rust/game_rules/src/breakage/destruction dustPuff): density the guards' sight lines and the froxels light like any smoke
+  kind: import('../draw/names').SmokeKindName;   // breath: a man's breath in the cold (src/picture/snow/breath.ts BREATHSTEAM): a `look` source that rides his mouth by `trackVel` · puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (rust/game_rules/src/breakage/destruction dustPuff): density the guards' sight lines and the froxels light like any smoke
   mode?: 'jet' | 'burst';   // burst = velocity points radially away from pos
   push?: number;        // drag RATE (1/s) toward dir·speed at the core; blend per step = clamp(push·g·dt). Default 25 = the old hard-coded constant
   expand?: number;      // divergence source (1/s) at the core: the pressure solve is asked to LEAVE div v = expand·g in the field, so the puff genuinely
