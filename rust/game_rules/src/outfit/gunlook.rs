@@ -11,10 +11,10 @@ pub fn gun_own(def: &crate::weapons::WeaponDef) -> Option<crate::weapons::Weapon
 }
 
 /// The voice its report is played with.
-pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
+pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::audio_iface::Sfx {
     match gun_own(def).and_then(|own| own.voice) {
         Some(voice) => voice,
-        None => def.report.voice.clone(),
+        None => def.report.voice,
     }
 }
 
@@ -122,12 +122,12 @@ mod tests {
     fn a_gun_sounds_and_flashes_as_its_own_or_by_its_row() {
         let g = Game::blank();
         let says = |id: W| { let d = row(&g, id); (voice_of(&g, &d), String::from(flame_of(&g, &d).as_str())) };
-        let pair = |v: &str, f: &str| (String::from(v), String::from(f));
-        assert_eq!(says(W::Mk12), pair("mk12Suppressed", "mk12"));
-        assert_eq!(says(W::G18), pair("g18Report", "g18"));
-        assert_eq!(says(W::Fiveseven), pair("pistolSuppressed", "pistolSuppressed"));
-        assert_eq!(says(W::G19bare), pair("pistolLoud", "pistolBare"));
-        assert_eq!(says(W::Fn2000), pair("rifleSuppressed", "sc20k"));
-        assert_eq!(says(W::Mk18bare), pair("carbineReport", "carbine"));
+        let pair = |v: crate::audio_iface::Sfx, f: &str| (v, String::from(f));
+        assert_eq!(says(W::Mk12), pair(crate::audio_iface::Sfx::Mk12Suppressed, "mk12"));
+        assert_eq!(says(W::G18), pair(crate::audio_iface::Sfx::G18Report, "g18"));
+        assert_eq!(says(W::Fiveseven), pair(crate::audio_iface::Sfx::PistolSuppressed, "pistolSuppressed"));
+        assert_eq!(says(W::G19bare), pair(crate::audio_iface::Sfx::PistolLoud, "pistolBare"));
+        assert_eq!(says(W::Fn2000), pair(crate::audio_iface::Sfx::RifleSuppressed, "sc20k"));
+        assert_eq!(says(W::Mk18bare), pair(crate::audio_iface::Sfx::CarbineReport, "carbine"));
     }
 }

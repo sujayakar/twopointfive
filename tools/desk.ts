@@ -1,7 +1,8 @@
 // THE DESK, for a tool with no page: the game's module asked as the page asks it (src/view/desk.ts). It is the page's one desk from here on (src/view/desk.ts `desk`), so what of the page
 // asks it answers too. Nothing is kept.
 import { readFileSync } from 'node:fs';
-import { Desk, setDesk, type DeskFace } from '../src/view/desk';
+import { Face } from '../src/draw/face';
+import { Desk, setDesk } from '../src/view/desk';
 import type { MissionRow } from '../src/view/read';
 import { faceHere } from './blitz/face-build.ts';
 
@@ -14,8 +15,7 @@ export function toolModule(): WebAssembly.Module {
 }
 export function toolDesk(): Desk {
   if (standing) return standing;
-  const X = new WebAssembly.Instance(toolModule()).exports as unknown as DeskFace & { memory: WebAssembly.Memory };
-  setDesk(standing = new Desk(X, X.memory, () => { /* a tool keeps nothing */ }));
+  setDesk(standing = new Desk(new Face(new WebAssembly.Instance(toolModule()).exports), () => { /* a tool keeps nothing */ }));
   return standing;
 }
 /** every mission there is: the plain solo night, then the tables in their order (rust/game_types/src/scene_scenario_list/rows.rs) */

@@ -108,7 +108,7 @@ Fires and moths read `wind_at`.
 
 **Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
 kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
-field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
+field along the line, and `air_grid` hands the picture the same cells, so what is drawn is what blinds.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
 coals, and files its smoke, marked as look so that no man sees it, and a hot-air source that parts falling snow. Rounds and blasts leave it burning
@@ -163,7 +163,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 - **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
 - **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
-- **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `tools/draw/gen.ts`, then the reader.
+- **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `half`, then the reader.
 
 ## What holds it
 

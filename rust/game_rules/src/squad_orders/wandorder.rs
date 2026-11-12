@@ -14,13 +14,13 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.
 fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {
-    let k = crate::seats::view_key(g, seat);
+    let k = seat.group_id;
     g.m.wandorder.states.get(k).and_then(|st| st.jobs.get(gd).copied())
 }
 
 /// Writes a copy back over the row, if the row is still there (never sets a new one: that would move it in the walk's order).
 fn put_job(g: &mut Game, gd: GuardId, j: Job) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     if let Some(row) = g.m.wandorder.states.get_mut(k).and_then(|st| st.jobs.get_mut(gd)) {
         *row = j;
     }
@@ -37,8 +37,8 @@ pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The fight has him: its lease, blind, folded, or the room fight's aim over his order.
-fn fought(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    g.tab.orders_assignment[a].yield_t >= 0.0
+fn fought(g: &crate::game::Game, gd: GuardId, a: TaskId) -> bool {
+    g.tab.task[a].yield_t >= 0.0
         || crate::control::man::blind(g, gd)
         || crate::control::man::staggered(g, gd)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
@@ -109,12 +109,12 @@ fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Jo
     }
     j.t0 = -1.0;
     j.live = false;
-    g.tab.orders_assignment[j.a].crouch = Some(false);
+    g.tab.task[j.a].crouch = Some(false);
 }
 
 /// Done with it: the lens out, a word, a plain hold: beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands.
 fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job, line: Option<&str>, moved: bool) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let c = g.gd[gd].ch;
     let d = j.door;
     lens_out(g, gd, j);
@@ -132,7 +132,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
         crate::orders::squad_orders_assign(
             g,
             gd,
-            &crate::orders::SquadOrdersAssignA {
+            &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some(to.pos),
                 face: Some(to.yaw),
@@ -153,7 +153,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
         crate::orders::squad_orders_assign(
             g,
             gd,
-            &crate::orders::SquadOrdersAssignA {
+            &crate::duty::TaskGiven {
                 order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
@@ -172,7 +172,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
 pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
     let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };
-    let st_key = crate::seats::view_key(g, &crate::seats::here(g));
+    let st_key = g.group;
     if !g.m.wandorder.states.has(st_key) {
         return Issue::Arm1(());
     }
@@ -194,7 +194,7 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
     crate::orders::squad_orders_assign(
         g,
         gd,
-        &crate::orders::SquadOrdersAssignA {
+        &crate::duty::TaskGiven {
             order: String::from(WAND_ORDER),
             post: Some([p.spot.pos[0], 0.0, p.spot.pos[2]]),
             face: Some(p.spot.yaw),
@@ -231,7 +231,7 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
 }
 
 /// The order's beat for one man: walk, kneel, feed, look; ends when the leaf moves, the switch goes, or his mark is moved.
-pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     let Some(mut j) = job(g, &crate::seats::here(g), gd) else { return };
     if j.a != a {
         return;
@@ -255,17 +255,17 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     j.last_t = now;
     put_job(g, gd, j);
     // (the orders stopped him short: his mark moved to his feet, and he never looks from there)
-    let short = match g.tab.orders_assignment[a].post {
+    let short = match g.tab.task[a].post {
         None => true,
         Some(post) => dist_xz(post, j.stand) > 0.3,
     };
     if short {
-        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
+        let line = if g.tab.task[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
         settle(g, gd, &mut j, line, false);
         return;
     }
     let pos = g.ch[c].pos;
-    let on = g.tab.orders_assignment[a].arrived
+    let on = g.tab.task[a].arrived
         && dist_xz(pos, j.stand) < 0.45
         && m::abs(v3::wrap_angle(g.ch[c].body_yaw - j.yaw)) < 0.6
         && crate::doors::doors_side(g, d, pos) == j.side
@@ -280,7 +280,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     g.ch[c].anim.lockpick = true;
     j.knelt = true;
-    g.tab.orders_assignment[a].crouch = Some(true);
+    g.tab.task[a].crouch = Some(true);
     // (WAND.quick settled on: only a second feed at this door waits WAND.feedSecs)
     let through = !j.live
         && if j.again {
@@ -300,7 +300,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));
-    g.tab.orders_assignment[a].there = there.into();
+    g.tab.task[a].there = there.into();
 }
 
 /// The order's row on the menus.
@@ -316,7 +316,7 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
 /// fight or another order has.
 pub fn wand_order_frame(g: &mut crate::game::Game) {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let mut want = false;
     if live(g) {
         for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
@@ -332,11 +332,11 @@ pub fn wand_order_frame(g: &mut crate::game::Game) {
         }
         g.m.wandorder.states.set(k, State { jobs: JsMap::new() });
     }
-    let listed = g.sets[g.seat].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
+    let listed = g.groups[g.group].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
+        let after = g.groups[g.group].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
-        let before = after.and_then(|i| g.sets[g.seat].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
+        let before = after.and_then(|i| g.groups[g.group].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());
     } else if !want && listed {
         crate::orders::squad_orders_unregister(g, WAND_ORDER);
@@ -378,7 +378,7 @@ pub fn mate_wand_eye(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fo
 
 /// `mateWandEye` from its second line on, in his seat's view.
 fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let st = g.m.wandorder.states.get(k)?;
     if st.jobs.is_empty() {
         return None;
@@ -414,7 +414,7 @@ fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
 
 /// Every teammate's live lens: a device feed under 'only my own eyes'.
 pub fn mate_wand_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
-    let k = crate::seats::view_key(g, &crate::seats::here(g));
+    let k = g.group;
     let Some(st) = g.m.wandorder.states.get(k) else { return Vec::new() };
     if st.jobs.is_empty() {
         return Vec::new();
@@ -440,14 +440,14 @@ mod tests {
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
-        let a = g.tab.orders_assignment.push(crate::orders::Assignment::default());
-        g.tab.orders_assignment[a].crouch = Some(true);
+        let a = g.tab.task.push(crate::duty::Task::default());
+        g.tab.task[a].crouch = Some(true);
         g.ch[c].anim.lockpick = true;
 
         let mut j = Job { a, t0: 3.0, live: true, knelt: false, ..Job::default() };
         lens_out(&mut g, gd, &mut j);
         assert!(!j.again && !j.live && j.t0 == -1.0);
-        assert_eq!(g.tab.orders_assignment[a].crouch, Some(false));
+        assert_eq!(g.tab.task[a].crouch, Some(false));
         assert!(g.ch[c].anim.lockpick, "this file did not put the pose on him, so it does not take it off");
 
         j.knelt = true;

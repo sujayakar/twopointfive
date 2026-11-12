@@ -1,19 +1,17 @@
-//! EVERY PART OF A GAME'S STATE, said once: the game's own (game::state_words), then rust/sim's block a part at a time as `sim.<part>`. What holds two games to each other (hold, the
-//! gate, a test that parts two machines) names and reads the same list, so a part that joins the state joins every one of them.
-use alloc::format;
+//! EVERY PART OF A GAME'S STATE, said once (game::state_words). What holds two games to each other (hold, the gate, a test that parts two machines) names and reads the same list, so a
+//! part that joins the state joins every one of them.
 use alloc::string::String;
 use alloc::vec::Vec;
 use game::game::Game;
 use game::bytes::W;
 
 /// the parts' names, in the order `words` gives them
-pub fn names() -> Vec<String> { game::state_words::state_names().into_iter().chain(crate::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect() }
+pub fn names() -> Vec<String> { game::state_words::state_names() }
 
-/// a word a part, into `out`, of the game as it stands in its own slot. `o` is the writer the game's parts go through, kept by a caller that asks every frame.
+/// a word a part, into `out`. `o` is the writer the game's parts go through, kept by a caller that asks every frame.
 pub fn words(g: &mut Game, o: &mut W, out: &mut Vec<u32>) {
     o.b.clear();
     game::state_words::state_words(g, o, out);
-    out.extend(crate::block::part_hashes(g.sim));
 }
 
 /// the parts' words as one number

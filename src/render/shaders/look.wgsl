@@ -5,7 +5,7 @@
 //   MAPS      tiling materials (and two of masonry), each made by the page the first time a box is that stuff (render/gbuffer.ts needLook; render/lookTex.ts: paint, height, normal, roughness, cavity), picked by what the box SAYS it is made of
 //             (its word in its own record: common.wgsl boxStuff, scene/stuff.ts; no colour is asked) and laid in metres: along a wall and up it, world x z on the ground, along the long
 //             side of a board or a sheet, and in the box's own frame for cloth, bare metal and old paint (a sack carries its weave with it) AND FOR ANYTHING THAT
-//             MOVES, whatever it is made of (a box past the level's statics: a door's leaf, a shoved crate, a jar; common.wgsl boxLook). A layer varies a box's
+//             MOVES, whatever it is made of (a box past the level's statics: a door's leaf, a shoved crate, a jar; rows.wgsl finishMoves). A layer varies a box's
 //             paint and never moves its value: its multiplier and its hollows each average to 1 over a tile (lookTex.ts lookLayer).
 //   UNTILE    a stuff that has no courses (its row's `untiles`) is read twice, the second turned and shifted, and cross-faded by a slow noise and
 //             by height, so a 2 m map does not print its repeat on a 40 m yard. A stuff MADE OF PIECES deals its map's pieces over the world instead
@@ -73,7 +73,7 @@ fn lookTrod() -> f32 { return lookWay.x; }
 /** IS THIS A FACE THE LOOK LAYER DRESSES AT ALL: a box that is no fixture's face and not tilted, on a face that lies flat or stands upright. lookSurface's
  *  own first question and lookWears', said once */
 fn lookDresses(n: vec3f, bi: u32, hf: vec4f) -> bool {
-  if (hf.w < 0.0 || (boxGeo[bi].flags & (BOX_EMISSIVE | BOX_ROT)) != 0u) { return false; }
+  if (hf.w < 0.0 || (boxGeo[bi].flags & (GEO_EMISSIVE | GEO_ROT)) != 0u) { return false; }
   return abs(n.y) > 0.9 || abs(n.y) <= 0.1;
 }
 /** DOES THIS LAYER WEAR THE PIXEL'S FLOOR AND SKIRTING ITSELF (lookSurface's USE AND DIRT)? The g-buffer asks once a pixel and hands the answer to BOTH
@@ -197,8 +197,8 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   var alb = albedoIn; var rough = roughIn;
   let k = lookCfg.a; let k2 = lookCfg.b;
   let kw = k.w * left;   // THE WEATHER'S AMOUNT HERE: the panel's row × how far the place is left to it. The rules for a stuff the weather touches ask this; the rules of use ask k.w
-  let word = boxLook(bi); let moves = (word & 32u) != 0u;        // not one of the level's statics: rebuilt every frame, wherever the game has it now
-  let salt = word >> 6u;                                          // the box's own number (0‥44; render/gbuffer.ts lookWordOf): never its place in the list, which moves when a wall is breached
+  let word = boxFinishWord(bi); let moves = finishMoves(word) != 0u;        // not one of the level's statics: rebuilt every frame, wherever the game has it now
+  let salt = finishOwn(word);                                          // the box's own number (0‥44; rust/game_draw boxes/pack.rs finish): never its place in the list, which moves when a wall is breached
   // ---- USE AND DIRT: ONE ANSWER A MARK. The level's traffic map is read ONCE a pixel, here (a floor where it is; a kept wall's foot a stride out on the
   // floor it stands on), whoever dresses the pixel. Three marks come of it, and each has one answer, by HOW WILD THE SURFACE IS (`wild`, above: its stuff's
   // word × the place's). `wild` is 0 or 1 on every level that says nothing of itself, and there each mark has one of the two answers below; in a place
@@ -410,7 +410,7 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
   let ks = lookCfg.e.w;
   if (ks <= 0.0 || hf.w < 0.0 || (cls != 0u && LOOK_THING[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)].w > 0.5)) { return o; }   // (the stuff's `sheds`: bare iron stays bare, on a snow level it is a stove, a flue or a brazier)
   let b = boxGeo[bi];
-  if ((b.flags & (BOX_EMISSIVE | BOX_ROT | BOX_GLASS)) != 0u || snowIsPaint(paint) || snowIsLay(paint)) { return o; }
+  if ((b.flags & (GEO_EMISSIVE | GEO_ROT | GEO_GLASS)) != 0u || snowIsPaint(paint) || snowIsLay(paint)) { return o; }
   var amt = 0.0; var up = vec3f(0.0, 1.0, 0.0); var at = wp; var bank = true;
   if (gn.y > 0.9) {
     if (wp.y < LOOK_GROUND.y) { return o; }                      // the ground is the field's

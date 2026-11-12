@@ -13,7 +13,7 @@ pub fn stack_room_fix(g: &mut Game, d: DoorId, side: f64, posts: Option<&[StackP
     for p in posts { bad.push(!on_floor(g, &f, p.pos) || anothers(g, d, p.pos)); }
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
     let w = g.dr[d].def.width;
-    let (jamb_out, jamb_past, gap) = { let k = &g.sets[g.seat].orders.knobs; (k.jamb_out, k.jamb_past, k.file_gap) };
+    let (jamb_out, jamb_past, gap) = { let k = &g.groups[g.group].orders.knobs; (k.jamb_out, k.jamb_past, k.file_gap) };
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     let x = Face { d, side, f: &f, w, c: g.dr[d].frame_centre, th: g.dr[d].def.closed_dir, front, min_m: min_m.unwrap_or(0.0), jamb_out, jamb_past, gap };
     let mut out = posts.to_vec();
@@ -187,10 +187,9 @@ fn ways_next(g: &mut Game, x: &Face) -> Vec<Way> {
     let (d, f, s, cs) = (x.d, x.f, g.k.stackroom, g.col.nav.cell);
     let into = floor_of(g, d, -x.side);
     let mut ways: Vec<Way> = Vec::new();
-    let pl = g.player;
-    let ring = crate::orders::player_ring(g, pl);
+    let ring = crate::orders::squad_orders_ring(g, &crate::seats::here(g));
     let mut ours: Vec<V3> = Vec::new();
-    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.player_pos(pl)); }
+    if let Some(pl) = crate::group::player(g) { ours.push(g.player_pos(pl)); }
     for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.pos_of(man)); }
     }

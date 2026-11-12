@@ -76,7 +76,7 @@ pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
-        let row = &g.tab.orders_assignment[a];
+        let row = &g.tab.task[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) { return false; }
         match (row.watch, row.post) { (Some(w), Some(p)) => (w, p), _ => return false }
     };

@@ -57,7 +57,7 @@ fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::play
 }
 
 /// the walk keys, ahead, left, back and right
-pub const WALK_KEYS: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
+pub const WALK_KEYS: [crate::input::Key; 4] = [crate::input::Key::W, crate::input::Key::A, crate::input::Key::S, crate::input::Key::D];
 /// Which of them a hand holds to go from `from` toward `to`, in a view that looks along `forward`: the nearest of the eight ways they can go.
 pub fn walk_keys(from: V3, to: [f64; 2], forward: V3) -> [bool; 4] {
     let (dx, dz) = (to[0] - from[0], to[1] - from[2]);

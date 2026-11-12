@@ -138,7 +138,7 @@ fn lamp_asked(g: &crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnM
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
 fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
+    let leave = if steady_only { (js::to_i32(leave) | crate::fixtures::PASSING as i32) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -399,7 +399,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let def = g.weapon(g.fa[w].def).clone();
     if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(at), Some(0.5), None);
     }
 }
 

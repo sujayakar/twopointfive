@@ -136,7 +136,8 @@ fn squads_let_go(g: &mut crate::game::Game, st: Option<&crate::enemysquads::Stat
         for m0 in g.tab.enemysquads_squad[q].men.clone() {
             let t = g.time;
             crate::owner::release(g, m0, all, t);
-            g.gd[m0].stays_in_rooms = false;
+            let d = &mut g.gd[m0].duty;
+            (d.rooms, d.group) = (false, None);
         }
     }
 }
@@ -151,7 +152,6 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
     let Some(s) = s else { return };
     let Some(defs) = s.squads.as_ref().filter(|d| !d.is_empty()) else { return };
     let mut squads: Vec<EnemysquadsSquadId> = Vec::new();
-    let mut of: JsMap<GuardId, EnemysquadsSquadId> = JsMap::new();
     for def in defs {
         if def.arrive.is_some() { continue; }   // (late squads: not built)
         let names: &[String] = def.rooms.as_deref().unwrap_or(&[]);
@@ -159,25 +159,27 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
         let men: Vec<GuardId> = hostiles.iter().enumerate().filter(|(i, _)| rooms.get(*i).map_or(false, |r| names.contains(r))).map(|(_, m)| *m).collect();
         let mut barricade: JsSet<String> = JsSet::new();
         for b in crate::scene_scenarios::squad_barricade(def, &s.rooms) { barricade.add(b); }
-        let q = g.tab.enemysquads_squad.push(Squad {
-            def: def.clone(), name: def.name.clone().unwrap_or_else(|| def.id.clone()), rooms: mine, men: men.clone(), barricade,
+        let q = EnemysquadsSquadId::from_ix(g.tab.enemysquads_squad.len());
+        let group = g.groups.push(crate::group::Group::new(crate::teams::Team::Hostile, crate::group::Commander::Squad(q)));
+        g.tab.enemysquads_squad.push(Squad {
+            def: def.clone(), name: def.name.clone().unwrap_or_else(|| def.id.clone()), rooms: mine, men: men.clone(), group, barricade,
             state: SquadState::Hold, state0: None, fix: None, news_t: -100.0, decide_at: 0.0, decided_at: -100.0, contact_t: -100.0, called_t: -100.0, called_room: None,
             fallen: JsSet::new(), ready: false, own_said: None, stayed: None, hit_room: None, rc: None, calls: None, call_die: None, hung: None, trouble: None, wary: None,
-            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(),
+            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(), entries: Vec::new(),
         });
         squads.push(q);
         let stays = def.may_leave == Some(false);
         for m0 in men {
-            of.set(m0, q);
+            g.gd[m0].duty.group = Some(group);
             let t = g.time;
             crate::owner::claim(g, m0, crate::owner::by::SQUAD, t, None);
-            g.gd[m0].stays_in_rooms = stays;
+            g.gd[m0].duty.rooms = stays;
         }
     }
     if !squads.is_empty() {
         let kept: Vec<_> = squads.iter().map(|q| g.tab.enemysquads_squad[*q].def.clone()).collect();
         let stay_ask = crate::stayask::stay_ask_here(g, &kept);
-        g.m.enemysquads.states = Some(State { stay_ask: Some(stay_ask), s: s.clone(), squads, of, net: Vec::new(), nc: None, word: None });
+        g.m.enemysquads.states = Some(State { stay_ask: Some(stay_ask), s: s.clone(), squads, net: Vec::new(), nc: None, word: None });
     }
 }
 /// the staging is gone
@@ -195,8 +197,10 @@ pub fn squad_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::enemysquads
     let x = &g.tab.enemysquads_squad[q];
     Some(SquadOf { def: x.def.clone(), men: x.men.clone() })
 }
-/// STATES.get(g)?.of.get(gd)
-fn squad_id_of(g: &Game, gd: GuardId) -> Option<EnemysquadsSquadId> { g.m.enemysquads.states.as_ref()?.of.get(gd).copied() }
+/// the squad he is of
+pub(super) fn squad_id_of(g: &Game, gd: GuardId) -> Option<EnemysquadsSquadId> {
+    match g.groups[g.gd[gd].duty.group?].commander { crate::group::Commander::Squad(q) => Some(q), _ => None }
+}
 
 /// may his squad wedge this door
 pub fn squad_may_wedge(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
@@ -377,7 +381,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
 }
 
 /// teamKnown, each place with how well it is known
-fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
+pub(super) fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -518,7 +522,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
 }
 
 /// wayRound with goRound on: the net's door, no wall between a known place and a spot, every spot tried, a way walked mark by mark
-fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
+pub(super) fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
     let pos = g.pos_of(gd);
@@ -716,7 +720,7 @@ pub(super) fn send_round(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<D
 /// A man goes on his errand: his row on the squad's list, and his leg, round by the way or loose at the fix.
 fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, w: Option<&Way>, sit: &Situation) {
     let (ally, fix_at, lost) = (sit.fix.ally, sit.fix.at, sit.lost);
-    let (gd, station) = { let r = &g.tab.roomfight_def[d]; (r.gd, r.station) };
+    let (gd, station) = (g.tab.roomfight_def[d].gd, crate::roomfight::station(g, d));
     let t0 = g.time;
     g.tab.enemysquads_squad[q].sent.push(Sent {
         gd, from: v3::copy(station), ally, role, phase: if w.is_some() { SentPhase::Run } else { SentPhase::Loose },

@@ -178,15 +178,14 @@ fn index_things(g: &mut Game, fixture_boxes: &JsSet<crate::Num>) -> Vec<usize> {
 
 /// What kind of thing a static is: a paper lying on something, a screen, or a small thing on a desk's height; None for anything else.
 fn thing_of(g: &Game, b: BoxId, in_fixture: bool) -> Option<DKind> {
-    let bf = crate::scene_boxes::box_flag();
     let row = &g.tab.boxes[b];
     let (h, flags) = (row.h, row.flags);
-    if js::has_bits(flags, js::to_i32(bf.glass) | js::to_i32(bf.no_primary)) || row.piece == Some(true) {
+    if js::has_bits(flags, crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32) || row.piece == Some(true) {
         return None;
     }
     let (max_h, min_h, bottom) = (m::max_n(&h), m::min_n(&h), row.c[1] - h[1]);
     let dark = row.emissive[0] + row.emissive[1] + row.emissive[2] == 0.0;
-    let shadowless = js::has_bits(flags, js::to_i32(bf.no_shadow));
+    let shadowless = js::has_bits(flags, crate::scene_boxes::box_flag::NO_SHADOW as i32);
     let does = does_of_box(g, b);
     if shadowless && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
         return Some(DKind::Paper);

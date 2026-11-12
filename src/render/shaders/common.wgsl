@@ -55,54 +55,44 @@ struct Frame {
 };
 
 /// Is this level's switch up? `bit` = one of the scene prelude's level words (WX_KINDS, WX_SNOW, SNOW_SURF, SNOW_WISPS, SNOW_TRACKS, SNOW_GLOW, SNOW_SPARKLE,
-/// SNOW_GRAINS, SNOW_UNDER: render/frame.ts LevelSw). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
+/// SNOW_GRAINS, SNOW_UNDER, below). The same answer on every pixel of a frame and on every frame of a page: a branch a level does not raise
 /// is never taken.
 fn lv(bit: u32) -> bool { return (frame.levelCfg.x & bit) != 0u; }
+// LEVEL SWITCHES: what a level raises, a bit each of levelCfg.x (written by render/frame.ts levelSwitches from the page's own switches)
+const WX_KINDS: u32 = 1u;
+const WX_SNOW: u32 = 2u;
+const SNOW_SURF: u32 = 4u;
+const SNOW_WISPS: u32 = 8u;
+const SNOW_TRACKS: u32 = 16u;
+const SNOW_GLOW: u32 = 32u;
+const SNOW_SPARKLE: u32 = 64u;
+const SNOW_GRAINS: u32 = 128u;
+const SNOW_UNDER: u32 = 256u;
 
 const FLAG_DIRECT: u32 = 1u;
 const FLAG_INDIRECT: u32 = 2u;
 const FLAG_VOLUMETRICS: u32 = 4u;
 const FLAG_SMOKE: u32 = 8u;
-const FLAG_RC_VISWEIGHT: u32 = 16u;
+const FLAG_RC_VIS_WEIGHT: u32 = 16u;
 const FLAG_SMOKE_SHADOWS: u32 = 64u;
 const FLAG_REACH_MASK: u32 = 32u;  // per-light reach masks over the level's 1 m cells (reach.ts): a light whose mask excludes the shading point's cell is skipped as if evalLight were !ok
 const FLAG_BOUNCE: u32 = 128u;
 const FLAG_DITHER: u32 = 256u;
-const FLAG_SOFTSHADOW: u32 = 512u;
-const FLAG_NIGHTVISION: u32 = 1024u;
+const FLAG_SOFT_SHADOW: u32 = 512u;
+const FLAG_NIGHT_VISION: u32 = 1024u;
 const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
-const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries BOX_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
+const FLAG_GLOSS: u32 = 2097152u;      // experiment (default off): floor pixels whose box carries GEO_GLOSS get one traced, Fresnel-weighted reflection ray in the final gather (fgather.wgsl → its own half-res texture → temporal + one à-trous pass → added after the diffuse terms in composite); off = nothing stored, filtered or read
 const FLAG_DECALS: u32 = 4194304u;      // experiment E1 (default on in its branch): the g-buffer's fragment stage applies render/decals.ts's marks (decals.wgsl) to the stored albedo / normal / gloss-keep; off = nothing read
 const FLAG_MESH_SHADOWS: u32 = 8388608u; // ultra: occluded() / occludedT() test characters against their skinned triangle mesh (meshShadowT below: per-character refit BVH in meshData, render/meshShadows.ts) instead of the round-cone proxies; off = the proxy loops (occludedCapsules / traceCapsules)
 const FLAG_PARTICLES: u32 = 16777216u;   // experiment: the GPU particle system is live this frame (render/particles.ts + shaders/particles*.wgsl: its own compute pass and a splat into the HDR target after the composite) — informational for the scene passes, none of which reads it
 const FLAG_BOUNCE_CARDS: u32 = 33554432u; // torch bounce cards (default off): the final gather samples each carried spot's footprint as an analytic one-bounce emitter (cards.wgsl builds them, fgather.wgsl samples them and excludes the light's direct term where its rays land inside a footprint); off = nothing built, sampled or excluded
 const FLAG_GLASS: u32 = 268435456u;    // glass panes (E3, SceneInfo.glass) — composite tints / reflects over what stands behind them and draws the crack decals on them, fgather traces their mirror ray, direct tints light through them; off = scene.glassInfo.x is 0 and nobody loops
 
-struct BoxGeo { c: vec3f, rot: u32, h: vec3f, flags: u32 };
-const BOX_NOPRIMARY: u32 = 1u;
-const BOX_NOSHADOW: u32 = 2u;
-const BOX_CUTAWAY: u32 = 4u;
-const BOX_EMISSIVE: u32 = 16u;
-const BOX_AREALIT: u32 = 32u;     // emission carried by an analytic area light instead (see Light kind 3)
-const BOX_ROT: u32 = 64u;         // fully rotated box: orientation is the quaternion boxRot(i), not the packed yaw (hand props, sparks, tumbling canisters)
-const BOX_GLOSS: u32 = 128u;      // polished floor finish: its on-screen top face gets a traced reflection ray under FLAG_GLOSS (boxes.ts BoxFlag.Gloss)
-const GEO_ROUND: u32 = 8u;        // ROUND THINGS (scene/round.ts; only ever raised in a build compiled with ROUND_BOXES): the box is the cylinder about its own y, radius h.x — to a program with the cut rule, the prism its rows of the cut table stand round it (ROUND_AS_CUT) (boxes.ts BOX_ROUND_BIT — the CPU's Dynamic bit, which is not sent then)
-const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised in a build compiled with CUT_BOXES): the box is clipped by the planes in its rows of the cut table (boxMat from CUT_BASE)
-const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
-struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: the slab reject' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (the slab reject)
 // Character shadow / reflection proxies: ROUND CONES (segment a→b, radius r at a; the radius at b rides in misc's top byte — sdfrig.wgsl coneRb; 0 there = r again, an
 // untapered cone). `misc` packs owner (low 8 bits), rgb565 albedo (bits 8..23), r_b in millimetres (bits 24..31). The record keeps its old name: boxes.ts writes it.
-struct Capsule { a: vec3f, r: f32, b: vec3f, misc: u32 };
-
-struct Light {
-  pos: vec3f, kind: u32,          // 0 point, 1 spot, 2 directional, 3 area (one-sided Lambertian disk: normal = dir, radius = disk radius, color = radiance × area)
-  dir: vec3f, range: f32,
-  color: vec3f, cosOuter: f32,
-  cosInner: f32, volumetric: f32, owner: u32, radius: f32,
-};
 
 struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
@@ -133,9 +123,7 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 @group(0) @binding(12) var<storage, read> lightReach: array<u32>;   // the per-light reach rows (render/reach.ts, lights.ts reachBuf)
 
-fn boxAlbedo(i: u32) -> vec3f { return boxMat[i * 4u].xyz; }
-fn boxCutHeight(i: u32) -> f32 { return boxMat[i * 4u].w; }
-fn boxEmissive(i: u32) -> vec3f { return boxMat[i * 4u + 1u].xyz * frame.emissiveScale; }
+fn boxEmissive(i: u32) -> vec3f { return boxEmits(i) * frame.emissiveScale; }
 /// A GLOWING FACE AS A RAY TAKES IT (the gather, the cache; frame.lampCfg, the look page's row `rooms`). By day a fixture's light is drawn at its night strength × the hour's
 /// exposure and a glowing face at its real strength capped at white (render/photometry.ts): right for the eye, but a ray that took the face at that strength would make a
 /// bulb's own 8 cm of glass a lamp a thousand times the bulb. A ray takes the face at what it gave the night's rays × the day's lamp strength. (A mirror keeps boxEmissive: the eye.)
@@ -183,14 +171,6 @@ fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y
  *  foot of a wall such snow leans at the wall, and a step along it ended in the room behind: shown by that room's exposure (a white line along every outer
  *  wall by day), and unseen by the fog's eyes (a dark one). Whoever asks where a surface stands on the plan asks through this one line. */
 fn standOff(N: vec3f, d: f32) -> vec2f { return select(N.xz * d, vec2f(0.0), N.y > 0.5); }
-/** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
-fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
-/** × the emission of the box's emissive markings (a switchable's supply factor: rust/game_rules/src/air/lighting.rs) */
-fn boxMarkGain(i: u32) -> f32 { return boxMat[i * 4u + 3u].w; }
-/** vec4 row where the MARKING table starts in boxMat (its tail: boxes.ts MAT_STRIDE × maxBoxes ÷ 4) — record r's k-th row is boxMat[MARK_BASE + r * 6 + k] (markings.wgsl) */
-const MARK_BASE: u32 = MAX_BOXES * 4u;
-/** raster orientation of box i as a unit quaternion (equals its yaw for ordinary boxes; raster-only props may tilt) */
-fn boxRot(i: u32) -> vec4f { return boxMat[i * 4u + 2u]; }
 fn quatRotate(q: vec4f, v: vec3f) -> vec3f { let t = 2.0 * cross(q.xyz, v); return v + q.w * t + cross(q.xyz, t); }
 /// THE LOOK PROTOTYPE (look.wgsl; the prelude's LOOK): the FACE under a g-buffer normal the look tilted (the normal target's alpha 0 marks one). `n` = that unit
 /// normal, `id` = the pixel's id. The tilt is held under 38° from the face (LOOK_MAX_TILT), so the box axis the normal leans on most is the face it lies on: exact.
@@ -203,22 +183,18 @@ fn lookGeoN(n: vec3f, id: u32) -> vec3f {
   if (a.x >= a.y && a.x >= a.z) { g = vec3f(sign(l.x), 0.0, 0.0); } else if (a.y >= a.z) { g = vec3f(0.0, sign(l.y), 0.0); }
   return quatRotate(q, g);
 }
-fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
-/** The surface finish of box i (boxes.ts matWord in boxMat row 1's w: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
+fn boxOwner(b: BoxGeo) -> u32 { return boxWordOwner(b.flags); }
+/** The surface finish of box i (boxmat.wgsl boxFinishWord: roughness 0‥1 + 2 if bare metal + 4 if anisotropic — three disjoint ranges of one
  *  float): the material half of the one BRDF (base colour = boxAlbedo). The g-buffer writes roughness / metalness per pixel from it (+ its detail layer);
  *  the reflection pass reads the anisotropy. A box nobody gave a finish reads rough 1 (matte: no reflection ray, no analytic highlight). */
 struct Finish { rough: f32, metal: bool, aniso: bool };
-/** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
- *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. */
-fn boxLook(i: u32) -> u32 { return u32(boxMat[i * 4u + 1u].w * 0.125); }
-fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
+/** THE LOOK PROTOTYPE: what box i is made of (look.wgsl's classes, 0 = plain; decided by the box's own word), carried above the finish in the same float (rows.wgsl finish…) */
+fn boxStuff(i: u32) -> u32 { return finishStuff(boxFinishWord(i)); }
 fn boxFinish(i: u32) -> Finish {
-  var w = boxMat[i * 4u + 1u].w; var f: Finish;
-  w -= 8.0 * floor(w * 0.125);   // (THE LOOK'S OWN LINE: boxLook's word, above)
-  f.aniso = w >= 4.0; w -= select(0.0, 4.0, f.aniso);
-  f.metal = w >= 2.0; w -= select(0.0, 2.0, f.metal);
-  f.rough = clamp(w, 0.0, 1.0);
+  let w = boxFinishWord(i); var f: Finish;
+  f.aniso = finishAniso(w) != 0u;
+  f.metal = finishMetal(w) != 0u;
+  f.rough = clamp(finishRough(w), 0.0, 1.0);
   return f;
 }
 
@@ -352,7 +328,7 @@ fn wxRoofAt(p: vec2f) -> vec4f {
   if (frame.cardCfg.z != 0u) { let R = wxRect(frame.cardCfg.z); if (wxInRect(R, p)) { return R; } }
   return vec4f(0.0, 0.0, -1.0, -1.0);
 }
-fn wxGrid(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, WXD_H - 1) * WXD_W + clamp(c.x, 0, WXD_W - 1)); return boxMat[WXD_BASE + (k >> 2u)][k & 3u]; }
+fn wxGrid(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, WXD_H - 1) * WXD_W + clamp(c.x, 0, WXD_W - 1)); return boxMat[AIR_BASE + (k >> 2u)][k & 3u]; }
 /** the room's share of the weather's air at p (xz) under footprint R: the air grid, bilinear between the cells whose CENTRES the footprint holds (a cell is the
  *  room's when its centre is under the roof — rust/game_rules/src/air/air_dust.rs sorts them the same way), so the open air's 1 never bleeds in through a wall */
 fn wxIndoor(p: vec2f, R: vec4f) -> f32 {
@@ -380,20 +356,17 @@ fn safeInv(v: vec3f) -> vec3f {
   return vec3f(select(1.0 / v.x, 1e20, abs(v.x) < 1e-20), select(1.0 / v.y, 1e20, abs(v.y) < 1e-20), select(1.0 / v.z, 1e20, abs(v.z) < 1e-20));
 }
 
-// Ray vs yawed (or, with BOX_ROT, fully rotated) box `bi`. Returns vec2(t, code). t < 0 → miss. code: axis*2 + (1 if local normal negative), 7 = origin inside.
+// Ray vs yawed (or, with GEO_ROT, fully rotated) box `bi`. Returns vec2(t, code). t < 0 → miss. code: axis*2 + (1 if local normal negative), 7 = origin inside.
 // invRd = safeInv(rd) from the caller; axisFast (the unrotated fast path): a box with yaw 0 packs rot as exactly (1.0, 0.0) = 0x3C00, and for those the
 // local frame IS the world frame — 1·x − 0·z evaluates to x exactly whatever the contraction, so lo = p, ld = rd and inv = invRd bit for bit —
 // which skips two half unpacks, both rotations and the three divisions for two thirds of all items and every global. Lossless; off = always rotate.
 const ROT_IDENTITY: u32 = 0x3C00u;
 // ---- CUT BOXES (scene/cut.ts; called only inside `if (CUT_BOXES)` blocks — the scene prelude's const, false = this is dead code and the module is as it was): a box
-// flagged GEO_CUT keeps only the side n_k · p ≤ d_k of each plane in its CUT_ROWS rows of the cut table (box-local frame; a zero normal ends the record). The solid
+// flagged GEO_CUT keeps only the side n_k · p ≤ d_k of each plane in its rows of the cut table (cutPlane) (box-local frame; a zero normal ends the record). The solid
 // is convex, so the ray's stay inside it is still ONE interval: the slab interval [tN, tF] cut down plane by plane — a plane the ray crosses INTO the kept side may
 // raise tN (and is then the face it enters by), one it crosses OUT of lowers tF. Codes: a box face keeps isectBox's 0‥5, 7 = origin inside the cut solid, and cut
 // plane k answers −1 − k (negative: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face; boxNormalFromCode decodes it).
 // cut.ts cutClip is this, plane by plane, on the CPU (rayBox, lineBox).
-fn cutPlaneRow(bi: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + k]; }
-/** the row after a box's planes: (the colour its cut faces show, 1), or all zero = they show the box's own (Box.cutCore) */
-fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT_ROWS]; }
 // NO LOOP IN THE BOX TEST. Every box walk has this test written into its own loops, and a loop INSIDE it costs a
 // walk far more than the loop's own work: with the planes taken in a `for`, the fog's march took twice as long on an NVIDIA card with no cut box in the world,
 // and the same planes written straight down took nothing (timed 2026-11-05 on a rented A10: 3.3 ms to 6.6 with the loop, of one plane or of eight; 3.0 with no
@@ -402,7 +375,7 @@ fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT
  *  planes among them, in the order isectCut's planes always had: a zero normal ends the record, and of the planes that raise tN the most the FIRST is the
  *  face (a later row at the same t does not take it over). A ray along a plane and on its far side leaves nothing: tF = −1, a miss to every reader. */
 fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
-  let q = CUT_BASE + bi * CUT_STRIDE + k0; let p0 = boxMat[q]; let p1 = boxMat[q + 1u]; let p2 = boxMat[q + 2u]; let p3 = boxMat[q + 3u];
+  let p0 = cutPlane(bi, k0); let p1 = cutPlane(bi, k0 + 1u); let p2 = cutPlane(bi, k0 + 2u); let p3 = cutPlane(bi, k0 + 3u);
   let n = mat4x3f(p0.xyz, p1.xyz, p2.xyz, p3.xyz);                    // (a vector × this = its dot with each of the four normals)
   let l0 = (s.w > 0.5) & any(p0.xyz != vec3f(0.0)); let l1 = l0 & any(p1.xyz != vec3f(0.0)); let l2 = l1 & any(p2.xyz != vec3f(0.0)); let l3 = l2 & any(p3.xyz != vec3f(0.0));
   let live = vec4<bool>(l0, l1, l2, l3);
@@ -417,9 +390,9 @@ fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
   let up = mIn > s.x;                                                 // (strictly: a plane at the entry the ray already has changes nothing, not even a zero's sign)
   return vec4f(select(s.x, mIn, up), select(min(s.y, mOut), -1.0, gone), select(s.z, face, up), select(0.0, 1.0, l3));
 }
-const_assert CUT_ROWS == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there)
+const_assert CUT_PLANES == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there)
 fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
-  let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_ROWS is 8: two fours)
+  let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_PLANES is 8: two fours)
   let tN = s.x; let tF = s.y; var code = s.z;
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
@@ -468,15 +441,15 @@ fn isectRound(lo: vec3f, ld: vec3f, R: f32, tNy: f32, tFy: f32, tBox: f32, tmax:
 /** the normal of a round box's SIDE at world point wp on it: straight out from its axis (a yaw about that axis changes nothing; a tilted one goes through its own frame) */
 fn roundNormalAt(b: BoxGeo, bi: u32, wp: vec3f) -> vec3f {
   let p = wp - b.c;
-  if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
+  if ((b.flags & GEO_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
   return normalize(vec3f(p.x, 0.0, p.z) + vec3f(1e-9, 0.0, 0.0));
 }
 fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
-  if ((b.flags & BOX_ROT) != 0u) { let qi = vec4f(-boxRot(bi).xyz, boxRot(bi).w); lo = quatRotate(qi, p); ld = quatRotate(qi, rd); inv = safeInv(ld); }   // rare: one extra fetch + two quaternion rotations
+  if ((b.flags & GEO_ROT) != 0u) { let qi = vec4f(-boxRot(bi).xyz, boxRot(bi).w); lo = quatRotate(qi, p); ld = quatRotate(qi, rd); inv = safeInv(ld); }   // rare: one extra fetch + two quaternion rotations
   else if (b.rot == ROT_IDENTITY) { lo = p; ld = rd; inv = invRd; }
-  else { let cs = unpack2x16float(b.rot); lo = vec3f(cs.x * p.x - cs.y * p.z, p.y, cs.y * p.x + cs.x * p.z); ld = vec3f(cs.x * rd.x - cs.y * rd.z, rd.y, cs.y * rd.x + cs.x * rd.z); inv = safeInv(ld); }
+  else { let cs = boxGeoRot(b); lo = vec3f(cs.x * p.x - cs.y * p.z, p.y, cs.y * p.x + cs.x * p.z); ld = vec3f(cs.x * rd.x - cs.y * rd.z, rd.y, cs.y * rd.x + cs.x * rd.z); inv = safeInv(ld); }
   let tA = (-b.h - lo) * inv; let tB = (b.h - lo) * inv;
   let tmn = min(tA, tB); let tmx = max(tA, tB);
   let tN = max(max(tmn.x, tmn.y), tmn.z);
@@ -492,12 +465,12 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f) -
 }
 
 fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
-  if (CUT_BOXES) { if (code < 0.0 && code > ROUND_SIDE + 0.5) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
+  if (CUT_BOXES) { if (code < 0.0 && code > ROUND_SIDE + 0.5) { return quatRotate(boxRot(bi), cutPlane(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
   let c = u32(code);
   let sgn = select(1.0, -1.0, (c & 1u) == 1u);
   let axis = c >> 1u;
-  if ((b.flags & BOX_ROT) != 0u) { var ln = vec3f(0.0); ln[axis] = sgn; return quatRotate(boxRot(bi), ln); }
-  let cs = unpack2x16float(b.rot);
+  if ((b.flags & GEO_ROT) != 0u) { var ln = vec3f(0.0); ln[axis] = sgn; return quatRotate(boxRot(bi), ln); }
+  let cs = boxGeoRot(b);
   if (axis == 0u) { return vec3f(cs.x, 0.0, -cs.y) * sgn; }   // local +x → world (cos,0,-sin)
   if (axis == 1u) { return vec3f(0.0, sgn, 0.0); }
   if (axis == 2u) { return vec3f(cs.y, 0.0, cs.x) * sgn; }    // local +z → world (sin,0,cos)
@@ -507,7 +480,7 @@ fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
 struct Hit { t: f32, idx: i32, n: vec3f, inside: bool, capAlbedo: vec3f };
 const CAPSULE_HIT: i32 = 0x7ffffff0;   // Hit.idx of a character-proxy hit (a round cone; the name is the record's): capAlbedo then holds his tint
 
-fn capsuleOwner(c: Capsule) -> u32 { return c.misc & 0xffu; }
+fn capsuleOwner(c: Capsule) -> u32 { return capsuleWordOwner(c.misc); }
 /** `skip` packs up to two character ids (bits 0-7: usually the receiving pixel's owner; bits 8-15: the light's owner) whose boxes / proxies a ray ignores. */
 fn skipsOwner(owner: u32, skip: u32) -> bool { return owner != 0u && (owner == (skip & 0xffu) || owner == ((skip >> 8u) & 0xffu)); }
 // THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (rust/game_rules/src/stealth/fogofwar FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
@@ -520,7 +493,7 @@ fn fogThinBox(b: BoxGeo, bi: u32) -> bool {
   if (boxOwner(b) != 0u) { return true; }
   return bi < 4096u && ((fogSight.thin[bi >> 7u][(bi >> 5u) & 3u] >> (bi & 31u)) & 1u) != 0u;
 }
-fn capsuleAlbedo(c: Capsule) -> vec3f { let p = c.misc >> 8u; return vec3f(f32((p >> 11u) & 31u) / 31.0, f32((p >> 5u) & 63u) / 63.0, f32(p & 31u) / 31.0); }
+fn capsuleAlbedo(c: Capsule) -> vec3f { return vec3f(f32(capsuleWordRed(c.misc)) / 31.0, f32(capsuleWordGreen(c.misc)) / 63.0, f32(capsuleWordBlue(c.misc)) / 31.0); }
 
 fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
   let oc = ro - ce; let b = dot(oc, rd); let c = dot(oc, oc) - ra * ra;

@@ -336,7 +336,7 @@ fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome
 
 /// The box the shadow casters stand in.
 fn box_of(g: &crate::game::Game) -> crate::hours::SkyStateBox {
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut b = SkyStateBox { x0: m::INF, x1: -m::INF, z0: m::INF, z1: -m::INF, top: 0.0 };
     let mut i = 0;
     while i < g.engine.world.statics.len() {
@@ -440,7 +440,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         (from, of) = if crate::scene_collision::segment_blocked(g, p, c2, None, None, None) { (p, None) } else { (c2, Some(Of::Quarter(jx as i32, jz as i32))) };
     }
     let u = under(g);
-    let open = u.open(g.sim, from, of);
+    let open = u.open(&g.made, from, of);
     if open.sky == 0 && open.sun | open.ground == 0 { return; }
     let mut leaves: Vec<BoxId> = Vec::new();
     for &db in g.col.dynamic_boxes.iter() {

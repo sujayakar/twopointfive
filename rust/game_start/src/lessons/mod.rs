@@ -15,9 +15,9 @@ use core::ops::Deref;
 use core::pin::Pin;
 use game::cmd::PlayerCmd;
 use game::game::{Game, GuardState, InteractableKind, MissionStage, SlotKind, Verb};
-use game::ids::{DoorId, FirearmId, GuardId, OrdersAssignmentId, SeatId};
+use game::ids::{DoorId, FirearmId, GuardId, TaskId, SeatId};
 use game::m;
-use game::orders::Assignment;
+use game::duty::Task;
 use game::scene_scenarios::LessonStep;
 use game::throwables::ItemKind;
 use game::view::{LessonView, RailPrompt};
@@ -230,7 +230,7 @@ impl Bot {
     pub fn sightings(&self) -> usize { self.ask(|g| g.chronicle.events.iter().filter(|e| matches!(e.kind, game::chronicle::ChronKind::Spotted | game::chronicle::ChronKind::Contact)).count()) }
 
     // ---- orders
-    pub fn order_of(&self, x: GuardId) -> Option<Assignment> { self.seen(|g, s| game::orders::squad_orders_of(s, x).map(|a: OrdersAssignmentId| g.tab.orders_assignment[a].clone())) }
+    pub fn order_of(&self, x: GuardId) -> Option<Task> { self.seen(|g, s| game::orders::squad_orders_of(s, x).map(|a: TaskId| g.tab.task[a].clone())) }
     pub fn ordered(&self, x: GuardId) -> String { self.order_of(x).map_or(String::from("-"), |a| a.order) }
     pub fn orders_log(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
     /// the last order on the book, and what it was given on

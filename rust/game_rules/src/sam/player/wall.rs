@@ -414,7 +414,7 @@ pub(super) fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, 
     if gain > 0.0 {
         let at = g.player_pos(g.player);
         let rate = if w.kind == Some(WallHoldKind::Stack) { 0.92 } else { 1.0 };
-        crate::audio_iface::game_audio_like_play(g, if on { "wallOn" } else { "wallOff" }, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, if on { crate::audio_iface::Sfx::WallOn } else { crate::audio_iface::Sfx::WallOff }, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
 }
 
@@ -467,10 +467,10 @@ fn press_face(g: &crate::game::Game, mx: f64, mz: f64) -> Option<crate::player::
 
 /// the move keys that are down, as bits (W 1, A 2, S 4, D 8).
 fn move_keys_down(g: &crate::game::Game, input: InputId) -> f64 {
-    let w = if crate::input::input_down(g, input, "KeyW") { 1 } else { 0 };
-    let a = if crate::input::input_down(g, input, "KeyA") { 2 } else { 0 };
-    let s = if crate::input::input_down(g, input, "KeyS") { 4 } else { 0 };
-    let d = if crate::input::input_down(g, input, "KeyD") { 8 } else { 0 };
+    let w = if crate::input::input_down(g, input, crate::input::Key::W) { 1 } else { 0 };
+    let a = if crate::input::input_down(g, input, crate::input::Key::A) { 2 } else { 0 };
+    let s = if crate::input::input_down(g, input, crate::input::Key::S) { 4 } else { 0 };
+    let d = if crate::input::input_down(g, input, crate::input::Key::D) { 8 } else { 0 };
     (w | a | s | d) as f64
 }
 
@@ -479,7 +479,7 @@ pub(super) fn wall_ran_on(g: &mut crate::game::Game, pl: PlayerId, input: InputI
     let ran = match &g.pl[pl].wall { Some(w) => w.ran, None => None };
     let Some(ran) = ran else { return false };
     if !js::truthy(ran) { return false; }
-    if (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && move_keys_down(g, input) == ran { return true; }
+    if (crate::input::input_down(g, input, crate::input::Key::ShiftLeft) || crate::input::input_down(g, input, crate::input::Key::ShiftRight)) && move_keys_down(g, input) == ran { return true; }
     if let Some(w) = g.pl[pl].wall.as_mut() { w.ran = None; }
     false
 }
@@ -512,7 +512,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].hands_full()
-        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.groups[g.group].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;

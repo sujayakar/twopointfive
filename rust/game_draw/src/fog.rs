@@ -141,7 +141,7 @@ fn lamps(g: &Game, f: &mut Fog) {
         // a fire's lamp wanders with its flames and is as big as they are: the fog has it where the level hung it, the size the level gave it
         let row = &g.tab.light[l];
         let (pos, radius) = match row.steady { Some(ref s) => (s.pos, s.radius), None => (row.pos, row.radius) };
-        f.lights[i * 16..i * 16 + 16].copy_from_slice(&game::render_lights::pack_light(row, pos, radius, strength, row.kind as u32, 0.0, 0));
+        f.lights[i * 16..i * 16 + 16].copy_from_slice(game::rows::words(&game::render_lights::pack_light(row, pos, radius, strength, row.kind as u32, 0.0, 0)));
     }
 }
 
@@ -150,7 +150,7 @@ fn thin(g: &Game, f: &mut Fog) {
     f.thin = 1;
     f.thin_serial = g.engine.world.geom_serial as u32;
     f.thin_count = st.len() as u32;
-    let flag = js::to_i32(game::scene_boxes::box_flag().thin);
+    let flag = game::scene_boxes::box_flag::THIN as i32;
     for (i, &b) in st.iter().take(THIN_WORDS * 32).enumerate() {
         if js::to_i32(g.tab.boxes[b].flags) & flag != 0 { f.thin_bits[i >> 5] |= 1 << (i & 31); }
     }

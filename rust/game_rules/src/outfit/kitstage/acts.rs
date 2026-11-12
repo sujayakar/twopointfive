@@ -107,8 +107,8 @@ pub(super) fn ask_veil(g: &Game, st: &mut KitStage) {
     st.veil_asked = Some(g.time);
     st.veil_laid = false;
 }
-pub(super) fn press(st: &mut KitStage, key: &'static str) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
-fn unpress(st: &mut KitStage, key: &'static str) { st.a.press.retain(|k| *k != key); }
+pub(super) fn press(st: &mut KitStage, key: crate::input::Key) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
+fn unpress(st: &mut KitStage, key: crate::input::Key) { st.a.press.retain(|k| *k != key); }
 pub(super) fn to(g: &Game, b: &mut Beat, phase: &'static str) { b.phase = phase; b.pt = g.time; }
 fn mark(g: &Game, b: &mut Beat, word: &'static str) { b.marks.push(word); if b.mark_t.is_nan() { b.mark_t = g.time; } }
 fn pos(g: &Game, b: &Beat) -> V3 { g.ch[b.ch_id].pos }
@@ -129,7 +129,7 @@ fn on_door(st: &KitStage) -> OrderTarget { OrderTarget::Door(crate::orders::Orde
 fn floor(p: V3) -> OrderTarget { OrderTarget::Floor(crate::orders::OrderTargetFloor { at: [p[0], 0.0, p[2]], ..crate::orders::OrderTargetFloor::default() }) }
 fn roster(g: &Game, x: GuardId) -> Who { Who::Num(crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&o| o == x).map_or(-1.0, |i| i as f64)) }
 fn order_def(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> Option<OrdersOrderDefId> { seat.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == id) }
-fn assignment_order(g: &Game, x: GuardId) -> Option<String> { crate::orders::squad_orders_of(&crate::seats::here(g), x).map(|a| g.tab.orders_assignment[a].order.clone()) }
+fn assignment_order(g: &Game, x: GuardId) -> Option<String> { crate::orders::squad_orders_of(&crate::seats::here(g), x).map(|a| g.tab.task[a].order.clone()) }
 fn door_op(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<DoorOpId> { seat.door_tools.ops.iter().copied().find(|&o| g.tab.doortools_door_op[o].door == d) }
 
 // ------------------------------------------------------------ the game's rows held for a row
@@ -171,9 +171,9 @@ pub(super) fn pools(g: &mut Game, st: &KitStage, f: Option<&str>) {
     let cards = &st.a.cards;
     let sum = |k: &str, from: usize| -> f64 { let mut s = 0.0; for i in from..=n { if let Some(c) = cards.get(i) { s += count(c, k); } } m::max(s, if Some(k) == f { 1.0 } else { 0.0 }) };
     crate::doortools::door_tools_sync(g);
-    g.sets[g.seat].door_tools.bangs = sum("bangs", 1);
-    g.sets[g.seat].door_tools.charges = sum("charges", 1);
-    g.sets[g.seat].door_tools.frags = sum("frags", 1);
+    g.groups[g.group].tools.bangs = sum("bangs", 1);
+    g.groups[g.group].tools.charges = sum("charges", 1);
+    g.groups[g.group].tools.frags = sum("frags", 1);
     let smoke = sum("smoke", 1);
     crate::squadsmoke::squad_smoke_stage(g, smoke);
     let walls = sum("walls", 0);
@@ -474,7 +474,7 @@ fn frag_aim(g: &Game, st: &KitStage, b: &mut Beat) -> bool {
     b.spot = Some(spot);
     out_of(st, [land[0], land[2]]) <= -st.frag_land
 }
-fn throw_kind(a: Act) -> (th::ItemKind, &'static str) { match a { Act::ThrowSmoke => (th::ItemKind::Smoke, "Digit3"), Act::ThrowFlash => (th::ItemKind::Flash, "Digit4"), _ => (th::ItemKind::Frag, "Digit5") } }
+fn throw_kind(a: Act) -> (th::ItemKind, crate::input::Key) { match a { Act::ThrowSmoke => (th::ItemKind::Smoke, crate::input::Key::Digit3), Act::ThrowFlash => (th::ItemKind::Flash, crate::input::Key::Digit4), _ => (th::ItemKind::Frag, crate::input::Key::Digit5) } }
 fn thrown_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if walled(st) { return Err(String::from("a blank wall: no opening to throw through")); }
     let frag = b.row == Act::ThrowFrag;
@@ -485,7 +485,7 @@ fn thrown_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Str
     };
     let Some(spot) = spot.filter(|_| free(g, p)) else { return Err(String::from("no room at the door")) };
     b.post = Some(p); b.spot = Some(spot);
-    b.base = if frag { g.sets[g.seat].door_tools.stats.frags } else { cans(g) };
+    b.base = if frag { g.groups[g.group].tools.stats.frags } else { cans(g) };
     to(g, b, "open");
     unlock(g, st);
     match b.man {
@@ -598,11 +598,11 @@ fn stand_off(g: &Game, st: &mut KitStage, b: &mut Beat) {
 }
 fn charge_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let d = the_door(st);
-    if b.mark_t.is_nan() && g.sets[g.seat].door_tools.stats.blown > b.base { mark(g, b, "blow"); }
+    if b.mark_t.is_nan() && g.groups[g.group].tools.stats.blown > b.base { mark(g, b, "blow"); }
     if !b.mark_t.is_nan() { return if g.time - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
     if let Some(c) = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d) {
         if b.phase != "set" { to(g, b, "set"); b.marks.push("set"); }
-        let armed = g.sets[g.seat].door_tools.ops.iter().any(|&o| { let r = &g.tab.doortools_door_op[o]; r.kind == crate::doortools::DoorToolKind::Charge && r.door == d && r.phase == crate::doortools::Phase::Armed });
+        let armed = g.groups[g.group].tools.ops.iter().any(|&o| { let r = &g.tab.doortools_door_op[o]; r.kind == crate::doortools::DoorToolKind::Charge && r.door == d && r.phase == crate::doortools::Phase::Armed });
         if g.time - b.pt >= K.clear_secs || armed { crate::doortools::door_tools_trigger(g, Some(c)); }
     }
     Step::On
@@ -613,7 +613,7 @@ fn charge_sam_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Str
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: a charge will not cut it")); }
     if g.dr[d].leaf.off { return Err(String::from("no leaf to set it on")); }
-    b.base = g.sets[g.seat].door_tools.stats.blown;
+    b.base = g.groups[g.group].tools.stats.blown;
     b.post = Some(v2(q));
     to(g, b, "go");
     sam_goes(st, v2(q));
@@ -625,7 +625,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let el = now - b.pt;
     let d = the_door(st);
     let c = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d);
-    if b.mark_t.is_nan() && g.sets[g.seat].door_tools.stats.blown > b.base { mark(g, b, "blow"); }
+    if b.mark_t.is_nan() && g.groups[g.group].tools.stats.blown > b.base { mark(g, b, "blow"); }
     if !b.mark_t.is_nan() { return if now - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
     let ajar = !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03;
     let id = ch_id(g, b);
@@ -640,7 +640,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "ask" {
         if g.pl[pl].charging().is_some() { b.given = true; to(g, b, "hands"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("charges: the door never offered it")); return Step::Done; }
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Charge)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Charge)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "hands" {
@@ -707,7 +707,7 @@ fn wand_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "ask" {
         if wanding.is_some() { b.marks.push("knee"); to(g, b, "feed"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("wand: the door never offered it")); return Step::Done; }
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Wand)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Wand)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "off" { return if flat(g.seat_pos(&crate::seats::here(g)), b.home) <= K.on_slot || el >= 1.5 { Step::Done } else { Step::On }; }
@@ -769,14 +769,14 @@ fn wand_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 /// what Sam had in his hands as a launcher's row begins: the hand a row cut this very tick still owes him is not let land
 fn hand_was(g: &Game, seat: &crate::seats::SeatRef, st: &mut KitStage) -> Option<SlotKind> {
     match st.a.hand_due.take() {
-        Some(h) => { unpress(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); Some(h) }
+        Some(h) => { unpress(st, if h == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }); Some(h) }
         None => Some(g.pl[seat.player].slot),
     }
 }
 /// the launcher's load stepped to `load`: true once that load is up
 fn tube(g: &mut Game, st: &mut KitStage, load: RifleAttachment) -> bool {
     let pl = g.player;
-    if !crate::game::player_rifle_up(g, pl) { press(st, "Digit2"); return false; }
+    if !crate::game::player_rifle_up(g, pl) { press(st, crate::input::Key::Digit2); return false; }
     if g.pl[pl].equip_t > 0.0 { return false; }
     let rifle = g.pl[pl].rifle;
     if crate::weapons::rifle_attachment(g, rifle) == Some(load) { return true; }
@@ -1139,7 +1139,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         if g.pl[pl].kick().is_some() { b.given = true; to(g, b, "work"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("big: the door never offered it")); return Step::Done; }
         let verb = if big_of(st, 0) == Some(BigKit::Hammer) { Verb::Hammer } else { Verb::Breach };
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(verb)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(verb)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "work" {
@@ -1155,7 +1155,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 // ------------------------------------------------------------ a gun changed, suit and trim
 fn sam_draw(st: &mut KitStage) {
     let pistol = st.a.cards.first().map_or(false, |c| c.weapon == crate::kit::KitWeapon::Pistol);
-    press(st, if pistol { "Digit1" } else { "Digit2" });
+    press(st, if pistol { crate::input::Key::Digit1 } else { crate::input::Key::Digit2 });
 }
 fn swap_up(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let rows: &[Act] = if st.quiet && b.man.is_none() { &[Act::QuietGun, Act::Gun] } else { &[Act::Gun] };
@@ -1192,7 +1192,7 @@ pub(super) fn start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
         Act::BangOrder | Act::FragOrder => order_start(g, st, b),
         Act::ThrowSmoke | Act::ThrowFlash | Act::ThrowFrag => thrown_start(g, st, b),
         Act::ChargeMate => {
-            b.base = g.sets[g.seat].door_tools.stats.blown;
+            b.base = g.groups[g.group].tools.stats.blown;
             let t = on_door(st);
             let who = roster(g, b.man.unwrap());
             match crate::orders::squad_orders_give(g, "charge", Some(&t), Some(who), None) { Some(w) => Err(w), None => Ok(()) }
@@ -1208,7 +1208,7 @@ pub(super) fn start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
         Act::Turn => turn_start(g, st, b),
         Act::Swap => {
             to(g, b, "stow");
-            if b.man.is_none() { unpress(st, "Digit1"); unpress(st, "Digit2"); if !g.pl[g.player].holstered { press(st, "KeyE"); } }
+            if b.man.is_none() { unpress(st, crate::input::Key::Digit1); unpress(st, crate::input::Key::Digit2); if !g.pl[g.player].holstered { press(st, crate::input::Key::E); } }
             Ok(())
         }
         Act::QuietGun => quiet::gun_start(g, st, b),
@@ -1357,7 +1357,7 @@ fn man_home(g: &mut Game, st: &mut KitStage, b: &Beat, e: End, x: GuardId) {
     let in_order = st.order.contains(&x);
     let (home, face) = home_of(g, st, x);
     if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
-        let r = &mut g.tab.orders_assignment[a];
+        let r = &mut g.tab.task[a];
         if r.order == "cover" { r.watch = None; r.upper = crate::character::UpperMode::None; r.stance = crate::character::Stance::LowReady; if in_order { r.face = Some(face); } }
     }
     if !in_order || lane || (e.far && !e.hole) { return; }
@@ -1369,7 +1369,7 @@ fn sam_home(g: &mut Game, st: &mut KitStage, b: &Beat) {
     let pl = g.player;
     if let Some(h) = b.hand.filter(|&h| h != g.pl[pl].slot) {
         if st.quiet { g.pl[pl].slot = h; g.pl[pl].holstered = true; }
-        else { press(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); st.a.hand_due = Some(h); }
+        else { press(st, if h == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }); st.a.hand_due = Some(h); }
     }
     if st.a.led.map_or(true, |l| l.at.is_none()) { let a = st.a.aim; st.a.sam_ch.v = a.v; st.a.sam_ch.want = a.v; st.a.sam_ch.w = a.w; st.a.sam_ch.own = false; }
     st.a.led = None;
@@ -1426,7 +1426,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     if b.man.is_none() { g.pl[pl].charging_over(); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
-    if b.field == "frags" && b.mark_t.is_nan() && (g.sets[g.seat].door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
+    if b.field == "frags" && b.mark_t.is_nan() && (g.groups[g.group].tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
     let mut i = g.items.items.len();
     while i > 0 { i -= 1; let it = g.items.items[i]; if g.tab.item[it].kind == th::ItemKind::Frag && !g.tab.item[it].fired { th::throwables_remove_at(g, i as f64); } }
     if b.man.is_none() { g.pl[pl].launch_held = None; if b.row == Act::Cam { g.pl[pl].cams.clear(); } }
@@ -1489,7 +1489,7 @@ fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
         st.a.rest_until = now + 1.0;
         return;
     }
-    if st.quiet && man.is_none() && g.pl[pl].holstered && matches!(b.row, Act::Gun | Act::GunDoor | Act::Light) { let k = if g.pl[pl].slot == SlotKind::Rifle { "Digit2" } else { "Digit1" }; press(st, k); }
+    if st.quiet && man.is_none() && g.pl[pl].holstered && matches!(b.row, Act::Gun | Act::GunDoor | Act::Light) { let k = if g.pl[pl].slot == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }; press(st, k); }
     st.a.beat_n += 1;
     if f != "weapon" || !matches!(b.row, Act::Gun | Act::GunDoor | Act::QuietGun) { st.a.refused = None; }
     st.a.beat = Some(b);
@@ -1515,7 +1515,7 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     // (his gun, left out by a row, goes back once he is home)
     if st.quiet && !b_some && st.a.led.is_none() && !g.pl[pl].holstered && matches!(g.pl[pl].slot, SlotKind::Pistol | SlotKind::Rifle) && now - st.a.stow_t > 1.0 && flat(p, st.sam) <= K.on_slot && !crate::character::anim_kit_busy(g, c) && st.a.asked.is_none() && now - st.a.last_end >= QK.stow {
         st.a.stow_t = now;
-        press(st, "KeyE");
+        press(st, crate::input::Key::E);
     }
     // (at a wall left open what the charge threw down may lie on his place: a half step home that gets no nearer for a second is given up, and where he stands is his place)
     let plain_walk = st.a.led.map_or(false, |l| l.at.is_none());
@@ -1535,7 +1535,7 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
         if flat(p, st.sam) > K.on_slot + slack && !men_first { { let home = st.sam; sam_goes(st, home) }; }
         else { st.a.led = None; }
     }
-    if !b_some && (!g.sets[g.seat].door_tools.ops.is_empty() || !g.sets[g.seat].door_tools.set.is_empty()) { crate::doortools::door_tools_reset(g); pools(g, st, None); }
+    if !b_some && (!g.groups[g.group].tools.ops.is_empty() || !g.groups[g.group].tools.set.is_empty()) { crate::doortools::door_tools_reset(g); pools(g, st, None); }
     if !b_some && !st.a.dirty && (!g.sets[g.seat].wall_charge.ops.is_empty() || !g.sets[g.seat].wall_charge.set.is_empty()) { crate::wallcharge::wall_charge_reset(g); pools(g, st, None); }
     if !b_some && st.a.shot && now - st.a.shot_at >= K.hold { mend(g, st); }
 }

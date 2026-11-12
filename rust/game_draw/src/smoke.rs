@@ -1,5 +1,5 @@
 //! THE GAME'S OWN SMOKE AS THE PICTURE IS TOLD IT: what the picture's solver is bent toward, a little at a time (src/smoke/smoke.wgsl, THE GAME'S SMOKE). The grid is
-//! the block's (sim::bricks): half-metre cells in bricks, stepped ten times a second, the same on every machine and in every snapshot. The rows are made again
+//! the game's (`g.smoke`): half-metre cells in bricks, stepped ten times a second, the same on every machine and in every snapshot. The rows are made again
 //! when a step was taken, and lie as the GPU reads them. Of a game put back no way from cell to cell is known till its next step: they are asked before the first
 //! of it is drawn (`unsaid`), so a picture has the whole of it at once.
 use crate::boxes::Word;
@@ -42,31 +42,34 @@ pub struct Smoke {
     /// a word a place of the plan: the brick's row and one (0 = none stands there)
     pub at: Vec<Word>,
     pub bricks: Vec<SmokeBrick>,
-    of: Option<(f64, f64)>,
+    of: u64,
     made: u32,
     said: bool,
 }
 
 impl Smoke {
-    pub fn cut(&mut self) { (self.of, self.said) = (None, false); }
+    pub fn cut(&mut self) { (self.of, self.said) = (0, false); }
     /// nothing was said yet of the game as it was put back: its ways are to be asked before a take (game::sense::smoke_ways)
     pub fn unsaid(&self) -> bool { !self.said }
     pub fn take(&mut self, g: &Game) {
         self.said = true;
-        let stamp = sim::state::stamp(g.sim);
-        let stands = sim::bricks::stands(g.sim, stamp);
-        let of = stands.as_ref().map(|s| (stamp, s.steps));
-        if of.is_some() && self.of == of { return; }
-        self.of = of;
-        (self.head.clear(), self.at.clear(), self.bricks.clear());
-        let Some(s) = stands else { return };
-        self.made += 1;
-        self.head.push(SmokeHead { made: self.made, wide: s.wide as u32, deep: s.deep as u32 });
-        self.at.resize(s.wide * s.deep, Word { w: 0 });
-        for b in 0..sim::bricks::MAX_BRICKS {
-            let Some(b) = s.brick(b) else { continue };
-            self.bricks.push(SmokeBrick { rho: core::array::from_fn(|c| b.rho[c] as f32), open: b.open, dye: dye(b.dye) });
-            self.at[b.z * s.wide + b.x].w = self.bricks.len() as u32;
+        let s = &g.smoke;
+        let drawn = sim::bricks::drawn(&g.made.ways, |of, faces| {
+            if of == self.of { return; }
+            self.of = of;
+            (self.head.clear(), self.at.clear(), self.bricks.clear());
+            self.made += 1;
+            self.head.push(SmokeHead { made: self.made, wide: s.wide, deep: s.deep });
+            self.at.resize((s.wide * s.deep) as usize, Word { w: 0 });
+            for (b, (rho, open)) in s.bricks.iter().zip(s.rho.chunks_exact(CELLS).zip(faces.chunks_exact(CELLS))) {
+                let Some((x, z)) = b.at else { continue };
+                self.bricks.push(SmokeBrick { rho: core::array::from_fn(|c| rho[c] as f32), open: sim::bricks::open_words(open), dye: dye(b.dye) });
+                self.at[(z as u32 * s.wide + x as u32) as usize].w = self.bricks.len() as u32;
+            }
+        });
+        if drawn.is_none() {
+            self.of = 0;
+            (self.head.clear(), self.at.clear(), self.bricks.clear());
         }
     }
 }

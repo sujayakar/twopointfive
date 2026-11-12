@@ -1,10 +1,10 @@
 //! The types of `smoke_types`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what kind of source an emitter is, for the host's solver
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Words)]
 pub enum SmokeEmitterKind {
     #[default] Flash,
     Wisp,
@@ -95,11 +95,6 @@ pub struct CanisterParams {
     pub canister_radius: f64,
     pub canister_temp: f64,
     pub canister_speed: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct SmokeSystemLike {
-    pub params: Option<crate::smoke_types::CanisterParams>,
 }
 
 pub const WIND_GPU_MAX: f64 = 8.0;

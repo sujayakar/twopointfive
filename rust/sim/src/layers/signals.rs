@@ -9,11 +9,11 @@ struct HeadDrawn {
     z: [f64; 3],
 }
 impl HeadDrawn {
-    fn of(fk: &Fk, tw: &[f64; 4], rest_inv: &[f64; 4]) -> HeadDrawn {
+    fn of(rig: &Rig, fk: &Fk, tw: &[f64; 4], rest_inv: &[f64; 4]) -> HeadDrawn {
         let tn = twist_of(tw[0], tw[1]);
-        let hr = quat::mul(twist_of(tw[2], tw[3]), quat::mul(tn, quat::mul(fk.rot(role(HEAD)), *rest_inv)));
-        let nk = fk.at(role(NECK));
-        HeadDrawn { at: v3::add(nk, quat::rotate(tn, v3::sub(fk.at(role(HEAD)), nk))), x: quat::rotate(hr, [1.0, 0.0, 0.0]), y: quat::rotate(hr, [0.0, 1.0, 0.0]), z: quat::rotate(hr, [0.0, 0.0, 1.0]) }
+        let hr = quat::mul(twist_of(tw[2], tw[3]), quat::mul(tn, quat::mul(fk.rot(rig.role(HEAD)), *rest_inv)));
+        let nk = fk.at(rig.role(NECK));
+        HeadDrawn { at: v3::add(nk, quat::rotate(tn, v3::sub(fk.at(rig.role(HEAD)), nk))), x: quat::rotate(hr, [1.0, 0.0, 0.0]), y: quat::rotate(hr, [0.0, 1.0, 0.0]), z: quat::rotate(hr, [0.0, 0.0, 1.0]) }
     }
     /// a direction of the head's frame, in the model's
     fn dir(&self, p: &[f64; 3]) -> [f64; 3] {
@@ -22,8 +22,8 @@ impl HeadDrawn {
     }
 }
 /// the support arm's mask, joint by joint: the shoulder and the upper arm, the forearm, the hand and all its digits
-fn left_arm_mask(w_up: f64, w_fore: f64, w_hand: f64) {
-    ask_mask(&[(role(SHOULDER_L), w_up, false), (role(UPPER_ARM_L), w_up, false), (role(FOREARM_L), w_fore, false), (role(HAND_L), w_hand, true)]);
+fn left_arm_mask(body: &mut Body, w_up: f64, w_fore: f64, w_hand: f64) {
+    body.mask(&[(body.rig.role(SHOULDER_L), w_up, false), (body.rig.role(UPPER_ARM_L), w_up, false), (body.rig.role(FOREARM_L), w_fore, false), (body.rig.role(HAND_L), w_hand, true)]);
 }
 /// what a support hand brought to the head is posed from
 struct HeadHand {
@@ -37,41 +37,29 @@ struct HeadHand {
     thumb: f64,
 }
 /// the support hand to a place in the head's frame as it will be drawn (a smoke, the goggles): solved on the scratch pose at `at_b`, laid on the arm by e.
-fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> bool {
+fn head_hand(body: &mut Body, an: &mut Anim, p: &HeadHand) {
     let (at, at_b, _) = poses(an);
     let (tw, hri, fix_l) = (an.nv_tw, an.head_rest_inv, an.hand_fix[0]);
-    let Some(Some((n, hd))) = with_pose(g, at, |d, rig, n, fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &[NECK, HEAD])) {
-            return None;
-        }
+    let hd = body.pose(at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        Some((n, HeadDrawn::of(fk, &tw, &hri)))
-    }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+        HeadDrawn::of(rig, fk, &tw, &hri)
+    });
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
-        turn(d, rig, role(SHOULDER_L), q_roll(p.shrug * DEGR));
+    body.pose(at_b, |d, rig, fk| {
+        turn(d, rig, rig.role(SHOULDER_L), q_roll(p.shrug * DEGR));
         fk_run(rig, d, fk.rot, fk.pos);
         let r = hand_rot(&fix_l, hd.dir(&p.fingers), hd.dir(&p.back));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::add(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
-        hand(d, hh, 0, &p.curl, p.thumb, 0.0);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &v3::add(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
+        hand(rig, d, hh, 0, &p.curl, p.thumb, 0.0);
     });
-    left_arm_mask(p.e, p.e, p.e);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return false;
-    }
+    left_arm_mask(body, p.e, p.e, p.e);
+    body.blend(at, at_b, 1.0, true, at);
     hands_to(&h, an);
-    true
 }
 /// A smoke's arm: the left wrist to a place in front of the mouth.
-pub fn smoke_pose(g: usize, an: &mut Anim) -> bool {
+pub fn smoke_pose(body: &mut Body, an: &mut Anim) {
     let x = an.smoke_arm;
     let p = HeadHand {
         e: x * x * (3.0 - 2.0 * x),
@@ -83,10 +71,10 @@ pub fn smoke_pose(g: usize, an: &mut Anim) -> bool {
         curl: [SMOKEARM.curl[0], SMOKEARM.curl[1], SMOKEARM.curl[2], SMOKEARM.curl[3]],
         thumb: SMOKEARM.thumb,
     };
-    head_hand(g, an, &p)
+    head_hand(body, an, &p)
 }
 /// A goggle flip's arm: the left hand at the goggles, wherever between up and down they are.
-pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> bool {
+pub fn nv_pose(body: &mut Body, an: &mut Anim, k: f64, tune: &Knobs) {
     let p = HeadHand {
         e: an.nv_arm,
         shrug: tune.kit.nv.hand.shrug,
@@ -97,7 +85,7 @@ pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> bool {
         curl: [tune.kit.nv.hand.curl[0], tune.kit.nv.hand.curl[1], tune.kit.nv.hand.curl[2], tune.kit.nv.hand.curl[3]],
         thumb: tune.kit.nv.hand.thumb,
     };
-    head_hand(g, an, &p)
+    head_hand(body, an, &p)
 }
 /// the support arm laid on shoulder first, then the elbow, then the hand, and off in the same order (the signals' and the tells' envelopes)
 fn staggered(t: f64, tin: f64, tout: f64, e: f64) -> (f64, f64, f64) {
@@ -105,38 +93,28 @@ fn staggered(t: f64, tin: f64, tout: f64, e: f64) -> (f64, f64, f64) {
     (seg(0.0), seg(0.05), seg(0.09))
 }
 /// A left-hand signal: the arm solved against the body as it stands and laid on shoulder first.
-pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64) -> bool {
+pub fn signal_layer(body: &mut Body, an: &mut Anim, t: f64, kind: SignalKind, dur: f64) {
     let (at, at_b, _) = poses(an);
     let (side, fix_l) = (an.sig_side, an.hand_fix[0]);
-    let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE2, NECK, HEAD])) {
-            return None;
-        }
+    body.pose(at, |d, rig, _fk| {
         if kind == SignalKind::Go {
             // body English on the chop: the upper spine goes a few degrees with the hand, the eyes stay on where it sends people
             let ft = curve(t, &[[0.22, 0.0], [0.46, 1.0], [0.62, 0.5], [0.9, 0.0]]);
             if ft > 1e-3 {
                 let q = |kk: f64| quat::mul(q_yaw(-3.5 * DEGR * ft * kk), quat::mul(q_roll(-2.0 * DEGR * ft * kk), q_pitch(2.5 * DEGR * ft * kk)));
-                turn(d, rig, role(SPINE2), q(0.4));
-                turn(d, rig, role(SPINE3), q(0.6));
-                turn(d, rig, role(NECK), q(-0.3));
-                turn(d, rig, role(HEAD), q(-0.4));
+                turn(d, rig, rig.role(SPINE2), q(0.4));
+                turn(d, rig, rig.role(SPINE3), q(0.6));
+                turn(d, rig, rig.role(NECK), q(-0.3));
+                turn(d, rig, rig.role(HEAD), q(-0.4));
             }
         }
-        Some(n)
-    }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    });
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let sh = fk.at(role(UPPER_ARM_L));
+        let sh = fk.at(rig.role(UPPER_ARM_L));
         let (to, r, pole, clav, curl, thumb, spread): ([f64; 3], [f64; 4], [f64; 3], f64, [f64; 4], f64, f64);
         if kind == SignalKind::Hold {
             // the fist snaps up beside the head, palm forward
@@ -181,122 +159,96 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64)
             (pole, clav, curl, thumb, spread) = ([1.0, 0.05, 0.3], 14.0, [0.1, 0.15, 0.2, 0.3], 0.2, 0.6);
         }
         if !falsy(clav) {
-            turn(d, rig, role(SHOULDER_L), q_roll(clav * DEGR));
+            turn(d, rig, rig.role(SHOULDER_L), q_roll(clav * DEGR));
         }
         fk_run(rig, d, fk.rot, fk.pos);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&pole), 0.85, Some(&r), false);
-        hand(d, hh, 0, &curl, thumb, spread);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &to, Some(&pole), 0.85, Some(&r), false);
+        hand(rig, d, hh, 0, &curl, thumb, spread);
     });
     let (w_up, w_fore, w_hand) = staggered(t, 0.2, 0.26, dur);
-    left_arm_mask(w_up, w_fore, w_hand);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return false;
-    }
+    left_arm_mask(body, w_up, w_fore, w_hand);
+    body.blend(at, at_b, 1.0, true, at);
     hands_to(&h, an);
-    true
 }
 /// An idle tell: a look at the watch (the forearm level across the chest, the eyes down onto it), or a hand round to the back of the neck with the chest
 /// lifted into the stretch.
-pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> bool {
+pub fn tell_layer(body: &mut Body, an: &mut Anim, t: f64, watch: bool, dur: f64) {
     let (at, at_b, _) = poses(an);
     let (gaze_local, fix_l) = (an.gaze_local, an.hand_fix[0]);
     let (tin, tout) = if watch { (0.2, 0.28) } else { (0.26, 0.34) };
     // the body's share (the head, the chest): one window over the whole tell
     let env = bump(t, 0.0, tin, dur - tout, dur);
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[SPINE2, NECK, HEAD]) { Some(n) } else { None }) else {
-        return false;
-    };
     if env <= 1e-4 {
-        return true;
+        return;
     }
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
+    let mut h = hands_of(body, an);
     let mut wrist = [0.0f64; 3];
-    with_pose(g, at, |d, rig, _n, fk| {
+    body.pose(at, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         if watch {
             // the wrist's spot first, off the shoulder as the body has it now, then the eyes onto the watch on the back of it
-            let sh = fk.at(role(UPPER_ARM_L));
+            let sh = fk.at(rig.role(UPPER_ARM_L));
             wrist = [sh[0] - 0.21, sh[1] - 0.21, sh[2] + 0.21];
             look_at(d, rig, fk, &gaze_local, [wrist[0] + 0.03, wrist[1] + 0.02, wrist[2] + 0.01], 0.9 * env, 0.0);
         } else {
             // the stretch: the chest up a few degrees, the head forward and tipped away from the working hand
-            turn(d, rig, role(SPINE2), q_pitch(-1.6 * DEGR * env));
-            turn(d, rig, role(SPINE3), q_pitch(-1.8 * DEGR * env));
-            turn(d, rig, role(NECK), quat::mul(q_pitch(5.0 * DEGR * env), q_roll(-3.0 * DEGR * env)));
-            turn(d, rig, role(HEAD), quat::mul(q_pitch(9.0 * DEGR * env), quat::mul(q_roll(-6.0 * DEGR * env), q_yaw(-4.0 * DEGR * env))));
+            turn(d, rig, rig.role(SPINE2), q_pitch(-1.6 * DEGR * env));
+            turn(d, rig, rig.role(SPINE3), q_pitch(-1.8 * DEGR * env));
+            turn(d, rig, rig.role(NECK), quat::mul(q_pitch(5.0 * DEGR * env), q_roll(-3.0 * DEGR * env)));
+            turn(d, rig, rig.role(HEAD), quat::mul(q_pitch(9.0 * DEGR * env), quat::mul(q_roll(-6.0 * DEGR * env), q_yaw(-4.0 * DEGR * env))));
         }
     });
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
+    body.pose(at_b, |d, rig, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         if watch {
-            turn(d, rig, role(SHOULDER_L), q_roll(3.0 * DEGR * env));
+            turn(d, rig, rig.role(SHOULDER_L), q_roll(3.0 * DEGR * env));
             fk_run(rig, d, fk.rot, fk.pos);
             let r = hand_rot(&fix_l, [-1.0, 0.14, 0.12], [0.05, 0.9, -0.42]);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrist, Some(&[1.0, -0.55, 0.18]), 0.85, Some(&r), false);
-            hand(d, hh, 0, &[0.35, 0.4, 0.45, 0.5], 0.4, 0.0);
+            two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &wrist, Some(&[1.0, -0.55, 0.18]), 0.85, Some(&r), false);
+            hand(rig, d, hh, 0, &[0.35, 0.4, 0.45, 0.5], 0.4, 0.0);
         } else {
             // the scapula comes up with the raised elbow; the hand works up and down the back of the neck
-            turn(d, rig, role(SHOULDER_L), q_roll(12.0 * DEGR * env));
+            turn(d, rig, rig.role(SHOULDER_L), q_roll(12.0 * DEGR * env));
             fk_run(rig, d, fk.rot, fk.pos);
-            let nk = fk.at(role(NECK));
+            let nk = fk.at(rig.role(NECK));
             let rub = 0.018 * sin((t - tin) * 2.0 * PI * 2.5) * bump(t, tin, tin + 0.15, dur - tout - 0.1, dur - tout);
             let to = [nk[0] + 0.085, nk[1] + 0.035 + rub, nk[2] - 0.075];
             let r = hand_rot(&fix_l, [-0.55, 0.35, -0.75], [0.45, 0.55, 0.55]);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&[0.75, 0.35, 0.8]), 0.9, Some(&r), false);
-            hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.65], 0.5, 0.0);
+            two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &to, Some(&[0.75, 0.35, 0.8]), 0.9, Some(&r), false);
+            hand(rig, d, hh, 0, &[0.5, 0.55, 0.6, 0.65], 0.5, 0.0);
         }
     });
     let (w_up, w_fore, w_hand) = staggered(t, tin, tout, dur);
-    left_arm_mask(w_up, w_fore, w_hand);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return false;
-    }
+    left_arm_mask(body, w_up, w_fore, w_hand);
+    body.blend(at, at_b, 1.0, true, at);
     hands_to(&h, an);
-    true
 }
 /// A hand to the radio: the left hand up to the handset at his left collar, the head turned and tipped to it as far as his gun is down.
-pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> bool {
+pub fn radio_pose(body: &mut Body, an: &mut Anim, w: f64, hw: f64) {
     let (at, at_b, _) = poses(an);
     let fix_l = an.hand_fix[0];
-    let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &[NECK, HEAD])) {
-            return None;
-        }
+    body.pose(at, |d, rig, _fk| {
         if hw > 0.003 {
-            turn(d, rig, role(NECK), quat::mul(q_yaw(9.0 * DEGR * hw), q_pitch(5.0 * DEGR * hw)));
-            turn(d, rig, role(HEAD), quat::mul(q_roll(-5.0 * DEGR * hw), quat::mul(q_yaw(13.0 * DEGR * hw), q_pitch(8.0 * DEGR * hw))));
+            turn(d, rig, rig.role(NECK), quat::mul(q_yaw(9.0 * DEGR * hw), q_pitch(5.0 * DEGR * hw)));
+            turn(d, rig, rig.role(HEAD), quat::mul(q_roll(-5.0 * DEGR * hw), quat::mul(q_yaw(13.0 * DEGR * hw), q_pitch(8.0 * DEGR * hw))));
         }
-        Some(n)
-    }) else {
-        return false;
-    };
-    let Some(mut h) = hands_of(g, an) else {
-        return false;
-    };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return false;
-    }
+    });
+    let mut h = hands_of(body, an);
+    body.copy(at, at_b);
     let hh = &mut h;
-    with_pose(g, at_b, |d, rig, _n, fk| {
-        turn(d, rig, role(SHOULDER_L), q_roll(7.0 * DEGR * w));
+    body.pose(at_b, |d, rig, fk| {
+        turn(d, rig, rig.role(SHOULDER_L), q_roll(7.0 * DEGR * w));
         fk_run(rig, d, fk.rot, fk.pos);
-        let (sh, live0, rot0) = (fk.at(role(UPPER_ARM_L)), fk.at(role(HAND_L)), fk.rot(role(HAND_L)));
+        let (sh, live0, rot0) = (fk.at(rig.role(UPPER_ARM_L)), fk.at(rig.role(HAND_L)), fk.rot(rig.role(HAND_L)));
         // under and ahead of the collar on that side: the fingers come up onto the handset
         let wrist = [sh[0] - 0.035, sh[1] - 0.115, sh[2] + 0.15];
         let r = quat::nlerp(rot0, hand_rot(&fix_l, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::lerp3(live0, wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
-        hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(UPPER_ARM_L), rig.role(FOREARM_L), rig.role(HAND_L), &v3::lerp3(live0, wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
+        hand(rig, d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
     });
-    ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
-    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n) {
-        return false;
-    }
+    body.mask(&[(body.rig.role(SHOULDER_L), 1.0, true)]);
+    body.blend(at, at_b, smoothstep(0.0, 0.25, w), true, at);
     hands_to(&h, an);
-    true
 }

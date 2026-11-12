@@ -53,14 +53,13 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     g.dr[id].leaf.latched = m::abs(a) < 1e-3;
     let leaf_h: V3 = [def.width / 2.0 - 0.01, height / 2.0, thick / 2.0];
     g.dr[id].leaf_h = leaf_h;
-    let flag = crate::scene_boxes::box_flag();
     let steel = def.steel == Some(true);
     let marks = if steel { None } else { Some(crate::scene_marking_defaults::door_leaf_marks(leaf_h, None).into()) };
     let leaf = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
         c: [0.0, 0.0, 0.0],
         h: leaf_h,
         albedo: Some(def.albedo.unwrap_or([0.42, 0.3, 0.19])),
-        flags: Some(flag.dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         rough: Some(if steel { 0.3 } else { 0.55 }),
         metal: if steel { Some(true) } else { None },
         marks,
@@ -68,7 +67,7 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     });
     g.dr[id].box_ = leaf;
     // push plate + lever handle (raster only)
-    let handle_flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let handle_flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let mut handles = Vec::new();
     for _ in 0..2 {
         handles.push(crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
@@ -162,7 +161,7 @@ pub fn door_place(g: &mut crate::game::Game, id: DoorId) {
 /// the leaf's box and its handles put at `p` (an open leaf standing in the room does not seal the doorway acoustically)
 pub(super) fn leaf_stands(g: &mut Game, id: DoorId, p: &crate::doors::DoorPoseAt, seals: bool) {
     let d = &g.dr[id];
-    let seal = js::to_i32(crate::scene_boxes::box_flag().sound_seal);
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as i32;
     let mut leaf = g.tab.boxes.edit(d.box_);
     (leaf.c, leaf.yaw) = (p.c, p.yaw);
     let flags = js::to_i32(leaf.flags);
@@ -262,15 +261,15 @@ pub fn doors_side(g: &crate::game::Game, d: DoorId, from: V3) -> f64 {
     if u[0] * pz - u[1] * px >= 0.0 { 1.0 } else { -1.0 }
 }
 /// The lock is against you: latched, still locked, you on the keyed side, and nothing on your ring fits it
-// (a ring is asked through `squadcast::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
+// (a ring is asked through `group::ring_has`, the one way to ask it: a cast that carries the building's keys holds the ring that answers
 //  yes to every lock, and a plain `has` of the lock's name answers no for it: the response team's lead would boot a
 //  door his keys open and not go to the handle)
 pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    g.dr[d].leaf.locked && g.dr[d].leaf.latched && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
+    g.dr[d].leaf.locked && g.dr[d].leaf.latched && doors_side(g, d, from) == g.dr[d].key_side && !(match keys { Some(k) => crate::group::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 /// The lock is against you BUT for the key you carry
 pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    doors_locked_out(g, d, from, None) && (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
+    doors_locked_out(g, d, from, None) && (match keys { Some(k) => crate::group::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 
 #[cfg(test)]

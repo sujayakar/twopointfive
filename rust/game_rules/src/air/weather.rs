@@ -275,14 +275,14 @@ pub fn weather_hear_mask(g: &crate::game::Game, ear: V3) -> f64 {
 pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let (Some(f), Some(_)) = (g.weather.fog_spec, g.weather.kind_now) else { return 1.0 };
     crate::air_dust::air_dust_ready(g);   // (the field stands before it is read: it is built when first asked)
-    let air = &::sim::weather::of_read(g.sim).air;
+    let air = &g.air_dust;
     let mut leak = 0.0;
-    if air.on != 0.0 {
+    if air.on {
         let n = m::min(24.0, m::max(4.0, m::ceil(v3::dist_xz(b, a) / 0.75)));
         let mut i = 0.0;
         while i < n {
             let t = (i + 0.5) / n;
-            leak += air.share_at(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
+            leak += ::sim::air::share_at(air, a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
             i += 1.0;
         }
         return m::exp(-fog_tau(f.sigma, f.h, a, b) * leak / n);
@@ -491,7 +491,7 @@ fn weather_end_flash(g: &mut crate::game::Game) {
 fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, pitch: f64, remark: [f64; 3]) {
     // near: the crack and the clap on top of the roll; far: the roll alone, darker and slower
     let near = th.dist_km < 1.3;
-    let name = if near { "thunderNear" } else { "thunderFar" };
+    let name = if near { crate::audio_iface::Sfx::ThunderNear } else { crate::audio_iface::Sfx::ThunderFar };
     let gain = (if near { 1.0 } else { 0.85 }) * th.loud * (0.6 + 0.4 * g.weather.storm);
     let lowpass = v3::clamp(9000.0 * m::exp(-th.dist_km * 0.75), 500.0, 9000.0);
     let rate = v3::clamp(1.02 - th.dist_km * 0.06, 0.78, 1.02) * (0.96 + 0.08 * pitch);
@@ -557,7 +557,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
 fn soak(g: &mut Game, b: BoxId) {
     let (albedo, flags, rough, aniso) = { let x = &g.tab.boxes[b]; (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
-    let gloss = crate::scene_boxes::box_flag().gloss;
+    let gloss = crate::scene_boxes::box_flag::GLOSS as f64;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
 }
 

@@ -126,9 +126,9 @@ pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
     alloc::format!("a ray that is no number{} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)", at)
 }
 
-/// a question's word of the rows: the block that holds them is this game's
-fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
-    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
+/// a question's word of the level's lamps
+fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows<'_>> {
+    r.map(|r| sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(r.leave), steady: r.steady, exposure: crate::hours::exposure(g) })
 }
 
 /// a sense's question the module handed back, in words
@@ -144,7 +144,7 @@ pub fn new(g: &mut crate::game::Game, boxes: &[BoxId]) -> crate::scene_collision
     g.tab.boxes.statics(boxes);
     let wd = crate::scene_world::world();
     g.tab.boxes.grid(wd.grid_w as u32, wd.grid_h as u32, wd.grid_cell);
-    let skip = js::to_u32(crate::scene_boxes::box_flag().no_shadow) | js::to_u32(crate::scene_boxes::box_flag().dynamic);
+    let skip = crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::DYNAMIC;
     let list: Vec<(u32, [i32; 4])> = (0..).zip(boxes).filter(|(_, b)| js::to_u32(g.tab.boxes[**b].flags) & skip == 0).map(|(i, &b)| (i, foot_cells(g, b))).collect();
     g.tab.boxes.file(&list);
     for (i, at) in list { if g.tab.boxes[boxes[i as usize]].rot.is_some() && at[0] <= at[1] && at[2] <= at[3] { g.tab.boxes.file_tilted(i, at); } }
@@ -301,11 +301,11 @@ fn line(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, panes: O
 
 /// is a→b blocked by a static or a leaf; `through` = the flags it passes (glass by default: the line of sight).
 pub fn segment_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
-    line(g, &Over::OWN, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), panes)
+    line(g, &Over::OWN, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag::GLASS as f64), panes)
 }
 /// …of the world as the question takes it
 pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>) -> bool {
-    line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), None)
+    line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag::GLASS as f64), None)
 }
 
 /// the sheets of glass a blast at `at` has a line to within `radius`, each with the point it meets
@@ -328,7 +328,7 @@ pub fn shot_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, energy: Option<
 /// …of the world as the question takes it
 pub fn shot_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, energy: Option<f64>) -> bool {
     let pass = match g.col.fire_pass {
-        Some(FirePass::Bars) => crate::scene_boxes::box_flag().bar,
+        Some(FirePass::Bars) => crate::scene_boxes::box_flag::BAR as f64,
         None => 0.0,
     };
     let mut panes: Vec<SegmentBlockedPanesItem> = Vec::new();
@@ -413,63 +413,48 @@ pub fn eye_contact(g: &Game, e: crate::scene_collision::EyeContactE, chest: V3, 
 /// the light of these lamps on a point, onto the six faces: the question's own (`lamps`) and the level's, which the loop reads where they stand (`rows`); `shade` = the smoke dims
 /// each on its way.
 pub fn lamps_on(g: &Game, p: V3, lamps: &[[f64; sim::light::LAMP]], shade: bool, rows: crate::scene_collision::LampRows) -> [f64; 6] {
-    let shade = if shade { sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim) } } else { sim::light::NO_SHADE };
+    let shade = shade.then(|| sim::light::Shade { sigma: g.k.sense.smoke.sigma, smoke: &g.smoke }).filter(|s| s.sigma > 0.0);
     let mut out = [0.0; 6];
-    let r = sim::light::estimate(world(g), lamps, p, &shade, rows_for(g, Some(rows)), &mut out, &g.k);
+    let r = sim::light::estimate(world(g), lamps, p, shade.as_ref(), rows_for(g, Some(rows)), &mut out, &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("light", "a lamp's line too long to be one, or of no number", &p, &p)); }
     out
 }
 
 /// the ways between the coarse grid's cells are asked of the boxes and leaves as they stand: a game put back knows none till its next step
-pub fn grid_ways(g: &Game) { sim::bricks::ways(g.sim, sim::state::stamp(g.sim), world(g), &g.k); }
+pub fn grid_ways(g: &mut Game) { sim::bricks::ways(&mut g.smoke, &g.made.ways, g.tab.boxes.world(), &g.k); }
 
-/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done.
-pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand.
+pub fn grid_step(g: &mut crate::game::Game, n: u32, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) {
     // (the light that comes round: the lamps of nobody's fixture, and the level's by the rows' word)
     let (lamps, said) = crate::guards::steady_lamps(g);
     let sky = crate::hours::sky_now(g);
-    let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
-    if let Some(wd) = wind {
-        if wd.x != 0.0 || wd.z != 0.0 {
-            let (gw, gh, gc) = { let w = world(g); (w.w as f64, w.h as f64, w.cs) };
-            let (nx, nz) = (2.0 * m::ceil(gw * gc / 2.0), 2.0 * m::ceil(gh * gc / 2.0));
-            if nx * nz <= sim::bricks::MAX_GLOW as f64 {
-                let at = sim::bricks::wind_addr();
-                let GridWindShare::Under { roofs } = &wd.share;
-                let mut o = 0usize;
-                let mut z = 0.0;
-                while z < nz {
-                    let mut i = 0.0;
-                    while i < nx {
-                        let v = crate::wind::wind_share_under(g, i + 0.5, z + 0.5, roofs.as_deref());
-                        unsafe { *at.add(o) = v; }
-                        o += 1;
-                        i += 1.0;
-                    }
-                    z += 1.0;
-                }
-                wx = wd.x;
-                wz = wd.z;
-                low = wd.low;
-                gain = wd.gain;
-                full_at = wd.full_at;
-            }
-        }
-    }
-    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
+    // (a wind that is no number, or whose rise with height is none, is still air: the smoke is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
-    let windy = real(wx) && real(wz) && real(low) && real(gain) && real(full_at) && real(k.in_wind) && low >= 0.0 && gain >= 0.0 && full_at > 0.0;
-    let (wx, wz) = if windy { (wx, wz) } else { (0.0, 0.0) };
-    let bk = sim::bricks::K { decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, wind_x: wx, wind_z: wz, wind_low: low, wind_gain: gain, wind_full_at: full_at, wind_keep: k.in_wind };
-    let gk = sim::glow::K { sweep, sky, lamps: &lamps, rows: rows_for(g, Some(said)) };
-    sim::bricks::step(g.sim, sim::state::stamp(g.sim), world(g), js::to_u32(n), &bk, Some(&gk), &g.k) != ASK_HOST
+    let blows = |w: &&crate::scene_collision::GridWind| (w.x != 0.0 || w.z != 0.0) && [w.x, w.z, w.low, w.gain, w.full_at, k.in_wind].into_iter().all(real) && w.low >= 0.0 && w.gain >= 0.0 && w.full_at > 0.0;
+    let wind = wind.filter(blows);
+    let share = wind.map_or(Vec::new(), |wd| {
+        let GridWindShare::Under { roofs } = &wd.share;
+        let w = world(g);
+        let squares = |cells: u32| (2.0 * m::ceil(cells as f64 * w.cs / 2.0)) as usize;
+        let (nx, nz) = (squares(w.w), squares(w.h));
+        if nx * nz > sim::bricks::MAX_GLOW { return Vec::new(); }
+        (0..nx * nz).map(|i| crate::wind::wind_share_under(g, (i % nx) as f64 + 0.5, (i / nx) as f64 + 0.5, roofs.as_deref())).collect()
+    });
+    let w = wind.filter(|_| !share.is_empty());
+    let bk = sim::bricks::K {
+        decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, share: &share, wind_keep: k.in_wind,
+        wind_x: w.map_or(0.0, |w| w.x), wind_z: w.map_or(0.0, |w| w.z), wind_low: w.map_or(1.0, |w| w.low), wind_gain: w.map_or(0.0, |w| w.gain), wind_full_at: w.map_or(1.0, |w| w.full_at),
+    };
+    let rows = sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(said.leave), steady: said.steady, exposure: crate::hours::exposure(g) };
+    let gk = sim::glow::K { sweep, sky, lamps: &lamps, rows: Some(rows) };
+    sim::bricks::step(&mut g.smoke, &g.made, g.tab.boxes.world(), n, &bk, Some(&gk), &g.k)
 }
 
 /// a tick with no step of the grid in it: some of what the light of the next ones is worked out from is made ahead, no state
-pub fn grid_ahead(g: &Game) { if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::ahead(g.sim, world(g), &g.k); } }
+pub fn grid_ahead(g: &Game) { sim::bricks::ahead(&g.smoke, &g.made, world(g), &g.k); }
 
 /// What the light under a roof is worked out from is made behind the loading, `most` lines of it, and not in the first step: the statics' lines, no state. → is all of it made
-pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
+pub fn light_ready(g: &Game, most: usize) -> bool { sim::bricks::light_ready(&g.made, world(g), crate::hours::sky_now(g).to_sun, most, &g.k) }
 
 // ---- how a sound reaches a listener
 
@@ -526,7 +511,7 @@ fn heard_straight(g: &Game, src: V3, dst: V3) -> Result<Propagation, f64> {
 fn heard_round(g: &Game, src: V3, dst: V3, straight: f64) -> Option<Propagation> {
     nav_grid_there(g);
     let (nw, nh, cs) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
-    let seal = js::to_u32(crate::scene_boxes::box_flag().sound_seal);
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL;
     let mut out = [0.0; 4];
     let k = sim::hear::route(world(g), seal, nw, nh, cs, src, dst, straight, &mut out, &g.k);
     if k == ASK_HOST { return None; }
@@ -659,6 +644,8 @@ pub fn way_priced<G: core::ops::Deref<Target = Game>>(g: G, a: V3, b: V3, max_it
     let n = sim::nav::start_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k).unwrap_or_else(|| sim::nav::priced(&mut |c| price(&mut g, (c % nw) as f64, (c / nw) as f64)));
     way_of(n, a, b)
 }
+/// a call of this module's was stopped in its middle (a panic): no search is under way
+pub fn searches_afresh() { sim::nav::afresh(); }
 /// …for a host, that asks it of places of its own: one that is no number has no way
 pub fn way_host(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
     let n = search(g, a, b, max_iter as f64);
@@ -808,9 +795,9 @@ mod tests {
     #[test]
     fn a_question_says_how_the_rows_are_read() {
         let mut g = Box::new(Game::blank());
-        g.sim = 2;
+        g.light_home.rows = vec![Default::default(); 2];
         let rows = rows_for(&g, Some(LampRows { leave: 4.0, steady: true })).unwrap();
-        assert_eq!((rows.g, rows.leave, rows.steady), (2, 4, true));
+        assert_eq!((rows.lamps.len(), rows.leave, rows.steady), (2, 4, true));
         assert!(rows_for(&g, None).is_none());
     }
 

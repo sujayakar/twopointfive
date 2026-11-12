@@ -31,7 +31,7 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
     let down = crate::teams::foe_down(g, gd);
     let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
     if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
-    if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
+    if g.gd[gd].react_t > 0.0 || down || g.gd[gd].duty.pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
     let f = Fight { gd, dt, c, pc, can_shoot, staff, dist, dazzled, staggered };
     // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
     let cover = crate::control::grant_cover(g, gd, dt);
@@ -156,7 +156,7 @@ fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
         let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
         crate::game::game_say(g, gd, line, Some(true), None);
         let at = head_or_pos(g, c);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
     }
     if g.gd[gd].search_t > 14.0 {
         crate::mind::set_state(g, gd, St::Suspicious, "guards");
@@ -177,7 +177,7 @@ fn hunts_him(g: &mut Game, f: Fight, a: &mut Acts) {
     } else if let Some(forced) = crate::doorforce::door_force(g, gd, dt) {
         a.aim_at = Some(forced.aim);
         a.move_speed = forced.move_;
-    } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].pinned) {
+    } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].duty.pinned) {
         let at = v3::add(gp, [0.0, 1.1, 0.0]);
         a.aim_at = Some(at);
         if crate::doorway::off_threshold(g, gd, Some(at), dt, false) {
@@ -193,7 +193,7 @@ fn hunts_him(g: &mut Game, f: Fight, a: &mut Acts) {
             None => { let pace = g.tune.guard_chase; let r = chase_fix(g, gd, dt, pace); (r.move_, r.aim, r.pied, r.crouch) }
         };
         a.move_speed = mv; a.aim_at = at; a.pied = pd; a.crouch = cr;
-    } else if !g.gd[gd].pinned && !g.gd[gd].hold && g.time - g.gd[gd].last_seen_t > 2.0 {
+    } else if g.gd[gd].duty.free() && g.time - g.gd[gd].last_seen_t > 2.0 {
         drop_to_search(g, gd, None);
     }
 }
@@ -242,7 +242,7 @@ fn fight_sight(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, dt: f64) -> Sig
     let trunk = match g.ch[pc].bone(Bone::Spine2) { Some(b) => Some(b), None => g.ch[pc].bone(Bone::Hips) };
     let pp = g.ch[pc].pos;
     let mut aim: V3 = [match trunk { Some(t) => t[0], None => pp[0] }, pp[1] + (if crouched { 0.8 } else { 1.25 }), match trunk { Some(t) => t[2], None => pp[2] }];
-    let pinned = g.gd[gd].pinned;
+    let pinned = g.gd[gd].duty.pinned;
     let mut blocked = false;
     if (!pinned || pane_first(g, c, aim)) && !clear_shot(g, c, aim) {
         let head = match g.ch[pc].bone(Bone::Head) { Some(b) => b, None => v3::add(pp, [0.0, if crouched { 1.05 } else { 1.6 }, 0.0]) };

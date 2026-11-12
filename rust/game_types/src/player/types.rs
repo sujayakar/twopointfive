@@ -1,6 +1,6 @@
 //! The types of `player`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -250,7 +250,7 @@ pub struct PressFace {
     pub off: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct ThrowRest {
     pub at: V3,
     pub path: Vec<V3>,

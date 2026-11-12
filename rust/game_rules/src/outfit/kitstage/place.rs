@@ -137,7 +137,7 @@ fn quiet_lamps(g: &mut Game, st: &mut KitStage, set: &Set, lit: &[FixtureId]) {
     }
     quiet_inside(g, st, QK.inside, 1.0);
     let roofs = quiet_roofs(g, plan);
-    let np = js::to_i32(box_flag().no_primary);
+    let np = box_flag::NO_PRIMARY as i32;
     for &i in &roofs {
         let b = g.col.boxes[i];
         if g.engine.world.statics.get(i) != Some(&b) { continue; }
@@ -176,8 +176,8 @@ fn stand_men(g: &mut Game, st: &mut KitStage, set: &Set) -> Men {
         let c = g.gd[x].ch;
         crate::character::pos_replace(g, c, [p[0], 0.0, p[1]]);
         g.ch[c].aim_pitch = 0.0;
-        crate::control::set_hold(g, x, true, "the kit picture");
-        crate::control::set_pinned(g, x, true, "the kit picture");
+        crate::duty::hold(g, x, true, "the kit picture");
+        crate::duty::pin(g, x, true, "the kit picture");
         faces.push((c, super::walk::faces(st, [p[0], p[1]])));
     }
     let shut = set.door.map_or(0.0, |d| g.dr[d].leaf.angle);
@@ -283,8 +283,7 @@ fn porch_box(g: &mut Game, st: &mut KitStage, set: &Set) {
     p.yaw = Some(m::atan2(plan.s[1], plan.s[0]));
     p.albedo = Some([0.04, 0.04, 0.04]);
     p.emissive = Some(glow(&set.lit));
-    let f = box_flag();
-    p.flags = Some((js::to_i32(f.emissive) | js::to_i32(f.area_lit)) as f64);
+    p.flags = Some((box_flag::EMISSIVE as i32 | box_flag::AREA_LIT as i32) as f64);
     let b = crate::scene_boxes::make_box(g, &p);
     crate::scene_boxes::box_world_add_static(g, b);
     st.fixture = Some(b);

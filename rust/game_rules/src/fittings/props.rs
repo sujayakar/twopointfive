@@ -79,7 +79,7 @@ fn prop_new(g: &mut Game, def: &Arc<crate::scene_level::PropDef>, id_2: f64) -> 
             h: [p.h[0], p.h[1], p.h[2]],
             yaw: Some(0.0),
             albedo: Some(p.albedo),
-            flags: Some(crate::scene_boxes::box_flag().dynamic),
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
             mkey: Some(crate::scene_boxes::mkey().prop + id_2 * 16.0 + j as f64),
             marks,
             stuff: p.stuff.clone(),

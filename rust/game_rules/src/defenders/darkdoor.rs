@@ -52,7 +52,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineKind,
     crate::game::game_say(g, gd, pool[i], Some(radio), None);
     if radio {
         let at = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 
@@ -71,7 +71,7 @@ fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.
 fn own(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
+    x.script.is_none() && x.duty.free() && x.standoff.is_none() && x.errand.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.

@@ -1,5 +1,5 @@
 // A TAPE WALKED (tape/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
-import { HAND } from '../draw/hand';
+import type { MomentNo } from '../draw/face';
 import { ANOTHER, HandWalk, TapeRefused, figuresPart, type TapeFigures, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
 import { GameLost, partsOf, type DrawGame, type Start } from './drawgame';
 
@@ -26,13 +26,13 @@ export class DrawPlay {
   words: Parted | null = null;
   /** the walk was lost to a panic, as the run may have been (`ends`) */
   lost: GameLost | null = null;
-  private rows: HandWalk; private moments = new Map<number, { k: number; place: TapePlace }>();
+  private rows: HandWalk; private moments = new Map<number, { k: MomentNo; place: TapePlace }>();
 
   /** `same`: it was played on this very module */
   constructor(readonly game: DrawGame, bytes: Uint8Array, private same = true) {
-    this.walk = new HandWalk(bytes, HAND.count); this.rows = new HandWalk(bytes, HAND.count);
+    this.walk = new HandWalk(bytes); this.rows = new HandWalk(bytes);
     let total = 0, ends = ''; for (let r = this.rows.next(); r; r = this.rows.next()) { if (r.kind === 'step') total++; else if (r.kind === 'try') this.tries.push(r.tick); else if (r.kind === 'end') ends = r.why; }
-    this.total = total; this.ends = ends; this.rows = new HandWalk(bytes, HAND.count);
+    this.total = total; this.ends = ends; this.rows = new HandWalk(bytes);
   }
   /** the game from the tape's start, on this build's own parts; a part that is another build's is refused by its name */
   start(own: Pick<Start, 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
@@ -62,7 +62,7 @@ export class DrawPlay {
     if (this.play || said.tick !== this.at) return;
     const tick = said.tick, mine = this.game.mark(said.state !== null && !this.words);
     if (mine.die !== said.die) this.play = { tick, why: `${mine.die} rolls of the die, ${said.die} on the tape` };
-    if (!this.words && (mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.parts !== said.parts ? 'the hash of its block' : 'the hash of every part of it' };
+    if (!this.words && (mine.stands !== said.stands || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.stands !== said.stands ? 'where everybody stands' : 'the hash of every part of it' };
   }
   private stood(said: TapeFigures): void { if (this.play || said.tick !== this.at) return; const why = figuresPart(said, this.game.figures()); if (why) this.play = { tick: said.tick, why }; }
   /** the moment the game stands at is held for a seek back, the crowded ones let go first */

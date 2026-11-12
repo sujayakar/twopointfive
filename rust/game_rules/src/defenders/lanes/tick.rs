@@ -280,7 +280,7 @@ fn guns_that_went_down_have_moved(g: &mut Game, k: &crate::knobs::LanesK) {
 fn note_their_posts(g: &mut Game) {
     for i in 0..g.fight.defs.len() {
         let d = g.fight.defs[i];
-        let (gd, station) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].station);
+        let (gd, station) = (g.tab.roomfight_def[d].gd, crate::roomfight::station(g, d));
         let st = s(g);
         if !st.post.has(gd) { st.post.set(gd, v3::copy(station)); }
     }
@@ -563,7 +563,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let cid = g.ch[c].id;
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, from, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(0.7), who: Some(cid), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
     let now = g.time;
     let gap = g.k.lanes.stun_gap;
     let x = &mut g.tab.lanes_lane[l];

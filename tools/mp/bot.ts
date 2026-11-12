@@ -16,7 +16,8 @@
 //   --why          with --predict: every clean look that was off by a millimetre or more, a line each on stderr (where, by how much, his state)
 // Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
 // (`moved`: the length of the way its man went, m, tick by tick.)
-import { NET, type WireCmd } from '../../src/net/wire.ts';
+import { SeatInput } from '../../src/draw/input.ts';
+import { inputNumbers, NET, type WireCmd } from '../../src/net/wire.ts';
 import { NetClient } from '../../src/net/client.ts';
 import { Foresee, FORESEE } from '../../src/net/foresee.ts';
 import { onWay, wayOff } from '../../src/net/delay.ts';
@@ -62,12 +63,12 @@ function offWall(S: Stood): string[] | null {
 let off: { keys: string[]; till: number } | null = null, later = 0;
 let beatN = 0, shots = 0, start: number[] | null = null, tickMs = 0, tickN = 0;
 function hands(S: Stood): WireCmd {
-  const n = beatN++, V = VIEW, c: WireCmd = { k: [], b: 0, m: [0, 0], s: [V.w, V.h, V.w, V.h], v: [target![0], target![1], target![2], V.yaw, V.pitch, V.distance, V.fov, V.w / V.h, 0] };
+  const n = beatN++, V = VIEW, a = n * 0.05 + seatN() * 2;
+  const c: WireCmd = { k: [], n: inputNumbers({ mouse: [V.w / 2 + Math.cos(a) * 260, V.h / 2 + Math.sin(a) * 180], size: [V.w, V.h, V.w, V.h], target: target!, yaw: V.yaw, pitch: V.pitch, distance: V.distance, fov: V.fov, aspect: V.w / V.h }) };
   if (off && n >= off.till) off = null;
   if (!off) { const keys = offWall(S); if (keys) { off = { keys, till: n + 30 }; later++; } }
   const leg = (Math.floor(n / 90) + later + seatN()) % 4; c.k = [...off?.keys ?? [['KeyW', 'KeyD', 'KeyS', 'KeyA'][leg]]];   // (a second seat walks the same square a side on)
-  const a = n * 0.05 + seatN() * 2; c.m = [V.w / 2 + Math.cos(a) * 260, V.h / 2 + Math.sin(a) * 180];
-  if (n > 120 && n % 40 < 4) { c.b = 1; if (n % 40 === 0) { c.c = 1; shots++; } }
+  if (n > 120 && n % 40 < 4) { c.n[SeatInput.buttons] = 1; if (n % 40 === 0) { c.n[SeatInput.clicked] = 1; shots++; } }
   if (n === 200 || n === 500) c.p = ['KeyF'];
   if (n === 320) c.p = ['KeyR'];
   return c;

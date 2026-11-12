@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
-import { characterFiles } from '../blitz/start-pack.ts';
+import { characterFiles } from '../blitz/character.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
 import { FollowCamera } from '../../src/host/camera';
@@ -49,10 +49,10 @@ for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.len
     input.buttons = 1; input.clicked = 1; run(30, 'a shot'); input.buttons = 0;
     const s0 = stood(); game.commands.load(BREAK ? 'manual.9' : 'manual.0'); run(2, 'a load'); const put = game.savesTold(), c = where(), loaded = stood() !== s0, walked = Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3;
     // a panic: the game of that call is gone, and it stands again from the newest kept, with its saves
-    at = 'a panic'; let label: string | null = null; try { game.X.face_debug_panic(game.h, 0); } catch { label = game.recover(true); }
+    at = 'a panic'; let label: string | null = null; try { game.face.debugPanic(game.h); } catch { label = game.recover(true); }
     run(20, 'the frames after a panic'); const e = where(), up = label !== null && (/^tut-/.test(file) || (label === 'by hand' && Math.hypot(e[0] - a[0], e[1] - a[1]) < 0.6));
     // …and a second time, from the start of the run, with the saves still kept
-    at = 'a second panic'; let first: string | null = null; try { game.X.face_debug_panic(game.h, 0); } catch { first = game.recover(false); }
+    at = 'a second panic'; let first: string | null = null; try { game.face.debugPanic(game.h); } catch { first = game.recover(false); }
     run(3, 'the frames after the second'); const z = where(), kept = game.kept(), start = first === '' && Math.hypot(z[0] - a[0], z[1] - a[1]) < 2 && (/^tut-/.test(file) || kept === 'by hand');
     // what a card of the run is drawn from: its record, how it ended, the map's floor and marks
     at = 'the card of it'; const card = game.debrief(), E = game.end(), carded = card.rows !== undefined && E.floor.rows.length === E.floor.w * E.floor.h && /[01]/.test(E.floor.rows) && E.marks.some(m => m.cls === 'spawn') && E.marks.every(m => Number.isFinite(m.x + m.z) && m.title.length > 2);
@@ -63,24 +63,30 @@ for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.len
     const went = walked || SKY.has(m.id);
     line(again && cold && went && up && start && told && carded && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${cold ? '' : 'the game after the ticks thrown away is not the game before them · '}${boxes} boxes · thrown away in ${warmMs.toFixed(0)} ms · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${carded ? '' : ` · the card: ${JSON.stringify([E.marks, E.floor.w, E.floor.h])}`}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
   } catch (e) { line(false, `${m.id}: stopped in ${at}`, String((e as Error)?.message ?? e).slice(0, 400)); }
-  try { if (game.h) game.X.face_drop(game.h); } catch { /* lost to its panic */ }
+  try { if (game.h) game.face.drop(game.h); } catch { /* lost to its panic */ }
 }
 // WHAT A MACHINE KEEPS is what a game is staged by: a hard one's tables are another's than a standard one's, and a standard one's are its own again
-if (!only.length) { const tables = (kept: string): string => { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X;
+if (!only.length) { const tables = (kept: string): string => { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), F = g.face;
     g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', kept, mannequin, mannequinBin, cast, castLook, seed: 5 });
-    X.face_state_words(g.h); const p = X.face_out_ptr() >>> 0, w = new Uint32Array(g.memory.buffer.slice(p, p + (X.face_out_len() >>> 0))), off: string[] = [];
-    for (let i = 0; i < X.face_state_n(); i++) { X.face_state_name(i); off.push(`${new TextDecoder().decode(new Uint8Array(g.memory.buffer, X.face_out_ptr() >>> 0, X.face_out_len() >>> 0))} ${w[i]}`); }
-    X.face_drop(g.h); return off.filter(x => /^k /.test(x)).join(); };
+    const w = F.stateWords(g.h), off = F.stateNames().map((n, i) => `${n} ${w[i]}`);
+    F.drop(g.h); return off.filter(x => /^k /.test(x)).join(); };
   const standard = tables(''), hard = tables('{"hard":true}'), lever = tables('{"levers":{"ai":"hard"}}'), refused = tables('{"levers":{"ai":"nonsense"}}'), after = tables('');
   line(standard === after && standard === refused && hard !== standard && lever !== standard && lever !== hard, 'hard, and one lever of it, are what a game is staged by; a word that is no rung is nothing, and the next game is its own'); }
+// TWO GAMES IN ONE MODULE, and one of them lost to a panic: it is still that game, whatever else has been started since, and the other is untouched
+if (!only.length) { const two = [0, 1].map(() => new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 })), [A, B] = two, cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, start = (g: DrawGame, level: string): void => g.start({ level: bytes(level), words: `?levelFile=${level}&roomclear&squad4`, mannequin, mannequinBin, cast, castLook, seed: 5 });
+  const step = (g: DrawGame, n: number): void => { cam.rebuild(); for (let i = 0; i < n; i++) g.step(1 / 60, sampleHand(g.numbersOf(), input, cam, canvas)); }, doors = (g: DrawGame): number => g.map().doors.length, way = (g: DrawGame): boolean => { const D = g.map().doors; return !!g.face.way(g.h, [g.map().men[0].x, 0, g.map().men[0].z], [D[0].hx + 1, 0, D[0].hz + 1], 6000); };
+  start(A, 'block.json'); step(A, 60); const a0 = doors(A), ways0 = way(A); try { A.face.debugPanic(A.h); } catch { /* lost */ }
+  start(B, 'compound.json'); step(B, 60); const b0 = doors(B), b1 = B.face.stateWords(B.h).join(), label = A.recover(false), a1 = doors(A), apart = A.h !== B.h && B.face.stateWords(B.h).join() === b1; step(A, 60); step(B, 60);
+  line(label === '' && a0 === a1 && a0 !== b0 && apart && doors(B) === b0 && (!ways0 || way(A)), 'of two games in one module the one lost to a panic stands again as itself, and the other goes on', `${a0} and ${a1} doors, the other ${b0}; numbers ${A.h} and ${B.h}`);
+  for (const g of two) g.face.drop(g.h); }
 // A KNOB BY ITS NAME: every one turned to what it is turned to is no change, one turned is another game, and turned back it is the same again
-if (!only.length) { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), X = g.X;
+if (!only.length) { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), F = g.face;
   g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', mannequin, mannequinBin, cast, castLook, seed: 5 });
-  const word = (): string => { X.face_state_words(g.h); const p = X.face_out_ptr() >>> 0; return new Uint32Array(g.memory.buffer.slice(p, p + (X.face_out_len() >>> 0))).join(); };
-  const send = (f: () => void): void => { f(); const b = g.commands.take(), p = X.face_alloc(b.length) >>> 0; new Uint8Array(g.memory.buffer, p, b.length).set(b); if (!X.face_commands(g.h, p, b.length)) throw new Error('a command was refused'); X.face_free(p, b.length); };
+  const word = (): string => F.stateWords(g.h).join();
+  const send = (f: () => void): void => { f(); F.commands(g.h, g.commands.take()); };
   const all = g.knobs(), was = word(); send(() => { for (const k of all) g.commands.knob(k.name, k.value); }); const same = word() === was;
   const one = all.find(k => /pressure\.on$/.test(k.name)) ?? all[0]; send(() => g.commands.knob(one.name, one.yes ? 1 - one.value : one.value + 1)); const turned = word() !== was && g.knobs().find(k => k.name === one.name)!.value !== one.value;
   send(() => g.commands.knob(one.name, one.value)); send(() => g.commands.knob('no.such', 1));
-  line(all.length > 1000 && same && turned && word() === was, `${all.length} knobs by name: turned to what they are is no change, one turned is, and turned back it is not`); X.face_drop(g.h); }
+  line(all.length > 1000 && same && turned && word() === was, `${all.length} knobs by name: turned to what they are is no change, one turned is, and turned back it is not`); F.drop(g.h); }
 console.log(fails ? `=== play: ${fails} FAILED ===` : '=== play: ALL PASS ===');
 process.exit(fails ? 1 : 0);

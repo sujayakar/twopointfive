@@ -58,7 +58,7 @@ fn a_row_of_the_menu_is_one_seats() {
         assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
         // the second seat's fall in is given a target of its own: the first seat's menu is as it was
         seats::with_seat(&mut p.g, second, &mut |g| {
-            let d = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
+            let d = g.groups[g.group].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
             g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
             game::orders::squad_orders_register(g, d, None);
         });

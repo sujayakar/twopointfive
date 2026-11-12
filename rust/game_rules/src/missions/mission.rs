@@ -166,8 +166,8 @@ fn begin_the_pull_if_asked(g: &mut Game) {
     if !asked { return; }
     let rf = g.level.errand.front;
     crate::deed::begin(g, crate::game::Deed::Take(0.0));
-    crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
-    crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(rf), Some(0.8), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
     let thing = g.level.errand.thing.clone();
     if !g.mission.hands_on {
         g.mission.hands_on = true;
@@ -196,8 +196,8 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     g.mission.stage = crate::game::MissionStage::Exfil;
     g.mission.sweep_at = if w.told { g.time + 7.0 } else { -1.0 };
     the_rack_goes_dark(g);
-    crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
-    crate::audio_iface::game_audio_like_play(g, "lightOff", Some(rf), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Rack, Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightOff, Some(rf), Some(0.7), None);
     let pl = g.player;
     let who = g.player_id(pl);
     let time = g.time;
@@ -218,7 +218,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
 
 /// The dead rack is noticed: the nearest calm patrol goes to look at it.
 pub fn send_rack_check(g: &mut crate::game::Game) {
-    use crate::game::{GuardState, GuardTask, GuardTaskArm0, GuardTaskArm0Kind};
+    use crate::game::{GuardState, Errand, ErrandAt, ErrandThing};
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) {
         return;
@@ -230,7 +230,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let mut bd = 1e9;
     for &gd in g.guards.iter() {
         let t = &g.gd[gd];
-        if t.state != GuardState::Patrol || t.hold || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.task.is_some() {
+        if t.state != GuardState::Patrol || t.duty.holds || t.held.is_some() || t.script.is_some() || t.unit.is_some() || g.ch[t.ch].team != crate::teams::Team::Guard || t.errand.is_some() {
             continue;
         }
         let d = v3::dist(g.ch[t.ch].pos, goal);
@@ -241,7 +241,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let Some(best) = best else { return };
     {
-        g.gd[best].task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
+        g.gd[best].errand = Some(Errand::At(ErrandAt { kind: ErrandThing::Rack, pos: goal }));
         crate::mind::fix(g, best, Some(v3::copy(goal)), "mission");
         crate::mind::raise(g, best, 0.42, "mission");
         crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
@@ -252,7 +252,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     let line = format!("something's tripped in {} — going to take a look", g.level.errand.place);
     crate::game::game_say(g, best, &line, Some(true), None);
     let at = g.pos_of(best);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }
 

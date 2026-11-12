@@ -353,7 +353,7 @@ fn budget_of(g: &crate::game::Game, thru: bool, rounds: f64) -> f64 {
 
 /// a man with no feet of his own to weigh
 fn stays(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].pinned || g.gd[gd].hold || g.gd[gd].script.is_some()
+    !g.gd[gd].duty.free() || g.gd[gd].script.is_some()
 }
 
 // ---------------------------------------------------------------- the choice
@@ -661,7 +661,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let mut who: Option<CharId> = None;
     for item in known(g, gd, None) {
         if let Some(h) = crate::character::guard_of(g, item.k.who) {
-            if crate::silent::round_held(g, gd, h) {
+            if crate::duty::round_held(g, gd, h) {
                 bump(g, BumpK::HeldSilent);
                 continue;
             }

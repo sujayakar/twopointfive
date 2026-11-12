@@ -1,9 +1,9 @@
 //! The types of `workthings`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct WorkThing {
     pub kind: crate::workthings::WorkThingKind,
     pub face: V3,
@@ -12,7 +12,7 @@ pub struct WorkThing {
     pub name: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum WorkThingKind {
     #[default] Breaker,
     Objective,
@@ -30,7 +30,7 @@ pub struct WorkThings {
 pub struct Job {
     pub thing: crate::workthings::WorkThing,
     pub verb: crate::workthings::WorkVerb,
-    pub a: OrdersAssignmentId,
+    pub a: TaskId,
     pub t0: f64,
     pub last_t: f64,
 }

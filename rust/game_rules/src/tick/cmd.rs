@@ -602,7 +602,7 @@ pub(super) fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3>
 }
 
 /// did this key go down in the step the first seat's record was of
-pub(super) fn seat_pressed(g: &crate::game::Game, key: &str) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key)) }
+pub(super) fn seat_pressed(g: &crate::game::Game, key: crate::input::Key) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key.as_str())) }
 
 /// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.
 fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {

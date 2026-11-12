@@ -184,7 +184,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
     let calm = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && man.body_duty.is_none()
-        && man.task.is_none()
+        && man.errand.is_none()
         && man.awareness < g.k.attention.calm_aw
         && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
@@ -312,7 +312,7 @@ fn hold_as_it_stands(g: &mut Game, gd: GuardId, hh: Hold, f: ThisFrame, now: f64
 
 /// Looking from his post: free to, he goes to it; his mind elsewhere or his time up ends it; else his suspicion stays up and he tells when he is nearly done.
 fn looks_on(g: &mut Game, gd: GuardId, mut hh: Hold, suspicious: bool, f: ThisFrame, now: f64) -> Option<Hold> {
-    if suspicious && !g.gd[gd].hold && on_it(g, gd, &hh) {
+    if suspicious && !g.gd[gd].duty.holds && on_it(g, gd, &hh) {
         hh.mode = HoldMode::Go;
         hh.until = -1.0;
         hh.told = false;
@@ -393,7 +393,7 @@ fn takes_it(g: &mut Game, gd: GuardId, cand: MemCand, h: Option<Hold>, now: f64)
     }
     let full = secs_for(g, cand.kind);
     let secs = full * m::pow(g.k.attention.wear_k, (nth - 1) as f64);
-    let posted = g.gd[gd].hold;
+    let posted = g.gd[gd].duty.holds;
     let until = if posted { now + m::max(0.0, g.gd[gd].react_t) + secs } else { -1.0 };
     let made = Hold { at: v3::copy(cand.at), kind: cand.kind, mode: if posted { HoldMode::Look } else { HoldMode::Go }, t0: now, secs, full, until, glimpse: 0.0, told: false, nth, ears: g.k.attention.ear_k, noises: 1.0, yaw: None };
     set_hold(g, gd, Some(made));

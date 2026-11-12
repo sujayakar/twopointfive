@@ -1,6 +1,6 @@
 //! The types of `game`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -102,7 +102,7 @@ pub enum SlotKind {
     Frag,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words, Crosses)]
 pub enum GuardState {
     #[default] Patrol,
     Suspicious,
@@ -222,7 +222,7 @@ pub struct WitnessSawHeld {
     pub who: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum MissionStage {
     #[default] Drive,
     Infiltrate,
@@ -246,7 +246,7 @@ pub struct Mission {
     pub serial: u32,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct MissionStats {
     pub qrf_who: Option<String>,
     pub elapsed: f64,
@@ -332,11 +332,7 @@ pub struct Game {
     pub search_probe_n: f64,
     pub time: f64,
     pub dice: crate::dice::Draws,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
-    pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
@@ -420,11 +416,12 @@ pub struct Game {
     #[bytes(skip)]
     pub saves: crate::savestate::Checkpoints,
     pub rack_targets: Vec<FixtureId>,
-    #[is(crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true })] pub tune: crate::game::GameTune,
+    #[is(crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, civilians: true, civilian_kill_fails: false, body_light: true })] pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
     pub level: Arc<crate::scene_level::Level>,
     #[is(RigId(0))] pub rig: RigId,
-    pub smoke: crate::smoke_types::SmokeSystemLike,
+    /// the game's own smoke: what every eye, every lamp's light and the fog of war see through, with the light that comes round beside it
+    pub smoke: crate::smoke::Smoke,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
     pub aside: bool,
     pub rolls: Vec<crate::game::Roll>,
@@ -437,6 +434,12 @@ pub struct Game {
     /// each seat's own things, by its id
     #[is(crate::seats::sets_new())] pub sets: Tab<SeatId, crate::seats::SeatSet>,
     pub seats: Vec<SeatId>,
+    /// the group a pass is about: the seat's own, or the one `group::with` names
+    /// (a machine's own: in no bytes)
+    #[bytes(skip)]
+    #[is(GroupId(0))] pub group: GroupId,
+    /// every group, by its id
+    #[is(crate::group::groups_new())] pub groups: Tab<GroupId, crate::group::Group>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
@@ -451,14 +454,10 @@ pub struct Game {
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// what g.serial() deals next
     #[is(1)] pub serial_next: u32,
-    /// a second cast of the squad is in the seat's row (`squadcast::with_cast`)
-    pub in_cast: bool,
     /// the rows box_frame has dealt that are not free yet (boxes_frame_reset)
     pub box_frame_rows: Vec<FrameBoxId>,
     /// rows box_frame may deal again
     pub box_frame_free: Vec<FrameBoxId>,
-    /// poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
-    pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows. The host drains it (the face clears it before a step)
     /// (a step's output, and no state: in no bytes)
     #[bytes(skip)]
@@ -498,16 +497,18 @@ pub struct Game {
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub stats: Stats,
-    /// which game of rust/sim's this is: every wrapper over rust/sim reads it, and the game's die lives there
-    /// (which of rust/sim's slots it stands in is the host's: in no bytes)
+    /// (made again from the rest: in no bytes)
     #[bytes(skip)]
-    pub sim: usize,
+    pub made: crate::made::Tables,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     #[is(crate::owned::Owned::new())] pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     #[is(crate::owned::Owned::new())] pub mark_set: crate::owned::Owned,
+    /// where a layer of the animator runs a pose forward: nobody reads it after the layer (in no bytes)
+    #[bytes(skip)]
+    pub bones: crate::anim_skeleton::PoseFK,
     /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
     /// (made from the statics: in no bytes)
     #[bytes(skip)]
@@ -592,7 +593,6 @@ pub struct GameTune {
     pub perimeter_eta: f64,
     pub perimeter_size: f64,
     pub qrf_silent: bool,
-    pub qrf_squad: bool,
     pub civilians: bool,
     pub civilian_kill_fails: bool,
     pub body_light: bool,
@@ -979,26 +979,26 @@ pub struct TalkLast {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
-pub enum GuardTask {
-    Arm0(crate::game::GuardTaskArm0),
-    CheckOn(crate::game::GuardTaskCheckOn),
+pub enum Errand {
+    At(crate::game::ErrandAt),
+    CheckOn(crate::game::ErrandCheckOn),
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskArm0 {
-    pub kind: crate::game::GuardTaskArm0Kind,
+pub struct ErrandAt {
+    pub kind: crate::game::ErrandThing,
     pub pos: V3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum GuardTaskArm0Kind {
+pub enum ErrandThing {
     #[default] Breaker,
     Device,
     Rack,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GuardTaskCheckOn {
+pub struct ErrandCheckOn {
     pub pos: V3,
     pub who: GuardId,
     pub wp: f64,
@@ -1033,11 +1033,10 @@ pub struct Guard {
     /// written whole: a new fix (`mind::fix`) counts in fix_stamp, one put back or carried over (`mind::fix_keep`) does not
     pub last_known: Option<V3>,
     #[is(-100.0)] pub last_seen_t: f64,
-    pub covers: Option<V3>,
     #[is(-100.0)] pub word_t: f64,
     pub led_at: Option<V3>,
-    pub hold: bool,
-    pub pinned: bool,
+    /// what he is held to
+    #[is(crate::duty::Duty::blank())] pub duty: crate::duty::Duty,
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
@@ -1071,7 +1070,6 @@ pub struct Guard {
     pub body_duty: Option<crate::game::GuardBodyDuty>,
     pub dropped: Option<ItemId>,
     #[is(f64::NEG_INFINITY)] pub handle_gate_t: f64,
-    pub stays_in_rooms: bool,
     pub fled: bool,
     #[is(-1.0)] pub gun_lost_at: f64,
     #[is(-1.0)] pub torch_lost_at: f64,
@@ -1131,7 +1129,8 @@ pub struct Guard {
     pub stall_ref: Option<V3>,
     pub stall_t: f64,
     pub script: Option<crate::game::GuardScript>,
-    pub task: Option<crate::game::GuardTask>,
+    /// what a man of the night staff is off to do
+    pub errand: Option<crate::game::Errand>,
     pub drawn: bool,
     /// may name a man who is dead or has left
     pub leader: Option<GuardId>,
@@ -1323,7 +1322,6 @@ impl Game {
 pub struct Tabs {
     pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
-    pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
     /// (a host's hand, which differs by machine: in no bytes)
@@ -1343,7 +1341,7 @@ pub struct Tabs {
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
     pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
-    pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
+    pub task: Tab<TaskId, crate::duty::Task>,
     pub doortools_room_search: Tab<DoortoolsRoomSearchId, crate::doortools::RoomSearch>,
     pub doortools_word: Tab<WordId, crate::doortools::Word>,
     pub doortools_door_gate: Tab<DoorGateId, crate::doortools::DoorGate>,
@@ -1396,7 +1394,6 @@ pub struct Mods {
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
-    pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     pub character: crate::character::CharacterMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,

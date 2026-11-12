@@ -99,7 +99,7 @@ pub fn clear(f: &mut Falls, kind: FallKind) {
 mod tests {
     use super::*;
 
-    fn landing(t: f64, sound: FallSound, gain: f64, amount: f64, told: FallTold) -> Landing {
+    fn landing(t: f64, sound: Option<game_types::audio_iface::Sfx>, gain: f64, amount: f64, told: FallTold) -> Landing {
         Landing { t, pos: [2.0, 0.5, 3.0], sound, gain, rate: 1.5, amount, who: 7.0, told, level: 4.0, dust: 0.0 }
     }
     fn lying(f: &Falls, x: f64, z: f64) -> f64 { cell(x, z).and_then(|k| f.litter.get(k).copied()).unwrap_or(0.0) }
@@ -115,26 +115,26 @@ mod tests {
     #[test]
     fn a_landing_lays_its_glass_tells_the_floor_once_a_gap_and_is_gone() {
         let mut f = Falls::blank();
-        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassShatter, 0.5, 0.1, FallTold::Always), 8.0));
-        assert!(schedule(&mut f, FallKind::Pieces, landing(1.0, FallSound::Empty, 0.0, 0.0, FallTold::Never), 8.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, Some(game_types::audio_iface::Sfx::GlassShatter), 0.5, 0.1, FallTold::Always), 8.0));
+        assert!(schedule(&mut f, FallKind::Pieces, landing(1.0, None, 0.0, 0.0, FallTold::Never), 8.0));
         assert_eq!((f.glass.waiting.len(), f.pieces.waiting.len()), (1, 1));
         assert!(due(&mut f, FallKind::Glass, 0.5, 1.0, 0.0).is_empty());
         let d = due(&mut f, FallKind::Glass, 1.0, 9.0, 0.25);
         assert_eq!(d.len(), 1);
-        assert_eq!((d[0].sound, d[0].pos, d[0].gain, d[0].rate, d[0].heard, d[0].level, d[0].who), (FallSound::GlassShatter, [2.0, 0.5, 3.0], 0.5, 1.5, true, 4.0, 7.0));
+        assert_eq!((d[0].sound, d[0].pos, d[0].gain, d[0].rate, d[0].heard, d[0].level, d[0].who), (Some(game_types::audio_iface::Sfx::GlassShatter), [2.0, 0.5, 3.0], 0.5, 1.5, true, 4.0, 7.0));
         assert!(f.glass.waiting.is_empty() && any_glass(&f));
         assert_eq!((lying(&f, 2.1, 3.1), lying(&f, -1.0, 3.1)), (0.1, 0.0));
-        assert!(schedule(&mut f, FallKind::Glass, landing(1.1, FallSound::GlassTinkle, 0.5, 0.0, FallTold::IfItSounds), 8.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.1, Some(game_types::audio_iface::Sfx::GlassTinkle), 0.5, 0.0, FallTold::IfItSounds), 8.0));
         assert!(!due(&mut f, FallKind::Glass, 1.1, 9.0, 0.25)[0].heard, "inside the gap");
-        assert!(schedule(&mut f, FallKind::Glass, landing(1.3, FallSound::GlassTinkle, 0.0, 0.0, FallTold::IfItSounds), 8.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.3, Some(game_types::audio_iface::Sfx::GlassTinkle), 0.0, 0.0, FallTold::IfItSounds), 8.0));
         assert!(!due(&mut f, FallKind::Glass, 1.3, 9.0, 0.25)[0].heard, "no sound of its own");
     }
 
     #[test]
     fn a_full_list_lays_the_glass_now_and_thickens_the_last_sound() {
         let mut f = Falls::blank();
-        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassTinkle, 0.5, 0.0, FallTold::Always), 1.0));
-        assert!(!schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::GlassTinkle, 0.5, 0.1, FallTold::Always), 1.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, Some(game_types::audio_iface::Sfx::GlassTinkle), 0.5, 0.0, FallTold::Always), 1.0));
+        assert!(!schedule(&mut f, FallKind::Glass, landing(1.0, Some(game_types::audio_iface::Sfx::GlassTinkle), 0.5, 0.1, FallTold::Always), 1.0));
         assert_eq!((f.glass.waiting.len(), f.glass.waiting[0].gain, lying(&f, 2.0, 3.0)), (1, 0.6, 0.1));
     }
 
@@ -155,7 +155,7 @@ mod tests {
         let mut f = Falls::blank();
         lay(&mut f.litter, 2.1, 3.1, 0.1);
         f.glass.last_told = 1.0;
-        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, FallSound::Empty, 0.0, 0.0, FallTold::Never), 8.0));
+        assert!(schedule(&mut f, FallKind::Glass, landing(1.0, None, 0.0, 0.0, FallTold::Never), 8.0));
         clear_waiting(&mut f, FallKind::Glass);
         assert!(f.glass.waiting.is_empty() && any_glass(&f) && f.glass.last_told == 1.0, "the landings alone");
         clear(&mut f, FallKind::Pieces);

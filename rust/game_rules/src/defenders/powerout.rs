@@ -517,13 +517,13 @@ fn party_man(gd: GuardId, role: ManRole, goal: V3, from: V3, watch: Option<V3>) 
 fn name_the_party(g: &mut Game, go: &[(RoomfightDefId, WayTo)], lever: V3) {
     let lead = &go[0];
     let lead_gd = g.tab.roomfight_def[lead.0].gd;
-    let lead_from = g.tab.roomfight_def[lead.0].station;
+    let lead_from = crate::roomfight::station(g, lead.0);
     st(g).men.push(party_man(lead_gd, ManRole::Lever, lever, lead_from, None));
     if let Some(second) = go.get(1) {
         let from = g.pos_of(lead_gd);
         let gd = g.tab.roomfight_def[second.0].gd;
         let c = cover_spot(g, gd, lever, &lead.1.path, from);
-        let station = g.tab.roomfight_def[second.0].station;
+        let station = crate::roomfight::station(g, second.0);
         st(g).men.push(party_man(gd, ManRole::Cover, c.spot, station, Some(c.watch)));
     }
     let go_at = g.time + g.k.powerout.beat;

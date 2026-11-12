@@ -153,7 +153,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
         if self.big {
             for &gd in self.squad.iter() {
                 let Some(a) = crate::orders::squad_orders_of(seat, gd) else { continue };
-                let a = &g.tab.orders_assignment[a];
+                let a = &g.tab.task[a];
                 if !self.down(gd) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.at == crate::orders::At::Stacked {
                     if let Some(d) = a.door { put(&mut self.by, d, &[gd], WaitWhy::Stack, self.addr.contains(&gd)); }
                 }
@@ -233,14 +233,14 @@ impl<'a, 'g> Waiting<'a, 'g> {
         men.iter().all(|&m| {
             if self.down(m) { return true; }
             let Some(a) = crate::orders::squad_orders_of(self.seat, m) else { return true };
-            let a = &self.g.tab.orders_assignment[a];
+            let a = &self.g.tab.task[a];
             a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| v3::dist_xz(self.g.pos_of(m), p) < 0.5))
         })
     }
     /// the bar across each doorway
     fn doors(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for e in self.by.iter() {
             let (ja, jb) = jambs(g, e.door);
             let mut now = false;
@@ -257,7 +257,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// the bar along each wall with a charge of his own
     fn wall_charges(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for &c in &self.walls {
             let sc = &g.tab.wallcharge_set_wall_charge[c];
             let now = p.up && !p.pair_first && !p.row_key && p.wall_first && Some(c) == p.wall;
@@ -268,7 +268,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
 }
 
 /// the way he has still to walk, as far as the order says it
-fn way_of(g: &Game, gd: GuardId, a: &crate::orders::Assignment, mark: V3) -> PlanWay {
+fn way_of(g: &Game, gd: GuardId, a: &crate::duty::Task, mark: V3) -> PlanWay {
     let m = &g.gd[gd];
     let p = g.ch[m.ch].pos;
     let mut stops: Vec<V3> = a.via.clone();
@@ -334,7 +334,7 @@ fn just_told(g: &Game, seat: &SeatRef) -> Vec<Told> {
 fn man_plan(g: &Game, seat: &SeatRef, paired: bool, gd: GuardId, told: Option<&[Told]>) -> Option<PlanMan> {
     let m = &g.gd[gd];
     if g.cond[m.ch].down { return None; }
-    let a = &g.tab.orders_assignment[crate::orders::squad_orders_of(seat, gd)?];
+    let a = &g.tab.task[crate::orders::squad_orders_of(seat, gd)?];
     let post = a.post?;
     let mut age = crate::m::max(0.0, g.time - a.t0);
     if let Some(told) = told {
@@ -362,7 +362,7 @@ fn man_plan(g: &Game, seat: &SeatRef, paired: bool, gd: GuardId, told: Option<&[
 }
 
 /// the way he faces on his mark, what he was told to watch from it if he does, and whether that is his door
-fn man_looks(g: &Game, a: &crate::orders::Assignment, c: &crate::character::Character, mark: V3, there: bool, walking: bool) -> (Option<f64>, Option<V3>, bool) {
+fn man_looks(g: &Game, a: &crate::duty::Task, c: &crate::character::Character, mark: V3, there: bool, walking: bool) -> (Option<f64>, Option<V3>, bool) {
     let fit_watch = a.fit.as_ref().and_then(|f| f.watch);
     let raw = a.watch.or(fit_watch);
     let on_door = raw.is_some_and(|w| a.door.is_some_and(|d| v3::dist_xz(w, g.dr[d].frame_centre) < 1.5));

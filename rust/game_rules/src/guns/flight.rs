@@ -94,7 +94,7 @@ pub fn noise(g: &mut Game, pos: V3, level: f64, who: f64, lure: Option<bool>) {
 /// One leaves `by`'s tube: the sound at it, and the noise at him.
 pub fn launched(g: &mut Game, by: CharId, from: V3, gain: f64, rate: Option<f64>, level: f64) {
     let rate = rate.map(|rate| crate::audio_iface::PlayOpts::Rate { rate });
-    crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(gain), rate.as_ref());
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Launcher, Some(from), Some(gain), rate.as_ref());
     noise_at(g, by, level);
 }
 
@@ -123,7 +123,7 @@ pub fn struck(g: &mut Game, c: CharId, dir: V3, by: CharId) {
     if crate::condition::down(g, c) { return; }
     crate::character::anim_hit(g, c);
     let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(thump), Some(0.55), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(thump), Some(0.55), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     let back_m = g.k.ring.stagger_back;
     let p = g.ch[c].pos;
     let back: V3 = [p[0] - dir[0] * back_m, 0.0, p[2] - dir[2] * back_m];

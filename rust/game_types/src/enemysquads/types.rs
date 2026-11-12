@@ -85,6 +85,10 @@ pub enum SentPhase {
     #[default] Set,
     Run,
     Loose,
+    /// he is short of the door he was sent to, waiting for those sent with him
+    Form,
+    /// he is on an order of his squad's, with those sent with him
+    Told,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -206,6 +210,7 @@ pub struct Squad {
     pub name: String,
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub men: Vec<GuardId>,
+    pub group: GroupId,
     pub barricade: JsSet<String>,
     pub state: crate::enemysquads::SquadState,
     pub state0: Option<crate::enemysquads::SquadChoice>,
@@ -232,6 +237,18 @@ pub struct Squad {
     pub went: Vec<crate::enemysquads::Sent>,
     pub due: Vec<crate::enemysquads::SquadDueItem>,
     pub events: Vec<crate::enemysquads::SquadEvent>,
+    pub entries: Vec<crate::enemysquads::Entry>,
+}
+
+/// Men of a squad going into a room together by one door.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Entry {
+    pub op: DoorOpId,
+    pub men: Vec<GuardId>,
+    pub at: V3,
+    pub t0: f64,
+    /// the stuns they set out with
+    pub stuns: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -253,7 +270,6 @@ pub struct State {
     pub stay_ask: Option<bool>,
     pub s: crate::scene_scenarios::StructureData,
     pub squads: Vec<EnemysquadsSquadId>,
-    pub of: JsMap<GuardId, EnemysquadsSquadId>,
     pub net: Vec<crate::enemysquads::StateNetItem>,
     pub nc: Option<crate::enemysquads::NetCheck>,
     pub word: Option<crate::enemysquads::StateWord>,

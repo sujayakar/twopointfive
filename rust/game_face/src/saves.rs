@@ -1,11 +1,9 @@
-//! A GAME KEPT: its own value (a clone of the whole `Game`, a closure in flight with it) and its block of rust/sim's. It lives as long as this module, and a game lost to a panic leaves
-//! it whole. The save controller (game::savestate::control) says when and under which label; `face_step`'s flag SAVES is its turn.
-//!
-//!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), would one by hand be made now (u32), the key of the one to go back to (text), how many,
-//!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
-//!   face_saves_told(h) -> n            what the save controller tells the player, at face_out: its tag while it is up, then a line for each thing it has said since it was last asked (0: nothing of either)
-//!   face_recover(h, newest) -> h | 0   a game lost to a panic stands again from the best kept of it, or from its run's first step (`face_recover_what(h)`: from what)
+//! A GAME KEPT: its own value (a clone of the whole `Game`, a closure in flight with it). It lives as long as this module, and a game lost to a panic leaves
+//! it whole. The save controller (game::savestate::control) says when and under which label; `step`'s flag SAVES is its turn.
+use crate::Held;
 use game::savestate::control::{self, Kept, START};
+use game::view::{Recovered, SaveRow, SavesTold, SavesView};
+use game_start::host::calls::GameNo;
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 
@@ -21,7 +19,7 @@ thread_local! {
 pub fn dealt(g: &Game) { DEALT.with(|d| d.set(d.get().max(g.serial_next))); }
 
 /// this game is the one held now, as it stands in it (a moment of the game, which deals no serial twice either: it is the run again)
-pub fn hold(x: &mut super::Held, g: Box<Game>) {
+pub fn hold(x: &mut Held, g: Box<Game>) {
     control::stand(&mut x.g, g);
     x.cmds = None;
     x.drawn.cut();
@@ -30,8 +28,8 @@ pub fn hold(x: &mut super::Held, g: Box<Game>) {
 pub fn shelf_off(h: u32) { STOOD_OF.with(|s| s.borrow_mut().remove(&h)); }
 
 /// AFTER A STEP, for a host that keeps games: what the step asked of the save controller, and the controller's own turn (game::savestate::control). One put back is whole again there, and nothing is drawn through it.
-pub fn saves(h: u32, x: &mut super::Held, dt: f64) {
-    STOOD_OF.with(|s| s.borrow_mut().insert(h, control::stood(&mut x.g)));
+pub fn saves_turn(x: &mut Held, dt: f64) {
+    STOOD_OF.with(|s| s.borrow_mut().insert(x.no, control::stood(&mut x.g)));
     let asked = control::asked(&x.g.out);
     let told = control::after_step(&mut x.g, dt, asked);
     if told.back { x.cmds = None; }
@@ -39,29 +37,22 @@ pub fn saves(h: u32, x: &mut super::Held, dt: f64) {
     if let Some(words) = told.said { x.said.push(words); }
 }
 /// …a step taken with the controller off (a tape walked): only the run's start and a restart the step asked for
-pub fn restart_turn(h: u32, x: &mut super::Held) {
-    STOOD_OF.with(|s| s.borrow_mut().insert(h, control::stood(&mut x.g)));
+pub fn restart_turn(x: &mut Held) {
+    STOOD_OF.with(|s| s.borrow_mut().insert(x.no, control::stood(&mut x.g)));
     if control::restart_turn(&mut x.g) { x.cmds = None; x.drawn.cut(); }
 }
 /// what is kept of game `h`, the best to go back to first
 fn kept_of(h: u32) -> Vec<(String, Kept)> { STOOD_OF.with(|s| s.borrow().get(&h).copied()).map_or(Vec::new(), control::kept_of) }
-/// what a game lost to a panic would stand again from: 0 nothing, 1 its run's first step, 2 a save (its label at face_out)
-#[no_mangle]
-pub extern "C" fn face_recover_what(h: u32) -> u32 {
-    match kept_of(h).first() { None => 0, Some((key, _)) if key == START => 1, Some((_, e)) => { super::out(e.label.clone().into_bytes()); 2 } }
-}
-/// A GAME LOST TO A PANIC STANDS AGAIN, from the best save of it (`newest` = 0: from its run's first step), under a new number; 0 = nothing of it is kept. What was
-/// kept of the lost game is the new one's.
-#[no_mangle]
-pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
-    super::hook();
+pub fn recover_what(h: GameNo) -> Option<String> { kept_of(h).first().map(|(key, e)| if key == START { String::new() } else { e.label.clone() }) }
+/// What was kept of the lost game is the new one's.
+pub fn recover(h: GameNo, newest: bool) -> Option<Recovered> {
     let of = kept_of(h);
-    let Some((key, e)) = of.iter().find(|(key, _)| newest != 0 || key == START).cloned() else { return 0 };
-    // (a game that still stands under the lost number would share the slot: it is let go, and what is kept of it is not)
-    super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
-    let mut g = e.image.laid(e.image.game.sim);
+    let (key, e) = of.iter().find(|(key, _)| newest || key == START).cloned()?;
+    // (a game that still stands under the lost number is let go, and what is kept of it is not)
+    super::let_go(h);
+    let mut g = e.image.laid();
     g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
-    let n = super::put(super::Held::new(g));
+    let n = super::put(Held::new(g));
     STOOD_OF.with(|s| { let mut s = s.borrow_mut(); if let Some(of) = s.remove(&h) { s.insert(n, of); } });
     super::with(n, |x| {
         // (the saves made after the one that stands are still kept: the shelf names them all)
@@ -73,41 +64,18 @@ pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
         if key != START { let was = control::abandoned(&x.g); let told = control::put_back(&mut x.g, &key, was); x.said.push(told); }
         x.drawn.cut();
     });
-    super::out(e.label.into_bytes());
-    n
+    Some(Recovered { game: n, label: e.label })
 }
-#[no_mangle]
-pub extern "C" fn face_saves_told(h: u32) -> usize {
-    let t = super::with(h, |x| {
-        let (f, secs) = (x.g.saves.flash.as_ref(), x.g.k.ckpt.flash_secs);
-        let mut t = String::from(f.filter(|f| x.g.time >= f.t && x.g.time - f.t < secs).map_or("", |f| f.text.as_str()));
-        for s in x.said.drain(..) { t.push('\n'); t.push_str(&s); }
-        t
-    });
-    let n = t.len();
-    super::out(t.into_bytes());
-    n
+pub fn saves_told(x: &mut Held) -> SavesTold {
+    let (f, secs) = (x.g.saves.flash.as_ref(), x.g.k.ckpt.flash_secs);
+    SavesTold { tag: f.filter(|f| x.g.time >= f.t && x.g.time - f.t < secs).map_or(String::new(), |f| f.text.clone()), lines: std::mem::take(&mut x.said) }
 }
-#[no_mangle]
-pub extern "C" fn face_saves(h: u32) {
-    let b = super::with_ref(h, |x| {
-        let g = &x.g;
-        let mut b = Vec::new();
-        let text = |b: &mut Vec<u8>, s: &str| { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); };
-        b.extend_from_slice(&g.mission.stats.elapsed.to_le_bytes());
-        b.extend_from_slice(&(control::hand_no(g).is_none() as u32).to_le_bytes());
-        let offer = game::savestate::checkpoints_newest(g, Some(true), Some(g.mission.stats.elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
-        text(&mut b, offer.as_ref().map_or("", |i| i.key.as_str()));
-        let rows = control::timeline(g);
-        b.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-        for r in rows {
-            text(&mut b, &r.key);
-            text(&mut b, &r.label);
-            b.extend_from_slice(&((r.slot == game::savestate::SlotInfoSlot::Manual) as u32 | (r.regret.is_some() as u32) << 1).to_le_bytes());
-            b.extend_from_slice(&r.mission_t.to_le_bytes());
-            b.extend_from_slice(&r.saved_at.to_le_bytes());
-        }
-        b
-    });
-    super::out(b);
+pub fn saves(x: &Held) -> SavesView {
+    let g = &x.g;
+    let elapsed = g.mission.stats.elapsed;
+    let offer = game::savestate::checkpoints_newest(g, Some(true), Some(elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
+    SavesView {
+        elapsed, hand: control::hand_no(g).is_none(), offer: offer.map_or(String::new(), |i| i.key),
+        rows: control::timeline(g).into_iter().map(|r| SaveRow { key: r.key, label: r.label, slot: r.slot, regret: r.regret.is_some(), mission_t: r.mission_t, saved_at: r.saved_at }).collect(),
+    }
 }

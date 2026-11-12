@@ -15,11 +15,41 @@ pub struct GltfNode {
 
 #[derive(Clone, Debug, Default)]
 pub struct Track {
-    pub node: f64,
-    pub path: f64,
+    pub node: usize,
+    pub path: Path,
     pub times: Vec<f32>,
     pub values: Vec<f32>,
+    /// the value of the key before, not the line between two
     pub step: bool,
+    /// which set of times of its clip it is on (LINES: one of its own)
+    pub line: usize,
+}
+/// the sets of times of one clip that a sample keeps its place on
+pub const LINES: usize = 8;
+
+/// what of a node a track says
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Path { #[default] Move, Turn, Scale }
+impl Track {
+    /// where in a pose's ten columns its values go
+    pub fn chan(&self) -> usize { match self.path { Path::Move => 0, Path::Turn => 3, Path::Scale => 7 } }
+    /// numbers a key
+    pub fn comps(&self) -> usize { if self.path == Path::Turn { 4 } else { 3 } }
+}
+impl Clip {
+    /// A clip of tracks as a file has them: each has a key and a value for every key of it, and stands on its line, the first with the same times, single for single.
+    pub fn new(name: String, duration: f64, tracks: Vec<Track>) -> Clip {
+        for t in &tracks { assert!(!t.times.is_empty() && t.values.len() == t.times.len() * t.comps(), "the clip \"{name}\" has a track of {} times and {} values on node {}", t.times.len(), t.values.len(), t.node); }
+        Clip { name, duration, tracks }.lined()
+    }
+    fn lined(mut self) -> Clip {
+        let mut first: Vec<usize> = Vec::new();
+        for k in 0..self.tracks.len() {
+            let at = first.iter().position(|&f| { let (a, b) = (&self.tracks[f].times, &self.tracks[k].times); a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()) });
+            self.tracks[k].line = at.unwrap_or_else(|| if first.len() < LINES { first.push(k); first.len() - 1 } else { LINES });
+        }
+        self
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -93,7 +123,11 @@ pub struct CastInfo {
 #[derive(Clone, Debug, Default)]
 pub struct GltfCharacter {
     pub nodes: Vec<crate::anim_gltf::GltfNode>,
-    pub order: Vec<f64>,
+    /// each node's parent (−1: none), and the nodes parents first
+    pub parent: Vec<i32>,
+    pub order: Vec<u32>,
+    /// which of them plays which part
+    pub roles: crate::anim_skeleton::roles::Roles,
     pub skin: crate::anim_gltf::SkinData,
     pub mesh: AnimGltfMeshDataId,
     pub clips: JsMap<String, ClipId>,

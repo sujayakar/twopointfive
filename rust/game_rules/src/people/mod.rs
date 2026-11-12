@@ -5,6 +5,7 @@ pub mod civilians;
 pub mod condition;
 pub mod control;
 pub mod doze;
+pub mod duty;
 pub mod flinch;
 pub mod floorseen;
 pub mod guards;

@@ -9,7 +9,8 @@
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN, NET_PREDICT, NET_LAG, NET_JITTER, NET_LOSS } from './address';
 import { NetClient, type ClientHost } from './client';
 import { onWay, wayOff, type Way } from './delay';
-import { FORESEE, Foresee, type Ahead, type Foreseen } from './foresee';
+import type { AheadView } from '../view/read';
+import { FORESEE, Foresee, type Foreseen } from './foresee';
 import { NET, type WireCmd } from './wire';
 import { buildName } from '../host/buildname';
 
@@ -147,7 +148,7 @@ export class NetDoor {
     return n;
   }
   /** the look ahead, at the end of a page tick (foresee.ts) */
-  look(walk: ((cmds: WireCmd[]) => Ahead) | null): Foreseen | null { return this.fore.look(walk, this.client, this.far); }
+  look(walk: ((cmds: WireCmd[]) => AheadView) | null): Foreseen | null { return this.fore.look(walk, this.client, this.far); }
 
   /** how the page is doing (`word`: the state word after the last tick) */
   state(word: string): NetPageState {

@@ -17,7 +17,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 /// the menu is being read again: what was worked out for it is worked out again as its rows ask
 pub(in crate::squad_orders) fn forget(g: &mut Game) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     if let Some(s) = g.m.squadthrow.states.get_mut(key) { s.plans.clear(); }
 }
 
@@ -110,7 +110,7 @@ fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Op
 
 /// The row's words, with the warning of the plan for this spot.
 pub(in crate::squad_orders) fn row_label(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = g.group;
     let warn = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)).filter(|p| p.at == at).and_then(|p| p.warn.clone()).unwrap_or_default();
     let n = left(g, kind);
     format!("{} there · {} left{}", word(kind).as_str(), n, warn)

@@ -65,10 +65,7 @@ pub fn spawn_civilians(g: &mut crate::game::Game) {
 
 /// A mission that takes the floor: the level's own civilians leave it, and a mission that stops stands them again (`spawn_civilians`)
 pub fn civilians_leave(g: &mut crate::game::Game) {
-    for cv in core::mem::take(&mut g.civilians) {
-        let c = g.gd[cv].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
+    g.civilians.clear();
 }
 
 /// A civilian of the usual make at her first mark, doing what she does there.
@@ -98,8 +95,8 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         team: Some(crate::teams::Team::Civilian),
     };
     let tint = v3::copy(def.tint);
-    let (men, rig) = (g.men, g.rig);
-    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
+    let rig = g.rig;
+    let gd = crate::game::guard_new(g, rig, id, route, -1, fl, tint, Some(&look));
     crate::mind::foe(g, gd, None, "civilians");
     g.gd[gd].drawn = false;
     g.gd[gd].heard_up_to = g.event_seq;

@@ -43,7 +43,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(fc)) {
         // (the very mark dealt: marks of one stack are never at one spot, so the first of the same bits is that one)
         let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();
-        let a = SquadOrdersAssignA {
+        let a = crate::duty::TaskGiven {
             order: String::from(ORDER.id), post: Some(post.pos), face: Some(post.face),
             watch: Some([fc[0], 1.05, fc[2]]), door: Some(door), shy: Some(door),
             stance: Some(if post.lead { crate::character::Stance::Stack } else { crate::character::Stance::HighReady }),

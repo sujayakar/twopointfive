@@ -2,21 +2,18 @@
 //! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. The operands stand in a written order, so the doubles are the
 //! same on every machine, and every pose value is stored as a single (single.rs).
 //!
-//! WHAT IT IS HANDED. A function works on slices. The animator's layers are layers/ and ask here. A character's poses live in its game's block (poses.rs) and a question is
-//! asked of them THERE, with no copy; a pose that is an array of the host's (a function's scratch) is written onto the BENCH below, asked about, and read back. The rig is
-//! written onto the bench before a question is asked of it, and the bench is scratch: nothing of a game is kept on it.
+//! WHAT IT IS HANDED. A function works on slices, whoever's the poses are; the animator's layers are layers/, over a man (`Body`).
 //!
 //! The lengths and the angles are the game's own (rust/maths).
 
 use crate::maths::{acos, atan2, hypot4};
 use crate::single::{get, put, S};
+use game_types::anim_skeleton::roles::{Roles, DIGITS_L, DIGITS_R};
 use game_types::m;
 use game_types::v3::{self, quat, Quat, V3};
 
-/// nodes a rig on the bench can have (the game's has 55)
+/// nodes a rig can have (the game's has 55)
 pub const MAX_NODES: usize = 128;
-/// poses the bench holds
-pub const POSES: usize = 4;
 /// singles a node of a local pose: tx ty tz | qx qy qz qw | sx sy sz
 pub const NODE: usize = 10;
 /// A POSE IS TEN COLUMNS, A NODE A ROW: channel `c` of node `i` is single `c * n + i` of it, `n` = its rows — the nodes
@@ -32,40 +29,6 @@ pub const fn singles(nodes: usize) -> usize {
     rows(nodes) * NODE
 }
 
-#[repr(C, align(16))]
-pub struct Bench {
-    /// a pose run forward: every node's model-space rotation (x y z w), then every node's origin (x y z)
-    pub rot: [f64; MAX_NODES * 4],
-    pub pos: [f64; MAX_NODES * 3],
-    pub pose: [S; POSES * MAX_NODES * NODE],
-    pub mask: [S; MAX_NODES],
-    /// the rig: every node's parent (−1 = none), and the nodes parents first
-    pub parent: [i32; MAX_NODES],
-    pub order: [u32; MAX_NODES],
-    pub nodes: u32,
-}
-static mut BENCH: Bench = Bench {
-    rot: [0.0; MAX_NODES * 4],
-    pos: [0.0; MAX_NODES * 3],
-    pose: [S::ZERO; POSES * MAX_NODES * NODE],
-    mask: [S::ZERO; MAX_NODES],
-    parent: [0; MAX_NODES],
-    order: [0; MAX_NODES],
-    nodes: 0,
-};
-// (a pose on the bench starts on a 16-byte boundary too, like one in a game's block: a kernel works either)
-const _: () = assert!(core::mem::offset_of!(Bench, pose) % 16 == 0 && (MAX_NODES * NODE * 4) % 16 == 0);
-/// the bench (one thread; nothing on it outlives the question it was written for)
-#[inline(always)]
-pub fn bench() -> &'static mut Bench {
-    unsafe { &mut *core::ptr::addr_of_mut!(BENCH) }
-}
-/// the bench, to read
-#[inline(always)]
-pub fn bench_read() -> &'static Bench {
-    unsafe { &*core::ptr::addr_of!(BENCH) }
-}
-
 /// `x || 1` of a length: 1 where it is nothing or no number
 #[inline(always)]
 fn or_one(l: f64) -> f64 {
@@ -77,10 +40,29 @@ fn or_one(l: f64) -> f64 {
 }
 
 
-/// A RIG AS A FUNCTION SEES IT
+/// A RIG AS A FUNCTION SEES IT: its nodes' parents, its nodes parents first, and which play which part
+#[derive(Clone, Copy)]
 pub struct Rig<'a> {
     pub parent: &'a [i32],
     pub order: &'a [u32],
+    pub roles: &'a Roles,
+}
+impl<'a> Rig<'a> {
+    /// the node that plays role `i`
+    #[inline(always)]
+    pub fn role(&self, i: usize) -> usize {
+        self.roles.nodes[i] as usize
+    }
+    /// list `i` of its nodes, parents first
+    #[inline(always)]
+    pub fn list(&self, i: usize) -> &'a [u32] {
+        &self.roles.lists[i]
+    }
+    /// the finger joints of a hand (0 the left)
+    #[inline(always)]
+    pub fn digits(&self, side: usize) -> &'a [u32] {
+        self.list(if side == 1 { DIGITS_R } else { DIGITS_L })
+    }
 }
 
 /// Out = lerp(a, b, w · mask[node]) — `a`, `b` and `out` are places on one store of poses (out may be a's)
@@ -118,10 +100,14 @@ fn fk_node(d: &[S], n: usize, rot: &mut [f64], pos: &mut [f64], i: usize, par: i
 }
 /// every node run forward, parents first
 pub fn fk_run(rig: &Rig, d: &[S], rot: &mut [f64], pos: &mut [f64]) {
+    fk_all(rig.parent, rig.order, d, rot, pos);
+}
+/// …of nodes nobody has cast yet
+pub fn fk_all(parent: &[i32], order: &[u32], d: &[S], rot: &mut [f64], pos: &mut [f64]) {
     let n = d.len() / NODE;
-    for &i in rig.order {
+    for &i in order {
         let i = i as usize;
-        fk_node(d, n, rot, pos, i, rig.parent[i]);
+        fk_node(d, n, rot, pos, i, parent[i]);
     }
 }
 /// `root` and what hangs under it, in the rig's order (the others are current and are left)
@@ -311,93 +297,74 @@ fn swivel(e: V3, pole: V3, line: V3, pole_w: f64) -> Option<Quat> {
     Some(quat::axis_angle(line, ang * pole_w))
 }
 
-// ---- THE QUESTIONS (the module's exports: lib.rs)
-const SLOT: usize = MAX_NODES * NODE;
-/// the rig on the bench has `nodes` nodes, `order` of them listed parents first
-pub fn bench_rig(nodes: u32, order: u32) {
-    let b = bench();
-    b.nodes = if (nodes as usize) <= MAX_NODES && order <= nodes { nodes | (order << 16) } else { 0 };
+/// A MAN AS A LAYER POSES HIM: his poses, his bones as last run forward, his rig, and the clips he is sampled from.
+pub struct Body<'a> {
+    pub poses: &'a mut [S],
+    pub fk: Fk<'a>,
+    pub rig: Rig<'a>,
+    pub clips: &'a game_types::ids::Tab<game_types::ids::ClipId, game_types::anim_gltf::Clip>,
+    /// the nodes' weights a masked blend goes by
+    mask: [S; MAX_NODES],
 }
-/// the rig on the bench, borrowed table by table (so that a walk may write the bench's other tables)
-macro_rules! rig_of {
-    ($b:ident) => {{
-        let (n, m) = (($b.nodes & 0xffff) as usize, ($b.nodes >> 16) as usize);
-        (n, Rig { parent: &$b.parent[..n], order: &$b.order[..m] })
-    }};
-}
-/// IS THIS A RIG THE WALKS ABOVE CAN WALK (asked once a rig): the order lists every node once, and a node's parent (if it has one) is listed before it. So
-/// every index is a node, a run forward meets a parent before its children, and a walk up the parents ends.
-pub fn bench_rig_ok() -> bool {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    if n == 0 || rig.order.len() != n {
-        return false;
+impl<'a> Body<'a> {
+    pub fn new(poses: &'a mut [S], fk: Fk<'a>, rig: Rig<'a>, clips: &'a game_types::ids::Tab<game_types::ids::ClipId, game_types::anim_gltf::Clip>) -> Body<'a> {
+        Body { poses, fk, rig, clips, mask: [S::ZERO; MAX_NODES] }
     }
-    let mut seen = [false; MAX_NODES];
-    for &i in rig.order {
-        let i = i as usize;
-        if i >= n || seen[i] {
-            return false;
-        }
-        let p = rig.parent[i];
-        if p >= 0 && (p as usize >= n || !seen[p as usize]) {
-            return false;
-        }
-        seen[i] = true;
+    /// how many nodes his rig has
+    #[inline(always)]
+    pub fn nodes(&self) -> usize {
+        self.rig.parent.len()
     }
-    true
-}
-// WHERE A POSE IS, for a question: `g == ON_BENCH` → place `at` of the bench (the host wrote it there and reads the answer back) · else in game `g`'s pool
-// (poses.rs), starting at single `at` of that part, and it is read and written THERE. One body a question, whichever it is. The rig, the mask, a
-// question's own numbers and a pose run forward are the bench's either way. A question answers `true` when it did the work; `false` = that is not a pose
-// (not a place of the bench, not a pose the pool handed out, not a node), and nothing was written.
-use crate::poses::{holds, Poses, HEAD};
-use crate::state::state;
-pub const ON_BENCH: usize = u32::MAX as usize;
-#[inline(always)]
-fn pool(g: usize) -> &'static mut Poses {
-    &mut state(g).poses
-}
-/// where a pose of `nodes` nodes starts in its array (the bench's `pose`, or the pool's `data`)
-#[inline(always)]
-fn start(g: usize, at: usize, nodes: usize) -> Option<usize> {
-    if nodes > MAX_NODES {
-        None
-    } else if g == ON_BENCH {
-        if at < POSES {
-            Some(at * SLOT)
-        } else {
-            None
+    /// A LAYER'S WAY IN (layers/): the singles of pose `at`, the rig, and the bones
+    #[inline]
+    pub fn pose<R>(&mut self, at: usize, f: impl FnOnce(&mut [S], &Rig, &mut Fk) -> R) -> R {
+        let one = singles(self.nodes());
+        f(&mut self.poses[at * one..(at + 1) * one], &self.rig, &mut self.fk)
+    }
+    /// poses `a` and `b` into `out`, `w` of `b`; `masked`: by the mask's weight of each node besides
+    pub fn blend(&mut self, a: usize, b: usize, w: f64, masked: bool, out: usize) {
+        let (n, one) = (self.nodes(), singles(self.nodes()));
+        blend(self.poses, a * one, b * one, w, if masked { Some(&self.mask[..]) } else { None }, out * one, n);
+    }
+    /// clip `c` at time `t` into pose `at`
+    pub fn sample(&mut self, at: usize, c: game_types::ids::ClipId, t: f64, looped: bool) {
+        let one = singles(self.nodes());
+        crate::clips::sample(&self.clips[c], t, looped, &mut self.poses[at * one..(at + 1) * one]);
+    }
+    /// The mask of the next blend that goes by one: an entry is a node, its weight, and whether its whole subtree takes that weight. A later entry lies over an earlier one; a node the
+    /// rig has not is skipped; every other node is nought.
+    pub fn mask(&mut self, entries: &[(usize, f64, bool)]) {
+        let (n, rig, mask) = (self.rig.parent.len(), &self.rig, &mut self.mask);
+        for m in mask[..n].iter_mut() {
+            *m = S::ZERO;
         }
-    } else {
-        let s = at.wrapping_sub(HEAD / 4);
-        if holds(pool(g), s, nodes) {
-            Some(s)
-        } else {
-            None
+        for &(root, w, sub) in entries {
+            if root >= n {
+                continue;
+            }
+            put(mask, root, w);
+            if sub {
+                // (parents first: a node is in the subtree when its parent is)
+                let mut inside = [false; MAX_NODES];
+                inside[root] = true;
+                for &i in rig.order {
+                    let i = i as usize;
+                    let par = rig.parent[i];
+                    if par >= 0 && inside[par as usize] {
+                        inside[i] = true;
+                        put(mask, i, w);
+                    }
+                }
+            }
         }
     }
+    /// pose `from` into pose `to`
+    pub fn copy(&mut self, from: usize, to: usize) {
+        let one = singles(self.nodes());
+        self.poses.copy_within(from * one..(from + 1) * one, to * one);
+    }
 }
-/// …and the array itself
-macro_rules! poses_of {
-    ($b:ident, $g:expr) => {
-        if $g == ON_BENCH {
-            &mut $b.pose[..]
-        } else {
-            &mut pool($g).data[..]
-        }
-    };
-}
-/// A LAYER'S WAY IN (layers/): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
-/// `f` — or None where a question would answer false
-pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &mut Fk) -> R) -> Option<R> {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    let s = start(g, at, n)?;
-    let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
-    Some(f(&mut poses_of!(b, g)[s..s + singles(n)], &rig, n, &mut fk))
-}
-/// THE RUN-FORWARD BONES on the bench: what a layer runs forward it finds here, until the next layer. Nobody else reads them
+/// THE RUN-FORWARD BONES: every node's model-space rotation (x y z w), then every node's origin
 pub struct Fk<'a> {
     pub rot: &'a mut [f64],
     pub pos: &'a mut [f64],
@@ -423,56 +390,4 @@ impl Fk<'_> {
     pub fn rot(&self, i: usize) -> [f64; 4] {
         [self.rot[i * 4], self.rot[i * 4 + 1], self.rot[i * 4 + 2], self.rot[i * 4 + 3]]
     }
-}
-/// poses `a`, `b` → `out`, all three in the one array
-pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
-    let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
-        return false;
-    };
-    let bn = bench();
-    let d = poses_of!(bn, g);
-    blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n);
-    true
-}
-/// a mask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
-/// that weight. A later entry lies over an earlier one; a node the rig has not is skipped; every other node is nought.
-pub fn ask_mask(entries: &[(usize, f64, bool)]) {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    for m in b.mask[..n].iter_mut() {
-        *m = S::ZERO;
-    }
-    for &(root, w, sub) in entries {
-        if root >= n {
-            continue;
-        }
-        put(&mut b.mask, root, w);
-        if sub {
-            // (parents first: a node is in the subtree when its parent is)
-            let mut inside = [false; MAX_NODES];
-            inside[root] = true;
-            for &i in rig.order {
-                let i = i as usize;
-                let par = rig.parent[i];
-                if par >= 0 && inside[par as usize] {
-                    inside[i] = true;
-                    put(&mut b.mask, i, w);
-                }
-            }
-        }
-    }
-}
-/// clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
-/// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not
-pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
-    let need = crate::clips::nodes_of(c);
-    if need == 0 || need > nodes {
-        return false;
-    }
-    let Some(s) = start(g, at, nodes) else {
-        return false;
-    };
-    let b = bench();
-    crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped);
-    true
 }

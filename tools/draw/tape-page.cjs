@@ -6,7 +6,7 @@ const { mkdirSync, readFileSync } = require('node:fs'), { join } = require('node
 const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 // (the men's place among the sections, by its name: a section put before it moves the number)
 const MEN = Number(/enum Section \{[^}]*\bmen = (\d+)/.exec(readFileSync(join(__dirname, '../../src/draw/sections.ts'), 'utf8'))[1]);
-const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.state;
+const same = (a, b) => a.die === b.die && a.stands === b.stands && a.state === b.state;
 (async () => {
   const ctx = await PAGE.context();
   const open = async (words, ready = true) => {
@@ -85,7 +85,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.s
   await V.page.close();
   // ---- lost to a panic on the way, it is gone back on
   { const L = await open(`paused&quality=verylow&mute&playtape=${sid}`);
-    const s = await L.page.evaluate(() => { const d = window.__draw, P = d.played, G = d.game; d.run(400, [], 'none'); try { G.X.face_debug_panic(G.h, 0); } catch { /* lost */ } const lost = !!G.lost; d.run(5, [], 'none'); const stood = P.at;
+    const s = await L.page.evaluate(() => { const d = window.__draw, P = d.played, G = d.game; d.run(400, [], 'none'); try { G.face.debugPanic(G.h); } catch { /* lost */ } const lost = !!G.lost; d.run(5, [], 'none'); const stood = P.at;
       P.seek(200); for (let i = 0; i < 600 && P.seeking; i++) d.run(1, [], 'none'); const back = P.at, up = !G.lost; d.run(P.total, [], 'none'); return { lost, stood, back, up, card: !!document.querySelector('#fatal[style*="flex"]'), m: G.mark() }; });
     check(s.lost && s.stood === 400 && Math.abs(s.back - 200) < 3 && s.up && !s.card && same(s.m, s1.m), 'lost to a panic, it stands, is sought back and ends the same', s); await L.page.close(); }
   // ---- live: a person's page, its own frames

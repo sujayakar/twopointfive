@@ -5,10 +5,11 @@
 numbers (`rust/sim`). It imports nothing. A host hands it a start and what each seat's hands did, and reads back what is drawn and told; a game is a
 number.
 
-Each file of `rust/game_face/src` says its own doors at its head: `lib.rs` (the memory, a panic's words, a game's life and its step, the words two
-machines hold each other to), `hand.rs` (what a seat's hands did, and the commands), `net.rs` (every seat's record of a tick), `draw.rs` (the sections a
-page draws), `view.rs` (what a HUD and the panel are told), `ask.rs` (the world's questions), `saves.rs` and `moment.rs` (a game kept), `desk.rs` (the
-cards before a game), `map.rs`, `end.rs`, `checks.rs` (doors for tools).
+**The calls are declared once**, in `rust/game_start/src/host/calls.rs`: a name, how it holds a game (`reads`, `does`, or `free` of any), its arguments by type
+and what comes back. `rust/game_face/src/` has a function of each name and makes the exports from the list; the program `half` writes the page's caller
+(`src/draw/face.ts`, class `Face`) and the readers of what is told (`src/view/read.ts`). Every export has one shape: the game's number and one run of bytes, the
+arguments in their order (`host/field.rs`, `src/draw/writer.ts`); back comes a number, or the bytes of a type that crosses (`src/draw/wire.ts`). A wrong
+name, argument or answer does not compile on either side, and a module of another list is refused as it loads (the stamp).
 
 ## Build
 

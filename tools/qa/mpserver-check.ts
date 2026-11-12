@@ -39,6 +39,8 @@
 //   refused       a hello with a wrong seat key, another game's id, another wire or (when the server names its build) another build is told why and let go
 //   idle          with everybody gone the server ended itself inside its idle time, exit 0
 // EXIT 0 = every line passed · 1 = a line failed · 2 = a process could not be started.
+import { SeatInput } from '../../src/draw/input.ts';
+import { FIRST } from '../../src/net/wire.ts';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.MPSERVER_BREAK === '1';
@@ -58,21 +60,22 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 // ---- the rule, on its own
 {
   const { SeatLine } = await import(`${ROOT}/src/net/timeline.ts`), W = await import(`${ROOT}/src/net/wire.ts`);
-  const rec = (k: string[], extra: object = {}) => ({ k, b: 0, m: [10, 20], s: [1280, 720, 1280, 720], v: [1, 0, 2, 0.5, 0.96, 21, 0.6, 16 / 9, 0], ...extra });
+  const VIEW = { mouse: [10, 20], size: [1280, 720, 1280, 720], target: [1, 0, 2], yaw: 0.5, pitch: 0.96, distance: 21, fov: 0.6, aspect: 16 / 9 };
+  const rec = (k: string[], o: { p?: string[]; clicked?: number; wheel?: number } = {}) => ({ k, n: W.inputNumbers({ ...VIEW, clicked: o.clicked, wheel: o.wheel }), ...(o.p ? { p: o.p } : {}) }), edge = (t: { n: number[] }) => [t.n[SeatInput.clicked], t.n[SeatInput.wheel]].join();
   const L = new SeatLine();
   L.put(0, rec(['KeyW'], { p: ['KeyW'] }), 0);
   const t0 = L.take(0, true), t1 = L.take(1, true);
-  const own = t0.k.join() === 'KeyW' && t0.p?.join() === 'KeyW', held = t1.k.join() === 'KeyW' && t1.p === undefined && t1.c === undefined;
-  L.put(1, rec(['KeyW', 'KeyF'], { p: ['KeyF'], c: 1, w: 3 }), 2);   // late: tick 1 has run
+  const own = t0.k.join() === 'KeyW' && t0.p?.join() === 'KeyW', held = t1.k.join() === 'KeyW' && t1.p === undefined && edge(t1) === '0,0';
+  L.put(1, rec(['KeyW', 'KeyF'], { p: ['KeyF'], clicked: 1, wheel: 3 }), 2);   // late: tick 1 has run
   const t2 = L.take(2, true), t3 = L.take(3, true);
-  const late = t2.p?.join() === 'KeyF' && t2.c === 1 && t2.w === 3 && t2.k.includes('KeyF') && t3.p === undefined && t3.c === undefined && L.late === 1;
-  const empty = L.take(4, false), idle = empty.k.length === 0 && empty.b === 0 && empty.v[0] === 1;
+  const late = t2.p?.join() === 'KeyF' && edge(t2) === '1,3' && t2.k.includes('KeyF') && t3.p === undefined && edge(t3) === '0,0' && L.late === 1;
+  const empty = L.take(4, false), idle = empty.k.length === 0 && empty.n[SeatInput.buttons] === 0 && empty.n[SeatInput.target] === 1;
   L.put(9, rec(['KeyA']), 5); L.put(9, rec(['KeyD']), 5); for (let t = 5; t < 9; t++) L.take(t, true);
   const once = L.take(9, true).k.join() === 'KeyA';
   const far = (() => { const M = new SeatLine(); M.put(5 + W.NET.horizon + 1, rec(['KeyW']), 5); return M.got === 0; })();
-  const wheel = (() => { const M = new SeatLine(); M.put(0, rec([], { w: -3 }), 1); M.put(1, rec([], { w: 3 }), 1); const t = M.take(1, true); return t.w === undefined && W.wireOk(t) && !W.wireOk({ ...rec([]), p: 5 }) && !W.wireOk({}) && !W.wireOk({ ...rec([]), v: [1, 2] }); })();
-  const odd = { k: ['KeyW'], p: ['KeyE'], b: 1, c: 1, m: [3.25, -0], s: [1280, 720, 2560, 1440], v: [1.1, -0, 2.2, -0, 0.1 + 0.2, 21, 0.6, 16 / 9, 0.18] }, back = W.netParse(W.netText(odd)) as typeof odd;
-  const bits = W.wireOk(back) && [...odd.m, ...odd.s, ...odd.v].every((x, i) => Object.is(x, [...back.m, ...back.s, ...back.v][i])) && back.k.join() === 'KeyW' && back.p.join() === 'KeyE' && back.b === 1 && back.c === 1;
+  const wheel = (() => { const M = new SeatLine(); M.put(0, rec([], { wheel: -3 }), 1); M.put(1, rec([], { wheel: 3 }), 1); const t = M.take(1, true); return edge(t) === '0,0' && W.wireOk(t) && !W.wireOk({ ...rec([]), p: 5 }) && !W.wireOk({}) && !W.wireOk({ ...rec([]), n: [1, 2] }); })();
+  const odd = { k: ['KeyW'], p: ['KeyE'], n: W.inputNumbers({ buttons: 1, clicked: 1, mouse: [3.25, -0], size: [1280, 720, 2560, 1440], target: [1.1, -0, 2.2], yaw: -0, pitch: 0.1 + 0.2, distance: 21, fov: 0.6, aspect: 16 / 9, aimLead: 0.18 }) }, back = W.netParse(W.netText(odd)) as typeof odd;
+  const bits = W.wireOk(back) && odd.n.every((x: number, i: number) => Object.is(x, back.n[i])) && back.k.join() === 'KeyW' && back.p.join() === 'KeyE';
   line(own && held && late && idle && once && far && wheel && bits, `the rule: a tick runs on the seat's own record in time${own ? '' : ' (NO)'}, a held one with its edges off when none came${held ? '' : ' (NO)'}, a late press, click and wheel land on the next tick and once${late ? '' : ' (NO)'}, an empty seat holds nothing and keeps its view${idle ? '' : ' (NO)'}, a second record for a tick is not taken${once ? '' : ' (NO)'}, one past the horizon is not kept${far ? '' : ' (NO)'}, a late wheel turn and the tick's own add up${wheel ? '' : ' (NO)'}, a record crosses the wire to the bit${bits ? '' : ' (NO)'}`);
 }
 
@@ -92,7 +95,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
     const L = { conn, C, pump: () => { while (inbox.length) C.message(inbox.shift()!, now); C.walk(host, 1e9); } };
     links.push(L); C.hello(); L.pump(); return L;
   };
-  const cmd = { k: ['KeyW'], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
+  const cmd = { ...FIRST, k: ['KeyW'] };
   let beats = 0;
   /** `ms` of the clock: the server advances every ms unless it is stalled, the seat beats at the rate unless its hands are off, everybody reads */
   const run = (ms: number, o: { beat?: boolean; server?: boolean } = {}) => { try { for (let i = 0; i < ms; i++) { now++; if (o.server !== false) S.advance(); for (const L of links) L.pump();
@@ -121,7 +124,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ---- the host's settings: games stood here from starts that differ in them alone
 { const M = await import('../mp/stand.ts');
-  const hard = '{"hard":true}', idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
+  const hard = '{"hard":true}', idle = FIRST;
   const gameOf = async (search: string, kept?: string): Promise<string> => { const G = await M.standStart(M.freshStart({ search, seed: 7, kept })); for (let i = 0; i < 30; i++) G.step([idle, idle]); return G.word(); };
   const AT = '?roomclear&squad4&seats=2', told = await gameOf(AT, hard), again = await gameOf(AT, hard), bare = await gameOf(AT, ''), plain = await gameOf(AT), word = await gameOf(`${AT}&difficulty=hard`), over = await gameOf(`${AT}&difficulty=standard`, hard);
   const ok = told === again && told !== bare && plain === bare, addressed = word === told && over === bare;

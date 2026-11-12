@@ -45,7 +45,7 @@ fn lamp(p: &mut Play, kind: f64, at: [f64; 3], dir: [f64; 3], range: f64, intens
 /// The light that stands on a point, all of it.
 fn light(p: &mut Play, at: [f64; 3]) -> f64 { light_at(&mut p.g, at, None, None, None).0 }
 /// What the lamps and the sky give a point by their own lines, without what comes round off the walls: a question that leaves out a kind of lamp asks only this, and no beacon stands in these scenes.
-fn direct(p: &mut Play, at: [f64; 3]) -> f64 { light_asked(&mut p.g, at, &[], false, sim::lights::R_PASSING as f64) }
+fn direct(p: &mut Play, at: [f64; 3]) -> f64 { light_asked(&mut p.g, at, &[], false, game::fixtures::PASSING as f64) }
 
 /// THE RULE: a lamp's light dies away before the end of its reach: just inside it there is next to nothing, not the most of what a lamp that far off would give, and past it nothing.
 /// A FAILURE MEANS: a lamp's light stops at an edge on the floor, and a man one step over that edge is lit or not by a hard line nobody can see.
@@ -227,12 +227,11 @@ fn a_question_that_leaves_out_the_screens_gets_none_of_them() {
     p.g.ai_enabled = false;
     p.run(0.1);
     let at = {
-        let l = &sim::state::state_read(p.g.sim).lights;
-        let r = (0..l.rows as usize).find(|&r| l.row_bits[r] & sim::lights::R_SCREEN != 0 && l.row_bits[r] & sim::lights::R_ON != 0).expect("the office has a lit screen");
-        [l.x[r] + 0.4 * l.dx[r], l.y[r] + 0.4 * l.dy[r], l.z[r] + 0.4 * l.dz[r]]
+        let l = p.g.light_home.rows.iter().find(|l| l.leave & game::fixtures::SCREEN != 0 && l.on).expect("the office has a lit screen");
+        std::array::from_fn(|k| l.pos[k] + 0.4 * l.dir[k])
     };
-    let with = light_asked(&mut p.g, at, &[], false, sim::lights::R_PASSING as f64);
-    let without = light_asked(&mut p.g, at, &[], false, sim::lights::R_SCREEN as f64);
+    let with = light_asked(&mut p.g, at, &[], false, game::fixtures::PASSING as f64);
+    let without = light_asked(&mut p.g, at, &[], false, game::fixtures::SCREEN as f64);
     assert!(with > 0.2, "the staging: in front of a screen {with:.3}");
     assert!(without < 0.7 * with, "leaving out the screens {without:.3}, not leaving them out {with:.3}");
 }

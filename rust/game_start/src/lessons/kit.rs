@@ -60,9 +60,9 @@ async fn ring(b: &Bot, p: V3) -> bool {
     b.down("KeyB");
     b.hold(&["KeyB"], 0.45, || false).await;
     b.ticks(2).await;
-    if b.ask(|g| g.sets[g.seat].orders.menu.is_none()) { b.say(String::from("  the squad's ring did not come up")); return false }
+    if b.ask(|g| g.groups[g.group].orders.menu.is_none()) { b.say(String::from("  the squad's ring did not come up")); return false }
     let said = b.ask(|g| game::lesson::lesson_step(g).and_then(|t| t.menu_line)).unwrap_or_default();
-    let rows = || b.ask(|g| g.sets[g.seat].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
+    let rows = || b.ask(|g| g.groups[g.group].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
     let digits = Bot::digits(&said);
     b.say(format!("  the ring is up: '{}' -> {:?} · {}", said, digits, rows()));
     for d in digits { b.press(&format!("Digit{}", d), 4).await; b.say(format!("    [{}] -> {}", d, rows())); }
@@ -85,7 +85,7 @@ async fn deed(b: &Bot, id: &str) {
             b.ticks(20).await;
             let top = b.seen(|_, s| s.nearby.iter().find_map(|r| r.verb));
             if top != Some(Verb::Push) { b.fail(format!("a tap at the wooden door gives {:?}, not the door opened", top)).await; }
-            b.press(game::consts::INTERACT_KEY, 3).await;
+            b.press(game::consts::INTERACT_KEY.as_str(), 3).await;
             let d = b.door("inner");
             if !b.until(|| !b.closed(d), 5.0).await { b.fail(String::from("a tap of the interaction key did not open the wooden door")).await; }
         }
@@ -136,8 +136,8 @@ async fn deed(b: &Bot, id: &str) {
             let rows: Vec<&str> = b.seen(|_, s| s.nearby.iter().filter(|r| r.kind == InteractableKind::Door).map(|r| r.verb.map_or("-", |v| v.as_str())).collect());
             b.say(format!("  the door's rows: {}", rows.join(" ")));
             if rows.join(" ") != "charge" { b.fail(format!("the shop's door offers '{}', not the charge alone", rows.join(" "))).await; }
-            b.down(game::consts::INTERACT_KEY);
-            b.hold(&[game::consts::INTERACT_KEY], 0.5, || own_ring(b)).await;
+            b.down(game::consts::INTERACT_KEY.as_str());
+            b.hold(&[game::consts::INTERACT_KEY.as_str()], 0.5, || own_ring(b)).await;
             b.ticks(3).await;
             if !own_ring(b) { b.fail(String::from("the interaction key held on the locked door put no ring up")).await; }
         }
@@ -157,7 +157,7 @@ async fn deed(b: &Bot, id: &str) {
         "blow" => {
             let warned = b.seen(|g, s| game::view::tick_view(g, s).corner.iter().any(|n| n.text.find("TOO CLOSE:").is_some_and(|i| n.text[i..].split('·').next().unwrap_or("").split(|c: char| !c.is_alphanumeric()).any(|w| w == "you"))));
             if warned { b.fail(String::from("the mark that says stand clear is inside his own charge's backblast")).await; }
-            b.press(game::consts::INTERACT_KEY, 30).await;
+            b.press(game::consts::INTERACT_KEY.as_str(), 30).await;
         }
         // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
         "shop" => {

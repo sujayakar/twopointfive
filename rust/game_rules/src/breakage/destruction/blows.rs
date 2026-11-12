@@ -13,8 +13,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    js::or_bits(f.no_primary, f.no_shadow)
+    (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range
@@ -295,7 +294,7 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
         if g.tab.fixture[t].boxes.iter().any(|&b| b == i) && !g.tab.fixture[t].broken {
             if destruction_break_target(g, t) {
                 let pos = g.tab.fixture[t].pos;
-                crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.6), None);
+                crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.6), None);
             }
         }
     }
@@ -470,7 +469,7 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
         if !g.tab.fixture[t].broken {
             let lit = destruction_break_target(g, t);
             let pos = g.tab.fixture[t].pos;
-            crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
                 crate::render_lights::light_set_flash(g, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
                 let name = g.tab.fixture[t].name.clone();

@@ -117,7 +117,7 @@ impl Player {
                 ahead = Some([pos[0] + dx / d * 6.0, 1.1, pos[2] + dz / d * 6.0]);
                 if over.is_none() {
                     let f = self.ahead.get();
-                    for (on, key) in game::player::walk_keys(pos, [goal[0], goal[2]], [f[0], 0.0, f[1]]).into_iter().zip(game::player::WALK_KEYS) { if on { cmd.keys.push(String::from(key)); } }
+                    for (on, key) in game::player::walk_keys(pos, [goal[0], goal[2]], [f[0], 0.0, f[1]]).into_iter().zip(game::player::WALK_KEYS) { if on { cmd.keys.push(key.text()); } }
                 }
             }
             if self.sprint.get() { cmd.keys.push(String::from("ShiftLeft")); }
@@ -199,7 +199,7 @@ impl Player {
     // ---- his hands
     /// a key goes down for a tick. (The squad's is never pressed twice inside the window of a double press: his second is a second try at an order, never 'fall in')
     pub async fn key(&self, code: &str) {
-        let (quick, twice, secs) = self.ask(|g| (code == g.sets[g.seat].orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
+        let (quick, twice, secs) = self.ask(|g| (code == g.groups[g.group].orders.knobs.quick_key.as_str(), g.k.cmdring.twice, g.k.cmdring.twice_secs));
         if quick && twice {
             while self.t.get() < self.quick_at.get() + secs + 0.05 { self.tick().await }
             self.quick_at.set(self.t.get());
@@ -366,7 +366,7 @@ impl Player {
                 let rows = &s.nearby;
                 (rows.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
             });
-            if lit { self.down(game::consts::INTERACT_KEY); self.ticks(2).await; return true; }
+            if lit { self.down(game::consts::INTERACT_KEY.as_str()); self.ticks(2).await; return true; }
             if there { self.down("ArrowDown"); }
         }
         false

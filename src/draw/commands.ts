@@ -1,4 +1,4 @@
-// Written by tools/draw/gen.ts from rust/game_start/src/host/command.rs. To change a command, change it there.
+// Written by the program `half` (rust/game_start/src/bin/half) from rust/game_start/src/host/command.rs. To change a command, change it there.
 import { Writer } from './writer';
 
 /** what a player or a panel does that is not input, in its order, until a step takes it */
@@ -27,7 +27,7 @@ export class Commands extends Writer {
   letGo(): void { this.u32(10); }
   /** one knob, by its name (knobs.rs); a name no knob has is nothing */
   knob(name: string, value: number): void { this.u32(17); this.text(name); this.f64(value); }
-  /** encounter back */
+  /** nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and nothing is the mission's, the log's or the alarm's (`aside`); 0 puts a fresh encounter back */
   aside(on: number, x: number, z: number): void { this.u32(21); this.u32(on); this.f64(x); this.f64(z); }
   /** what each man is thinking is said over him (and the meters' raw numbers with it) */
   labels(on: number): void { this.u32(22); this.u32(on); }
@@ -43,7 +43,7 @@ export class Commands extends Writer {
   kitStageCards(kept: string, size: number): void { this.u32(30); this.text(kept); this.i32(size); }
   /** whose card is open (0 the player) and the row under its highlight */
   kitStageOpen(who: number, field: string): void { this.u32(31); this.u32(who); this.text(field); }
-  /** foot (a number that is none: not said) */
+  /** where the picture's men should sit in the view: its shape, then their middle, their share of its height and width and a man's, the door's line and the edges it is hung between, and the column's top and foot (a number that is none: not said) */
   kitStageFrame(aspect: number, cx: number, cy: number, h: number, w: number, man: number, door: number, left: number, right: number, keep: number, top: number, bottom: number): void { this.u32(32); this.f64(aspect); this.f64(cx); this.f64(cy); this.f64(h); this.f64(w); this.f64(man); this.f64(door); this.f64(left); this.f64(right); this.f64(keep); this.f64(top); this.f64(bottom); }
   /** the kit picture: the page has laid its copy over the picture, as the view's `veil` asked */
   kitStageUnder(): void { this.u32(33); }

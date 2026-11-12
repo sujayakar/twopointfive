@@ -406,7 +406,7 @@ fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
 
 /// nobody else of his side is alert (and free): he is on his own with it
 fn alone(g: &crate::game::Game, gd: GuardId) -> bool {
-    !g.guards.iter().any(|&o| o != gd && g.team(o) == g.team(gd) && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].hold)
+    !g.guards.iter().any(|&o| o != gd && g.team(o) == g.team(gd) && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].duty.holds)
 }
 
 /// The corner he holds, and whether it has the line on the fix
@@ -493,12 +493,12 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     let team = g.team(gd);
     let list = g.guards.clone();
     for o in list {
         let man = &g.gd[o];
-        if o == gd || g.cond[man.ch].down || man.held.is_some() || man.hold || man.pinned || g.ch[man.ch].team != team || man.script.is_some() {
+        if o == gd || g.cond[man.ch].down || man.held.is_some() || !man.duty.free() || g.ch[man.ch].team != team || man.script.is_some() {
             continue;
         }
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
@@ -573,7 +573,7 @@ fn move_lone_row(g: &mut Game, gd: GuardId, mut l: Lone, dt: f64) -> Option<TacM
 
 /// the alert branch with a fix and no eyes on his man: his role, else the lone man's angle, else None = the chase
 pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::tactics::TacMove> {
-    if !tactics_on(g) || g.gd[gd].last_known.is_none() || g.gd[gd].pinned || g.gd[gd].hold {
+    if !tactics_on(g) || g.gd[gd].last_known.is_none() || !g.gd[gd].duty.free() {
         return None;
     }
     s(g);
@@ -878,7 +878,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, gate: &mut crate
     let line = call_line(g, gate);
     crate::game::game_say(g, gd, &line, Some(true), None);
     let radio_at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(radio_at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(radio_at), Some(0.7), None);
     let Some(best) = whom_to_call(g, gd, gate.door) else { return };
     let marks = plan_for(g, gate.door, gate.side, gate.near_a);
     let spot = stack_spot(g, gate.door, gate.side, gate.near_a, 1.0, marks.as_ref()).pos;
@@ -955,7 +955,7 @@ fn comes_to(g: &mut Game, o: GuardId, spot: V3) {
     man.stall_ref = None;
     man.body_duty = None;
     man.search_plan = None;
-    man.task = None;
+    man.errand = None;
     match man.state {
         S::Patrol => {
             crate::mind::set_state(g, o, S::Suspicious, "tactics");
@@ -1059,7 +1059,7 @@ pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     }
     {
         let m = &g.gd[gd];
-        if m.script.is_some() || m.held.is_some() || m.hold || m.pinned || g.cond[m.ch].down || (m.state == crate::game::GuardState::Patrol && !m.drawn) {
+        if m.script.is_some() || m.held.is_some() || !m.duty.free() || g.cond[m.ch].down || (m.state == crate::game::GuardState::Patrol && !m.drawn) {
             return false;
         }
     }

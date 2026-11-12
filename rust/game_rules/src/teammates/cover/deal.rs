@@ -88,15 +88,15 @@ fn cover_build(g: &mut Game) {
 }
 
 /// His order leaves his eyes spare now.
-fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    if !g.tab.orders_assignment[a].spare.unwrap_or(false) || g.tab.orders_assignment[a].post.is_none() { return false; }
-    if g.tab.orders_assignment[a].from.is_none() { return false; }
+fn cover_spare(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
+    if !g.tab.task[a].spare.unwrap_or(false) || g.tab.task[a].post.is_none() { return false; }
+    if g.tab.task[a].from.is_none() { return false; }
     if rear_pin(g, gd).map_or(false, |p| p.out.unwrap_or(false)) { return true; }
-    let door = g.tab.orders_assignment[a].door;
+    let door = g.tab.task[a].door;
     for o in crate::seats::team_men(g, &crate::seats::here(g)) {
         if o == gd { continue; }
-        if let Some(b) = crate::seats::order_of(g, o) {
-            let row = &g.tab.orders_assignment[b];
+        if let Some(b) = crate::duty::order(g, o) {
+            let row = &g.tab.task[b];
             if row.post.is_some() && !row.spare.unwrap_or(false) && row.door == door { return true; }
         }
     }
@@ -104,17 +104,17 @@ fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 }
 
 /// His order has given him nothing to watch and no door to be at: his eyes are his own on the walk to his mark, and on it where the order says so.
-pub fn cover_eyes_free(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    let row = &g.tab.orders_assignment[a];
+pub fn cover_eyes_free(g: &Game, gd: GuardId, a: TaskId) -> bool {
+    let row = &g.tab.task[a];
     if row.watch.is_some() || row.door.is_some() { return false; }
     let walking = row.post.map_or(false, |p| v3::dist_xz(g.pos_of(gd), p) > ON_MARK_M);
     walking || crate::orders::rows::is(g, a, crate::orders::Is::LooksAbout)
 }
 
 /// Is this man free to be dealt an opening: the order he is under if so.
-fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
+fn cover_free(g: &mut Game, gd: GuardId) -> Option<TaskId> {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
-    let a = crate::seats::order_of(g, gd)?;
+    let a = crate::duty::order(g, gd)?;
     if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
     if crate::roomfight::room_fight_engaged(g, gd) || crate::cleared::walks_in(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
@@ -126,7 +126,7 @@ fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
 }
 
 /// What a rear man on a door-less mark watches.
-fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(GuardId, OrdersAssignmentId)], bodies: &[V3]) -> Option<crate::roomfit::Watchable> {
+fn cover_read_rear(g: &mut Game, gd: GuardId, a: TaskId, list: &[(GuardId, TaskId)], bodies: &[V3]) -> Option<crate::roomfit::Watchable> {
     let k = g.k.cover;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -135,13 +135,13 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
     if let Some(r) = &cached {
         if now >= r.t && now - r.t < k.rear_read_secs && v3::dist_xz(p, r.at) <= 0.5 { return r.pick.clone(); }
     }
-    let row = &g.tab.orders_assignment[a];
+    let row = &g.tab.task[a];
     let front = match row.watch { Some(w) => v3::yaw_to(w, p), None => row.face.unwrap_or(g.ch[c].body_yaw) };
     let deg = k.rear_read_deg * m::PI / 180.0;
     let same = |o: &crate::roomfit::Watchable, t: &crate::roomfit::Watchable| o.key == t.key || m::abs(v3::wrap_angle(v3::yaw_to(p, o.at) - t.yaw)) < (if o.way && t.way { 0.15 } else { deg });
     let mut theirs: Vec<crate::roomfit::Watchable> = Vec::new();
     for &(mt, b) in list {
-        if mt == gd || !g.tab.orders_assignment[b].spare.unwrap_or(false) { continue; }
+        if mt == gd || !g.tab.task[b].spare.unwrap_or(false) { continue; }
         if let Some(r) = g.cover.reads.get(b) {
             if let Some(pk) = &r.pick {
                 if now >= r.t && now - r.t <= k.rear_read_secs + 0.5 { theirs.push(pk.clone()); }
@@ -165,8 +165,8 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
 }
 
 /// A stack's rear man still on the walk to his mark, further out than the last steps.
-pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    let row = &g.tab.orders_assignment[a];
+pub fn cover_walk_only(g: &Game, gd: GuardId, a: TaskId) -> bool {
+    let row = &g.tab.task[a];
     if !row.spare.unwrap_or(false) || row.from.is_none() { return false; }
     match row.post {
         Some(post) => v3::dist_xz(g.pos_of(gd), post) > g.k.cover.rear_walk_m,
@@ -175,9 +175,9 @@ pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 }
 
 /// A door standing open by his way, with floor beyond it the team has not been on.
-fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bool {
+fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: TaskId) -> bool {
     let d = match g.tab.cover_opening[o].door { Some(d) => d, None => return false };
-    if Some(d) == g.tab.orders_assignment[a].door { return false; }
+    if Some(d) == g.tab.task[a].door { return false; }
     let open = g.dr[d].leaf.off || (!g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.doormanners.lane_ajar);
     if !open { return false; }
     let ra = crate::cleared::cleared_rooms_room_by(g, d, 1.0);
@@ -295,11 +295,11 @@ struct Cx {
     sams: Vec<CharId>,
     men: Vec<GuardId>,
     /// the free men with their orders, those following first in their places in the file
-    list: Vec<(GuardId, OrdersAssignmentId)>,
+    list: Vec<(GuardId, TaskId)>,
     /// the free men following, front to back
     file: Vec<GuardId>,
     bodies: Vec<(CharId, V3)>,
-    asg_of: JsMap<GuardId, OrdersAssignmentId>,
+    asg_of: JsMap<GuardId, TaskId>,
     spd: JsMap<GuardId, f64>,
     ways: JsMap<GuardId, Option<f64>>,
 }
@@ -393,8 +393,8 @@ fn held_by(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
     let (at, door) = (g.tab.cover_opening[o].at, g.tab.cover_opening[o].door);
     for &gd in &cx.squad {
         if cx.men.contains(&gd) { continue; }
-        let a = match crate::seats::order_of(g, gd) { Some(a) => a, None => continue };
-        let row = &g.tab.orders_assignment[a];
+        let a = match crate::duty::order(g, gd) { Some(a) => a, None => continue };
+        let row = &g.tab.task[a];
         let post = match row.post { Some(p) => p, None => continue };
         if v3::dist_xz(g.pos_of(gd), post) > 1.5 { continue; }
         if (door.is_some() && row.door == door) || row.watch.map_or(false, |w| v3::dist_xz(w, at) < 1.5) { return true; }
@@ -486,21 +486,21 @@ fn cover_deal(g: &mut Game) {
 }
 
 /// The men free to be dealt, with their orders: those following first, by their places in the file.
-fn free_men(g: &mut Game, squad: &[GuardId]) -> Vec<(GuardId, OrdersAssignmentId)> {
-    let mut list: Vec<(GuardId, OrdersAssignmentId)> = Vec::new();
+fn free_men(g: &mut Game, squad: &[GuardId]) -> Vec<(GuardId, TaskId)> {
+    let mut list: Vec<(GuardId, TaskId)> = Vec::new();
     for &gd in squad { if let Some(a) = cover_free(g, gd) { list.push((gd, a)); } }
-    let tab = &g.tab.orders_assignment;
-    let key = |a: OrdersAssignmentId| if tab[a].post.is_none() { tab[a].follow } else { 100.0 };
+    let tab = &g.tab.task;
+    let key = |a: TaskId| if tab[a].post.is_none() { tab[a].follow } else { 100.0 };
     js::sort_by(&mut list, |a, b| key(a.1) - key(b.1));
     list
 }
 
 /// Everything the stages of the deal read, as it stands now.
-fn who_is_where(g: &Game, sams: Vec<CharId>, squad: Vec<GuardId>, list: Vec<(GuardId, OrdersAssignmentId)>) -> Cx {
+fn who_is_where(g: &Game, sams: Vec<CharId>, squad: Vec<GuardId>, list: Vec<(GuardId, TaskId)>) -> Cx {
     let men: Vec<GuardId> = list.iter().map(|x| x.0).collect();
-    let mut asg_of: JsMap<GuardId, OrdersAssignmentId> = JsMap::new();
+    let mut asg_of: JsMap<GuardId, TaskId> = JsMap::new();
     for &(gd, a) in &list { asg_of.set(gd, a); }
-    let file: Vec<GuardId> = list.iter().filter(|x| g.tab.orders_assignment[x.1].post.is_none()).map(|x| x.0).collect();
+    let file: Vec<GuardId> = list.iter().filter(|x| g.tab.task[x.1].post.is_none()).map(|x| x.0).collect();
     let mut bodies: Vec<(CharId, V3)> = squad.iter().map(|&gd| (g.gd[gd].ch, g.pos_of(gd))).collect();
     for &sam in &sams { bodies.push((sam, g.ch[sam].pos)); }
     let mut spd: JsMap<GuardId, f64> = JsMap::new();
@@ -623,7 +623,7 @@ fn set_rear(g: &mut Game, r: CoverOpeningId, back: V3, p: V3, bl: f64) {
 }
 
 /// A man whose eyes are spare on a mark: HIS rear is the way he came to it, an opening only he can take, unless he already has a gun that way.
-fn rear_of_a_spare_man(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, gd: GuardId, a: OrdersAssignmentId) {
+fn rear_of_a_spare_man(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, gd: GuardId, a: TaskId) {
     let Some(back) = way_he_came(g, cx, gd, a) else { return };
     let p = g.pos_of(gd);
     let brg = v3::yaw_to(p, back);
@@ -638,13 +638,13 @@ fn rear_of_a_spare_man(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, gd: G
 }
 
 /// The point at his back: what he reads of his room from a door-less mark, or else the way he walked to it, or else the door's face behind him.
-fn way_he_came(g: &mut Game, cx: &Cx, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
+fn way_he_came(g: &mut Game, cx: &Cx, gd: GuardId, a: TaskId) -> Option<V3> {
     let k = g.k.cover;
-    let (spare, post, from) = (g.tab.orders_assignment[a].spare.unwrap_or(false), g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].from);
+    let (spare, post, from) = (g.tab.task[a].spare.unwrap_or(false), g.tab.task[a].post, g.tab.task[a].from);
     let (Some(post), Some(from), true) = (post, from, spare) else { return None };
     if cover_walk_only(g, gd, a) { return None; }
     let p = g.pos_of(gd);
-    let adoor = g.tab.orders_assignment[a].door;
+    let adoor = g.tab.task[a].door;
     let margin = if g.cover.reads.get(a).map_or(false, |r| r.pick.is_some()) { 0.5 } else { 0.0 };
     let read = if adoor.is_none() && v3::dist_xz(p, post) <= k.rear_read_in + margin {
         let points: Vec<V3> = cx.bodies.iter().map(|x| x.1).collect();
@@ -704,7 +704,7 @@ fn pinned_ways(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>) -> Vec<(Guard
 fn where_on_the_pin(g: &Game, gd: GuardId, pin: &crate::rearwatch::RearPin) -> Option<V3> {
     let o = pin.o;
     let j0 = g.cover.jobs.get(gd).copied();
-    let post = g.tab.orders_assignment[pin.a].post;
+    let post = g.tab.task[pin.a].post;
     let p = g.pos_of(gd);
     let mut to = crate::rearwatch::rear_sees(g, p, o, pin.front);
     if to.is_none() { if let Some(j) = j0 { if !j.off && j.o == o { to = Some(j.to); } } }
@@ -909,7 +909,7 @@ fn got_row<'a>(got: &JsMap<GuardId, CoverOpeningId>, live: &'a [LiveOpening], gd
 }
 
 /// Step to see: every open door nobody has a line into gets one man.
-fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, CoverOpeningId>, live: &[LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) {
+fn cover_step_deal(g: &mut Game, list: &[(GuardId, TaskId)], asg_of: &JsMap<GuardId, TaskId>, got: &JsMap<GuardId, CoverOpeningId>, live: &[LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) {
     let k = g.k.cover;
     let t = g.time;
     cover_prune_steps(g);
@@ -943,9 +943,9 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
             }
         }
         // (his order lets his feet go: under 'fall in' while Sam stands, or holding a spot with nothing named)
-        let (post, goal, t0) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].goal, g.tab.orders_assignment[a].t0);
+        let (post, goal, t0) = (g.tab.task[a].post, g.tab.task[a].goal, g.tab.task[a].t0);
         let may_step = if post.is_none() { sam_stopped(g, gd) } else {
-            let row = &g.tab.orders_assignment[a];
+            let row = &g.tab.task[a];
             crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.watch.is_none() && !row.spare.unwrap_or(false) && row.via.is_empty()
         };
         let placed = post.is_some() || !(k.step_place_m > 0.0) || v3::dist_xz(p, goal) <= k.step_place_m;
@@ -975,7 +975,7 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
             for &gd in tier.iter() {
                 let a = *asg_of.get(gd).unwrap();
                 let p = g.pos_of(gd);
-                let from: V3 = match (g.tab.orders_assignment[a].post, g.cover.steps.get(gd)) {
+                let from: V3 = match (g.tab.task[a].post, g.cover.steps.get(gd)) {
                     (Some(po), _) => [po[0], 0.0, po[2]],
                     (None, Some(s)) => s.from,
                     (None, None) => [p[0], 0.0, p[2]],
@@ -1000,8 +1000,8 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
 fn cover_prune_steps(g: &mut Game) {
     for gd in g.cover.steps.keys() {
         let sa = g.cover.steps.get(gd).unwrap().a;
-        let a = crate::seats::order_of(g, gd);
-        let gone = crate::condition::down(g, g.gd[gd].ch) || a != Some(sa) || (g.tab.orders_assignment[sa].post.is_none() && !sam_stopped(g, gd));
+        let a = crate::duty::order(g, gd);
+        let gone = crate::condition::down(g, g.gd[gd].ch) || a != Some(sa) || (g.tab.task[sa].post.is_none() && !sam_stopped(g, gd));
         if gone { g.cover.steps.delete(gd); }
     }
 }
@@ -1069,7 +1069,7 @@ fn cover_step_spot(g: &Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &
 }
 
 /// Where the cover has this man step to under the order he has now.
-pub fn cover_step_of(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
+pub fn cover_step_of(g: &Game, gd: GuardId, a: TaskId) -> Option<V3> {
     match g.cover.steps.get(gd) { Some(s) if s.a == a => Some(s.q), _ => None }
 }
 
@@ -1088,8 +1088,8 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     let j = match g.cover.jobs.get(gd).copied() { Some(j) => j, None => return };
     g.cover.jobs.delete(gd);
     if !taken && !j.off && script_aim_is(g, gd, j.aim) {
-        let a = crate::seats::order_of(g, gd).unwrap_or(j.a);
-        let row = &g.tab.orders_assignment[a];
+        let a = crate::duty::order(g, gd).unwrap_or(j.a);
+        let row = &g.tab.task[a];
         if row.spare.unwrap_or(false) && row.post.is_some() && row.from.is_some() {
             let t = g.time;
             g.cover.kept.set(gd, CoverKeptValue { j, t });
@@ -1109,8 +1109,8 @@ fn cover_release(g: &mut Game, gd: GuardId, j: CoverJob) {
 }
 
 /// `s.aimAt = A.watch`, and the gun-up carriage if nobody has changed it since.
-fn give_aim_back(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    let (watch, upper, stance) = (g.tab.orders_assignment[a].watch, g.tab.orders_assignment[a].upper, g.tab.orders_assignment[a].stance);
+fn give_aim_back(g: &mut Game, gd: GuardId, a: TaskId) {
+    let (watch, upper, stance) = (g.tab.task[a].watch, g.tab.task[a].upper, g.tab.task[a].stance);
     let s = g.gd[gd].script.as_mut().unwrap();
     s.aim_at = watch;
     if s.upper == Some(crate::character::UpperMode::Aim) && s.stance == Some(crate::character::Stance::None) {
@@ -1185,7 +1185,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     let kv = *g.cover.kept.get(gd)?;
     let p = g.pos_of(gd);
     if m::abs(g.time - kv.t) >= g.k.rear.secs || !script_aim_is(g, gd, kv.j.aim) { return None; }
-    let a = crate::seats::order_of(g, gd)?;
+    let a = crate::duty::order(g, gd)?;
     g.cover.kept.get_mut(gd).unwrap().j.a = a;
     let mut j = kv.j;
     j.a = a;
@@ -1203,7 +1203,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
         (along > 0.15 && along < len + k.in_m && m::abs(sx * fz - sz * fx) < k.lane_keep) || v3::dist_xz(b, j.to) < k.in_m
     };
     for pl in crate::seats::men_up(g) {
-        if ours(g.player_pos(pl)) { return None; }
+        if crate::group::is_seats(g) && ours(g.player_pos(pl)) { return None; }
     }
     for mt in crate::seats::team_men(g, &crate::seats::here(g)) {
         if mt != gd && !crate::condition::down(g, g.gd[mt].ch) && ours(g.pos_of(mt)) { return None; }

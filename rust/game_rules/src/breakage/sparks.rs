@@ -83,7 +83,6 @@ pub fn sparks_update(g: &mut crate::game::Game, dt: f64) {
 pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let p = g.sparks.params;
     let t = p.thickness * 0.5;
-    let bf = crate::scene_boxes::box_flag();
     for i in 0..g.sparks.pool.len() {
         let s = g.sparks.pool[i];
         if !s.alive { continue; }
@@ -99,7 +98,7 @@ pub fn sparks_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let mid = v3::lerp3(s.pos, tail, 0.5);
         let dir: V3 = if l > 1e-5 { [d[0] / l, d[1] / l, d[2] / l] } else { [0.0, 1.0, 0.0] };
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: mid, h: [t, t, m::max(p.min_streak * 0.5, l * 0.5)], yaw: Some(v3::yaw_of(d)), rot: Some(v3::quat::from_to([0.0, 0.0, 1.0], dir)),
-            albedo: Some([0.04, 0.03, 0.02]), emissive: Some(emissive), flags: Some((js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64), ..Default::default() });
+            albedo: Some([0.04, 0.03, 0.02]), emissive: Some(emissive), flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64), ..Default::default() });
         out.push(b.into());
     }
 }

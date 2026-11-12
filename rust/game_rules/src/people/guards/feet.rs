@@ -234,7 +234,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
-    let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
+    let why = if !g.gd[gd].duty.free() || !g.ai_enabled {
         Some(Off::Posted)
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
         Some(Off::NotAlert)
@@ -414,7 +414,7 @@ pub(in crate::people) fn team_through() -> f64 {
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
 fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag().glass }
+    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag::GLASS as f64 }
 }
 
 /// That man's own line to a point, asked bare.
@@ -426,7 +426,7 @@ pub fn eye_blocked(g: &crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool {
 /// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.
 pub fn eye_contact(g: &crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let is_player = crate::character::is_player(g, pc);
-    let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
+    let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag::GLASS as f64 };
     let tgt = g.ch[pc].bone_or(crate::character::Bone::Chest, 1.1);
     let tgt2 = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
     let smoked = is_player && smoke_trans < 0.3;

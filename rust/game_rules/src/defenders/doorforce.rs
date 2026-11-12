@@ -355,7 +355,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
     let mut b = door_he_believes_in(g, gd)?;
     let d = b.door;
     if man!(g, gd).on.is_none() { takes_his_stand_on_it(g, gd, &b); }
-    let free = !g.gd[gd].pinned && !g.gd[gd].hold;
+    let free = g.gd[gd].duty.free();
     let pos = g.ch[c].pos;
     let to = where_a_round_would_go(g, gd, &mut b, pos, dt);
     let st = stand!(g, gd);
@@ -547,7 +547,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     let lock: V3 = [hinge[0] + m::cos(closed) * (width - 0.2), 0.9, hinge[1] + m::sin(closed) * (width - 0.2)];
     if kk.phase != KickPhase::Kick && !shut(g, d) { return kick_end(g, gd, d, b, Some("it stands open"), false); }
     if kk.phase == KickPhase::Walk {
-        if g.gd[gd].pinned || g.gd[gd].hold { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
+        if !g.gd[gd].duty.free() { return kick_end(g, gd, d, b, Some("he has been put on a post"), true); }   // (the boot was a free man's; what he believes of the door stands, for the rounds)
         if g.time - kk.t0 > g.k.doorforce.walk_secs { return kick_end(g, gd, d, b, Some("the walk took too long"), false); }
         crate::guards::go_to(g, gd, kk.spot, None);
         let speed = g.tune.guard_investigate;

@@ -34,7 +34,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `devices.rs`, `chronicle/` | cameras, beams, keypads; the run's record, score and badges |
 | `unseen.rs`, `sneak/` | the team going low because Sam is (`team-feel.md`) |
 
-The hot loops are `rust/sim/src/fog.rs` (eyes against men), `rust/sim/src/light.rs` (lamps on a point) and `rust/sim/src/lights.rs` (fixtures, the
+The hot loops are `rust/sim/src/fog.rs` (eyes against men), `rust/sim/src/light.rs` (lamps on a point) and `air/fixtures.rs` (fixtures, the
 mains, the machines of cameras and beams). The hold and the wall are in `player/`, the meters in `game/doors.rs`.
 
 The page's half: `rust/game_draw/src/fog.rs` fills the fog's section, `src/draw/fog.ts` reads it into `src/render/fogofwar.ts` (kernels
@@ -152,7 +152,7 @@ the mains stop them (`alive`). `sensing` is off under a night breach and a rescu
   kept like `thing_recs`. The place's: nothing to do. No fog exception of its own, and no rule reads `g.fog_picture`.
 - **A new eye:** a `FogEye` in `teams_eyes`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
 - **A new row for Sam:** a `Verb`, its thing `Offers::add`ed with the row (a file of `player/offers/`, or a `*_rows` call from `around`), and the owner reads the seat's `act`.
-- **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `rust/sim/src/lights.rs`, drawn by
+- **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `air/fixtures.rs`, drawn by
   `device_boxes`.
 - **A price:** `ScoreK`; a new count is a `chron_*` and a `RunCounts` field.
 

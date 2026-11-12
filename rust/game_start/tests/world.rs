@@ -138,7 +138,7 @@ fn two_men(look: [f64; 2]) -> (Play, game::ids::GuardId, game::ids::GuardId) {
     let mut p = Play::scene(&s, &Opts { seed: 402, ..Default::default() });
     p.g.god_mode = true;
     let (a, b) = (p.guard("a"), p.guard("b"));
-    p.g.gd[b].hold = true;
+    p.g.gd[b].duty.holds = true;
     p.run(0.8);   // (his head comes to where he looks)
     (p, a, b)
 }
@@ -285,7 +285,7 @@ fn a_night_after_the_reel_is_a_fresh_night() {
     assert!(p.g.mission.stats.elapsed > 1.9);
 }
 
-/// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's, in its block.
+/// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's.
 /// A FAILURE MEANS: a checkpoint taken in a firefight by a window comes back to another game.
 #[test]
 fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
@@ -313,7 +313,7 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(p.g.falls.glass.waiting.len() != waiting, "the staging is wrong: nothing landed in two seconds");
-    p.g = kept.laid(p.g.sim);
+    p.lay(&kept);
     assert_eq!(p.g.falls.glass.waiting.len(), waiting, "put back: the landings waiting");
     for (k, want) in first.iter().enumerate() {
         p.frame();

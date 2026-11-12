@@ -7,7 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ private helpers
-fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
 /// the box a breakable stands in for
 fn own_box(g: &Game, b: WallbreakBreakableId) -> &crate::scene_boxes::Box { let x = g.tab.wallbreak_breakable[b].box_; &g.tab.boxes[x] }
 fn hide_box(g: &mut Game, b: BoxId) { let mut x = g.tab.boxes.edit(b); x.flags = (js::to_i32(x.flags) | js::to_i32(HIDE)) as f64; }
@@ -116,8 +115,7 @@ fn wall_break_index(g: &mut crate::game::Game) {
     }
     let world = crate::scene_world::world();
     let (w_, h_) = (world.grid_w, world.grid_h);
-    let f = flag();
-    let (shadow, primary, glass, dynamic) = (js::to_i32(f.no_shadow), js::to_i32(f.no_primary), js::to_i32(f.glass), js::to_i32(f.dynamic));
+    let (shadow, primary, glass, dynamic) = (crate::scene_boxes::box_flag::NO_SHADOW as i32, crate::scene_boxes::box_flag::NO_PRIMARY as i32, crate::scene_boxes::box_flag::GLASS as i32, crate::scene_boxes::box_flag::DYNAMIC as i32);
     let any = shadow | primary | glass | dynamic;
     for i in 0..g.col.boxes.len() {
         let b = g.col.boxes[i]; let fi = i as f64;
@@ -181,8 +179,7 @@ pub fn wall_break_adoptable(g: &crate::game::Game, index: f64) -> bool {
     if index < 0.0 || index >= g.col.boxes.len() as f64 || index >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(index)) || g.destr.walls.hidden.has(crate::Num(index)) { return false; }
     let b = g.col.boxes[index as usize];
     let (c, h, yaw, flags, em, rot) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
-    let f = flag();
-    if (flags & (js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic))) != 0 { return false; }
+    if (flags & (crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32)) != 0 { return false; }
     if rot || m::abs(m::sin(yaw)) > 1e-6 || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(index)) || crate::destruction::destruction_item_of(g, index).is_some() || crate::scene_boxes::shape_cut(g, b.into()) { return false; }
     let world = crate::scene_world::world();
     if c[0] < world.min[0] || c[0] > world.max[0] || c[2] < world.min[2] || c[2] > world.max[2] { return false; }
@@ -441,7 +438,7 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
         }
         let mut x = g.tab.boxes.edit(p);
         x.stud = true;
-        x.flags = (js::to_i32(x.flags) | js::to_i32(flag().thin)) as f64;
+        x.flags = (js::to_i32(x.flags) | crate::scene_boxes::box_flag::THIN as i32) as f64;
         x.albedo = v3::copy(studs[j].albedo); x.rough = Some(studs[j].rough); x.metal = Some(studs[j].metal); x.does = Some(studs[j].does);
     }
     for k in rects.len() + studs.len()..g.tab.wallbreak_breakable[b].slots.len() { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = g.col.boxes[s as usize]; hide_box(g, p); }

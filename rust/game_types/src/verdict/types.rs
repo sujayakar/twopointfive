@@ -1,6 +1,6 @@
 //! The types of `verdict`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -45,14 +45,14 @@ pub struct Track {
     pub next: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words, Crosses)]
 pub enum ManState {
     #[default] Dead,
     Out,
     Up,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RunVerdict {
     pub kind: Option<crate::scene_scenarios::MissionKind>,
     pub won: bool,
@@ -70,7 +70,7 @@ pub struct RunVerdict {
     pub start: [f64; 2],
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum Approach {
     Doors,
     Quiet,
@@ -78,7 +78,7 @@ pub enum Approach {
     Dark,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct VerdictMan {
     pub id: f64,
     pub name: String,
@@ -93,14 +93,14 @@ pub struct VerdictMan {
     pub path: Vec<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes, Default, Crosses)]
 pub struct RunVerdictFoes {
     pub down: f64,
     pub of: f64,
     pub fell: Vec<f64>,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, Debug, ToBytes, Default, Crosses)]
 pub struct RunVerdictHostages {
     pub alive: f64,
     pub of: f64,

@@ -54,7 +54,6 @@ pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
 pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment) -> bool {
     use crate::glasspen::PaneType;
     use crate::glassbreak::{FragmentCause as Cause, FragmentKind as Kind};
-    use crate::falls::FallSound;
     if !shards_live(g) { return false; }
     let e = match f.cause { Cause::Hit => 1.0, Cause::Blast => 1.5, Cause::Dice | Cause::Rake => 0.5, Cause::Support => 0.25 };
     let n = v3::normalize(f.normal);
@@ -82,7 +81,7 @@ pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &c
             let nb = glass_shards_budget(g, want);
             glass_shards_emit(g, v3::mad(f.centre, n, -0.03), v3::scale(n, -1.0), nb, spray((1.0 + 0.8 * e) * sp, 0.8, 1.0, fine_life * 0.8, 0.4, f.grain, 0.6, 1.3, 45.0, 1.0, spread * 0.6, None, tint), xor_u32(f.seed, 0xBACC as f64));
         }
-        if own { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a, f.who, Some(false)); }
+        if own { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, Some(crate::audio_iface::Sfx::GlassTinkle), 0.0, 1.0, a, f.who, Some(false)); }
     } else if dice {
         let grain = if f.grain > 0.0 { f.grain } else { 0.009 };
         let want = clamp_i(m::round(a * m::min(g.k.shards.dice_per_m2, 0.5 / (grain * grain))), g.k.shards.dice_min, g.k.shards.dice_max);
@@ -92,7 +91,7 @@ pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &c
         let want = clamp_i(m::round(a * g.k.shards.fine_per_m2 * g.k.shards.dice_fine_share), 4.0, fine_max);
         let nf = glass_shards_budget(g, want);
         glass_shards_emit(g, f.centre, n, nf, spray(1.6 * sp, 0.85, 1.2, fine_life, 0.4, fine_size * 0.8, 0.5, 1.2, 45.0, 1.0, spread, Some(v3::scale(f.velocity, 0.5)), tint), xor_u32(f.seed, 0xF17E as f64));
-        if own { glass_shards_schedule(g, to_sched(fall), FallSound::GlassShatter, m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * crate::debris::hash01(f.seed), a * 0.8, f.who, None); }
+        if own { glass_shards_schedule(g, to_sched(fall), Some(crate::audio_iface::Sfx::GlassShatter), m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * crate::debris::hash01(f.seed), a * 0.8, f.who, None); }
     } else if f.kind == Kind::Sheet {
         let nf = glass_shards_budget(g, clamp_i(m::round(a * 60.0), 4.0, 40.0));
         glass_shards_emit(g, f.centre, n, nf, spray(0.8 * sp, 0.8, 1.2, fine_life, 0.4, fine_size, 0.5, 1.2, 40.0, 1.0, spread, Some(f.velocity), tint), xor_u32(f.seed, 0xF17E as f64));
@@ -156,7 +155,7 @@ fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::glassbreak::Fragmen
         let c = v3::mad(v3::mad(fr.mid, fr.u, off), n, 0.02);
         let bx = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
             c, h: [hu, hv, m::max(0.004, f.thickness / 2.0)], yaw: Some(0.0), rot: Some(rot), albedo: Some(plate_albedo(f.tint, under, f.type_)),
-            flags: Some(crate::scene_boxes::box_flag().dynamic), ..Default::default()
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default()
         });
         let vel = v3::add(f.velocity, v3::add(v3::scale(fr.u, (j - (k - 1.0) / 2.0) * 0.25), [(h(1.0) - 0.5) * 0.3, -0.2 * h(2.0), (h(3.0) - 0.5) * 0.3]));
         let w: V3 = [f.spin[0] * (0.6 + 0.8 * h(4.0)) + (h(5.0) - 0.5) * 2.0, f.spin[1] + (h(6.0) - 0.5) * 2.0, f.spin[2] * (0.6 + 0.8 * h(7.0)) + (h(8.0) - 0.5) * 2.0];
@@ -225,7 +224,7 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
     }
     let bx = g.tab.debris_chunk[ch].box_;
     g.tab.edit(bx).rough = Some(0.05);
-    g.tab.edit(bx).flags = js::or_bits(g.tab[bx].flags, crate::scene_boxes::box_flag().no_shadow);
+    g.tab.edit(bx).flags = js::or_bits(g.tab[bx].flags, crate::scene_boxes::box_flag::NO_SHADOW as f64);
     if let Some(cut) = cut {
         if g.k.shards.cut_body > 0.0 {
             let at = g.tab[bx].c;
@@ -283,8 +282,8 @@ pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: D
     if breaks { g.shards.breaks.push(GlassShardsBreaksItem { c: c_2, speed }); }
     let big = m::min(1.0, meta.area / 0.08);
     let at = g.tab[bx].c;
-    if breaks { glass_shards_sound(g, "glassShatter", at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * crate::debris::hash01(serial * 31.0)); }
-    else { glass_shards_sound(g, "glassTinkle", at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * crate::debris::hash01(serial * 31.0)); }
+    if breaks { glass_shards_sound(g, crate::audio_iface::Sfx::GlassShatter, at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * crate::debris::hash01(serial * 31.0)); }
+    else { glass_shards_sound(g, crate::audio_iface::Sfx::GlassTinkle, at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * crate::debris::hash01(serial * 31.0)); }
     true
 }
 
@@ -435,7 +434,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
             let w_of = crate::scene_boxes::word_of(word);
             let child_box = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
                 c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: Some(yaw), rot: Some(rot), albedo: Some(v3::copy(balbedo)), stuff: w_of.stuff, does: w_of.does,
-                flags: Some(crate::scene_boxes::box_flag().dynamic), ..Default::default()
+                flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default()
             });
             let side = j - (k - 1.0) / 2.0;
             let vel = v3::add(cv, v3::add(v3::scale(l, side * (0.5 + 0.5 * h(20.0 + j))), [(h(30.0 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40.0 + j), (h(50.0 + j) - 0.5) * 0.5]));
@@ -530,7 +529,7 @@ fn glass_shards_fall_of(g: &crate::game::Game, c_2: V3, v: V3) -> crate::shards:
 }
 
 /// A landing put on the game's falls.
-fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassShardsScheduleFall, name: crate::falls::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: Option<bool>) {
+fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassShardsScheduleFall, name: Option<crate::audio_iface::Sfx>, gain: f64, rate: f64, amount: f64, who: f64, event: Option<bool>) {
     let event = event.unwrap_or(true);
     let t = g.time + fall.t;
     let cap = g.k.shards.pending_max;
@@ -542,26 +541,25 @@ fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassSh
 fn glass_shards_landing(g: &mut crate::game::Game, fall: crate::shards::GlassShardsLandingFall, gain: f64, rate: f64, amount: f64, who: f64) {
     let t = g.time + fall.t;
     let cap = g.k.shards.pending_max;
-    crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Glass, crate::falls::Landing { t, pos: fall.pos, sound: crate::falls::FallSound::GlassTinkle, gain, rate, amount, who, told: crate::falls::FallTold::Always, level: 0.0, dust: 0.0 }, cap);
+    crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Glass, crate::falls::Landing { t, pos: fall.pos, sound: Some(crate::audio_iface::Sfx::GlassTinkle), gain, rate, amount, who, told: crate::falls::FallTold::Always, level: 0.0, dust: 0.0 }, cap);
 }
 
 /// A voice, inside the frame's cap and the voice's gap; a merged landing thickens the next.
-fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: f64, rate: f64) {
+fn glass_shards_sound(g: &mut crate::game::Game, name: crate::audio_iface::Sfx, pos: V3, gain: f64, rate: f64) {
     if gain <= 0.0 { return; }
-    let key = String::from(name);
-    let gap = g.k.shards.sound_gap.get(key.clone()).copied().unwrap_or(0.0);
-    let since = g.time - g.shards.sound_at.get(key.clone()).copied().unwrap_or(-1e9);
+    let gap = g.k.shards.sound_gap.get(name).copied().unwrap_or(0.0);
+    let since = g.time - g.shards.sound_at.get(name).copied().unwrap_or(-1e9);
     if g.shards.sounds_this_frame >= g.k.shards.sounds_per_frame || (gap > 0.0 && since >= 0.0 && since < gap) {
         if gap > 0.0 {
-            let owed = m::min(g.k.shards.sound_thicken, g.shards.sound_owed.get(key.clone()).copied().unwrap_or(0.0) + gain * 0.25);
-            g.shards.sound_owed.set(key, owed);
+            let owed = m::min(g.k.shards.sound_thicken, g.shards.sound_owed.get(name).copied().unwrap_or(0.0) + gain * 0.25);
+            g.shards.sound_owed.set(name, owed);
         }
         return;
     }
-    let owed = if gap > 0.0 && since >= 0.0 && since < gap + g.k.shards.sound_owed_secs { g.shards.sound_owed.get(key.clone()).copied().unwrap_or(0.0) } else { 0.0 };
-    g.shards.sound_owed.set(key.clone(), 0.0);
+    let owed = if gap > 0.0 && since >= 0.0 && since < gap + g.k.shards.sound_owed_secs { g.shards.sound_owed.get(name).copied().unwrap_or(0.0) } else { 0.0 };
+    g.shards.sound_owed.set(name, 0.0);
     let now = g.time;
-    g.shards.sound_at.set(key, now);
+    g.shards.sound_at.set(name, now);
     g.shards.sounds_this_frame += 1.0;
     crate::audio_iface::game_audio_like_play(g, name, Some(v3::copy(pos)), Some(gain + owed), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
@@ -575,7 +573,7 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     if k == 0.0 { return level; }
     g.shards.crunch_n += 1.0;
     let rate = 0.85 + 0.3 * crate::debris::hash01(g.shards.crunch_n * 97.0);
-    crate::audio_iface::game_audio_like_play(g, "glassCrunch", Some([pos[0], 0.02, pos[2]]), Some(m::min(1.0, (0.35 + 0.65 * k) * m::min(1.5, 0.5 + level * 2.0))), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GlassCrunch, Some([pos[0], 0.02, pos[2]]), Some(m::min(1.0, (0.35 + 0.65 * k) * m::min(1.5, 0.5 + level * 2.0))), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     r.level
 }
 
@@ -610,7 +608,7 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     }
     let (level, gap) = (g.k.shards.level, g.k.shards.event_gap);
     for p in crate::falls::due(&mut g.falls, crate::falls::FallKind::Glass, now, level, gap) {
-        glass_shards_sound(g, p.sound.as_str(), p.pos, p.gain, p.rate);
+        if let Some(name) = p.sound { glass_shards_sound(g, name, p.pos, p.gain, p.rate); }
         if p.heard {
             let serial = g.serial();
             g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [p.pos[0], 0.0, p.pos[2]], time: now, loud: false, level: Some(p.level), who: Some(p.who), serial, ..crate::game::GameEvent::default() });

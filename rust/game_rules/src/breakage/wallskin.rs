@@ -86,8 +86,7 @@ fn brk_id(g: &Game, k: f64) -> Option<WallbreakBreakableId> { let b = g.destr.wa
 
 /// The authored statics that could be a sheet (drawn and nothing else, level, lightless) and those that are solid (met by rays and drawn, level, square).
 fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallSkin {
-    let f = crate::scene_boxes::box_flag();
-    let lone = js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
+    let lone = crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
     let mut w = WallSkin::blank();
     let n = authored as usize; w.solid = vec![0; n];
     for i in 0..n {
@@ -98,7 +97,7 @@ fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallS
         if b.rot.is_some() || b.round == Some(true) { continue; }
         let fl = js::to_i32(flags0.unwrap_or(b.flags)) & lone;
         if fl == 0 { w.solid[i] = 1; }
-        else if fl == js::to_i32(f.no_shadow) && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0 { w.cand.push(i as f64); }   // (trim a box says is asked like any other)
+        else if fl == crate::scene_boxes::box_flag::NO_SHADOW as i32 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0 { w.cand.push(i as f64); }   // (trim a box says is asked like any other)
     }
     w
 }

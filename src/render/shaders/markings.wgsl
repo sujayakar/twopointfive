@@ -9,7 +9,6 @@
 // baked lighting cannot be expressed. Prerequisite text: common.wgsl (frame, boxGeo, boxMat, MARK_BASE, boxRot, quatRotate). No derivative built-ins here
 // (the g-buffer hands its own in), so the module is legal in compute stages too.
 
-const MK_HEAD_ROWS: u32 = 8u;
 const MK_MINIFY_LO: f32 = 0.75;      // footprint (cells) where the fade toward the mean begins …
 const MK_MINIFY_W: f32 = 1.0;        // … and its width (fully the mean by 1.75 cells a pixel)
 const MK_LOCAL: u32 = 4u;            // the local box average reaches this many cells an axis before the global mean takes over
@@ -19,30 +18,30 @@ const MK_FACE_V = array<vec3f, 6>(vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.0, 0.0), ve
 
 /** one record's header, unpacked (scene/markings.ts packMarking) */
 struct MarkRec {
-  row: u32,                          // its first table row (the cells start at row + MK_HEAD_ROWS)
+  row: u32,                          // its first table row (the cells start at row + MARK_HEAD)
   U0: i32, V0: i32, W: i32, H: i32,
   face: u32, res: u32, last: bool, anyEmit: bool, areaLit: bool, emask: u32, palFlags: u32,
   f: vec3f,                          // coverage fractions of entries 1‥3
 };
 fn markLoad(row: u32) -> MarkRec {
   var m: MarkRec; m.row = row;
-  let r0 = boxMat[MARK_BASE + row]; let r1 = boxMat[MARK_BASE + row + 1u];
+  let r0 = markPlace(row);
   m.U0 = i32(round(r0.x)); m.V0 = i32(round(r0.y)); m.W = clamp(i32(round(r0.z)), 1, 32); m.H = clamp(i32(round(r0.w)), 1, 32);
-  let mw = u32(r1.x + 0.5);
+  let mw = u32(markSays(row) + 0.5);
   m.face = mw & 7u; m.res = (mw >> 3u) & 3u; m.last = ((mw >> 5u) & 1u) != 0u; m.anyEmit = ((mw >> 6u) & 1u) != 0u; m.areaLit = ((mw >> 7u) & 1u) != 0u; m.emask = (mw >> 8u) & 7u; m.palFlags = (mw >> 11u) & 63u;
-  m.f = r1.yzw;
+  m.f = markShares(row);
   return m;
 }
 /** rows this record takes (the next record of the box's list follows directly) */
-fn markRows(m: MarkRec) -> u32 { return MK_HEAD_ROWS + (u32(m.W * m.H) + 47u) / 48u; }
+fn markRows(m: MarkRec) -> u32 { return MARK_HEAD + (u32(m.W * m.H) + 47u) / 48u; }
 /** entry k's (1‥3) albedo + roughness (−1 = keep) and emitted radiance */
-fn markPalA(m: MarkRec, k: u32) -> vec4f { return boxMat[MARK_BASE + m.row + 2u * k]; }
-fn markPalE(m: MarkRec, k: u32) -> vec3f { return boxMat[MARK_BASE + m.row + 2u * k + 1u].xyz; }
+fn markPalA(m: MarkRec, k: u32) -> vec4f { return markPal(m.row, 2u * (k - 1u)); }
+fn markPalE(m: MarkRec, k: u32) -> vec3f { return markPal(m.row, 2u * (k - 1u) + 1u).xyz; }
 /** the palette entry of cell (i, j) (j from the bottom); 0 outside the bitmap or transparent */
 fn markCell(m: MarkRec, i: i32, j: i32) -> u32 {
   if (i < 0 || j < 0 || i >= m.W || j >= m.H) { return 0u; }
   let c = u32(j * m.W + i);
-  let word = u32(boxMat[MARK_BASE + m.row + MK_HEAD_ROWS + c / 48u][(c % 48u) / 12u]);   // an exact integer < 2^24: the u32 conversion is exact
+  let word = u32(boxMat[MARK_BASE + m.row + MARK_HEAD + c / 48u][(c % 48u) / 12u]);   // an exact integer < 2^24: the u32 conversion is exact
   return (word >> (2u * (c % 12u))) & 3u;
 }
 /** this record's cell size (m): the base × ½ / 1 / 2 */
@@ -299,7 +298,7 @@ fn markHit(slot: u32, bi: u32, wp: vec3f, n: vec3f, V: vec3f, fp: f32, kEmit: f3
   return o;
 }
 /** the 1-based first table row in a box's flags word (0 = no markings) — 0 for everybody while frame.markCfg.x says markings are off */
-fn markSlotOf(flags: u32) -> u32 { return select(0u, flags >> 18u, frame.markCfg.x > 0.0); }
+fn markSlotOf(flags: u32) -> u32 { return select(0u, boxWordMark(flags), frame.markCfg.x > 0.0); }
 // The reflection passes' RAY CONE, set once per pixel by their main() before the rays go out: the receiver pixel's own footprint (mkConeFp0, m), its growth per
 // metre past the mirror (mkConePix = the pixel's angular size: a planar mirror keeps the primary cone diverging at the same rate) and the LOBE's share per metre
 // (mkConeK = markConeK() × α). markReflHit band-limits a TRACED hit's markings by fp0 + t·(pix + k). The lobe's share is deliberately small (settings.markingReflCone,

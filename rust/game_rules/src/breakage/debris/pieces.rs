@@ -12,7 +12,7 @@ pub(super) fn landing_of(kind: ChunkKind) -> LANDINGValue {
 }
 
 pub(super) fn sfx_of(l: &LANDINGValue) -> Vec<ChunkSfxItem> {
-    l.sfx.iter().map(|s| ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect()
+    l.sfx.iter().map(|s| ChunkSfxItem { name: s.name, rate: s.rate, gain: s.gain }).collect()
 }
 
 // ---------------------------------------------------------------- the arithmetic of a box's attitude
@@ -88,7 +88,7 @@ fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_
     if !js::truthy(lv) { lv = l.level; }
     if !js::truthy(lv) { lv = landing_of(kind).level; }
     let t = g.time + f.t;
-    if crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Pieces, crate::falls::Landing { t, pos: f.pos, sound: crate::falls::FallSound::Empty, gain: 0.0, rate: 1.0, amount: 0.0, who, told: crate::falls::FallTold::Always, level: lv, dust: l.dust }, crate::falls::MAX_WAITING as f64) {
+    if crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Pieces, crate::falls::Landing { t, pos: f.pos, sound: None, gain: 0.0, rate: 1.0, amount: 0.0, who, told: crate::falls::FallTold::Always, level: lv, dust: l.dust }, crate::falls::MAX_WAITING as f64) {
         g.destr.debris.stats.told += 1.0;
     }
 }
@@ -136,7 +136,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
         albedo: Some(v3::copy(albedo)),
         stuff: word.stuff,
         does: word.does,
-        flags: Some(crate::scene_boxes::box_flag().dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         mkey: Some(crate::scene_boxes::mkey().debris + ((js::to_i32(serial) & 65535) as f64)),
         ..crate::scene_boxes::MakeBoxP::default()
     };
@@ -577,7 +577,7 @@ fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     let (sfx, serial) = { let ch = &g.tab.debris_chunk[c]; (ch.sfx.clone(), ch.serial) };
     for s in sfx.iter() {
         let gain = m::min(1.0, s.gain * (0.6 + speed * 0.15));
-        crate::audio_iface::game_audio_like_play(g, &s.name, Some(p), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: s.rate * (0.94 + 0.12 * hash01(serial * 31.0)) }));
+        crate::audio_iface::game_audio_like_play(g, s.name, Some(p), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: s.rate * (0.94 + 0.12 * hash01(serial * 31.0)) }));
     }
     if g.tab.debris_chunk[c].dress != Some(true) {
         let (time, level, who, ev) = (g.time, g.tab.debris_chunk[c].level, g.tab.debris_chunk[c].who, g.serial());

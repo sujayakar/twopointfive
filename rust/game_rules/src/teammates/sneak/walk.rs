@@ -81,7 +81,7 @@ pub fn sneak_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if !g.k.sneak.on { return false; }
     let (end, goal) = {
         let r = &g.gd[h];
-        if r.state != crate::game::GuardState::Suspicious || r.task.is_some() || r.body_duty.is_some() || r.hold || r.held.is_some() { return false; }
+        if r.state != crate::game::GuardState::Suspicious || r.errand.is_some() || r.body_duty.is_some() || r.duty.holds || r.held.is_some() { return false; }
         match (r.last_known, r.path_goal) { (Some(l), Some(pg)) => (l, pg), _ => return false }
     };
     if dist_xz(goal, end) > 1.0 { return false; }
@@ -204,7 +204,7 @@ fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guar
         Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
             let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
-            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);
+            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag::GLASS as f64);
             crate::guards::EyeContact { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
         }
     }
