@@ -6,7 +6,7 @@ import { $ } from "bun";
 import { faceWasm } from "./blitz/face-build.ts";
 const cloud = (process.env.TPS_CLOUD_URL ?? "").trim();
 if (cloud && !/^https:\/\/[\w.-]+(:\d+)?\/?$/.test(cloud)) { console.error(`build — TPS_CLOUD_URL is not an https address: ${cloud}`); process.exit(1); }
-await $`bun run tools/draw/ban.ts`;   // (the page makes no level: an import of what makes one stops the build)
+await $`bun run tools/draw/ban.ts`;   // (the page draws a game it does not hold, and makes no level)
 await $`rm -rf dist`;
 const res = await Bun.build({ entrypoints: ["./index.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" }, ...(cloud ? { define: { __TPS_CLOUD__: JSON.stringify(cloud) } } : {}) });
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
