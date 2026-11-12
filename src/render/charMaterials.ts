@@ -207,7 +207,7 @@ export function charSlots(ch: GltfCharacter): CharSlotData {
 
 // ---------------------------------------------------------------- the tables ----------------------------------------------------------------
 
-export type CharSide = 'operator' | 'defender' | 'responder' | 'civilian';
+export type CharSide = import('../draw/names').SideName;
 /** One slot's material. COLOUR: `albedo` as written, or taken from the character — `src` 'tint' / 'tint2' (Character.tint / tint2: the level's, the loadout
  *  screen's suit and trim) × `k`, then pulled `mix` of the way toward `albedo`; `pick` = one of these per man by his id (the irregulars' motley), pulled
  *  `mix` toward… the source when both are given. A row that is only `{ as: slot }` (SlotAlias) = this side has no such thing: the faces shade as that other

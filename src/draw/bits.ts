@@ -79,3 +79,65 @@ export const enum StepFlag {
   /** the save controller has its turn */
   Saves = 8,
 }
+
+/** what is said of a source of smoke */
+export const enum SourceFlag {
+  /** the picture's alone */
+  Look = 1,
+  /** gone when what it rides is */
+  Confined = 2,
+  /** its ride's direction is the smoke's velocity */
+  RidesVelocity = 4,
+  /** the men see through it too */
+  Held = 8,
+  /** a fire's, for the preset that sheds those */
+  Fire = 16,
+}
+
+/** what is said of a light */
+export const enum LightFlag {
+  Burns = 1,
+  Transient = 2,
+  Broad = 4,
+  /** a carried spot */
+  Card = 8,
+  Infrared = 16,
+  /** a hand's, Sam's own */
+  Moves = 32,
+}
+
+/** what is said of a source of moving air */
+export const enum WindFlag {
+  /** the storm is a field cut roof by roof */
+  Field = 1,
+  /** the air of a fire */
+  Heat = 2,
+}
+
+/** what of the picture's smoke begins again */
+export const enum ResetFlag {
+  /** all of it goes */
+  Smoke = 1,
+  /** the cans venting stop, what they let out left in the air */
+  Cans = 2,
+}
+
+/** what is said of a man, as what stands on the snow */
+export const enum FootFlag {
+  Alive = 1,
+  /** the fog hides him */
+  Hidden = 2,
+  /** a body */
+  Dead = 4,
+  /** and which bones he has */
+  Bones = 8,
+  LeftToe = 16,
+  RightToe = 32,
+}
+
+/** what is said of a part of a thing that moves over the ground */
+export const enum ThingFlag {
+  Rests = 1,
+  /** it lies on something that is not the ground */
+  LiesOn = 2,
+}

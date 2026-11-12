@@ -3,6 +3,7 @@
 // while it is there, and it is not caught up afterwards. The picture's own: it reads the things' rows and writes the prints' map; it rolls no die.
 import { snowFieldAt, type SnowField } from '../../render/snowField';
 import type { Drawn } from '../../draw/drawn';
+import { ThingFlag } from '../../draw/bits';
 import { Section, Thing } from '../../draw/sections';
 import { stampMark, pressGroove, pressClods, hash3, type SnowTracks } from './tracks';
 
@@ -72,7 +73,7 @@ export class SnowThings {
     for (let i = 0, o = D.at[Section.things]; i < n;) {
       const kind = u[o + Thing.kind], key = u[o + Thing.key];
       if (kind === 0) { let parts = 1; while (i + parts < n && u[o + parts * Thing.row + Thing.kind] === 0 && u[o + parts * Thing.row + Thing.key] === key) parts++; this.prop(T, field, dark, o, parts); i += parts; o += parts * Thing.row; continue; }
-      const x = f[o + Thing.c], y = f[o + Thing.c + 1], z = f[o + Thing.c + 2], vx = f[o + Thing.vel], vy = f[o + Thing.vel + 1], vz = f[o + Thing.vel + 2], rest = (u[o + Thing.says] & 1) !== 0, on = (u[o + Thing.says] & 2) !== 0, sp = Math.hypot(vx, vz);
+      const x = f[o + Thing.c], y = f[o + Thing.c + 1], z = f[o + Thing.c + 2], vx = f[o + Thing.vel], vy = f[o + Thing.vel + 1], vz = f[o + Thing.vel + 2], rest = (u[o + Thing.says] & ThingFlag.Rests) !== 0, on = (u[o + Thing.says] & ThingFlag.LiesOn) !== 0, sp = Math.hypot(vx, vz);
       if (kind === 1) this.thrown(T, field, dark, key, x, y, z, vy, sp, f[o + Thing.radius], rest, on);
       else this.chunk(T, field, dark, key, x, y, z, vy, sp, f[o + Thing.h], f[o + Thing.h + 1], f[o + Thing.h + 2], rest, on);
       i++; o += Thing.row;
@@ -82,7 +83,7 @@ export class SnowThings {
     const D = this.D, f = D.f, u = D.u, K = SNOWMARKS, R = Thing.row, key = u[o0 + Thing.key], px = f[o0 + Thing.at], pz = f[o0 + Thing.at + 1];
     let st = this.propSeen.get(key);
     if (!st) { st = new Float32Array(n * 2 + 1); for (let i = 0; i < n; i++) { st[i * 2] = f[o0 + i * R + Thing.c]; st[i * 2 + 1] = f[o0 + i * R + Thing.c + 2]; } this.propSeen.set(key, st); return; }
-    if (u[o0 + Thing.says] & 1) return;
+    if (u[o0 + Thing.says] & ThingFlag.Rests) return;
     const hid = !!dark && dark(px, pz), vx = f[o0 + Thing.vel], vz = f[o0 + Thing.vel + 2], speed = Math.hypot(vx, vz), radius = f[o0 + Thing.radius], mass = f[o0 + Thing.mass], sp = speed + Math.abs(f[o0 + Thing.spin]) * radius;
     const heavy = clamp(mass / Math.max(0.1, K.deepKg), 0, 1), force = K.force0 + K.forceKg * heavy + K.forceV * Math.min(2, sp);
     let strokes: number[] | null = null, far = 0;

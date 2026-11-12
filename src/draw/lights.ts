@@ -1,12 +1,11 @@
 // THE LIGHTS onto the renderer's set, from their section: a light is the same object for as long as it burns (the set knows last frame's slots by it), and its
 // numbers are written into it.
-import type { LightClass } from '../render/photometry';
 import type { LightSet, RtLight } from '../render/lights';
 import type { Drawn } from './drawn';
+import { LightFlag } from './bits';
+import { LIGHT_CLASSES } from './names';
 import { Light, Section } from './sections';
 
-const CLASSES: readonly LightClass[] = ['none', 'fixture', 'hand', 'vehicle', 'flash', 'face'];
-const BURNS = 1, TRANSIENT = 2, BROAD = 4, CARD = 8, IR = 16, MOVES = 32;
 
 export class DrawLights {
   private by = new Map<number, RtLight>();
@@ -19,11 +18,11 @@ export class DrawLights {
       let l = this.by.get(key);
       if (!l) { l = { name: '', group: '', kind: 0, pos: [0, 0, 0], dir: [0, -1, 0], color: [0, 0, 0], intensity: 0, range: 0, innerDeg: 0, outerDeg: 0, radius: 0, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, steady: undefined, transient: undefined, broad: false, markRef: undefined, card: false, slot: undefined, glassMask: undefined, fog: undefined, fogGhost: undefined, class: undefined }; this.by.set(key, l); }
       for (let k = 0; k < 3; k++) { l.pos[k] = f[o + Light.pos + k]; l.dir[k] = f[o + Light.dir + k]; l.color[k] = f[o + Light.color + k]; }
-      l.kind = u[o + Light.kind] as 0; l.class = CLASSES[u[o + Light.class]]; l.enabled = (says & BURNS) !== 0; l.transient = (says & TRANSIENT) !== 0; l.broad = (says & BROAD) !== 0; l.card = (says & CARD) !== 0;
-      l.group = (says & MOVES) !== 0 ? 'flashlights' : ''; l.owner = u[o + Light.owner]; l.markRef = (u[o + Light.mark] | 0) < 0 ? undefined : u[o + Light.mark];
+      l.kind = u[o + Light.kind] as 0; l.class = LIGHT_CLASSES[u[o + Light.class]]; l.enabled = (says & LightFlag.Burns) !== 0; l.transient = (says & LightFlag.Transient) !== 0; l.broad = (says & LightFlag.Broad) !== 0; l.card = (says & LightFlag.Card) !== 0;
+      l.group = (says & LightFlag.Moves) !== 0 ? 'flashlights' : ''; l.owner = u[o + Light.owner]; l.markRef = (u[o + Light.mark] | 0) < 0 ? undefined : u[o + Light.mark];
       l.intensity = f[o + Light.intensity]; l.peakIntensity = f[o + Light.peak]; l.range = f[o + Light.range]; l.innerDeg = f[o + Light.inner]; l.outerDeg = f[o + Light.outer]; l.radius = f[o + Light.radius];
       l.volumetric = f[o + Light.volumetric]; l.flicker = f[o + Light.flicker]; l.ttl = f[o + Light.ttl]; l.age = f[o + Light.age]; l.fog = f[o + Light.fog]; l.fogGhost = f[o + Light.ghost];
-      if (says & IR) I[b++] = l; else L[a++] = l; }
+      if (says & LightFlag.Infrared) I[b++] = l; else L[a++] = l; }
     L.length = a; I.length = b;
     if (this.by.size > n) for (const k of this.by.keys()) if (!this.seen.has(k)) this.by.delete(k);
   }

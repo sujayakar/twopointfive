@@ -8,14 +8,13 @@ import type { Drawn } from '../draw/drawn';
 import { DrawWinds } from '../draw/winds';
 import type { DrawWorld } from '../draw/world';
 import { snowConfig } from '../render/frame';
+import { ResetFlag } from '../draw/bits';
 import { Reset, Section, View } from '../draw/sections';
 import { AirPicture } from './air';
 import { FirePicture } from './fire';
 import { RainPicture, Roofs } from './rain';
 import { SnowPicture } from './snow/snow';
 import { skyFrom } from '../draw/sky';
-
-const SMOKE = 1, CANS = 2;
 
 export class WeatherPicture {
   readonly winds: DrawWinds; readonly air: AirPicture; readonly fire: FirePicture; readonly rain: RainPicture; readonly roofs: Roofs; readonly snow: SnowPicture | null;
@@ -35,8 +34,8 @@ export class WeatherPicture {
   told(): void {
     const D = this.D;
     if (D.n[Section.resets]) { const o = D.at[Section.resets], id = D.u[o + Reset.tick]; if (id !== this.said) { const w = D.u[o + Reset.what];
-      if (w & SMOKE) this.smoke.anew();
-      if (w & CANS) this.smoke.shutCans();
+      if (w & ResetFlag.Smoke) this.smoke.anew();
+      if (w & ResetFlag.Cans) this.smoke.shutCans();
       this.said = id; } }
   }
   /** a tick has run, the camera that follows it stepped */
