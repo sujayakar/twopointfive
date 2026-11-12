@@ -1,6 +1,6 @@
 //! The rules of the game, over its data: every module by one path, its types and its rules.
 #![no_std]
-#![allow(dead_code, unused_variables, unused_imports, non_snake_case, non_camel_case_types, non_upper_case_globals, unused_mut)]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 pub use game_types::*;
 pub mod tick;

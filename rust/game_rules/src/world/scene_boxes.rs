@@ -1,12 +1,11 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::scene_boxes::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{string::String, sync::Arc, vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
 
 // THE BOX TABLES' MAKERS. A box of the world is a row of `g.tab.boxes` and is never
 // dealt again, so its number is the same on every host. A box of the frame, or one its maker keeps a while, is a row of `g.tab.frame_boxes`: a row is freed by
@@ -149,7 +148,7 @@ pub fn word_of(b: crate::scene_boxes::WordOfB) -> crate::scene_boxes::WordOf {
 }
 
 /// The world's buffers and tables.
-pub fn box_world_new(g: &crate::game::Game, max_boxes: Option<f64>) -> crate::scene_boxes::BoxWorld {
+pub fn box_world_new(max_boxes: Option<f64>) -> crate::scene_boxes::BoxWorld {
     let wd = crate::scene_world::world();
     let max_boxes = max_boxes.unwrap_or(wd.max_boxes);
     let mut w = crate::scene_boxes::BoxWorld::blank();
@@ -173,17 +172,7 @@ pub fn box_world_keep_statics(g: &mut crate::game::Game, n: usize) {
     g.ray_grid = Default::default();
 }
 
-/// Static `i` goes and those after it close up, the one place one static is taken out. The grid's numbers then name other boxes, so the grid goes too: the rays ask one by one until the next tick opens.
-fn box_world_drop_static(g: &mut crate::game::Game, i: usize) {
-    g.engine.world.statics.remove(i);
-    g.ray_grid = Default::default();
-}
-
 /// Half extents in world XZ of a yawed or rotated box.
-fn box_world_footprint(g: &mut crate::game::Game, b: BoxId) -> [f64; 2] {
-    footprint_of(&g.tab.boxes[b])
-}
-
 fn footprint_of(b: &Bx) -> [f64; 2] {
     if let Some(rot) = b.rot {
         let ax = v3::quat::rotate(rot, [1.0, 0.0, 0.0]);
@@ -619,7 +608,7 @@ mod tests {
         assert!(box_world_at(&g, 219).is_some() && box_world_at(&g, 220).is_none());
         let mut seen = 2166136261u32;
         { let r = ray_grid(&g).unwrap(); seen = fnv_f(seen, r.globals.len() as f64); seen = fnv_f(seen, r.start[r.start.len() - 1] as f64); }
-        for i in 0..200 { let id = g.engine.world.statics[i]; let f = box_world_footprint(&mut g, id); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
+        for i in 0..200 { let id = g.engine.world.statics[i]; let f = footprint_of(&g.tab.boxes[id]); seen = fnv_f(seen, f[0]); seen = fnv_f(seen, f[1]); }
         assert_eq!(seen, GRID_WORD, "grid and footprints");
         let hits = rays(&mut g, &mut x);
         assert_eq!(hits, RAYS_WORD, "the rays through the grid");
@@ -643,14 +632,6 @@ mod tests {
         box_world_list(&mut g);
         let mut x5 = Lcg(777);
         assert_eq!(rays(&mut g, &mut x5), brute, "statics cut short: brute force against a grid made afresh");
-        // one static taken out from the middle: the same
-        box_world_drop_static(&mut g, 40);
-        assert!(ray_grid(&g).is_none());
-        let mut x6 = Lcg(777);
-        let brute = rays(&mut g, &mut x6);
-        box_world_list(&mut g);
-        let mut x7 = Lcg(777);
-        assert_eq!(rays(&mut g, &mut x7), brute, "a static taken out: brute force against a grid made afresh");
     }
 
     /// the ray as it is said: the statics of the cells round each half metre of it, in order, each once; the nearest entered and of two as near the first come on

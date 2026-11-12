@@ -1,7 +1,6 @@
 pub use ::game_types::ownblow::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
+use crate::v3;
 use alloc::string::String;
 
 /// The key a set charge's row names: the squad's while that key blows it, else the interaction's.

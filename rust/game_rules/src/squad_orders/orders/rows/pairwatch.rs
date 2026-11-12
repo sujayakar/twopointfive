@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair],
@@ -22,12 +22,12 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
     }
 }
 
-fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+fn valid(g: &mut Game, t: &OrderTarget, _: &[GuardId]) -> Result<(), Option<String>> {
     let OrderTarget::Foe(x) = t else { return Err(None) };
     rows::plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::pairorders::watch_issue(g, men, t)
 }
 

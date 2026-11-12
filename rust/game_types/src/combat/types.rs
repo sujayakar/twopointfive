@@ -1,7 +1,6 @@
 //! The types of `combat`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, V3};
+use alloc::vec::Vec;
 
 /// bodyHit's contact: what decides a round whose origin is already inside the man. `true` is the parameter's None. Entering = false: the entering hit only. Muzzle = fireWeapon's test. LegCrown = a later leg through glass, ro[1] <= headTop's height (or pos + 1.8). Flight = a ring or a 40 mm round, ro[1] < headTop's height (or pos + 1.75) + radius
 #[derive(Clone, Copy, Debug)]

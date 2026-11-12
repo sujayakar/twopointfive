@@ -1,8 +1,8 @@
 pub use ::game_types::scene_cut::types;
 pub use types::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{Quat, V3};
 use alloc::{vec, vec::Vec};
 
 /// A plane from any normal (normalised here) and its offset along that normal's length: keeps n · p ≤ d.

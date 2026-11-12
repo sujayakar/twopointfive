@@ -6,7 +6,6 @@ use super::plan::KIT_PLAN;
 use super::types::*;
 use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2};
 use crate::game::{Game, SlotKind};
-use crate::ids::*;
 use crate::m;
 use alloc::string::String;
 use alloc::vec;

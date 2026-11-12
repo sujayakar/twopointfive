@@ -1,9 +1,8 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::levelfit::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::boxworld::{MAX_BOXES, MAX_CELLS, MAX_CUTS, MAX_ITEMS, MAX_LEAVES, MAX_SHEETS, MAX_THINGS, MAX_TILTED};
 use alloc::{string::String, vec, vec::Vec};

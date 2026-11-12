@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a walk's price list ----

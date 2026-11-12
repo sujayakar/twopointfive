@@ -1,11 +1,10 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::blast_look::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 fn charge_look() -> CHARGELOOK {
@@ -36,7 +35,7 @@ pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear();  }
@@ -134,7 +133,6 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
 
 /// the stun charge's flash a wall charge borrowed (detonateStun lit it this frame where spawnBurst put it); None: none burning there
 fn flash_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
-    let b = crate::effects::bang();
     let mut at = crate::blast_feel::burst_at(g, w);
     at[1] += g.k.effects.bang.light_lift;
     let n = g.engine.lights.lights.len();
@@ -175,7 +173,7 @@ fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false })
 }
 
@@ -252,7 +250,7 @@ pub(super) fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
 }
 fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
     let set = g.sets[g.seat].wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;
@@ -333,7 +331,7 @@ fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::Wa
     if open { let t = crate::wallcharge::thick(g, w); ways.insert(0, (crate::wallcharge::wall_pt(g, w, 0.0, -(t + 0.1), Some(h)), v3::scale(n, -1.0), 0)); }
     let pale = v3::lerp3(g.tab.boxes[w.box_].albedo, [0.86, 0.85, 0.82], 0.45);
     struct F<'a> { count: &'a [f64], speed: &'a [f64], jit: f64, cone: &'a [f64], tilt: f64, life: f64, life_jit: f64, size: f64, size_jit: f64, aspect: Option<f64> }
-    let mut throw = |g: &mut Game, kind: PKind, f: F, color: Option<V3>| {
+    let throw = |g: &mut Game, kind: PKind, f: F, color: Option<V3>| {
         let kk = if kind == PKind::Spark { k } else { one };
         for way in ways.iter() {
             let i = if open { way.2 } else { 0 };   // (a wall that held: everything it had comes back off the near face)
@@ -356,7 +354,7 @@ fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::Wa
 /// go the same two ways), a low fan all round, a small fountain, embers.
 fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
-    let (kk, b, k) = (g.k.blast_look.stun_sparks, crate::effects::bang(), scale(g));
+    let (kk, k) = (g.k.blast_look.stun_sparks, scale(g));
     let seed = g.fx_seed - 1.0;
     let rnd = |i: f64| { let t = m::sin(seed * 37.31 + i * 91.7) * 43758.5453; t - m::floor(t) };
     let yaw = rnd(1.0) * m::PI * 2.0;

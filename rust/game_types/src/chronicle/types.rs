@@ -1,6 +1,5 @@
 //! The types of `chronicle`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]

@@ -1,6 +1,5 @@
 //! The types of `duty`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, Blank, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, Blank, ids::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// WHAT A MAN IS HELD TO, whoever gave it him: one record for every man of any side. A squad's order, a defender's post, a mission's mark and a night man's lockdown all write it

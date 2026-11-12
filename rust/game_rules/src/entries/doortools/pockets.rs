@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 
@@ -389,7 +389,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
     if out.is_empty() {
         return door_tools_pods(g, d, side, Some(n));
     }
-    let mut pts = js_slice(&out, 0, n as usize);
+    let pts = js_slice(&out, 0, n as usize);
     pts
 }
 
@@ -463,8 +463,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     }
     let queue: Vec<DoorToolsDoneItemQueueItem> = in_men
         .iter()
-        .enumerate()
-        .map(|(i, &gd)| DoorToolsDoneItemQueueItem { gd, pod: deal.get(gd).copied().unwrap_or(pods[0]) })
+        .map(|&gd| DoorToolsDoneItemQueueItem { gd, pod: deal.get(gd).copied().unwrap_or(pods[0]) })
         .collect();
     let o = &mut g.tab.doortools_door_op[op];
     o.rear.clear();

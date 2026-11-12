@@ -1,6 +1,5 @@
 //! The types of `weapons`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// WHICH OF THE THREE A GUN IS: a Pistol's and a Rifle's own rows are fields of the one Firearm (g.fa)

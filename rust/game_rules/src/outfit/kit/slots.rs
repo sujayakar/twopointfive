@@ -3,7 +3,7 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn your_issue_fills_your_four_pouches_on_the_pages_table() {
-        let mut g = Game::blank();
+        let g = Game::blank();
         let t = g.k.slots.table.clone();
         let c = issued()[0].clone();
         assert_eq!(cost_of(&c, &t), 4.0);

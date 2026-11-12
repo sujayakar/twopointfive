@@ -1,13 +1,11 @@
 //! A SQUAD MAN IN THE FIGHT: his eyes on each of them, who his muzzle is on, what he does with nobody in his sight, and his fire.
-#![allow(unused_imports)]
 use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// the sight gain, with the hunting man's x2.2 for a scripted man.
 fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardId, dist: f64, known: Option<bool>) -> f64 {
@@ -486,7 +484,6 @@ struct CueLook {
     eye: V3,
     gone: Option<GuardId>,
     arc: Option<f64>,
-    a: Option<TaskId>,
     on_way_to_door: bool,
     look: Option<OpTurn>,
 }
@@ -524,7 +521,7 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let a = crate::duty::order(g, gd);
     let arc = arc_of_his_hold(g, c, a);
     let on_way_to_door = match a { Some(id) => g.tab.task[id].door.is_some() && !g.tab.task[id].arrived, None => false };
-    let s = CueLook { o, gd, c, eye, gone, arc, a, on_way_to_door, look };
+    let s = CueLook { o, gd, c, eye, gone, arc, on_way_to_door, look };
     let mut cause = round_from_a_man_in_his_line(g, s);
     if cause.is_none() { cause = man_a_mates_muzzle_is_on(g, s); }
     if cause.is_none() { cause = footsteps_coming(g, s); }

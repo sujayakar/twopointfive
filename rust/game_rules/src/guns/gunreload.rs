@@ -2,10 +2,10 @@ pub use ::game_types::gunreload::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 /// how this row is fed right now; None: a magazine change as it always was
 pub fn feed_of(def: &crate::weapons::WeaponDef) -> Option<crate::gunreload::FEEDValue> {

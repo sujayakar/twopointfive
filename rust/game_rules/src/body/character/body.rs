@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use alloc::{vec, vec::Vec};
 
 // ---- small private helpers ----
 
@@ -1102,7 +1101,6 @@ mod tests {
         assert!(pin(&rag, &mut gd, R.pelvis, end)[1] < 0.3, "and then he is sitting on the floor");
     }
 }
-
 
 // ---- the animator's place: `anim.pos_in` and the body's `pos`
 //

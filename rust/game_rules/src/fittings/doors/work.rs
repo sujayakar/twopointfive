@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// A door's sound, heard and played.
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
@@ -380,6 +380,7 @@ pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys:
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     // every number below is pinned

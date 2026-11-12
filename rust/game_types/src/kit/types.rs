@@ -1,6 +1,5 @@
 //! The types of `kit`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// KitRow.get and .set: a row that is not one field of the card reads and writes it itself. The arm says which
@@ -450,10 +449,6 @@ pub fn suits() -> JsMap<String, crate::kit::SUITSValue> { { let mut t = JsMap::n
 pub fn trims() -> JsMap<String, crate::kit::TRIMSValue> { { let mut t = JsMap::new(); t.set(String::from("black"), crate::kit::TRIMSValue { label: String::from("black"), tint: [0.03, 0.03, 0.035] }); t.set(String::from("red"), crate::kit::TRIMSValue { label: String::from("red"), tint: [0.55, 0.07, 0.05] }); t.set(String::from("blue"), crate::kit::TRIMSValue { label: String::from("blue"), tint: [0.07, 0.2, 0.6] }); t.set(String::from("green"), crate::kit::TRIMSValue { label: String::from("green"), tint: [0.1, 0.32, 0.18] }); t.set(String::from("amber"), crate::kit::TRIMSValue { label: String::from("amber"), tint: [0.6, 0.38, 0.05] }); t.set(String::from("white"), crate::kit::TRIMSValue { label: String::from("white"), tint: [0.6, 0.6, 0.58] }); t } }
 
 pub const WALLS_MAX: f64 = 2.0;
-
-
-
-
 
 pub fn trim() -> Vec<crate::kit::Thing> { alloc::vec![crate::kit::Thing::Rings, crate::kit::Thing::Shells, crate::kit::Thing::Smoke, crate::kit::Thing::Frags, crate::kit::Thing::Charges, crate::kit::Thing::Bangs, crate::kit::Thing::Cams, crate::kit::Thing::Wand, crate::kit::Thing::Walls, crate::kit::Thing::Shotgun, crate::kit::Thing::Hammer] }
 

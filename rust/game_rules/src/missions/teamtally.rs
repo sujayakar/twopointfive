@@ -1,6 +1,5 @@
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use alloc::string::String;
 
 /// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.

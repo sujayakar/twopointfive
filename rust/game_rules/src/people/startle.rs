@@ -1,10 +1,7 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::startle::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::v3::{self, Quat, V3};
-use alloc::vec::Vec;
+use crate::v3::{self, V3};
 
 /// the script lent for the frame, as the run left it, put back on his row: the tick reads its `arrived`.
 pub(super) fn startle_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
@@ -205,6 +202,7 @@ fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
     use crate::game::GuardState;
 

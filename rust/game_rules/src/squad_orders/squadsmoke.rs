@@ -4,9 +4,9 @@ pub use types::*;
 pub const SMOKE_ORDER: &str = crate::orders::rows::smokethere::ORDER.id;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// The squad's smoke canisters left this run.
@@ -143,7 +143,7 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 }
 
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given.
-pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, _: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let key = g.group;
     let at = t.at();
     let has_cans = match g.m.squadsmoke.states.get(key) { Some(s) => s.cans > 0.0, None => false };

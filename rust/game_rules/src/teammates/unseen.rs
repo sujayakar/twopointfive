@@ -3,8 +3,8 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String};
+use crate::v3::V3;
+use alloc::string::String;
 
 // ------------------------------------------------------------ the state
 

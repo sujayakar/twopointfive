@@ -1,10 +1,9 @@
 use crate::boxworld::{SNOW_BANK, SNOW_BARE, SNOW_OLD, SNOW_PACKED};
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use alloc::vec::Vec;
 
 /// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's.
 pub fn bog_run(g: &crate::game::Game, bog: f64) -> f64 {
@@ -35,7 +34,7 @@ pub fn lie(g: &mut Game) {
 /// May the ground bog anything in this game now.
 pub fn snow_bog_may(g: &crate::game::Game) -> bool {
     let name = crate::scene_level_load::level_name_of(g);
-    crate::weather_kinds::snow_level(g, name.as_deref())
+    crate::weather_kinds::snow_level(name.as_deref())
 }
 
 /// How boggy the ground is where a thing touched down, 0 to 1, over the level's snow and the weather's roofs.

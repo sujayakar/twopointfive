@@ -72,11 +72,6 @@ pub fn ceil(x: f64) -> f64 {
     let f = floor(x);
     if f == x || x != x { x } else if f == -1.0 && x > -1.0 { -0.0 } else { f + 1.0 }
 }
-/// `Math.fround`: the nearest single, as a double
-#[inline]
-pub fn fround(x: f64) -> f64 {
-    (x as f32) as f64
-}
 /// `Math.imul`
 #[inline]
 pub fn imul(a: i32, b: i32) -> i32 {

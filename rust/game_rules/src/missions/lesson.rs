@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 // ---- the lines: their patterns written out by hand (no regex in the game). All works on bytes, as every pattern here

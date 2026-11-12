@@ -1,9 +1,6 @@
-#![allow(unused_variables)]
 pub use ::game_types::audio_iface::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
-use alloc::string::String;
+use crate::v3::V3;
 
 /// a sound at a place, as loud as this
 pub fn play_at(g: &mut crate::game::Game, name: Sfx, at: V3, gain: f64) { game_audio_like_play(g, name, Some(at), Some(gain), None); }

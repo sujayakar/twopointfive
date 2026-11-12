@@ -8,6 +8,7 @@
 //!   face_out_ptr() · face_out_len()           the bytes the last call that tells anything told: read before the next
 //!   face_panic_ptr() · _len() · _clear()      what the last panic said, with its file and line. The module is built to abort on a panic, so the host sees a trap; it reads the words here. The
 //!                                             game of that call is gone (`with` takes it out for the call, so no borrow is left behind), and every game kept is whole (saves.rs, moment.rs)
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 use game::bytes::W;
 use game::crosses::Answer;
 use game::view::{ActionRow, AheadView, CursorView, DebriefView, EndView, FloorView, HandsSaid, KnobRow, MapView, Met, OutcomeView, Recovered, RunView, SavesTold, SavesView, ShownRow, SoundPath, Tally, TickView};

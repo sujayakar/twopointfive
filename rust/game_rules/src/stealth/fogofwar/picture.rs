@@ -7,13 +7,11 @@
 //! What the team knows (who is seen, which doors, lamps and loose things are remembered and how, who the team is) is the rest of fogofwar/ and is the
 //! game's: every machine of one game holds it the same. This file reads it: `lamp_recs` for a lamp, `hidden_chars` for a man.
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::js;
 use crate::m;
 use crate::v3::V3;
 use alloc::{vec, vec::Vec};
-
 
 /// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody

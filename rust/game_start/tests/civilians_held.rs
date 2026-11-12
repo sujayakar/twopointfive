@@ -65,7 +65,7 @@ fn a_held_civilian_talks_stays_down_and_tells_the_first_man_who_finds_her() {
         p.g.pl[me].holstered = true;
         p.run(0.05);
         assert!(p.grab_row(m), "seed {s}: from close behind her there is no grab");
-        game::player::start_grab(&mut p.g, m, None);
+        game::player::start_grab(&mut p.g, m);
         p.run(1.4);
         assert!(p.in_arm() == Some(m), "seed {s}: she is not in his arm");
         for _ in 0..2 {

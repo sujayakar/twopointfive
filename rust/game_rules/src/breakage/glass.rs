@@ -2,13 +2,12 @@ pub use ::game_types::glass::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---- the box table ----
-
 
 // ---- private helpers ----
 
@@ -360,7 +359,7 @@ mod tests {
 
     #[test]
     fn off_the_list_is_no_box() {
-        let mut g = Game::blank();
+        let g = Game::blank();
         for i in [-1.0, 0.5, f64::NAN, 3.0] { assert_eq!(g.box_at(i), None, "{}", i); }
     }
 }

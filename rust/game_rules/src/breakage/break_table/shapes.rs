@@ -1,11 +1,9 @@
-#![allow(unused_variables)]
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// The row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
 pub(super) fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
@@ -339,7 +337,6 @@ pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Opt
     let (yaw, h, c) = { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) };
     wall_normal_at(yaw, h, c, toward, keep)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! WHAT IS PAINTED ON A WALL GOES WITH THE WALL, whole. A sheet (an authored static that is drawn and nothing else) is drawn where
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
@@ -15,10 +14,10 @@ pub use ::game_types::wallskin::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 use crate::scene_cut::CutPlane;
 

@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
@@ -823,7 +823,6 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
     }
     pin_start(g, l);
 }
-
 
 /// FIRE FROM AN ANGLE: of the men held on the lane with a burst in his gun and a corner no nearer the guns than `pinMinM`, in turn, one steps to it
 fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {

@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
@@ -25,6 +25,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     }
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     match crate::doortools::door_tools_threshold_hold(g, men, t) { crate::doortools::DoorToolsThresholdHold::Text(w) => Some(w), crate::doortools::DoorToolsThresholdHold::Arm1(()) => None }
 }

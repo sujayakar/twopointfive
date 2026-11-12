@@ -2,9 +2,9 @@ pub use ::game_types::roomfit::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is.

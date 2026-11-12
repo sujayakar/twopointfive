@@ -1,7 +1,6 @@
 //! The types of `input`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, js::*};
+use alloc::string::String;
 
 #[derive(Clone, Debug, Blank)]
 pub struct Input {

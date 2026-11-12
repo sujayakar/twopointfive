@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// THE SIDE IT OPENS INTO: the sign of every angle it can stand at; the page's DOORWAY: exitsOut off, leafWay on
 pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
@@ -193,7 +192,7 @@ pub(super) fn pose_of(hinge: [f64; 2], w: f64, closed_dir: f64, thick: f64, heig
 }
 
 /// the level's doors. `emit` is not kept: the word is `Doors.sound`'s to say, by name
-pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent)) -> crate::doors::Doors {
+pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef]) -> crate::doors::Doors {
     assert!(defs.len() <= DOOR_CAP, "a level of {} doors: the game holds {}", defs.len(), DOOR_CAP);
     let mut list = Vec::with_capacity(defs.len());
     for (i, d) in defs.iter().enumerate() {
@@ -274,6 +273,7 @@ pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     extern crate std;
     use super::*;
     fn bits(x: &[f64]) -> Vec<u64> { x.iter().map(|v| v.to_bits()).collect() }

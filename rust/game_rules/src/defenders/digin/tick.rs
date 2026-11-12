@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{format, vec, vec::Vec};
 
 // THE LIVE STATE is g.m.digin.states, reached by state_of. A function with `m: &mut Man` or `r: &mut RoomSt` holds a copy of that row checked out:
 // the top of the stack (dig_in_tick, dig_in_release; row_put for a room) writes it back. `drop` writes a room's bracer to the table: never call it with that row checked out.

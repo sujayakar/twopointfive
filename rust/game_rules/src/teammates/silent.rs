@@ -2,9 +2,9 @@ pub use ::game_types::silent::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsSet;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{string::String, vec, vec::Vec};
 
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
@@ -295,6 +295,7 @@ pub fn silent_tick(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use super::*;
     #[test]
     fn the_hud_word_after_loud() {

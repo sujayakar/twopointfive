@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint.
 pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Frame {

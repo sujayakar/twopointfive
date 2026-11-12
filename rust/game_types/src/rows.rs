@@ -147,6 +147,7 @@ mod tests {
     fn a_part_of_a_word_is_read_back_and_no_other_s() {
         let w = Word::of(200, 17, 255);
         assert_eq!((w.low(), w.mid(), w.top()), (200, 17, 255));
+        assert_eq!((Word::TABLE.parts.len(), Share::TABLE.parts.len()), (3, 3));
         let over = Word::of(256 + 3, 32 + 1, 0);
         assert_eq!((over.low(), over.mid(), over.top()), (3, 1, 0));
     }

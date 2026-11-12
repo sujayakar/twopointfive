@@ -110,15 +110,16 @@ fn load_base(f: GltfFile) -> Base {
     // ---- mesh (merge all primitives of the first skinned mesh) ----
     let mesh_node = g.get("nodes").items().iter().position(|nd| nd.has("mesh") && nd.has("skin")).expect("gltf: no skinned mesh");
     let mesh = g.get("meshes").at(g.get("nodes").at(mesh_node).get("mesh").num().unwrap() as usize);
-    struct Prim { pos: Accessor, nrm: Accessor, jn: Accessor, wt: Accessor, idx: Accessor, mat: f64, material: u8 }
-    let (mut vcount, mut icount) = (0usize, 0usize);
-    let prims: Vec<Prim> = mesh.get("primitives").items().iter().enumerate().map(|(pi, p)| {
+    struct Prim { pos: Accessor, nrm: Accessor, jn: Accessor, wt: Accessor, material: u8 }
+    let mut vcount = 0usize;
+    let prims: Vec<Prim> = mesh.get("primitives").items().iter().map(|p| {
         let at = p.get("attributes");
         let acc = |k: &str| o.accessor(at.get(k).num().unwrap_or_else(|| panic!("gltf: a primitive with no {}", k)));
-        let (pos, nrm, jn, wt, idx) = (acc("POSITION"), acc("NORMAL"), acc("JOINTS_0"), acc("WEIGHTS_0"), o.accessor(p.get("indices").num().expect("gltf: a primitive with no indices")));
-        vcount += pos.count; icount += idx.count;
+        let (pos, nrm, jn, wt) = (acc("POSITION"), acc("NORMAL"), acc("JOINTS_0"), acc("WEIGHTS_0"));
+        if !p.has("indices") { panic!("gltf: a primitive with no indices"); }
+        vcount += pos.count;
         let m = p.get("material").num();
-        Prim { pos, nrm, jn, wt, idx, mat: m.unwrap_or(pi as f64), material: match m { Some(x) if x < 255.0 => x as u8, _ => 255 } }
+        Prim { pos, nrm, jn, wt, material: match m { Some(x) if x < 255.0 => x as u8, _ => 255 } }
     }).collect();
     let joints_are_u16 = prims.iter().any(|p| p.jn.comp == 5123);
     let mut md = MeshData {
@@ -128,7 +129,7 @@ fn load_base(f: GltfFile) -> Base {
         bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: None,
         mat_index: Some(vec![0; vcount]),
     };
-    let (mut vo, mut io) = (0usize, 0usize);
+    let mut vo = 0usize;
     for p in prims {
         let n = p.pos.count;
         let (pos, nrm) = (p.pos.data.f32(), p.nrm.data.f32());
@@ -147,7 +148,7 @@ fn load_base(f: GltfFile) -> Base {
             md.bbox_min = [game::m::min(md.bbox_min[0], x), game::m::min(md.bbox_min[1], y), game::m::min(md.bbox_min[2], z)];
             md.bbox_max = [game::m::max(md.bbox_max[0], x), game::m::max(md.bbox_max[1], y), game::m::max(md.bbox_max[2], z)];
         }
-        vo += n; io += p.idx.count;
+        vo += n;
     }
 
     // ---- animations ----
@@ -180,19 +181,19 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
     let sk = g.get("skins").at(0);
     if sk.is_null() { panic!("cast: no skin"); }
     let jmap: Vec<usize> = sk.get("joints").nums().iter().map(|&n| { let name = g.get("nodes").at(n as usize).get("name").str().unwrap_or(""); base_joint(name).unwrap_or_else(|| panic!("cast: joint '{}' is not on the mannequin's skeleton", name)) }).collect();
-    let slot_of = |mi: Option<f64>| -> f64 {
+    let slot_named = |mi: Option<f64>| {
         let full = mi.map(|i| g.get("materials").at(i as usize).get("name").str().unwrap_or("")).unwrap_or("");
         // (`name.replace(/\.\d+$/, '')`: a copy's ".001" taken off)
         let name = match full.rfind('.') { Some(i) if i + 1 < full.len() && full[i + 1..].bytes().all(|c| c.is_ascii_digit()) => &full[..i], _ => full };
-        SLOT_NAMES.iter().position(|s| *s == name).unwrap_or_else(|| panic!("cast: material '{}' is not a slot ({})", name, SLOT_NAMES.join(" "))) as f64
+        if !SLOT_NAMES.contains(&name) { panic!("cast: material '{}' is not a slot ({})", name, SLOT_NAMES.join(" ")); }
     };
     let part_nodes: Vec<&Json> = g.get("nodes").items().iter().filter(|nd| nd.has("mesh") && nd.has("skin")).collect();
     if part_nodes.is_empty() { panic!("cast: no skinned mesh"); }
     if part_nodes.len() > CAST_MAX_PARTS { panic!("cast: {} parts, at most {}", part_nodes.len(), CAST_MAX_PARTS); }
     let parts: Vec<String> = part_nodes.iter().map(|nd| String::from(nd.get("name").str().unwrap_or(""))).collect();
     for (i, p) in parts.iter().enumerate() { if parts[..i].contains(p) { panic!("cast: part names are not unique"); } }
-    struct Prim { pos: Accessor, nrm: Accessor, jn: Accessor, wt: Accessor, idx: Accessor, part: usize, slot: f64 }
-    let (mut vcount, mut icount) = (0usize, 0usize);
+    struct Prim { pos: Accessor, nrm: Accessor, jn: Accessor, wt: Accessor, idx: Accessor, part: usize }
+    let mut vcount = 0usize;
     let mut prims: Vec<Prim> = Vec::new();
     for (part, nd) in part_nodes.iter().enumerate() {
         for p in g.get("meshes").at(nd.get("mesh").num().unwrap() as usize).get("primitives").items() {
@@ -205,8 +206,9 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
             let (pos, nrm, jn, wt, idx) = (acc("POSITION"), acc("NORMAL"), acc("JOINTS_0"), acc("WEIGHTS_0"), o.accessor(p.get("indices").num().unwrap()));
             if pos.comp != 5126 || pos.n != 3 || nrm.comp != 5126 || nrm.n != 3 || jn.n != 4 || wt.n != 4 { panic!("cast: part '{}' has an attribute of the wrong type", parts[part]); }
             if nrm.count != pos.count || jn.count != pos.count || wt.count != pos.count || idx.count % 3 != 0 { panic!("cast: part '{}' has attributes of different lengths, or indices that are not whole triangles", parts[part]); }
-            vcount += pos.count; icount += idx.count;
-            prims.push(Prim { pos, nrm, jn, wt, idx, part, slot: slot_of(p.get("material").num()) });
+            vcount += pos.count;
+            slot_named(p.get("material").num());
+            prims.push(Prim { pos, nrm, jn, wt, idx, part });
         }
     }
     let mut md = MeshData {
@@ -214,7 +216,7 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
         vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
         mat_index: None,
     };
-    let (mut vo, mut io) = (0usize, 0usize);
+    let mut vo = 0usize;
     for p in prims {
         let n = p.pos.count;
         let (pos, nrm) = (p.pos.data.f32(), p.nrm.data.f32());
@@ -237,7 +239,7 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
             for c in 0..3 { let x = md.positions[v * 3 + c] as f64; if !x.is_finite() { panic!("cast: part '{}' has a non-finite position", parts[p.part]); } md.bbox_min[c] = game::m::min(md.bbox_min[c], x); md.bbox_max[c] = game::m::max(md.bbox_max[c], x); }
         }
         for k in 0..p.idx.count { let ix = p.idx.data.get(k) as usize; if ix >= n { panic!("cast: part '{}' indexes past its vertices", parts[p.part]); }  }
-        vo += n; io += p.idx.count;
+        vo += n;
     }
     let decl = g.get("extras").get("cast").get("variants");
     let mut named: Vec<(String, CastSide, Vec<String>)> = if decl.is_null() { vec![(String::from("all"), CastSide::Operator, parts.clone())] } else {

@@ -1,7 +1,6 @@
 //! The types of `scene_boxes`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, sync::Arc, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, Quat, V3};
+use alloc::{sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Box {

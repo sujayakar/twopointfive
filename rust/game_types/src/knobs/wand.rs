@@ -1,6 +1,5 @@
 //! The numbers of wand.
 use crate::bytes::ToBytes;
-use alloc::string::String;
 use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]

@@ -1,7 +1,6 @@
-#![allow(unused_imports, unused_variables)]
 pub mod screen;
 pub use screen::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use alloc::string::String;
 
 /// The squad size a query asks for: `squad=N` (0 to 4), else `squad4` = 4 unless `flag4` is false, else None.

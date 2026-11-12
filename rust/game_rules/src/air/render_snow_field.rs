@@ -1,9 +1,5 @@
-#![allow(unused_imports, unused_variables)]
-pub use ::game_types::render_snow_field::types;
-pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 
 // These two ask what a box DOES, one model the picture and the game both read: furnblast and snow_bog call them. Pure readings of a box.
 /// is this box a thin lay on the ground: at the ground, a finger thick at most, not glass and not the deep snow's own paint

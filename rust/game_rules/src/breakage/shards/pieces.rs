@@ -3,10 +3,10 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// The one gate: the switch on AND glass breaking live.
 pub(in crate::breakage) fn shards_live(g: &crate::game::Game) -> bool {
@@ -273,7 +273,7 @@ pub(in crate::breakage) fn glass_shards_gone(g: &mut crate::game::Game, c_2: Deb
 /// A plate's first hard touch: its sound and hearing now, whether it breaks decided here and done in update. Always true.
 pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) -> bool {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
-    let (serial, who, bx) = { let c = &g.tab.debris_chunk[c_2]; (c.serial, c.who, c.box_) };
+    let (serial, bx) = { let c = &g.tab.debris_chunk[c_2]; (c.serial, c.box_) };
     let (v0, v1) = (g.k.shards.shatter_v0, g.k.shards.shatter_v1);
     let p = if v1 > v0 { m::max(0.0, m::min(1.0, (speed - v0) / (v1 - v0))) } else { 1.0 };
     let laminated = meta.type_ == crate::glasspen::PaneType::Laminated;

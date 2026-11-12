@@ -1,6 +1,5 @@
 //! The types of `enemysquads`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then; rear is RoundCtx.rear

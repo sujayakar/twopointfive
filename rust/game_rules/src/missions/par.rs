@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! A PAR: a room clear run AGAINST A CLOCK (the Door Kickers star rating). A level file carries a `scenarios.par` block (gold / silver / bronze
 //! seconds and `loss_secs`); while that level's room clear is up, the tick times the run and, once, names the medal.
 //!

@@ -1,7 +1,6 @@
 //! The types of `aim`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, V3};
+use alloc::string::String;
 
 /// A MAN BEHIND A GUN, whoever he is
 #[derive(Clone, Debug, ToBytes, Blank)]

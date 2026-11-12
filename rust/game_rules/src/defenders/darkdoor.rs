@@ -3,10 +3,10 @@ pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 type Pool = &'static [&'static str];
 /// (kind, say, he, they). A pool that a kind does not have is empty.
@@ -699,6 +699,8 @@ fn lose(g: &mut crate::game::Game, gd: GuardId) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::String;
+    use alloc::vec;
     use super::*;
 
     /// the static here and `lines()` are the same words in the same order

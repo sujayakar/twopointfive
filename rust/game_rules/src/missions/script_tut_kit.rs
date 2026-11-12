@@ -1,14 +1,12 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables, unused_imports)]
 //! The script of the level tut-kit: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_kit::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them

@@ -1,10 +1,8 @@
-use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+                      // your own module: its types, its other parts' functions
+use crate::js;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 
 /// x held between lo and hi; lo wins a crossed pair.
 pub(super) fn clamp_i(x: f64, lo: f64, hi: f64) -> f64 {
@@ -214,6 +212,7 @@ fn signed_area(p: &[[f64; 2]]) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
     use crate::glasspen::PaneType;
 

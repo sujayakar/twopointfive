@@ -5,7 +5,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// Which move a blow is, by the side it comes from and the hand that does it.
@@ -232,7 +232,7 @@ pub fn takedown_tick(g: &mut crate::game::Game) {
 
 /// One man's breath: on while he lies out cold, let go otherwise.
 fn breathe_each(g: &mut Game, gd: GuardId, n: &mut i32) {
-    use crate::game::{DownKind, GuardState};
+    use crate::game::DownKind;
     let c = g.gd[gd].ch;
     let down_kind = g.gd[gd].down_kind;
     if g.ch[c].ragdoll.is_some()

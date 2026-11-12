@@ -1,6 +1,4 @@
-use crate::game::Game;
 use crate::ids::*;
-use alloc::string::String;
 
 /// THE BACK KEY backs out of what is up: the squad's ring, his own, a verb that is running, the launcher's arc, a gun's setup. Esc is the pause and only the
 /// pause: the page keeps it, and the first tick after a card is handed the one-tick code 'Paused' (as a lost window hands it 'Blur'), which lets go of what a
@@ -19,6 +17,7 @@ pub fn back_take(g: &mut crate::game::Game, input: InputId) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     #[test]

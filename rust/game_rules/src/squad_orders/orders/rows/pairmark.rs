@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair, Is::Take],
@@ -16,6 +16,6 @@ pub const ORDER: Row = Row {
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("take him · on your mark") }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::pairorders::take_issue(g, crate::pairorders::JobMode::Mark, men, t)
 }

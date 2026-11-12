@@ -1,8 +1,7 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::sheet_model::types;
 pub use types::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// Linear falloff of an impulse: 1 − d/r inside the radius, 0 outside.
 fn impulse_falloff(d: f64, r: f64) -> f64 {

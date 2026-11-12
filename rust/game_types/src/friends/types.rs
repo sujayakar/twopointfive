@@ -1,7 +1,5 @@
 //! The types of `friends`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::ids::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum SamOffFriend {

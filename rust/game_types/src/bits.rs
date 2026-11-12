@@ -17,7 +17,7 @@ pub fn pascal(name: &str) -> impl Iterator<Item = char> + '_ { name.split('_').f
 macro_rules! bits {
     ($(#[doc = $d:expr])* pub mod $m:ident as $name:ident { $($(#[doc = $bd:expr])* $b:ident = $v:expr,)* }) => {
         $(#[doc = $d])* pub mod $m {
-            #[allow(unused_imports)] use super::*;
+            #[allow(unused_imports)] use super::*;   // (a bit's value may name what stands beside the module)
             $($(#[doc = $bd])* pub const $b: u32 = $v;)*
             pub const TABLE: $crate::bits::BitsTable = $crate::bits::BitsTable { name: stringify!($name), doc: &[$($d),*], bits: &[$((stringify!($b), $b, &[$($bd),*]),)*] };
         }

@@ -2,10 +2,10 @@ use super::*;                      // your own module: its types, its other part
 use crate::ask::Over;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 fn box_ch(g: &Game, b: BoxId) -> (V3, V3) { let r = &g.tab.boxes[b]; (r.c, r.h) }
 /// the box of the wall as authored, by the engine's id, else the spot's own (`g.col.boxes[wall] ?? W.box`)
@@ -160,7 +160,7 @@ pub fn wall_charge_take(g: &mut crate::game::Game) -> f64 {
 
 /// A charge off the wall unblown: what it cost goes back.
 pub(super) fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId) {
-    let (free_, paid, index) = { let c = &g.tab.wallcharge_set_wall_charge[c_2]; (c.free.unwrap_or(false), c.paid, c.wall.index) };
+    let (free_, paid) = { let c = &g.tab.wallcharge_set_wall_charge[c_2]; (c.free.unwrap_or(false), c.paid) };
     if free_ {
     } else if paid <= 0.0 {
         if let Some(n) = g.sets[g.seat].wall_charge.carried { g.sets[g.seat].wall_charge.carried = Some(n + 1.0); }

@@ -3,10 +3,9 @@ pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// the game's State, which is there (`states` holds it once a hook made it); never kept across a call that takes `g`
 macro_rules! state { ($g:expr) => { $g.m.doorforce.states.as_mut().unwrap() } }
@@ -603,6 +602,8 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
+    use alloc::vec;
     use super::*;
 
     /// Leaked: a test's game lives as long as the test binary.

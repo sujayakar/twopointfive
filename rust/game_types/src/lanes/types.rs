@@ -1,7 +1,6 @@
 //! The types of `lanes`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 /// a walk's price list, nav.findPath's penalty: a cell of the mask costs `dear`, any other 1, or at least the pursuit tactics' price where there is one; a man the rule leaves alone pays the tactics' price alone
 #[derive(Clone, Debug)]

@@ -1,5 +1,7 @@
 //! THE KIT PICTURE'S STAGE, AT A START: the words of a link that carries `kitview` read into the level that is built, the mission's words and the men's dress; and the plan made once the mission is up.
-use crate::json::{self, Json};
+#[cfg(feature = "std")]
+use crate::json;
+use crate::json::Json;
 use crate::kit_plan::{self as kp, PlanBlock, PlanLevel, Way};
 use crate::kit_set::{self, QuietKind};
 use alloc::borrow::Cow;
@@ -89,6 +91,7 @@ fn make_plan(g: &mut Game, data: &Json, y: &Json) {
 }
 
 /// where Sam starts on a way, as the file writes it: a room clear's team or its nth start, the night breach's team; a level with neither has the level's own spawn
+#[cfg(feature = "std")]
 fn team_start(data: &Json, way: usize) -> [f64; 2] {
     let s = data.get("scenarios");
     let (rc, nb) = (s.get("roomClear"), s.get("nightBreach"));

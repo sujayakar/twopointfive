@@ -2,10 +2,10 @@ use super::*;                      // your own module: its types, its other part
 use crate::doortools::{Beat, Ended};
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 /// his row of `defs`, a copy: read again after a call that may have written it
@@ -1080,7 +1080,7 @@ mod tests {
         let d = g.dr.push(crate::doors::Door::blank());
         g.dr[d].frame_centre = [0.0, 0.0, 0.0];
         let room = crate::scene_scenarios::Rect { x0: -5.0, x1: 20.0, z0: -5.0, z1: 20.0, ..Default::default() };
-        let mut man = |g: &mut Game, at: V3| {
+        let man = |g: &mut Game, at: V3| {
             let c = g.ch.push(crate::character::Character::blank());
             g.ch[c].pos = at;
             let mut m = crate::game::Guard::blank();

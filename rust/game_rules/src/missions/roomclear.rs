@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes

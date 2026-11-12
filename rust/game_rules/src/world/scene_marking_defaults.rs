@@ -1,9 +1,8 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::scene_marking_defaults::types;
 pub use types::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// markFromRect with the painter `c => c.fill(1)`, through marking: a rect in metres snapped inward onto the lattice, every cell palette entry 1; None if the
 /// snapped rect is empty. A private fn because the skeleton's mark_from_rect hands its painter the canvas by value, so a fill could not reach the rows.

@@ -27,8 +27,6 @@ use crate::game::{Game, GuardState};
 use crate::ids::GuardId;
 use crate::m;
 use crate::v3::V3;
-use alloc::format;
-use alloc::string::String;
 
 /// One write that moved him: who, when (the game's clock) and to what.
 #[derive(Clone, Copy, Debug, Default, ToBytes)]

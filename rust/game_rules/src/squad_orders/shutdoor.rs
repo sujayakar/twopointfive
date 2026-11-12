@@ -5,9 +5,9 @@ pub const SHUT_ID: &str = crate::orders::rows::shutdoor::ORDER.id;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// Where the door's handle comes to.

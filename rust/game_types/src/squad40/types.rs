@@ -1,6 +1,5 @@
 //! The types of `squad40`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -99,4 +98,4 @@ pub struct Squad40Mod {
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
 }
 
-pub const none: &str = "no 40 mm left.";
+pub const NO_ROUND: &str = "no 40 mm left.";

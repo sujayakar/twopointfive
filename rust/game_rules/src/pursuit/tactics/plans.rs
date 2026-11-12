@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// which plan the man's role on the roster belongs to (`st.roles.get(m)?.plan`)
 fn role_plan(g: &mut Game, m: GuardId) -> Option<TacticsPlanId> {

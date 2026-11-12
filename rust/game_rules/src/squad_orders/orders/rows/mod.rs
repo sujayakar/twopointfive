@@ -32,7 +32,6 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::{GiveOpts, OrderDef, OrderTarget};
 use alloc::string::String;
-use alloc::vec::Vec;
 
 macro_rules! rows {
     ($($m:ident;)*) => {

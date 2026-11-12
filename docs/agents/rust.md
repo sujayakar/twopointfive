@@ -176,11 +176,12 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 | `c_2`, `g_2`, `weather_set_wet_2`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
 | `&mut Game` on a function that only reads | By hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
-| `Opaque`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
+| an unused import, argument or private function | The compiler says it, and a build that is gated or played refuses it: take it out. A `pub` one nobody names is said by nobody |
 
 ## What holds it
 
-- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `half --check` (`rust/game_start`, `cargo run --profile gate --bin half`): the page's
+- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links, and that no file turns the compiler's warnings off.
+  `half --check` (`rust/game_start`, `cargo run --profile gate --bin half`): the page's
   offsets.
 - `gate`: the rows `again` (a second run in one process), `save` and `load` (a `Moment` put back) and `draw`. `tools/draw/play-check.ts` panics a game
   in the module and recovers it.

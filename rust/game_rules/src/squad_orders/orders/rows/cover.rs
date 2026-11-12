@@ -4,7 +4,7 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::{self, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::Covers, Is::Resumed, Is::KeepsLane, Is::WalksLow],
@@ -21,7 +21,7 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
     if squad_orders_has_line(g, gd, t) { None } else { Some(String::from("no line from here.")) }
 }
 /// 'cover'.issue
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     let t_at = t.at();
     let watch: V3 = [t_at[0], 1.1, t_at[2]];
     for &gd in men {

@@ -2,10 +2,10 @@ pub use ::game_types::fire::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.
 fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {

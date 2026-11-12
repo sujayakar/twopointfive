@@ -1,6 +1,5 @@
 //! The types of `tactics`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man's price list for nav.findPath, fixed when asked: a cell of his side's dangerous doorways costs door_mult, a cell of his flank's avoid-set at least CORRIDOR_COST, any other 1

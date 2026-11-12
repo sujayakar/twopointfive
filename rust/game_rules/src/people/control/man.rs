@@ -1,6 +1,6 @@
 //! QUESTIONS A RULE MAY ASK OF A MAN. Each is one line, takes `&Game` (asking changes nothing) and says in its comment what it does NOT
 //! tell you. A rule's `propose` uses these before it reads a man's fields; a question that is missing is added here, not written in the rule.
-use crate::game::{Game, GuardState};
+use crate::game::Game;
 use crate::ids::*;
 
 /// He is dead. (A man down and bleeding, or one who has fled the level, is not: `down_kind`, `fled`.)

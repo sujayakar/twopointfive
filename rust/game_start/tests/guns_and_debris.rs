@@ -94,7 +94,7 @@ fn debris_is_heard_where_it_lands() {
         for _ in 0..3 { game::destruction::destruction_dust_puff(&mut p.g, [21.6, 1.2, 15.5], [0.0, 0.0, 1.0], 1.0, game::scene_materials::Surf::Drywall); }
         assert!(props_heard(&mut p, 2.0).is_empty(), "seed {s}: paper and dust filed a noise");
         assert!(p.awareness(man) < 0.05, "seed {s}: paper and dust moved him: {}", p.awareness(man));
-        assert!(game::destruction::destruction_tile_drop(&mut p.g, [20.2, 0.1, 15.4], 0.5, Some(true), None, None), "seed {s}: the tile drop was refused");
+        assert!(game::destruction::destruction_tile_drop(&mut p.g, [20.2, 0.1, 15.4], Some(true), None, None), "seed {s}: the tile drop was refused");
         let heard = props_heard(&mut p, 2.5);
         assert_eq!(heard.len(), 1, "seed {s}: noises from one tile: {heard:?}");
         assert!(p.awareness(man) > 0.2 || p.state(man) != game::game::GuardState::Patrol, "seed {s}: a tile landing two metres off left him at {}", p.awareness(man));

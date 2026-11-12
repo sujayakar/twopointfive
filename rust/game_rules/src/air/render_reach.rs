@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use alloc::{vec, vec::Vec};

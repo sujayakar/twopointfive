@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! The script of the level tut-pair: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_pair::types;

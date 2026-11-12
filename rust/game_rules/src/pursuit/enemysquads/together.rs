@@ -5,8 +5,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use crate::roomfight::{def_of, DefMode};
-use crate::v3::{dist_xz, V3};
-use alloc::{format, string::String, vec::Vec};
+use crate::v3::V3;
+use alloc::{format, vec::Vec};
 
 /// how long the first of them there waits for the others
 const FORM_SECS: f64 = 6.0;

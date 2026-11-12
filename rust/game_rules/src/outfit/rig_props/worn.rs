@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// The hand frame the pistol group lives in: wrist origin, z the bore, y the top of the slide.
 pub(super) fn pistol_frame(g: &crate::game::Game, c_2: CharId, hand: V3, p: crate::rig_props::PistolFrameP, in_hand: Option<bool>) -> crate::rig_props::PistolFrame {
@@ -64,7 +63,7 @@ pub(super) fn long_look_of(g: &crate::game::Game, c_2: CharId, held: bool) -> Op
 }
 
 /// A long model's support-hand grip for the animator; `fit` moves it with the gun as drawn, and a fist round a post into the hook of the fingers.
-pub fn model_grip(g: &crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>) -> Option<crate::character::AnimLongGrip> {
+pub fn model_grip(id_2: crate::weapons::GunModelId, fit: Option<bool>) -> Option<crate::character::AnimLongGrip> {
     let fit = fit.unwrap_or(false);
     let rig = crate::rig_props::rig();
     let l = crate::gunlook::long_model(Some(id_2))?;
@@ -665,12 +664,9 @@ pub(super) fn carbine_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carrie
         Some(hand) => hand,
         None => return,
     };
-    let (hand_f, f) = match at {
-        Some(at) => (at, at),
-        None => {
-            let cf = carbine_frame(g, c_2, hand, c_3);
-            (cf.hand_f, cf.g)
-        }
+    let f = match at {
+        Some(at) => at,
+        None => carbine_frame(g, c_2, hand, c_3).g,
     };
     let look = match as_ {
         Some(id) => crate::gunlook::long_model(Some(id)).map(|l| LongLookOf { id, l }),

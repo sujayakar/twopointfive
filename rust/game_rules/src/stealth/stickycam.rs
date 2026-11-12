@@ -1,12 +1,11 @@
 pub use ::game_types::stickycam::types;
 pub use types::*;
-use crate::game::Game;
 use crate::flight::Met;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// The module's knobs as the launcher's flight reads them.
 fn b(g: &crate::game::Game) -> crate::launcher::Ballistics {
@@ -341,6 +340,9 @@ pub fn sticky_flying(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> boo
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
+    use alloc::vec;
     use super::*;
     use crate::weapons::RifleAttachment as A;
 

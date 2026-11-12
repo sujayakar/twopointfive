@@ -1,18 +1,17 @@
-#![allow(unused_variables)]
 pub use ::game_types::furnblast::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// The row of a class, owned, so a caller can hold it across a call that takes g. Nothing writes the table.
 pub fn furn_break_row(cls: crate::scene_materials::BreakClass) -> crate::furnblast::BreakRow { crate::furnblast::furn_break().into_iter().find(|e| e.0 == cls).unwrap().1 }
 
 use crate::Num;
-use crate::scene_materials::{BreakClass, Does, Surf};
+use crate::scene_materials::{BreakClass, Surf};
 use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, WallBreakNoteC};
 
 // ---------------------------------------------------------------- small readers

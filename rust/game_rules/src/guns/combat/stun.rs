@@ -1,10 +1,9 @@
-use super::*;                      // your own module: its types, its other parts' functions
+                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::vec::Vec;
+use crate::v3::{self, V3};
 
 /// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.
 pub fn flash_fuse(g: &crate::game::Game) -> f64 {

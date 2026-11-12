@@ -187,7 +187,7 @@ fn a_man_in_sams_arm_is_told_nothing() {
         let him = mate(&p);
         let (at, yaw) = (p.g.pos_of(him), p.g.ch[p.g.gd[him].ch].body_yaw);
         p.sam_put([at[0] - yaw.sin() * 0.6, at[2] - yaw.cos() * 0.6]);
-        game::player::start_grab(&mut p.g, him, None);
+        game::player::start_grab(&mut p.g, him);
         p.run(0.2);
         assert!(p.g.gd[him].held.is_some(), "seed {s}: the staging is wrong: not in his arm");
         assert!(game::duty::order(&p.g, him).is_none(), "seed {s}: still under the team's order");

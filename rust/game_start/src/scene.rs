@@ -171,8 +171,8 @@ impl Scene {
 
     /// THE SCENE AS A LEVEL FILE'S VALUE (docs/level-format.md, version 2).
     pub fn level(&self) -> Json {
-        let K = sizes();
-        let (WORLD, KIT_H, DOOR_HEAD, LEAF_W, LEAF_H) = (K.world, K.ceiling, K.head, K.leaf_w, K.leaf_h);
+        let sizes_of = sizes();
+        let (whole, kit_h, door_head, leaf_wide, leaf_high) = (sizes_of.world, sizes_of.ceiling, sizes_of.head, sizes_of.leaf_w, sizes_of.leaf_h);
         if self.doors.is_empty() { panic!("scene '{}': a level's mission names the door a man goes in by and the one he leaves by, so a scene has at least one door", self.name); }
         if self.team.is_some() && !self.routes.is_empty() { panic!("scene '{}': a room clear and guards on routes in one scene: the room clear's staging takes every man who is not its own off the floor. Post defenders in rooms, or say a night with no team", self.name); }
         if self.team.is_none() && self.rooms.iter().any(|r| !r.marks.is_empty()) { panic!("scene '{}': defenders are posted and no team is said: a defender is a room clear's man (`team`)", self.name); }
@@ -187,10 +187,10 @@ impl Scene {
         let slab = |x0: f64, y0: f64, z0: f64, x1: f64, y1: f64, z1: f64| ([(x0 + x1) / 2.0, (y0 + y1) / 2.0, (z0 + z1) / 2.0], [m::abs(x1 - x0) / 2.0, m::abs(y1 - y0) / 2.0, m::abs(z1 - z0) / 2.0]);
         let mat = |name: &'static str| ("material", s(name));
         // the ground under everything, then each room's floor finish and ceiling
-        add("ground", [WORLD[0] / 2.0, -0.125, WORLD[1] / 2.0], [WORLD[0] / 2.0, 0.125, WORLD[1] / 2.0], mat("asphalt"), vec![]);
+        add("ground", [whole[0] / 2.0, -0.125, whole[1] / 2.0], [whole[0] / 2.0, 0.125, whole[1] / 2.0], mat("asphalt"), vec![]);
         for r in self.rooms.iter() {
             let (c, h) = slab(r.x0, 0.0, r.z0, r.x1, 0.004, r.z1); add("floors", c, h, mat("carpet"), vec![]);
-            let (c, h) = slab(r.x0, KIT_H, r.z0, r.x1, KIT_H + 0.2, r.z1); add("ceiling", c, h, mat("ceiling"), vec![("flags", arr(vec![s("NoPrimary")]))]);
+            let (c, h) = slab(r.x0, kit_h, r.z0, r.x1, kit_h + 0.2, r.z1); add("ceiling", c, h, mat("ceiling"), vec![("flags", arr(vec![s("NoPrimary")]))]);
         }
         // walls, with their doorways
         let t = WALL_INT;
@@ -200,25 +200,25 @@ impl Scene {
             let mut piece = |a: f64, bb: f64, y0: f64, y1: f64| { let (c, h) = match w.axis { Axis::X => slab(a, y0, w.line - t / 2.0, bb, y1, w.line + t / 2.0), Axis::Z => slab(w.line - t / 2.0, y0, a, w.line + t / 2.0, y1, bb) }; add("walls", c, h, mat("wall"), vec![]); };
             let mut cur = w.a;
             for o in holes.iter() {
-                if o[0] > cur { piece(cur, o[0], 0.0, KIT_H); }
-                piece(o[0], o[1], DOOR_HEAD, KIT_H);
+                if o[0] > cur { piece(cur, o[0], 0.0, kit_h); }
+                piece(o[0], o[1], door_head, kit_h);
                 cur = o[1];
             }
-            if cur < w.b { piece(cur, w.b, 0.0, KIT_H); }
+            if cur < w.b { piece(cur, w.b, 0.0, kit_h); }
         }
         // each door's frame: two jambs, the head, the two stops that close the sight slots at the hinge and the latch
         let frame = ("albedo", nums(&[0.3, 0.24, 0.17]));
         for d in self.doors.iter() {
             let group = format!("doorframe.{}", d.name);
-            let (a, gap, hy, w) = (d.hinge - JAMB_FACE, LEAF_W + 2.0 * JAMB_FACE, DOOR_HEAD / 2.0, d.line);
+            let (a, gap, hy, w) = (d.hinge - JAMB_FACE, leaf_wide + 2.0 * JAMB_FACE, door_head / 2.0, d.line);
             let mut along = |u: f64, y: f64, hu: f64, hyy: f64, hw: f64| { let (c, h) = match d.axis { Axis::X => ([u, y, w], [hu, hyy, hw]), Axis::Z => ([w, y, u], [hw, hyy, hu]) }; add(&group, c, h, frame.clone(), vec![]); };
             along(a - 0.01, hy, 0.03, hy, t / 2.0 + 0.012);
             along(a + gap + 0.01, hy, 0.03, hy, t / 2.0 + 0.012);
-            let hb = LEAF_H + 0.005;
-            along(a + gap / 2.0, (hb + DOOR_HEAD + 0.065) / 2.0, gap / 2.0 + 0.04, (DOOR_HEAD + 0.065 - hb) / 2.0, t / 2.0 + 0.012);
+            let hb = leaf_high + 0.005;
+            along(a + gap / 2.0, (hb + door_head + 0.065) / 2.0, gap / 2.0 + 0.04, (door_head + 0.065 - hb) / 2.0, t / 2.0 + 0.012);
             let mut stop = |u0: f64, u1: f64| along(d.hinge + (u0 + u1) / 2.0, hy, (u1 - u0) / 2.0, hy, 0.02);
             stop(-0.012, 0.024);
-            stop(LEAF_W - 0.004, LEAF_W + 0.012);
+            stop(leaf_wide - 0.004, leaf_wide + 0.012);
         }
         // the lamps: a flex and a bulb each, the bulb the light's fixture
         let mut lights: Vec<Json> = Vec::new();
@@ -233,10 +233,10 @@ impl Scene {
                 ("innerDeg", n(0.0)), ("outerDeg", n(180.0)), ("group", s("room")), ("enabled", b(l.on)), ("volumetric", n(0.25)), ("radius", n(0.06)), ("fixture", s(&fixture))]));
         }
         // the mains breaker's panel and lamp, on a post in the lot's far corner (a level always has one)
-        let panel = add("breaker", [WORLD[0] - 1.0, 1.35, WORLD[1] - 0.94], [0.28, 0.36, 0.04], ("albedo", nums(&[0.42, 0.44, 0.45])), vec![("name", s("breaker_panel")), ("stuff", s("sheet"))]);
-        let led = add("breaker", [WORLD[0] - 1.18, 1.62, WORLD[1] - 0.99], [0.015, 0.015, 0.01], mat("black"), vec![("emissive", nums(&[0.3, 4.0, 0.6])), ("flags", arr(vec![s("NoShadow")]))]);
+        let panel = add("breaker", [whole[0] - 1.0, 1.35, whole[1] - 0.94], [0.28, 0.36, 0.04], ("albedo", nums(&[0.42, 0.44, 0.45])), vec![("name", s("breaker_panel")), ("stuff", s("sheet"))]);
+        let led = add("breaker", [whole[0] - 1.18, 1.62, whole[1] - 0.99], [0.015, 0.015, 0.01], mat("black"), vec![("emissive", nums(&[0.3, 4.0, 0.6])), ("flags", arr(vec![s("NoShadow")]))]);
         let doors: Vec<Json> = self.doors.iter().map(|d| {
-            let mut rec = vec![("id", s(&d.name)), ("hinge", nums(&match d.axis { Axis::X => [d.hinge, d.line], Axis::Z => [d.line, d.hinge] })), ("closedDir", n(match d.axis { Axis::X => 0.0, Axis::Z => m::PI / 2.0 })), ("width", n(LEAF_W))];
+            let mut rec = vec![("id", s(&d.name)), ("hinge", nums(&match d.axis { Axis::X => [d.hinge, d.line], Axis::Z => [d.line, d.hinge] })), ("closedDir", n(match d.axis { Axis::X => 0.0, Axis::Z => m::PI / 2.0 })), ("width", n(leaf_wide))];
             if d.locked { rec.push(("locked", b(true))); }
             obj(rec)
         }).collect();
@@ -247,8 +247,8 @@ impl Scene {
         let rect = |r: [f64; 4]| obj(vec![("x0", n(r[0])), ("x1", n(r[1])), ("z0", n(r[2])), ("z1", n(r[3]))]);
         let mut top = vec![
             ("version", n(2.0)), ("name", s(&self.name)),
-            ("meta", obj(vec![("bounds", obj(vec![("min", nums(&[0.0, -0.25, 0.0])), ("max", nums(&[WORLD[0], 8.0, WORLD[1]]))])), ("generator", s("rust/game_start scene.rs")), ("notes", s("A scene a test wrote: a level file like any other."))])),
-            ("floors", arr(vec![obj(vec![("id", s("f0")), ("name", s("ground floor")), ("y", n(0.0)), ("ceiling", n(KIT_H))])])),
+            ("meta", obj(vec![("bounds", obj(vec![("min", nums(&[0.0, -0.25, 0.0])), ("max", nums(&[whole[0], 8.0, whole[1]]))])), ("generator", s("rust/game_start scene.rs")), ("notes", s("A scene a test wrote: a level file like any other."))])),
+            ("floors", arr(vec![obj(vec![("id", s("f0")), ("name", s("ground floor")), ("y", n(0.0)), ("ceiling", n(kit_h))])])),
             ("materials", obj(vec![
                 ("asphalt", obj(vec![("albedo", nums(&[0.09, 0.09, 0.1])), ("rough", n(0.92)), ("stuff", s("tarmac")), ("does", s("tarmac"))])),
                 ("carpet", obj(vec![("albedo", nums(&[0.13, 0.14, 0.17])), ("rough", n(0.95)), ("stuff", s("cloth")), ("does", s("carpet"))])),
@@ -264,7 +264,7 @@ impl Scene {
                 obj(vec![("id", s("pull_drive")), ("kind", s("drive")), ("rackIndex", n(0.0)), ("front", nums(&[area[0] + 0.5, 1.0, area[2] + 0.5])), ("halfW", n(0.3))]),
                 obj(vec![("id", s("exfil")), ("kind", s("exfil")), ("door", s(&last.name)), ("x", n(self.spawn[0])), ("z", n(self.spawn[1]))]),
             ]))])),
-            ("breaker", obj(vec![("pos", nums(&[WORLD[0] - 1.0, 1.35, WORLD[1] - 1.4])), ("panel", s(&panel)), ("led", s(&led))])),
+            ("breaker", obj(vec![("pos", nums(&[whole[0] - 1.0, 1.35, whole[1] - 1.4])), ("panel", s(&panel)), ("led", s(&led))])),
             ("beacons", arr(vec![])),
             ("sky", obj(vec![("zenith", nums(&[0.015, 0.025, 0.05])), ("horizon", nums(&[0.04, 0.05, 0.08]))])),
             ("plans", obj(vec![("roomClear", arr(vec![]))])),

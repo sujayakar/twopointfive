@@ -1,6 +1,5 @@
 //! The types of `orders`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer. Not kept past the one trial.
@@ -75,7 +74,6 @@ pub struct SquadOrders {
     pub worked: JsMap<DoorId, Vec<Option<crate::orders::SquadOrdersWorkedValueItem>>>,
     pub reached: JsMap<String, crate::orders::SquadOrdersReachedValue>,
 }
-
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadOrdersPosture {

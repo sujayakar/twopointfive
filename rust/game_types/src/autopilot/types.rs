@@ -1,6 +1,5 @@
 //! The types of `autopilot`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::ids::*;
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug)]

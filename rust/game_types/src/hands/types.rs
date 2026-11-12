@@ -1,7 +1,5 @@
 //! The types of `hands`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, ids::*, V3};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Haul {

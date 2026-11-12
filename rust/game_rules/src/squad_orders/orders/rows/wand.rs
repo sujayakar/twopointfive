@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::Row;
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     only: Some(only),
@@ -17,7 +17,7 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("look under i
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
     let OrderTarget::Door(x) = t else { return Vec::new() };
     for side in [x.side, -x.side] {
-        let mut there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
+        let there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
         if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &there) { return vec![p.gd]; }
     }
     Vec::new()
@@ -30,7 +30,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     }
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     match crate::wandorder::issue(g, men, t) {
         crate::wandorder::Issue::Text(w) => Some(w),
         crate::wandorder::Issue::Arm1(()) => None,

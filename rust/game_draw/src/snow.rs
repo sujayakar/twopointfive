@@ -101,7 +101,7 @@ pub struct Snow {
 impl Snow {
     pub fn take(&mut self, g: &Game) {
         (self.feet.clear(), self.things.clear(), self.blasts.clear());
-        if !game::weather_kinds::snow_level(g, game::scene_level_load::level_name_of(g).as_deref()) { self.words.clear(); return; }
+        if !game::weather_kinds::snow_level(game::scene_level_load::level_name_of(g).as_deref()) { self.words.clear(); return; }
         let tick = crate::tick(g);
         for e in &g.out { if let OutEvent::SnowBlast(b) = e { let serial = self.blasts.len() as u32; self.blasts.push(SnowBlast { tick, serial, at: b.at.map(|x| x as f32), radius: b.radius as f32 }); } }
         // (what snow a static is moves only with the list)

@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// One more round for a side.
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {

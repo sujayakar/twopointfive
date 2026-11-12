@@ -5,8 +5,7 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::{GiveOpts, OrderTarget};
 use crate::squad40;
-use crate::v3::V3;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],

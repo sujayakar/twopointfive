@@ -2,9 +2,9 @@ pub use ::game_types::rails::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A step's `after` line as its order stands: given (1), or given and waiting on his word (2).
@@ -28,7 +28,7 @@ fn lookout_eye(id_2: f64, e: crate::rails::LookoutEyeE) -> crate::fogofwar::FogE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene_scenarios::{LessonData, LessonStep, LessonStepAfter, RailsData, RailsDataWaits};
+    use crate::scene_scenarios::LessonStepAfter;
 
     #[test]
     fn said_takes_the_word_only_at_two() {

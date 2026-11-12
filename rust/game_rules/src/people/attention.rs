@@ -2,10 +2,10 @@ pub use ::game_types::attention::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// A new man's row (`Mem::default()` has the wrong clocks).
 fn fresh() -> Mem {
@@ -489,6 +489,7 @@ pub(super) fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     /// A blank game with one man on it; leaked, so a test holds it as a plain reference.
@@ -670,7 +671,7 @@ mod tests {
 
     #[test]
     fn the_panels_line_and_the_list_of_lines() {
-        let (mut g, gd) = game();
+        let (g, gd) = game();
         g.gd[gd].callsign = String::from("Novak");
         g.guards.push(gd);
         g.m.attention.mem_of.get_or_insert_with(gd, fresh).tick = 100.0;
@@ -680,7 +681,7 @@ mod tests {
 
     #[test]
     fn the_log_keeps_the_last_48() {
-        let (mut g, gd) = game();
+        let (mut g, _) = game();
         for i in 0..50 { log(&mut g, "x", LogH { secs: i as f64 }); }
         assert_eq!(g.m.attention.attention_log.len(), 48);
         assert_eq!(g.m.attention.attention_log[0].secs, 2.0);

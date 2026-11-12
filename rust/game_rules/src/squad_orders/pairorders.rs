@@ -2,9 +2,9 @@ pub use ::game_types::pairorders::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the living row of a man's job: a copy would lose the write
@@ -249,7 +249,7 @@ pub fn row_take_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarg
     out
 }
 /// `valid` of the two take rows
-pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, _: &[GuardId]) -> Result<(), Option<String>> {
     let crate::orders::OrderTarget::Foe(x) = t else { return Err(None) };
     if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
     if crate::pairorders::pair_orders_noticed(g, x.foe) {

@@ -1,7 +1,6 @@
 //! The types of `lightswitch`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallSwitch {

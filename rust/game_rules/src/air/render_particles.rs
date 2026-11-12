@@ -1,10 +1,7 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 pub use ::game_types::render_particles::types;
 pub use types::*;
-use crate::game::Game;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 pub fn particles_impulse(g: &mut crate::game::Game, pos: V3, radius: f64, strength: f64, o: Option<&crate::render_particles::ImpulseOpts>) -> bool { g.out.push(crate::out_events::OutEvent::ParticlesImpulse(crate::out_events::OutParticlesImpulse { pos: pos, radius: radius, strength: strength, o: o.cloned() })); false }
 

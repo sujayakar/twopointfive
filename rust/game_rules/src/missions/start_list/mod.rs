@@ -57,7 +57,7 @@ impl Mission {
     /// Standard | Hard changes something on it: a squad scenario's defenders read it
     fn diff_live(&self) -> bool { self.entry.is_some() && !self.is_quiet() }
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
-    fn own_weather(&self, g: &Game) -> bool { weather_kinds::snow_level(g, self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
+    fn own_weather(&self) -> bool { weather_kinds::snow_level(self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
     /// the hour and the weather a row is always started in
     fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {
@@ -235,17 +235,17 @@ impl Sitting {
     pub fn said(&mut self, words: Vec<(String, String)>) { self.said.extend(words); }
 
     /// The levers this machine keeps, by the words it said: the address's own come last, one for each it names, and a word that is no rung was never kept.
-    fn kept_said(&self, g: &Game) -> Vec<(LeverKey, &str)> {
+    fn kept_said(&self) -> Vec<(LeverKey, &str)> {
         let boot = Query::parse(self.booted.as_deref().unwrap_or(""));
         let named = difficulty::levers_now().iter().filter(|l| boot.get(&l.param).is_some_and(|w| !w.is_empty())).count();
         let kept = &self.said[..self.said.len().saturating_sub(named)];
-        kept.iter().filter_map(|(k, r)| Some((lever_key(k)?, r.as_str()))).filter(|(k, r)| difficulty::is_rung(g, *k, Some(r))).collect()
+        kept.iter().filter_map(|(k, r)| Some((lever_key(k)?, r.as_str()))).filter(|(k, r)| difficulty::is_rung(*k, Some(r))).collect()
     }
 
     /// This machine keeps the levers as they stand: the page a link loads reads them back, and the link need not carry them.
     fn levers_stored(&self, g: &Game) -> bool {
         if self.stored.is_some() { return true; }
-        let kept = self.kept_said(g);
+        let kept = self.kept_said();
         [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().all(|k| kept.iter().rev().find(|(x, _)| *x == k).map(|(_, r)| *r) == difficulty::lever_set(g, k))
     }
 
@@ -255,7 +255,7 @@ impl Sitting {
         let mut order: Vec<LeverKey> = Vec::new();
         for (k, r) in &self.said {
             let Some(k) = lever_key(k) else { continue };
-            if !order.contains(&k) && difficulty::is_rung(g, k, Some(r)) { order.push(k); }
+            if !order.contains(&k) && difficulty::is_rung(k, Some(r)) { order.push(k); }
         }
         order.retain(|k| difficulty::lever_set(g, *k).is_some());
         order
@@ -277,7 +277,7 @@ impl Sitting {
         let quiet = m.quiet_row();
         let href = quietfog::quiet_fog_href(g, &href, quiet);
         let href = hours::hour_href(&href, self.hour);
-        let wx = if m.own_weather(g) { None } else { self.weather };
+        let wx = if m.own_weather() { None } else { self.weather };
         way_search(&weather_kinds::weather_search(&href, wx), self.way_of(m))
     }
 
@@ -387,15 +387,15 @@ impl Sitting {
         let link = self.href_of(g, &m);
         let mut settings = vec![difficulty_row(g, &m)];
         lever_rows(g, &m, &link, &mut settings);
-        settings.push(self.hour_row(g, &m));
+        settings.push(self.hour_row(&m));
         settings.push(self.weather_row(g, &m));
         settings.push(self.way_row(&m));
         let quiet = matches!(m.kind_word(), "quiet" | SOLO_KEY) && !Query::parse(after_mark(&self.page)).has("kitloud");
         SheetView { id: m.id.clone(), settings, base: self.base_of(g, &m), as_pick: self.as_pick(g, &m).is_some(), quiet, link }
     }
 
-    fn hour_row(&self, g: &Game, m: &Mission) -> Setting {
-        let wx = if m.own_weather(g) { None } else { m.row_weather().or(self.weather) };
+    fn hour_row(&self, m: &Mission) -> Setting {
+        let wx = if m.own_weather() { None } else { m.row_weather().or(self.weather) };
         Setting {
             key: String::from("hour"), label: String::from("Hour"), live: true, shown: m.row_hour().is_none(), moved: false,
             note: hours::hour_note(self.hour, wx.is_some(), m.row_weather().is_some()),
@@ -405,7 +405,7 @@ impl Sitting {
 
     fn weather_row(&self, g: &Game, m: &Mission) -> Setting {
         Setting {
-            key: String::from("weather"), label: String::from("Weather"), live: true, shown: !m.own_weather(g) && m.row_weather().is_none(), moved: false,
+            key: String::from("weather"), label: String::from("Weather"), live: true, shown: !m.own_weather() && m.row_weather().is_none(), moved: false,
             note: weather_kinds::weather_note(g, self.weather, m.row_hour().unwrap_or(self.hour)),
             choices: weather_kinds::WEATHER_ROW.iter().map(|k| choice(k.map_or("default", |k| k.as_str()), &weather_kinds::weather_title(g, *k), String::new(), self.weather == *k, true)).collect(),
         }
@@ -534,10 +534,10 @@ fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
         let moved = if mine { quiet_lit != quietfog::quiet_fog_default(g) } else { difficulty::lever_set(g, l.key).is_some() };
         let note = if !live { String::new() }
             else if mine { quietfog::quiet_fog_words(lit) }
-            else { let w = difficulty::lever_words(g, l.key, lit); if w.is_empty() { String::from("moved by hand in the debugger") } else { w } };
+            else { let w = difficulty::lever_words(l.key, lit); if w.is_empty() { String::from("moved by hand in the debugger") } else { w } };
         let choices = l.rungs.iter().map(|r| {
             let on = lit == Some(r.id.as_str());
-            let title = if l.key != LeverKey::Fog { r.words.clone() } else if mine { quietfog::quiet_fog_words(Some(&r.id)) } else { difficulty::lever_words(g, LeverKey::Fog, Some(&r.id)) };
+            let title = if l.key != LeverKey::Fog { r.words.clone() } else if mine { quietfog::quiet_fog_words(Some(&r.id)) } else { difficulty::lever_words(LeverKey::Fog, Some(&r.id)) };
             // (the bottom rung: the quiet pick's on a quiet row, on a squad's row where the fog's lever is live, and wherever it is the one lit)
             let offered = l.key != LeverKey::Fog || r.id != "off" || mine || live || on;
             choice(&r.id, &r.label, title, on, offered)

@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair],
@@ -23,7 +23,7 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
     if dark.is_some() { None } else { Some(String::from("no dark spot there.")) }
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::pairorders::dark_issue(g, men, t)
 }
 

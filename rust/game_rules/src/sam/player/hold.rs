@@ -2,9 +2,9 @@ use super::*;                      // your own module: its types, its other part
 use crate::character::{HoldPhase, HoldVariant};
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the hold of this seat: re-read at every use, never held across a call that takes `g`
@@ -507,7 +507,6 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
 
 /// holdTail's last lines, with a hold or without one: the sling, the body's bake, the rail light, the dragging shuffle.
 fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
-    let p = g.player;
     arm_rifle(g, false, None);
     crate::character::character_update(g, c, dt);
     pose_gun_light(g);

@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// A cut: `lens.target = copy(at); lens.desired = copy(at)`. A whole write of `desired` is what Seat.takeCut watches for, here by its serial.
 fn cut_lens(g: &mut Game, cam: CameraId, at: V3) {
@@ -160,7 +160,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
         let (a, b) = (g.player_pos(me), g.pos_of(gd));
         if v3::dist_xz(a, b) > crate::dialogue::INTERROGATE_REACH || crate::scene_collision::solid_blocked(g, [a[0], 1.0, a[2]], [b[0], 1.0, b[2]], None) { return None; }
     }
-    let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
+    let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
     let Some(pick) = pick else { return None };
     crate::guards::say(g, gd, &pick.text, Some(false), Some(true));   // (forced: a held man's only voice is his answers)
     if let Some(bubble) = g.gd[gd].bubble.as_mut() {

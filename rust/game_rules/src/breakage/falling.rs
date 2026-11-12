@@ -2,7 +2,7 @@ pub use ::game_types::falling::types;
 pub use types::*;
 use crate::game::Game;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// The ray a falling thing asks of what it lands on: the `t` of `{ t } | null`. Statics, or the statics and then the props up to the statics' `t`, the props' answer first.
 fn ask(g: &Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f64) -> Option<f64> {

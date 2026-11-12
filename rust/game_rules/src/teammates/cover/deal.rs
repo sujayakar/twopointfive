@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// how far through an opening with no door in it the floor beyond it is asked of: the first that is a room's (a bed may stand at the hole)
 const BEYOND_M: [f64; 4] = [0.9, 1.5, 2.1, 2.7];

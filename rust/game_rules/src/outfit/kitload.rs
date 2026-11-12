@@ -1,11 +1,10 @@
 pub use ::game_types::kitload::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3;
+use alloc::{vec, vec::Vec};
 
 /// The guns a card puts on member i, the one in his hands first.
 fn guns_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Vec<crate::weapons::WeaponId> {
@@ -171,6 +170,7 @@ pub fn load_cross(g: &crate::game::Game, c: CharId) -> f64 { g.load[c].map_or(1.
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// A FAILURE MEANS: a card's cost is not what it carries: a thing with no cost changes nothing, and n of a thing cost n of it.

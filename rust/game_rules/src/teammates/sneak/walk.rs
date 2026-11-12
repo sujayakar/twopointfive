@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec, vec::Vec};
 
 fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 

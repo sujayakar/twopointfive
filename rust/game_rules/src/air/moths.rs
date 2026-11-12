@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! MOTHS ROUND THE LIT SODIUM LAMPS AT NIGHT, whole. "Nobody's AI reads them", and no ray meets them; but each is a KEYED box of
 //! the frame's list (MKEY.test + 0x4000 + i), and the fog of war keeps a record of every keyed loose thing of that list and caps its records, the
 //! frame's room is budgeted with them in it, and the men's kit starts behind them in the list (`rig_from`). So the tick reads what this lane writes,
@@ -6,12 +5,11 @@
 
 pub use ::game_types::moths::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 use crate::v3::quat;
 

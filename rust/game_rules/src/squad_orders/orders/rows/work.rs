@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::Row;
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     can: Some(can),
@@ -29,14 +29,14 @@ fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
     crate::workthings::work_things_pick(g, men, t)
 }
 
-fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+fn valid(g: &mut Game, t: &OrderTarget, _: &[GuardId]) -> Result<(), Option<String>> {
     let OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) = t else { return Err(Some(String::from("nothing to work there."))) };
     if th.stand.is_none() { return Err(Some(String::from("can't get a hand on it."))); }
     let verb = crate::workthings::work_things_verb_of(g, th);
     rows::plain_valid(crate::workthings::work_things_moot(g, th, verb))
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     match crate::workthings::work_things_issue(g, men, t) {
         crate::workthings::WorkThingsIssue::Text(w) => Some(w),
         crate::workthings::WorkThingsIssue::Arm1(()) => None,

@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// A box held by value, made a row.
 fn box_pushed(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
@@ -38,7 +38,7 @@ pub(super) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId
     let (surf, hard) = { let r = &g.tab.wallbreak_breakable[b]; (r.surf, r.hard) };
     let as_ = if hard == Some(true) { Some(crate::break_table::Mat::Blockwork) } else { None };
     let cell = box_pushed(g, cell);
-    let r = crate::break_table::breaks_shed_cell(g, surf, cell, dir, who, budget, as_);
+    crate::break_table::breaks_shed_cell(g, surf, cell, dir, who, budget, as_);
 }
 
 // ---------------------------------------------------------------- what stood on it / hung on it
@@ -686,9 +686,6 @@ pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: O
         });
     }
 }
-
-
-
 
 #[cfg(test)]
 mod tests {

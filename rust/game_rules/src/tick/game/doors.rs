@@ -1,11 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3;
+use alloc::vec::Vec;
 
 /// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated
 pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId]) {
@@ -233,7 +231,6 @@ fn game_door_contact(g: &crate::game::Game) -> Option<crate::doors::DoorContact>
     })
 }
 
-
 /// the row a click with empty hands is on: the first guard in reach who is no hostage
 fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     let mut i = 0;
@@ -328,12 +325,12 @@ fn act_grab(g: &mut Game, act: Option<&Interactable>, dt: f64, input: InputId) {
     let stalked = crate::stalk::stalk_grab(g, &crate::seats::here(g));
     if !free { return; }
     if let Some(st) = stalked {
-        crate::player::start_grab(g, st, None);
+        crate::player::start_grab(g, st);
         if holds(g, pl, st) { hold_from_here(g, pl); }
     } else if let Some(vc) = via_click {
         if rb == Some(crate::close::CloseRmb::Hold) {
             let keyed = crate::stalk::stalk_key_can(g, vc);
-            crate::player::start_grab(g, vc, clicked_close);
+            crate::player::start_grab(g, vc);
             if holds(g, pl, vc) {
                 if keyed {
                     crate::stalk::stalk_key_took(g);
@@ -349,9 +346,9 @@ fn act_grab(g: &mut Game, act: Option<&Interactable>, dt: f64, input: InputId) {
             let loud = rb == Some(crate::close::CloseRmb::Tap) && choke_on;
             crate::player::start_takedown(g, vc, clicked_close, Some(false), Some(loud));
         }
-    } else if let Some((ag, close)) = act.filter(|a| a.kind == InteractableKind::Guard && a.verb == Some(Verb::Grab)).and_then(|a| Some((a.guard?, a.close))) {
+    } else if let Some(ag) = act.filter(|a| a.kind == InteractableKind::Guard && a.verb == Some(Verb::Grab)).and_then(|a| a.guard) {
         let keyed = crate::stalk::stalk_key_can(g, ag);
-        crate::player::start_grab(g, ag, close);
+        crate::player::start_grab(g, ag);
         if keyed && holds(g, pl, ag) {
             crate::stalk::stalk_key_took(g);
             hold_from_here(g, pl);

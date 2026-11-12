@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use crate::v3::{self, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 
 /// Is he down: dead, knocked out, or a player out of hits.
 pub fn down(g: &Game, c: CharId) -> bool { g.cond[c].down }
@@ -116,6 +116,7 @@ pub fn stun_pose(g: &mut Game, c: CharId, live: bool, from: V3) -> (bool, bool) 
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::String;
     use super::*;
     use alloc::vec;
     use crate::game::{Guard, Player};

@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 /// `seat`'s man walked through `cmds` (oldest first, `dt` seconds each) from where the game has him, on a copy of him: writes nothing to the game.

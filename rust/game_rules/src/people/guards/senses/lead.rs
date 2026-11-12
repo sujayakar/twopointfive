@@ -3,7 +3,6 @@ use crate::game::Game;
 use crate::guards::*;
 use crate::ids::*;
 use crate::character::Bone;
-use crate::v3;
 
 pub(in crate::people) fn lead(g: &mut Game, gd: GuardId, c: CharId, fc: Option<CharId>) {
     let now = g.time;

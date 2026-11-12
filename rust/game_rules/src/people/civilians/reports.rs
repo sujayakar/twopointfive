@@ -1,14 +1,14 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 use crate::character::{AnimAct, Bone, HoldPhase};
 use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue, ChronicleNDataValue};
-use crate::dialogue::{Band, DialoguePick, IntelKind, Knowledge, StageKey};
-use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, Temperament, WitnessCalledToBody, WitnessSawBody};
+use crate::dialogue::{DialoguePick, IntelKind};
+use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, WitnessCalledToBody, WitnessSawBody};
 use crate::guards::{body_pos, escalation_of, follow_path, go_to, point_in_view, say};
 use crate::scene_level::{CivilianDefKind, CivilianTask};
 use crate::teams::Team;
@@ -334,7 +334,7 @@ fn answer_base(text: String, id: &str, stage_n: f64, kind: Option<IntelKind>) ->
 }
 
 /// her answers in the arm: fear, then the thing or two she knows, then nothing
-pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
+pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::dialogue::DialoguePick> {
     let cid = g.gd[gd].civ.unwrap(); let t_id = g.gd[gd].talk;
     g.tab.game_talk[t_id].stage += 1.0; g.tab.game_talk[t_id].presses += 1.0; g.tab.game_talk[t_id].last_t = g.time;
     let stage = g.tab.game_talk[t_id].stage;

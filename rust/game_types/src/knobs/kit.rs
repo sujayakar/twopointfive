@@ -2,7 +2,6 @@
 use crate::bytes::ToBytes;
 use crate::js::*;
 use alloc::string::String;
-use alloc::vec::Vec;
 use game_derive::Knobs;
 
 /// The pouches: what each man has room for and what a thing fills.

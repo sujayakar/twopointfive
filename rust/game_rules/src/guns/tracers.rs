@@ -2,10 +2,10 @@ pub use ::game_types::tracers::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor.
 fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
@@ -235,6 +235,8 @@ pub fn tracers_clear(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
+    use alloc::vec;
     extern crate std;
     use super::*;
 

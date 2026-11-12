@@ -2,11 +2,10 @@ pub use ::game_types::weather::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// The level's boxes as IDs: `g.col.boxes`, statics appended later included.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
@@ -141,7 +140,7 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
 fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
     let name = crate::scene_level_load::level_name_of(g);
     let stood = g.stood;
-    if crate::weather_kinds::snow_level(g, name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
+    if crate::weather_kinds::snow_level(name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
 }
 
 /// No weather picked on a floor that is none of the office's: its own night is dry and still, under its own roofs.

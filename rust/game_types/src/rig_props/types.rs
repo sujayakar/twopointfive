@@ -1,7 +1,5 @@
 //! The types of `rig_props`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::V3;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Seg {

@@ -1,13 +1,12 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::runner::types;
 pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// the script lent for the frame, as the run left it, put back on his row.
 pub(super) fn runner_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {

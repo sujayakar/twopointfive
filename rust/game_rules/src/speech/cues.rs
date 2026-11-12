@@ -2,10 +2,10 @@ pub use ::game_types::cues::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
 use crate::roomfight::{Did, News, Word};
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the tables
@@ -621,8 +621,8 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
             if cues_cue(g, gd, CueKind::Still, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
         }
         let now = g.gd[gd].state;
-        let M = cues_man(g, gd);
-        M.state = now;
+        let man_row = cues_man(g, gd);
+        man_row.state = now;
     }
     if g.cues.squelch_due {
         g.cues.squelch_due = false;

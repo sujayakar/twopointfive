@@ -1,9 +1,8 @@
 pub use ::game_types::aimcost::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// Did a round flying these legs MEET a fixture (its point `pos`, its own boxes) under the real-hit rule? `stopped`: its flight ended in one of the fixture's boxes.
 pub fn lamp_struck(g: &mut crate::game::Game, pos: V3, boxes: &[Option<BoxId>], stopped: bool, legs: &[crate::aimcost::RoundLeg], bare: Option<f64>, slack: Option<f64>) -> bool {

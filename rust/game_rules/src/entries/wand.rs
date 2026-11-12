@@ -1,9 +1,8 @@
 pub use ::game_types::wand::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// A door the wand goes under: shut home, on its hinges, not the steel fire door.
 pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {

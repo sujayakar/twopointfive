@@ -1,6 +1,5 @@
 //! The types of `doornames`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
 use alloc::{string::String, vec::Vec};
 
 /// the state this module keeps at its top level
