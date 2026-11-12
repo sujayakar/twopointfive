@@ -150,6 +150,8 @@ export interface Level {
   /** `fumble` (s, absent = 2.2): how long a man sent to the tripped panel works at it before the mains come back */
   breaker: { pos: Vec3; boxes: number[]; fumble?: number };
   beacons: { pos: Vec3; box: number }[];
+  /** the lamps of its parked vehicles, by the box its lens is (carLamps.ts finds them as a level is written) — absent = none */
+  vehicleLamps?: { box: number; what: 'head lamp' | 'tail lamp' }[];
   sky: { zenith: Vec3; horizon: Vec3 };
   /** the breach drill's plan (optional; rust/game_rules/src/missions/breach.rs BreachDrill) */
   breach?: BreachPlan;

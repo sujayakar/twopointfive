@@ -68,7 +68,7 @@ fn level_counts(g: &crate::game::Game, level: &crate::levelfit::LevelCountsLevel
     let no_switches = Vec::new();
     let switches = level.switchables.as_ref().unwrap_or(&no_switches);
     let beacons = level.beacons.as_ref().map_or(0.0, |l| l.len() as f64);
-    let cars = crate::carlamps::find_car_lamps(g, &level.boxes);
+    let cars = &g.level.vehicle_lamps;
     let mut flat = 0.0;
     for s in switches.iter() {
         for &bi in s.boxes.iter() {

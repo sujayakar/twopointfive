@@ -1,4 +1,4 @@
-// A PARKED VEHICLE'S LAMPS, FOUND: the level files carry no name for one, so by what the generators write (officeGen.ts and levelKit.ts car, gwotKit.ts pickup and van, the pass's lorry): its
+// A PARKED VEHICLE'S LAMPS, FOUND, as a level is written (its file's `vehicleLamps`): no generator names one, so by what they write (officeGen.ts and levelKit.ts car, gwotKit.ts pickup and van, the pass's lorry): its
 // half size, its paint or its glow, and its twin the same height and yaw across the vehicle's width.
 import type { Vec3 } from '../../../src/math/vec';
 import type { Box } from '../../../src/scene/boxes';
@@ -42,4 +42,9 @@ export function carLampsIn(boxes: readonly Box[], K: LampFit = LAMP_FIT): FoundL
     if (twin) out.push({ box: a.i, what: s.what, lit: !!s.emissive });
   }
   return out;
+}
+/** … as the level says them: none said where it has none */
+export function lampsOf(boxes: readonly Box[]): { vehicleLamps?: { box: number; what: LampSig['what'] }[] } {
+  const found = carLampsIn(boxes);
+  return found.length ? { vehicleLamps: found.map(({ box, what }) => ({ box, what })) } : {};
 }

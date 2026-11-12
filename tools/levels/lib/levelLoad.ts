@@ -123,6 +123,7 @@ export function loadLevel(data: LevelData): Level {
     ...(data.hums ? { hums: data.hums.map((h): HumDef => ({ name: h.id, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     breaker: { pos: V(data.breaker.pos), boxes: [bx(data.breaker.panel), bx(data.breaker.led)], ...(data.breaker.fumble !== undefined ? { fumble: data.breaker.fumble } : {}) },
     beacons: data.beacons.map(b => ({ pos: V(b.pos), box: bx(b.box) })),
+    ...(data.vehicleLamps ? { vehicleLamps: data.vehicleLamps.map(l => ({ box: bx(l.box), what: l.what })) } : {}),
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
@@ -285,6 +286,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     ] },
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
+    ...(level.vehicleLamps ? { vehicleLamps: level.vehicleLamps.map(l => ({ box: ids[l.box], what: l.what })) } : {}),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
     ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: lib/scenarios.ts)

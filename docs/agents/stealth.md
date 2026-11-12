@@ -81,7 +81,7 @@ nearest calm man, unless `power_out_rules` gives the walk to a garrison's party.
 pistol up, on what the reticle has (`ocpable`). A flashlight dies, a fixture or device goes dark for `ocp_duration`, a breaker in sight trips.
 
 **Wall switches** are in no level file. `build` finds plates on a room's wall by each door. `flip_switch` works one; a calm defender at it puts the
-room back (`light_switch_tick`, `puts_back`). **Car lamps** are found from the boxes (`find_car_lamps`); one already dark breaks and tells nobody
+room back (`light_switch_tick`, `puts_back`). **Car lamps** are the level's (`vehicleLamps`, `car_lamp_targets`); one already dark breaks and tells nobody
 (`dead_lamp`).
 
 **One key and a ring.** `build_interactables` makes the rows (`Interactable`, each with a `Verb`). `update_interact` reads the key: a tap does the

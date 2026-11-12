@@ -13,6 +13,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 const { OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/tools/levels/lib/officeGen.ts`);
 const { rowWord, rowDoes: nameDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
+const { lampsOf } = await import(`${ROOT}/tools/levels/lib/carLamps.ts`);
 const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. tools/levels/lib/materials.ts)
 const { DOES_DEFAULT } = await import('./lib/does.ts');
 const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
@@ -78,6 +79,7 @@ stampDoes(level);
 // THE SKIN (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here
 if (gen.finish && !FLOOR_TO) { const n0 = level.boxes.length; const st = gen.finish(level, groups); if (st) console.log(`look: ${st.repainted} boxes repainted, ${st.kept} kept, ${st.decals} decals, ${st.props} props — ${Object.entries(st.by as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => `${n} ${k}`).join(', ')}${st.relaid === undefined ? '' : ` — ${st.relaid} flat decals raised to draw in order, the highest top at ${((st.flatTop ?? 0) * 1000).toFixed(2)} mm, ${st.surfaced} now over a flat of the level`}`); if (groups.length !== level.boxes.length) throw new Error(`finish: ${groups.length} groups for ${level.boxes.length} boxes (from ${n0})`); }
 stampDoes(level);
+Object.assign(level, lampsOf(level.boxes));   // (its vehicles' lamps, in their last paint: the file's vehicleLamps)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string; does?: string }> = {};
 /** what a paint's row says its boxes do: what the paint's NAME says (scene/stuff.ts PAINT_DOES, as a kit words a box of it), else, for a row of a
  *  generator's own that no table names, the word its colour had. A box that does another thing says so itself (levelLoad.ts levelToData) */
