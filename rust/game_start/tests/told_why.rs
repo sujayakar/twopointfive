@@ -290,9 +290,10 @@ fn a_silent_squad_says_it_on_the_net() {
     }
 }
 
-/// The rescue on the office, nobody roaming.
-fn rescue(s: u32, squad: u32, set: f64) -> Play {
-    let mut p = rescue_of(&Opts { seed: s, squad, ..Default::default() }, 99.0, 99.0, set, true);
+/// The rescue on the office.
+fn rescue(s: u32, squad: u32) -> Play {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&rescue", &Opts { seed: s, squad, ..Default::default() });
+    p.sam_unhurt();
     p.run(0.3);
     p
 }
@@ -303,7 +304,7 @@ fn hostage_door(p: &Play) -> DoorId { let d = p.g.level.scenarios.as_ref().and_t
 #[test]
 fn f_at_the_hostage_room_with_men_on_its_door_is_answered_by_them() {
     for s in SEEDS {
-        let mut p = rescue(s, 2, 0.0);
+        let mut p = rescue(s, 2);
         let d = hostage_door(&p);
         let sam = p.sam_at();
         assert_eq!(p.order_on_face("charge", d, sam), None, "seed {s}: the staging");
@@ -313,7 +314,7 @@ fn f_at_the_hostage_room_with_men_on_its_door_is_answered_by_them() {
         assert!(said_by_one_of(&p, &men, "charge isn't set yet."), "seed {s}: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
         drop(p);
 
-        let mut p = rescue(s, 2, 0.0);
+        let mut p = rescue(s, 2);
         let d = hostage_door(&p);
         let sam = p.sam_at();
         assert_eq!(p.order_on_face("bangClear", d, sam), None, "seed {s}: the staging");
@@ -330,12 +331,12 @@ fn f_at_the_hostage_room_with_men_on_its_door_is_answered_by_them() {
 fn f_at_the_hostage_room_with_nobody_free_says_so() {
     let (holding, alone) = ("we're all holding what you gave us. call us in first.", "you'll have to take the room yourself");
     for s in SEEDS {
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         p.tap("KeyF");
         assert!(no_team_line(&p, holding) && word(&p).as_deref() != Some(alone), "seed {s}: the control");
         drop(p);
 
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         let (sam, men) = (p.sam_at(), p.men());
         for (m, off) in men.iter().zip([-2.0, 2.0]) { assert_eq!(p.order_men("cover", [sam[0] + off, sam[1]], &[*m]), None, "seed {s}: the staging"); }
         p.run(0.5);
@@ -343,7 +344,7 @@ fn f_at_the_hostage_room_with_nobody_free_says_so() {
         assert!(said_by_one_of(&p, &men, holding), "seed {s}: {:?} word {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>(), word(&p));
         drop(p);
 
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         for m in p.men() { p.falls(m, DownBy::Guard); }
         p.frame();
         p.tap("KeyF");
@@ -357,12 +358,12 @@ fn f_at_the_hostage_room_with_nobody_free_says_so() {
 fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
     let none = "no bangs left. going in without one.";
     for s in SEEDS {
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         p.tap("KeyF");
         assert!(no_team_line(&p, none), "seed {s}: the control");
         drop(p);
 
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         let men = p.men();
         p.g.groups[p.g.group].tools.bangs = 0.0;
         p.tap("KeyF");
@@ -370,7 +371,7 @@ fn an_entry_short_of_cans_is_said_by_a_man_going_in() {
         assert!(said_by_one_of(&p, &men, none), "seed {s}: the rescue: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());
         drop(p);
 
-        let mut p = rescue(s, 2, 30.0);
+        let mut p = rescue(s, 2);
         let men = p.men();
         p.g.groups[p.g.group].tools.bangs = 1.0;
         let b = game::rescue::rescue_from_bounds(&p.g).expect("the staging: the side door's room");   // (Sam in the side door's room: one man goes round by it)
