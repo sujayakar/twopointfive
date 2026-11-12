@@ -1,4 +1,4 @@
-//! WHAT THE LOOPS ASK OF THE WEATHER: is a place under a roof. What the weather is and does is the rules' (game_rules air/weather.rs); the dust's field is air.rs's.
+//! WHAT THE LOOPS ASK OF THE WEATHER: is a place under a roof. What the weather is and does is the rules' (game_rules air/weather.rs); the dust's field is stepped in air.rs.
 
 /// the roofs a table holds (a level's four biggest)
 pub const ROOFS: usize = crate::snow::MAX_ROOFS;

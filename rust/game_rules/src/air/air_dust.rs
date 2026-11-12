@@ -46,3 +46,15 @@ pub fn air_dust_update(g: &mut Game, dt: f64) {
         ::sim::air::update(&mut g.air_dust, g.tab.boxes.world(), dt, &g.k);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /// The plan is the world's floor, in cells. A failure means dust is read beside where it stands, or not at all at the far end of a level.
+    #[test]
+    fn the_plan_lies_over_the_whole_world() {
+        use ::sim::air::{AIR_CELL, AIR_H, AIR_W, X0, Z0};
+        let w = crate::scene_world::world();
+        assert_eq!((X0, Z0), (w.min[0], w.min[2]));
+        assert_eq!((X0 + AIR_W as f64 * AIR_CELL, Z0 + AIR_H as f64 * AIR_CELL), (w.max[0], w.max[2]));
+    }
+}
