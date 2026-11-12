@@ -95,7 +95,7 @@ pub fn knobs(item: TokenStream) -> TokenStream {
     let (kind, name) = (word(t.next()), word(t.next()));
     let Some(TokenTree::Group(g)) = t.next() else { panic!("Knobs is for a struct with named fields: {name}") };
     if kind != "struct" || g.delimiter() != Delimiter::Brace { panic!("Knobs is for a struct with named fields: {name}") }
-    let rows: Vec<(String, String)> = split(g.stream()).into_iter().map(|f| {
+    let rows: Vec<(String, String, String)> = split(g.stream()).into_iter().map(|f| {
         let mut t = f.into_iter().peekable();
         let mut value = None;
         while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
@@ -112,23 +112,17 @@ pub fn knobs(item: TokenStream) -> TokenStream {
         let ty: String = t.map(|x| x.to_string()).collect::<String>().replace(' ', "");
         let plain = ["f64", "bool", "V3"].contains(&ty.as_str()) || ty.starts_with('[');
         if value.is_none() && plain { panic!("{name}.{field} says no value: #[k(…)]") }
-        (field, value.unwrap_or(format!("<{ty}>::page()")))
+        (field, value.unwrap_or(format!("<{ty}>::page()")), ty)
     }).collect();
-    let (mut page, mut walk, mut get, mut set) = (String::new(), String::new(), String::new(), String::new());
-    for (f, value) in &rows {
+    let (mut page, mut fields) = (String::new(), String::new());
+    for (f, value, ty) in &rows {
         page += &format!("{f}: {value}, ");
-        // (a field of a type nothing can be turned in, a word say, is passed over: knobs `Auto`)
-        walk += &format!("::game_types::knobs::under(at, {f:?}, |at| (&Auto(&self.{f})).walk_it(at, &mut *each)); ");
-        get += &format!("({f:?}, rest) => (&Auto(&self.{f})).get_it(rest), ");
-        set += &format!("({f:?}, rest) => (&mut AutoMut(&mut self.{f})).set_it(rest, v), ");
+        fields += &format!("Field {{ name: {f:?}, at: ::core::mem::offset_of!({name}, {f}), of: &Holds::<{ty}>::OF }}, ");
     }
     format!("impl {name} {{ pub fn page() -> Self {{ Self {{ {page} }} }} }} \
              impl ::core::default::Default for {name} {{ fn default() -> Self {{ Self::page() }} }} \
-             impl ::game_types::knobs::KnobTable for {name} {{ \
-                 #[allow(unused_variables)] fn walk(&self, at: &mut ::alloc::string::String, each: &mut dyn FnMut(&str, bool, f64)) {{ #[allow(unused_imports)] use ::game_types::knobs::auto::*; {walk} }} \
-                 #[allow(unused_variables)] fn get(&self, name: &str) -> ::core::option::Option<f64> {{ #[allow(unused_imports)] use ::game_types::knobs::auto::*; match ::game_types::knobs::first_part(name) {{ {get} _ => None }} }} \
-                 #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ #[allow(unused_imports)] use ::game_types::knobs::auto::*; match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
-             }}").parse().unwrap()
+             impl ::game_types::knobs::KnobTable for {name} {{ const OF: ::game_types::knobs::Of = {{ \
+                 #[allow(unused_imports)] use ::game_types::knobs::{{Field, Holds, HoldsNone}}; ::game_types::knobs::Of::Table(&[{fields}]) }}; }}").parse().unwrap()
 }
 /// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says; and all of them in their order
 #[proc_macro_derive(Words, attributes(word))]
