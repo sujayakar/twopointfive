@@ -32,14 +32,3 @@ pub struct DecalOpts {
     pub pane: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WEARMARK {
-    pub look: f64,
-    pub reach0: f64,
-    pub reach1: f64,
-    pub min_half: f64,
-    pub max_half: f64,
-}
-
-pub fn wear_mark() -> crate::render_decals::WEARMARK { crate::render_decals::WEARMARK { look: 3.0, reach0: 0.09, reach1: 0.21, min_half: 0.035, max_half: 0.09 } }
-

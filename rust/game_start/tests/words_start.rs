@@ -31,3 +31,22 @@ fn a_start_stands_with_what_its_address_says() {
     assert!(matches!(s.game.k.morale.training, game::morale::Training::Green), "a pick");
     assert!(matches!(s.game.k.morale.nerve, game::morale::Nerve::Brittle), "a pick");
 }
+
+/// THE RULE: every number of a table is reached by its name, however it lies: in a row, in a list of rows, by a key of a map, in what may not be there.
+/// CONTROL: a place past a list's end, a key that is not there and a word are no knobs.
+/// A FAILURE MEANS: a number the picture is made of cannot be turned on the panel.
+#[test]
+fn a_number_in_a_list_or_a_map_has_a_name() {
+    use game::knobs::{KnobTable, Knobs};
+    let mut k = Knobs::page();
+    for name in ["fixture_break.pops.4", "blast_feel.push.1.2", "blast_feel.fire.soot.3.count.1", "casings.of.mk12.dir.0", "impact.on.metal.sparks", "colors.openings.hot.0", "walls.tough.drywall", "doorshot.fly.0"] {
+        let was = KnobTable::get(&k, name).unwrap_or_else(|| panic!("no knob is named {name}"));
+        assert!(k.set(name, was + 1.0) && KnobTable::get(&k, name) == Some(was + 1.0), "{name} is not turned");
+    }
+    for name in ["fixture_break.pops.5", "blast_feel.push.1", "casings.of.m870.dir.0", "impact.on.snow.sparks", "fire.names.0", "doorshot.fly", "fire.names", "tune"] {
+        assert!(KnobTable::get(&k, name).is_none() && !k.set(name, 1.0), "{name} is no number");
+    }
+    let mut seen = Vec::new();
+    k.walk(&mut String::new(), &mut |name, _, v| seen.push((String::from(name), v)));
+    for (name, v) in &seen { assert_eq!(KnobTable::get(&k, name), Some(*v), "{name} is listed and not found"); }
+}

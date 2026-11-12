@@ -65,8 +65,8 @@ pub(super) fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
     let attach = if s.dynamic { Some(s.box_) } else { None };
     let b = &g.tab.boxes[s.box_];
     if b.stuff == Some(crate::scene_stuff::BoxStuff::Glass) && js::to_u32(b.flags) & box_flag::GLASS == 0 {
-        let k = crate::particle_fx::solid_glass_crack();
-        lay(g, DecalKind::Damage, e.hit_p, e.n, Some(if pellets { k.pellet } else if rifle { k.rifle } else { k.pistol }), &DecalOpts { param: Some(k.look + k.strength), clamp_to: Some(s.box_), attach, ..Default::default() });
+        let k = g.k.pfx.solid_glass;
+        lay(g, DecalKind::Damage, e.hit_p, e.n, Some(if pellets { k.pellet } else if rifle { k.rifle } else { k.pistol }), &DecalOpts { param: Some(crate::particle_fx::SOLID_GLASS_LOOK + k.strength), clamp_to: Some(s.box_), attach, ..Default::default() });
         return;
     }
     let param = m::max(0.75, m::min(1.6, mm / 6.0)) * if rifle { 1.1 } else { 1.0 };

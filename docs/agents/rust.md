@@ -151,7 +151,8 @@ and neither side may link the other. Inside the rules:
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
   A seat's field also goes in `SeatRef`.
 - **A `static mut`** of `rust/sim` is no state: it needs its row in `rust-rules-check.ts` STATICS, saying SCRATCH or COPY.
-- **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
+- **A knob:** `#[k(value)] pub name: f64` in its table.
+  A row, a list or a map of numbers is reached part by part (`fixture_break.pops.4`). A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
   `game_start/src/host/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.

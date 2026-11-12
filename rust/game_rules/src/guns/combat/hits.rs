@@ -648,21 +648,12 @@ pub fn can_params() -> crate::smoke_types::CanisterParams {
 
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.
 fn start_canister(g: &mut crate::game::Game, it: ItemId) {
-    let seconds: f64;
-    if crate::effects::flags().vent_canister {
-        let yaw = g.tab.item[it].heading;
-        let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
-        seconds = crate::effects::spawn_vent(g, at, yaw, None);
-    } else {
-        let p = can_params();
-        seconds = p.canister_duration;
-        let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
-        // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
-        let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
-        crate::smoke_types::smoke_system_like_emit(g, &e);
-        crate::out_events::push_smoke_system_like_emit(g, &e);
-    }
-    g.tab.item[it].emit_t = seconds;
+    let p = can_params();
+    let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
+    let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
+    crate::smoke_types::smoke_system_like_emit(g, &e);
+    crate::out_events::push_smoke_system_like_emit(g, &e);
+    g.tab.item[it].emit_t = p.canister_duration;
     let pos = g.tab.item[it].pos;
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
     crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::SmokePop, Some(pos), Some(0.9), None);

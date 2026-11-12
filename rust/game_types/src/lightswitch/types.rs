@@ -55,10 +55,4 @@ pub struct LightswitchMod {
 
 pub const WALL_TOP: f64 = 2.2;
 
-pub fn plate() -> V3 { [0.62, 0.6, 0.55] }
-
-pub fn rocker() -> V3 { [0.74, 0.72, 0.66] }
-
-pub fn glow() -> V3 { [1.6, 0.8, 0.16] }
-
 pub const SW_KEY: f64 = 4194304.0;

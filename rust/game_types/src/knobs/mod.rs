@@ -1,6 +1,8 @@
 //! THE NUMBERS THE GAME IS TUNED BY: a file a family, each table with its values beside its fields. A person turns one by its dotted name: a row of the panel (game_start host/shown.rs), an address word (words.rs), a tape's Knob command.
 use crate::bytes::ToBytes;
+use crate::js::JsMap;
 use alloc::string::String;
+use alloc::vec::Vec;
 use game_derive::Knobs;
 
 mod aim; pub use aim::*;
@@ -108,6 +110,14 @@ mod pfx; pub use pfx::*;
 mod dust; pub use dust::*;
 mod dust_look; pub use dust_look::*;
 mod tracers; pub use tracers::*;
+mod blast_look; pub use blast_look::*;
+mod moths; pub use moths::*;
+mod effects; pub use effects::*;
+mod stature; pub use stature::*;
+mod wallwear; pub use wallwear::*;
+mod colors; pub use colors::*;
+mod impact; pub use impact::*;
+mod casings; pub use casings::*;
 mod rescueflow; pub use rescueflow::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
@@ -172,10 +182,70 @@ pub trait KnobTable {
     /// turn it; false = there is none. For a yes or no anything but 0 is yes
     fn set(&mut self, name: &str, v: f64) -> bool;
 }
+/// a map's key, as a name's part: a word as it is, an arm with a small first letter
+fn said(key: &impl core::fmt::Debug) -> String {
+    let mut s = alloc::format!("{key:?}").trim_matches('"').replace('.', " ");
+    if let Some(first) = s.get_mut(..1) { first.make_ascii_lowercase(); }
+    s
+}
+
+impl KnobTable for f64 {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { each(at, false, *self) }
+    fn get(&self, name: &str) -> Option<f64> { name.is_empty().then_some(*self) }
+    fn set(&mut self, name: &str, v: f64) -> bool { if name.is_empty() { *self = v; } name.is_empty() }
+}
+impl KnobTable for bool {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { each(at, true, *self as u8 as f64) }
+    fn get(&self, name: &str) -> Option<f64> { name.is_empty().then_some(*self as u8 as f64) }
+    fn set(&mut self, name: &str, v: f64) -> bool { if name.is_empty() { *self = v != 0.0; } name.is_empty() }
+}
+/// a list's, each by its place
+impl<T: KnobTable> KnobTable for [T] {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { for (i, x) in self.iter().enumerate() { under(at, &alloc::format!("{i}"), |at| x.walk(at, &mut *each)); } }
+    fn get(&self, name: &str) -> Option<f64> { let (i, rest) = first_part(name); <[T]>::get(self, i.parse::<usize>().ok()?)?.get(rest) }
+    fn set(&mut self, name: &str, v: f64) -> bool { let (i, rest) = first_part(name); i.parse::<usize>().ok().and_then(|i| self.get_mut(i)).is_some_and(|x| x.set(rest, v)) }
+}
+impl<T: KnobTable, const N: usize> KnobTable for [T; N] {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self[..].walk(at, each) }
+    fn get(&self, name: &str) -> Option<f64> { KnobTable::get(&self[..], name) }
+    fn set(&mut self, name: &str, v: f64) -> bool { self[..].set(name, v) }
+}
+impl<T: KnobTable> KnobTable for Vec<T> {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self[..].walk(at, each) }
+    fn get(&self, name: &str) -> Option<f64> { KnobTable::get(&self[..], name) }
+    fn set(&mut self, name: &str, v: f64) -> bool { self[..].set(name, v) }
+}
+/// a map's, each by its key's name
+impl<K: core::fmt::Debug + Eq + Clone + core::hash::Hash, T: KnobTable> KnobTable for JsMap<K, T> {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { for (k, x) in self.iter() { under(at, &said(&k), |at| x.walk(at, &mut *each)); } }
+    fn get(&self, name: &str) -> Option<f64> { let (k, rest) = first_part(name); self.iter().find(|x| said(&x.0) == k)?.1.get(rest) }
+    fn set(&mut self, name: &str, v: f64) -> bool { let (k, rest) = first_part(name); self.iter_mut().find(|x| said(&x.0) == k).is_some_and(|x| x.1.set(rest, v)) }
+}
+/// what may not be there: its numbers while it is
+impl<T: KnobTable> KnobTable for Option<T> {
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { if let Some(x) = self { x.walk(at, each); } }
+    fn get(&self, name: &str) -> Option<f64> { self.as_ref()?.get(name) }
+    fn set(&mut self, name: &str, v: f64) -> bool { self.as_mut().is_some_and(|x| x.set(name, v)) }
+}
+/// (what the derive writes) a field's numbers, if its type has any: `Is` is found before `IsNot`, which is further off by a reference
+pub mod auto {
+    use super::{KnobTable, String};
+    pub struct Auto<'a, T: ?Sized>(pub &'a T);
+    pub struct AutoMut<'a, T: ?Sized>(pub &'a mut T);
+    pub trait Is { fn walk_it(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)); fn get_it(&self, name: &str) -> Option<f64>; }
+    impl<T: KnobTable + ?Sized> Is for Auto<'_, T> {
+        fn walk_it(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self.0.walk(at, each) }
+        fn get_it(&self, name: &str) -> Option<f64> { KnobTable::get(self.0, name) }
+    }
+    pub trait IsNot { fn walk_it(&self, _at: &mut String, _each: &mut dyn FnMut(&str, bool, f64)) {} fn get_it(&self, _name: &str) -> Option<f64> { None } }
+    impl<T: ?Sized> IsNot for &Auto<'_, T> {}
+    pub trait IsMut { fn set_it(&mut self, name: &str, v: f64) -> bool; }
+    impl<T: KnobTable + ?Sized> IsMut for AutoMut<'_, T> { fn set_it(&mut self, name: &str, v: f64) -> bool { KnobTable::set(self.0, name, v) } }
+    pub trait IsNotMut { fn set_it(&mut self, _name: &str, _v: f64) -> bool { false } }
+    impl<T: ?Sized> IsNotMut for &mut AutoMut<'_, T> {}
+}
 /// (what the derive writes) the first part of a dotted name, and the rest
 pub fn first_part(name: &str) -> (&str, &str) { name.split_once('.').unwrap_or((name, "")) }
-/// (what the derive writes) one number, by its name under `at`
-pub fn each_of(at: &mut String, name: &str, yes: bool, v: f64, each: &mut dyn FnMut(&str, bool, f64)) { under(at, name, |at| each(at, yes, v)) }
 /// (what the derive writes) the dotted name goes one part deeper for `f`
 pub fn under(at: &mut String, name: &str, f: impl FnOnce(&mut String)) {
     let n = at.len();
@@ -310,6 +380,14 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflow: RescueflowK,
+    pub casings: CasingsK,
+    pub impact: ImpactK,
+    pub colors: ColorsK,
+    pub wallwear: WallwearK,
+    pub stature: StatureK,
+    pub effects: EffectsK,
+    pub moths: MothsK,
+    pub blast_look: BlastLookK,
     pub tracers: TracersK,
     pub dust_look: DustLookK,
     pub dust: DustK,

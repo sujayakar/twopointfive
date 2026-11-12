@@ -57,4 +57,18 @@ pub struct PfxK {
     #[k(0.16)] pub tink_gain: f64,
     /// width (m) of the sparks where a tracer stops (the rest of them are the `tracers` table)
     #[k(0.0025)] pub ember_size: f64,
+    pub solid_glass: PfxKSolidGlass,
 }
+
+/// THE CRACK A ROUND LEAVES IN SOLID GLASS (a car's window, which cracks and stays): the star of pale lines drawn as a mark. The picture alone.
+#[derive(Clone, Copy, Debug, ToBytes, Knobs)]
+pub struct PfxKSolidGlass {
+    /// its radius (m) by what fired: a pistol · any other gun. A hit on a breakable thing draws these at ± 15%
+    #[k(0.085)] pub pistol: f64,
+    #[k(0.11)] pub rifle: f64,
+    /// its radius (m) for a gun that fires pellets, where a round stopped in the glass lays its own mark; a hit on a breakable thing takes `rifle`
+    #[k(0.035)] pub pellet: f64,
+    /// how strongly the crack's pale heart and bruise show, under 1: a mark's record holds its look as the whole number and this as the fraction, so 1 or more would make it another mark
+    #[k(0.9)] pub strength: f64,
+}
+

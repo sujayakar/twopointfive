@@ -571,7 +571,7 @@ impl Blaze {
 
     /// Its hot air, as the falling snow meets it.
     fn hot_air(&self, g: &Game) -> crate::smoke_types::WindGpuSource {
-        let w = fire_look_smoke().snow;
+        let w = g.k.fire.plume.snow;
         let a = axis_at(g, self.flame_h * 0.5, self.wind);
         let n = m::hyp3(a[2], 1.0, a[3]);
         crate::smoke_types::WindGpuSource {
@@ -615,7 +615,7 @@ impl Blaze {
 
     /// `n` embers off it, counted in the book, by its own seed and not the particles' serial.
     fn throw(&self, g: &mut Game, n: f64, hard: f64) {
-        let fl = fire_look_smoke();
+        let fl = g.k.fire.plume;
         let nth = book(g).embers;
         let k = &g.k.fire;
         let up = self.flame_h * fl.ember_up;
@@ -651,7 +651,7 @@ impl Blaze {
             let e = self.gas(g);
             smoke_emit(g, &e);
         }
-        let every = fire_look_smoke().puff_every;
+        let every = g.k.fire.plume.puff_every;
         if due(every) {
             let e = self.puff(g, m::floor(clock.time / every));
             smoke_emit(g, &e);
@@ -660,7 +660,7 @@ impl Blaze {
 
     /// The steady source.
     fn gas(&self, g: &Game) -> crate::smoke_types::SmokeEmitter {
-        let (b, l) = (&g.k.fire.smoke, fire_look_smoke());
+        let (b, l) = (&g.k.fire.smoke, g.k.fire.plume);
         let p = self.mouth.pos;
         let up = g.k.fire.height * l.up;
         let a = axis_at(g, up, self.wind);
@@ -680,7 +680,7 @@ impl Blaze {
 
     /// The `nth` puff.
     fn puff(&self, g: &Game, nth: f64) -> crate::smoke_types::SmokeEmitter {
-        let l = fire_look_smoke();
+        let l = g.k.fire.plume;
         let luck = |j: f64| h01(self.si + nth * 31.0 + j);
         let ox = (luck(11.0) - 0.5) * 2.0 * l.puff_off;
         let oz = (luck(12.0) - 0.5) * 2.0 * l.puff_off;
