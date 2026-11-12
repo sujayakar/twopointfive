@@ -29,8 +29,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     crate::doors::doors_blast(g, at, tear, who);
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
-    let o = crate::effects::SpawnBurstO { spark_count: { let e = g.k.effects.bang; Some(m::min(e.spark_count, if crate::effects::flags().trails { e.trail_count } else { 0.0 })) } };
-    let l = crate::effects::spawn_burst(g, at, seed, Some(o));
+    let l = crate::effects::spawn_burst(g, at, seed);
     crate::particle_fx::bang_fx(g, at);
     let flash = crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(who));

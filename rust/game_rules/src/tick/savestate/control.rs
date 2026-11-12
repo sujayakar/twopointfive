@@ -510,11 +510,12 @@ fn checkpoint(g: &mut Game, label: &str) {
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Save, Some(label));
 }
 
-/// What the abandoned game hands to the one put back: what is the host's and the run's as it is NOW, and not the saved moment's to take back.
-pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, labels: bool, tune: crate::knobs::TuneK }
+/// What the abandoned game hands to the one put back: what is the host's and the run's as it is NOW, and not the saved moment's to take back. Not the tables of numbers: what a
+/// mission or a difficulty set comes with the save, and what the player turned is turned again by the host that knows the rows by name.
+pub struct Abandoned { saves: Checkpoints, loads: f64, kept: f64, god: bool, ai: bool, ammo: bool, unseen: bool, labels: bool }
 pub fn abandoned(g: &Game) -> Abandoned {
     let c = &g.chronicle.counts;
-    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug, tune: g.k.tune.clone() }
+    Abandoned { saves: g.saves.clone(), loads: c.loads, kept: c.saves, god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, labels: g.show_debug }
 }
 /// There is no game kept under this key any more: it is off the shelf. What the player is told of it.
 fn gone(g: &mut Game, key: &str) -> String {
@@ -543,7 +544,7 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     g.saves.due = None;
     g.saves.authored = None;
     g.saves.last_save_t = g.time;
-    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.show_debug, g.k.tune) = (was.god, was.ai, was.ammo, was.unseen, was.labels, was.tune);
+    (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.show_debug) = (was.god, was.ai, was.ammo, was.unseen, was.labels);
     g.chronicle.counts.loads = was.loads;
     g.chronicle.counts.saves = was.kept;
     let _ = crate::chronicle::chron_checkpoint(g, crate::chronicle::ChronCheckpointWhat::Load, Some(&label));
