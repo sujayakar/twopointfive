@@ -94,10 +94,6 @@ fn with_ref<R>(h: u32, f: impl FnOnce(&Held) -> R) -> R { with(h, |x| f(x)) }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 unsafe fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] { if n == 0 { &[] } else { std::slice::from_raw_parts(p, n) } }
-/// the slots of rust/sim's that no live game stands in
-fn free_slot() -> Option<usize> {
-    GAMES.with(|v| { let v = v.borrow(); (0..sim::state::GAMES).find(|s| !v.iter().flatten().any(|h| h.g.sim == *s)) })
-}
 
 // ---- the bytes
 #[no_mangle]

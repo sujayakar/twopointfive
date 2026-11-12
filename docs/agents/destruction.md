@@ -122,7 +122,7 @@ density is real, so men's eyes read it as the picture does. `destruction_dust_pu
 time.
 
 **Restart and load.** A restart runs `glass_break_reset`, `destruction_reset` (it calls `wall_break_reset`, `furniture_reset`) and `decals_clear`. A
-load puts back a clone of the whole game and its block (`savestate/`), so nothing has to be told.
+load puts back a clone of the whole game (`savestate/`), so nothing has to be told.
 
 ## Rules that hold
 

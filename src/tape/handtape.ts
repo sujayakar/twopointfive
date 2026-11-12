@@ -23,8 +23,8 @@ if (count > 64) throw new Error('a tape has 64 bits to say which of a hand\u2019
 export interface PartOf { name: string; length: number; hash: number }
 /** what a game was started from */
 export interface TapeStart { build: string; levelName: string; level: Uint8Array; words: string; parts: PartOf[]; seed: number; seats: number; flags: number; kept: string }
-/** what the game came to by a tick: rolls made of its die, the hash of its block's parts' hashes, and the hash of every part of it (null: a tape made before every mark had it) */
-export interface TapeMark { tick: number; die: number; parts: number; state: number | null }
+/** what the game came to by a tick: rolls made of its die, the word of where everybody stands, and the hash of every part of it (null: a tape made before every mark had it) */
+export interface TapeMark { tick: number; die: number; stands: number; state: number | null }
 /** WHO STANDS WHERE by a tick, and the rounds the player has fired: what came of the play, whatever the module that played it keeps its state in (a mark's hashes are of one module's own layout) */
 export interface TapeFigures { tick: number; shots: number; men: { id: number; x: number; z: number; down: boolean }[] }
 /** metres a man may stand from where he stood, and it is the same play */
@@ -89,7 +89,7 @@ export class HandTape {
   order(bytes: Uint8Array): void { if (!this.over) { this.u8(ORDER); this.bytes(bytes); } }
   /** a hands-off player took the seat, or with no plan gave it back */
   hands(plan: HandsOffPlan | null): void { if (!this.over) { this.u8(HANDS); this.text(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); } }
-  mark(m: TapeMark): void { if (this.over) return; this.u8(MARK); this.u32(m.tick); this.f64(m.die); this.u32(m.parts); this.u8(m.state === null ? 0 : 1); if (m.state !== null) this.u32(m.state); }
+  mark(m: TapeMark): void { if (this.over) return; this.u8(MARK); this.u32(m.tick); this.f64(m.die); this.u32(m.stands); this.u8(m.state === null ? 0 : 1); if (m.state !== null) this.u32(m.state); }
   figures(f: TapeFigures): void {
     if (this.over) return; this.u8(FIGURES); this.u32(f.tick); this.u32(f.shots); this.u32(f.men.length); this.room(f.men.length * 13);
     for (const m of f.men) { this.d.setUint32(this.n, m.id, true); this.d.setFloat32(this.n + 4, m.x, true); this.d.setFloat32(this.n + 8, m.z, true); this.b[this.n + 12] = m.down ? 1 : 0; this.n += 13; }
@@ -156,7 +156,7 @@ export class HandWalk {
     const kind = this.u8(), tick = this.ticks;
     if (kind === ORDER) return { kind: 'order', tick, bytes: this.bytes() };
     if (kind === HANDS) { const said = this.text(), [seed, cap, breaker, ...route] = said.split('\n'); return { kind: 'hands', tick, plan: said ? { seed: Number(seed), cap: Number(cap), breaker: breaker !== '0', route } : null }; }
-    if (kind === MARK) { const at = this.u32(), die = this.f64(), parts = this.u32(); return { kind: 'mark', mark: { tick: at, die, parts, state: this.u8() ? this.u32() : null } }; }
+    if (kind === MARK) { const at = this.u32(), die = this.f64(), stands = this.u32(); return { kind: 'mark', mark: { tick: at, die, stands, state: this.u8() ? this.u32() : null } }; }
     if (kind === FIGURES) { const f: TapeFigures = { tick: this.u32(), shots: this.u32(), men: [] }; for (let n = this.u32(); n > 0; n--) f.men.push({ id: this.u32(), x: this.f32(), z: this.f32(), down: this.u8() === 1 }); return { kind: 'figures', figures: f }; }
     if (kind === TRY) return { kind: 'try', tick };
     if (kind === END) return { kind: 'end', tick, why: this.text() };

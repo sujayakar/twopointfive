@@ -7,7 +7,7 @@ use crate::scene_level::Level;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
+/// Makes the game in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` on a blank Game, and made the level's boxes as rows listed in `g.col.boxes` in the level's order.
 /// Each part stands on those before it: what a part draws of the die, and the order the lists are filled in, hang on this order.
 pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) {
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)

@@ -1,5 +1,5 @@
 //! A PICTURE OF A GAME TOUCHES NOTHING, AND HOLDS ITS PROGRAM WHOLE. A level's program in the middle of a beat goes on through a checkpoint as if none were taken, every man as he was, and a game put
-//! back, in a fresh slot after another game has stood and gone, goes on as the game that was not put back did. A beat's place is plain data (`BeatFrame`), so nothing has to be stopped for a picture, or started again after one.
+//! back, after another game has stood and gone, goes on as the game that was not put back did. A beat's place is plain data (`BeatFrame`), so nothing has to be stopped for a picture, or started again after one.
 //! `PROGRAM_MOMENT_BREAK=1`: the moment comes back with a beat's place lost, and the tests must fail on it.
 use game::game::Game;
 use game::savestate::control;
@@ -17,19 +17,7 @@ fn stand(id: &str) -> Play {
     Play::mission(e.level.as_deref().unwrap_or("office.json"), &pick_search(&e, ""), &Opts { seed: 9, dress: true, ..Default::default() })
 }
 fn put_step(p: &mut Play, step: &str) { p.g.lesson.i = game::lesson::lesson_data(&p.g).unwrap().steps.iter().position(|t| t.id == step).unwrap_or_else(|| panic!("no step '{}'", step)) as f64; }
-fn block(g: &Game) -> Vec<u8> { game_start::block::bytes(g.sim).to_vec() }
-/// the game kept stands again in a fresh game's slot, as the page's module puts one back
-fn lay(p: &mut Play, g: &Game, b: &[u8], slot: usize) { p.g = Moment { game: Box::new(g.clone()), block: b.to_vec() }.laid(slot); }
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut out);
-    out.extend(game_start::block::part_hashes(p.g.sim));
-    out
-}
-fn parting(a: &[u32], b: &[u32]) -> String {
-    let names: Vec<String> = game::state_words::state_names().into_iter().chain(game_start::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect();
-    names.iter().zip(a.iter().zip(b)).filter(|(_, (x, y))| x != y).map(|(n, _)| n.as_str()).collect::<Vec<_>>().join(", ")
-}
+fn parting(a: &[u32], b: &[u32]) -> String { let names = game_start::parts::names(); game_start::parts::differ(&names, a, b).join(", ") }
 /// a beat of the running program that stands in its middle
 fn in_the_middle(g: &Game) -> usize {
     let Some(r) = g.director.run.filter(|&r| !g.tab.director_run[r].ended) else { return 0 };
@@ -92,16 +80,15 @@ fn a_checkpoint_touches_nothing(id: &str, step: &str, checkpoint: &str) {
 fn the_program_goes_on(id: &str, step: &str, checkpoint: &str) {
     let (mut p, mut h) = into_a_beat(id, step);
     assert_eq!(control::run_no(&p.g, &game::seats::here(&p.g), false), None, "{}: F5 and the autosave are refused with a program running", id);
-    let (mut g, b) = (p.g.clone(), block(&p.g));
-    g.out.clear();
+    let m = Moment::of(&p.g);
     let mut rows = Vec::new();
-    for i in 0..ON_SECS * 60 { hands(&mut p, i, checkpoint); h.frame(&mut p); if i % 60 == 59 { rows.push(words(&mut p)); } }
+    for i in 0..ON_SECS * 60 { hands(&mut p, i, checkpoint); h.frame(&mut p); if i % 60 == 59 { rows.push(p.words()); } }
     assert!(h.taken >= 1, "{}: nothing in the twenty seconds took a checkpoint", id);
     drop(p);
     let broken = std::env::var("PROGRAM_MOMENT_BREAK").is_ok();
     drop(stand("room-clear-four"));
     let mut q = stand(id);
-    lay(&mut q, &g, &b, 1);
+    q.g = m.laid();   // (bare, as the module stands a game lost to a panic: nothing of what was made from the level is there)
     assert!(in_the_middle(&q.g) > 0, "{}: the program came back with no beat in its middle", id);
     if broken { let beat = q.g.tab.director_run[q.g.director.run.unwrap()].beats[0]; q.g.tab.director_live_beat[beat].it = game::director::BeatFrame::Spent; }
     let mut h = Host::new();
@@ -109,7 +96,7 @@ fn the_program_goes_on(id: &str, step: &str, checkpoint: &str) {
         hands(&mut q, i, checkpoint);
         h.frame(&mut q);
         if i % 60 == 59 {
-            let w = words(&mut q);
+            let w = q.words();
             assert!(w == rows[i / 60], "{} put back: parts {} s on, in {}", id, (i + 1) / 60, parting(&rows[i / 60], &w));
         }
     }

@@ -2,8 +2,8 @@
 //! (`stand.rs`) and the host's own frame; nothing writes the game's state behind a rule's back. What a test asks of a man it asks through the
 //! readers at the foot of this file, so that when a field moves (the AI's rework will move several) one line here follows it and no test does.
 //!
-//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps its blocks and several tables in statics, so two games on two threads would write each
-//! other's state: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
+//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps scratch in statics, so two games on two threads would write each
+//! other's: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
 use crate::json::Json;
 use crate::scene::Scene;
 use crate::stand::{self, Host, StartOpts, Stood};
@@ -98,7 +98,7 @@ fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_
 fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play {
     // (a second game stood by the thread that holds the first would wait on itself for ever: said, not waited for)
     if HOLDS.with(|h| h.get()) { panic!("one game at a time: this test still holds a Play. Drop it (`drop(p)`, or end its block) before standing another"); }
-    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
+    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on nothing of it)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
@@ -252,10 +252,10 @@ impl Play {
     }
     /// a moment put back: the game is that one again, where it stood
     pub fn lay(&mut self, m: &game::savestate::control::Moment) {
-        let new = m.laid(self.g.sim);
+        let new = m.laid();
         game::savestate::control::stand(&mut self.g, new);
     }
-    /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
+    /// Every part of the game's state, a word a part (`parts::names` names them): what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
         crate::parts::words(&mut self.g, &mut w, &mut out);
