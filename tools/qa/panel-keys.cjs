@@ -79,6 +79,13 @@ const QUALITY = process.env.QUALITY || 'verylow';
   await page.mouse.move(game.x, game.y); const h2 = await hOf();
   check(h0 > 900 && h1 === h0 && s.search === 'qzq' && s.focus === 'panel' && h2 < h0 - 200, 'a tall page, a query with no rows: the panel keeps its height while the search types, and lets it go with the keyboard', { h0, h1, h2, ...s });
   await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); }); await page.setViewportSize({ width: 1280, height: 720 });
+  // WHAT THE PLAYER TURNED STAYS over a restart and a load; a number set by anything else goes back with the game
+  const turns = await page.evaluate(() => { const D = window.__draw, G = D.game, name = 'tune.guard_chase', at = n => G.knobs().find(k => k.name === n).value, was = at(name), other = at('tune.lone_wait');
+    G.turn(name, was + 1); G.commands.knob('tune.lone_wait', other + 1); G.tell(); D.run(3, [], 'none'); const set = [at(name) - was, at('tune.lone_wait') - other];
+    G.commands.save(); G.tell(); D.run(3, [], 'none'); const key = G.saves().rows[0] && G.saves().rows[0].key;
+    G.commands.restart(''); G.tell(); D.run(6, [], 'none'); const again = [at(name) - was, at('tune.lone_wait') - other];
+    return { set, again, key: !!key }; });
+  check(turns.set.join() === '1,1' && turns.again.join() === '1,0', 'a number the player turned stands after a restart, and one something else set is the first try\'s again', turns);
   check(pageErrors.length === 0, 'no page error', pageErrors);
   await PAGE.end();
 })().catch(e => { console.error('SCRIPT ERROR', String(e && e.stack || e).slice(0, 800)); process.exit(2); });

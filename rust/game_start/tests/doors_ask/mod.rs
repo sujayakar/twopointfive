@@ -229,9 +229,7 @@ pub trait DoorsAsk {
     /// how many blind rounds the room has fired through its door
     fn rescue_blind(&self) -> f64;
     /// STAGING: the clock's knobs, and the mission staged again on them: seconds to the first shot, then the second, seconds for a man to be set
-    fn rescue_on(&mut self, first: f64, second: f64, set: f64);
     /// STAGING: no man abroad to meet the pair, and the door's man inside
-    fn rescue_quiet_floor(&mut self);
     /// is he on his way out of a room he has given up
     fn falls_back(&self, name: &str) -> bool;
     /// how long he lines up on her
@@ -609,12 +607,6 @@ impl DoorsAsk for Play {
     fn rescue_men(&self) -> Vec<GuardId> { self.g.staged.foes.clone() }
     fn rescue_hostages(&self) -> Vec<GuardId> { self.g.staged.captives.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
-    fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
-    fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
-        let k = &mut self.g.k.rescue;
-        (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
-        game::savestate::control::restart(&mut self.g);
-    }
     fn falls_back(&self, name: &str) -> bool {
         self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.leg.kind == game::roomfight::DefMoveKind::Fallback })
     }
@@ -869,3 +861,13 @@ impl DoorsAsk for Play {
 pub fn off_by(a: f64, b: f64) -> f64 { let d = (a - b).rem_euclid(std::f64::consts::TAU); d.min(std::f64::consts::TAU - d) }
 /// the yaw from one place to another
 pub fn yaw_to(a: [f64; 2], b: [f64; 2]) -> f64 { (b[0] - a[0]).atan2(b[1] - a[1]) }
+
+/// the rescue on the office: the captor's two clocks and how long a room takes to be set, and nobody roaming if so asked
+pub fn rescue_of(o: &game_start::play::Opts, first: f64, second: f64, set: f64, quiet: bool) -> game_start::play::Play {
+    let mut p = game_start::play::Play::mission_laid("office.json", "?levelFile=office.json&rescue", o, |k| {
+        (k.rescue.resolve_secs, k.rescue.second_hostage_secs, k.rescue.set_secs) = (first, second, set);
+        if quiet { (k.rescue.roamers, k.rescue.door_man) = (0.0, game::knobs::RescueKDoorMan::Inside); }
+    });
+    p.sam_unhurt();
+    p
+}
