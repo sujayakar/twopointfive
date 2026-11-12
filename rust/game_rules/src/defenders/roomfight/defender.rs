@@ -66,6 +66,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
     let mode = g.tab.roomfight_def[d].mode;
     if mode == DefMode::Move { room_fight_tick_move(g, d, dt); return; }
     if mode == DefMode::Free { room_fight_tick_free(g, d); return; }
+    if mode == DefMode::Told { return; }
     if g.gd[gd].script.is_some() && crate::director::director_lesson_runs(g) { g.tab.roomfight_def[d].staged = Some(true); return; }
     if g.tab.roomfight_def[d].staged == Some(true) {
         g.tab.roomfight_def[d].staged = Some(false); crate::duty::hold(g, gd, true, "roomfight");
