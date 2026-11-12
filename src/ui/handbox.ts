@@ -16,7 +16,7 @@
 //   EMPTY HANDS have a place at the head of the strip: with everything put away it is the tab, and the box under it is empty.
 // Every slot is still one `.slot` with its `.key`, in the kit's order: what reads the column by those names finds them.
 import type { KitGun, KitSetup, KitSlot, KitThing, KitView } from '../view/seatview';
-import { capOfCode, keyCap, keyText, keysOf } from '../host/keymap';
+import { capNow, keyCap, keyText, keysOf } from '../host/keymap';
 
 const CSS = `
 #equip.hand { width: 380px; min-width: 0; }
@@ -85,7 +85,7 @@ function state(gun: KitGun): HTMLElement {
 function popup(setup: KitSetup): HTMLElement {
   const pop = mk('div', 'hp');
   for (const r of setup.rows) {
-    const row = mk('div', 'hp-row'), k = mk('kbd'); k.textContent = capOfCode(r.key); row.appendChild(k);
+    const row = mk('div', 'hp-row'), k = mk('kbd'); k.textContent = capNow(r.key); row.appendChild(k);
     for (const w of r.words) row.appendChild(mk('span', `o${w.on ? ' on' : ''}${w.out ? ' out' : ''}`, w.text));
     pop.appendChild(row);
   }
@@ -110,7 +110,7 @@ const pips = (s: KitSlot) => { const c = mk('span', CAN_CLASS[s.thing]); for (le
 
 /** a place in the strip: what its key brings (the one that is up is the box's tab) */
 function slotOf(s: KitSlot): HTMLElement {
-  const key = () => { const k = mk('span', 'key'); k.textContent = capOfCode(s.key); return k; };
+  const key = () => { const k = mk('span', 'key'); k.textContent = capNow(s.key); return k; };
   if (s.thing === 'hands') { const e = mk('div', 'slot hands' + (s.up ? ' sel' : '')); e.appendChild(key()); e.appendChild(mk('i', 'mt')); return e; }
   if (s.absent) { const e = mk('div', 'slot absent'); e.appendChild(key()); e.appendChild(mk('span', 'name', s.name)); return e; }
   const e = mk('div', 'slot' + (s.up ? ' sel' : '') + (s.spent ? ' none' : '') + (s.taken ? ' row' : '')); e.appendChild(key());

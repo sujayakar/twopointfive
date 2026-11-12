@@ -1,5 +1,6 @@
 //! THE KIT'S COLUMN (`view.kit`, rust/game_rules/src/outfit/kit `kit_view`): what a HUD is told of what a man carries, held to what the game says he carries and to the keys a player presses.
 use game::game::SlotKind;
+use game::input::Key;
 use game::view::{KitSlot, KitThing, KitView};
 use game::weapons::WeaponId;
 use game_start::play::{Opts, Play};
@@ -173,7 +174,7 @@ fn the_setup_is_told_while_it_is_open_and_only_then() {
         tap(&mut p, "Digit1");
         press(&mut p, "Digit1");
         let k = kit(&p);
-        assert_eq!(k.setup.expect("the pistol's digit again").rows.last().map(|r| r.key.clone()), Some(String::from("Digit3")), "seed {}", seed);
+        assert_eq!(k.setup.expect("the pistol's digit again").rows.last().map(|r| r.key), Some(Key::Digit3), "seed {}", seed);
     }
 }
 
@@ -190,10 +191,10 @@ fn a_load_he_is_out_of_is_stepped_over() {
         p.g.fa[rf].att_idx = 0;
         (p.g.fa[rf].rings, p.g.fa[rf].shells, p.g.fa[rf].cams) = (3.0, 0.0, 2.0);
         p.run(0.8);
-        let rows = |p: &Play| kit(p).setup.map_or(Vec::new(), |s| s.rows.iter().map(|r| r.key.clone()).collect::<Vec<_>>());
+        let rows = |p: &Play| kit(p).setup.map_or(Vec::new(), |s| s.rows.iter().map(|r| r.key).collect::<Vec<_>>());
         // ring up, no grenade, two cameras behind it
         press(&mut p, "Digit2");
-        assert_eq!(rows(&p), ["Digit1", "Digit2", "Digit3"], "seed {}", seed);
+        assert_eq!(rows(&p), [Key::Digit1, Key::Digit2, Key::Digit3], "seed {}", seed);
         let load: Vec<(String, bool, bool)> = kit(&p).setup.unwrap().rows[1].words.iter().map(|w| (w.text.clone(), w.on, w.out)).collect();
         assert_eq!(load, [(String::from("SPONGE ×3"), true, false), (String::from("HE ×0"), false, true), (String::from("CAM ×2"), false, false)], "seed {}", seed);
         press(&mut p, "Digit2");
@@ -201,7 +202,7 @@ fn a_load_he_is_out_of_is_stepped_over() {
         // nothing else to put up: no row, and 2 2 only shuts it
         p.g.fa[rf].rings = 0.0;
         press(&mut p, "Digit2");
-        assert_eq!(rows(&p), ["Digit1", "Digit3"], "seed {}", seed);
+        assert_eq!(rows(&p), [Key::Digit1, Key::Digit3], "seed {}", seed);
         press(&mut p, "Digit2");
         assert!(kit(&p).setup.is_none() && kit(&p).gun.unwrap().load.map(|w| w.text) == Some(String::from("CAM ×2")), "seed {}", seed);
     }
@@ -220,7 +221,7 @@ fn a_card_without_the_light_has_no_lamp_to_work() {
         let pl = p.g.player;
         // CONTROL: the issued card has one
         press(&mut p, "Digit2");
-        assert!(kit(&p).setup.is_some_and(|s| s.rows.iter().any(|r| r.key == "Digit3")), "seed {}: the issued card's setup has no light", seed);
+        assert!(kit(&p).setup.is_some_and(|s| s.rows.iter().any(|r| r.key == Key::Digit3)), "seed {}: the issued card's setup has no light", seed);
         press(&mut p, "Tab");
         press(&mut p, "KeyL");
         let rf = p.g.pl[pl].rifle;
@@ -240,8 +241,8 @@ fn a_card_without_the_light_has_no_lamp_to_work() {
         press(&mut p, "KeyL");
         assert!(!p.g.fa[rf].light_on && !kit(&p).gun.unwrap().light, "seed {}: L worked a lamp the card did not give him", seed);
         press(&mut p, "Digit2");
-        let rows: Vec<String> = kit(&p).setup.map_or(Vec::new(), |s| s.rows.iter().map(|r| r.key.clone()).collect());
-        assert!(!rows.iter().any(|r| r == "Digit3") && !rows.is_empty(), "seed {}: the setup offers the light: {:?}", seed, rows);
+        let rows: Vec<Key> = kit(&p).setup.map_or(Vec::new(), |s| s.rows.iter().map(|r| r.key).collect());
+        assert!(!rows.iter().any(|r| *r == Key::Digit3) && !rows.is_empty(), "seed {}: the setup offers the light: {:?}", seed, rows);
     }
 }
 /// THE SAME OF A SQUAD'S MISSION (the room clear), where the loud card is what he wears.

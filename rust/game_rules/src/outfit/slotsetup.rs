@@ -111,7 +111,7 @@ pub(super) fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
             SetupKind::Load => g.fa[g.pl[seat.player].rifle].attachments.iter().zip(r.opts.iter()).map(|(a, o)| load_word(*a, o.left.unwrap_or(0.0), o.on)).collect(),
             SetupKind::Light => vec![word("LIGHT", r.opts.iter().any(|o| o.id == "on" && o.on))],
         };
-        crate::view::KitSetupRow { key: digit_code(r.key as i32).text(), words }
+        crate::view::KitSetupRow { key: digit_code(r.key as i32), words }
     }).collect();
     Some(crate::view::KitSetup { rows, back: crate::backkey::BACK_KEY.as_str().to_uppercase() })
 }
