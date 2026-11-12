@@ -96,7 +96,7 @@ const L = links(); if (BREAK) L.planted = ['outside', 'sim'];
   const off = (at: string, raw: string): void => { if (/^\s*#!\[\s*(cfg_attr\([^\]]*)?allow\([^\]]*\b(unused\w*|dead_code|warnings|nonstandard_style|non_\w+)\b/.test(raw)) bad.push(`${at} — the compiler's word is off for a whole file`); };
   for (const c of crates) { for (const l of code(c, true)) { read++; off(l.at, l.text); }
     if (!code(c, true).some(l => l.file === `${c}/src/lib.rs` && l.text.startsWith('#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]'))) bad.push(`rust/${c}/src/lib.rs does not make a warning an error where the game is played or gated`); }
-  if (BREAK) off('rust/planted/src/planted.rs:1', '#![allow(unused_imports)]');
+  if (BREAK) off('a planted line', '#![allow(unused_imports)]');
   line(bad, 'warnings: no file turns the compiler\'s word for unused code off', `${crates.length} crates, ${read} lines`); }
 console.log(`=== rust-rules-check: ${red ? `${red} FAIL` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);
