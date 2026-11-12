@@ -98,3 +98,21 @@ fn back_at_the_runs_first_step_the_saves_stay() {
     assert!(h.p.g.saves.shelf.m.has(key.clone()), "the shelf let it go");
     assert!(control::kept_of(of).iter().any(|(k, _)| *k == key), "the game kept under it is gone");
 }
+
+/// THE RULE: the tables of numbers come with the save, the tune with the rest: what a mission or a difficulty set then is what stands. (What the player turned since, the page turns again: it
+/// knows its rows by name.)
+/// A FAILURE MEANS: a level's script shuts the response team out, and after a load it comes.
+#[test]
+fn a_save_brings_its_own_numbers() {
+    let mut h = Host::office(8);
+    h.run(0.5);
+    let then = (false, 1.25);
+    (h.p.g.k.tune.qrf, h.p.g.k.walls.sill) = then;
+    control::ask_save(&mut h.p.g);
+    h.frame();
+    (h.p.g.k.tune.qrf, h.p.g.k.walls.sill) = (true, 0.5);
+    assert_eq!(control::ask_load(&mut h.p.g, "manual.0"), None);
+    h.frame();
+    assert_eq!(h.backs, 1);
+    assert_eq!((h.p.g.k.tune.qrf, h.p.g.k.walls.sill), then, "a number stayed as it was turned after the save");
+}

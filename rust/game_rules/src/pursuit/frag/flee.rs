@@ -205,8 +205,7 @@ fn seen_and_heard(g: &mut Game, b: &Burst) {
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
     let flags = crate::effects::flags();
-    let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(g.k.effects.bang.spark_count, if flags.trails { g.k.effects.bang.trail_count } else { 0.0 })) };
-    let l = crate::effects::spawn_burst(g, from, seed, Some(o));
+    let l = crate::effects::spawn_burst(g, from, seed);
     crate::particle_fx::bang_fx(g, from);
     let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(b.who));

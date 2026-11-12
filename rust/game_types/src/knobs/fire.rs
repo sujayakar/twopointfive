@@ -81,9 +81,9 @@ pub struct FireK {
     /// `?firereact=0&firelean=0&firebright=0&firesway=0`. `wander` is not his 0.07: his note asking for shadows that move came with it (FIRE_WANDER).
     pub look: FireKLook,
     pub plume: FireKPlume,
-    /// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
-    ///  flame's height (its foot, a radius lower, stays over a standing man's head on a drum), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-    ///  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke
+    /// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): its source's least width in cells, what it lets out a second, how hot, how fast it
+    ///  leaves, how hard the air is dragged along and how much its way wobbles; filed afresh every `every` s for that long. Where it stands and how wide is `plume`'s.
+    ///  `on` and `view_r` (m) are the picture's: a fire's painted soot hands over to its smoke only with the one, and within the other of what the view looks at
     pub smoke: FireKSmoke,
     /// THE SOUND: the bed's level at the fire (heard for as long as it burns) and each crack's (× how hard the crack is)
     #[k(0.85)] pub bed: f64,
@@ -131,14 +131,12 @@ pub struct FireKLook {
     #[k(40.0)] pub steps: f64,
 }
 
-/// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
-///  flame's height (its foot, a radius lower, stays over a standing man's head on a drum), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
-///  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke
+/// THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): its source's least width in cells, what it lets out a second, how hot, how fast it
+///  leaves, how hard the air is dragged along and how much its way wobbles; filed afresh every `every` s for that long. Where it stands and how wide is `plume`'s.
+///  `on` and `view_r` (m) are the picture's: a fire's painted soot hands over to its smoke only with the one, and within the other of what the view looks at
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct FireKSmoke {
     #[k(true)] pub on: bool,
-    #[k(1.9)] pub up: f64,
-    #[k(0.26)] pub radius: f64,
     #[k(4.0)] pub cells: f64,
     #[k(1.0)] pub density: f64,
     #[k(21.0)] pub temp: f64,
@@ -147,7 +145,6 @@ pub struct FireKSmoke {
     #[k(0.5)] pub jitter: f64,
     #[k(1.0)] pub every: f64,
     #[k(18.0)] pub view_r: f64,
-    #[k(0.12)] pub lean: f64,
 }
 
 /// THE COLUMN OVER A FIRE: the smoke it lets out on the solver (a steady source and, a few a second, puffs of thicker, hotter gas), the way its embers leave, and its hot air
