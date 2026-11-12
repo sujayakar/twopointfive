@@ -438,6 +438,12 @@ impl<'a> Rules<'a> {
             self.a_box(&w, &b.box_);
             if self.boxes.contains(b.box_.as_str()) && !self.switched.contains_key(b.box_.as_str()) { self.say(w, format!("'{}' is no switchable's box (the beam goes with that fixture)", b.box_)); }
         }
+        let mut lamps = BTreeSet::new();
+        for (i, l) in f.vehicle_lamps.iter().flatten().enumerate() {
+            let w = format!("vehicleLamps[{i}].box");
+            self.a_box(&w, &l.box_);
+            if !lamps.insert(l.box_.as_str()) { self.say(w, format!("'{}' is another lamp already", l.box_)); }
+        }
     }
 
     // ---- the drills' plans

@@ -510,6 +510,12 @@
   },
   "breaker": { "pos": [1.5, 1.35, 19.24], "panel": "breaker_panel", "led": "breaker_led" },
   "beacons": [],
+  "vehicleLamps": [
+    { "box": "box_0128", "what": "head lamp" },
+    { "box": "box_0129", "what": "tail lamp" },
+    { "box": "box_0130", "what": "head lamp" },
+    { "box": "box_0131", "what": "tail lamp" }
+  ],
   "sky": { "zenith": [0.007, 0.012, 0.024], "horizon": [0.018, 0.024, 0.039] },
   "plans": {
     "roomClear": []

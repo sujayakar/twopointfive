@@ -61,8 +61,8 @@ hand. A top-level `marks[]` row is a named spot where a person stands to use a t
 **Lights and lamps.** `lights[]` are point, spot or directional; `group` and `mains` say what can put one out, `fixture` names its glowing box.
 `switchables[]` are glowing boxes on a switch. The directional light in group `exterior` is the moon, and an hour's sun goes in at its place.
 `lamps_out` puts out group `exterior` at an hour whose `lamps` is false. No file places a wall switch: `room_light` picks the mains lights a plate
-works. `tools/levels/lib/carLamps.ts` and `carlamps.rs` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
-lamp moved for the look changes the play.
+works. `tools/levels/lib/carLamps.ts` finds a vehicle's lamps by what the kits write as a level is written, and the file
+names them (`vehicleLamps`, `carlamps.rs`). Guards read the light the picture shows, so a lamp moved for the look changes the play.
 
 **Furniture and props.** A fixed thing is plain boxes. A loose thing is a `props[]` row: `kind`, `mass`, `parts`, its footprint fitted by
 `fitPropFootprint`. Men are pushed by what stands from 0.2 m up and the walk grid is baked from 0.25 m, so a top of 0.19 m or less is walked over, and

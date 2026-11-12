@@ -1,20 +1,11 @@
 //! The types of `carlamps`.
-use crate::{Words, V3};
+use crate::{Words, bytes::ToBytes};
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LampSig {
-    pub what: crate::carlamps::CarLamp,
-    pub h: V3,
-    pub albedo: Option<V3>,
-    pub emissive: Option<V3>,
-    pub gap: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FoundLamp {
+/// a vehicle's lamp, as the level's file says it: which box its lens is
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct VehicleLamp {
     pub box_: f64,
     pub what: crate::carlamps::CarLamp,
-    pub lit: bool,
 }
 
 /// the counters this module keeps for the checks
@@ -25,7 +16,7 @@ pub struct CarlampsStats {
 
 pub const VEHICLE_GROUP: &str = "vehicle";
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CarLamp {
     #[word("head lamp")] #[default] HeadLamp,
     #[word("tail lamp")] TailLamp,
