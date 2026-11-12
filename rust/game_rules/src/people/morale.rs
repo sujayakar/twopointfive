@@ -533,7 +533,7 @@ fn run_dry(g: &mut crate::game::Game, gd: GuardId) {
         g.fa[w].burst = None;
         crate::character::anim_reload(g, c, None, None);
         let pos = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(pos), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(pos), Some(0.5), None);
     }
     g.gd[gd].reload_t = m::max_n(&[g.gd[gd].reload_t, row.dur, g.k.morale.reload_secs]);
     bark(g, gd, LineKind::Out, false, Some(true));

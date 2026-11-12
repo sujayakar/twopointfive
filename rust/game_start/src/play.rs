@@ -62,7 +62,7 @@ pub enum Button { Left = 1, Middle = 2, Right = 4 }
 pub struct Said { pub t: f64, pub who: GuardId, pub text: String, pub radio: bool }
 /// a sound the game asked for
 #[derive(Clone, Debug)]
-pub struct Sound { pub t: f64, pub name: String, pub at: Option<[f64; 3]> }
+pub struct Sound { pub t: f64, pub name: game::audio_iface::Sfx, pub at: Option<[f64; 3]> }
 
 /// A game a test is playing. It holds the one-game lock until dropped.
 pub struct Play {
@@ -155,7 +155,7 @@ impl Play {
         let t = self.g.time;
         for e in out {
             match e {
-                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
+                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name, at: p.pos }),
                 E::SmokeSystemLikeEmit(_) | E::SmokeSystemLikePush(_) | E::SmokeSystemLikeRound(_) => self.smoke.push(e),
                 _ => {}
             }
@@ -292,13 +292,13 @@ impl Play {
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
     pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
     /// His walk keys toward `to` from here on, as a hand holds them, until he is within a hand's breadth or they are let go of (None).
-    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key); } } }
+    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key.as_str()); } } }
     /// …held for the tick to come
     pub fn hold_legs(&mut self) {
         let Some(to) = self.legs else { return };
         let (p, f) = (self.g.player_pos(self.g.player), self.g.tab.camera[self.host.cam].forward);
         let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
-        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
+        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(key.text()); } else { i.keys.delete(key.text()); } }
     }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }

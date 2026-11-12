@@ -86,7 +86,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     r.done.add(beat);
     r.last_at = now;
     crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
     row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: String::from(s) });
     true

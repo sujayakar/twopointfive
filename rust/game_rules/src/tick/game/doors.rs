@@ -320,7 +320,7 @@ fn act_grab(g: &mut Game, act: Option<&Interactable>, dt: f64, input: InputId) {
     let rmb_on = g.pl[pl].holstered && free;
     let rmb_down = crate::input::input_rmb(g, input);
     let rmb_hit = crate::input::input_rmb_hit(g, input);
-    let dropped = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
+    let dropped = crate::input::input_hit(g, input, crate::input::Key::Blur) || crate::input::input_hit(g, input, crate::input::Key::Paused);
     let rb = crate::close::close_rmb(g, rmb_on, rmb_down, rmb_hit, dt, in_reach.is_some(), choke_on, dropped);
     let clicked: Option<Interactable> = if rb.is_some() { in_reach } else { None };
     let via_click: Option<GuardId> = clicked.as_ref().and_then(|c| c.guard);

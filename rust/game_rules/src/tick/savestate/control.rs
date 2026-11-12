@@ -179,7 +179,7 @@ pub fn tick(g: &mut Game, dt: f64) -> Option<Do> {
         return g.saves.authored.take().and_then(|label| write(g, SlotInfoSlot::Auto, &label, true));
     }
     g.saves.authored = None;
-    if crate::cmd::seat_pressed(g, "F5") && !crate::condition::down(g, g.pl[g.player].ch) { ask_save(g); }
+    if crate::cmd::seat_pressed(g, crate::input::Key::F5) && !crate::condition::down(g, g.pl[g.player].ch) { ask_save(g); }
     let hand = if core::mem::take(&mut g.saves.hand) { write(g, SlotInfoSlot::Manual, "by hand", false) } else { None };
     let auto = turn(g, dt, hand.is_none());
     hand.or(auto)

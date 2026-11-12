@@ -11,8 +11,8 @@ pub mod panes;
 pub mod smoke;
 pub mod bytes;
 pub mod crosses;
-#[macro_use]
 pub mod bits;
+#[macro_use]
 pub mod rows;
 pub mod handed;
 pub mod ids;

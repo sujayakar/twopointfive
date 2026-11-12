@@ -370,7 +370,7 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
         let k = st.tinks[i];
         if k.t > now { continue; }
         st.tinks.remove(i);
-        crate::audio_iface::game_audio_like_play(g, "casingTink", Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CasingTink, Some(k.pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: k.rate }));
     }
 }
 

@@ -394,12 +394,12 @@ pub(super) fn wall_charge_nearest(g: &mut crate::game::Game, of: Option<&mut dyn
 pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     g.sets[g.seat].wall_charge.pressed = false;
     if !wall_charge_sync(g) || g.sets[g.seat].wall_charge.set.is_empty() { return; }
-    let key = g.k.doortools.blow_key.clone();
-    if !crate::input::input_hit(g, input, &key) { return; }
+    let key = g.k.doortools.blow_key;
+    if !crate::input::input_hit(g, input, key) { return; }
     if crate::condition::down(g, g.pl[g.player].ch) {
         let mut any = false;
         for c in g.sets[g.seat].wall_charge.set.clone() { if wall_charge_key_is(g, &crate::seats::here(g), c) { any = true; break; } }
-        if any { g.tab.input[input].pressed.delete(key.clone()); }
+        if any { g.tab.input[input].pressed.delete(key.text()); }
         return;
     }
     if let Some(rows) = g.groups[g.group].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
@@ -419,15 +419,15 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     wall_charge_blow(g, Some(c), None);
     let mut word = false;
     for x in g.groups[g.group].tools.set.clone() { if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) { word = true; break; } }
-    if word { g.tab.input[input].pressed.delete(key.clone()); } else { g.sets[g.seat].wall_charge.pressed = true; }   // (men waiting at a door get the word on this same press)
+    if word { g.tab.input[input].pressed.delete(key.text()); } else { g.sets[g.seat].wall_charge.pressed = true; }   // (men waiting at a door get the word on this same press)
 }
 
 /// after the door tools' input: a press that blew a wall and was nobody's word besides is used up
 pub fn wall_charge_input_after(g: &mut crate::game::Game, input: InputId) {
     if g.sets[g.seat].wall_charge.pressed {
         g.sets[g.seat].wall_charge.pressed = false;
-        let key = g.k.doortools.blow_key.clone();
-        g.tab.input[input].pressed.delete(key.clone());
+        let key = g.k.doortools.blow_key;
+        g.tab.input[input].pressed.delete(key.text());
     }
 }
 
@@ -528,7 +528,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
         let c = g.tab.wallcharge_set_wall_charge.push(row);
         g.sets[g.seat].wall_charge.set.push(c);
         let sound_at = wall_pt(g, w, 0.0, 0.0, Some(height));
-        crate::audio_iface::game_audio_like_play(g, "lockPick", Some(sound_at), Some(0.6), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(sound_at), Some(0.6), None);
         crate::furnblast::furniture_warm(g);
     }
     o!(g, op).owes = Some(true);   

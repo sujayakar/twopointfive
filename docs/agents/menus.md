@@ -56,6 +56,10 @@ pasted address starts the same run.
 card is open uses the thing under the highlight at the door. Changes go by message (`kv`: kit, sel, pause, frame), and the window answers boot, ready or none.
 
 **A key has a code and a place.** `Input` asks `gameCode` what a key is before filing it. The game goes on asking for the codes it always did, and a tape holds those codes.
+
+**A code is an arm of Rust's `Key`** (`game_types/src/input/types.rs`), its word the browser code: `input_hit(g, input, Key::F)`. `half` gives the page `GameKey`
+(`src/draw/names.ts`), and `keymap.ts` names a row by that or its own `PageKey`. `Input`'s sets, a hand, a tape and the wire stay text.
+
 On the page (`gameKeysBoot`) they stand so:
 
 | the game asks for | what it means | on the board |

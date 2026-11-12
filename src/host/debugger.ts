@@ -19,7 +19,7 @@ import type { DrawGame } from './drawgame';
 import type { ActionRow } from '../view/read';
 import { keepPick, keepRow } from './machine';
 import type { DrawHud } from './drawhud';
-import { gameCode, typedInto } from './keymap';
+import { DEBUG_KEY, gameCode, typedInto } from './keymap';
 
 /** rows shown at once: a word narrows them */
 const SHOWN = 40;
@@ -104,7 +104,7 @@ export function debuggerPanel(d: DebuggerDeps): Panel {
   buildLookPanel(panel, d.engine, () => d.hud().fps, false, skyOf(d.game));
   if (d.net) netRows(panel, d.net);
   d.input.keyVeto = e => d.card(e) || panel.onKey(e);
-  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== 'Backquote' || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
+  addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== DEBUG_KEY || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
   (window as unknown as { __panel: Panel }).__panel = panel;
   return panel;
 }

@@ -152,7 +152,7 @@ pub(super) fn note(g: &mut crate::game::Game, what: &str) {
 /// Control's voice: a line on the net with nobody in the building saying it.
 pub(super) fn control(g: &mut crate::game::Game, text: &str) {
     crate::cues::cues_radio(g, &alloc::format!("CONTROL — {}", text));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.55), None);
 }
 
 /// Control's voice, with a row in the run's timeline.
@@ -188,7 +188,7 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
     let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
 

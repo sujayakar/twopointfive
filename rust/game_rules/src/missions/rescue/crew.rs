@@ -228,7 +228,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     if !crate::rescue::rescue_up(g) { return; }
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
-    if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
+    if crate::input::input_hit(g, input, crate::input::Key::F) { rescue_order_door(g); }
     rescue_hear(g);
     rescue_defenders(g);
     crate::rescueflush::rescue_flush_tick(g);

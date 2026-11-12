@@ -216,7 +216,7 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     book.stir.get_or_insert_with(Vec::new).push(ix as f64);
     let pos = mouth_of(g, t).pos;
     let volume = g.k.fire.crack * heat_of(g, t);
-    crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::FireCrack, Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
 }
 
 /// The steady row of a fire's lamp: what it is as the level hung it. Made the first time the lamp is a fire's.
@@ -608,7 +608,7 @@ impl Blaze {
             if !(p.at > clock.was && p.at <= clock.time) { continue; }
             let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * self.heat;
             let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
-            crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(self.mouth.pos), Some(gain), Some(&opts));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::FireCrack, Some(self.mouth.pos), Some(gain), Some(&opts));
             if g.k.fire.embers > 0.0 && crack > 0.0 { self.throw(g, m::round(crack * (0.4 + 0.6 * p.hard)), p.hard); }
         }
     }

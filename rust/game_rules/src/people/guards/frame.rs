@@ -176,9 +176,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false));
         }
         let at = head_or_pos(g, c);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.8), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.8), None);
         if g.time - g.last_sting_t > 8.0 {
-            crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::AlertSting, None, Some(0.75), None);
             g.last_sting_t = g.time;
         }
         if g.ai_enabled {
@@ -200,7 +200,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
                 crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
         }
     }
     crate::startle::startle_sight(g, gd, prev, seen);

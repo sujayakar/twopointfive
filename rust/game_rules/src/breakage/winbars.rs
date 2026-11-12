@@ -87,7 +87,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
         }
         if break_bar(g, m.index, m.at, m.dir, who, BreakBarCause::Round) {
             n += 1.0;
-            if lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(m.at), Some(0.8), None); }
+            if lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(m.at), Some(0.8), None); }
         }
     }
     n
@@ -157,7 +157,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         if let Some(c) = got {
             let chunk = &mut g.tab.debris_chunk[c];
             chunk.level = land.level;
-            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect();
+            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name, rate: s.rate, gain: s.gain }).collect();
             match cls {
                 crate::scene_materials::BreakClass::Wood => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Wood),
                 crate::scene_materials::BreakClass::Metal => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Metal),

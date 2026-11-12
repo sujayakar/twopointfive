@@ -91,7 +91,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
     for k in 0..4 {
         let at = crate::character::work_key_beat(k as f64, secs);
         if before < at && after >= at {
-            crate::audio_iface::game_audio_like_play(g, "padBeep", Some(pad.def.pos), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 + 0.03 * k as f64 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PadBeep, Some(pad.def.pos), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 + 0.03 * k as f64 }));
             let [x, y] = keys[k];
             let (pos, n) = (pad.def.pos, pad.n);
             let spot: V3 = [pos[0] + n[0] * 0.03 + r[0] * x, pos[1] + y, pos[2] + n[2] * 0.03 + r[2] * x];

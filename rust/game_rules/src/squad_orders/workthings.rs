@@ -421,8 +421,8 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
             g.sets[g.seat].work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
         }
         if verb == WorkVerb::Drive {
-            crate::audio_iface::game_audio_like_play(g, "click", Some(th.face), Some(0.8), None);
-            crate::audio_iface::game_audio_like_play(g, "magOut", Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(th.face), Some(0.8), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
             if !g.mission.hands_on {
                 g.mission.hands_on = true;
                 let text = format!("hands on {}", g.level.errand.thing);

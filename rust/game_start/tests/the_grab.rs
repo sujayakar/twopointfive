@@ -272,8 +272,8 @@ fn a_man_taken_by_hand_has_his_gun_taken_off_him_first_and_laid_down() {
         let held = p.time() - t0;
         assert!(out <= held, "seed {s}: the gun left him at {out:.2} s, held at {held:.2} s");
         p.until(4.0, |p| matches!(p.dropped_gun(m), Some((false, true)))).unwrap_or_else(|| panic!("seed {s}: the gun never came to rest: {:?}", p.dropped_gun(m)));
-        let names: Vec<&str> = p.sounds[heard..].iter().map(|x| x.name.as_str()).collect();
-        let (strip, catch) = (names.iter().position(|n| *n == "gunStrip"), names.iter().position(|n| *n == "grabCatch"));
+        let names: Vec<_> = p.sounds[heard..].iter().map(|x| x.name).collect();
+        let (strip, catch) = (names.iter().position(|n| *n == game::audio_iface::Sfx::GunStrip), names.iter().position(|n| *n == game::audio_iface::Sfx::GrabCatch));
         assert!(strip.is_some() && catch.is_some() && strip < catch, "seed {s}: the strip, then the catch: {names:?}");
     }
 }
@@ -291,7 +291,7 @@ fn a_man_with_no_gun_in_his_hands_has_nothing_taken() {
         assert_ne!(p.hand_of(m), Some(InHand::Weapon), "seed {s}: staging: a calm man of a level carries no gun in his hands");
         let heard = p.sounds.len();
         assert!(p.sam_takes(m), "seed {s}: nobody in the arm");
-        let names: Vec<&str> = p.sounds[heard..].iter().map(|x| x.name.as_str()).collect();
-        assert!(names.contains(&"grabCatch") && !names.contains(&"gunStrip"), "seed {s}: {names:?}");
+        let names: Vec<_> = p.sounds[heard..].iter().map(|x| x.name).collect();
+        assert!(names.contains(&game::audio_iface::Sfx::GrabCatch) && !names.contains(&game::audio_iface::Sfx::GunStrip), "seed {s}: {names:?}");
     }
 }

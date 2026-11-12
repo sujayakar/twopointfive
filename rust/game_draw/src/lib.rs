@@ -54,13 +54,21 @@ macro_rules! sections {
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
             s.push_str(&gpu::text());
             s.push_str(&game::bits::text(&BITS));
+            for n in &NAMES { s.push_str(n.list); for w in n.words { s.push(' '); s.push_str(w); } s.push('\n'); }
             s
         }
     };
 }
 
 /// the words whose bits a page or a shader reads by name
-pub const BITS: [&game::bits::BitsTable; 3] = [&game::scene_boxes::box_flag::TABLE, &boxes::pack::geo_flag::TABLE, &boxes::glass::pane_flag::TABLE];
+pub const BITS: [&game::bits::BitsTable; 5] = [&game::scene_boxes::box_flag::TABLE, &boxes::pack::geo_flag::TABLE, &boxes::glass::pane_flag::TABLE, &game::handed::start_flag::TABLE, &game::handed::step_flag::TABLE];
+/// names both sides spell: the page's list of them, the type it makes of that, the enum's words in their order (where one crosses as a number, by that), and what they are
+pub struct Named { pub list: &'static str, pub ty: &'static str, pub words: &'static [&'static str], pub doc: &'static str }
+pub const NAMES: [Named; 3] = [
+    Named { list: "SFX", ty: "SfxName", words: game::audio_iface::Sfx::WORDS, doc: "a sound played once, which the game asks for or the mixer picks" },
+    Named { list: "LASTINGS", ty: "LastingName", words: game::audio_iface::LastingSfx::WORDS, doc: "a sound that goes on" },
+    Named { list: "KEYS", ty: "GameKey", words: game::input::Key::WORDS, doc: "a key the game asks for, by its code" },
+];
 
 pub mod boxes;
 pub mod doorways;

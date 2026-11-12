@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2216360831;
+export const LAYOUT = 222605576;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -741,7 +741,7 @@ export const enum Sound {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: its name's number (`face_draw_name`) */
+  /** u32: its name's number (`Sfx`) */
   name = 2,
   /** u32: it has a place; 0 = it is in the ears */
   placed = 3,
@@ -781,7 +781,7 @@ export const enum Footfall {
 
 /** a thing that sounds for as long as it goes on, as it stands: a chair that rolls, a fire that burns, a can that pours, what hums in a room */
 export const enum Lasting {
-  /** u32: the sound's name's number (`face_draw_name`), and which of that name it is */
+  /** u32: its name's number (`LastingSfx`), and which of that name it is */
   name = 0,
   /** u32 */
   id = 1,
