@@ -439,7 +439,7 @@ impl FurnAsk for Play {
         gr.members.iter().map(|&m| self.g.tab.furnblast_member[m].i).collect()
     }
     fn standing(&self, of: &[f64]) -> usize {
-        let hidden = game::js::to_i32(game::scene_boxes::box_flag().no_primary);
+        let hidden = game::scene_boxes::box_flag::NO_PRIMARY as i32;
         of.iter().filter(|&&i| game::js::to_i32(self.g.tab.boxes[self.g.col.boxes[i as usize]].flags) & hidden == 0).count()
     }
     fn prop_near(&self, at: [f64; 2]) -> PropId {

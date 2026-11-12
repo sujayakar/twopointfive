@@ -41,7 +41,7 @@ fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     let Some(b) = static_box(g, t) else { return 0.0; };
     let b = &g.tab.boxes[b];
     let (long, short) = (m::max(b.h[0], b.h[2]), m::min(b.h[0], b.h[2]));
-    if js::to_i32(b.flags) & js::to_i32(crate::scene_boxes::box_flag().no_primary) != 0 && b.h[1] <= 0.06 && b.c[1] > 2.2 && long >= 0.25 && long <= 1.2 && short >= 0.1 { 1.0 } else { 0.0 }
+    if js::to_i32(b.flags) & crate::scene_boxes::box_flag::NO_PRIMARY as i32 != 0 && b.h[1] <= 0.06 && b.c[1] > 2.2 && long >= 0.25 && long <= 1.2 && short >= 0.1 { 1.0 } else { 0.0 }
 }
 
 /// The top of whatever lies under (x, z): the level's statics by one ray down, the furniture by its boxes' footprints.
@@ -49,7 +49,7 @@ fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
     let mut y = 0.0;
     if let Some(hit) = crate::scene_collision::raycast(g, [x, from, z], down(), from + 0.5) { if hit.index < 1e6 { y = m::max(0.0, from - hit.t); } }   // (a door leaf's top edge is no floor)
     g.m.fixture_break.floor.on = None;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     for pi in 0..g.props.props.len() {
         let p = g.props.props[pi];
         for bi in 0..g.tab.props_prop[p].boxes.len() {
@@ -137,7 +137,7 @@ fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::
     r.hang = vec![mk(g, [l / 2.0, 0.02, w / 2.0], f.tray, None), mk(g, [l * 0.15, 0.03, m::min(0.06, w * 0.22)], f.cover, None), mk(g, [l / 2.0 - 0.015, 0.003, w / 2.0 - 0.02], f.face, None),
         mk(g, [l / 2.0 - 0.07, 0.014, 0.014], f.tube, None), mk(g, [l * 0.15, 0.014, 0.014], f.tube, None), mk(g, f.lead, f.soot, None)];
     // (belt and braces: were a ray ever to meet it, its glow would still count for nothing)
-    { let x = &mut g.tab.frame_boxes[r.hang[5]]; x.flags = (js::to_i32(x.flags) | js::to_i32(crate::scene_boxes::box_flag().area_lit)) as f64; }
+    { let x = &mut g.tab.frame_boxes[r.hang[5]]; x.flags = (js::to_i32(x.flags) | crate::scene_boxes::box_flag::AREA_LIT as i32) as f64; }
     let wv: V3 = [-r.uh0[2], 0.0, r.uh0[0]]; let y0 = c[1] - 0.06;
     let (h0, uh0) = (r.h0, r.uh0);
     let mut piece = |g: &mut Game, h: V3, a: f64, s: f64, albedo: V3, glass: bool, k: f64| -> Piece {

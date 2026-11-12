@@ -371,7 +371,7 @@ export const enum Info {
 export const enum Pane {
   /** f32: how many sites it has been cut from */
   sites = 0,
-  /** f32: 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web */
+  /** f32: `PaneFlag`, as a number */
   says = 1,
   /** f32: 0: its own x runs across it; 1: its z does */
   axis = 2,

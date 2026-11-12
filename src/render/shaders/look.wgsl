@@ -73,7 +73,7 @@ fn lookTrod() -> f32 { return lookWay.x; }
 /** IS THIS A FACE THE LOOK LAYER DRESSES AT ALL: a box that is no fixture's face and not tilted, on a face that lies flat or stands upright. lookSurface's
  *  own first question and lookWears', said once */
 fn lookDresses(n: vec3f, bi: u32, hf: vec4f) -> bool {
-  if (hf.w < 0.0 || (boxGeo[bi].flags & (BOX_EMISSIVE | BOX_ROT)) != 0u) { return false; }
+  if (hf.w < 0.0 || (boxGeo[bi].flags & (GEO_EMISSIVE | GEO_ROT)) != 0u) { return false; }
   return abs(n.y) > 0.9 || abs(n.y) <= 0.1;
 }
 /** DOES THIS LAYER WEAR THE PIXEL'S FLOOR AND SKIRTING ITSELF (lookSurface's USE AND DIRT)? The g-buffer asks once a pixel and hands the answer to BOTH
@@ -410,7 +410,7 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
   let ks = lookCfg.e.w;
   if (ks <= 0.0 || hf.w < 0.0 || (cls != 0u && LOOK_THING[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)].w > 0.5)) { return o; }   // (the stuff's `sheds`: bare iron stays bare, on a snow level it is a stove, a flue or a brazier)
   let b = boxGeo[bi];
-  if ((b.flags & (BOX_EMISSIVE | BOX_ROT | BOX_GLASS)) != 0u || snowIsPaint(paint) || snowIsLay(paint)) { return o; }
+  if ((b.flags & (GEO_EMISSIVE | GEO_ROT | GEO_GLASS)) != 0u || snowIsPaint(paint) || snowIsLay(paint)) { return o; }
   var amt = 0.0; var up = vec3f(0.0, 1.0, 0.0); var at = wp; var bank = true;
   if (gn.y > 0.9) {
     if (wp.y < LOOK_GROUND.y) { return o; }                      // the ground is the field's

@@ -155,11 +155,10 @@ pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crat
 
 /// What a cursor ray lands on of the scene, through glass and past the men
 fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
-    let f = crate::scene_boxes::box_flag();
-    let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
+    let skip = (crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::GLASS as i32) as f64;
     if let Some(h) = first {
         if let Some(b) = crate::scene_boxes::box_world_at(g, h.index as usize) {
-            if !js::truthy(g.tab[b].owner) && (js::to_i32(g.tab[b].flags) & js::to_i32(f.glass)) == 0 {
+            if !js::truthy(g.tab[b].owner) && (js::to_i32(g.tab[b].flags) & crate::scene_boxes::box_flag::GLASS as i32) == 0 {
                 return SquadOrdersSceneHit { t: h.t, index: h.index };
             }
         }

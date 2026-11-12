@@ -236,7 +236,7 @@ fn hitRadiance(hit: Hit, P: vec3f, ro: vec3f) -> vec3f {
   else {
     let bi = u32(hit.idx);
     let b = boxGeo[bi];
-    if ((b.flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
+    if ((b.flags & (GEO_EMISSIVE | GEO_AREA_LIT)) == GEO_EMISSIVE) { L += boxEmissiveRay(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
     albedo = boxAlbedoSec(bi);
   }
   var E = vec3f(0.0);

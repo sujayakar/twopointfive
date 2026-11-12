@@ -150,7 +150,7 @@ fn thin(g: &Game, f: &mut Fog) {
     f.thin = 1;
     f.thin_serial = g.engine.world.geom_serial as u32;
     f.thin_count = st.len() as u32;
-    let flag = js::to_i32(game::scene_boxes::box_flag().thin);
+    let flag = game::scene_boxes::box_flag::THIN as i32;
     for (i, &b) in st.iter().take(THIN_WORDS * 32).enumerate() {
         if js::to_i32(g.tab.boxes[b].flags) & flag != 0 { f.thin_bits[i >> 5] |= 1 << (i & 31); }
     }

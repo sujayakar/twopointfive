@@ -188,7 +188,7 @@ pub(super) fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::Fo
     let mut book = g.destr.edge_look.foot_book;
     crate::debris::debris_feet(g, men, k, Some(&list), Some(&mut book));
     g.destr.edge_look.foot_book = book;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let frame = js::to_i32(m::floor(g.time * 60.0));
     for (i, &c) in list.iter().enumerate() {
         let slid = !g.tab.debris_chunk[c].rest;

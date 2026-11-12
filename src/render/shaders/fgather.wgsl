@@ -104,7 +104,7 @@ fn glossGlints(Po: vec3f, R: vec3f, owner: u32) -> vec3f {
   return G;
 }
 
-// The radiance a polished floor at P (a BOX_GLOSS top face, N = +y) mirrors toward the eye. ONE reflection ray — the view direction reflected
+// The radiance a polished floor at P (a GEO_GLOSS top face, N = +y) mirrors toward the eye. ONE reflection ray — the view direction reflected
 // about the normal, jittered over a GLOSS_SPREAD cone — traced through the scene like a gather ray and shaded like a gather hit: emission (here
 // INCLUDING area-lit fixtures: a mirror shows the glowing panel / screen / vending front itself, whereas the diffuse paths take those through
 // their analytic lights) + albedo/pi × (direct at the hit — the exact on-screen textures when the hit is visible, else the one-shadow-ray

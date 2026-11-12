@@ -1658,7 +1658,7 @@ pub fn dice_threshold(r: &Row) -> f64 {
 }
 
 // ---- a window's bar (the pieces it throws are the caller's)
-const F_BAR: u32 = 1 << 19;
+const F_BAR: u32 = game_types::scene_boxes::box_flag::BAR;
 const NO_SHADOW: u32 = crate::world::F_NO_SHADOW;
 /// is static `bi` a window's bar that still stands? (its row keeps NoShadow of the two bits a broken bar is hidden by)
 #[inline]

@@ -31,7 +31,7 @@ fn at_door(b: &Box, doors: &[LevelDoorDef]) -> bool {
     }
     false
 }
-fn solid(b: &Box) -> bool { let f = box_flag(); !has(b, f.no_shadow + f.glass) }
+fn solid(b: &Box) -> bool { !has(b, (box_flag::NO_SHADOW as f64) + (box_flag::GLASS as f64)) }
 fn narrow(b: &Box, width: f64) -> bool { b.rot.is_none() && !cut(b) && 2.0 * m::max(b.h[0], b.h[2]) < width }
 /// a's footprint grown by `pad`, against b's: the two yawed rectangles overlap in plan
 fn plans_meet(a: &Box, b: &Box, pad: f64) -> bool {
@@ -74,11 +74,10 @@ fn stands_free(ai: usize, boxes: &[Box], width: f64) -> bool {
 }
 /// A LEVEL'S THIN THINGS: every static's mark off, then on the ones that stand free. Answers how many.
 pub fn thin_level(g: &mut Game, ids: &[BoxId], doors: &[LevelDoorDef]) -> usize {
-    let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes.edit(b), f.thin, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), box_flag::THIN as f64, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let free: Vec<usize> = (0..boxes.len()).filter(|&i| solid(&boxes[i]) && narrow(&boxes[i], THIN_WIDTH) && !at_door(&boxes[i], doors) && stands_free(i, &boxes, THIN_WIDTH)).collect();
-    for &i in free.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.thin, true); }
+    for &i in free.iter() { set(&mut g.tab.boxes.edit(ids[i]), box_flag::THIN as f64, true); }
     free.len()
 }
 
@@ -90,7 +89,7 @@ const SILL_MIN: f64 = 0.2;
 const KIT_DEEP: [f64; 2] = [0.72, 0.88];
 const TOUCH: f64 = 0.02;
 
-fn plain(b: &Box) -> bool { let f = box_flag(); !has(b, f.glass + f.no_shadow + f.no_primary + f.dynamic) && b.rot.is_none() && b.round != Some(true) && !cut(b) }
+fn plain(b: &Box) -> bool { !has(b, (box_flag::GLASS as f64) + (box_flag::NO_SHADOW as f64) + (box_flag::NO_PRIMARY as f64) + (box_flag::DYNAMIC as f64)) && b.rot.is_none() && b.round != Some(true) && !cut(b) }
 fn slim(b: &Box) -> bool {
     plain(b) && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0 && 2.0 * m::min(b.h[0], b.h[2]) <= BAR_ACROSS && 2.0 * m::max(b.h[0], b.h[2]) <= BAR_DEEP && 2.0 * b.h[1] >= BAR_TALL && b.h[1] > m::max(b.h[0], b.h[2])
 }
@@ -124,11 +123,10 @@ fn in_opening(ai: usize, boxes: &[Box]) -> bool {
 }
 /// A LEVEL'S WINDOW BARS: every static's mark off, then on the ones the rule names. Answers how many.
 pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
-    let f = box_flag();
-    for &b in ids { set(&mut g.tab.boxes.edit(b), f.bar, false); }
+    for &b in ids { set(&mut g.tab.boxes.edit(b), box_flag::BAR as f64, false); }
     let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
     let bars: Vec<usize> = (0..boxes.len()).filter(|&i| slim(&boxes[i]) && in_opening(i, &boxes)).collect();
-    for &i in bars.iter() { set(&mut g.tab.boxes.edit(ids[i]), f.bar, true); }
+    for &i in bars.iter() { set(&mut g.tab.boxes.edit(ids[i]), box_flag::BAR as f64, true); }
     bars.len()
 }
 
@@ -182,12 +180,11 @@ fn form_box(b: &mut Box, f: &Form) {
 /// level's last box, so no box changes its number. Never a tilted box, a box cut already or a window's bar. Answers how many
 /// boxes are shaped; `ids` grows by the pieces.
 pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
-    let f = box_flag();
     let (mut made, mut tail) = (0, Vec::new());
     for (i, &id) in ids.iter().enumerate() {
         let b = &g.tab.boxes[id];
         let Some(s) = b.shape.clone() else { continue; };
-        if b.rot.is_some() || b.cut.is_some() || has(b, f.bar) { continue; }
+        if b.rot.is_some() || b.cut.is_some() || has(b, box_flag::BAR as f64) { continue; }
         let mut b = g.tab.boxes.edit(id);
         form_box(&mut b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
         b.shaped = Some(true);
@@ -196,7 +193,7 @@ pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
             let o = cut_to_world(w.off, b.yaw, None);   // (the box's own frame)
             let mut p = game::scene_boxes::make_box_value(&game::scene_boxes::MakeBoxP {
                 c: [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]], h: w.h, yaw: Some(b.yaw + w.yaw.unwrap_or(0.0)),
-                flags: Some(f.no_shadow + if has(&b, f.cutaway) { f.cutaway } else { 0.0 }), cut_height: Some(b.cut_height),   // (cut away with its box, where the box is)
+                flags: Some((box_flag::NO_SHADOW as f64) + if has(&b, box_flag::CUTAWAY as f64) { (box_flag::CUTAWAY as f64) } else { 0.0 }), cut_height: Some(b.cut_height),   // (cut away with its box, where the box is)
                 piece: Some(true), of: Some(i as f64), ..crate::level::blank_box()
             });
             // its own paint, finish and word, or its box's as the box stands

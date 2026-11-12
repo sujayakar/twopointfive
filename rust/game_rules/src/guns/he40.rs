@@ -281,8 +281,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight.
 pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let item = crate::throwables::shell_item();
     let mut i = 0;
     while i < g.shells.len() {

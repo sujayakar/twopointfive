@@ -111,10 +111,9 @@ impl Lay<'_> {
         let f = &self.f;
         let (c, s) = (m::cos(th), m::sin(th));
         let e1: V3 = [f.along[0] * c, s, f.along[2] * c]; let e2: V3 = [-f.along[0] * s, c, -f.along[2] * s]; let e3 = v3::cross(e1, e2);
-        let fl = crate::scene_boxes::box_flag();
         crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
             c: at_c(self.fc, f, u, y, v), h: [a, hb, ht], yaw: Some(self.f_yaw), rot: Some(quat::from_basis(e1, e2, e3)), albedo: Some(albedo),
-            flags: Some((js::to_i32(fl.dynamic) | (if solid { 0 } else { js::to_i32(fl.no_shadow) })) as f64),
+            flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | (if solid { 0 } else { crate::scene_boxes::box_flag::NO_SHADOW as i32 })) as f64),
             mkey: Some(MKEY_LOOK + (key & 0x7fffff) as f64), rough: self.f_rough, stuff: self.p.stuff, does: self.p.does, ..Default::default() })
     }
     /// A plate of what the wall is built on, which is not the wall: a wall that stands by itself shows none.

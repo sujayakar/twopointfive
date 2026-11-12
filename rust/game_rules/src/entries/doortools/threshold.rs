@@ -153,10 +153,9 @@ pub(super) fn door_tools_draw_charge(g: &mut crate::game::Game, c_2: ChargeId) {
     let n = door_pt(g, d, 0.0, 1.0, side, None);
     let e = door_pt(g, d, 0.0, 0.0, side, None);
     let yaw = v3::yaw_to(e, n);
-    let fl = crate::scene_boxes::box_flag();
-    let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: p, h: [0.07, 0.11, 0.02], yaw: Some(yaw), albedo: Some([0.09, 0.1, 0.08]), flags: Some(fl.dynamic), ..Default::default() });
+    let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: p, h: [0.07, 0.11, 0.02], yaw: Some(yaw), albedo: Some([0.09, 0.1, 0.08]), flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
-    let both = (js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64;
+    let both = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: [p[0] + (n[0] - e[0]) * 0.022, p[1] + 0.07, p[2] + (n[2] - e[2]) * 0.022], h: [0.012, 0.012, 0.004], yaw: Some(yaw), albedo: Some([0.9, 0.12, 0.08]), emissive: Some([2.2, 0.2, 0.1]), flags: Some(both), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
 }

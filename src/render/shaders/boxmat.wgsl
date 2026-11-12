@@ -25,7 +25,7 @@ fn cutCore(i: u32) -> vec4f { return boxMat[CUT_BASE + i * 9u + 8u]; }   // the 
 // what is broken of a listed pane (all nought: it is whole): 36 rows a box
 const PANE_STRIDE: u32 = 36u;
 fn paneSites(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].x; }   // how many sites it has been cut from
-fn paneSays(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].y; }   // 1 something is open, 2 it has run, 4 it lets go in clumps, 8 it is gone, 16 its breaks are a web
+fn paneSays(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].y; }   // `PaneFlag`, as a number
 fn paneAxis(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].z; }   // 0: its own x runs across it; 1: its z does
 fn paneDamage(i: u32) -> f32 { return boxMat[PANE_BASE + i * 36u + 0u].w; }   // how far it has gone, to 1
 fn paneHalf(i: u32) -> vec2f { return boxMat[PANE_BASE + i * 36u + 1u].xy; }

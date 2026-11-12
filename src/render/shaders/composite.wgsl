@@ -10,7 +10,7 @@
 @group(1) @binding(6) var volTex: texture_2d<f32>;        // 1/frame.lossyCfg.y res (half; a quarter with volQuarter)
 @group(1) @binding(7) var diceTex: texture_3d<f32>;
 @group(1) @binding(8) var softTex: texture_2d<f32>;
-@group(1) @binding(9) var specTex: texture_2d<f32>;       // glossy-floor reflection radiance (fgather.wgsl glossReflection, filtered), on indirectTex's texel grid — only read for BOX_GLOSS pixels while FLAG_GLOSS is on; holds nothing meaningful otherwise
+@group(1) @binding(9) var specTex: texture_2d<f32>;       // glossy-floor reflection radiance (fgather.wgsl glossReflection, filtered), on indirectTex's texel grid — only read for GEO_GLOSS pixels while FLAG_GLOSS is on; holds nothing meaningful otherwise
 @group(1) @binding(12) var reflTex: texture_2d<f32>;      // ray-traced reflections, THE MIRROR (reflect.wgsl outRefl → the shared denoiser's specular client), at 1/frame.rtCfg.w res: what the lobe's rays bring back per texel, filterable (sampled bilinearly) — only read while frame.rtCfg.w > 0
 @group(1) @binding(18) var hiTex: texture_storage_2d<rgba16float, read>;   // … and THE HIGHLIGHTS on the same grid (reflect.wgsl outHi, as the pass wrote it): rgb = the lamps', the panels' and the sun's highlights and a beam's image, a = 0 where the texel holds none, else 1 + the roughness the texel made them with. A storage texture: this stage had no sampled texture left when it was added (one is free since the froxel volume went), and a load is all it is asked
 @group(1) @binding(13) var gMat: texture_2d<f32>;         // the g-buffer's material target: (roughness, metalness) per pixel (the reflections' cutoff fade, the metal step-back, the upsample's tap test)
@@ -96,7 +96,7 @@ fn upsampleSpecular(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
       // pull a dark fringe along every corridor edge under a bright reflection: only gloss-topped world boxes contribute
       let tid = textureLoad(gId, gpx(src), 0).x; let tIdx = tid & 0xFFFFFu;
       if (((tid >> 28u) & 1u) != 0u || tIdx == 0xFFFFFu) { continue; }
-      if ((boxGeo[tIdx].flags & BOX_GLOSS) == 0u) { continue; }
+      if ((boxGeo[tIdx].flags & GEO_GLOSS) == 0u) { continue; }
       let zs = linearDepth(d, ipos(vec2f(src) + 0.5));
       let ns = geoN(gpx(src));
       var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
@@ -269,21 +269,21 @@ fn gbDice(uv: vec2f, grain: f32, seed: u32) -> f32 {
 fn gbEdge(k: u32, fl: u32, n: u32, uv: vec2f, P: vec2f, N: vec2f, w: f32, wt: f32, acc: vec2f) -> vec2f {
   let sd = dot(uv - P, N); let dd = abs(sd);
   var o = vec2f(max(acc.x, gbLine(dd, w, wt)), acc.y);
-  if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv - N * (sd + select(-0.004, 0.004, sd >= 0.0)))) { o.y = min(o.y, dd); }
+  if ((fl & GB_OPEN) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv - N * (sd + select(-0.004, 0.004, sd >= 0.0)))) { o.y = min(o.y, dd); }
   return o;
 }
 fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
   let h = gbHeader(k); let fl = u32(h.y + 0.5); let n = min(u32(h.x + 0.5), 8u);
   let uv = gbUV(k, gbLocal(k, X));
   let w = max(fp, 0.0006);
-  if ((fl & 4u) != 0u) {   // a tempered pane on its way out: what still stands is dice — drawn while a die is a few pixels across, a milky sheet beyond that; brightest at the wave's edge
+  if ((fl & GB_DICING) != 0u) {   // a tempered pane on its way out: what still stands is dice — drawn while a die is a few pixels across, a milky sheet beyond that; brightest at the wave's edge
     let grain = max(paneGrain(k), 1e-3);
     let res = clamp(grain / (5.0 * w) - 0.2, 0.0, 1.0);
     let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - paneOpenAt(k));
     return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(paneSeed(k))), w, 0.9), res), front), 0.45 + 0.4 * front);
   }
   if (n == 0u) { return vec2f(0.0); }
-  let web = (fl & 16u) != 0u; let full = (fl & 2u) != 0u && !web;
+  let web = (fl & GB_WEB) != 0u; let full = (fl & GB_RUN) != 0u && !web;
   let me = gbNearest(k, n, uv); let S = gbSiteLoad(k, me); let st = gpSector(S, uv); let sb = gpSectorBand(S, uv); let s = i32(sb.x); let b = sb.y;
   let d = uv - S.c; let r = length(d);
   let heavy = 0.55 + 0.35 * clamp(h.w, 0.15, 1.0);   // the lines thicken a little as the pane's damage climbs
@@ -336,7 +336,7 @@ fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
     let cj = paneSite(k, j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
     let dd = (d2 - d1) / (2.0 * sep);
     acc.x = max(acc.x, gbLine(dd, w, 0.8 * heavy));
-    if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv + (cj - S.c) / sep * (dd + 0.004))) { acc.y = min(acc.y, dd); }
+    if ((fl & GB_OPEN) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv + (cj - S.c) / sep * (dd + 0.004))) { acc.y = min(acc.y, dd); }
   }
   let rim = 1.0 - smoothstep(0.003, 0.010 + 2.0 * w, acc.y);   // the raw edge beside a hole
   return vec2f(max(acc.x, rim), max(frost, 0.8 * rim));
@@ -976,11 +976,11 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     var Ei = upsampleIndirect(sPix, sPin, z, N);
     Ei *= clamp(1.0 + LOOK_BOUNCE * (Nl.y - N.y), 0.45, 1.6);   // the relief in bounced light: most of it comes from above (the sky, a ceiling's wash), so a facet leaning up takes more of it
     var emissive = vec3f(0.0);
-    var glossPix = false;                       // this pixel is the polished top of a BOX_GLOSS floor box (world geometry, never a character)
+    var glossPix = false;                       // this pixel is the polished top of a GEO_GLOSS floor box (world geometry, never a character)
     if (((id >> 28u) & 1u) == 0u && boxIdx != 0xFFFFFu) {
       let b = boxGeo[boxIdx];
-      if ((b.flags & BOX_EMISSIVE) != 0u) { emissive = boxEmissive(boxIdx); }
-      glossPix = (b.flags & BOX_GLOSS) != 0u;
+      if ((b.flags & GEO_EMISSIVE) != 0u) { emissive = boxEmissive(boxIdx); }
+      glossPix = (b.flags & GEO_GLOSS) != 0u;
       let mslot = markSlotOf(b.flags);                                        // MARKINGS (markings.wgsl): the emission of the box's emissive markings at this pixel — the vending window's cans and backlight, UI bars, LEDs — genuine radiance, so it blooms and reads in NV like a fixture
       if (mslot != 0u && ((id >> 29u) & 1u) == 0u) { emissive += markEmissiveAt(mslot, boxIdx, P, N, (frame.camPos - P) / max(z, 1e-4), z * 2.0 * frame.post.w * frame.invScreen.y); }
     }

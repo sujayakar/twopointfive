@@ -56,7 +56,7 @@ fn wall_break_rests_on(g: &crate::game::Game, j: f64, a: crate::wallbreak::AABB,
         let b = aabb(g, bx);
         if under(a, b) { out.push(b); }
     }
-    let primary = crate::scene_boxes::box_flag().no_primary;
+    let primary = crate::scene_boxes::box_flag::NO_PRIMARY as f64;
     for at in 0..g.destr.walls.ghosts.len() {
         let i = g.destr.walls.ghosts[at];
         if i == j { continue; }
@@ -115,7 +115,7 @@ fn wall_break_near(g: &crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64>
             if touches(a, aabb(g, bx), e) && !out.contains(&i) { out.push(i); }
         }
     }
-    let primary = crate::scene_boxes::box_flag().no_primary;
+    let primary = crate::scene_boxes::box_flag::NO_PRIMARY as f64;
     for at in 0..g.destr.walls.ghosts.len() {
         let i = g.destr.walls.ghosts[at];
         let o = g.col.boxes[i as usize];
@@ -145,7 +145,7 @@ pub(super) fn wall_break_settle(g: &mut crate::game::Game, b: WallbreakBreakable
 fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, queue: &mut Vec<crate::wallbreak::AABB>, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) {
     let mut falls = 0.0;
     let mut seen: JsSet<crate::Num> = JsSet::new();
-    let (glass, primary) = { let f = crate::scene_boxes::box_flag(); (f.glass, f.no_primary) };
+    let (glass, primary) = { (crate::scene_boxes::box_flag::GLASS as f64, crate::scene_boxes::box_flag::NO_PRIMARY as f64) };
     while !queue.is_empty() && falls < g.k.walls.falls_per_change {
         let gone = queue.remove(0);
         for j in wall_break_near(g, gone) {
@@ -182,7 +182,7 @@ fn wall_break_hung_at(g: &crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f
     let mut list = scratch();
     let n = crate::scene_collision::gather(g, at[0] - r - 0.4, at[2] - r - 0.4, at[0] + r + 0.4, at[2] + r + 0.4, 0.25, wa.y1, &mut list) as usize;
     let mut out: Vec<f64> = Vec::new();
-    let primary = crate::scene_boxes::box_flag().no_primary;
+    let primary = crate::scene_boxes::box_flag::NO_PRIMARY as f64;
     for k in 0..n {
         let j = list[k] as f64;
         if !wall_break_board_like(g, j) { continue; }
@@ -211,8 +211,7 @@ fn wall_break_board_like(g: &crate::game::Game, j: f64) -> bool {
         Some(f) => f,
         None => if crate::furnblast::furniture_broken(g, j) { without_bits(flags, HIDE) } else { flags },   // (as authored: one that a blast has since hidden is a board still)
     };
-    let f = crate::scene_boxes::box_flag();
-    if any_bit(f0, js::or_bits(f.glass, f.no_shadow)) || g.destr.walls.fixture_boxes.has(crate::Num(j)) || crate::destruction::destruction_item_of(g, j).is_some() || g.level.breaker.boxes.contains(&j) { return false; }
+    if any_bit(f0, (crate::scene_boxes::box_flag::GLASS | crate::scene_boxes::box_flag::NO_SHADOW) as f64) || g.destr.walls.fixture_boxes.has(crate::Num(j)) || crate::destruction::destruction_item_of(g, j).is_some() || g.level.breaker.boxes.contains(&j) { return false; }
     let a = aabb(g, b);
     let k_ = g.k.walls.hung;
     let (dx, dz) = (a.x1 - a.x0, a.z1 - a.z0);
@@ -228,7 +227,7 @@ fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: 
     let n = crate::scene_collision::gather(g, rect.x0 - 0.3, rect.z0 - 0.3, rect.x1 + 0.3, rect.z1 + 0.3, 0.25, wa.y1, &mut list) as usize;
     let mut cand: Vec<f64> = Vec::new();
     for k in 0..n { cand.push(list[k] as f64); }
-    let (glass, primary) = { let f = crate::scene_boxes::box_flag(); (f.glass, f.no_primary) };
+    let (glass, primary) = { (crate::scene_boxes::box_flag::GLASS as f64, crate::scene_boxes::box_flag::NO_PRIMARY as f64) };
     for at in 0..g.destr.walls.ghosts.len() {
         let j = g.destr.walls.ghosts[at];
         let o = g.col.boxes[j as usize];
