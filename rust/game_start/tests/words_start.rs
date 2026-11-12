@@ -49,4 +49,13 @@ fn a_number_in_a_list_or_a_map_has_a_name() {
     let mut seen = Vec::new();
     k.walk(&mut String::new(), &mut |name, _, v| seen.push((String::from(name), v)));
     for (name, v) in &seen { assert_eq!(KnobTable::get(&k, name), Some(*v), "{name} is listed and not found"); }
+    // each is turned, and is the only one that is
+    let yes: std::collections::HashSet<String> = { let mut y = std::collections::HashSet::new(); k.walk(&mut String::new(), &mut |name, yes, _| if yes { y.insert(String::from(name)); }); y };
+    for (n, (name, v)) in seen.iter().enumerate() {
+        let to = if yes.contains(name) { 1.0 - v } else { v + 0.5 };
+        assert!(k.set(name, to), "{name} is not turned");
+        let mut at = 0;
+        k.walk(&mut String::new(), &mut |_, _, x| { assert!(x == if at == n { to } else { seen[at].1 }, "{name} was turned, and {} moved", seen[at].0); at += 1; });
+        assert!(k.set(name, *v));
+    }
 }

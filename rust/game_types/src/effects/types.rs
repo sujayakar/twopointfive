@@ -41,7 +41,6 @@ pub enum MuzzleFxKey {
 pub struct Flags {
     pub shot_sparks: bool,
     pub ejection_wisp: bool,
-    pub trails: bool,
     pub dazzle: bool,
 }
 
@@ -62,12 +61,7 @@ pub struct SpawnShotO {
     pub gas: Option<bool>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SpawnBurstO {
-    pub spark_count: Option<f64>,
-}
-
-pub fn flags() -> crate::effects::Flags { crate::effects::Flags { shot_sparks: true, ejection_wisp: true, trails: true, dazzle: true } }
+pub fn flags() -> crate::effects::Flags { crate::effects::Flags { shot_sparks: true, ejection_wisp: true, dazzle: true } }
 
 /// what the rules know of a stun charge (how it is seen is the knobs' `effects.bang`)
 #[derive(Clone, Copy, Debug)]

@@ -128,7 +128,7 @@ fn wobble(seed: f64, dv: V3, amount: f64, k: f64) -> V3 {
 }
 
 /// A stun canister coming apart at `at`: end jets, body vents, wisp, sparks and the smoke hung off them; returns the flash.
-pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate::effects::SpawnBurstO>) -> crate::effects::FxLight {
+pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64) -> crate::effects::FxLight {
     let b = g.k.effects.bang;
     let dens = b.density * b.density_gain;
     let temp = b.temp * b.temp_gain;
@@ -178,19 +178,11 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
         push: Some(b.wisp_push), attack: Some(b.wisp_attack), jitter: Some(0.3), lattice: Some(Lattice::Coarse),
         ..Emitter::default()
     });
-    let spark_count = match o {
-        Some(SpawnBurstO { spark_count: Some(n) }) => n,
-        _ => b.spark_count,
-    };
-    if spark_count > 0.0 {
+    if b.trail_count > 0.0 {
         let k = g.k.effects.sparks;
-        let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: spark_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
-        let n = if flags().trails {
-            let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
-            m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]))
-        } else {
-            0.0
-        };
+        let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: b.trail_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
+        let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
+        let n = m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]));
         let tl = g.k.effects.trail;
         let mut i: usize = 0;
         while (i as f64) < n {
