@@ -170,3 +170,32 @@ fn the_team_goes_into_a_room_as_a_squad() {
         assert!(at[1] - at[0] < 4.0, "seed {s}: {:.1} s between the first two through", at[1] - at[0]);
     }
 }
+
+/// THE RULE: a man of theirs whom Sam takes is in his arm whatever the team has been told: at a door, on the way or holding, he is told nothing while he is held, and the rest go on without him.
+/// A FAILURE MEANS: the team's orders walk a man out of Sam's arm, or the team waits for a man who cannot come.
+#[test]
+fn a_man_in_sams_arm_is_told_nothing() {
+    for s in SEEDS {
+        let mut p = night(s);
+        p.sam_unseen();
+        rifle_rounds(&mut p);
+        p.alarm_raised_to(2.0);
+        p.until(ETA + 5.0, |p| p.response() == QrfState::Deployed).unwrap_or_else(|| panic!("seed {s}: never on the floor"));
+        // (off to a place, all of them under one order)
+        let mate = |p: &Play| p.response_men().last().copied().unwrap();
+        p.until(120.0, |p| p.g.qrf.phase == game::qrf::Phase::Move && game::duty::order(&p.g, mate(p)).is_some()).unwrap_or_else(|| panic!("seed {s}: never off to a place"));
+        let him = mate(&p);
+        let (at, yaw) = (p.g.pos_of(him), p.g.ch[p.g.gd[him].ch].body_yaw);
+        p.sam_put([at[0] - yaw.sin() * 0.6, at[2] - yaw.cos() * 0.6]);
+        game::player::start_grab(&mut p.g, him, None);
+        p.run(0.2);
+        assert!(p.g.gd[him].held.is_some(), "seed {s}: the staging is wrong: not in his arm");
+        assert!(game::duty::order(&p.g, him).is_none(), "seed {s}: still under the team's order");
+        let others: Vec<_> = p.response_men().into_iter().filter(|&m| m != him).collect();
+        assert!(others.iter().all(|&m| game::duty::order(&p.g, m).is_some()), "seed {s}: the rest lost theirs");
+        let targets = |p: &Play| p.g.qrf.log.iter().filter(|l| l.what.starts_with("target:")).count();
+        let was = targets(&p);
+        p.until(40.0, |p| targets(p) > was || p.g.gd[him].held.is_none()).unwrap_or_else(|| panic!("seed {s}: the team waits for him"));
+        assert!(p.g.gd[him].held.is_some(), "seed {s}: out of his arm");
+    }
+}

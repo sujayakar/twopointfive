@@ -36,16 +36,23 @@ pub(super) fn told(g: &mut Game, el: &[GuardId], row: &crate::orders::Row, at: V
         g.groups[g.group].orders.group += 1.0;
         let why = (row.issue)(g, el, &t, None);
         if el.len() > 1 { crate::orders::squad_orders_same_ways(g, el); }
-        for &man in el { if let Some(a) = crate::duty::order(g, man) { g.tab.task[a].pace = pace; } }
+        if pace.is_some() { for &man in el { if let Some(a) = crate::duty::order(g, man) { g.tab.task[a].pace = pace; } } }
         why
     })
 }
 
-/// A frame of what they have been told.
-pub(super) fn do_as_told(g: &mut Game) { in_group(g, |g| { crate::doortools::door_tools_tick(g); crate::orders::squad_orders_tick(g); }) }
+/// A frame of what they have been told. A man in Sam's arm is told nothing: an order would walk him out of it.
+pub(super) fn do_as_told(g: &mut Game, el: &[GuardId]) {
+    let taken: Vec<GuardId> = el.iter().copied().filter(|&man| g.gd[man].held.is_some() && crate::duty::order(g, man).is_some()).collect();
+    in_group(g, |g| {
+        if !taken.is_empty() { crate::orders::squad_orders_clear(g, Some(&taken)); }
+        crate::doortools::door_tools_tick(g);
+        crate::orders::squad_orders_tick(g);
+    })
+}
 
-/// All of them are where they were told to go.
-pub(super) fn on_their_marks(g: &Game, el: &[GuardId]) -> bool { el.iter().all(|&man| crate::duty::task(g, man).is_some_and(|a| a.arrived)) }
+/// All of them who can are where they were told to go.
+pub(super) fn on_their_marks(g: &Game, el: &[GuardId]) -> bool { el.iter().all(|&man| g.gd[man].held.is_some() || crate::duty::task(g, man).is_some_and(|a| a.arrived)) }
 
 /// They hold where they stand, a way in each.
 pub(super) fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
@@ -59,6 +66,7 @@ pub(super) fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
 /// They cannot get into that room: it is left for a while, and they choose again.
 pub(super) fn leave_it(g: &mut crate::game::Game, el: &[GuardId], room: &str, line: &str) {
     radio(g, Some(el[0]), line);
+    g.qrf.spent = Some(QrfSpent { room: String::from(room), fix_t: g.qrf.fix_t });
     let at = g.time - RECLEAR_SECS + 30.0;
     g.qrf.cleared.set(String::from(room), at);
     hold360(g, el);
@@ -110,7 +118,6 @@ pub(super) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     g.qrf.phase = Phase::Drill;
     g.qrf.phase_t = 0.0;
     g.qrf.can = None;
-    g.qrf.can_land_t = f64::NAN;
     note(g, &format!("stack:{}", t.room));
     note(g, &format!("drill:{}", kind.as_str()));
     true
@@ -161,19 +168,14 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             return;
         }
     }
-    for &man in el.iter() {
-        if g.gd[man].held.is_some() {   // (in Sam's arm: off the entry: the orders would walk him out of it)
-            in_group(g, |g| { if crate::orders::squad_orders_has(&crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
-        }
-    }
-    do_as_told(g);
+    do_as_told(g, el);
     while (g.qrf.op_beat as usize) < g.tab.doortools_door_op[op].beats.len() {
         let what = g.tab.doortools_door_op[op].beats[g.qrf.op_beat as usize].what.clone();
         note(g, &format!("drill:{}", what));
         g.qrf.op_beat += 1.0;
     }
     if let Some(can) = g.tab.doortools_door_op[op].can {
-        if !g.tab.item[can].fired { g.qrf.can = Some(can); g.qrf.can_land_t = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
+        if !g.tab.item[can].fired { g.qrf.can = Some(can); }   // (perceiveScripted: the charge they put in is not a noise to them)
     }
     if g.tab.doortools_door_op[op].bang_t == g.time {
         if let Some(at) = g.tab.doortools_door_op[op].bang_at {
@@ -299,33 +301,6 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     note(g, "regroup");
 }
 
-/// A man's waypoint queue is set from `pts` and his goal is its head.
-pub(super) fn route(g: &mut crate::game::Game, m: GuardId, pts: &[V3], patch: Option<crate::squad::OrderPatch>) {
-    let w: Vec<V3> = pts.iter().map(|p| v3::copy(*p)).collect();
-    let goal = w.first().copied();   // (`w[0] ?? null`: None halts him. A new leg, even at the same spot: every goal here is a new object, so `held` stays as the patch has it)
-    g.qrf.wps.set(m, w);
-    let mut patch = patch.unwrap_or_default();
-    patch.goal = Some(goal);
-    crate::squad::order(g, m, patch);
-}
-
-/// Past a waypoint, on to the next; true when on the last one and arrived.
-pub(super) fn advance(g: &mut crate::game::Game, m: GuardId) -> bool {
-    if !g.qrf.wps.has(m) || g.gd[m].script.is_none() { return man_arrived(g, m); }
-    loop {
-        let next = {
-            let w = g.qrf.wps.get(m).unwrap();
-            if w.len() > 1 { w[0] } else { break; }
-        };
-        if !(dist_xz(g.pos_of(m), next) < 0.75) { break; }
-        let w = g.qrf.wps.get_mut(m).unwrap();
-        w.remove(0);
-        let goal = w[0];
-        crate::squad::order(g, m, crate::squad::OrderPatch { goal: Some(Some(goal)), ..Default::default() });
-    }
-    g.qrf.wps.get(m).unwrap().len() <= 1 && man_arrived(g, m)
-}
-
 /// Tier 2's trigger past deployment: one of theirs down, enough men down, a running gunfight.
 pub(super) fn maybe_perimeter(g: &mut crate::game::Game) {
     if !g.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
@@ -420,7 +395,6 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     }
     let out: Vec<GuardId> = g.qrf.perim.as_ref().unwrap().men.iter().map(|p| p.gd).collect();
     g.qrf.men.retain(|man| !out.contains(man));   // (peeled men leave the element's order; they stay 'owned' through perim)
-    for &man in out.iter() { g.qrf.wps.delete(man); }
     for i in 0..out.len() { to_post(g, i); }
     if on_drill { let left = alive(g); hold360(g, &left); }
     if let Some(&first) = out.first() {

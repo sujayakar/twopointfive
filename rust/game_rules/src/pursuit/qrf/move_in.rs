@@ -369,9 +369,9 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
         Phase::Move => phase_move(g, &mut el),
         Phase::Drill => phase_drill(g, &mut el),
         Phase::Called => if g.qrf.phase_t > 1.2 { hold360(g, &el); },
-        Phase::Hold => { do_as_told(g); if g.qrf.phase_t > HOLD360_SECS { pick_target(g, &mut el, false); } }
+        Phase::Hold => { do_as_told(g, &el); if g.qrf.phase_t > HOLD360_SECS { pick_target(g, &mut el, false); } }
         Phase::Fight => { phase_fight(g, &mut el); return; }   // the AI has them: no script senses to run
-        Phase::Regroup => { do_as_told(g); if g.qrf.phase_t > 1.5 || on_their_marks(g, &el) { pick_target(g, &mut el, true); } }
+        Phase::Regroup => { do_as_told(g, &el); if g.qrf.phase_t > 1.5 || on_their_marks(g, &el) { pick_target(g, &mut el, true); } }
         Phase::Landing => {}
     }
     scripted_senses(g, &el, dt);
@@ -522,7 +522,7 @@ fn number_the_events(g: &mut crate::game::Game) {
 
 /// His hearing runs on the events less the element's own (and a can of theirs going off where it landed); what it writes on an event (`announced`) is written back.
 fn hear_all_but_their_own(g: &mut crate::game::Game, m: GuardId, ids: &[f64]) {
-    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(g.tab.item[c].pos), _ => None };
+    let can_at = g.qrf.can.map(|c| g.tab.item[c].pos);
     let all = core::mem::take(&mut g.events);
     let mut kept: Vec<usize> = Vec::new();
     let mut lent = Vec::new();
@@ -705,12 +705,11 @@ fn phase_file(g: &mut crate::game::Game, el: &Vec<GuardId>) {
         crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");
         let e = mk.entry.get(i).copied().unwrap_or(mk.entry[0]);
         let ef = mk.entry_face.get(i).copied().unwrap_or(m::PI / 2.0);
-        route(g, x, &[e], Some(crate::squad::OrderPatch { speed: Some(Some(2.4)), face: Some(Some(ef)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)), aim_at: Some(Some(sector_point(e, ef, None, None))), crouch: Some(Some(i == 3)), strafe: Some(Some(false)), ..Default::default() }));
+        crate::squad::order(g, x, crate::squad::OrderPatch { goal: Some(Some(v3::copy(e))), speed: Some(Some(2.4)), face: Some(Some(ef)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)), aim_at: Some(Some(sector_point(e, ef, None, None))), crouch: Some(Some(i == 3)), strafe: Some(Some(false)), ..Default::default() });
         g.qrf.filed += 1.0;
         let what = format!("in:{}", i + 1);
         note(g, &what);
     }
-    for &x in el.iter() { advance(g, x); }
     let all_in = g.qrf.filed >= el.len() as f64 && el.iter().all(|&x| {
         let p = g.pos_of(x);
         arrived(g, x) || dist_xz(p, g.gd[x].script.and_then(|s| s.goal).unwrap_or(p)) < 0.9
@@ -887,7 +886,6 @@ fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
     g.qrf.phase_t = 0.0;
     for &x in el {
         crate::mind::set_state(g, x, crate::game::GuardState::Search, "qrf");
-        g.qrf.wps.delete(x);
     }
     let t = g.qrf.target.clone().unwrap();
     let pace = if g.qrf.cue_rush { RUSH_SPEED } else { MOVE_SPEED };
@@ -902,7 +900,7 @@ fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
 /// The element walking: a fresher fix, and arriving.
 fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     let t = match g.qrf.target.clone() { Some(t) => t, None => { pick_target(g, el, true); return; } };
-    do_as_told(g);
+    do_as_told(g, el);
     // a fresher fix elsewhere: re-target (not more than every few seconds, and only for a real move of it)
     if let Some(b) = fix_of(g) {
         if b.t > g.qrf.fix_t + 0.5 && dist_xz(b.pos, g.qrf.fix.unwrap_or(b.pos)) > RETARGET_M && g.time - g.qrf.target_at > 3.0 {

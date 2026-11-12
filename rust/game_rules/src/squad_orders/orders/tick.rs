@@ -18,10 +18,11 @@ fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: Ta
 /// Once a frame before the guards move: each man under an order is walked to it and posed on it.
 pub fn squad_orders_tick(g: &mut crate::game::Game) {
     squad_orders_sync(g);
-    crate::fireline::fire_line_tick(g);
+    let player = crate::group::is_seats(g);   // (his gun and his way are no other group's)
+    if player { crate::fireline::fire_line_tick(g); }
     if g.groups[g.group].orders.asg.is_empty() { return; }
     if !squad_orders_active(g, &crate::seats::here(g)) { squad_orders_clear(g, None); return; }
-    crate::sneak::sneak_tick(g);
+    if player { crate::sneak::sneak_tick(g); }
     let mates: Vec<GuardId> = if squad_orders_big(g, &crate::seats::here(g)) { squad_orders_men(g, &crate::seats::here(g), None, None) } else { Vec::new() };
     let followers = the_file(g);
     note_sams_walk(g, &followers);
