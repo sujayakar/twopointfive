@@ -72,6 +72,13 @@ if (!only.length) { const tables = (kept: string): string => { const g = new Dra
     F.drop(g.h); return off.filter(x => /^k /.test(x)).join(); };
   const standard = tables(''), hard = tables('{"hard":true}'), lever = tables('{"levers":{"ai":"hard"}}'), refused = tables('{"levers":{"ai":"nonsense"}}'), after = tables('');
   line(standard === after && standard === refused && hard !== standard && lever !== standard && lever !== hard, 'hard, and one lever of it, are what a game is staged by; a word that is no rung is nothing, and the next game is its own'); }
+// TWO GAMES IN ONE MODULE, and one of them lost to a panic: it is still that game, whatever else has been started since, and the other is untouched
+if (!only.length) { const two = [0, 1].map(() => new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 })), [A, B] = two, cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, start = (g: DrawGame, level: string): void => g.start({ level: bytes(level), words: `?levelFile=${level}&roomclear&squad4`, mannequin, mannequinBin, cast, castLook, seed: 5 });
+  const step = (g: DrawGame, n: number): void => { cam.rebuild(); for (let i = 0; i < n; i++) g.step(1 / 60, sampleHand(g.numbersOf(), input, cam, canvas)); }, doors = (g: DrawGame): number => g.map().doors.length, way = (g: DrawGame): boolean => { const D = g.map().doors; return !!g.face.way(g.h, [g.map().men[0].x, 0, g.map().men[0].z], [D[0].hx + 1, 0, D[0].hz + 1], 6000); };
+  start(A, 'block.json'); step(A, 60); const a0 = doors(A), ways0 = way(A); try { A.face.debugPanic(A.h); } catch { /* lost */ }
+  start(B, 'compound.json'); step(B, 60); const b0 = doors(B), b1 = B.face.stateWords(B.h).join(), label = A.recover(false), a1 = doors(A), apart = A.h !== B.h && B.face.stateWords(B.h).join() === b1; step(A, 60); step(B, 60);
+  line(label === '' && a0 === a1 && a0 !== b0 && apart && doors(B) === b0 && (!ways0 || way(A)), 'of two games in one module the one lost to a panic stands again as itself, and the other goes on', `${a0} and ${a1} doors, the other ${b0}; numbers ${A.h} and ${B.h}`);
+  for (const g of two) g.face.drop(g.h); }
 // A KNOB BY ITS NAME: every one turned to what it is turned to is no change, one turned is another game, and turned back it is the same again
 if (!only.length) { const g = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), F = g.face;
   g.start({ level: bytes('depot.json'), words: '?levelFile=depot.json&roomclear&squad4', mannequin, mannequinBin, cast, castLook, seed: 5 });

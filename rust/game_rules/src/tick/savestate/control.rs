@@ -303,7 +303,7 @@ pub struct First { image: Moment, men: crate::standing::Men }
 /// EVERY GAME THE CONTROL KEEPS OF A STAND: the first, what a stage goes back to, and what was kept as it ran
 #[derive(Default)]
 struct Held { first: Option<Rc<First>>, stage: Option<Rc<crate::kitstage::KitStage>>, kept: BTreeMap<String, Kept>, used: u64 }
-/// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game dropped may stand again from a kept copy of itself (a panic's way back, a tool's slot given up), and is the same stand.
+/// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game lost may stand again from a kept copy of itself, and is the same stand.
 static mut IMAGES: BTreeMap<u32, Held> = BTreeMap::new();
 static mut STANDS: u32 = 0;
 static mut USES: u64 = 0;

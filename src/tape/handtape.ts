@@ -12,7 +12,7 @@ import { HAND } from '../draw/input';
 import type { HandsOffPlan } from '../host/benchScenes';
 
 /** `version`: a tape of another one is refused, and one whose hand has other numbers (`HAND`) */
-export const HANDTAPE = { magic: 0x31485054, version: 3 };
+export const HANDTAPE = { magic: 0x31485054, version: 4 };
 const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7, FIGURES = 8;
 const DT = 1, KEYS = 2, WIDE = 4;
 /** a step's numbers, each with a bit of two words */
@@ -130,7 +130,7 @@ export class HandWalk {
     this.d = new DataView(b.buffer, b.byteOffset, b.byteLength);
     if (b.length < 12 || this.u32() !== HANDTAPE.magic) throw new TapeRefused('That file isn\u2019t a replay of this game.');
     const version = this.u32(), numbers = this.u32(), hand = version >= 3 ? this.u32() : 0;
-    if (any ? version !== 2 && version !== 3 : version !== HANDTAPE.version || hand !== HAND) throw new TapeRefused(ANOTHER);
+    if (any ? version < 2 || version > HANDTAPE.version : version !== HANDTAPE.version || hand !== HAND) throw new TapeRefused(ANOTHER);
     this.hand = new Float64Array(numbers).fill(NaN);
     try {
       if (this.u8() !== START) throw new RangeError();
