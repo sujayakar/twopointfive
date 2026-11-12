@@ -173,86 +173,114 @@ mod wind; pub use wind::*;
 mod workstow; pub use workstow::*;
 mod workthings; pub use workthings::*;
 
-/// a table's numbers by their dotted names (`#[derive(Knobs)]` writes it)
-pub trait KnobTable {
-    /// each number under this table: its dotted name, whether it is a yes or no, what it stands at (a yes is 1)
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64));
+/// WHAT OF A TYPE IS A NUMBER, AND WHERE: a table's numbers are reached by their dotted names through this alone, so a number costs a name and a place and no code
+pub enum Of {
+    /// a number · a yes or no · nothing a person turns (a word, say)
+    Number, YesNo, Nothing,
+    /// a table: its fields, each at so many bytes
+    Table(&'static [Field]),
+    /// so many of a kind side by side, each by its place
+    Row { many: usize, step: usize, of: &'static Of },
+    /// a list: where it lies and how many
+    List { step: usize, of: &'static Of, lies: unsafe fn(*const u8) -> (*const u8, usize), lies_mut: unsafe fn(*mut u8) -> (*mut u8, usize) },
+    /// a map: each by its key's name
+    Map { of: &'static Of, each: unsafe fn(*const u8, &mut dyn FnMut(&str, *const u8)), each_mut: unsafe fn(*mut u8, &mut dyn FnMut(&str, *mut u8)) },
+    /// what may not be there (null: it is not)
+    Maybe { of: &'static Of, there: unsafe fn(*const u8) -> *const u8, there_mut: unsafe fn(*mut u8) -> *mut u8 },
+}
+pub struct Field { pub name: &'static str, pub at: usize, pub of: &'static Of }
+
+/// a type that holds numbers (`#[derive(Knobs)]` writes it for a table)
+pub trait KnobTable: Sized {
+    const OF: Of;
+    /// each number under this: its dotted name, whether it is a yes or no, what it stands at (a yes is 1)
+    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { unsafe { walk(&Self::OF, self as *const Self as *const u8, at, each) } }
     /// the number of that name; None = there is none
-    fn get(&self, name: &str) -> Option<f64>;
+    fn get(&self, name: &str) -> Option<f64> { unsafe { get(&Self::OF, self as *const Self as *const u8, name) } }
     /// turn it; false = there is none. For a yes or no anything but 0 is yes
-    fn set(&mut self, name: &str, v: f64) -> bool;
+    fn set(&mut self, name: &str, v: f64) -> bool { unsafe { set(&Self::OF, self as *mut Self as *mut u8, name, v) } }
+}
+/// (what the derive asks of a field's type) its numbers, if it has any: an inherent constant is found before a trait's
+pub struct Holds<T>(core::marker::PhantomData<T>);
+impl<T: KnobTable> Holds<T> { pub const OF: Of = T::OF; }
+pub trait HoldsNone { const OF: Of = Of::Nothing; }
+impl<T> HoldsNone for Holds<T> {}
+
+impl KnobTable for f64 { const OF: Of = Of::Number; }
+impl KnobTable for bool { const OF: Of = Of::YesNo; }
+impl<T: KnobTable, const N: usize> KnobTable for [T; N] { const OF: Of = Of::Row { many: N, step: core::mem::size_of::<T>(), of: &T::OF }; }
+impl<T: KnobTable> KnobTable for Vec<T> {
+    const OF: Of = Of::List { step: core::mem::size_of::<T>(), of: &T::OF, lies: |p| { let v = unsafe { &*(p as *const Vec<T>) }; (v.as_ptr() as *const u8, v.len()) }, lies_mut: |p| { let v = unsafe { &mut *(p as *mut Vec<T>) }; (v.as_mut_ptr() as *mut u8, v.len()) } };
+}
+impl<K: core::fmt::Debug + Eq + Clone + core::hash::Hash, T: KnobTable> KnobTable for JsMap<K, T> {
+    const OF: Of = Of::Map {
+        of: &T::OF,
+        each: |p, f| for (k, x) in unsafe { &*(p as *const JsMap<K, T>) }.iter() { f(&said(&k), x as *const T as *const u8) },
+        each_mut: |p, f| for (k, x) in unsafe { &mut *(p as *mut JsMap<K, T>) }.iter_mut() { f(&said(&k), x as *mut T as *mut u8) },
+    };
+}
+impl<T: KnobTable> KnobTable for Option<T> {
+    const OF: Of = Of::Maybe {
+        of: &T::OF,
+        there: |p| unsafe { &*(p as *const Option<T>) }.as_ref().map_or(core::ptr::null(), |x| x as *const T as *const u8),
+        there_mut: |p| unsafe { &mut *(p as *mut Option<T>) }.as_mut().map_or(core::ptr::null_mut(), |x| x as *mut T as *mut u8),
+    };
 }
 /// a map's key, as a name's part: a word as it is, an arm with a small first letter
-fn said(key: &impl core::fmt::Debug) -> String {
+fn said(key: &dyn core::fmt::Debug) -> String {
     let mut s = alloc::format!("{key:?}").trim_matches('"').replace('.', " ");
     if let Some(first) = s.get_mut(..1) { first.make_ascii_lowercase(); }
     s
 }
-
-impl KnobTable for f64 {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { each(at, false, *self) }
-    fn get(&self, name: &str) -> Option<f64> { name.is_empty().then_some(*self) }
-    fn set(&mut self, name: &str, v: f64) -> bool { if name.is_empty() { *self = v; } name.is_empty() }
-}
-impl KnobTable for bool {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { each(at, true, *self as u8 as f64) }
-    fn get(&self, name: &str) -> Option<f64> { name.is_empty().then_some(*self as u8 as f64) }
-    fn set(&mut self, name: &str, v: f64) -> bool { if name.is_empty() { *self = v != 0.0; } name.is_empty() }
-}
-/// a list's, each by its place
-impl<T: KnobTable> KnobTable for [T] {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { for (i, x) in self.iter().enumerate() { under(at, &alloc::format!("{i}"), |at| x.walk(at, &mut *each)); } }
-    fn get(&self, name: &str) -> Option<f64> { let (i, rest) = first_part(name); <[T]>::get(self, i.parse::<usize>().ok()?)?.get(rest) }
-    fn set(&mut self, name: &str, v: f64) -> bool { let (i, rest) = first_part(name); i.parse::<usize>().ok().and_then(|i| self.get_mut(i)).is_some_and(|x| x.set(rest, v)) }
-}
-impl<T: KnobTable, const N: usize> KnobTable for [T; N] {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self[..].walk(at, each) }
-    fn get(&self, name: &str) -> Option<f64> { KnobTable::get(&self[..], name) }
-    fn set(&mut self, name: &str, v: f64) -> bool { self[..].set(name, v) }
-}
-impl<T: KnobTable> KnobTable for Vec<T> {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self[..].walk(at, each) }
-    fn get(&self, name: &str) -> Option<f64> { KnobTable::get(&self[..], name) }
-    fn set(&mut self, name: &str, v: f64) -> bool { self[..].set(name, v) }
-}
-/// a map's, each by its key's name
-impl<K: core::fmt::Debug + Eq + Clone + core::hash::Hash, T: KnobTable> KnobTable for JsMap<K, T> {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { for (k, x) in self.iter() { under(at, &said(&k), |at| x.walk(at, &mut *each)); } }
-    fn get(&self, name: &str) -> Option<f64> { let (k, rest) = first_part(name); self.iter().find(|x| said(&x.0) == k)?.1.get(rest) }
-    fn set(&mut self, name: &str, v: f64) -> bool { let (k, rest) = first_part(name); self.iter_mut().find(|x| said(&x.0) == k).is_some_and(|x| x.1.set(rest, v)) }
-}
-/// what may not be there: its numbers while it is
-impl<T: KnobTable> KnobTable for Option<T> {
-    fn walk(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { if let Some(x) = self { x.walk(at, each); } }
-    fn get(&self, name: &str) -> Option<f64> { self.as_ref()?.get(name) }
-    fn set(&mut self, name: &str, v: f64) -> bool { self.as_mut().is_some_and(|x| x.set(name, v)) }
-}
-/// (what the derive writes) a field's numbers, if its type has any: `Is` is found before `IsNot`, which is further off by a reference
-pub mod auto {
-    use super::{KnobTable, String};
-    pub struct Auto<'a, T: ?Sized>(pub &'a T);
-    pub struct AutoMut<'a, T: ?Sized>(pub &'a mut T);
-    pub trait Is { fn walk_it(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)); fn get_it(&self, name: &str) -> Option<f64>; }
-    impl<T: KnobTable + ?Sized> Is for Auto<'_, T> {
-        fn walk_it(&self, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) { self.0.walk(at, each) }
-        fn get_it(&self, name: &str) -> Option<f64> { KnobTable::get(self.0, name) }
-    }
-    pub trait IsNot { fn walk_it(&self, _at: &mut String, _each: &mut dyn FnMut(&str, bool, f64)) {} fn get_it(&self, _name: &str) -> Option<f64> { None } }
-    impl<T: ?Sized> IsNot for &Auto<'_, T> {}
-    pub trait IsMut { fn set_it(&mut self, name: &str, v: f64) -> bool; }
-    impl<T: KnobTable + ?Sized> IsMut for AutoMut<'_, T> { fn set_it(&mut self, name: &str, v: f64) -> bool { KnobTable::set(self.0, name, v) } }
-    pub trait IsNotMut { fn set_it(&mut self, _name: &str, _v: f64) -> bool { false } }
-    impl<T: ?Sized> IsNotMut for &mut AutoMut<'_, T> {}
-}
-/// (what the derive writes) the first part of a dotted name, and the rest
-pub fn first_part(name: &str) -> (&str, &str) { name.split_once('.').unwrap_or((name, "")) }
-/// (what the derive writes) the dotted name goes one part deeper for `f`
-pub fn under(at: &mut String, name: &str, f: impl FnOnce(&mut String)) {
+/// the first part of a dotted name, and the rest
+fn first_part(name: &str) -> (&str, &str) { name.split_once('.').unwrap_or((name, "")) }
+/// the dotted name goes one part deeper for `f`
+fn under(at: &mut String, name: &str, f: impl FnOnce(&mut String)) {
     let n = at.len();
     if n > 0 { at.push('.'); }
     at.push_str(name);
     f(at);
     at.truncate(n);
+}
+
+/// (`p` is where a value of what `of` says lies: the trait's own calls see to it)
+unsafe fn walk(of: &Of, p: *const u8, at: &mut String, each: &mut dyn FnMut(&str, bool, f64)) {
+    match *of {
+        Of::Nothing => {}
+        Of::Number => each(at, false, *(p as *const f64)),
+        Of::YesNo => each(at, true, *(p as *const bool) as u8 as f64),
+        Of::Table(fields) => for f in fields { under(at, f.name, |at| walk(f.of, p.add(f.at), at, &mut *each)); },
+        Of::Row { many, step, of } => for i in 0..many { under(at, &alloc::format!("{i}"), |at| walk(of, p.add(i * step), at, &mut *each)); },
+        Of::List { step, of, lies, .. } => { let (p, many) = lies(p); for i in 0..many { under(at, &alloc::format!("{i}"), |at| walk(of, p.add(i * step), at, &mut *each)); } }
+        Of::Map { of, each: of_map, .. } => of_map(p, &mut |key, p| under(at, key, |at| walk(of, p, at, &mut *each))),
+        Of::Maybe { of, there, .. } => { let p = there(p); if !p.is_null() { walk(of, p, at, each); } }
+    }
+}
+unsafe fn get(of: &Of, p: *const u8, name: &str) -> Option<f64> {
+    let (part, rest) = first_part(name);
+    match *of {
+        Of::Nothing => None,
+        Of::Number => name.is_empty().then(|| *(p as *const f64)),
+        Of::YesNo => name.is_empty().then(|| *(p as *const bool) as u8 as f64),
+        Of::Table(fields) => { let f = fields.iter().find(|f| f.name == part)?; get(f.of, p.add(f.at), rest) }
+        Of::Row { many, step, of } => { let i = part.parse::<usize>().ok().filter(|&i| i < many)?; get(of, p.add(i * step), rest) }
+        Of::List { step, of, lies, .. } => { let (p, many) = lies(p); let i = part.parse::<usize>().ok().filter(|&i| i < many)?; get(of, p.add(i * step), rest) }
+        Of::Map { of, each, .. } => { let mut found = None; each(p, &mut |key, p| if key == part && found.is_none() { found = get(of, p, rest) }); found }
+        Of::Maybe { of, there, .. } => { let p = there(p); if p.is_null() { None } else { get(of, p, name) } }
+    }
+}
+unsafe fn set(of: &Of, p: *mut u8, name: &str, v: f64) -> bool {
+    let (part, rest) = first_part(name);
+    match *of {
+        Of::Nothing => false,
+        Of::Number => { if name.is_empty() { *(p as *mut f64) = v; } name.is_empty() }
+        Of::YesNo => { if name.is_empty() { *(p as *mut bool) = v != 0.0; } name.is_empty() }
+        Of::Table(fields) => fields.iter().find(|f| f.name == part).is_some_and(|f| set(f.of, p.add(f.at), rest, v)),
+        Of::Row { many, step, of } => part.parse::<usize>().is_ok_and(|i| i < many && set(of, p.add(i * step), rest, v)),
+        Of::List { step, of, lies_mut, .. } => { let (p, many) = lies_mut(p); part.parse::<usize>().is_ok_and(|i| i < many && set(of, p.add(i * step), rest, v)) }
+        Of::Map { of, each_mut, .. } => { let mut found = false; each_mut(p, &mut |key, p| if key == part && !found { found = set(of, p, rest, v) }); found }
+        Of::Maybe { of, there_mut, .. } => { let p = there_mut(p); !p.is_null() && set(of, p, name, v) }
+    }
 }
 
 /// every knob table
