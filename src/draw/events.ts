@@ -1,15 +1,15 @@
 // WHAT A TICK DID THAT IS DRAWN ONCE, played: particles thrown and kicked, the air pushed, smoke let go. Every row carries the id that names it (its tick, its kind,
 // its place among that kind), and an id is played once, however often its tick is run.
-import type { EmitOpts, ImpulseOpts, Particles, PKind } from '../render/particles';
+import type { EmitOpts, ImpulseOpts, Particles } from '../render/particles';
 import { lookConfig } from '../render/frame';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { SmokeEmitter } from '../smoke/types';
 import type { Vec3 } from '../math/vec';
 import type { Drawn } from './drawn';
 import type { AudioEngine, LastingSound } from '../audio/audio';
-import type { FloorMat } from '../audio/floors';
-import { LASTINGS, SFX } from './names';
-import { AirPush, Anchor, Emit, EMIT_SHAPES, FLOORS, Footfall, Heard, Kick, Lasting, PKINDS, Section, SmokeSource, SMOKE_KINDS, Sound } from './sections';
+import { SourceFlag } from './bits';
+import { EMIT_SHAPES, FLOORS, LASTINGS, LATTICES, PKINDS, PUSH_SHAPES, SFX, SMOKE_KINDS } from './names';
+import { AirPush, Anchor, Emit, Footfall, Heard, Kick, Lasting, Section, SmokeSource, Sound } from './sections';
 
 /** the ids played in the last `KEPT` ticks, by kind */
 const KEPT = 120;
@@ -24,8 +24,7 @@ class Played {
   /** another game, or the same one put back: its ticks are run for the first time again */
   forget(): void { this.by.clear(); }
 }
-const LOOK = 1, CONFINED = 2, RIDES_VELOCITY = 4, HELD = 8, FIRE = 16;
-const LATTICES = [undefined, 'fine', 'coarse'] as const, SHAPE_LINE = 1, SHAPE_BODY = 2, SHAPE_OUT = 4, SHAPE_ROUND = 5, SHAPE_STRIDE = 6;
+const latticeOf = (n: number): 'fine' | 'coarse' | undefined => { const l = LATTICES[n]; return l === 'every' ? undefined : l; };
 /** m/s a stride throws the air at the most, and the most the look's amount of it counts */
 const STRIDE_MOST = 2.2, STIR_MOST = 2;
 const said = (v: number): number | undefined => v === v ? v : undefined;
@@ -46,19 +45,19 @@ export class DrawEvents {
     const D = this.D, f = D.f, u = D.u, P = this.particles;
     if (P) {
       for (let i = 0, o = D.at[Section.emits]; i < D.n[Section.emits]; i++, o += Emit.row) if (this.played.once(Section.emits, u[o + Emit.tick], u[o + Emit.serial])) {
-        const m = o + Emit.more, w: EmitOpts = { speed: f[o + Emit.speed], life: f[o + Emit.life], size: f[o + Emit.size], shape: u[o + Emit.shape] ? EMIT_SHAPES[u[o + Emit.shape] - 1] as EmitOpts['shape'] : undefined, spread: said(f[m]), speedJit: said(f[m + 1]), lifeJit: said(f[m + 2]), sizeJit: said(f[m + 3]), lift: said(f[m + 4]), radius: said(f[m + 5]), posJit: said(f[m + 6]), top: said(f[m + 7]), aspect: said(f[m + 8]), tumble: said(f[m + 9]), nrmJit: said(f[m + 10]), steam: said(f[m + 11]), ember: said(f[m + 12]), vadd: this.v3said(o + Emit.vadd), color: this.v3said(o + Emit.color), owner: u[o + Emit.owner], seed: u[o + Emit.seed] === 0xffffffff ? undefined : u[o + Emit.seed] };
-        const was = P.ours; P.ours = u[o + Emit.ours] !== 0; P.emit(PKINDS[u[o + Emit.kind]] as PKind, this.v3(o + Emit.pos), this.v3(o + Emit.dir), u[o + Emit.count], w); P.ours = was; }
+        const m = o + Emit.more, w: EmitOpts = { speed: f[o + Emit.speed], life: f[o + Emit.life], size: f[o + Emit.size], shape: u[o + Emit.shape] ? EMIT_SHAPES[u[o + Emit.shape] - 1] : undefined, spread: said(f[m]), speedJit: said(f[m + 1]), lifeJit: said(f[m + 2]), sizeJit: said(f[m + 3]), lift: said(f[m + 4]), radius: said(f[m + 5]), posJit: said(f[m + 6]), top: said(f[m + 7]), aspect: said(f[m + 8]), tumble: said(f[m + 9]), nrmJit: said(f[m + 10]), steam: said(f[m + 11]), ember: said(f[m + 12]), vadd: this.v3said(o + Emit.vadd), color: this.v3said(o + Emit.color), owner: u[o + Emit.owner], seed: u[o + Emit.seed] === 0xffffffff ? undefined : u[o + Emit.seed] };
+        const was = P.ours; P.ours = u[o + Emit.ours] !== 0; P.emit(PKINDS[u[o + Emit.kind]], this.v3(o + Emit.pos), this.v3(o + Emit.dir), u[o + Emit.count], w); P.ours = was; }
       for (let i = 0, o = D.at[Section.kicks]; i < D.n[Section.kicks]; i++, o += Kick.row) if (this.played.once(Section.kicks, u[o + Kick.tick], u[o + Kick.serial])) {
-        const k = u[o + Kick.kinds], w: ImpulseOpts = { up: said(f[o + Kick.up]), bias: this.v3said(o + Kick.bias), eye: this.v3said(o + Kick.eye), occlude: u[o + Kick.occlude] !== 0, kinds: k ? PKINDS.filter((_, n) => k >>> n & 1) as PKind[] : undefined, seed: u[o + Kick.seed] === 0xffffffff ? undefined : u[o + Kick.seed] };
+        const k = u[o + Kick.kinds], w: ImpulseOpts = { up: said(f[o + Kick.up]), bias: this.v3said(o + Kick.bias), eye: this.v3said(o + Kick.eye), occlude: u[o + Kick.occlude] !== 0, kinds: k ? PKINDS.filter((_, n) => k >>> n & 1) : undefined, seed: u[o + Kick.seed] === 0xffffffff ? undefined : u[o + Kick.seed] };
         P.impulse(this.v3(o + Kick.pos), f[o + Kick.radius], f[o + Kick.strength], w); }
     }
     this.sources();
     const stir = Math.max(0, lookConfig.stir); this.smoke.setStir(stir);   // (how hard a moving man curls the smoke about him)
-    for (let i = 0, o = D.at[Section.pushes]; i < D.n[Section.pushes]; i++, o += AirPush.row) if ((u[o + AirPush.shape] <= SHAPE_BODY || u[o + AirPush.shape] >= SHAPE_ROUND) && this.played.once(Section.pushes, u[o + AirPush.tick], u[o + AirPush.serial])) {
-      const shape = u[o + AirPush.shape], len = f[o + AirPush.len], vel = this.v3(o + AirPush.vel);
-      if (shape === SHAPE_ROUND) { this.smoke.round?.(this.v3(o + AirPush.pos), this.v3(o + AirPush.dir), len); continue; }
-      if (shape === SHAPE_STRIDE) { if (stir > 0) this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.min(STRIDE_MOST, Math.hypot(vel[0], vel[1], vel[2]) * Math.min(STIR_MOST, stir)), radius: f[o + AirPush.radius] }); continue; }
-      this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + AirPush.radius], lattice: LATTICES[u[o + AirPush.lattice]], line: shape === SHAPE_LINE ? len : undefined, body: shape === SHAPE_BODY ? len : undefined, push: said(f[o + AirPush.hard]) }); }
+    for (let i = 0, o = D.at[Section.pushes]; i < D.n[Section.pushes]; i++, o += AirPush.row) if (PUSH_SHAPES[u[o + AirPush.shape]] !== 'jet' && PUSH_SHAPES[u[o + AirPush.shape]] !== 'outward' && this.played.once(Section.pushes, u[o + AirPush.tick], u[o + AirPush.serial])) {
+      const shape = PUSH_SHAPES[u[o + AirPush.shape]], len = f[o + AirPush.len], vel = this.v3(o + AirPush.vel);
+      if (shape === 'round') { this.smoke.round?.(this.v3(o + AirPush.pos), this.v3(o + AirPush.dir), len); continue; }
+      if (shape === 'stride') { if (stir > 0) this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.min(STRIDE_MOST, Math.hypot(vel[0], vel[1], vel[2]) * Math.min(STIR_MOST, stir)), radius: f[o + AirPush.radius] }); continue; }
+      this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + AirPush.radius], lattice: latticeOf(u[o + AirPush.lattice]), line: shape === 'line' ? len : undefined, body: shape === 'body' ? len : undefined, push: said(f[o + AirPush.hard]) }); }
   }
   /** what sounds for as long as it goes on */
   private lasting(): void {
@@ -78,7 +77,7 @@ export class DrawEvents {
     for (let i = 0, o = D.at[Section.sounds]; i < D.n[Section.sounds]; i++, o += Sound.row, D.fresh()) if (this.played.once(Section.sounds, D.u[o + Sound.tick], D.u[o + Sound.serial])) {
       const name = SFX[D.u[o + Sound.name]], f = D.f, pos = D.u[o + Sound.placed] ? this.v3(o + Sound.pos) : null;
       A.play(name, pos, said(f[o + Sound.gain]), { rate: said(f[o + Sound.rate]), lowpass: said(f[o + Sound.lowpass]), pan: said(f[o + Sound.pan]), wet: said(f[o + Sound.wet]) }); }
-    for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, FLOORS[D.u[o + Footfall.floor]] as FloorMat);
+    for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, FLOORS[D.u[o + Footfall.floor]]);
   }
   private sources(): void { const D = this.D; for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, D.u[o + SmokeSource.tick], D.u[o + SmokeSource.serial])) this.source(o); }
   /** a source of smoke, with the push of the air that goes with it, as today's solver takes them: one emitter */
@@ -86,8 +85,8 @@ export class DrawEvents {
     const D = this.D, f = D.f, u = D.u, n = u[o + SmokeSource.push], a = n ? D.at[Section.pushes] + (n - 1) * AirPush.row : -1, says = u[o + SmokeSource.says], key = u[o + SmokeSource.anchor];
     const vel: Vec3 = a < 0 ? [0, 0, 0] : this.v3(a + AirPush.vel);
     const e: SmokeEmitter = { pos: this.v3(o + SmokeSource.pos), dir: a < 0 ? [0, 1, 0] : this.v3(a + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + SmokeSource.radius], density: f[o + SmokeSource.density], temperature: f[o + SmokeSource.heat], ttl: f[o + SmokeSource.ttl], age: f[o + SmokeSource.age],
-      kind: SMOKE_KINDS[u[o + SmokeSource.kind]] as SmokeEmitter['kind'], lattice: LATTICES[u[o + SmokeSource.lattice]], attack: said(f[o + SmokeSource.attack]), jitter: said(f[o + SmokeSource.jitter]), prio: said(f[o + SmokeSource.prio]), minVoxels: said(f[o + SmokeSource.minCells]), tint: this.v3said(o + SmokeSource.tint),
-      look: (says & LOOK) !== 0 || undefined, fire: (says & FIRE) !== 0 || undefined, held: (says & HELD) !== 0 || undefined, confined: (says & CONFINED) !== 0 || undefined, trackVel: (says & RIDES_VELOCITY) !== 0 || undefined, mode: a >= 0 && u[a + AirPush.shape] === SHAPE_OUT ? 'burst' : undefined, push: a < 0 ? undefined : said(f[a + AirPush.hard]), expand: a < 0 ? undefined : said(f[a + AirPush.expand]) };
+      kind: SMOKE_KINDS[u[o + SmokeSource.kind]], lattice: latticeOf(u[o + SmokeSource.lattice]), attack: said(f[o + SmokeSource.attack]), jitter: said(f[o + SmokeSource.jitter]), prio: said(f[o + SmokeSource.prio]), minVoxels: said(f[o + SmokeSource.minCells]), tint: this.v3said(o + SmokeSource.tint),
+      look: (says & SourceFlag.Look) !== 0 || undefined, fire: (says & SourceFlag.Fire) !== 0 || undefined, held: (says & SourceFlag.Held) !== 0 || undefined, confined: (says & SourceFlag.Confined) !== 0 || undefined, trackVel: (says & SourceFlag.RidesVelocity) !== 0 || undefined, mode: a >= 0 && PUSH_SHAPES[u[a + AirPush.shape]] === 'outward' ? 'burst' : undefined, push: a < 0 ? undefined : said(f[a + AirPush.hard]), expand: a < 0 ? undefined : said(f[a + AirPush.expand]) };
     if (key) e.track = () => this.anchors.get(key) ?? null;
     this.smoke.emit(e);
   }

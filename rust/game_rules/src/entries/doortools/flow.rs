@@ -278,7 +278,7 @@ fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         watch: None,
         shy: Some(None),
         thru: Some(door),
-        pace: Some(g.groups[g.group].orders.knobs.entry),
+        pace: Some(g.k.orders.entry),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
         light: Some(g.groups[g.group].tools.lights.unwrap_or(true)),

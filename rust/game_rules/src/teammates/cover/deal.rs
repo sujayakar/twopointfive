@@ -314,9 +314,9 @@ struct Laid {
     pins: Vec<(GuardId, CoverOpeningId)>,
 }
 /// The dealing so far: the live openings, and the row each man got. (`live` no longer changes shape but for a row added at its end: a row's index is its handle)
-struct Hand {
-    live: Vec<LiveOpening>,
-    got: JsMap<GuardId, usize>,
+pub(super) struct Hand {
+    pub(super) live: Vec<LiveOpening>,
+    pub(super) got: JsMap<GuardId, usize>,
 }
 
 /// Does somebody stood at `p` fill the opening: his feet in its frame, not beside it. A man walking past along the wall does not, however near he goes.
@@ -450,13 +450,21 @@ fn along(g: &Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3> {
 
 fn find_live(live: &[LiveOpening], o: CoverOpeningId) -> Option<usize> { live.iter().position(|l| l.o == o) }
 
-/// Every dealing of `hands` men to the pool tried: the best, -1 being none.
-struct Search<'a> { score: &'a [Vec<f64>], used: Vec<bool>, cur: Vec<i32>, best: Vec<i32>, bs: f64 }
+/// Every dealing of `hands` men to the pool tried that could beat the best so far: the best, -1 being none. `rest`: the most the men from each on can add.
+struct Search<'a> { score: &'a [Vec<f64>], rest: Vec<f64>, used: Vec<bool>, cur: Vec<i32>, best: Vec<i32>, bs: f64 }
+impl<'a> Search<'a> {
+    fn new(score: &'a [Vec<f64>], pool: usize) -> Search<'a> {
+        let mut rest = vec![0.0; score.len() + 1];
+        for i in (0..score.len()).rev() { rest[i] = rest[i + 1] + score[i].iter().copied().fold(0.0, m::max); }
+        Search { score, rest, used: vec![false; pool], cur: vec![-1; score.len()], best: vec![-1; score.len()], bs: -m::INF }
+    }
+}
 fn rec(z: &mut Search, i: usize, s: f64) {
     if i == z.score.len() {
         if s > z.bs + 1e-9 { z.bs = s; z.best = z.cur.clone(); }
         return;
     }
+    if s + z.rest[i] <= z.bs { return; }
     z.cur[i] = -1;
     rec(z, i + 1, s);
     for j in 0..z.used.len() {
@@ -734,7 +742,8 @@ fn deal_out(g: &mut Game, cx: &Cx, laid: Laid) {
     rear_man_first(g, &mut h, rear_l, last, &pins);
     pinned_men_next(&mut h, &pins);
     keeps_what_he_was_just_dealt(g, cx, &mut h);
-    best_dealing(g, cx, &mut h);
+    let hands: Vec<GuardId> = cx.men.iter().copied().filter(|&gd| !h.got.has(gd)).collect();
+    best_dealing(&mut h, &hands, |live, pool, gd| scores_of(g, cx, live, pool, gd));
     leaf_edge_for_the_rest(cx, &mut h);
     open_way_as_he_goes_by(g, cx, &mut h);
     floor_nobody_looked_over(g, cx, &mut h);
@@ -749,7 +758,7 @@ fn deal_out(g: &mut Game, cx: &Cx, laid: Laid) {
 }
 
 /// That row is his to take.
-fn give(h: &mut Hand, gd: GuardId, i: usize) {
+pub(super) fn give(h: &mut Hand, gd: GuardId, i: usize) {
     h.got.set(gd, i);
     h.live[i].by = Some(gd);
 }
@@ -779,16 +788,21 @@ fn keeps_what_he_was_just_dealt(g: &Game, cx: &Cx, h: &mut Hand) {
     }
 }
 
+/// What an opening at `at` is worth to a man, `heavy` and near, little turn from where his gun is, the one he `has`, his lane.
+pub(super) fn worth(g: &Game, gd: GuardId, at: V3, heavy: f64, has: bool) -> f64 {
+    let k = &g.k.cover;
+    let p = g.pos_of(gd);
+    let turn = m::abs(v3::wrap_angle(v3::yaw_to(p, at) - g.ch[g.gd[gd].ch].aim_yaw));
+    let lane = crate::gunroles::gun_lane(g, gd, v3::dist_xz(p, at), k.reach);
+    m::max(0.05, heavy - 0.25 * v3::dist_xz(p, at) / k.reach - 0.35 * turn / m::PI + (if has { k.sticky } else { 0.0 }) + lane)
+}
+
 /// The men with nothing yet and the eight heaviest openings still free: the dealing of the best total.
-fn best_dealing(g: &Game, cx: &Cx, h: &mut Hand) {
-    let hands: Vec<GuardId> = cx.men.iter().copied().filter(|&gd| !h.got.has(gd)).collect();
+pub(super) fn best_dealing(h: &mut Hand, hands: &[GuardId], scores: impl Fn(&[LiveOpening], &[usize], GuardId) -> Vec<f64>) {
     let mut pool: Vec<usize> = (0..h.live.len()).filter(|&i| h.live[i].by.is_none() && !h.live[i].can.is_empty()).collect();
     pool.truncate(8);
-    let mut score: Vec<Vec<f64>> = Vec::with_capacity(hands.len());
-    for &gd in &hands {
-        score.push(scores_of(g, cx, &h.live, &pool, gd));
-    }
-    let mut z = Search { score: &score, used: vec![false; pool.len()], cur: vec![-1; hands.len()], best: vec![-1; hands.len()], bs: -m::INF };
+    let score: Vec<Vec<f64>> = hands.iter().map(|&gd| scores(&h.live, &pool, gd)).collect();
+    let mut z = Search::new(&score, pool.len());
     rec(&mut z, 0, 0.0);
     let best = z.best;
     for (i, &gd) in hands.iter().enumerate() {
@@ -797,21 +811,18 @@ fn best_dealing(g: &Game, cx: &Cx, h: &mut Hand) {
     }
 }
 
-/// What each opening of the pool is worth to this man: heavy and near, little turn from where his gun is, the one he has, his lane; not behind him unless he is the last man.
+/// What each opening of the pool is worth to this man; one behind him little, unless he is the last man.
 fn scores_of(g: &Game, cx: &Cx, live: &[LiveOpening], pool: &[usize], gd: GuardId) -> Vec<f64> {
     let k = g.k.cover;
     let last = cx.file.last().copied();
-    let p = g.pos_of(gd);
     let job_o = g.cover.jobs.get(gd).map(|j| j.o);
     let mut row: Vec<f64> = Vec::with_capacity(pool.len());
     for &i in pool {
         if !live[i].can.contains(&gd) { row.push(0.0); continue; }
         let o = live[i].o;
         let oat = g.tab.cover_opening[o].at;
-        let turn = m::abs(v3::wrap_angle(v3::yaw_to(p, oat) - g.ch[g.gd[gd].ch].aim_yaw));
         let behind = Some(gd) != last && behind_of(g, cx, gd, oat);
-        let lane = crate::gunroles::gun_lane(g, gd, v3::dist_xz(p, oat), k.reach);
-        row.push(m::max(0.05, 10.0 * live[i].w * (if behind { k.behind_k } else { 1.0 }) - 0.25 * v3::dist_xz(p, oat) / k.reach - 0.35 * turn / m::PI + (if job_o == Some(o) { k.sticky } else { 0.0 }) + lane));
+        row.push(worth(g, gd, oat, 10.0 * live[i].w * (if behind { k.behind_k } else { 1.0 }), job_o == Some(o)));
     }
     row
 }
@@ -1007,7 +1018,7 @@ fn cover_prune_steps(g: &mut Game) {
 }
 
 /// Is `x` in the lane a → b, within `lane` of the line.
-fn in_lane(x: V3, a: V3, b: V3, lane: f64) -> bool {
+pub(super) fn in_lane(x: V3, a: V3, b: V3, lane: f64) -> bool {
     let dx = b[0] - a[0];
     let dz = b[2] - a[2];
     let len = js::or(m::hyp2(dx, dz), 1.0);
@@ -1323,8 +1334,7 @@ mod tests {
     use super::*;
 
     fn search(score: Vec<Vec<f64>>, pool: usize) -> Vec<i32> {
-        let n = score.len();
-        let mut z = Search { score: &score, used: vec![false; pool], cur: vec![-1; n], best: vec![-1; n], bs: -m::INF };
+        let mut z = Search::new(&score, pool);
         rec(&mut z, 0, 0.0);
         z.best
     }

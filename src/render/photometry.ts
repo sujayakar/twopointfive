@@ -48,7 +48,7 @@ export function hourExposure(id: string, sunAuthored: number): number {
   const lux = HOUR_SUN_LUX[id]; return lux && sunAuthored > 0 ? Math.min(1, sunAuthored * LUX_PER_UNIT / lux) : 1;
 }
 
-export type LightClass = 'none' | 'fixture' | 'hand' | 'vehicle' | 'flash' | 'face';
+export type LightClass = import('../draw/names').LightClassName;
 interface LightLike { name: string; group: string; kind: number; ttl: number; transient?: boolean; card?: boolean; steady?: unknown; intensity: number; peakIntensity: number; class?: LightClass }
 const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
 /** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), the sky at a window (the look page's), a lightning stroke (the sky's), a device's

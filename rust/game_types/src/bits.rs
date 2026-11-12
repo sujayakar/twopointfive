@@ -23,6 +23,8 @@ macro_rules! bits {
         }
     };
 }
+/// the word of those bits that are so
+pub fn of<const N: usize>(bits: [(u32, bool); N]) -> u32 { bits.iter().fold(0, |w, (b, so)| if *so { w | b } else { w }) }
 /// the declarations as text, a line a word: what the other halves were written from is held to it as the module is loaded
 pub fn text(tables: &[&BitsTable]) -> alloc::string::String {
     let mut s = alloc::string::String::new();

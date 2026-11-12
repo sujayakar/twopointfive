@@ -12,7 +12,7 @@ fn typescript() -> String {
         // (a level's generator asks for a box's bit by the name in its hand)
         let listed = *name == "BoxFlag";
         l.push(if listed { format!("export const {name} = {{") } else { format!("export const enum {name} {{") });
-        for (n, v, doc) in *bits { l.push(format!("  /** {} */", said(doc))); l.push(format!("  {}{} {v},", pascal(n).collect::<String>(), if listed { ":" } else { " =" })); }
+        for (n, v, doc) in *bits { if !doc.is_empty() { l.push(format!("  /** {} */", said(doc))); } l.push(format!("  {}{} {v},", pascal(n).collect::<String>(), if listed { ":" } else { " =" })); }
         l.push(if listed { "} as const;".into() } else { "}".into() });
     }
     l.join("\n") + "\n"

@@ -161,17 +161,8 @@ fn room_fight_entry_toward(g: &crate::game::Game, d: RoomfightDefId, at: V3) -> 
 fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let s = hostile_skill(g);
     let room = g.tab.roomfight_def[d].room; let ent = entries_of(g, room);
-    let (mut best, mut bs) = (-1.0, g.k.roomfight.fear_min);
-    let c = g.gd[gd].ch; let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
-    for (i, e) in ent.iter().enumerate() {
-        let n = i as f64;
-        if ev_at(g, d, i) <= 0.02 { continue; }
-        let view = if crate::scene_collision::segment_blocked(g, eye, [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5], None, None, None) { 0.6 } else { 1.0 };
-        let mut mates = 0.0;
-        for &x in &g.fight.defs { let X = &g.tab.roomfight_def[x]; if x != d && !crate::condition::down(g, g.gd[X.gd].ch) && X.room == room && X.mode == DefMode::Hold && X.watch == n { mates += 1.0; } }
-        let sc = ev_at(g, d, i) * view - g.k.roomfight.crowd * mates + (if n == g.tab.roomfight_def[d].watch { g.k.roomfight.sticky } else { 0.0 });
-        if sc > bs { bs = sc; best = n; }
-    }
+    let dealt = crate::cover::way_dealt(g, gd);
+    let best = dealt.or_else(|| crate::cover::on_his_own(g, d)).map_or(-1.0, |i| i as f64);
     if best != g.tab.roomfight_def[d].want {
         let at = g.time + pick(g, crate::dice::Who::Def(d), s.shift); let D = &mut g.tab.roomfight_def[d];
         D.want = best; D.want_at = at;
@@ -181,8 +172,9 @@ fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if !ent.is_empty() && g.time >= g.tab.roomfight_def[d].glance_next && g.time - g.gd[gd].last_seen_t > 2.0 && g.time - g.tab.roomfight_def[d].noise_t > 3.0 && !crate::enemysquads::squad_drill(g).map_or(false, |k| k.drill_angles) {
         let watch = g.tab.roomfight_def[d].watch;
-        let mut others: Vec<f64> = (0..ent.len()).map(|i| i as f64).filter(|&i| i != watch).collect();
-        if watch >= 0.0 { others.push(-1.0); }
+        // (a man who splits the ways with his mates glances at what none of them has)
+        let others: Vec<f64> = if dealt.is_some() { crate::cover::left_open(g, d) } else { (0..ent.len()).map(|i| i as f64).chain([-1.0]).filter(|&i| i != watch).collect() };
+        if others.is_empty() { return; }
         let r = crate::dice::draw_def(g, "roomfight::room_fight_choose_watch#1", d);
         let to = others.get(m::floor(r * others.len() as f64) as usize).copied().unwrap_or(-1.0);
         let until = g.time + pick(g, crate::dice::Who::Def(d), s.glance);

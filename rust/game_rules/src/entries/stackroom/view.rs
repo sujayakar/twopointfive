@@ -74,7 +74,7 @@ pub fn stack_view_fix(g: &mut Game, d: DoorId, side: f64, posts: Option<&[StackP
     let posts = posts?;
     if !stack_view_open(g, d) { return Some(posts.to_vec()); }
     let Some(f) = floor_of(g, d, side) else { return Some(posts.to_vec()) };
-    let (jamb_out, jamb_past) = (g.groups[g.group].orders.knobs.jamb_out, g.groups[g.group].orders.knobs.jamb_past);
+    let (jamb_out, jamb_past) = (g.k.orders.jamb_out, g.k.orders.jamb_past);
     let w = g.dr[d].def.width;
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     let x = View { d, side, f: &f, w, c: g.dr[d].frame_centre, jamb_out, jamb_past, front, far: far_cells(g, d, side), taken, posts };

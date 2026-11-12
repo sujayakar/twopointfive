@@ -3,10 +3,11 @@
 import type { KeepSource } from './keeper';
 import type { KeptHead } from './kept';
 import { bodyText, type KeptStore } from './keepstore';
-import type { HandTape } from './handtape';
+import { HAND } from '../draw/input';
+import { HANDTAPE, type HandTape } from './handtape';
 
 /** a visit's head, where its tape is one of hands */
-export interface HandsHead extends KeptHead { game: 'twopointsix'; hands: number; seed: number }
+export interface HandsHead extends KeptHead { game: 'twopointsix'; hands: number; /** which numbers a hand of it is of (draw/input.ts HAND) */ hand: number; seed: number }
 interface Line { k?: string; sid?: string; from?: number; b?: string }
 
 const CHUNK = 0x8000;
@@ -33,6 +34,10 @@ export function handsOf(lines: Iterable<Line>): Uint8Array | null {
   if (!n) return null;
   const all = new Uint8Array(n); let at = 0; for (const b of out) { all.set(b, at); at += b.length; }
   return all;
+}
+/** can a kept visit's tape be walked by this build, by what its head says of it: one of another version, or whose hands have other numbers, is refused */
+export async function walkable(store: Pick<KeptStore, 'head'>, sid: string): Promise<boolean> {
+  try { const h = JSON.parse(await store.head(sid) ?? '{}') as Partial<HandsHead>; return h.hands === HANDTAPE.version && (h.hand ?? HAND) === HAND; } catch { return false; }
 }
 /** a kept visit's tape, read out of the store; null: it is not kept, or has none */
 export async function keptHands(store: Pick<KeptStore, 'bodies'>, sid: string): Promise<Uint8Array | null> {
