@@ -100,6 +100,7 @@ mod rails; pub use rails::*;
 mod rearwatch; pub use rearwatch::*;
 mod rescue; pub use rescue::*;
 mod rescueend; pub use rescueend::*;
+mod rescueflow; pub use rescueflow::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
 mod roomfight; pub use roomfight::*;
@@ -300,6 +301,7 @@ pub struct Knobs {
     pub stayask: StayaskK,
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
+    pub rescueflow: RescueflowK,
     pub rescueflush: RescueflushK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,
