@@ -88,7 +88,7 @@ pub static STEPS: &[Run] = &[
         ("wall charges", |g, _| crate::wallcharge::wall_charge_tick(g)),
     ]),
     Seats(&[("rear watch", |g, _| crate::rearwatch::rear_watch_tick(g))]),
-    World(("cover", |g, _| crate::cover::cover_tick(g))),
+    World(("cover", |g, _| { crate::cover::cover_tick(g); crate::cover::posts_tick(g); })),
     Seats(&[("silent", |g, _| crate::silent::silent_tick(g))]),
     World(("pairs", |g, t| crate::pairorders::pair_orders_tick(g, t.dt))),
     Seats(&[("spotted", |g, _| crate::spotted::spotted_tick(g))]),
