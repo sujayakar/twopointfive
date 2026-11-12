@@ -30,7 +30,7 @@ import { placeNone } from './placeField';
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the splat (as in front of the composite and every volumetric march, render/passes.ts)
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 
-export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain' | 'shard';
+export type PKind = import('../draw/names').PKindName;
 export const P_KINDS: readonly PKind[] = ['spark', 'debris', 'dust', 'casing', 'sheet', 'rain', 'shard'];
 export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, casing: 3, sheet: 4, rain: 5, shard: 6 };
 /** which ring a kind is dealt from: 0 = SHORT-lived (seconds at most), 1 = LONG (chips, brass and paper that lie there) — a spark storm never evicts resting brass — 2 = RAIN (the particle rain's
@@ -91,7 +91,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/breakage/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
-export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
+export type EmitShape = import('../draw/names').EmitShapeName;
 const SHAPE_ID: Record<EmitShape, number> = { cone: 0, burst: 1, ring: 2, puff: 3, rainDisc: 4 };   // rainDisc (particles.wgsl emit): born at pos.y (− up to a metre) uniformly over the OUTDOOR part of the disc of radius `radius` about pos.xz — the GPU rejects the interior / annex footprints itself — moving along dir at speed
 /** One emit's numbers (what the record carries; see EmitRec in particles_common.wgsl). speed m/s, spread = cone half-angle (rad) | burst spread, life s, size m
  *  (a spark's streak thickness, a chip's width, a puff's birth radius, a case's diameter), jitters 0‥1, lift = burst / ring vertical share, radius = ring radius,

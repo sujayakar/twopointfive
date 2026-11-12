@@ -8,12 +8,24 @@ use game::out_events::OutEvent;
 use game::smoke_types::{WindGpuSource};
 use game::wind::{WindSource, WindSourceKind};
 
+game::bits! {
+    /// what is said of a source of moving air
+    pub mod wind_flag as WindFlag {
+        /// the storm is a field cut roof by roof
+        FIELD = 1,
+        /// the air of a fire
+        HEAT = 2,
+    }
+}
+/// what a source of moving air is
+#[derive(Clone, Copy, PartialEq, game::Words)]
+pub enum WindKind { Jet, Storm }
 section! {
     /// a source of moving air
     pub struct Wind {
-        /// 0 a jet, 1 the storm
+        /// WIND_KINDS
         pub kind: u32,
-        /// 1 the storm is a field cut roof by roof · 2 the air of a fire
+        /// WindFlag
         pub says: u32,
         /// which particles it moves, a bit a kind (0: the usual)
         pub kinds: u32,
@@ -148,8 +160,8 @@ impl Winds {
 
 fn own(s: &WindSource, roofs: &mut Vec<Rect>) -> Wind {
     let mut w = Wind::ZERO;
-    w.kind = (s.kind == WindSourceKind::Storm) as u32;
-    w.says = (s.field == Some(true)) as u32 | (s.heat == Some(true)) as u32 * 2;
+    w.kind = if s.kind == WindSourceKind::Storm { WindKind::Storm } else { WindKind::Jet } as u32;
+    w.says = game::bits::of([(wind_flag::FIELD, s.field == Some(true)), (wind_flag::HEAT, s.heat == Some(true))]);
     w.kinds = s.kinds.map_or(0, |k| k as u32);
     if let Some(r) = s.roofs.as_ref() {
         w.roofs_at = roofs.len() as u32;
@@ -168,8 +180,8 @@ fn own(s: &WindSource, roofs: &mut Vec<Rect>) -> Wind {
 
 fn gpu(s: &WindGpuSource) -> Wind {
     let mut w = Wind::ZERO;
-    w.kind = matches!(s.kind, game::wind::WindSourceKind::Storm) as u32;
-    w.says = (s.field == Some(true)) as u32 | (s.heat == Some(true)) as u32 * 2;
+    w.kind = if matches!(s.kind, game::wind::WindSourceKind::Storm) { WindKind::Storm } else { WindKind::Jet } as u32;
+    w.says = game::bits::of([(wind_flag::FIELD, s.field == Some(true)), (wind_flag::HEAT, s.heat == Some(true))]);
     w.kinds = s.kinds.map_or(0, |k| k as u32);
     w.pos = s.pos.map(|x| x as f32);
     w.dir = s.dir.map(|x| x as f32);

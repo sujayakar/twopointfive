@@ -5,8 +5,7 @@ import type { BoxWorld } from '../scene/boxes';
 import type { RenderSettings } from '../settings';
 import { placeholderTints } from '../render/charMaterials';
 import { PageLook, pageLook, type Doubles } from './input';
-import { SIDES } from './men';
-import { STUFFS } from './sections';
+import { SIDES, STUFFS } from './names';
 
 const out = pageLook(), yes = (v: unknown): number => v ? 1 : 0;
 /** (one row, written again by every ask) */

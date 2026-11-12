@@ -106,7 +106,7 @@ pub struct CastVariant {
     pub mask: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, crate::Words)]
 pub enum CastSide {
     #[default] Civilian,
     Operator,
