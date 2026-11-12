@@ -7,6 +7,9 @@ use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Blows, Is::Loud],
+    targets: &[TargetKind::Floor],
+    listed: Some(&[]),
+    ack: &["copy.", "on it."],
     can: Some(can),
     valid: Some(valid),
     gone: Some(gone),

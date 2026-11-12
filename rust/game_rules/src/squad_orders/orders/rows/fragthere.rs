@@ -8,6 +8,9 @@ use alloc::{string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
+    targets: &[TargetKind::Floor],
+    page: Some(crate::squadthrow::THROW_PAGE),
+    free: true,
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::squadthrow::walk_tick),

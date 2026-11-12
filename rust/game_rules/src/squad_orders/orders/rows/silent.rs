@@ -6,6 +6,10 @@ use crate::orders::*;
 use alloc::string::String;
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Floor, TargetKind::Door, TargetKind::None],
+    listed: Some(&[TargetKind::Floor, TargetKind::None]),
+    free: true,
+    ack: &["going quiet.", "copy. silent."],
     only: Some(crate::silent::row_whole_squad),
     ..Row::new("silent", label, issue)
 };

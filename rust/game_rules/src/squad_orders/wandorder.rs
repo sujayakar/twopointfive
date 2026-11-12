@@ -305,11 +305,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
 
 /// The order's row on the menus.
 fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Door],
-        ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        ..Default::default()
-    });
+    let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER);
     crate::orders::squad_orders_row(g, def)
 }
 

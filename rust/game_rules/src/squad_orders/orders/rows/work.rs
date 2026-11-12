@@ -6,6 +6,9 @@ use crate::orders::*;
 use alloc::{string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Floor],
+    listed: Some(&[]),
+    ack: &["on it.", "moving."],
     can: Some(can),
     only: Some(only),
     valid: Some(valid),

@@ -341,12 +341,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
 
 /// the order's row, put on the throws' page.
 fn list(g: &mut crate::game::Game) {
-    crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
-        page: Some(String::from(crate::squadthrow::THROW_PAGE)),
-        targets: vec![crate::orders::TargetKind::Floor],
-        free: Some(true),
-        ..Default::default()
-    });
+    crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER);
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made.

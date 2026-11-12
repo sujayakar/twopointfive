@@ -293,18 +293,8 @@ pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
 /// The module and its two rows.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
-    wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        opens: Some(String::from(WALL_PAGE)),
-        ..crate::orders::OrderDef::default()
-    }));
-    wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        ..crate::orders::OrderDef::default()
-    }));
+    wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER));
+    wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER));
     wc
 }
 

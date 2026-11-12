@@ -7,6 +7,9 @@ use alloc::string::String;
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
+    targets: &[TargetKind::Door],
+    ack: &["on the jambs. your call.", "copy, holding it for you."],
+    page: Some(crate::doortools::TOOLS_PAGE),
     valid: Some(valid),
     ..Row::new("thresholdHold", label, issue)
 };
