@@ -65,3 +65,17 @@ export const enum PaneFlag {
   /** its breaks are a web (a laminated sheet) */
   Web = 16,
 }
+
+/** how a game is started */
+export const enum StartFlag {
+  /** the rows that dress the picture are up */
+  Dress = 1,
+  /** what `ready` makes is the host's to have made */
+  Later = 2,
+}
+
+/** what a step does beside its tick */
+export const enum StepFlag {
+  /** the save controller has its turn */
+  Saves = 8,
+}

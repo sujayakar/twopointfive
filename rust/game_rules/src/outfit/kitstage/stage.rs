@@ -388,7 +388,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
         acts::before_step(g, &mut st, cmd);
         super::walk::sam_hand(g, &mut st, cmd);
         // (Sam's own keys, for this tick; the cursor where the director asked for it)
-        for k in st.a.press.drain(..) { cmd.pressed.push(String::from(k)); }
+        for k in st.a.press.drain(..) { cmd.pressed.push(k.text()); }
         cmd.clicked = st.a.clicked;
         st.a.clicked = 0.0;
         if let Some(q) = st.a.cursor { if let Some((x, y)) = cursor_of(cmd, q) { cmd.mx = x; cmd.my = y; } }

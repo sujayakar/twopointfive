@@ -193,7 +193,7 @@ pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
             let o = cut_to_world(w.off, b.yaw, None);   // (the box's own frame)
             let mut p = game::scene_boxes::make_box_value(&game::scene_boxes::MakeBoxP {
                 c: [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]], h: w.h, yaw: Some(b.yaw + w.yaw.unwrap_or(0.0)),
-                flags: Some((box_flag::NO_SHADOW as f64) + if has(&b, box_flag::CUTAWAY as f64) { (box_flag::CUTAWAY as f64) } else { 0.0 }), cut_height: Some(b.cut_height),   // (cut away with its box, where the box is)
+                flags: Some((box_flag::NO_SHADOW as f64) + if has(&b, box_flag::CUTAWAY as f64) { box_flag::CUTAWAY as f64 } else { 0.0 }), cut_height: Some(b.cut_height),   // (cut away with its box, where the box is)
                 piece: Some(true), of: Some(i as f64), ..crate::level::blank_box()
             });
             // its own paint, finish and word, or its box's as the box stands

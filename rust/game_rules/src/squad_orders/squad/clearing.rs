@@ -396,7 +396,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         crate::game::game_say(g, by, &line, None, None);
         let c = g.gd[by].ch;
         let at_ear = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
         return replanned;
     }
     false

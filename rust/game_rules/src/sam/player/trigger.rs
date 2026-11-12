@@ -92,7 +92,7 @@ fn pull(g: &mut Game, t: Tick, gun: FirearmId, speed: f64) {
 /// The trigger of an empty gun.
 pub(super) fn dry_fire(g: &mut Game, c: CharId) {
     g.arms[c].fire_cd = 0.25;
-    at_the_gun(g, c, "dryFire", 0.7);
+    at_the_gun(g, c, crate::audio_iface::Sfx::DryFire, 0.7);
 }
 /// What a round goes at: a fixture under the reticle, a man under the cursor, else level along the heading.
 fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
@@ -113,11 +113,11 @@ fn launcher(g: &mut Game, t: Tick, go: Go, blocked: bool, was: Option<RifleAttac
     let owed = blocked && !go.stunned && was.is_some() && crate::aimweight::aim_weigh_launch_keep(g, pl, dt);
     let load = crate::weapons::rifle_attachment(g, rifle)?;
     let left = crate::weapons::rifle_left(g, rifle, load) > 0.0;
-    let called_off = crate::backkey::back_hit(g, t.input) || t.hit(g, "Blur") || t.hit(g, "Paused");
+    let called_off = crate::backkey::back_hit(g, t.input) || t.hit(g, crate::input::Key::Blur) || t.hit(g, crate::input::Key::Paused);
     let kept = was.is_some() && !beat && (!blocked || owed) && !go.stunned && g.groups[g.group].orders.menu.is_none() && left && !called_off;
     let pressed = !kept && t.rmb_hit(g) && !beat && !blocked && !go.stunned;
     let begun = pressed && left && g.fa[rifle].ring_cd <= 0.0;
-    if pressed && !begun { at_the_gun(g, c, "dryFire", 0.4); }
+    if pressed && !begun { at_the_gun(g, c, crate::audio_iface::Sfx::DryFire, 0.4); }
     if !kept && !begun { return None; }
     if owed { g.pl[pl].launch_held = Some(load); return None; }
     let from = crate::rig_props::sc20k_launcher_muzzle(g, c);

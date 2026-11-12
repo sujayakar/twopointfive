@@ -491,7 +491,7 @@ fn weather_end_flash(g: &mut crate::game::Game) {
 fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, pitch: f64, remark: [f64; 3]) {
     // near: the crack and the clap on top of the roll; far: the roll alone, darker and slower
     let near = th.dist_km < 1.3;
-    let name = if near { "thunderNear" } else { "thunderFar" };
+    let name = if near { crate::audio_iface::Sfx::ThunderNear } else { crate::audio_iface::Sfx::ThunderFar };
     let gain = (if near { 1.0 } else { 0.85 }) * th.loud * (0.6 + 0.4 * g.weather.storm);
     let lowpass = v3::clamp(9000.0 * m::exp(-th.dist_km * 0.75), 500.0, 9000.0);
     let rate = v3::clamp(1.02 - th.dist_km * 0.06, 0.78, 1.02) * (0.96 + 0.08 * pitch);

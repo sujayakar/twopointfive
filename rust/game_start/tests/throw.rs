@@ -12,7 +12,7 @@ fn flat(p: game::V3) -> [f64; 2] { [p[0], p[2]] }
 
 /// The ring held open on `at` with the frag's row lit; false where no ring lists it.
 fn lit(p: &mut Play, at: [f64; 2]) -> bool {
-    let key = p.g.k.cmdring.key.clone();
+    let key = p.g.k.cmdring.key.as_str();
     p.key_up(&key);
     p.g.groups[p.g.group].orders.menu = None;
     p.g.groups[p.g.group].orders.cmd_ring = None;

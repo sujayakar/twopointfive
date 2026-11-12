@@ -8,6 +8,7 @@ import type { Vec3 } from '../math/vec';
 import type { Drawn } from './drawn';
 import type { AudioEngine, LastingSound } from '../audio/audio';
 import type { FloorMat } from '../audio/floors';
+import { LASTINGS, SFX } from './names';
 import { AirPush, Anchor, Emit, EMIT_SHAPES, FLOORS, Footfall, Heard, Kick, Lasting, PKINDS, Section, SmokeSource, SMOKE_KINDS, Sound } from './sections';
 
 /** the ids played in the last `KEPT` ticks, by kind */
@@ -32,9 +33,8 @@ const said = (v: number): number | undefined => v === v ? v : undefined;
 export class DrawEvents {
   private played = new Played();
   private anchors = new Map<number, { pos: Vec3; dir: Vec3 }>();
-  private names: string[] = [];
-  constructor(private D: Drawn, private particles: Particles | null, private smoke: SmokeSystem, private audio: AudioEngine, private nameOf: (i: number) => string) {}
-  cut(): void { this.played.forget(); this.anchors.clear(); this.names.length = 0; }
+  constructor(private D: Drawn, private particles: Particles | null, private smoke: SmokeSystem, private audio: AudioEngine) {}
+  cut(): void { this.played.forget(); this.anchors.clear(); }
   private v3(o: number): Vec3 { const f = this.D.f; return [f[o], f[o + 1], f[o + 2]]; }
   private v3said(o: number): Vec3 | undefined { return this.D.f[o] === this.D.f[o] ? this.v3(o) : undefined; }
 
@@ -64,13 +64,11 @@ export class DrawEvents {
   private lasting(): void {
     const D = this.D, rows: LastingSound[] = [];
     for (let i = 0, o = D.at[Section.lasting]; i < D.n[Section.lasting]; i++, o += Lasting.row) {
-      const name = this.named(D.u[o + Lasting.name]);
+      const name = LASTINGS[D.u[o + Lasting.name]];
       rows.push({ name, id: D.u[o + Lasting.id], pos: this.v3(o + Lasting.at), gain: D.f[o + Lasting.gain], hard: D.f[o + Lasting.hard], age: said(D.f[o + Lasting.age]) ?? Infinity, left: said(D.f[o + Lasting.left]) ?? Infinity, reach: D.f[o + Lasting.reach] });
     }
     this.audio.lasting(rows, D.f[D.at[Section.heard] + Heard.time]);
   }
-  /** a sound's name, by its number (the module is asked once, and its memory may have grown) */
-  private named(n: number): string { if (!this.names[n]) { this.names[n] = this.nameOf(n); this.D.fresh(); } return this.names[n]; }
   /** the sounds of the tick that has just run */
   private sounds(): void {
     this.lasting();
@@ -78,7 +76,7 @@ export class DrawEvents {
     A.rain(D.f[h + Heard.rain]);
     // (each call below asks the module, whose memory may have grown: the views are looked at afresh after it)
     for (let i = 0, o = D.at[Section.sounds]; i < D.n[Section.sounds]; i++, o += Sound.row, D.fresh()) if (this.played.once(Section.sounds, D.u[o + Sound.tick], D.u[o + Sound.serial])) {
-      const name = this.named(D.u[o + Sound.name]), f = D.f, pos = D.u[o + Sound.placed] ? this.v3(o + Sound.pos) : null;
+      const name = SFX[D.u[o + Sound.name]], f = D.f, pos = D.u[o + Sound.placed] ? this.v3(o + Sound.pos) : null;
       A.play(name, pos, said(f[o + Sound.gain]), { rate: said(f[o + Sound.rate]), lowpass: said(f[o + Sound.lowpass]), pan: said(f[o + Sound.pan]), wet: said(f[o + Sound.wet]) }); }
     for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, FLOORS[D.u[o + Footfall.floor]] as FloorMat);
   }

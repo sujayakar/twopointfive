@@ -378,32 +378,32 @@ fn throwables_say(g: &mut crate::game::Game, told: Vec<Told>) {
 fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) {
     match b {
         // doortools, tactics, squadthrow and the rest: the can's knock
-        ItemBounce::Can => crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None),
+        ItemBounce::Can => crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(p), Some(m::min(1.0, sp / 4.0)), None),
         // the player's own throw, and the room hears it
         ItemBounce::CanHeard => {
-            crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(p), Some(m::min(1.0, sp / 4.0)), None);
             let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(p), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
             g.events.push(e);
         }
         ItemBounce::RingSkitter => {
             if sp > 1.2 {
-                crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.5, sp / 12.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.7 }));
+                crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(p), Some(m::min(0.5, sp / 12.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.7 }));
             }
         }
         ItemBounce::ShellSkitter => {
             if sp > 1.0 {
-                crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.7, sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
+                crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(p), Some(m::min(0.7, sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
             }
         }
-        ItemBounce::Mag => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), None),
-        ItemBounce::MagRate { belt } => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: if belt { 0.6 } else { 0.8 } })),
+        ItemBounce::Mag => crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagDrop, Some(p), Some(m::min(1.0, sp / 3.0)), None),
+        ItemBounce::MagRate { belt } => crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagDrop, Some(p), Some(m::min(1.0, sp / 3.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: if belt { 0.6 } else { 0.8 } })),
         // who 0: nobody living made it, a clatter the room cannot explain
         ItemBounce::Dropped { kind, quiet } => {
             if sp < 0.7 {
                 return;
             }
             let rate = if kind == ItemKind::Pistol { 0.72 } else if kind == ItemKind::Rifle { 0.6 } else { 0.85 };
-            crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0) * (if quiet { 0.5 } else { 1.0 })), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagDrop, Some(p), Some(m::min(1.0, sp / 3.0) * (if quiet { 0.5 } else { 1.0 })), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
             if !quiet {
                 let c = g.tab.item[it].clatters.unwrap_or(0.0) + 1.0;
                 g.tab.item[it].clatters = Some(c);
@@ -417,7 +417,7 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
         // disturbed after a load, it clatters as any
         ItemBounce::Loaded { kind } => {
             if sp >= 0.7 {
-                let name = if kind == ItemKind::Smoke || kind == ItemKind::Flash { "canisterBounce" } else { "magDrop" };
+                let name = if kind == ItemKind::Smoke || kind == ItemKind::Flash { crate::audio_iface::Sfx::CanisterBounce } else { crate::audio_iface::Sfx::MagDrop };
                 crate::audio_iface::game_audio_like_play(g, name, Some(p), Some(m::min(1.0, sp / 3.0)), None);
             }
         }

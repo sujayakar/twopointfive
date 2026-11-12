@@ -399,7 +399,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let def = g.weapon(g.fa[w].def).clone();
     if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(at), Some(0.5), None);
     }
 }
 

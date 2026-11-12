@@ -273,7 +273,7 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
             let now = g.time;
             g.dr[d].leaf.noticed_t = now;
             let at = crate::doors::door_pos(g, d);
-            crate::audio_iface::game_audio_like_play(g, "lockOpen", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockOpen, Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
         }
         break;
     }

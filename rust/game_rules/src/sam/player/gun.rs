@@ -74,7 +74,7 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
     if on { reload_dropped(g, c, pistol); reload_dropped(g, c, rifle); }
     if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].equip_t = RIFLE_EQUIP_SECS; }
     if !quiet {
-        crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Equip, None, Some(0.45), None);
     }
 }
 

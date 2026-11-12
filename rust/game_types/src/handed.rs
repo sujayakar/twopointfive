@@ -3,6 +3,23 @@
 use crate::rows::{table, Row, RowTable};
 use alloc::{string::String, vec, vec::Vec};
 
+crate::bits! {
+    /// how a game is started
+    pub mod start_flag as StartFlag {
+        /// the rows that dress the picture are up
+        DRESS = 1,
+        /// what `ready` makes is the host's to have made
+        LATER = 2,
+    }
+}
+crate::bits! {
+    /// what a step does beside its tick
+    pub mod step_flag as StepFlag {
+        /// the save controller has its turn
+        SAVES = 8,
+    }
+}
+
 row! {
     /// WHAT A SEAT'S HANDS DID IN A TICK, as a player's own machine hands it and as it travels to another's: his keys go beside it, as their codes
     pub struct SeatInput {

@@ -291,7 +291,7 @@ pub(super) fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::W
         crate::marks::bullet_mark(g, x.at, x.n_in, s, def);
         crate::particle_fx::impact_fx(g, x.at, x.dir_in, crate::combat::RoundMet { n: x.n_in, index: Some(x.index), prop: None, box_: None }, def);
         crate::particle_fx::impact_fx(g, out, v3::scale(x.dir_out, -1.0), crate::combat::RoundMet { n: n_out, index: Some(x.index), prop: None, box_: None }, def);
-        if lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(x.at), Some(0.6), None); }
+        if lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(x.at), Some(0.6), None); }
         if x.index >= 1e6 {
             if let Some(p) = pel.as_deref_mut() { crate::shotgun::pellet_end(p, x.index, x.t, x.at); }
         }

@@ -34,10 +34,10 @@ mod tests {
 }
 
 /// `g.audio.play(sfx, at, vol)`: no options
-fn play(g: &mut Game, sfx: &str, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
+fn play(g: &mut Game, sfx: crate::audio_iface::Sfx, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
 
 /// `g.audio.play(sfx, at, vol, { rate })`
-fn play_rate(g: &mut Game, sfx: &str, at: V3, vol: f64, rate: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate })) }
+fn play_rate(g: &mut Game, sfx: crate::audio_iface::Sfx, at: V3, vol: f64, rate: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate })) }
 
 // ---- what a reload tells its owner: the two callers' callbacks ----
 
@@ -47,7 +47,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
         ReloadEvents::None => {}
         ReloadEvents::Pistol { ch, fill } => {
             let p = g.ch[ch].pos;
-            play(g, "magOut", p, 0.7);
+            play(g, crate::audio_iface::Sfx::MagOut, p, 0.7);
             if dropped {
                 let h = g.ch[ch].bone(crate::character::Bone::HandL).unwrap_or(g.ch[ch].pos);
                 let at = [h[0], m::max(0.3, h[1]), h[2]];
@@ -60,7 +60,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             let own = feed.as_ref().map_or(false, |f| f.cues.is_some());
             if !own {
                 let p = g.ch[ch].pos;
-                play_rate(g, "magOut", p, 0.75, 0.85);
+                play_rate(g, crate::audio_iface::Sfx::MagOut, p, 0.75, 0.85);
             }
             let def = g.fa[id].def;
             // (`fp?.drop !== null`: no plan at all is not null; a plan whose drop is null drops nothing)
@@ -92,12 +92,12 @@ fn ev_mag_in(g: &mut Game, id: FirearmId) {
         ReloadEvents::None => {}
         ReloadEvents::Pistol { ch, .. } => {
             let p = g.ch[ch].pos;
-            play(g, "magIn", p, 0.8);
+            play(g, crate::audio_iface::Sfx::MagIn, p, 0.8);
         }
         ReloadEvents::Rifle { ch, feed } => {
             if !feed.as_ref().map_or(false, |f| f.cues.is_some()) {
                 let p = g.ch[ch].pos;
-                play_rate(g, "magIn", p, 0.85, 0.85);
+                play_rate(g, crate::audio_iface::Sfx::MagIn, p, 0.85, 0.85);
             }
         }
     }
@@ -109,12 +109,12 @@ fn ev_rack(g: &mut Game, id: FirearmId) {
         ReloadEvents::None => {}
         ReloadEvents::Pistol { ch, .. } => {
             let p = g.ch[ch].pos;
-            play(g, "rack", p, 0.8);
+            play(g, crate::audio_iface::Sfx::Rack, p, 0.8);
         }
         ReloadEvents::Rifle { ch, feed } => {
             if !feed.as_ref().map_or(false, |f| f.cues.is_some()) {
                 let p = g.ch[ch].pos;
-                play_rate(g, "rack", p, 0.85, 0.8);
+                play_rate(g, crate::audio_iface::Sfx::Rack, p, 0.85, 0.8);
             }
         }
     }

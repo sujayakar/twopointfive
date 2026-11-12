@@ -252,7 +252,7 @@ fn in_the_guns_hold_the_buttons_are_a_round_and_the_ocp() {
     let (r0, c0, heard) = (rounds(&p), charge(&p), p.sounds.len());
     click(&mut p, Button::Right);
     assert_eq!(rounds(&p), r0, "the right button: no round");
-    assert!(p.sounds[heard..].iter().any(|x| x.name == "deny") && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
+    assert!(p.sounds[heard..].iter().any(|x| x.name == game::audio_iface::Sfx::Deny) && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
 
     // a light of the room under the reticle
     let eye = p.sam_at();
