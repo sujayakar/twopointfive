@@ -114,7 +114,7 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
 
 /// Shift + the ring's key is the goal's own this frame, only where the ring has no hold to wait out.
 pub(super) fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
-    (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && goals_on(g, seat) && !(g.k.cmdring.hold_secs > 0.0)
+    (crate::input::input_down(g, input, crate::input::Key::ShiftLeft) || crate::input::input_down(g, input, crate::input::Key::ShiftRight)) && goals_on(g, seat) && !(g.k.cmdring.hold_secs > 0.0)
 }
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down.
@@ -122,8 +122,8 @@ pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraI
     if !(goal_shift(g, &crate::seats::here(g), input) && g.groups[g.group].orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
         return;
     }
-    let key = g.k.cmdring.key.clone();
-    if g.tab.input[input].pressed.delete(key) {
+    let key = g.k.cmdring.key;
+    if g.tab.input[input].pressed.delete(key.text()) {
         let t = crate::orders::squad_orders_target_under(g, input, cam, canvas);
         plan_goal(g, &t);
     }

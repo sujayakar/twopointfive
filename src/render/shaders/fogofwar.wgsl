@@ -328,7 +328,7 @@ const FOW_WALK_WHOLE: bool = GRID_W + GRID_H <= 96;   // the walk's 96-cell cap 
 /// (its footprint is not its yaw's) and anything the eye's own man carries (the walk skips those in the grid). false = no answer: the caller walks.
 fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, owner: u32) -> bool {
   var b = boxGeo[bi];
-  if ((b.flags & BOX_ROT) != 0u || skipsOwner(boxOwner(b), owner) || fogThinBox(b, bi)) { return false; }   // (… nor one a fog eye passes: FOG.thin)
+  if ((b.flags & GEO_ROT) != 0u || skipsOwner(boxOwner(b), owner) || fogThinBox(b, bi)) { return false; }   // (… nor one a fog eye passes: FOG.thin)
   let s = scene.grid.x + 0.001;
   if (b.h.x <= s || b.h.z <= s) { return false; }
   b.h = vec3f(b.h.x - s, b.h.y, b.h.z - s);

@@ -116,7 +116,7 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment
     if f.heard {
         let dicing = f.kind == FragmentKind::Clump || f.kind == FragmentKind::Sheet;
         let rate = if dicing { 0.7 } else { 1.25 + 0.3 * crate::debris::hash01(f.key + v.key) };
-        crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GlassCrack, Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
         crate::glass::glass_event(g, g.box_at(f.bi).unwrap(), f.centre, 1.0, f.who);
     }
     if crate::shards::shards_live(g) {
@@ -200,7 +200,7 @@ fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFra
             h: hh,
             yaw: Some(yaw),
             albedo: Some(v3::copy(g.k.glassbreak.shard_albedo)),
-            flags: Some(crate::scene_boxes::box_flag().dynamic),
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
             ..Default::default()
         };
         let bx = crate::scene_boxes::make_box(g, &p);
@@ -256,7 +256,7 @@ pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<cr
 pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, energy: f64, who: f64, through: Option<bool>) -> crate::glassbreak::GlassImpact {
     let b = g.box_at(bi);
     let shape = match b { Some(b) => { let r = &g.tab.boxes[b]; Some((r.flags, r.h)) } None => None };
-    let is_glass = match shape { Some((flags, _)) => (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0, None => false };
+    let is_glass = match shape { Some((flags, _)) => (js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32) != 0, None => false };
     let thickness = match (is_glass, shape) { (true, Some((_, h))) => 2.0 * m::min(h[0], h[2]), _ => 0.0 };
     let mut res = GlassImpact { pane: is_glass, live: false, type_: PaneType::Annealed, thickness, was_open: false, punched: false, diced: false, released: 0.0, cracked: false };
     if !is_glass { return res; }

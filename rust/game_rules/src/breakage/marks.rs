@@ -46,8 +46,7 @@ fn face_half_extents(b: &WorldBox, n: V3) -> [f64; 2] {
 }
 /// may a mark sit on this box: not light-only or ray-invisible geometry, not a glowing fixture, not a sliver thinner than a centimetre on its narrow faces
 fn markable(b: &WorldBox, n: V3) -> bool {
-    let f = box_flag();
-    if js::to_u32(b.flags) & js::to_u32(f.no_primary + f.no_shadow) != 0 { return false; }
+    if js::to_u32(b.flags) & (box_flag::NO_PRIMARY | box_flag::NO_SHADOW) != 0 { return false; }
     if b.emissive[0] + b.emissive[1] + b.emissive[2] > 0.0 { return false; }
     face_half_extents(b, n).iter().all(|e| *e > 0.006)
 }
@@ -65,7 +64,7 @@ pub(super) fn lay_bullet(g: &mut Game, e: &OutBulletMark) {
     let (mm, rifle, pellets) = (leading_number(&def.calibre).filter(|x| *x != 0.0).unwrap_or(6.0), def.cls != crate::weapons::WeaponClass::Pistol, def.pellets.is_some());
     let attach = if s.dynamic { Some(s.box_) } else { None };
     let b = &g.tab.boxes[s.box_];
-    if b.stuff == Some(crate::scene_stuff::BoxStuff::Glass) && js::to_u32(b.flags) & js::to_u32(box_flag().glass) == 0 {
+    if b.stuff == Some(crate::scene_stuff::BoxStuff::Glass) && js::to_u32(b.flags) & box_flag::GLASS == 0 {
         let k = crate::particle_fx::solid_glass_crack();
         lay(g, DecalKind::Damage, e.hit_p, e.n, Some(if pellets { k.pellet } else if rifle { k.rifle } else { k.pistol }), &DecalOpts { param: Some(k.look + k.strength), clamp_to: Some(s.box_), attach, ..Default::default() });
         return;

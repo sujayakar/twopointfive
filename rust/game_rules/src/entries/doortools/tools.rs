@@ -17,7 +17,7 @@ fn post_or_pos(g: &Game, op: DoorOpId, m: GuardId) -> V3 {
     match g.tab.doortools_door_op[op].post.get(m) { Some(p) => p.pos, None => g.pos_of(m) }
 }
 /// DOORTOOLS.blowKey.replace('Key', '')
-pub(crate) fn blow_letter(g: &Game) -> String { g.k.doortools.blow_key.replacen("Key", "", 1) }
+pub(crate) fn blow_letter(g: &Game) -> String { g.k.doortools.blow_key.as_str().replacen("Key", "", 1) }
 fn by_sam(g: &Game, c: ChargeId) -> bool { g.tab.doortools_set_charge[c].by == crate::ownblow::SAM_BY }
 /// this.ops.some(o => o.kind === 'charge' && o.door === d)
 fn charge_order_on(g: &Game, seat: &crate::seats::SeatRef, d: DoorId) -> bool {
@@ -372,7 +372,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let id = g.tab.doortools_set_charge.push(row);
     g.groups[g.group].tools.set.push(id);
     let at = crate::doors::door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(at), Some(0.6), None);
 }
 
 /// The charges that stand set: drawn; one whose door has come open or off its hinges is off it, back in the count.

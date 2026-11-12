@@ -73,11 +73,11 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     if g.squad_net.down_due {
         if g.k.squadnet.down_gain > 0.0 {
             let (gain, rate) = (g.k.squadnet.down_gain, g.k.squadnet.down_rate);
-            crate::audio_iface::game_audio_like_play(g, "radio", None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
         }
     } else if g.squad_net.click_due && g.k.squadnet.click > 0.0 {
         let (gain, rate) = (g.k.squadnet.click, g.k.squadnet.click_rate);
-        crate::audio_iface::game_audio_like_play(g, "radio", None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
     g.squad_net.click_due = false;
     g.squad_net.down_due = false;

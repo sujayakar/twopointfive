@@ -1,5 +1,5 @@
 // WHAT IS UNDERFOOT, as the mixer has it: which of the two samples, how bright, its name. How loud a step on it is comes with the footfall (rust/game_rules/src/world/floor.rs tread).
-export type FloorMat = 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass';
+export type FloorMat = import('../draw/names').FloorName;
 
 /** Per material: `hard` = which of the two footstep samples plays (heel click vs soft scuff), `rate` × the sample's playback rate (stone a touch brighter, carpet duller — subtle),
  *  `label` for the HUD / panel. */

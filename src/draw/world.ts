@@ -6,13 +6,12 @@ import { lookNeedBits } from '../render/gbuffer';
 import type { Vec3 } from '../math/vec';
 import type { CutPlane } from '../scene/cut';
 import type { Drawn } from './drawn';
+import { GeoFlag, PaneFlag } from './bits';
 import { BoxMat, Capsule } from './gpu';
 import { Beam, Cut, Geo, Head, Info, Leaf, Mat, Pane, Row4, Section, Word } from './sections';
 
-/** the GPU's flag word (rust/game_draw boxes/pack.rs): what of it a plan asks */
-const KEPT = 0xe7 | BoxFlag.Glass, ROUND = 8, ROT = 64, CUT = 1 << 16;
-/** of a pane's first row's second number: something of it has fallen out, all of it has (render/shaders/glass_open.wgsl) */
-const GB_OPEN = 1, GB_GONE = 8;
+/** what of a box's word as a shader reads it means the same in the box's own: what a plan asks */
+const KEPT = GeoFlag.NoPrimary | GeoFlag.NoShadow | GeoFlag.Cutaway | GeoFlag.AreaLit | GeoFlag.Rot | GeoFlag.Gloss | GeoFlag.Glass;
 /** m round a box that changed */
 const STALE = 0.1;
 const A_CUT: CutPlane[] = [{ n: [0, 1, 0], d: 0 }];
@@ -69,8 +68,8 @@ export class DrawWorld extends BoxWorld {
     const u = this.D.u, L = this.glassList, words = Pane.row;
     for (let k = 0; k < L.length; k++) {
       const at = this.D.at[Section.panes] + k * words, fl = this.D.f[at + Pane.says];
-      let key = fl & GB_GONE ? 1 : 0;
-      if (fl & GB_OPEN && !key) for (let w = 0; w < words; w++) if (w !== Pane.damage) key = (Math.imul(key ^ u[at + w], 0x01000193) + w) | 0;   // (all but the damage, which opens nothing by itself)
+      let key = fl & PaneFlag.Gone ? 1 : 0;
+      if (fl & PaneFlag.Open && !key) for (let w = 0; w < words; w++) if (w !== Pane.damage) key = (Math.imul(key ^ u[at + w], 0x01000193) + w) | 0;   // (all but the damage, which opens nothing by itself)
       if (key === (this.holed.get(L[k]) ?? 0)) continue;
       this.holed.set(L[k], key);
       this.stands(this.statics[L[k]]);
@@ -85,13 +84,13 @@ export class DrawWorld extends BoxWorld {
     this.statics.length = Math.min(this.statics.length, count); this.glassStatics.length = 0;
     for (let i = from; i < to; i++) {
       const g = g0 + i * Geo.row, m = m0 + i * Mat.row, w = u[g + Geo.flags], was = this.statics[i], b = this.statics[i] ?? (this.statics[i] = boxOf([0, 0, 0], [0, 0, 0], 0, [0, 0, 0], [0, 0, 0], 0, 0));
-      const lies = was !== undefined && b.c[0] === f[g + Geo.c] && b.c[1] === f[g + Geo.c + 1] && b.c[2] === f[g + Geo.c + 2] && b.h[0] === f[g + Geo.h] && b.h[1] === f[g + Geo.h + 1] && b.h[2] === f[g + Geo.h + 2] && (b.cut !== undefined) === ((w & CUT) !== 0), stood = lies && b.flags === (w & KEPT);
+      const lies = was !== undefined && b.c[0] === f[g + Geo.c] && b.c[1] === f[g + Geo.c + 1] && b.c[2] === f[g + Geo.c + 2] && b.h[0] === f[g + Geo.h] && b.h[1] === f[g + Geo.h + 1] && b.h[2] === f[g + Geo.h + 2] && (b.cut !== undefined) === ((w & GeoFlag.Cut) !== 0), stood = lies && b.flags === (w & KEPT);
       if (was && !stood) this.wall(b);
-      const yaw = 2 * Math.atan2(f[m + Mat.rot + 1], f[m + Mat.rot + 3]), turned = was !== undefined && (b.yaw !== yaw || (b.round === true) !== ((w & ROUND) !== 0) || (b.rot !== undefined) !== ((w & ROT) !== 0) || b.rot !== undefined && b.rot.some((q, k) => q !== f[m + Mat.rot + k]));
+      const yaw = 2 * Math.atan2(f[m + Mat.rot + 1], f[m + Mat.rot + 3]), turned = was !== undefined && (b.yaw !== yaw || (b.round === true) !== ((w & GeoFlag.Round) !== 0) || (b.rot !== undefined) !== ((w & GeoFlag.Rot) !== 0) || b.rot !== undefined && b.rot.some((q, k) => q !== f[m + Mat.rot + k]));
       { const now = stopsSky(w & KEPT), then = was !== undefined && stopsSky(b.flags); if (now !== then || now && (!lies || turned)) this.moved++; }
       for (let k = 0; k < 3; k++) { b.c[k] = f[g + Geo.c + k]; b.h[k] = f[g + Geo.h + k]; b.albedo[k] = f[m + Mat.albedo + k]; b.emissive[k] = f[m + Mat.emits + k]; }
-      b.flags = w & KEPT; b.round = (w & ROUND) !== 0 ? true : undefined; b.cut = (w & CUT) !== 0 ? A_CUT : undefined; b.cutHeight = f[m + Mat.cutHeight];
-      if (w & ROT) { b.rot ??= [0, 0, 0, 1]; for (let k = 0; k < 4; k++) b.rot[k] = f[m + Mat.rot + k]; } else b.rot = undefined;
+      b.flags = w & KEPT; b.round = (w & GeoFlag.Round) !== 0 ? true : undefined; b.cut = (w & GeoFlag.Cut) !== 0 ? A_CUT : undefined; b.cutHeight = f[m + Mat.cutHeight];
+      if (w & GeoFlag.Rot) { b.rot ??= [0, 0, 0, 1]; for (let k = 0; k < 4; k++) b.rot[k] = f[m + Mat.rot + k]; } else b.rot = undefined;
       b.yaw = yaw;
       if (!stood && this.told) this.wall(b);
     }

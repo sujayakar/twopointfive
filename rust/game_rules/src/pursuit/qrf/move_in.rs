@@ -278,7 +278,7 @@ fn arriving(g: &mut crate::game::Game) {
         note(g, "nobody");
         return;
     }
-    if mk.stairs { crate::audio_iface::game_audio_like_play(g, "stairBoots", Some([mk.muster[0][0], 0.3, mk.muster[0][2]]), Some(0.75), None); }
+    if mk.stairs { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StairBoots, Some([mk.muster[0][0], 0.3, mk.muster[0][2]]), Some(0.75), None); }
     let clear = match word(&mk.clear) { Some(c) => format!(" {},", c), None => String::new() };
     let lead = g.qrf.men[0];
     let text = format!("{} at {} — {} of us, ten seconds.{} check your fire", mk.tag, mk.name, count, clear);
@@ -319,7 +319,7 @@ fn deploy(g: &mut crate::game::Game) {
     let door = marks_door(g, &mk);
     let lead = alive(g).first().copied();
     if let (Some(d), Some(l)) = (door, lead) { fling_open(g, d, l); }
-    if let Some(d) = door { if mk.stairs { let at = g.dr[d].frame_centre; crate::audio_iface::game_audio_like_play(g, "stairDoor", Some(at), Some(1.0), None); } }
+    if let Some(d) = door { if mk.stairs { let at = g.dr[d].frame_centre; crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StairDoor, Some(at), Some(1.0), None); } }
     if crate::mission::mission_live(g) {
         g.mission.stats.qrf = m::max(g.mission.stats.qrf, 1.0);
         g.mission.stats.qrf_at = g.mission.stats.elapsed;
@@ -344,7 +344,7 @@ fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
     let who = g.char_id(by);
     g.dr[d].leaf.last_who = who;
     let at = door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::DoorBash, Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
 
 // ---------------------------------------------------------------- the men, every frame

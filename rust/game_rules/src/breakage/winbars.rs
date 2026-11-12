@@ -12,7 +12,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- helpers
 /// a bar, not hidden   (`(flags & (Bar | HIDE)) === Bar`)
 fn stands(flags: f64) -> bool {
-    let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
+    let bar = crate::scene_boxes::box_flag::BAR as i32;
     (js::to_i32(flags) & (bar | js::to_i32(HIDE))) == bar
 }
 /// `g.col.boxes[index]`: a number that is no place in the list is undefined
@@ -87,7 +87,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
         }
         if break_bar(g, m.index, m.at, m.dir, who, BreakBarCause::Round) {
             n += 1.0;
-            if lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(m.at), Some(0.8), None); }
+            if lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(m.at), Some(0.8), None); }
         }
     }
     n
@@ -129,7 +129,6 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         dz /= l;
     }
     let hit_u = v3::clamp((at[1] - y0) / h, 0.0, 1.0);
-    let tab = crate::scene_boxes::box_flag();
     let mut k = 100.0;
     for j in 0..(n as usize) {
         let (u0, u1) = (cuts[j], cuts[j + 1]);
@@ -147,7 +146,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
             let mut piece = g.tab.boxes.edit(f);
             piece.c = fc;
             piece.h = fh;
-            piece.flags = tab.dynamic;
+            piece.flags = crate::scene_boxes::box_flag::DYNAMIC as f64;
             piece.marks = None;
         }
         let sp = v3::lerp(k_.fly[0], k_.fly[1], r1) * (if struck { 1.0 } else { k_.rest_k });
@@ -158,7 +157,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         if let Some(c) = got {
             let chunk = &mut g.tab.debris_chunk[c];
             chunk.level = land.level;
-            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect();
+            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name, rate: s.rate, gain: s.gain }).collect();
             match cls {
                 crate::scene_materials::BreakClass::Wood => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Wood),
                 crate::scene_materials::BreakClass::Metal => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Metal),
@@ -210,13 +209,12 @@ mod tests {
 
     #[test]
     fn a_bar_stands_until_either_hide_flag_is_up() {
-        let t = crate::scene_boxes::box_flag();
-        assert_eq!(HIDE, js::or_bits(t.no_primary, t.no_shadow));
-        assert!(stands(t.bar));
-        assert!(stands(js::or_bits(t.bar, t.dynamic)));
-        assert!(!stands(js::or_bits(t.bar, t.no_primary)));
-        assert!(!stands(js::or_bits(t.bar, t.no_shadow)));
-        assert!(!stands(t.dynamic));
-        assert_eq!(js::or_bits(t.bar, HIDE), t.bar + 3.0);
+        assert_eq!(HIDE, (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64);
+        assert!(stands(crate::scene_boxes::box_flag::BAR as f64));
+        assert!(stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::DYNAMIC) as f64));
+        assert!(!stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::NO_PRIMARY) as f64));
+        assert!(!stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::NO_SHADOW) as f64));
+        assert!(!stands(crate::scene_boxes::box_flag::DYNAMIC as f64));
+        assert_eq!(js::or_bits(crate::scene_boxes::box_flag::BAR as f64, HIDE), (crate::scene_boxes::box_flag::BAR as f64) + 3.0);
     }
 }

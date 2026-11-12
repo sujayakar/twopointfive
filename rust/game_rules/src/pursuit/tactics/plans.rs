@@ -493,7 +493,7 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     let team = g.team(gd);
     let list = g.guards.clone();
     for o in list {
@@ -878,7 +878,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, gate: &mut crate
     let line = call_line(g, gate);
     crate::game::game_say(g, gd, &line, Some(true), None);
     let radio_at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(radio_at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(radio_at), Some(0.7), None);
     let Some(best) = whom_to_call(g, gd, gate.door) else { return };
     let marks = plan_for(g, gate.door, gate.side, gate.near_a);
     let spot = stack_spot(g, gate.door, gate.side, gate.near_a, 1.0, marks.as_ref()).pos;

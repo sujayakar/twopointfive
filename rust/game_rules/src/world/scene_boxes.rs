@@ -82,15 +82,14 @@ pub fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, o
 fn trim_drawn(g: &crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
     match g.tab.boxes[t].of {
         None => true,
-        Some(of) => js::to_i32(g.tab.boxes[all[of as usize]].flags) & js::to_i32(box_flag().no_primary) == 0,
+        Some(of) => js::to_i32(g.tab.boxes[all[of as usize]].flags) & box_flag::NO_PRIMARY as i32 == 0,
     }
 }
 
 /// Is a static drawn: not hidden, not a pane, and trim only while its box is.
 pub fn box_drawn(g: &crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
-    let f = box_flag();
     let (flags, piece) = { let x = &g.tab.boxes[b]; (x.flags, x.piece) };
-    js::to_i32(flags) & (js::to_i32(f.no_primary) | js::to_i32(f.glass)) == 0 && (piece != Some(true) || trim_drawn(g, all, b))
+    js::to_i32(flags) & (box_flag::NO_PRIMARY as i32 | box_flag::GLASS as i32) == 0 && (piece != Some(true) || trim_drawn(g, all, b))
 }
 
 /// makeBox's object as a value, in no table: what the caller gives; absent = boxOf's.
@@ -235,7 +234,7 @@ struct Nearest { best: f64, bi: f64, bn: V3 }
 /// Closest box along the ray, of every box of the frame as it is drawn (the statics by their grid). A read: the game keeps nothing of a ray.
 pub fn box_world_raycast(g: &crate::game::Game, ro: V3, rd: V3, tmax: Option<f64>, skip_flags: Option<f64>, skip_owner: Option<f64>, with_look: Option<bool>) -> Option<crate::scene_boxes::BoxWorldRaycast> {
     let tmax = tmax.unwrap_or(1e9);
-    let skip_flags = skip_flags.unwrap_or_else(|| { let f = box_flag(); (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary)) as f64 });
+    let skip_flags = skip_flags.unwrap_or_else(|| { (box_flag::NO_SHADOW as i32 | box_flag::NO_PRIMARY as i32) as f64 });
     let skip_owner = skip_owner.unwrap_or(0.0);
     let with_look = with_look.unwrap_or(false);
     let w = &g.engine.world;
@@ -263,7 +262,7 @@ fn ray_test(g: &Game, near: &mut Nearest, i: usize, ro: V3, rd: V3, skip_flags: 
     let Some(r) = ray_box(g, ro, rd, id, near.best) else { return };
     if r.t < near.best || (r.t == near.best && (i as f64) < near.bi) {
         // (a pane that hangs is asked whether it is open where the ray meets it)
-        if js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len()
+        if js::to_i32(flags) & box_flag::GLASS as i32 != 0 && i < g.engine.world.statics.len()
             && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i as f64, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
         *near = Nearest { best: r.t, bi: i as f64, bn: r.n };
     }
@@ -666,7 +665,7 @@ mod tests {
                 if !(cx >= 0.0 && cz >= 0.0 && cx < w.w as f64 && cz < w.h as f64) { continue; }
                 let c = cz as usize * w.w as usize + cx as usize;
                 for &b in &w.items[w.start[c] as usize..w.start[c + 1] as usize] {
-                    if core::mem::replace(&mut asked[b as usize], true) || js::to_i32(g.tab.boxes[list[b as usize]].flags) & js::to_i32(box_flag().no_shadow) != 0 { continue; }
+                    if core::mem::replace(&mut asked[b as usize], true) || js::to_i32(g.tab.boxes[list[b as usize]].flags) & box_flag::NO_SHADOW as i32 != 0 { continue; }
                     if let Some(r) = ray_box(g, ro, rd, list[b as usize].into(), met.0) { if r.t < met.0 { met = (r.t, b as i32); } }
                 }
             }
@@ -711,7 +710,7 @@ mod tests {
                 let Some(r) = ray_box(&g, ro, rd, b.into(), tmax) else { continue };
                 tied += (i as i32 != got && r.t == want.0) as u32;
                 // (a tilted one is met where the walk comes by the cells it is filed in, and what stands past the edge is in no cell)
-                let plain = g.tab.boxes[b].rot.is_none() && js::to_i32(g.tab.boxes[b].flags) & js::to_i32(box_flag().no_shadow) == 0;
+                let plain = g.tab.boxes[b].rot.is_none() && js::to_i32(g.tab.boxes[b].flags) & box_flag::NO_SHADOW as i32 == 0;
                 let at = [ro[0] + rd[0] * r.t, ro[2] + rd[2] * r.t];
                 assert!(!plain || r.t >= want.0 || !(at[0] >= 0.0 && at[0] < 40.0 && at[1] >= 0.0 && at[1] < 28.0), "ray {j} from {ro:?} along {rd:?}: {i} is nearer than {got}");
             }
@@ -742,7 +741,6 @@ mod tests {
     #[test]
     fn trim_is_drawn_while_its_box_is() {
         let mut g = Game::blank();
-        let f = box_flag();
         let plain = || box_value([0.0; 3], [1.0; 3], 0.0, [0.5; 3], [0.0; 3], 0.0, 0.0, None);
         let wall = crate::scene_boxes::box_new(&mut g, plain());
         let mut piece = plain();
@@ -752,10 +750,10 @@ mod tests {
         let all = [wall, trim];
         assert!(trim_drawn(&mut g, &all, wall), "no `of`: its own");
         assert!(trim_drawn(&mut g, &all, trim) && box_drawn(&mut g, &all, trim));
-        g.tab.edit(wall).flags = f.no_primary;
+        g.tab.edit(wall).flags = box_flag::NO_PRIMARY as f64;
         assert!(!trim_drawn(&mut g, &all, trim) && !box_drawn(&mut g, &all, trim), "the wall hidden: its trim with it");
         assert!(!box_drawn(&mut g, &all, wall));
-        g.tab.edit(wall).flags = f.glass;
+        g.tab.edit(wall).flags = box_flag::GLASS as f64;
         assert!(!box_drawn(&mut g, &all, wall), "a pane is not drawn");
         assert!(box_drawn(&mut g, &all, trim), "trim asks only whether its box is hidden");
     }

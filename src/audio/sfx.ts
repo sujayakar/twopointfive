@@ -1,20 +1,8 @@
 // Procedurally synthesized sound effects rendered into AudioBuffers at startup (no samples shipped).
 import type { SfxBuffer, SfxContext } from './backend';
 import { Voice, biquad, band, peakTo, TUNING, type Mode, type Tune } from './synth';
-export type SfxName =
-  | 'pistolSuppressed' | 'pistolLoud' | 'carbineReport' | 'rifleSuppressed' | 'launcher' | 'dryFire' | 'magOut' | 'magIn' | 'rack' | 'magDrop' | 'footSoft' | 'footHard' | 'ocp' | 'nvOn' | 'nvOff'
-  | 'click' | 'throw' | 'canisterBounce' | 'bulletImpact' | 'bodyHit' | 'bodyFall' | 'lightBreak' | 'lightOff' | 'deny' | 'equip' | 'smokePop' | 'alertSting' | 'radio'
-  | 'doorCreak' | 'doorBang' | 'doorLatch' | 'doorBash' | 'doorRattle' | 'lockPick' | 'lockOpen' | 'lockBreak' | 'powerDown' | 'powerUp' | 'stunBang' | 'earRing' | 'propScrape' | 'propThud'
-  | 'grabScuffle' | 'chokeStrain' | 'chokeLimp' | 'whipThud' | 'shove' | 'murmur' | 'heldProtest' | 'whistle'
-  | 'stairDoor' | 'stairBoots' | 'casingTink' | 'thunderNear' | 'thunderFar' | 'glassCrack' | 'glassTinkle' | 'glassShatter' | 'glassCrunch'
-  | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (rust/game_rules/src/stealth/devices.rs): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
-  | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (rust/game_rules/src/breakage/blast_feel)
-  | 'wallOn' | 'wallOff'   // the player's back landing on a wall and his stepping off it (rust/game_rules/src/stealth/wallsnap.rs `voice`)
-  | 'grabCatch' | 'gunStrip' | 'gunDown'   // the grab as three beats: the catch, the gun twisted out of his hand, the gun let down onto the floor
-  | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (rust/game_rules/src/outfit/gunlook.rs), and the pump gun's
-  | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (rust/game_rules/src/guns/gunreload.rs)
-  | 'chairRoll'   // a chair coasting on its castors (rust/game_rules/src/fittings/props.rs CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
-  | 'fireBed' | 'fireCrack';   // an open fire (rust/game_rules/src/air/fire.rs): its low bed, looped between FIRE_LOOP's two marks for as long as it burns, and one crack of the wood
+import type { SfxName } from '../draw/names';
+export type { SfxName };
 
 type Gen = (t: number, i: number, sr: number, rnd: () => number, state: Float32Array) => number;
 

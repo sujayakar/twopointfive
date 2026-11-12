@@ -22,7 +22,7 @@ fn ring(p: &Play) -> Option<RingView> { p.view().ring }
 fn ring_on(p: &mut Play, at: [f64; 2]) {
     p.point_at(at);
     p.frame();
-    let key = p.g.k.cmdring.key.clone();
+    let key = p.g.k.cmdring.key.as_str();
     p.key_down(&key);
     p.until(2.0, |p| ring(p).is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}: {:?}", p.g.groups[p.g.group].orders.menu.is_some()));
 }
@@ -154,7 +154,7 @@ fn a_taps_word_and_live_are_told() {
         assert!(p.view().live, "seed {seed}: the run is live");
         assert!(p.view().empty.is_none(), "seed {seed}: nothing was tapped");
         // on open floor
-        p.key_down(game::consts::INTERACT_KEY); p.frame(); p.key_up(game::consts::INTERACT_KEY); p.run(0.4);
+        p.key_down(game::consts::INTERACT_KEY.as_str()); p.frame(); p.key_up(game::consts::INTERACT_KEY.as_str()); p.run(0.4);
         let e = p.view().empty.unwrap_or_else(|| panic!("seed {seed}: a tap on open floor says nothing: {:?} nearby {}", p.g.sets[p.g.seat].hand.sel.word, p.g.sets[p.g.seat].nearby.len()));
         assert_eq!((e.word.as_str(), e.kind, e.dist), (game::handring::EMPTY_WORD, game::view::ThingKind::Wall, None), "seed {seed}");
         // a step up to a door takes it down
@@ -220,7 +220,7 @@ fn asking_writes_nothing_with_a_ring_up() {
             p.order("stack", door, Who::All);
             let mut out = Vec::new();
             for k in 0..120 {
-                if k == 30 { let key = p.g.k.cmdring.key.clone(); p.point_at(door); p.key_down(&key); }
+                if k == 30 { let key = p.g.k.cmdring.key.as_str(); p.point_at(door); p.key_down(&key); }
                 p.frame();
                 if ask { let v = p.view(); assert!(!v.plan.own.men.is_empty(), "seed {seed}: the plan on the floor has nobody"); }
                 if k % 30 == 29 { out.push(p.words()); }
@@ -269,7 +269,7 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
         assert!(p.view().hand.is_none(), "seed {seed}: no ring before the key");
         p.sam_put([door[0], door[1] + 0.9]);
         p.run(0.3);
-        p.key_down(game::consts::INTERACT_KEY);
+        p.key_down(game::consts::INTERACT_KEY.as_str());
         p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}: his ring did not come up: {:?}", p.g.sets[p.g.seat].nearby.iter().map(|r| r.line2.clone()).collect::<Vec<_>>()));
         let h = p.view().hand.unwrap();
         assert!(h.wedges.iter().any(|w| w.text != "whistle"), "seed {seed}: a door's rows: {h:?}");
@@ -283,7 +283,7 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
 /// A FAILURE MEANS: a ring that was let go of shuts under the hand, one stands that was answered, or one put away did its row. The control: each way out is asked of a ring that stood.
 #[test]
 fn his_own_ring_stays_until_it_is_answered_or_put_away() {
-    let key = game::consts::INTERACT_KEY;
+    let key = game::consts::INTERACT_KEY.as_str();
     for seed in SEEDS {
         for at_door in [false, true] {
             // what one way out of it left: the ring, a whistle blown, the door's leaf moved
@@ -322,7 +322,7 @@ fn his_own_ring_stays_until_it_is_answered_or_put_away() {
             let (stays, gone, whistled, opened) = ((true, false, false), (false, false, false), (false, true, false), (false, false, true));
             assert_eq!(after(&mut |p| { let_go(p); p.run(2.0); }), stays, "{}", why("let go of on nothing"));
             assert_eq!(after(&mut |p| { let_go(p); tap(p, "Digit4"); }), stays, "{}", why("a digit with no wedge"));
-            assert_eq!(after(&mut |p| { let_go(p); tap(p, game::backkey::BACK_KEY); }), gone, "{}", why("the back key"));
+            assert_eq!(after(&mut |p| { let_go(p); tap(p, game::backkey::BACK_KEY.as_str()); }), gone, "{}", why("the back key"));
             assert_eq!(after(&mut |p| { let_go(p); click(p, Button::Right); }), gone, "{}", why("the right button"));
             assert_eq!(after(&mut |p| { out_to(p, p.g.k.cmdring.wedges); let_go(p); }), whistled, "{}", why("the hand out to the whistle and the key let go"));
             assert_eq!(after(&mut |p| { let_go(p); tap(p, "Digit5"); }), whistled, "{}", why("the whistle's digit"));
@@ -351,12 +351,12 @@ fn a_card_over_the_game_puts_the_rings_away_unsent() {
             ring_on(&mut p, door);
             if up { card(&mut p); }
             assert_eq!(ring(&p).is_none(), up, "seed {seed}: a card came up: {up}");
-            let key = p.g.k.cmdring.key.clone();
+            let key = p.g.k.cmdring.key.as_str();
             if up { p.key_up(&key); p.run(0.5); assert_eq!((orders(&p), ring(&p).is_none()), (was, true), "seed {seed}: the key came up under it"); }
         }
         for up in [true, false] {
             let (mut p, door) = stand();
-            let (was, key) = (orders(&p), p.g.k.cmdring.key.clone());
+            let (was, key) = (orders(&p), p.g.k.cmdring.key.as_str());
             p.point_at(door);
             p.frame();
             p.key_down(&key);
@@ -369,11 +369,11 @@ fn a_card_over_the_game_puts_the_rings_away_unsent() {
         let (mut p, door) = stand();
         p.sam_put([door[0], door[1] + 0.9]);
         p.run(0.3);
-        p.key_down(game::consts::INTERACT_KEY);
+        p.key_down(game::consts::INTERACT_KEY.as_str());
         p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}: his ring did not come up"));
         card(&mut p);
         assert!(p.view().hand.is_none(), "seed {seed}: his own ring");
-        p.key_up(game::consts::INTERACT_KEY);
+        p.key_up(game::consts::INTERACT_KEY.as_str());
         p.run(0.5);
         assert!(p.view().hand.is_none() && p.g.sets[p.g.seat].act.is_none(), "seed {seed}");
         drop(p);

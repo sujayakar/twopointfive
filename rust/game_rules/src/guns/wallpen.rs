@@ -90,8 +90,7 @@ fn roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
 
 /// The stuff of static `index` if a round goes through such a thing at all, by its paint and where it stands.
 fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpen::ThinStuff> {
-    let bf = crate::scene_boxes::box_flag();
-    let mask = js::to_i32(bf.glass) | js::to_i32(bf.no_primary) | js::to_i32(bf.no_shadow) | js::to_i32(bf.dynamic);
+    let mask = crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
     let bx = &g.tab.boxes[b];
     let (c, h, em, word) = (bx.c, bx.h, bx.emissive, bx.does);
     if any_flag(bx.flags, mask) || bx.rot.is_some() || bx.metal.unwrap_or(false) || em[0] + em[1] + em[2] > 0.0 { return None; }
@@ -167,8 +166,7 @@ fn thin_toll(g: &crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Option
 fn born_in(g: &crate::game::Game, p: V3, d: V3, self_: f64) -> f64 {
     let mut scratch = embed_scratch();
     let n = crate::scene_collision::gather(g, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, &mut scratch);
-    let bf = crate::scene_boxes::box_flag();
-    let (no_shadow, glass) = (js::to_i32(bf.no_shadow), js::to_i32(bf.glass));
+    let (no_shadow, glass) = (crate::scene_boxes::box_flag::NO_SHADOW as i32, crate::scene_boxes::box_flag::GLASS as i32);
     let mut i = 0;
     while (i as f64) < n {
         let at = scratch[i] as usize;
@@ -293,7 +291,7 @@ pub(super) fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::W
         crate::marks::bullet_mark(g, x.at, x.n_in, s, def);
         crate::particle_fx::impact_fx(g, x.at, x.dir_in, crate::combat::RoundMet { n: x.n_in, index: Some(x.index), prop: None, box_: None }, def);
         crate::particle_fx::impact_fx(g, out, v3::scale(x.dir_out, -1.0), crate::combat::RoundMet { n: n_out, index: Some(x.index), prop: None, box_: None }, def);
-        if lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(x.at), Some(0.6), None); }
+        if lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(x.at), Some(0.6), None); }
         if x.index >= 1e6 {
             if let Some(p) = pel.as_deref_mut() { crate::shotgun::pellet_end(p, x.index, x.t, x.at); }
         }

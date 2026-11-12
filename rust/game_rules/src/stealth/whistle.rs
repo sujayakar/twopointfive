@@ -54,7 +54,7 @@ pub fn whistle_ready_in_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
 
 /// V pressed this frame.
 pub fn whistle_key(g: &mut crate::game::Game, input: InputId) {
-    if crate::input::input_hit(g, input, "KeyV") { try_whistle(g); }
+    if crate::input::input_hit(g, input, crate::input::Key::V) { try_whistle(g); }
 }
 
 /// Blow it if the breath is back: the event at his feet, the meter's tick, the voice at his head. False = nothing happened.
@@ -82,7 +82,7 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
     let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, if g.pl[pl].crouch { 1.05 } else { 1.6 }, 0.0]));
-    crate::audio_iface::game_audio_like_play(g, "whistle", Some(at), Some(gain), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Whistle, Some(at), Some(gain), None);
     true
 }
 

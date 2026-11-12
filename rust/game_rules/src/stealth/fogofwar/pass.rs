@@ -45,8 +45,7 @@ pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
 
 /// What the team's sight lines pass: glass and the statics marked thin.
 pub fn fog_through() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
+    (crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::THIN as i32) as f64
 }
 
 pub fn fog_of_war_new() -> crate::fogofwar::FogOfWar {

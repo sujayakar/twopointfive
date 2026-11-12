@@ -192,7 +192,7 @@ pub(super) fn cut_plate_box(g: &mut crate::game::Game, origin: V3, rot: Quat, po
         yaw: Some(0.0),
         rot: Some(rot),
         albedo: Some(albedo),
-        flags: Some(crate::scene_boxes::box_flag().dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         ..Default::default()
     });
     let anti = signed_area(poly) >= 0.0;

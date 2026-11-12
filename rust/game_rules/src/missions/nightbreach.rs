@@ -583,7 +583,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
         for s in g.seats.clone() {
             let man = crate::cmd::seat_man(g, s);
             let seat_input = g.tab.cmd_seat[s].input;
-            if !crate::condition::down(g, g.pl[man].ch) && crate::input::input_hit(g, seat_input, "KeyF") {
+            if !crate::condition::down(g, g.pl[man].ch) && crate::input::input_hit(g, seat_input, crate::input::Key::F) {
                 night_breach_order(g);
                 break;
             }

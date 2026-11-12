@@ -513,7 +513,7 @@ fn step_fuse(g: &mut Game, op: DoorOpId, cx: &Cx) {
         g.tab.item[it].bounces = 0.0;
         g.tab.item[it].settled = false;
         let at = g.tab.item[it].pos;
-        crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(at), Some(0.5), None);
         o!(g, op).pass = None;
         return;
     }
@@ -791,7 +791,7 @@ fn step_place(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let c = g.tab.doortools_set_charge.push(SetCharge { door: d, side, by });
     g.groups[g.group].tools.set.push(c);
     let dp = crate::doors::door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(dp), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(dp), Some(0.6), None);
     crate::game::game_say(g, lead, "charge set.", None, None);
     door_tools_beat(g, op, "set");
     let p = o!(g, op).post.get(lead).cloned().unwrap();

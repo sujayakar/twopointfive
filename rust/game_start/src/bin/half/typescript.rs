@@ -98,15 +98,6 @@ fn sections(stamp: u32) -> String {
         l.push(String::new());
         l.extend(offsets(r));
     }
-    // (a word that crosses by its number: an enum's, in their order)
-    let lists: [(&str, &[&str], &str); 5] = [
-        ("STUFFS", game::scene_stuff::BoxStuff::WORDS, "what a box may say it is made of"), ("PKINDS", game::render_particles::PKind::WORDS, "what a particle is"),
-        ("EMIT_SHAPES", game::render_particles::EmitShape::WORDS, "how particles are thrown"), ("SMOKE_KINDS", game::smoke_types::SmokeEmitterKind::WORDS, "what smoke comes from"),
-        ("FLOORS", game::floor::FloorMat::WORDS, "what a floor is"),
-    ];
-    for (name, words, doc) in lists {
-        l.extend([String::new(), format!("/** {doc}, by its number in Rust */"), format!("export const {name} = [{}] as const;", names(words.iter().map(|w| format!("'{w}'")).collect()))]);
-    }
     l.join("\n") + "\n"
 }
 

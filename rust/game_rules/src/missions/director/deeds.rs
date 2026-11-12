@@ -153,7 +153,7 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
     }
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
     let at = gd.map(|x| { let c = g.gd[x].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) });
-    crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
 }
 // ---- world: doors (ts 985)
 /// c.doors.lock
@@ -191,7 +191,7 @@ pub(in crate::missions) fn director_beat_charge(g: &mut crate::game::Game, r: Di
     let who = g.ch[c].id;
     let it = crate::throwables::throwables_spawn(g, kind, from, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(fuse.unwrap_or(1.2)), who: Some(who), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
     if toss == Some(true) { crate::character::anim_toss_item(g, c, Some(crate::character::TOSS_QUICK)); }
     Ok(())
 }

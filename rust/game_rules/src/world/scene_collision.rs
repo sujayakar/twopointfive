@@ -144,7 +144,7 @@ pub fn new(g: &mut crate::game::Game, boxes: &[BoxId]) -> crate::scene_collision
     g.tab.boxes.statics(boxes);
     let wd = crate::scene_world::world();
     g.tab.boxes.grid(wd.grid_w as u32, wd.grid_h as u32, wd.grid_cell);
-    let skip = js::to_u32(crate::scene_boxes::box_flag().no_shadow) | js::to_u32(crate::scene_boxes::box_flag().dynamic);
+    let skip = crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::DYNAMIC;
     let list: Vec<(u32, [i32; 4])> = (0..).zip(boxes).filter(|(_, b)| js::to_u32(g.tab.boxes[**b].flags) & skip == 0).map(|(i, &b)| (i, foot_cells(g, b))).collect();
     g.tab.boxes.file(&list);
     for (i, at) in list { if g.tab.boxes[boxes[i as usize]].rot.is_some() && at[0] <= at[1] && at[2] <= at[3] { g.tab.boxes.file_tilted(i, at); } }
@@ -301,11 +301,11 @@ fn line(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, panes: O
 
 /// is a→b blocked by a static or a leaf; `through` = the flags it passes (glass by default: the line of sight).
 pub fn segment_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
-    line(g, &Over::OWN, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), panes)
+    line(g, &Over::OWN, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag::GLASS as f64), panes)
 }
 /// …of the world as the question takes it
 pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>) -> bool {
-    line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass), None)
+    line(g, over, a, b, shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag::GLASS as f64), None)
 }
 
 /// the sheets of glass a blast at `at` has a line to within `radius`, each with the point it meets
@@ -328,7 +328,7 @@ pub fn shot_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>, energy: Option<
 /// …of the world as the question takes it
 pub fn shot_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, energy: Option<f64>) -> bool {
     let pass = match g.col.fire_pass {
-        Some(FirePass::Bars) => crate::scene_boxes::box_flag().bar,
+        Some(FirePass::Bars) => crate::scene_boxes::box_flag::BAR as f64,
         None => 0.0,
     };
     let mut panes: Vec<SegmentBlockedPanesItem> = Vec::new();
@@ -511,7 +511,7 @@ fn heard_straight(g: &Game, src: V3, dst: V3) -> Result<Propagation, f64> {
 fn heard_round(g: &Game, src: V3, dst: V3, straight: f64) -> Option<Propagation> {
     nav_grid_there(g);
     let (nw, nh, cs) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
-    let seal = js::to_u32(crate::scene_boxes::box_flag().sound_seal);
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL;
     let mut out = [0.0; 4];
     let k = sim::hear::route(world(g), seal, nw, nh, cs, src, dst, straight, &mut out, &g.k);
     if k == ASK_HOST { return None; }

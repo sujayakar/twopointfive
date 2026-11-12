@@ -627,7 +627,7 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     if g.cues.squelch_due {
         g.cues.squelch_due = false;
         let squelch = g.k.cues.squelch;
-        if squelch > 0.0 { crate::audio_iface::game_audio_like_play(g, "radio", None, Some(squelch), None); }
+        if squelch > 0.0 { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(squelch), None); }
     }
 }
 

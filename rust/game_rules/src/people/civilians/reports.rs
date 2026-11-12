@@ -120,7 +120,7 @@ pub(super) fn to_phone(g: &mut crate::game::Game, gd: GuardId) {
     civ_say(g, gd, &t, Some(1.0));
     g.ch[c].anim.act = Some(AnimAct { clip: String::from("Idle_Talking_Loop"), loop_: Some(true), rate: Some(1.3), in_: Some(0.3), out: Some(0.4) });
     let at = v3::add(g.ch[c].pos, [0.0, 1.2, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "click", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
     set_state(g, gd, CivState::Phone);
 }
 
@@ -422,7 +422,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     let units = line.encode_utf16().count() as f64;
     g.pl[pl].bubble = Some(PlayerBubble { text: line.clone(), t: g.time, dur: v3::clamp(0.7 + 0.018 * units, 0.9, 1.4) + 0.4, radio: false });
     let at = v3::add(g.ch[pc].pos, [0.0, 1.6, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Murmur, Some(at), Some(0.2), None);
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -643,7 +643,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     say(g, o, &t, Some(true), None);
     let oc = g.gd[o].ch;
     let at = g.ch[oc].bone(Bone::Head).unwrap_or(g.ch[oc].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.9), None);
     let mut i = 0;
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;

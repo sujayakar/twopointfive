@@ -3,7 +3,7 @@ use super::*;
 
 pub fn door_tools_input(g: &mut Game, input: InputId) {
     door_tools_sync(g);
-    if !crate::input::input_hit(g, input, &g.k.doortools.blow_key.clone()) { return; }
+    if !crate::input::input_hit(g, input, g.k.doortools.blow_key) { return; }
     if crate::condition::down(g, g.pl[g.player].ch) {
         if !keyed(g).is_empty() { key_taken(g, input); }
         return;
@@ -15,8 +15,8 @@ pub fn door_tools_input(g: &mut Game, input: InputId) {
 }
 /// The press is spent: nothing after this one hears the key.
 fn key_taken(g: &mut Game, input: InputId) {
-    let key = g.k.doortools.blow_key.clone();
-    g.tab.input[input].pressed.delete(key);
+    let key = g.k.doortools.blow_key;
+    g.tab.input[input].pressed.delete(key.text());
 }
 /// The word was given a moment ago: the rest of a double tap.
 fn word_tapped(g: &Game) -> bool { g.time - g.groups[g.group].tools.word_key_t < g.k.doortools.word_tap }

@@ -68,7 +68,7 @@ fn glossReflectionX(P: vec3f, owner: u32, gb: u32) -> GxSpec {
     if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
     else {
       let bi = u32(hit.idx);
-      if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
+      if ((boxGeo[bi].flags & GEO_EMISSIVE) != 0u) { L += boxEmissive(bi); }
       albedo = boxAlbedoSec(bi);
     }
     if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
@@ -108,7 +108,7 @@ fn glassShadeX(Pg: vec3f, n: vec3f, V: vec3f, gb: u32) -> GxSpec {
       if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
       else {
         let bi = u32(hit.idx);
-        if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
+        if ((boxGeo[bi].flags & GEO_EMISSIVE) != 0u) { L += boxEmissive(bi); }
         albedo = boxAlbedoSec(bi);
       }
       if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
@@ -208,7 +208,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
       if (hit.idx == CAPSULE_HIT) { albedo = hit.capAlbedo; }
       else {
         let bi = u32(hit.idx);
-        if ((boxGeo[bi].flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }
+        if ((boxGeo[bi].flags & (GEO_EMISSIVE | GEO_AREA_LIT)) == GEO_EMISSIVE) { L += boxEmissiveRay(bi); }
         albedo = boxAlbedoSec(bi);
         for (var c = 0u; c < nC; c++) { if (onCard(Ph, hit.n, wgCards[c * 4u], wgCards[c * 4u + 1u])) { ex |= 1u << c; } }
       }
@@ -230,7 +230,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
   if (specOn) {
     var gG = vec3f(0.0); var gM = 0.0; var pG = vec3f(0.0); var pF = 0.0;
     let bidx = id & 0xFFFFFu;
-    if (gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & BOX_GLOSS) != 0u && N.y > 0.95) {
+    if (gloss && ((id >> 28u) & 1u) == 0u && bidx != 0xFFFFFu && (boxGeo[bidx].flags & GEO_GLOSS) != 0u && N.y > 0.95) {
       let o = glossReflectionX(P, owner, gb);
       specNow = o.now;
       if (o.lit) { mask |= 1u << RAYS; gG = o.G; gM = o.mul; }

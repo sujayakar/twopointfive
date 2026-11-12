@@ -2,6 +2,7 @@
 //   freshStart(setup)   the start of a game for an address: its level's file, its seats, its die, its difficulty
 //   standStart(start)   THE game a server or a client plays, stood from the start's bytes as every page stands it. As many as the module has room for.
 //   buildName()         the build this checkout is
+import { StartFlag } from '../../src/draw/bits';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WireCmd, Outcome } from '../../src/net/wire.ts';
@@ -27,9 +28,6 @@ export function freshStart(setup: StartSetup): NetStart {
   return start;
 }
 
-/** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
-const DRESS = 1;
-
 /** a networked game as a machine with no page holds it */
 export interface Stood {
   readonly seats: number; readonly ticks: number;
@@ -50,7 +48,7 @@ export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
   const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
   const face = new Face(new WebAssembly.Instance(toolModule()).exports), [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
-  const h = face.start(new Uint8Array(readFileSync(level)), start.words, mannequin, mannequinBin, cast, castLook, start.kept, start.seed, start.seats, DRESS);
+  const h = face.start(new Uint8Array(readFileSync(level)), start.words, mannequin, mannequinBin, cast, castLook, start.kept, start.seed, start.seats, StartFlag.Dress);
   face.reserve(64 * 1048576);
   if (bent) { const at = face.stateNames().indexOf(bent), words = face.stateWords.bind(face); if (at < 0) throw new Error(`the game has no part ${bent}`);
     face.stateWords = h => { const w = words(h); w[at] ^= 1; return w; }; }

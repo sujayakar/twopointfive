@@ -99,7 +99,7 @@ fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3, n: 
         row.n = v3::normalize(n);
     }
     let pos = g.tab.stickycam_sticky_cam[cam].pos;
-    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
     let level = g.k.sticky.stick_noise;
     crate::flight::noise(g, [pos[0], 0.0, pos[2]], level, 0.0, None);
     // the most that stay out: the oldest stuck one retires
@@ -284,7 +284,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     let n = m::min(g.k.sticky.carry, g.fa[rf].cams + 1.0);
     sticky_issue(g, pl, n, Some(true));
     let pos = g.tab.stickycam_sticky_cam[c].pos;
-    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(0.16), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(pos), Some(0.16), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
     let level = g.k.sticky.take_noise;
     let c = g.pl[pl].ch;
     crate::flight::noise_at(g, c, level);
@@ -294,8 +294,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 /// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends.
 pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let pl = g.player;
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let device = crate::scene_boxes::mkey().device;
     for i in 0..g.pl[pl].cams.len() {
         let id = g.pl[pl].cams[i];

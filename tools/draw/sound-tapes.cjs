@@ -13,8 +13,8 @@ const PAGE = require('../qa/page.cjs').page({ name: 'sound tapes', port: process
 /** a sound the mixer plays inside another's own call, which a page with no sound running never gets as far as asking for: filed with the sound that plays it */
 const read = () => fs.existsSync(INDEX) ? JSON.parse(fs.readFileSync(INDEX, 'utf8')) : { tapes: [] };
 const write = X => { fs.writeFileSync(INDEX + '.tmp', JSON.stringify(X, null, 1) + '\n'); fs.renameSync(INDEX + '.tmp', INDEX); };
-/** every name of the mixer's table (src/audio/sfx.ts SfxName) */
-const sfxNames = () => { const s = fs.readFileSync(path.join(ROOT, 'src/audio/sfx.ts'), 'utf8'), a = s.indexOf('export type SfxName'), b = s.indexOf('\n\n', a); return [...s.slice(a, b).replace(/\/\/.*$/gm, '').matchAll(/'([A-Za-z0-9]+)'/g)].map(m => m[1]); };
+/** every name of the mixer's table (src/draw/names.ts SFX, written by `half` from Rust's `Sfx`) */
+const sfxNames = () => { const s = fs.readFileSync(path.join(ROOT, 'src/draw/names.ts'), 'utf8'), a = s.indexOf('export const SFX = ['), b = s.indexOf(']', a); return [...s.slice(a, b).matchAll(/'([A-Za-z0-9]+)'/g)].map(m => m[1]); };
 function cover() {
   const X = read(), all = sfxNames(), by = new Map(all.map(n => [n, []]));
   for (const T of X.tapes) for (const n of Object.keys(T.sounds)) (by.get(n) ?? by.set(n, []).get(n)).push(T.id);

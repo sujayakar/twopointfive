@@ -27,8 +27,7 @@ words!(does_word, DoesWord, [Snow, Carpet, Lino, Stone, Grass, Wood, Plastic, Co
 
 /// the box flags a file may say, as the bits of `Box.flags`
 fn flags_to_bits(names: &[FlagName]) -> f64 {
-    let f = game::scene_boxes::box_flag();
-    names.iter().fold(0u32, |bits, n| bits | match n { FlagName::NoPrimary => f.no_primary, FlagName::NoShadow => f.no_shadow, FlagName::Cutaway => f.cutaway, FlagName::Gloss => f.gloss, FlagName::Glass => f.glass } as u32) as f64
+    names.iter().fold(0u32, |bits, n| bits | match n { FlagName::NoPrimary => game::scene_boxes::box_flag::NO_PRIMARY as f64, FlagName::NoShadow => game::scene_boxes::box_flag::NO_SHADOW as f64, FlagName::Cutaway => game::scene_boxes::box_flag::CUTAWAY as f64, FlagName::Gloss => game::scene_boxes::box_flag::GLOSS as f64, FlagName::Glass => game::scene_boxes::box_flag::GLASS as f64 } as u32) as f64
 }
 
 /// A LIST OF MARKINGS AS IT IS LAID (the structure a generator builds): a list of none is no list, the base size goes unsaid, a colour of its own leaves no multiplier and a multiplier of 1 is none, and a colour

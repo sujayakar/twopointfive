@@ -150,8 +150,7 @@ fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::l
         lv.civilians.as_ref().map_or(0.0, |l| l.len() as f64),
     );
     let most = hand_over_most(g, civs);
-    let flag = crate::scene_boxes::box_flag();
-    let glass = flagged(g, &col.boxes, flag.glass);
+    let glass = flagged(g, &col.boxes, crate::scene_boxes::box_flag::GLASS as f64);
     let mut parts = 0.0;
     let (cells, entries, tilted) = grid_count(g);
     if let Some(p) = &g_2.props { for i in p.all.iter() { parts += i.boxes.len() as f64; } }

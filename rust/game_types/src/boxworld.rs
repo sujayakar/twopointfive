@@ -9,7 +9,7 @@
 use crate::bytes::{ToBytes, W};
 use crate::made::next;
 use crate::ids::*;
-use crate::scene_boxes::Box as SBox;
+use crate::scene_boxes::{box_flag, Box as SBox};
 use crate::V3;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut, Index};
@@ -53,10 +53,10 @@ pub const K_WALK: u32 = 8;
 pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
 
 /// the flags a question reads
-pub const F_NO_SHADOW: u32 = 2;
-pub const F_GLASS: u32 = 1 << 17;
+pub const F_NO_SHADOW: u32 = box_flag::NO_SHADOW;
+pub const F_GLASS: u32 = box_flag::GLASS;
 /// …and those a row keeps: a write of any other moves no row
-pub const F_KEPT: u32 = 4294901770;
+pub const F_KEPT: u32 = !0xffff | box_flag::DYNAMIC | box_flag::NO_SHADOW;
 
 /// what snow a static is (`World.snow`): ground somebody cleared, trodden, old, and snow that stands or caps
 pub const SNOW_BARE: u8 = 1;

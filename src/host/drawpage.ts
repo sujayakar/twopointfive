@@ -3,6 +3,7 @@
 // play is in this page's bundle: tools/draw/ban.ts stops the build on an import from where one could stand.
 import { kitPicture } from './kitguard';   // (FIRST: in the Team & kit picture's window it makes the stores read-only before any module below reads or writes one)
 import { PIPE_QUEUE, gpuStory, initGpu, laterIdle, pipeQueue, showFatal, showFatalError, pipelineProgress } from '../gpu/device';
+import type { GameKey } from '../draw/names';
 import { Engine } from '../engine';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality } from '../ui/quality';
@@ -234,10 +235,10 @@ async function main(): Promise<void> {
   made.catch(() => { /* awaited below */ });
   // (while the programs compile: what the first step and the first frame want of the level, then the ticks a run begins with, still, with an order given at the nearest doors, walking and firing)
   const tReady = performance.now(); await game.ready(nextTask); trafficFrom(engine.gbuffer, game.traffic()); boot.span('levelReady', tReady);
-  if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
+  if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set<GameKey>(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
     const { men: who, doors } = game.map(), me = who.find(m => m.kind === 'player'), off = (d: { hx: number; hz: number }): number => me ? Math.hypot(d.hx - me.x, d.hz - me.z) : 0;
-    const near = doors.sort((a, b) => off(a) - off(b)).map(d => eye.project([d.hx + d.ux * d.width / 2, 1, d.hz + d.uz * d.width / 2], w, h)), order = new Set(['KeyB']), STILL = WARM / 3;
+    const near = doors.sort((a, b) => off(a) - off(b)).map(d => eye.project([d.hx + d.ux * d.width / 2, 1, d.hz + d.uz * d.width / 2], w, h)), order = new Set<GameKey>(['KeyB']), STILL = WARM / 3;
     await game.warm(WARM, (N, i) => { const told = i < STILL && i >= 4 && i % 2 === 0 ? order : none, [x, y] = i < STILL && near[i >> 1] || [w * 0.6, h * 0.4];   // (… the order on one door after another: some are behind a wall, and what is not a door is a walk)
       return sampleHand(N, { keys: i < STILL ? told : walk, pressed: told, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: x, mouseY: y }, eye, size); }, nextTask); }
   await made;
@@ -249,7 +250,7 @@ async function main(): Promise<void> {
   lookConfig.snow = () => snowConfig.on;
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
-  const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
+  const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio);
   MUSIC.pieces = MUSIC.byLevel = true; audio.scoreSet = setlistOf(setlistLevel(q.get('levelFile')), desk().kind(location.search) || null);   // (the level's own music)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   const hud = kitPicture ? null : new DrawHud(game, ask, canvas); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
@@ -332,7 +333,7 @@ async function main(): Promise<void> {
     lens();
   };
   const tick = (dt: number): void => {
-    if (thaw) { thaw = false; if (!net) { input.pressed.add('Paused'); input.pressed.add('Thawed'); } }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
+    if (thaw) { thaw = false; if (!net) { input.pressed.add('Paused' satisfies GameKey); input.pressed.add('Thawed' satisfies GameKey); } }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
     owed = false;   // (a card asked for another game, and this tick stands it, whatever else holds the world still)
     if (play) { if (!play.tick()) { played.paused = true; if (game.lost) lostWalk(); return; } }
     else if (net) { if (net.tick(input, cam, size, stopped(), told1)) { anew(); lens(); } }
@@ -505,5 +506,6 @@ const uncaught = (head: string, e: unknown): void => { if (document.getElementBy
 window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message) && !(ev.error instanceof GameLost)) uncaught('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost) && !(ev.reason instanceof TapeRefused)) uncaught('Unhandled promise rejection:', ev.reason); });
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
-const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
+const ready = main(), later = (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
+later.catch(e => { if (!(e instanceof TapeRefused)) throw e; });   // (a refusal is said on its card, and is nobody's error)
 ready.catch(e => { if (e instanceof TapeRefused) { refusedCard(e.message); return; } console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });

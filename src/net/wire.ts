@@ -10,6 +10,7 @@
 // Host-neutral: no DOM, no bun, no game.
 import { SeatInput } from '../draw/input';
 import { numWord, wordNum } from './numtext';
+import type { GameKey } from '../draw/names';
 import type { NetStart } from './start';
 
 /** `proto`: the wire's version (a hello of another is refused). `hz`: ticks a second (the fixed step's). `wordEvery`: ticks between state words. `lead`: how many
@@ -79,7 +80,7 @@ export function heldOf(w: WireCmd): WireCmd { return { k: w.k, n: edged(w.n, w.n
 export function idleOf(w: WireCmd): WireCmd { return { k: [], n: edged(w.n, 0, 0, 0) }; }
 /** THE HANDS COME OFF (a card went up over the player's game, his tab was hidden): nothing held, and the game's own one-tick word for it, 'Paused',
  *  so the tick that takes it lets go UNSENT what a button let go would have done — a held launcher's round, a held list's row */
-export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused'], n: edged(w.n, 0, 0, 0) }; }
+export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused' satisfies GameKey], n: edged(w.n, 0, 0, 0) }; }
 /** the record of a seat that has never sent one: nothing held, a plain view over the origin (the referee holds the look-at near the seat's own man) */
 export const FIRST: WireCmd = { k: [], n: inputNumbers({ mouse: [640, 360], size: [1280, 720, 1280, 720], target: [0, 0, 0], yaw: 0, pitch: 0.96, distance: 21, fov: 0.6, aspect: 16 / 9 }) };
 

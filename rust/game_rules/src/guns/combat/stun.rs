@@ -37,7 +37,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     if let Some(r) = l.radius {
         if js::truthy(r) { g.tab.light[light].radius = r; }
     }
-    if !crate::blast_feel::wall_report(g, at) { crate::audio_iface::game_audio_like_play(g, "stunBang", Some(at), Some(1.0), None); }
+    if !crate::blast_feel::wall_report(g, at) { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::StunBang, Some(at), Some(1.0), None); }
     crate::marks::bang_scorch(g, at);
     crate::destruction::destruction_bang(g, at, Some(who), Some(1.0), Some(!borrowed));
     if borrowed { crate::destruction::destruction_furn_blast(g, at, crate::furnblast::BlastSource::Door, Some(who)); }
@@ -46,7 +46,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         let c = g.pl[ears].ch;
         let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
         if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, at) < b.dazzle_radius && !crate::scene_collision::segment_blocked(g, v3::add(at, [0.0, 0.3, 0.0]), eye, None, None, None) {
-            crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.2 - v3::dist(eye, at) / b.dazzle_radius, 0.25, 0.8)), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::EarRing, None, Some(v3::clamp(1.2 - v3::dist(eye, at) / b.dazzle_radius, 0.25, 0.8)), None);
         }
     }
     let (time, serial) = (g.time, g.serial());

@@ -111,7 +111,7 @@ pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     g.arms[g.gd[gd].ch].fire_cd = 0.0;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    crate::audio_iface::game_audio_like_play(g, "equip", Some(pos), Some(0.45), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Equip, Some(pos), Some(0.45), None);
     true
 }
 
@@ -185,10 +185,10 @@ pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let beat = f.as_ref().map(|_| crate::character::ReloadBeat { dur: row.dur, out: row.out, in_: row.in_, rack: row.rack.map(Some), keep: None, hand: None, exact: row.exact });
     crate::character::anim_reload(g, c, Some(row.dur), beat);
     let pos = g.ch[c].pos;
-    crate::audio_iface::game_audio_like_play(g, "equip", Some(pos), Some(0.45), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Equip, Some(pos), Some(0.45), None);
     if f.as_ref().map_or(true, |f| f.kind == crate::gunreload::FeedKind::Mag) {
         let pos = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_play(g, "magOut", Some(pos), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(pos), Some(0.5), None);
     }
 }
 

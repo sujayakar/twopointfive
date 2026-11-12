@@ -18,7 +18,7 @@ use game_types::glasspen::PaneType;
 use game_types::knobs::Knobs;
 use game_types::v3;
 use alloc::vec::Vec;
-use crate::falls::{self, FallSound, FallTold};
+use crate::falls::{self, FallTold};
 use crate::glass::{classify_row, dice_out, site_of, GW_COLS, GW_CRATER, GW_DSEED, GW_FLAGS, GW_GOING, GW_N, GW_OPEN, GW_ROWS, GW_SEED, G_DICE, G_DICE_AT, G_GONE, G_RUN, G_SITE};
 use crate::lines::{self, ASK_GLASS};
 use crate::maths::{hypot2, hypot3, round_half_up};
@@ -574,17 +574,17 @@ fn landing(c: &mut Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3], tune: &K
     let plateable = !dice && !powder && a >= tune.shards.plate_min_area;
     let at = c.now + t;
     let soon = c.now + (t + 0.05);
-    let mut put = |t: f64, sound: FallSound, gain: f64, rate: f64, amount: f64, told: FallTold| {
+    let mut put = |t: f64, sound: Option<game_types::audio_iface::Sfx>, gain: f64, rate: f64, amount: f64, told: FallTold| {
         c.landings.push(falls::Landing { t, pos: p, sound, gain, rate, amount, who, told, level: 0.0, dust: 0.0 });
     };
     if powder {
-        put(soon, FallSound::GlassTinkle, 0.0, 1.0, a, FallTold::Never);
+        put(soon, Some(game_types::audio_iface::Sfx::GlassTinkle), 0.0, 1.0, a, FallTold::Never);
     } else if dice {
-        put(at, FallSound::GlassShatter, js_min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * hash01(f.seed as f64), a * 0.8, FallTold::IfItSounds);
+        put(at, Some(game_types::audio_iface::Sfx::GlassShatter), js_min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * hash01(f.seed as f64), a * 0.8, FallTold::IfItSounds);
     } else if f.kind == K_SHEET {
-        put(at, FallSound::GlassTinkle, if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, FallTold::Always);
+        put(at, Some(game_types::audio_iface::Sfx::GlassTinkle), if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, FallTold::Always);
     } else {
-        put(at, FallSound::GlassTinkle, if plateable { 0.0 } else { js_min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * hash01(f.seed as f64), a, FallTold::Always);
+        put(at, Some(game_types::audio_iface::Sfx::GlassTinkle), if plateable { 0.0 } else { js_min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * hash01(f.seed as f64), a, FallTold::Always);
     }
 }
 
@@ -1641,7 +1641,7 @@ pub fn heard_gap(p: &mut Panes, pane: u32, who: f64, now: f64, gap: f64) -> bool
 pub fn jet(c: &mut Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64, tune: &Knobs) {
     let v = [d[0] * (speed * 0.35), d[1] * (speed * 0.35), d[2] * (speed * 0.35)];
     let (t, p) = fall_of(c.w, at, v, c.gravity, 0.8, tune);
-    c.landings.push(falls::Landing { t: c.now + t, pos: p, sound: FallSound::GlassTinkle, gain: 0.0, rate: 1.0, amount, who, told: FallTold::Never, level: 0.0, dust: 0.0 });
+    c.landings.push(falls::Landing { t: c.now + t, pos: p, sound: Some(game_types::audio_iface::Sfx::GlassTinkle), gain: 0.0, rate: 1.0, amount, who, told: FallTold::Never, level: 0.0, dust: 0.0 });
 }
 /// a dicing pane's open threshold as the picture reads it: the midpoint between the last clump out and the next in
 pub fn dice_threshold(r: &Row) -> f64 {
@@ -1658,7 +1658,7 @@ pub fn dice_threshold(r: &Row) -> f64 {
 }
 
 // ---- a window's bar (the pieces it throws are the caller's)
-const F_BAR: u32 = 1 << 19;
+const F_BAR: u32 = game_types::scene_boxes::box_flag::BAR;
 const NO_SHADOW: u32 = crate::world::F_NO_SHADOW;
 /// is static `bi` a window's bar that still stands? (its row keeps NoShadow of the two bits a broken bar is hidden by)
 #[inline]

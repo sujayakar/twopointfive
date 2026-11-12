@@ -1,4 +1,5 @@
 // Keyboard + mouse state.
+import type { GameKey } from '../draw/names';
 import { gameCode, camKey, KEYMAP, SINK_LABEL } from './keymap';
 import { KEPT } from '../gpu/keep';   // (a leaf)
 export class Input {
@@ -75,7 +76,7 @@ export class Input {
       this.keys.add(code); this.heldAs.set(e.code, code);
     }, { capture: true });
     window.addEventListener('keyup', e => { if (e.code === this.camHeld) this.camHeld = ''; { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
-    window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
+    window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur' satisfies GameKey); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
     el.addEventListener('mousemove', e => { this.modsUp(e); const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock, so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) return; if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
@@ -98,8 +99,8 @@ export class Input {
   private modUp(phys: string) { const as = this.heldAs.get(phys); if (as === undefined) return; this.heldAs.delete(phys); if (as) this.keys.delete(as); if (this.camHeld === phys) this.camHeld = ''; }
   /** Give keyboard focus back to the game (the sink when embedded, else just drop focus from whatever button / field had it). */
   focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
-  down(code: string) { return this.keys.has(code); }
-  hit(code: string) { return this.pressed.has(code); }
+  down(code: GameKey) { return this.keys.has(code); }
+  hit(code: GameKey) { return this.pressed.has(code); }
   rmb() { return (this.buttons & 4) !== 0; }
   endFrame() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; this.wheelCtrl = 0; this.orbitDX = 0; }
   /** between two game ticks of one drawn frame (src/host/drawpage.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */
