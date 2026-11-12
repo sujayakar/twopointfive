@@ -184,7 +184,7 @@ const TAKEN = 'Another player has your seat.';
 export const CANT_PLAY = 'This page can’t play that game.';
 /** a server's goodbye before any welcome (wire.ts ByeCode), as the player is told it */
 function refusal(code: string): string {
-  return code === 'build' ? 'That game is on another version. Reload the page and join again.'
+  return code === 'build' || code === 'proto' ? 'That game is on another version. Reload the page and join again.'
     : code === 'seat' ? TAKEN
     : code === 'full' ? 'There’s no room left to watch that game.'
     : 'You can’t join that game.';
