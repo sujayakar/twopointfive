@@ -27,6 +27,7 @@ pub struct GuardScript {
     pub hot: Option<bool>,
     pub flinch: Option<bool>,
     pub direct: Option<bool>,
+    #[bytes(skip)]
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
     /// dealt at the one place a man's own script is made (`squad::order`, when he has none). What runs a step of his script asks by it whether the script it began with is still his. A lent script (frag, runner, morale, startle) stays 0: his own goes back before anything can read it here

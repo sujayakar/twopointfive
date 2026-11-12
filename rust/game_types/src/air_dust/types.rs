@@ -6,9 +6,13 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AirDust {
     #[is(true)] pub dirty: bool,
+    #[bytes(skip)]
     pub drift: f64,
+    #[bytes(skip)]
     #[is(alloc::vec![0.0; 4480])] pub gpu: Vec<f32>,
+    #[bytes(skip)]
     pub seeded: bool,
+    #[bytes(skip)]
     #[is(crate::air_dust::AirDustStats { roofed: 0.0, edges: 0.0 })] pub stats: crate::air_dust::AirDustStats,
 }
 

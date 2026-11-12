@@ -691,6 +691,7 @@ pub struct Anim {
     pub grip_can: bool,
     #[is(crate::character::AnimHn { nodes: Vec::new(), fist: Vec::new(), own: Vec::new(), open: Vec::new(), trig: alloc::vec![0.0; 12], thumb: alloc::vec![alloc::vec![0.0; 12], alloc::vec![0.0; 12]], base: alloc::vec![alloc::vec![0.0; 60], alloc::vec![0.0; 60]], note: alloc::vec![alloc::vec![0.0; 5], alloc::vec![0.0; 5]], seed: 0.0, built: f64::NAN, quiet: false, grip: alloc::vec![0.0, 0.0], off: 1.0, fired: 9.0, gun: 0.0 })] pub hn: crate::character::AnimHn,
     pub nodes: crate::character::AnimNodes,
+    #[bytes(skip)]
     #[is(PoseSetId(0))] pub poses: PoseSetId,
     #[is(RigId(0))] pub rig: RigId,
     pub nv: Option<crate::character::AnimNv>,
@@ -705,9 +706,13 @@ pub struct Anim {
     #[is(true)] pub act_loop: bool,
     #[is(crate::character::MvGait { live: false, g: 0.0, u: 0.0, st: 0.0 })] pub mv_out: crate::character::MvGait,
     #[is(crate::character::AnimMvPo { stw: 0.0, stn: 1.0, dzw: 0.0, gun: false, gun_p: [0.0, 0.0, 0.0], gun_r: [0.0, 0.0, 0.0, 1.0] })] pub mv_po: crate::character::AnimMvPo,
+    #[bytes(skip)]
     pub fk_legs: Vec<i32>,
+    #[bytes(skip)]
     pub fk_arms: Vec<i32>,
+    #[bytes(skip)]
     pub fk_head: Vec<i32>,
+    #[bytes(skip)]
     pub cast: crate::anim_skeleton::LayerCast,
     pub hn_flat: Option<Vec<f64>>,
     #[is(f64::NAN)] pub hn_flat_of: f64,
@@ -1367,8 +1372,10 @@ pub struct Character {
     /// whose man he is
     pub team: crate::teams::Team,
     /// his row of the block's men. None (0xffffffff) once he has left, or for a man of no game
+    #[bytes(skip)]
     #[is(0xffffffff)] pub man_row: u32,
     /// owner, rank, reason, since of a man with no row: the numbers he took with him (`man_leaves`)
+    #[bytes(skip)]
     pub man_kept: Option<[f64; 4]>,
 }
 
@@ -2465,6 +2472,7 @@ pub struct CharacterCapsules {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CharacterMod {
     #[is(crate::character::CharacterModHOLDSHOW { beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
+    #[bytes(skip)]
     pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
 }
 

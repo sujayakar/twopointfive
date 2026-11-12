@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 
 /// A POSE IS A HANDLE: its place in the pool of rust/sim's block (poses.rs new_of, holds) and how many nodes it has. Its columns are reached by functions that take g. rust/sim's layers reach it by its place
 #[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
-pub struct Pose { pub at: u32, pub nodes: u32 }
+pub struct Pose { #[bytes(skip)] pub at: u32, #[bytes(skip)] pub nodes: u32 }
 impl Pose {
     pub fn blank() -> Self { Pose { at: 0, nodes: 0 } }
 }
@@ -98,6 +98,7 @@ pub struct AnimSkeletonMod {
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
     #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { roles: None, names: None })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
+    #[bytes(skip)]
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
 }
 

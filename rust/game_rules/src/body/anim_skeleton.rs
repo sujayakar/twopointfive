@@ -234,7 +234,7 @@ fn cols_of(g: &mut crate::game::Game, p: Pose) -> &'static mut [f32] {
 }
 
 /// A pose's singles wherever they are, to read.
-fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
+pub fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
     if p.nodes != 0 && p.at >= Pose::LOOSE {
         let n = ::sim::skeleton::singles(p.nodes as usize);
         if let Some(r) = g.loose_poses.get((p.at - Pose::LOOSE) as usize) {
