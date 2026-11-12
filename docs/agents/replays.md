@@ -90,7 +90,8 @@ a save during a response, with Sam down, after the run or with two players. An a
 last.
 
 **A restart.** A restart is the road a load goes. The controller holds the level as it stands before the men (`keep_level`). `control::restart` puts it
-back, writes `Survivors` under the men, runs the stand's own lines (`standing::stand_men`), then writes the switches, the tune and each lens over them.
+back, writes `Survivors` under the men, runs the stand's own lines (`standing::stand_men`), then writes the switches and each lens over them. The tables
+of numbers are the first moment's, as a load's are the save's; what the player turned the page turns again by name after either (`turnAgain`).
 Nothing else goes over, so a new field needs no reset line, and one that must outlive a try goes in `Survivors`. Only serials and `event_seq` go on.
 
 **Across builds.** A kept row names the module it was played on (the file's ETag, `src/host/face.ts`). On that module any mark that differs ends the

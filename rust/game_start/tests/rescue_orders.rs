@@ -5,10 +5,7 @@ use game::orders::Who;
 use game_start::play::{dist, Opts, Play};
 
 fn stood(s: u32, set: f64) -> Play {
-    let mut p = Play::mission("office.json", "?levelFile=office.json&rescue", &Opts { seed: s, squad: 2, ..Default::default() });
-    p.sam_unhurt();
-    p.rescue_quiet_floor();
-    p.rescue_on(99.0, 99.0, set);
+    let mut p = rescue_of(&Opts { seed: s, squad: 2, ..Default::default() }, 99.0, 99.0, set, true);
     p.run(0.3);
     p
 }

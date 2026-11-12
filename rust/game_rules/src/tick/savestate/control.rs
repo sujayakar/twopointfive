@@ -346,13 +346,15 @@ pub fn kept_of(stood: u32) -> Vec<(String, Kept)> {
     of
 }
 
-/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the tune, the men's kit, the die, whatever hands out a number, the tallies, the tables as they are now and how far each lens is out. Row numbers go back with the game
+/// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the men's kit, the die, whatever hands out a number, the tallies
+/// and how far each lens is out. The tables of numbers are the first moment's (what they ship at, the address, the difficulty and the rows this machine keeps), before a man stood: what a
+/// mission's script wrote in the try is the try's. What the player turned in it the page turns again, by name, as after a load.
 pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, aside: bool,
-    tune: crate::knobs::TuneK, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
-    kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
+    props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
+    kit: crate::kit::KitMod, pending: Option<crate::quiet::QuietDeal>,
     dice: crate::dice::Draws, fx_seed: f64, roll_seq: f64, event_seq: f64,
-    saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
+    saves_on: bool, stats: crate::game::Stats, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
     shown: Option<SeatId>, remote: Vec<bool>,
 }
@@ -360,30 +362,26 @@ impl Survivors {
     pub fn of(g: &Game) -> Survivors {
         Survivors {
             god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, aside: g.aside,
-            tune: g.k.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
-            kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
+            props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
+            kit: g.m.kit.clone(), pending: g.quiet.pending.clone(),
             dice: g.dice, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
-            saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
+            saves_on: g.saves.enabled, stats: g.stats.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
             shown: g.local_seat, remote: g.seats.iter().map(|&s| g.tab.cmd_seat[s].remote).collect(),
         }
     }
-    /// what the men's lines read and write on: the tables, the die, the counts and what the host is owed. They go on from here, so this is written once, before them
+    /// what the men's lines read and write on: the die, the counts and what the host is owed. They go on from here, so this is written once, before them
     fn write_under(&self, g: &mut Game) {
         put_cards(g, self.kit.clone());
-        g.m.difficulty = self.difficulty.clone();
         g.quiet.pending = self.pending.clone();
         (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice, self.fx_seed, self.roll_seq, self.event_seq);
-        // (the switches of the tune are the first moment's until the men stand: `write_over`)
-        let tune = g.k.tune;
-        (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
-        g.k.tune = tune;
+        (g.stats, g.out, g.cmd_buf) = (self.stats.clone(), self.out.clone(), self.cmd_buf.clone());
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses,
     /// whose hands come from another machine
     fn write_over(&self, g: &mut Game) {
         (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.aside) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.aside);
-        (g.k.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune.clone(), self.props_on, self.friction, self.fog_on, self.fog_viewer);
+        (g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.props_on, self.friction, self.fog_on, self.fog_viewer);
         g.saves.enabled = self.saves_on;
         let cams: Vec<_> = g.tab.camera.ids().collect();
         for (c, (d, want)) in cams.into_iter().zip(self.lens.iter()) { g.tab.camera[c].distance = *d; g.tab.camera[c].desired_distance = *want; }
@@ -396,8 +394,6 @@ pub fn ask_restart(g: &mut Game) { g.saves.again = true; }
 pub fn restart(g: &mut Game) -> bool {
     let of = stood(g);
     let Some(first) = held(of).first.clone() else { return false };
-    // (the switches a quiet run took are its own, and an evening keeps what stood under them)
-    crate::quiet::quiet_mission_release(g);
     let was = Survivors::of(g);
     let host = (g.host_cam, g.host_input);
     let mut new = first.image.laid();
@@ -425,15 +421,12 @@ fn put_cards(g: &mut Game, kit: crate::kit::KitMod) {
 pub fn again(g: &mut Game, size: Option<u32>) -> bool {
     let of = stood(g);
     let (Some(first), Some(stage)) = (held(of).first.clone(), held(of).stage.clone()) else { return false };
-    let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
+    let (kit, out, cmd) = (g.m.kit.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
     let mut new = first.image.laid();
     new.serial_next = new.serial_next.max(g.serial_next);
     stand(g, new);
     put_cards(g, kit);
-    // (the tune is the first moment's: a stage sets its own switches as it is staged)
-    let tune = g.k.tune;
-    (g.k, g.out, g.cmd_buf) = (k, out, cmd);
-    g.k.tune = tune;
+    (g.out, g.cmd_buf) = (out, cmd);
     // (a mission that refuses leaves the plain floor, and a stage on it is a picture of nothing)
     let mut men = first.men.clone();
     if let (Some(n), Some(q)) = (size, men.words.as_mut()) { q.set("squad", &alloc::format!("{n}")); }
