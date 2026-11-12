@@ -644,6 +644,8 @@ pub fn way_priced<G: core::ops::Deref<Target = Game>>(g: G, a: V3, b: V3, max_it
     let n = sim::nav::start_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k).unwrap_or_else(|| sim::nav::priced(&mut |c| price(&mut g, (c % nw) as f64, (c / nw) as f64)));
     way_of(n, a, b)
 }
+/// a call of this module's was stopped in its middle (a panic): no search is under way
+pub fn searches_afresh() { sim::nav::afresh(); }
 /// …for a host, that asks it of places of its own: one that is no number has no way
 pub fn way_host(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
     let n = search(g, a, b, max_iter as f64);
