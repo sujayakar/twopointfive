@@ -8,6 +8,8 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Covers, Is::Resumed, Is::KeepsLane, Is::WalksLow],
+    targets: &[TargetKind::Floor, TargetKind::Door],
+    ack: &["covering.", "i've got it."],
     can: Some(can),
     ..Row::new("cover", label, issue)
 };

@@ -7,6 +7,10 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
+    targets: &[TargetKind::Floor, TargetKind::Door, TargetKind::None],
+    listed: Some(&[TargetKind::Floor, TargetKind::None]),
+    ack: &["going.", "moving."],
+    word: true,
     only: Some(only),
     valid: Some(valid),
     notes: Some(crate::doortools::door_tools_word_note),

@@ -26,7 +26,7 @@ pub struct RingState {
 pub struct FlatRow {
     pub id: String,
     pub word: bool,
-    pub free: Option<bool>,
+    pub free: bool,
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
 }

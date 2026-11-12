@@ -7,6 +7,9 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
+    targets: &[TargetKind::Door],
+    page: Some(crate::doortools::HELD_PAGE),
+    word: true,
     only: Some(only),
     valid: Some(valid),
     ..Row::new("thrWord", label, issue)

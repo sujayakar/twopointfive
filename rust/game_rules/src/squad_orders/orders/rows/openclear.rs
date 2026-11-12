@@ -9,6 +9,9 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Enters],
+    targets: &[TargetKind::Door],
+    ack: &["on it.", "moving."],
+    page: Some(crate::doortools::TOOLS_PAGE),
     only: Some(crate::doortools::row_held_or_all),
     valid: Some(valid),
     ..Row::new("openClear", label, issue)

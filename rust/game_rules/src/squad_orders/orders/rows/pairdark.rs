@@ -7,6 +7,9 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair],
+    targets: &[TargetKind::Floor],
+    ack: &["moving.", "on it."],
+    stands_in: Some(rows::movethere::ORDER.id),
     can: Some(can),
     tick: Some(crate::pairorders::pair_orders_dark_tick),
     when: Some(when),

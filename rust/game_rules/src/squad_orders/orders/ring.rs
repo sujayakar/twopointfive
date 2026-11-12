@@ -429,8 +429,8 @@ fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
     let d = &g.tab.orders_order_def[id];
     crate::cmdring::FlatRow {
         id: d.id.clone(),
-        word: d.word,
-        free: d.free,
+        word: d.row.word,
+        free: d.row.free,
         targets: d.targets.iter().map(|k| String::from(k.as_str())).collect(),
         listed: d.listed.as_ref().map(|l| l.iter().map(|k| String::from(k.as_str())).collect()),
     }

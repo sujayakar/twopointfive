@@ -329,44 +329,26 @@ pub struct GiveOpts {
     pub men: Option<Vec<GuardId>>,
 }
 
+/// AN ORDER'S ROW ON A SQUAD'S MENU, as it stands there: the row it is of says the rest
 #[derive(Clone, Debug, ToBytes)]
 pub struct OrderDef {
     pub id: String,
-    /// what it does: its label, who it is for, what it asks and hands out (orders/rows/)
+    /// what it is: what it can be given on, its words, who it is for, what it asks and hands out (orders/rows/)
     /// (code: in no bytes)
     #[bytes(skip)]
     pub row: &'static crate::orders::Row,
+    /// what it can be given on now (a pair's men can be sent to a man)
     pub targets: Vec<crate::orders::TargetKind>,
-    /// the name of the rows this one is among: they're listed where a row that opens the name is
+    /// the name of the rows it is among: they're listed where a row that opens the name is (a stand-in is where the row it stands in for is)
     pub page: Option<String>,
-    pub opens: Option<String>,
     pub listed: Option<Vec<crate::orders::TargetKind>>,
-    /// the word's own row: F gives it with the ring up, and it has no wedge
-    pub word: bool,
-    pub ack: Option<Vec<String>>,
-    pub free: Option<bool>,
-    pub stands_in: Option<crate::orders::OrderDefStandsIn>,
+    /// the row it stands in for (none: that one is not on the menu)
+    pub stands_in: Option<String>,
 }
 impl Default for OrderDef {
     fn default() -> Self {
-        OrderDef {
-            id: String::new(),
-            row: &crate::orders::Row::NONE,
-            targets: Vec::new(),
-            page: None,
-            opens: None,
-            listed: None,
-            word: false,
-            ack: None,
-            free: None,
-            stands_in: None,
-        }
+        OrderDef { id: String::new(), row: &crate::orders::Row::NONE, targets: Vec::new(), page: None, listed: None, stands_in: None }
     }
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct OrderDefStandsIn {
-    pub for_: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -568,6 +550,20 @@ pub struct Row {
     pub id: &'static str,
     /// what the rules that do not know it by name need to know of it
     pub is: &'static [Is],
+    /// what it can be given on, and where the menu lists it if that is elsewhere
+    pub targets: &'static [TargetKind],
+    pub listed: Option<&'static [TargetKind]>,
+    /// what a man says to it, by turns (nothing: he says nothing)
+    pub ack: &'static [&'static str],
+    /// the name of the rows it is among, and the one it opens (it is then no order but a row that opens those)
+    pub page: Option<&'static str>,
+    pub opens: Option<&'static str>,
+    /// the word's own row: F gives it with the ring up, and it has no wedge
+    pub word: bool,
+    /// it takes nobody off what they are at
+    pub free: bool,
+    /// the row it stands in for while `when` says so
+    pub stands_in: Option<&'static str>,
     pub label: fn(&mut Game, &OrderTarget) -> String,
     pub can: Option<fn(&mut Game, GuardId, &OrderTarget) -> Option<String>>,
     pub only: Option<fn(&mut Game, &[GuardId], &OrderTarget) -> Vec<GuardId>>,
@@ -586,7 +582,7 @@ impl Row {
     /// An order with the three things every order has. The rest are `None` until its file says otherwise:
     /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
     pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
-        Row { id, is: &[], label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None, notes: None }
+        Row { id, is: &[], targets: &[], listed: None, ack: &[], page: None, opens: None, word: false, free: false, stands_in: None, label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None, notes: None }
     }
 }
 fn none_label(_g: &mut Game, _t: &OrderTarget) -> String { String::new() }

@@ -6,6 +6,8 @@ use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Floor],
+    free: true,
     only: Some(only),
     valid: Some(valid),
     notes: Some(crate::squadsmoke::notes),

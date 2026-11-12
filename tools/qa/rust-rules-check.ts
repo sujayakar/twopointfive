@@ -17,7 +17,7 @@ type Side = 'gameplay' | 'dressing' | 'both';
 const SIDES: Record<string, Side> = { prim: 'both', maths: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_start: the game's own start, a level file's text in and a Game out, and what a host does round a step · game_face: the module a host loads)
 /** what a line of rust/sim may not say */
 const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
-  { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
+  { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (rust/maths), the same bits on every machine' },
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
   { re: /relaxed[-_]|_relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },

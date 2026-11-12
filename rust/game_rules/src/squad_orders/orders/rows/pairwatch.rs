@@ -7,6 +7,8 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair],
+    targets: &[TargetKind::Foe],
+    ack: &["eyes on him.", "i've got him."],
     can: Some(can),
     valid: Some(valid),
     tick: Some(tick),

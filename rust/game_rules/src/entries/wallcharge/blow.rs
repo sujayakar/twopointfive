@@ -403,7 +403,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
         return;
     }
     if let Some(rows) = g.groups[g.group].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
-        if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
+        if rows.iter().any(|&d| g.tab.orders_order_def[d].row.word) { return; }
     }
     let sam = g.player_pos(g.player);
     let c = match wall_charge_nearest(g, Some(&mut |g: &mut Game, x: WallChargeId| wall_charge_key_is(g, &crate::seats::here(g), x))) { Some(c) => c, None => return };

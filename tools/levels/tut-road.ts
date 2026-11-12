@@ -44,7 +44,7 @@ import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END,
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-road';
-export const NOTES = 'The tutorial\'s first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post\'s wall and gateway, the hut, the sandbags under a machine gun, the roadblock\'s wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road';
+export const NOTES = 'The tutorial\'s first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post\'s wall and gateway, the hut, the sandbags under a machine gun, the roadblock\'s wall, the upper gate). Its fights are staged by the game\'s script of its name. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 
 const HALF = Math.PI / 2;
@@ -522,7 +522,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const p of WALL_FACE) on(`the roadblock wall's far face (${p})`, Math.abs(p[2] - (COVER_Z - 0.13)) < 0.05 && p[0] > RB_WALL.x0 + 0.3 && p[0] < RB_WALL.x1 - 0.6);
     on('the nook is behind its wall', HUT_NOOK[0] > NOOK_WALL.x + 0.4 && HUT_NOOK[0] < HUT.x1 - 0.4 && HUT_NOOK[2] < NOOK_WALL.z1 - 0.6);
     on('his mark is behind the boards', HUT_MARK[0] > PLANKS.x + 0.4 && HUT_MARK[2] < PLANKS.z1 - 0.55 && HUT_MARK[2] > NOOK_WALL.z1 + 0.1 && Math.hypot(HUT_MARK[0] - (NOOK_WALL.x - 0.12), HUT_MARK[2] - NOOK_WALL.z1) > 0.3);
-    if (bad.length) throw new Error(`tut-road: the script's places (levels/tut-road.script.ts) are off this floor: ${bad.join(' · ')}`); }
+    if (bad.length) throw new Error(`tut-road: the script's places are off this floor: ${bad.join(' · ')}`); }
   const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'hut', name: 'hut door' }, { door: 'gate', name: 'upper gate' }],
     places: { areas: [{ name: 'the road', bounds: { x0: 0, x1: POST.x0, z0: ROAD.z0, z1: ROAD.z1 } }, { name: 'the gateway', bounds: { x0: POST.x0, x1: HUT.x0, z0: ROAD.z0, z1: ROAD.z1 } },
       { name: 'the roadblock', bounds: { x0: HUT.x1, x1: POST.x1, z0: ROAD.z0, z1: ROAD.z1 } }] } };

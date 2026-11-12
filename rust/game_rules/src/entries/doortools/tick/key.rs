@@ -24,7 +24,7 @@ fn word_given(g: &mut Game) { g.groups[g.group].tools.word_key_t = g.time; }
 /// The word's row of the menu that is up.
 fn word_row(g: &Game) -> Option<usize> {
     let menu = g.groups[g.group].orders.menu.as_ref()?;
-    menu.rows.iter().position(|&d| g.tab.orders_order_def[d].word)
+    menu.rows.iter().position(|&d| g.tab.orders_order_def[d].row.word)
 }
 fn give_go(g: &mut Game, men: &[GuardId]) -> bool {
     let p = g.seat_pos(&crate::seats::here(g));

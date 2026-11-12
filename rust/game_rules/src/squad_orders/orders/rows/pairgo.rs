@@ -7,6 +7,9 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair],
+    targets: &[TargetKind::Floor, TargetKind::Door, TargetKind::None, TargetKind::Foe],
+    word: true,
+    free: true,
     only: Some(only),
     valid: Some(valid),
     notes: Some(crate::pairorders::pair_orders_mark_note),

@@ -7,6 +7,8 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::Pair, Is::Take],
+    targets: &[TargetKind::Foe],
+    ack: &["on him.", "moving up on him."],
     can: Some(crate::pairorders::row_take_can),
     only: Some(crate::pairorders::row_take_only),
     valid: Some(crate::pairorders::row_take_valid),
