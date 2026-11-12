@@ -17,7 +17,7 @@ import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
-import { FIRST, inputNumbers, type WireCmd } from '../../src/net/wire';
+import { FIRST, NET, inputNumbers, type WireCmd } from '../../src/net/wire';
 import { SeatLine } from '../../src/net/timeline';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
@@ -108,6 +108,11 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
   key('keydown', 'ShiftLeft', true); I.endFrame(); key('keydown', 'Enter', true); key('keyup', 'ShiftLeft', false); key('keyup', 'Enter', false);
   const [held, down] = sampleHand(game.numbersOf(), I, cam, canvas).split('\n'); I.endFrame(); const [after] = sampleHand(game.numbersOf(), I, cam, canvas).split('\n');
   line(held.split(' ').includes('ShiftLeft') && down === 'Enter' && after === '', 'two keys let go before a tick took them are taken together, and then are up', `held ${held || 'nothing'}, down ${down || 'nothing'}, then ${after || 'nothing'}`); if (had === undefined) delete G.window; }
+// a page left open across a change of the wire knocks at a server that speaks the new one
+{ const G = globalThis as Record<string, unknown>, had = G.WebSocket; G.WebSocket = class { readyState = 1; onopen?: () => void; onmessage?: (e: { data: string }) => void; constructor() { setTimeout(() => this.onopen?.(), 0); }
+    send(t: string): void { server.message({ send: x => { this.onmessage?.({ data: x }); return 1; }, close: () => { /* */ } }, JSON.stringify({ ...JSON.parse(t) as object, proto: NET.proto - 1 })); } close(): void { /* */ } };
+  const old = new NetDoor('ws://here', 'g', 'a', 'Ada'); await old.open(); G.WebSocket = had;
+  line(old.client.byeCode === 'proto' && /Reload the page/.test(old.refuse), 'a page of an older wire is told to reload', old.refuse); }
 // asleep for four seconds, and back
 { const ok = c.wordsOk, was = seen, ticks = game.ticks; asleep = true; run(240); asleep = false; let n = 0; while (c.behind > 2 && n++ < 100) beat(); run(30);
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
