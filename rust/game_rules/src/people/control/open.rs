@@ -23,7 +23,7 @@ impl Reaction for Rule {
 
     fn propose(g: &Game, gd: GuardId) -> Option<LeavePost> {
         let r = super::state(g)?.rows.open.get(gd)?;
-        let pace = g.tune.guard_investigate * g.k.suppression.displace_pace;
+        let pace = g.k.tune.guard_investigate * g.k.suppression.displace_pace;
         let at = g.pos_of(gd);
         let aim = Some([r.from[0], 1.1, r.from[2]]);
         Some(LeavePost::On(Leg { cover: true, face: Some(v3::yaw_to(at, r.from)), aim, ..Leg::to(r.to?, pace) }))

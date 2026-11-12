@@ -24,9 +24,9 @@ fn marks_door(g: &Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
 // ---------------------------------------------------------------- the calls
 /// What this call gets: the way in, how many, how long, off the game's own die.
 pub(super) fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
-    let qrf_eta = g.tune.qrf_eta;
+    let qrf_eta = g.k.tune.qrf_eta;
     let r = response_of(g);
-    let sandbox = v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0);
+    let sandbox = v3::clamp(m::round(g.k.tune.qrf_size), 2.0, 4.0);
     let r = match r {
         Some(r) if reason != crate::qrf::QrfReason::Panel => r,
         _ => return crate::qrf::Dealt { way: 0.0, men: sandbox, eta: qrf_eta },
@@ -154,8 +154,8 @@ fn callers_hear(g: &mut crate::game::Game, at: V3) {
 /// Nobody has been asked for yet: a raid's callers, the silent net, then gunfire or bodies under an alarm ask for the team.
 fn before_the_call(g: &mut crate::game::Game, rd: bool) {
     use crate::qrf::QrfReason;
-    if !g.tune.qrf || !live(g) || !g.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
-    if !g.tune.qrf || !live(g) { return; }
+    if !g.k.tune.qrf || !live(g) || !g.k.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
+    if !g.k.tune.qrf || !live(g) { return; }
     if rd {
         if !raid_over(g) && g.time - g.qrf.loud_t < LOUD_MEMORY_SECS && raid_voice(g).is_some() && !request_qrf(g, QrfReason::Gunfire) {
             g.qrf.raid_t = -1e9;
@@ -163,7 +163,7 @@ fn before_the_call(g: &mut crate::game::Game, rd: bool) {
         }
         return;
     }
-    if g.tune.qrf_silent && silent_net(g) { return; }
+    if g.k.tune.qrf_silent && silent_net(g) { return; }
     if crate::guards::escalation_of(g) < 2.0 { return; }
     if g.time - g.qrf.loud_t < LOUD_MEMORY_SECS { request_qrf(g, QrfReason::Gunfire); }
     else if bodies_found(g) >= 2.0 { request_qrf(g, QrfReason::Bodies); }
@@ -171,7 +171,7 @@ fn before_the_call(g: &mut crate::game::Game, rd: bool) {
 
 /// How many are wanted: what was dealt, or the sandbox's own number.
 fn team_size(g: &crate::game::Game) -> f64 {
-    if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) }
+    if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.k.tune.qrf_size), 2.0, 4.0) }
 }
 
 /// The call was asked for long enough ago: the team is rolling, and control says how many, by where and how long.

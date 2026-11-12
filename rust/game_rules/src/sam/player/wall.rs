@@ -398,7 +398,7 @@ pub(super) fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64
     wall_voice(g, w, false);
     if ml > 0.0 {
         if -(mx * w.n[0] + mz * w.n[2]) < 0.5 {
-            let pace = if g.pl[pl].crouch { crouch_pace(g) } else { g.tune.player_walk };
+            let pace = if g.pl[pl].crouch { crouch_pace(g) } else { g.k.tune.player_walk };
             g.pl[pl].speed_sm = m::max(m::abs(w.v), 0.8 * pace * g.pl[pl].pace);
         }
     } else if how == WallStepOffHow::Q {

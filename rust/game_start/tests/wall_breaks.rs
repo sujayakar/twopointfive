@@ -14,7 +14,7 @@ fn rooms(s: u32) -> Play {
     sc.room("west", 10.0, 8.0, 18.0, 18.0).room("east", 18.0, 8.0, 26.0, 18.0).door("yard", Axis::Z, 10.0, 15.4);
     sc.sam(2.25, 2.25);
     let mut p = scene_with(&sc, vec![a_box_of("crate", [14.0, 0.8, 12.0], [0.2, 0.8, 0.6], "white", "wood")], &Opts { seed: s, ..Default::default() });
-    p.g.god_mode = true; p.g.ai_enabled = false; p.g.tune.chaos = 0.5;
+    p.g.god_mode = true; p.g.ai_enabled = false; p.g.k.chaos.def = 0.5;
     p.run(0.1);
     p
 }

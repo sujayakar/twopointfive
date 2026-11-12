@@ -133,7 +133,7 @@ fn vsKind(vi: u32) -> VOut {
     mode = 0.0; softR = 0.03;
   } else if (kind == P_DUST) {
     width = 2.0 * p.size * (1.0 + k1.z * u);            // diameter, growing
-    mode = 2.0; opacity = k1.w * (1.0 - u) * (1.0 - u) * smoothstep(0.0, max(k1.x, 1e-3), p.age); softR = max(width * 0.25, 0.05) * k1.y;   // (k1.x = fade-in s 0.06, k1.y = softness × 1: params.dust's look slots — rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK)
+    mode = 2.0; opacity = k1.w * (1.0 - u) * (1.0 - u) * smoothstep(0.0, max(k1.x, 1e-3), p.age); softR = max(width * 0.25, 0.05) * k1.y;   // (k1.x = fade-in s, k1.y = softness: params.dust's look slots, the knobs `dust_look`)
     opacity *= steamOf(p.color);                        // STEAM (src/picture/snow/breath.ts): a breath's own share of the puff's opacity — 1 for every other puff
   } else {                                             // debris / casing: a motion streak in flight, a dash at its resting angle once down
     let halfLen = p.size * select(0.55 * max(1.0, unpack2x16float(p.aux).x), 2.0, kind == P_CASING);   // a chip is barely longer than wide (× its aspect: a splinter is three chips long); a case is four diameters long

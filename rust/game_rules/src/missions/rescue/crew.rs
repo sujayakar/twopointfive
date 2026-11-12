@@ -603,7 +603,7 @@ fn turn_him_loose(g: &mut Game, h: GuardId, to: V3) {
 
 /// Off his post on the room fight's 'move'.
 fn rescue_crew_move(g: &mut crate::game::Game, f: RoomfightDefId, goal: V3, by: Option<DoorId>) {
-    let pace = g.tune.guard_chase + 0.3;
+    let pace = g.k.tune.guard_chase + 0.3;
     crate::roomfight::send(g, f, crate::roomfight::Leg { by, ..crate::roomfight::Leg::to(goal, pace) }, crate::owner::by::MISSION);
 }
 

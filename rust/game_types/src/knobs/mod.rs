@@ -100,6 +100,14 @@ mod rails; pub use rails::*;
 mod rearwatch; pub use rearwatch::*;
 mod rescue; pub use rescue::*;
 mod rescueend; pub use rescueend::*;
+mod tune; pub use tune::*;
+mod blast_feel; pub use blast_feel::*;
+mod edge_look; pub use edge_look::*;
+mod fixture_break; pub use fixture_break::*;
+mod pfx; pub use pfx::*;
+mod dust; pub use dust::*;
+mod dust_look; pub use dust_look::*;
+mod tracers; pub use tracers::*;
 mod rescueflow; pub use rescueflow::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
@@ -302,6 +310,14 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflow: RescueflowK,
+    pub tracers: TracersK,
+    pub dust_look: DustLookK,
+    pub dust: DustK,
+    pub pfx: PfxK,
+    pub fixture_break: FixtureBreakK,
+    pub edge_look: EdgeLookK,
+    pub blast_feel: BlastFeelK,
+    pub tune: TuneK,
     pub rescueflush: RescueflushK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,

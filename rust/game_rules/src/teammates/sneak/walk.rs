@@ -250,7 +250,7 @@ pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: Guard
 /// The eye's rate on a man on a step: the arithmetic of sight_gain_on.
 fn eye_rate(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: Option<bool>) -> f64 {
     let low = low.unwrap_or(true);
-    let mut rate = g.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
+    let mut rate = g.k.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
     if dist < 1.8 { rate = m::max(rate, 3.5); }
     let st = g.gd[h].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search { rate * 2.2 } else { rate }

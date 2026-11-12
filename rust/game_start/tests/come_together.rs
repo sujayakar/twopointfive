@@ -39,7 +39,7 @@ fn a_squads_men_are_there_together() {
             if p.until(6.0, |p| p.g.tab.enemysquads_squad.iter().any(|(_, q)| q.due.len() >= 2)).is_none() { continue; }
             let due: Vec<(GuardId, f64, [f64; 2])> = p.g.tab.enemysquads_squad.iter().find(|(_, q)| q.due.len() >= 2).map(|(_, q)| q.due.iter().map(|d| (d.gd, d.t, [d.at[0], d.at[2]])).collect()).unwrap();
             let now = p.time();
-            let pace = p.g.tune.guard_chase;
+            let pace = p.g.k.tune.guard_chase;
             let there: Vec<(f64, f64)> = due.iter().map(|&(m, t, to)| (t + walk(&mut p, m, to) / pace, t - now)).collect();
             let last = there.iter().map(|x| x.0).fold(0.0, f64::max);
             for &(arrives, leaves_in) in &there { assert!(last - arrives < 0.3 || leaves_in > 5.0, "{level}, seed {s}: one is there {:.1} s before the last, and left after {leaves_in:.1} s", last - arrives); }

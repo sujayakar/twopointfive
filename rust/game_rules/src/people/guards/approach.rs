@@ -273,7 +273,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
     g.gd[gd].pieing = Some(p);
     let mut out = speed;
     if before < PIE_SLOW_M + 0.3 && before > -0.1 {   // the brake: a stride and he is at a walk
-        out = m::min(speed, g.tune.guard_walk);
+        out = m::min(speed, g.k.tune.guard_walk);
         if g.gd[gd].speed > out { g.gd[gd].speed = v3::damp(g.gd[gd].speed, out, 14.0, dt); }
     }
     // the look pivots about the near jamb's edge: the slice round past the far jamb as he closes, then, stepping through, hard back to the corner behind the near jamb

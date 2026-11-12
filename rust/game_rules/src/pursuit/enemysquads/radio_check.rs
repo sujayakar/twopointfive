@@ -501,7 +501,7 @@ fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
 }
 /// A looker's leg: a scripted leg, at the pace of a man going to look.
 pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let pace = g.tune.guard_investigate;
+    let pace = g.k.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::SQUAD_LEG);
 }
 

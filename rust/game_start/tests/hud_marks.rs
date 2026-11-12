@@ -103,7 +103,7 @@ fn the_mark_over_a_man_says_what_he_is() {
         assert_eq!(shown(&p, mate), ("".into(), HeadTone::Calm), "seed {}: no '?' over a man of your own", seed);
         set(&mut p, foe, GuardState::Alert, 1.0);
         assert_eq!(shown(&p, foe), ("!".into(), HeadTone::Alert), "seed {}", seed);
-        p.g.tune.aim_model = true; p.g.arms[p.g.gd[foe].ch].aim.track = 1.0;
+        p.g.k.tune.aim_model = true; p.g.arms[p.g.gd[foe].ch].aim.track = 1.0;
         assert_eq!(shown(&p, foe), ("◎!".into(), HeadTone::Alert), "seed {}: he has you lined up", seed);
         set(&mut p, mate, GuardState::Alert, 1.0); p.g.arms[p.g.gd[mate].ch].aim.track = 1.0;
         assert_eq!(shown(&p, mate), ("!".into(), HeadTone::Alert), "seed {}: never the '◎' of a man who has you lined up", seed);
@@ -229,7 +229,7 @@ fn in_a_game_of_two_the_ring_and_the_arc_are_the_seats_own() {
         let mut p = Play::level("defuse.json", true, &Opts { seed, seats: 2, ..Default::default() });
         p.frame();
         let (first, second) = (game::seats::seat(&p.g, p.g.seats[0]).player, game::seats::seat(&p.g, p.g.seats[1]).player);
-        p.g.tune.aim_model = true;
+        p.g.k.tune.aim_model = true;
         p.g.pl[first].holstered = true; p.g.pl[second].holstered = false; p.g.pl[second].slot = SlotKind::Pistol;
         assert!(p.view_of(0).aim.ring.is_none(), "seed {}: CONTROL: his hands are empty", seed);
         let r = p.view_of(1).aim.ring.expect("the second man has a gun out");

@@ -30,7 +30,7 @@ pub(super) fn gun_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result
     b.h_to = 1.1;
     sam_stand(g, st);
     if g.pl[g.player].holstered { press(st, draw_key(g, &crate::seats::here(g))); }
-    if QK.cut && st.a.lead_was.is_none() { st.a.lead_was = Some(g.m.fixture_break.fixlook.on); g.m.fixture_break.fixlook.on = false; }
+    if QK.cut { g.m.fixture_break.put_down = true; }
     Ok(())
 }
 pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {

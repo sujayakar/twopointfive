@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, vec, vec::Vec};
 
 /// the one gate every entry point takes first. GLASSFX.on is settled on.
 pub fn glass_break_live(g: &crate::game::Game) -> bool {
-    g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
+    g.k.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
 }
 
 use crate::ask::Over;

@@ -513,22 +513,22 @@ fn director_apply_systems(g: &mut crate::game::Game, r: DirectorRunId) {
         return;
     }
     let mut saved: JsMap<&'static str, bool> = JsMap::new();
-    if qrf.is_some() { saved.set("qrf", g.tune.qrf); }
-    if needs.is_some() { saved.set("needs", g.tune.needs); }
-    if civilians.is_some() { saved.set("civilians", g.tune.civilians); }
+    if qrf.is_some() { saved.set("qrf", g.k.tune.qrf); }
+    if needs.is_some() { saved.set("needs", g.k.tune.needs); }
+    if civilians.is_some() { saved.set("civilians", g.k.tune.civilians); }
     if autosave.is_some() { saved.set("autosave", g.saves.enabled); }
     g.tab.director_run[r].systems_saved = Some(saved);
-    if let Some(x) = qrf { g.tune.qrf = x; }
-    if let Some(x) = needs { g.tune.needs = x; }
-    if let Some(x) = civilians { g.tune.civilians = x; }
+    if let Some(x) = qrf { g.k.tune.qrf = x; }
+    if let Some(x) = needs { g.k.tune.needs = x; }
+    if let Some(x) = civilians { g.k.tune.civilians = x; }
     if let Some(x) = autosave { g.saves.enabled = x; }
 }
 
 fn director_restore_systems(g: &mut crate::game::Game, r: DirectorRunId) {
     let Some(s) = g.tab.director_run[r].systems_saved.take() else { return };
-    if let Some(&x) = s.get("qrf") { g.tune.qrf = x; }
-    if let Some(&x) = s.get("needs") { g.tune.needs = x; }
-    if let Some(&x) = s.get("civilians") { g.tune.civilians = x; }
+    if let Some(&x) = s.get("qrf") { g.k.tune.qrf = x; }
+    if let Some(&x) = s.get("needs") { g.k.tune.needs = x; }
+    if let Some(&x) = s.get("civilians") { g.k.tune.civilians = x; }
     if let Some(&x) = s.get("autosave") { g.saves.enabled = x; }
 }
 
