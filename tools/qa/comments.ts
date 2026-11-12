@@ -38,7 +38,7 @@ export function words(s: string, lang: Lang): Words[] {
 
 const NAMED = /(?:[\w.-]+\/)*[A-Za-z_][\w-]*(?:\.[\w-]+)*\.(?:ts|rs|wgsl|cjs|mjs|py|md)\b/g;
 /** names a check plants to see that it finds them */
-const PLANTED: Readonly<Record<string, readonly string[]>> = { 'tools/qa/docs-check.ts': ['docs/not-here.md', 'tools/qa/none-check.ts', 'src/game/nobody.ts', 'docs/internal/nowhere.md'], 'tools/qa/level-needs.ts': ['tools/levels/not-there.ts'], 'tools/qa/rust-rules-check.ts': ['rust/sim/src/planted.rs', 'sim/src/planted.rs'] };
+const PLANTED: Readonly<Record<string, readonly string[]>> = { 'tools/draw/ban.ts': ['src/rules/hunger.ts', 'src/ui/planted1.ts', 'src/audio/planted2.ts', 'src/render/planted3.ts', 'src/gpu/planted8.ts', 'src/picture/planted4.ts', 'src/scene/planted5.ts', 'src/view/planted6.ts', 'src/smoke/planted7.ts'], 'tools/qa/docs-check.ts': ['docs/not-here.md', 'tools/qa/none-check.ts', 'src/game/nobody.ts', 'docs/internal/nowhere.md'], 'tools/qa/level-needs.ts': ['tools/levels/not-there.ts'], 'tools/qa/rust-rules-check.ts': ['rust/sim/src/planted.rs', 'sim/src/planted.rs'] };
 /** the files a text names that none of these paths is, or ends in. A name that stands for many (a star, angle brackets), an address or an absolute path is nobody's; a page, a script or (`pathed`) any name counts with a folder before it */
 export function notThere(paths: readonly string[]): (text: string, pathed?: boolean) => string[] {
   const ends = new Map<string, string[]>(); for (const p of paths) { const b = p.slice(p.lastIndexOf('/') + 1), l = ends.get(b); if (l) l.push(p); else ends.set(b, [p]); }

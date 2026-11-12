@@ -13,7 +13,7 @@ if (!existsSync(TS_LIB)) { console.error(`no TypeScript at ${TS_LIB} (vendor/typ
 const ts = (await import(TS_LIB)).default as { preProcessFile(text: string, imports: boolean, js: boolean): { importedFiles: { fileName: string }[] } };
 /** the HUD in play: each of these and whatever they import */
 const HUD = ['overlay', 'cmdring', 'ringlone', 'bubbles', 'netplace', 'findring', 'planfloor', 'handbox', 'tabcard', 'corner', 'squadthrowviz', 'attentionviz', 'railcard', 'railclear'].map(f => `src/ui/${f}.ts`).concat('src/host/hud.ts');
-/** a file under src/view may import its own folder, the plain arithmetic types, and src/draw, which itself imports nothing of the game (tools/draw/ban.ts) */
+/** a file under src/view may import its own folder, the plain arithmetic types, and src/draw, the page's half of what crosses */
 const MAY_VIEW = ['src/view/', 'src/math/', 'src/draw/'];
 /** anything else on the walk: these folders and leaves, each walked in its turn, so a file here that imports the game is named too */
 const MAY_HUD = [...MAY_VIEW, 'src/ui/', 'src/host/keymap.ts', 'src/host/hud.ts', 'src/host/findme.ts', 'src/audio/floors.ts'];
