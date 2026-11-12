@@ -119,16 +119,10 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
     true
 }
 
-/// how many other men of this room are at it on entry `i`
-fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> usize {
-    let mut n = 0;
-    for x in g.fight.defs.clone() {
-        let xg = g.tab.roomfight_def[x].gd;
-        if x == me || crate::condition::down(g, g.gd[xg].ch) || g.tab.roomfight_def[x].room != Some(room) { continue; }
-        if phase_of(g, xg) == Phase::Idle { continue; }
-        if state_of(g).men.get(xg).unwrap().entry == i { n += 1; }
-    }
-    n
+/// the door he gets ready for: the one they are expected by, or the next likeliest if fewer have that
+fn his_door(g: &Game, d: RoomfightDefId, r: &RoomSt) -> f64 {
+    let on = |way: f64| crate::cover::on_way(g, r.room, way as usize, d);
+    if r.second >= 0.0 && on(r.expected) > on(r.second) { r.second } else { r.expected }
 }
 
 /// he has thought: the room's row, his door, the word, the furniture or the door, or cover
@@ -153,7 +147,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
     if r.expected < 0.0 { m.phase = Phase::Idle; return; }
     if !r.men.contains(&gd) { r.men.push(gd); }
     m.room = Some(room);
-    m.entry = if r.second >= 0.0 && on_entry(g, d, room, r.expected) > on_entry(g, d, room, r.second) { r.second } else { r.expected };
+    m.entry = his_door(g, d, &r);
     m.brace = -1.0;
     m.spot = None;
     fear(g, d, *m);
@@ -753,6 +747,13 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     let w = state_of(g).men.get_mut(gd).unwrap();
     w.know = know; w.know_t = now; w.far = false;  w.ordered = true; w.phase = Phase::Think; w.until = now + beat;
     true
+}
+
+/// The door of his room he is getting ready for or dug in on, if he is at it.
+pub fn dig_in_way(g: &Game, d: RoomfightDefId) -> Option<f64> {
+    let row = &g.tab.roomfight_def[d];
+    let m = g.m.digin.states.as_ref()?.men.get(row.gd)?;
+    if matches!(m.phase, Phase::Idle | Phase::Think | Phase::ToRoom) || m.room != row.room { None } else { Some(m.entry) }
 }
 
 /// A man set off the door's line rests his gun on the floor they must cross (writes `pt`)
