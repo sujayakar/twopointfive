@@ -190,7 +190,7 @@ fn hash_u(n: f64) -> f64 {
 
 /// the authored stun sparks as they stand, over what they were when the tables were set: count, speed, life, size
 fn scale(g: &crate::game::Game) -> crate::blast_look::BurstOfK {
-    let (r, pfx, sp) = (ref_(), g.m.particle_fx.pfx, crate::effects::sparks());
+    let (r, pfx, sp) = (ref_(), g.k.pfx, crate::effects::sparks());
     BurstOfK { n: pfx.bang_sparks / r.sparks, v: sp.speed / r.speed, l: sp.life / r.life, s: pfx.bang_spark_size / r.size }
 }
 

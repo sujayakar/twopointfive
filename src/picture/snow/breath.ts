@@ -28,7 +28,7 @@ export const SNOWBREATH = {
   lifeJit: 0.25,
   size: 0.085,         // m: a puff's radius at birth (× 1 ± sizeJit; the kind grows it by three fifths over its life)
   sizeJit: 0.3,
-  opacity: 0.66,       // × the dust puff's own peak opacity (rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK.opacity, 0.3)
+  opacity: 0.66,       // × the dust puff's own peak opacity (rust/game_types/src/knobs/dust_look.rs opacity, 0.3)
   hardK: 1.5,          // × size and opacity when blown
   color: [0.9, 0.93, 1.0] as Vec3,   // what it scatters: near white, a touch cold
   mouthAhead: 0.1,     // m from the head bone (eye level) forward to the lips

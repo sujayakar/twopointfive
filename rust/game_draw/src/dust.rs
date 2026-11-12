@@ -15,6 +15,6 @@ section! {
 }
 
 pub fn fill(g: &Game, out: &mut Vec<DustLook>) {
-    let l = g.m.particle_fx.dust_look;
+    let l = g.k.dust_look;
     out.push(DustLook { opacity: l.opacity as f32, growth: l.growth as f32, fade_in: l.fade_in as f32, soft: l.soft as f32, wrap: l.wrap as f32, ambient: l.ambient as f32 });
 }

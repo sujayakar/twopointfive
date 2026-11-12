@@ -13,7 +13,7 @@ fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Is the run asked of anybody on this floor now.
 fn run_on(g: &crate::game::Game) -> bool {
-    g.tune.suppression && g.ai_enabled
+    g.k.tune.suppression && g.ai_enabled
 }
 
 /// Does a hostile round that came only `s` m from its muzzle still count here.
@@ -181,7 +181,7 @@ mod tests {
         let (mut g, gd) = one_man();
         let other = g.gd.push(crate::game::Guard::blank());
         g.guards.push(other);
-        g.tune.suppression = true; g.ai_enabled = false;
+        g.k.tune.suppression = true; g.ai_enabled = false;
         g.m.flinch.state_of.set(gd, FlinchModStateOfValue { under: 1.5, at: 0.0 });
         flinch_tick(&mut g, 0.016);
         assert!(g.m.flinch.state_of.get(gd).is_none());

@@ -294,7 +294,7 @@ fn gun_light(g: &mut Game, t: Tick) {
     let infinite = g.infinite_ammo;
     g.fa[t.gun].infinite = infinite;
     g.fa[t.rifle].infinite = infinite;
-    let power = g.tune.player_light;
+    let power = g.k.tune.player_light;
     let light = g.pl[t.pl].light;
     let l = &mut g.tab.light[light];
     l.peak_intensity = power;

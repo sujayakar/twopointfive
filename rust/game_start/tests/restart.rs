@@ -39,12 +39,12 @@ fn an_evening_keeps_its_switches_and_its_die() {
     let mut p = pass();
     p.run(1.0);
     p.g.god_mode = true;
-    p.g.tune.vis_floor *= 2.0;
+    p.g.k.tune.vis_floor *= 2.0;
     p.run(1.0);
     p.g.dice.n += 5.0;   // (the die is ahead of where the first step had it)
-    let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
+    let (floor, rolled, serial, restarts, run) = (p.g.k.tune.vis_floor, p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
     assert!(control::restart(&mut p.g));
-    assert!(p.g.god_mode && p.g.tune.vis_floor == floor, "the switches went back with the game");
+    assert!(p.g.god_mode && p.g.k.tune.vis_floor == floor, "the switches went back with the game");
     assert!(p.g.dice.n >= rolled, "the die went back with the game");
     assert!(p.g.serial_next >= serial, "a number would be dealt twice");
     assert_eq!(p.g.time, 0.0, "the clock starts over");
@@ -98,10 +98,10 @@ fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     p.run(0.5);
     let (active, guards) = (p.g.staged.up, p.g.guards.len());
     p.g.ai_enabled = false;
-    p.g.tune.teams = false;
+    p.g.k.tune.teams = false;
     assert!(control::restart(&mut p.g));
     assert_eq!((p.g.staged.up, p.g.guards.len()), (active, guards), "the mission did not stand again");
-    assert!(!p.g.ai_enabled && !p.g.tune.teams, "the switches went back with the game");
+    assert!(!p.g.ai_enabled && !p.g.k.tune.teams, "the switches went back with the game");
 }
 
 /// THE RULE: the hour is the first step's, so a night's lights are never under a noon's sky.

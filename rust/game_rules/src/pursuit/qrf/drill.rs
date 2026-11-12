@@ -303,7 +303,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 
 /// Tier 2's trigger past deployment: one of theirs down, enough men down, a running gunfight.
 pub(super) fn maybe_perimeter(g: &mut crate::game::Game) {
-    if !g.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
+    if !g.k.tune.perimeter || !live(g) || g.qrf.perim.is_some() || raid(g) { return; }   // (a raid: one team, no second lift)
     if !marks_of(g).map_or(false, |mk| !mk.posts.is_empty()) { return; }   // (this place has no second tier)
     let mut down = 0usize;
     for i in 0..g.guards.len() {
@@ -330,13 +330,13 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     if !has_response(g) { return false; }   // (the posts are the office's lot)
     let mk = marks_of(g).unwrap();
     if mk.posts.is_empty() { return false; }
-    let want = m::min(v3::clamp(m::round(g.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
+    let want = m::min(v3::clamp(m::round(g.k.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
     let now = g.time;
     g.qrf.perim = Some(Perimeter {
-        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
+        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.k.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
     let lit = if g.targets.iter().any(|t| g.tab.fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
-    let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);
+    let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.k.tune.perimeter_eta), lit);
     control(g, &word);
     crate::lighting::set_group(g, "exterior", true);   // the lot's lamps, all of them: back as authored on a restart
     if crate::mission::mission_live(g) { g.mission.stats.qrf = 2.0; }

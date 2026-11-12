@@ -374,7 +374,7 @@ fn live_rules(g: &mut Game) {
     g.god_mode = true;
     g.infinite_ammo = true;
     g.saves.enabled = false;
-    g.tune.qrf = false;
+    g.k.tune.qrf = false;
     let t = &mut g.k.turn;
     t.aim = m::round(K.gun_rate * R * 1000.0) / 1000.0;
     t.aim_acc = m::round(K.gun_rate * R / K.ramp * 100.0) / 100.0;

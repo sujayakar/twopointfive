@@ -21,27 +21,19 @@ pub fn all(g: &Game) -> Vec<(String, bool, f64)> {
     out
 }
 
-/// THE NUMBERS A PERSON TURNS THAT ARE THE GAME'S OWN STATE AND NOT A TABLE'S: the tune, the impacts' table, the weather as it stands
+/// THE NUMBERS A PERSON TURNS THAT ARE THE GAME'S OWN STATE AND NOT A TABLE'S: the weather as it stands
 fn live(g: &Game, name: &str) -> Option<f64> {
-    let (t, p) = (&g.tune, &g.m.particle_fx.pfx);
     Some(match name {
-        "tune.flash_intensity" => t.flash_intensity, "tune.player_light" => t.player_light, "tune.flash_outer" => t.flash_outer, "tune.flash_inner" => t.flash_inner, "tune.ocp_duration" => t.ocp_duration, "wind.def" => t.wind, "weather.on" => g.weather.on as u8 as f64,
-        "pfx.impact_scale_rifle" => p.impact_scale_rifle, "pfx.chip_size" => p.chip_size, "pfx.chip_life" => p.chip_life, "pfx.dust_size" => p.dust_size, "pfx.bang_sparks" => p.bang_sparks, "pfx.bang_ring" => p.bang_ring, "pfx.casing_life" => p.casing_life, "pfx.tink_gain" => p.tink_gain,
+        "weather.on" => g.weather.on as u8 as f64,
         "weather.storm" => g.weather.storm, "weather.rain_rate" => g.weather.rain_rate, "weather.wind.0" => g.weather.wind[0], "weather.wind.1" => g.weather.wind[1],
         _ => return None,
     })
 }
 fn set_live(g: &mut Game, name: &str, v: f64) -> bool {
     match name {
-        "tune.flash_intensity" => g.tune.flash_intensity = v, "tune.player_light" => g.tune.player_light = v,
         // (the inner cone stays two degrees inside the outer, whichever is turned)
-        "tune.flash_outer" => { g.tune.flash_outer = v; g.tune.flash_inner = g.tune.flash_inner.min(v - 2.0); }
-        "tune.flash_inner" => g.tune.flash_inner = v.min(g.tune.flash_outer - 2.0),
-        "tune.ocp_duration" => g.tune.ocp_duration = v,
-        // (a game starts its wind from the table)
-        "wind.def" => { g.tune.wind = v; g.k.wind.def = v; }
-        "pfx.impact_scale_rifle" => g.m.particle_fx.pfx.impact_scale_rifle = v, "pfx.chip_size" => g.m.particle_fx.pfx.chip_size = v, "pfx.chip_life" => g.m.particle_fx.pfx.chip_life = v, "pfx.dust_size" => g.m.particle_fx.pfx.dust_size = v,
-        "pfx.bang_sparks" => g.m.particle_fx.pfx.bang_sparks = v, "pfx.bang_ring" => g.m.particle_fx.pfx.bang_ring = v, "pfx.casing_life" => g.m.particle_fx.pfx.casing_life = v, "pfx.tink_gain" => g.m.particle_fx.pfx.tink_gain = v,
+        "tune.flash_outer" => { g.k.tune.flash_outer = v; g.k.tune.flash_inner = g.k.tune.flash_inner.min(v - 2.0); }
+        "tune.flash_inner" => g.k.tune.flash_inner = v.min(g.k.tune.flash_outer - 2.0),
         // (a storm turned by hand strikes on its own new clock)
         "weather.on" => game::weather::weather_set_enabled_2(g, v >= 0.5),
         "weather.storm" => if g.weather.storm != v { g.weather.storm = v; g.weather.next_flash_at = -1.0; },

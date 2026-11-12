@@ -266,9 +266,9 @@ impl StealthAsk for Play {
     fn response_reason(&self) -> Option<game::qrf::QrfReason> { self.g.qrf.reason }
     fn response_men(&self) -> Vec<GuardId> { self.g.qrf.men.iter().copied().collect() }
     fn response_on_clock(&mut self, men: f64, eta: f64) {
-        self.g.tune.qrf = true;
-        self.g.tune.qrf_eta = eta;
-        self.g.tune.qrf_size = men;
+        self.g.k.tune.qrf = true;
+        self.g.k.tune.qrf_eta = eta;
+        self.g.k.tune.qrf_size = men;
         if let Some(r) = std::sync::Arc::make_mut(&mut self.g.level).scenarios.as_mut().and_then(|s| s.response.as_mut()) { r.men = Some([men, men]); r.eta = Some([eta, eta]); }
     }
     fn alarm_raised_to(&mut self, level: f64) { game::guards::raise_escalation(&mut self.g, level, None, None, None); }

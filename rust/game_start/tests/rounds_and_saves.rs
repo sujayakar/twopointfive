@@ -16,7 +16,7 @@ fn rooms(s: u32, man: [f64; 2], more: Vec<game_start::json::Json>) -> (Play, gam
     sc.room("west", 10.0, 8.0, 18.0, 18.0).room("east", 18.0, 8.0, 26.0, 18.0).door("yard", Axis::Z, 26.0, 15.4).door("mid", Axis::Z, 18.0, 15.4);
     sc.bulb(14.0, 13.0).sentry("beyond", man, [24.0, man[1]]).sam(15.0, man[1]);
     let mut p = scene_with(&sc, more, &Opts { seed: s, ..Default::default() });
-    p.g.god_mode = true; p.g.ai_enabled = false; p.g.tune.chaos = 0.5;
+    p.g.god_mode = true; p.g.ai_enabled = false; p.g.k.chaos.def = 0.5;
     p.sam_takes_his_rifle();
     p.run(0.4);
     let gd = p.guard("beyond");
@@ -102,7 +102,7 @@ fn a_hit_goes_by_what_the_thing_says_it_is() {
 fn a_round_into_soaked_ground_does_what_it_does_dry() {
     let dust = |weather: &str| {
         let mut p = Play::mission("compound.json", &format!("?levelFile=compound.json&weather={weather}&roomclear&squad4"), &Opts { seed: 8, ..Default::default() });
-        p.g.god_mode = true; p.g.ai_enabled = false; p.g.tune.chaos = 0.5;
+        p.g.god_mode = true; p.g.ai_enabled = false; p.g.k.chaos.def = 0.5;
         let soaked = p.until(2.0, |p| p.g.weather.wet_on).is_some();
         // the ground the whole level stands on, by its place among the statics: what a round's flight says it stopped in
         let ground = p.g.col.boxes.iter().position(|&b| { let (c, h) = (p.g.tab.boxes[b].c, p.g.tab.boxes[b].h); c[1] + h[1] == 0.0 && h[0] >= 20.0 && h[2] >= 14.0 }).expect("the ground") as f64;
@@ -153,7 +153,7 @@ fn a_blast_that_opens_two_walls_floods_the_rooms_once() {
     let (mut asked, mut bad) = (0, Vec::new());
     for level in ["compound.json", "block.json", "warehouse.json"] {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear=6&squad4"), &Opts { seed: 6, ..Default::default() });
-        p.g.god_mode = true; p.g.tune.chaos = 0.5;
+        p.g.god_mode = true; p.g.k.chaos.def = 0.5;
         p.run(1.0);
         let mut place = None;
         for w in game::wallbreak::wall_break_all(&p.g) {

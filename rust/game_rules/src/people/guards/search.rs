@@ -339,7 +339,7 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     if unstick_first(g, gd, dt) {
         return false;
     }
-    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt) {
+    if g.k.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt) {
         return false;
     }
     if !g.gd[gd].fled && crate::lanes::lane_gate(g, gd) {
@@ -464,7 +464,7 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
     let keyed = keyed.unwrap_or(false);
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let n = (w * h) as usize;
-    let tune_sprint = g.tune.player_sprint;
+    let tune_sprint = g.k.tune.player_sprint;
     let sprint = m::max(1.0, tune_sprint * crate::kitload::load_sprint_on(g, g.pl[g.player].ch));
     let mut secs: Vec<f32> = vec![f32::INFINITY; n];
     let mut metres: Vec<f32> = vec![f32::INFINITY; n];

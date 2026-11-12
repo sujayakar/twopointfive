@@ -313,7 +313,7 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
         let rig = g.rig;
         let p = crate::game::player_new(g, rig, at, Some(fn2000), Some(index));
         crate::seats::with_seat(g, s, &mut |g: &mut Game| g.player = p);
-        let (owner, intensity) = (g.player_id(p), g.tune.player_light);
+        let (owner, intensity) = (g.player_id(p), g.k.tune.player_light);
         let def = crate::rig_props::rail_light_def(g, owner, intensity);
         g.pl[p].light = crate::render_lights::light_set_add(g, def);
     }
