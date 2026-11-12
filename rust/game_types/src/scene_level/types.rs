@@ -341,6 +341,8 @@ pub struct Level {
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
+    /// it is built for snow: born in it, and in no other weather
+    pub snow: bool,
     /// (none: its leaves are as a leaf is made)
     pub door_paint: Option<crate::scene_level::DoorPaint>,
     pub errand: crate::mission::Errand,

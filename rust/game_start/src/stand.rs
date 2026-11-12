@@ -107,7 +107,7 @@ pub fn stand_laid(data: &Json, assets: Assets, o: &StartOpts, laid: &dyn Fn(&mut
     // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it: the row's
     // own hour and weather onto its words, and the weather the game is born in
     let mut address = o.link.as_deref().map(game::query::Query::parse);
-    if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q); }
+    if let Some(q) = address.as_mut() { game::scenario_run::address_before_game(&mut g, q, data.get("snow").bool() == Some(true)); }
     // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
     if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };

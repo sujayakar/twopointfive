@@ -53,6 +53,8 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 import { BLUE_LEAVES, RUST_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'pass';
+/** it is built for snow */
+export const SNOW = true;
 /** what its leaves are painted */
 export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass';

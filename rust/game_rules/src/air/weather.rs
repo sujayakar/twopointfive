@@ -138,9 +138,8 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
 
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level.
 fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
-    let name = crate::scene_level_load::level_name_of(g);
     let stood = g.stood;
-    if crate::weather_kinds::snow_level(name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
+    if g.level.snow && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
 }
 
 /// No weather picked on a floor that is none of the office's: its own night is dry and still, under its own roofs.

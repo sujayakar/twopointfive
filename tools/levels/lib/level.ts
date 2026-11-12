@@ -155,6 +155,8 @@ export interface Level {
   breach?: BreachPlan;
   /** the script it is played by (the file's `script`) — absent = none */
   script?: string;
+  /** it is built for snow (the file's `snow`) */
+  snow?: boolean;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;
   /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): host/drawpage.ts hands it to the look (scene/look.ts lookKeptOf) */

@@ -69,7 +69,7 @@ pub fn fill(g: &Game, out: &mut Vec<Sky>) {
         let (row, (elev, bearing)) = (&g.tab.light[l], game::hours::turns::moon_at(g, l));
         (r.moon, r.moon_k, r.moon_elev, r.moon_bearing) = (1 + row.enabled as u32, row.peak_intensity as f32, elev as f32, bearing as f32);
     }
-    r.snow_level = game::weather_kinds::snow_level(game::scene_level_load::level_name_of(g).as_deref()) as u32;
+    r.snow_level = g.level.snow as u32;
     r.own_zenith = f3(g.level.sky.zenith);
     r.own_horizon = f3(g.level.sky.horizon);
     r.kept = g.level.kept.unwrap_or(-1.0) as f32;

@@ -497,6 +497,8 @@ pub struct ScenarioEntry {
     /// level can be started in, never snow (a level built for snow keeps its own)
     pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::scene_scenarios::ScenarioEntryWeather>,
+    /// its level is built for snow (as its file says: game_start tests/weather_rows.rs): the sheet draws no weather for it
+    pub snow: bool,
     /// the room clear's placement seed, a quiet mission's deal pinned (none: dealt on every start)
     pub seed: Option<f64>,
     /// the one line under the title: the premise
