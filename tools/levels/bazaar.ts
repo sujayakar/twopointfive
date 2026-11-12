@@ -48,10 +48,13 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 import { carCoat } from './lib/carShapes';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
 export const NAME = VARIANT ? `bazaar.v${VARIANT.join('')}` : 'bazaar';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const NOTES = 'The bazaar row: a quiet level for one. Two blocks of shops between a lit street and a back alley; a patrol walks round each block and both come down the passage between them. Regenerate: bun run tools/levels/export.ts bazaar';
 export const MATERIALS = GWOT_MATERIALS;
 

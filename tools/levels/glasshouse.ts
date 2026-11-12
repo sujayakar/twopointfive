@@ -29,8 +29,11 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'glasshouse';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const NOTES = 'The glasshouse: a seed station whose front and inside partitions are glass, seven men in four rooms, a blank back wall with the back door into the store. The forecourt is floodlit, the glazed rooms dark. Two ways in, both from the dark and out of sight: the side of the building round the corner from the glass, and the back lot. Regenerate: bun run tools/levels/export.ts glasshouse';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;

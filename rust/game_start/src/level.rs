@@ -3,7 +3,7 @@
 //!
 //! A start refuses a file with any fault of the reading (`file.rs`): a level stood without part of itself is another level. The rules a file is held to beside that (an id that points nowhere, a
 //! number out of its range) are `faults.rs`, which a level is asked before it is committed, and not at every start.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Material, Part, ShapeData, ShapePieceData};
+use crate::file::{self, BoxData, FlagName, LeafPaintData, LevelFile, LightData, LightDataKind, Material, Part, ShapeData, ShapePieceData};
 use crate::json::Json;
 use alloc::{string::String, sync::Arc, vec, vec::Vec};
 use game::game::Game;
@@ -196,6 +196,10 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     };
     level.mark_texel = f.meta.mark_texel;
     level.kept = f.meta.kept;
+    level.door_paint = f.door_paint.map(|p| {
+        let side = |x: LeafPaintData| LeafPaint { albedo: x.albedo, stuff: paint.stuff(&Said { material: None, albedo: None, rough: None, metal: None, stuff: x.stuff.as_deref(), does: None }) };
+        DoorPaint { outside: side(p.outside), inside: side(p.inside) }
+    });
     // the scenarios' block and the footsteps' map: the runtime's own types, as they are written
     level.scenarios = f.scenarios.map(|s| s.kept); level.surfaces = f.surfaces;
     level.script = game::director::level_script_of(&name);   // (a level that carries a script, by the file's name)

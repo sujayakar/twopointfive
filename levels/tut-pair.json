@@ -734,6 +734,7 @@
     { "id": "gate_e", "hinge": [38, 17.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "office", "hinge": [32.82, 9.6], "closedDir": 0, "width": 0.86, "locked": true, "lock": "pad_office", "keySide": 1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.06, 0.19, 0.32], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [
     { "id": "pickup", "points": [[9.75, 0, 15.25], [9.75, 0, 14.5]], "wait": [3600, 0], "keys": [] },
     { "id": "near", "points": [[20.8, 0, 17.6], [22.2, 0, 17.6]], "wait": [3600, 0], "keys": [] },

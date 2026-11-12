@@ -87,6 +87,7 @@ a `word` is that need.
 - **`ground`: the ground is not one flat sheet.** In `gwotKit.ts`, lay finishes as the place is used (`ground`), wear where feet and wheels go (`ruts`), stains where
   use leaves them (`patch`, `stain`, `hearth`) and low things that throw a shadow (`rubble`, `kerb`), where the player walks and the camera rests. `STYLE.md` has the
   rules for paint. The need is a NOTE for each piece of `GROUND.big` m² with nothing that reads near it. Whether it reads is by eye, at the level's own hour.
+- **A level says what its doors are painted.** `export const DOOR_PAINT` (`lib/doorPaint.ts`) is the file's `doorPaint`; with none its leaves are in the office's colors.
 - **A level says how kept it is, once.** `export const KEPT = <0 to 1>` is the file's `meta.kept`, for the picture alone. A clean rack is another stuff, not a kept
   level. `?kept=` tries it for a visit. Check: `bun run tools/qa/checks.ts kept`.
 - **Furniture goes at the tail** of the generator's lists, in group `lived.<room>` (`tools/levels/lib/lived.ts`), so every other index stays the same without it. The

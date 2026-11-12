@@ -53,8 +53,11 @@ import { WORLD } from '../../src/scene/world';
 import { rockOf } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tunnel-station';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 export const NOTES = 'The first tutorial mission, on a place of its own: the tunnel station, a walled road-keepers\' post beside a tunnel\'s mouth on a pass road, at night, in winter. The squad\'s two pickups in the west of the road, a roadblock and a gun truck at the tunnel in the east of it; seven men in four rooms round a wide yard under snow. Built by tools/levels/tut-team.ts; no file of its own.';
 

@@ -60,6 +60,7 @@ import { GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, VARNISH, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The consulate: a lobby, a 3 m corridor past four rooms (a glass front, an open arch, two shut doors) to a hall, and the consul\'s office in two halves with a door on each. The four-person hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts consulate';
 
@@ -502,6 +503,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'consulate';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.21, 0.05, 0.105], drawnAs('wood', [0.27, 0.18, 0.12]));
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;

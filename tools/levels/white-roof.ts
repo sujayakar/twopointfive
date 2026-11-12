@@ -34,15 +34,18 @@ import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
-import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
+import { PANEL_GREY, saidAs, drawnAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { markFromRect, type MarkPal } from '../../src/scene/markings';
 import * as MD from './lib/markingDefaults';
 import { madeOf } from '../../src/scene/stuff';
 import type { Vec3 } from '../../src/math/vec';
+import { leavesOf } from './lib/doorPaint';
 
 export const NAME = 'white-roof';
+/** what its leaves are painted: orange enamel, and grey within */
+export const DOOR_PAINT = leavesOf(drawnAs('enamel', [0.88, 0.24, 0.03]), drawnAs('enamel', [0.74, 0.74, 0.73]));
 export const NOTES = 'A look study: a kept roof in full sun, every surface one flat colour and one of the ten kept stuffs (render/lookTex.ts). Not in the missions list. Regenerate: bun run tools/levels/export.ts white-roof';
 export const MATERIALS = GWOT_MATERIALS;
 

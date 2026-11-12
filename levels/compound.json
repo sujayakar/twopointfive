@@ -1423,6 +1423,7 @@
     { "id": "gate_w", "hinge": [4, 14.32], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "gate_n", "hinge": [23.82, 4], "closedDir": 0, "width": 0.86, "exterior": true }
   ],
+  "doorPaint": { "outside": { "albedo": [0.06, 0.19, 0.32], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

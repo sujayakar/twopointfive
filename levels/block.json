@@ -1204,6 +1204,7 @@
     { "id": "fire_exit", "hinge": [36, 13.32], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "stairwell", "hinge": [4, 10.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "locked": true, "lock": "stairwell", "keySide": -1, "steel": true }
   ],
+  "doorPaint": { "outside": { "albedo": [0.22, 0.4, 0.1] }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

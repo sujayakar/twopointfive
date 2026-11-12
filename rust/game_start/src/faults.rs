@@ -2,7 +2,7 @@
 //! of); where the file reads whole, the rules a file can be held to by itself: ids that are one thing's, names that point at something, numbers in their range, lists that go together.
 //!
 //! It judges the FILE. What the built floor says (a mark on free floor, a way on foot, a light in a wall) is asked of the game: `levels`, and tools/qa/level-lint.ts.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
+use crate::file::{self, BoxData, DoorPaintData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
 use crate::level::{does_word, stuff_word, Said};
@@ -157,6 +157,7 @@ impl<'a> Rules<'a> {
             self.finish(&w, m.rough);
             self.words(&w, m.stuff.as_deref(), m.does.as_deref());
         }
+        if let Some(p) = &f.door_paint { self.door_paint("doorPaint", p); }
         if let Some(s) = &f.surfaces {
             let b = &s.building;
             if !rect(b.x0, b.x1, b.z0, b.z1) { self.say("surfaces.building", "x0 to x1, z0 to z1"); }
@@ -169,6 +170,12 @@ impl<'a> Rules<'a> {
             let said = |k: &str| o.peek(k).and_then(Json::str);
             let w = named(i, list, said("id").unwrap_or(""));
             if let Some(on) = said("floor") { if !self.f.floors.iter().any(|s| s.id == on) { self.say(format!("{w}.floor"), format!("the file has no floor '{on}'")); } }
+        }
+    }
+    fn door_paint(&self, w: &str, p: &DoorPaintData) {
+        for (side, x) in [("outside", &p.outside), ("inside", &p.inside)] {
+            if !light(&x.albedo) { self.say(format!("{w}.{side}.albedo"), "0 or more"); }
+            self.words(&format!("{w}.{side}"), x.stuff.as_deref(), None);
         }
     }
     fn finish(&self, w: &str, rough: Option<f64>) { if rough.is_some_and(|r| !(0.0..=1.0).contains(&r)) { self.say(format!("{w}.rough"), "a number from 0 to 1"); } }
@@ -695,6 +702,7 @@ impl<'a> Rules<'a> {
                     self.round(&at, b);
                     if b.shape.is_some() { self.say(format!("{at}.shape"), "a picture's box says no shape"); }
                 }
+                if let Some(p) = &t.door_paint { self.door_paint(&format!("{at}.doorPaint"), p); }
                 for (i, d) in t.doors.iter().flatten().enumerate() { if d.width <= 0.0 { self.say(format!("{}.width", named(i, &format!("{at}.doors"), &d.id)), "over 0"); } }
             }
         }

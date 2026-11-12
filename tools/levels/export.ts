@@ -65,6 +65,8 @@ if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.lengt
   if (n) console.log(`floor: ${n} flat${n > 1 ? 's' : ''} raised to draw in order`); }
 // HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept (docs/level-format.md).
 if (gen.KEPT !== undefined) level.kept = gen.KEPT;
+// WHAT ITS LEAVES ARE PAINTED, a generator's `DOOR_PAINT` export (lib/doorPaint.ts): the file's doorPaint. With the skin left out they are as a leaf is made.
+if (gen.DOOR_PAINT && !(gen.finish && FLOOR_TO)) level.doorPaint = gen.DOOR_PAINT;
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
 // WHAT EACH BOX DOES (src/scene/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
 // (tools/levels/doesWas.ts, frozen) HERE, before the skin repaints anything: a box in other clothes does what it did. Once more after the skin, for what the skin added.

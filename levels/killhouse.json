@@ -565,6 +565,7 @@
     { "id": "mess", "hinge": [23.32, 14.5], "closedDir": 0, "width": 0.86 },
     { "id": "hall", "hinge": [21.6, 12.82], "closedDir": 1.5707963267948966, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.26, 0.12, 0.42] }, "inside": { "albedo": [0.55, 0.43, 0.27], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

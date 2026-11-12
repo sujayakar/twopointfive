@@ -1,7 +1,7 @@
 //! THE KIT PICTURE'S SET LOADER: `set_level(level, way) → level'`. Where the way being staged names a BESPOKE SET, the picture loads the set's boxes, doors and lights INSTEAD of the level's geometry
 //! and keeps what makes the level the level. A way with no set gets the very object it handed in, so nothing downstream can differ. Pure, as the planner beside it: nothing handed in is written to.
 //!
-//! KEPT, the level's own: `name` (what the weather's snow levels and the look's door paint are keyed by), `version`, `meta`, `floors`, `materials` (the set's boxes take the level's paint by name),
+//! KEPT, the level's own: `name` (what the weather's snow levels are keyed by), `doorPaint` where the set says none, `version`, `meta`, `floors`, `materials` (the set's boxes take the level's paint by name),
 //! `surfaces`, `sky`, every directional light and `scenarios.issue`. The hour and the weather are the link's and are not touched here.
 //! SWAPPED: `boxes`, `doors` and the lamps are the set's. Box i of the set is box i of the level that loads (the plan's `hidden` indexes hold).
 //! GONE: props, switchables, routes, chokepoints, civilians, volumes, devices, vents, connectors, beacons, the clear and breach plans, and every scenario block but the two below: each names a place
@@ -188,6 +188,7 @@ pub fn set_level(data: &Json, way: usize) -> Cow<'_, Json> {
     o.push(("lights", json::arr(lights.clone())));
     o.push(("switchables", json::arr(Vec::new())));
     o.push(("doors", doors));
+    if let Some(paint) = [t, data].into_iter().map(|of| of.get("doorPaint")).find(|p| truthy(p)) { o.push(("doorPaint", paint.clone())); }
     for k in ["routes", "chokepoints", "volumes", "devices", "connectors"] { o.push((k, json::arr(Vec::new()))); }
     o.push(("mission", json::obj(vec![("playerSpawn", sam), ("objectives", json::arr(vec![
         json::obj(vec![("id", json::s("reach_room")), ("kind", json::s("reach")), ("area", bounds), ("door", json::s(&two[0]))]),

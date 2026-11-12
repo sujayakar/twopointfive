@@ -42,8 +42,11 @@ import { BoxFlag } from '../../src/scene/boxes';
 import { carLampsIn } from './lib/carLamps';
 import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from './tutRoadMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-road';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The tutorial\'s first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post\'s wall and gateway, the hut, the sandbags under a machine gun, the roadblock\'s wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 
