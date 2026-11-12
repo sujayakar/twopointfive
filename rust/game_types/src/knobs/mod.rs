@@ -118,6 +118,7 @@ mod wallwear; pub use wallwear::*;
 mod colors; pub use colors::*;
 mod impact; pub use impact::*;
 mod casings; pub use casings::*;
+mod sparks; pub use sparks::*;
 mod rescueflow; pub use rescueflow::*;
 mod rescueflush; pub use rescueflush::*;
 mod roomclear; pub use roomclear::*;
@@ -408,6 +409,7 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflow: RescueflowK,
+    pub sparks: SparksK,
     pub casings: CasingsK,
     pub impact: ImpactK,
     pub colors: ColorsK,

@@ -122,8 +122,8 @@ pub struct EffectsKCard {
 }
 
 
-/// A STUN'S SPARKS, a burst over the upper half of a sphere. The game's own pool of them (`spark_count`) carries the smoke trails and is never drawn; the picture's are
-///  the `pfx` and `blast_look` particles, which read this table for their speed and life too.
+/// A STUN'S SPARKS, a burst over the upper half of a sphere. The game's own (`bang.trail_count` of them, boxes of the `sparks` table) carry the smoke trails; the rest are the
+///  `pfx` and `blast_look` particles, which read this table for their speed and life too.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct EffectsKSparks {
     /// m/s: the fastest (a pool spark × 0.45‥1, a particle × 0.45‥1 the same way)
@@ -203,9 +203,7 @@ pub struct EffectsKBang {
     #[k(14.0)] pub light_range: f64,
     #[k(0.15)] pub light_radius: f64,
     #[k(0.3)] pub light_lift: f64,
-    /// sparks of the game's own pool, at most: both callers ask for the lesser of this and `trail_count`, so `trail_count` is what stands
-    #[k(72.0)] pub spark_count: f64,
-    /// how many of them draw a smoke trail · how many of the game's emitters a trail must leave free
+    /// how many sparks of the game's own it throws, each with a smoke trail if there is room · how many of the game's emitters a trail must leave free
     #[k(12.0)] pub trail_count: f64,
     #[k(2.0)] pub trail_reserve: f64,
 }

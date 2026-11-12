@@ -364,7 +364,7 @@ pub struct Game {
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96] })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
