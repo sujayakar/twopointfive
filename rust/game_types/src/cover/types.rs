@@ -83,6 +83,16 @@ pub struct Cover {
     pub reads: JsMap<TaskId, crate::cover::CoverReadsValue>,
     pub kept: JsMap<GuardId, crate::cover::CoverKeptValue>,
     pub outs: JsMap<GuardId, crate::cover::CoverOutsValue>,
+    /// the way into his room each man of a held room was dealt, and when they are dealt again
+    pub posts: JsMap<GuardId, crate::cover::PostWay>,
+    pub posts_at: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct PostWay {
+    pub room: RoomfightRoomId,
+    pub door: DoorId,
+    pub t0: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
