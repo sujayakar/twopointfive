@@ -37,7 +37,7 @@ street lamps. `rust/game_draw/src/traffic.rs` makes the wear map.
 ## How it works
 
 **Generator to file.** A generator exports `build` (the `Level`, `scenarios`, a group for each box, `surfaces`), `NAME` and `NOTES`, and at will
-`MATERIALS`, `PALETTE`, `KEPT`, `DOOR_PAINT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
+`MATERIALS`, `PALETTE`, `KEPT`, `SCRIPT`, `DOOR_PAINT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
 that would share a plane (`layLevelFloor`), words any box without a `does` (`stampDoes`), runs the skin (`finish`) and writes `levelToData`. It
 refuses unless the text loads back to the generator's `Level`, field for field. Then it asks `levels second-way` and `levels sight` (`LEVELASK=0` in
 front skips them for a level in the making).

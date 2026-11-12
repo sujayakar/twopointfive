@@ -45,6 +45,8 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-road';
+/** the script it is played by */
+export const SCRIPT = 'tut-road';
 /** what its leaves are painted */
 export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The tutorial\'s first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post\'s wall and gateway, the hut, the sandbags under a machine gun, the roadblock\'s wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road';

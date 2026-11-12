@@ -96,7 +96,7 @@ end; only a taken house gets a time. Each teammate down adds `loss_secs`, and th
 `rails_answer`, once as a step comes up, sets its fog, signals its `cue` and keeps its `checkpoint`. A step's `explain` is the card that holds the world. With `respawn`, a teammate who falls is
 spared on one knee (`rails_spare`). While steps remain, a room clear ends only by every player falling (`rails_holds_end`); past the last it's Taken. A lesson's address reads no difficulty lever.
 
-**Level scripts.** `level_script_of` names a script by the level's file name, and only the six tutorials have one. `manifest_of` makes a manifest of marks, doors and programs, `lint_manifest`
+**Level scripts.** A level's file names its script (`script`, `LevelScriptFn`), and only the six tutorials have one. `manifest_of` makes a manifest of marks, doors and programs, `lint_manifest`
 checks it against the level, and a bad one isn't armed. `rails_start_program` starts the program named `tutorial` at each run; `director_tick` resumes its beats. A beat is a step function over a plain
 frame (`BeatFrame`, `beat_next`), yielding a `Cond`, so it saves whole. A `cue` reaches a beat as the signal `lesson:<cue>`, and a beat says it has played out as `done:<name>` (`rails_cued`).
 
@@ -126,7 +126,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
   a line in `mission_tick`, and its staging in its own start.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
-- **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
+- **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn` with its word in `file.rs`, of `beat_frame_new` and `beat_next`, and the generator's `SCRIPT`.
 
 ## What holds it
 

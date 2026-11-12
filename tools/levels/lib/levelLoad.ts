@@ -114,6 +114,7 @@ export function loadLevel(data: LevelData): Level {
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
     boxes, props, lights, switchables,
+    ...(data.script !== undefined ? { script: data.script } : {}),
     ...(data.plans.breach ? { breach: planOf(data.plans.breach) as BreachPlan } : {}),
     doors,
     ...(data.doorPaint ? { doorPaint: clone(data.doorPaint) } : {}),
@@ -257,6 +258,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const data: LevelData = {
     version: LEVEL_DATA_VERSION,
     name: opts.name,
+    ...(level.script !== undefined ? { script: level.script } : {}),
     // (what the loader hands back ON THE LEVEL from the file's meta is written from the Level, iff it has it: its marks' texel and how kept it is. The
     //  Level is the one source: either key in a caller's opts.meta is dropped, so a file cannot say a word its Level does not, and a round trip holds)
     meta: (() => { const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) }; })(),

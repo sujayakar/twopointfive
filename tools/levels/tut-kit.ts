@@ -38,6 +38,8 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-kit';
+/** the script it is played by */
+export const SCRIPT = 'tut-kit';
 /** what its leaves are painted */
 export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';

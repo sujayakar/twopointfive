@@ -153,6 +153,8 @@ export interface Level {
   sky: { zenith: Vec3; horizon: Vec3 };
   /** the breach drill's plan (optional; rust/game_rules/src/missions/breach.rs BreachDrill) */
   breach?: BreachPlan;
+  /** the script it is played by (the file's `script`) — absent = none */
+  script?: string;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;
   /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): host/drawpage.ts hands it to the look (scene/look.ts lookKeptOf) */

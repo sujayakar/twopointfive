@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "tut-kit",
+  "script": "tut-kit",
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-kit.ts build → tools/levels/export.ts", "notes": "The tutorial's third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }

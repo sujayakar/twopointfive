@@ -65,6 +65,8 @@ if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.lengt
   if (n) console.log(`floor: ${n} flat${n > 1 ? 's' : ''} raised to draw in order`); }
 // HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept (docs/level-format.md).
 if (gen.KEPT !== undefined) level.kept = gen.KEPT;
+// THE SCRIPT IT IS PLAYED BY, a generator's `SCRIPT` export: the file's script.
+if (gen.SCRIPT !== undefined) level.script = gen.SCRIPT;
 // WHAT ITS LEAVES ARE PAINTED, a generator's `DOOR_PAINT` export (lib/doorPaint.ts): the file's doorPaint. With the skin left out they are as a leaf is made.
 if (gen.DOOR_PAINT && !(gen.finish && FLOOR_TO)) level.doorPaint = gen.DOOR_PAINT;
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
