@@ -487,8 +487,7 @@ impl Shown {
 
 /// The flags of a part, and of one that casts no shadow.
 fn part_flags() -> [f64; 2] {
-    let flag = crate::scene_boxes::box_flag();
-    [flag.dynamic, (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64]
+    [(crate::scene_boxes::box_flag::DYNAMIC as f64), (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64]
 }
 
 fn can_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {

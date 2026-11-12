@@ -105,18 +105,18 @@ fn gbClumpKey(k: u32, uv: vec2f) -> f32 {
 }
 /** has the glass of pane k at pane point uv fallen out? (flags = the header's) */
 fn gbOpenUV(k: u32, fl: u32, n: u32, uv: vec2f) -> bool {
-  if ((fl & 1u) == 0u) { return false; }
-  if ((fl & 8u) != 0u) { return true; }
-  if ((fl & 4u) != 0u) { return gbClumpKey(k, uv) < paneOpenAt(k); }   // a tempered pane letting go: the clumps the wave has reached
+  if ((fl & GB_OPEN) == 0u) { return false; }
+  if ((fl & GB_GONE) != 0u) { return true; }
+  if ((fl & GB_DICING) != 0u) { return gbClumpKey(k, uv) < paneOpenAt(k); }   // a tempered pane letting go: the clumps the wave has reached
   if (n == 0u) { return false; }
   let S = gbSiteLoad(k, gbNearest(k, n, uv)); let sb = gpSectorBand(S, uv);
-  if (sb.y >= 3u && (fl & 2u) == 0u) { return false; }   // the uncut sheet beyond the rings of a pane that has not run
+  if (sb.y >= 3u && (fl & GB_RUN) == 0u) { return false; }   // the uncut sheet beyond the rings of a pane that has not run
   return gbPieceOpen(S, sb.x, sb.y);
 }
 /** has the part of pane k at local point lp fallen out? (a whole pane — nothing open — answers in one fetch) */
 fn glassCellOpen(k: u32, lp: vec3f) -> bool {
   let h = gbHeader(k); let fl = u32(h.y + 0.5);
-  if ((fl & 1u) == 0u) { return false; }
+  if ((fl & GB_OPEN) == 0u) { return false; }
   return gbOpenUV(k, fl, min(u32(h.x + 0.5), 8u), gbUV(k, lp));
 }
 /** world point → pane-local point (Rᵀ·(X − c)), of the pane's first two rows in SceneInfo.glass */

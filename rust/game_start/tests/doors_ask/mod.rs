@@ -824,7 +824,7 @@ impl DoorsAsk for Play {
         let mut out = Vec::new();
         for &b in &self.g.col.boxes {
             let x = &self.g.tab.boxes[b];
-            if (x.flags as u32) & (game::scene_boxes::box_flag().glass as u32) == 0 { continue; }
+            if (x.flags as u32) & (game::scene_boxes::box_flag::GLASS) == 0 { continue; }
             let (a, o, ha) = ((x.c[0] - f.hx) * f.ux + (x.c[2] - f.hz) * f.uz, (x.c[0] - f.hx) * f.nx + (x.c[2] - f.hz) * f.nz, f.ux.abs() * x.h[0] + f.uz.abs() * x.h[2]);
             if o.abs() < 0.3 && a + ha > -2.5 && a - ha < w + 2.5 { out.push((a - ha, a + ha)); }
         }

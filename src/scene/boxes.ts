@@ -4,38 +4,14 @@ import { WORLD } from './world';
 import { makeBuffer } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP } from './cut';
 import type { BoxShape } from './shapes';
+import { BoxFlag } from '../draw/bits';
 import { BoxMat, Capsule, capsuleWord, capsuleWordBlue, capsuleWordGreen, capsuleWordOwner, capsuleWordRed } from '../draw/gpu';
 import { Cap, Geo, Info } from '../draw/sections';
 import type { MarkingDef } from './markings';
 
+export { BoxFlag };   // (what a box is, as bits of its `flags`: declared in rust/game_types/src/scene_boxes/types.rs)
 /** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
 export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
-export const BoxFlag = {
-  NoPrimary: 1,      // not rasterized into the G-buffer (ceilings, light-only geometry)
-  NoShadow: 2,       // ignored by all rays (decals, glow cards)
-  Cutaway: 4,        // rasterized only below mat.cutHeight (the viewer stage drops its back wall to a lip when the orbit camera goes behind it); rays see the full box
-  Dynamic: 8,        // rebuilt every frame (character proxies, props on bones)
-  Emissive: 16,      // has non-zero emission (lets shaders early-out)
-  AreaLit: 32,       // its emission is represented by an analytic area light: rays ignore the emissive term (no double count, no small-emitter aliasing in the cascades)
-  Rot: 64,           // carries a full 3D rotation (Box.rot; set automatically on upload): raster AND rays use the quaternion in boxMat instead of the packed yaw
-  Gloss: 128,        // polished floor finish (lobby stone, the lino): under FrameFlags.Gloss the final gather traces one Fresnel-weighted reflection ray for on-screen pixels of its top face (fgather.wgsl glossReflection) — the last free bit of the GPU flag byte
-  SoundSeal: 1 << 16,   // CPU-only (bits 8-15 of the GPU word are the owner byte, so CPU flags start at 1<<16): a dynamic occluder that currently seals sound (a door leaf near closed)
-  // GLASS (experiment E3). The GPU flag word is a u32 whose low byte holds the flags above and whose second byte is the owner; bits 16-31 were simply never sent
-  // (upload masked Box.flags to 0xff because the only higher bit, SoundSeal, is CPU-only). Rather than repurpose Cutaway (the viewer's stage wall needs it) the
-  // word is WIDENED: Glass keeps the same bit on both sides (1<<17 here = BOX_GLASS 131072u in common.wgsl) and upload() passes exactly that bit through.
-  // A glass box is authored geometry (levels/*.json flag name 'Glass', albedo = the pane's transmission tint) that no traced ray and no raster triangle ever
-  // sees: upload() keeps it out of the trace grid AND the visible list and instead lists it in SceneInfo.glass (≤ MAX_GLASS panes, 3 vec4f each), where
-  // composite / fgather / direct test view and shadow segments against it analytically (Fresnel reflection + tint + dust glow; common.wgsl glassTrace).
-  // CPU: movement collision and sound treat it as a wall, sight passes through it (rust/game_rules/src/world/scene_collision.rs segment_blocked's `through`), a round / kick / bang breaks it.
-  Glass: 1 << 17,
-  // A THIN THING THAT STANDS FREE (as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (rust/game_rules/src/stealth/fogofwar: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — rust/game_rules/src/people/guards eye_through), and
-  // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
-  Thin: 1 << 18,
-  // A WINDOW'S BAR (as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
-  // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
-  Bar: 1 << 19,
-} as const;
 
 import { SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;

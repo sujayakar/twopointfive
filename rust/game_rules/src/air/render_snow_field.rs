@@ -14,7 +14,7 @@ pub fn snow_paint_of(g: &crate::game::Game, b: &crate::render_snow_field::SnowPa
 pub(super) fn snow_thin_lay(g: &crate::game::Game, b: BoxId) -> bool {
     let (c, h, flags, does) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.flags, x.does) };
     let top = c[1] + h[1];
-    let glass = js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0;
+    let glass = js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32 != 0;
     !glass && top <= 0.03 && top > 0.0 && c[1] - h[1] >= -0.02 && crate::scene_materials::does_of(g, does).snow != Some(crate::scene_materials::SnowKind::Snow)
 }
 /// ground somebody cleared: any paint that is not snow's, and not a lit thing lying on the snow

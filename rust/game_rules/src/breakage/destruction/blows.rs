@@ -13,8 +13,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    js::or_bits(f.no_primary, f.no_shadow)
+    (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range

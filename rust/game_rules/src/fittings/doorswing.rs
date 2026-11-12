@@ -59,7 +59,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
     let uz = m::sin(c);
     let mx = def.hinge[0] + ux * def.width / 2.0;
     let mz = def.hinge[1] + uz * def.width / 2.0;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut n = 0.0;
     for off in [0.8, 1.5] {
         for al in [-0.4, 0.0, 0.4] {

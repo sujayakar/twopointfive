@@ -136,8 +136,7 @@ pub(super) fn quiet_roofs(g: &Game, p: &Planned) -> Vec<usize> {
     if !QK.roofs || p.indoors { return Vec::new(); }
     let (mid, n, lim) = (p.anchor.mid, p.anchor.n, p.wall.face + QK.roof_eave);
     let out_of = |x: f64, z: f64| (x - mid[0]) * n[0] + (z - mid[1]) * n[1];
-    let f = box_flag();
-    let (np, not) = (js::to_i32(f.no_primary), js::to_i32(f.no_shadow) | js::to_i32(f.emissive) | js::to_i32(f.area_lit));
+    let (np, not) = (box_flag::NO_PRIMARY as i32, box_flag::NO_SHADOW as i32 | box_flag::EMISSIVE as i32 | box_flag::AREA_LIT as i32);
     let mut got = Vec::new();
     for (i, &id) in g.col.boxes.iter().enumerate() {
         let b = &g.tab.boxes[id];

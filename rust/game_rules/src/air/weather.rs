@@ -557,7 +557,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
 fn soak(g: &mut Game, b: BoxId) {
     let (albedo, flags, rough, aniso) = { let x = &g.tab.boxes[b]; (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
-    let gloss = crate::scene_boxes::box_flag().gloss;
+    let gloss = crate::scene_boxes::box_flag::GLOSS as f64;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
 }
 

@@ -216,10 +216,9 @@ fn breach_drill_can_in_hand(g: &mut crate::game::Game) {
     let y = v3::cross(axis, x);
     let rot = v3::quat::from_basis(x, y, axis);
     let owner = (js::to_i32(g.ch[c].id) & 0xff) as f64;
-    let flag = crate::scene_boxes::box_flag();
-    let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: centre, h: [0.032, 0.032, 0.07], yaw: Some(yaw), rot: Some(rot), albedo: Some([0.07, 0.075, 0.08]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(flag.dynamic), owner: Some(owner), ..Default::default() });
+    let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: centre, h: [0.032, 0.032, 0.07], yaw: Some(yaw), rot: Some(rot), albedo: Some([0.07, 0.075, 0.08]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), owner: Some(owner), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_, ttl: 1e-3 });
-    let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(centre, axis, 0.045), h: [0.034, 0.034, 0.012], yaw: Some(yaw), rot: Some(rot), albedo: Some([0.7, 0.7, 0.66]), flags: Some((js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64), owner: Some(owner), ..Default::default() });
+    let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(centre, axis, 0.045), h: [0.034, 0.034, 0.012], yaw: Some(yaw), rot: Some(rot), albedo: Some([0.7, 0.7, 0.66]), flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64), owner: Some(owner), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_, ttl: 1e-3 });
 }
 

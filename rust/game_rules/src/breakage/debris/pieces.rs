@@ -136,7 +136,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
         albedo: Some(v3::copy(albedo)),
         stuff: word.stuff,
         does: word.does,
-        flags: Some(crate::scene_boxes::box_flag().dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         mkey: Some(crate::scene_boxes::mkey().debris + ((js::to_i32(serial) & 65535) as f64)),
         ..crate::scene_boxes::MakeBoxP::default()
     };

@@ -189,14 +189,13 @@ fn shot_shows(g: &mut Game, r: &Round) {
 /// The flash card: one frame of emissive box.
 fn flash_card(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
     let card = crate::effects::muzzle_card();
-    let bf = crate::scene_boxes::box_flag();
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(r.muzzle, r.dir, mf.card_ahead),
         h: mf.card_half,
         yaw: Some(v3::yaw_of(r.dir)),
         albedo: Some(card.albedo),
         emissive: Some(mf.card_emissive),
-        flags: Some((js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });

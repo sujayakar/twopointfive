@@ -32,7 +32,7 @@ pub fn shoulder(g: &Game, c: CharId) -> V3 {
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.
 pub fn solid_between(g: &Game, from: V3, to: V3) -> bool {
-    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag::SOUND_SEAL as f64)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
@@ -541,8 +541,7 @@ pub fn laser_reach(g: & crate::game::Game, c_2: CharId, self_: Option<GuardId>, 
     let from = v3::mad(g.ch[c_2].muzzle, dir, 0.02);
     if !dir[0].is_finite() || v3::len(dir) < 0.5 { return None; }
     let mut l = 30.0;
-    let flags = crate::scene_boxes::box_flag();
-    let skip = js::or_bits(flags.no_shadow, flags.glass);
+    let skip = (crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::GLASS) as f64;
     let owner = (js::to_i32(g.ch[c_2].id) & 0xff) as f64;
     let wh = crate::scene_boxes::box_world_raycast(g, from, dir, Some(l), Some(skip), Some(owner), None);
     if let Some(h) = &wh { l = h.t; }
@@ -582,8 +581,7 @@ pub fn beam_boxes(from: V3, dir: V3, l: f64, out: &mut Carried, dot: bool, ir: b
     let up: V3 = if m::abs(dir[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
     let x = v3::normalize(v3::cross(up, dir));
     let y = v3::cross(dir, x);
-    let flags = crate::scene_boxes::box_flag();
-    let box_flags = js::or_bits(flags.no_shadow, flags.dynamic);
+    let box_flags = (crate::scene_boxes::box_flag::NO_SHADOW | crate::scene_boxes::box_flag::DYNAMIC) as f64;
     let line = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
         h: [HW, HW, l / 2.0],

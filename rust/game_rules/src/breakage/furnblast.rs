@@ -25,7 +25,7 @@ fn snow_paint(g: &Game, b: BoxId) -> bool { let does = does_word(g, b); crate::r
 fn box_class(g: &Game, b: BoxId) -> BreakClass { let does = does_word(g, b); break_class_of(g, &BreakClassOfB { does }) }
 fn flags_of(g: &Game, b: BoxId) -> i32 { js::to_i32(g.tab.boxes[b].flags) }
 /// BoxFlag.NoPrimary, BoxFlag.NoShadow, BoxFlag.Glass, BoxFlag.Dynamic as bits
-fn bits() -> (i32, i32, i32, i32) { let f = crate::scene_boxes::box_flag(); (js::to_i32(f.no_primary), js::to_i32(f.no_shadow), js::to_i32(f.glass), js::to_i32(f.dynamic)) }
+fn bits() -> (i32, i32, i32, i32) { (crate::scene_boxes::box_flag::NO_PRIMARY as i32, crate::scene_boxes::box_flag::NO_SHADOW as i32, crate::scene_boxes::box_flag::GLASS as i32, crate::scene_boxes::box_flag::DYNAMIC as i32) }
 fn plan_a(a: &AABB) -> OverPlanA { OverPlanA { x0: a.x0, z0: a.z0, x1: a.x1, z1: a.z1 } }
 fn plan_q(a: &AABB) -> OverPlanQ { OverPlanQ { x0: a.x0, z0: a.z0, x1: a.x1, z1: a.z1 } }
 fn over(a: &AABB, q: &AABB) -> bool { over_plan(plan_a(a), plan_q(q)) }

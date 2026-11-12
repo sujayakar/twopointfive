@@ -54,7 +54,7 @@ fn solid(g: &Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
     let (c, half, flags) = level_box(g, h.index as usize);
-    if js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
+    if js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32 != 0 { return false; }
     c[1] + half[1] >= WALL_TOP
 }
 
@@ -446,8 +446,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
 // ---------------------------------------------------------------- drawing (into Game.dynBoxes, beside the keypads' plates)
 /// The plate, its rocker (top proud with the lights on) and, in a room off at the switch, the small amber pilot: a decal's depth, nobody's collision, no shadow.
 pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let flag = crate::scene_boxes::box_flag();
-    let deco = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let deco = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     for sw in wall_switches(g) {
         let yaw = v3::yaw_of(sw.n);
         let lit = switch_lit(g, &sw);

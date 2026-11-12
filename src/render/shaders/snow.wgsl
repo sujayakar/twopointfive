@@ -142,7 +142,7 @@ fn snowBox(wp: vec3f, nIn: vec3f, bi: u32, lc: vec3f, hf: vec4f, ground: bool, p
   if (thin && face != 2u) { o.gone = snowField(wp.xz).y > 0.3 || paint || lay; return o; }   // the side of a strip lying on the ground: under the snow, it is not seen
   if (!paint) { return o; }
   // a snow-painted box that is not the ground: a CAP (or what shows of a drift). Rounded off toward its edges; a thin one's edge wanders and its sides are not drawn
-  let b = boxGeo[bi]; let cap = hf.y < 0.06 && (b.flags & BOX_NOSHADOW) != 0u;
+  let b = boxGeo[bi]; let cap = hf.y < 0.06 && (b.flags & GEO_NO_SHADOW) != 0u;
   var up = nIn; var f = vec4f(0.0, 1.0, 0.0, 0.0);
   if (face == 2u) {
     let r = min(snowCfg.p[5].w, min(hf.x, hf.z) * 0.9);

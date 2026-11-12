@@ -192,7 +192,7 @@ fn tile_falls(g: &mut Game, q: &Square, y: f64, who: f64) {
         yaw: Some(0.0),
         albedo: Some(v3::copy(albedo)),
         emissive: Some([0.0, 0.0, 0.0]),
-        flags: Some(crate::scene_boxes::box_flag().dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         owner: Some(0.0),
         stuff: Some(crate::scene_stuff::BoxStuff::Paint),
         ..Default::default()

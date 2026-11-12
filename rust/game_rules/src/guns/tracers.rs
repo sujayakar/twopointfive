@@ -9,13 +9,12 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor.
 fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
-    let f = crate::scene_boxes::box_flag();
     crate::scene_boxes::MakeBoxP {
         c: [0.0, -10.0, 0.0],
         h: [0.006, 0.006, 0.05],
         albedo: Some([0.04, 0.03, 0.02]),
         emissive: Some([0.0, 0.0, 0.0]),
-        flags: Some((js::to_i32(f.dynamic) | js::to_i32(f.no_shadow)) as f64),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
         ..Default::default()
     }
 }

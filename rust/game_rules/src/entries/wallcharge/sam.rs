@@ -93,13 +93,12 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let yaw = if w.along_x { 0.0 } else { m::PI / 2.0 };
     let n = wall_pt(g, &w, 0.0, 1.0, None);
     let o = wall_pt(g, &w, 0.0, 0.0, None);
-    let flag = crate::scene_boxes::box_flag();
     let slab = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: p,
         h: [0.07, 0.11, 0.02],
         yaw: Some(yaw),
         albedo: Some([0.09, 0.1, 0.08]),
-        flags: Some(flag.dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: slab, ttl: 1e-3 });
@@ -109,7 +108,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
         yaw: Some(yaw),
         albedo: Some([0.9, 0.12, 0.08]),
         emissive: Some([2.2, 0.2, 0.1]),
-        flags: Some((js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: tell, ttl: 1e-3 });

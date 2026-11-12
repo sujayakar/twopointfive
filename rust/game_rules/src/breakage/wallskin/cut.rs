@@ -116,9 +116,9 @@ impl Sheet {
 
     /// The piece of it that stands over one rectangle (None: the ragged piece behind leaves nothing of it), and whether a plane of what is behind bites it.
     fn piece(&self, bh: &Behind, x: &WallSkinLaidValueItem) -> (Option<Bx>, bool) {
-        let s = &self.s; let fl = crate::scene_boxes::box_flag();
+        let s = &self.s; 
         let mut p = s.clone();
-        p.flags = ((js::to_i32(s.flags) & !js::to_i32(fl.no_primary)) | js::to_i32(fl.dynamic)) as f64;
+        p.flags = ((js::to_i32(s.flags) & !crate::scene_boxes::box_flag::NO_PRIMARY as i32) | crate::scene_boxes::box_flag::DYNAMIC as i32) as f64;
         p.mkey = Some(crate::scene_boxes::mkey().skin + self.j * SLOTS + x.slot);
         if self.marked() { p.cut = Some(self.marked_planes(&x.r)); } else { self.trim(&mut p, &x.r); }
         // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)
@@ -201,7 +201,7 @@ impl Behind {
 /// What has gone of a thing it lay on: a breakable's open cells at that face; any other solid whole, once something has hidden it.
 fn gone_of(g: &Game, sh: &Sheet, q: &Seat) -> Vec<Rect> {
     if let Some(b) = brk_id(g, q.k) { return open_cells(g, sh, q, &g.tab.wallbreak_breakable[b]); }
-    let hidden = js::to_i32(g.tab.boxes[g.col.boxes[q.k as usize]].flags) & js::to_i32(crate::scene_boxes::box_flag().no_primary) != 0;
+    let hidden = js::to_i32(g.tab.boxes[g.col.boxes[q.k as usize]].flags) & crate::scene_boxes::box_flag::NO_PRIMARY as i32 != 0;
     if hidden { vec![all()] } else { Vec::new() }
 }
 
