@@ -41,7 +41,7 @@ pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
 /// What the hearing model has under a point, as a HUD says it (None: the floors are all one).
 pub fn floor_heard(g: &crate::game::Game, pos: V3) -> Option<crate::view::FloorWord> {
     use crate::{floor::FloorMat as F, view::FloorWord as W};
-    if !g.tune.floor_materials { return None; }
+    if !g.k.tune.floor_materials { return None; }
     Some(match floor_of(g, pos) { F::Carpet => W::Carpet, F::Lino => W::Lino, F::Stone => W::Stone, F::Tile => W::Tile, F::Asphalt => W::Asphalt, F::Grass => W::Grass })
 }
 
@@ -55,7 +55,7 @@ pub fn tread(g: &mut crate::game::Game, pos: V3, base: f64, is_player: bool) -> 
 pub fn footfall(g: &mut crate::game::Game, pos: V3, base: f64, is_player: bool) -> f64 {
     let mat = floor_of(g, pos);
     let row = floor_row(mat);
-    let (heard, level) = if g.tune.floor_materials { (base * row.loud, base * row.loud) } else { (base * (if row.hard { 1.0 } else { 0.8 }), base) };
+    let (heard, level) = if g.k.tune.floor_materials { (base * row.loud, base * row.loud) } else { (base * (if row.hard { 1.0 } else { 0.8 }), base) };
     crate::audio_iface::game_audio_like_footstep(g, pos, heard, is_player, mat);
     level
 }

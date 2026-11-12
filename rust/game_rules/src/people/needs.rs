@@ -140,7 +140,7 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
 
 /// May the needs play in this run at all?
 fn needs_live(g: &crate::game::Game) -> bool {
-    g.tune.needs
+    g.k.tune.needs
         && g.ai_enabled
         && !g.aside
         && g.qrf.state == crate::qrf::QrfState::Idle
@@ -170,7 +170,7 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 
 /// Why a trip under way must be broken off now, or None.
 fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
-    if !g.tune.needs {
+    if !g.k.tune.needs {
         return Some(String::from("switched off"));
     }
     if crate::condition::down(g, g.gd[gd].ch) {
@@ -234,7 +234,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
 
 /// Once a frame: levels, the after-alert cap, interrupts, the deal of a trip.
 pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
-    if !g.tune.needs {
+    if !g.k.tune.needs {
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];

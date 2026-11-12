@@ -213,7 +213,7 @@ pub struct Acts {
     /// THE HOLD through Sam's frag: the beat it is on for · since when the team is on a knee · each man's knee as it last stood · a row of Sam's has waited for the men since · the beat that has the team down
     pub pin: Option<u32>, pub pin_t: f64, pub kneel_t: f64, pub knees: Vec<(GuardId, f64)>, pub home_t: f64, pub kneel: Option<u32>,
     /// the game's rows as they were, held for a row: FRAG's flee, SAMSTUN's own, the dead lamp's lead
-    pub flee_m: Option<f64>, pub lead_was: Option<bool>,
+    pub flee_m: Option<f64>,
     /// Sam's weapon light as the game has it · the lit man's beam · the wand's row has the fog of war on for the game · Player.wand as it found it · a teammate's card and what it carried · the load a launcher's row found on the tube
     pub sam_cone: Option<(f64, f64, f64)>, pub beam: Option<V3>, pub fog_up: bool, pub wand_was: bool, pub wand_kit: Option<(GuardId, bool)>, pub tube_was: Option<i32>,
     /// teammates' guns on their way in · each member's colours as the scenario staged him
@@ -253,7 +253,7 @@ impl Default for Acts {
             pulled: -1e9, sam_card_due: false, home_men: Vec::new(), hand_due: None, leaf_ask: -1.0, last_end: -1e9,
             vent_at: -1.0, vent_kill: -1.0, step_t: 0.0, step_dt: 0.0,
             pin: None, pin_t: 0.0, kneel_t: 0.0, knees: Vec::new(), home_t: n, kneel: None,
-            flee_m: None, lead_was: None,
+            flee_m: None,
             sam_cone: None, beam: None, fog_up: false, wand_was: false, wand_kit: None, tube_was: None,
             swaps: Vec::new(), issued_suit: Vec::new(), issued_trim: Vec::new(),
             walks: Vec::new(), shut_wall: None, shut_own: None, wall_ask: None,

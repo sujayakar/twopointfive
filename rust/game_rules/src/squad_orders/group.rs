@@ -88,7 +88,7 @@ pub fn groups_tick(g: &mut Game, dt: f64) {
 fn hurry(g: &mut Game, id: GroupId) {
     for (gd, a) in g.groups[id].orders.asg.iter().map(|(gd, &a)| (gd, a)).collect::<alloc::vec::Vec<_>>() {
         let far = g.tab.task[a].post.is_some_and(|p| crate::v3::dist_xz(p, g.pos_of(gd)) > ONTO_M);
-        g.tab.task[a].pace = far.then_some(g.tune.guard_chase);
+        g.tab.task[a].pace = far.then_some(g.k.tune.guard_chase);
     }
 }
 const ONTO_M: f64 = 2.5;

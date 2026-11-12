@@ -114,7 +114,7 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
     m.stand = stand;
     m.rest = [e.at[0] - e.out[0] * 0.6, 0.0, e.at[2] - e.out[1] * 0.6];
     m.phase = Phase::ToProp;
-    let speed = g.tune.guard_chase;
+    let speed = g.k.tune.guard_chase;
     move_(g, d, goal, speed);
     true
 }
@@ -234,7 +234,7 @@ fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::di
         if let Some(stand) = stand {
             if crate::roomfight::room_fight_in_room(g, Some(r.room), stand) && dist_xz(g.pos_of(gd), stand) < 12.0 {
                 m.brace = -1.0; m.prop = None;  m.stand = stand; m.phase = Phase::ToDoor;
-                let speed = g.tune.guard_chase;
+                let speed = g.k.tune.guard_chase;
                 move_(g, d, stand, speed);
                 return;
             }
@@ -260,7 +260,7 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
     if let Some(p) = p {
         m.spot = Some(p);
         m.phase = Phase::ToCover;
-        let speed = g.tune.guard_chase;
+        let speed = g.k.tune.guard_chase;
         move_(g, d, p, speed);
     } else {
         settle(g, d, m);

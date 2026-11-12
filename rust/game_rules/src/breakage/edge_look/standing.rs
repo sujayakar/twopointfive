@@ -58,7 +58,7 @@ impl<'a> Cells<'a> {
 
 /// What lays one wall's pieces: its frame, what it is painted from, and the boxes so far.
 struct Lay<'a> {
-    w: Cells<'a>, f: Frame, e: EdgeLookModEDGE, p: Painted,
+    w: Cells<'a>, f: Frame, e: crate::knobs::EdgeLookK, p: Painted,
     fc: V3, f_yaw: f64, f_rough: Option<f64>,
     out: Vec<Bx>, key: i32,
     /// the charges' gaps along it
@@ -86,7 +86,7 @@ impl Lay<'_> {
         let p = painted(g, b);
         let x = &g.tab.boxes[b.box_];
         Lay {
-            w: Cells::of(f, b), f, e: g.m.edge_look.edge,
+            w: Cells::of(f, b), f, e: g.k.edge_look,
             fc: x.c, f_yaw: x.yaw, f_rough: x.rough,
             out: Vec::new(), key: (js::to_i32(b.id) & 0x3fff) << 9,
             bl: g.destr.edge_look.blasted.get(crate::Num(b.id)).cloned(),
@@ -315,7 +315,7 @@ fn dress(g: &mut Game, id: f64, out: Vec<Bx>) {
 
 /// Over the level's cap it is the walls dressed longest ago that go bare (`id` is the newest, whatever it was before).
 fn undress(g: &mut Game, id: f64) {
-    let most = g.m.edge_look.edge.max_decor;
+    let most = g.k.edge_look.max_decor;
     let mut total = 0.0; for x in g.destr.edge_look.decor.values() { total += x.len() as f64; }
     let mut at = 0;
     while let Some(old) = g.destr.edge_look.decor.next_key(&mut at) {

@@ -55,7 +55,7 @@ fn walks_to_the_spot(g: &mut Game, gd: GuardId, c: CharId, dt: f64, a: &mut Acts
     let at = g.gd[gd].search_plan.as_ref().unwrap().current as usize;
     let s_pos = g.gd[gd].search_plan.as_ref().unwrap().spots[at].pos;
     go_to(g, gd, s_pos, None);
-    let pie = pie_doorway(g, gd, dt, g.tune.guard_investigate, false);
+    let pie = pie_doorway(g, gd, dt, g.k.tune.guard_investigate, false);
     a.pied = true;
     let arrived = follow_path(g, gd, dt, pie.speed);
     a.move_speed = g.gd[gd].speed;

@@ -90,7 +90,7 @@ fn a_running_step_across_the_room_wakes_him() {
 fn due_a_coffee(seed: u32) -> (Play, [GuardId; 3]) {
     let mut p = Play::level("office.json", false, &Opts { seed, ..Default::default() });
     p.sam_unhurt();
-    p.g.tune.needs = true;
+    p.g.k.tune.needs = true;
     p.run(0.1);
     p.sam_put([2.0, 2.0]);
     p.g.player_invisible = true;

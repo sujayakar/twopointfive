@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The one gate: the switch on AND glass breaking live.
 pub(in crate::breakage) fn shards_live(g: &crate::game::Game) -> bool {
-    g.tune.glass_shards && crate::glassbreak::glass_break_live(g)
+    g.k.tune.glass_shards && crate::glassbreak::glass_break_live(g)
 }
 
 /// `x` wrapped to an unsigned word, as a number.

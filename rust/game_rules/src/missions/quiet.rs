@@ -70,7 +70,7 @@ fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<
     let squad = squad.unwrap_or(0.0);
     if let Some(why) = quiet_mission_level_refuses(g) { return Some(why); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) — nobody would walk his route")); }
-    if js::truthy(squad) && !g.tune.teams { return Some(String::from("sides are switched off (tune.teams): no partner")); }
+    if js::truthy(squad) && !g.k.tune.teams { return Some(String::from("sides are switched off (tune.teams): no partner")); }
     if let Some(r) = g.director.run {
         if !g.tab.director_run[r].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[r].name)); }
     }

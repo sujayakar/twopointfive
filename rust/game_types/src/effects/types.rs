@@ -240,7 +240,6 @@ pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_ai
 
 pub fn sparks() -> crate::effects::Sparks { crate::effects::Sparks { speed: 20.0, spread: 0.55, lift: 0.5, life: 0.55 } }
 
-pub fn tracer_fx() -> crate::tracers::TracersParams { crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 } }
 
 pub fn trail() -> crate::effects::Trail { crate::effects::Trail { radius: 0.036, min_voxels: 1.0, density: 8.6, temp: 45.0, life: 0.9, attack: 0.01 } }
 

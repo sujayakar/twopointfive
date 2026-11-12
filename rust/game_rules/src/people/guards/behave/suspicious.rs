@@ -74,7 +74,7 @@ fn goes_to_see(g: &mut Game, gd: GuardId, c: CharId, dt: f64, a: &mut Acts) {
 /// To the place he thinks something is: there, his attention stays on it, or he looks about until he lets it go; a walk that gets nowhere moves him on.
 fn walks_to_his_fix(g: &mut Game, gd: GuardId, c: CharId, lk: V3, dt: f64, a: &mut Acts) {
     go_to(g, gd, lk, None);
-    let arrived = follow_path(g, gd, dt, g.tune.guard_investigate);
+    let arrived = follow_path(g, gd, dt, g.k.tune.guard_investigate);
     a.move_speed = g.gd[gd].speed;
     // (gd.lastKnown read again: the walk's gates may have written a new fix)
     a.aim_at = g.gd[gd].last_known.map(|k| v3::add(k, [0.0, 0.9, 0.0]));

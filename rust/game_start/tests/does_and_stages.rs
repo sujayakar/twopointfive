@@ -29,7 +29,7 @@ fn answers(level: &Json, what: &str) -> (Vec<String>, usize, usize) {
     std::fs::write(&path, json::to_text(level)).unwrap();
     let mut p = Play::level(path.to_str().unwrap(), false, &Opts { seed: 1, ..Default::default() });
     std::fs::remove_file(&path).ok();
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.frame();
     let walls = game::wallbreak::wall_break_all(&p.g);
     let (nw, nc) = (walls.iter().filter(|w| w.kind == game::wallbreak::BKind::Wall).count(), walls.iter().filter(|w| w.kind == game::wallbreak::BKind::Cover).count());

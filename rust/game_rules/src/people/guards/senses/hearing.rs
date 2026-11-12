@@ -95,7 +95,7 @@ fn light_out(g: &mut Game, gd: GuardId, s: &Sound) {
     let &Sound { e, at_e, d_straight, placed, .. } = s;
     let c = g.gd[gd].ch;
     if d_straight < 10.0 && g.gd[gd].awareness < 0.4 && light_out_seen(g, gd, LightOutSeenE { pos: e.pos, from: e.from }) {
-        if e.cause == Some(crate::lighting::LightEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
+        if e.cause == Some(crate::lighting::LightEventCause::Ocp) && g.gd[gd].awareness < 0.3 && g.k.tune.ocp_notice == crate::game::GameTuneOcpNotice::Glance {
             let src: V3 = match e.from {
                 Some(f) => f,
                 None => [e.pos[0], 2.4, e.pos[2]],

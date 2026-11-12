@@ -58,7 +58,7 @@ pub fn stuns_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// Is any of it live: the switch on, the AI on.
 pub(super) fn tactics_on(g: &crate::game::Game) -> bool {
-    g.tune.tactics && g.ai_enabled
+    g.k.tune.tactics && g.ai_enabled
 }
 
 /// Two bearings' difference in degrees.
@@ -276,7 +276,7 @@ pub fn danger_at(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Team)
     g.m.tactics.states.as_ref().unwrap().danger.iter().copied().find(|&r| tab[r].door == d && tab[r].team == team && tab[r].until > now)
 }
 
-/// Mark (or re-arm) a doorway dangerous for `team` for tune.doorDanger seconds.
+/// Mark (or re-arm) a doorway dangerous for `team` for `tune.door_danger` seconds.
 pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Team, why: crate::tactics::DangerWhy, victim: Option<&str>) -> TacticsDangerRecId {
     s(g);
     let found = {
@@ -284,7 +284,7 @@ pub fn mark_danger(g: &mut crate::game::Game, d: DoorId, team: crate::teams::Tea
         g.m.tactics.states.as_ref().unwrap().danger.iter().copied().find(|&x| tab[x].door == d && tab[x].team == team)
     };
     let now = g.time;
-    let until = now + m::max(1.0, g.tune.door_danger);
+    let until = now + m::max(1.0, g.k.tune.door_danger);
     if let Some(id) = found {
         let r = &mut g.tab.tactics_danger_rec[id];
         if r.until <= now {
@@ -756,7 +756,7 @@ mod tests {
         use crate::tactics::DangerWhy;
         let mut g = Game::blank();
         g.time = 10.0;
-        g.tune.door_danger = 25.0;
+        g.k.tune.door_danger = 25.0;
         let d = DoorId(3);
         let r = mark_danger(&mut g, d, Team::Guard, DangerWhy::Drop, Some("A1"));
         assert_eq!(g.tab.tactics_danger_rec[r].until, 35.0);

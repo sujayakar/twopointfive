@@ -29,7 +29,7 @@ impl T {
         let clear = men && game_start::play::room_clear_files().contains(&file);
         let mut p = Play::level(&file, clear, &Opts { seed: 1, dress: true, ..Default::default() });
         p.g.god_mode = true;
-        p.g.tune.chaos = 0.5;
+        p.g.k.chaos.def = 0.5;
         T { p, sums: vec![0xcbf2_9ce4_8422_2325; parts::names().len()], w: game::bytes::W::new(), words: Vec::new(), frames: 0, n: Default::default() }
     }
     fn reached(&mut self, what: &'static str, n: usize) { *self.n.entry(what).or_insert(0) += n; }

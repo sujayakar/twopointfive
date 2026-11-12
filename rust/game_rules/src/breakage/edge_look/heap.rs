@@ -8,7 +8,7 @@ struct Cell<'a> {
     /// The wall's frame; None for cover.
     f: Option<Frame>,
     blast: bool,
-    e: EdgeLookModEDGE,
+    e: crate::knobs::EdgeLookK,
     p: Painted,
     /// The cell: its middle on plan, half its width, the way off it and along it, and its foot and its head.
     centre: V3,
@@ -56,7 +56,7 @@ impl<'a> Cell<'a> {
         let p = painted(g, b);
         let (bc, bh, byaw) = { let x = &g.tab.boxes[b.box_]; (x.c, x.h, x.yaw) };
         let (ix, iz, iy) = (js::rem(c, b.nx), js::rem(m::floor(c / b.nx), b.nz), m::floor(c / (b.nx * b.nz)));
-        let e = g.m.edge_look.edge;
+        let e = g.k.edge_look;
         let upper = iy != 0.0;
         let mut cell = Cell {
             b, c, f, blast, e, p,
