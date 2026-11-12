@@ -37,7 +37,7 @@ street lamps. `rust/game_draw/src/traffic.rs` makes the wear map.
 ## How it works
 
 **Generator to file.** A generator exports `build` (the `Level`, `scenarios`, a group for each box, `surfaces`), `NAME` and `NOTES`, and at will
-`MATERIALS`, `PALETTE`, `KEPT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
+`MATERIALS`, `PALETTE`, `KEPT`, `DOOR_PAINT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
 that would share a plane (`layLevelFloor`), words any box without a `does` (`stampDoes`), runs the skin (`finish`) and writes `levelToData`. It
 refuses unless the text loads back to the generator's `Level`, field for field. Then it asks `levels second-way` and `levels sight` (`LEVELASK=0` in
 front skips them for a level in the making).
@@ -80,7 +80,8 @@ round, a charge and a blast: a row of `MATERIALS` in `materials.ts`, whose twin 
 else: a mud partition a charge cuts beside a mud shell. `finish` is usually `skinLevel`: same boxes, other paint, decals in group `look`.
 
 **The look.** The default kit is `gwotKit.ts`; `gwotPalette.ts` names its paints. `look_dress` is true on any `?levelFile=` but the office and
-`office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. A mark on a face is a
+`office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. `DOOR_PAINT` (`lib/doorPaint.ts`) is
+`doorPaint`: what its leaves are painted. A mark on a face is a
 `MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
 (`snow_level`).
 

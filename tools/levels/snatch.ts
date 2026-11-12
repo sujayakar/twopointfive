@@ -25,8 +25,11 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'snatch';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'A house in a walled yard, eight men, a room clear; two doors of the far wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;

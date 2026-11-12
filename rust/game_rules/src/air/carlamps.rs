@@ -13,8 +13,7 @@ struct Cand { i: usize, s: usize }
 
 /// What each generator writes for a lamp.
 fn sigs() -> Vec<crate::carlamps::LampSig> {
-    let p = crate::scene_gwot_palette::gwot_palette();
-    let (white, red) = (p.plastic_white, p.truck_red);
+    let (white, red) = ([0.7, 0.7, 0.66], [0.42, 0.06, 0.05]);   // (the look's white plastic and its red truck)
     vec![
         LampSig { what: crate::carlamps::CarLamp::TailLamp, h: [0.02, 0.06, 0.16], albedo: None, emissive: Some([0.5, 0.03, 0.02]), gap: 1.24 },   // the car
         LampSig { what: crate::carlamps::CarLamp::HeadLamp, h: [0.02, 0.07, 0.14], albedo: Some([0.8, 0.8, 0.75]), emissive: None, gap: 1.24 },

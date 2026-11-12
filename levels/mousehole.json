@@ -610,6 +610,7 @@
     { "id": "store", "hinge": [23.82, 15], "closedDir": 0, "width": 0.86 },
     { "id": "post", "hinge": [27, 16.82], "closedDir": 1.5707963267948966, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.05, 0.2, 0.19] }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

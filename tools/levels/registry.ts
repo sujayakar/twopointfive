@@ -51,6 +51,7 @@ import { GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The registry: a lobby, a lit gallery past a glass-fronted reading room and a blind copy room to the registrar\'s office, and a long dark way round through the stacks to its side door. The hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts registry';
 
@@ -475,6 +476,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'registry';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf(drawnAs('paint', [0.1, 0.1, 0.105]));
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = REGISTRY_ROOMS;

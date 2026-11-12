@@ -21,8 +21,11 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'gwot-yard';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every piece of tools/levels/lib/gwotKit.ts in it once. It has no file: the library asks this generator';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;

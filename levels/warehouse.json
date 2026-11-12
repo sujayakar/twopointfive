@@ -1436,6 +1436,7 @@
     { "id": "hd_s", "hinge": [30, 20.82], "closedDir": 1.5707963267948966, "width": 0.86 },
     { "id": "d_n", "hinge": [32.82, 11], "closedDir": 0, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.6, 0.42, 0.04], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

@@ -304,6 +304,19 @@ impl Default for RoomClearPlan {
     }
 }
 
+/// what a side's leaves are painted: the colour, and what they are made of where the level says
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct LeafPaint {
+    pub albedo: V3,
+    pub stuff: Option<crate::scene_stuff::BoxStuff>,
+}
+/// the paint of a level's leaves: those that lead outside, and the rest
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct DoorPaint {
+    pub outside: crate::scene_level::LeafPaint,
+    pub inside: crate::scene_level::LeafPaint,
+}
+
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
     pub props: Vec<Arc<crate::scene_level::PropDef>>,
@@ -329,6 +342,8 @@ pub struct Level {
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
+    /// (none: its leaves are as a leaf is made)
+    pub door_paint: Option<crate::scene_level::DoorPaint>,
     pub errand: crate::mission::Errand,
 }
 /// a BreachPlan is a RoomClearPlan with more on it: the part of it doorPlan's callers read

@@ -339,6 +339,7 @@
     { "id": "lounge", "hinge": [17, 11.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "between", "hinge": [11.5, 11.32], "closedDir": 1.5707963267948966, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.88, 0.24, 0.03], "stuff": "enamel" }, "inside": { "albedo": [0.74, 0.74, 0.73], "stuff": "enamel" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

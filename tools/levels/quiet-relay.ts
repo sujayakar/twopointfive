@@ -87,8 +87,11 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'quiet-relay';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The relay station at night, for a pair sneaking: a walled hilltop compound, an antenna mast whose two floodlights wash the face of the hut block (a comms hut joined to an ops room), a generator shed with the breaker, a bunk hut, a fuel point, two pickups. Its one idea: the long way round — both doors are on the lit face, watched by a picket in the dark behind the mast; one of the pair goes round by the alley behind the gate\'s blast wall to his back while the other waits at the door. Seven beats authored, five or six manned a deal; two cameras; four gates. Regenerate: bun run tools/levels/export.ts quiet-relay';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;

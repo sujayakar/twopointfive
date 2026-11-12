@@ -1517,6 +1517,7 @@
     { "id": "sg_w", "hinge": [17.25, 17.82], "closedDir": 1.5707963267948966, "width": 0.86 },
     { "id": "sg_e", "hinge": [25.75, 17.82], "closedDir": 1.5707963267948966, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.08, 0.24, 0.16], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

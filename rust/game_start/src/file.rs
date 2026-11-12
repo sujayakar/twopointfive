@@ -76,6 +76,12 @@ json_struct!(DoorData {
     id: "id", hinge: "hinge", closed_dir: "closedDir", width: "width", angle: "angle", exterior: "exterior", closer: "closer", min_angle: "minAngle", max_angle: "maxAngle", locked: "locked",
     lock: "lock", key_side: "keySide", swing: "swing", steel: "steel",
 } drops { "floor": Option<String> });
+/// what the leaves of a side are painted, and what they are made of (none: nothing said)
+pub struct LeafPaintData { pub albedo: V3, pub stuff: Option<String> }
+json_struct!(LeafPaintData { albedo: "albedo", stuff: "stuff" });
+/// the paint of the level's leaves: those that lead outside (`exterior`), and the rest. Steel ones are left as they are made
+pub struct DoorPaintData { pub outside: LeafPaintData, pub inside: LeafPaintData }
+json_struct!(DoorPaintData { outside: "outside", inside: "inside" });
 json_words!(PropKindName { Cardboard: "cardboard", Plant: "plant", Chair: "chair", Bin: "bin" });
 /// one box of a loose thing
 pub struct Part { pub off: V3, pub h: V3, pub yaw: Option<f64>, pub material: Option<String>, pub albedo: Option<V3>, pub stuff: Option<String>, pub does: Option<String>, pub markings: Option<Vec<MarkingDef>> }
@@ -166,12 +172,12 @@ impl FromJson for Nothing {
 
 pub struct LevelFile {
     pub version: f64, pub name: String, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
-    pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
+    pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub door_paint: Option<DoorPaintData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
     pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>, pub hums: Option<Vec<HumDef>>,
     pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub plans: Plans, pub scenarios: Option<Scenarios>,
 }
 json_struct!(LevelFile {
-    version: "version", name: "name", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors",
+    version: "version", name: "name", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors", door_paint: "doorPaint",
     routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", hums: "hums", connectors: "connectors", mission: "mission",
     breaker: "breaker", beacons: "beacons", sky: "sky", plans: "plans", scenarios: "scenarios",
 });

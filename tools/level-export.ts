@@ -16,6 +16,7 @@ const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelL
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
 const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
+const { GREEN_LEAVES } = await import(`${ROOT}/tools/levels/lib/doorPaint.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
 
@@ -30,6 +31,8 @@ const trace = { groups: [] as string[] };
 const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL } : {});
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
+
+level.doorPaint = GREEN_LEAVES();   // (its leaves, in the look's green outside and grey wood in: tools/levels/lib/doorPaint.ts)
 
 // 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts),
 //    one floor, the traceable world bounds

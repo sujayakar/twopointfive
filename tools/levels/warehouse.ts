@@ -63,6 +63,7 @@ import { drawnAs, PANEL_GREY, CHAIR_GREY, RACK_BLACK, madeOf, saidAs } from '../
 import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
 
@@ -739,6 +740,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'warehouse';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf(drawnAs('paint', [0.6, 0.42, 0.04]));
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = WAREHOUSE_ROOMS;

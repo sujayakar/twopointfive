@@ -214,7 +214,6 @@ pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
 pub mod scene_door_size { pub mod types; pub use types::*; }
-pub mod scene_gwot_palette { pub mod types; pub use types::*; }
 pub mod scene_level { pub mod types; pub use types::*; }
 pub mod scene_level_data { pub mod types; pub use types::*; }
 pub mod scene_level_load { pub mod types; pub use types::*; }
