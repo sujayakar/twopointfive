@@ -1,5 +1,5 @@
 // WHAT A BOX DID BY ITS COLOUR, UNTIL 2026-11-05: THE OLD RULE, FROZEN.
-// The game's rules used to ask a box's COLOUR what it was (src/scene/materials.ts tells how). They ask the box's word now (Box.does), and this file keeps
+// The game's rules used to ask a box's COLOUR what it was (rust/game_types/src/scene_materials tells how). They ask the box's word now (Box.does), and this file keeps
 // the old rule for one job and no other:
 //   · BRINGING A BOX FORWARD. A box whose maker said no word is given, when its level is exported, the word its colour would have had (stampDoes below:
 //     tools/levels/export.ts). So a generator that paints a thing in numbers nobody named still gets today's answer, written in the file where anyone
@@ -7,7 +7,9 @@
 // NOTHING IN src/ READS THIS, and nothing here reads the game: the palettes below are COPIES of the numbers as they stood that day (the office's rows, the
 // 2010s look's and the snow kit's), so a palette may change its colours and this rule answers as it always did. The hair's shift by which a paint of the
 // look stood for another office paint (gwotAs, to 0.0024 a channel) is here too, with its list in its old order: the files written before carry it.
-import { DOES_DEFAULT, MATERIALS, doesOfWord, type Does, type DoesWord, type Surf, type BreakClass, type SnowKind } from '../../src/scene/materials.ts';
+import type { DoesWord, SnowKind } from '../../src/draw/names.ts';
+import { DOES_DEFAULT } from './lib/does.ts';
+import type { BreakClass, Surf } from './lib/materials.ts';
 
 type V = readonly number[];
 const OFFICE: Record<string, V> = { carpet: [0.13, 0.14, 0.17], carpetBlue: [0.09, 0.11, 0.2], carpetRed: [0.22, 0.07, 0.07], lino: [0.33, 0.33, 0.31], stone: [0.38, 0.37, 0.35], asphalt: [0.09, 0.09, 0.1], grass: [0.1, 0.16, 0.08], wall: [0.66, 0.64, 0.6], wallDark: [0.36, 0.38, 0.4], concrete: [0.42, 0.41, 0.4], ceiling: [0.72, 0.72, 0.7], partRed: [0.5, 0.13, 0.1], partBlue: [0.13, 0.17, 0.42], partTan: [0.55, 0.47, 0.35], wood: [0.52, 0.4, 0.27], woodDark: [0.25, 0.18, 0.12], metal: [0.3, 0.31, 0.33], black: [0.04, 0.04, 0.045], chair: [0.14, 0.2, 0.45], cardboard: [0.58, 0.44, 0.26], white: [0.8, 0.8, 0.78], plant: [0.12, 0.3, 0.1], glassFrame: [0.2, 0.22, 0.25], screenOff: [0.02, 0.02, 0.025], red: [0.55, 0.08, 0.06], glass: [0.8, 0.87, 0.83], glassExt: [0.7, 0.75, 0.79] };
@@ -89,7 +91,7 @@ export function wasOf(albedo: V): Was {
 /** is this colour, to the number, a row of the look's palette or a snow paint AS THEY STOOD (not a stand-in a hair off one)? */
 export const lookRowWas = (albedo: V): boolean => { const k = albedo.join(','); return Object.values(LOOK).some(a => a.join(',') === k) || Object.values(SNOW).some(a => a.join(',') === k); };
 
-/** the row each office paint's name is (scene/materials.ts) */
+/** the row each office paint's name is (lib/materials.ts) */
 const NAME_ROW: Record<string, DoesWord> = {
   wall: 'plasterboard', partRed: 'partition', partBlue: 'partition', partTan: 'partition', ceiling: 'ceiling', white: 'laminate', glass: 'pane', glassExt: 'pane',
   concrete: 'concrete', wallDark: 'concrete', stone: 'stone', lino: 'lino', asphalt: 'tarmac', carpet: 'carpet', carpetBlue: 'carpet', carpetRed: 'carpet', grass: 'grass',
@@ -108,25 +110,6 @@ export function wordWas(albedo: V): DoesWord {
   if (w.surf === 'drywall') return w.paper ? (w.steel ? 'unnamed pale grey' : 'unnamed pale') : w.steel ? 'unnamed light grey' : 'unnamed light';
   return w.steel ? 'unnamed grey' : 'unnamed';
 }
-/** the columns of a word against what the colour said: the names of the columns that differ ('' = none). `tone` = ask the three the destruction index
- *  read by tone and by the dead screen's colour too (the caller knows whether the box is one the index could have looked at) */
-export function differs(d: Does, w: Was, tone: { casing: boolean; paper: boolean; screen: boolean }): string[] {
-  const out: string[] = [];
-  if (d.surf !== w.surf) out.push(`surf ${w.surf} → ${d.surf}`);
-  if (d.breaks !== w.breaks) out.push(`breaks ${w.breaks} → ${d.breaks}`);
-  if (!!d.steel !== w.steel) out.push(`steel ${w.steel} → ${!!d.steel}`);
-  if (d.wall !== w.wall) out.push(`wall ${w.wall} → ${d.wall}`);
-  if (!!d.board !== w.board) out.push(`board ${w.board} → ${!!d.board}`);
-  if (d.cover !== w.cover) out.push(`cover ${w.cover} → ${d.cover}`);
-  if (!!d.struct !== w.struct) out.push(`struct ${w.struct} → ${!!d.struct}`);
-  if (!!d.counter !== w.counter) out.push(`counter ${w.counter} → ${!!d.counter}`);
-  if (d.snow !== w.snow) out.push(`snow ${w.snow} → ${d.snow}`);
-  if (tone.casing && !!d.casing !== w.casing) out.push(`casing ${w.casing} → ${!!d.casing}`);
-  if (tone.paper && !!d.paper !== w.paper) out.push(`paper ${w.paper} → ${!!d.paper}`);
-  if (tone.screen && !!d.screen !== w.screen) out.push(`screen ${w.screen} → ${!!d.screen}`);
-  return out;
-}
-
 type Said = { albedo?: V; does?: string };
 /** every thing of a level that wears a paint of its own: its boxes, a shape's pieces that say a paint, its props' parts */
 function* painted(level: { boxes: Said[]; props?: { parts: Said[] }[] }): Generator<Said> {
@@ -146,4 +129,3 @@ export function stampDoes(level: { boxes: Said[]; props?: { parts: Said[] }[] })
   }
   return n;
 }
-export { MATERIALS, doesOfWord };

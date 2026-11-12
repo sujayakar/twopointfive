@@ -53,7 +53,7 @@ fn a_dry_gun_starts_its_own_reload() {
 fn unlimited_ammo_covers_wall_charges() {
     use game::wallcharge::{wall_charge_set_carried, wall_charge_take};
     let mut p = Play::mission("mousehole.json", "?levelFile=mousehole.json&roomclear&squad4", &Opts { seed: 1, ..Default::default() });
-    p.g.ai_enabled = false; p.g.god_mode = true; p.g.tune.chaos = 0.5;
+    p.g.ai_enabled = false; p.g.god_mode = true; p.g.k.chaos.def = 0.5;
     p.run(0.1);
     wall_charge_set_carried(&mut p.g, Some(2.0));
     p.g.infinite_ammo = true;
@@ -85,7 +85,7 @@ fn props_heard(p: &mut Play, secs: f64) -> Vec<f64> {
 fn debris_is_heard_where_it_lands() {
     for s in [3402u32, 3403] {
         let mut p = alone(s);
-        p.g.ai_enabled = true; p.g.tune.chaos = 0.5;
+        p.g.ai_enabled = true; p.g.k.chaos.def = 0.5;
         let man = p.g.guards[1];
         p.posted_calm(man, [21.6, 17.2], [21.6, 14.0]);
         p.run(0.5);

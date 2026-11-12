@@ -47,8 +47,8 @@ pub(super) fn ops(g: &Game) -> Vec<GuardId> { g.staged.team.iter().copied().filt
 /// EVERYBODY WHO IS NOT THE TEAM, far off, dark, held, calm and deaf, the level's devices inert, and the alarm a stray noise placed dropped while the floor is at 0. A blast is made inside the step, so the mark
 /// on a man's ears is set past any number an event can get, and renewed here. Answers what it had to put right: men found roused, the alarm's marks dropped.
 pub(super) fn park(g: &mut Game) -> (u32, u32) {
-    g.tune.devices = false;
-    g.tune.lasers = false;
+    g.k.tune.devices = false;
+    g.k.tune.lasers = false;
     for i in 0..g.events.len() { if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); } }
     let (mut k, mut men, mut alarms) = (0.0, 0, 0);
     let all: Vec<GuardId> = g.guards.iter().chain(g.civilians.iter()).copied().collect();

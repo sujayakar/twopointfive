@@ -126,7 +126,7 @@ fn struck(g: &Game, hit: &RoundMet) -> Struck {
     if index >= 1e6 { return of(Surf::Wood, box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]), None); }
     let box_ = box_at(g.col.boxes.len(), index).map(|k| g.col.boxes[k]);
     let surf = match box_ {
-        Some(b) if crate::scene_materials::does_of(g, g.tab.boxes[b].does).wall == Some(DoesWall::Screen) => Surf::Fabric,
+        Some(b) if crate::scene_materials::does_of_box(g, b).wall == Some(DoesWall::Screen) => Surf::Fabric,
         Some(b) => crate::particle_fx::surf_at(g, b),
         None => Surf::Concrete,
     };
@@ -440,8 +440,8 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
         Some(crate::scene_materials::Surf::Metal) => mark = lane("dent"),
         Some(crate::scene_materials::Surf::Fabric) | Some(crate::scene_materials::Surf::Carpet) => mark = lane("shred"),
         Some(crate::scene_materials::Surf::Glass) => {
-            let c = crate::particle_fx::solid_glass_crack();
-            mark = LaneMark { look: c.look, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
+            let c = g.k.pfx.solid_glass;
+            mark = LaneMark { look: crate::particle_fx::SOLID_GLASS_LOOK, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
         }
         Some(_) => {
             crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, p, n, Some(0.013), Some(crate::render_decals::DecalOpts { clamp_to: Some(box_), attach, ..Default::default() }));

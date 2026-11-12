@@ -143,7 +143,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let mut s = g.gd[gd].script.unwrap();
     let c = g.gd[gd].ch;
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-    let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
+    let ordered = match s.speed { Some(x) => x, None => g.k.tune.guard_walk };
     let speed = crate::guards::team_pace(g, gd, ordered);
     let legs = crate::guards::team_legs(g, gd, speed);
     let fight_face = fight_face_while_walking(g, gd, &s);

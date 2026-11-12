@@ -120,7 +120,7 @@ fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
     if thin > g.k.wallcharge.outer_thick
         || long < g.k.wallcharge.outer_min_len
         || row.metal == Some(true)
-        || { let word = row.does; crate::scene_materials::does_of(g, word).surf == crate::scene_materials::Surf::Metal }
+        || { let word = row.does; crate::scene_materials::does_of(word).surf == crate::scene_materials::Surf::Metal }
         || !crate::wallbreak::wall_break_adoptable(g, index)
     {
         return false;
@@ -217,7 +217,7 @@ fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option
                 continue;
             }
             let word = g.tab.boxes[b].does;
-            let s = crate::scene_materials::does_of(g, word).surf;
+            let s = crate::scene_materials::does_of(word).surf;
             if s != crate::scene_materials::Surf::Drywall && s != crate::scene_materials::Surf::Concrete && s != crate::scene_materials::Surf::Metal {
                 continue;
             }

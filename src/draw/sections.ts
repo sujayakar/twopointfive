@@ -1,7 +1,7 @@
 // Written by the program `half` (rust/game_start/src/bin/half) from rust/game_draw. To change a section, change it there.
 
 /** the stamp of everything that crosses, as this was written: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 865776799;
+export const LAYOUT = 3362591112;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -863,24 +863,18 @@ export const enum Fire {
 export const enum FireTable {
   /** f32 × 16: fire.wgsl FireLook, in its order */
   look = 0,
-  /** f32: how far off the view a flame is drawn, how many, the flame's height and how far the wind leans it */
+  /** f32: how far off the view a flame is drawn, and how many are */
   drawR = 16,
   /** f32 */
   max = 17,
+  /** f32: its smoke is drawn at all · for a fire this near the view (m) · how fast its soot hands over to it (a share a second) */
+  smoke = 18,
   /** f32 */
-  height = 18,
+  viewR = 19,
   /** f32 */
-  tall = 19,
-  /** f32 */
-  lean = 20,
-  /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
-  smoke = 21,
-  /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
-  column = 33,
-  /** f32 × 3 */
-  soot = 47,
+  sootEase = 20,
   /** words a row */
-  row = 50,
+  row = 21,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
@@ -1091,7 +1085,7 @@ export const enum SnowBlast {
 
 /** what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old */
 export const enum SnowWord {
-  /** u32 */
+  /** u32: SNOW_KINDS, one more than its number (0: none) */
   w = 0,
   /** words a row */
   row = 1,

@@ -16,7 +16,7 @@ fn glazing(s: u32, kinds: [PaneType; 3]) -> (Play, [f64; 3], Vec<GuardId>) {
     let mut p = Play::level("office.json", false, &Opts { seed: s, ..Default::default() });
     p.g.god_mode = true;
     p.g.ai_enabled = false;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.sam_put([24.0, 17.6]);
     p.frame();
     let panes = [p.pane_at(6.5, GLAZING_Z), p.pane_at(7.5, GLAZING_Z), p.pane_at(8.5, GLAZING_Z)];
@@ -131,7 +131,7 @@ fn cut_by_a_pane(kind: PaneType, sill: bool, more: Vec<Json>) -> (Play, f64) {
     let mut p = scene_with(&s, all, &Opts::default());
     p.sam_unhurt();
     p.sam_unseen();
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.1);
     let bi = p.pane_at(18.0, 12.0);
     p.pane_is(bi, kind);
@@ -200,7 +200,7 @@ fn a_burst_breaks_the_glass_behind_a_door_it_took_off() {
         let mut p = scene_with(&s, vec![a_box("pane", [19.0, 1.5, 13.0], [0.02, 1.5, 1.5], "white", &["Glass"])], &Opts::default());
         p.sam_unhurt();
         p.sam_unseen();
-        p.g.tune.chaos = 0.5;
+        p.g.k.chaos.def = 0.5;
         p.run(0.1);
         let bi = p.pane_at(19.0, 13.0);
         p.pane_is(bi, PaneType::Tempered);

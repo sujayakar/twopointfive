@@ -57,7 +57,7 @@ fn at3(muzzle: V3, f: &MuzzleFrame, off: V3) -> V3 {
 /// A shot from `muzzle` down `dir`: bore jet, side ports, the wisp; returns the light to fire.
 pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::effects::SpawnShotO) -> Vec<crate::effects::FxLight> {
     let gas = o.gas != Some(false); // `smoke = NO_GAS`: its emit does nothing, so no call is made
-    let s = shot();
+    let s = g.k.effects.shot;
     let d = v3::normalize(dir);
     let f = muzzle_frame(muzzle, d);
     let at = at3(muzzle, &f, s.jet_off);
@@ -128,8 +128,8 @@ fn wobble(seed: f64, dv: V3, amount: f64, k: f64) -> V3 {
 }
 
 /// A stun canister coming apart at `at`: end jets, body vents, wisp, sparks and the smoke hung off them; returns the flash.
-pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate::effects::SpawnBurstO>) -> crate::effects::FxLight {
-    let b = bang();
+pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64) -> crate::effects::FxLight {
+    let b = g.k.effects.bang;
     let dens = b.density * b.density_gain;
     let temp = b.temp * b.temp_gain;
     let yaw = rnd(seed, 1.0) * m::PI * 2.0;
@@ -178,20 +178,12 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
         push: Some(b.wisp_push), attack: Some(b.wisp_attack), jitter: Some(0.3), lattice: Some(Lattice::Coarse),
         ..Emitter::default()
     });
-    let spark_count = match o {
-        Some(SpawnBurstO { spark_count: Some(n) }) => n,
-        _ => b.spark_count,
-    };
-    if spark_count > 0.0 {
-        let k = sparks();
-        let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: spark_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
-        let n = if flags().trails {
-            let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
-            m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]))
-        } else {
-            0.0
-        };
-        let tl = trail();
+    if b.trail_count > 0.0 {
+        let k = g.k.effects.sparks;
+        let idx = crate::sparks::sparks_emit_burst(g, at, crate::sparks::SparksEmitBurstO { count: b.trail_count, speed: k.speed, spread: k.spread, lift: k.lift, life: k.life }, seed);
+        let room = crate::smoke_types::smoke_system_like_budget(g) - b.trail_reserve;
+        let n = m::max(0.0, m::min_n(&[b.trail_count, idx.len() as f64, room]));
+        let tl = g.k.effects.trail;
         let mut i: usize = 0;
         while (i as f64) < n {
             let slot = idx[i] as usize;
@@ -207,26 +199,6 @@ pub fn spawn_burst(g: &mut crate::game::Game, at: V3, seed: f64, o: Option<crate
         }
     }
     FxLight { pos: v3::add(at, [0.0, b.light_lift, 0.0]), color: b.light_color, intensity: b.light_power, range: b.light_range, ttl: b.light_duration, radius: Some(b.light_radius) }
-}
-
-/// The smoke can venting along `yaw` from `at`; returns the emission time for the hiss.
-pub fn spawn_vent(g: &mut crate::game::Game, at: V3, yaw: f64, o: Option<crate::effects::SpawnVentO>) -> f64 {
-    let o = o.unwrap_or_default();
-    let v = vent();
-    let seconds = o.seconds.unwrap_or(v.seconds);
-    let dv: V3 = [m::sin(yaw) * v.speed, v.rise, m::cos(yaw) * v.speed];
-    smoke_emit(g, &Emitter {
-        pos: v3::copy(at), dir: dv, speed: v3::len(dv), radius: v.radius, density: v.density, temperature: v.temp, ttl: seconds, age: 0.0, kind: Kind::Vent,
-        push: Some(v.push), expand: Some(v.expand), attack: Some(v.attack), jitter: Some(v.jitter), lattice: Some(Lattice::Coarse), prio: Some(2.0),
-        ..Emitter::default()
-    });
-    seconds
-}
-
-/// Where a can lying at `item_pos` vents from, for a jet along `yaw`.
-pub fn vent_mouth(item_pos: V3, yaw: f64) -> V3 {
-    let v = vent();
-    [item_pos[0] + m::sin(yaw) * v.standoff, item_pos[1] + v.height, item_pos[2] + m::cos(yaw) * v.standoff]
 }
 
 #[cfg(test)]
@@ -247,13 +219,6 @@ mod tests {
             at_near(v3::cross(f.y, f.z), f.x, "right-handed");
             if d[1].abs() < 1.0 { assert!(f.y[1] > 0.0, "{d:?}: up is up"); }
         }
-    }
-
-    #[test]
-    fn a_vent_opens_out_along_its_yaw_at_its_height() {
-        let v = vent();
-        let at = vent_mouth([2.0, 0.1, -4.0], m::PI / 2.0);
-        assert!(v3::dist(at, [2.0 + v.standoff, 0.1 + v.height, -4.0]) < 1e-9, "out along its way: {at:?}");
     }
 
     /// A stun's vents differ burst to burst and jet to jet, the same each time it is replayed.
@@ -285,7 +250,7 @@ mod tests {
         let mut g = Game::blank();
         let o = SpawnShotO { gas: Some(false), light_gain: Some(0.5), ..Default::default() };
         let l = spawn_shot(&mut g, [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], &o);
-        let s = shot();
+        let s = g.k.effects.shot;
         assert_eq!(l.len(), 1);
         assert_eq!(l[0].intensity, s.light_power * 0.5);
         assert_eq!((l[0].range, l[0].ttl), (s.light_range, s.light_duration));

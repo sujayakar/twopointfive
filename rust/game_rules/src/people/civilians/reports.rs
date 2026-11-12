@@ -466,7 +466,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKO, ChronCountKey::CivKO, Some(&d), Some(pos));
         }
-        if dead && g.tune.civilian_kill_fails && crate::mission::mission_live(g) {
+        if dead && g.k.tune.civilian_kill_fails && crate::mission::mission_live(g) {
             let at = g.time + crate::mission::DOWN_CARD_SECS;
             g.mission.stage = MissionStage::Failed; g.mission.down_card_at = at;
         } else if !hostage {

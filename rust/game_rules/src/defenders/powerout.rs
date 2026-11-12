@@ -222,7 +222,7 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, lever: V3, way: &[V3], fro
 
 /// out on the party's errand, at the pace of a man going to look: there, he stands there.
 fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let pace = g.tune.guard_investigate;
+    let pace = g.k.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::BREAKER);
 }
 
@@ -907,7 +907,7 @@ fn step_off(g: &mut crate::game::Game, fight: bool) {
         let why = alloc::format!("{}, {} m off, {} s after the lights went", how, js::to_fixed(dist_xz(g.pos_of(gd), goal), 0), js::to_fixed(g.time - st(g).since, 1));
         event(g, PowerOutEventWhat::Go, Some(gd), &why);
     }
-    let at = g.time + st(g).way_m / m::max(0.5, g.tune.guard_investigate) + g.k.powerout.overdue;
+    let at = g.time + st(g).way_m / m::max(0.5, g.k.tune.guard_investigate) + g.k.powerout.overdue;
     st(g).overdue_at = at;
 }
 

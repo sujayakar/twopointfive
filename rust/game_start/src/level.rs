@@ -23,7 +23,6 @@ macro_rules! words {
     };
 }
 words!(stuff_word, BoxStuff, [Carpet, Grass, Rubber, Metal, Glass, Wood, Plastic, Fabric, Steel, Enamel, Tarmac, MudWall, Plaster, Block, Earth, Gravel, Slab, Sheet, Cloth, Paint, Veneer, Carpaint, Stucco, Skim, GlossBlock, BoardConcrete, CastPanel, Paver, Brushed, Louvre, Plain, Waits]);
-words!(does_word, DoesWord, [Snow, Carpet, Lino, Stone, Grass, Wood, Plastic, Concrete, Fabric, Steel, Enamel, Tarmac, Casing, Screen, UnnamedDark, Plasterboard, Partition, Ceiling, Laminate, Pane, DarkCarpet, Card, Frame, Plant, PackedSnow, OldSnow, Unnamed, UnnamedGrey, UnnamedLight, UnnamedLightGrey, UnnamedPale, UnnamedPaleGrey, DarkPlastic, GreyPlastic, DarkGlass]);
 
 /// the box flags a file may say, as the bits of `Box.flags`
 fn flags_to_bits(names: &[FlagName]) -> f64 {
@@ -79,7 +78,7 @@ impl<'a> Paint<'a> {
     /// what it does: its own word, else its material row's; nothing for the default row
     fn does(&self, o: &Said) -> Option<DoesWord> {
         let w = o.does.or_else(|| self.row(o)?.does.as_deref()).filter(|w| *w != "unnamed")?;
-        Some(does_word(w).unwrap_or_else(|| panic!("level '{}': '{}' is no row of the table of materials", self.name, w)))
+        Some(DoesWord::named(w).unwrap_or_else(|| panic!("level '{}': '{}' is no row of the table of materials", self.name, w)))
     }
 }
 

@@ -10,9 +10,6 @@ import type { Engine } from '../engine';
 import type { Drawn } from '../draw/drawn';
 import { Fire, FireTable, Section, View } from '../draw/sections';
 
-const enum Smoke { on, up, radius, cells, density, temp, speed, push, jitter, every, viewR, lean }
-const enum Column { up, radius, density, sootEase, puffEvery, puffSecs, puffUp, puffRadius, puffOff, puffDensity, puffTemp, puffSpeed, puffPush, puffExpand }
-
 /** a frame's book: by a fire's place among the level's, how far its soot has eased over */
 interface Book { n: number; time: number; sootMix: number[] }
 const fresh = (): Book => ({ n: 0, time: 0, sootMix: [] });
@@ -30,14 +27,14 @@ export class FirePicture {
     if (!D.n[Section.fireTable]) return;
     let P = this.book; if (was < P.time - 1e-9) P = this.book = fresh();
     P.n++; P.time = time;
-    const t = D.at[Section.fireTable], B = t + FireTable.smoke, C = t + FireTable.column;
+    const t = D.at[Section.fireTable];
     const drawing = this.smoke.drawing?.() === true && E.settings.fireSmoke !== false, fit = lookConfig.fireSmoke > 0;
     for (let i = 0, o = D.at[Section.fires]; i < n; i++, o += Fire.row) {
       if (!u[o + Fire.lit]) continue;
       const ix = u[o + Fire.ix], mx = f[o + Fire.pos], mz = f[o + Fire.pos + 2];
       const d = Math.hypot(mx - focus[0], mz - focus[2]);
-      const near = f[B + Smoke.on] !== 0 && drawing && d < f[B + Smoke.viewR];
-      P.sootMix[ix] = Math.min(1, Math.max(0, (P.sootMix[ix] ?? 0) + (fit && near ? dt : -dt) * f[C + Column.sootEase]));
+      const near = f[t + FireTable.smoke] !== 0 && drawing && d < f[t + FireTable.viewR];
+      P.sootMix[ix] = Math.min(1, Math.max(0, (P.sootMix[ix] ?? 0) + (fit && near ? dt : -dt) * f[t + FireTable.sootEase]));
     }
   }
   /** before a frame is drawn: every fire near the view, four at most, nearest first */

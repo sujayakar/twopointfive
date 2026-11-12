@@ -32,7 +32,7 @@ fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
 
 /// The master as the systems read it, clamped 0‥1.
 pub fn wind_of(g: &crate::game::Game) -> f64 {
-    m::max(0.0, m::min(1.0, g.tune.wind))
+    m::max(0.0, m::min(1.0, g.k.wind.def))
 }
 
 /// A diffuser's air at p, m/s: rust/sim's.

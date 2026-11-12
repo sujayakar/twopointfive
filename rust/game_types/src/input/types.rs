@@ -1,6 +1,6 @@
 //! The types of `input`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Blank)]
@@ -16,7 +16,7 @@ pub struct Input {
 
 /// A KEY THE GAME ASKS FOR, by its browser code: the one list of them, and the page's (`GameKey`, src/draw/names.ts, written from `Key::WORDS`). A key's word is its code:
 /// a hand, a tape, a record and the wire carry codes as text, and an `Input`'s sets hold whatever text a host hands them, so a rule asks by `as_str`.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words, Crosses)]
 pub enum Key {
     #[word("KeyW")] W,
     #[word("KeyA")] A,
@@ -68,18 +68,14 @@ impl Key {
     /// its code, to go in a set
     pub fn text(self) -> String { String::from(self.as_str()) }
 }
-/// as its code
-impl ToBytes for Key { fn w(&self, o: &mut crate::bytes::W) { self.as_str().w(o) } }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// a code is the text a hand, a tape and the wire carry, and a table of knobs writes that text
+    /// a code is the text a hand, a tape and the wire carry
     #[test]
-    fn a_keys_word_is_its_code_and_it_writes_as_that_text() {
+    fn a_keys_word_is_its_code() {
         assert_eq!((Key::W.as_str(), Key::Digit1.as_str(), Key::Space.as_str(), Key::Blur.as_str()), ("KeyW", "Digit1", "Space", "Blur"));
-        let of = |x: &dyn ToBytes| { let mut o = crate::bytes::W::new(); x.w(&mut o); o.b };
-        assert_eq!(of(&Key::ShiftLeft), of(&String::from("ShiftLeft")));
     }
     #[test]
     fn the_digits_are_nought_to_nine() {

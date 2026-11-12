@@ -93,10 +93,13 @@ fn place_of(link: &str) -> bool {
 }
 
 /// STAND A GAME on the level file `data` (the file's text, parsed).
-pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
+pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_laid(data, assets, o, &|_| ()) }
+/// …with what a test lays on the tables of numbers over what the machine and the address say: a restart stands on it too
+pub fn stand_laid(data: &Json, assets: Assets, o: &StartOpts, laid: &dyn Fn(&mut game::knobs::Knobs)) -> Stood {
     let mut g = Box::new(Game::blank());
     // (what the machine keeps and what the address says come first: the start reads knobs from its first line, which cast, which furniture, how a thing is rounded)
     crate::host::lay(&mut g, &o.kept, o.link.as_deref());
+    laid(&mut g.k);
     // (THE KIT PICTURE: an address that carries `kitview` builds the level the way needs and dresses the men before they are made; no other start reads a word of it)
     let kit = crate::kit_stage::of_link(o.link.as_deref(), data);
     let data: &Json = kit.as_ref().map_or(data, |k| &k.data);

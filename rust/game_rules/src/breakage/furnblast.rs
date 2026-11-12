@@ -20,9 +20,8 @@ use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, Wa
 fn box_at(g: &Game, i: f64) -> Option<BoxId> { if i < 0.0 || i as usize >= g.col.boxes.len() { None } else { Some(BoxId::from_ix(i as usize)) } }
 fn bx(i: f64) -> BoxId { BoxId::from_ix(i as usize) }
 fn is_piece(g: &Game, b: BoxId) -> bool { g.tab.boxes[b].piece == Some(true) }
-fn does_word(g: &Game, b: BoxId) -> Option<String> { g.tab.boxes[b].does.map(|w| String::from(w.as_str())) }
-fn snow_paint(g: &Game, b: BoxId) -> bool { let does = does_word(g, b); crate::render_snow_field::snow_paint_of(g, &crate::render_snow_field::SnowPaintOfB { does }).is_some() }
-fn box_class(g: &Game, b: BoxId) -> BreakClass { let does = does_word(g, b); break_class_of(g, &BreakClassOfB { does }) }
+fn snow_paint(g: &Game, b: BoxId) -> bool { crate::scene_materials::does_of_box(g, b).snow.is_some() }
+fn box_class(g: &Game, b: BoxId) -> BreakClass { crate::scene_materials::does_of_box(g, b).breaks }
 fn flags_of(g: &Game, b: BoxId) -> i32 { js::to_i32(g.tab.boxes[b].flags) }
 /// BoxFlag.NoPrimary, BoxFlag.NoShadow, BoxFlag.Glass, BoxFlag.Dynamic as bits
 fn bits() -> (i32, i32, i32, i32) { (crate::scene_boxes::box_flag::NO_PRIMARY as i32, crate::scene_boxes::box_flag::NO_SHADOW as i32, crate::scene_boxes::box_flag::GLASS as i32, crate::scene_boxes::box_flag::DYNAMIC as i32) }
@@ -59,8 +58,6 @@ fn land_sfx(row: &BreakRow) -> Vec<crate::debris::ChunkSfxItem> { row.land.sfx.i
 // ---------------------------------------------------------------- the file's free functions
 /// what a breaching charge is to the furniture, by its breaking radius
 pub fn charge_source(radius: f64) -> crate::furnblast::BlastSource { if radius >= 1.5 { BlastSource::Wall } else { BlastSource::Door } }
-/// which row of the break table a box is: its word's
-pub(super) fn break_class_of(g: &crate::game::Game, b: &crate::furnblast::BreakClassOfB) -> crate::scene_materials::BreakClass { crate::scene_materials::does_of_word(g, b.does.as_deref()).breaks }
 /// a box's bounds, its yaw taken in
 fn aabb_of(g: &crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
     let (c, h, yaw) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw) };
@@ -120,11 +117,11 @@ fn ensure_index(g: &mut Game) {
         let v = vol_of(g, b); let long = m::max(h[0], h[2]) * 2.0; let ghost = (f0 & ns) != 0;
         let br = crate::wallbreak::wall_break_breakable_at(g, i);
         if let Some(r) = &br { if r.kind == BKind::Wall { others.push(a); continue; } }
-        let does = crate::wallbreak::does_of_box(g, b); let e = g.tab.boxes[b].emissive; let lit = e[0] + e[1] + e[2] > 0.0;
+        let does = crate::scene_materials::does_of_box(g, b); let e = g.tab.boxes[b].emissive; let lit = e[0] + e[1] + e[2] > 0.0;
         let mut root = false;
         if !ghost && g.tab.boxes[b].rot.is_none() && !lit && !fixture.has(Num(i)) && crate::destruction::destruction_item_of(g, i).is_none() && a.y0 <= 0.25 && a.y1 >= r_min_top && a.y1 <= r_max_top && long <= r_max_long && v <= r_max_vol {
             if br.is_some() { root = does.cover.is_some() && (m::min(h[0], h[2]) * 2.0 <= 0.12 || v <= 0.25); }   // (a desk's panel, a small carton: a crate of real cover stays the wall engine's)
-            else { root = does.struct_ != Some(true); }
+            else { root = !does.structure; }
         }
         if !root && !(a.y0 > 0.06 && a.y1 <= rd_max_top && v <= rd_max_vol && long <= r_max_long && br.is_none()) { if !ghost { others.push(a); } continue; }
         cand.push(g.tab.furnblast_member.push(Member { i, a, root, ghost, nb: Vec::new(), sup: Vec::new(), group: None }));
@@ -166,7 +163,7 @@ fn ensure_index(g: &mut Game) {
         if loaded { continue; }
         let id0 = g.tab.furnblast_member[l[0]].i;
         let bi = g.tab.furnblast_member[big.unwrap_or(l[0])].i; let bb = bx(bi);
-        let surf = crate::wallbreak::does_of_box(g, bb).surf;
+        let surf = crate::scene_materials::does_of_box(g, bb).surf;
         let grp = Group { id: id0, members: l.clone(), a, heavy, surf };
         for &mi in &l {
             g.tab.furnblast_member[mi].group = Some(grp.clone());
@@ -490,7 +487,7 @@ fn steel_part(g: &mut Game, b: BoxId, l: V3, h: V3) -> BoxId {
 fn furniture_steel(g: &mut crate::game::Game, b: BoxId, mode: crate::furnblast::FurnitureMode, dir: V3, seed: f64) -> Option<Vec<crate::furnblast::SteelPart>> {
     let h = g.tab.boxes[b].h;
     if g.tab.boxes[b].rot.is_some() || m::min_n(&[h[0], h[1], h[2]]) * 2.0 < STEEL_CARCASS_M || m::max_n(&[h[0], h[1], h[2]]) * 2.0 > STEEL_CARCASS_MOST { return None; }
-    if crate::wallbreak::does_of_box(g, b).steel != Some(true) { return None; }   // (and painted as one: the class 'metal' is also where every unnamed paint lands)
+    if !crate::scene_materials::does_of_box(g, b).steel { return None; }   // (and painted as one: the class 'metal' is also where every unnamed paint lands)
     let yaw = g.tab.boxes[b].yaw; let cs = m::cos(yaw); let sn = m::sin(yaw); let t = g.k.breaks.steel.sheet;
     let deep: usize = if h[0] <= h[2] { 0 } else { 2 }; let wide: usize = if deep == 0 { 2 } else { 0 };   // the door is on a broad upright face
     let ax: V3 = if deep == 0 { [cs, 0.0, -sn] } else { [sn, 0.0, cs] };
@@ -617,9 +614,9 @@ fn furniture_mouth_stack(g: &crate::game::Game, seed: &[crate::furnblast::AABB],
 fn furniture_mouth_mine(g: &crate::game::Game, i: f64, b: BoxId, a: crate::furnblast::AABB) -> bool {
     if g.destr.furn.member_at.has(Num(i)) { return true; }
     if snow_paint(g, b) { return true; }   // (lying snow banked at the wall's foot, under a roof or not)
-    let does = crate::wallbreak::does_of_box(g, b); let (h, c) = (g.tab.boxes[b].h, g.tab.boxes[b].c);
+    let does = crate::scene_materials::does_of_box(g, b); let (h, c) = (g.tab.boxes[b].h, g.tab.boxes[b].c);
     let post = m::min(h[0], h[2]) < 0.1 && a.y1 > 1.5 && a.y1 - a.y0 > 1.0;   // (tall in itself: a binder on a top shelf is thin and high up, and no post)
-    !post && furniture_roofed(g, c[0], c[2]) && (does.struct_ != Some(true) || (does.counter == Some(true) && a.y1 <= 2.0))
+    !post && furniture_roofed(g, c[0], c[2]) && (!does.structure || (does.counter && a.y1 <= 2.0))
 }
 /// would mouth() take static `i` from `r`, a hole not blown yet? Reading only
 pub fn furniture_mouth_would_take(g: &mut crate::game::Game, i: f64, r: [f64; 4], depth: Option<f64>) -> bool {
@@ -775,7 +772,7 @@ fn furniture_away(g: &mut crate::game::Game, at: V3, p: V3) -> V3 {
 }
 /// a burst of chips
 fn furniture_chips(g: &mut crate::game::Game, c_2: V3, v: V3, b: BoxId, who: f64, n: f64) {
-    let wood = crate::wallbreak::does_of_box(g, b).surf == Surf::Wood;
+    let wood = crate::scene_materials::does_of_box(g, b).surf == Surf::Wood;
     let albedo = g.tab.boxes[b].albedo;
     emit_debris(g, c_2, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), n, 2.4, if wood { 0.006 } else { 0.01 }, if wood { 3.0 } else { 1.0 }, v3::copy(albedo), who);
 }

@@ -41,8 +41,6 @@ fn stand_world(g: &mut Game, ids: &[BoxId], n_seats: f64) {
     g.local_seat = Some(g.seats[0]);
     // what this machine kept.
     crate::difficulty::levers_fog(g);
-    crate::destruction::load_chaos(g);
-    g.tune.wind = g.k.wind.def;   // (loadWind's first line; the rest of it is storage and it left the game)
     g.col = crate::scene_collision::new(g, ids);
 }
 
@@ -54,10 +52,10 @@ fn stand_player(g: &mut Game, ch: RigId, level: &Level) {
     // loose furniture and thrown things: never collision occluders
     g.props = crate::props::prop_system_new(g, &level.props);
     g.items = crate::throwables::Throwables::blank();
-    g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
+    g.tracers = crate::tracers::tracers_new(g);   // (its lights and its sparks are reached by path)
     g.weather = crate::weather::weather_new(g);
     let p = g.player;
-    let player_light = g.tune.player_light;
+    let player_light = g.k.tune.player_light;
     let rail = crate::rig_props::rail_light_def(g, crate::consts::PLAYER_ID, player_light);
     g.pl[p].light = crate::render_lights::light_set_add(g, rail);
 }
@@ -275,7 +273,7 @@ fn stand_guards(g: &mut Game, level: &Level) {
     let tints: [V3; 3] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     for (i, &r) in level.routes.iter().enumerate() {
         let id = 10.0 + i as f64;
-        let (fi, f0, f1) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
+        let (fi, f0, f1) = (g.k.tune.flash_intensity, g.k.tune.flash_inner, g.k.tune.flash_outer);
         let def = crate::rig_props::torch_light_def(g, &format!("flashlight{}", i), id, fi, f0, f1);
         let fl = crate::render_lights::light_set_add(g, def);
         let gd = crate::game::guard_new(g, rig, id, r, i as i32, fl, tints[i % tints.len()], None);

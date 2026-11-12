@@ -506,5 +506,6 @@ const uncaught = (head: string, e: unknown): void => { if (document.getElementBy
 window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message) && !(ev.error instanceof GameLost)) uncaught('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost) && !(ev.reason instanceof TapeRefused)) uncaught('Unhandled promise rejection:', ev.reason); });
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
-const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
+const ready = main(), later = (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
+later.catch(e => { if (!(e instanceof TapeRefused)) throw e; });   // (a refusal is said on its card, and is nobody's error)
 ready.catch(e => { if (e instanceof TapeRefused) { refusedCard(e.message); return; } console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });

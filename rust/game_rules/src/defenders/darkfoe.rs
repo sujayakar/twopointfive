@@ -262,7 +262,7 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
 
 /// The room fight's own 'move' leg: his script's legs, his own senses, planted where he gets to.
 fn walk(g: &mut crate::game::Game, d: RoomfightDefId, goal: V3) {
-    let pace = g.tune.guard_investigate * g.k.darkfoe.stumble_k;
+    let pace = g.k.tune.guard_investigate * g.k.darkfoe.stumble_k;
     crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, pace), crate::owner::by::BREAKER);
 }
 

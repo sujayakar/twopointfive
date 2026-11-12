@@ -97,7 +97,7 @@ fn deal(g: &mut Game, c: CharId) {
     let up = !down(g, c);
     let hurt = if up && is_hurt(g, c, None) { 1.0 } else { 0.0 };
     let (flinch, pinned) = (g.k.suppression.flinch, g.k.suppression.pinned);
-    let shaken = if up && g.tune.suppression { v3::clamp((g.cond[c].sup.v - (flinch - 0.1)) / m::max(1e-3, pinned - (flinch - 0.1)), 0.0, 1.0) } else { 0.0 };
+    let shaken = if up && g.k.tune.suppression { v3::clamp((g.cond[c].sup.v - (flinch - 0.1)) / m::max(1e-3, pinned - (flinch - 0.1)), 0.0, 1.0) } else { 0.0 };
     let an = &mut g.ch[c].anim;
     (an.fold_too, an.hurt, an.shaken) = (true, hurt, shaken);
     an.hurt_side = -1.0; // his free hand is his left and goes across to his right ribs: the side he favours, every man

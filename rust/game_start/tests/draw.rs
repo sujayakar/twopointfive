@@ -369,7 +369,7 @@ fn a_tracer_that_stops_in_something_solid_throws_its_ember() {
     for (impact, solid) in [(TracerImpact::Solid, true), (TracerImpact::Flesh, false), (TracerImpact::None, false)] {
         let mut p = office(6);
         p.run(0.2);
-        let want_sparks = p.g.tracers.params.ember_sparks;
+        let want_sparks = p.g.k.tracers.ember_sparks;
         assert!(want_sparks > 0.0, "the table asks for no ember");
         game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [1.0, 0.0, 0.0], 6.0, impact, [1.0, 0.6, 0.3], 0.0);
         let mut out = Vec::new();

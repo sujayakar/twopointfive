@@ -10,8 +10,8 @@ import { NET_WORD_SEED, foldWord, wordTick } from './words';
 /** a key's code, as the referee has one: anything else is no key, and is left out before the codes become one text */
 const CODE = /^[A-Za-z0-9]+$/;
 const codes = (k: readonly string[] | undefined): string => k ? k.filter(c => CODE.test(c)).join(' ') : '';
-/** a record's keys: those held, a line feed, those that went down · its numbers, as a row */
-const keysOf = (w: WireCmd): string => `${codes(w.k)}\n${codes(w.p)}`;
+/** a record's keys: those held (and those held under a press it carries), a line feed, those that went down · its numbers, as a row */
+const keysOf = (w: WireCmd): string => `${codes(w.u ? [...w.k, ...w.u] : w.k)}\n${codes(w.p)}`;
 const rowOf = (w: WireCmd): Doubles<'SeatInput'> => { const r = seatInput(); r.set(w.n); return r; };
 
 export class NetGame {

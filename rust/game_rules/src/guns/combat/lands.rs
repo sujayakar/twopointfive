@@ -95,7 +95,7 @@ fn met(f: &Flight, e: &End) -> Option<RoundMet> {
 /// A tracer, the straight way from the muzzle to where it ended.
 fn traces(g: &mut Game, r: &Round, f: &Flight, e: &End) {
     use crate::tracers::TracerImpact;
-    if r.def.tracer.is_none() || !g.tune.tracers { return; }
+    if r.def.tracer.is_none() || !g.k.tune.tracers { return; }
     let gun = firearm_of(g, r.shooter);
     let (along, far) = if f.bent() { (v3::normalize(v3::sub(e.at, r.muzzle)), v3::dist(r.muzzle, e.at)) } else { (r.dir, e.t) };
     let impact = if e.hit.is_some() {

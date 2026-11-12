@@ -45,7 +45,7 @@ A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g
 
 ## How it works
 
-**Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
+**Chaos.** `chaos_of` is one number from 0 to 1, the knob `chaos.def`. At 0
 most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
@@ -152,7 +152,7 @@ load puts back a clone of the whole game (`savestate/`), so nothing has to be to
 
 - **A number:** `rust/game_types/src/knobs/`: `destruction.rs` (`ChaosK`), `wallbreak.rs` (`WallsK`), `wallcharge.rs` (`WallchargeK`, `WallshotK`,
   `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one.
-- **What a stuff does:** its `MATERIALS` row in `src/scene/materials.ts` with the twin `does_of` reads (`levels.md`); a toll in `WallpenK`, a `tough`
+- **What a stuff does:** its row of `materials!` in `rust/game_types/src/scene_materials/types.rs` (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.
 - **Something that reacts to a hole:** read `wall_break_since`. Something a restart must clear joins `destruction_reset`.

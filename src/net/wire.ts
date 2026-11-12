@@ -22,7 +22,7 @@ import type { NetStart } from './start';
  *  and `slipAt` how far behind the server lets its game's clock slip instead. `tapeChunk`: ticks a message when a joiner is sent the run so far. `watchers`: the
  *  most connections with no seat. `maxText`: the longest message a server reads from a client (a record is a few hundred characters). `retryMs`: how long a
  *  server waits on a backed-up connection that never says it has drained before it tries the run so far again. */
-export const NET = { proto: 3, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
+export const NET = { proto: 4, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
 /** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; src/host/myname.ts): text with something to read in it — a letter, a digit or a
  *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
  *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
@@ -40,9 +40,9 @@ export function cleanName(raw: unknown): string {
   return READS.test(cut) ? cut : '';
 }
 
-/** a seat's record as it travels: keys held · keys gone down · his input's numbers, as they are handed (src/draw/input.ts SeatInput). The one-tick EDGES are `p`, the buttons gone down
- *  and the wheel */
-export interface WireCmd { k: string[]; p?: string[]; n: number[]; }
+/** a seat's record as it travels: keys held · keys gone down · keys held as something went down and let go since (Shift under an Enter: the tick that takes the press has them held, and no tick
+ *  after it) · his input's numbers, as they are handed (src/draw/input.ts SeatInput). The one-tick EDGES are `p`, `u`, the buttons gone down and the wheel */
+export interface WireCmd { k: string[]; p?: string[]; u?: string[]; n: number[]; }
 /** a record's numbers, by what each is */
 export function inputNumbers(o: { buttons?: number; clicked?: number; wheel?: number; mouse: readonly number[]; size: readonly number[]; target: ArrayLike<number>; yaw: number; pitch: number; distance: number; fov: number; aspect: number; aimLead?: number }): number[] {
   const n = new Array<number>(SeatInput.row).fill(0);
@@ -64,16 +64,26 @@ const numsOk = (a: unknown, n: number): a is number[] => Array.isArray(a) && a.l
  *  many keys, how long a name, how far a view may be from its man are the game's own referee's to say, and a message's length is NET.maxText's) */
 export function wireOk(c: unknown): c is WireCmd {
   const w = c as WireCmd | null;
-  return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && numsOk(w.n, SeatInput.row) && Number.isInteger(w.n[SeatInput.buttons]) && Number.isInteger(w.n[SeatInput.clicked]);
+  return !!w && typeof w === 'object' && keysOk(w.k) && (w.p === undefined || keysOk(w.p)) && (w.u === undefined || keysOk(w.u)) && numsOk(w.n, SeatInput.row) && Number.isInteger(w.n[SeatInput.buttons]) && Number.isInteger(w.n[SeatInput.clicked]);
 }
-/** `w` with one-tick edges laid over its own (keys gone down, clicks, the wheel's turn): how an edge that missed its tick rides a later record. Also the plain
- *  copy of a record in the wire's own field order, with nothing else on it (`withEdges(w, [], 0, 0)`) */
-export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: number): WireCmd {
-  const out: WireCmd = { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], w.n[SeatInput.clicked] | c, w.n[SeatInput.wheel] + wheel) }, ps = w.p ? w.p.slice() : [];
-  for (const k of p) if (!ps.includes(k)) ps.push(k);
-  if (ps.length) out.p = ps;
+/** `w` with one-tick edges laid over its own (keys gone down, clicks, the wheel's turn, and the keys held under them): how an edge that missed its tick rides a later record. Also the plain
+ *  copy of a record in the wire's own field order, with nothing else on it (`withEdges(w, NO_EDGES)`) */
+export function withEdges(w: WireCmd, e: Edges): WireCmd {
+  const out: WireCmd = { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], w.n[SeatInput.clicked] | e.c, w.n[SeatInput.wheel] + e.w) }, p = joined(w.p, e.p), u = joined(w.u, e.u).filter(k => !w.k.includes(k));
+  if (p.length) out.p = p;
+  if (u.length) out.u = u;
   return out;
 }
+/** THE EDGES OF RECORDS that missed their ticks, owed to one that has not: what went down, clicked and turned, and what was held under it */
+export interface Edges { readonly p: readonly string[]; readonly u: readonly string[]; readonly c: number; readonly w: number; }
+export const NO_EDGES: Edges = { p: [], u: [], c: 0, w: 0 };
+/** `e` and a record's own (the keys it held are under what it pressed) */
+export function edgesOf(e: Edges, w: WireCmd): Edges {
+  const c = w.n[SeatInput.clicked], under = w.p || c ? joined(w.k, w.u) : w.u;
+  return { p: joined(e.p, w.p), u: joined(e.u, under), c: e.c | c, w: e.w + w.n[SeatInput.wheel] };
+}
+export const anyEdge = (e: Edges): boolean => !!(e.p.length || e.c || e.w);
+const joined = (a: readonly string[] | undefined, b: readonly string[] | undefined): string[] => [...new Set([...a ?? [], ...b ?? []])];
 /** `w` with its one-tick edges taken off: what a seat's tick runs on when no record of its own came for it (the keys and the buttons stay held, the view stays) */
 export function heldOf(w: WireCmd): WireCmd { return { k: w.k, n: edged(w.n, w.n[SeatInput.buttons], 0, 0) }; }
 /** `w` with nothing held either: a seat nobody is sitting in (its view stays where it was) */

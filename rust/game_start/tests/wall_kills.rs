@@ -11,7 +11,7 @@ const STEP_BACK: f64 = 2.2;
 /// The mousehole's room clear of four, a charge of Sam's own on its long wall, everybody the line does not name stood off the map, and Sam where it wants him.
 fn charged(s: u32, men: &[(usize, [f64; 2])], foe: Option<[f64; 2]>, sam: [f64; 2], god: bool) -> (Play, game::ids::WallChargeId, Vec<GuardId>) {
     let mut p = Play::mission("mousehole.json", "?levelFile=mousehole.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
-    p.g.ai_enabled = false; p.g.god_mode = true; p.g.tune.chaos = 0.5;
+    p.g.ai_enabled = false; p.g.god_mode = true; p.g.k.chaos.def = 0.5;
     p.run(0.1);
     let c = p.sam_sets_charge(AT, FROM).expect("Sam sets the charge");
     p.g.god_mode = god;
@@ -79,7 +79,7 @@ const CHARGE: [f64; 3] = [31.28, 0.0, 18.14];
 const CLEAR: [f64; 2] = [20.5, 21.5];
 fn the_yard(s: u32, order: &str) -> (Play, WallSpot, Vec<GuardId>) {
     let mut p = Play::mission("pass.json", "?levelFile=pass.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
-    p.g.god_mode = true; p.g.tune.chaos = 0.5;
+    p.g.god_mode = true; p.g.k.chaos.def = 0.5;
     for (i, m) in p.hostiles().into_iter().enumerate() { p.man_stands(m, [400.0 + 2.0 * i as f64, 400.0]); }
     let w = wall_at(&mut p.g, CHARGE, Some([CHARGE[0], 0.0, CHARGE[2] + 1.0])).expect("a place there");
     let spot = wall_charge_set_spot(&mut p.g, &w).expect("a place to set it from");

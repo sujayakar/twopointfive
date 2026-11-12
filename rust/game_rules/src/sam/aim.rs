@@ -65,7 +65,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     let pc = g.gd[gd].foe;
     g.arms[g.gd[gd].ch].aim.braking = false;
-    if !g.tune.aim_model || crate::condition::down(g, g.gd[gd].ch) {
+    if !g.k.tune.aim_model || crate::condition::down(g, g.gd[gd].ch) {
         aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         return;
     }
@@ -139,13 +139,13 @@ pub fn settle_time(p: crate::aim::SettleTimeP, dist: f64) -> f64 {
 
 /// The first-shot gate; true with the model off.
 pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
-    !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
+    !g.k.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
 /// The same of a man who fires as he walks: as lined up as a walking man gets.
 pub fn aim_ready_walking(g: &crate::game::Game, gd: GuardId) -> bool {
     let p = g.k.aim.guard;
-    !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= m::min(p.acquire_min, p.moving_track_cap) - 1e-9
+    !g.k.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= m::min(p.acquire_min, p.moving_track_cap) - 1e-9
 }
 
 /// The standoff's flank round: are the feet he remembers still enough?
@@ -189,7 +189,7 @@ fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim
 
 /// What to hand fireWeapon for this guard's round; stamps `last_shot`.
 pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::combat::FireOpts {
-    if !g.tune.aim_model {
+    if !g.k.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
     }
     let t = guard_terms(g, gd, extra);
@@ -200,7 +200,7 @@ pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate:
 
 /// The whole cone a guard's round is drawn from.
 pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
-    if !g.tune.aim_model {
+    if !g.k.tune.aim_model {
         let s = ai_spread_of(g, gd);
         let tc = foe_or_player(g, &crate::seats::here(g), gd);
         let tv = g.ch[tc].vel;
@@ -213,14 +213,14 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
-    let brake = g.tune.aim_model && !g.gd[gd].duty.pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
+    let brake = g.k.tune.aim_model && !g.gd[gd].duty.pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
     g.arms[g.gd[gd].ch].aim.braking = brake;
     brake
 }
 
 /// Fed the round this guard has just let go: count it if it went into the frame on his half of the line.
 pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
-    if !g.tune.aim_model {
+    if !g.k.tune.aim_model {
         return;
     }
     let (from, to) = match g.events.last() {
@@ -247,7 +247,7 @@ pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
 /// Two rounds running into the frame from where he stands: that spot is no line.
 pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let f = match g.arms[g.gd[gd].ch].aim.fouled {
-        Some(f) if g.tune.aim_model => f,
+        Some(f) if g.k.tune.aim_model => f,
         _ => return false,
     };
     if v3::dist_xz(f.pos, g.pos_of(gd)) > 0.5 {
@@ -262,7 +262,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let p = g.k.aim.player;
     let c = g.pl[pl].ch;
-    if !g.tune.aim_model || crate::condition::down(g, g.pl[pl].ch) {
+    if !g.k.tune.aim_model || crate::condition::down(g, g.pl[pl].ch) {
         aim_state_clear(&mut g.arms[g.pl[pl].ch].aim);
         return;
     }
@@ -339,12 +339,12 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
 
 /// He has you lined up: his track is past the aim model's first-shot gate.
 pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
+    g.k.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
 /// Sam's cone under the model and his track: nothing with the model off.
 pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
-    if !g.tune.aim_model {
+    if !g.k.tune.aim_model {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
     }
     let p = g.k.aim.player;
@@ -364,7 +364,7 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
 pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);
-    if !g.tune.aim_model {
+    if !g.k.tune.aim_model {
         return 0.0;
     }
     let now = g.time;

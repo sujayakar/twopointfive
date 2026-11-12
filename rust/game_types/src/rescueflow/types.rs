@@ -62,7 +62,6 @@ pub enum JobKind {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescueFlow {
-    #[is(crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 })] pub knobs: crate::rescueflow::RescueFlowKnobs,
     pub known: Vec<crate::rescueflow::Known>,
     pub jobs: JsMap<GuardId, crate::rescueflow::Job>,
     pub passed: JsSet<String>,
@@ -77,29 +76,6 @@ pub struct RescueFlow {
     #[is(crate::scene_scenarios::Rect { x0: 0.0, x1: 0.0, z0: 0.0, z1: 0.0 })] pub room: crate::scene_scenarios::Rect,
     pub corr: Option<crate::rescueflow::RescueFlowCorr>,
     pub came_in: Option<crate::rescueflow::RescueFlowCameIn>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct RescueFlowKnobs {
-    pub abreast: f64,
-    pub unpass: f64,
-    pub past: f64,
-    pub max_cover: f64,
-    pub give_up: f64,
-    pub want_secs: f64,
-    pub hot_hold: f64,
-    pub hot_secs: f64,
-    pub hot_empty: f64,
-    pub look_share: f64,
-    pub look_secs: f64,
-    pub clear_share: f64,
-    pub clear_secs: f64,
-    pub eye_m: f64,
-    pub sense_hz: f64,
-    pub sample_y: f64,
-    pub hold_secs: f64,
-    pub wait_m: f64,
-    pub glow: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -120,8 +96,6 @@ pub struct RescueFlowCameIn {
     pub o: crate::scene_scenarios::RouteOpening,
     pub t: f64,
 }
-
-pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("unknown"), [1.0, 0.55, 0.08]); t.set(String::from("looked"), [0.6, 0.62, 0.5]); t.set(String::from("hot"), [2.6, 0.12, 0.05]); t.set(String::from("held"), [0.12, 0.5, 1.6]); t.set(String::from("cleared"), [0.1, 1.0, 0.3]); t } }
 
 pub const EYE: f64 = 1.55;
 

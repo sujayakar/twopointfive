@@ -39,6 +39,10 @@ pub struct CoverK {
     #[k(35.0)] pub sam_deg: f64,
     #[k(0.2)] pub sam_k: f64,
     #[k(0.1)] pub held_k: f64,
+    /// a way into the room he holds that a man has heard them at weighs this much more to him (by how fresh and loud it was, up to a shot just now)
+    #[k(1.0)] pub heard_k: f64,
+    /// … and a second gun on it is worth this much of the first
+    #[k(0.8)] pub second_k: f64,
     /// the weights: a shut door against an open way · the rear · how fast nearness tells (m)
     #[k(0.7)] pub shut_k: f64,
     #[k(0.8)] pub rear_k: f64,

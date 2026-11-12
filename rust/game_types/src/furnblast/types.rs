@@ -138,11 +138,6 @@ pub struct Member {
     pub group: Option<crate::furnblast::Group>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct BreakClassOfB {
-    pub does: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OverPlanA {
     pub x0: f64,

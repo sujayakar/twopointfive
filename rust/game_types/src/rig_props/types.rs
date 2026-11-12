@@ -534,8 +534,6 @@ pub fn sling_front() -> crate::rig_props::RigSc20kSlung { crate::rig_props::RigS
 
 pub fn sling_rest() -> crate::rig_props::SLINGREST { crate::rig_props::SLINGREST { pivot: 0.28, len: 0.7, clear: 0.11, max: 1.4, soft: 0.1, n: 6.0 } }
 
-pub fn rail_lens_color() -> V3 { [0.9, 0.96, 1.0] }
-
 pub const SLUNG_CAST_OUT: f64 = 0.03;
 
 pub const BARE_BARREL: f64 = 0.008;

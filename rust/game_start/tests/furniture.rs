@@ -10,7 +10,7 @@ const CHAIR: [f64; 2] = [8.2, 19.1];
 
 fn office(s: u32) -> Play {
     let mut p = Play::level("warehouse.json", false, &Opts { seed: s, ..Default::default() });
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.g.god_mode = true;
     p.g.ai_enabled = false;
     p.g.player_invisible = true;

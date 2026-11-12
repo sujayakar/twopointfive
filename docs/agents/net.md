@@ -37,7 +37,8 @@ its own copy. A record (`WireCmd`) is what a hand did: its keys, and its `SeatIn
 the start (`NetStart`). Messages are JSON over a WebSocket.
 
 **The server decides** (`SeatLine.take`). A tick runs on the seat's own record if it came in time, otherwise on the newest
-it knows with the one-tick edges off (`heldOf`). A late record becomes the newest, and its edges land on the next tick. An empty seat holds nothing (`idleOf`).
+it knows with the one-tick edges off (`heldOf`). A late record becomes the newest, and its edges land on the next tick. The keys
+held under a press and let go since (`u`) are an edge like it: held on the tick that takes the press, on none after. An empty seat holds nothing (`idleOf`).
 
 **States.** `waiting` until every seat has a client that has stood its game and said `Ready`; no tick runs. Then `playing`, then `ended` on the game's
 verdict (`face_verdict`), a grace, and done. A connection with no key is a watcher. A joiner or a slow socket is sent the run so far in stretches (`catchUp`).

@@ -237,8 +237,6 @@ export function keyBuilt(id: RowId): boolean { const a = byId.get(id); return !a
 export function keysOf(id: RowId): string[] { const a = byId.get(id); return a && !dormant(id) ? keysNow(a) : []; }
 /** the cap of a row now ('—' with no key) */
 export function capNow(id: RowId): string { const a = byId.get(id); if (!a) return id; const as = slotNow() ? ALIAS[id] : undefined; if (as && !keysNow(a).length) return capNow(as); const ks = keysNow(a); return same(ks, a.codes) ? a.cap : ks[0] ? keyLabel(ks[0]) : NONE; }
-/** the cap of a code the view handed over as text: its row's now, and the text itself if no row is on it */
-export const capOfCode = (code: string): string => byId.has(code) ? capNow(code as RowId) : code;
 /** the row a cap of the build names ('f', 'Space', '2'), if it names one */
 export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLowerCase()) ?? null; }
 /** a cap the HUD was handed, as it is bound now. Anything that is no row's cap ('LMB', '×') is handed back */

@@ -27,7 +27,7 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - 
 
 /// The sodium lamps (exterior spot lights hung high, found once off the light targets) and the moth pool dealt round them.
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
-    let k = moths(); let mut out = Moths::blank();
+    let k = g.k.moths; let mut out = Moths::blank();
     for t in g.targets.clone() {
         let (kind, group, light) = { let f = &g.tab.fixture[t]; (f.kind, f.group.clone(), f.light) };
         let Some(l) = light else { continue; };
@@ -59,8 +59,8 @@ pub fn moths_clear(g: &mut crate::game::Game) {
 /// Once a frame: move the moths.
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
-    let k = moths();
-    let on = g.tune.moths;
+    let k = g.k.moths;
+    let on = g.k.tune.moths;
     let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { g.weather.rain_rate } } else { 0.0 };   // (no moths at a lamp in falling snow)
     // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
     for li in 0..g.moths.lamps.len() {

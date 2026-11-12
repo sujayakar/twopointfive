@@ -67,9 +67,9 @@ fn round_in_view(g: &mut Game, shooter: CharId, target: V3, o: &FireOpts, mut pe
 }
 
 /// `fx.muzzleFx[key]`
-fn muzzle_row(key: crate::effects::MuzzleFxKey) -> crate::effects::MuzzleFx {
+fn muzzle_row(g: &Game, key: crate::effects::MuzzleFxKey) -> crate::knobs::MuzzleFxK {
     use crate::effects::MuzzleFxKey as K;
-    let t = crate::effects::muzzle_fx();
+    let t = g.k.effects.muzzle;
     match key {
         K::Mk12 => t.mk12,
         K::Mp7 => t.mp7,
@@ -177,7 +177,7 @@ fn aims(g: &mut Game, shooter: CharId, sg: Option<GuardId>, target: V3, o: &Fire
 
 /// What is seen and heard of a shot at the muzzle.
 fn shot_shows(g: &mut Game, r: &Round) {
-    let mf = muzzle_row(crate::gunlook::flame_of(g, &r.def));
+    let mf = muzzle_row(g, crate::gunlook::flame_of(g, &r.def));
     flash_card(g, r, &mf);
     gas_and_light(g, r, &mf);
     crate::particle_fx::muzzle_sparks_fx(g, r.muzzle, r.dir, r.shooter);
@@ -187,8 +187,8 @@ fn shot_shows(g: &mut Game, r: &Round) {
 }
 
 /// The flash card: one frame of emissive box.
-fn flash_card(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
-    let card = crate::effects::muzzle_card();
+fn flash_card(g: &mut Game, r: &Round, mf: &crate::knobs::MuzzleFxK) {
+    let card = g.k.effects.card;
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(r.muzzle, r.dir, mf.card_ahead),
         h: mf.card_half,
@@ -202,9 +202,9 @@ fn flash_card(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
 }
 
 /// Gas, light and powder: the shot's effects.
-fn gas_and_light(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
+fn gas_and_light(g: &mut Game, r: &Round, mf: &crate::knobs::MuzzleFxK) {
     g.fx_seed += 1.0;
-    let gain = mf.light_gain * (if r.def.suppressed { crate::effects::shot().suppressed_gain } else { 1.0 });
+    let gain = mf.light_gain * (if r.def.suppressed { g.k.effects.shot.suppressed_gain } else { 1.0 });
     let gas = !crate::fogofwar::fog_of_war_air_hides(g, r.shooter);
     let lights = crate::effects::spawn_shot(g, r.muzzle, r.dir, &crate::effects::SpawnShotO {
         light_gain: Some(gain),

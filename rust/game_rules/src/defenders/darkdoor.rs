@@ -570,7 +570,7 @@ fn waits_on_his_spot(g: &mut Game, gd: GuardId, d: DoorId, dt: f64, speed: f64) 
         let yaw = v3::yaw_to(p, to);
         let back = d_s < 1.6 && m::cos(yaw - face) < 0.3;
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, if back { face } else { yaw }, 5.5 * dt);
-        let want = m::min(speed, g.tune.guard_investigate) * v3::clamp(d_s / 0.8, 0.35, 1.0) * (if back { 0.6 } else { v3::clamp(m::cos(yaw - g.ch[c].body_yaw) * 1.5, 0.15, 1.0) });
+        let want = m::min(speed, g.k.tune.guard_investigate) * v3::clamp(d_s / 0.8, 0.35, 1.0) * (if back { 0.6 } else { v3::clamp(m::cos(yaw - g.ch[c].body_yaw) * 1.5, 0.15, 1.0) });
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, want, 4.0, dt);
         let sp = g.gd[gd].speed;
         g.ch[c].vel = [m::sin(yaw) * sp, 0.0, m::cos(yaw) * sp];

@@ -77,7 +77,7 @@ fn rescue_flow_build(g: &mut crate::game::Game) {
     if let Some(b) = crate::rescue::rescue_bounds(g) {
         g.rescue.flow.room = b;
     }
-    let sample_y = g.rescue.flow.knobs.sample_y;
+    let sample_y = g.k.rescueflow.sample_y;
     for reg in f.regions.iter() {
         let id = reg.id.clone();
         // a region with a clear plan on its door has the plan's bounds, if the first plan of that door has any
@@ -132,7 +132,7 @@ fn rescue_flow_lookable(g: &crate::game::Game, k: &mut crate::rescueflow::Known)
     let eyes: [V3; 4] = [[mark[0], EYE, mark[2]], [at[0], EYE, at[2] + dz], [at[0] - 0.9, EYE, at[2] + dz], [at[0] + 0.9, EYE, at[2] + dz]];
     k.lookable = Vec::new();
     k.built_open = rescue_flow_open(g, &k.o);
-    let eye_m = g.rescue.flow.knobs.eye_m;
+    let eye_m = g.k.rescueflow.eye_m;
     let pts = g.tab.rescueflow_region[k.region].pts.clone();
     for (i, p) in pts.iter().enumerate() {
         for e in eyes.iter() {
@@ -193,7 +193,7 @@ fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegio
 /// What the stages of a sensing share: the moment, the knobs, the team's eyes and every room.
 struct Sensing {
     t: f64,
-    k: RescueFlowKnobs,
+    k: crate::knobs::RescueflowK,
     eyes: Vec<V3>,
     rooms: Vec<RescueflowRegionId>,
 }
@@ -201,7 +201,7 @@ struct Sensing {
 /// A few times a second: the floor seen, who of theirs is known where, what each room and opening reads.
 fn rescue_flow_sense(g: &mut crate::game::Game) {
     let eyes = rescue_flow_eyes(g, &crate::seats::here(g));
-    let s = Sensing { t: g.time, k: g.rescue.flow.knobs, eyes, rooms: g.rescue.flow.regions.values().copied().collect() };
+    let s = Sensing { t: g.time, k: g.k.rescueflow, eyes, rooms: g.rescue.flow.regions.values().copied().collect() };
     look_over_a_room(g, &s);
     for &r in s.rooms.iter() {
         let rect = g.tab.rescueflow_region[r].rect;
@@ -415,7 +415,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
 
 /// What a frame's stages share: the knobs, the moment, and where Sam is on the route.
 struct FlowNow {
-    k: RescueFlowKnobs,
+    k: crate::knobs::RescueflowK,
     t: f64,
     sam: V3,
     in_corr: bool,
@@ -445,7 +445,7 @@ struct OnJob {
 
 /// Once a frame from Rescue.tick.
 pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
-    let k = g.rescue.flow.knobs;
+    let k = g.k.rescueflow;
     let Some(f) = rescue_flow_f(g).filter(|_| crate::rescue::rescue_up(g)) else {
         send_everyone_back(g);
         return;
@@ -498,7 +498,7 @@ fn send_everyone_back(g: &mut Game) {
 }
 
 /// Where Sam stands this frame, read once.
-fn flow_now(g: &Game, f: &crate::scene_scenarios::RescueFlowData, k: RescueFlowKnobs) -> FlowNow {
+fn flow_now(g: &Game, f: &crate::scene_scenarios::RescueFlowData, k: crate::knobs::RescueflowK) -> FlowNow {
     let pl = g.player;
     let sam = g.player_pos(pl);
     let dynamic = crate::rescue::rescue_dynamic(g);
@@ -908,8 +908,8 @@ fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
 /// The strips: one flat glowing bar on the corridor floor across each opening, in its state's colour (a hot one beats).
 fn rescue_flow_boxes(g: &mut crate::game::Game) {
     let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
-    let colours = colour();
-    let glow = g.rescue.flow.knobs.glow;
+    let colours = g.k.colors.openings.clone();
+    let glow = g.k.rescueflow.glow;
     let time = g.time;
     for at in 0..g.rescue.flow.known.len() {
         let (state, oat, north, half) = {

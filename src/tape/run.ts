@@ -7,6 +7,7 @@ import { KEEP, keepBudget, pruneKept } from './keepstore';
 import { keptStore } from './keptui';
 import { reportWarning } from '../cloud/report';
 import { PLAYTAPE, visitPairs } from './address';
+import { HAND } from '../draw/input';
 import { HANDTAPE, type HandTape } from './handtape';
 import { handSource, type HandsHead } from './keep';
 import { MODULE } from './module';
@@ -16,7 +17,7 @@ export interface RunDeps {
   sid: string;
   /** the run's tape, ended or not; null: nobody's run is on · it is still being written */
   tape(): HandTape | null; on(): boolean;
-  head(): Omit<HandsHead, 'game' | 'hands' | 'module' | 'url' | 'userAgent'>;
+  head(): Omit<HandsHead, 'game' | 'hands' | 'hand' | 'module' | 'url' | 'userAgent'>;
   /** the run is over · somebody has it in hand */
   over(): boolean; live(): boolean;
   /** the tick the try that is on began after */
@@ -36,7 +37,7 @@ export class RunKeep {
   constructor(private d: RunDeps) {
     const store = keptStore(), idle = (f: () => void, timeout: number): void => { if (window.requestIdleCallback) window.requestIdleCallback(() => f(), { timeout }); else f(); };
     const K = this.keeper = new ReplayKeeper(handSource(d.tape), { sid: d.sid, store, played: () => (d.tape()?.ticks ?? 0) > 0, say: words => d.say(words),
-      head: (): HandsHead => ({ game: 'twopointsix', hands: HANDTAPE.version, module: MODULE.name, url: location.search, userAgent: navigator.userAgent, ...d.head() }) });
+      head: (): HandsHead => ({ game: 'twopointsix', hands: HANDTAPE.version, hand: HAND, module: MODULE.name, url: location.search, userAgent: navigator.userAgent, ...d.head() }) });
     setInterval(() => idle(() => K.beat(), 2000), KEEP.secs * 1000);
     setInterval(() => { if (K.watch(d.over(), performance.now())) idle(() => { void K.endBeat().then(() => d.ended()); }, IDLE_MS); }, LOOK_MS);
     window.addEventListener('pagehide', () => { void K.leave(); });

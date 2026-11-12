@@ -37,7 +37,7 @@ cleared rooms: cleared
 door tools: ch col destr dice door_path dr engine.lights events falls fight fx_seed gd groups.orders groups.tools items keyed m.blast_look m.destruction m.doortools m.handleside m.seenwalk m.unseen serial_next smoke sparks squad_net tab.boxes tab.debris_chunk tab.doortools_door_op tab.doortools_known_threat tab.doortools_room_search tab.doortools_word tab.item tab.light tab.roomfight_room tab.task
 wall charges:
 rear watch: m.rearwatch tab.task
-cover: cover gd tab.cover_opening
+cover: cover gd m.morale tab.cover_opening
 silent: groups.orders m.silent tab.orders_order_def
 pairs: groups.orders pair tab.orders_order_def
 spotted: ch gd m.spotted

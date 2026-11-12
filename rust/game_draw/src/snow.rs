@@ -8,7 +8,6 @@ use game::game::Game;
 use game::ids::*;
 use game::m;
 use game::out_events::OutEvent;
-use game::scene_materials::SnowKind;
 
 game::bits! {
     /// what is said of a man, as what stands on the snow
@@ -85,6 +84,7 @@ event! {
 section! {
     /// what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old
     pub struct SnowWord {
+        /// SNOW_KINDS, one more than its number (0: none)
         pub w: u32,
     }
 }
@@ -108,8 +108,7 @@ impl Snow {
         let list = (g.engine.world.statics.len(), g.engine.world.geom_serial);
         if self.of != list { self.of = list; self.words.clear();
         for &id in &g.engine.world.statics {
-            let w = match game::scene_materials::does_of(g, g.tab.boxes[id].does).snow { Some(SnowKind::Snow) => 1, Some(SnowKind::SnowPacked) => 2, Some(SnowKind::SnowOld) => 3, None => 0 };
-            self.words.push(SnowWord { w });
+            self.words.push(SnowWord { w: game::scene_materials::does_of_box(g, id).snow.map_or(0, |s| s as u32 + 1) });
         } }
         for &s in &g.seats { let c = g.pl[game::cmd::seat_man(g, s)].ch; self.man(g, c, false, false); }
         for &gd in g.guards.iter().chain(game::civilians::civilians_shown(g).iter()) { self.man(g, g.gd[gd].ch, hidden(g, gd), game::condition::down(g, g.gd[gd].ch)); }
