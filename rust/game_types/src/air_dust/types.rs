@@ -8,14 +8,20 @@ pub struct AirDust {
     /// the roofs or the weather changed, and the field is to be built
     #[is(true)] pub dirty: bool,
     /// the men's eyes read the field this run
+    #[bytes(skip)]
     pub on: bool,
+    #[bytes(skip)]
     pub leak: f64,
+    #[bytes(skip)]
     pub acc: f64,
     /// the re-check's place in the plan's edges
+    #[bytes(skip)]
     pub cur: usize,
     /// a cell's share (none at all: no weather has had dust in it, and it is the open air's everywhere)
+    #[bytes(skip)]
     pub share: Vec<f64>,
     /// by edge: no static stands across it
+    #[bytes(skip)]
     pub open: Vec<u8>,
     /// (made from the roofs and the leaves: in no bytes)
     #[bytes(skip)]

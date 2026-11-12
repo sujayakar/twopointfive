@@ -461,7 +461,6 @@ impl ToBytes for Boxes {
         self.rows.start.w(o);
         self.rows.items.w(o);
         self.rows.tilted.w(o);
-        self.rows.panes.w(o);
     }
 }
 

@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 
 /// A POSE OF A MAN'S: which of his it is
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, ToBytes)]
-pub struct Pose { pub at: u32 }
+pub struct Pose { #[bytes(skip)] pub at: u32 }
 
 /// THE POSES A MAN KEEPS, one after another. A pose is ten columns of singles (tx ty tz, qx qy qz qw, sx sy sz), a node a row; the rows are whole fours, and those past the last node stay zeros.
 #[derive(Clone, Debug, Default, ToBytes)]

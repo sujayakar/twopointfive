@@ -70,6 +70,7 @@ pub struct LightHome {
     pub mains: Mains,
     pub lamps: Vec<LightId>,
     /// those lamps as a light question reads them, in the same order: that of the engine's list, which a sum of floats over them is made of, so nothing sorts them
+    #[bytes(skip)]
     pub rows: Vec<Lamp>,
 }
 

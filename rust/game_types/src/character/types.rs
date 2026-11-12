@@ -1224,7 +1224,7 @@ pub struct AnimHdIdle {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RagDrive {
     /// the pose he fell in
-    pub pose: Vec<f32>,
+    #[bytes(skip)] pub pose: Vec<f32>,
     pub ov: Vec<Option<crate::anim_skeleton::NodeOverride>>,
     pub hips: usize,
     pub hips_rot0: Quat,
@@ -1340,7 +1340,7 @@ pub struct Character {
     pub in_hand_k: f64,
     pub sim_hand_r: Option<Quat>,
     /// the poses he keeps
-    pub poses: crate::anim_skeleton::Poses,
+    #[bytes(skip)] pub poses: crate::anim_skeleton::Poses,
     pub in_hand_ov: Option<Vec<Option<crate::anim_skeleton::NodeOverride>>>,
     pub prev_bones: JsMap<crate::character::Bone, V3>,
     pub prev_dt: f64,
@@ -1364,6 +1364,7 @@ pub struct Character {
     /// whose man he is
     pub team: crate::teams::Team,
     /// whose man he is now: who has a hand on him (owner.rs)
+    #[bytes(skip)]
     pub hold: crate::owner::Hold,
 }
 
