@@ -67,7 +67,7 @@ impl Me {
     fn counted(&self, n: usize) -> bool { let given = self.orders() > n; if given { self.given.set(self.given.get() + 1); } given }
     fn ops_on(&self, d: DoorId) -> bool { self.seen(|g, s| s.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].door == d)) }
 
-    async fn quick(&self) { let k = self.ask(|g| g.groups[g.group].orders.knobs.quick_key.as_str()); self.key(&k).await }
+    async fn quick(&self) { let k = self.ask(|g| g.k.orders.quick_key.as_str()); self.key(&k).await }
 
     async fn go(&self, p: V3, max: f64, stop: impl FnMut() -> bool) -> bool { self.p.go(p, max, stop, Walk::default()).await }
 

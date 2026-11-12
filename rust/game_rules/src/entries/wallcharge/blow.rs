@@ -133,7 +133,7 @@ pub(super) fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate
     for &b in g.col.nav.blocked.iter() { h = h.wrapping_mul(31).wrapping_add(b as i32); }
     let stamp = format!("{}|{}|{}|{}|{}|{}|{}:{}|{},{}|1",
         g.pl[p].keys.keys().join(","), g.pl[p].codes.keys().join(","), locks, g.cleared.known, g.destr.walls.serial,
-        g.engine.world.geom_serial, g.col.nav.blocked.len(), h, g.groups[g.group].orders.knobs.cleared_dear, g.groups[g.group].orders.knobs.round_cap);
+        g.engine.world.geom_serial, g.col.nav.blocked.len(), h, g.k.orders.cleared_dear, g.k.orders.round_cap);
     let same = match &g.sets[g.seat].wall_charge.walks { Some(k) => k.menu == m && k.stamp == stamp && k.map.len() <= 512, None => false };
     if !same { g.sets[g.seat].wall_charge.walks = Some(WallChargeWalks { menu: m, stamp, map: JsMap::new() }); }
     WallChargeKept::Menu
@@ -558,9 +558,9 @@ fn step_standoff(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64
 }
 
 /// the job of a man going in: gun up, light, searching
-fn entry_job(seat: &crate::seats::SeatRef, post: V3, face: f64, watch: Option<V3>, light: bool, there: &str) -> WallChargeAssignA {
+fn entry_job(g: &Game, post: V3, face: f64, watch: Option<V3>, light: bool, there: &str) -> WallChargeAssignA {
     let a = none_aim(job("entering · the wall", there));
-    WallChargeAssignA { post: Some(post), face: Some(face), watch, pace: Some(seat.orders.knobs.entry), light: Some(light), search: Some(true), ..a }
+    WallChargeAssignA { post: Some(post), face: Some(face), watch, pace: Some(g.k.orders.entry), light: Some(light), search: Some(true), ..a }
 }
 
 /// through the hole, each to his own point; then the room is theirs
@@ -579,7 +579,7 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
             o!(g, op).stage.set(q.gd, crate::wallcharge::WallStage::Lane);
             let lw = g.k.wallcharge.lane_watch;
             let watch = if lw > 0.0 { Some(wall_pt(g, w, o!(g, op).hole.unwrap().du, -(tk + lw), Some(g.k.wallcharge.height))) } else { None };
-            let a = entry_job(&crate::seats::here(g), q.lane, into, watch, light, "entering · the wall");
+            let a = entry_job(g, q.lane, into, watch, light, "entering · the wall");
             wall_charge_assign(g, op, q.gd, &a);
         }
     }
@@ -607,7 +607,7 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
                 if !o!(g, op).crossed.has(gd) { let along = wall_along(w, p); o!(g, op).crossed.set(gd, along); }
                 o!(g, op).stage.set(gd, crate::wallcharge::WallStage::Pod);
                 let there = if pod.watch.is_some() && !crate::orders::truthy_str(&pod.door) { "holding the hole" } else { "holding the room" };
-                let job = entry_job(&crate::seats::here(g), pod.pos, pod.face, pod.watch, light, there);
+                let job = entry_job(g, pod.pos, pod.face, pod.watch, light, there);
                 wall_charge_assign(g, op, gd, &job);
             }
         } else if !arrived && yield_t < 0.0 {   // (a man the fight has is not waited for, nor one who has taken up his door)
@@ -649,7 +649,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
     let a = WallChargeAssignA {
         post: Some(if moved { at } else { pod.pos }),
         face: Some(if moved && door { v3::yaw_to(at, h.watch) } else { h.face }),
-        watch: Some(h.watch), pace: Some(g.groups[g.group].orders.knobs.entry), light, search: Some(true), ..a
+        watch: Some(h.watch), pace: Some(g.k.orders.entry), light, search: Some(true), ..a
     };
     wall_charge_assign(g, op, gd, &a);
 }
