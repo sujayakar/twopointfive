@@ -16,7 +16,7 @@
 //   spiral (`slips` counts; a client follows the slip by the ticks it hears, client.ts).
 import type { NetStart } from './start';
 import type { NetState, Outcome, WireCmd, Hello, ToServer, ToClient, Tick, State, ByeCode } from './wire';
-import { NET, netText, netParse, heldOf, wireOk, withEdges, cleanName } from './wire';
+import { NET, NO_EDGES, netText, netParse, heldOf, wireOk, withEdges, cleanName } from './wire';
 import { SeatLine } from './timeline';
 
 /** what the host gives: its clock (ms, never going back), one tick of its game on the seats' records (and whatever it does between two ticks), the game's
@@ -74,7 +74,7 @@ export class NetServer {
     if (!P) { if (m.k === 'hello') this.hello(conn, m); else this.bye(conn, 'hello', 'say hello first'); return; }
     if (P.seat < 0) return;   // (a watcher sends nothing the game hears)
     const S = this.seats[P.seat];
-    if (m.k === 'in') { if (this.state !== 'waiting' && Number.isInteger(m.t) && wireOk(m.c)) S.line.put(m.t, withEdges(m.c, [], 0, 0), this.tick); }
+    if (m.k === 'in') { if (this.state !== 'waiting' && Number.isInteger(m.t) && wireOk(m.c)) S.line.put(m.t, withEdges(m.c, NO_EDGES), this.tick); }
     else if (m.k === 'ready') { if (!S.ready) { S.ready = true; this.begin(); } }
     else if (m.k === 'lost') { if (!P.lost) { P.lost = true; this.lost++; this.onChange?.(); } }
   }
