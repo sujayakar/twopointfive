@@ -39,12 +39,11 @@ fn an_evening_keeps_its_switches_and_its_die() {
     let mut p = pass();
     p.run(1.0);
     p.g.god_mode = true;
-    p.g.k.tune.vis_floor *= 2.0;
     p.run(1.0);
     p.g.dice.n += 5.0;   // (the die is ahead of where the first step had it)
-    let (floor, rolled, serial, restarts, run) = (p.g.k.tune.vis_floor, p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
+    let (rolled, serial, restarts, run) = (p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
     assert!(control::restart(&mut p.g));
-    assert!(p.g.god_mode && p.g.k.tune.vis_floor == floor, "the switches went back with the game");
+    assert!(p.g.god_mode, "the switch went back with the game");
     assert!(p.g.dice.n >= rolled, "the die went back with the game");
     assert!(p.g.serial_next >= serial, "a number would be dealt twice");
     assert_eq!(p.g.time, 0.0, "the clock starts over");
@@ -101,7 +100,29 @@ fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     p.g.k.tune.teams = false;
     assert!(control::restart(&mut p.g));
     assert_eq!((p.g.staged.up, p.g.guards.len()), (active, guards), "the mission did not stand again");
-    assert!(!p.g.ai_enabled && !p.g.k.tune.teams, "the switches went back with the game");
+    assert!(!p.g.ai_enabled, "the switch went back with the game");
+}
+
+/// THE RULE: a second try begins with the first's numbers as the first began with them: the tables as the address, the difficulty and this machine's rows laid them. What a script, a staging or a
+/// mission wrote in the try is the try's. (What the player turned, the page turns again: it knows its rows by name.) CONTROL: the numbers did move in the first.
+/// A FAILURE MEANS: a lesson that shuts the response team out leaves it shut out of the next try for good, or a rule switched for a quiet run stands in the one after it.
+#[test]
+fn a_second_try_begins_with_the_firsts_numbers() {
+    use game::knobs::KnobTable;
+    let numbers = |p: &Play| { let mut l = Vec::new(); p.g.k.walk(&mut String::new(), &mut |name, _, v| l.push((String::from(name), v))); l };
+    for (level, words) in [("tut-team.json", "?levelFile=tut-team.json&roomclear&squad4"), ("bazaar.json", "?levelFile=bazaar.json&quiet"), ("compound.json", "?levelFile=compound.json&roomclear&squad4&hard")] {
+        let mut p = Play::mission(level, words, &Opts { seed: 2, ..Default::default() });
+        let first = numbers(&p);
+        p.run(2.0);
+        p.g.k.tune.guard_chase = 9.0;
+        p.g.k.tune.needs = !p.g.k.tune.needs;
+        p.g.k.pairup.on = !p.g.k.pairup.on;
+        assert_ne!(numbers(&p), first, "{level}: the control: nothing was written");
+        assert!(control::restart(&mut p.g));
+        let again = numbers(&p);
+        let moved: Vec<_> = again.iter().zip(&first).filter(|(a, b)| a != b && !(a.1.is_nan() && b.1.is_nan())).collect();
+        assert!(moved.is_empty(), "{level}: the second try has the first's: {moved:?}");
+    }
 }
 
 /// THE RULE: the hour is the first step's, so a night's lights are never under a noon's sky.
@@ -117,15 +138,15 @@ fn the_hour_goes_back() {
     assert_eq!(game::hours::told::told(&p.g), night);
 }
 
-/// THE RULE: a lever of the difficulty goes over whole: the rung it is set to and the table it wrote.
+/// THE RULE: the difficulty goes back whole, as a try can change it in nothing but a mission's own lines: the rung it is set to and the table it wrote.
 /// A FAILURE MEANS: the next thing to work the tables out reads the first try's rung and the lever comes undone by itself.
 #[test]
-fn a_lever_of_the_difficulty_goes_over_whole() {
+fn a_lever_of_the_difficulty_goes_back_whole() {
     let mut p = pass();
-    let was = p.g.k.fog.cone;
-    game::difficulty::set_cone_visit(&mut p.g, Some(!was));
+    let was = (p.g.m.difficulty.cone_visit, p.g.k.fog.cone);
+    game::difficulty::set_cone_visit(&mut p.g, Some(!was.1));
     assert!(control::restart(&mut p.g));
-    assert_eq!((p.g.m.difficulty.cone_visit, p.g.k.fog.cone), (Some(!was), !was));
+    assert_eq!((p.g.m.difficulty.cone_visit, p.g.k.fog.cone), was);
 }
 
 /// THE RULE: a wand the player picked for a teammate reaches him on the next try and on every one after that, and the mission's words said again take nothing off him.
