@@ -6,6 +6,8 @@ use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Door],
+    ack: &["on it.", "moving."],
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::wandorder::tick),

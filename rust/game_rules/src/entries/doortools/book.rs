@@ -75,10 +75,6 @@ fn door_of(t: &crate::orders::OrderTarget) -> Option<(DoorId, f64)> {
         _ => None,
     }
 }
-/// a string list of a row
-fn strs(xs: &[&str]) -> Vec<String> {
-    xs.iter().map(|x| String::from(*x)).collect()
-}
 /// S.register(def, before): a row is a thing of the orders' table
 fn register(g: &mut Game, def: crate::orders::OrderDef, before: Option<&str>) {
     let id = crate::orders::squad_orders_row(g, def);
@@ -135,21 +131,19 @@ fn door_tools_thr_sig_now() -> f64 {
 
 /// the door tools, and their rows on the menu
 pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools {
-    use crate::orders::{rows, OrderDef, TargetKind as K};
+    use crate::orders::rows;
     use crate::doortools::TOOLS_PAGE;
     let mut me = crate::doortools::DoorTools::blank();
     me.charges = g.k.doortools.charges;
     me.bangs = g.k.doortools.bangs;
     me.frags = g.k.frag.squad;
-    register(g, rows::def(&rows::tools::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(TOOLS_PAGE)), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::openclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "moving."])), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::charge::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["copy.", "on it."])), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), ..OrderDef::default() }), None);
-    // the row that stands in for the tools' while the jambs are held. no part registered it (CHANGES-6)
-    register(g, rows::def(&rows::held::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE) }), ..OrderDef::default() }), None);
-    // thrRows writes `this`, and this is not on g yet: it stands there for the call
+    register(g, rows::def(&rows::tools::ORDER), None);
+    register(g, rows::def(&rows::openclear::ORDER), None);
+    register(g, rows::def(&rows::bangclear::ORDER), None);
+    register(g, rows::def(&rows::charge::ORDER), None);
+    register(g, rows::def(&rows::fragclear::ORDER), None);
+    register(g, rows::def(&rows::held::ORDER), None);
+    // (the tools stand on the group for the call that puts a row of theirs on the menu)
     core::mem::swap(&mut g.groups[g.group].tools, &mut me);
     door_tools_thr_rows(g);
     core::mem::swap(&mut g.groups[g.group].tools, &mut me);
@@ -158,13 +152,12 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
 
 /// the row of the door held from outside, the one order of that page on the page's switches
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
-    use crate::orders::{rows, OrderDef, TargetKind as K};
+    use crate::orders::rows;
     g.groups[g.group].tools.thr_sig = door_tools_thr_sig_now();
     for id in [crate::orders::rows::threshold::ORDER.id, crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
-    register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
-        ack: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+    register(g, rows::def(&rows::threshold::ORDER), Some(crate::orders::rows::fragclear::ORDER.id));
     g.groups[g.group].tools.thr_row = false;
 }
 
@@ -199,7 +192,7 @@ pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::Door
 
 /// a new cast is a fresh run; the rows that hang on the cast dealt again
 pub fn door_tools_sync(g: &mut crate::game::Game) {
-    use crate::orders::{rows, OrderDef, TargetKind as K};
+    use crate::orders::rows;
     use crate::doortools::{BIG_ORDER, GoRow, TOOLS_PAGE};
     let (mut i, mut same, mut at) = (0usize, true, 0usize);
     while at < g.guards.len() {
@@ -235,8 +228,9 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         if go == GoRow::None {
             crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
         } else {
-            let listed = if go == GoRow::Small { Vec::new() } else { vec![K::Floor, K::None] };
-            register(g, rows::def(&rows::go::ORDER, OrderDef { word: true, targets: vec![K::Floor, K::Door, K::None], listed: Some(listed), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
+            let mut def = rows::def(&rows::go::ORDER);
+            if go == GoRow::Small { def.listed = Some(Vec::new()); }   // (a pair's is on no list: F alone gives it)
+            register(g, def, None);
         }
     }
     if g.groups[g.group].tools.thr_sig != door_tools_thr_sig_now() {
@@ -258,12 +252,12 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         g.groups[g.group].tools.big_row = Some(big);
         crate::orders::squad_orders_unregister(g, BIG_ORDER);
         if big {
-            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+            register(g, rows::def(&rows::bigclear::ORDER), Some(crate::orders::rows::fragclear::ORDER.id));
         }
     }
     if !g.groups[g.group].tools.thr_row {
         g.groups[g.group].tools.thr_row = true;
-        register(g, rows::def(&rows::thrword::ORDER, OrderDef { page: Some(String::from(crate::doortools::HELD_PAGE)), word: true, targets: vec![K::Door], ..OrderDef::default() }), None);
+        register(g, rows::def(&rows::thrword::ORDER), None);
     }
 }
 

@@ -1,6 +1,6 @@
 //! AN ORDER IS ONE MODULE AND ONE LINE.
 //!
-//! An order of the squad's menu is a `Row`: its id and the functions the menu and the tick call. An order is one file
+//! An order of the squad's menu is a `Row`: its id, what it can be given on and what a man says to it (`targets`, `ack`, `page`, ...: the fields of `Row` say), and the functions the menu and the tick call. An order is one file
 //! here (`orders/rows/<name>.rs`, with a `pub const ORDER: Row`) and one line of `rows!` below. `OrderDef.row` is the
 //! row the menu holds it by.
 //!
@@ -10,7 +10,7 @@
 //!   only    the men, of those addressed, the order is for
 //!   valid   these men together can carry it out here (Ok), or not (Err(None)), or the word for why (Err(Some))
 //!   gone    the ring does not offer it on this target at all
-//!   when    it stands in now for the row its data names (`OrderDef.stands_in`)
+//!   when    it stands in now for the row it names (`stands_in`)
 //!   issue   hand each man his assignment; Some is a refusal, in those words
 //!   tick    once a frame for each man under the order, before he is posed
 //!   frame   once a frame for the order itself, after the menu's input: put its row on the menu or take it off
@@ -21,7 +21,7 @@
 //! Only `id`, `label` and `issue` must be written: `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
 //!
 //! What an order's functions call, so that its id is written once, in its `Row`:
-//!   `list(g, &ORDER, data)`    its row on the menu (`data`: its page, its targets, its words of assent). Listing again is the same row.
+//!   `list(g, &ORDER)`          its row on the menu. Listing again is the same row.
 //!   `unlist(g, &ORDER)`        off the menu
 //!   `listed(g, seat, &ORDER)`  is it on this seat's menu
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
@@ -76,13 +76,14 @@ rows! {
     stunthere;
 }
 
-/// The row of the menu for an order: `data` is what only it knows (its page, its targets), and the functions
-/// are the order's own.
-pub fn def(r: &'static Row, data: OrderDef) -> OrderDef { OrderDef { id: String::from(r.id), row: r, ..data } }
+/// The row of the menu for an order, as the order says it
+pub fn def(r: &'static Row) -> OrderDef {
+    OrderDef { id: String::from(r.id), row: r, targets: r.targets.to_vec(), page: r.page.map(String::from), listed: r.listed.map(|l| l.to_vec()), stands_in: r.stands_in.map(String::from) }
+}
 
 /// Put the order's row on the menu. Listing it again is the same row (`squad_orders_row`), in the place the menu deals it.
-pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
-    let d = crate::orders::squad_orders_row(g, def(r, data));
+pub fn list(g: &mut Game, r: &'static Row) -> OrdersOrderDefId {
+    let d = crate::orders::squad_orders_row(g, def(r));
     crate::orders::squad_orders_register(g, d, None);
     d
 }

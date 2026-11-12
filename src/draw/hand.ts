@@ -11,7 +11,7 @@ export function newHand(): Hand {
 }
 
 /** the host's input, camera and canvas, as a hand is sampled of them */
-export interface HandInput { readonly keys: ReadonlySet<string>; readonly pressed: ReadonlySet<string>; buttons: number; clicked: number; wheel: number; mouseX: number; mouseY: number }
+export interface HandInput { readonly keys: ReadonlySet<string>; readonly pressed: ReadonlySet<string>; /** held as something was pressed since the last hand, let go since or not */ readonly under?: ReadonlySet<string>; buttons: number; clicked: number; wheel: number; mouseX: number; mouseY: number }
 export interface HandCamera { viewProj: ArrayLike<number>; invViewProj: ArrayLike<number>; pos: ArrayLike<number>; forward: ArrayLike<number>; target: ArrayLike<number>; yaw: number; pitch: number; distance: number; fov: number; aspect: number; aimLead: number; desiredDistance: number }
 export interface HandCanvas { clientWidth: number; clientHeight: number; width: number; height: number }
 
@@ -23,6 +23,6 @@ export function sampleHand(hand: Hand, input: HandInput, cam: HandCamera, canvas
   I[SeatInput.yaw] = cam.yaw; I[SeatInput.pitch] = cam.pitch; I[SeatInput.distance] = cam.distance; I[SeatInput.fov] = cam.fov; I[SeatInput.aspect] = cam.aspect; I[SeatInput.aimLead] = cam.aimLead; L[SeatLens.desired] = cam.desiredDistance;
   for (let i = 0; i < 16; i++) { L[SeatLens.vp + i] = cam.viewProj[i]; L[SeatLens.ivp + i] = cam.invViewProj[i]; }
   for (let i = 0; i < 3; i++) { I[SeatInput.target + i] = cam.target[i]; L[SeatLens.pos + i] = cam.pos[i]; L[SeatLens.forward + i] = cam.forward[i]; }
-  let held = '', down = ''; for (const k of input.keys) held += held ? ` ${k}` : k; for (const k of input.pressed) down += down ? ` ${k}` : k;
+  let held = '', down = ''; for (const k of input.keys) held += held ? ` ${k}` : k; if (input.under) for (const k of input.under) if (!input.keys.has(k)) held += held ? ` ${k}` : k; for (const k of input.pressed) down += down ? ` ${k}` : k;
   return `${held}\n${down}`;
 }

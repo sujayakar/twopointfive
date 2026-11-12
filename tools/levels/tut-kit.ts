@@ -37,7 +37,7 @@ import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from './tutKitMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
-export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';
+export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by the game\'s script of its name. Regenerate: bun run tools/levels/export.ts tut-kit';
 export const MATERIALS = GWOT_MATERIALS;
 
 const HALF = Math.PI / 2;

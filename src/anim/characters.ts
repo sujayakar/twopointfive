@@ -81,7 +81,7 @@ export class CharacterRenderer implements SkinnedDrawable {
     for (let k = 0; k < CHAR_MAT_FLOATS; k++) if (f[o + k] !== was[k]) { this.matDirty = true; break; }
   }
   /** A FRAME'S MEN WHOSE INSTANCES AND BONES ARE WRITTEN ELSEWHERE (src/draw/men.ts): how many, their bones as they are sent (instance i's at `at` + i × JOINT_STRIDE × 16 words), and the parts each wears */
-  drawn(count: number, bones: Uint32Array, at: number) {
+  drawn(count: number, bones: ArrayLike<number>, at: number) {
     this.instanceCount = count;
     for (let i = 0, o = 0; i < count; i++, o += BONES) {
       const was = this.bones; let w = 0; while (w < BONES && bones[at + o + w] === was[o + w]) w++;
