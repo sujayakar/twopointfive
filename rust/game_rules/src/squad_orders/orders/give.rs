@@ -21,10 +21,6 @@ pub(crate) fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTar
 pub(crate) fn on(b: Option<bool>) -> bool {
     b.unwrap_or(false)
 }
-/// `if (word)` of an optional string
-fn word(s: &Option<String>) -> bool {
-    s.as_ref().map_or(false, |x| !x.is_empty())
-}
 fn player_ch(g: &Game, seat: &crate::seats::SeatRef) -> CharId {
     g.pl[seat.player].ch
 }

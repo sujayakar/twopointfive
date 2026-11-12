@@ -10,7 +10,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap};
 use crate::m;
 use crate::v3::{self, V3};
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.
 fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {

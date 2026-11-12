@@ -4,7 +4,7 @@ use crate::ids::*;
 use crate::js;
 use crate::m;
 use crate::v3::V3;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- where a door is
 
@@ -132,7 +132,7 @@ fn door_tools_thr_sig_now() -> f64 {
 /// the door tools, and their rows on the menu
 pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools {
     use crate::orders::rows;
-    use crate::doortools::TOOLS_PAGE;
+    
     let mut me = crate::doortools::DoorTools::blank();
     me.charges = g.k.doortools.charges;
     me.bangs = g.k.doortools.bangs;
@@ -193,7 +193,7 @@ pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::Door
 /// a new cast is a fresh run; the rows that hang on the cast dealt again
 pub fn door_tools_sync(g: &mut crate::game::Game) {
     use crate::orders::rows;
-    use crate::doortools::{BIG_ORDER, GoRow, TOOLS_PAGE};
+    use crate::doortools::{BIG_ORDER, GoRow};
     let (mut i, mut same, mut at) = (0usize, true, 0usize);
     while at < g.guards.len() {
         let gd = g.guards[at];
