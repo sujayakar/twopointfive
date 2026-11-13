@@ -1,7 +1,7 @@
 // THE MODULE A PAGE RUNS IS THE GAME THE GATE PLAYS. The native gate plays a few fights and says every hand of them and, every second, the word of each part of the game
 // (rust/game_start/src/bin/gate/records.rs); the module of this checkout is handed the same hands, as a machine that is sent them, and its words must be the same.
 //   bun run tools/draw/native-check.ts [the gate's binary]     (none: cargo makes it)     exit 0 · 1 a fight parted, with the second and the parts
-//   NATIVE_BREAK=1 …    one hand of each fight is handed wrong: every line must fail
+//   NATIVE_BREAK=1 …    from a second and a half in the first player walks to and fro as well: every line must fail
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { toolModule, missions } from '../desk.ts';
@@ -20,7 +20,7 @@ for (const fight of said.stdout.toString().split(/^fight\t/m).slice(1)) {
   const h = face.start(new Uint8Array(readFileSync(resolve(ROOT, 'levels', file))), m.link, mannequin, mannequinBin, cast, castLook, '', +seed, +seats, StartFlag.Dress); face.networked(h);
   let ticks = 0, asked = 0, parted = '', hands = 0;
   for (const line of lines.slice(1)) { const w = line.split('\t');
-    if (w[0] === 'hand') { const v = seatInput(); w[2].split(' ').forEach((x, i) => { v[i] = +x; }); if (w[3] || +v[0]) hands++; if (BREAK && ticks === 90 && w[1] === '0') v[9] += 1; face.record(h, +w[1], v, `${w[3]}\n${w[4]}`); }
+    if (w[0] === 'hand') { const v = seatInput(); w[2].split(' ').forEach((x, i) => { v[i] = +x; }); if (w[3] || +v[0]) hands++; const keys = BREAK && ticks >= 90 && w[1] === '0' ? `${w[3]} ${ticks % 120 < 60 ? 'KeyW' : 'KeyS'}` : w[3]; face.record(h, +w[1], v, `${keys}\n${w[4]}`); }
     else if (w[0] === 'tick') { face.step(h, 1 / 60, 0 as StepFlag); face.outClear(h); ticks++; }
     else if (w[0] === 'words') { asked++; const is = face.stateWords(h), was = w[1].split(' ').map(x => parseInt(x, 16)), apart = names.filter((_, i) => is[i] !== was[i]);
       if (is.length !== was.length || apart.length) { parted = `${(ticks / 60).toFixed(1)} s in, in ${is.length !== was.length ? `${is.length} parts for ${was.length}` : apart.slice(0, 8).join(', ') + (apart.length > 8 ? ` and ${apart.length - 8} more` : '')}`; break; } } }
