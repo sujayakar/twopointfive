@@ -235,8 +235,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
   var wxAirOn = false; if (WX_VOL) { if (lv(WX_KINDS)) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
   if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
-  let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through one full-res pixel of its vdiv×vdiv block, interleaved by texel parity as before (×1 at vdiv 2)
-  let full = min(gid.xy * vdiv + vec2u(gid.y & 1u, gid.x & 1u) * (vdiv / 2u), vec2u(frame.screen) - 1u);
+  let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through the pixel in the middle of its vdiv×vdiv block (composite.wgsl upsampleVol reads where)
+  let full = min(gid.xy * vdiv + vdiv / 2u, vec2u(frame.screen) - 1u);
   let depth = textureLoad(gDepth, full, 0);
   let pix = vec2f(full) + 0.5;
   let Pfar = worldFromDepth(pix, select(depth, 1.0, depth >= 1.0));

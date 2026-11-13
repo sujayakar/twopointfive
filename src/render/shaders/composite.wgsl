@@ -216,32 +216,26 @@ fn wxAirTEst(pixf: vec2f, z: f32) -> f32 {
   var t0 = 0.0; if (ro.y > top && rd.y < -1e-4) { t0 = (top - ro.y) / rd.y; }
   return clamp(exp(-wxFogTau(wxFog(), ro + rd * t0, rd, max(z - t0, 0.0))), 0.05, 1.0);
 }
-/** a texel's share by how far (in texels, each way) the pixel it marched through stands from this one: 0 at a texel and a half, so no texel is let in or let go of with a share left
- *  (with nine texels cut off where they end, the share steps as the nearest texel changes: a bright edge is drawn in squares of a texel) */
-fn volWindow(d: vec4f) -> vec4f { let a = abs(d); return select(0.5 * (1.5 - a) * (1.5 - a), 0.75 - a * a, a < vec4f(0.5)) * step(a, vec4f(1.5)); }
+/** a texel's share by how far (in texels, each way) the pixel it marched through stands from this one: 0 at a texel and a half, so no texel of the nine is let in or let go of with a share
+ *  left (cut off where the nine end, the share steps as the nearest texel changes, and a bright edge is drawn in squares of a texel) */
+fn volWindow(d: vec2f) -> f32 { let a = abs(d); let w = select(0.5 * (1.5 - a) * (1.5 - a), 0.75 - a * a, a < vec2f(0.5)); return w.x * w.y; }
 fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   let hdims = vec2i(textureDimensions(volTex));
   let vdiv = i32(frame.lossyCfg.y);                             // volumetric divisor: 2, or 4 with the lossy option
-  var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }
-  let base = ip / vdiv;
+  let at = (select(vec2f(pix) + 0.5, pin, SHARP) - (0.5 * f32(vdiv) + 0.5)) / f32(vdiv);   // in texels, from the middle of one's marched pixel: the middle of the nine is the nearest
+  let base = vec2i(floor(at + 0.5));
   var acc = vec4f(0.0); var wsum = 0.0;
-  var at = vec2f(pix) + 0.5; if (SHARP) { at = pin; }
-  let first = vec2i(floor(at / f32(vdiv) - 0.5)) - 1;   // of the four each way that a pixel they marched through can stand within a texel and a half of this one
-  let off = vec2f(first) + (0.5 - at) / f32(vdiv);      // (a pixel they marched through is half a texel on, across, in every second row, and down in every second column)
-  let wx0 = volWindow(vec4f(0.0, 1.0, 2.0, 3.0) + off.x); let wx1 = volWindow(vec4f(0.5, 1.5, 2.5, 3.5) + off.x);
-  let wy0 = volWindow(vec4f(0.0, 1.0, 2.0, 3.0) + off.y); let wy1 = volWindow(vec4f(0.5, 1.5, 2.5, 3.5) + off.y);
   // EXPERIMENT (settings.smokeUpsampleRelax, volCfg.w bit 20): the depth guide assumes the volumetric term follows the SURFACE — true of haze up to it, false of a plume in
   // front of it: guiding by depth carves the plume's soft edge along every depth edge BEHIND it. Where the centre texel is mostly smoke (T < ½) the depth term lets go.
   var depthK = 1.0;
   if (((frame.volCfg.w >> 20u) & 1u) != 0u) { var Tc = textureLoad(volTex, clamp(base, vec2i(0), hdims - 1), 0).a; if (wxAirT < 1.0) { Tc = min(Tc / wxAirT, 1.0); } depthK = smoothstep(0.35, 0.75, Tc); }   // (÷ the weather's air in the texel's alpha — wxAirT, 1 with none: fog FOLLOWS the surface, only a plume lets go of the guide)
-  for (var dy = 0; dy < 4; dy++) {
-    for (var dx = 0; dx < 4; dx++) {
-      var w = select(wx0[dx], wx1[dx], ((first.y + dy) & 1) == 1) * select(wy0[dy], wy1[dy], ((first.x + dx) & 1) == 1);
-      if (w <= 0.0) { continue; }   // (nine of the sixteen, as before)
-      let h = clamp(first + vec2i(dx, dy), vec2i(0), hdims - 1);
-      let src = min(h * vdiv + vec2i(h.y & 1, h.x & 1) * (vdiv / 2), inHi());   // the pixel that texel marched through (volumetrics.wgsl)
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      let h = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
+      let src = min(h * vdiv + vdiv / 2, inHi());   // the pixel that texel marched through (volumetrics.wgsl)
       let d = textureLoad(gDepth, gpx(src), 0);
       let zs = select(linearDepth(d, ipos(vec2f(src) + 0.5)), 1e4, d >= 1.0);
+      var w = volWindow(vec2f(base + vec2i(dx, dy)) - at);
       w *= mix(1.0, exp(-abs(zs - z) / max(z * 0.05, 0.05)), depthK);
       acc += textureLoad(volTex, h, 0) * w; wsum += w;
     }
