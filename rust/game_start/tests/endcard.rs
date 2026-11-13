@@ -82,3 +82,15 @@ fn out_through_the_exit_the_card_comes_once() {
     }
 }
 
+
+/// A FAILURE MEANS: the end card's map is light where nobody is indoors, as it was while every level had the office's outline laid over it.
+#[test]
+fn the_map_is_light_under_the_levels_own_roofs() {
+    for (level, under, open) in [("crossing", [20.0, 7.0], [20.0, 16.0]), ("block", [13.0, 18.0], [38.0, 14.0]), ("floodlit", [18.0, 9.0], [10.0, 20.0])] {
+        let p = Play::level(&format!("{level}.json"), false, &Opts { seed: 1, ..Default::default() });
+        let floor = game::view::walked_floor(&p.g);
+        let light = |at: [f64; 2]| { let cell = |v: f64| (v / floor.cell) as usize; (floor.rows.as_bytes()[cell(at[1]) * floor.w as usize + cell(at[0])] - b'0') & 1 == 1 };
+        assert!(light(under), "{level}: {under:?} is in a room");
+        assert!(!light(open), "{level}: {open:?} is in the open");
+    }
+}

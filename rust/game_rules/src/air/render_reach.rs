@@ -28,3 +28,11 @@ pub fn build_interior_cells(g: &crate::game::Game, statics: &[BoxId]) -> Vec<u8>
     }
     inside
 }
+
+/// Is this plan point under a ceiling or a roof: what every rule that asks "indoors" asks. True where no cells were ever made.
+pub fn roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
+    let Some(cells) = &g.reach_interior else { return true };
+    let w = crate::scene_world::world();
+    let (cx, cz) = (m::floor(x - w.min[0]), m::floor(z - w.min[2]));
+    cx >= 0.0 && cz >= 0.0 && cx < w.grid_w && cz < w.grid_h && cells.get((cz * w.grid_w + cx) as usize) == Some(&1)
+}

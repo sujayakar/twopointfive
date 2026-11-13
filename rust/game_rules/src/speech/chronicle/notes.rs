@@ -209,12 +209,6 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     String::from("west side")
 }
 
-/// Inside the building's footprint.
-pub fn indoors(p: V3) -> bool {
-    let b = crate::floor::building();
-    p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
-}
-
 // ------------------------------------------------------------ the record
 
 /// The row a hearing event made, as its place in `events`.

@@ -229,7 +229,7 @@
       { "door": "a", "name": "room A door" },
       { "door": "b", "name": "room B door" },
       { "door": "c", "name": "room C door" },
-      { "door": "ab", "name": "A to B door" }
+      { "door": "ab", "name": "room A to room B door" }
     ]
   }
 }

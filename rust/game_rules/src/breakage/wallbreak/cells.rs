@@ -92,12 +92,6 @@ pub fn wall_break_pieces_sure(g: &crate::game::Game) -> f64 {
     m::max(0.0, m::min(m::min(r.boxes, r.cuts), m::floor(r.items / foot)))
 }
 
-/// May a man stand under a roof at this plan point (true with no interior map at all). (index's `roofed`)
-fn roofed(interior: Option<&[u8]>, min: [f64; 3], w: f64, h: f64, x: f64, z: f64) -> bool {
-    let Some(interior) = interior else { return true };
-    let cx = m::floor(x - min[0]); let cz = m::floor(z - min[2]);
-    cx >= 0.0 && cz >= 0.0 && cx < w && cz < h && interior[(cz * w + cx) as usize] == 1
-}
 /// a length's whole divisions into cells (index's `div`)
 fn div(len: f64, col: f64) -> f64 { m::max(1.0, m::round(len / col)) }
 
@@ -110,7 +104,6 @@ fn wall_break_index(g: &mut crate::game::Game) {
         if let Some(fb) = g.level.lights[k].fixture_box { if fb >= 0.0 { g.destr.walls.fixture_boxes.add(crate::Num(fb)); } }
     }
     let world = crate::scene_world::world();
-    let (w_, h_) = (world.grid_w, world.grid_h);
     let (shadow, primary, glass, dynamic) = (crate::scene_boxes::box_flag::NO_SHADOW as i32, crate::scene_boxes::box_flag::NO_PRIMARY as i32, crate::scene_boxes::box_flag::GLASS as i32, crate::scene_boxes::box_flag::DYNAMIC as i32);
     let any = shadow | primary | glass | dynamic;
     for i in 0..g.col.boxes.len() {
@@ -131,9 +124,8 @@ fn wall_break_index(g: &mut crate::game::Game) {
             for u in [-0.6, 0.0, 0.6] {
                 let px = c[0] + (if along_x { u * h[0] } else { 0.0 }); let pz = c[2] + (if along_x { 0.0 } else { u * h[2] });
                 n += 1;
-                let interior = g.reach_interior.as_deref();
-                if roofed(interior, world.min, w_, h_, px + (if along_x { 0.0 } else { 0.6 }), pz + (if along_x { 0.6 } else { 0.0 }))
-                    && roofed(interior, world.min, w_, h_, px - (if along_x { 0.0 } else { 0.6 }), pz - (if along_x { 0.6 } else { 0.0 })) { in2 += 1; }
+                if crate::render_reach::roofed(g, px + (if along_x { 0.0 } else { 0.6 }), pz + (if along_x { 0.6 } else { 0.0 }))
+                    && crate::render_reach::roofed(g, px - (if along_x { 0.0 } else { 0.6 }), pz - (if along_x { 0.6 } else { 0.0 })) { in2 += 1; }
             }
             if in2 * 2 <= n { continue; }
             kind = Some(BKind::Wall);
