@@ -1,7 +1,7 @@
 // WHAT THE RUST OF THE GAME MAY NOT SAY, where no compiler keeps it out. No cargo, no game: the sources are read.
-//   rules     no line of rust/sim or rust/maths (the world's numbers: lines, bodies, doors, light, the maths) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
+//   rules     no line of rust/sim, rust/maths, rust/game_types or rust/game_rules (a test's own lines apart) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
 //             one arithmetic on every machine, and nothing kept where a snapshot does not see it
-//   statics   every `static mut` of rust/sim and rust/prim is a row here: scratch of one call, or a copy proven where it is made
+//   statics   every `static mut` of those and of rust/prim is a row here: scratch of one call, a copy proven where it is made, or what is held beside the games
 //   sides     every crate under rust/ is gameplay, dressing or both, and neither side links the other; a crate from outside has no side
 //   module    the crates the game's module is hashed from (tools/blitz/face-build.ts FACE_CRATES) are the crates its locks link: a crate left out would leave a stale module unseen
 //   warnings  no file of a crate turns the compiler's word for unused, dead or misnamed code off (one item may), and every crate's own root makes it an error where the game is played or gated
@@ -16,17 +16,17 @@ let red = 0; const line = (bad: string[], what: string, good: string): void => {
  *  likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row here is red: nothing joins without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
 const SIDES: Record<string, Side> = { prim: 'both', maths: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_start: the game's own start, a level file's text in and a Game out, and what a host does round a step · game_face: the module a host loads)
-/** what a line of rust/sim may not say */
+/** what a line of the game may not say */
 const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (rust/maths), the same bits on every machine' },
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
-  { re: /relaxed[-_]|_relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
-  { re: /\b(UnsafeCell|RefCell|Cell|OnceCell|Atomic\w+)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (scratch or a copy), so the build can say which' },
+  { re: /relaxed-simd|x\d+_relaxed_/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
+  { re: /\b(UnsafeCell|RefCell|OnceCell|Atomic\w+|cell::Cell)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (scratch or a copy), so the build can say which', but: 'game_types/src/made.rs' },   // (made.rs: tables made again from the game, in no bytes and no copy, and the number of a writing, which no rule reads)
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
-/** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS: SCRATCH = written and read inside one call · COPY = a table of numbers, or the host's own truth copied in and proven
- *  there. No game keeps anything here (a moment of it is the game as a value), and a `static mut` with no row is red: state kept here is in no snapshot. */
+/** EVERY `static mut` OF THE GAME'S CRATES, AND WHAT IT IS: SCRATCH = written and read inside one call · COPY = a table of numbers, or the host's own truth copied in and proven
+ *  there · HELD = what is kept beside the games. No game keeps anything here (a moment of it is the game as a value), and a `static mut` with no row is red: state kept here is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists; and what stopped the last line like it, asked first of the next, which changes no answer',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
@@ -47,6 +47,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
   'sim/src/dome.rs FAN': 'COPY · the ways up to the sky and down to the ground and what each counts for on a face: a table of numbers, worked out once and the same for every game',
   'sim/src/light.rs SET': 'SCRATCH · one sweep\'s lamps, gathered before its metres ask them',
+  'game_types/src/made.rs N': 'HELD · the number of the last writing of a thing, which no rule of the game reads',
+  'game_rules/src/tick/savestate/control.rs IMAGES': 'HELD · what is kept of each stand, to go back to: a game lost to a panic is gone while this is not', 'game_rules/src/tick/savestate/control.rs STANDS': 'HELD · how many games have stood', 'game_rules/src/tick/savestate/control.rs USES': 'HELD · which stand was asked for last',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
@@ -67,14 +69,24 @@ function links(): Record<string, string[]> {
 function code(crate: string, whole = false): { at: string; file: string; text: string }[] {
   const out: { at: string; file: string; text: string }[] = [], walk = (d: string): void => { for (const n of readdirSync(d).sort()) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) { const file = relative(WORK, p); readFileSync(p, 'utf8').split('\n').forEach((raw, i) => out.push({ at: `rust/${file}:${i + 1}`, file, text: whole ? raw : raw.replace(/\/\/.*$/, '') })); } } };
   walk(join(WORK, crate, 'src')); return out; }
-const sim = [...code('sim'), ...code('maths')], prim = code('prim');
+/** a crate's lines without its tests' */
+function played(crate: string): ReturnType<typeof code> { const out: ReturnType<typeof code> = []; let skip = '', next = false, file = '';
+  for (const l of code(crate)) { if (l.file !== file) { file = l.file; skip = ''; next = false; }
+    if (skip) { if (l.text.startsWith(skip)) skip = ''; continue; }
+    if (/^\s*#\[cfg\(test\)\]/.test(l.text)) { next = true; continue; }
+    if (next && /^\s*#\[/.test(l.text)) continue;
+    if (next) { next = false; if (/\{\s*$/.test(l.text)) skip = `${/^\s*/.exec(l.text)![0]}}`; continue; }
+    out.push(l); }
+  return out; }
+const sim = [...code('sim'), ...code('maths'), ...played('game_types'), ...played('game_rules')], prim = code('prim');
 if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs', text: 'static mut PLANTED: f64 = x.sin();' });
 
 { const bad = sim.flatMap(l => RULES.filter(R => R.but !== l.file && R.re.test(l.text)).map(R => `${l.at} — ${R.why}`));
-  line(bad, 'rules: no line of rust/sim or rust/maths rounds as the machine likes or keeps what no block holds', `${sim.length} lines read for ${RULES.length} rules`); }
+  line(bad, 'rules: no line of rust/sim, rust/maths, rust/game_types or rust/game_rules rounds as the machine likes or keeps what no block holds', `${sim.length} lines read for ${RULES.length} rules`); }
 { const bad: string[] = [], met = new Set<string>();
   for (const l of [...sim, ...prim]) {
-    if (/^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+(?!mut\b)\w+\s*:.*\b(\w*Cell|Atomic\w+|Mutex|RwLock|Once\w*|Lazy\w*)\b/.test(l.text)) bad.push(`${l.at} — a static written through a cell or a lock: what is kept between calls is a \`static mut\` with a row in STATICS`);
+    const c = /^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+(?!mut\b)(\w+)\s*:.*\b(\w*Cell|Atomic\w+|Mutex|RwLock|Once\w*|Lazy\w*)\b/.exec(l.text);
+    if (c) { const key = `${l.file} ${c[1]}`; met.add(key); if (!(key in STATICS)) bad.push(`${l.at} — a static written through a cell or a lock: what is kept between calls is a \`static mut\` with a row in STATICS`); continue; }
     const m = /^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+mut\s+(\w+)/.exec(l.text); if (!m) continue;
     const key = `${l.file} ${m[1]}`; met.add(key); if (!(key in STATICS)) bad.push(`${l.at} — \`static mut ${m[1]}\` has no row in STATICS (here): a game's state belongs on the game, and scratch or a copy says which it is`); }
   for (const k of Object.keys(STATICS)) if (!met.has(k)) bad.push(`STATICS names ${k}, which is not there`);
