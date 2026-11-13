@@ -16,7 +16,7 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 - **The end card:** won or lost, the clock, the par, the ways this mission can be won, each man's run, every death explained, the map and the timeline. It offers the checkpoint,
   Restart, the next mission and the Replay.
 - **Options.** Graphics, Audio, Game (autosave, hints, the walk-in wall hold, finding your man, the three cheats), Controls, where any key can be moved. Text size.
-- **The debugger** (backslash): every number of the rules, the sandbox's actions, the renderer.
+- **The debugger** (backslash): every number of the tables of `knobs/`, the sandbox's actions, the renderer.
 
 ## Where the code is
 

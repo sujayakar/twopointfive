@@ -58,8 +58,8 @@ his fix and a look round. `alert`: a cover rule, his reaction beat, a standoff, 
 **The floor's alarm.** `escalation` is 0, 1 or 2 (`raise_escalation`, `step_down_escalation`). From 1 men hear keener and walk brisker; at 2
 `supervise_lockdown` deals followers and posts. `update_rollcall` is the staff's radio check, which is how a death nobody found comes out.
 
-**Who has him.** The body list in `control/` is `frag`, `runner`, `morale`, `startle`, `duck`, `lost`; the first to answer wins. The first four
-are asked before his own script and state, the last (his room is lost) at his post. Rules that task him set a bit in `owner.rs` (`taskers!` in its types,
+**Who has him.** The body list in `control/` is `frag`, `runner`, `morale`, `startle`, `duck`, `lost`, `open`; the first to answer wins. What it asks
+for says where it is asked (`ai-architecture.md`). Rules that task him set a bit in `owner.rs` (`taskers!` in its types,
 strongest first), and a rule asks `kept` before it takes him.
 
 **Difficulty.** `tables_of` writes `PressureK` and `DiginK` from a level and the levers. Hard's AI turns on `on`, `rescue_crew`,
