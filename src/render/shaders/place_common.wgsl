@@ -70,13 +70,12 @@ fn lookEyeRs(oa: vec3f) -> f32 { var rs = 1.0; if (oa.z > 0.5) { let ue = placeW
 /** A PLACE'S THREE GAINS, from the light it holds: x = the gain it is shown by now, with the eyes where they are; y = the gain it is shown by to eyes
  *  that are IN it (never under x: a place brighter than the eyes' is shown over, and is its own picture already); z = the gain the open air is shown by
  *  now (never over x). */
-fn lookGains(here: f32) -> vec3f { let oa = lookOpenAir(); return lookGainsAt(here, lookEyeRs(oa), oa); }
-/** … the same, handed the open air's words and the eyes' darkness (lookOpenAir, lookEyeRs) by a caller that has them */
+/** … handed the open air's words and the eyes' darkness (lookOpenAir, lookEyeRs) by a caller that has them */
 fn lookGainsAt(here: f32, rs: f32, oa: vec3f) -> vec3f {
   let g = lookExpoFor(here, rs, oa);
   return vec3f(g, max(lookExpoFor(here, lookEyeDark(here, oa.x), oa), g), min(lookExpoFor(oa.x, rs, oa), g));
 }
-/** LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET (`k` = frame.placeCfg.x, the look panel's Light in order row; 0 = lookGains(here), to the bit). The
+/** LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET (`k` = frame.placeCfg.x, the look panel's Light in order row; 0 = the gains of here alone, to the bit). The
  *  maintainer, 11-04, of an open door's orange leaf glowing in a shaded doorway: "is there some nonphysical stuff going on here with doors? door looks like
  *  it's lit even though the ground immediately in front of it is in shadow", and then "is there a way we can make the exposure stuff more general and not
  *  special case doors? this should hold for holes from wall charges too right?", "or even areas with very different brightnesses outdoors". A place has ONE
@@ -234,7 +233,7 @@ fn lookPlaceLevels(P: vec3f, N: vec3f, Eown: f32) -> vec2f {
   if (hi < -500.0) { return vec2f(max(Eown, 1e-9)); }
   return exp2(vec2f(hi, max(nh, hi)));
 }
-/** THE THREE GAINS OF THE PLACE A POINT OF THE AIR IS IN (lookGains of placeAir's level), for a step of the volumetric march. Over the roofs, and
+/** THE THREE GAINS OF THE PLACE A POINT OF THE AIR IS IN (of placeAir's level), for a step of the volumetric march. Over the roofs, and
  *  where no cell within two holds a level, the air is the open air's. All 1 until the field is live. (A particle asks what a surface asks,
  *  lookPlaceLevels: particles_draw.wgsl partShow.) */
 fn lookAirGains(X: vec3f) -> vec3f {

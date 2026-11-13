@@ -324,7 +324,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           if (dens > 0.002) {
             let sigT = dens * 6.0;
             let sigS = sigT * 0.92;
-            // ambient: diceMeanRadianceWalled with its occlusion ray cached per (dice cell, plan quadrant) along the ray — a dozen steps share a 1 m cell and take the
+            // ambient: the mean radiance with its occlusion ray cached per (dice cell, plan quadrant) along the ray — a dozen steps share a 1 m cell and take the
             // first one's answer (approximate, not exact: a wall standing INSIDE the cell between two of those steps is decided by whichever came first)
             let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
             var side = sign(X - home); side.y = 0.0;

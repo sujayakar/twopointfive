@@ -23,7 +23,6 @@ struct SnowCfg { p: array<vec4f, 11> };
 // (SNOWTRACKS.mess) is the same byte read the same way: its stamp breaks the outline, the bank's reach and the floor, and sets clods in the bank's half.
 @group(1) @binding(10) var snowTrackTex: texture_2d<f32>;
 
-fn snowLive() -> bool { return GBUF_SNOW && snowCfg.p[1].z > 0.5; }
 fn snowField(xz: vec2f) -> vec4f { return textureSampleLevel(snowTex, linSamp, (xz - snowCfg.p[0].xy) * snowCfg.p[0].z / snowCfg.p[1].xy, 0.0); }
 fn snowIsPaint(a: vec3f) -> bool { return all(abs(a - snowCfg.p[7].xyz) < vec3f(0.004)); }
 /** a path's or a rut's strip, by its paint (trodden or old snow) */

@@ -412,7 +412,7 @@ fn grainVertex(p: Particle, cx: f32, cy: f32) -> VOut {
 }
 /** a smooth 1-D value noise 0‥1 (the wisp's strands and clumps) */
 fn wispN1(x: f32, k: f32) -> f32 { let i = floor(x); let f = x - i; let t = f * f * (3.0 - 2.0 * f); return mix(rainHash(i, k), rainHash(i + 1.0, k), t); }
-/** v2 REFRACTION through the SHARED module (refract_common.wgsl — the solid-glass lane's, copied verbatim: fresnelSchlick / refractDir / beerLambert / screenRefractPx / clampRefractOffset;
+/** v2 REFRACTION through the SHARED module (refract_common.wgsl — the solid-glass lane's, copied verbatim: fresnelSchlick / refractDir / screenRefractPx / clampRefractOffset;
  *  prepended to this splat): the streak is a thin WATER CYLINDER along its world axis T. At across-position x ∈ [−1, 1] its visible normal is N = A·x + Vp·√(1 − x²) (A = across, Vp =
  *  toward the eye, both ⊥ T); the eye ray refracts in (η 1 / 1.333), crosses the circular section — the cylinder's chord: it leaves where the section's outward normal is N mirrored about
  *  the internal ray's cross-section direction (a circle cannot hold a ray past the critical angle, so refractDir's mirrored fallback never fires here; were it to, the mirrored ray is
@@ -424,7 +424,7 @@ fn wispN1(x: f32, k: f32) -> f32 { let i = floor(x); let f = x - i; let t = f * 
  *  rainRoofed: inside the interior / annex footprint below the ceiling): the top-down camera looks straight through the NoPrimary roof, so a lit corridor floor sits a few pixels
  *  beside the drops outside its wall on screen with wall and slab between them in the world — screen space has no idea, and the drops by the exit sign came up green (the maintainer,
  *  08-12). Rain is only ever outdoors, so nothing indoors is behind a drop. × the two Fresnel transmissions (F0 0.02, both interfaces — no legacy look to hold); the drop's
- *  millimetre of water absorbs nothing (beerLambert of a clear tint ≡ 1, left out). Each fetch's display luminance held under rainCfgC.z (an emitter's face must not become a white
+ *  millimetre of water absorbs nothing (a clear tint's share is 1, left out). Each fetch's display luminance held under rainCfgC.z (an emitter's face must not become a white
  *  needle). A DISPLACED READ KEEPS ITS LIGHT AND LOSES THE PICTURE (`keep` = rainCfgC.x's packed 0‥1, 1 = the fetch as it was): a tap was one FIXED offset per streak, so a streak
  *  whose side tap landed on a red stripe was red along its whole length and the next one cream — rain beside a striped tent came up as a displaced picture of the tent, loudest over
  *  dark floor far behind the streak (the probe at its reach, the offset on its cap: one large offset for every streak there) (the maintainer, 10-12: 'weird effect of red and white

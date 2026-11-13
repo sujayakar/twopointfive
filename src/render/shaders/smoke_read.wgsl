@@ -72,17 +72,6 @@ fn smokeClearRun(p: vec3f, rd: vec3f) -> f32 {
   if (m == 0u) { x = spgExit(p, rd, inv, mc, SPG_MB); }
   return max(min(x.x, min(x.y, x.z)), 0.0);
 }
-/** does any coarse brick touching the box [lo, hi] have something to fetch? (macro cells, so a yes can be a near miss; a box over more than 64 of them is answered yes unasked) */
-fn smokeAnyIn(lo: vec3f, hi: vec3f) -> bool {
-  if (!spgSkip()) { return true; }
-  let top = spgMacroOf(SPG_N0 - 1);
-  let a = max(vec3i(floor(lo / SPG_MB)), vec3i(0)); let z = min(vec3i(floor(hi / SPG_MB)), top);
-  if (any(z < a)) { return false; }
-  let n = z - a + 1;
-  if (n.x * n.y * n.z > 64) { return true; }
-  for (var k = a.z; k <= z.z; k++) { for (var j = a.y; j <= z.y; j++) { for (var i = a.x; i <= z.x; i++) { if (spgMacro(vec3i(i, j, k)) != 0u) { return true; } } } }
-  return false;
-}
 /** ∫ density dt along ro + t·rd, t0 < t < t1: a walk over the COARSE bricks; inside a brick that holds smoke, samples every `stride` metres of the chord through it (at least one, at the chord's
  *  middle); where the page says there is fine smoke too, that lattice is sampled at 0.4 × the stride. The sample points hang on the world's lattice and the ray, not on a box's extent — a plume's
  *  shadow does not re-sample itself when some other plume grows. Clear air costs one load per MACRO cell crossed, left in one hop; in a macro cell with smoke somewhere its word says which

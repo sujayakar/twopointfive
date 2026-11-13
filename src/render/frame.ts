@@ -268,7 +268,7 @@ export const bounceWallsConfig = { on: true };
 /** WALLS HAVE TWO SIDES, AS ONE RULE FOR EVERY READ OF THE CACHE (render/wallSides.ts; shaders/common.wgsl sideAt, lighting_common.wgsl diceTaps and
  *  diceFacePointBy; the look page's row `walls`). The level's floor plan says which place a point is in, and a read of the radiance cache keeps to the place it is
  *  made for. With the prelude's `const WALL_SIDES` up that one rule stands IN PLACE OF the four older guards, each of which met one case of the same fault with
- *  means of its own: the plane of the surface a gather ray left (diceIrradianceFrom, 08-12), an occlusion ray for a point in smoke (diceMeanRadianceWalled, 08-09),
+ *  means of its own: the plane of the surface a gather ray left (diceIrradianceFrom, 08-12), an occlusion ray for a point in smoke (volumetrics.wgsl, 08-09),
  *  five to eight box rays off a man (BOUNCE WALLS: diceWalledPoint, 10-20) and the cache's own nearest-cell read (LIGHT KEEPS TO ITS ROOM: hitRadiance under
  *  FLAG_RC_ROOM, 10-31). Their text is still in the modules and is dead code under the const.
  *  UP on every page: `?look=walls:0` lowers it at boot, and the four guards are back; a const of the shaders, so the row is not live. */
