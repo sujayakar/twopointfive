@@ -115,3 +115,20 @@ fn a_teammate_turns_to_the_rounds_of_a_man_of_the_place() {
         }
     }
 }
+
+/// THE RULE: a teammate who comes round to a man he has lost looks where he saw him last.
+/// A FAILURE MEANS: a teammate's gun follows a man through a wall.
+#[test]
+fn a_teammates_gun_stays_where_he_lost_the_man() {
+    for s in SEEDS {
+        let (mut p, op, x, at, man) = his_back_to_him(Team::Hostile, s);
+        let look = |p: &Play| p.g.fight.ops.iter().any(|&o| { let r = &p.g.tab.roomfight_op[o]; r.gd == op && r.turn.is_some() && r.tgt.is_none() });
+        assert!(rounds_past_him(&mut p, x, at, man, look), "seed {s}: the staging is wrong: no look was dealt");
+        let hid = [28.25, 16.75];
+        for k in 0..100 {
+            p.pin_man(x, hid, -EAST, GuardState::Patrol, 0.0);
+            p.frame();
+            assert!(k < 60 || p.gun_off(op, man) < 10.0, "seed {s}: {k} frames after he lost him his gun is {:.0} degrees off where he was, {:.0} off where he is", p.gun_off(op, man), p.gun_off(op, hid));
+        }
+    }
+}
