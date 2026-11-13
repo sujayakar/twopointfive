@@ -40,6 +40,7 @@
 // sorting room: the long one) — the level's one decision, painted on its floor.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { KitViewData, LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -125,7 +126,7 @@ const REGISTRY_KITVIEW: KitViewData = {
       group: 'rg', enabled: true, volumetric: 0, radius: 0.15, mains: false, broad: true, fixture: 'rg_panel' }] } },
   ways: [{ door: 'rg_front', set: 'front', pane: false }] };
 
-export function build(): { level: Level; scenarios: LevelScenarios; groups: string[] } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE as Record<string, Vec3>, H = WORLD.ceilingY, R = REGISTRY_ROOMS;
   const { TX, mk, grp, add, slab, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, shelf, ceilingPanel, doorFrame, lights, switchables } = K;
@@ -471,7 +472,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // these a line that says where ('holding …') had only the OFFICE's words for it — the captor 'holding the server room' in the registrar's office
   scenarios.places = { areas: [{ name: "registrar's office", bounds: { ...R.office } }, { name: 'reading room', bounds: { ...R.reading } }, { name: 'copy room', bounds: { ...R.copy } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'gallery', bounds: { ...R.gallery } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'stacks', bounds: { ...R.stacks } }, { name: 'sorting room', bounds: { ...R.sorting } }] };
   scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
-  return { level, scenarios, groups: trace.groups };
+  // WHAT IS UNDERFOOT: rect for rect the floors above and the rooms' own wall to wall. The lobby is stone, the gallery and the hall lino, the stacks
+  // sealed concrete, the copy room anti-static tile; the sorting room's painted boards ring as lino does, the rest is carpet. The north verge is grass.
+  const surfaces: SurfacesData = {
+    building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
+    zones: [
+      { id: 'lobby', mat: 'stone', x0: 4, z0: 4, x1: 10, z1: 24 }, { id: 'gallery', mat: 'lino', x0: 10, z0: 10, x1: 24, z1: 12.8 }, { id: 'hall', mat: 'lino', x0: 24, z0: 4, x1: 29, z1: 12.8 }, { id: 'stacks', mat: 'stone', x0: 10, z0: 12.8, x1: 29, z1: 24 },
+      { id: 'copy', mat: 'tile', x0: 17, z0: 4, x1: 24, z1: 10 }, { id: 'sorting', mat: 'lino', x0: 29, z0: 12.8, x1: 36, z1: 24 }, { id: 'rooms', mat: 'carpet', x0: 4, z0: 4, x1: 36, z1: 24 }, { id: 'north_verge', mat: 'grass', x0: 0, z0: 0, x1: 40, z1: 3.2 },
+    ],
+  };
+  return { level, scenarios, groups: trace.groups, surfaces };
 }
 
 // ─────────────────────────────── the skin ───────────────────────────────

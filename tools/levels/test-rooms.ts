@@ -16,6 +16,7 @@
 // levels/<name>.json from it and refuses a file that does not load back to the same level. (docs/agents/levels.md is the how-to.)
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
@@ -25,7 +26,7 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 export const NAME = 'test-rooms';
 export const NOTES = 'A tiny test level for the scenario probes: three rooms off one hall and a lobby, built from the office kit. Regenerate: bun run tools/levels/export.ts test-rooms';
 
-export function build(): { level: Level; scenarios: LevelScenarios; groups: string[] } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE, H = WORLD.ceilingY;
   const { grp, add, slab, wallX, wallZ, desk, monitor, chair, cabinet, shelf, bench, plant, cardboardBox, ceilingPanel, doorFrame, lights, switchables } = K;
@@ -159,5 +160,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     },
   };
   scenarios.doorNames = [{ door: 'a', name: 'room A door' }, { door: 'b', name: 'room B door' }, { door: 'c', name: 'room C door' }, { door: 'ab', name: 'room A to room B door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
-  return { level, scenarios, groups: trace.groups };
+  const surfaces: SurfacesData = { building: { x0: 10, x1: 30, z0: 8, z1: 22 }, grassEdge: 0, inside: 'lino', outside: 'asphalt', verge: 'asphalt', zones: [] };   // (what is underfoot)
+  return { level, scenarios, groups: trace.groups, surfaces };
 }

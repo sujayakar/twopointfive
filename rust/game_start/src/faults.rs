@@ -159,11 +159,9 @@ impl<'a> Rules<'a> {
             self.words(&w, m.stuff.as_deref(), m.does.as_deref());
         }
         if let Some(p) = &f.door_paint { self.door_paint("doorPaint", p); }
-        if let Some(s) = &f.surfaces {
-            let b = &s.building;
-            if !rect(b.x0, b.x1, b.z0, b.z1) { self.say("surfaces.building", "x0 to x1, z0 to z1"); }
-            for (i, z) in s.zones.iter().enumerate() { if !rect(z.x0, z.x1, z.z0, z.z1) { self.say(format!("surfaces.zones[{i}]"), "x0 to x1, z0 to z1"); } }
-        }
+        let b = &f.surfaces.building;
+        if !rect(b.x0, b.x1, b.z0, b.z1) { self.say("surfaces.building", "x0 to x1, z0 to z1"); }
+        for (i, z) in f.surfaces.zones.iter().enumerate() { if !rect(z.x0, z.x1, z.z0, z.z1) { self.say(format!("surfaces.zones[{i}]"), "x0 to x1, z0 to z1"); } }
     }
     /// the floor each of a list's records is on (which the reading lets go) is a floor of the file's
     fn floors(&self, list: &str, of: &Json) {

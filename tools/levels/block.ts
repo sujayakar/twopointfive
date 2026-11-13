@@ -91,6 +91,7 @@
 // in the dado's paint. Drum rings in the store. No letters, no numbers, no lines, no bays, no tiles.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { KitViewWay, LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
@@ -146,7 +147,7 @@ export const BLOCK_SQUADS_HOLD = (): NonNullable<NonNullable<LevelScenarios['roo
   { id: 'delta', name: 'Delta', rooms: ['store'], rally: [33.0, 0, 22.2], barricade: [], mayLeave: false },
 ];
 
-export function build(): { level: Level; scenarios: LevelScenarios; groups: string[] } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE as Record<string, Vec3>, H = WORLD.ceilingY, R = BLOCK_ROOMS;
   const { TX, mk, grp, add, slab, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, bin, cabinet, papers, wallArt, bench, shelf, ceilingPanel, doorFrame, lights, switchables } = K;
@@ -622,7 +623,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   { const way: KitViewWay = { door: 'kitchen_to_hall', side: -1, roomLights: 1, pane: false, light: { porch: { intensity: 0 }, fill: { intensity: 0 } } }; scenarios.kitView = { ways: [way, { ...way }] }; }
   scenarios.places = { areas: [{ name: 'staging area', bounds: { ...R.staging } }, { name: 'hall', bounds: { ...R.hall } },
     { name: 'battery room', bounds: { ...R.battery } }, { name: 'switch room', bounds: { ...R.switchroom } }] };
-  return { level, scenarios, groups: trace.groups };
+  // WHAT IS UNDERFOOT: rect for rect the floors above and the rooms' own wall to wall. The loading hall, the battery room and the store are screed, the
+  // kitchen quarry tile, the comms and the frame room the raised floor; the workshop's wood block and the switch room's paint ring as lino does; the verges are grass.
+  const surfaces: SurfacesData = {
+    building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 3.2, inside: 'stone', outside: 'asphalt', verge: 'grass',
+    zones: [
+      { id: 'hall', mat: 'lino', x0: 11, z0: 12, x1: 36, z1: 15.26 }, { id: 'kitchen', mat: 'tile', x0: 14.44, z0: 7.38, x1: 20.4, z1: 12 }, { id: 'mess', mat: 'lino', x0: 11, z0: 4, x1: 20.4, z1: 12 },
+      { id: 'frames', mat: 'tile', x0: 26.6, z0: 4, x1: 36, z1: 12 }, { id: 'workshop', mat: 'lino', x0: 11, z0: 15.26, x1: 20.4, z1: 24 }, { id: 'switchroom', mat: 'lino', x0: 20.4, z0: 15.26, x1: 27.2, z1: 24 },
+    ],
+  };
+  return { level, scenarios, groups: trace.groups, surfaces };
 }
 
 // ─────────────────────────────── the skin ───────────────────────────────

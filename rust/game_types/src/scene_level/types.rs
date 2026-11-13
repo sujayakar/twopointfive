@@ -334,7 +334,7 @@ pub struct Level {
     pub marks: Option<Vec<crate::scene_level::MarkDef>>,
     pub script: Option<crate::scene_level::LevelScriptFn>,
     pub scenarios: Option<crate::scene_scenarios::LevelScenarios>,
-    pub surfaces: Option<crate::scene_level_data::SurfacesData>,
+    pub surfaces: crate::scene_level_data::SurfacesData,
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
     /// in its boxes' order
