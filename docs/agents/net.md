@@ -97,7 +97,9 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 - **A read between two ticks writes nothing the words cover.** What a machine looks at or shows must part nothing.
 - **What a client sends is checked before it is kept:** length (`NET.maxText`), shape (`wireOk`), then the game's own check. A name is cleaned at both ends
   (`cleanName`) and written as text, never markup. A level file is a name, never a path (`levelName`).
-- **One build.** A game is made only on a runner of the page's build. A server that names one lets in no other; a checkout with uncommitted changes names none (`buildName`).
+- **One game.** A game is made only on a runner of the page's build. Whoever comes after need not be that build: what the two games are made of must be one word
+  (`gameMade`: the module's sources, the levels, the characters, `src/net`), and a server lets in no other. So a page reloaded after a deploy is back in its game unless the
+  deploy changed the game; then it is told to host a new one. It is told to reload only where that mends it (`pageOld`).
 - **Two teams to the eye.** "no outlines for the other player character (maybe we should have yellow + red team and then purple + blue team)". "seeing your teammates
   squad path overlays (but probably fainter than yours) would be great".
 - **A name of your own.** "or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". The browser keeps it (`myName`). One that would
