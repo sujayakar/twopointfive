@@ -49,6 +49,7 @@ export class Overlay implements HudLike {
   private equipKey = '';
   private equipKit: KitView | null = null;
   private equipRev = -1;
+  private equipAlone = false;
   private markers: HTMLElement[] = [];
   private fragMarksEl: HTMLElement[] = [];   // (game.view.marks.frags: a defender's live grenade Sam has been cued on)
   private camMarks: HTMLElement[] = [];    // (game.view.marks.cams: a small lens on each of his own stuck sticky cameras while the fog of war is live)
@@ -312,7 +313,7 @@ export class Overlay implements HudLike {
     this.plan.update(src, V, cam, w, h);
     this.findme.update(src, V, cam, w, h, this.plan.youOn);
     // equipment
-    this.updateEquip(V.kit);
+    this.updateEquip(V.kit, src.page.alone);
   }
 
   /** WHAT THE THING HE IS AIMING WILL REACH (null = nothing to draw): each radius a ring flat on the floor under the point, so the camera's
@@ -376,11 +377,11 @@ export class Overlay implements HudLike {
 
   /** Kit column (bottom-left, standing on the meters): ui/handbox.ts draws what the game tells it, and again only when that (or a key's binding) has changed. A new
    *  record every tick is no change: the OCP's charge is drawn in twentieths. */
-  private updateEquip(kit: KitView) {
-    if (kit === this.equipKit && KEYMAP.rev === this.equipRev) return;
-    this.equipKit = kit; this.equipRev = KEYMAP.rev;
-    const key = JSON.stringify(kit, (k, v) => k === 'charge' ? Math.round(v * 20) : v) + KEYMAP.rev;
-    if (key !== this.equipKey) { this.equipKey = key; drawHandBox(this.equip, kit); }
+  private updateEquip(kit: KitView, alone: boolean) {
+    if (kit === this.equipKit && KEYMAP.rev === this.equipRev && alone === this.equipAlone) return;
+    this.equipKit = kit; this.equipRev = KEYMAP.rev; this.equipAlone = alone;
+    const key = JSON.stringify(kit, (k, v) => k === 'charge' ? Math.round(v * 20) : v) + KEYMAP.rev + alone;
+    if (key !== this.equipKey) { this.equipKey = key; drawHandBox(this.equip, kit, alone); }
   }
 }
 
