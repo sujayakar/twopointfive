@@ -132,8 +132,8 @@ the recorded picture. On a voice built from instruments the card lists its layer
   in `src/sounds/catalog.ts` copies gains from those calls: move it too.
 - **The law, the budget:** `mixlaw.ts`, the head of `audio.ts`.
 - **A new voice:** a variant of `Sfx` (`rust/game_types/src/audio_iface/types.rs`, the one list: a name that is not in it does not compile on either side), `half`
-  (`SFX` and `SfxName` in `src/draw/names.ts`), a row in `buildSfx` with a seed of its own, its level in `HEARD`, a row in `SOUNDS` (the typecheck is red without
-  them), then the rule's call. `bun run tools/qa/checks.ts sound`, then
+  (`SFX` and `SfxName` in `src/draw/names.ts`), a row in `buildSfx` with a seed of its own, its level in `HEARD` (the table throws as it is built
+  without one), a row in `SOUNDS` (the typecheck is red without one), then the rule's call. `bun run tools/qa/checks.ts sound`, then
   `node tools/draw/sound-tapes.cjs --cover`, which says what no replay reaches and what was asked for that is no row.
 - **Another take:** a row of `TAKES` in `sfxAlt.ts`. An older voice back: a name in `WAS_IN_GAME`.
 - **Something new to say of a sound:** an arm of `PlayOpts`, `play_opts`, `OutPlayOpts`, the `Sound` row, `half`, then the reading in
