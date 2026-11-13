@@ -28,7 +28,7 @@ pub fn order(g: &Game, gd: GuardId) -> Option<TaskId> { g.gd[gd].duty.task.filte
 /// It keeps him from that floor: he is told to stay in his squad's rooms, and it is in none of them.
 pub fn bars(g: &Game, gd: GuardId, p: V3) -> bool { g.gd[gd].duty.rooms && !crate::enemysquads::in_squad_rooms(g, gd, p) }
 
-/// A ROUND OF HIS AT THAT MAN IS HELD: told to be silent, not to fire first, to wait for a word, or a man is onto him. Every gun of any side asks it here before it fires.
+/// A ROUND OF HIS AT THAT MAN IS HELD: told to be silent, not to fire first, to wait for a word, or a man is onto him. The team's guns ask it here before they fire: nobody else is under such an order.
 pub fn round_held(g: &mut Game, gd: GuardId, man: GuardId) -> bool {
     crate::silent::silent_holds_round(g, gd, man) || crate::pairorders::pair_holds_round(g, gd, man) || crate::spotted::spotted_holds_round(g, gd, man)
 }

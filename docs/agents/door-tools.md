@@ -138,7 +138,7 @@ on the boot. Giving a row marked `Is::Loud` ends silence (`silent_tool`).
 
 - **A number:** `rust/game_types/src/knobs/doortools.rs`, also `doorpath.rs`, `stackroom.rs`, `shotgun.rs`. A panel or `?knob.doortools.after_bang=1` turns one.
 - **A row:** a file in `orders/rows/` with its `Row`, registered in `door_tools_new` or, if it hangs on the cast, `door_tools_sync`. `Is` says what it lifts or breaks.
-  No key is a digit above 5, so a late row gets a letter of its own.
+  A row past the ring's places goes behind "more".
 - **Where a man stands:** the door tools' shaping is in `door_tools_start` and `door_tools_standoff_posts`; the chain every stack shares is `squad_orders_stack_posts`.
 - **A new tool on a lock:** a branch in `door_tools_open`, a state under `DoorOp.kick`, a step called from `step_kick`, and on through `door_tools_opened`. Move the leaf through
   the calls `doors.md` names.

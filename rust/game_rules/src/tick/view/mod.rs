@@ -83,6 +83,19 @@ pub fn under(g: &Game, t: &crate::orders::OrderTarget) -> Under {
     }
 }
 
+/// The level's walked floor as the end card's map is drawn from it: what can be walked, and what of it is under a roof.
+pub fn walked_floor(g: &Game) -> WalkedFloor {
+    let nav = &g.col.nav;
+    let (w, h) = (nav.w as usize, nav.h as usize);
+    let mut rows = alloc::string::String::with_capacity(w * h);
+    for z in 0..h { for x in 0..w {
+        let blocked = nav.blocked.get(z * w + x) == Some(&1);
+        let roofed = crate::render_reach::roofed(g, (x as f64 + 0.5) * nav.cell, (z as f64 + 0.5) * nav.cell);
+        rows.push(char::from(b'0' + roofed as u8 + 2 * blocked as u8));
+    } }
+    WalkedFloor { w: w as u32, h: h as u32, cell: nav.cell, rows }
+}
+
 /// what the end card shows of a run, about `seat`: the chronicle's words and counts, the floor's rooms and the recap. Asked as the card opens
 pub fn debrief_view(g: &Game, seat: &crate::seats::SeatRef) -> DebriefView {
     let c = &g.chronicle;

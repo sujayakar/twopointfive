@@ -283,7 +283,7 @@ async function main(): Promise<void> {
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) { events.stands(); return; }
-    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); runGone(); three(cam.target, o + View.follow);
+    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
   };
   anew(); lens(); size.read(); cam.aspect = Math.max(1, size.clientWidth) / Math.max(1, size.clientHeight); cam.rebuild();
 
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
   // a save's picture, by its run and the save as the pause card names it
   const ofRun = (save: string): string => `${D.u[D.at[Section.heard] + Heard.run]}:${save}`, nameOf = (r: { key: string; savedAt: number }): string => `${r.key}@${r.savedAt}`;
   const pictures = new Map<string, string>(), pics = new SavePics<string>(gpu, canvas, () => 256, () => 0.6, (key, url) => { pictures.set(key, url); if (key === ofRun(key.slice(key.indexOf(':') + 1))) pause.pictured(key.slice(key.indexOf(':') + 1), url); }, e => console.warn('save picture:', e)); let saves = 0;
-  let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ }, runGone = onEnded;
+  let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, tried = -1, ended = 0, onEnded = (): void => { /* no card is made yet */ }, runGone = onEnded;
   // ---- a tape being played: what a bar over it turns
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
   const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
@@ -391,7 +391,7 @@ async function main(): Promise<void> {
     // (what this machine keeps of the run: its try as it begins, its end before the card of it)
     { const on = D.u[view() + View.run]; if (!unkept && books.due((on & 1) !== 0, (on & 2) !== 0)) books.tell(game.run()); }
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
-    { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
+    { const run = D.u[D.at[Section.heard] + Heard.run], e = D.u[view() + View.ended]; if (run !== tried) { tried = run; runGone(); } if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
     if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
     smokeFrom(smoke, D);

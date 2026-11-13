@@ -60,7 +60,7 @@ Every run you play is kept as a replay. `F7` saves it right away, `Shift+F7` wat
 | `/?bench`, or Extras ▸ Benchmark on the title | hands off, a few minutes: three floors played by the game itself, then every quality level timed |
 | `cargo test -p game_start` (in `rust/`) | the game's rules, asked of the game itself |
 | `bun run tools/qa/checks.ts` | the picture's code, the page, the menus, the sounds and the level files, without a GPU |
-| `bun run qa` | typecheck, the checks above, and `gate`: every mission stood and a few played, each held to its pins (`rust/game_start/README.md`, "The gate") |
+| `bun run qa` | typecheck, the checks above, `gate` (every mission stood and a few played, each held to its pins; `rust/game_start/README.md`, "The gate"), and every native test |
 
 The benchmark ends on a short text to copy (your GPU, load times, frames a second) and saves no file. A build with a backend also sends the
 numbers to the developer, which you can turn off in Options; a build with none sends nothing.
