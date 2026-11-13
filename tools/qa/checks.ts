@@ -22,7 +22,7 @@ const ROWS: readonly Row[] = [
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'], ['lasting-check.ts', 'sound'],
-  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
+  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['carlamps-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
   ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/ban.ts', 'build'], ['../gpu/wgsl-rows.ts', 'build', '--check'],
 ];

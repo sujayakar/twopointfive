@@ -8,9 +8,9 @@ import { GWOT_PALETTE } from '../../../src/scene/gwotPalette';
 export interface LampFit { fit: number; tone: number; twin: number }
 export const LAMP_FIT: LampFit = { fit: 0.004, tone: 0.004, twin: 0.03 };
 
-interface LampSig { what: 'head lamp' | 'tail lamp'; h: Vec3; albedo?: Vec3; emissive?: Vec3; /** centre to centre across the vehicle */ gap: number; }
+export interface LampSig { what: 'head lamp' | 'tail lamp'; h: Vec3; albedo?: Vec3; emissive?: Vec3; /** centre to centre across the vehicle */ gap: number; }
 /** what each generator writes for a lamp (built on demand: nothing here is read at module load) */
-function sigs(): LampSig[] {
+export function sigs(): LampSig[] {
   const white = GWOT_PALETTE.plasticWhite, red = GWOT_PALETTE.truckRed;
   return [
     { what: 'tail lamp', h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], gap: 1.24 },   // the car (officeGen.ts, levelKit.ts)
