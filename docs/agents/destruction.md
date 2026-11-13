@@ -121,8 +121,8 @@ density is real, so men's eyes read it as the picture does. `destruction_dust_pu
 (`edge_look_flush`), then `spread` cells a tick are shed. Puffs wait in `dust_queue` under `puffs_per_frame`, and `feel_stages` lays out the feel over
 time.
 
-**Restart and load.** A restart runs `glass_break_reset`, `destruction_reset` (it calls `wall_break_reset`, `furniture_reset`) and `decals_clear`. A
-load puts back a clone of the whole game (`savestate/`), so nothing has to be told.
+**Restart and load.** Each puts back a clone of a whole game (`savestate/control.rs`), so nothing has to be told. `destruction_reset` and the resets it
+calls are the kit picture's alone, between two of its stands (`outfit/kitstage/acts.rs`).
 
 ## Rules that hold
 
@@ -155,7 +155,7 @@ load puts back a clone of the whole game (`savestate/`), so nothing has to be to
 - **What a stuff does:** its row of `materials!` in `rust/game_types/src/scene_materials/types.rs` (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.
-- **Something that reacts to a hole:** read `wall_break_since`. Something a restart must clear joins `destruction_reset`.
+- **Something that reacts to a hole:** read `wall_break_since`. A new field of a game needs no line for a restart.
 - **The glass rule:** `rust/sim/src/panes.rs`. A fragment's look is `shards/`.
 - **Wall places on a level:** `levels charges LEVEL --write`, in `tools/levels/counts/charges`, with a line that starts # to say why.
 
