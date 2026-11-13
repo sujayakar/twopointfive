@@ -13,6 +13,7 @@
 // THE SWITCH: COOP.on — on for a real page, `?coop=0` = the page as it was (no Co-op row on the title, a `?join=` on the address is not read). Nothing a tick
 // reads: a game is the server's start whatever this says.
 import type { Wire } from '../cloud/wire';
+import type { Built } from '../host/buildname';
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
 
 export const COOP = {
@@ -55,11 +56,15 @@ export function freshId(): string { const a = new Uint8Array(20); crypto.getRand
 /** a die for a new game: a whole number the server takes (start.ts: up to 4294967295) */
 export function freshSeed(): number { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]; }
 
-/** WHY NOT, as the player is told it. The control plane's refusals begin with a word (`full:` · `build:` · `code:`); anything else did not get there */
-export function lobbyWhy(e: unknown, doing: 'host' | 'join'): string {
+/** A GAME MADE OF SOMETHING ELSE THAN THIS PAGE'S: `old` = this page is not the newest (host/buildname.ts pageOld), and loading it again mends it. The newest page has no way back into a game begun
+ *  before the game itself changed */
+export const anotherVersion = (old: boolean): string => old ? 'That game is on another version. Reload the page and join again.' : 'That game is on an older version. Host a new game.';
+/** WHY NOT, as the player is told it. The control plane's refusals begin with a word (`none:` · `full:` · `build:` · `code:`); anything else did not get there. `old` = this page is not the newest */
+export function lobbyWhy(e: unknown, doing: 'host' | 'join', old = false): string {
   const m = String((e as { message?: unknown } | null)?.message ?? e), refused = !!(e as { refused?: boolean } | null)?.refused;
+  if (/\bnone:/.test(m)) return 'You can’t host here because there are no game servers.';
   if (/\bfull:/.test(m)) return doing === 'host' ? 'Every game server is busy right now. Try again in a minute.' : 'That game already has two players.';
-  if (/\bbuild:/.test(m)) return doing === 'host' ? 'This page is out of date. Reload it and try again.' : 'That game is on another version. Reload the page and try again.';
+  if (/\bbuild:/.test(m)) return doing === 'join' ? anotherVersion(old) : old ? 'This page is out of date. Reload it and try again.' : 'The game servers aren’t on this version yet. Try again in a few minutes.';
   if (/\bcode:/.test(m)) return doing === 'host' ? 'The game couldn’t be made. Try again.' : 'There’s no game with that code. Check the code with your friend.';
   return refused ? (doing === 'host' ? 'The game couldn’t be made. Try again.' : 'You can’t join that game.') : 'This page couldn’t reach the game service. Check your connection and try again.';
 }
@@ -71,27 +76,29 @@ export function gameWhy(v: GameView | null): string {
   return v.seat < 0 ? 'That game already has two players.' : '';
 }
 
-/** THE CONTROL PLANE'S THREE CALLS, for one tab (`pid`) of one build */
+/** THE CONTROL PLANE'S THREE CALLS, for one tab (`pid`) of one page: the build it is, what its game is made of, and whether it is still the newest */
 export class Lobby {
-  constructor(readonly wire: Wire, readonly pid: string, readonly build: string) {}
+  constructor(readonly wire: Wire, readonly pid: string, readonly page: Built, private old: () => Promise<boolean> = async () => false) {}
+  /** why a call of this page's was refused */
+  async why(e: unknown, doing: 'host' | 'join'): Promise<string> { return lobbyWhy(e, doing, await this.old()); }
   /** a game of `scenario` (coopScenario) on a fresh die: the host holds its first seat */
   make(scenario: string, seed: number = freshSeed(), knobs: Record<string, unknown> = {}): Promise<GameView> {
-    return this.wire.mutation<GameView>('games:make', { pid: this.pid, build: this.build, setup: { scenario, seed, knobs, seats: Array.from({ length: COOP.seats }, () => ({})) } });
+    return this.wire.mutation<GameView>('games:make', { pid: this.pid, build: this.page.commit, made: this.page.made, setup: { scenario, seed, knobs, seats: Array.from({ length: COOP.seats }, () => ({})) } });
   }
-  join(code: string): Promise<GameView> { return this.wire.mutation<GameView>('games:join', { pid: this.pid, code, build: this.build }); }
+  join(code: string): Promise<GameView> { return this.wire.mutation<GameView>('games:join', { pid: this.pid, code, made: this.page.made }); }
   get(code: string): Promise<GameView | null> { return this.wire.query<GameView | null>('games:get', { pid: this.pid, code }); }
   /** THROUGH THE DOOR: a seat in the game `code` names, and its server's address once the server answers. Resolves to the view (`address` set) or rejects
    *  with the words for why not. `told` hears each state on the way; `sleep` and `now` are the host's clock (a check hands its own) */
   async seat(code: string, told: (v: GameView) => void = () => { /* */ }, sleep: (ms: number) => Promise<void> = ms => new Promise(r => setTimeout(r, ms)), now: () => number = () => Date.now()): Promise<GameView> {
     let v: GameView | null;
-    try { v = await this.join(code); } catch (e) { throw new Error(lobbyWhy(e, 'join')); }
+    try { v = await this.join(code); } catch (e) { throw new Error(await this.why(e, 'join')); }
     for (const until = now() + COOP.startMs; ;) {
       const why = gameWhy(v); if (why) throw new Error(why);
       told(v!);
       if (v!.address && (v!.state === 'waiting' || v!.state === 'playing')) return v!;
       if (now() > until) throw new Error('The game’s server didn’t start. Host a new game.');
       await sleep(COOP.pollMs);
-      try { v = await this.get(code); } catch (e) { if ((e as { refused?: boolean } | null)?.refused) throw new Error(lobbyWhy(e, 'join')); }   // (a call that did not get there is asked again: the game is still being started)
+      try { v = await this.get(code); } catch (e) { if ((e as { refused?: boolean } | null)?.refused) throw new Error(await this.why(e, 'join')); }   // (a call that did not get there is asked again: the game is still being started)
     }
   }
 }

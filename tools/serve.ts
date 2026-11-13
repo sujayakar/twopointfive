@@ -8,6 +8,7 @@ import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 import { devRunner, type DevRunner } from "./mp/runner.ts";
 import { writePieces } from "./qa/capture-pieces.ts";
+import { gameMade } from "./blitz/made.ts";
 import { faceAsk } from "./blitz/face-build.ts";   // the game's module (rust/game_face), built when its sources are newer
 
 /** the module file's own name (a kept run says which module it was played on: src/tape/module.ts) */
@@ -55,6 +56,7 @@ const server = Bun.serve({
     }
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a run and a report file it)
+    if (path === "/qa/made") return new Response(gameMade(), { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // what the game of this checkout is made of, as it is now: the page is bundled as it is asked for
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
     if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled)
     const f = Bun.file("./public" + path);
