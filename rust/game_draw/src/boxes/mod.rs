@@ -104,6 +104,8 @@ section! {
         pub glass_info: [u32; 4],
         /// a pane: its middle and its yaw's cosine, its half sizes and the sine, its tint and its place among the statics
         pub glass: [[f32; 4]; 96],
+        /// x: how many of the boxes are statics: those before that place. A box at it or past it is the frame's own and moves
+        pub statics: [u32; 4],
     }
 }
 section! {
