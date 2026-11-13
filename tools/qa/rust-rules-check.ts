@@ -21,8 +21,8 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (rust/maths), the same bits on every machine' },
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
-  { re: /relaxed-simd|x\d+_relaxed_/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
-  { re: /\b(UnsafeCell|RefCell|OnceCell|Atomic\w+|cell::Cell)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (scratch or a copy), so the build can say which', but: 'game_types/src/made.rs' },   // (made.rs: tables made again from the game, in no bytes and no copy, and the number of a writing, which no rule reads)
+  { re: /relaxed[-_](?!\s)\w|\w_relaxed_/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
+  { re: /\b(UnsafeCell|RefCell|OnceCell|Atomic\w+)\b|\bcell::|\bCell::new\b|\bCell<(?!')/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (scratch or a copy), so the build can say which', but: 'game_types/src/made.rs' },   // (made.rs: tables made again from the game, in no bytes and no copy, and the number of a writing, which no rule reads)
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
 /** EVERY `static mut` OF THE GAME'S CRATES, AND WHAT IT IS: SCRATCH = written and read inside one call · COPY = a table of numbers, or the host's own truth copied in and proven
