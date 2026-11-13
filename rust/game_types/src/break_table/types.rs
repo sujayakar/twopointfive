@@ -1,7 +1,6 @@
 //! The types of `break_table`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Breaks {
@@ -176,11 +175,6 @@ pub struct CellGrid {
     pub open: Vec<u8>,
     pub n_open: Option<f64>,
     pub box_: BoxId,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct MatOfBox {
-    pub does: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

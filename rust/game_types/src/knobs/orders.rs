@@ -1,6 +1,5 @@
 //! The numbers of orders.
 use crate::bytes::ToBytes;
-use alloc::string::String;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
@@ -8,12 +7,12 @@ use game_derive::Knobs;
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct OrdersK {
     /// press: who the orders go to — gold → red → blue for a squad in pairs (all → each man for the one pair) · on a teammate under the cursor: that man
-    #[k(String::from("KeyT"))] pub who_key: String,
+    #[k(crate::input::types::Key::T)] pub who_key: crate::input::types::Key,
     /// press: the target's own first order at once, no menu (RoN's 'issue default command') — move there on floor, stack up on a door, fall in on nothing.
     ///  THE CODE the game asks for, as every recording and tape holds it. The KEY that gives it on the page's board is Q (host/keymap.ts `qCmd`; the
     ///  maintainer, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
     ///  the quick tap should be exactly the same as B"): the board says which key, this read says which code
-    #[k(String::from("KeyB"))] pub quick_key: String,
+    #[k(crate::input::types::Key::B)] pub quick_key: crate::input::types::Key,
     /// the open menu's men, door face and why-nots are re-read this often (game seconds; a path search per man per row each time)
     #[k(1.0)] pub refresh_secs: f64,
     /// the reticle within this of a doorway's centre (or of its leaf) is ON that door; within `selfM` of Sam or `manM` of a teammate it is on nobody's floor

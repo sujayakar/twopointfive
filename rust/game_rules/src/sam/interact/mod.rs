@@ -4,9 +4,9 @@ pub mod hud;
 pub use hud::*;
 use crate::game::{Deed, Game};
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String};
 
 /// every row a door can have, and those of them an open leaf can
@@ -88,7 +88,7 @@ pub fn empty_word(t: Option<&crate::interact::EmptyThing>) -> String {
 fn move_mask(g: &Game, input: InputId) -> f64 {
     let mut mask = 0i32;
     for (i, k) in crate::player::WALK_KEYS.iter().enumerate() {
-        if crate::input::input_down(g, input, k) { mask |= 1 << i; }
+        if crate::input::input_down(g, input, *k) { mask |= 1 << i; }
     }
     mask as f64
 }
@@ -132,16 +132,14 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
-    let mut n = 0.0;
-    for r in seat.nearby { { n += 1.0; } }
-    n < g.k.cmdring.wedges
+    (seat.nearby.len() as f64) < g.k.cmdring.wedges
 }
 
 /// a wedge's digit pressed this frame
 fn wedge_digit(g: &Game, input: InputId) -> bool {
     let mut d = 1;
     while d as f64 <= g.k.cmdring.wedges {
-        if crate::input::input_hit(g, input, &format!("Digit{}", d)) { return true; }
+        if crate::input::Key::digit(d).is_some_and(|k| crate::input::input_hit(g, input, k)) { return true; }
         d += 1;
     }
     false
@@ -263,7 +261,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let k = Press { dt, input, view, cam, down, hit, back: crate::backkey::back_hit(g, input) };
     g.sets[g.seat].act = None;
     if !down && !hit { g.sets[g.seat].hand.f_held = false; }   // (a spent press has come up: the key is live again)
-    if crate::input::input_hit(g, input, "Paused") { interact_let_go(g); }
+    if crate::input::input_hit(g, input, crate::input::Key::Paused) { interact_let_go(g); }
     if verb_runs(g, k) { return; }
     if crate::condition::down(g, g.pl[g.player].ch) { close_selector(g, false); return; }
     let free = g.sets[g.seat].hand.sel.open && ring_free(g, &crate::seats::here(g));
@@ -317,7 +315,7 @@ fn ring_opens(g: &mut Game, k: Press) {
 
 /// The ring is up: what the hand points it at is lit, and a click, a digit or the key let go of does it.
 fn ring_tick(g: &mut Game, k: Press) {
-    if crate::input::input_hit(g, k.input, "Blur") { close_selector(g, true); return; }
+    if crate::input::input_hit(g, k.input, crate::input::Key::Blur) { close_selector(g, true); return; }
     if crate::input::input_rmb_hit(g, k.input) { k.swallow(g, 4); close_selector(g, true); return; }
     let lmb = crate::input::input_lmb_hit(g, k.input);
     let digit = digit_taken(g, k.input);
@@ -354,7 +352,7 @@ fn ring_tick(g: &mut Game, k: Press) {
 /// The digit pressed this tick, 0 for none: the ring's while it is up, not his slots'.
 fn digit_taken(g: &mut Game, input: InputId) -> i32 {
     let pressed = &mut g.tab.input[input].pressed;
-    (1..=9).rev().fold(0, |digit, d| if pressed.delete(format!("Digit{}", d)) { d } else { digit })
+    (1..=9).rev().fold(0, |digit, d| if crate::input::Key::digit(d).is_some_and(|k| pressed.delete(k.text())) { d } else { digit })
 }
 /// The rows changed under it: nothing is pointed at until the hand moves again, and it goes to its thing.
 fn rows_changed(g: &mut Game, k: Press) {
@@ -391,7 +389,7 @@ fn ring_points(g: &mut Game, k: Press, digit: i32, still: bool) -> (Option<i32>,
 
 /// The arrows move the light over his rows.
 fn light_moves(g: &mut Game, input: InputId) {
-    let by = crate::input::input_hit(g, input, "ArrowDown") as i32 - crate::input::input_hit(g, input, "ArrowUp") as i32;
+    let by = crate::input::input_hit(g, input, crate::input::Key::ArrowDown) as i32 - crate::input::input_hit(g, input, crate::input::Key::ArrowUp) as i32;
     if by != 0 && g.sets[g.seat].nearby.len() > 1 { g.sets[g.seat].hand.near_sel += by; crate::player::pick_hover(g); }
     let hand = &mut g.sets[g.seat].hand;
     if let Some(r) = hand.sel.ring.as_mut() { r.state.lit = (hand.near_sel + 1) as f64; }

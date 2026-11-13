@@ -1,7 +1,7 @@
 //! What a seat is told of its men's throws: from the order until the thing leaves his hand (`squadthrow`'s walks, `squad40`'s turns), and the plan the lit row of its ring
 //! stands on, which the menu's own frame keeps. Only read: nothing is worked out here.
 use super::*;
-use crate::game::{Game, GuardState};
+use crate::game::Game;
 use crate::squadthrow::SquadThrowKind;
 use crate::v3;
 use alloc::{vec, vec::Vec};

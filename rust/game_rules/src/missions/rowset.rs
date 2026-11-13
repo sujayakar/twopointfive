@@ -2,7 +2,6 @@
 
 pub use ::game_types::rowset::types;
 pub use types::*;
-use crate::game::Game;
 
 use crate::query::Query;
 use crate::scene_scenarios::ScenarioEntry;

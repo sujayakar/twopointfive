@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 /// The net's ask runs on this floor: a floor whose every squad stays in its rooms.
@@ -165,7 +165,7 @@ pub fn squads_stage(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
             def: def.clone(), name: def.name.clone().unwrap_or_else(|| def.id.clone()), rooms: mine, men: men.clone(), group, barricade,
             state: SquadState::Hold, state0: None, fix: None, news_t: -100.0, decide_at: 0.0, decided_at: -100.0, contact_t: -100.0, called_t: -100.0, called_room: None,
             fallen: JsSet::new(), ready: false, own_said: None, stayed: None, hit_room: None, rc: None, calls: None, call_die: None, hung: None, trouble: None, wary: None,
-            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(),
+            ask_die: None, sent: Vec::new(), went: Vec::new(), due: Vec::new(), events: Vec::new(), entries: Vec::new(),
         });
         squads.push(q);
         let stays = def.may_leave == Some(false);
@@ -381,7 +381,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
 }
 
 /// teamKnown, each place with how well it is known
-fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
+pub(super) fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -522,7 +522,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
 }
 
 /// wayRound with goRound on: the net's door, no wall between a known place and a spot, every spot tried, a way walked mark by mark
-fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
+pub(super) fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
     let pos = g.pos_of(gd);
@@ -713,7 +713,7 @@ fn pair(g: &mut Game, net: &[StateNetItem], sit: &Situation) -> (Vec<RoomfightDe
 }
 /// At a run to a place, by those points and that door, tried again where he gets nowhere.
 pub(super) fn send_round(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, way: Vec<V3>) {
-    let pace = g.tune.guard_chase + 0.3;
+    let pace = g.k.tune.guard_chase + 0.3;
     let leg = crate::roomfight::Leg { by: door, ..crate::roomfight::Leg::errand(to, pace) };
     crate::roomfight::send_by(g, d, leg, way, crate::owner::by::SQUAD_LEG);
 }
@@ -978,7 +978,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) { continue; }   // (he was told that room is gone)
         let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
         let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(dist_xz(p, at), |w| crate::places::walk_len(p, &w));
-        new.push((g.tab.enemysquads_squad[q].due.len(), way / g.tune.guard_chase));
+        new.push((g.tab.enemysquads_squad[q].due.len(), way / g.k.tune.guard_chase));
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
     // they come together: the near man leaves when he will be there with the far one, if that is soon
@@ -1036,7 +1036,7 @@ mod tests_2 {
     ];
     const LEN: u64 = 0x4023ea2894d21e60;
     #[test]
-    fn along_walks_as_the_typescript_does() {
+    fn along_gives_the_pinned_walks() {
         let path: [V3; 3] = [[1.7, 0.0, 2.9], [1.7, 0.0, 2.9], [-3.3, 1.0, 0.123]];
         let mut seen: Vec<[u64; 3]> = Vec::new();
         let l = along([0.3, 7.0, -1.1], &path, &mut |p, s| seen.push([p[0].to_bits(), p[2].to_bits(), s.to_bits()]));

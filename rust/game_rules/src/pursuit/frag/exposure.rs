@@ -1,11 +1,9 @@
-#![allow(unused_imports, unused_variables)]
-use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// the flee script frag_flee lent for the frame, as the run left it, put back in the book it came from: the first live grenade's book
@@ -181,10 +179,11 @@ pub fn blast(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -
 
 #[cfg(test)]
 mod tests {
+    use crate::v3::dist_xz;
     use super::*;
     // the pinned bits of hash01
     #[test]
-    fn hash01_has_the_typescript_s_bits() {
+    fn hash01_keeps_its_bits() {
         let rows: [(f64, f64, u64); 9] = [
             (0.0, 0.0, 0x3fe2255ea0000000),
             (1.0, 2.0, 0x3fea137a20000000),
@@ -201,7 +200,7 @@ mod tests {
         }
     }
     #[test]
-    fn flat_has_the_typescript_s_bits() {
+    fn flat_keeps_its_bits() {
         assert_eq!(dist_xz([0.1, 5.0, 0.2], [3.3, 9.0, -4.7]).to_bits(), 0x401768ce6d3c11e0);
         assert_eq!(dist_xz([1e-3, 0.0, 7.25], [1e-3, 0.0, 7.25]).to_bits(), 0);
         assert_eq!(dist_xz([-12.75, 1.0, 33.125], [8.5, 2.0, -0.0625]).to_bits(), 0x4043b431f0bad27a);

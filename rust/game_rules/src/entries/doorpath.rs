@@ -2,9 +2,9 @@ pub use ::game_types::doorpath::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// A door blown off its hinges: no leaf to walk round.
@@ -668,7 +668,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     if w.held < k.cap {   // the file: room for the man sent before him
         let f = room_ahead(g, gd, w, carrot);
         if f < 1.0 {
-            let walk = g.tune.guard_walk;
+            let walk = g.k.tune.guard_walk;
             let s = g.gd[gd].script.as_mut().unwrap();
             s.speed = Some(s.speed.unwrap_or(walk) * f);
             if f < 0.5 {

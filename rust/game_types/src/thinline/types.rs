@@ -1,7 +1,5 @@
 //! The types of `thinline`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Thin {

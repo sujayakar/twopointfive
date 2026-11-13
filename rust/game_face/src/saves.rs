@@ -1,4 +1,4 @@
-//! A GAME KEPT: its own value (a clone of the whole `Game`, a closure in flight with it) and its block of rust/sim's. It lives as long as this module, and a game lost to a panic leaves
+//! A GAME KEPT: its own value (a clone of the whole `Game`, a closure in flight with it). It lives as long as this module, and a game lost to a panic leaves
 //! it whole. The save controller (game::savestate::control) says when and under which label; `step`'s flag SAVES is its turn.
 use crate::Held;
 use game::savestate::control::{self, Kept, START};
@@ -48,9 +48,9 @@ pub fn recover_what(h: GameNo) -> Option<String> { kept_of(h).first().map(|(key,
 pub fn recover(h: GameNo, newest: bool) -> Option<Recovered> {
     let of = kept_of(h);
     let (key, e) = of.iter().find(|(key, _)| newest || key == START).cloned()?;
-    // (a game that still stands under the lost number would share the slot: it is let go, and what is kept of it is not)
-    super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
-    let mut g = e.image.laid(e.image.game.sim);
+    // (a game that still stands under the lost number is let go, and what is kept of it is not)
+    super::let_go(h);
+    let mut g = e.image.laid();
     g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
     let n = super::put(Held::new(g));
     STOOD_OF.with(|s| { let mut s = s.borrow_mut(); if let Some(of) = s.remove(&h) { s.insert(n, of); } });

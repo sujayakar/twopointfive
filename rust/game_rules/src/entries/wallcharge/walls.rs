@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// How near a point passes a line on the floor, a to b.
 pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
@@ -120,7 +120,7 @@ fn outer_wall_of(g: &Game, index: f64, asked: &mut Vec<(f64, f64)>) -> bool {
     if thin > g.k.wallcharge.outer_thick
         || long < g.k.wallcharge.outer_min_len
         || row.metal == Some(true)
-        || { let word = row.does; crate::scene_materials::does_of(g, word).surf == crate::scene_materials::Surf::Metal }
+        || { let word = row.does; crate::scene_materials::does_of(word).surf == crate::scene_materials::Surf::Metal }
         || !crate::wallbreak::wall_break_adoptable(g, index)
     {
         return false;
@@ -178,8 +178,7 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
 /// …asked of the game shared
 fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option<crate::wallcharge::WallSpot> {
     let n = m::min(g.destr.walls.authored, g.col.boxes.len() as f64) as usize;
-    let f = crate::scene_boxes::box_flag();
-    let skip = js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic);
+    let skip = crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
     let mut best: Option<crate::wallcharge::WallSpot> = None;
     let mut bd = g.k.wallcharge.pick_m + 1e-6;
     for i in 0..n {
@@ -218,7 +217,7 @@ fn wall_at_of(g: &Game, at: V3, from: V3, asked: &mut Vec<(f64, f64)>) -> Option
                 continue;
             }
             let word = g.tab.boxes[b].does;
-            let s = crate::scene_materials::does_of(g, word).surf;
+            let s = crate::scene_materials::does_of(word).surf;
             if s != crate::scene_materials::Surf::Drywall && s != crate::scene_materials::Surf::Concrete && s != crate::scene_materials::Surf::Metal {
                 continue;
             }
@@ -294,18 +293,8 @@ pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
 /// The module and its two rows.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
-    wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        opens: Some(String::from(WALL_PAGE)),
-        ..crate::orders::OrderDef::default()
-    }));
-    wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        ..crate::orders::OrderDef::default()
-    }));
+    wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER));
+    wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER));
     wc
 }
 

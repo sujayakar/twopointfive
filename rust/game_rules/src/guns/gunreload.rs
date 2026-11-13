@@ -2,10 +2,10 @@ pub use ::game_types::gunreload::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 /// how this row is fed right now; None: a magazine change as it always was
 pub fn feed_of(def: &crate::weapons::WeaponDef) -> Option<crate::gunreload::FEEDValue> {
@@ -44,8 +44,8 @@ fn shell_rate(k: f64) -> f64 {
     0.94 + js::rem(k * 5.0, 7.0) * 0.02
 }
 
-fn cue(t: f64, sfx: &str, gain: f64, rate: f64) -> FeedCue {
-    FeedCue { t, sfx: String::from(sfx), gain, rate }
+fn cue(t: f64, sfx: crate::audio_iface::Sfx, gain: f64, rate: f64) -> FeedCue {
+    FeedCue { t, sfx, gain, rate }
 }
 
 /// what is heard, in order, of a reload of this row on this beat; None: a magazine gun
@@ -62,13 +62,13 @@ fn cues_of(f: FEEDValue, b: FeedBeat, n: f64, port: bool) -> Option<Vec<FeedCue>
     let mut out = Vec::new();
     if f.kind == FeedKind::Belt {
         let t = belt_times(b);
-        out.push(cue(t.up, "beltCoverUp", 0.8, 1.0));
-        out.push(cue(t.off, "beltBoxOff", 0.8, 1.0));
-        out.push(cue(t.on, "beltBoxOn", 0.85, 1.0));
-        out.push(cue(t.lay, "beltLay", 0.8, 1.0));
-        out.push(cue(t.down, "beltCoverDown", 0.9, 1.0));
+        out.push(cue(t.up, crate::audio_iface::Sfx::BeltCoverUp, 0.8, 1.0));
+        out.push(cue(t.off, crate::audio_iface::Sfx::BeltBoxOff, 0.8, 1.0));
+        out.push(cue(t.on, crate::audio_iface::Sfx::BeltBoxOn, 0.85, 1.0));
+        out.push(cue(t.lay, crate::audio_iface::Sfx::BeltLay, 0.8, 1.0));
+        out.push(cue(t.down, crate::audio_iface::Sfx::BeltCoverDown, 0.9, 1.0));
         if b.pull {
-            out.push(cue(t.charge, "chargeLmg", 0.9, 1.0));
+            out.push(cue(t.charge, crate::audio_iface::Sfx::ChargeLmg, 0.9, 1.0));
         }
     } else {
         let t = shell_times(b, n);
@@ -77,15 +77,15 @@ fn cues_of(f: FEEDValue, b: FeedBeat, n: f64, port: bool) -> Option<Vec<FeedCue>
         let mut i = 0usize;
         while k < n {
             let head = first && i == 0;
-            out.push(cue(t[i], "shellIn", if head { 0.6 } else { 0.8 }, shell_rate(k)));
+            out.push(cue(t[i], crate::audio_iface::Sfx::ShellIn, if head { 0.6 } else { 0.8 }, shell_rate(k)));
             if head {
-                out.push(cue(m::min(t[0] + 0.12, if n > 1.0 { t[1] - 0.02 } else { b.in_ + 0.12 }), "boltDrop", 0.9, 1.0));
+                out.push(cue(m::min(t[0] + 0.12, if n > 1.0 { t[1] - 0.02 } else { b.in_ + 0.12 }), crate::audio_iface::Sfx::BoltDrop, 0.9, 1.0));
             }
             k += 1.0;
             i += 1;
         }
         if b.pull && !first {
-            out.push(if f.pump == Some(true) { cue(b.rack, "rack", 0.85, 0.7) } else { cue(b.rack, "boltDrop", 0.9, 1.0) });
+            out.push(if f.pump == Some(true) { cue(b.rack, crate::audio_iface::Sfx::Rack, 0.85, 0.7) } else { cue(b.rack, crate::audio_iface::Sfx::BoltDrop, 0.9, 1.0) });
         }
     }
     js::sort_by(&mut out, |x, y| x.t - y.t);
@@ -294,7 +294,7 @@ pub fn feed_begin(g: &mut crate::game::Game, gun: FirearmId) -> crate::weapons::
 /// one cue, played at him
 pub(super) fn feed_play(g: &mut crate::game::Game, at: V3, c_2: &crate::gunreload::FeedCue, vol: Option<f64>) {
     let vol = vol.unwrap_or(1.0);
-    crate::audio_iface::game_audio_like_play(g, &c_2.sfx, Some(at), Some(c_2.gain * vol), Some(&crate::audio_iface::PlayOpts::Rate { rate: c_2.rate }));
+    crate::audio_iface::game_audio_like_play(g, c_2.sfx, Some(at), Some(c_2.gain * vol), Some(&crate::audio_iface::PlayOpts::Rate { rate: c_2.rate }));
 }
 
 /// his reload's clock went from `before` to `now`: the sounds of his gun's own feeding that fall between are played at him
@@ -480,34 +480,34 @@ mod tests {
     }
 
     fn heard(model: M, beat: FeedBeat, n: f64, port: bool) -> Vec<FeedCue> { cues_of(feed_by(model), beat, n, port).unwrap() }
-    fn said(c: &[FeedCue]) -> Vec<&str> { c.iter().map(|q| q.sfx.as_str()).collect() }
+    fn said(c: &[FeedCue]) -> Vec<crate::audio_iface::Sfx> { c.iter().map(|q| q.sfx).collect() }
 
     /// What is heard of a belt change is the belt change, and in order, with the charge only on a dry gun.
     #[test]
     fn a_belt_change_is_heard_in_order() {
         let dry = heard(M::Mk46, long(true), 100.0, true);
-        assert_eq!(said(&dry), ["beltCoverUp", "beltBoxOff", "beltBoxOn", "beltLay", "beltCoverDown", "chargeLmg"]);
+        assert_eq!(said(&dry), [crate::audio_iface::Sfx::BeltCoverUp, crate::audio_iface::Sfx::BeltBoxOff, crate::audio_iface::Sfx::BeltBoxOn, crate::audio_iface::Sfx::BeltLay, crate::audio_iface::Sfx::BeltCoverDown, crate::audio_iface::Sfx::ChargeLmg]);
         assert!(dry.windows(2).all(|w| w[0].t <= w[1].t));
-        assert_eq!(said(&heard(M::Mk46, long(false), 100.0, false)), ["beltCoverUp", "beltBoxOff", "beltBoxOn", "beltLay", "beltCoverDown"]);
+        assert_eq!(said(&heard(M::Mk46, long(false), 100.0, false)), [crate::audio_iface::Sfx::BeltCoverUp, crate::audio_iface::Sfx::BeltBoxOff, crate::audio_iface::Sfx::BeltBoxOn, crate::audio_iface::Sfx::BeltLay, crate::audio_iface::Sfx::BeltCoverDown]);
     }
 
     /// A shell is heard for each shell, each a little different in pitch. The M1014's first into the open port is softer and the bolt drops after it, once. Otherwise a dry gun is worked at the end: the bolt, or the pump, slower.
     #[test]
     fn shells_are_heard_one_by_one_and_then_the_bolt_or_the_pump() {
         let c = heard(M::M1014, m1014(false), 7.0, true);
-        assert_eq!(said(&c), ["shellIn", "boltDrop", "shellIn", "shellIn", "shellIn", "shellIn", "shellIn", "shellIn"]);
+        assert_eq!(said(&c), [crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::BoltDrop, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn]);
         assert!(c[0].gain < c[2].gain, "the shell at the port is softer than the ones into the tube");
         assert!(c[0].t < c[1].t && c[1].t < c[2].t, "the bolt drops between the first shell and the second");
         assert!(c[0].rate != c[2].rate);
         // the only shell: the bolt still drops after it
-        assert_eq!(said(&heard(M::M1014, m1014(false), 1.0, true)), ["shellIn", "boltDrop"]);
+        assert_eq!(said(&heard(M::M1014, m1014(false), 1.0, true)), [crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::BoltDrop]);
         // a shell into the tube and a dry gun: the bolt goes last
         let c = heard(M::M1014, m1014(true), 3.0, false);
-        assert_eq!(said(&c), ["shellIn", "shellIn", "shellIn", "boltDrop"]);
+        assert_eq!(said(&c), [crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::ShellIn, crate::audio_iface::Sfx::BoltDrop]);
         assert_eq!(c[3].t, m1014(true).rack);
         // the pump, at its own slower rate
         let c = heard(M::M870, m870(), 6.0, true);
-        assert_eq!(said(&c[6..]), ["rack"]);
+        assert_eq!(said(&c[6..]), [crate::audio_iface::Sfx::Rack]);
         assert_eq!((c[6].t, c[6].rate), (m870().rack, 0.7));
         assert!(cues_of(feed_by(M::G18), m870(), 33.0, true).is_none(), "a magazine gun has no cues of its own");
     }

@@ -1,6 +1,5 @@
 //! The types of `game`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -332,11 +331,7 @@ pub struct Game {
     pub search_probe_n: f64,
     pub time: f64,
     pub dice: crate::dice::Draws,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
-    pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
@@ -368,7 +363,7 @@ pub struct Game {
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96] })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
@@ -420,11 +415,11 @@ pub struct Game {
     #[bytes(skip)]
     pub saves: crate::savestate::Checkpoints,
     pub rack_targets: Vec<FixtureId>,
-    #[is(crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true })] pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
     pub level: Arc<crate::scene_level::Level>,
     #[is(RigId(0))] pub rig: RigId,
-    pub smoke: crate::smoke_types::SmokeSystemLike,
+    /// the game's own smoke: what every eye, every lamp's light and the fog of war see through, with the light that comes round beside it
+    pub smoke: crate::smoke::Smoke,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
     pub aside: bool,
     pub rolls: Vec<crate::game::Roll>,
@@ -461,8 +456,6 @@ pub struct Game {
     pub box_frame_rows: Vec<FrameBoxId>,
     /// rows box_frame may deal again
     pub box_frame_free: Vec<FrameBoxId>,
-    /// poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
-    pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows. The host drains it (the face clears it before a step)
     /// (a step's output, and no state: in no bytes)
     #[bytes(skip)]
@@ -502,16 +495,18 @@ pub struct Game {
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub stats: Stats,
-    /// which game of rust/sim's this is: every wrapper over rust/sim reads it, and the game's die lives there
-    /// (which of rust/sim's slots it stands in is the host's: in no bytes)
+    /// (made again from the rest: in no bytes)
     #[bytes(skip)]
-    pub sim: usize,
+    pub made: crate::made::Tables,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     #[is(crate::owned::Owned::new())] pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     #[is(crate::owned::Owned::new())] pub mark_set: crate::owned::Owned,
+    /// where a layer of the animator runs a pose forward: nobody reads it after the layer (in no bytes)
+    #[bytes(skip)]
+    pub bones: crate::anim_skeleton::PoseFK,
     /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
     /// (made from the statics: in no bytes)
     #[bytes(skip)]
@@ -544,62 +539,6 @@ pub struct GameBeaconsItem {
 pub struct GameFxItem {
     pub box_: FrameBoxId,
     pub ttl: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct GameTune {
-    pub devices: bool,
-    pub lasers: bool,
-    pub camera_suspicion_secs: f64,
-    pub camera_alarm_secs: f64,
-    pub device_cones: bool,
-    pub guard_walk: f64,
-    pub guard_investigate: f64,
-    pub guard_chase: f64,
-    pub player_walk: f64,
-    pub player_sprint: f64,
-    pub player_crouch: f64,
-    pub player_light: f64,
-    pub flash_intensity: f64,
-    pub flash_inner: f64,
-    pub flash_outer: f64,
-    pub detect_rate: f64,
-    pub ocp_duration: f64,
-    pub ocp_notice: crate::game::GameTuneOcpNotice,
-    pub vis_slope: f64,
-    pub vis_floor: f64,
-    pub floor_materials: bool,
-    pub muzzle_discipline: bool,
-    pub suppression: bool,
-    pub carbine_guards: crate::game::CarbineDeal,
-    pub suppress_first: bool,
-    pub tracers: bool,
-    pub aim_model: bool,
-    pub teams: bool,
-    pub needs: bool,
-    pub tactics: bool,
-    pub flank_wait: f64,
-    pub lone_wait: f64,
-    pub door_danger: f64,
-    pub door_wait: f64,
-    pub chaos: f64,
-    pub wind: f64,
-    pub moths: bool,
-    pub glass_break: bool,
-    pub glass_shards: bool,
-    pub wall_break: bool,
-    pub debris_impulses: bool,
-    pub qrf: bool,
-    pub qrf_eta: f64,
-    pub qrf_size: f64,
-    pub perimeter: bool,
-    pub perimeter_eta: f64,
-    pub perimeter_size: f64,
-    pub qrf_silent: bool,
-    pub qrf_squad: bool,
-    pub civilians: bool,
-    pub civilian_kill_fails: bool,
-    pub body_light: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -1326,7 +1265,6 @@ impl Game {
 pub struct Tabs {
     pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
-    pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
     /// (a host's hand, which differs by machine: in no bytes)
@@ -1394,12 +1332,10 @@ pub struct Mods {
     #[bytes(skip)]
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
-    pub scene_materials: crate::scene_materials::SceneMaterialsMod,
     pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
-    pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     pub character: crate::character::CharacterMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,

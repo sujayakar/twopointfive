@@ -1,6 +1,5 @@
 //! The types of `debris`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -109,9 +108,9 @@ impl Default for Chunk {
     }
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ChunkSfxItem {
-    pub name: String,
+    pub name: crate::audio_iface::Sfx,
     pub rate: f64,
     pub gain: f64,
 }
@@ -169,9 +168,9 @@ pub struct LANDINGValue {
     pub sfx: Vec<crate::debris::LANDINGValueSfxItem>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct LANDINGValueSfxItem {
-    pub name: String,
+    pub name: crate::audio_iface::Sfx,
     pub rate: f64,
     pub gain: f64,
 }
@@ -195,4 +194,4 @@ pub const SLEEP_T: f64 = 0.25;
 
 pub fn debris_imp() -> crate::debris::DEBRISIMP { crate::debris::DEBRISIMP { gain: 0.35, up_k: 0.7, v_max: 3.0, wake: 0.1, tumble: 0.5 } }
 
-pub fn landing() -> JsMap<String, crate::debris::LANDINGValue> { { let mut t = JsMap::new(); t.set(String::from("tile"), crate::debris::LANDINGValue { level: 0.4, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 0.75, gain: 0.9 }, crate::debris::LANDINGValueSfxItem { name: String::from("magDrop"), rate: 0.5, gain: 0.35 }] }); t.set(String::from("housing"), crate::debris::LANDINGValue { level: 0.5, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 0.6, gain: 1.0 }, crate::debris::LANDINGValueSfxItem { name: String::from("lightBreak"), rate: 0.8, gain: 0.45 }] }); t.set(String::from("clutter"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.45, gain: 0.5 }] }); t.set(String::from("binder"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.1, gain: 0.55 }] }); t.set(String::from("chunk"), crate::debris::LANDINGValue { level: 0.2, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("propThud"), rate: 1.3, gain: 0.4 }] }); t.set(String::from("shard"), crate::debris::LANDINGValue { level: 0.3, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: String::from("glassCrack"), rate: 1.9, gain: 0.3 }, crate::debris::LANDINGValueSfxItem { name: String::from("casingTink"), rate: 0.6, gain: 0.35 }] }); t } }
+pub fn landing() -> JsMap<String, crate::debris::LANDINGValue> { { let mut t = JsMap::new(); t.set(String::from("tile"), crate::debris::LANDINGValue { level: 0.4, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 0.75, gain: 0.9 }, crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::MagDrop, rate: 0.5, gain: 0.35 }] }); t.set(String::from("housing"), crate::debris::LANDINGValue { level: 0.5, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 0.6, gain: 1.0 }, crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::LightBreak, rate: 0.8, gain: 0.45 }] }); t.set(String::from("clutter"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.45, gain: 0.5 }] }); t.set(String::from("binder"), crate::debris::LANDINGValue { level: 0.25, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.1, gain: 0.55 }] }); t.set(String::from("chunk"), crate::debris::LANDINGValue { level: 0.2, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.3, gain: 0.4 }] }); t.set(String::from("shard"), crate::debris::LANDINGValue { level: 0.3, sfx: alloc::vec![crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::GlassCrack, rate: 1.9, gain: 0.3 }, crate::debris::LANDINGValueSfxItem { name: crate::audio_iface::Sfx::CasingTink, rate: 0.6, gain: 0.35 }] }); t } }

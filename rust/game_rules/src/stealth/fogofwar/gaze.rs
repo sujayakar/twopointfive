@@ -1,10 +1,7 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
 
 /// The field every eye has this frame, degrees in plan: the cone's rows under FOG.cone, else fovDeg.
 pub fn field_deg(g: &crate::game::Game) -> f64 {

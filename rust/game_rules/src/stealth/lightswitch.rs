@@ -2,15 +2,15 @@ pub use ::game_types::lightswitch::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 type Ray = crate::scene_collision::Raycast;
 
 /// A level box's centre, its half size and its flags, by its place in the level's list (`g.col.boxes`).
-fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
+fn level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
 /// Is this fixture one a wall switch works: on the mains and a light of the room.
@@ -20,7 +20,7 @@ fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
     if f.kind == crate::fixtures::FixtureKind::Analytic { return f.light.is_some(); }
     if f.kind != crate::fixtures::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
     let first = f.boxes[0] as usize;
-    let (c, h, _) = seam_level_box(g, first);
+    let (c, h, _) = level_box(g, first);
     h[1] <= h[0] && h[1] <= h[2] && c[1] > 1.5
 }
 
@@ -53,8 +53,8 @@ fn wall_ray(g: &crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::s
 fn solid(g: &Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
-    let (c, half, flags) = seam_level_box(g, h.index as usize);
-    if js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
+    let (c, half, flags) = level_box(g, h.index as usize);
+    if js::to_i32(flags) & crate::scene_boxes::box_flag::GLASS as i32 != 0 { return false; }
     c[1] + half[1] >= WALL_TOP
 }
 
@@ -312,8 +312,8 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
     }
     let time = g.time;
     crate::fixtures::light_home_flip(g, &sw.targets, on, time, true);
-    crate::audio_iface::game_audio_like_play(g, "click", Some(sw.pos), Some(0.8), None);
-    if !on { crate::audio_iface::game_audio_like_play(g, "lightOff", Some(sw.pos), Some(0.5), None); }
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(sw.pos), Some(0.8), None);
+    if !on { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightOff, Some(sw.pos), Some(0.5), None); }
     if g.m.lightswitch.states.is_some() {
         g.m.lightswitch.states.as_mut().unwrap().hands.retain(|h| h.c != by);
         let plant = plants(g, by);
@@ -446,17 +446,16 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
 // ---------------------------------------------------------------- drawing (into Game.dynBoxes, beside the keypads' plates)
 /// The plate, its rocker (top proud with the lights on) and, in a room off at the switch, the small amber pilot: a decal's depth, nobody's collision, no shadow.
 pub fn switch_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let flag = crate::scene_boxes::box_flag();
-    let deco = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let deco = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     for sw in wall_switches(g) {
         let yaw = v3::yaw_of(sw.n);
         let lit = switch_lit(g, &sw);
         let key = crate::scene_boxes::mkey().device + SW_KEY + sw.id * 4.0;
-        let a = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(plate()), flags: Some(deco), mkey: Some(key), ..Default::default() });
+        let a = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::mad(sw.pos, sw.n, 0.006), h: [0.042, 0.06, 0.006], yaw: Some(yaw), albedo: Some(g.k.colors.switch_plate), flags: Some(deco), mkey: Some(key), ..Default::default() });
         out.push(a.into());
-        let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(rocker()), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
+        let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.015), [0.0, if lit { 0.012 } else { -0.012 }, 0.0]), h: [0.016, 0.018, 0.005], yaw: Some(yaw), albedo: Some(g.k.colors.switch_rocker), flags: Some(deco), mkey: Some(key + 1.0), ..Default::default() });
         out.push(b.into());
-        let c = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { glow() }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
+        let c = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: v3::add(v3::mad(sw.pos, sw.n, 0.013), [0.0, -0.045, 0.0]), h: [0.007, 0.004, 0.002], yaw: Some(yaw), albedo: Some([0.05, 0.03, 0.01]), emissive: Some(if lit { [0.0, 0.0, 0.0] } else { g.k.colors.switch_glow }), flags: Some(deco), mkey: Some(key + 2.0), ..Default::default() });
         out.push(c.into());
     }
 }

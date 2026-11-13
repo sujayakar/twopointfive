@@ -4,9 +4,9 @@ pub mod looked;
 pub use looked::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// `M[i]` of a Uint16Array: `None` is JavaScript's undefined (a negative, NaN or past-the-end index).
@@ -275,7 +275,7 @@ mod tests {
 
     /// The pinned metres of `cleared_rooms_dear_along`, a cell dear where its x is even.
     #[test]
-    fn dear_along_keeps_the_typescripts_bits() {
+    fn dear_along_keeps_its_bits() {
         let mut g = Game::blank();
         let cell = g.col.nav.cell;
         assert_eq!(cell, 0.5);

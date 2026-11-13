@@ -1,18 +1,17 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
-
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
 pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
-    let k = g.tab[b].mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
+    let k = g.tab[b].mkey.expect("fog: a box with no key");
     key_of_mkey(g, k)
 }
 
@@ -45,8 +44,7 @@ pub(super) fn ghost_box(g: &mut crate::game::Game, s: AnyBoxId) -> FrameBoxId {
 
 /// What the team's sight lines pass: glass and the statics marked thin.
 pub fn fog_through() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
+    (crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::THIN as i32) as f64
 }
 
 pub fn fog_of_war_new() -> crate::fogofwar::FogOfWar {
@@ -66,7 +64,6 @@ fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { g.ch[c].bone_or(crate::cha
 
 /// `men as players`
 fn players(g: &crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
-
 
 /// Once a tick after everybody has moved: the eyes, then seen or not for every man off the team, then the doors.
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {

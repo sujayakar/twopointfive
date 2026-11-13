@@ -1,8 +1,6 @@
-#![allow(unused_variables)]
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -209,7 +207,7 @@ pub(super) fn intel_lead(t: crate::game::Temperament, k: crate::dialogue::Knowle
     }
 }
 
-/// A fact behind a lead that runs on into it starts in lower case, unless it starts with 'I' or a man's name. By hand, the regexes of TS 366:
+/// A fact behind a lead that runs on into it starts in lower case, unless it starts with 'I' or a man's name. By hand, these patterns:
 /// `/[a-z—] $/` on the lead, `/^(?!I\b|\{(?:Checker|Checked|Missing|Partner|Victim|Caller|Body)\})(\{?)([A-Z])/` on the fact.
 fn run_on_text(lead: &str, fact: &str) -> String {
     let mut back = lead.chars().rev();

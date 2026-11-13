@@ -1,7 +1,5 @@
 //! The types of `condition`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, Blank, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, Blank, V3};
 
 /// HOW A MAN IS: what a blast, a flash, a blow and fire have left on him, whoever he is. A clock that is past is nothing
 #[derive(Clone, Copy, Debug, ToBytes, Blank)]

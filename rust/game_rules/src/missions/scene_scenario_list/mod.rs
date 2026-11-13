@@ -5,7 +5,7 @@ pub use types::*;
 pub use ::game_types::scene_scenario_list::rows::*;
 pub mod short;
 pub use short::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::scene_scenarios::MissionKind;
 use crate::m;
 use alloc::string::String;

@@ -1,9 +1,8 @@
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.
 pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
@@ -15,24 +14,6 @@ pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
     if prev > f64::NEG_INFINITY { near.push(prev); }
     if next < f64::INFINITY { near.push(next); }
     near
-}
-
-/// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.
-pub(super) fn layer_tables_fit() {
-    let cross_jab = &KNIFE_BLOW;
-    let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", KNIFE_SLASH.keys.len()), ("back", KNIFE_BACK.keys.len())];
-    for (k, n) in blows {
-        crate::anim_skeleton::layer_fits(&alloc::format!("the knife's {} blow", k), n as f64, KNIFE_KEYS_MAX, None);
-    }
-    let (nums, vecs) = (throw_nums(), throw_vecs());
-    for low in [false, true] {
-        let ThrowTables { k1, k3 } = throw_tables(low);
-        let side = if low { "underhand" } else { "overhand" };
-        let lens = k1.iter().map(|k| k.len()).chain(k3.iter().map(|k| k.len()));
-        for (name, n) in nums.iter().chain(vecs.iter()).zip(lens) {
-            crate::anim_skeleton::layer_fits(&alloc::format!("the {} throw's table \"{}\"", side, name), n as f64, THROW_KEYS_MAX, Some(2.0));
-        }
-    }
 }
 
 /// A swing's tables as the module's layer is handed them, by name and in its order: eleven of numbers, then six of vectors. A table the underhand lacks is the overhand's (`T[n] ?? THR[n]`).
@@ -180,5 +161,19 @@ mod tests_2 {
         assert!(!off(end + s.show * stow + 0.001, end), "back on his gun");
         // a stow of no length is over at once
         assert!(!big_off(BigOffB { t: end + 0.01, equip, stow: 0.0, end }));
+    }
+
+    #[test]
+    fn a_knifes_blow_has_no_more_keys_than_its_layer_holds() {
+        for n in [KNIFE_BLOW.cross.keys.len(), KNIFE_BLOW.jab.keys.len(), KNIFE_SLASH.keys.len(), KNIFE_BACK.keys.len()] { assert!(n <= ::sim::layers::KNIFE_KEYS, "a blow of {n} keys"); }
+    }
+
+    /// A swing is keyed: from somewhere to somewhere, and no more keys than its layer holds.
+    #[test]
+    fn every_table_of_a_swing_has_the_keys_a_layer_reads() {
+        for low in [false, true] {
+            let t = throw_tables(low);
+            for n in t.k1.iter().map(|k| k.len()).chain(t.k3.iter().map(|k| k.len())) { assert!((2..=::sim::layers::THROW_KEYS).contains(&n), "a table of {n} keys (the underhand: {low})"); }
+        }
     }
 }

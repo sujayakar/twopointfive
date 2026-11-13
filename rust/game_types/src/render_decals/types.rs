@@ -1,7 +1,5 @@
 //! The types of `render_decals`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, ids::*, V3};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DecalKind {
@@ -31,15 +29,4 @@ pub struct DecalOpts {
     pub seed: Option<f64>,
     pub pane: Option<f64>,
 }
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WEARMARK {
-    pub look: f64,
-    pub reach0: f64,
-    pub reach1: f64,
-    pub min_half: f64,
-    pub max_half: f64,
-}
-
-pub fn wear_mark() -> crate::render_decals::WEARMARK { crate::render_decals::WEARMARK { look: 3.0, reach0: 0.09, reach1: 0.21, min_half: 0.035, max_half: 0.09 } }
 

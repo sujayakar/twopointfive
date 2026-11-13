@@ -1,5 +1,3 @@
-use crate::game::Game;
-
 /// One frame's word to Sam's animator, before any state poses him; down: nothing fed.
 pub fn stealth_feed(g: &mut crate::game::Game) {
     let pl = g.player;

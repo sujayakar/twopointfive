@@ -1,21 +1,14 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
-
-/// What a box does, by its word.
-fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = g.tab.boxes[b].does;
-    crate::scene_materials::does_of(g, word)
-}
-
-/// The knob as the systems read it: tune.chaos, from 0 to 1.
+/// How much breaks, as the systems read it: from 0 to 1.
 pub fn chaos_of(g: &crate::game::Game) -> f64 {
-    let c = g.tune.chaos;
+    let c = g.k.chaos.def;
     m::max(0.0, m::min(1.0, c))
 }
 
@@ -26,12 +19,7 @@ pub(super) fn loud_now(g: &crate::game::Game) -> bool {
 
 /// Impulses at all: chaos above 0 and the switch.
 pub(in crate::breakage) fn impulses_on(g: &crate::game::Game) -> bool {
-    chaos_of(g) > 0.0 && g.tune.debris_impulses
-}
-
-/// What of the kept knob is the game's: the first value. What a machine kept is the browser's storage, the host's.
-pub fn load_chaos(g: &mut crate::game::Game) {
-    g.tune.chaos = g.k.chaos.def;
+    chaos_of(g) > 0.0 && g.k.tune.debris_impulses
 }
 
 /// The impulses' strength scale off the knob.
@@ -53,11 +41,6 @@ pub(super) fn dlog(g: &mut crate::game::Game, s: &str) {
     if log.len() > 200 {
         log.drain(0..100);
     }
-}
-
-/// A cap of n() events in any one-second window.
-fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
-    RateCap { n, ..RateCap::blank() }
 }
 
 /// One more event at time t, if the window has room.
@@ -178,20 +161,19 @@ fn index_things(g: &mut Game, fixture_boxes: &JsSet<crate::Num>) -> Vec<usize> {
 
 /// What kind of thing a static is: a paper lying on something, a screen, or a small thing on a desk's height; None for anything else.
 fn thing_of(g: &Game, b: BoxId, in_fixture: bool) -> Option<DKind> {
-    let bf = crate::scene_boxes::box_flag();
     let row = &g.tab.boxes[b];
     let (h, flags) = (row.h, row.flags);
-    if js::has_bits(flags, js::to_i32(bf.glass) | js::to_i32(bf.no_primary)) || row.piece == Some(true) {
+    if js::has_bits(flags, crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32) || row.piece == Some(true) {
         return None;
     }
     let (max_h, min_h, bottom) = (m::max_n(&h), m::min_n(&h), row.c[1] - h[1]);
     let dark = row.emissive[0] + row.emissive[1] + row.emissive[2] == 0.0;
-    let shadowless = js::has_bits(flags, js::to_i32(bf.no_shadow));
-    let does = does_of_box(g, b);
-    if shadowless && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
+    let shadowless = js::has_bits(flags, crate::scene_boxes::box_flag::NO_SHADOW as i32);
+    let does = crate::scene_materials::does_of_box(g, b);
+    if shadowless && h[1] <= 0.03 && does.paper && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
         return Some(DKind::Paper);
     }
-    if does.screen.unwrap_or(false) && min_h <= 0.012 {
+    if does.screen && min_h <= 0.012 {
         return Some(if max_h > 0.35 || (bottom > 1.2 && max_h > 0.3) { DKind::Tv } else { DKind::Screen });
     }
     if !shadowless && !in_fixture && max_h <= 0.17 && h[0] * h[1] * h[2] * 8.0 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark {
@@ -208,7 +190,7 @@ fn housing_of(g: &Game, screen: usize) -> Option<usize> {
     for i in screen.saturating_sub(6)..core::cmp::min(g.col.boxes.len(), screen + 6) {
         let b = BoxId::from_ix(i);
         let row = &g.tab.boxes[b];
-        if i == screen || m::abs(row.yaw - s.yaw) > 1e-3 || row.h[0] < s.h[0] || row.h[1] < s.h[1] || row.h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
+        if i == screen || m::abs(row.yaw - s.yaw) > 1e-3 || row.h[0] < s.h[0] || row.h[1] < s.h[1] || row.h[2] > 0.05 || !crate::scene_materials::does_of_box(g, b).casing {
             continue;
         }
         let dd = v3::dist(row.c, s.c);
@@ -282,7 +264,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
             g.destr.items.delete(i);
             continue;
         }
-        if !does_of_box(g, b).casing.unwrap_or(false) {
+        if !crate::scene_materials::does_of_box(g, b).casing {
             continue;
         }
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();
@@ -585,7 +567,7 @@ mod tests {
         let mut k = crate::knobs::ChaosK::default();
         k.papers_per_sec = 1.0;
         k.puffs_per_sec = 5.0;
-        let mut c = rate_cap_new(RateCapN::Paper);
+        let mut c = RateCap { n: RateCapN::Paper, ..RateCap::blank() };
         assert!(rate_cap_take(&mut c, 0.0, &k));
         assert!(!rate_cap_take(&mut c, 0.5, &k));
         // the panel raised the cap: the window starts afresh

@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 /// `seat`'s man walked through `cmds` (oldest first, `dt` seconds each) from where the game has him, on a copy of him: writes nothing to the game.
@@ -83,15 +83,15 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         let (mut mx, mut mz) = (0.0, 0.0);
         if !crate::samstun::sam_rooted(g, &crate::seats::here(g), Some(now)) {
             let b = crate::camera::follow_camera_planar_basis(g, cam);
-            let way = crate::player::keys_way(b.fwd, b.right, has(&r.keys, "KeyW"), has(&r.keys, "KeyS"), has(&r.keys, "KeyD"), has(&r.keys, "KeyA"));
+            let way = crate::player::keys_way(b.fwd, b.right, has(&r.keys, crate::input::Key::W), has(&r.keys, crate::input::Key::S), has(&r.keys, crate::input::Key::D), has(&r.keys, crate::input::Key::A));
             mx = way[0];
             mz = way[1];
         }
         let ml = m::hyp2(mx, mz);
         if ml > 0.0 { mx /= ml; mz /= ml; }
-        if has(&r.pressed, "KeyC") { crate::player::crouch_key(g, m); }
+        if has(&r.pressed, crate::input::Key::C) { crate::player::crouch_key(g, m); }
         let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, Some(now))
-            && (has(&r.keys, "ShiftLeft") || has(&r.keys, "ShiftRight"))
+            && (has(&r.keys, crate::input::Key::ShiftLeft) || has(&r.keys, crate::input::Key::ShiftRight))
             && ml > 0.0;
         crate::player::sprint_stance(g, m, want_sprint, false);
         crate::player::stride_step(g, m, mx, mz, ml, None, dt, Some(now));
@@ -127,6 +127,6 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
 }
 
 /// `r.keys.includes(k)`
-fn has(list: &[String], k: &str) -> bool {
-    list.iter().any(|x| x == k)
+fn has(list: &[String], k: crate::input::Key) -> bool {
+    list.iter().any(|x| x == k.as_str())
 }

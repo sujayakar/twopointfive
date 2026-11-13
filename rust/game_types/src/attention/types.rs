@@ -1,6 +1,5 @@
 //! The types of `attention`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -34,8 +33,6 @@ pub struct Hold {
     pub ears: f64,
     pub noises: f64,
     pub yaw: Option<f64>,
-    /// dealt when a hold starts
-    pub serial: u32,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

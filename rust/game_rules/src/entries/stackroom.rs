@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 use crate::ask::Over;
 
@@ -30,7 +30,7 @@ pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroo
     if !same { g.m.stackroom.books = None; return; }
     let k = g.m.stackroom.books.as_mut().unwrap();
     if !near { k.near = None; }
-    // only the doors kept, in the order kept, as the copied map of ts:94 has them
+    // only the doors kept, in the order kept
     let mut back = JsMap::new();
     for (d, read) in floors.iter() {
         let mut pair = k.floors.delete(d).unwrap_or([None, None]);

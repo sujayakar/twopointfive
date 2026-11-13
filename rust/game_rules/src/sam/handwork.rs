@@ -1,11 +1,10 @@
 pub use ::game_types::handwork::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ---------------------------------------------------------------- the work pose
 
@@ -91,18 +90,17 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
     for k in 0..4 {
         let at = crate::character::work_key_beat(k as f64, secs);
         if before < at && after >= at {
-            crate::audio_iface::game_audio_like_play(g, "padBeep", Some(pad.def.pos), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 + 0.03 * k as f64 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::PadBeep, Some(pad.def.pos), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 + 0.03 * k as f64 }));
             let [x, y] = keys[k];
             let (pos, n) = (pad.def.pos, pad.n);
             let spot: V3 = [pos[0] + n[0] * 0.03 + r[0] * x, pos[1] + y, pos[2] + n[2] * 0.03 + r[2] * x];
-            let bf = crate::scene_boxes::box_flag();
             let box_ = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
                 c: spot,
                 h: [0.008, 0.007, 0.002],
                 yaw: Some(pad.def.yaw),
                 albedo: Some([0.2, 0.16, 0.05]),
                 emissive: Some([2.4, 1.5, 0.3]),
-                flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
+                flags: Some((crate::scene_boxes::box_flag::DYNAMIC | crate::scene_boxes::box_flag::NO_SHADOW) as f64),
                 ..Default::default()
             });
             g.fx.push(crate::game::GameFxItem { box_, ttl: 0.11 });
@@ -124,7 +122,7 @@ pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64
             h: [0.07, 0.11, 0.02],
             yaw: Some(m::atan2(n[0], n[2])),
             albedo: Some([0.09, 0.1, 0.08]),
-            flags: Some(crate::scene_boxes::box_flag().dynamic),
+            flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
             owner: Some(owner),
             ..Default::default()
         });
@@ -294,7 +292,6 @@ pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
     let r: V3 = [-f[2], 0.0, f[0]];
     let s = if i.two { if right { 0.045 } else { -0.045 } } else { 0.0 };
     let done = l.t > l.dur;
-    let bf = crate::scene_boxes::box_flag();
     let owner = crate::rig_props::owner_of(g, c_2);
     out.put(&crate::scene_boxes::MakeBoxP {
         c: if done { [h[0], h[1] - 0.07, h[2]] } else { [h[0] + f[0] * 0.09 - r[0] * s, h[1], h[2] + f[2] * 0.09 - r[2] * s] },
@@ -303,7 +300,7 @@ pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
         albedo: Some([0.13, 0.14, 0.15]),
         rough: Some(0.4),
         metal: Some(true),
-        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC | crate::scene_boxes::box_flag::NO_SHADOW) as f64),
         owner: Some(owner),
         ..Default::default()
     });
@@ -344,14 +341,13 @@ pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
     let spot = crate::inhand::belt_torch().at;
     let (o, a) = (spot[0], spot[1]);
     let at: V3 = [hp[0] + r[0] * o + f[0] * a, hp[1] - 0.045, hp[2] + r[2] * o + f[2] * a];
-    let bf = crate::scene_boxes::box_flag();
     let owner = crate::rig_props::owner_of(g, c_2);
     out.put(&crate::scene_boxes::MakeBoxP {
         c: at,
         h: [0.017, 0.062, 0.017],
         yaw: Some(m::atan2(f[0], f[2])),
         albedo: Some([0.05, 0.05, 0.055]),
-        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC | crate::scene_boxes::box_flag::NO_SHADOW) as f64),
         owner: Some(owner),
         ..Default::default()
     });
@@ -361,7 +357,7 @@ pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
         yaw: Some(m::atan2(f[0], f[2])),
         albedo: Some([0.07, 0.07, 0.075]),
         stuff: Some(crate::scene_stuff::BoxStuff::Metal),
-        flags: Some(js::or_bits(bf.dynamic, bf.no_shadow)),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC | crate::scene_boxes::box_flag::NO_SHADOW) as f64),
         owner: Some(owner),
         ..Default::default()
     });

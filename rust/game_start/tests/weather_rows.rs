@@ -73,7 +73,7 @@ fn a_snow_level_says_what_lies_on_it() {
     assert!(d.snow.words.iter().any(|w| w.w == 1), "the pass has fresh snow");
     let me = p.g.player_id(p.g.player) as u32;
     let f = d.snow.feet.iter().find(|f| f.id == me).expect("Sam stands on it");
-    assert_eq!(f.says & game_draw::snow::ALIVE, game_draw::snow::ALIVE);
+    assert_eq!(f.says & game_draw::snow::foot_flag::ALIVE, game_draw::snow::foot_flag::ALIVE);
     drop(p);
     let mut o = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, ..Default::default() });
     for _ in 0..4 { o.frame(); }
@@ -133,4 +133,17 @@ fn wet_ground_is_the_rows_and_not_the_box() {
         let h = d.boxes.head[0];
         assert!(!wet.iter().any(|&i| i >= h.from && i < h.to), "a wet box is sent again every tick: {}..{}", h.from, h.to);
     }
+}
+
+/// THE RULE: a mission's row says its level is built for snow where the level's file does, and nowhere else. A FAILURE MEANS: the list offers a weather the level will not be in, or offers none of one it would.
+#[test]
+fn a_row_says_snow_as_its_level_does() {
+    let mut snow = 0;
+    for e in game::scene_scenario_list::all_missions() {
+        let file = e.level.as_deref().unwrap_or("office.json");
+        let level = game_start::json::parse(&game_start::files::level_text(file)).expect(file);
+        assert_eq!(e.snow, level.get("snow").bool() == Some(true), "{} on {file}", e.id);
+        snow += e.snow as u32;
+    }
+    assert!(snow >= 4);
 }

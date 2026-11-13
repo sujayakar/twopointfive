@@ -1,15 +1,6 @@
 //! What falls and what it leaves: the landings waiting, and the glass lying on the floor. The rules are `rust/sim/src/falls.rs`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Words, V3};
+use crate::{bytes::ToBytes, V3};
 use alloc::vec::Vec;
-
-/// the sound a thing lands with
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words, ToBytes)]
-pub enum FallSound {
-    #[word("")] #[default] Empty,
-    GlassTinkle,
-    GlassShatter,
-}
 
 /// is the floor told of a landing
 #[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
@@ -24,7 +15,7 @@ pub enum FallKind { Glass, Pieces }
 pub struct Landing {
     pub t: f64,
     pub pos: V3,
-    pub sound: FallSound,
+    pub sound: Option<crate::audio_iface::Sfx>,
     pub gain: f64,
     pub rate: f64,
     pub amount: f64,
@@ -63,7 +54,7 @@ impl Default for Falls { fn default() -> Self { Self::blank() } }
 /// a landing that has come
 #[derive(Clone, Copy, Debug)]
 pub struct FallDue {
-    pub sound: FallSound,
+    pub sound: Option<crate::audio_iface::Sfx>,
     pub pos: V3,
     pub gain: f64,
     pub rate: f64,

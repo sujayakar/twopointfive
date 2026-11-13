@@ -2,12 +2,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use crate::guards::behave::{Acts, Sensed};
 use crate::guards::senses::Saw;
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- small helpers
 
@@ -51,7 +49,7 @@ const LOW_QUIET_SECS: f64 = 4.0;
 ///   behave      his state's behaviour (behave/): where his legs go, what his gun does
 ///   pose        the looks laid over his aim, the muzzle and the wall, the animator, his light, his footfall
 pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    use crate::game::GuardState as St;
+    
     let c = g.gd[gd].ch;
     crate::character::character_turn_begin(g, c);
     player_ground_vel(g);
@@ -176,9 +174,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false));
         }
         let at = head_or_pos(g, c);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.8), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.8), None);
         if g.time - g.last_sting_t > 8.0 {
-            crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::AlertSting, None, Some(0.75), None);
             g.last_sting_t = g.time;
         }
         if g.ai_enabled {
@@ -200,7 +198,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
                 crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
         }
     }
     crate::startle::startle_sight(g, gd, prev, seen);

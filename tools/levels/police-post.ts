@@ -92,6 +92,7 @@ import type { MarkFace, MarkPal } from '../../src/scene/markings';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NOTES = 'The district police post at night, for one man sneaking: every door that matters is locked on one key and the only ring is on the desk sergeant\'s belt; most men know the armoury pad\'s code, and the armoury has no other door; or a lock is picked in the corridor a man walks, or the breaker brings the ring out to the shed. A perimeter wall with a lit main gate, two side gates and the east gate into the impound (the way out), a main building of seven rooms off one corridor, a generator shed with the breaker, a guard hut, two pickups under a canopy, the radio mast on the back strip. Six beats authored, five manned a deal; two cameras, a keypad door. In the GWOT look kit. Regenerate: bun run tools/levels/export.ts police-post';
 export const MATERIALS = GWOT_MATERIALS;
@@ -214,6 +215,8 @@ export const RESPONSE: ResponseData = {
 };
 
 export const NAME = VARIANT ? `police-post-v${VARIANT[0]}${VARIANT[1] ?? 0}${VARIANT[2] ?? 0}` : 'police-post';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 
 export function build(): { level: Level; scenarios?: LevelScenarios; groups: string[]; surfaces: SurfacesData; quiet: QuietData } {
   const trace: GeneratorTrace = { groups: [] };

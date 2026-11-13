@@ -19,7 +19,7 @@ macro_rules! calls { ($made:ident) => { $made! {
     free reserve(bytes: usize);
 
     /// A GAME FROM ITS START (game_start `handed`): the level file's text, the address's words (empty: none), the mannequin's gltf and its buffer, the cast's gltf and the look's (empty: none), what the machine keeps (empty:
-    /// nothing). No state crosses. Flags: 1 the rows that dress the picture are up, 2 the host makes what `ready` makes. 0: there is no room for another
+    /// nothing). No state crosses. Flags: `StartFlag`.
     free start(level: &[u8], words: &str, mannequin: &[u8], mannequin_bin: &[u8], cast: &[u8], cast_look: &[u8], kept: &str, seed: u32, seats: u32, flags: u32) -> GameNo;
     /// what the first step wants and such a start leaves, so many lines of it (the light under the roofs): there is more. A step that finds it wanting makes the rest
     reads ready(lines: u32) -> bool;
@@ -27,7 +27,7 @@ macro_rules! calls { ($made:ident) => { $made! {
     free drop(game: GameNo);
     /// which seat this machine shows, by its place in the game's list
     does show_seat(seat: u32);
-    /// ONE TICK of every seat on what was handed. Flags: 8 the save controller's turn
+    /// ONE TICK of every seat on what was handed. Flags: `StepFlag`
     does step(dt: f64, flags: u32) => Result<(), String>;
     /// the host has taken (or does not want) what the tick told it: the list is a step's output and no part of the state, so nothing else empties it
     does out_clear();
@@ -70,8 +70,6 @@ macro_rules! calls { ($made:ident) => { $made! {
     does draw_cut();
     /// the floors' traffic map (game_draw `traffic`), worked out as it is asked: once, as a level opens
     reads traffic() => Vec<u8>;
-    /// a name that crosses by its number (a sound's)
-    reads draw_name(number: u32) => String;
 
     /// what a HUD is told of the game as its last tick left it, about the seat this machine shows
     reads tick_view() => TickView;
@@ -135,11 +133,10 @@ macro_rules! calls { ($made:ident) => { $made! {
     does state_words() => Vec<u32>;
     /// the die's count of draws
     reads die_n() -> f64;
-    /// the parts of rust/sim's block by name, and a hash of each
-    free part_names() => Vec<String>;
-    reads part_hashes() => Vec<u32>;
+    /// a word of where every man and leaf stands: what two machines of one game hold to each other after each tick
+    reads tick_word() -> u32;
 
-    /// A PLANTED PANIC, for the check of the road back from one: inside the game, as a rule of the tick would
+    /// A PLANTED PANIC, for the check of the road back from one: inside the game, as a rule of the tick would, in the middle of a search for a way
     does debug_panic();
 } } }
 

@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 //! WALL WEAR: what a breakable wall or piece of cover SHOWS while it is being shot, before it gives. Look only: wallbreak counts a round into a cell and opens the cell when the count is
 //! up; here every counted round's mark is sized by how far gone its cell is (a pock, a small hole in a ring of blown plaster, cracks out of it), the marks the cell already carries grow
 //! with it, and on a thin partition the same mark shows on the far face, with a puff and chips thrown out of that side. It adds no mark: the round's own is made into this. A THROUGH mark
@@ -9,12 +7,8 @@ pub use ::game_types::wallwear::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-
-#[allow(unused_imports)]
-use crate::out_events::*;
+use crate::v3::{self, V3};
 use crate::render_decals::{mark_asked, Ask};
 
 pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e, ours)); }
@@ -22,25 +16,26 @@ pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scen
 pub(super) fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); }
 
 use crate::out_events::{OutEvent, OutParticlesEmit, OutWallWearRound};
-use crate::render_decals::{mark_of, mark_set_mut, wear_mark, DecalKind, MarkSet};
+use crate::render_decals::{mark_of, mark_set_mut, DecalKind, MarkSet};
 use crate::render_particles::{EmitOpts, EmitShape, PKind, MAX_NEW_PER_FRAME};
 use crate::scene_materials::Surf;
 
+/// the mark's kind in decals.wgsl
+const WEAR_LOOK: f64 = 3.0;
 const PALE: V3 = [0.86, 0.85, 0.82];
 /// the mark's material code (decals.wgsl wearMark): plaster · wood · torn board or cloth
 fn mat_of(s: Surf) -> f64 { match s { Surf::Wood => 1.0, Surf::Cardboard | Surf::Fabric => 2.0, _ => 0.0 } }
 /// strength → the record: param = look + material + strength; radius = the reach, or hypot(half thickness, reach) for a mark on the mid-plane
-fn shape(d: &mut crate::render_decals::Mark, s: f64) {
-    let k = wear_mark();
+fn shape(k: crate::knobs::WallwearKMark, d: &mut crate::render_decals::Mark, s: f64) {
     let reach = k.reach0 + k.reach1 * s;
-    d.param = k.look + d.wear_mat + s;
+    d.param = WEAR_LOOK + d.wear_mat + s;
     d.radius = if d.wear_half > 0.0 { m::hyp2(d.wear_half, reach) } else { reach };
 }
 
 /// A round was counted on a cell of a breakable. `key` names the cell that was hit, `counted` the one the count went to (the same, but for a sill under a standing upper), `frac` that cell's count ÷ what it takes (≥ 1: it goes this frame).
 pub(super) fn wear_round(g: &mut Game, e: &OutWallWearRound, ours: bool) {
     if !g.destr.walls.wear.on { return; }
-    let w = crate::wallwear::wear();
+    let (w, k) = (g.k.wallwear, g.k.wallwear.mark);
     if e.frac >= 1.0 { mark_set_mut(g).wear.cells.retain(|c| c.0 != e.counted); return; }   // the cell is gone this frame: what it throws is the break's own (a sill's list is kept: it stands)
     let b = g.tab.boxes[e.box_].clone();
     // the thin axis of the box is the one a through mark crosses
@@ -55,20 +50,20 @@ pub(super) fn wear_round(g: &mut Game, e: &OutWallWearRound, ours: bool) {
     // every mark the cell carries grows with it
     if let Some(at) = s.wear.cells.iter().position(|c| c.0 == e.key) {
         let list = core::mem::take(&mut s.wear.cells[at].1);
-        for &serial in list.iter() { if let Some(d) = mark_of(s, serial) { let v = strength(d.seed); if v > crate::js::rem(d.param, 1.0) + 1e-4 { shape(d, v); } } }
+        for &serial in list.iter() { if let Some(d) = mark_of(s, serial) { let v = strength(d.seed); if v > crate::js::rem(d.param, 1.0) + 1e-4 { shape(k, d, v); } } }
         s.wear.cells[at].1 = list;
     }
     // this round's own mark
     let Some(i) = own(s, e.hit_p) else { return };
     let (serial, n) = (s.list[i].serial, s.list[i].n);
-    let through = m::abs(v3::dot(n, axis)) > 0.9 && half >= wear_mark().min_half && half <= wear_mark().max_half;
+    let through = m::abs(v3::dot(n, axis)) > 0.9 && half >= k.min_half && half <= k.max_half;
     let d = &mut s.list[i];
     if through { d.pos = v3::mad(d.pos, d.n, -half); }   // onto the mid-plane: both faces are then on its two planes
     d.kind = DecalKind::Damage;
     d.wear_half = if through { half } else { 0.0 };
     d.wear_mat = mat_of(e.surf);
     let v = strength(d.seed);
-    shape(d, v);
+    shape(k, d, v);
     match s.wear.cells.iter().position(|c| c.0 == e.key) {
         Some(at) => s.wear.cells[at].1.push(serial),
         None => {
@@ -101,7 +96,7 @@ fn throw_out(g: &mut Game, b: &crate::scene_boxes::Box, surf: Surf, hit_p: V3, d
     let (wood, soft) = (surf == Surf::Wood, surf == Surf::Fabric || surf == Surf::Cardboard);
     let chip = if surf == Surf::Drywall { v3::lerp3(b.albedo, PALE, 0.55) } else if wood { [0.66, 0.52, 0.34] } else { v3::lerp3(b.albedo, [0.8, 0.78, 0.72], if soft { 0.4 } else { 0.1 }) };
     let dust = if surf == Surf::Drywall { [0.82, 0.8, 0.76] } else if wood { [0.62, 0.54, 0.42] } else { v3::lerp3(b.albedo, [0.7, 0.68, 0.64], 0.6) };
-    let w = crate::wallwear::wear();
+    let w = g.k.wallwear;
     let mut room = w.max_births;
     if through {
         // out of the far face, along the round (kept off the wall plane so nothing is born inside it)

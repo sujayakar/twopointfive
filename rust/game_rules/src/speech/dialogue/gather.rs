@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- names: rooms, routes, doors, numbers
 fn with_the_room(room: &str) -> String { if room.starts_with("the ") { String::from(room) } else { alloc::format!("the {}", room) } }

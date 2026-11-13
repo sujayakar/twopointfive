@@ -1,7 +1,4 @@
 //! The types of `consts`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
 
 pub const PLAYER_ID: f64 = 1.0;
 
@@ -15,4 +12,4 @@ pub const DRIVE_REACH: f64 = 1.1;
 
 pub const DRIVE_SECS: f64 = 3.5;
 
-pub const INTERACT_KEY: &str = "Space";
+pub const INTERACT_KEY: crate::input::types::Key = crate::input::types::Key::Space;

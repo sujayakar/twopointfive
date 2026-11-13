@@ -26,6 +26,7 @@ struct SceneInfo {
   globalsB: array<vec4f, 32>,   // a global's bounds in the world: its least corner, then its greatest, a little proud of it
   glassInfo: vec4u,   // x, y: how many panes
   glass: array<vec4f, 96>,   // a pane: its middle and its yaw's cosine, its half sizes and the sine, its tint and its place among the statics
+  statics: vec4u,   // x: how many of the boxes are statics: those before that place. A box at it or past it is the frame's own and moves
 };
 
 // one of a man's proxies, as a shader traces it: a round cone

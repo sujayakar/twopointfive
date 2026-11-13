@@ -1,7 +1,6 @@
 //! The types of `doorswing`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, bytes::ToBytes};
+use alloc::string::String;
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SwingDeal {

@@ -104,6 +104,8 @@ section! {
         pub glass_info: [u32; 4],
         /// a pane: its middle and its yaw's cosine, its half sizes and the sine, its tint and its place among the statics
         pub glass: [[f32; 4]; 96],
+        /// x: how many of the boxes are statics: those before that place. A box at it or past it is the frame's own and moves
+        pub statics: [u32; 4],
     }
 }
 section! {
@@ -311,7 +313,7 @@ impl Boxes {
         let mut cut_at = (u32::MAX, 0u32);
         self.wet.follow(g);
         for i in 0..n {
-            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(g, i as u32, &all[st[i]], was) } else { &all[st[i]] };
+            let b = if self.wet.is(i as u32) { let was = Was::of(&all[st[i]], &self.look); self.wet.dressed(i as u32, &all[st[i]], was) } else { &all[st[i]] };
             let now = Was::of(b, &self.look);
             if !whole && self.was[i] == now { continue; }
             let anew = i >= self.was.len();

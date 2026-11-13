@@ -1,7 +1,9 @@
 {
   "version": 2,
   "name": "tut-road",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-road.ts build → tools/levels/export.ts", "notes": "The tutorial's first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post's wall and gateway, the hut, the sandbags under a machine gun, the roadblock's wall, the upper gate). Its fights are staged by levels/tut-road.script.ts. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road" },
+  "script": "tut-road",
+  "snow": true,
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-road.ts build → tools/levels/export.ts", "notes": "The tutorial's first mission: one man and his rifle on a snowed-in mountain road at night, walked along one line (the stopped truck, the road post's wall and gateway, the hut, the sandbags under a machine gun, the roadblock's wall, the upper gate). Its fights are staged by the game's script of its name. The snow is in the file. Regenerate: bun run tools/levels/export.ts tut-road" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -837,6 +839,7 @@
     { "id": "gate", "hinge": [37, 14.68], "closedDir": -1.5707963267948966, "width": 0.86, "angle": -1.45, "exterior": true, "closer": false, "swing": -1 },
     { "id": "hut", "hinge": [17, 12.32], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "closer": false, "locked": true, "swing": 1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.06, 0.19, 0.32], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [
     { "id": "sentry", "points": [[15.6, 0, 15.1], [15.9, 0, 15.299999999999999]], "wait": [600, 600] },
     { "id": "hut", "points": [[21.75, 0, 10.25], [21.75, 0, 10.45]], "wait": [600, 600] },
@@ -866,6 +869,20 @@
   "breaker": { "pos": [17.75, 1.35, 9.999999999999998], "panel": "breaker_panel", "led": "breaker_led" },
   "beacons": [
     { "id": "beacon0", "pos": [16.8, 2.61, 13], "box": "sw_beacon0" }
+  ],
+  "vehicleLamps": [
+    { "box": "box_0302", "what": "head lamp" },
+    { "box": "box_0303", "what": "tail lamp" },
+    { "box": "box_0304", "what": "head lamp" },
+    { "box": "box_0305", "what": "tail lamp" },
+    { "box": "box_0331", "what": "head lamp" },
+    { "box": "box_0332", "what": "tail lamp" },
+    { "box": "box_0333", "what": "head lamp" },
+    { "box": "box_0334", "what": "tail lamp" },
+    { "box": "box_0443", "what": "head lamp" },
+    { "box": "box_0444", "what": "tail lamp" },
+    { "box": "box_0445", "what": "head lamp" },
+    { "box": "box_0446", "what": "tail lamp" }
   ],
   "sky": { "zenith": [0.012, 0.02, 0.042], "horizon": [0.04, 0.05, 0.075] },
   "plans": {

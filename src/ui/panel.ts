@@ -6,7 +6,7 @@
 // The game panel shows ONE hover tip of its own (#ptip) in place of the browser's: whatever a row / button / header carried as its `title`, and the full text of
 // anything the 372 px column cut short with an ellipsis (the status strip, a page's subtitle, a section's live summary, a long label) — at once, wrapped, readable.
 import { rectZoom, uiSize } from './textsize';
-import { gameCode } from '../host/keymap';   // (the player's own keys: the panel's key is where he put it)
+import { DEBUG_KEY, gameCode } from '../host/keymap';   // (the player's own keys: the panel's key is where he put it)
 type Getter<T> = () => T; type Setter<T> = (v: T) => void;
 type Rf = (() => void) & { el?: HTMLElement; page?: HTMLElement | null };
 /** localStorage behind try/catch (a private window, a disabled store, a full quota: the panel builds and works, nothing persists) and JSON that must be what we
@@ -96,7 +96,7 @@ export class Panel {
       this.search?.addEventListener('focus', () => { this.root.style.minHeight = getComputedStyle(this.root).height; }); this.search?.addEventListener('blur', () => { this.root.style.minHeight = ''; });
       // backtick opens and shuts the panel (host/debugger.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
       // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
-      this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== 'Backquote' || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
+      this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== DEBUG_KEY || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
       this.installTips();
     } else this.root.appendChild(this.body);
     setInterval(() => { if (this.visible) this.refresh(); }, opts.refreshMs ?? 400);
@@ -213,7 +213,7 @@ export class Panel {
     const t = e.target; const typingIn = (t instanceof HTMLInputElement && (t.type === 'text' || t.type === 'search')) || t instanceof HTMLSelectElement;   // (a field being typed in / a list being picked keeps its own keys)
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
-    if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: host/debugger.ts's hotkey shuts it — never a character for the search)
+    if (gameCode(e.code) === DEBUG_KEY) return false;   // (the panel's own key: host/debugger.ts's hotkey shuts it — never a character for the search)
     return false;
   }
   private saveSoon() { if (!this.game) return; clearTimeout(this.saveT); this.saveT = setTimeout(() => lsSet('twopointsix.panel', JSON.stringify(this.state)), 250) as unknown as number; }

@@ -6,7 +6,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use crate::v3::{self, V3};
-use alloc::{format, string::String, vec::Vec};
+use alloc::vec::Vec;
 
 /// the spots outside a door, (depth, lateral)
 const SPOTS: [(f64, f64); 9] = [(3.0, 1.6), (3.0, -1.6), (2.4, 1.2), (2.4, -1.2), (1.2, 2.4), (1.2, -2.4), (1.2, 1.7), (1.2, -1.7), (2.6, 0.0)];

@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// which plan the man's role on the roster belongs to (`st.roles.get(m)?.plan`)
 fn role_plan(g: &mut Game, m: GuardId) -> Option<TacticsPlanId> {
@@ -100,7 +100,7 @@ fn flanker_presses(g: &mut Game, plan: TacticsPlanId, live: &[GuardId], presser:
     end_plan(g, plan, None);
     let Some(p2) = plan_approach(g, live, fix, Some(fl)) else { return };
     // (no waiting for anybody: he goes as soon as he is at his corner)
-    if let Some(&r) = g.tab.tactics_plan[p2].roles.get(fl) { g.tab.tactics_role[r].hold_t = g.tune.flank_wait; }
+    if let Some(&r) = g.tab.tactics_plan[p2].roles.get(fl) { g.tab.tactics_role[r].hold_t = g.k.tune.flank_wait; }
 }
 
 /// NEW PLANS: unplanned free alert men of one side, no eyes on their man, more than JOIN_M off a fix they share. A live plan of his side on (about) a man's fix takes him in by a re-deal.
@@ -279,7 +279,7 @@ fn push(g: &mut Game, gd: GuardId, role: TacticsRoleId, dt: f64, out: &mut TacMo
         let pr_arrived = role_of_man(g, pr).map_or(false, |r| g.tab.tactics_role[r].arrived);
         if pr != gd && !pr_arrived && dist_xz(g.ch[c].pos, g.pos_of(pr)) < BEHIND_M { return kneel_toward(g, gd, dt, fix, out, Some(0.0)); }
     }
-    let run = g.tune.guard_chase;
+    let run = g.k.tune.guard_chase;
     if advance(g, gd, dt, fix, run, out) || dist_xz(g.ch[c].pos, fix) < ARRIVE_M || crate::guards::not_getting_anywhere(g, gd, dt, ROLE_STALL_SECS) { arrive(g, gd, role); }
     aim_at_fix(out, fix);
 }
@@ -291,7 +291,7 @@ fn press(g: &mut Game, gd: GuardId, role: TacticsRoleId, dt: f64, out: &mut TacM
     let c = g.gd[gd].ch;
     if !g.tab.tactics_role[role].holding {
         let hold = g.tab.tactics_role[role].hold_at.unwrap_or(fix);
-        let jog = g.tune.guard_investigate;
+        let jog = g.k.tune.guard_investigate;
         if advance(g, gd, dt, hold, jog, out) || dist_xz(g.ch[c].pos, hold) < 0.5 {
             g.tab.tactics_role[role].holding = true;
             g.gd[gd].drop_path();
@@ -305,7 +305,7 @@ fn press(g: &mut Game, gd: GuardId, role: TacticsRoleId, dt: f64, out: &mut TacM
     if ready_to_go(g, plan) {
         let why = if g.tab.tactics_plan[plan].contact { Go::Contact } else { Go::Set };
         go_now(g, plan, gd, why);
-    } else if g.tab.tactics_role[role].hold_t >= g.tune.flank_wait {
+    } else if g.tab.tactics_role[role].hold_t >= g.k.tune.flank_wait {
         go_now(g, plan, gd, Go::TimeUp);
     }
 }
@@ -330,7 +330,7 @@ fn flank(g: &mut Game, gd: GuardId, role: TacticsRoleId, dt: f64, out: &mut TacM
     let r = &mut g.tab.tactics_role[role];
     r.ground = Some(r.ground.unwrap_or(0.0) * m::exp(-dt / 1.5) + dist_xz(p, r.last_pos.unwrap_or(p)));
     r.last_pos = Some(v3::copy(p));
-    let run = g.tune.guard_chase;
+    let run = g.k.tune.guard_chase;
     if advance(g, gd, dt, set_at, run, out) || dist_xz(g.ch[c].pos, set_at) < 0.5 {
         g.tab.tactics_role[role].holding = true;
         g.gd[gd].drop_path();
@@ -354,7 +354,7 @@ fn second(g: &mut Game, gd: GuardId, role: TacticsRoleId, dt: f64, out: &mut Tac
     let pr_holding = g.tab.tactics_plan[plan].roles.get(pr).map_or(false, |r| g.tab.tactics_role[*r].holding);
     let moving = g.gd[gd].path.len() > 0 && g.gd[gd].path_i < g.gd[gd].path.len() && g.gd[gd].speed > 0.2;
     if gap > BEHIND_M + (if moving { 0.0 } else { BEHIND_SLACK_M }) {
-        let pace = if gap > BEHIND_M + 3.0 { g.tune.guard_chase } else { g.tune.guard_investigate };
+        let pace = if gap > BEHIND_M + 3.0 { g.k.tune.guard_chase } else { g.k.tune.guard_investigate };
         advance(g, gd, dt, goal, pace, out);
         aim_at_fix(out, fix);
     } else {
@@ -493,7 +493,7 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     let team = g.team(gd);
     let list = g.guards.clone();
     for o in list {
@@ -529,13 +529,13 @@ fn move_lone(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     let mut out = TacMove { move_: 0.0, aim: None, pied: false, crouch: 0.0 };
     if l.released {
         // on alone, carefully: the chase as it always was, at a walk
-        let walk = g.tune.guard_walk;
+        let walk = g.k.tune.guard_walk;
         let r = crate::guards::chase_fix(g, gd, dt, walk);
         return Some(TacMove { move_: r.move_, aim: r.aim, pied: r.pied, crouch: 0.0 });
     }
     let hold = l.hold_at.unwrap();
     if l.hold_t <= 0.0 && dist_xz(g.ch[c].pos, hold) > 0.2 {
-        let pace = g.tune.guard_investigate;
+        let pace = g.k.tune.guard_investigate;
         let there = advance(g, gd, dt, hold, pace, &mut out);
         if there || crate::guards::not_getting_anywhere(g, gd, dt, ROLE_STALL_SECS) {
             l.hold_at = Some(v3::copy(g.ch[c].pos));
@@ -554,7 +554,7 @@ fn move_lone(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     if !l.called && l.hold_t > 0.4 {
         lone_call(g, gd, l);
     }
-    if l.hold_t >= g.tune.lone_wait || (l.hold_t > 1.0 && !alone(g, gd)) {
+    if l.hold_t >= g.k.tune.lone_wait || (l.hold_t > 1.0 && !alone(g, gd)) {
         l.released = true;
         g.gd[gd].drop_path();
         crate::guards::reset_chase(g, gd);
@@ -585,7 +585,7 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
     if s(g).gates.has(gd) {
         // on a kill-zone doorway's drill: the gate inside followPath has his feet; nothing else of ours meanwhile
         s(g).lone.delete(gd);
-        let chase = g.tune.guard_chase;
+        let chase = g.k.tune.guard_chase;
         let r = crate::guards::chase_fix(g, gd, dt, chase);
         return Some(TacMove { move_: r.move_, aim: r.aim, pied: r.pied, crouch: r.crouch });
     }
@@ -878,7 +878,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, gate: &mut crate
     let line = call_line(g, gate);
     crate::game::game_say(g, gd, &line, Some(true), None);
     let radio_at = head_or_pos(g, gd);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(radio_at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(radio_at), Some(0.7), None);
     let Some(best) = whom_to_call(g, gd, gate.door) else { return };
     let marks = plan_for(g, gate.door, gate.side, gate.near_a);
     let spot = stack_spot(g, gate.door, gate.side, gate.near_a, 1.0, marks.as_ref()).pos;

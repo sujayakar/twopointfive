@@ -18,7 +18,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 game = { path = "../game_rules", package = "game_rules" }
-sim = { path = "../sim" }
 # (what the picture is told)
 game_draw = { path = "../game_draw" }
 # (the game's own start and what a host does round a step, with none of its readers of this repository's files: a host hands the level's text and the character's bytes in)

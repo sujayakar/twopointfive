@@ -1,7 +1,6 @@
 pub use ::game_types::ringlone::types;
 pub use types::*;
-use crate::game::Game;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 
 /// The way wedge `key` of `n` points, in radians; 1 is up, clockwise.

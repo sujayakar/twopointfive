@@ -1,7 +1,6 @@
 //! The types of `opening`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
+use alloc::string::String;
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct OpeningModSpotsValue {

@@ -1,6 +1,5 @@
 //! The types of `roomfight`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -119,6 +118,8 @@ pub enum DefMode {
     #[default] Hold,
     Move,
     Free,
+    /// his squad's orders have his legs
+    Told,
 }
 
 /// The leg a defender is on, or was on last (roomfight/post.rs).

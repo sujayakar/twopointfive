@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 use game::m;
-use game::scene_boxes::{box_flag, Box};
+use game::scene_boxes::{box_flag, Box, SHEET_MASK};
 use game::scene_materials::Surf;
 use game::weather::{WET_ALBEDO, WET_ROUGH};
 use crate::boxes::Was;
@@ -32,15 +32,14 @@ fn sky_spots(b: &Box, roofs: &[Rect], enough: u32, step: f64) -> u32 {
 fn sky_over_most(b: &Box, roofs: &[Rect]) -> bool { sky_spots(b, roofs, 13, 0.4) >= 13 }
 /// a ground slab a picked rain wets
 fn open_ground(b: &Box, roofs: &[Rect]) -> bool {
-    let (t, k) = (top(b), box_flag());
-    if !(t > -0.011 && t < 0.003) || b.h[0] * b.h[2] < 4.0 || crate::boxes::pack::flags(b) & (k.no_primary as u32 | k.glass as u32 | k.dynamic as u32) != 0 { return false; }
+    let t = top(b);
+    if !(t > -0.011 && t < 0.003) || b.h[0] * b.h[2] < 4.0 || crate::boxes::pack::flags(b) & (box_flag::NO_PRIMARY | box_flag::GLASS | box_flag::DYNAMIC) != 0 { return false; }
     sky_spots(b, roofs, 1, 0.45) >= 1
 }
-fn sheet_mask() -> u32 { game::scene_boxes::SHEET_MASK as u32 }
 /// a sheet lying on the ground: drawn only, thin, low, not under the ground
-fn ground_sheet(b: &Box) -> bool { crate::boxes::pack::flags(b) & sheet_mask() == box_flag().no_shadow as u32 && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0.0 }
+fn ground_sheet(b: &Box) -> bool { crate::boxes::pack::flags(b) & SHEET_MASK == box_flag::NO_SHADOW && b.h[1] <= 0.02 && top(b) <= 0.03 && b.c[1] - b.h[1] >= 0.0 }
 /// a flat a sheet may lie on: solid, square to the world, low, broader than a kerb
-fn ground_flat(b: &Box) -> bool { crate::boxes::pack::flags(b) & sheet_mask() == 0 && b.yaw == 0.0 && top(b) <= FLAT_TOP && b.h[0] > 0.4 && b.h[2] > 0.4 }
+fn ground_flat(b: &Box) -> bool { crate::boxes::pack::flags(b) & SHEET_MASK == 0 && b.yaw == 0.0 && top(b) <= FLAT_TOP && b.h[0] > 0.4 && b.h[2] > 0.4 }
 
 /// THE GROUND THAT IS WET while the weather's ground is, of these statics, as their places in the list
 fn wet_ground_of(g: &Game, statics: &[BoxId], roofs: &[Rect], lot: Option<BoxId>, picked: bool) -> Vec<u32> {
@@ -52,7 +51,7 @@ fn wet_ground_of(g: &Game, statics: &[BoxId], roofs: &[Rect], lot: Option<BoxId>
         let on = |b: &Box, s: &Box| { let up = top(b) - top(s); up > 0.0 && up <= WET_OVER && m::abs(b.c[0] - s.c[0]) <= s.h[0] && m::abs(b.c[2] - s.c[2]) <= s.h[2] };
         for (i, &id) in statics.iter().enumerate() {
             let b = &all[id];
-            if Some(id) != lot && !wet[i] && crate::boxes::pack::flags(b) & sheet_mask() == 0 && bases.iter().any(|s| on(b, s)) && sky_over_most(b, roofs) { wet[i] = true; }
+            if Some(id) != lot && !wet[i] && crate::boxes::pack::flags(b) & SHEET_MASK == 0 && bases.iter().any(|s| on(b, s)) && sky_over_most(b, roofs) { wet[i] = true; }
         }
     }
     let grounds: Vec<usize> = (0..statics.len()).filter(|&i| ground_flat(&all[statics[i]])).collect();
@@ -78,7 +77,7 @@ fn standing(g: &Game, statics: &[BoxId], lot: Option<BoxId>) -> u32 {
     for (i, &id) in statics.iter().enumerate() {
         let b = &g.tab.boxes[id];
         if top(b) > hi { continue; }
-        w = eat(w, i as u32); w = eat(w, crate::boxes::pack::flags(b) & sheet_mask()); w = eat(w, q(b.yaw));
+        w = eat(w, i as u32); w = eat(w, crate::boxes::pack::flags(b) & SHEET_MASK); w = eat(w, q(b.yaw));
         for k in 0..3 { w = eat(w, q(b.c[k])); w = eat(w, q(b.h[k])); }
     }
     w
@@ -110,13 +109,13 @@ impl Wet {
     pub fn is(&self, i: u32) -> bool { !self.list.is_empty() && self.list.binary_search(&i).is_ok() }
     /// the box as the renderer has it while wet: darker where it is not bare metal, and with a water's film where it does not drink. `was` = the box itself as it stands: it is
     /// dressed again only where that moved, so the rows of a wet box are packed again only when it changed
-    pub fn dressed(&mut self, g: &Game, i: u32, b: &Box, was: Was) -> &Box {
+    pub fn dressed(&mut self, i: u32, b: &Box, was: Was) -> &Box {
         let at = self.list.binary_search(&i).unwrap();
         if !matches!(&self.dressed[at], Some((w, _)) if *w == was) {
             let mut o = b.clone();
             if o.wet_k.is_none() {
                 o.wet_k = Some(if b.metal == Some(true) { 1.0 } else { WET_ALBEDO });
-                if !soaks(g, b) { o.flags = (crate::boxes::pack::flags(b) | box_flag().gloss as u32) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
+                if !soaks(b) { o.flags = (crate::boxes::pack::flags(b) | box_flag::GLOSS) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
             }
             self.dressed[at] = Some((was, o));
         }
@@ -125,4 +124,4 @@ impl Wet {
 }
 
 /// does what this box is made of soak water up: no film on it, no puddle
-fn soaks(g: &Game, b: &Box) -> bool { matches!(game::scene_materials::does_of(g, b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }
+fn soaks(b: &Box) -> bool { matches!(game::scene_materials::does_of(b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }

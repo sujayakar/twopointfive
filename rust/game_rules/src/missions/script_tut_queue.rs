@@ -1,18 +1,16 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables, unused_imports)]
 //! The script of the level tut-queue: its define pass and a step function for each beat.
 
 pub use ::game_types::script_tut_queue::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of levels/tut-queue.script.ts") } }
+fn tut_queue_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_queue::TutQueueVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutQueue(v) => v, _ => panic!("the run is not of the level tut-queue") } }
 
 const GUNNER: &str = "Tango 3";
 const MATE: &str = "Tango 4";

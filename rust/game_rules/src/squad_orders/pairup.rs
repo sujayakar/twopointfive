@@ -1,6 +1,5 @@
 pub use ::game_types::pairup::types;
 pub use types::*;
-use crate::game::Game;
 
 /// A rule is in force: the switch, and its own row (settled on, on the page).
 pub fn pair_up(g: &crate::game::Game) -> bool {
@@ -11,9 +10,9 @@ pub fn pair_up(g: &crate::game::Game) -> bool {
 pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     let off = off.unwrap_or(false);
     if g.k.pairup.on {
-        if !put_back() { g.k.pair.on = true; }
-        if !put_back() { g.k.sneak.on = true; }
-        if !put_back() { g.k.spotted.on = true; }
+        g.k.pair.on = true;
+        g.k.sneak.on = true;
+        g.k.spotted.on = true;
     } else if off {
         g.k.spotted.on = false;
         g.k.sneak.on = false;
@@ -21,13 +20,9 @@ pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
     }
 }
 
-/// This visit's own word against one part: the address and the environment are the host's, so here there is none.
-fn put_back() -> bool {
-    false
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     #[test]

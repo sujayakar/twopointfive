@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! WHAT IS PAINTED ON A WALL GOES WITH THE WALL, whole. A sheet (an authored static that is drawn and nothing else) is drawn where
 //! something solid still stands behind it: over an opened cell it is cut square, and what stands of it goes onto the frame's list as boxes of its own
 //! paint, keyed MKEY.skin. No flag of any box is written; the authored sheet is left out of the picture by the world's `undrawn` (the host reads this
@@ -9,16 +8,16 @@
 //! - THE LANE'S BOOKS ARE MADE ON FIRST USE (`ensure`), from the level as authored: `ensure` reads every box's flags AS AUTHORED (what the two lanes that
 //!   hide a static kept of it), so it gives the same lists whenever it is asked.
 //! - A piece is a row its sheet keeps (`scene_boxes::box_kept`) and lets go when it is cut again or made whole.
-//! - A fault here is a panic with its place; `failed` is never raised.
+//! - A fault here is a panic with its place.
 
 pub use ::game_types::wallskin::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 use crate::scene_cut::CutPlane;
 
@@ -86,8 +85,7 @@ fn brk_id(g: &Game, k: f64) -> Option<WallbreakBreakableId> { let b = g.destr.wa
 
 /// The authored statics that could be a sheet (drawn and nothing else, level, lightless) and those that are solid (met by rays and drawn, level, square).
 fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallSkin {
-    let f = crate::scene_boxes::box_flag();
-    let lone = js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
+    let lone = crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
     let mut w = WallSkin::blank();
     let n = authored as usize; w.solid = vec![0; n];
     for i in 0..n {
@@ -98,7 +96,7 @@ fn wall_skin_new(g: &crate::game::Game, authored: f64) -> crate::wallskin::WallS
         if b.rot.is_some() || b.round == Some(true) { continue; }
         let fl = js::to_i32(flags0.unwrap_or(b.flags)) & lone;
         if fl == 0 { w.solid[i] = 1; }
-        else if fl == js::to_i32(f.no_shadow) && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0 { w.cand.push(i as f64); }   // (trim a box says is asked like any other)
+        else if fl == crate::scene_boxes::box_flag::NO_SHADOW as i32 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0 { w.cand.push(i as f64); }   // (trim a box says is asked like any other)
     }
     w
 }
@@ -114,7 +112,6 @@ fn ensure(g: &mut Game) {
 
 /// Cells of B have just opened: every sheet lying on it is cut again as this frame's boxes are handed over.
 pub(super) fn wall_skin_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
-    if g.destr.walls.skins.failed { return; }
     for j in wall_skin_skins_of(g, b) { g.destr.walls.skins.dirty.add(crate::Num(j)); }
 }
 
@@ -124,7 +121,7 @@ pub(super) fn wall_skin_clear(g: &mut crate::game::Game) {
     for b in gone { crate::scene_boxes::box_let_go(g, b); }
     let s = &mut g.destr.walls.skins;
     s.cut.clear(); s.out.clear(); s.laid.clear(); s.seats.clear(); s.on.clear(); s.dirty.clear(); s.marked.clear();
-     s.room = 1e9; s.was = false; s.failed = false;
+     s.room = 1e9; s.was = false;
 }
 
 /// Once a frame, before the frame's box list is made again: what the list can still take of this lane's.
@@ -135,12 +132,10 @@ pub(super) fn wall_skin_update(g: &mut crate::game::Game) {
 
 /// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out.
 pub(super) fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let on = !g.destr.walls.skins.failed;
-    if !on && (!g.destr.walls.skins.cut.is_empty() || !g.destr.walls.skins.dirty.is_empty()) { let f = g.destr.walls.skins.failed; wall_skin_clear(g); g.destr.walls.skins.failed = f; }   // (put down under a standing game: the bands as authored)
-    if on && !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
+    if !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
         for b in g.destr.walls.list.clone() { if g.tab.wallbreak_breakable[b].open.iter().any(|x| *x != 0) { let bl = crate::edge_look::break_like(g, b); wall_skin_opened(g, &bl); } }
     }
-    g.destr.walls.skins.was = on;
+    g.destr.walls.skins.was = true;
     if !g.destr.walls.skins.dirty.is_empty() {
         let mut js_: Vec<f64> = g.destr.walls.skins.dirty.keys().into_iter().map(|k| k.0).collect();
         js::sort_by(&mut js_, |p, q| *p - *q);

@@ -8,6 +8,8 @@ import type { Box } from '../../scene/boxes';
 import type { Engine } from '../../engine';
 import type { Drawn } from '../../draw/drawn';
 import type { DrawWinds } from '../../draw/winds';
+import { FootFlag } from '../../draw/bits';
+import { SNOW_KINDS } from '../../draw/names';
 import { Foot, Section, SnowBlast, SnowWord } from '../../draw/sections';
 import type { AirPicture } from '../air';
 import type { Roofs } from '../rain';
@@ -19,8 +21,6 @@ import { SnowSight } from './sight';
 import { clearSnowTracks, formSnowTracks, makeSnowTracks, TRACK_RES, updateSnowTracks, type Man, type SnowTracks } from './tracks';
 import { SNOW_LOOK } from './look';
 
-const WORDS = [undefined, 'snow', 'packed snow', 'old snow'] as (Box['does'])[];
-const ALIVE = 1, HIDDEN = 2, DEAD = 4;
 /** the wind a snow level's ripples lie along (rust/game_rules/src/air/weather_kinds.rs WEATHER_PRESETS.snow) */
 const RIPPLE: [number, number] = [0.8, 0.3];
 
@@ -31,14 +31,14 @@ export function readMen(D: Drawn, L: Man[], made: Map<number, Man>): void {
   for (let i = 0, o = D.at[Section.feet]; i < L.length; i++, o += Foot.row) {
     const id = u[o + Foot.id], says = u[o + Foot.says], z = (): number[] => [0, 0, 0];
     let m = made.get(id); if (!m) made.set(id, m = { id, alive: false, hidden: false, dead: false, pos: z(), vel: z(), bodyYaw: 0, hips: z(), head: z(), chest: z(), footL: z(), footR: z(), toeL: z(), toeR: z(), facing: z() });
-    m.alive = (says & ALIVE) !== 0; m.hidden = (says & HIDDEN) !== 0; m.dead = (says & DEAD) !== 0; m.bodyYaw = f[o + Foot.yaw];
+    m.alive = (says & FootFlag.Alive) !== 0; m.hidden = (says & FootFlag.Hidden) !== 0; m.dead = (says & FootFlag.Dead) !== 0; m.bodyYaw = f[o + Foot.yaw];
     v(m.pos, o + Foot.pos); v(m.vel, o + Foot.vel); v(m.hips, o + Foot.hips); v(m.head, o + Foot.head); v(m.chest, o + Foot.chest); v(m.footL, o + Foot.footL); v(m.footR, o + Foot.footR); v(m.toeL, o + Foot.toeL); v(m.toeR, o + Foot.toeR); v(m.facing, o + Foot.facing);
     L[i] = m;
   }
 }
 
 /** every static is told what snow it is: the one reading the field, the air and the dig all ask */
-export function sayOf(D: Drawn, B: Box[]): void { for (let i = 0, o = D.at[Section.snowWords], n = Math.min(B.length, D.n[Section.snowWords]); i < n; i++, o += SnowWord.row) B[i].does = WORDS[D.u[o + SnowWord.w]]; }
+export function sayOf(D: Drawn, B: Box[]): void { for (let i = 0, o = D.at[Section.snowWords], n = Math.min(B.length, D.n[Section.snowWords]); i < n; i++, o += SnowWord.row) { const w = D.u[o + SnowWord.w]; B[i].snow = w ? SNOW_KINDS[w - 1] : undefined; } }
 
 export class SnowPicture {
   field: SnowField | null = null; tracks: SnowTracks | null = null;

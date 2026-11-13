@@ -21,7 +21,7 @@ fn hall(boxes: Vec<Json>) -> Play {
     let mut p = scene_with(&s, boxes, &Opts { seed: 1, ..Default::default() });
     p.g.god_mode = true;
     p.g.ai_enabled = false;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.05);
     p
 }
@@ -91,7 +91,7 @@ fn a_hole_in_a_sheet_costs_a_round_less_than_the_sheet() {
     let e = (toll * hole_k + floor + toll + floor) / 2.0;
     let (at, off) = ([18.0, 1.5, 14.0], [18.0, 1.5, 14.0 - 1.0]);
     assert!(shot_blocked(&mut p.g, off, [18.0, 1.5, 15.0], None, Some(e)), "the staging: whole, the sheet stops a round of {e}");
-    game::glassbreak::glass_break_asking(&mut p.g, |cx, k| sim::pen::add_hole(cx.g, bi as u32, at, k));
+    sim::pen::add_hole(p.g.tab.boxes.panes(), bi as u32, at, &p.g.k);
     assert!(!shot_blocked(&mut p.g, off, [18.0, 1.5, 15.0], None, Some(e)), "through the hole, a round of {e} pays the whole toll");
     assert!(shot_blocked(&mut p.g, [18.5, 1.5, 13.0], [18.5, 1.5, 15.0], None, Some(e)), "half a metre along, the hole lets a round of {e} through");
 }
@@ -117,8 +117,8 @@ fn a_round_comes_out_of_glass_turned_a_little() {
     let (mut sum, mut most, mut n) = (0.0, 0.0f64, 0);
     for k in 0..40 {
         let at = [16.5 + 0.075 * k as f64, 1.0 + 0.025 * k as f64];
-        let cx = game::glassbreak::glass_ctx(&p.g);
-        let x = sim::pen::pane_crossing(&cx, bi as u32, [at[0], at[1], 13.0], [0.0, 0.0, 1.0], 1.0 - THIN, 1.0, 0, &p.g.k).expect("a hard round goes through");
+        let w = p.g.tab.boxes.world();
+        let x = sim::pen::pane_crossing(w, bi as u32, [at[0], at[1], 13.0], [0.0, 0.0, 1.0], 1.0 - THIN, 1.0, 0, &p.g.k).expect("a hard round goes through");
         sum += x.turn_deg;
         most = most.max(x.turn_deg);
         n += 1;
@@ -134,8 +134,8 @@ fn a_round_comes_out_of_glass_turned_a_little() {
 fn a_round_does_not_come_out_of_glass_into_a_wall() {
     let mut p = hall(vec![sheet("sheet", [18.0, 1.5, 14.0]), a_box_of("behind", [17.0, 1.5, 14.0 + THIN + 0.1], [1.0, 1.5, 0.1], "white", "concrete")]);
     let bi = p.pane_at(18.0, 14.0);
-    let cx = game::glassbreak::glass_ctx(&p.g);
-    let at = |x: f64| sim::pen::pane_crossing(&cx, bi as u32, [x, 1.5, 13.0], [0.0, 0.0, 1.0], 1.0 - THIN, 1.0, 0, &p.g.k);
+    let w = p.g.tab.boxes.world();
+    let at = |x: f64| sim::pen::pane_crossing(w, bi as u32, [x, 1.5, 13.0], [0.0, 0.0, 1.0], 1.0 - THIN, 1.0, 0, &p.g.k);
     assert!(at(17.0).is_none(), "against the wall, the round comes out of the glass");
     assert!(at(19.5).is_some_and(|x| x.into == -1), "with air behind it, the round does not come out");
 }
@@ -180,10 +180,10 @@ fn a_laminated_sheet_blown_out_is_air() {
     assert!(solid_blocked(&mut p.g, [14.3, 1.5, 15.7], [14.3, 1.5, 16.7], None), "two metres off, the sheet stops no line");
 }
 
-/// the hit a sheet has taken, as its row in the game's block keeps it
+/// the hit a sheet has taken, as its row keeps it
 fn sheet_damage(p: &Play, bi: f64) -> f64 {
-    let s = p.g.sim;
-    (0..sim::panes::row_n(s) as usize).map(|r| sim::panes::row_ref(s, r)).find(|r| r.w[0] as f64 == bi).map_or(0.0, |r| r.damage + r.energy)
+    let panes = &p.g.tab.boxes.world().panes;
+    panes.rows.iter().find(|r| r.w[0] as f64 == bi).map_or(0.0, |r| r.damage + r.energy)
 }
 
 /// THE RULE: a stun charge beside a sheet stars it. CONTROL: a stun charge across the hall, none of it.
@@ -246,8 +246,7 @@ fn a_burst_counts_a_whole_crater_out_with_its_first_wedge() {
     let from = [18.0, 0.05 + p.g.k.frag.lift, 13.2];
     glass_break_blast(&mut p.g, &game::ask::Over::OWN, from, Some(opts));
     // points of the sheet that lie in a wedge not itself queued, of a crater one of whose wedges is
-    let s = p.g.sim;
-    let row = (0..sim::panes::row_n(s) as usize).map(|r| sim::panes::row_ref(s, r)).find(|r| r.w[0] as f64 == bi).expect("the blast touched the sheet");
+    let row = *p.g.tab.boxes.world().panes.rows.iter().find(|r| r.w[0] as f64 == bi).expect("the blast touched the sheet");
     const CRATER_WEDGES: usize = 12;   // (a site's first pieces, by the glass's own numbering, are its crater's wedges)
     let (mut pts, mut sectors) = (Vec::new(), 0usize);
     for i in 0..1200 {
@@ -404,7 +403,7 @@ fn rooms(boxes: Vec<Json>) -> Play {
     let mut p = scene_with(&s, boxes, &Opts { seed: 1, ..Default::default() });
     p.g.god_mode = true;
     p.g.ai_enabled = false;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.1);
     p
 }
@@ -418,7 +417,7 @@ fn rounds_to_open(pistol: bool) -> usize {
     let gun = if pistol { man.pistol } else { man.rifle };
     let def = p.g.m.weapons.weapons.get(p.g.fa[gun].def).expect("its row").clone();
     let who = p.g.ch[p.g.pl[p.g.player].ch].id;
-    let chaos = p.g.tune.chaos;
+    let chaos = p.g.k.chaos.def;
     for n in 1..400 {
         game::wallbreak::wall_break_round(&mut p.g, who, at, [1.0, 0.0, 0.0], hit.index, &def, chaos);
         if cells_open(&p) > 0.0 { return n; }
@@ -446,7 +445,7 @@ fn a_blast_does_not_open_a_wall_behind_a_wall() {
         let mut p = scene_with(&s, vec![], &Opts { seed: 1, ..Default::default() });
         p.g.god_mode = true;
         p.g.ai_enabled = false;
-        p.g.tune.chaos = 0.5;
+        p.g.k.chaos.def = 0.5;
         p.run(0.1);
         p
     };
@@ -473,7 +472,7 @@ fn what_stood_on_a_crate_comes_down_when_the_crate_goes() {
     let man = &p.g.pl[p.g.player];
     let def = p.g.m.weapons.weapons.get(p.g.fa[man.rifle].def).expect("its row").clone();
     let who = p.g.ch[p.g.pl[p.g.player].ch].id;
-    let chaos = p.g.tune.chaos;
+    let chaos = p.g.k.chaos.def;
     let gone = |p: &Play| game::wallbreak::wall_break_all(&p.g).iter().any(|w| w.kind == game::wallbreak::BKind::Cover && w.open >= w.cells);
     for _ in 0..2000 {
         if gone(&p) { break; }
@@ -523,7 +522,7 @@ fn rounds_knock_small_things_off_a_desk() {
     assert!(solid_blocked(&mut p.g, a, b, None), "the staging: no mug on the desk");
     gun_fires(&mut p, [14.0, 9.0], [14.0, 0.86, 12.0]);
     assert!(solid_blocked(&mut p.g, a, b, None), "one round took the mug off");
-    let enough = (p.g.k.chaos.t_knock / (2.0 * p.g.tune.chaos)).ceil() as usize + 2;
+    let enough = (p.g.k.chaos.t_knock / (2.0 * p.g.k.chaos.def)).ceil() as usize + 2;
     for _ in 0..enough { gun_fires(&mut p, [14.0, 9.0], [14.0, 0.86, 12.0]); }
     assert!(!solid_blocked(&mut p.g, a, b, None), "{} rounds at it and the mug stands", enough + 1);
 }
@@ -540,7 +539,7 @@ fn a_mans_round_puts_out_a_lamp_in_a_fight() {
     s.defender("west", [12.25, 12.25], "west-yard").defender("east", [24.25, 12.25], "east-yard");
     let mut p = Play::scene(&s, &Opts { seed: 1, ..Default::default() });
     p.g.god_mode = true;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.2);
     let lamps: Vec<_> = p.g.targets.clone();
     let near = |p: &Play, x: f64| lamps.iter().copied().find(|&t| { let f = &p.g.tab.fixture[t]; (f.pos[0] - x).abs() < 1.0 && (f.pos[2] - 13.0).abs() < 1.0 }).unwrap_or_else(|| panic!("no lamp at x {x}"));

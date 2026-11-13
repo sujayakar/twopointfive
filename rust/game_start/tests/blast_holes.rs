@@ -6,7 +6,7 @@ use world_ask::{a_box, scene_with, WallAsk};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 fn seed(seed: u32) -> Opts { Opts { seed, ..Default::default() } }
-fn hands_off(p: &mut Play) { p.g.god_mode = true; p.g.ai_enabled = false; p.g.tune.chaos = 0.5; p.run(0.1); }
+fn hands_off(p: &mut Play) { p.g.god_mode = true; p.g.ai_enabled = false; p.g.k.chaos.def = 0.5; p.run(0.1); }
 
 /// Two rooms with a partition at x 18 and a door well away; a chest of drawers stood hard against the partition's east face at `z`.
 fn chest_behind_a_partition(z: f64, s: u32) -> Play {
@@ -71,7 +71,7 @@ fn a_man_on_the_grids_way_gets_through_the_breach() {
         drop(p);
 
         let mut p = the_pass(s);
-        p.g.tune.chaos = 0.0;
+        p.g.k.chaos.def = 0.0;
         let way = p.sam_sets_charge(STORE, [31.3, 3.6]).ok().and_then(|c| { p.charge_blows(c); p.run(0.8); p.body_walks_the_grid(a, b) });
         assert!(way.map_or(true, |(len, _)| len >= 5.0), "seed {s}: at chaos 0 the grid goes straight through the wall: {way:?}");
     }

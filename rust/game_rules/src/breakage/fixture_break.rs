@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! A FIXTURE THAT BROKE: its tray swinging down by one end and tearing out, its diffuser and glass on the floor, the torn
 //! lead's glow. "Picture only: nothing play asks about" by its rays; but every piece is a KEYED box of the frame's list (MKEY.test + 0x5000 + …), and
 //! the fog of war keeps a record of every keyed loose thing of that list and caps its records, the frame's room is budgeted with them in it, and the
@@ -13,10 +12,10 @@ pub use ::game_types::fixture_break::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 use crate::v3::quat;
 
@@ -41,7 +40,7 @@ fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     let Some(b) = static_box(g, t) else { return 0.0; };
     let b = &g.tab.boxes[b];
     let (long, short) = (m::max(b.h[0], b.h[2]), m::min(b.h[0], b.h[2]));
-    if js::to_i32(b.flags) & js::to_i32(crate::scene_boxes::box_flag().no_primary) != 0 && b.h[1] <= 0.06 && b.c[1] > 2.2 && long >= 0.25 && long <= 1.2 && short >= 0.1 { 1.0 } else { 0.0 }
+    if js::to_i32(b.flags) & crate::scene_boxes::box_flag::NO_PRIMARY as i32 != 0 && b.h[1] <= 0.06 && b.c[1] > 2.2 && long >= 0.25 && long <= 1.2 && short >= 0.1 { 1.0 } else { 0.0 }
 }
 
 /// The top of whatever lies under (x, z): the level's statics by one ray down, the furniture by its boxes' footprints.
@@ -49,7 +48,7 @@ fn floor_at(g: &mut crate::game::Game, x: f64, z: f64, from: f64) -> f64 {
     let mut y = 0.0;
     if let Some(hit) = crate::scene_collision::raycast(g, [x, from, z], down(), from + 0.5) { if hit.index < 1e6 { y = m::max(0.0, from - hit.t); } }   // (a door leaf's top edge is no floor)
     g.m.fixture_break.floor.on = None;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
+    let no_shadow = crate::scene_boxes::box_flag::NO_SHADOW as i32;
     for pi in 0..g.props.props.len() {
         let p = g.props.props[pi];
         for bi in 0..g.tab.props_prop[p].boxes.len() {
@@ -88,7 +87,7 @@ fn state(g: &mut Game) -> &mut State { g.m.fixture_break.state.as_mut().unwrap()
 
 /// A fixture found broken: its record, its hanging boxes and its loose pieces.
 fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::fixture_break::Rec {
-    let f = g.m.fixture_break.fixlook.clone();
+    let f = g.k.fixture_break.clone();
     let sb = if kind == 1.0 { static_box(g, t) } else { None };
     let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.fixture[t].pos };
     let seed = (js::to_i32(m::round(c[0] * 100.0) * 73856093.0) ^ js::to_i32(m::round(c[2] * 100.0) * 19349663.0) ^ js::to_i32(m::round(c[1] * 100.0) * 83492791.0)) as f64;
@@ -137,7 +136,7 @@ fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::
     r.hang = vec![mk(g, [l / 2.0, 0.02, w / 2.0], f.tray, None), mk(g, [l * 0.15, 0.03, m::min(0.06, w * 0.22)], f.cover, None), mk(g, [l / 2.0 - 0.015, 0.003, w / 2.0 - 0.02], f.face, None),
         mk(g, [l / 2.0 - 0.07, 0.014, 0.014], f.tube, None), mk(g, [l * 0.15, 0.014, 0.014], f.tube, None), mk(g, f.lead, f.soot, None)];
     // (belt and braces: were a ray ever to meet it, its glow would still count for nothing)
-    { let x = &mut g.tab.frame_boxes[r.hang[5]]; x.flags = (js::to_i32(x.flags) | js::to_i32(crate::scene_boxes::box_flag().area_lit)) as f64; }
+    { let x = &mut g.tab.frame_boxes[r.hang[5]]; x.flags = (js::to_i32(x.flags) | crate::scene_boxes::box_flag::AREA_LIT as i32) as f64; }
     let wv: V3 = [-r.uh0[2], 0.0, r.uh0[0]]; let y0 = c[1] - 0.06;
     let (h0, uh0) = (r.h0, r.uh0);
     let mut piece = |g: &mut Game, h: V3, a: f64, s: f64, albedo: V3, glass: bool, k: f64| -> Piece {
@@ -194,7 +193,7 @@ fn land(r: &mut crate::fixture_break::Rec, s: f64) {
 
 /// The arc at the torn lead `a` seconds after the light died: 0‥1, and whether a pop or a spit STARTS inside this frame (→ sparks).
 fn glow_at(g: &crate::game::Game, r: &mut crate::fixture_break::Rec, a: f64, out: &mut crate::fixture_break::GlowAtOut) -> f64 {
-    let f = g.m.fixture_break.fixlook.clone(); let mut gl = 0.0; out.sparks = 0.0;
+    let f = g.k.fixture_break.clone(); let mut gl = 0.0; out.sparks = 0.0;
     for k in 0..f.pops.len() {
         let tk = f.pops[k] * (0.85 + 0.3 * h01(r.seed + 11.0 * k as f64 + 5.0)); if a < tk { break; }
         gl += f.pop_gain[k] * m::exp(-(a - tk) / f.pop_tau);
@@ -218,8 +217,8 @@ fn seed_of(r: &mut crate::fixture_break::Rec) -> f64 {
 /// Once a frame (with the other dynamic boxes): notice fixtures that broke or were repaired, move what is moving, hand the frame the look's
 /// boxes.
 pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, dt: f64) {
-    let f = g.m.fixture_break.fixlook.clone();
-    if !f.on {
+    let f = g.k.fixture_break.clone();
+    if !f.on || g.m.fixture_break.put_down {
         if let Some(s) = g.m.fixture_break.state.as_mut() { let gone = core::mem::take(&mut s.recs); s.last_t = -1.0; for r in gone.iter() { let_go(g, r); } }
         return;
     }

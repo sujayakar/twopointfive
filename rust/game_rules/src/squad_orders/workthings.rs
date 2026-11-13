@@ -5,10 +5,10 @@ pub const WORK_ORDER: &str = crate::orders::rows::work::ORDER.id;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small local helpers
 
@@ -110,14 +110,7 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
 
 /// Makes the row and registers it on the orders' menu.
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
-    let def = crate::orders::rows::def(&crate::orders::rows::work::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        listed: Some(Vec::new()),
-        ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        ..crate::orders::OrderDef::default()
-    });
-    let row = crate::orders::squad_orders_row(g, def);
-    crate::orders::squad_orders_register(g, row, None);
+    let row = crate::orders::rows::list(g, &crate::orders::rows::work::ORDER);
     WorkThings { row, ..WorkThings::blank() }
 }
 
@@ -249,7 +242,7 @@ fn work_things_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &cra
     let mut out = vec![seat.work.row];
     for &id in rows {
         let d = &g.tab.orders_order_def[id];
-        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) { out.push(id); }
+        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_deref() != Some(crate::orders::rows::movethere::ORDER.id) { out.push(id); }
     }
     out
 }
@@ -421,8 +414,8 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
             g.sets[g.seat].work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
         }
         if verb == WorkVerb::Drive {
-            crate::audio_iface::game_audio_like_play(g, "click", Some(th.face), Some(0.8), None);
-            crate::audio_iface::game_audio_like_play(g, "magOut", Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(th.face), Some(0.8), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::MagOut, Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
             if !g.mission.hands_on {
                 g.mission.hands_on = true;
                 let text = format!("hands on {}", g.level.errand.thing);

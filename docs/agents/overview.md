@@ -21,8 +21,9 @@ Two ideas hold it together:
 no files, no threads and no die but its own, so the same inputs on the same start make the same game, to the bit, on every machine.
 
 **The page draws it** (`src/`, TypeScript, no npm dependencies). The page holds a game as a number. It hands over what the player did, asks for
-a tick, and draws the rows the tick left in the module's memory. No rule of play is written in `src/`: `tools/draw/ban.ts` is the first step of
-the build and is red on one.
+a tick, and draws the rows the tick left in the module's memory. No rule of play is written in `src/`. `tools/draw/ban.ts`, the first step of
+the build, holds what a rule there would have to do: only the files it names make a game do anything, none writes the module's memory, every folder of
+`src/` says what it is, and none names a file of `tools/`. What a drawing works out for itself and shows, no check sees: ask the game and draw the answer.
 
 The same module runs under the page, the game server (`tools/mp/server.ts`) and the tools. Native tests and the gate link the same crates
 with no module at all.
@@ -129,6 +130,8 @@ models and animations. `STYLE.md` is the look as rules, `docs/level-format.md` t
 - **A command or a setting:** `rust/game_start/src/host/command.rs`, then `half`.
 - **A question a host asks the game:** a line in `rust/game_start/src/host/calls.rs`, a function of its name in `rust/game_face/src/`, the answer's struct in
   `rust/game_types/src/view/told.rs`, then `half`: the page calls `Face` (`src/draw/face.ts`).
+- **A word's bits both sides read by name:** `bits!` (`rust/game_types/src/bits.rs`), a line in `game_draw::BITS`, then `half` (`src/draw/bits.ts`, `src/render/shaders/bits.wgsl`).
+- **A name both sides spell** (a sound, a key): the enum's arm, a line in `game_draw::NAMES` for a new list, then `half` (`src/draw/names.ts`).
 - **A level:** its generator under `tools/levels/`, then `tools/levels/export.ts`.
 - After Rust changes a page needs the module built: `bun run tools/blitz/face-build.ts`. The dev server serves the one it finds.
 

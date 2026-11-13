@@ -167,9 +167,8 @@ fn the_traffic_map_is_worn_where_the_level_is_walked() {
     }
 }
 
-/// THE RULE: a door's leaf is made of what its paint is. In a level that wears the look an outside leaf in the level's own accent is paint and an inside one in the palette's wood is wood,
-/// whatever shade its own name gives it; one with old paint faded on it is plain; a level whose row gives its paint as numbers says nothing for that side unless its row says a word, and a row
-/// with one word means every leaf. A steel door is left as it was made.
+/// THE RULE: a door's leaf is made of what its level's file says its paint is (`doorPaint`: outside, inside), whatever shade its own name gives it. A side that says no word is plain, and so is an
+/// inside leaf with the outside's old paint faded on it, unless both sides are one thing. A steel door is left as it was made.
 /// A FAILURE MEANS: a blown leaf's pieces and a round's chips are of another stuff than the door that was drawn.
 #[test]
 fn a_levels_leaves_are_made_of_their_paint() {
@@ -191,21 +190,23 @@ fn a_levels_leaves_are_made_of_their_paint() {
         assert_eq!((o.as_str(), i.as_str(), s.as_str()), (out, inside, steel), "{level}: outside, inside, steel");
         shades
     };
-    let shades = is("barracks.json", "Paint", "Wood plain", "");   // no row: the accent its boxes are painted in, the palette's wood, old paint on some
+    let shades = is("barracks.json", "Paint", "Wood plain", "");   // paint, and wood with old paint on some
     assert!(shades > 4, "each leaf a shade of its own: {shades}");
     is("office.json", "Paint", "Wood plain", "plain");
-    is("block.json", "plain", "Wood plain", "plain");         // a row of numbers
-    is("warehouse.json", "Paint", "Wood plain", "");          // a row that says paint for the outside
-    is("killhouse.json", "plain", "Wood plain", "");          // a row that says wood for numbers inside
-    let one = changed("killhouse.json", "enamel", &|l| *member(l, "name") = Json::Str("white-roof".into()));
-    is(one.to_str().unwrap(), "Enamel", "Enamel", "");        // a row with one word: every leaf, the ones with old paint too
+    is("block.json", "plain", "Wood plain", "plain");         // numbers alone outside
+    is("warehouse.json", "Paint", "Wood plain", "");          // paint outside
+    is("killhouse.json", "plain", "Wood plain", "");          // wood inside
+    // both sides one thing: every leaf, the ones with old paint too
+    let white = json::parse(&game_start::files::level_text("white-roof.json")).unwrap();
+    let one = changed("killhouse.json", "enamel", &|l| *member(l, "doorPaint") = white.get("doorPaint").clone());
+    is(one.to_str().unwrap(), "Enamel", "Enamel", "");
 }
 
 /// A level file's most (game::levelfit, what `faults.rs` holds it to) is what the game's lists have room for.
 #[test]
 fn a_level_may_have_what_the_game_has_room_for() {
     let c = game::levelfit::level_caps();
-    for (name, most, room) in [("doors", c.doors, game::doors::DOOR_CAP), ("things", c.things, sim::world::MAX_THINGS), ("parts", c.parts, sim::world::MAX_LEAVES), ("lamps", c.lamps, sim::lights::ROWS)] {
+    for (name, most, room) in [("doors", c.doors, game::doors::DOOR_CAP), ("things", c.things, sim::world::MAX_THINGS), ("parts", c.parts, sim::world::MAX_LEAVES), ("lamps", c.lamps, game::fixtures::LAMPS)] {
         assert_eq!(most, room as f64, "{name}");
     }
 }

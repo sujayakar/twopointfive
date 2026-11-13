@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 fn civ_of(g: &Game, gd: GuardId) -> CivId { g.gd[gd].civ.unwrap() }
 
@@ -31,7 +31,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
         let c = g.gd[gd].ch;
         let head = g.ch[c].bone_or(crate::character::Bone::Head, 0.4);
         let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
-        crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::HeldProtest, Some(head), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
     true
 }
@@ -156,7 +156,7 @@ fn report_goes_on_the_radio(g: &mut Game, p: &crate::civilians::Pending, civ: Ci
     crate::guards::say(g, o, &text, Some(true), None);
     let oc = g.gd[o].ch;
     let at = g.ch[oc].bone(crate::character::Bone::Head).unwrap_or(g.ch[oc].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.7), None);
     if p.armed.unwrap_or(false) {
         let pos = p.pos.or(g.cv[civ].cause_pos).unwrap_or(g.pos_of(cv));
         g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
@@ -258,7 +258,7 @@ pub(super) fn control(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     let t = fill(g, gd, text, None);
     let line = format!("CONTROL — {}", t);
     crate::cues::cues_radio(g, &line);
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.55), None);
     let mut data: JsMap<String, Option<D>> = JsMap::new();
     data.set(String::from("who"), Some(D::Text(String::from("CONTROL"))));
     data.set(String::from("text"), Some(D::Text(t)));
@@ -272,7 +272,7 @@ fn scream(g: &mut crate::game::Game, gd: GuardId, shout: Option<&str>) {
     g.cv[cv].scream_at = g.time;
     let head = g.ch[g.gd[gd].ch].bone_or(crate::character::Bone::Head, 1.6);
     let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
-    crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::HeldProtest, Some(head), Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     if let Some(s) = shout { if !s.is_empty() { civ_say(g, gd, s, None); } }
     hear_scream(g, gd);
 }
@@ -326,7 +326,7 @@ fn yield_to(g: &mut Game, c: CharId, p: V3, r: f64) {
 
 /// One civilian's frame: perception, the little state machine, the figure, solidity.
 fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    use crate::game::GuardState;
+    
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     if g.cv[cv].state == CivState::Gone { return; }

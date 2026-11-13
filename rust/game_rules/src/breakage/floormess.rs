@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 //! THE FLOOR'S MESS is one arm of the marks (render_decals/set.rs says when). No rule reads a mark.
 //! FLOOR MESS: what a blast and a broken thing LEAVE once the dust has gone out of the air. FILM where a burst's pall stood, a pale film of settled dust on the floor: a HEART at the
 //! burst and LOBES round it, each fitted to the room (none laid across something standing between it and the burst, each reaching only as far as the nearest thing standing between waist
@@ -10,12 +8,10 @@ pub use ::game_types::floormess::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::vec::Vec;
-
-#[allow(unused_imports)]
 use crate::out_events::*;
 use crate::render_decals::{mark_asked, Ask};
 
@@ -37,7 +33,6 @@ pub(super) fn mess_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) {
 
 use crate::render_decals::{lay, mark_set, DecalKind, DecalOpts};
 use crate::scene_boxes::{box_flag, Box as WorldBox};
-use crate::v3::quat;
 
 const DIRS: [[f64; 2]; 8] = [[1.0, 0.0], [0.7071, 0.7071], [0.0, 1.0], [-0.7071, 0.7071], [-1.0, 0.0], [-0.7071, -0.7071], [0.0, -1.0], [0.7071, -0.7071]];
 const UP: V3 = [0.0, 1.0, 0.0];
@@ -52,8 +47,7 @@ fn h(x: f64, z: f64, k: f64) -> f64 {
 fn look_of(d: &crate::render_decals::Mark) -> f64 { if d.kind == DecalKind::Damage { m::floor(d.param) } else { -1.0 } }
 /// may a top take a film: lit geometry that is not a glowing fixture
 fn takes(b: &WorldBox) -> bool {
-    let f = box_flag();
-    js::to_u32(b.flags) & js::to_u32(f.no_primary + f.no_shadow) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
+    js::to_u32(b.flags) & (box_flag::NO_PRIMARY | box_flag::NO_SHADOW) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
 }
 /// how far a film centred here may reach: to the nearest thing STANDING (any static whose span meets the band from waist to head height), measured to the box itself, and `want` at most. 0 = the centre is inside one.
 fn fit(g: &Game, x: f64, z: f64, want: f64) -> f64 {
@@ -82,30 +76,30 @@ fn film(g: &mut Game, x: f64, z: f64, y: f64, rad: f64, s: f64, on: Option<BoxId
 }
 /// ONE film: on the floor at (x, z) reaching `want` at most, and on the tops that stand in it. `k` tells this patch from its burst's others; `heart` = the burst's own middle (the one film that carries the soot).
 fn patch(g: &mut Game, x: f64, z: f64, want: f64, strength: f64, k: f64, heart: bool) {
-    let K = g.k.chaos.mess;
+    let mess = g.k.chaos.mess;
     let r = fit(g, x, z, want);
-    if r < K.min_radius { return; }
+    if r < mess.min_radius { return; }
     film(g, x, z, 0.0, r, strength, None, false, k, heart);   // (the level's floor: a rug lying on it is inside the mark's own plane tolerance)
     // the tops that stand in it: a mark's plane takes every surface at its height, so one film a height dusts every top of that height inside the reach; the nearest three heights
     let mut near = alloc::vec![0i32; NEAR];
-    let n = crate::scene_collision::gather(g, x - r, z - r, x + r, z + r, K.top.lo, K.top.hi, &mut near);
+    let n = crate::scene_collision::gather(g, x - r, z - r, x + r, z + r, mess.top.lo, mess.top.hi, &mut near);
     let mut hs: Vec<(f64, f64)> = Vec::new();
     for i in 0..n as usize {
         let Some(&id) = g.col.boxes.get(near[i] as usize) else { continue };
         let b = &g.tab.boxes[id];
         if b.rot.is_some() || !takes(b) || m::min(b.h[0], b.h[2]) < 0.12 { continue; }
         let (y, d) = (b.c[1] + b.h[1], m::hyp2(b.c[0] - x, b.c[2] - z) - m::max(b.h[0], b.h[2]));
-        if y < K.top.lo || y > K.top.hi || d > r * 0.8 { continue; }
+        if y < mess.top.lo || y > mess.top.hi || d > r * 0.8 { continue; }
         let q = m::round(y * 50.0) / 50.0;
         match hs.iter_mut().find(|e| m::abs(e.0 - q) < 0.03) { Some(e) => e.1 = m::min(e.1, d), None => hs.push((q, d)) }
     }
     hs.sort_by(|a, b| a.1.total_cmp(&b.1).then(a.0.total_cmp(&b.0)));
-    for &(y, _) in hs.iter().take(3) { film(g, x, z, y, r, strength * K.top.strength, None, true, k, heart); }
+    for &(y, _) in hs.iter().take(3) { film(g, x, z, y, r, strength * mess.top.strength, None, true, k, heart); }
     // …and the prop standing under its middle (a prop's rides the prop)
-    if let Some(ph) = crate::props::prop_system_raycast(g, [x, K.clear_y, z], DOWN, K.clear_y - K.top.lo) {
+    if let Some(ph) = crate::props::prop_system_raycast(g, [x, mess.clear_y, z], DOWN, mess.clear_y - mess.top.lo) {
         if ph.n[1] > 0.9 && takes(&g.tab.boxes[ph.box_]) {
-            let (y, half) = (K.clear_y - ph.t, m::max(g.tab.boxes[ph.box_].h[0], g.tab.boxes[ph.box_].h[2]));
-            if y <= K.top.hi && half > 0.15 { film(g, x, z, y, m::min(r, half * 1.15), strength * K.top.strength, Some(ph.box_), true, k, heart); }
+            let (y, half) = (mess.clear_y - ph.t, m::max(g.tab.boxes[ph.box_].h[0], g.tab.boxes[ph.box_].h[2]));
+            if y <= mess.top.hi && half > 0.15 { film(g, x, z, y, m::min(r, half * 1.15), strength * mess.top.strength, Some(ph.box_), true, k, heart); }
         }
     }
 }
@@ -138,9 +132,9 @@ fn spread(g: &mut crate::game::Game, x: f64, z: f64, s: crate::floormess::Spread
 
 /// A BURST went off at `at`; `size` 1 = the hand grenade's.
 pub(super) fn lay_burst(g: &mut Game, at: V3, size: Option<f64>) {
-    let K = g.k.chaos.mess;
-    if !on(g) || at[1] > K.roof_y { return; }   // (a burst on a roof leaves the room under it alone)
-    let b = K.burst;
+    let mess = g.k.chaos.mess;
+    if !on(g) || at[1] > mess.roof_y { return; }   // (a burst on a roof leaves the room under it alone)
+    let b = mess.burst;
     spread(g, at[0], at[2], crate::floormess::Spread { core: b.core, lobes: b.lobes, reach: b.reach, lobe: b.lobe, strength: b.strength }, m::max(0.6, m::min(1.6, size.unwrap_or(1.0))), None);
 }
 
@@ -168,10 +162,10 @@ pub(super) fn lay_opened(g: &mut Game, rect: [f64; 4]) {
 /// The debris pool took a resting chunk's slot: the crushed mark of it where it lay.
 pub(super) fn lay_evicted(g: &mut Game, c: &crate::out_events::OutMessEvicted) {
     if !on(g) { return; }
-    let R = g.k.chaos.mess.rubble;
+    let rubble = g.k.chaos.mess.rubble;
     let long = m::max(c.h[0], m::max(c.h[1], c.h[2]));
-    if long < R.least { return; }
-    let (x, z, rad) = (c.c[0], c.c[2], m::max(R.min, m::min(R.max, long * R.grow)));
+    if long < rubble.least { return; }
+    let (x, z, rad) = (c.c[0], c.c[2], m::max(rubble.min, m::min(rubble.max, long * rubble.grow)));
     // what it lay on: the level under it (a chunk on a desk marks the desk), a prop's top rides the prop
     let from = [x, c.c[1] + 0.02, z];
     let st = crate::scene_collision::raycast(g, from, DOWN, c.c[1] + 0.3);
@@ -186,12 +180,12 @@ pub(super) fn lay_evicted(g: &mut Game, c: &crate::out_events::OutMessEvicted) {
     let looks = crate::floormess::mess_look();
     // (a kind is no stuff of these: what it is made of is said by its `mat` or it is grit)
     let look = if c.mat.is_some_and(|m| matches!(m, crate::break_table::Mat::Wood | crate::break_table::Mat::Cardboard | crate::break_table::Mat::Fabric | crate::break_table::Mat::Paper | crate::break_table::Mat::Carpet | crate::break_table::Mat::Plant)) { looks.splinter } else { looks.grit };
-    if mark_set(g).is_some_and(|s| s.list.iter().any(|d| { let l = look_of(d); (l == looks.grit || l == looks.splinter) && m::abs(d.pos[1] - y) < 0.04 && m::hyp2(d.pos[0] - x, d.pos[2] - z) < R.crowd * m::min(rad, d.radius) })) { return; }
+    if mark_set(g).is_some_and(|s| s.list.iter().any(|d| { let l = look_of(d); (l == looks.grit || l == looks.splinter) && m::abs(d.pos[1] - y) < 0.04 && m::hyp2(d.pos[0] - x, d.pos[2] - z) < rubble.crowd * m::min(rad, d.radius) })) { return; }
     // long along the way the piece lay: its longest axis as it came to rest, laid flat
     let il = if c.h[0] >= c.h[1] && c.h[0] >= c.h[2] { 0 } else if c.h[1] >= c.h[2] { 1 } else { 2 };
     let ax: V3 = core::array::from_fn(|i| if i == il { 1.0 } else { 0.0 });
     let wa = crate::render_decals::to_world([0.0; 3], c.yaw, c.rot, ax, false);
     let size = m::min(1.0, long / 0.3);
     let tangent = if m::hyp2(wa[0], wa[2]) > 0.2 { [wa[0], 0.0, wa[2]] } else { [1.0, 0.0, 0.0] };
-    lay(g, DecalKind::Damage, [x, y, z], UP, Some(rad), &DecalOpts { param: Some(look + m::min(0.999, R.strength * (0.6 + 0.4 * size))), look: Some(true), seed: Some(m::floor(h(x, z, 7.0) * 4096.0)), tangent: Some(tangent), attach: on_box, ..Default::default() });
+    lay(g, DecalKind::Damage, [x, y, z], UP, Some(rad), &DecalOpts { param: Some(look + m::min(0.999, rubble.strength * (0.6 + 0.4 * size))), look: Some(true), seed: Some(m::floor(h(x, z, 7.0) * 4096.0)), tangent: Some(tangent), attach: on_box, ..Default::default() });
 }

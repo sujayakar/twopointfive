@@ -21,10 +21,9 @@ pub fn moment(x: &mut Held) -> MomentNo {
 }
 pub fn moment_back(h: GameNo, k: MomentNo) -> bool {
     let Some((shelf, said)) = MOMENTS.with(|v| v.borrow().get((k as usize).wrapping_sub(1)).and_then(|m| m.as_ref()).filter(|m| m.of == h).map(|m| {
-        // (a game lost to a panic left its number and its slot: it stands in them)
-        let slot = m.game.game.sim;
-        super::stand_if_lost(h, || m.game.laid(slot));
-        super::with(h, |x| { let g = m.game.laid(x.g.sim); hold(x, g); x.hands = None; });
+        // (a game lost to a panic left its number: it stands in it)
+        super::stand_if_lost(h, || m.game.laid());
+        super::with(h, |x| { let g = m.game.laid(); hold(x, g); x.hands = None; });
         (m.shelf.clone(), m.said.clone())
     })) else { return false };
     super::with(h, |x| { control::kept_again(control::stood(&mut x.g), &shelf); x.said = said; });

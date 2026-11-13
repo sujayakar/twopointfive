@@ -4,7 +4,7 @@ import type { Drawn } from './drawn';
 import { Section, Sky } from './sections';
 
 /** a section's three floats at `o`, into `v` */
-const into = (v: { [i: number]: number }, f: Float32Array, o: number, n: number): void => { for (let i = 0; i < n; i++) v[i] = f[o + i]; };
+const into = (v: { [i: number]: number }, f: ArrayLike<number>, o: number, n: number): void => { for (let i = 0; i < n; i++) v[i] = f[o + i]; };
 export const HOURS_OF = ['night', 'dawn', 'midday', 'overcast', 'dusk'] as const;
 
 /** what the section last said of what a hand may turn (the sky, the haze, the gloss, the exposure): the hand's own turn stands until it says another, and the exposure's is carried to that */

@@ -1,7 +1,6 @@
 //! The numbers of shards.
 use crate::bytes::ToBytes;
 use crate::js::*;
-use alloc::string::String;
 use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
@@ -87,7 +86,7 @@ pub struct ShardsK {
     #[k(48.0)] pub pending_max: f64,
     /// s between two plays of one voice (tuning round two: a diced sheet was 40‥80 'glassShatter's inside half a second — a wall of one sample); a landing inside the gap is
     ///  not played, it THICKENS the next one (≤ soundThicken more gain). {} = every landing its own sound, as it was
-    #[k({ let mut t = JsMap::new(); t.set(String::from("glassTinkle"), 0.07); t.set(String::from("glassShatter"), 0.11); t })] pub sound_gap: JsMap<String, f64>,
+    #[k({ let mut t = JsMap::new(); t.set(crate::audio_iface::Sfx::GlassTinkle, 0.07); t.set(crate::audio_iface::Sfx::GlassShatter, 0.11); t })] pub sound_gap: JsMap<crate::audio_iface::Sfx, f64>,
     #[k(0.5)] pub sound_thicken: f64,
     #[k(0.6)] pub sound_owed_secs: f64,
     /// a landing's hearing level, 0.35 when a plate shatters

@@ -1,9 +1,6 @@
 //! What the parts of `director` share, and what it hands to the host.
-#![allow(unused_variables)]
-#[allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-#[allow(unused_imports)]
-use alloc::{string::String, vec::Vec};
+use crate::ids::*;
+use alloc::string::String;
 
 /// the beat's frame before its first step
 pub(super) fn beat_frame_new(script: &crate::scene_level::LevelScriptFn, beat: &str) -> crate::director::BeatFrame {
@@ -111,7 +108,7 @@ pub(super) fn beat_next(g: &mut crate::game::Game, r: DirectorRunId, b: Director
         F::TutTeamCook(f) => crate::script_tut_team::tut_team_cook_step(g, r, b, f),
         F::TutTeamAmbush(f) => crate::script_tut_team::tut_team_ambush_step(g, r, b, f, &got),
         F::TutTeamPinned(f) => crate::script_tut_team::tut_team_pinned_step(g, r, f),
-        F::TutTeamSmoke(f) => crate::script_tut_team::tut_team_smoke_step(g, r, b, f),
+        F::TutTeamSmoke(f) => crate::script_tut_team::tut_team_smoke_step(g, r, f),
         F::TutTeamBreak(f) => crate::script_tut_team::tut_team_break_step(g, r, b, f),
         F::TutTeamOrdered(f) => crate::script_tut_team::tut_team_ordered_step(g, r, f),
         F::TutTeamBlind(f) => crate::script_tut_team::tut_team_blind_step(g, r, b, f),
@@ -139,14 +136,14 @@ pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: Director
         F::TutQuietNight(f) => crate::script_tut_quiet::tut_quiet_night_test(g, r, f, id),
         F::TutRoadRoad(f) => crate::script_tut_road::tut_road_road_test(g, r, f, id),
         F::TutRoadHut(f) => crate::script_tut_road::tut_road_hut_test(g, r, f, id),
-        F::TutRoadGun(f) => crate::script_tut_road::tut_road_gun_test(g, r, id),
+        F::TutRoadGun(_) => crate::script_tut_road::tut_road_gun_test(g, r, id),
         F::TutRoadGate(f) => crate::script_tut_road::tut_road_gate_test(g, r, f, id),
-        F::TutTeamHold(f) => crate::script_tut_team::tut_team_hold_test(g, r, id),
+        F::TutTeamHold(_) => crate::script_tut_team::tut_team_hold_test(g, r, id),
         F::TutTeamCook(f) => crate::script_tut_team::tut_team_cook_test(g, r, f, id),
-        F::TutTeamPinned(f) => crate::script_tut_team::tut_team_pinned_test(g, r, id),
-        F::TutTeamSmoke(f) => crate::script_tut_team::tut_team_smoke_test(g, r, id),
-        F::TutTeamBreak(f) => crate::script_tut_team::tut_team_break_test(g, r, id),
-        F::TutTeamLinger(f) => crate::script_tut_team::tut_team_linger_test(g, r, id),
+        F::TutTeamPinned(_) => crate::script_tut_team::tut_team_pinned_test(g, r, id),
+        F::TutTeamSmoke(_) => crate::script_tut_team::tut_team_smoke_test(g, r, id),
+        F::TutTeamBreak(_) => crate::script_tut_team::tut_team_break_test(g, r, id),
+        F::TutTeamLinger(_) => crate::script_tut_team::tut_team_linger_test(g, r, id),
         F::TutTeamPush(f) => crate::script_tut_team::tut_team_push_test(g, r, b, f, id),
         _ => Err(alloc::format!("a c.until of id {} on a beat with none", id)),
     };
@@ -157,14 +154,6 @@ pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: Director
 /// what a script's question about a door answers
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
-
-pub mod util {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-
-}
 
 /// the define pass of the level this names, its locals left on the manifest
 pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut crate::director::Manifest) -> Result<(), String> {
@@ -179,18 +168,4 @@ pub(super) fn script_define(script: crate::scene_level::LevelScriptFn, m: &mut c
         S::TutTeam => V::TutTeam(crate::script_tut_team::tut_team_define(m)?),
     };
     Ok(())
-}
-
-/// the script of the level of this name
-pub fn level_script_of(name: &str) -> Option<crate::scene_level::LevelScriptFn> {
-    use crate::scene_level::LevelScriptFn as S;
-    match name {
-        "tut-kit" => Some(S::TutKit),
-        "tut-pair" => Some(S::TutPair),
-        "tut-queue" => Some(S::TutQueue),
-        "tut-quiet" => Some(S::TutQuiet),
-        "tut-road" => Some(S::TutRoad),
-        "tut-team" => Some(S::TutTeam),
-        _ => None,
-    }
 }

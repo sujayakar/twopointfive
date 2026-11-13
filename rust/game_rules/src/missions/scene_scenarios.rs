@@ -2,7 +2,7 @@
 
 pub use ::game_types::scene_scenarios::types;
 pub use types::*;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// A squad's barricade doors: the file's own list if it names one (an empty list means never), else every door of its rooms
 /// except one shared by two of its own rooms.
@@ -37,6 +37,7 @@ pub fn squad_barricade(q: &crate::scene_scenarios::SquadData, rooms: &[crate::sc
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use crate::scene_scenarios::{SquadData, StructureDoor, StructureRoom};
 

@@ -1,11 +1,11 @@
 use crate::v3::dist_xz;
-use super::*;                      // your own module: its types, its other parts' functions
+                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- the table of defaults and the state
 
@@ -483,7 +483,7 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };
     let rate = tune_rate * (0.95 + crate::dice::draw_of(g, "digin::scrape#1", gd) * 0.1);
-    crate::audio_iface::game_audio_like_play(g, if thud { "propThud" } else { "propScrape" }, Some(pos), Some(if thud { 0.6 } else { 0.5 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+    crate::audio_iface::game_audio_like_play(g, if thud { crate::audio_iface::Sfx::PropThud } else { crate::audio_iface::Sfx::PropScrape }, Some(pos), Some(if thud { 0.6 } else { 0.5 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     let c = g.gd[gd].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent {
@@ -576,10 +576,11 @@ pub(super) fn hand_waits(g: &Game, m: &crate::digin::Man, d_2: DoorId) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     // the pinned bits of dist_xz and path_len
     #[test]
-    fn flat_and_path_len_have_the_typescripts_bits() {
+    fn flat_and_path_len_keep_their_bits() {
         assert_eq!(dist_xz([1.1, 9.0, 2.3], [-4.7, 0.0, 8.9]).to_bits(), 0x4021929cde1931e6);
         assert_eq!(path_len([0.1, 0.0, 0.2], &[[1.3, 0.0, 2.7], [3.9, 5.0, -1.1], [-2.25, 0.0, 0.7]]).to_bits(), 0x402b92245733eab8);
     }

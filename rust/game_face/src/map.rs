@@ -1,6 +1,6 @@
 //! THE MAP OF A RUN being watched: the floor, asked once a stand, and who and what stands on it now. Both are reads, and everybody is on them, seen or not.
 use super::Held;
-use game::view::{FloorView, MapDoor, MapKind, MapMan, MapView};
+use game::view::{FloorView, MapDoor, MapMan, MapView};
 
 /// what a box's flags say of it here (game_draw's own words for them)
 const NO_SHADOW: u32 = game_draw::boxes::NO_SHADOW;

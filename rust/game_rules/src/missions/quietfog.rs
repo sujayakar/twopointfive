@@ -1,7 +1,6 @@
 pub use ::game_types::quietfog::types;
 pub use types::*;
-use crate::game::Game;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use alloc::{string::String, vec::Vec};
 
@@ -200,6 +199,7 @@ pub(super) fn quiet_fog_end(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     #[test]

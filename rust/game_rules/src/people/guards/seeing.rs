@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 fn hunting(g: &Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
@@ -162,7 +161,7 @@ pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guard
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
+    let view = crate::seats::view_key(&crate::seats::here(g));
     let p = g.player_pos(g.player);
     let now = g.time;
     let Some(row) = g.m.guards.ground_track.get_mut(view) else {
@@ -244,7 +243,7 @@ fn gain(g: &Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
     let hunts = hunting(g, gd);
     let moving = motion_sum(g.pos_of(gd), hunts, at, w.vel, w.light, dist);
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let mut rate = g.tune.detect_rate * m::pow(w.light, 1.5) * crate::guards::dist_term(g, dist) * (if w.low { 0.75 } else { 1.0 }) * moving * v3::clamp((w.smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
+    let mut rate = g.k.tune.detect_rate * m::pow(w.light, 1.5) * crate::guards::dist_term(g, dist) * (if w.low { 0.75 } else { 1.0 }) * moving * v3::clamp((w.smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
     rate *= crate::attention::attention_side_k(g, gd, at) * crate::kitload::load_seen(g, w.c);
     if dist < 1.8 { rate = m::max(rate, 3.5 * w.near); }
     if hunts { rate *= 2.2; }
@@ -298,7 +297,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
         Some(n) => v3::dist_xz(body, pos) <= n,
         None => false,
     };
-    if g.tune.body_light {
+    if g.k.tune.body_light {
         let seen_at = if at_feet { m::min(dist, g.k.body_light.near_m) } else { dist };
         if !crate::guards::body_lit(g, o, eye, seen_at) {
             return false;
@@ -358,7 +357,7 @@ mod tests {
 
     /// Pinned bits of the motion factor and the player's ground velocity, on the same frames.
     #[test]
-    fn ground_track_and_motion_match_the_typescript() {
+    fn ground_track_and_motion_are_as_pinned() {
         let eye: V3 = [3.25, 0.0, -1.5];
         let lit = 0.4;
         let mut row = crate::guards::GuardsModGroundTrackValue { pos: [0.0, 0.0, 0.0], t: 10.0, vel: [0.0, 0.0, 0.0] };

@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! EVERY DEATH EXPLAINS ITSELF. For every man of OUR side who goes down (a player, a teammate, a hostage) the tick keeps WHO did it, FROM WHERE and with what, and
 //! the floor's last seconds: every man's place and gun line, every door leaf, every round. The end card shows how it happened.
 //!
@@ -19,7 +18,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 use crate::character::Bone;
@@ -283,7 +282,7 @@ fn ear(g: &Game, c: CharId, a: V3) -> bool {
     if straight > EARS_PATH_M { return false; }
     let Some(path) = crate::scene_collision::nav_grid_find_path(g, b, a, Some(6000.0), None) else { return false; };
     if path.is_empty() { return false; }
-    let seal = crate::scene_boxes::box_flag().sound_seal;
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as f64;
     let (mut len, mut door, mut pa) = (0.0, false, [b[0], 1.0, b[2]]);
     for q in path {
         let pb = [q[0], 1.0, q[2]];

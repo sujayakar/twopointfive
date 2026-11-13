@@ -25,7 +25,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `hours/` | the hours (`hours()`), one laid over the level and taken off, cloud on the light, the sky's light on a man |
-| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
+| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`) |
 | `weather.rs` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `weather_air_trans` |
 | `air_dust.rs` | the fog's share in each half-meter cell, carried through openings and settling back |
 | `wind.rs` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
@@ -64,7 +64,7 @@ and past half cover spreads the disc and grays both (`under_weather`). `HourStat
 
 **Which weather is in force** is settled as the game is made (`weather_new`):
 
-1. A level named in `snow_levels` is born in snow and refuses any other kind (`weather_level_kind`, `set_kind_at`).
+1. A level whose file says `snow` is born in snow and refuses any other kind (`weather_level_kind`, `set_kind_at`).
 2. A picked kind: its preset's storm, rain, wind and fog, under the level's own roofs. `Weather.live` is up, and only then do ears and eyes change.
 3. No pick, on a level with quiet missions of its own (`own_floor`): dry and still (`weather_own_night`).
 4. No pick, otherwise: the old storm (`legacy`), rain and lightning, cut by the level's own roofs (`Weather.own`, `sync_roofs`), or by the fixed
@@ -98,7 +98,7 @@ coat (`wet_step` keeps it, and only `rust/game_draw/src/men.rs` reads it); drips
 air; the picture's air; a fire's flame and plume; moths.
 
 **How the split is held.** `game_draw` takes the game shared and `src/picture/` writes nothing back, so drawing cannot change a game
-(`the_snow_rows_change_nothing`). `tools/draw/ban.ts` keeps rules out of `src/`. A host says `StartOpts.dress`: a page has it up, a host with no
+(`the_snow_rows_change_nothing`). `tools/draw/ban.ts` holds who in `src/` makes the game do anything. A host says `StartOpts.dress`: a page has it up, a host with no
 picture down. This system reads two rows of `DressModDRESS`, `wind` and `moths`, both in the tick, because the moths are boxes of the frame's list. A
 cut (a load, a restart) starts each `src/picture/` part again from the rows.
 
@@ -108,7 +108,7 @@ Fires and moths read `wind_at`.
 
 **Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
 kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
-field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
+field along the line, and `air_grid` hands the picture the same cells, so what is drawn is what blinds.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
 coals, and files its smoke, marked as look so that no man sees it, and a hot-air source that parts falling snow. Rounds and blasts leave it burning
@@ -160,7 +160,7 @@ is made and sets `StoodWith`, the kind locked for that game.
 - **A kind:** its row in `WeatherKindsMod::blank`. A new one is also a word of `WeatherKind`, `weather_kinds()`, `ALL_KINDS`, `WEATHER_ROW` and
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
-- **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
+- **A snow level:** its generator's `SNOW`, its row's `snow`, its boxes painted by word (the `level` skill).
 - **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
 - **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `half`, then the reader.

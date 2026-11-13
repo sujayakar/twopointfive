@@ -1,6 +1,5 @@
 //! The types of `weather_kinds`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
@@ -42,8 +41,6 @@ pub struct WeatherKindsMod {
 }
 
 pub fn weather_kinds() -> Vec<String> { alloc::vec![String::from("clear"), String::from("overcast"), String::from("rain"), String::from("downpour"), String::from("fog"), String::from("dust")] }
-
-pub fn snow_levels() -> Vec<String> { alloc::vec![String::from("pass"), String::from("tut-team"), String::from("tut-quiet"), String::from("tut-road")] }
 
 pub const ROOF_Q: f64 = 0.2;
 

@@ -1,11 +1,9 @@
-#![allow(unused_variables)]
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// The row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
 pub(super) fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
@@ -30,14 +28,14 @@ pub(super) fn mat_of_surf(s: crate::scene_materials::Surf) -> crate::break_table
 }
 
 /// The row a pool chunk reads: by what the lane knows the thing is, else by what its box does.
-pub(super) fn mat_of(g: &crate::game::Game, kind: crate::debris::ChunkKind, box_: &crate::break_table::MatOfBox) -> crate::break_table::Mat {
+pub(super) fn mat_of(kind: crate::debris::ChunkKind, does: Option<crate::scene_materials::DoesWord>) -> crate::break_table::Mat {
     use crate::debris::ChunkKind;
     use crate::scene_materials::Surf;
     if kind == ChunkKind::Shard { return Mat::Glass; }
     if kind == ChunkKind::Tile { return Mat::Tile; }
     if kind == ChunkKind::Housing { return Mat::Screen; }
     if kind == ChunkKind::Binder { return Mat::Plastic; }
-    let s = crate::scene_materials::does_of_word(g, box_.does.as_deref()).surf;
+    let s = crate::scene_materials::does_of(does).surf;
     if kind == ChunkKind::Clutter { return if s == Surf::Foliage { Mat::Plant } else { Mat::Plastic }; }
     mat_of_surf(s)
 }
@@ -339,7 +337,6 @@ pub(super) fn wall_normal(g: &crate::game::Game, b: BoxId, toward: V3, keep: Opt
     let (yaw, h, c) = { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) };
     wall_normal_at(yaw, h, c, toward, keep)
 }
-
 
 #[cfg(test)]
 mod tests {

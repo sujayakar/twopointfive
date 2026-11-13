@@ -126,9 +126,9 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     const k = BACK[way], t0 = performance.now(), out = () => { const r = C.pending[C.pending.length - 1]; return !!r && r[1].k.includes(k); };
     for (let i = 0; (i < 2 || S().far || !out()) && performance.now() - t0 < 30000; i++) { step(10, [k]); await tick0(); }
     const a = pos(), down = man().down; if (rest) C.rest(performance.now());
-    // (past the last tick he said anything for, half a second let him come to a stand: what the server does with a man nobody speaks for)
-    const lastSaid = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
-    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; host.step(c); if (!quiet && t >= lastSaid + 30) quiet = pos(); }, word: () => host.word() }, max);
+    // (past the last tick he said anything for — the tick the server took his hands off on, which on a loaded box comes long after the one that was said for — half a second let him come to a stand: what the server does with a man nobody speaks for)
+    let end = rest ? Infinity : Math.max(C.confirmed, ...C.pending.map(q => q[0])); const was = C.walk; let quiet = null;
+    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; if (rest && c[C.seat].p && c[C.seat].p.includes('Paused')) { end = t; quiet = null; } host.step(c); if (!quiet && t >= end + 30) quiet = pos(); }, word: () => host.word() }, max);
     await new Promise(r => setTimeout(r, 3500));
     const behind = S().behind, far = await level([]), b = pos(); C.walk = was;
     return { behind, far, key: k, down, room: +room.toFixed(2), walked: +gone(b, a).toFixed(2), after: quiet ? +gone(b, quiet).toFixed(2) : -1 };
@@ -169,6 +169,10 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: its game is nowhere near stood)
     await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__net); await page.evaluate(() => window.__ready);
     const out = await page.evaluate(drive, { N, BREAK, NO_AHEAD, PICK: BAD_WAY ? 0 : 3, WORDS: !!WORDS });
+    const turns = await page.evaluate(() => { const P = window.__panel, was = P.visible; if (!was) P.toggle();
+      const says = [...P.root.querySelectorAll('.textrow')].some(e => /can't be turned in a co-op game/.test(e.textContent)), off = [...P.root.querySelectorAll('input')].filter(e => e.disabled).length, shut = P.root.querySelectorAll('.sbody[inert]').length;
+      if (!was) P.toggle(); return { says, off, shut }; });
+    line(turns.says && turns.off > 10 && turns.shut > 2, `numbers: the debugger ${turns.says ? 'says they' : 'DOES NOT SAY they'} can't be turned in a co-op game (${turns.off} of its knobs and ${turns.shut} sections shut)`);
     const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30), differ = S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine}; --words DIR, then tools/mp/words-diff.ts, names the parts)` : '';
     line(moved.has('roomclear') === /roomclear/.test(setup.scenario) && moved.get('seed') === String(setup.seed) && moved.has('net') && !moved.has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (?${moved.toString().slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);

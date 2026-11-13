@@ -1,8 +1,8 @@
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// The men dealt into a room.
 fn n(count: &JsMap<String, f64>, r: &crate::scene_scenarios::StructureRoom) -> f64 {
@@ -140,6 +140,7 @@ pub(crate) fn squads_by_rooms(g: &mut Game, men: &[GuardId]) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use crate::scene_scenarios::{Rect, StructureData, StructureRoom};
 
@@ -166,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn cuts_match_the_typescript() {
+    fn cuts_are_as_pinned() {
         assert_eq!(deal(line(), &["a", "a", "b", "c", "d", "d", "e"]), block(&["dealt1 Alpha: a,b", "dealt2 Bravo: c,d,e"]));
         assert_eq!(deal(line(), &["a", "a", "a", "b", "c", "c", "d", "e", "e", "e"]), block(&["dealt1 Alpha: a", "dealt2 Bravo: b,c,d", "dealt3 Charlie: e"]));
         assert_eq!(deal(line(), &["a", "a", "a", "a", "a", "a", "a", "a", "a", "a"]), block(&["dealt1 Alpha: a,b,c,d,e"]));

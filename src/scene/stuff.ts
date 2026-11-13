@@ -11,11 +11,11 @@
 // found a paint's finish by its numbers: a wall repainted a slightly different grey was silently another material. tools/levels/stuffWas.ts keeps that rule,
 // frozen, for one job: bringing a level file written before forward, each box saying what it was drawn as.)
 // A NAME NEVER CHANGES A COLOUR, and a colour says nothing: this table gives a paint what it is drawn as and leaves its numbers alone.
-// WHAT A PAINT DOES IS SAID THE SAME WAY, IN ANOTHER WORD (PAINT_DOES below; scene/materials.ts has the rows). A paint's name says what a box of it is to
+// WHAT A PAINT DOES IS SAID THE SAME WAY, IN ANOTHER WORD (PAINT_DOES below; rust/game_types/src/scene_materials has the rows). A paint's name says what a box of it is to
 // a round, a charge and a blast; a kit puts that word on the box beside `stuff` (Box.does), and the two are never worked out from one another: `stuff` is
-// the picture's and a repaint changes it, `does` is the rules' and a repaint leaves it. The rules read the box (materials.ts doesOf), never this table.
+// the picture's and a repaint changes it, `does` is the rules' and a repaint leaves it. The rules read the box (rust `does_of`), never this table.
 import type { GwotMat } from './gwotPalette';
-import type { DoesWord } from './materials';   // (a type: what a paint DOES is a word of the table of materials)
+import type { DoesWord } from '../draw/names';   // (a type: what a paint DOES is a word of the table of materials)
 import { LOOK_NAMES, lookStuffOf } from '../render/lookTex';   // (a module of arithmetic with no imports of its own: the look's list of materials is the one list)
 
 export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'glass' | 'rubber';
@@ -53,7 +53,7 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
 };
-/** WHAT EACH PAINT DOES, by its name: the row of the table of materials (scene/materials.ts) a box of that paint takes its `does` from. Every word here is
+/** WHAT EACH PAINT DOES, by its name: the row of the table of materials (rust/game_types/src/scene_materials) a box of that paint takes its `does` from. Every word here is
  *  what the rules made of the paint's COLOUR until 2026-11-05, written out so that no rule moved the day they stopped reading colours: so two rugs are
  *  'dark carpet' because their dye is dark, and the white plastic is 'grey plastic' because a plain light grey was a cabinet to a blast. Each is a choice
  *  somebody may now make by changing one word. A paint with no row here says nothing, and a box of it takes the default row unless it says its own. */
@@ -103,7 +103,7 @@ export const saidFor = <S extends BoxStuff>(stuff: S, paint: readonly number[], 
   own.includes(paint) ? { stuff } : {};   // (the row handed over, not its numbers: a copy of the kit's wood is nobody's paint and gets no veneer, as it gets no finish)
 // ---- A PAINT IS KNOWN BY THE ROW HANDED OVER, NOT BY ITS NUMBERS ----
 /** what a kit knows of one of its paints: its name in the palette, its finish, what it is made of ('plain' is no word: absent), and what it does
- *  (scene/materials.ts; absent = the paint says nothing, and a box of it is asked no further here) */
+ *  (rust/game_types/src/scene_materials; absent = the paint says nothing, and a box of it is asked no further here) */
 export interface Paint { readonly name: string; readonly rough?: number; readonly metal?: boolean; readonly stuff?: BoxStuff; readonly does?: DoesWord }
 /** each palette row's own array → what its kit said of it. Keyed by the ARRAY (`albedo: C.wood` hands the row over), never by its numbers: two paints
  *  with one colour are two paints, and a colour written out as numbers is nobody's paint. Rows are added as their palette's module loads; never removed. */
@@ -168,7 +168,7 @@ export function doingAs(paint: readonly number[], does: DoesWord): [number, numb
   const was = PAINTS.get(paint); if (was?.does === does) return paint as [number, number, number];
   const out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, { ...(was ?? { name: '' }), does }); return out;
 }
-/** … AND WHAT IT DOES, the same way (scene/materials.ts): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
+/** … AND WHAT IT DOES, the same way (rust/game_types/src/scene_materials): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
  *  which does what steel does, whatever else was said of them (madeOf first, then this, or either alone). A colour nobody says this of is brought forward
  *  by the exporter with the word its tone had (tools/levels/doesWas.ts). Returns the colour. */
 export function doing<T extends readonly number[]>(does: DoesWord, colour: T): T {
@@ -231,7 +231,7 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
  *  whatever number a kit, a skin or a hand wrote beside the word (a vehicle's body took a truck enamel's satin, a cot's and a locker's too, or nothing at
  *  all: it showed next to nothing of what stands round it). The word decides; a thing that should not shine like a car does not say it is car paint.
  *  Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: whether a thing is bare metal stays its paint's (a piece the game breaks off a thing
- *  is given the thing's own finish and flag, rust/game_rules/src/breakage/break_table; what a thing DOES is its other word, scene/materials.ts, and reads neither).
+ *  is given the thing's own finish and flag, rust/game_rules/src/breakage/break_table; what a thing DOES is its other word, rust/game_types/src/scene_materials, and reads neither).
  *  WHERE: read by the one function that hands a box's finish to the GPU (rust/game_draw boxes/pack.rs finish), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.
@@ -244,7 +244,7 @@ export const coatRough = (word: BoxStuff | undefined): number | undefined => COA
  *  because what is seen through it is an unlit inside, and it is what mirrors most on a car. A PANE (BoxFlag.Glass) is the glass engine's and is not
  *  touched; nor is a face that carries MARKINGS (a mark is laid out in its own colours on the colour under it: a panel's grid, a screen's picture).
  *  THE COLOUR IS NOT REPAINTED: `Box.albedo` stays the file's. This is a rule of the PICTURE, keyed on the word a box is DRAWN as (Box.stuff): what a
- *  box DOES is its other word (Box.does, scene/materials.ts: a kit vehicle's window does what 'dark glass' does) and is neither asked nor touched. So it
+ *  box DOES is its other word (Box.does, rust/game_types/src/scene_materials: a kit vehicle's window does what 'dark glass' does) and is neither asked nor touched. So it
  *  goes wherever the word goes, whoever painted the box (the kits' dark glass, a plain car's own grey), and the game still finds the box's own colour
  *  where it takes one (what a piece broken off it is painted, a chip's tint, a lamp known by its tone). The pack sends it dark, in the one place it
  *  sends a wet box darker (rust/game_draw boxes/pack.rs sent), and no rougher than `rough`. Darker and smoother stay as they are. NEUTRAL, not the

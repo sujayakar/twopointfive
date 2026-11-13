@@ -2,9 +2,9 @@ pub use ::game_types::pairorders::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the living row of a man's job: a copy would lose the write
@@ -249,7 +249,7 @@ pub fn row_take_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarg
     out
 }
 /// `valid` of the two take rows
-pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, _: &[GuardId]) -> Result<(), Option<String>> {
     let crate::orders::OrderTarget::Foe(x) = t else { return Err(None) };
     if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
     if crate::pairorders::pair_orders_noticed(g, x.foe) {
@@ -260,43 +260,16 @@ pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[Guard
     }
     Ok(())
 }
-/// one of the two take rows
-fn take_row(g: &mut Game, row: &'static crate::orders::Row, ack: [&str; 2]) -> OrdersOrderDefId {
-    let def = crate::orders::rows::def(row, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Foe],
-        ack: Some(vec![String::from(ack[0]), String::from(ack[1])]),
-        ..Default::default()
-    });
-    crate::orders::squad_orders_row(g, def)
-}
-
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
 fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
-    let mark = take_row(g, &rows::pairmark::ORDER, ["moving up on him.", "on him. your mark."]);
-    let watch = crate::orders::squad_orders_row(g, rows::def(&rows::pairwatch::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Foe],
-        ack: Some(vec![String::from("eyes on him."), String::from("i've got him.")]),
-        ..Default::default()
-    }));
-    let now = take_row(g, &rows::pairtake::ORDER, ["on him.", "moving up on him."]);
-    let dark = crate::orders::squad_orders_row(g, rows::def(&rows::pairdark::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Floor],
-        ack: Some(vec![String::from("moving."), String::from("on it.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::movethere::ORDER.id) }),
-        ..Default::default()
-    }));
-    vec![mark, watch, now, dark]
+    [&rows::pairmark::ORDER, &rows::pairwatch::ORDER, &rows::pairtake::ORDER, &rows::pairdark::ORDER].into_iter().map(|r| crate::orders::squad_orders_row(g, rows::def(r))).collect()
 }
 
 /// the mark's own row: 'go' under the word's header   (PairOrders.goRow)
 fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::rows;
-    crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER, crate::orders::OrderDef {
-        word: true, free: Some(true),
-        targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
-        ..Default::default()
-    }))
+    crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER))
 }
 
 /// a row here given while the squad is loud: silent first, with the squad's own line for it   (PairOrders.quietFirst)
@@ -352,8 +325,8 @@ fn pair_orders_reset(g: &mut Game) {
 // ------------------------------------------------------------ once a frame
 /// F: the mark, while somebody waits on it; the press is used here and a menu that is up goes away   (PairOrders.input)
 pub fn pair_orders_input(g: &mut Game, input: InputId) {
-    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.holds("KeyF") || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
-    g.tab.input[input].pressed.delete(String::from("KeyF"));
+    if !seated_in(g, &crate::seats::here(g)) || !g.tab.input[input].pressed.holds(crate::input::Key::F.as_str()) || crate::condition::down(g, g.pl[g.player].ch) || pair_orders_waiting(g, &crate::seats::here(g)).is_empty() { return; }
+    g.tab.input[input].pressed.delete(crate::input::Key::F.text());
     crate::orders::squad_orders_close(g);
     pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::F));
 }
@@ -505,7 +478,7 @@ fn pair_orders_body_lit(g: &mut Game, o: GuardId, foe: GuardId, at: V3) -> bool 
     let eye = eye_of(g, o);
     let d = m::hyp3(eye[0] - at[0], eye[1] - at[1], eye[2] - at[2]);
     let (near_m, far_m, lit, lit_near) = (g.k.body_light.near_m, g.k.body_light.far_m, g.k.body_light.lit, g.k.body_light.lit_near);
-    let bar = if !g.tune.body_light || d <= near_m { -1.0 } else { lit_near + (lit - lit_near) * m::min(1.0, (d - near_m) / m::max(0.1, far_m - near_m)) };
+    let bar = if !g.k.tune.body_light || d <= near_m { -1.0 } else { lit_near + (lit - lit_near) * m::min(1.0, (d - near_m) / m::max(0.1, far_m - near_m)) };
     let vis = g.shown[g.gd[foe].ch].visibility;
     m::max(vis, pair_orders_lit_at(g, at)) >= bar
 }

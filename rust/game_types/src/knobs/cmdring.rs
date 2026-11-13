@@ -1,13 +1,12 @@
 //! The numbers of cmdring.
 use crate::bytes::ToBytes;
-use alloc::string::String;
 use game_derive::Knobs;
 
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct CmdringK {
     /// the key: the squad's command key — the quick order's own code, which the page's board has on Q (host/keymap.ts; the maintainer: "let's move the squad
     ///  command button to Q then too", "from tab"). Tab itself is the page's: the way back and the objectives card (ui/tabcard.ts)
-    #[k(String::from("KeyB"))] pub key: String,
+    #[k(crate::input::types::Key::B)] pub key: crate::input::types::Key,
     /// wedges on the ring, clockwise from the top: the digits 1 … this (never above 5)
     #[k(5.0)] pub wedges: f64,
     /// the ring's middle: the cursor this far (CSS px) out of it lights the wedge it is out toward — once it has been back inside since the ring last changed

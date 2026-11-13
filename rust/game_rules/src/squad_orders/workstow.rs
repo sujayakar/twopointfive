@@ -1,9 +1,7 @@
 pub use ::game_types::workstow::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use alloc::boxed::Box;
 
 /// A charge is going on by your own hands.
 fn sam_job(g: &crate::game::Game) -> bool {
@@ -23,7 +21,7 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
         g.pl[pl].work_stow = Some(crate::game::PlayerWorkStow { drew: drew || owed, t, down: !drew });
         if drew {
             holster(g, true);
-            crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Equip, None, Some(0.35), None);
         }
         return;
     };
@@ -48,7 +46,7 @@ pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut cra
     }
     holster(g, false);
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.workstow.sam_up);
-    crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.35), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Equip, None, Some(0.35), None);
 }
 
 /// The thing is still on its way out of his hand: the job's clock has not started.
@@ -131,6 +129,8 @@ pub fn stow_fight(g: &crate::game::Game, gd: GuardId, a: Option<crate::workstow:
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::boxed::Box;
     use super::*;
 
     fn man() -> (Box<Game>, GuardId, CharId) {

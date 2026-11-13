@@ -1,6 +1,5 @@
 pub use ::game_types::sprintdoor::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 
@@ -78,7 +77,7 @@ pub fn sprint_door_after(g: &mut crate::game::Game, pl: PlayerId, own: &crate::d
         g.stats.sprintdoor.bashes += 1;
     }
     if own.ripped.is_some() {
-        let cap = g.tune.player_sprint * g.k.sprintdoor.rip_pace;
+        let cap = g.k.tune.player_sprint * g.k.sprintdoor.rip_pace;
         let now = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);
         if now > cap {
             let k = cap / now;
@@ -119,6 +118,7 @@ pub fn sprint_door_head(off: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
     extern crate std;
 
@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn head_matches_the_typescript() {
+    fn head_is_as_pinned() {
         let rows: [(f64, u64); 9] = [
             (0.0, 0x0000000000000000),
             (1e-7, 0x0000000000000000),
@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn lean_matches_the_typescript() {
+    fn lean_is_as_pinned() {
         big_stack(|| {
         let mut g = Game::blank();
         g.k.sprintdoor = crate::knobs::SprintdoorK::page();
@@ -169,7 +169,7 @@ mod tests {
         let mut g = Game::blank();
         g.k.sprintdoor = crate::knobs::SprintdoorK::page();
         g.time = 12.5;
-        g.tune.player_sprint = 5.6;
+        g.k.tune.player_sprint = 5.6;
         let mut ch = crate::character::Character::blank();
         ch.vel = [4.1, 0.0, 3.3];
         ch.pos = [0.4, 0.0, -1.9];
@@ -197,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn after_a_bash_matches_the_typescript() {
+    fn after_a_bash_is_as_pinned() {
         big_stack(|| {
         let (mut g, pl, c, d) = stage();
         sprint_door_after(&mut g, pl, &contact(d, false));
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn after_a_bash_and_a_rip_matches_the_typescript() {
+    fn after_a_bash_and_a_rip_is_as_pinned() {
         big_stack(|| {
         let (mut g, pl, c, d) = stage();
         sprint_door_after(&mut g, pl, &contact(d, true));

@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
@@ -186,7 +186,6 @@ pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::swing;
-
 
     const FRAME: f64 = 1.0 / 60.0;
 

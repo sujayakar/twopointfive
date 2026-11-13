@@ -2,11 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// His order's own tick, if it has one: it may rewrite his Task or re-assign him.
 fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: TaskId) {
@@ -18,10 +17,11 @@ fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: Ta
 /// Once a frame before the guards move: each man under an order is walked to it and posed on it.
 pub fn squad_orders_tick(g: &mut crate::game::Game) {
     squad_orders_sync(g);
-    crate::fireline::fire_line_tick(g);
+    let player = crate::group::is_seats(g);   // (his gun and his way are no other group's)
+    if player { crate::fireline::fire_line_tick(g); }
     if g.groups[g.group].orders.asg.is_empty() { return; }
     if !squad_orders_active(g, &crate::seats::here(g)) { squad_orders_clear(g, None); return; }
-    crate::sneak::sneak_tick(g);
+    if player { crate::sneak::sneak_tick(g); }
     let mates: Vec<GuardId> = if squad_orders_big(g, &crate::seats::here(g)) { squad_orders_men(g, &crate::seats::here(g), None, None) } else { Vec::new() };
     let followers = the_file(g);
     note_sams_walk(g, &followers);
@@ -101,6 +101,7 @@ fn through_his_door(g: &mut Game, gd: GuardId, a: TaskId) {
 
 /// The fight AI has an alerted man until his fight has gone cold: true while it is hot. Cold, he goes over to searching.
 fn fight_has_him(g: &mut Game, gd: GuardId, a: TaskId) -> bool {
+    if !crate::group::is_seats(g) { return false; }   // (a group no player commands says itself when a fight takes a man off his order)
     if g.gd[gd].script.is_some() || g.gd[gd].state != crate::game::GuardState::Alert { return false; }
     if g.tab.task[a].yield_t < 0.0 {
         g.tab.task[a].yield_t = g.time;

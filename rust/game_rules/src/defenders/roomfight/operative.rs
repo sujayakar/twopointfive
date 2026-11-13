@@ -1,13 +1,11 @@
 //! A SQUAD MAN IN THE FIGHT: his eyes on each of them, who his muzzle is on, what he does with nobody in his sight, and his fire.
-#![allow(unused_imports)]
 use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// the sight gain, with the hunting man's x2.2 for a scripted man.
 fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardId, dist: f64, known: Option<bool>) -> f64 {
@@ -345,7 +343,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * sk.settle_k;
     if on && g.tab.roomfight_op[o].pre { g.tab.roomfight_op[o].track = m::max(g.tab.roomfight_op[o].track, sk.preaim); g.tab.roomfight_op[o].pre = false; }
     g.tab.roomfight_op[o].track = if on { m::min(1.0, g.tab.roomfight_op[o].track + dt / settle) } else { m::max(0.0, g.tab.roomfight_op[o].track - p.lose_rate * dt) };
-    if !g.tune.aim_model { g.tab.roomfight_op[o].track = if on { 1.0 } else { 0.0 }; }
+    if !g.k.tune.aim_model { g.tab.roomfight_op[o].track = if on { 1.0 } else { 0.0 }; }
     if on_man && crate::gunwall::gun_wall_is(g, c) { 
         g.tab.roomfight_op[o].block_t += dt;
         g.tab.roomfight_op[o].wall_t += dt;
@@ -397,7 +395,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     let spread = def.ai_spread;
     let hands = (spread.base + m::max(0.0, dist - spread.range_from) * spread.range_k) * sk.spread_k;
     let sup_v = g.cond[g.gd[gd].ch].sup.v;
-    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
+    let sup_k = if g.k.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
     let string = crate::gunroles::gun_string(g, gd); // a belt-fed gun's string, the Mk 12's single aimed round; 0: the controlled pair
     let grow = if string > 1.0 { crate::gunroles::gun_string_grow(g, gd, js::rem(g.tab.roomfight_op[o].n, string)) } else { 0.0 };
     let feet = m::max(speed, g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0)) * g.k.aimcost.move_k;
@@ -486,7 +484,6 @@ struct CueLook {
     eye: V3,
     gone: Option<GuardId>,
     arc: Option<f64>,
-    a: Option<TaskId>,
     on_way_to_door: bool,
     look: Option<OpTurn>,
 }
@@ -524,7 +521,7 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let a = crate::duty::order(g, gd);
     let arc = arc_of_his_hold(g, c, a);
     let on_way_to_door = match a { Some(id) => g.tab.task[id].door.is_some() && !g.tab.task[id].arrived, None => false };
-    let s = CueLook { o, gd, c, eye, gone, arc, a, on_way_to_door, look };
+    let s = CueLook { o, gd, c, eye, gone, arc, on_way_to_door, look };
     let mut cause = round_from_a_man_in_his_line(g, s);
     if cause.is_none() { cause = man_a_mates_muzzle_is_on(g, s); }
     if cause.is_none() { cause = footsteps_coming(g, s); }

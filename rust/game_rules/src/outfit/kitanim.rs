@@ -1,8 +1,7 @@
 pub use ::game_types::kitanim::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.

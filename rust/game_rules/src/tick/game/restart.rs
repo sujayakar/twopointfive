@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 /// A cut: `lens.target = copy(at); lens.desired = copy(at)`. A whole write of `desired` is what Seat.takeCut watches for, here by its serial.
 fn cut_lens(g: &mut Game, cam: CameraId, at: V3) {
@@ -19,19 +19,19 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
     use crate::doors::DoorSound;
     if let Some(pl) = crate::seats::man_by_id(g, e.who) { g.pl[pl].noise = m::max(g.pl[pl].noise, e.level); }
     match e.sound {
-        DoorSound::Creak => crate::audio_iface::play_at(g, "doorCreak", e.pos, 0.5 + 0.5 * e.level / 0.3),
-        DoorSound::Bang => crate::audio_iface::play_at(g, "doorBang", e.pos, 0.9),
-        DoorSound::Latch => crate::audio_iface::play_at(g, "doorLatch", e.pos, 0.6),
+        DoorSound::Creak => crate::audio_iface::play_at(g, crate::audio_iface::Sfx::DoorCreak, e.pos, 0.5 + 0.5 * e.level / 0.3),
+        DoorSound::Bang => crate::audio_iface::play_at(g, crate::audio_iface::Sfx::DoorBang, e.pos, 0.9),
+        DoorSound::Latch => crate::audio_iface::play_at(g, crate::audio_iface::Sfx::DoorLatch, e.pos, 0.6),
         DoorSound::Bash => {
             // (under 1: a leaf ripped round by its handle at a run, the same slam, lighter and shorter)
-            if e.level < 1.0 { crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { crate::audio_iface::play_at(g, "doorBash", e.pos, 0.9); }
+            if e.level < 1.0 { crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::DoorBash, e.pos, 0.6, 1.15); } else { crate::audio_iface::play_at(g, crate::audio_iface::Sfx::DoorBash, e.pos, 0.9); }
         }
-        DoorSound::Rattle => crate::audio_iface::play_at(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
-        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; crate::audio_iface::play_at_rate(g, "lockPick", e.pos, 0.5, rate); }
-        DoorSound::Unlock => crate::audio_iface::play_at(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
+        DoorSound::Rattle => crate::audio_iface::play_at(g, crate::audio_iface::Sfx::DoorRattle, e.pos, 0.35 + 2.0 * e.level),
+        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::LockPick, e.pos, 0.5, rate); }
+        DoorSound::Unlock => crate::audio_iface::play_at(g, crate::audio_iface::Sfx::LockOpen, e.pos, 0.4 + 1.3 * e.level),
         DoorSound::Kick => {
-            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.9);
-            crate::audio_iface::play_at(g, "lockBreak", e.pos, 0.95);
+            crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::DoorBash, e.pos, 1.0, 0.9);
+            crate::audio_iface::play_at(g, crate::audio_iface::Sfx::LockBreak, e.pos, 0.95);
             let kicker = match crate::seats::man_by_id(g, e.who) {
                 Some(p) => Some(g.pl[p].ch),
                 None => g.guards.iter().map(|&x| g.gd[x].ch).find(|&c| g.ch[c].id == e.who),
@@ -46,12 +46,12 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         }
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
-            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.8);
+            crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::DoorBash, e.pos, 1.0, 0.8);
         }
         DoorSound::Clang => {
             // a boot on the steel stair door: the ring of it, no keep to splinter
-            crate::audio_iface::play_at_rate(g, "doorBash", e.pos, 1.0, 0.7);
-            crate::audio_iface::play_at_rate(g, "stairDoor", e.pos, 0.55, 1.3);
+            crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::DoorBash, e.pos, 1.0, 0.7);
+            crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::StairDoor, e.pos, 0.55, 1.3);
         }
     }
     // heard: a kick is its own kind, floor-wide; everything else a 'door' noise with a level, placed at the leaf
@@ -112,10 +112,10 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     let (thud_rate, scrape_rate) = { let t = &g.tab.props_prop[e.prop].tune; (t.thud_rate, t.scrape_rate) };
     let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
-        crate::audio_iface::play_at_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
+        crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::PropThud, e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
         crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed));
     } else if !e.rolling {
-        crate::audio_iface::play_at_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
+        crate::audio_iface::play_at_rate(g, crate::audio_iface::Sfx::PropScrape, e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
     }
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent {
@@ -160,7 +160,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
         let (a, b) = (g.player_pos(me), g.pos_of(gd));
         if v3::dist_xz(a, b) > crate::dialogue::INTERROGATE_REACH || crate::scene_collision::solid_blocked(g, [a[0], 1.0, a[2]], [b[0], 1.0, b[2]], None) { return None; }
     }
-    let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
+    let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
     let Some(pick) = pick else { return None };
     crate::guards::say(g, gd, &pick.text, Some(false), Some(true));   // (forced: a held man's only voice is his answers)
     if let Some(bubble) = g.gd[gd].bubble.as_mut() {
@@ -204,7 +204,7 @@ pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
     if hit > 1.4 {
         let at = g.ch[c_2].bone(crate::character::Bone::Spine2).unwrap_or(g.ch[c_2].pos);
-        crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyFall, Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
         crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }
 }

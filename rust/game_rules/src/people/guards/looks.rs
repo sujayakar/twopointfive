@@ -21,7 +21,7 @@ pub const LOOKS: &[Look] = &[
 ];
 
 fn tactics(g: &mut Game, gd: GuardId, _dt: f64, eyes_on_foe: bool) -> Option<Laid> {
-    if !g.tune.tactics || eyes_on_foe { return None; }
+    if !g.k.tune.tactics || eyes_on_foe { return None; }
     crate::tactics::tactics_look(g, gd).map(|l| Laid { aim: Some(l.aim), crouch: l.crouch })
 }
 

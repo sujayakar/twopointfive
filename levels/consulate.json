@@ -1071,6 +1071,7 @@
     { "id": "front", "hinge": [4, 18.32], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
     { "id": "fire_exit", "hinge": [36, 21.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true }
   ],
+  "doorPaint": { "outside": { "albedo": [0.21, 0.05, 0.105] }, "inside": { "albedo": [0.27, 0.18, 0.12], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],

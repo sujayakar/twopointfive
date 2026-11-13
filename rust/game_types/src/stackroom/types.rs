@@ -1,7 +1,6 @@
 //! The types of `stackroom`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 /// what `stack_room_book_keep` took, to put the room rule's book back once after an ask made only to be looked at. Forget: there was no book, so drop it. Back: forget the floors and doorway cells read since; floors marks which faces of which doors had been read (a floor is never rewritten once read, so the marks will do, without cloning every Floor's W*H cells on each trial). sig and doors: if the book no longer has them it was rebuilt during the ask, and the old one put back would be rebuilt empty at the next `book_of`, so set books to None
 #[derive(Clone, Debug)]

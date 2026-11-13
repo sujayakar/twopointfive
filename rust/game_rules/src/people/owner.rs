@@ -1,38 +1,34 @@
 //! WHOSE MAN HE IS: one word a man, a bit a tasker (`Taskers`, types.rs). A tasker that takes him sets its bit and lets go by clearing it; the strongest
 //! bit set is who has him, since when and for what reason. A rule asks whether any of some taskers has a hand on him (`has`).
-//! The list, its names and its order are the types file's `taskers!`; the word lies on the man's row of the block (sim_men_store).
+//! The list, its names and its order are the types file's `taskers!`; the word lies on his body (`Character.hold`).
 
 pub use ::game_types::owner::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-
-use crate::sim_men_store as men;
+use crate::js;
 
 /// the word changed: if who has him changed, he has him from now, for its first reason or the one given
 fn settle(g: &mut Game, gd: GuardId, word: By, t: f64, why: Option<u32>) {
-    let c = g.gd[gd].ch;
-    men::man_set_owner(g, c, word.0);
+    let h = &mut g.ch[g.gd[gd].ch].hold;
+    h.by = word;
     let rank = word.rank();
-    if rank == men::man_rank(g, c) {
-        if let Some(w) = why { if rank > 0 { men::man_set_reason(g, c, w); } }
+    if rank == h.rank {
+        if let Some(w) = why { if rank > 0 { h.reason = w; } }
         return;
     }
-    men::man_set_rank(g, c, rank);
-    men::man_set_reason(g, c, why.unwrap_or(0));
-    men::man_set_since(g, c, t);
+    (h.rank, h.reason, h.since) = (rank, why.unwrap_or(0), t);
 }
 
 /// Tasker `by` takes him; nothing changes if it has him already, but for the reason it gives. `t` the game's clock; `why` a place in its list of reasons.
 pub fn claim(g: &mut Game, gd: GuardId, by: By, t: f64, why: Option<f64>) {
     let why = js::to_u32(why.unwrap_or(0.0));
     let c = g.gd[gd].ch;
-    let was = By(men::man_owner(g, c));
+    let was = g.ch[c].hold.by;
     let word = was | by;
     let top = by.rank() == word.rank();
     if was == word {
-        if top { men::man_set_reason(g, c, why); }
+        if top { g.ch[c].hold.reason = why; }
         return;
     }
     settle(g, gd, word, t, if top { Some(why) } else { None });
@@ -40,13 +36,13 @@ pub fn claim(g: &mut Game, gd: GuardId, by: By, t: f64, why: Option<f64>) {
 
 /// Tasker `by` lets go. The one below it, if any, has him again from now.
 pub fn release(g: &mut Game, gd: GuardId, by: By, t: f64) {
-    let was = By(men::man_owner(g, g.gd[gd].ch));
+    let was = g.ch[g.gd[gd].ch].hold.by;
     if !was.any(by) { return; }
     settle(g, gd, By(was.0 & !by.0), t, None);
 }
 
 /// has any of these a hand on him
-pub fn has(g: &Game, gd: GuardId, by: By) -> bool { By(men::man_owner(g, g.gd[gd].ch)).any(by) }
+pub fn has(g: &Game, gd: GuardId, by: By) -> bool { g.ch[g.gd[gd].ch].hold.by.any(by) }
 
 /// MAY `by` TAKE HIM? Who keeps him from it, in words, or None. His body first: dead, in somebody's arm, blind, reeling, a hostage in his own. Then whoever above `by` in the list has
 /// him. (`By::NOBODY` asks for the weakest of all: is he anybody's)
@@ -65,10 +61,10 @@ pub fn name_of(by: By) -> Option<&'static str> { TASKERS.iter().find(|t| t.by ==
 
 /// who has him, for what reason and since when; None: nobody
 pub(super) fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
-    let c = g.gd[gd].ch;
-    let top = By(men::man_owner(g, c)).rank();
+    let h = g.ch[g.gd[gd].ch].hold;
+    let top = h.by.rank();
     let t = TASKERS.iter().find(|t| t.by.rank() == top)?;
-    Some((t.name, t.why.get(men::man_reason(g, c) as usize).copied().unwrap_or(t.why[0]), men::man_since(g, c)))
+    Some((t.name, t.why.get(h.reason as usize).copied().unwrap_or(t.why[0]), h.since))
 }
 
 // ---- by number, for the page's checks (the call table's rows)
@@ -89,9 +85,7 @@ mod tests {
 
     fn stand() -> (alloc::boxed::Box<Game>, GuardId) {
         let mut g = alloc::boxed::Box::new(Game::blank());
-        // a man with no row on the block keeps his numbers on his Character, so this needs no block
         let c = crate::character::man_new(&mut g, crate::character::Character::blank());
-        g.ch[c].man_kept = Some([0.0; 4]);
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let m = g.gd.push(man);
@@ -104,7 +98,7 @@ mod tests {
         let (mut g, m) = stand();
         let g = &mut *g;
         let c = g.gd[m].ch;
-        let row = |g: &Game| (men::man_owner(g, c), men::man_rank(g, c), men::man_reason(g, c), men::man_since(g, c));
+        let row = |g: &Game| { let h = g.ch[c].hold; (h.by.0, h.rank, h.reason, h.since) };
         let is = |word: By, reason: u32, since: f64| (word.0, word.rank(), reason, since);
         let (at_rest, lane) = (by::SQUAD, by::SQUAD | by::LANE);
         claim(g, m, by::SQUAD, 1.0, None);

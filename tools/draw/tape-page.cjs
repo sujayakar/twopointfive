@@ -6,7 +6,7 @@ const { mkdirSync, readFileSync } = require('node:fs'), { join } = require('node
 const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 // (the men's place among the sections, by its name: a section put before it moves the number)
 const MEN = Number(/enum Section \{[^}]*\bmen = (\d+)/.exec(readFileSync(join(__dirname, '../../src/draw/sections.ts'), 'utf8'))[1]);
-const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.state;
+const same = (a, b) => a.die === b.die && a.stands === b.stands && a.state === b.state;
 (async () => {
   const ctx = await PAGE.context();
   const open = async (words, ready = true) => {
@@ -107,7 +107,14 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.s
     await still(T.page, 'tape-4-older'); await T.page.close();
     const U = await open(`paused&quality=verylow&mute&playtape=${sid}`), [b, parted] = await U.page.evaluate(() => { const d = window.__draw; d.run(1, [], 'none'); const said = document.querySelector('#tapebar .say').textContent; d.run(240, [], 'none'); return [said, d.played.parted]; }); await U.page.close();
     check(!!was && s.old && /older version/.test(s.line) && /older version of the game/.test(b) && !/older/.test(s0.said) && parted === null, 'a run of an older version of the game is said to be one, on the list and on the bar, and plays as it was', { was, ...s, bar: b, parted, own: s0.said }); }
+  // ---- of another tape version: the list says it can't be played, and its row goes nowhere
+  { const T = await open('paused&quality=verylow&mute');
+    const s = await T.page.evaluate(async sid => { const db = await new Promise((res, rej) => { const q = indexedDB.open('twopointsix-kept'); q.onsuccess = () => res(q.result); q.onerror = rej; }), tx = db.transaction('heads', 'readwrite'), st = tx.objectStore('heads'), was = JSON.parse(await new Promise(res => { const q = st.get(sid); q.onsuccess = () => res(q.result); }));
+      st.put(JSON.stringify({ ...was, hands: was.hands - 1 }) + '\n', sid); await new Promise(res => { tx.oncomplete = res; });
+      const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)); at('Extras').click(); at('Replays').click(); await new Promise(r => setTimeout(r, 1200)); const a = document.querySelector('#menu .xlist a.xrow'); return { hands: was.hands, hand: was.hand, href: a.getAttribute('href'), line: a.querySelector('i').textContent, title: a.title }; }, sid); await T.page.close();
+    check(s.hands > 0 && s.hand > 0 && s.href === null && /can’t be played anymore/.test(s.line) && !/may go/.test(s.line) && /different version/.test(s.title), 'a run of another tape version is said to be one that can’t be played', s); }
   // ---- refused in words
   const N = await open('paused&quality=verylow&mute&playtape=20200101T000000-none', false); await N.page.waitForFunction(() => /saved in this browser/.test(document.body.textContent), null, { timeout: 300000 }).then(async () => check(await N.page.evaluate(() => { const c = document.getElementById('taperefuse'); return !!c && document.getElementById('fatal').style.display !== 'flex' && !/\n\s+at |\.ts:/.test(c.textContent) && c.querySelector('a').textContent === '\u2039 Main menu'; }), 'a replay that is gone is refused in words, with a way back')).catch(() => check(false, 'a replay that is gone is refused in words'));
+  check(N.errors.length === 0, 'a refusal is nobody\'s error', N.errors.slice(0, 3));
   await PAGE.end(PAGE.fails ? `=== tape page: ${PAGE.fails} FAILED ===` : '=== tape page: ALL PASS ===');
 })().catch(e => { console.error(e); process.exit(2); });

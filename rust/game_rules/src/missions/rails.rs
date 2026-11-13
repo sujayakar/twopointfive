@@ -2,9 +2,9 @@ pub use ::game_types::rails::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A step's `after` line as its order stands: given (1), or given and waiting on his word (2).
@@ -28,7 +28,7 @@ fn lookout_eye(id_2: f64, e: crate::rails::LookoutEyeE) -> crate::fogofwar::FogE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene_scenarios::{LessonData, LessonStep, LessonStepAfter, RailsData, RailsDataWaits};
+    use crate::scene_scenarios::LessonStepAfter;
 
     #[test]
     fn said_takes_the_word_only_at_two() {
@@ -54,10 +54,10 @@ mod tests {
 }
 
 /// ACTS.move.keys: the walk keys
-fn walk_keys() -> Vec<String> { crate::rails::acts().delete(String::from("move")).and_then(|r| r.keys).unwrap_or_default() }
-/// /^(Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/
+fn walk_keys() -> Vec<crate::input::Key> { crate::rails::acts().delete(String::from("move")).and_then(|r| r.keys).unwrap_or_default() }
+/// /^(Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/ (it reads what a host handed, any text)
 fn is_free(code: &str) -> bool {
-    if matches!(code, "Tab" | "Enter" | "NumpadEnter" | "Blur" | "Paused" | "BracketLeft" | "BracketRight") { return true; }
+    if [crate::input::Key::Tab, crate::input::Key::Enter, crate::input::Key::NumpadEnter, crate::input::Key::Blur, crate::input::Key::Paused, crate::input::Key::BracketLeft, crate::input::Key::BracketRight].iter().any(|k| k.as_str() == code) { return true; }
     let b = code.as_bytes();
     (b.len() == 2 || b.len() == 3) && b[0] == b'F' && b[1..].iter().all(|c| c.is_ascii_digit())
 }
@@ -238,7 +238,7 @@ fn gate_ok(c: &GateOk, code: &str) -> bool {
             };
         }
     }
-    is_free(code) || has(&c.keys, code) || (c.menu_up && is_digit(code)) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == "ShiftLeft" || code == "ShiftRight"))
+    is_free(code) || has(&c.keys, code) || (c.menu_up && is_digit(code)) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == crate::input::Key::ShiftLeft.as_str() || code == crate::input::Key::ShiftRight.as_str()))
 }
 
 /// whatever the step has not unlocked is taken out of the tick
@@ -250,7 +250,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     let acts = crate::rails::acts();
     for x in a.iter() {
         let act = match acts.get(x) { Some(r) => r, None => continue };
-        if let Some(l) = &act.keys { for k in l { keys.add(k.clone()); } }
+        if let Some(l) = &act.keys { for k in l { keys.add(k.text()); } }
         buttons |= js::to_i32(act.buttons.unwrap_or(0.0));
         wheel = wheel || act.wheel.unwrap_or(false);
     }
@@ -258,8 +258,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     let menu_up = g.groups[g.group].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
-        (i.keys.holds("ShiftLeft") || i.keys.holds("ShiftRight"),
-         i.keys.holds("Enter") || i.pressed.holds("Enter") || i.keys.holds("NumpadEnter") || i.pressed.holds("NumpadEnter"))
+        (i.keys.holds(crate::input::Key::ShiftLeft.as_str()) || i.keys.holds(crate::input::Key::ShiftRight.as_str()),
+         i.keys.holds(crate::input::Key::Enter.as_str()) || i.pressed.holds(crate::input::Key::Enter.as_str()) || i.keys.holds(crate::input::Key::NumpadEnter.as_str()) || i.pressed.holds(crate::input::Key::NumpadEnter.as_str()))
     };
     let p = g.player;
     let hand_up = has(&a, "use") && g.sets[g.seat].hand.sel.open;
@@ -269,7 +269,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.sets[g.seat].hand.setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
     let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown().is_none() && g.groups[g.group].orders.cmd_ring.is_none() && g.groups[g.group].orders.menu.is_none() && {
-        let ik = String::from(crate::consts::INTERACT_KEY);
+        let ik = crate::consts::INTERACT_KEY.text();
         let (down_t, f_held) = (g.sets[g.seat].hand.sel.down_t, g.sets[g.seat].hand.f_held);
         let i = &g.tab.input[input];
         i.keys.has(ik.clone()) && (down_t >= 0.0 || (i.pressed.has(ik) && !f_held))
@@ -279,12 +279,12 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     for k in i.pressed.keys() { if !gate_ok(&c, &k) { i.pressed.delete(k); } }
     for k in i.keys.keys() { if !gate_ok(&c, &k) { i.keys.delete(k); } }
     // the command key held is the ring: its own action over `order`
-    if has(&c.keys, "KeyB") {
-        let kb = || String::from("KeyB");
+    if has(&c.keys, crate::input::Key::B.as_str()) {
+        let kb = || crate::input::Key::B.text();
         if shift && !has(&a, "goal") {
-            let running = has(&a, "sprint") && walk.iter().any(|k| i.keys.has(k.clone()));
+            let running = has(&a, "sprint") && walk.iter().any(|k| i.keys.has(k.text()));
             if !running {
-                if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
+                if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(crate::input::Key::ShiftLeft.text()); i.keys.delete(crate::input::Key::ShiftRight.text()); }
             }
         }
         // (`ringPart`: only with Shift down. Else the key is seen let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note)
@@ -294,7 +294,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     i.buttons = (js::to_i32(i.buttons) & buttons) as f64;
     i.clicked = (clicked & buttons) as f64;
     if !wheel && !menu_up && !hand_up { i.wheel = 0.0; }
-    let word = i.pressed.holds("KeyF");
+    let word = i.pressed.holds(crate::input::Key::F.as_str());
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));

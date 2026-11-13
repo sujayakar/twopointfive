@@ -143,7 +143,7 @@ fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
     let d_b = v3::dist_xz(body, here);
     if d_b > 2.2 {
         go_to(g, gd, body, None);
-        follow_path(g, gd, dt, g.tune.guard_investigate);
+        follow_path(g, gd, dt, g.k.tune.guard_investigate);
         a.move_speed = g.gd[gd].speed;
     } else {
         brake(g, gd, 6.0, dt);
@@ -156,7 +156,7 @@ fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
         let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
         crate::game::game_say(g, gd, line, Some(true), None);
         let at = head_or_pos(g, c);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
     }
     if g.gd[gd].search_t > 14.0 {
         crate::mind::set_state(g, gd, St::Suspicious, "guards");
@@ -187,10 +187,10 @@ fn hunts_him(g: &mut Game, f: Fight, a: &mut Acts) {
             g.ch[c].vel = [0.0, 0.0, 0.0];
         }
     } else if g.gd[gd].last_known.is_some() {
-        let tac = if g.tune.tactics { crate::tactics::tactics_alert(g, gd, dt) } else { None };
+        let tac = if g.k.tune.tactics { crate::tactics::tactics_alert(g, gd, dt) } else { None };
         let (mv, at, pd, cr) = match tac {
             Some(r) => (r.move_, r.aim, r.pied, r.crouch),
-            None => { let pace = g.tune.guard_chase; let r = chase_fix(g, gd, dt, pace); (r.move_, r.aim, r.pied, r.crouch) }
+            None => { let pace = g.k.tune.guard_chase; let r = chase_fix(g, gd, dt, pace); (r.move_, r.aim, r.pied, r.crouch) }
         };
         a.move_speed = mv; a.aim_at = at; a.pied = pd; a.crouch = cr;
     } else if g.gd[gd].duty.free() && g.time - g.gd[gd].last_seen_t > 2.0 {
@@ -279,7 +279,7 @@ fn fight_legs(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, s: &Sight, dist:
             closing = true;
         } else {
             go_to(g, gd, g.ch[pc].pos, None);
-            let pace = if braking { 0.0 } else if crate::suppression::flinching(g, gd) { g.tune.guard_investigate } else { g.tune.guard_chase };
+            let pace = if braking { 0.0 } else if crate::suppression::flinching(g, gd) { g.k.tune.guard_investigate } else { g.k.tune.guard_chase };
             closing = !follow_path(g, gd, dt, pace);
             if braking { brake(g, gd, 6.0, dt); }
         }
@@ -291,7 +291,7 @@ fn fight_legs(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, s: &Sight, dist:
             *move_speed = g.gd[gd].speed;
         } else if matches!(st, crate::guards::LineStep::None) && dist > LINE_PUSH_MIN_M {
             go_to(g, gd, g.ch[pc].pos, None);
-            follow_path(g, gd, dt, g.tune.guard_investigate);
+            follow_path(g, gd, dt, g.k.tune.guard_investigate);
             *move_speed = g.gd[gd].speed;
         } else {
             brake(g, gd, 6.0, dt);
@@ -312,7 +312,7 @@ fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f6
     let Sight { aim, blocked, poked, facing_err, .. } = *s;
     g.arms[g.gd[gd].ch].fire_cd -= dt;
     let twisted = move_speed > 0.3 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.ch[c].aim_yaw)) > 0.9;
-    let shield = g.tune.muzzle_discipline && shield_up(g, &crate::seats::here(g));
+    let shield = g.k.tune.muzzle_discipline && shield_up(g, &crate::seats::here(g));
     if shield { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
     let weapon = g.gd[gd].weapon;
     if crate::gunslots::side_locked(g, gd) {

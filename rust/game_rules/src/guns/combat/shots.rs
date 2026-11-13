@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 // ------------------------------------------------------------ shooting
 
@@ -67,9 +66,9 @@ fn round_in_view(g: &mut Game, shooter: CharId, target: V3, o: &FireOpts, mut pe
 }
 
 /// `fx.muzzleFx[key]`
-fn muzzle_row(key: crate::effects::MuzzleFxKey) -> crate::effects::MuzzleFx {
+fn muzzle_row(g: &Game, key: crate::effects::MuzzleFxKey) -> crate::knobs::MuzzleFxK {
     use crate::effects::MuzzleFxKey as K;
-    let t = crate::effects::muzzle_fx();
+    let t = g.k.effects.muzzle;
     match key {
         K::Mk12 => t.mk12,
         K::Mp7 => t.mp7,
@@ -100,7 +99,7 @@ fn man_down(g: &mut Game, gd: GuardId, r: &crate::shotgun::RoundIn) {
     let sg = if by_player { None } else { guard_of_char(g, r.shooter) };
     let by_who = if by_player { DownBy::Player } else { DownBy::Guard };
     kill_guard(g, gd, r.dir, Some(false), Some(DownKind::Shot), Some(by_who), crate::game::With::Hand);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.8), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(r.hit_p), Some(0.8), None);
     if was_up { g.gd[gd].killer_id = g.ch[r.shooter].id; }
     if let Some(s) = sg.filter(|_| r.shield) {
         if !crate::condition::down(g, g.gd[s].ch) { crate::guards::hostage_hit_bark(g, s, gd); }
@@ -113,7 +112,7 @@ fn sam_hit(g: &mut Game, pl: PlayerId, r: &crate::shotgun::RoundIn) {
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[pl].hit_flash = 1.0;
     crate::deed::shaken_off(g, pl);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(r.hit_p), Some(0.9), None);
     if !g.god_mode {
         let seat = crate::seats::seat_of_man(g, pl);
         in_seat(g, seat, &mut |g: &mut Game| hit_player(g, dir));
@@ -177,35 +176,34 @@ fn aims(g: &mut Game, shooter: CharId, sg: Option<GuardId>, target: V3, o: &Fire
 
 /// What is seen and heard of a shot at the muzzle.
 fn shot_shows(g: &mut Game, r: &Round) {
-    let mf = muzzle_row(crate::gunlook::flame_of(g, &r.def));
+    let mf = muzzle_row(g, crate::gunlook::flame_of(&r.def));
     flash_card(g, r, &mf);
     gas_and_light(g, r, &mf);
     crate::particle_fx::muzzle_sparks_fx(g, r.muzzle, r.dir, r.shooter);
     crate::particle_fx::casing_fx(g, r.shooter, &r.def);
-    let voice = crate::gunlook::voice_of(g, &r.def);
-    crate::audio_iface::game_audio_like_play(g, &voice, Some(r.muzzle), Some(1.0), None);
+    let voice = crate::gunlook::voice_of(&r.def);
+    crate::audio_iface::game_audio_like_play(g, voice, Some(r.muzzle), Some(1.0), None);
 }
 
 /// The flash card: one frame of emissive box.
-fn flash_card(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
-    let card = crate::effects::muzzle_card();
-    let bf = crate::scene_boxes::box_flag();
+fn flash_card(g: &mut Game, r: &Round, mf: &crate::knobs::MuzzleFxK) {
+    let card = g.k.effects.card;
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(r.muzzle, r.dir, mf.card_ahead),
         h: mf.card_half,
         yaw: Some(v3::yaw_of(r.dir)),
         albedo: Some(card.albedo),
         emissive: Some(mf.card_emissive),
-        flags: Some((js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });
 }
 
 /// Gas, light and powder: the shot's effects.
-fn gas_and_light(g: &mut Game, r: &Round, mf: &crate::effects::MuzzleFx) {
+fn gas_and_light(g: &mut Game, r: &Round, mf: &crate::knobs::MuzzleFxK) {
     g.fx_seed += 1.0;
-    let gain = mf.light_gain * (if r.def.suppressed { crate::effects::shot().suppressed_gain } else { 1.0 });
+    let gain = mf.light_gain * (if r.def.suppressed { g.k.effects.shot.suppressed_gain } else { 1.0 });
     let gas = !crate::fogofwar::fog_of_war_air_hides(g, r.shooter);
     let lights = crate::effects::spawn_shot(g, r.muzzle, r.dir, &crate::effects::SpawnShotO {
         light_gain: Some(gain),

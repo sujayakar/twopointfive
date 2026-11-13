@@ -5,7 +5,7 @@
 //! `waits_on_key` repeats the rules of the press as a reader (the pair's mark first, then the nearest set charge of a wall or a door's, then the word, the drill and the rescue's entry).
 use super::*;
 use crate::doortools::Phase;
-use crate::game::{Game, GuardState};
+use crate::game::Game;
 use crate::ids::*;
 use crate::seats::SeatRef;
 use crate::v3;
@@ -218,7 +218,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
         let wall_first = wall.is_some() && !self.charges.iter().any(|&c| door_d(c) < wall_d);
         let reaches = up && !pair_first && (!wall_first || self.charges.is_empty());   // the press gets as far as the door tools
         let any_word = self.by.iter().any(|e| e.word);
-        let row_key = self.seat.orders.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].word));   // a menu up with a row on the key: the key IS that row
+        let row_key = self.seat.orders.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].row.word));   // a menu up with a row on the key: the key IS that row
         let early = big && ops.iter().any(|&o| {
             let op = &g.tab.doortools_door_op[o];
             op.thr.as_ref().is_some_and(|th| matches!(th.first, Some(crate::doortools::ThresholdFirst::Can | crate::doortools::ThresholdFirst::Burst))) && op.men.iter().any(|m| self.addr.contains(m))
@@ -240,7 +240,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// the bar across each doorway
     fn doors(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for e in self.by.iter() {
             let (ja, jb) = jambs(g, e.door);
             let mut now = false;
@@ -257,7 +257,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// the bar along each wall with a charge of his own
     fn wall_charges(&self, p: &Press, out: &mut Vec<PlanDoor>) {
         let g = self.g;
-        let f = key_cap(&g.k.doortools.blow_key);
+        let f = key_cap(g.k.doortools.blow_key.as_str());
         for &c in &self.walls {
             let sc = &g.tab.wallcharge_set_wall_charge[c];
             let now = p.up && !p.pair_first && !p.row_key && p.wall_first && Some(c) == p.wall;

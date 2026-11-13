@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use alloc::{vec, vec::Vec};
 
 // ---- small private helpers ----
 
@@ -20,32 +19,24 @@ fn ov_set(ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, i: usize, o:
 }
 /// skel.nodePos(node)
 fn node_pos(g: &Game, id: CharId, node: usize) -> V3 { crate::anim_skeleton::skeleton_instance_node_pos(&g.ch[id].skel, node as f64) }
-/// His skeleton out of `g` while `g` is lent, with the twists of his pose if they are laid on: the run forward reads neither through `g`.
-fn skel_lent(g: &mut Game, id: CharId, twisted: bool, f: impl FnOnce(&Game, &mut crate::anim_skeleton::SkeletonInstance, Option<&[crate::anim_skeleton::TwistSpec]>)) {
-    let mut sk = core::mem::replace(&mut g.ch[id].skel, crate::anim_skeleton::SkeletonInstance::blank());
-    if twisted {
-        let tw = core::mem::take(&mut g.ch[id].anim.twists);
-        f(g, &mut sk, Some(&tw));
-        g.ch[id].anim.twists = tw;
-    } else {
-        f(g, &mut sk, None);
-    }
-    g.ch[id].skel = sk;
-}
 /// A pose of his run forward to be read and no further: another is drawn.
 fn skel_read_pose(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
-    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_forward(g, sk, pose, tw, None));
+    let Game { art, ch, .. } = g;
+    let c = &mut ch[id];
+    crate::anim_skeleton::skeleton_instance_forward(&art.rig[c.rig], &mut c.skel, c.poses.of(pose), Some(&c.anim.twists), None);
 }
 /// skel.update(anim.pose, world, anim.twists, ov)
 fn skel_anim_pose(g: &mut Game, id: CharId, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
-    let (pose, world) = (g.ch[id].anim.pose, g.ch[id].world);
-    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_update(g, sk, pose, &world, tw, ov));
+    let Game { art, ch, .. } = g;
+    let c = &mut ch[id];
+    crate::anim_skeleton::skeleton_instance_update(&art.rig[c.rig], &mut c.skel, c.poses.of(c.anim.pose), &c.world, Some(&c.anim.twists), ov);
 }
 /// The fallen man's pose run forward under his rag's overrides.
 fn skel_rag_run(g: &mut Game, id: CharId) {
-    let rd = g.ch[id].rd.take().unwrap();
-    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_forward(g, sk, rd.pose, None, Some(&rd.ov)));
-    g.ch[id].rd = Some(rd);
+    let Game { art, ch, .. } = g;
+    let crate::character::Character { rig, skel, rd, .. } = &mut ch[id];
+    let rd = rd.as_ref().unwrap();
+    crate::anim_skeleton::skeleton_instance_forward(&art.rig[*rig], skel, &rd.pose, None, Some(&rd.ov));
 }
 /// …where he lies.
 fn skel_rag_pose(g: &mut Game, id: CharId) {
@@ -56,7 +47,7 @@ fn skel_rag_pose(g: &mut Game, id: CharId) {
 fn skel_lies(g: &mut Game, id: CharId) { g.ch[id].skel.world = g.ch[id].world; }
 fn same_kind(a: &crate::inhand::InHandWord, b: &crate::inhand::InHandWord) -> bool { core::mem::discriminant(a) == core::mem::discriminant(b) }
 
-/// RAG_LIMBS with each row's name read as its node (`n[k]`): [node, parent row (−1 = the rigid trunk), from-particle, to-particle] (ts:4262)
+/// The ragdoll's limbs, each row's name read as its node: [node, parent row (−1 = the rigid trunk), from-particle, to-particle]
 fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
     rag_limbs().iter().map(|(k, parent, a, c)| {
         let node = match k.as_str() {
@@ -91,21 +82,16 @@ pub fn man_new(g: &mut crate::game::Game, body: crate::character::Character) -> 
 /// A body: his columns, his animator, his skeleton, and the rest pose's frames. `who` stays blank: the owner writes it. (Character.constructor)
 pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::CharacterDesc) -> CharId {
     let id = crate::character::man_new(g, Character::blank());
-    if d.men.is_some() { crate::sim_men_store::stand_man(g, id); } // standMan(this, d.men ?? loneMen()): a man of no game has no row of the block (ts:4356)
     g.ch[id].rig = ch;
     g.ch[id].id = d.id; g.ch[id].tint = d.tint; g.ch[id].tint2 = d.tint2; g.ch[id].pos = v3::copy(d.pos); g.ch[id].body_yaw = d.yaw; g.ch[id].aim_yaw = d.yaw;
-    let anim = anim_new(g, ch);
-    g.ch[id].anim = anim;
+    (g.ch[id].anim, g.ch[id].poses) = anim_new(g, ch);
     anim_desync(g, id, d.id);
-    let sk = crate::anim_skeleton::skeleton_instance_new(g, ch);
-    g.ch[id].skel = sk;
     // rest-pose chest rotation for "facing" extraction
-    let nodes = g.art.rig[ch].nodes.len();
-    let rp = crate::anim_skeleton::pose_new(g, nodes);
-    crate::anim_skeleton::rest_pose(g, ch, rp);
-    let origin = v3::m4::create();
-    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_update(g, sk, rp, &origin, None, None));
-    crate::anim_skeleton::pose_done(g, rp);   // (the scratch is dropped)
+    {
+        let c = &mut g.ch[id];
+        c.skel = crate::anim_skeleton::skeleton_instance_new(&g.art.rig[ch], ch);
+        crate::anim_skeleton::skeleton_instance_update(&g.art.rig[ch], &mut c.skel, c.poses.of(c.anim.rest), &v3::m4::create(), None, None);
+    }
     let n = g.ch[id].anim.nodes;
     g.ch[id].rest_chest_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.spine3]);
     g.ch[id].rest_head_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.head]);
@@ -180,14 +166,8 @@ pub fn character_chest_frame(g: &crate::game::Game, id: CharId) -> Option<crate:
 
 // ---- the frame ----
 
-/// His frame. A man whose poses are not yet at home (made inside this tick) is lent the stage for it. (Character.update)
+/// His frame: the turn, the animator, the skeleton and what is read off it.
 pub fn character_update(g: &mut crate::game::Game, id: CharId, dt: f64) {
-    let lent = crate::posehome::stage_open(g, id);
-    character_update_standing(g, id, dt);
-    if let Some(st) = lent { crate::posehome::stage_shut(g, id, st); }
-}
-/// The turn, the animator, the skeleton and what is read off it. (Character.updateStanding)
-fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if g.ch[id].ragdoll.is_some() { character_update_ragdoll(g, id, dt); return; }
     if g.ch[id].turn.on && dt > 0.0 { character_turn_weigh(g, id, dt); }
     else {
@@ -496,7 +476,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     if !g.ch[id].bones.has(Bone::Hips) { character_update(g, id, 0.0); }
     if let Some(under) = anim_under_pose(g, id) {
         let pose = g.ch[id].anim.pose;
-        crate::anim_skeleton::pose_copy(g, pose, under);
+        g.ch[id].poses.copy(under, pose);
         skel_anim_pose(g, id, None);
         character_read_bones(g, id, 0.0);
     }
@@ -542,14 +522,12 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     use_shove(g, id, rag, &rg, quiet, fall, f, h, j, twist, pitch_axis);
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death
-    let rig = g.ch[id].rig;
-    let nodes = g.art.rig[rig].nodes.len();
-    let pose = crate::anim_skeleton::pose_new(g, nodes);
-    let drawn = g.ch[id].anim.pose;
-    crate::anim_skeleton::pose_copy(g, pose, drawn);
-    let mut sk = core::mem::replace(&mut g.ch[id].skel, crate::anim_skeleton::SkeletonInstance::blank());
-    crate::anim_skeleton::skeleton_instance_bake_local_rotations(g, &mut sk, pose);
-    g.ch[id].skel = sk;
+    let pose = {
+        let c = &g.ch[id];
+        let mut d = c.poses.of(c.anim.pose).to_vec();
+        crate::anim_skeleton::skeleton_instance_bake_local_rotations(&g.art.rig[c.rig], &c.skel, &mut d);
+        d
+    };
     let limbs = limb_rows(&n);
     let mut rot0: Vec<Quat> = Vec::with_capacity(limbs.len());
     let mut dir0: Vec<V3> = Vec::with_capacity(limbs.len());
@@ -557,7 +535,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
         rot0.push(v3::quat::mul(y_q, g.ch[id].skel.global_rot[node]));
         dir0.push(v3::normalize(v3::sub(pts[c], pts[a])));
     }
-    let mut ov: Vec<Option<crate::anim_skeleton::NodeOverride>> = vec![None; nodes];
+    let mut ov: Vec<Option<crate::anim_skeleton::NodeOverride>> = vec![None; g.ch[id].poses.nodes];
     ov[n.hips] = Some(crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: Some([0.0, 0.0, 0.0]) });
     let limb_ov: Vec<usize> = limbs.iter().map(|(node, _, _, _)| { ov[*node] = Some(crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: None }); *node }).collect();
     let hips_rot0 = v3::quat::mul(y_q, g.ch[id].skel.global_rot[n.hips]);
@@ -570,7 +548,7 @@ fn clear_fall(g: &mut Game, id: CharId) {
     let c = &mut g.ch[id];
     c.fall_as = None; c.fall_from = None; c.fall_tight = false; c.fall_ahead = 0.0;
 }
-/// the branches of the shove (ts:4645 to 4649)
+/// the branches of the shove
 fn use_shove(g: &mut Game, id: CharId, rag: RagdollId, rg: &crate::ragdoll::RAG, quiet: bool, fall: f64, f: V3, h: V3, j: f64, twist: f64, pa: V3) {
     if !quiet && fall < 0.5 {
         crate::ragdoll::ragdoll_add_rigid_velocity(g, rag, v3::mad(v3::scale(h, 0.8 * j), [0.0, -1.0, 0.0], 0.9), [pa[0] * 0.9 * j, twist * 0.6, pa[2] * 0.9 * j]);
@@ -1123,7 +1101,6 @@ mod tests {
         assert!(pin(&rag, &mut gd, R.pelvis, end)[1] < 0.3, "and then he is sitting on the floor");
     }
 }
-
 
 // ---- the animator's place: `anim.pos_in` and the body's `pos`
 //

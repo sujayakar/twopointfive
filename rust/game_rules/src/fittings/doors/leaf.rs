@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// THE SIDE IT OPENS INTO: the sign of every angle it can stand at; the page's DOORWAY: exitsOut off, leafWay on
 pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
@@ -53,14 +52,13 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     g.dr[id].leaf.latched = m::abs(a) < 1e-3;
     let leaf_h: V3 = [def.width / 2.0 - 0.01, height / 2.0, thick / 2.0];
     g.dr[id].leaf_h = leaf_h;
-    let flag = crate::scene_boxes::box_flag();
     let steel = def.steel == Some(true);
     let marks = if steel { None } else { Some(crate::scene_marking_defaults::door_leaf_marks(leaf_h, None).into()) };
     let leaf = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
         c: [0.0, 0.0, 0.0],
         h: leaf_h,
         albedo: Some(def.albedo.unwrap_or([0.42, 0.3, 0.19])),
-        flags: Some(flag.dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         rough: Some(if steel { 0.3 } else { 0.55 }),
         metal: if steel { Some(true) } else { None },
         marks,
@@ -68,7 +66,7 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     });
     g.dr[id].box_ = leaf;
     // push plate + lever handle (raster only)
-    let handle_flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let handle_flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let mut handles = Vec::new();
     for _ in 0..2 {
         handles.push(crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
@@ -162,7 +160,7 @@ pub fn door_place(g: &mut crate::game::Game, id: DoorId) {
 /// the leaf's box and its handles put at `p` (an open leaf standing in the room does not seal the doorway acoustically)
 pub(super) fn leaf_stands(g: &mut Game, id: DoorId, p: &crate::doors::DoorPoseAt, seals: bool) {
     let d = &g.dr[id];
-    let seal = js::to_i32(crate::scene_boxes::box_flag().sound_seal);
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as i32;
     let mut leaf = g.tab.boxes.edit(d.box_);
     (leaf.c, leaf.yaw) = (p.c, p.yaw);
     let flags = js::to_i32(leaf.flags);
@@ -194,7 +192,7 @@ pub(super) fn pose_of(hinge: [f64; 2], w: f64, closed_dir: f64, thick: f64, heig
 }
 
 /// the level's doors. `emit` is not kept: the word is `Doors.sound`'s to say, by name
-pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent)) -> crate::doors::Doors {
+pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef]) -> crate::doors::Doors {
     assert!(defs.len() <= DOOR_CAP, "a level of {} doors: the game holds {}", defs.len(), DOOR_CAP);
     let mut list = Vec::with_capacity(defs.len());
     for (i, d) in defs.iter().enumerate() {
@@ -275,13 +273,14 @@ pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     extern crate std;
     use super::*;
     fn bits(x: &[f64]) -> Vec<u64> { x.iter().map(|v| v.to_bits()).collect() }
 
     /// the pinned bits of a door (hinge [1.25, -3.5], closed at 0.7, 0.93 wide, 0.06 thick, 2.05 tall) posed at 0.37
     #[test]
-    fn the_pose_is_the_typescripts_to_the_bit() {
+    fn the_pose_keeps_its_bits() {
         let p = pose_of([1.25, -3.5], 0.93, 0.7, 0.06, 2.05, 0.37);
         let got = [p.c[0], p.c[1], p.c[2], p.yaw, p.handles[0][0], p.handles[0][1], p.handles[0][2], p.handles[1][0], p.handles[1][1], p.handles[1][2]];
         assert_eq!(bits(&got), [0x3ff7a6213404e158, 0x3ff08f5c28f5c28f, 0xc008aaa8cb200044, 0xbff11eb851eb851e, 0x3ff93a063e610b0e, 0x3ff0000000000000, 0xc00639c318a617ee, 0x3ffae92f9c7699be, 0x3ff0000000000000, 0xc006afc1e6a1520a]);
@@ -289,7 +288,7 @@ mod tests {
 
     /// the pinned answers of that door with swing -1
     #[test]
-    fn the_sweep_answers_as_the_typescript_does() {
+    fn the_sweep_gives_the_pinned_answers() {
         let s = crate::doors::DoorSwing { hinge: [1.25, 0.0, -3.5], swing: -1.0, open: 1.92, radius: 0.93, closed_dir: 0.7, one_way: true };
         for (x, z, pad, want) in [(1.761, -3.331, 0.0, true), (1.6, -3.2, 0.0, false), (1.25, -2.3, 0.2, false), (1.25, -4.2, 0.1, false), (2.0, -2.8, 0.05, false), (2.4, -3.1, 0.1, false), (0.8, -3.9, 0.05, false), (1.3, -3.9, 0.2, true)] {
             assert_eq!(door_swing_sweeps(&s, x, z, Some(pad)), want, "{x} {z} {pad}");

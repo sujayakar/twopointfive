@@ -1,6 +1,5 @@
 //! The types of `gunreload`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -19,10 +18,10 @@ pub struct FeedBeat {
     pub pull: bool,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct FeedCue {
     pub t: f64,
-    pub sfx: String,
+    pub sfx: crate::audio_iface::Sfx,
     pub gain: f64,
     pub rate: f64,
 }

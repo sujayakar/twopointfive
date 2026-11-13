@@ -10,7 +10,7 @@ fn emitted(p: &Play) -> Vec<game::smoke_types::SmokeEmitter> {
     p.smoke.iter().filter_map(|e| if let OutEvent::SmokeSystemLikeEmit(x) = e { Some(x.e.clone()) } else { None }).collect()
 }
 /// What the smoke the men see through was given last step, which starts at nothing on these stands and goes back to it.
-fn lives(p: &Play) -> f64 { sim::state::state_read(p.g.sim).smoke.st[sim::bricks::H_OUT] }
+fn lives(p: &Play) -> f64 { p.g.smoke.out }
 
 #[test]
 fn an_open_fire_in_view_files_its_smoke_and_no_man_sees_it() {

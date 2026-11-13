@@ -1,7 +1,6 @@
 //! The types of `stickycam`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StickyCam {
@@ -29,12 +28,6 @@ pub const EYE_ID: f64 = 200.0;
 pub fn none() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
 pub fn none_cams() -> Vec<StickyCamId> { Vec::new() }
-
-pub fn body() -> V3 { [0.05, 0.05, 0.055] }
-
-pub fn lens() -> V3 { [0.012, 0.012, 0.014] }
-
-pub fn lens_live() -> V3 { [0.42, 0.05, 0.04] }
 
 pub const CAM_KEY: f64 = 8388608.0;
 

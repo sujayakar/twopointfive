@@ -2,6 +2,7 @@
 // holds its number and nothing of it.
 import type { HandsOffPlan } from './benchScenes';
 import { FaceError, type Fetched } from './face';
+import { StartFlag, StepFlag } from '../draw/bits';
 import { Drawn, drawRefused } from '../draw/drawn';
 import { Face, HOLDS, type GameNo, type MomentNo } from '../draw/face';
 import { Heard, Man, Section, View, Want } from '../draw/sections';
@@ -16,11 +17,6 @@ import type { ActionRow, CursorView, DebriefView, EndView, FloorView, HandsSaid,
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number; /** what the machine keeps, as its one text (empty: nothing) */ kept?: string; /** what a tape of the run says it is of */ named?: { level: string; build: string } }
 /** the parts of a start that are the build's own, as a tape holds a walk's to its */
 export const partsOf = (o: Start): PartOf[] => (['mannequin', 'mannequinBin', 'cast', 'castLook'] as const).map(name => ({ name, length: o[name].length, hash: hashOf(o[name]) }));
-
-/** `face_start`'s: the rows that dress the picture are up */
-const DRESS = 1, /** … and what `ready` makes is this page's to make */ LATER = 2;
-/** `face_step`'s: the save controller */
-const SAVES = 8;
 
 /** lines of the light's table to a call (a millisecond or two), and how long calls go on between two turns of the event loop (ms) */
 const READY = 512, READY_MS = 8;
@@ -69,10 +65,9 @@ export class DrawGame {
   start(o: Start): void {
     this.lost = null;
     const kept = o.kept ?? '', seats = o.seats ?? 1;
-    this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, kept });
+    this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: StartFlag.Dress, kept });
     if (this.h) { this.face.drop(this.h); this.h = 0 as GameNo; }
-    this.h = this.face.start(o.level, o.words, o.mannequin, o.mannequinBin, o.cast, o.castLook, kept, o.seed, seats, DRESS | LATER);
-    if (!this.h) throw new FaceError('no room for another game in this module');
+    this.h = this.face.start(o.level, o.words, o.mannequin, o.mannequinBin, o.cast, o.castLook, kept, o.seed, seats, StartFlag.Dress | StartFlag.Later);
     this.ticks = 0; this.done++; this.said = null; this.between = 1; this.tried = -1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.face.reserve(64 * 1048576);
@@ -100,7 +95,7 @@ export class DrawGame {
     this.face.outClear(this.h);   // (what the tick told its host is in its sections now)
     this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1;
   }
-  private tick(dt: number, keys: string, told = SAVES): void {
+  private tick(dt: number, keys: string, told: number = StepFlag.Saves): void {
     this.face.hand(this.h, 0, this.hand.input, this.hand.lens, keys);
     this.face.step(this.h, dt, told);
     this.ticks++; this.done++;
@@ -108,10 +103,10 @@ export class DrawGame {
   /** it is walked through a tape: nobody commands it but the tape */
   walked = false;
   private order(): void { if (this.commands.length) { const b = this.commands.take(); if (this.walked) return; this.tape?.order(b); this.face.commands(this.h, b); } }
-  /** what the game has come to: the rolls of its die, its block's hash, and the hash of every part of it (`whole` false: without that, the dear one) */
+  /** what the game has come to: the rolls of its die, the word of where everybody stands, and the hash of every part of it (`whole` false: without that, the dear one) */
   mark(whole = true): TapeMark {
     const of = (w: Uint32Array): number => hashOf(new Uint8Array(w.buffer));
-    return { tick: this.ticks, die: this.face.dieN(this.h), parts: of(this.face.partHashes(this.h)), state: whole ? of(this.face.stateWords(this.h)) : null };
+    return { tick: this.ticks, die: this.face.dieN(this.h), stands: this.face.tickWord(this.h), state: whole ? of(this.face.stateWords(this.h)) : null };
   }
   /** who stands where, and the rounds the player has fired */
   figures(): TapeFigures { return { tick: this.ticks, shots: this.tally().stats.shots, men: this.map().men }; }
@@ -152,7 +147,7 @@ export class DrawGame {
    *  handed (the keys' text its answer); a tick, then a turn of the event loop. The game stands at its moment again after, and nobody was shown any of it */
   async warm(n: number, hand: (N: Hand, i: number) => string, turn: () => Promise<void>): Promise<void> {
     const k = this.face.moment(this.h); if (!k) return;
-    const T = this.tape, at = this.ticks, told = this.walked ? 0 : SAVES; this.tape = null;   // (a tape keeps what was played)
+    const T = this.tape, at = this.ticks, told = this.walked ? 0 : StepFlag.Saves; this.tape = null;   // (a tape keeps what was played)
     try { for (let i = 0; i < n; i++) { const keys = hand(this.numbersOf(), i); this.tick(1 / 60, keys, told); this.face.outClear(this.h); await turn(); } } catch (e) { if (!this.lost) throw e; /* (lost in them: it stands again below, and is lost in play if it is to be) */ }
     finally { this.momentBack(k, at); this.momentDrop(k); this.tape = T; this.draw(); }   // (…and its sections are of where it stands, before anybody asks which game they are of)
   }
@@ -242,8 +237,6 @@ export class DrawGame {
   get turnedNow(): Record<string, number | string> { return { ...Object.fromEntries(this.turned), ...Object.fromEntries(this.picked) }; }
   /** one of the panel's picks, for the visit: a restart or a load stands a game that has another, and this is picked again */
   pick(name: string, word: string): void { this.picked.set(name, word); this.commands.act(name, 0, word); }
-  /** a name that crosses by its number */
-  nameOf(i: number): string { return this.face.drawName(this.h, i); }
   private draw(): void {
     this.drawn.take(this.h); if (!this.tape) return;
     const { u, at } = this.drawn, run = u[at[Section.heard] + Heard.run]; if (run !== this.tried) { if (this.tried >= 0) this.tape.again(); this.tried = run; }

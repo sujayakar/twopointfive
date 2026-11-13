@@ -1,15 +1,6 @@
 //! The types of `stature`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct STATURETUNE {
-    pub jitter: f64,
-    pub min: f64,
-    pub max: f64,
-    pub ease_per_sec: f64,
-}
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -31,6 +22,4 @@ pub fn variant_stature(variant: &str) -> f64 {
         _ => 1.0,
     }
 }
-
-pub fn stature_tune() -> crate::stature::STATURETUNE { crate::stature::STATURETUNE { jitter: 0.015, min: 0.92, max: 1.05, ease_per_sec: 0.25 } }
 

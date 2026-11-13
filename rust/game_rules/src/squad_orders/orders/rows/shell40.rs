@@ -3,13 +3,15 @@
 use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
-use crate::orders::{GiveOpts, OrderTarget};
+use crate::orders::{GiveOpts, OrderTarget, TargetKind};
 use crate::squad40;
-use crate::v3::V3;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
+    targets: &[TargetKind::Floor],
+    page: Some(crate::squadthrow::THROW_PAGE),
+    free: true,
     only: Some(only),
     valid: Some(valid),
     tick: Some(squad40::turn_tick),

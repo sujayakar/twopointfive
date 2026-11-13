@@ -48,16 +48,16 @@ pub fn legs_own(g: &crate::game::Game) -> bool {
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.
 fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::player::Legs, ml: f64) -> f64 {
-    let mut max_speed = if ml == 0.0 { 0.0 }
-        else if m.sprinting { g.tune.player_sprint }
-        else if let Some(t) = m.tow { if t.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }
+    let max_speed = if ml == 0.0 { 0.0 }
+        else if m.sprinting { g.k.tune.player_sprint }
+        else if let Some(t) = m.tow { if t.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.k.tune.player_crouch * 0.6 } }
         else if m.dash { g.k.crouchrun.pace }
-        else { (if m.crouch { crouch_pace(g) } else { g.tune.player_walk }) * m.pace };
+        else { (if m.crouch { crouch_pace(g) } else { g.k.tune.player_walk }) * m.pace };
     crate::kitload::sam_load_pace(g, g.pl[seat.player].ch, max_speed, Some(m.sprinting))
 }
 
 /// the walk keys, ahead, left, back and right
-pub const WALK_KEYS: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
+pub const WALK_KEYS: [crate::input::Key; 4] = [crate::input::Key::W, crate::input::Key::A, crate::input::Key::S, crate::input::Key::D];
 /// Which of them a hand holds to go from `from` toward `to`, in a view that looks along `forward`: the nearest of the eight ways they can go.
 pub fn walk_keys(from: V3, to: [f64; 2], forward: V3) -> [bool; 4] {
     let (dx, dz) = (to[0] - from[0], to[1] - from[2]);

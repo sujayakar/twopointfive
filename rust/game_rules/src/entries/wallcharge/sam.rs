@@ -1,11 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
 fn hole_open(g: &Game, w: &WallSpot, t: f64, du: f64) -> bool {
@@ -93,13 +92,12 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
     let yaw = if w.along_x { 0.0 } else { m::PI / 2.0 };
     let n = wall_pt(g, &w, 0.0, 1.0, None);
     let o = wall_pt(g, &w, 0.0, 0.0, None);
-    let flag = crate::scene_boxes::box_flag();
     let slab = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
         c: p,
         h: [0.07, 0.11, 0.02],
         yaw: Some(yaw),
         albedo: Some([0.09, 0.1, 0.08]),
-        flags: Some(flag.dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: slab, ttl: 1e-3 });
@@ -109,7 +107,7 @@ pub fn wall_charge_draw(g: &mut crate::game::Game, c_2: WallChargeId) {
         yaw: Some(yaw),
         albedo: Some([0.9, 0.12, 0.08]),
         emissive: Some([2.2, 0.2, 0.1]),
-        flags: Some((js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64),
+        flags: Some((crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64),
         ..Default::default()
     });
     g.fx.push(crate::game::GameFxItem { box_: tell, ttl: 1e-3 });
@@ -155,15 +153,15 @@ pub fn wall_charge_sam_fatal(g: &crate::game::Game, c_2: WallChargeId) -> bool {
 pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     if !wall_charge_on(g) { return Vec::new(); }
-    let W = seat.wall_charge;
+    let his_charges = seat.wall_charge;
     let mut out = Vec::new();
-    if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
-    if W.set.is_empty() { return out; }
+    if let Some(n) = his_charges.carried { if his_charges.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
+    if his_charges.set.is_empty() { return out; }
     let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
     let f = crate::doortools::blow_letter(g);
     let p = g.seat_pos(seat);
     for own in [false, true] {
-        let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
+        let of: Vec<WallChargeId> = his_charges.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
         if of.is_empty() { continue; }
         let mut by: Vec<(WallChargeId, f64)> = of.iter().map(|&c| (c, v3::dist_xz(wall_pt(g, &g.tab.wallcharge_set_wall_charge[c].wall, 0.0, 0.0, None), p))).collect();
         js::sort_by(&mut by, |a, b| a.1 - b.1);
@@ -286,7 +284,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let row = SetWallCharge { wall: s.wall, t: g.time, by: String::from(crate::ownblow::SAM_BY), paid, free };
     let id = g.tab.wallcharge_set_wall_charge.push(row);
     g.sets[g.seat].wall_charge.set.push(id);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(at), Some(0.6), None);
     crate::furnblast::furniture_warm(g);
 }
 

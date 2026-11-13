@@ -1,11 +1,8 @@
 pub use ::game_types::scenario_run::types;
 pub use types::*;
-use crate::scene_scenarios::MissionKind;
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 /// The query's level is a Training lesson's.
 fn lesson_level(q: &crate::query::Query) -> bool {
@@ -135,12 +132,11 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 /// hour and weather written onto the words, then the weather the game is BORN in (`?weather=`, or snow on a level built for it), locked (the
 /// address's for the life of a game this start stands, as a page's is), and the visit's hour (`?hour=`, `?sun=`), which the stand lays over the level. A Weather born in its kind lays its roofs, its wet ground and its wind once; a host that stood the level's
 /// own storm first and changed the kind afterwards would have another box table than a page.
-pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
+pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query, snow: bool) -> Option<crate::weather_kinds::WeatherKind> {
     crate::rowset::row_settings(q);
     // (a Training level's stagings wear what its lesson asks)
     crate::kit::kit_lesson_page(g, lesson_of_address(q).is_some());
     // (a level built for snow is in snow whatever the address said)
-    let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
     // (the visit's hour, which the stand lays over the level once the game is made)
     let sun = q.float("sun").filter(|s| s.is_finite());

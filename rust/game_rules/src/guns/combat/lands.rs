@@ -70,7 +70,7 @@ fn flashes(g: &mut Game, r: &Round, e: &End, unseen: bool) {
 /// The level's side of it: the sound and the mark (a pane makes its own), what it knocks out, and the destruction's share.
 fn strikes(g: &mut Game, r: &Round, f: &Flight, e: &End) {
     let pane = e.stop.filter(|s| !f.through && s.index < 1e6).is_some_and(|s| crate::glass::is_pane(g, g.col.boxes.get(s.index as usize).copied()));
-    if e.hit.is_none() && !pane && r.lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(e.at), Some(0.8), None); }
+    if e.hit.is_none() && !pane && r.lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(e.at), Some(0.8), None); }
     if !e.bare { return; }
     let met = met(f, e);
     if !pane {
@@ -95,7 +95,7 @@ fn met(f: &Flight, e: &End) -> Option<RoundMet> {
 /// A tracer, the straight way from the muzzle to where it ended.
 fn traces(g: &mut Game, r: &Round, f: &Flight, e: &End) {
     use crate::tracers::TracerImpact;
-    if r.def.tracer.is_none() || !g.tune.tracers { return; }
+    if r.def.tracer.is_none() || !g.k.tune.tracers { return; }
     let gun = firearm_of(g, r.shooter);
     let (along, far) = if f.bent() { (v3::normalize(v3::sub(e.at, r.muzzle)), v3::dist(r.muzzle, e.at)) } else { (r.dir, e.t) };
     let impact = if e.hit.is_some() {
@@ -110,7 +110,7 @@ fn traces(g: &mut Game, r: &Round, f: &Flight, e: &End) {
 
 /// The man it found, and what is kept of it: whose side he was on, whom it went past, how he died.
 fn tells_hit(g: &mut Game, r: &mut Round, e: &End) {
-    if r.ours && e.hit.is_some_and(|c| crate::friendlyfire::on_our_side(g, c)) { crate::friendlyfire::ff_note(g, r.shooter, e.hit); }
+    if r.ours && e.hit.is_some_and(|c| crate::friendlyfire::on_our_side(g, c)) { crate::friendlyfire::ff_note(g, r.shooter); }
     if r.by_player && r.lead { crate::friendlyfire::ff_past(g, r.muzzle, e.at, e.hit); }
     let was_down = e.hit.is_some_and(|c| crate::condition::down(g, c));
     crate::deathrecap::recap_round(g, e.hit, was_down, r.shooter, r.muzzle, e.at, &r.def, r.blind);
@@ -163,7 +163,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     let pos = g.tab.fixture[t].pos;
     if kind == FixtureKind::Breaker {
         crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
-        crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(1.0), None);
         crate::game::game_set_blackout(g, f64::INFINITY, crate::lighting::SetBlackoutCause::Shot);
         g.tab.fixture[t].broken = true;
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
@@ -172,7 +172,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     let lens = g.tab.fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
         g.tab.fixture[t].broken = true;
-        crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.8), None);
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
         return;
     }
@@ -180,7 +180,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
-    crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
     } else if kind != FixtureKind::Device {

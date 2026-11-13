@@ -1,14 +1,14 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 use crate::character::{AnimAct, Bone, HoldPhase};
 use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue, ChronicleNDataValue};
-use crate::dialogue::{Band, DialoguePick, IntelKind, Knowledge, StageKey};
-use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, Temperament, WitnessCalledToBody, WitnessSawBody};
+use crate::dialogue::{DialoguePick, IntelKind};
+use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, WitnessCalledToBody, WitnessSawBody};
 use crate::guards::{body_pos, escalation_of, follow_path, go_to, point_in_view, say};
 use crate::scene_level::{CivilianDefKind, CivilianTask};
 use crate::teams::Team;
@@ -120,7 +120,7 @@ pub(super) fn to_phone(g: &mut crate::game::Game, gd: GuardId) {
     civ_say(g, gd, &t, Some(1.0));
     g.ch[c].anim.act = Some(AnimAct { clip: String::from("Idle_Talking_Loop"), loop_: Some(true), rate: Some(1.3), in_: Some(0.3), out: Some(0.4) });
     let at = v3::add(g.ch[c].pos, [0.0, 1.2, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "click", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Click, Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
     set_state(g, gd, CivState::Phone);
 }
 
@@ -334,7 +334,7 @@ fn answer_base(text: String, id: &str, stage_n: f64, kind: Option<IntelKind>) ->
 }
 
 /// her answers in the arm: fear, then the thing or two she knows, then nothing
-pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
+pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::dialogue::DialoguePick> {
     let cid = g.gd[gd].civ.unwrap(); let t_id = g.gd[gd].talk;
     g.tab.game_talk[t_id].stage += 1.0; g.tab.game_talk[t_id].presses += 1.0; g.tab.game_talk[t_id].last_t = g.time;
     let stage = g.tab.game_talk[t_id].stage;
@@ -422,7 +422,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     let units = line.encode_utf16().count() as f64;
     g.pl[pl].bubble = Some(PlayerBubble { text: line.clone(), t: g.time, dur: v3::clamp(0.7 + 0.018 * units, 0.9, 1.4) + 0.4, radio: false });
     let at = v3::add(g.ch[pc].pos, [0.0, 1.6, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Murmur, Some(at), Some(0.2), None);
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -466,7 +466,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKO, ChronCountKey::CivKO, Some(&d), Some(pos));
         }
-        if dead && g.tune.civilian_kill_fails && crate::mission::mission_live(g) {
+        if dead && g.k.tune.civilian_kill_fails && crate::mission::mission_live(g) {
             let at = g.time + crate::mission::DOWN_CARD_SECS;
             g.mission.stage = MissionStage::Failed; g.mission.down_card_at = at;
         } else if !hostage {
@@ -643,7 +643,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     say(g, o, &t, Some(true), None);
     let oc = g.gd[o].ch;
     let at = g.ch[oc].bone(Bone::Head).unwrap_or(g.ch[oc].pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.9), None);
     let mut i = 0;
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;

@@ -53,7 +53,7 @@ fn sparks(g: &mut Game, ways: &[Way], open: bool, count: &[f64], speed: &[f64], 
 /// A WALL CHARGE WENT OFF, as the tick left the wall: the fireball now, and the rest of it to come
 pub(in crate::breakage) fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
     if !live(g) { return; }
-    let f = g.m.blast_feel.feel.clone();
+    let f = g.k.blast_feel.clone();
     { let s = stages(g); s.serial += 2.0; }   // (the report's two draws of this half's counter, so the seeds after them are the ones they would be)
     let open = holed(g, wall);
     let n: V3 = if wall.along_x { [0.0, 0.0, wall.side] } else { [wall.side, 0.0, 0.0] };
@@ -101,7 +101,7 @@ pub(in crate::breakage) fn feel_starts(g: &mut Game, wall: &crate::wallcharge::W
 
 fn push(g: &mut Game, i: usize, blast: usize) {
     if !crate::destruction::impulses_on(g) { return; }
-    let (row, up) = (g.m.blast_feel.feel.push[i], g.m.blast_feel.feel.push_up);
+    let (row, up) = (g.k.blast_feel.push[i], g.k.blast_feel.push_up);
     let faces = stages(g).faces[blast].clone();
     for f in &faces {
         let s = seed(g);
@@ -111,7 +111,7 @@ fn push(g: &mut Game, i: usize, blast: usize) {
 
 /// one stage of THE DUST RING: on each face, a puff or three in every sector the wave can still reach (a sector a wall stops stays stopped)
 fn ring(g: &mut Game, k: u32, blast: usize) {
-    let r = g.m.blast_feel.feel.ring;
+    let r = g.k.blast_feel.ring;
     let (at, fr) = (r.r0 + k as f64 * r.step, 1.0 - k as f64 / r.stages);
     let n = stages(g).faces[blast].len();
     for fi in 0..n {
@@ -146,7 +146,7 @@ pub(in crate::breakage) fn feel_stages(g: &mut Game) {
     if g.feel.get::<Stages>().map_or(true, |s| s.queue.is_empty()) { return; }
     if !live(g) { stages(g).queue.clear(); return; }
     let time = g.time;
-    let f = g.m.blast_feel.feel.clone();
+    let f = g.k.blast_feel.clone();
     let mut i = 0;
     while i < stages(g).queue.len() {
         if stages(g).queue[i].at > time { i += 1; continue; }

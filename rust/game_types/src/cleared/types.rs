@@ -1,7 +1,6 @@
 //! The types of `cleared`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 /// a walk's price list, nav.findPath's penalty: a cell of a room nobody has been in costs `dear`, bar the walker's own room and his mark's; `also` rooms cost `dear` whatever is known. The price reads the room map and known rooms live from g.cleared and the grid from g.col.nav
 #[derive(Clone, Debug)]

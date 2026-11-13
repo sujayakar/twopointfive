@@ -7,13 +7,11 @@
 //! What the team knows (who is seen, which doors, lamps and loose things are remembered and how, who the team is) is the rest of fogofwar/ and is the
 //! game's: every machine of one game holds it the same. This file reads it: `lamp_recs` for a lamp, `hidden_chars` for a man.
 use super::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::js;
 use crate::m;
 use crate::v3::V3;
 use alloc::{vec, vec::Vec};
-
 
 /// Called at the end of the game's pass, once a tick, on every machine.
 /// The lights' classes for this frame, painted: the level's lamps the team has in another state than they are in. Out but remembered lit = lit where nobody
@@ -76,8 +74,7 @@ fn fog_of_war_lamp_face(g: &mut crate::game::Game, t: FixtureId, lit: Option<boo
     let rec = if lit == Some(true) { g.fog_picture.face_recs.get(t).cloned() } else { None };
     let boxes = g.tab.fixture[t].boxes.clone();
     let base = g.tab.fixture[t].base_emissive;
-    let flag = crate::scene_boxes::box_flag();
-    let shows = js::to_i32(flag.area_lit) | js::to_i32(flag.no_shadow);
+    let shows = crate::scene_boxes::box_flag::AREA_LIT as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32;
     let mut i = 0;
     while i < boxes.len() {
         let at = i;

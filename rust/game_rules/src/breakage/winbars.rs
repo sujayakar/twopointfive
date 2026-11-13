@@ -2,17 +2,17 @@ pub use ::game_types::winbars::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what this skeleton still cannot give
 
 // ---------------------------------------------------------------- helpers
 /// a bar, not hidden   (`(flags & (Bar | HIDE)) === Bar`)
 fn stands(flags: f64) -> bool {
-    let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
+    let bar = crate::scene_boxes::box_flag::BAR as i32;
     (js::to_i32(flags) & (bar | js::to_i32(HIDE))) == bar
 }
 /// `g.col.boxes[index]`: a number that is no place in the list is undefined
@@ -41,12 +41,7 @@ pub fn bar_at(g: &crate::game::Game, index: f64) -> bool {
 
 /// The flags a bar this rule took was authored with, or None.
 pub(super) fn bar_flags0(g: &crate::game::Game, index: f64) -> Option<f64> {
-    if crate::glassbreak::glass_break_untouched(g) { return None; }
-    let s = g.sim;
-    for i in 0..::sim::panes::bars_gone(s) as usize {
-        if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
-    }
-    None
+    crate::glassbreak::touched(g).bars.iter().find(|b| b[0] as f64 == index).map(|b| b[1] as f64)
 }
 
 /// Once, as the game is made: the line of fire's question and the blasts' list.
@@ -92,7 +87,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
         }
         if break_bar(g, m.index, m.at, m.dir, who, BreakBarCause::Round) {
             n += 1.0;
-            if lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(m.at), Some(0.8), None); }
+            if lead { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BulletImpact, Some(m.at), Some(0.8), None); }
         }
     }
     n
@@ -102,7 +97,7 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
     let flags = g.tab.boxes[b].flags;
-    if !::sim::panes::bar_take(&crate::glassbreak::glass_ctx(g), js::to_u32(index), js::to_u32(flags)) { return false; }
+    if !::sim::panes::bar_take(g.tab.boxes.lent(), js::to_u32(index), js::to_u32(flags)) { return false; }
     let flags = g.tab.boxes[b].flags;
     g.tab.boxes.edit(b).flags = js::or_bits(flags, HIDE);
     changed(g);
@@ -110,11 +105,11 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
 
     // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
     let k_ = g.k.winbars;
-    let (bc, bh, yaw, albedo, does) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw, r.albedo, r.does.map(|w| String::from(w.as_str()))) };
+    let (bc, bh, yaw, albedo, does) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw, r.albedo, r.does) };
     let n = m::max(1.0, m::round(k_.pieces));
     let y0 = bc[1] - bh[1];
     let h = 2.0 * bh[1];
-    let cls = crate::furnblast::break_class_of(g, &crate::furnblast::BreakClassOfB { does });
+    let cls = crate::scene_materials::does_of(does).breaks;
     let land = crate::furnblast::furn_break_row(cls).land;
     let seed = seed_word(crate::glass::box_seed(g, b), v3::clamp((at[1] - y0) / h, 0.0, 1.0));
     let mut cuts = vec![0.0];
@@ -134,7 +129,6 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         dz /= l;
     }
     let hit_u = v3::clamp((at[1] - y0) / h, 0.0, 1.0);
-    let tab = crate::scene_boxes::box_flag();
     let mut k = 100.0;
     for j in 0..(n as usize) {
         let (u0, u1) = (cuts[j], cuts[j + 1]);
@@ -152,7 +146,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
             let mut piece = g.tab.boxes.edit(f);
             piece.c = fc;
             piece.h = fh;
-            piece.flags = tab.dynamic;
+            piece.flags = crate::scene_boxes::box_flag::DYNAMIC as f64;
             piece.marks = None;
         }
         let sp = v3::lerp(k_.fly[0], k_.fly[1], r1) * (if struck { 1.0 } else { k_.rest_k });
@@ -163,7 +157,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         if let Some(c) = got {
             let chunk = &mut g.tab.debris_chunk[c];
             chunk.level = land.level;
-            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect();
+            chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name, rate: s.rate, gain: s.gain }).collect();
             match cls {
                 crate::scene_materials::BreakClass::Wood => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Wood),
                 crate::scene_materials::BreakClass::Metal => crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Metal),
@@ -197,7 +191,7 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, over: &crate::ask::Over, ev:
     if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(&crate::glassbreak::glass_ctx(g), v, from, r, built_boxes(g), &g.k));
+    let took = crate::scene_collision::over_lent(g, over, |v| ::sim::panes::bars_blast(g.tab.boxes.world(), v, from, r, built_boxes(g), &g.k));
     for (i, at) in took {
         let i = i as f64;
         let b = g.col.boxes[i as usize];
@@ -215,13 +209,12 @@ mod tests {
 
     #[test]
     fn a_bar_stands_until_either_hide_flag_is_up() {
-        let t = crate::scene_boxes::box_flag();
-        assert_eq!(HIDE, js::or_bits(t.no_primary, t.no_shadow));
-        assert!(stands(t.bar));
-        assert!(stands(js::or_bits(t.bar, t.dynamic)));
-        assert!(!stands(js::or_bits(t.bar, t.no_primary)));
-        assert!(!stands(js::or_bits(t.bar, t.no_shadow)));
-        assert!(!stands(t.dynamic));
-        assert_eq!(js::or_bits(t.bar, HIDE), t.bar + 3.0);
+        assert_eq!(HIDE, (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64);
+        assert!(stands(crate::scene_boxes::box_flag::BAR as f64));
+        assert!(stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::DYNAMIC) as f64));
+        assert!(!stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::NO_PRIMARY) as f64));
+        assert!(!stands((crate::scene_boxes::box_flag::BAR | crate::scene_boxes::box_flag::NO_SHADOW) as f64));
+        assert!(!stands(crate::scene_boxes::box_flag::DYNAMIC as f64));
+        assert_eq!(js::or_bits(crate::scene_boxes::box_flag::BAR as f64, HIDE), (crate::scene_boxes::box_flag::BAR as f64) + 3.0);
     }
 }

@@ -27,7 +27,7 @@ is drawn is `render.md`.
 | `rust/game_start/src/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
 | `tools/qa/level-needs.ts`, `tools/qa/level-lint.ts`, `tools/levels/counts/` | what stands around a file, what reads off a file, the held counts |
 | `tools/qa/map-plan.ts` | a level's plan as an SVG |
-| `src/scene/materials.ts`, `stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, the palette, the men's dress, face marks, shapes |
+| `scene_materials/types.rs` (Rust), `src/scene/stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, palette, dress, marks, shapes |
 
 In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios.rs` are the records; `scene_materials.rs`, `scene_stuff.rs` and
 `scene_markings.rs` what a box is and wears; `scene_shapes/` and `scene_cut.rs` its form; `scene_look.rs` the men's dress; `scene_scenario_list/` the
@@ -37,7 +37,7 @@ street lamps. `rust/game_draw/src/traffic.rs` makes the wear map.
 ## How it works
 
 **Generator to file.** A generator exports `build` (the `Level`, `scenarios`, a group for each box, `surfaces`), `NAME` and `NOTES`, and at will
-`MATERIALS`, `PALETTE`, `KEPT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
+`MATERIALS`, `PALETTE`, `KEPT`, `SCRIPT`, `SNOW`, `DOOR_PAINT` and `finish`. `export.ts` fits doors (`fitDoors`), adds wreckable things on `LOUD_LEVELS` (`dressLevel`), lifts flats
 that would share a plane (`layLevelFloor`), words any box without a `does` (`stampDoes`), runs the skin (`finish`) and writes `levelToData`. It
 refuses unless the text loads back to the generator's `Level`, field for field. Then it asks `levels second-way` and `levels sight` (`LEVELASK=0` in
 front skips them for a level in the making).
@@ -61,8 +61,8 @@ hand. A top-level `marks[]` row is a named spot where a person stands to use a t
 **Lights and lamps.** `lights[]` are point, spot or directional; `group` and `mains` say what can put one out, `fixture` names its glowing box.
 `switchables[]` are glowing boxes on a switch. The directional light in group `exterior` is the moon, and an hour's sun goes in at its place.
 `lamps_out` puts out group `exterior` at an hour whose `lamps` is false. No file places a wall switch: `room_light` picks the mains lights a plate
-works. `tools/levels/lib/carLamps.ts` and `carlamps.rs` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
-lamp moved for the look changes the play.
+works. `tools/levels/lib/carLamps.ts` finds a vehicle's lamps by what the kits write as a level is written, and the file
+names them (`vehicleLamps`, `carlamps.rs`). Guards read the light the picture shows, so a lamp moved for the look changes the play.
 
 **Furniture and props.** A fixed thing is plain boxes. A loose thing is a `props[]` row: `kind`, `mass`, `parts`, its footprint fitted by
 `fitPropFootprint`. Men are pushed by what stands from 0.2 m up and the walk grid is baked from 0.25 m, so a top of 0.19 m or less is walked over, and
@@ -75,14 +75,16 @@ bowed top), `cut` (planes in the box's own frame), `old`, and `with` (trim nobod
 `tools/levels/lib/carShapes.ts` holds the vehicles'.
 
 **Paint, stuff and does.** A box says two words, and neither comes from the other. `stuff` is how it is drawn (`BoxStuff`). `does` is what it is to a
-round, a charge and a blast: a row of `MATERIALS` in `materials.ts`, whose twin the rules read through `does_of`. A file's `materials{}` row gives
+round, a charge and a blast: a row of `materials!` in `rust/game_types/src/scene_materials/types.rs`, which the rules read through `does_of` and the
+level tools as `MATERIALS` (`tools/levels/lib/materials.ts`, written by `half`). A file's `materials{}` row gives
 `albedo`, finish and a default for both; the names' words are `PAINT_STUFF` and `PAINT_DOES`. `gwotAs` is one paint on a thing that does something
 else: a mud partition a charge cuts beside a mud shell. `finish` is usually `skinLevel`: same boxes, other paint, decals in group `look`.
 
 **The look.** The default kit is `gwotKit.ts`; `gwotPalette.ts` names its paints. `look_dress` is true on any `?levelFile=` but the office and
-`office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. A mark on a face is a
-`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
-(`snow_level`).
+`office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. `DOOR_PAINT` (`lib/doorPaint.ts`) is
+`doorPaint`: what its leaves are painted. A mark on a face is a
+`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own: `SNOW` is the file's
+`snow`.
 
 **Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_among` asks only
 height and size: underside from `ceiling_y` less 0.25 m, top at most 0.45 m over, 0.9 m across or more. A drawn slab in that band stops the rain and
@@ -139,8 +141,7 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 - **A new piece:** the kit's file, through `pieces`; a line in a showroom; `bun run tools/levels/library.ts --write`.
 - **A new paint:** a row of the palette, its words in `PAINT_STUFF` and `PAINT_DOES`. `GWOT_MATERIALS` is written whole, so its new row makes every
   file wearing it stale.
-- **A new word of what a thing does:** a row of `MATERIALS`, its twin in `rust/game_types/src/scene_materials/types.rs`, and the `words!` list in
-  `level.rs`.
+- **A new word of what a thing does:** a row of `materials!` in `rust/game_types/src/scene_materials/types.rs`, then `half`.
 
 ## What holds it
 

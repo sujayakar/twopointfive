@@ -2,10 +2,10 @@ use super::*;                      // your own module: its types, its other part
 use crate::doortools::{Beat, Ended};
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 /// his row of `defs`, a copy: read again after a call that may have written it
@@ -228,7 +228,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     if !crate::rescue::rescue_up(g) { return; }
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
-    if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
+    if crate::input::input_hit(g, input, crate::input::Key::F) { rescue_order_door(g); }
     rescue_hear(g);
     rescue_defenders(g);
     crate::rescueflush::rescue_flush_tick(g);
@@ -603,7 +603,7 @@ fn turn_him_loose(g: &mut Game, h: GuardId, to: V3) {
 
 /// Off his post on the room fight's 'move'.
 fn rescue_crew_move(g: &mut crate::game::Game, f: RoomfightDefId, goal: V3, by: Option<DoorId>) {
-    let pace = g.tune.guard_chase + 0.3;
+    let pace = g.k.tune.guard_chase + 0.3;
     crate::roomfight::send(g, f, crate::roomfight::Leg { by, ..crate::roomfight::Leg::to(goal, pace) }, crate::owner::by::MISSION);
 }
 
@@ -1080,7 +1080,7 @@ mod tests {
         let d = g.dr.push(crate::doors::Door::blank());
         g.dr[d].frame_centre = [0.0, 0.0, 0.0];
         let room = crate::scene_scenarios::Rect { x0: -5.0, x1: 20.0, z0: -5.0, z1: 20.0, ..Default::default() };
-        let mut man = |g: &mut Game, at: V3| {
+        let man = |g: &mut Game, at: V3| {
             let c = g.ch.push(crate::character::Character::blank());
             g.ch[c].pos = at;
             let mut m = crate::game::Guard::blank();

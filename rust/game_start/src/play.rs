@@ -2,8 +2,8 @@
 //! (`stand.rs`) and the host's own frame; nothing writes the game's state behind a rule's back. What a test asks of a man it asks through the
 //! readers at the foot of this file, so that when a field moves (the AI's rework will move several) one line here follows it and no test does.
 //!
-//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps its blocks and several tables in statics, so two games on two threads would write each
-//! other's state: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
+//! ONE GAME AT A TIME IN A PROCESS. rust/sim keeps scratch in statics, so two games on two threads would write each
+//! other's: `stand` takes a lock that the `Play` holds until it is dropped, and `cargo test`'s threads take turns.
 use crate::json::Json;
 use crate::scene::Scene;
 use crate::stand::{self, Host, StartOpts, Stood};
@@ -62,7 +62,7 @@ pub enum Button { Left = 1, Middle = 2, Right = 4 }
 pub struct Said { pub t: f64, pub who: GuardId, pub text: String, pub radio: bool }
 /// a sound the game asked for
 #[derive(Clone, Debug)]
-pub struct Sound { pub t: f64, pub name: String, pub at: Option<[f64; 3]> }
+pub struct Sound { pub t: f64, pub name: game::audio_iface::Sfx, pub at: Option<[f64; 3]> }
 
 /// A game a test is playing. It holds the one-game lock until dropped.
 pub struct Play {
@@ -94,15 +94,15 @@ pub struct Play {
     _one: MutexGuard<'static, ()>,
 }
 
-fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_clear, None, o) }
-fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play {
+fn start(data: &Json, room_clear: bool, o: &Opts) -> Play { start_by(data, room_clear, None, o, &|_| ()) }
+fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts, laid: &dyn Fn(&mut game::knobs::Knobs)) -> Play {
     // (a second game stood by the thread that holds the first would wait on itself for ever: said, not waited for)
     if HOLDS.with(|h| h.get()) { panic!("one game at a time: this test still holds a Play. Drop it (`drop(p)`, or end its block) before standing another"); }
-    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
+    // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on nothing of it)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ready: o.ready, ..Default::default() });
+    let Stood { mut game, host, refused, .. } = stand::stand_laid(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ready: o.ready, ..Default::default() }, laid);
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
     let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, legs: None, refused, spoke: Vec::new(), _one: one };
@@ -127,10 +127,15 @@ impl Play {
     /// (`?levelFile=depot.json&roomclear&squad4`): the row's own hour and weather, the fog of war, a quiet mission's rung, then the mission.
     pub fn mission(name: &str, link: &str, o: &Opts) -> Play {
         let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
-        start_by(&data, false, Some(link), o)
+        start_by(&data, false, Some(link), o, &|_| ())
+    }
+    /// …with numbers of its own under it from before a man stands, as an address's would be: every try of it has them
+    pub fn mission_laid(name: &str, link: &str, o: &Opts, laid: impl Fn(&mut game::knobs::Knobs)) -> Play {
+        let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
+        start_by(&data, false, Some(link), o, &laid)
     }
     /// The same on a level file's tree a caller has already read (and perhaps changed).
-    pub fn mission_of(data: &Json, link: &str, o: &Opts) -> Play { start_by(data, false, Some(link), o) }
+    pub fn mission_of(data: &Json, link: &str, o: &Opts) -> Play { start_by(data, false, Some(link), o, &|_| ()) }
 
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)
     pub fn frame(&mut self) { self.frame_shown(|_| {}); }
@@ -155,7 +160,7 @@ impl Play {
         let t = self.g.time;
         for e in out {
             match e {
-                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
+                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name, at: p.pos }),
                 E::SmokeSystemLikeEmit(_) | E::SmokeSystemLikePush(_) | E::SmokeSystemLikeRound(_) => self.smoke.push(e),
                 _ => {}
             }
@@ -250,7 +255,12 @@ impl Play {
         for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
         script.over()
     }
-    /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
+    /// a moment put back: the game is that one again, where it stood
+    pub fn lay(&mut self, m: &game::savestate::control::Moment) {
+        let new = m.laid();
+        game::savestate::control::stand(&mut self.g, new);
+    }
+    /// Every part of the game's state, a word a part (`parts::names` names them): what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
         crate::parts::words(&mut self.g, &mut w, &mut out);
@@ -287,13 +297,13 @@ impl Play {
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
     pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
     /// His walk keys toward `to` from here on, as a hand holds them, until he is within a hand's breadth or they are let go of (None).
-    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key); } } }
+    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key.as_str()); } } }
     /// …held for the tick to come
     pub fn hold_legs(&mut self) {
         let Some(to) = self.legs else { return };
         let (p, f) = (self.g.player_pos(self.g.player), self.g.tab.camera[self.host.cam].forward);
         let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
-        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
+        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(key.text()); } else { i.keys.delete(key.text()); } }
     }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }

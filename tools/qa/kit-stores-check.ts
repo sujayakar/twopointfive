@@ -5,7 +5,7 @@
 // Each piece is laid alone in a kit stood up empty (tools/qa/kit-stand.ts). WHAT IS HELD, over EVERY row of the palette (a row added tomorrow is asked
 // the same; a level may paint a drum in any of them):
 //   1 steel      a drum standing and a drum lying, in any row, is STEEL to the rules: it says it does what steel does (Box.does, the row 'steel' of
-//                scene/materials.ts), so a round's hit knocks out of it what metal gives and a blast breaks it as metal (never the wood a wall
+//                lib/materials.ts), so a round's hit knocks out of it what metal gives and a blast breaks it as metal (never the wood a wall
 //                charge chews). It wears the row to the eye (the row's own numbers) and is known as the row's paint (scene/stuff.ts paintOf). WHAT IT SAYS: the row's own word where the
 //                row is a coat or metal already (`paint`, `enamel`, a row the table reads as metal); in every other row `paint`, with a drum enamel's
 //                finish, never the row's stuff (a drum in the colour of mud is not made of mud). Until 11-05 an olive drum was an ammunition crate's
@@ -22,7 +22,7 @@ import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, GWOT_FINISH } from '../../src/scene/gwotPalette';
 import { paintOf, stuffOfName, doesOfName } from '../../src/scene/stuff';
-import { doesOf, DOES_DEFAULT } from '../../src/scene/materials';
+import { doesOf, DOES_DEFAULT } from '../levels/lib/does';
 import { laid, lines, ROWS, type Kit } from './kit-stand';
 
 const BREAK = process.env.KITSTORES_BREAK === '1', { check, failed } = lines();

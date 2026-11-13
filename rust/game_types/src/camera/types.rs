@@ -1,7 +1,5 @@
 //! The types of `camera`.
-#![allow(unused_imports)]
-use crate::{Blank, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, V3};
 
 #[derive(Clone, Copy, Debug, Blank)]
 pub struct FollowCamera {

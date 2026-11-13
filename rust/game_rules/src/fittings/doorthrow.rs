@@ -2,10 +2,9 @@ pub use ::game_types::doorthrow::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::vec::Vec;
+use crate::v3::{self, V3};
 
 /// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.
 fn side_of(t: crate::teams::Team) -> f64 {
@@ -181,7 +180,7 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     let until = g.time + secs;
     crate::character::anim_hit_from(g, c, Some(away));
     let heard = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     crate::condition::fold(g, c, secs);
     count(g, s);
     if g.gd[gd].civ.is_some() {
@@ -225,7 +224,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);
     let heard = v3::add(g.player_pos(pl), [0.0, 1.1, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::BodyHit, Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     if s.floor {
         crate::unseen::kneel(g, pl);
     }

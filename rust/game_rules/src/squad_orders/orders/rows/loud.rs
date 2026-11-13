@@ -3,9 +3,14 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::Row;
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::string::String;
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Floor, TargetKind::Door, TargetKind::None],
+    listed: Some(&[TargetKind::Floor, TargetKind::None]),
+    free: true,
+    ack: &["going loud.", "copy. loud."],
+    stands_in: Some(rows::silent::ORDER.id),
     only: Some(crate::silent::row_whole_squad),
     when: Some(when),
     ..Row::new("loud", label, issue)
@@ -13,7 +18,7 @@ pub const ORDER: Row = Row {
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("go loud") }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, _: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::silent::set_silent(g, false);
     None
 }

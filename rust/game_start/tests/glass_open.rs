@@ -10,7 +10,7 @@ use world_ask::{GlassAsk, WorldAsk, YardAsk};
 fn partition(s: u32, sam: [f64; 2]) -> (Play, Vec<game::ids::GuardId>) {
     let mut p = Play::level("office.json", false, &Opts { seed: s, dress: true, ..Default::default() });
     p.g.god_mode = true;
-    p.g.tune.chaos = 0.5;
+    p.g.k.chaos.def = 0.5;
     p.run(0.08);
     for x in [6.5, 7.5, 8.5] { let b = p.pane_at(x, 10.0); p.pane_is(b, PaneType::Annealed); }
     let men = p.g.guards.clone();

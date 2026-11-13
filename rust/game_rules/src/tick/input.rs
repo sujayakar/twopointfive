@@ -2,23 +2,21 @@ pub use ::game_types::input::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use alloc::string::String;
+use crate::js;
 
 /// A new Input with every field initialised and no listeners: a seat's, a host's.
 pub fn input_detached(g: &mut Game) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
-
 /// Is this key held?
-pub fn input_down(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].keys.holds(code)
+pub fn input_down(g: &Game, id: InputId, key: Key) -> bool {
+    g.tab.input[id].keys.holds(key.as_str())
 }
 
 /// Did this key go down this frame?
-pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
-    g.tab.input[id].pressed.holds(code)
+pub fn input_hit(g: &Game, id: InputId, key: Key) -> bool {
+    g.tab.input[id].pressed.holds(key.as_str())
 }
 
 /// Left button held.
@@ -54,6 +52,7 @@ fn end_frame(i: &mut Input) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::String;
     use super::*;
 
     fn s(x: &str) -> String {
@@ -84,9 +83,9 @@ mod tests {
         g.tab.input[a].pressed.add(s("KeyE"));
         g.tab.input[a].buttons = 5.0;   // left and right
         g.tab.input[a].clicked = 4.0;   // right
-        assert!(input_down(&mut g, a, "KeyW") && input_hit(&mut g, a, "KeyE"));
+        assert!(input_down(&mut g, a, crate::input::Key::W) && input_hit(&mut g, a, crate::input::Key::E));
         assert!(input_lmb(&mut g, a) && input_rmb(&mut g, a));
         assert!(input_rmb_hit(&mut g, a) && !input_lmb_hit(&mut g, a));
-        assert!(!input_down(&mut g, b, "KeyW") && !input_hit(&mut g, b, "KeyE") && !input_lmb(&mut g, b));
+        assert!(!input_down(&mut g, b, crate::input::Key::W) && !input_hit(&mut g, b, crate::input::Key::E) && !input_lmb(&mut g, b));
     }
 }

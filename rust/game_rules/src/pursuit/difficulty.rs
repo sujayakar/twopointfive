@@ -1,7 +1,7 @@
 pub use ::game_types::difficulty::types;
 pub use types::*;
 use crate::game::Game;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- what the part's own tables hold
@@ -57,7 +57,7 @@ fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bo
 
 /// `same` of two DIGIN tables.
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
-    rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
+    rows_same!(a, b, crate::knobs::DiginK; on, reach_m, noticed_secs, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
 
 // ---------------------------------------------------------------- the levers' words
@@ -148,7 +148,7 @@ fn any_set(g: &crate::game::Game) -> bool {
 }
 
 /// v is a word and a rung of lever k.
-pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<&str>) -> bool {
+pub fn is_rung(k: crate::difficulty::LeverKey, v: Option<&str>) -> bool {
     match v {
         Some(w) => levers_now().iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
         None => false,
@@ -387,7 +387,7 @@ fn own(key: crate::difficulty::LeverKey) -> bool {
 /// move one lever; None = back to the level's own. Answers whether the level's name is kept anew with it.
 pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>, keep: Option<bool>, structure: Option<&str>) -> bool {
     let keep = keep.unwrap_or(true);
-    if rung.is_some() && !is_rung(g, key, rung) { return false; }
+    if rung.is_some() && !is_rung(key, rung) { return false; }
     if keep {
         if let Some(h) = g.m.difficulty.held {
             let s = &mut g.m.difficulty.set;
@@ -466,13 +466,13 @@ pub fn cone_visit_now(g: &crate::game::Game) -> Option<bool> {
 }
 
 /// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing.
-pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
+pub fn difficulty_asked(q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
     let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
     let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
     let mut levers = Vec::new();
     if !plain {
         for l in levers_now().iter() {
-            if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
+            if let Some(r) = q.get(&l.param) { if is_rung(l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
         }
     }
     let digin = q.has("digin");
@@ -496,7 +496,7 @@ pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::Difficul
 pub fn lever_set(g: &crate::game::Game, key: crate::difficulty::LeverKey) -> Option<&'static str> { set_word(&g.m.difficulty.set, key) }
 
 /// the rung of one lever in a line ('' = it stands on none).
-pub fn lever_words(g: &crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
+pub fn lever_words(key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
     let Some(rung) = rung else { return String::new() };
     levers_now().into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
 }
@@ -680,20 +680,19 @@ mod tests {
 
     #[test]
     fn levers_now_is_the_tables_with_the_bottom_rung_and_the_fourth() {
-        let mut g = crate::game::Game::blank();
         let now = levers_now();
         assert_eq!(now.iter().map(|l| l.key.as_str()).collect::<Vec<_>>(), ["fog", "ai", "kit", "told"]);
         assert_eq!(now[0].rungs.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(), ["off", "team", "cones", "own"]);
         for l in now.iter() {
             for r in &l.rungs {
-                assert!(is_rung(&mut g, l.key, Some(r.id.as_str())));
+                assert!(is_rung(l.key, Some(r.id.as_str())));
                 let mut s = DifficultyModSET::default();
                 set_put(&mut s, l.key, &r.id);
                 assert_eq!(set_word(&s, l.key), Some(r.id.as_str()));
             }
         }
-        assert!(!is_rung(&mut g, LeverKey::Kit, Some("cones")));
-        assert!(!is_rung(&mut g, LeverKey::Fog, None));
+        assert!(!is_rung(LeverKey::Kit, Some("cones")));
+        assert!(!is_rung(LeverKey::Fog, None));
     }
 
     #[test]

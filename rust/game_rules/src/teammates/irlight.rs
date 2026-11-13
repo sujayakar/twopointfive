@@ -2,9 +2,9 @@ pub use ::game_types::irlight::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::string::String;
 
 /// The kit's row, made if there is none: nothing but empty lists.
@@ -397,7 +397,7 @@ mod tests {
 
     /// The pinned bits of ir_light_at's sums. Every lens stands too near the point to ask the world (tmax <= 0.05).
     #[test]
-    fn ir_light_at_has_the_typescripts_bits() {
+    fn ir_light_at_keeps_its_bits() {
         let mut g = Game::blank();
         let lights = [
             test_light([1.25, 1.62, -0.75], [0.17364817766693033, -0.17364817766693033, 0.9698463103929542], 3.7, 0.04, 7.0, 40.0, 62.0, 37.0, true),

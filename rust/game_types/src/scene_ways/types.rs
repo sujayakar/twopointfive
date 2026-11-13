@@ -1,7 +1,6 @@
 //! The types of `scene_ways`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::bytes::ToBytes;
+use alloc::string::String;
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WayHint {

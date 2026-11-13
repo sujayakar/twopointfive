@@ -1,6 +1,5 @@
 //! The types of `director`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which events a beat's `director_beat_on` takes: the filters the level scripts use, each with what it captured

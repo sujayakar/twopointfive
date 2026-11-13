@@ -1,17 +1,17 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 macro_rules! o { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op] } }
 macro_rules! thr { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as_mut().unwrap() } }
 
 /// `detonate_stun` with nobody on its list: the guards' list is emptied around the call and put back as it was, so the stun's blast finds no man
 /// to judge (who it hurts is decided by the caller, by which side of the door he is on). A man added to the emptied list during the call would be lost with it.
-fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) {
+fn detonate_stun_at_nobody(g: &mut Game, it: ItemId) {
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
     g.guards = all;
@@ -60,7 +60,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
     let spot = door_pt(g, d, w * 0.7, 0.2, into, Some(0.5));
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, spot, [0.0, 0.0, 0.0], Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     g.tab.item[it].fired = true;
-    seam_detonate_stun_nobody(g, it);
+    detonate_stun_at_nobody(g, it);
     if let Some(ii) = g.items.items.iter().position(|x| *x == it) { g.items.items.remove(ii); }
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);
     let fc = g.dr[d].frame_centre;
@@ -153,10 +153,9 @@ pub(super) fn door_tools_draw_charge(g: &mut crate::game::Game, c_2: ChargeId) {
     let n = door_pt(g, d, 0.0, 1.0, side, None);
     let e = door_pt(g, d, 0.0, 0.0, side, None);
     let yaw = v3::yaw_to(e, n);
-    let fl = crate::scene_boxes::box_flag();
-    let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: p, h: [0.07, 0.11, 0.02], yaw: Some(yaw), albedo: Some([0.09, 0.1, 0.08]), flags: Some(fl.dynamic), ..Default::default() });
+    let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: p, h: [0.07, 0.11, 0.02], yaw: Some(yaw), albedo: Some([0.09, 0.1, 0.08]), flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
-    let both = (js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64;
+    let both = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: [p[0] + (n[0] - e[0]) * 0.022, p[1] + 0.07, p[2] + (n[2] - e[2]) * 0.022], h: [0.012, 0.012, 0.004], yaw: Some(yaw), albedo: Some([0.9, 0.12, 0.08]), emissive: Some([2.2, 0.2, 0.1]), flags: Some(both), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
 }

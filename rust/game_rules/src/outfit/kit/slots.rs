@@ -3,7 +3,7 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -36,8 +36,8 @@ fn gun_view(g: &Game, pl: PlayerId, gun: SetupGun) -> KitGun {
 }
 
 /// a place in the strip for a can
-fn can_slot(thing: KitThing, key: &str, name: &str, count: f64, up: bool) -> KitSlot {
-    KitSlot { thing, key: String::from(key), name: String::from(name), count, spent: count <= 0.0, up, ..KitSlot::default() }
+fn can_slot(thing: KitThing, key: crate::input::Key, name: &str, count: f64, up: bool) -> KitSlot {
+    KitSlot { thing, key, name: String::from(name), count, spent: count <= 0.0, up, ..KitSlot::default() }
 }
 
 /// the big slot's row: what he carries and whether a door in reach offers it
@@ -51,15 +51,15 @@ fn big_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<KitBig> {
 pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
     let (pl, p) = (seat.player, &g.pl[seat.player]);
     let up = |k: SlotKind| p.slot == k && !p.holstered;
-    let gun_slot = |thing, key: &str, id: FirearmId, k: SlotKind| KitSlot { thing, key: String::from(key), name: crate::gear::gear_text(&g.weapon(g.fa[id].def).short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
-    let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, "Digit2", p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: String::from("Digit2"), name: String::from("—"), absent: true, ..KitSlot::default() } };
+    let gun_slot = |thing, key: crate::input::Key, id: FirearmId, k: SlotKind| KitSlot { thing, key, name: crate::gear::gear_text(&g.weapon(g.fa[id].def).short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
+    let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, crate::input::Key::Digit2, p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: crate::input::Key::Digit2, name: String::from("—"), absent: true, ..KitSlot::default() } };
     let mut slots = vec![
-        KitSlot { thing: KitThing::Hands, key: String::from(crate::handslot::HANDSLOT_KEY), up: p.holstered, ..KitSlot::default() },
-        gun_slot(KitThing::Pistol, "Digit1", p.pistol, SlotKind::Pistol),
+        KitSlot { thing: KitThing::Hands, key: crate::handslot::HANDSLOT_KEY, up: p.holstered, ..KitSlot::default() },
+        gun_slot(KitThing::Pistol, crate::input::Key::Digit1, p.pistol, SlotKind::Pistol),
         rifle,
-        can_slot(KitThing::Smoke, "Digit3", "smoke", p.canisters, up(SlotKind::Smoke)),
-        can_slot(KitThing::Flash, "Digit4", "stun", p.flashbangs, up(SlotKind::Flash)),
-        can_slot(KitThing::Frag, "Digit5", "frag", p.frags, up(SlotKind::Frag)),
+        can_slot(KitThing::Smoke, crate::input::Key::Digit3, "smoke", p.canisters, up(SlotKind::Smoke)),
+        can_slot(KitThing::Flash, crate::input::Key::Digit4, "stun", p.flashbangs, up(SlotKind::Flash)),
+        can_slot(KitThing::Frag, crate::input::Key::Digit5, "frag", p.frags, up(SlotKind::Frag)),
     ];
     let setup = crate::slotsetup::setup_view(g, seat);
     if let Some(s) = &setup { for slot in slots.iter_mut() { slot.taken = !slot.up && s.rows.iter().any(|r| r.key == slot.key); } }
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn your_issue_fills_your_four_pouches_on_the_pages_table() {
-        let mut g = Game::blank();
+        let g = Game::blank();
         let t = g.k.slots.table.clone();
         let c = issued()[0].clone();
         assert_eq!(cost_of(&c, &t), 4.0);

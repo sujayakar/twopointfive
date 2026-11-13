@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// A broken cell's dust: the puff now if the caps allow, else it waits in the burst queue. No dice.
 pub(in crate::breakage) fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) {
@@ -129,7 +129,7 @@ enum Slot {
 }
 
 /// A tile of the ceiling grid over `p` lets go: a slab under the ceiling, crumbs, dust; or the light panel in that square does.
-pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
+pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let Some(q) = tile_over(g, p, force) else { return false };
     match slot_of(g, &q) {
@@ -192,7 +192,7 @@ fn tile_falls(g: &mut Game, q: &Square, y: f64, who: f64) {
         yaw: Some(0.0),
         albedo: Some(v3::copy(albedo)),
         emissive: Some([0.0, 0.0, 0.0]),
-        flags: Some(crate::scene_boxes::box_flag().dynamic),
+        flags: Some(crate::scene_boxes::box_flag::DYNAMIC as f64),
         owner: Some(0.0),
         stuff: Some(crate::scene_stuff::BoxStuff::Paint),
         ..Default::default()
@@ -255,7 +255,7 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     if !destruction_break_target(g, t) {
         if crate::carlamps::lamp_glass(g, t) && g.tab.fixture[t].broken {   // (a vehicle's dark lens: its glass and its sound, no light gone out)
             let pos = g.tab.fixture[t].pos;
-            crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.8), None);
             lens_shatter(g, t, from);
             let name = g.tab.fixture[t].name.clone();
             dlog(g, &format!("lens {} broken ({})", name, why));
@@ -268,7 +268,7 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     dlog(g, &format!("fixture {} out ({})", name, why));
     let pos = g.tab.fixture[t].pos;
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
-    crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         lens_shatter(g, t, from);
     } else {
@@ -336,7 +336,6 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.fixture[t].pos, lens: g.tab.fixture[t].lens };
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
-
 
 #[cfg(test)]
 mod tests {

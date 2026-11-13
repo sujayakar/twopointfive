@@ -30,7 +30,7 @@ import { placeNone } from './placeField';
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the splat (as in front of the composite and every volumetric march, render/passes.ts)
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 
-export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain' | 'shard';
+export type PKind = import('../draw/names').PKindName;
 export const P_KINDS: readonly PKind[] = ['spark', 'debris', 'dust', 'casing', 'sheet', 'rain', 'shard'];
 export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, casing: 3, sheet: 4, rain: 5, shard: 6 };
 /** which ring a kind is dealt from: 0 = SHORT-lived (seconds at most), 1 = LONG (chips, brass and paper that lie there) — a spark storm never evicts resting brass — 2 = RAIN (the particle rain's
@@ -74,8 +74,8 @@ export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fw
 /** Per-kind numbers (shaders/particles_common.wgsl k0 / k1), live from the panel. holdOrFade: SPARK = fraction of life held white-hot before the fall to red;
  *  others = seconds of fade-out at the end of life. shutterOrGrowth: streak kinds = seconds of motion one streak shows; DUST = growth factor of the radius over
  *  its life. brightOrOpacity: SPARK = brightness × (× 25 HDR at white heat, meant to clip); DUST = peak opacity; others unused (1).
- *  DUST reads its physics-free slots as LOOK (rust/game_rules/src/breakage/particle_fx.rs DUST_LOOK, Tab ▸ Effects ▸ Dust puffs): restitution = the share of a crossing beam scattered toward the eye (0.5),
- *  keep = × the cache's ambient on it (1), sleepV = fade-in seconds (0.06), holdOrFade = × the edge feather / depth softening (1) — the values the kernels had as literals.
+ *  DUST reads its physics-free slots as LOOK (the knobs `dust_look`, which a game hands over): restitution = the share of a crossing beam scattered toward the eye (0.5),
+ *  keep = × the cache's ambient on it (1), sleepV = fade-in seconds, holdOrFade = × the edge feather / depth softening.
  *  SHEET reads the eight slots as render/sheetModel.ts SHEET: gravity · drag = KT (along-slip) · restitution = KN_LIN · keep = KN_Q (through-slip drag × airspeed) ·
  *  sleepV · holdOrFade = fade s · shutterOrGrowth = FLUT (flutter torque gain) · brightOrOpacity = TRANS (light through the back face).
  *  RAIN reads them as: gravity · drag (toward the AIR's velocity: terminal fall = gravity ÷ drag = 9 m/s, the lattice's RAIN_V) · restitution = TAAU reactivity × (particles_draw.wgsl) ·
@@ -91,7 +91,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/breakage/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
-export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
+export type EmitShape = import('../draw/names').EmitShapeName;
 const SHAPE_ID: Record<EmitShape, number> = { cone: 0, burst: 1, ring: 2, puff: 3, rainDisc: 4 };   // rainDisc (particles.wgsl emit): born at pos.y (− up to a metre) uniformly over the OUTDOOR part of the disc of radius `radius` about pos.xz — the GPU rejects the interior / annex footprints itself — moving along dir at speed
 /** One emit's numbers (what the record carries; see EmitRec in particles_common.wgsl). speed m/s, spread = cone half-angle (rad) | burst spread, life s, size m
  *  (a spark's streak thickness, a chip's width, a puff's birth radius, a case's diameter), jitters 0‥1, lift = burst / ring vertical share, radius = ring radius,

@@ -1,9 +1,5 @@
 pub use ::game_types::gunlook::types;
 pub use types::*;
-use crate::game::Game;
-use crate::ids::*;
-use crate::v3::{self, Quat, V3};
-use alloc::string::String;
 
 /// What a row has of its own; None: its stand-in fields are the gun.
 pub fn gun_own(def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
@@ -11,15 +7,15 @@ pub fn gun_own(def: &crate::weapons::WeaponDef) -> Option<crate::weapons::Weapon
 }
 
 /// The voice its report is played with.
-pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
+pub fn voice_of(def: &crate::weapons::WeaponDef) -> crate::audio_iface::Sfx {
     match gun_own(def).and_then(|own| own.voice) {
         Some(voice) => voice,
-        None => def.report.voice.clone(),
+        None => def.report.voice,
     }
 }
 
 /// The flame and the flash's light gain it fires with.
-pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
+pub fn flame_of(def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
     match gun_own(def).and_then(|own| own.flame) {
         Some(flame) => flame,
         None => def.muzzle_fx,
@@ -37,7 +33,7 @@ pub(super) fn pistol_model(id_2: Option<crate::weapons::GunModelId>) -> Option<c
 }
 
 /// Which models are on a man, from the rows he carries: the one in his hands and the others.
-pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
+pub fn gun_look_of(into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
     use crate::weapons::{WeaponClass, WeaponDefRig, WeaponId};
     let mut l = into.unwrap_or(GunLook { hand: None, long: None, side: None, bare_long: None, bare_side: None });
     l.hand = in_hands.and_then(|d| d.own.as_ref()).map(|own| own.model);
@@ -65,6 +61,8 @@ pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>,
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::string::String;
     use super::*;
     use crate::weapons::GunModelId as Id;
     use crate::weapons::{WeaponDef, WeaponId as W};
@@ -82,7 +80,7 @@ mod tests {
     fn look(a: Option<W>, b: Option<W>, c: Option<W>) -> (Option<Id>, Option<Id>, Option<Id>, bool, bool) {
         let g = Game::blank();
         let (a, b, c) = (a.map(|x| row(&g, x)), b.map(|x| row(&g, x)), c.map(|x| row(&g, x)));
-        let l = gun_look_of(&g, None, a.as_ref(), b.as_ref(), c.as_ref()).unwrap();
+        let l = gun_look_of(None, a.as_ref(), b.as_ref(), c.as_ref()).unwrap();
         (l.hand, l.long, l.side, l.bare_long.unwrap(), l.bare_side.unwrap())
     }
 
@@ -111,9 +109,8 @@ mod tests {
     /// A FAILURE MEANS: the last man's look is left on a man with nothing in his hands.
     #[test]
     fn a_look_handed_in_is_written_over_whole() {
-        let g = Game::blank();
         let stale = GunLook { hand: Some(Id::G18), long: Some(Id::G18), side: Some(Id::G18), bare_long: Some(true), bare_side: Some(true) };
-        let l = gun_look_of(&g, Some(stale), None, None, None).unwrap();
+        let l = gun_look_of(Some(stale), None, None, None).unwrap();
         assert_eq!((l.hand, l.long, l.side, l.bare_long, l.bare_side), (None, None, None, Some(false), Some(false)));
     }
 
@@ -121,13 +118,13 @@ mod tests {
     #[test]
     fn a_gun_sounds_and_flashes_as_its_own_or_by_its_row() {
         let g = Game::blank();
-        let says = |id: W| { let d = row(&g, id); (voice_of(&g, &d), String::from(flame_of(&g, &d).as_str())) };
-        let pair = |v: &str, f: &str| (String::from(v), String::from(f));
-        assert_eq!(says(W::Mk12), pair("mk12Suppressed", "mk12"));
-        assert_eq!(says(W::G18), pair("g18Report", "g18"));
-        assert_eq!(says(W::Fiveseven), pair("pistolSuppressed", "pistolSuppressed"));
-        assert_eq!(says(W::G19bare), pair("pistolLoud", "pistolBare"));
-        assert_eq!(says(W::Fn2000), pair("rifleSuppressed", "sc20k"));
-        assert_eq!(says(W::Mk18bare), pair("carbineReport", "carbine"));
+        let says = |id: W| { let d = row(&g, id); (voice_of(&d), String::from(flame_of(&d).as_str())) };
+        let pair = |v: crate::audio_iface::Sfx, f: &str| (v, String::from(f));
+        assert_eq!(says(W::Mk12), pair(crate::audio_iface::Sfx::Mk12Suppressed, "mk12"));
+        assert_eq!(says(W::G18), pair(crate::audio_iface::Sfx::G18Report, "g18"));
+        assert_eq!(says(W::Fiveseven), pair(crate::audio_iface::Sfx::PistolSuppressed, "pistolSuppressed"));
+        assert_eq!(says(W::G19bare), pair(crate::audio_iface::Sfx::PistolLoud, "pistolBare"));
+        assert_eq!(says(W::Fn2000), pair(crate::audio_iface::Sfx::RifleSuppressed, "sc20k"));
+        assert_eq!(says(W::Mk18bare), pair(crate::audio_iface::Sfx::CarbineReport, "carbine"));
     }
 }

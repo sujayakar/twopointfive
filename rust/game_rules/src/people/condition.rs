@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use crate::v3::{self, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 
 /// Is he down: dead, knocked out, or a player out of hits.
 pub fn down(g: &Game, c: CharId) -> bool { g.cond[c].down }
@@ -97,7 +97,7 @@ fn deal(g: &mut Game, c: CharId) {
     let up = !down(g, c);
     let hurt = if up && is_hurt(g, c, None) { 1.0 } else { 0.0 };
     let (flinch, pinned) = (g.k.suppression.flinch, g.k.suppression.pinned);
-    let shaken = if up && g.tune.suppression { v3::clamp((g.cond[c].sup.v - (flinch - 0.1)) / m::max(1e-3, pinned - (flinch - 0.1)), 0.0, 1.0) } else { 0.0 };
+    let shaken = if up && g.k.tune.suppression { v3::clamp((g.cond[c].sup.v - (flinch - 0.1)) / m::max(1e-3, pinned - (flinch - 0.1)), 0.0, 1.0) } else { 0.0 };
     let an = &mut g.ch[c].anim;
     (an.fold_too, an.hurt, an.shaken) = (true, hurt, shaken);
     an.hurt_side = -1.0; // his free hand is his left and goes across to his right ribs: the side he favours, every man
@@ -116,6 +116,7 @@ pub fn stun_pose(g: &mut Game, c: CharId, live: bool, from: V3) -> (bool, bool) 
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::String;
     use super::*;
     use alloc::vec;
     use crate::game::{Guard, Player};

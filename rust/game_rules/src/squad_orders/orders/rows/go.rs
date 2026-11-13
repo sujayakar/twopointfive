@@ -3,10 +3,14 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
+    targets: &[TargetKind::Floor, TargetKind::Door, TargetKind::None],
+    listed: Some(&[TargetKind::Floor, TargetKind::None]),
+    ack: &["going.", "moving."],
+    word: true,
     only: Some(only),
     valid: Some(valid),
     notes: Some(crate::doortools::door_tools_word_note),
@@ -22,7 +26,7 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
     if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
 }
 
-fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
+fn only(g: &mut Game, men: &[GuardId], _: &OrderTarget) -> Vec<GuardId> {
     if !small(g) {
         let waits = crate::doortools::door_tools_waiting_men(g, men);
         if !waits.is_empty() { return waits; }
@@ -33,12 +37,12 @@ fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
     men.iter().copied().filter(|m| waits.contains(m) || held.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
 }
 
-fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+fn valid(g: &mut Game, _: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let waits = if small(g) { !crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), men).is_empty() } else { !crate::doortools::door_tools_waiting_any(g, &crate::seats::here(g), men).is_empty() };
     if waits || !crate::doortools::door_tools_frag_held(g, men).is_empty() { Ok(()) } else { Err(Some(String::from("nobody waiting."))) }
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     if !small(g) { crate::doortools::door_tools_go_men(g, men, None); return None; }
     let only: Vec<crate::doortools::DoorToolsGoMenOnlyItem> = crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), men).into_iter().map(|x| crate::doortools::DoorToolsGoMenOnlyItem { stack: x.stack, men: x.men }).collect();
     crate::doortools::door_tools_go_men(g, men, Some(&only))

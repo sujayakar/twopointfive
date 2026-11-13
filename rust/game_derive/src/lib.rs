@@ -16,7 +16,7 @@
 //!   #[is(value)]                 on a field: what it starts at, where that is not its type's own start
 //!
 //! It reads a declaration as tokens and needs no parser of the language: attributes, names, and where one field ends.
-extern crate proc_macro;
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 /// a declaration as far as it is read
@@ -87,8 +87,6 @@ pub fn crosses(item: TokenStream) -> TokenStream {
     let name = word(t.next());
     format!("impl ::game_types::crosses::Crosses for {name} {{ fn ty(t: &mut ::game_types::crosses::Types) -> ::game_types::crosses::Ty {{ t.tell({name:?}, concat!(module_path!(), \"::\", {name:?}), |t| ::game_types::crosses::Shape::{shape}) }} }}").parse().unwrap()
 }
-/// what the walk knows of a field by its type: a number, a yes or no, a row of numbers, another table, or none of these (a list, a word): a value and nothing a person turns
-enum Holds { Number, YesNo, Row(usize), Table, Other }
 #[proc_macro_derive(Knobs, attributes(k))]
 pub fn knobs(item: TokenStream) -> TokenStream {
     let mut t = item.into_iter().peekable();
@@ -97,7 +95,7 @@ pub fn knobs(item: TokenStream) -> TokenStream {
     let (kind, name) = (word(t.next()), word(t.next()));
     let Some(TokenTree::Group(g)) = t.next() else { panic!("Knobs is for a struct with named fields: {name}") };
     if kind != "struct" || g.delimiter() != Delimiter::Brace { panic!("Knobs is for a struct with named fields: {name}") }
-    let rows: Vec<(String, Holds, Option<String>)> = split(g.stream()).into_iter().map(|f| {
+    let rows: Vec<(String, String, String)> = split(g.stream()).into_iter().map(|f| {
         let mut t = f.into_iter().peekable();
         let mut value = None;
         while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
@@ -112,36 +110,19 @@ pub fn knobs(item: TokenStream) -> TokenStream {
         let field = word(t.next());
         t.next();   // (its colon)
         let ty: String = t.map(|x| x.to_string()).collect::<String>().replace(' ', "");
-        let holds = match (ty.as_str(), &value) {
-            ("f64", _) => Holds::Number,
-            ("bool", _) => Holds::YesNo,
-            ("V3" | "[f64;3]", _) => Holds::Row(3),
-            ("[f64;2]", _) => Holds::Row(2),
-            ("[f64;4]", _) => Holds::Row(4),
-            (_, None) => Holds::Table,
-            _ => Holds::Other,
-        };
-        if value.is_none() && !matches!(holds, Holds::Table) { panic!("{name}.{field} says no value: #[k(…)]") }
-        (field, holds, Some(value.unwrap_or(format!("<{ty}>::page()"))))
+        let plain = ["f64", "bool", "V3"].contains(&ty.as_str()) || ty.starts_with('[');
+        if value.is_none() && plain { panic!("{name}.{field} says no value: #[k(…)]") }
+        (field, value.unwrap_or(format!("<{ty}>::page()")), ty)
     }).collect();
-    let (mut page, mut walk, mut get, mut set) = (String::new(), String::new(), String::new(), String::new());
-    for (f, holds, value) in &rows {
-        page += &format!("{f}: {}, ", value.as_deref().unwrap_or(""));
-        match holds {
-            Holds::Number => { walk += &format!("::game_types::knobs::each_of(at, {f:?}, false, self.{f}, each); "); get += &format!("({f:?}, \"\") => Some(self.{f}), "); set += &format!("({f:?}, \"\") => {{ self.{f} = v; true }} "); }
-            Holds::YesNo => { walk += &format!("::game_types::knobs::each_of(at, {f:?}, true, self.{f} as u8 as f64, each); "); get += &format!("({f:?}, \"\") => Some(self.{f} as u8 as f64), "); set += &format!("({f:?}, \"\") => {{ self.{f} = v != 0.0; true }} "); }
-            Holds::Row(n) => for i in 0..*n { let part = format!("{f}.{i}"); walk += &format!("::game_types::knobs::each_of(at, {part:?}, false, self.{f}[{i}], each); "); get += &format!("({f:?}, \"{i}\") => Some(self.{f}[{i}]), "); set += &format!("({f:?}, \"{i}\") => {{ self.{f}[{i}] = v; true }} "); },
-            Holds::Table => { walk += &format!("::game_types::knobs::under(at, {f:?}, |at| ::game_types::knobs::KnobTable::walk(&self.{f}, at, &mut *each)); "); get += &format!("({f:?}, rest) => ::game_types::knobs::KnobTable::get(&self.{f}, rest), "); set += &format!("({f:?}, rest) => ::game_types::knobs::KnobTable::set(&mut self.{f}, rest, v), "); }
-            Holds::Other => {}
-        }
+    let (mut page, mut fields) = (String::new(), String::new());
+    for (f, value, ty) in &rows {
+        page += &format!("{f}: {value}, ");
+        fields += &format!("Field {{ name: {f:?}, at: ::core::mem::offset_of!({name}, {f}), of: &Holds::<{ty}>::OF }}, ");
     }
     format!("impl {name} {{ pub fn page() -> Self {{ Self {{ {page} }} }} }} \
              impl ::core::default::Default for {name} {{ fn default() -> Self {{ Self::page() }} }} \
-             impl ::game_types::knobs::KnobTable for {name} {{ \
-                 #[allow(unused_variables)] fn walk(&self, at: &mut ::alloc::string::String, each: &mut dyn FnMut(&str, bool, f64)) {{ {walk} }} \
-                 #[allow(unused_variables)] fn get(&self, name: &str) -> ::core::option::Option<f64> {{ match ::game_types::knobs::first_part(name) {{ {get} _ => None }} }} \
-                 #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
-             }}").parse().unwrap()
+             impl ::game_types::knobs::KnobTable for {name} {{ const OF: ::game_types::knobs::Of = {{ \
+                 #[allow(unused_imports)] use ::game_types::knobs::{{Field, Holds, HoldsNone}}; ::game_types::knobs::Of::Table(&[{fields}]) }}; }}").parse().unwrap()
 }
 /// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says; and all of them in their order
 #[proc_macro_derive(Words, attributes(word))]

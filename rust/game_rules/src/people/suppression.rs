@@ -2,10 +2,10 @@ pub use ::game_types::suppression::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// Everything the reactions keep, back to rest; the scalar itself stays.
 fn sup_clear_reactions(this: &mut crate::suppression::Sup) {
@@ -220,7 +220,7 @@ fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::
 
 /// May this man's behaviour react at all this frame.
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.tune.suppression && g.ai_enabled && !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
+    g.k.tune.suppression && g.ai_enabled && !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
 }
 
 /// Once a frame's decay of one man's scalar and pulse.
@@ -285,7 +285,7 @@ fn one_guards_edges(g: &mut Game, gd: GuardId, k: f64, kk: f64) {
     let band = band_of(v, was, g.k.suppression.pinned, g.k.suppression.release, g.k.suppression.flinch);
     if band > was && was < 1.0 && !reacts(g, gd)
         && g.gd[gd].script.as_ref().map_or(false, |s| s.flinch == Some(true))
-        && g.tune.suppression
+        && g.k.tune.suppression
     {
         start_from_round(g, gd);
     }
@@ -473,7 +473,7 @@ pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId) {
 
 /// May the plain fight close on the player right now, or is he holding the cover he has just reached.
 pub(super) fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.tune.suppression && g.time < g.cond[g.gd[gd].ch].sup.cover_until
+    g.k.tune.suppression && g.time < g.cond[g.gd[gd].ch].sup.cover_until
 }
 
 /// No place hidden from everybody: the kept one, the hard place in another man's line over the thin one.
@@ -563,7 +563,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
 
 /// What suppression does to a guard's next round: extra cone, and x the cadence he draws after it.
 pub fn guard_fire_mods(g: &crate::game::Game, gd: GuardId) -> crate::suppression::GuardFireMods {
-    if !g.tune.suppression { return GuardFireMods { spread: 0.0, gap: 1.0 }; }
+    if !g.k.tune.suppression { return GuardFireMods { spread: 0.0, gap: 1.0 }; }
     let v = g.cond[g.gd[gd].ch].sup.v;
     let spread = g.k.suppression.guard_spread * crate::condition::condition_sup(g, g.gd[gd].ch, v);
     GuardFireMods { spread, gap: 1.0 + g.k.suppression.gap_k * g.cond[g.gd[gd].ch].sup.v }
@@ -576,7 +576,7 @@ pub fn flinching(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Extra cone on the player's own round for his own suppression.
 pub fn sam_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    if g.tune.suppression {
+    if g.k.tune.suppression {
         let p = seat.player;
         let v = g.cond[g.pl[p].ch].sup.v;
         g.k.suppression.sam_spread * crate::condition::condition_sup(g, g.pl[p].ch, v)

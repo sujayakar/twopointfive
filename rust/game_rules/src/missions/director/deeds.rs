@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers of the context
 
@@ -153,7 +153,7 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
     }
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
     let at = gd.map(|x| { let c = g.gd[x].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) });
-    crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
 }
 // ---- world: doors (ts 985)
 /// c.doors.lock
@@ -180,7 +180,7 @@ pub(in crate::missions) fn director_beat_door_open(g: &mut crate::game::Game, d:
 }
 // ---- world: stimulus (ts 999)
 /// c.stimulus.charge: a CAUSE, never a result: the item's own fuse detonates it
-pub(in crate::missions) fn director_beat_charge(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, at: &crate::director::Place, by: &crate::director::UnitRef, kind: Option<crate::throwables::ItemKind>, fuse: Option<f64>, toss: Option<bool>) -> Result<(), String> {
+pub(in crate::missions) fn director_beat_charge(g: &mut crate::game::Game, r: DirectorRunId, at: &crate::director::Place, by: &crate::director::UnitRef, kind: Option<crate::throwables::ItemKind>, fuse: Option<f64>, toss: Option<bool>) -> Result<(), String> {
     let gd = director_guard_of(g, r, by)?;
     let c = g.gd[gd].ch;
     let hand = match crate::character::character_joint_under(g, c, "handL") { Some(h) => h, None => v3::add(g.ch[c].pos, [0.0, 1.3, 0.0]) };
@@ -191,7 +191,7 @@ pub(in crate::missions) fn director_beat_charge(g: &mut crate::game::Game, r: Di
     let who = g.ch[c].id;
     let it = crate::throwables::throwables_spawn(g, kind, from, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(fuse.unwrap_or(1.2)), who: Some(who), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
     if toss == Some(true) { crate::character::anim_toss_item(g, c, Some(crate::character::TOSS_QUICK)); }
     Ok(())
 }

@@ -2,9 +2,9 @@ pub use ::game_types::doorway::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// The row of `states` for `gd`, there by now: a call that holds it across a `g` re-gets it.
@@ -323,12 +323,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn leaf_cuts_as_the_typescript() {
+    fn leaf_cuts_as_pinned() {
         // (width, angle, along, perp, answer)
         for (w, a, al, pe, want) in LEAF { assert_eq!(leaf_cuts(*w, *a, *al, *pe), *want, "{w} {a} {al} {pe}"); }
     }
     #[test]
-    fn flat_bits_as_the_typescript() {
+    fn flat_bits_as_pinned() {
         assert_eq!(v3::dist_xz([1.25, 9.0, -3.5], [0.1, -2.0, 7.3]).to_bits(), FLAT_BITS);
     }
     const LEAF: &[(f64, f64, f64, f64, bool)] = &[(0.9000, 1.5700, 0.2000, 0.6000, false), (0.9000, 1.5700, -0.3000, 0.6000, true), (0.9000, -1.2000, 0.1000, -0.5000, true), (0.9000, 1.2000, 0.1000, -0.5000, false), (1.2000, 0.7000, 0.5000, 0.1000, false), (0.9000, 1.5700, 0.4500, 0.0000, false), (0.9000, 2.0000, -0.4000, 0.3000, true), (0.9000, 0.0000, 0.2000, 0.0000, false), (0.9000, 1.5700, 1.4000, 0.3000, false)];
@@ -348,7 +348,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let _ = state_of(g, gd);   // makes the row if it is new; every read and write below goes through the table
     let c = g.gd[gd].ch;
     let t = g.time;
-    let pace = m::min(g.tune.guard_investigate, g.k.doormanners.step);
+    let pace = m::min(g.k.tune.guard_investigate, g.k.doormanners.step);
     let (step, step_by, step_rest) = { let st = g.m.doorway.states.get(gd).unwrap(); (st.step, st.step_by, st.step_rest) };
     if let Some(step) = step {
         if t > step_by || step_to(g, gd, step, pace, dt, false) {

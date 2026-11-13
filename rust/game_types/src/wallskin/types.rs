@@ -1,7 +1,6 @@
 //! The types of `wallskin`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Seat {
@@ -26,7 +25,6 @@ pub struct WallSkin {
     pub solid: Vec<u8>,
     #[is(1000000000.0)] pub room: f64,
     pub was: bool,
-    pub failed: bool,
     pub marked: JsSet<crate::Num>,
 }
 

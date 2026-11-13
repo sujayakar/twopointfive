@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ---- private helpers ----
 
@@ -93,7 +93,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
     let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
     let backing = gh.is_none() && dist < STANDOFF_MIN_M - 0.3;
-    let pace_base = if far || backing { g.tune.guard_investigate } else { g.tune.guard_walk };
+    let pace_base = if far || backing { g.k.tune.guard_investigate } else { g.k.tune.guard_walk };
     let pace_k = if crate::suppression::flinching(g, gd) { g.k.suppression.standoff_pace_k } else { 1.0 };
     let pace = pace_base * pace_k;
     let st = Standing { gd, s, c, dt, p, fs, aim, far, backing };
@@ -203,7 +203,7 @@ fn standoff_round(g: &mut Game, st: Standing, gun_hold: bool, pos: V3) -> bool {
     let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - gun_yaw));
     let w = g.gd[gd].weapon;
     g.fa[w].burst = None;
-    let held = g.tune.muzzle_discipline
+    let held = g.k.tune.muzzle_discipline
         && !(gun_hold && crate::gunhold::gun_hold_phase(g, gd) == Some(crate::gunhold::Phase::Line) && crate::gunhold::gun_hold_free(g, p));
     if g.gd[gd].reload_t >= 0.0 {
         tick_reload_beat(g, gd, dt);
@@ -269,7 +269,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
                 standoff_bark(g, gd, crate::guards::StandoffMoment::Dropped, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(b));
             }
         }
-        g.arms[g.gd[gd].ch].fire_cd = if g.tune.muzzle_discipline {
+        g.arms[g.gd[gd].ch].fire_cd = if g.k.tune.muzzle_discipline {
             SHIELD_RELEASE_BEAT_MIN + crate::dice::draw_of(g, "guards::standoff_upkeep#1", gd) * SHIELD_RELEASE_BEAT_JITTER
         } else {
             let cd = g.arms[g.gd[gd].ch].fire_cd;
@@ -414,7 +414,7 @@ pub(in crate::people) fn team_through() -> f64 {
 
 /// What a man's eye passes: the team's for an operative, glass alone for every other side.
 fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag().glass }
+    if g.team(gd).ours() { team_through() } else { crate::scene_boxes::box_flag::GLASS as f64 }
 }
 
 /// That man's own line to a point, asked bare.
@@ -426,7 +426,7 @@ pub fn eye_blocked(g: &crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool {
 /// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.
 pub fn eye_contact(g: &crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let is_player = crate::character::is_player(g, pc);
-    let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
+    let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag::GLASS as f64 };
     let tgt = g.ch[pc].bone_or(crate::character::Bone::Chest, 1.1);
     let tgt2 = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
     let smoked = is_player && smoke_trans < 0.3;
@@ -588,7 +588,7 @@ fn unstick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::guard
             return crate::guards::UnstickStep::Done;
         }
     }
-    g.gd[gd].speed = v3::damp(g.gd[gd].speed, g.tune.guard_walk * v3::clamp(d / 0.3, 0.4, 1.0), 6.0, dt);
+    g.gd[gd].speed = v3::damp(g.gd[gd].speed, g.k.tune.guard_walk * v3::clamp(d / 0.3, 0.4, 1.0), 6.0, dt);
     let speed = g.gd[gd].speed;
     let step = m::min(d, speed * dt);
     g.ch[c].pos[0] += dx / d * step;
@@ -660,7 +660,7 @@ mod tests {
 
     // pinned bits, at the page's GUARD_EYE
     #[test]
-    fn dist_term_is_the_typescripts_bits() {
+    fn dist_term_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
@@ -680,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn eye_reach_is_the_typescripts_bits() {
+    fn eye_reach_keeps_its_bits() {
         let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),

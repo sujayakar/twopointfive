@@ -1,6 +1,5 @@
 //! The types of `handwork`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]

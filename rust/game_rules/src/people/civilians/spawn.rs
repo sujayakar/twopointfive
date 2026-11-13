@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3;
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// The office's phones and ways off the floor: every level with no places of its own reads these.
 fn office_spots() -> crate::civilians::CivSpots {
@@ -42,7 +41,7 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
 fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     let most = crate::levelfit::civ_most(g);
     if g.civilians.len() as f64 >= most {
-        let why = format!("more than {} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)", most);
+        let why = format!("more than {} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed", most);
         let said = crate::levelfit::level_too_big(g, &why);
         panic!("{}", said);
     }
@@ -53,7 +52,7 @@ fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
 /// Fresh civilians on their first marks; nothing with the switch off or none authored.
 pub fn spawn_civilians(g: &mut crate::game::Game) {
     g.civilians = Vec::new();
-    if !g.tune.civilians || g.staged.facts.fight {
+    if !g.k.tune.civilians || g.staged.facts.fight {
         return;
     }
     let defs = g.level.civilians.clone().unwrap_or_default();
@@ -65,10 +64,7 @@ pub fn spawn_civilians(g: &mut crate::game::Game) {
 
 /// A mission that takes the floor: the level's own civilians leave it, and a mission that stops stands them again (`spawn_civilians`)
 pub fn civilians_leave(g: &mut crate::game::Game) {
-    for cv in core::mem::take(&mut g.civilians) {
-        let c = g.gd[cv].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
+    g.civilians.clear();
 }
 
 /// A civilian of the usual make at her first mark, doing what she does there.
@@ -98,8 +94,8 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         team: Some(crate::teams::Team::Civilian),
     };
     let tint = v3::copy(def.tint);
-    let (men, rig) = (g.men, g.rig);
-    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
+    let rig = g.rig;
+    let gd = crate::game::guard_new(g, rig, id, route, -1, fl, tint, Some(&look));
     crate::mind::foe(g, gd, None, "civilians");
     g.gd[gd].drawn = false;
     g.gd[gd].heard_up_to = g.event_seq;

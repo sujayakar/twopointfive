@@ -17,7 +17,7 @@ import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { SNOW_PALETTE } from '../scene/gwotPalette';
-import { doesOf, type SnowKind } from '../scene/materials';
+import type { SnowKind } from '../draw/names';
 
 export const SNOW_RES = 10;           // texels per metre
 /** The look's numbers (judged on software-rendered stills only — the maintainer's to move: `__snow.look` on the console, then `__snow.relook()`). Authored data. */
@@ -71,11 +71,11 @@ export interface SnowField {
  *  CLEARED (any paint that is not snow's, and not a lit thing lying on the snow) */
 export function snowThinLay(b: Box): boolean { const top = b.c[1] + b.h[1]; return !(b.flags & BoxFlag.Glass) && top <= 0.03 && top > 0 && b.c[1] - b.h[1] >= -0.02 && snowPaintOf(b) !== 'snow'; }
 export function snowLayBare(b: Box): boolean { return snowPaintOf(b) === null && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0; }
-/** which lying snow a box is, by its word (scene/materials.ts, Box.does: the rows 'snow', 'packed snow' and 'old snow'), or null. THE SNOW FIELD IS ONE
- *  MODEL THE PICTURE AND THE GAME BOTH READ (rust/game_rules/src/air/snow_bog.rs wades in what is drawn), so this file of the renderer's asks what a box DOES: the one render
- *  file that does. Never by the colour. (THE SHADER still knows the three snow paints by their numbers, shaders/snow.wgsl snowIsPaint: so a level's snow
- *  wears the palette's whites until that reads a word too, or it is snow to the game and plain paint to the picture.) */
-export function snowPaintOf(b: { does?: string }): SnowKind | null { return doesOf(b).snow ?? null; }
+/** which lying snow a box is, as the module told the page (its word: rust/game_types/src/scene_materials, the rows 'snow', 'packed snow' and 'old snow'), or null. THE SNOW FIELD
+ *  IS ONE MODEL THE PICTURE AND THE GAME BOTH READ (rust/game_rules/src/air/snow_bog.rs wades in what is drawn). Never by the colour. (THE SHADER still knows the three snow
+ *  paints by their numbers, shaders/snow.wgsl snowIsPaint: so a level's snow wears the palette's whites until that reads a word too, or it is snow to the game and plain paint
+ *  to the picture.) */
+export function snowPaintOf(b: { snow?: SnowKind }): SnowKind | null { return b.snow ?? null; }
 
 // position-seeded value noise (0‥1, C1) — the bake's only irregularity: the same level, the same field
 function hash2(x: number, z: number): number { let h = (Math.imul(x | 0, 73856093) ^ Math.imul(z | 0, 19349663)) >>> 0; h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0; return ((h ^ (h >>> 15)) >>> 0) / 4294967296; }

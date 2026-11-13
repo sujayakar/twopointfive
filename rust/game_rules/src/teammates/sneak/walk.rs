@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec, vec::Vec};
 
 fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 
@@ -204,7 +204,7 @@ fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guar
         Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
             let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
-            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);
+            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag::GLASS as f64);
             crate::guards::EyeContact { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
         }
     }
@@ -250,7 +250,7 @@ pub(super) fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: Guard
 /// The eye's rate on a man on a step: the arithmetic of sight_gain_on.
 fn eye_rate(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: Option<bool>) -> f64 {
     let low = low.unwrap_or(true);
-    let mut rate = g.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
+    let mut rate = g.k.tune.detect_rate * m::pow(lit, 1.5) * clamp(1.0 - (dist - 3.0) / 13.0, 0.2, 1.0) * (if low { 0.75 } else { 1.0 }) * keen;
     if dist < 1.8 { rate = m::max(rate, 3.5); }
     let st = g.gd[h].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search { rate * 2.2 } else { rate }
@@ -481,7 +481,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cell_packs_as_the_typescript_does() {
+    fn a_cell_packs_as_pinned() {
         assert_eq!(walk_cell(0.3, 0.6), 1.0 + 4096.0 * 2.0);
         assert_eq!(walk_cell(-0.1, -0.1), -1.0 + 4096.0 * -1.0);
     }

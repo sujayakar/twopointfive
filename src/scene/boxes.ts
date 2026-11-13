@@ -4,42 +4,19 @@ import { WORLD } from './world';
 import { makeBuffer } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP } from './cut';
 import type { BoxShape } from './shapes';
+import { BoxFlag } from '../draw/bits';
 import { BoxMat, Capsule, capsuleWord, capsuleWordBlue, capsuleWordGreen, capsuleWordOwner, capsuleWordRed } from '../draw/gpu';
 import { Cap, Geo, Info } from '../draw/sections';
 import type { MarkingDef } from './markings';
 
+export { BoxFlag };   // (what a box is, as bits of its `flags`: declared in rust/game_types/src/scene_boxes/types.rs)
 /** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
 export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
-export const BoxFlag = {
-  NoPrimary: 1,      // not rasterized into the G-buffer (ceilings, light-only geometry)
-  NoShadow: 2,       // ignored by all rays (decals, glow cards)
-  Cutaway: 4,        // rasterized only below mat.cutHeight (the viewer stage drops its back wall to a lip when the orbit camera goes behind it); rays see the full box
-  Dynamic: 8,        // rebuilt every frame (character proxies, props on bones)
-  Emissive: 16,      // has non-zero emission (lets shaders early-out)
-  AreaLit: 32,       // its emission is represented by an analytic area light: rays ignore the emissive term (no double count, no small-emitter aliasing in the cascades)
-  Rot: 64,           // carries a full 3D rotation (Box.rot; set automatically on upload): raster AND rays use the quaternion in boxMat instead of the packed yaw
-  Gloss: 128,        // polished floor finish (lobby stone, the lino): under FrameFlags.Gloss the final gather traces one Fresnel-weighted reflection ray for on-screen pixels of its top face (fgather.wgsl glossReflection) — the last free bit of the GPU flag byte
-  SoundSeal: 1 << 16,   // CPU-only (bits 8-15 of the GPU word are the owner byte, so CPU flags start at 1<<16): a dynamic occluder that currently seals sound (a door leaf near closed)
-  // GLASS (experiment E3). The GPU flag word is a u32 whose low byte holds the flags above and whose second byte is the owner; bits 16-31 were simply never sent
-  // (upload masked Box.flags to 0xff because the only higher bit, SoundSeal, is CPU-only). Rather than repurpose Cutaway (the viewer's stage wall needs it) the
-  // word is WIDENED: Glass keeps the same bit on both sides (1<<17 here = BOX_GLASS 131072u in common.wgsl) and upload() passes exactly that bit through.
-  // A glass box is authored geometry (levels/*.json flag name 'Glass', albedo = the pane's transmission tint) that no traced ray and no raster triangle ever
-  // sees: upload() keeps it out of the trace grid AND the visible list and instead lists it in SceneInfo.glass (≤ MAX_GLASS panes, 3 vec4f each), where
-  // composite / fgather / direct test view and shadow segments against it analytically (Fresnel reflection + tint + dust glow; common.wgsl glassTrace).
-  // CPU: movement collision and sound treat it as a wall, sight passes through it (rust/game_rules/src/world/scene_collision.rs segment_blocked's `through`), a round / kick / bang breaks it.
-  Glass: 1 << 17,
-  // A THIN THING THAT STANDS FREE (as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (rust/game_rules/src/stealth/fogofwar: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — rust/game_rules/src/people/guards eye_through), and
-  // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
-  Thin: 1 << 18,
-  // A WINDOW'S BAR (as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
-  // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
-  Bar: 1 << 19,
-} as const;
 
 import { SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
-export type DoesWord = import('./materials').DoesWord;
+export type DoesWord = import('../draw/names').DoesWord;
+type SnowKind = import('../draw/names').SnowKind;
 /** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
  *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
  *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
@@ -61,7 +38,7 @@ export interface Box {
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
   /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
-   *  box does is its word, scene/materials.ts, in any weather). weather.ts darkens rained-on ground with it. */
+   *  box does is its word, rust/game_types/src/scene_materials, in any weather). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
@@ -84,11 +61,13 @@ export interface Box {
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
   stuff?: BoxStuff;
-  /** WHAT THIS BOX DOES (scene/materials.ts): the row of the table of materials whose `does` it takes: what it is to a round, a charge and a blast.
-   *  Absent = the default row. GAMEPLAY, where `stuff` is dressing, and never worked out from it or from the colour: written here once by whoever makes
-   *  the box (the loader from the level file, a kit from its paint, the game from the box a piece came off: wordOf below), and read by the rules through
-   *  materials.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is the same thing. */
+  /** WHAT THIS BOX DOES (a generator's box: no page reads it): the row of the table of materials it takes, what it is to a round, a charge and a blast. Absent = the default
+   *  row. GAMEPLAY, where `stuff` is dressing, and never worked out from it or from the colour: written here once by whoever makes the box (the loader from the level
+   *  file, a kit from its paint), and read by tools/levels/lib/does.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is
+   *  the same thing. */
   does?: DoesWord;
+  /** which lying snow it is, as the module told the page (render/snowField.ts snowPaintOf) */
+  snow?: SnowKind;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (rust/game_rules/src/air/weather.rs sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
@@ -159,7 +138,7 @@ export interface Box {
  *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again. */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, snow: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -253,7 +232,7 @@ export class BoxWorld {
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each. */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
   /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
-  addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
+  addCapsuleRows(f: ArrayLike<number>, u: ArrayLike<number>, at: number, owner: number, colours: readonly Vec3[], fb: ArrayLike<number>, b: number): void {
     if (this.charCount >= BoxWorld.castCap) return;
     const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
     for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];

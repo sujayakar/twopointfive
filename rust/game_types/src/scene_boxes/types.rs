@@ -1,7 +1,6 @@
 //! The types of `scene_boxes`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, sync::Arc, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, Quat, V3};
+use alloc::{sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Box {
@@ -50,21 +49,6 @@ pub struct BoxWorld {
     pub dynamics: Vec<AnyBoxId>,
     pub max_boxes: f64,
     pub geom_serial: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BoxFlag {
-    pub no_primary: f64,
-    pub no_shadow: f64,
-    pub cutaway: f64,
-    pub dynamic: f64,
-    pub emissive: f64,
-    pub area_lit: f64,
-    pub gloss: f64,
-    pub sound_seal: f64,
-    pub glass: f64,
-    pub thin: f64,
-    pub bar: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -158,9 +142,38 @@ pub struct RayBoxRound {
 
 pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
 
-pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
+crate::bits! {
+    /// what a box is, as bits of its `flags`: some a level file says, some a rule sets as it makes the box
+    pub mod box_flag as BoxFlag {
+        /// not rasterized into the G-buffer (ceilings, light-only geometry)
+        NO_PRIMARY = 1,
+        /// ignored by all rays (decals, glow cards)
+        NO_SHADOW = 2,
+        /// rasterized only below the cut height (a stage drops its back wall to a lip when the orbit camera goes behind it); rays see the full box
+        CUTAWAY = 4,
+        /// rebuilt every frame (character proxies, props on bones)
+        DYNAMIC = 8,
+        /// has non-zero emission (lets a shader early-out)
+        EMISSIVE = 16,
+        /// its emission is an analytic area light's: rays ignore the emissive term (no double count, no small-emitter aliasing in the cascades)
+        AREA_LIT = 32,
+        /// carries a full 3D rotation (set as it is packed): raster and rays take the quaternion in place of the packed yaw
+        ROT = 64,
+        /// polished floor finish (lobby stone, the lino): the gather traces one Fresnel-weighted reflection ray for on-screen pixels of its top face
+        GLOSS = 128,
+        /// the rules' alone: a door's leaf near closed, which seals sound
+        SOUND_SEAL = 1 << 16,
+        /// a pane: no traced ray and no raster triangle sees it, view and shadow segments are tested against it analytically (reflection, tint, dust glow). Movement and
+        /// sound treat it as a wall, sight passes it, a round or a kick breaks it
+        GLASS = 1 << 17,
+        /// the rules' alone: a thin thing that stands free (a stovepipe, a window's bar, a lone post), which the fog of war's own sight passes
+        THIN = 1 << 18,
+        /// the rules' alone: a window's bar (the kit's upright between a window's bays): a round that meets one breaks it, and a line of fire passes one
+        BAR = 1 << 19,
+    }
+}
 
-pub const SHEET_MASK: f64 = 131083.0;
+pub const SHEET_MASK: u32 = box_flag::GLASS | box_flag::DYNAMIC | box_flag::NO_SHADOW | box_flag::NO_PRIMARY;
 
 pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
 

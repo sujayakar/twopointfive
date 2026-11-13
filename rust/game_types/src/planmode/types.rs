@@ -1,7 +1,6 @@
 //! The types of `planmode`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::ids::*;
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, Default)]
 pub struct GoalParts {

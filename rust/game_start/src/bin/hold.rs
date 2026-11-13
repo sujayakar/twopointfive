@@ -7,7 +7,7 @@
 //!
 //! `keep` stands each level by the Rust start (`:clear` starts a room clear on it; a mission's id of the game's list stands that mission), plays it for N seconds (90) under each HAND and each
 //! seed (1), and writes for every frame the state's words (game::state_words: every part of the game that a host does not hand in)
-//! and a hash of each part of rust/sim's block, folded to one number, and one byte of each part. `check` builds nothing: it reads DIR's list of runs and its copies of the hands, plays
+//! folded to one number, and one byte of each part. `check` builds nothing: it reads DIR's list of runs and its copies of the hands, plays
 //! them on the build it is, and says for each run `the same after every frame`, or the first FRAME that differs and the PARTS that differ
 //! in it by their names. Exit 0 only if every run is the same. With no level named: the 21 of DEFAULT_LEVELS (13 as room clears); with no hand: every hand
 //! of `hands/`. A run is a process of its own (a game is one a process), four at a time.
@@ -133,7 +133,6 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let frames = (r.secs * 60.0).round() as usize;
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
-    // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
     let names = parts::names();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();

@@ -1,8 +1,7 @@
 pub use ::game_types::cmdring::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
 use alloc::{string::String, vec, vec::Vec};
 
@@ -147,7 +146,7 @@ fn flat_seats_of(wedges: f64, rows: &[FlatRow], kind: &str, lead: f64) -> FlatSe
         if i == lead {
             continue;
         }
-        if r.free == Some(true) && lists_none(&r.listed, &r.targets) {
+        if r.free && lists_none(&r.listed, &r.targets) {
             last.push(i);
         } else {
             rest.push(i);
@@ -338,7 +337,7 @@ mod tests {
     }
 
     fn fr(id: &str) -> FlatRow { FlatRow { id: String::from(id), targets: vec![String::from("floor")], ..FlatRow::default() } }
-    fn fp(id: &str) -> FlatRow { FlatRow { free: Some(true), targets: vec![String::from("none")], ..fr(id) } }
+    fn fp(id: &str) -> FlatRow { FlatRow { free: true, targets: vec![String::from("none")], ..fr(id) } }
     fn frs(ids: &[&str]) -> Vec<FlatRow> { ids.iter().map(|id| fr(id)).collect() }
     fn with_p(mut rows: Vec<FlatRow>, p: &str) -> Vec<FlatRow> { rows.push(fp(p)); rows }
 

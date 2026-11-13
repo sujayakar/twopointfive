@@ -43,16 +43,13 @@ struct Life {
 
 /// Breathing, the body's mass on starts and stops, the weight shifting foot to foot at rest, and the standing foot lock: the feet planted in the world
 /// while he stands, each stepping across in a lifted arc when the body has turned or shifted out from over it.
-pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w: f64, w_f: f64, p0: [f64; 3], tune: &Knobs) -> bool {
+pub fn life_layer(body: &mut Body, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w: f64, w_f: f64, p0: [f64; 3], tune: &Knobs) {
     let mut o = Life { dt, s, crouch_pose, w, w_f, p0, ..Life::default() };
     as_stands(an, &mut o);
     let (at, lf) = (an.p_a.at as usize, &mut an.life);
     let (f_w, f_next, mut foot) = (&mut an.feet.w, &mut an.feet.next, [an.feet.l, an.feet.r]);
     for f in foot.iter_mut() { f.lock_off = [0.0; 3]; f.lock_yaw = 0.0; }
-    let code = with_pose(g, at, |d, rig, n, fk| {
-        if !cast(n, &[HIPS, SPINE1, SPINE2, SPINE3, NECK, SHOULDER_L, SHOULDER_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R]) {
-            return false;
-        }
+    body.pose(at, |d, rig, fk| {
         // clocks
         turn_rate(lf, &o);
         own_motion(lf, &mut o);
@@ -63,11 +60,11 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
             *f_w = 0.0;
         }
         if w < 0.003 && w_f < 0.003 {
-            return true;
+            return;
         }
         // remember the feet, pose the body, put the feet back
-        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
-        let legs = list(FK_LEGS);
+        let (foot_l, foot_r) = (rig.role(FOOT_L), rig.role(FOOT_R));
+        let legs = rig.list(FK_LEGS);
         fk.part(rig, d, legs);
         feet_of_pose(foot_l, foot_r, fk, &mut o);
         if w >= 0.003 {
@@ -76,7 +73,7 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
         }
         feet_stand(lf, f_w, &mut o);
         if w < 0.003 && *f_w <= 0.01 {
-            return true;
+            return;
         }
         as_posed(&mut o);
         if *f_w > 0.01 {
@@ -90,13 +87,10 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
         }
         // put the feet back: the knee steered over the toes only as far as the feet are LOCKED
         let pole_w = if o.cr_t > 0.0 { 0.6 * *f_w * (1.0 - smoothstep(0.0, 1.0, o.cr_t)) } else { 0.6 * *f_w };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &o.tl, Some(&knee_pole(&o.ql)), pole_w, Some(&o.ql), true);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &o.tr, Some(&knee_pole(&o.qr)), pole_w, Some(&o.qr), true);
-        true
-    })
-    .unwrap_or(false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), foot_l, &o.tl, Some(&knee_pole(&o.ql)), pole_w, Some(&o.ql), true);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), foot_r, &o.tr, Some(&knee_pole(&o.qr)), pole_w, Some(&o.qr), true);
+    });
     (an.feet.l, an.feet.r) = (foot[0], foot[1]);
-    code
 }
 
 /// Which way he faces and how low he is.
@@ -185,7 +179,7 @@ fn feet_of_pose(foot_l: usize, foot_r: usize, fk: &mut Fk, o: &mut Life) {
 /// The body posed: the weight, the hip dropped on the resting side, the breath in the chest.
 fn body_lives(lf: &mut game_types::character::AnimLife, d: &mut [S], rig: &Rig, o: &Life) {
     let Life { crouch_pose, w, b_amp, .. } = *o;
-    let (hips, s1, s2, s3, nk) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK));
+    let (hips, s1, s2, s3, nk) = (rig.role(HIPS), rig.role(SPINE1), rig.role(SPINE2), rig.role(SPINE3), rig.role(NECK));
     let (br, br2) = (sin(lf.breath), sin(lf.breath - 0.6));
     let sh = lf.shift.x * w * min(1.0, LIFE.on);
     let side = LIFE.shift_travel * sh * (1.0 - 0.5 * crouch_pose);
@@ -206,8 +200,8 @@ fn body_lives(lf: &mut game_types::character::AnimLife, d: &mut [S], rig: &Rig, 
     turn(d, rig, s2, q_pitch(-0.5 * bp * br));
     turn(d, rig, s3, q_pitch(-0.4 * bp * br2));
     turn(d, rig, nk, q_pitch(0.5 * bp * br2));
-    turn(d, rig, role(SHOULDER_L), q_roll(1.0 * 0.9 * bp * br2));
-    turn(d, rig, role(SHOULDER_R), q_roll(-1.0 * 0.9 * bp * br2));
+    turn(d, rig, rig.role(SHOULDER_L), q_roll(1.0 * 0.9 * bp * br2));
+    turn(d, rig, rig.role(SHOULDER_R), q_roll(-1.0 * 0.9 * bp * br2));
 }
 
 /// Planted in the world while he stands, released into the cycle's feet as he moves off.
@@ -378,27 +372,24 @@ struct Feet {
 /// THE RULE OF A FOOT, last of the stack: a foot that is down stays where it is; it goes somewhere else only through the air, and no faster than a foot goes.
 /// It reads the feet the finished pose has, without the standing lock (life_layer's, which every layer above was posed over and goes on being),
 /// and writes the thigh, the shin and the foot of each leg and nothing above the hips. `w_f`: the legs are his to stand on; `own`: how much of what the stack has in them is the stack's and not a whole-body clip's.
-pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p0: [f64; 3]) -> bool {
+pub fn feet_last(body: &mut Body, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p0: [f64; 3]) {
     let mut o = Feet { dt, s, w_f, own, p0, ..Feet::default() };
     let mut foot = [an.feet.step_l, an.feet.step_r];
     as_on_feet(an, &mut o);
     (an.feet.at_known, an.feet.at_was) = (true, p0);
-    let code = with_pose(g, o.at, |d, rig, n, fk| {
-        if !cast(n, &[HIPS, THIGH_L, SHIN_L, FOOT_L, TOE_L, THIGH_R, SHIN_R, FOOT_R, TOE_R]) {
-            return false;
-        }
+    body.pose(o.at, |d, rig, fk| {
         if w_f < 0.003 {
             for f in foot.iter_mut() { f.down = false; f.swing = -1.0; f.off = [0.0; 3]; f.off_v = [0.0; 3]; f.off_yaw = 0.0; f.clear = 0.0; f.fresh = true; }
-            return true;
+            return;
         }
         legs_free(&mut o);
         if !o.active && foot.iter().all(|f| f.swing < 0.0 && f.off == [0.0; 3] && f.off_yaw == 0.0 && f.clear == 0.0) {
-            return true;
+            return;
         }
-        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
-        let legs = list(FK_LEGS);
+        let (foot_l, foot_r) = (rig.role(FOOT_L), rig.role(FOOT_R));
+        let legs = rig.list(FK_LEGS);
         fk.part(rig, d, legs);
-        feet_as_posed(fk, foot_l, foot_r, &mut o);
+        feet_as_posed(rig, fk, foot_l, foot_r, &mut o);
         feet_wanted(&mut o);
         for i in 0..2 {
             cycle_under(&mut foot, i, &mut o);
@@ -423,13 +414,10 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
         let ((tl, ql), (tr, qr)) = (o.placed[0], o.placed[1]);
         // the knee over the toes only as far as he stands
         let pole_w = if o.cr_t > 0.0 { 0.6 * o.f_w * (1.0 - smoothstep(0.0, 1.0, o.cr_t)) } else { 0.6 * o.f_w };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tl, Some(&knee_pole(&ql)), pole_w, Some(&ql), true);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tr, Some(&knee_pole(&qr)), pole_w, Some(&qr), true);
-        true
-    })
-    .unwrap_or(false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_L), rig.role(SHIN_L), foot_l, &tl, Some(&knee_pole(&ql)), pole_w, Some(&ql), true);
+        two_bone_ik(rig, d, fk.rot, fk.pos, rig.role(THIGH_R), rig.role(SHIN_R), foot_r, &tr, Some(&knee_pole(&qr)), pole_w, Some(&qr), true);
+    });
     (an.feet.step_l, an.feet.step_r) = (foot[0], foot[1]);
-    code
 }
 
 /// How he stands, and his own motion over the ground: more than half a metre in a frame is a teleport, and the feet are set down where they land.
@@ -464,10 +452,10 @@ fn without(o: &Feet, i: usize, a: [f64; 3], t: [f64; 3], r: [f64; 4]) -> ([f64; 
 }
 
 /// Both feet as posed, and which way he faces.
-fn feet_as_posed(fk: &Fk, foot_l: usize, foot_r: usize, o: &mut Feet) {
+fn feet_as_posed(rig: &Rig, fk: &Fk, foot_l: usize, foot_r: usize, o: &mut Feet) {
     let Feet { p0, yin, .. } = *o;
-    let (fl, toe_pose_l, rl) = without(o, 0, fk.at(foot_l), fk.at(role(TOE_L)), fk.rot(foot_l));
-    let (fr, toe_pose_r, rr) = without(o, 1, fk.at(foot_r), fk.at(role(TOE_R)), fk.rot(foot_r));
+    let (fl, toe_pose_l, rl) = without(o, 0, fk.at(foot_l), fk.at(rig.role(TOE_L)), fk.rot(foot_l));
+    let (fr, toe_pose_r, rr) = without(o, 1, fk.at(foot_r), fk.at(rig.role(TOE_R)), fk.rot(foot_r));
     let stands = Stands::at(p0, yin);
     (o.fl, o.toe_pose_l, o.rl, o.fr, o.toe_pose_r, o.rr, o.stands) = (fl, toe_pose_l, rl, fr, toe_pose_r, rr, stands);
 }

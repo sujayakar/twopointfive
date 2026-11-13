@@ -2,10 +2,10 @@ pub use ::game_types::doorswing::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec, vec::Vec};
 
 /// A drill plan as the deal reads it: door, fling, room, bounds (a level's `breach` and `clear_plans`, two structs, are read as one list)
 type Plan = (String, f64, Option<String>, Option<crate::doorswing::Rect>);
@@ -47,70 +47,6 @@ fn mid(r: crate::doorswing::Rect) -> [f64; 2] {
 /// A rectangle's area.
 fn area(r: crate::doorswing::Rect) -> f64 {
     m::abs((r.x1 - r.x0) * (r.z1 - r.z0))
-}
-
-/// What roofOver reads of a static: c, h, yaw, flags.
-type BoxNumbers = (V3, V3, f64, f64);
-
-/// roofOver's count over the statics' numbers.
-fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
-    let c = def.closed_dir;
-    let ux = m::cos(c);
-    let uz = m::sin(c);
-    let mx = def.hinge[0] + ux * def.width / 2.0;
-    let mz = def.hinge[1] + uz * def.width / 2.0;
-    let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
-    let mut n = 0.0;
-    for off in [0.8, 1.5] {
-        for al in [-0.4, 0.0, 0.4] {
-            let x = mx - uz * off * s + ux * al;
-            let z = mz + ux * off * s + uz * al;
-            let some = boxes.iter().any(|&(bc, bh, yaw, flags)| {
-                if js::to_i32(flags) & no_shadow != 0 || bc[1] - bh[1] < ROOF_UNDER {
-                    return false;
-                }
-                let dx = x - bc[0];
-                let dz = z - bc[2];
-                let cy = m::cos(yaw);
-                let sy = m::sin(yaw);
-                m::abs(dx * cy - dz * sy) <= bh[0] && m::abs(dx * sy + dz * cy) <= bh[2]
-            });
-            if some {
-                n += 1.0;
-            }
-        }
-    }
-    n
-}
-
-/// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
-fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
-    let list = g.col.boxes.clone();
-    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }).collect();
-    roof_points(&boxes, &g.dr[d].def, s)
-}
-
-/// outsideOf's answer from the roofed points of the + and the - face.
-fn outside_side(p: f64, mi: f64) -> f64 {
-    let inn = ROOF_PTS - 2.0;
-    let out = 2.0;
-    if p >= inn && mi <= out {
-        -1.0
-    } else if mi >= inn && p <= out {
-        1.0
-    } else {
-        0.0
-    }
-}
-
-/// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.
-fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
-    if !g.dr[d].def.exterior.unwrap_or(false) {
-        return 0.0;
-    }
-    let p = roof_over(g, d, 1.0);
-    let mi = roof_over(g, d, -1.0);
-    outside_side(p, mi)
 }
 
 /// floors' `flood`: the component of `start`, flooded and its size kept on the first asking.
@@ -497,19 +433,13 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
     let mut dealt = Vec::with_capacity(list.len());
     for &d in list.iter() {
         let name = g.dr[d].def.name.clone();
-        let mut got = match first_rule(g, &given, &mut fl, d, &name) {
+        let got = match first_rule(g, &given, &mut fl, d, &name) {
             Some(s) => s,
             None => crate::doorswing::SwingDeal {
                 swing: if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 },
                 why: SwingWhy::Wider,
                 into: None,
             },
-        };
-        let out = if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds {
-            let side = outside_of(g, d);
-            deal(g, d, side, SwingWhy::Outside, Some("the open air"))
-        } else {
-            None
         };
         let mut clear: Option<crate::doorswing::SwingDeal> = None;
         if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds && got.why != SwingWhy::Plan && got.why != SwingWhy::StandsOpen
@@ -597,7 +527,7 @@ mod tests {
 
     /// Every rule of `first_rule` and the outside rule on one made-up level, against pinned answers. The leaf room rule, in the deal's loop, is not reached.
     #[test]
-    fn rules_answer_as_the_typescript() {
+    fn rules_give_the_pinned_answers() {
         let mut g = Game::blank();
         door(&mut g, "floor", [10.0, 4.0], 1.6, -1.6, |d| d.exterior = Some(true));
         door(&mut g, "authored", [10.0, 6.0], 1.6, -1.6, |d| d.swing = Some(-1.0));
@@ -620,7 +550,6 @@ mod tests {
             }
         }
         (g.col.nav.w, g.col.nav.h, g.col.nav.cell, g.col.nav.blocked) = (40.0, 40.0, 0.5, blocked);
-        let roofs: [BoxNumbers; 3] = [([8.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 0.0), ([12.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 2.0), ([12.0, 1.0, 4.5], [2.0, 0.2, 3.0], 0.3, 0.0)];
         let mut breach = crate::scene_level::BreachPlan::default();
         breach.door = String::from("plan");
         breach.fling = -3.0;
@@ -648,19 +577,19 @@ mod tests {
         sc.rescue = Some(rs);
         level.scenarios = Some(sc);
 
-        let want: [(&str, f64, &str, &str, f64); 12] = [
-            ( "floor" , -1.0 , "floor" , "360 cells against 740" , -1.0 ),
-            ( "authored" , -1.0 , "authored" , "" , 0.0 ),
-            ( "folds" , 1.0 , "folds" , "" , 0.0 ),
-            ( "plan" , -1.0 , "plan" , "vault" , 0.0 ),
-            ( "room" , 1.0 , "room" , "small" , 0.0 ),
-            ( "hostages" , -1.0 , "hostages" , "cell" , 0.0 ),
-            ( "entry" , 1.0 , "mission" , "server room" , 0.0 ),
-            ( "locked" , -1.0 , "lock" , "" , 0.0 ),
-            ( "ajar" , 1.0 , "stands open" , "" , 0.0 ),
-            ( "wider" , -1.0 , "wider" , "" , 0.0 ),
-            ( "stopped" , -1.0 , "floor" , "360 cells against 740" , 0.0 ),
-            ( "split" , 1.0 , "wider" , "" , 0.0 ),
+        let want: [(&str, f64, &str, &str); 12] = [
+            ( "floor" , -1.0 , "floor" , "360 cells against 740" ),
+            ( "authored" , -1.0 , "authored" , "" ),
+            ( "folds" , 1.0 , "folds" , "" ),
+            ( "plan" , -1.0 , "plan" , "vault" ),
+            ( "room" , 1.0 , "room" , "small" ),
+            ( "hostages" , -1.0 , "hostages" , "cell" ),
+            ( "entry" , 1.0 , "mission" , "server room" ),
+            ( "locked" , -1.0 , "lock" , "" ),
+            ( "ajar" , 1.0 , "stands open" , "" ),
+            ( "wider" , -1.0 , "wider" , "" ),
+            ( "stopped" , -1.0 , "floor" , "360 cells against 740" ),
+            ( "split" , 1.0 , "wider" , "" ),
         ];
         let given = given_of(&g);
         let mut fl = None;
@@ -672,14 +601,7 @@ mod tests {
                 Some(s) => (s.swing, s.why.as_str(), s.into.clone().unwrap_or_default()),
                 None => (if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 }, "wider", String::new()),
             };
-            let out = if why != "authored" && why != "folds" {
-                let def = &g.dr[d].def;
-                let side = if def.exterior.unwrap_or(false) { outside_side(roof_points(&roofs, def, 1.0), roof_points(&roofs, def, -1.0)) } else { 0.0 };
-                deal(&g, d, side, crate::doorswing::SwingWhy::Outside, Some("the open air")).map_or(0.0, |o| o.swing)
-            } else {
-                0.0
-            };
-            assert_eq!((name.as_str(), swing, why, into.as_str(), out), *w);
+            assert_eq!((name.as_str(), swing, why, into.as_str()), *w);
         }
     }
 }

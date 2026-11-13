@@ -220,7 +220,7 @@ fn in_the_guns_hold() -> (Play, GuardId, [f64; 2]) {
     let at = p.at(man);
     p.sam_put([at[0] - 0.7, at[1]]);
     p.run(0.1);
-    game::player::start_grab(&mut p.g, man, None);
+    game::player::start_grab(&mut p.g, man);
     p.until(2.5, |p| holding(p)).expect("the grab never settled");
     p.run(0.5);
     (p, man, at)
@@ -252,7 +252,7 @@ fn in_the_guns_hold_the_buttons_are_a_round_and_the_ocp() {
     let (r0, c0, heard) = (rounds(&p), charge(&p), p.sounds.len());
     click(&mut p, Button::Right);
     assert_eq!(rounds(&p), r0, "the right button: no round");
-    assert!(p.sounds[heard..].iter().any(|x| x.name == "deny") && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
+    assert!(p.sounds[heard..].iter().any(|x| x.name == game::audio_iface::Sfx::Deny) && charge(&p) >= c0, "nothing lit: the refusal, and no charge spent");
 
     // a light of the room under the reticle
     let eye = p.sam_at();

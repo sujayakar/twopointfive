@@ -1,7 +1,5 @@
 //! The types of `rig_props`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::V3;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Seg {
@@ -533,8 +531,6 @@ pub fn grip_hung() -> crate::rig_props::Adj { crate::rig_props::Adj { off: [0.0,
 pub fn sling_front() -> crate::rig_props::RigSc20kSlung { crate::rig_props::RigSc20kSlung { off: [-0.07, 0.0, 0.2], bore: [0.55, -0.82, 0.12], roll: 180.0, follow: 0.85, adj: None } }
 
 pub fn sling_rest() -> crate::rig_props::SLINGREST { crate::rig_props::SLINGREST { pivot: 0.28, len: 0.7, clear: 0.11, max: 1.4, soft: 0.1, n: 6.0 } }
-
-pub fn rail_lens_color() -> V3 { [0.9, 0.96, 1.0] }
 
 pub const SLUNG_CAST_OUT: f64 = 0.03;
 

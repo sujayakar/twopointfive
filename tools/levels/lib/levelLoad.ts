@@ -7,7 +7,7 @@
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
-import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
+import { DOES_DEFAULT, doesSaid } from './does';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
@@ -49,7 +49,7 @@ export function loadLevel(data: LevelData): Level {
   /** what a box or a part is made of: its own word, else its material row's; nothing for plain (a box that says nothing is plain) */
   const stuffOf = (o: { stuff?: string }, m: MaterialData | undefined): BoxStuff | undefined => { const w = o.stuff ?? m?.stuff; return w === undefined || w === 'plain' ? undefined : w as BoxStuff; };
   /** the same for a box, or a shape's piece, that names its row itself (ONE reader for both, as finishOf is) */
-  /** … and what it DOES (scene/materials.ts): its own word, else its material row's, written onto the box here, once; nothing for the default row. Never from `stuff`, never from the colour */
+  /** … and what it DOES (lib/materials.ts): its own word, else its material row's, written onto the box here, once; nothing for the default row. Never from `stuff`, never from the colour */
   const doesOf = (o: { does?: string }, m: MaterialData | undefined): { does?: DoesWord } => doesSaid(o.does ?? m?.does);
   const saidOf = (o: { stuff?: string; does?: string; material?: string }): { stuff?: BoxStuff; does?: DoesWord } => { const m = o.material !== undefined ? mats.get(o.material) : undefined, w = stuffOf(o, m); return { ...(w !== undefined ? { stuff: w } : {}), ...doesOf(o, m) }; };
   // boxes, in file order (index i of the file IS static box i)
@@ -114,13 +114,16 @@ export function loadLevel(data: LevelData): Level {
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
     boxes, props, lights, switchables,
+    ...(data.script !== undefined ? { script: data.script } : {}), ...(data.snow !== undefined ? { snow: data.snow } : {}),
     ...(data.plans.breach ? { breach: planOf(data.plans.breach) as BreachPlan } : {}),
     doors,
+    ...(data.doorPaint ? { doorPaint: clone(data.doorPaint) } : {}),
     devices,
     ...(vents ? { vents } : {}),
     ...(data.hums ? { hums: data.hums.map((h): HumDef => ({ name: h.id, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     breaker: { pos: V(data.breaker.pos), boxes: [bx(data.breaker.panel), bx(data.breaker.led)], ...(data.breaker.fumble !== undefined ? { fumble: data.breaker.fumble } : {}) },
     beacons: data.beacons.map(b => ({ pos: V(b.pos), box: bx(b.box) })),
+    ...(data.vehicleLamps ? { vehicleLamps: data.vehicleLamps.map(l => ({ box: bx(l.box), what: l.what })) } : {}),
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
@@ -198,7 +201,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
    *  nothing over a row that says something; a box with an inline albedo writes its word unless it is plain */
   const says = (b: { stuff?: string; does?: string }, p: { material?: string }): { stuff?: string; does?: string } => {
     const row = p.material !== undefined ? materials[p.material] : undefined, mine = b.stuff ?? 'plain', rows = row?.stuff ?? 'plain';
-    // … and what it DOES (scene/materials.ts), the same way: per box only where it is another row than its material's, the default row's word where it
+    // … and what it DOES (lib/materials.ts), the same way: per box only where it is another row than its material's, the default row's word where it
     // does nothing over a row that says something
     const does = b.does ?? DOES_DEFAULT, rowDoes = row?.does ?? DOES_DEFAULT;
     return { ...(mine !== rows ? { stuff: mine } : {}), ...(does !== rowDoes ? { does } : {}) };
@@ -256,6 +259,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const data: LevelData = {
     version: LEVEL_DATA_VERSION,
     name: opts.name,
+    ...(level.script !== undefined ? { script: level.script } : {}), ...(level.snow !== undefined ? { snow: level.snow } : {}),
     // (what the loader hands back ON THE LEVEL from the file's meta is written from the Level, iff it has it: its marks' texel and how kept it is. The
     //  Level is the one source: either key in a caller's opts.meta is dropped, so a file cannot say a word its Level does not, and a round trip holds)
     meta: (() => { const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) }; })(),
@@ -266,6 +270,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     lights: level.lights.map(lightData),
     switchables: level.switchables.map(s => ({ id: s.name, boxes: s.boxes.map(bi => ids[bi]), group: s.group, on: s.on, baseEmissive: V(s.baseEmissive), ...(s.flicker !== undefined ? { flicker: s.flicker } : {}), ...(s.mains !== undefined ? { mains: s.mains } : {}) })),
     doors: level.doors.map(o => { const d: LevelData['doors'][number] = { id: o.name, hinge: [o.hinge[0], o.hinge[1]], closedDir: o.closedDir, width: o.width }; for (const k of ['angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'] as const) if (o[k] !== undefined) (d as any)[k] = o[k]; return d; }),
+    ...(level.doorPaint ? { doorPaint: clone(level.doorPaint) } : {}),
     routes: uniqIds(level.routes.map(r => slug(r.name))).map((id, i) => { const r = level.routes[i]; return { id, ...(r.name !== id ? { name: r.name } : {}), points: VV(r.points), wait: [...r.wait], ...(r.weapon !== undefined ? { weapon: r.weapon } : {}), ...(r.keys !== undefined ? { keys: [...r.keys] } : {}) }; }),
     chokepoints: uniqIds((level.chokepoints ?? []).map(c => slug(c.name))).map((id, i) => { const c = level.chokepoints![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), pos: V(c.pos), yaw: c.yaw }; }),
     ...(level.civilians ? { civilians: uniqIds(level.civilians.map(c => slug(c.name))).map((id, i): CivilianData => { const c = level.civilians![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), kind: c.kind, tint: V(c.tint), ...(c.tint2 !== undefined ? { tint2: V(c.tint2) } : {}), points: VV(c.points), wait: [...c.wait], ...(c.tasks !== undefined ? { tasks: [...c.tasks] } : {}), ...(c.face !== undefined ? { face: [...c.face] } : {}) }; }) } : {}),
@@ -281,6 +286,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     ] },
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
+    ...(level.vehicleLamps ? { vehicleLamps: level.vehicleLamps.map(l => ({ box: ids[l.box], what: l.what })) } : {}),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
     ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: lib/scenarios.ts)

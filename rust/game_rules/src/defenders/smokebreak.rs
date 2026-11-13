@@ -2,9 +2,9 @@ pub use ::game_types::smokebreak::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A blank row of counts.
 fn fresh() -> crate::smokebreak::SmokeBreakStats {
@@ -223,7 +223,7 @@ mod tests {
 
     /// The hand's beats on the page's numbers: (t, up, drawn, cycle, into's bits).
     #[test]
-    fn hand_beats_are_the_typescripts() {
+    fn hand_beats_are_as_pinned() {
         let k = crate::knobs::SmokebreakK::page();
         let rows: [(f64, f64, bool, f64, u64); 17] = [
             (0f64, 0f64, false, -1f64, 0x0000000000000000),

@@ -10,8 +10,8 @@ import { NET_WORD_SEED, foldWord, wordTick } from './words';
 /** a key's code, as the referee has one: anything else is no key, and is left out before the codes become one text */
 const CODE = /^[A-Za-z0-9]+$/;
 const codes = (k: readonly string[] | undefined): string => k ? k.filter(c => CODE.test(c)).join(' ') : '';
-/** a record's keys: those held, a line feed, those that went down · its numbers, as a row */
-const keysOf = (w: WireCmd): string => `${codes(w.k)}\n${codes(w.p)}`;
+/** a record's keys: those held (and those held under a press it carries), a line feed, those that went down · its numbers, as a row */
+const keysOf = (w: WireCmd): string => `${codes(w.u ? [...w.k, ...w.u] : w.k)}\n${codes(w.p)}`;
 const rowOf = (w: WireCmd): Doubles<'SeatInput'> => { const r = seatInput(); r.set(w.n); return r; };
 
 export class NetGame {
@@ -26,19 +26,19 @@ export class NetGame {
     const { face, h } = this;
     cmds.forEach((c, seat) => face.record(h, seat, rowOf(c), keysOf(c)));
     face.step(h, 1 / NET.hz, 0);   // (the saves are a game of one's)
-    this.w = foldWord(foldWord(this.w, [face.dieN(h)]), face.partHashes(h));
+    this.w = foldWord(this.w, [face.tickWord(h)]);
     if (wordTick(this.ticks++)) this.w = foldWord(this.w, this.whole().words);
   }
   /** what the ticks told their host is let go */
   clear(): void { this.face.outClear(this.h); }
   /** the state word after the last tick (words.ts) */
   word(): string { return this.w.toString(36); }
-  /** the whole game's words, one a part; `named`: with the parts' names, and after them what is in the word of every tick, as `block.<part>` */
+  /** the whole game's words, one a part; `named`: with the parts' names, and after them what is in the word of every tick, as `tick.<what>` */
   whole(named = false): { names: string[]; words: number[] } {
     const { face, h } = this, words = Array.from(face.stateWords(h));
     if (!named) return { names: [], words };
-    this.names ??= [...face.stateNames(), 'block.die', ...face.partNames().map(n => `block.${n}`)];
-    return { names: this.names, words: [...words, face.dieN(h), ...face.partHashes(h)] };
+    this.names ??= [...face.stateNames(), 'tick.word'];
+    return { names: this.names, words: [...words, face.tickWord(h)] };
   }
   /** how the mission ended (null while it is being played) */
   ended(): Outcome | null { const r = this.face.verdict(this.h); return r && { won: r.won, end: r.word, why: r.why }; }

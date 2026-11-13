@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! the verdict's tick. How a run went, worked out by the game itself and LATCHED: the first end wins and stays for that run.
 //! It only reads the game outside `g.verdict`: it moves nobody and draws no die, so a play is the same play with or without it.
 
@@ -7,7 +6,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{format, string::String, vec::Vec};
 
 /// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.

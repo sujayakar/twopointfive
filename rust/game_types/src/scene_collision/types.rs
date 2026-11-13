@@ -1,6 +1,5 @@
 //! The types of `scene_collision`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the share of the wind a square metre of the plan has: crate::wind::wind_share_under(g, x, z, roofs)

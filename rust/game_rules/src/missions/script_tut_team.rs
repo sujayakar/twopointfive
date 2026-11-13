@@ -1,17 +1,16 @@
-#![allow(unused_variables, unused_imports)]
 //! The script of the level tut-team: the squad's tutorial mission on the ground. Its define pass, a step function for each beat, its three helpers.
 
 pub use ::game_types::script_tut_team::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the script's locals, as this run's define pass left them
-fn tut_team_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_team::TutTeamVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutTeam(v) => v, _ => panic!("the run is not of levels/tut-team.script.ts") } }
+fn tut_team_vars(g: &crate::game::Game, r: DirectorRunId) -> &crate::script_tut_team::TutTeamVars { match &g.tab.director_run[r].vars { crate::director::ScriptVars::TutTeam(v) => v, _ => panic!("the run is not of the level tut-team") } }
 
 /// the roadblock's three posts, and the names its men answer to (POSTS)
 const POSTS: [(&str, V3); 3] = [("Tango 6", [34.0, 0.0, 21.6]), ("Tango 7", [34.9, 0.0, 23.6]), ("Tango 8", [32.4, 0.0, 23.2])];
@@ -399,7 +398,7 @@ pub(super) fn tut_team_pinned_test(g: &crate::game::Game, r: DirectorRunId, id: 
 }
 
 /// the squad's own smoke goes out; more goes out while no order comes (P.beat 'smoke')
-pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeFrame) -> Result<Option<crate::director::Cond>, String> {
+pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamSmokeFrame) -> Result<Option<crate::director::Cond>, String> {
     loop {
         match f.at {
             0 => {
@@ -424,7 +423,7 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
                     Some(sub) => sub,
                     None => return Ok(None),
                 };
-                if let Some(c) = tut_team_smoke_helper_step(g, r, b, &mut sub)? {
+                if let Some(c) = tut_team_smoke_helper_step(g, r, &mut sub)? {
                     f.sub_smoke = Some(sub);
                     return Ok(Some(c));
                 }
@@ -456,7 +455,7 @@ pub(super) fn tut_team_smoke_step(g: &mut crate::game::Game, r: DirectorRunId, b
                     Some(sub) => sub,
                     None => return Ok(None),
                 };
-                if let Some(c) = tut_team_smoke_helper_step(g, r, b, &mut sub)? {
+                if let Some(c) = tut_team_smoke_helper_step(g, r, &mut sub)? {
                     f.sub_smoke = Some(sub);
                     return Ok(Some(c));
                 }
@@ -893,17 +892,17 @@ fn smoke_call(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_team::TutTea
     }
 }
 /// the helper's closure toss: his can leaves his hand
-fn smoke_toss(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) -> Result<(), String> {
+fn smoke_toss(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) -> Result<(), String> {
     if let Some(u) = &f.by[i] {
         if crate::director::director_query_alive(g, r, u) {
-            crate::director::director_beat_charge(g, r, b, &crate::director::Place::List(SMOKES[i]), u, Some(crate::throwables::ItemKind::Smoke), Some(0.8), Some(true))?;
+            crate::director::director_beat_charge(g, r, &crate::director::Place::List(SMOKES[i]), u, Some(crate::throwables::ItemKind::Smoke), Some(0.8), Some(true))?;
         }
     }
     Ok(())
 }
 
 /// every can called by the man who throws it, a beat before it leaves his hand (the smoke beat's function* smoke)
-fn tut_team_smoke_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_team::TutTeamSmokeHelperFrame) -> Result<Option<crate::director::Cond>, String> {
+fn tut_team_smoke_helper_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_team::TutTeamSmokeHelperFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
         0 => {
             let men = squad(g, r);
@@ -920,12 +919,12 @@ fn tut_team_smoke_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: Di
             Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_CALLED - SMOKE_APART)?))
         }
         2 => {
-            smoke_toss(g, r, b, f, 0)?;
+            smoke_toss(g, r, f, 0)?;
             f.at = 3;
             Ok(Some(crate::director::director_beat_wait(g, r, SMOKE_APART)?))
         }
         3 => {
-            smoke_toss(g, r, b, f, 1)?;
+            smoke_toss(g, r, f, 1)?;
             f.at = 4;
             Ok(None)
         }

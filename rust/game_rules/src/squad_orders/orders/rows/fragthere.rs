@@ -4,10 +4,13 @@ use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::squadthrow::SquadThrowKind;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
+    targets: &[TargetKind::Floor],
+    page: Some(crate::squadthrow::THROW_PAGE),
+    free: true,
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::squadthrow::walk_tick),
@@ -26,6 +29,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     crate::squadthrow::row_valid(g, men, t.at(), SquadThrowKind::Frag).map_err(Some)
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::squadthrow::row_issue(g, men, t, SquadThrowKind::Frag)
 }

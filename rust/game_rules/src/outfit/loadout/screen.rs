@@ -1,5 +1,5 @@
 //! What a mission can be played with, as the screen before it asks (`squad_choices`, `note_of`, `roster_of`, the notes of a kit that is not yours).
-use crate::game::{Game, PairId};
+use crate::game::PairId;
 use crate::scene_scenarios::{MissionGroup, ScenarioEntry, MissionKind};
 use alloc::{format, string::String, vec::Vec};
 

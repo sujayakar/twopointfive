@@ -3,8 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::boxed::Box;
+use crate::v3::{self, V3};
 
 /// He is not the player's enemy: the reticle passes him over, and the cursor's ray knows it landed on him.
 pub fn friend(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -118,6 +117,7 @@ fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     /// One player, one body, no men: nothing below reaches another part's stub.

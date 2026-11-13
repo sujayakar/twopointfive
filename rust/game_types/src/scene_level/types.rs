@@ -1,9 +1,8 @@
 //! The types of `scene_level`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
-/// which level's script this is, by the level file's name; the body is its rust/game_rules/src/missions/script_tut_*.rs, its define pass called by a match
+/// which script a level is played by, as its file says it; the body is its rust/game_rules/src/missions/script_tut_*.rs, its define pass called by a match
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub enum LevelScriptFn {
     #[default] Unset,
@@ -304,6 +303,19 @@ impl Default for RoomClearPlan {
     }
 }
 
+/// what a side's leaves are painted: the colour, and what they are made of where the level says
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct LeafPaint {
+    pub albedo: V3,
+    pub stuff: Option<crate::scene_stuff::BoxStuff>,
+}
+/// the paint of a level's leaves: those that lead outside, and the rest
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct DoorPaint {
+    pub outside: crate::scene_level::LeafPaint,
+    pub inside: crate::scene_level::LeafPaint,
+}
+
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
     pub props: Vec<Arc<crate::scene_level::PropDef>>,
@@ -325,10 +337,16 @@ pub struct Level {
     pub surfaces: Option<crate::scene_level_data::SurfacesData>,
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
+    /// in its boxes' order
+    pub vehicle_lamps: Vec<crate::carlamps::VehicleLamp>,
     pub sky: crate::scene_level::LevelSky,
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
+    /// it is built for snow: born in it, and in no other weather
+    pub snow: bool,
+    /// (none: its leaves are as a leaf is made)
+    pub door_paint: Option<crate::scene_level::DoorPaint>,
     pub errand: crate::mission::Errand,
 }
 /// a BreachPlan is a RoomClearPlan with more on it: the part of it doorPlan's callers read

@@ -1,10 +1,7 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::js;
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// One run of free cells in row `v`, cells `a` to `b`.
 #[derive(Clone, Copy)]
@@ -111,10 +108,12 @@ pub(super) fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::k
 
 #[cfg(test)]
 mod tests {
+    use crate::m;
+    use alloc::string::String;
     use super::*;
 
     /// the pinned output of gaps_of: name, alongX, solid given, then each opening (id, kind, at, n, half, pass, far as double bits) and the count and checksum of `solid`'s calls.
-    const TS: &str = "\
+    const PINNED: &str = "\
 doorway true false gap@2.00,1.25 gap 4000000000000000 3ff199999999999a 3ff4000000000000 0/1 3feae147ae147ae2 - -\n\
 doorway true false calls 0 0\n\
 doorway true true gap@2.00,1.25 gap 4000000000000000 3ff199999999999a 3ff4000000000000 0/1 3feae147ae147ae2 - -\n\
@@ -161,7 +160,7 @@ twin false true calls 2 cf655555555546be";
     ];
 
     #[test]
-    fn gaps_match_the_typescript_bits() {
+    fn gaps_keep_their_bits() {
         let mut k = crate::knobs::CoverK::default();
         (k.gap_cells, k.through_rows, k.alcove_rows, k.bridge) = (3.0, 3.0, 3.0, 3.0);
         let mut out: Vec<String> = Vec::new();
@@ -187,7 +186,7 @@ twin false true calls 2 cf655555555546be";
                 }
             }
         }
-        let want: Vec<&str> = TS.lines().collect();
+        let want: Vec<&str> = PINNED.lines().collect();
         assert_eq!(out.iter().map(|s| s.as_str()).collect::<Vec<_>>(), want);
     }
 }

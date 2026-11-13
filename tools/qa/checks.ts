@@ -15,16 +15,16 @@ const ROWS: readonly Row[] = [
   ['lookexpo-check.ts', 'picture'], ['lookgrade-check.ts', 'picture'], ['lookmaps-check.ts', 'picture'], ['lookunits-check.ts', 'picture'], ['lookveil-check.ts', 'picture'], ['lookworkers-check.ts', 'picture'],
   ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-check.ts', 'picture'], ['rainscale-check.ts', 'picture'],
   ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['smokeline-check.ts', 'picture'],
-  ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
+  ['smokefree-check.ts', 'picture'], ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
   ['sweep-ir-check.ts', 'picture'],
   ['shaders-check.ts', 'shaders', 'parse'], ['shaders-check.ts', 'shaders', 'trim'], ['shaders-check.ts', 'shaders', 'fold'], ['shaders-check.ts', 'shaders', 'inline'], ['shaders-check.ts', 'shaders', 'levelset'], ['shaders-check.ts', 'shaders', 'rows'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'], ['lasting-check.ts', 'sound'],
-  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
+  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['carlamps-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
-  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../gpu/wgsl-rows.ts', 'build', '--check'],
+  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/ban.ts', 'build'], ['../gpu/wgsl-rows.ts', 'build', '--check'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {

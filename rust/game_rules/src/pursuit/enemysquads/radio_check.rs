@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// the squad's row   (Q)
 macro_rules! sq {
@@ -501,7 +501,7 @@ fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
 }
 /// A looker's leg: a scripted leg, at the pace of a man going to look.
 pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    let pace = g.tune.guard_investigate;
+    let pace = g.k.tune.guard_investigate;
     crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::SQUAD_LEG);
 }
 
@@ -1034,7 +1034,7 @@ mod tests {
     use super::*;
     /// the pinned words
     #[test]
-    fn check_word_is_the_typescripts() {
+    fn check_word_is_as_pinned() {
         assert_eq!(check_word("Alpha", 0.0, 1.75), WORD_ALPHA);
         assert_eq!(check_word("Élan squad", 625341585.0, 0.123456789), WORD_ELAN);
         assert_eq!(check_word("", 0.0, 0.0), WORD_EMPTY);

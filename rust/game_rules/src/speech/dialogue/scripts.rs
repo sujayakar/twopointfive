@@ -1,10 +1,7 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::js;
+use alloc::{string::String, vec::Vec};
 
 /// The script of this id.
 fn script_by_id(id_2: &str) -> Option<crate::dialogue::Script> {
@@ -97,33 +94,19 @@ pub(super) fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKe
 
 /// The man's line off a beat for this man; `None` if it does not resolve.
 pub(super) fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
-    let (raw, k) = him_raw(b, ctx)?;
+    let raw = him_raw(b, ctx)?;
     let text = expand(&raw, &ctx_tokens_map(&ctx.tokens))?;
     if text.is_empty() { None } else { Some(HimOf { text }) }
 }
 
 /// Which of the beat's lines is this man's: by his knowledge, else his temperament, else '*'; `mild` where STOIC_BITE is 0.
-fn him_raw(b: &Beat, ctx: &DialogueCtx) -> Option<(String, HimOfK)> {
+fn him_raw(b: &Beat, ctx: &DialogueCtx) -> Option<String> {
     if STOIC_BITE == 0.0 {
-        if let Some(mild) = b.mild.as_ref().filter(|x| !x.is_empty()) { return Some((mild.clone(), HimOfK::Empty)); }
+        if let Some(mild) = b.mild.as_ref().filter(|x| !x.is_empty()) { return Some(mild.clone()); }
     }
     match &b.him {
-        Him::Text(text) => Some((text.clone(), HimOfK::Empty)),
-        Him::Arm1(by) => {
-            if let Some(text) = by.of(ctx.k.as_str()) { return Some((text.clone(), him_k(ctx.k))); }
-            by.of(ctx.t.as_str()).or_else(|| by.of("*")).map(|text| (text.clone(), HimOfK::Empty))
-        }
-    }
-}
-
-/// A knowledge word as himOf's result has it.
-fn him_k(k: Knowledge) -> HimOfK {
-    match k {
-        Knowledge::None => HimOfK::None,
-        Knowledge::Heard => HimOfK::Heard,
-        Knowledge::Glimpsed => HimOfK::Glimpsed,
-        Knowledge::Saw => HimOfK::Saw,
-        Knowledge::SawHurt => HimOfK::SawHurt,
+        Him::Text(text) => Some(text.clone()),
+        Him::Arm1(by) => by.of(ctx.k.as_str()).or_else(|| by.of(ctx.t.as_str())).or_else(|| by.of("*")).cloned(),
     }
 }
 
@@ -169,6 +152,7 @@ fn script_beat(sc: &Script, s: StageKey) -> &Beat {
 
 #[cfg(test)]
 mod tests {
+    use crate::js::JsMap;
     use super::*;
 
     fn ctx(k: Knowledge, t: crate::game::Temperament) -> DialogueCtx {
@@ -184,12 +168,12 @@ mod tests {
     fn him_goes_by_knowledge_then_temperament_then_star() {
         let c = ctx(Knowledge::Heard, crate::game::Temperament::Hard);
         let all = beat(&[("*", "any"), ("hard", "two words"), ("heard", "he heard")]);
-        let (text, k) = him_raw(&all, &c).unwrap();
-        assert_eq!((text.as_str(), k.as_str()), ("he heard", "heard"));
-        let (text, k) = him_raw(&beat(&[("*", "any"), ("hard", "two words")]), &c).unwrap();
-        assert_eq!((text.as_str(), k.as_str()), ("two words", "*"));
-        let (text, k) = him_raw(&beat(&[("*", "any"), ("nervy", "no")]), &c).unwrap();
-        assert_eq!((text.as_str(), k.as_str()), ("any", "*"));
+        let text = him_raw(&all, &c).unwrap();
+        assert_eq!(text, "he heard");
+        let text = him_raw(&beat(&[("*", "any"), ("hard", "two words")]), &c).unwrap();
+        assert_eq!(text, "two words");
+        let text = him_raw(&beat(&[("*", "any"), ("nervy", "no")]), &c).unwrap();
+        assert_eq!(text, "any");
         assert!(him_raw(&beat(&[("nervy", "no")]), &c).is_none());
     }
 
@@ -197,8 +181,8 @@ mod tests {
     fn a_plain_line_is_for_everyone() {
         let c = ctx(Knowledge::Saw, crate::game::Temperament::Steady);
         let b = Beat { him: Him::Text(String::from("line")), ..Beat::default() };
-        let (text, k) = him_raw(&b, &c).unwrap();
-        assert_eq!((text.as_str(), k.as_str()), ("line", "*"));
+        let text = him_raw(&b, &c).unwrap();
+        assert_eq!(text, "line");
     }
 
     #[test]

@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::guards::*;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, V3};
+use crate::v3;
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 
@@ -15,7 +15,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
     if g.gd[gd].drawn { upper = UpperMode::Aim; }
     if g.gd[gd].body_duty.is_some() && g.gd[gd].awareness < 0.3 { g.gd[gd].body_duty = None; }
     if matches!(g.gd[gd].errand, Some(crate::game::Errand::CheckOn(_))) { g.gd[gd].errand = None; }
-    let walk = g.tune.guard_walk * (if lvl >= 1.0 { 1.15 } else { 1.0 });
+    let walk = g.k.tune.guard_walk * (if lvl >= 1.0 { 1.15 } else { 1.0 });
     if g.gd[gd].duty.holds {
         g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(g.gd[gd].look_phase * 0.5) * 0.2, 2.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -25,7 +25,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
         if follow_leader(g, gd, dt, walk) { move_speed = g.gd[gd].speed; }
     } else if lvl >= 2.0 && g.gd[gd].post.is_some() {
         if hold_post(g, gd, dt, walk) { move_speed = g.gd[gd].speed; }
-    } else if g.tune.needs && crate::needs::needs_patrol(g, gd, dt, walk) {
+    } else if g.k.tune.needs && crate::needs::needs_patrol(g, gd, dt, walk) {
         move_speed = g.gd[gd].speed;
     } else if crate::doze::doze_patrol(g, gd, dt, walk) {
         move_speed = g.gd[gd].speed;

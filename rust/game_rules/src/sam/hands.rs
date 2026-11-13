@@ -2,9 +2,9 @@ pub use ::game_types::hands::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 // ---- private
 
@@ -518,7 +518,7 @@ fn haul_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
 
 /// The same in m/s; over his shoulder he walks, at carryPace × his walk.
 pub(super) fn haul_speed(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    if haul_upright(g, seat) { g.tune.player_walk * g.k.hands.carry_pace } else { let k = g.tune.player_crouch; k * haul_pace(g, seat) }
+    if haul_upright(g, seat) { g.k.tune.player_walk * g.k.hands.carry_pace } else { let k = g.k.tune.player_crouch; k * haul_pace(g, seat) }
 }
 
 // ------------------------------------------------------------------------------------------------ a door
@@ -839,7 +839,6 @@ pub(super) fn door_move_lowers(g: &crate::game::Game, seat: &crate::seats::SeatR
 mod tests {
     use super::*;
     use crate::hands::Lie;
-
 
     fn near(v: V3, want: V3) {
         for k in 0..3 { assert!((v[k] - want[k]).abs() < 1e-9, "{v:?} {want:?}"); }

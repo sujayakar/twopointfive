@@ -2,9 +2,9 @@ pub use ::game_types::cmd::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{string::String, vec, vec::Vec};
 
 /// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.
@@ -602,7 +602,7 @@ pub(super) fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3>
 }
 
 /// did this key go down in the step the first seat's record was of
-pub(super) fn seat_pressed(g: &crate::game::Game, key: &str) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key)) }
+pub(super) fn seat_pressed(g: &crate::game::Game, key: crate::input::Key) -> bool { g.tab.cmd_seat[g.seats[0]].cmd.as_ref().is_some_and(|c| c.pressed.iter().any(|k| k == key.as_str())) }
 
 /// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.
 fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
@@ -613,6 +613,7 @@ fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
 
 #[cfg(test)]
 mod tests {
+    use crate::v3;
     use super::*;
 
     /// A record as an honest seat sends it: its view worked out by a real camera.

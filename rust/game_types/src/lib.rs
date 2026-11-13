@@ -1,13 +1,17 @@
 //! The game's data: every module's types and their defaults, the IDs, the knob tables. It runs no rule, and depends on nothing of the game.
 #![no_std]
-#![allow(dead_code, unused_variables, unused_imports, non_snake_case, non_camel_case_types, non_upper_case_globals, unused_mut)]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
 pub mod boxworld;
+pub mod made;
+pub mod panes;
+pub mod smoke;
 pub mod bytes;
 pub mod crosses;
+pub mod bits;
 #[macro_use]
 pub mod rows;
 pub mod handed;
@@ -44,7 +48,7 @@ pub mod aimweight { pub mod types; pub use types::*; }
 pub mod air_dust { pub mod types; pub use types::*; }
 pub mod anim_characters { pub mod types; pub use types::*; }
 pub mod anim_gltf { pub mod types; pub use types::*; }
-pub mod anim_skeleton { pub mod types; pub use types::*; }
+pub mod anim_skeleton { pub mod roles; pub mod types; pub use types::*; }
 pub mod attention { pub mod types; pub use types::*; }
 pub mod audio_iface { pub mod types; pub use types::*; }
 pub mod autopilot { pub mod types; pub use types::*; }
@@ -189,7 +193,6 @@ pub mod render_fogofwar { pub mod types; pub use types::*; }
 pub mod render_frame { pub mod types; pub use types::*; }
 pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
-pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }
@@ -206,12 +209,10 @@ pub mod samlook { pub mod types; pub use types::*; }
 pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
-pub mod scene_air_grid { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
 pub mod scene_door_size { pub mod types; pub use types::*; }
-pub mod scene_gwot_palette { pub mod types; pub use types::*; }
 pub mod scene_level { pub mod types; pub use types::*; }
 pub mod scene_level_data { pub mod types; pub use types::*; }
 pub mod scene_level_load { pub mod types; pub use types::*; }

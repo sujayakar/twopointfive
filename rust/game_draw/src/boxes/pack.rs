@@ -3,19 +3,37 @@ use super::marks::Marks;
 use super::{BoxWord, Cut, Finish, Geo, Look, Mat};
 use game::m;
 use game::rows::Half2;
-use game::scene_boxes::Box;
+use game::scene_boxes::{box_flag, Box};
 use game::scene_stuff::BoxStuff;
 
-pub const NO_PRIMARY: u32 = 1;
-pub const NO_SHADOW: u32 = 2;
-pub const CUTAWAY: u32 = 4;
-const EMISSIVE: u32 = 16;
-const ROT: u32 = 64;
-pub const GLASS: u32 = 1 << 17;
-pub const SOUND_SEAL: u32 = 1 << 16;
-const CUT_BIT: u32 = 1 << 16;
-/// a round thing's bit: bit 3, which no shader reads of a box
-const ROUND_BIT: u32 = 8;
+pub use game::scene_boxes::box_flag::{CUTAWAY, GLASS, NO_PRIMARY, NO_SHADOW, SOUND_SEAL};
+game::bits! {
+    /// a box's word as a shader reads it (`Geo.flags`): what of its own bits a shader asks, whose it is in the second byte, from bit 18 the first row (from 1) of its marks
+    pub mod geo_flag as GeoFlag {
+        /// not rasterized
+        NO_PRIMARY = box_flag::NO_PRIMARY,
+        /// no ray meets it
+        NO_SHADOW = box_flag::NO_SHADOW,
+        /// rasterized only below its cut height
+        CUTAWAY = box_flag::CUTAWAY,
+        /// the cylinder about its own y, radius h.x (to a program with the cut rule, the prism in its rows of the cut table). The box's own word has DYNAMIC here, which no shader asks
+        ROUND = box_flag::DYNAMIC,
+        /// has non-zero emission
+        EMISSIVE = box_flag::EMISSIVE,
+        /// its emission is an analytic area light's
+        AREA_LIT = box_flag::AREA_LIT,
+        /// fully rotated: its turn is the quaternion, not the packed yaw
+        ROT = box_flag::ROT,
+        /// polished floor finish
+        GLOSS = box_flag::GLOSS,
+        /// clipped by the planes in its rows of the cut table. The box's own word has SOUND_SEAL here, which is the rules' alone
+        CUT = box_flag::SOUND_SEAL,
+        /// a pane: never in the trace grid nor the raster
+        GLASS = box_flag::GLASS,
+    }
+}
+/// what of a box's own word goes to a shader as it stands, but for the bit a round thing takes
+const OWN: u32 = NO_PRIMARY | NO_SHADOW | CUTAWAY | box_flag::EMISSIVE | box_flag::AREA_LIT | box_flag::ROT | box_flag::GLOSS | GLASS;
 /// a key's system, in its top byte: a door's leaf, and what stands of a holed wall's paint
 pub const DOOR: u32 = 1;
 const SKIN: u32 = 10;
@@ -67,9 +85,9 @@ pub fn place(geo: &mut Geo, mat: &mut Mat, c: [f64; 3], yaw: f64, rot: Option<[f
 /// a box's rows; `cut_rows` is written where it is cut or round
 pub fn pack(b: &Box, c: [f64; 3], h: [f64; 3], moves: bool, look: &Look, marks: &mut Marks, geo: &mut Geo, mat: &mut Mat, cut_rows: &mut Cut) {
     let (own, is_round) = (flags(b), look.round && round(b));
-    let mut f = (own & if look.round { 0xf7 } else { 0xff }) | if is_round { ROUND_BIT } else { 0 } | (((b.owner as i64 as u32) & 0xff) << 8) | if b.rot.is_some() { ROT } else { 0 } | (own & GLASS);
+    let mut f = (own & if look.round { OWN } else { OWN | box_flag::DYNAMIC }) | if is_round { geo_flag::ROUND } else { 0 } | (((b.owner as i64 as u32) & 0xff) << 8) | if b.rot.is_some() { geo_flag::ROT } else { 0 };
     let em = emission(b, look.bared);
-    if em[0] + em[1] + em[2] > 0.0 { f |= EMISSIVE; }
+    if em[0] + em[1] + em[2] > 0.0 { f |= geo_flag::EMISSIVE; }
     let a = sent(b, look);
     let mut s = a;
     // (a tilted box carries no markings: a face's frame is by yaw alone)
@@ -81,7 +99,7 @@ pub fn pack(b: &Box, c: [f64; 3], h: [f64; 3], moves: bool, look: &Look, marks: 
         }
     }
     if is_round { round_rows(cut_rows, b.h[0]); }
-    else if look.cut && cut(b) { f |= CUT_BIT; cut_rows_of(cut_rows, b, look); }
+    else if look.cut && cut(b) { f |= geo_flag::CUT; cut_rows_of(cut_rows, b, look); }
     place(geo, mat, c, b.yaw, b.rot);
     let f3 = |v: [f64; 3]| v.map(|x| x as f32);
     (geo.h, geo.flags) = (f3(h), BoxWord(f));

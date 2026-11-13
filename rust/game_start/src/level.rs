@@ -3,7 +3,7 @@
 //!
 //! A start refuses a file with any fault of the reading (`file.rs`): a level stood without part of itself is another level. The rules a file is held to beside that (an id that points nowhere, a
 //! number out of its range) are `faults.rs`, which a level is asked before it is committed, and not at every start.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Material, Part, ShapeData, ShapePieceData};
+use crate::file::{self, BoxData, FlagName, LeafPaintData, LevelFile, LightData, LightDataKind, Material, Part, ShapeData, ShapePieceData};
 use crate::json::Json;
 use alloc::{string::String, sync::Arc, vec, vec::Vec};
 use game::game::Game;
@@ -23,12 +23,10 @@ macro_rules! words {
     };
 }
 words!(stuff_word, BoxStuff, [Carpet, Grass, Rubber, Metal, Glass, Wood, Plastic, Fabric, Steel, Enamel, Tarmac, MudWall, Plaster, Block, Earth, Gravel, Slab, Sheet, Cloth, Paint, Veneer, Carpaint, Stucco, Skim, GlossBlock, BoardConcrete, CastPanel, Paver, Brushed, Louvre, Plain, Waits]);
-words!(does_word, DoesWord, [Snow, Carpet, Lino, Stone, Grass, Wood, Plastic, Concrete, Fabric, Steel, Enamel, Tarmac, Casing, Screen, UnnamedDark, Plasterboard, Partition, Ceiling, Laminate, Pane, DarkCarpet, Card, Frame, Plant, PackedSnow, OldSnow, Unnamed, UnnamedGrey, UnnamedLight, UnnamedLightGrey, UnnamedPale, UnnamedPaleGrey, DarkPlastic, GreyPlastic, DarkGlass]);
 
 /// the box flags a file may say, as the bits of `Box.flags`
 fn flags_to_bits(names: &[FlagName]) -> f64 {
-    let f = game::scene_boxes::box_flag();
-    names.iter().fold(0u32, |bits, n| bits | match n { FlagName::NoPrimary => f.no_primary, FlagName::NoShadow => f.no_shadow, FlagName::Cutaway => f.cutaway, FlagName::Gloss => f.gloss, FlagName::Glass => f.glass } as u32) as f64
+    names.iter().fold(0u32, |bits, n| bits | match n { FlagName::NoPrimary => game::scene_boxes::box_flag::NO_PRIMARY as f64, FlagName::NoShadow => game::scene_boxes::box_flag::NO_SHADOW as f64, FlagName::Cutaway => game::scene_boxes::box_flag::CUTAWAY as f64, FlagName::Gloss => game::scene_boxes::box_flag::GLOSS as f64, FlagName::Glass => game::scene_boxes::box_flag::GLASS as f64 } as u32) as f64
 }
 
 /// A LIST OF MARKINGS AS IT IS LAID (the structure a generator builds): a list of none is no list, the base size goes unsaid, a colour of its own leaves no multiplier and a multiplier of 1 is none, and a colour
@@ -80,7 +78,7 @@ impl<'a> Paint<'a> {
     /// what it does: its own word, else its material row's; nothing for the default row
     fn does(&self, o: &Said) -> Option<DoesWord> {
         let w = o.does.or_else(|| self.row(o)?.does.as_deref()).filter(|w| *w != "unnamed")?;
-        Some(does_word(w).unwrap_or_else(|| panic!("level '{}': '{}' is no row of the table of materials", self.name, w)))
+        Some(DoesWord::named(w).unwrap_or_else(|| panic!("level '{}': '{}' is no row of the table of materials", self.name, w)))
     }
 }
 
@@ -183,6 +181,8 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     level.devices = Some(f.devices); level.vents = f.vents; level.hums = f.hums; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
     level.breaker = LevelBreaker { pos: f.breaker.pos, boxes: vec![bx(&f.breaker.panel), bx(&f.breaker.led)], fumble: f.breaker.fumble };
     level.beacons = f.beacons.iter().map(|b| LevelBeaconsItem { pos: b.pos, box_: bx(&b.box_) }).collect();
+    level.vehicle_lamps = f.vehicle_lamps.iter().flatten().map(|l| game::carlamps::VehicleLamp { box_: bx(&l.box_), what: l.what }).collect();
+    level.vehicle_lamps.sort_by(|a, b| a.box_.total_cmp(&b.box_));
     level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(f.plans.room_clear.into_iter().map(|p| p.plan).collect());
     level.volumes = Some(f.volumes).filter(|v| !v.is_empty());
     level.marks = f.marks.filter(|m| !m.is_empty());
@@ -197,9 +197,14 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     };
     level.mark_texel = f.meta.mark_texel;
     level.kept = f.meta.kept;
+    level.snow = f.snow == Some(true);
+    level.door_paint = f.door_paint.map(|p| {
+        let side = |x: LeafPaintData| LeafPaint { albedo: x.albedo, stuff: paint.stuff(&Said { material: None, albedo: None, rough: None, metal: None, stuff: x.stuff.as_deref(), does: None }) };
+        DoorPaint { outside: side(p.outside), inside: side(p.inside) }
+    });
     // the scenarios' block and the footsteps' map: the runtime's own types, as they are written
     level.scenarios = f.scenarios.map(|s| s.kept); level.surfaces = f.surfaces;
-    level.script = game::director::level_script_of(&name);   // (a level that carries a script, by the file's name)
+    level.script = f.script;
     g.level = Arc::new(level);
     g.m.scene_level_load.level_names = Some(name.clone());
     Loaded { name, boxes }

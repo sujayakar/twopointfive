@@ -1,10 +1,8 @@
-use super::*;                      // your own module: its types, its other parts' functions
+                      // your own module: its types, its other parts' functions
 use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// The game's radio row, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
 fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {
@@ -86,7 +84,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     r.done.add(beat);
     r.last_at = now;
     crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h));
-    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
     row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: String::from(s) });
     true

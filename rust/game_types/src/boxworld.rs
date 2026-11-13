@@ -7,9 +7,9 @@
 //! WHICH BOXES HAVE A ROW. A static (the level's list, in its order), a leaf (a door's box), a part of the furniture in the level. Every other box (a piece of debris, a skin) has none,
 //! and is written without one.
 use crate::bytes::{ToBytes, W};
+use crate::made::next;
 use crate::ids::*;
-use crate::scene_boxes::Box as SBox;
-use crate::V3;
+use crate::scene_boxes::{box_flag, Box as SBox};
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut, Index};
 
@@ -52,10 +52,10 @@ pub const K_WALK: u32 = 8;
 pub const K_SHAPED: u32 = K_ROT | K_ROUND | K_CUT;
 
 /// the flags a question reads
-pub const F_NO_SHADOW: u32 = 2;
-pub const F_GLASS: u32 = 1 << 17;
+pub const F_NO_SHADOW: u32 = box_flag::NO_SHADOW;
+pub const F_GLASS: u32 = box_flag::GLASS;
 /// …and those a row keeps: a write of any other moves no row
-pub const F_KEPT: u32 = 4294901770;
+pub const F_KEPT: u32 = !0xffff | box_flag::DYNAMIC | box_flag::NO_SHADOW;
 
 /// what snow a static is (`World.snow`): ground somebody cleared, trodden, old, and snow that stands or caps
 pub const SNOW_BARE: u8 = 1;
@@ -126,8 +126,8 @@ pub struct World {
     pub things: Vec<Thing>,
     /// the level's sheets of glass, ascending
     pub sheets: Vec<Sheet>,
-    /// whose panes these are: the slot of the game's block that holds what is out of them, while glass is hung
-    pub panes: Option<usize>,
+    /// …and those of them that have been touched
+    pub panes: crate::panes::Panes,
     /// the view of the glass a judgment in hand takes (VIEW_*), and its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it
     pub view: u32,
     pub view_at: [f64; 6],
@@ -238,11 +238,6 @@ pub fn filed(w: usize, cells: usize, list: &[(u32, [i32; 4])]) -> (Vec<u32>, Vec
 }
 /// every double by its bits (a −0 is not a 0)
 fn same(a: &[f64], b: &[f64]) -> bool { a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()) }
-/// the next writing's number
-fn next() -> u64 {
-    static N: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(1);
-    N.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
-}
 
 /// THE WORLD AS A QUESTION TAKES IT: the boxes as they stand, or as they would be. `leaves` = do the leaves stand; `but` = those that are let through; `open` = statics that are let
 /// through; `extra` = boxes that are not of the level and stand for this question (REC doubles each; a cut one's planes in `extra_cut`, its record's place there).
@@ -406,10 +401,12 @@ impl Boxes {
         self.rows.walk[bi] = on as u8;
         self.row(b);
     }
-    /// the glass that hangs: the slot of the block that holds what is out of it (None: no glass hangs), and the level's sheets
-    pub fn glass(&mut self, panes: Option<usize>, sheets: Vec<Sheet>) { (self.rows.panes, self.rows.sheets) = (panes, sheets); }
-    /// the game stands in this slot: its panes are there
-    pub fn stand_in(&mut self, slot: usize) { if let Some(g) = &mut self.rows.panes { *g = slot } }
+    /// the level's sheets of glass
+    pub fn glass(&mut self, sheets: Vec<Sheet>) { self.rows.sheets = sheets; }
+    /// the panes touched, to write
+    pub fn panes(&mut self) -> &mut crate::panes::Panes { &mut self.rows.panes }
+    /// the rows lent to a rule of the panes, which writes `panes` and asks lines of the rest
+    pub fn lent(&mut self) -> &mut World { &mut self.rows }
     /// the view of the glass the judgment in hand takes
     /// → the one that was
     pub fn view(&mut self, (kind, at, met): View) -> View {
@@ -463,6 +460,7 @@ impl ToBytes for Boxes {
         self.rows.start.w(o);
         self.rows.items.w(o);
         self.rows.tilted.w(o);
+        self.rows.panes.w(o);
     }
 }
 

@@ -4,10 +4,10 @@ use crate::mission::Facts;
 use crate::scene_scenarios::MissionKind;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---- private helpers
 
@@ -331,7 +331,7 @@ pub(super) fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut 
     b.next = g.time + bl.every;
     let c = g.gd[h].ch;
     if g.gd[h].held.is_some() || crate::control::man::staggered(g, h) || g.ch[c].gun_dir[1] < -bl.low_gun { return false; }
-    if g.tune.suppression && (g.cond[g.gd[h].ch].sup.v >= g.k.suppression.pinned || g.cond[g.gd[h].ch].sup.latched || g.cond[g.gd[h].ch].sup.down_t > 0.0) { return false; }
+    if g.k.tune.suppression && (g.cond[g.gd[h].ch].sup.v >= g.k.suppression.pinned || g.cond[g.gd[h].ch].sup.latched || g.cond[g.gd[h].ch].sup.down_t > 0.0) { return false; }
     let weapon = g.gd[h].weapon;
     if !crate::weapons::firearm_fire(g, weapon) { return false; }
     let target = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
@@ -379,7 +379,7 @@ pub(super) fn night_breach_can_start(g: &crate::game::Game, layout: Option<&crat
     if let Some(door) = g.level.breach.as_ref().map(|p| p.door.clone()) {
         if crate::doors::doors_by_name(g, &door).is_none() { return Some(format!("the plan's door '{}' is not in the level", door)); }
     }
-    if !g.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
+    if !g.k.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) — nobody would move")); }
     if let Some(r) = g.director.run {
         let run = &g.tab.director_run[r];
@@ -583,7 +583,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
         for s in g.seats.clone() {
             let man = crate::cmd::seat_man(g, s);
             let seat_input = g.tab.cmd_seat[s].input;
-            if !crate::condition::down(g, g.pl[man].ch) && crate::input::input_hit(g, seat_input, "KeyF") {
+            if !crate::condition::down(g, g.pl[man].ch) && crate::input::input_hit(g, seat_input, crate::input::Key::F) {
                 night_breach_order(g);
                 break;
             }
@@ -742,6 +742,7 @@ pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBre
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use crate::scene_scenarios::TeamStart;
 

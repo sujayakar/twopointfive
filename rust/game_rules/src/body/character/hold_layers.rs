@@ -1,14 +1,11 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
-// ---- the bench
-
-/// a boolean as the bench holds it
+/// a boolean as a number
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 
 // ---- the door hand
@@ -69,8 +66,7 @@ pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tak
     let k = v3::smoothstep(k_sw.away - 0.04, k_sw.take, a);
     s.belt = e * (if weapon { 1.0 - k } else { k });
     if g.ch[c].anim.sw_buf.is_none() {
-        let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);
-        let p = crate::anim_skeleton::pose_set_make(g, set, n);
+        let p = g.ch[c].poses.make();
         g.ch[c].anim.sw_buf = Some(p);
     }
     let sw = g.ch[c].anim.sw_buf.unwrap();
@@ -80,7 +76,7 @@ pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tak
 
 /// The swap's arm, by its envelope e and how far across k.
 fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
-    anim_layer(g, c, |s, an, _| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p));
 }
 
 /// Hands at work on a thing: the gate, and the layer when it runs.
@@ -98,11 +94,11 @@ pub(super) fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fre
     let (p, n) = (anim_to_model_p(g, c, l.p), anim_to_model_d(g, c, l.n));
     let an = &g.ch[c].anim;
     let r_free = l.hand != Some(0.0) && !armed && an.upper != UpperMode::Torch && (!an.long_gun || an.stowed) && (!an.grip[1] || an.stowed) && an.throw_t < 0.0 && an.sw.t < 0.0;
-    anim_layer(g, c, |s, an, _| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p));
 }
 
 /// The torch up in the hand that holds it, weight e.
-pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::torch_up(s, an, e)); }
+pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::torch_up(s, an, e)); }
 
 /// A hand to the radio: its clock and spring, and the pose when it shows.
 pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
@@ -119,7 +115,7 @@ pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
 }
 
 /// The hand at the radio by w, and the head's share hw.
-fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::radio_pose(s, an, w, hw)); }
+fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::radio_pose(s, an, w, hw)); }
 
 // ---- holding a man, and being held
 
@@ -130,7 +126,7 @@ pub(super) fn anim_hold_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
     let strip_at = an.hold_pose.and_then(|h| h.strip).and_then(|s| s.at);
     let (man, strip_at) = (h.man.map(|p| anim_to_model_p(g, c, p)), strip_at.map(|p| anim_to_model_p(g, c, p)));
     let beats = h.beats.unwrap_or(show.beats);
-    anim_layer(g, c, |s, an, k| ::sim::layers::hold_layer(s, an, w, dt, &h, beats, man, strip_at, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::hold_layer(s, an, w, dt, &h, beats, man, strip_at, k));
 }
 
 /// The held man, weight w.
@@ -138,7 +134,7 @@ pub(super) fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
     let (show, an) = (g.m.character.hold_show, &g.ch[c].anim);
     let h = an.held_pose.unwrap_or(an.he_last);
     let beats = h.beats.unwrap_or(show.beats);
-    anim_layer(g, c, |s, an, k| ::sim::layers::held_layer(s, an, w, dt, &h, beats, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::held_layer(s, an, w, dt, &h, beats, k));
 }
 
 /// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold.
@@ -169,15 +165,14 @@ pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::ch
     let ham = b.kind == crate::kit::BigTool::Hammer;
     if !(b.t >= 0.0) || us >= 1.0 { g.ch[c].anim.big_under = false; g.ch[c].anim.big_k = 0.0; return; }
     if ham && g.ch[c].anim.big_buf.is_none() {
-        let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);
-        let p = crate::anim_skeleton::pose_set_make(g, set, n);
+        let p = g.ch[c].poses.make();
         g.ch[c].anim.big_buf = Some(p);
     }
     let near = blows_near(&crate::character::BlowsNearB { t: b.t, end: b.end, blows: b.blows.clone() });
     let at = if (b.at[0] + b.at[1] + b.at[2]).is_finite() { anim_to_model_p(g, c, b.at) } else { [0.0, 1.0, 0.8] };
     let at_buf = if ham { g.ch[c].anim.big_buf.unwrap().at as usize } else { 0 };
     let grip = crate::rig_props::carbine_grip();
-    anim_layer(g, c, |s, an, k| ::sim::layers::big_layer(s, an, b, at_buf, &near, at, &grip, tw_y, tw_p, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::big_layer(s, an, b, at_buf, &near, at, &grip, tw_y, tw_p, k));
 }
 
 // ---- the throw
@@ -185,7 +180,7 @@ pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::ch
 /// The overhand throw at t.
 pub(super) fn anim_throw_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     let tables = throw_tables(g.ch[c].anim.thr_low >= 0.0);   // (the swing's tables, in the layer's order)
-    anim_layer(g, c, |s, an, k| ::sim::layers::throw_layer(s, an, t, &tables, k));
+    crate::anim_skeleton::anim_layer(g, c, |s, an, k| ::sim::layers::throw_layer(s, an, t, &tables, k));
 }
 
 // ---- the capsules' records

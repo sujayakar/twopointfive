@@ -1,12 +1,11 @@
 pub use ::game_types::ownblow::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
+use crate::v3;
 use alloc::string::String;
 
 /// The key a set charge's row names: the squad's while that key blows it, else the interaction's.
 pub fn blow_key_word(key_is: bool, key: &str) -> String {
-    if key_is { String::from(key) } else { String::from("Space") }
+    if key_is { String::from(key) } else { crate::input::Key::Space.text() }
 }
 
 /// What a line drawn as written says after 'charge set': the squad's key by name while it blows it, nothing for his own.

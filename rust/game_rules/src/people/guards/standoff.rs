@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold.
 pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
@@ -97,7 +97,7 @@ fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pa
     let seen = g.shown[g.pl[pl].ch].visibility;
     let light = m::max(seen, held_visibility(g, p));
     let dist_f = dist_term(g, dist);
-    let detect = g.tune.detect_rate;
+    let detect = g.k.tune.detect_rate;
     let lit = m::pow(light, 1.5);
     let smoke = v3::clamp((g.gd[gd].smoke_trans - 0.3) / 0.5, 0.0, 1.0);
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
@@ -260,9 +260,9 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
     crate::game::game_say(g, gd, &text, Some(true), None);
     let pos = g.ch[c].pos;
     let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(pos);
-    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.9), None);
     if g.time - g.last_sting_t > 8.0 {
-        crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::AlertSting, None, Some(0.75), None);
         g.last_sting_t = g.time;
     }
     let team = g.team(gd);

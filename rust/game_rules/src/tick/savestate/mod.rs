@@ -1,10 +1,8 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 pub use ::game_types::savestate::types;
 pub use types::*;
 pub mod control;
 use crate::game::Game;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use alloc::{string::String, vec::Vec};
 
 pub fn checkpoints_request(g: &mut crate::game::Game, why: &str, label: &str) { g.out.push(crate::out_events::OutEvent::CheckpointsRequest(crate::out_events::OutCheckpointsRequest { why: String::from(why), label: String::from(label) })); }

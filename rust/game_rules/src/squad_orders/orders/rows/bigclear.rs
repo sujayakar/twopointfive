@@ -3,10 +3,13 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud],
+    targets: &[TargetKind::Door],
+    ack: &["on it.", "breaching."],
+    page: Some(crate::doortools::TOOLS_PAGE),
     valid: Some(valid),
     gone: Some(gone),
     ..Row::new("bigClear", label, issue)
@@ -34,7 +37,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     crate::doortools::row_stackable(g, t, men)
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     g.groups[g.group].tools.big_next = true;
     let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::OpenClear, men, t);
     g.groups[g.group].tools.big_next = false;
@@ -42,7 +45,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
 }
 
 /// an open door, or a steel one
-fn gone(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
+fn gone(g: &Game, _: &crate::seats::SeatRef, t: &OrderTarget, _men: &[GuardId]) -> bool {
     let OrderTarget::Door(x) = t else { return false };
     crate::doortools::is_open(g, x.door) || on(g.dr[x.door].def.steel)
 }

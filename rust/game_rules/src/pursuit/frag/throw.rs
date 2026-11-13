@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// One live grenade's book, by its place in the list (the row is never held across a call that takes `g`).
 macro_rules! live { ($g:ident, $i:expr) => { $g.m.frag.books.as_mut().unwrap()[$i] }; }

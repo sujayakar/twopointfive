@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// A row of the books, by its key, for a write: the book stays in the table because `rear_ways` reads it through `g`.
@@ -997,7 +997,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_log_line_time_prints_as_to_fixed_does_under_bun() {
+    fn a_log_line_time_prints_as_to_fixed_does() {
         // (the case that differs from Rust's own formatter is the exact tie at .25)
         for (x, s) in [(0.25, "0.3"), (1.25, "1.3"), (0.75, "0.8"), (1.75, "1.8"), (0.35, "0.3"), (0.05, "0.1"), (2.5, "2.5"), (0.0, "0.0"), (12.34, "12.3")] {
             assert_eq!(js::to_fixed(x, 1), s);

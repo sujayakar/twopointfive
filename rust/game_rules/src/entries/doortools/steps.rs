@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// the order's row
 macro_rules! o { ($g:ident, $op:expr) => { $g.tab.doortools_door_op[$op] } }
@@ -513,7 +513,7 @@ fn step_fuse(g: &mut Game, op: DoorOpId, cx: &Cx) {
         g.tab.item[it].bounces = 0.0;
         g.tab.item[it].settled = false;
         let at = g.tab.item[it].pos;
-        crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.5), None);
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::CanisterBounce, Some(at), Some(0.5), None);
         o!(g, op).pass = None;
         return;
     }
@@ -598,7 +598,7 @@ fn next_through(g: &mut Game, op: DoorOpId, cx: &Cx) {
         o!(g, op).pod.set(q.gd, q.pod);
         // (the order's own assignment shies from its door: this one, that goes through it, does not)
         let a = crate::duty::TaskGiven {
-            order: String::from(o!(g, op).kind.as_str()), door: Some(cx.d), shy: None, post: Some(q.pod.pos), face: Some(q.pod.face), watch: None, thru: Some(cx.d), pace: Some(g.groups[g.group].orders.knobs.entry),
+            order: String::from(o!(g, op).kind.as_str()), door: Some(cx.d), shy: None, post: Some(q.pod.pos), face: Some(q.pod.face), watch: None, thru: Some(cx.d), pace: Some(g.k.orders.entry),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light_of(&crate::seats::here(g))), search: Some(true), going: format!("entering · {}", cx.name).into(), there: "holding the room".into(), ..Default::default()
         };
         crate::orders::squad_orders_assign(g, q.gd, &a);
@@ -791,7 +791,7 @@ fn step_place(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let c = g.tab.doortools_set_charge.push(SetCharge { door: d, side, by });
     g.groups[g.group].tools.set.push(c);
     let dp = crate::doors::door_pos(g, d);
-    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(dp), Some(0.6), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LockPick, Some(dp), Some(0.6), None);
     crate::game::game_say(g, lead, "charge set.", None, None);
     door_tools_beat(g, op, "set");
     let p = o!(g, op).post.get(lead).cloned().unwrap();

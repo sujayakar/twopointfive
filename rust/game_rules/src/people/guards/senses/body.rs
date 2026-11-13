@@ -46,7 +46,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
             }
             let line = words(g, o, n, cold);
             crate::game::game_say(g, gd, &line, Some(true), None);
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.9), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(eye), Some(0.9), None);
             g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
             let to = if lvl >= 1.0 || g.alarm.episode { 2.0 } else { 1.0 };
             raise_escalation(g, to, Some(gd), Some(crate::guards::RaiseEscalationCause::Body), Some(before > 0));

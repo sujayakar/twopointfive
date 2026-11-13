@@ -1,10 +1,5 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The item is still in the hand.
 pub fn anim_throwing(g: &crate::game::Game, c: CharId) -> bool {
@@ -74,5 +69,5 @@ pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     let a = &mut g.ch[c].anim;
     a.tell_t = -1.0;
 }
-/// The update; every pose of a man stands in his game's block, so there is no stage to open.
+/// The update.
 pub(super) fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }

@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// the module's state, known to be there (never held across a call that takes `g`)
@@ -1043,7 +1043,7 @@ mod tests {
 
     /// pinned bits of `idea_weight` and `idea_reach`, at the page's numbers and g.time 37.3
     #[test]
-    fn weight_and_reach_are_the_typescripts_bits() {
+    fn weight_and_reach_keep_their_bits() {
         let rows: [(f64, IdeaHow, bool, u64, u64); 6] = [
             (37.1, IdeaHow::Seen, false, 0x3ff0000000000000, 0x0000000000000000),
             (30.7, IdeaHow::Seen, false, 0x3feb17e4b17e4b19, 0x4016147ae147ae11),

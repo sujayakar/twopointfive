@@ -1,6 +1,5 @@
 //! The types of `enemysquads`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then; rear is RoundCtx.rear
@@ -85,6 +84,10 @@ pub enum SentPhase {
     #[default] Set,
     Run,
     Loose,
+    /// he is short of the door he was sent to, waiting for those sent with him
+    Form,
+    /// he is on an order of his squad's, with those sent with him
+    Told,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -233,6 +236,18 @@ pub struct Squad {
     pub went: Vec<crate::enemysquads::Sent>,
     pub due: Vec<crate::enemysquads::SquadDueItem>,
     pub events: Vec<crate::enemysquads::SquadEvent>,
+    pub entries: Vec<crate::enemysquads::Entry>,
+}
+
+/// Men of a squad going into a room together by one door.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Entry {
+    pub op: DoorOpId,
+    pub men: Vec<GuardId>,
+    pub at: V3,
+    pub t0: f64,
+    /// the stuns they set out with
+    pub stuns: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

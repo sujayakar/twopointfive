@@ -31,8 +31,7 @@ use game_start::parts;
 use std::time::Instant;
 
 /// the flag words of the GPU that say a cut row is read (rust/game_draw boxes/pack.rs)
-const ROUND: u32 = 8;
-const CUT: u32 = 1 << 16;
+use game_draw::boxes::pack::geo_flag::{CUT, ROUND};
 /// THE WORDS THAT HOLD A PLACE IN A TABLE WITH A HISTORY, and nothing else, masked for a fresh host: geo word 7 from bit 18 up is the box's first row in the marks' table (boxes/pack.rs `slot << 18`)
 const HISTORY: u32 = (1 << 18) - 1;
 /// a run put back as a page does: kept at this second and put back at that one, and it goes on from where it was kept
@@ -155,7 +154,7 @@ pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
         if i == MOMENT.1 * 60 && !back {
             // (as the page's `hold` does: the game whole again of that moment, and nothing drawn through it)
             let (m, n, cursor) = kept.take().expect("the moment was kept");
-            p.g = m.laid(p.g.sim);
+            p.lay(&m);
             (next, p.cursor, back, i, over) = (n, cursor, true, MOMENT.0 * 60, false);
             d.cut();
         }

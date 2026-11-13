@@ -98,7 +98,7 @@ impl Desk {
         self.asked = Some((String::from(link), String::from(issue), walls));
         let own = if link.is_empty() { self.list.fog_link(&mut self.g, mission) } else { String::from(link) };
         let words = Query::parse(after_mark(&own));
-        let f = TeamFor::new(&self.g, entry, words, issue_block(issue), walls as f64);
+        let f = TeamFor::new(entry, words, issue_block(issue), walls as f64);
         if !again {
             let size = kit::team_opens_on(&f.entry, kit::kit_team(&mut self.g, None));
             kit::kit_team(&mut self.g, Some(size));

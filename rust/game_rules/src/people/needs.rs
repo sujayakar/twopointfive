@@ -2,9 +2,9 @@ pub use ::game_types::needs::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 use crate::chronicle::{ChronKind, ChronicleDataValue};
@@ -140,7 +140,7 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
 
 /// May the needs play in this run at all?
 fn needs_live(g: &crate::game::Game) -> bool {
-    g.tune.needs
+    g.k.tune.needs
         && g.ai_enabled
         && !g.aside
         && g.qrf.state == crate::qrf::QrfState::Idle
@@ -170,7 +170,7 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 
 /// Why a trip under way must be broken off now, or None.
 fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
-    if !g.tune.needs {
+    if !g.k.tune.needs {
         return Some(String::from("switched off"));
     }
     if crate::condition::down(g, g.gd[gd].ch) {
@@ -234,7 +234,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
 
 /// Once a frame: levels, the after-alert cap, interrupts, the deal of a trip.
 pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
-    if !g.tune.needs {
+    if !g.k.tune.needs {
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];
@@ -457,7 +457,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
         let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
-        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 
@@ -752,7 +752,7 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     /// `path_len` against pinned bits.
     #[test]

@@ -1,7 +1,6 @@
 //! The types of `shards`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PaneCrossLike {
@@ -38,8 +37,8 @@ pub struct GlassShards {
     pub breaks: Vec<crate::shards::GlassShardsBreaksItem>,
     pub recs_this_frame: f64,
     pub sounds_this_frame: f64,
-    pub sound_at: JsMap<String, f64>,
-    pub sound_owed: JsMap<String, f64>,
+    pub sound_at: JsMap<crate::audio_iface::Sfx, f64>,
+    pub sound_owed: JsMap<crate::audio_iface::Sfx, f64>,
     pub deferred: Vec<crate::shards::GlassShardsDeferredItem>,
     pub deferred_n: f64,
     pub crunch_n: f64,
@@ -117,4 +116,3 @@ pub struct CutPlateBox {
     pub poly: Vec<[f64; 2]>,
 }
 
-pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

@@ -2,6 +2,7 @@
 //! these hold what is true of all of them: drawing a game changes nothing of it, what is drawn between two ticks stands between them, and nothing is drawn
 //! through a cut. `hold draw` draws every frame of a set of plays and says what it cost.
 mod world_ask;
+use game::audio_iface::LastingSfx;
 use game_draw::{want, Drawn};
 use game_start::play::{Opts, Play};
 use world_ask::WorldAsk;
@@ -139,6 +140,7 @@ fn the_boxes_say_what_they_hold() {
     let n = p.g.engine.world.statics.len() as u32;
     assert_eq!((head(&d).statics, head(&d).from, head(&d).to), (n, 0, n), "the first frame tells every static");
     assert_eq!(head(&d).count as usize, d.boxes.geo.len());
+    assert_eq!(d.boxes.grid.info[0].statics[0], n, "a shader tells a wall from a box that moves by the statics' count");
     assert_eq!((head(&d).visible + head(&d).visible_cut) as usize, d.boxes.visible.len());
     assert!(head(&d).grid_moved == 1 && head(&d).items > 0 && d.boxes.grid.items.len() == 2 * head(&d).items as usize);
     assert!(d.boxes.visible.iter().all(|w| (w.w & 0xffff) < head(&d).count), "a drawn box is past the list's end");
@@ -202,7 +204,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
     let late = agree(&d, &p, "eight seconds in");
     assert!(late > early, "the scene: the cloud was to grow ({early} of 60 lines hidden, then {late})");
     let mut again = |p: &mut Play, asked: bool| {
-        p.g = then.laid(p.g.sim);
+        p.lay(&then);
         d.cut();
         if asked {
             assert!(d.smoke.unsaid());
@@ -230,13 +232,13 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let [x, z] = p.sam_at();
     game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
     let told = |d: &Drawn| d.events.sources.iter().filter(|s| s.says & 8 != 0).map(|s| (s.tick, s.serial, s.pos.map(f32::to_bits), s.radius, s.density, s.ttl, s.age)).collect::<Vec<_>>();
-    let lets = |p: &Play| sim::bricks::letting(p.g.sim).map(|e| e.at.map(|v| (v as f32).to_bits())).collect::<Vec<_>>();
+    let lets = |p: &Play| sim::bricks::letting(&p.g.smoke).map(|e| e.at.map(|v| (v as f32).to_bits())).collect::<Vec<_>>();
     let mut first = Vec::new();
     for _ in 0..300 { p.frame_shown(|p| { d.take(&p.g, want::events); first = told(&d); }); if !first.is_empty() { break; } }
     assert_eq!(first.len(), 1, "the can's own event");
     let began = game::savestate::control::Moment::of(&p.g);
     // (the tick that began it, put back: as its host keeps it, with nothing left to say)
-    p.g = began.laid(p.g.sim);
+    p.lay(&began);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -246,7 +248,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let then = game::savestate::control::Moment::of(&p.g);
     let of = lets(&p);
     p.run(3.0);
-    p.g = then.laid(p.g.sim);
+    p.lay(&then);
     p.g.out.clear();
     d.cut();
     d.take(&p.g, want::events);
@@ -270,31 +272,31 @@ fn what_goes_on_is_heard_as_it_stands() {
     p.g.god_mode = true;
     p.run(0.2);
     let mut d = Drawn::default();
-    let heard = |d: &Drawn, name: &str| d.events.lasting.iter().filter(|l| d.events.names[l.name as usize] == name).map(|l| (l.id, l.at, if l.age.is_nan() { -1.0 } else { l.age }, if l.left.is_nan() { -1.0 } else { l.left })).collect::<Vec<_>>();
+    let heard = |d: &Drawn, name: LastingSfx| d.events.lasting.iter().filter(move |l| l.name == name as u32).map(|l| (l.id, l.at, if l.age.is_nan() { -1.0 } else { l.age }, if l.left.is_nan() { -1.0 } else { l.left })).collect::<Vec<_>>();
     d.take(&p.g, want::events);
-    let fires = heard(&d, "fireBed");
-    assert!(!fires.is_empty() && heard(&d, "smokeHiss").is_empty(), "the pass has a brazier that burns, and no can: {fires:?}");
+    let fires = heard(&d, LastingSfx::FireBed);
+    assert!(!fires.is_empty() && heard(&d, LastingSfx::SmokeHiss).is_empty(), "the pass has a brazier that burns, and no can: {fires:?}");
     let [x, z] = p.sam_at();
     game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
     let mut events = Vec::new();
-    let mut step = |p: &mut Play, d: &mut Drawn, n: usize| for _ in 0..n { p.frame_shown(|p| d.take(&p.g, want::events)); events.extend(d.events.sounds.iter().map(|s| d.events.names[s.name as usize].clone())); };
+    let mut step = |p: &mut Play, d: &mut Drawn, n: usize| for _ in 0..n { p.frame_shown(|p| d.take(&p.g, want::events)); events.extend(d.events.sounds.iter().map(|s| s.name)); };
     step(&mut p, &mut d, 300);
-    let at = heard(&d, "smokeHiss");
+    let at = heard(&d, LastingSfx::SmokeHiss);
     assert!(at.len() == 1 && at[0].2 > 1.0 && (at[0].2 + at[0].3 - 32.0).abs() < 0.1, "the can, its age and what it has left: {at:?}");
     let then = game::savestate::control::Moment::of(&p.g);
     step(&mut p, &mut d, 32 * 60);
-    assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
-    assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
-    p.g = then.laid(p.g.sim);
+    assert!(heard(&d, LastingSfx::SmokeHiss).is_empty() && heard(&d, LastingSfx::FireBed).len() == fires.len(), "burnt out, and the brazier burns on");
+    assert!(events.contains(&(game::audio_iface::Sfx::SmokePop as u32)) && !events.contains(&(game::audio_iface::Sfx::FireBed as u32)), "told by events: {events:?}");
+    p.lay(&then);
     d.cut();
     d.take(&p.g, want::events);
-    assert_eq!(heard(&d, "smokeHiss"), at, "put back, and the can is not heard as it stood");
-    assert_eq!(heard(&d, "fireBed"), fires);
+    assert_eq!(heard(&d, LastingSfx::SmokeHiss), at, "put back, and the can is not heard as it stood");
+    assert_eq!(heard(&d, LastingSfx::FireBed), fires);
     drop(p);
     // what hums in the office's rooms, off its own file: with the mains out the wind alone
     let mut p = office(5);
     p.run(0.2);
-    let hums = |p: &Play, d: &mut Drawn| { d.take(&p.g, want::events); ["hum", "servers", "buzz", "wind"].map(|n| heard(d, n).len()) };
+    let hums = |p: &Play, d: &mut Drawn| { d.take(&p.g, want::events); [LastingSfx::Hum, LastingSfx::Servers, LastingSfx::Buzz, LastingSfx::Wind].map(|n| heard(d, n).len()) };
     let mut d = Drawn::default();
     assert_eq!(hums(&p, &mut d), [1, 1, 2, 2]);
     game::lighting::set_blackout(&mut p.g, 9.0, game::lighting::SetBlackoutCause::Ocp);
@@ -329,7 +331,7 @@ fn the_smoke_keeps_its_color() {
     p.run(6.0);
     d.take(&p.g, want::smoke);
     assert!(dyes(&d).iter().filter(|w| **w != 0).count() > mixed.iter().filter(|w| **w != 0).count(), "the smoke that spread took its color along: {:x?}", dyes(&d));
-    p.g = then.laid(p.g.sim);
+    p.lay(&then);
     d.cut();
     game::sense::smoke_ways(&mut p.g);
     d.take(&p.g, want::smoke);
@@ -351,10 +353,10 @@ fn a_source_says_whether_the_game_holds_its_smoke() {
         (SmokeEmitter { look: Some(true), ..can.clone() }, false, "a look of one"),
         (SmokeEmitter { radius: 0.08, density: 24.0, ttl: 0.08, ..can.clone() }, false, "a shot's gas"),
     ] {
-        let before = sim::bricks::emitting(p.g.sim);
+        let before = p.g.smoke.emitters.len();
         game::smoke_types::smoke_system_like_emit(&mut p.g, &e);
         game::out_events::push_smoke_system_like_emit(&mut p.g, &e);
-        assert_eq!(sim::bricks::emitting(p.g.sim) > before, held, "{what}: the game's own smoke");
+        assert_eq!(p.g.smoke.emitters.len() > before, held, "{what}: the game's own smoke");
         let mut d = Drawn::default();
         d.take(&p.g, want::events);
         assert_eq!(d.events.sources.last().expect("the source is told").says & 8 != 0, held, "{what}: what the picture is told");
@@ -368,7 +370,7 @@ fn a_tracer_that_stops_in_something_solid_throws_its_ember() {
     for (impact, solid) in [(TracerImpact::Solid, true), (TracerImpact::Flesh, false), (TracerImpact::None, false)] {
         let mut p = office(6);
         p.run(0.2);
-        let want_sparks = p.g.tracers.params.ember_sparks;
+        let want_sparks = p.g.k.tracers.ember_sparks;
         assert!(want_sparks > 0.0, "the table asks for no ember");
         game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [1.0, 0.0, 0.0], 6.0, impact, [1.0, 0.6, 0.3], 0.0);
         let mut out = Vec::new();

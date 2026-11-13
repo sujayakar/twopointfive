@@ -4,8 +4,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
@@ -513,7 +513,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
         if let (true, Some(stop)) = (way_pin, stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
             s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now });
             g.gd[gd].drop_path();
-            let pace = g.tune.guard_chase;
+            let pace = g.k.tune.guard_chase;
             crate::roomfight::send(g, d, crate::roomfight::Leg::errand(stop, pace), crate::owner::by::LANE);
             crate::belief::word(g, gd, l_from);
             if first { round_shout(g, gd); }
@@ -563,7 +563,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let cid = g.ch[c].id;
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, from, sol.v0, Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(0.7), who: Some(cid), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
-    crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Throw, Some(from), Some(0.7), None);
     let now = g.time;
     let gap = g.k.lanes.stun_gap;
     let x = &mut g.tab.lanes_lane[l];
@@ -824,7 +824,6 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
     pin_start(g, l);
 }
 
-
 /// FIRE FROM AN ANGLE: of the men held on the lane with a burst in his gun and a corner no nearer the guns than `pinMinM`, in turn, one steps to it
 fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     g.tab.lanes_lane[l].pin_at = g.time + 1.0;   // (asked again soon while nobody is placed for it)
@@ -855,7 +854,7 @@ fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     held_off(g, gd);
     peek_on(g, gd, row);
     g.gd[gd].drop_path();
-    let fast = g.k.lanes.pin_pace - g.tune.guard_chase;
+    let fast = g.k.lanes.pin_pace - g.k.tune.guard_chase;
     crate::roomfight::run(g, d, pick.to, None, fast, crate::owner::by::LANE);
     {   // (his gun on where the fire came from before he is round the corner)
         let (guns, from) = (g.tab.lanes_lane[l].guns.clone(), g.tab.lanes_lane[l].from);
@@ -1023,7 +1022,7 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
     use crate::frag::FragThrowAt;
     use crate::lanes::FragPlace;
     let id = g.tab.lanes_lane[l].id;
-    let pace = g.k.lanes.peek_pace - g.tune.guard_chase;
+    let pace = g.k.lanes.peek_pace - g.k.tune.guard_chase;
     let big_n = if f.going { m::max(1.0, m::round(g.k.lanes.frag_step_m / 0.3)) + 1.0 } else { 1.0 };
     if let Some(was) = f.at {
         if winding(g, gd, *f) { return; }
@@ -1100,7 +1099,7 @@ fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     held_off(g, best);
     peek_on(g, best, row);
     g.gd[best].drop_path();
-    let fast = g.k.lanes.peek_pace - g.tune.guard_chase;
+    let fast = g.k.lanes.peek_pace - g.k.tune.guard_chase;
     crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);
 }
 

@@ -229,9 +229,7 @@ pub trait DoorsAsk {
     /// how many blind rounds the room has fired through its door
     fn rescue_blind(&self) -> f64;
     /// STAGING: the clock's knobs, and the mission staged again on them: seconds to the first shot, then the second, seconds for a man to be set
-    fn rescue_on(&mut self, first: f64, second: f64, set: f64);
     /// STAGING: no man abroad to meet the pair, and the door's man inside
-    fn rescue_quiet_floor(&mut self);
     /// is he on his way out of a room he has given up
     fn falls_back(&self, name: &str) -> bool;
     /// how long he lines up on her
@@ -587,7 +585,7 @@ impl DoorsAsk for Play {
     fn key_tapped_on(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.run(2.0 / 60.0);
         self.key_up(&key);
@@ -609,12 +607,6 @@ impl DoorsAsk for Play {
     fn rescue_men(&self) -> Vec<GuardId> { self.g.staged.foes.clone() }
     fn rescue_hostages(&self) -> Vec<GuardId> { self.g.staged.captives.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
-    fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
-    fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
-        let k = &mut self.g.k.rescue;
-        (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
-        game::savestate::control::restart(&mut self.g);
-    }
     fn falls_back(&self, name: &str) -> bool {
         self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.leg.kind == game::roomfight::DefMoveKind::Fallback })
     }
@@ -662,7 +654,7 @@ impl DoorsAsk for Play {
     fn compromised(&self) -> bool { game::silent::silent_compromised(&self.g, &game::seats::here(&self.g)) }
     fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.duty.holds, h.duty.pinned) = (false, false); }
     fn sam_holds(&mut self, m: GuardId) -> bool {
-        game::player::start_grab(&mut self.g, m, None);
+        game::player::start_grab(&mut self.g, m);
         self.until(2.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
     }
     fn in_standoff(&self, m: GuardId) -> Option<bool> { self.g.gd[m].standoff.map(|s| self.g.tab.guards_standoff[s].line_open) }
@@ -734,7 +726,7 @@ impl DoorsAsk for Play {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
         self.key_down("ShiftLeft");
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.run(2.0 / 60.0);
         self.key_up(&key);
@@ -746,7 +738,7 @@ impl DoorsAsk for Play {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
         self.key_down("ShiftLeft");
-        let key = self.g.k.cmdring.key.clone();
+        let key = self.g.k.cmdring.key.as_str();
         self.key_down(&key);
         self.until(1.5, |p| p.ring_up()).is_some()
     }
@@ -760,7 +752,7 @@ impl DoorsAsk for Play {
         self.keys_let_go();
         row.1
     }
-    fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.clone(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
+    fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.as_str(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
     fn smoke_left(&self) -> f64 { game::squadsmoke::squad_smoke_left(&self.g, &game::seats::here(&self.g)) }
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)> {
         let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Smoke).collect();
@@ -783,7 +775,7 @@ impl DoorsAsk for Play {
     fn frags_left(&self) -> f64 { self.g.groups[self.g.group].tools.frags }
     fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool { game::squadthrow::squad_thrower(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag).is_some() }
     fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])> {
-        let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag, Some(true), None)?;
+        let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag)?;
         let q = t.post?;
         Some((t.gd, [q[0], q[2]]))
     }
@@ -824,7 +816,7 @@ impl DoorsAsk for Play {
         let mut out = Vec::new();
         for &b in &self.g.col.boxes {
             let x = &self.g.tab.boxes[b];
-            if (x.flags as u32) & (game::scene_boxes::box_flag().glass as u32) == 0 { continue; }
+            if (x.flags as u32) & (game::scene_boxes::box_flag::GLASS) == 0 { continue; }
             let (a, o, ha) = ((x.c[0] - f.hx) * f.ux + (x.c[2] - f.hz) * f.uz, (x.c[0] - f.hx) * f.nx + (x.c[2] - f.hz) * f.nz, f.ux.abs() * x.h[0] + f.uz.abs() * x.h[2]);
             if o.abs() < 0.3 && a + ha > -2.5 && a - ha < w + 2.5 { out.push((a - ha, a + ha)); }
         }
@@ -869,3 +861,13 @@ impl DoorsAsk for Play {
 pub fn off_by(a: f64, b: f64) -> f64 { let d = (a - b).rem_euclid(std::f64::consts::TAU); d.min(std::f64::consts::TAU - d) }
 /// the yaw from one place to another
 pub fn yaw_to(a: [f64; 2], b: [f64; 2]) -> f64 { (b[0] - a[0]).atan2(b[1] - a[1]) }
+
+/// the rescue on the office: the captor's two clocks and how long a room takes to be set, and nobody roaming if so asked
+pub fn rescue_of(o: &game_start::play::Opts, first: f64, second: f64, set: f64, quiet: bool) -> game_start::play::Play {
+    let mut p = game_start::play::Play::mission_laid("office.json", "?levelFile=office.json&rescue", o, |k| {
+        (k.rescue.resolve_secs, k.rescue.second_hostage_secs, k.rescue.set_secs) = (first, second, set);
+        if quiet { (k.rescue.roamers, k.rescue.door_man) = (0.0, game::knobs::RescueKDoorMan::Inside); }
+    });
+    p.sam_unhurt();
+    p
+}

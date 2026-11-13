@@ -2,10 +2,9 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// `pl.wall!`, for a write: the hold itself, never held across a call that takes `g`.
 macro_rules! w {
@@ -401,7 +400,7 @@ fn pulls_away(g: &mut Game, p: PlayerId, away: f64, dt: f64) -> bool {
 /// His pace along the face and the station it takes him to, the whole of him kept on it and out of what stands by it. Returns that station,
 /// the one he was at, how far in the take was, and how far off the face's plane he stands.
 fn slide(g: &mut Game, p: PlayerId, f: Face, dir: f64, dt: f64) -> (f64, f64, f64, f64) {
-    let (ease_pow, pace) = (g.k.wallsnap.ease_pow, if g.pl[p].crouch { g.tune.player_crouch } else { WALL_PACE });
+    let (ease_pow, pace) = (g.k.wallsnap.ease_pow, if g.pl[p].crouch { g.k.tune.player_crouch } else { WALL_PACE });
     let w = w!(g, p);
     if w.block_dir != 0.0 && (dir != w.block_dir || { w.block_t += dt; w.block_t > 0.5 }) { w.block_dir = 0.0; w.block_t = 0.0; }
     let want = if dir == w.block_dir { 0.0 } else { dir * pace };

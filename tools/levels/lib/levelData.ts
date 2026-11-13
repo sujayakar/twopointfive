@@ -21,8 +21,8 @@
 //     sums like (x0 + x1) / 2.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
 import type { Vec3 } from '../../../src/math/vec';
-import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from './levelRows';
-export { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
+import { AUTHORED_FLAGS, type BoxData, type DoorData, type DoorPaintData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from './levelRows';
+export { AUTHORED_FLAGS, type BoxData, type DoorData, type DoorPaintData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
 import type { WeaponId } from './level';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from './scenarios';
@@ -56,7 +56,7 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
  *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
  *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it.
- *  `does` = WHAT THE PAINT IS TO A ROUND, A CHARGE AND A BLAST (scene/materials.ts: a row of the table of materials that has a `does`): every box and
+ *  `does` = WHAT THE PAINT IS TO A ROUND, A CHARGE AND A BLAST (lib/materials.ts: a row of the table of materials that has a `does`): every box and
  *  prop's part that wears the row does that, unless it says its own (BoxData.does). Absent = the default row. The rules' alone, never worked out from
  *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }
@@ -129,6 +129,10 @@ export type BreachPlanData = BreachPlan & { id: string };
 export interface LevelData {
   version: typeof LEVEL_DATA_VERSION;
   name: string;
+  /** the script it is played by (rust/game_rules/src/missions/script_tut_*.rs) — absent = none */
+  script?: string;
+  /** it is built for snow: born in it, and in no other weather — absent = it is not */
+  snow?: boolean;
   meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number; /** HOW KEPT THE PLACE IS, 0‥1 (absent = 0, every level before the key): 0 = left to the weather and the years, 1 = cleaned and painted last night. One word for the whole level, read by the look's surfaces and its painted marks (render/shaders/look.wgsl lookKept) */ kept?: number };
   floors: FloorData[];
   materials: Record<string, MaterialData>;
@@ -138,6 +142,8 @@ export interface LevelData {
   lights: LightData[];
   switchables: SwitchableData[];
   doors: DoorData[];
+  /** what its leaves are painted: absent = as a leaf is made, in the office's colours */
+  doorPaint?: DoorPaintData;
   routes: RouteData[];
   chokepoints: ChokepointData[];
   /** the cleaner / the late worker (rust/game_rules/src/people/civilians) — absent = nobody but the shift on the floor */
@@ -158,6 +164,8 @@ export interface LevelData {
   breaker: { pos: Vec3; panel: string; led: string; fumble?: number };
   /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/tick/game slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
+  /** the lamps of its parked vehicles, each by the box its lens is: a target a round breaks (rust/game_rules/src/air/carlamps.rs) — absent = none */
+  vehicleLamps?: { box: string; what: 'head lamp' | 'tail lamp' }[];
   sky: SkyData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
   /** what the playtest scenarios take from this level (lib/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
@@ -170,7 +178,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
+  top: ['version', 'name', 'script', 'snow', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'doorPaint', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'vehicleLamps', 'sky', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -179,12 +187,12 @@ export const KEYS = {
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
   switchable: ['id', 'boxes', 'group', 'on', 'baseEmissive', 'flicker', 'mains'],
-  door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
+  door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'], doorPaint: ['outside', 'inside'], leafPaint: ['albedo', 'stuff'],
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'name', 'area', 'door'], drive: ['id', 'kind', 'name', 'holder', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'name', 'door', 'x', 'z', 'out'],
-  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'],
+  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], vehicleLamp: ['box', 'what'], sky: ['zenith', 'horizon'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)
 } as const;
@@ -209,6 +217,7 @@ function pick<T extends object>(o: T, keys: readonly string[]): T { const out: a
 const canonLight = (l: LightData): LightData => pick(l, KEYS.light);
 /** a shape re-keyed as levelLoad.ts levelToData writes it: the form, then the pieces, each its own keys and then its form */
 const canonShape = (x: ShapeData): ShapeData => ({ ...formOf(x), ...(x.with ? { with: x.with.map(w => ({ ...pick(w, PIECE_KEYS), ...formOf(w) })) } : {}) });
+const canonDoorPaint = (p: DoorPaintData): DoorPaintData => ({ outside: pick(p.outside, KEYS.leafPaint), inside: pick(p.inside, KEYS.leafPaint) });
 const canonMarking = (m: MarkingDef): MarkingDef => ({ ...pick(m, KEYS.marking), pal: (m.pal ?? []).map(p => pick(p, KEYS.markpal)) });
 /** Preferred key order inside the drill plans, at any depth: the fields RoomClearPlan / BreachPlan have had, in reading order. canonBlob puts keys it knows
  *  in this order and anything newer AFTER them alphabetically — so the plans stay readable, serialize identically whatever order they were assembled in, and a
@@ -232,7 +241,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
   const mats: Record<string, MaterialData> = {}; for (const k of Object.keys(d.materials)) mats[k] = pick(d.materials[k], KEYS.material);   // (insertion order of materials is kept: it is the palette's authored order)
   const rect = (r: Rect): Rect => pick(r, KEYS.rect);
   return {
-    version: d.version, name: d.name,
+    version: d.version, name: d.name, ...(d.script !== undefined ? { script: d.script } : {}), ...(d.snow !== undefined ? { snow: d.snow } : {}),
     meta: { ...pick(d.meta, KEYS.meta), ...(d.meta.bounds ? { bounds: pick(d.meta.bounds, KEYS.bounds) } : {}) },
     floors: d.floors.map(f => pick(f, KEYS.floor)),
     materials: mats,
@@ -242,6 +251,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     lights: d.lights.map(canonLight),
     switchables: d.switchables.map(s => pick(s, KEYS.switchable)),
     doors: d.doors.map(o => pick(o, KEYS.door)),
+    ...(d.doorPaint ? { doorPaint: canonDoorPaint(d.doorPaint) } : {}),
     routes: d.routes.map(r => pick(r, KEYS.route)),
     chokepoints: d.chokepoints.map(c => pick(c, KEYS.chokepoint)),
     ...(d.civilians ? { civilians: d.civilians.map(c => pick(c, KEYS.civilian)) } : {}),
@@ -254,6 +264,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     mission: { ...pick(d.mission, KEYS.mission), objectives: d.mission.objectives.map(o => o.kind === 'reach' ? { ...pick(o, KEYS.reach), area: rect(o.area) } : o.kind === 'drive' ? pick(o, KEYS.drive) : pick(o, KEYS.exfil)) },
     breaker: pick(d.breaker, KEYS.breaker),
     beacons: d.beacons.map(b => pick(b, KEYS.beacon)),
+    ...(d.vehicleLamps ? { vehicleLamps: d.vehicleLamps.map(l => pick(l, KEYS.vehicleLamp)) } : {}),
     sky: pick(d.sky, KEYS.sky),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
     ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — lib/scenarios.ts is their shape)

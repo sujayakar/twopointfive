@@ -1,6 +1,5 @@
 //! The numbers of doortools.
 use crate::bytes::ToBytes;
-use alloc::string::String;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
@@ -10,7 +9,7 @@ pub struct DoortoolsK {
     #[k(2.0)] pub charges: f64,
     #[k(3.0)] pub bangs: f64,
     /// the trigger: Sam's key for a set charge (the night breach's F — a set charge has it first)
-    #[k(String::from("KeyF"))] pub blow_key: String,
+    #[k(crate::input::types::Key::F)] pub blow_key: crate::input::types::Key,
     /// … and for this long after a word given on the key, the key does nothing else: a second tap is not the breach drill's 'stack up'
     #[k(0.6)] pub word_tap: f64,
     /// caps (s): walking to the marks (given up sooner once nobody short of his has moved for `stillSecs`) · onto the kick spot · the whole entry

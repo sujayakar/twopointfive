@@ -3,6 +3,8 @@ import { clock } from '../tape/format';
 import { keptNow, keptStore, keptWords, mb } from '../tape/keptui';
 import { beingWritten } from '../tape/keepstore';
 import { PLAYTAPE } from '../tape/address';
+import { ANOTHER } from '../tape/handtape';
+import { walkable } from '../tape/keep';
 import { otherModule } from '../tape/module';
 import { reportWarning } from '../cloud/report';
 import { button, el } from './runcard';
@@ -22,17 +24,18 @@ export function replayRows(host: HTMLElement, back: () => void, focus: boolean):
   if (!styled) { styled = true; const s = document.createElement('style'); s.textContent = CSS; document.head.append(s); }
   host.textContent = ''; const head = el('div', 'xhead'), list = el('div', 'xlist'), note = el('div', 'xnote'), out = button('‹ Main menu', back, 'xback'); head.textContent = 'Replays'; host.append(head, list, note, out);
   const fill = async (): Promise<void> => {
-    const S = await keptNow(), runs = S.rows.filter(r => r.hands); list.textContent = '';
+    const S = await keptNow(), runs = S.rows.filter(r => r.hands), shut = new Set<string>(); list.textContent = '';
+    await Promise.all(runs.map(async r => { if (otherModule(r.module) && !await walkable(keptStore(), r.sid)) shut.add(r.sid); }));
     for (const r of runs) {
-      const one = el('div', 'one'), a = el('a', 'btn xrow') as HTMLAnchorElement, name = document.createElement('b'), line = document.createElement('i'), drop = el('button', 'drop') as HTMLButtonElement, live = beingWritten(r), n = r.notes?.length ?? 0, old = otherModule(r.module);
-      a.href = `?${PLAYTAPE}=${r.sid}`; a.dataset.replay = r.sid; name.textContent = r.scenario || 'A run'; line.textContent = [new Date(r.lastAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }), clock(r.seconds), mb(r.bytes), ...(n ? [`${n} note${n > 1 ? 's' : ''}`] : []), ...(live ? ['being played'] : []), ...(old ? ['from an older version, so it may go differently'] : [])].join(' · ');
-      if (old) { a.classList.add('old'); a.title = 'You played this on an older version of the game, so it may go differently.'; }
+      const one = el('div', 'one'), a = el('a', 'btn xrow') as HTMLAnchorElement, name = document.createElement('b'), line = document.createElement('i'), drop = el('button', 'drop') as HTMLButtonElement, live = beingWritten(r), n = r.notes?.length ?? 0, old = otherModule(r.module), no = shut.has(r.sid);
+      if (!no) a.href = `?${PLAYTAPE}=${r.sid}`; a.dataset.replay = r.sid; name.textContent = r.scenario || 'A run'; line.textContent = [new Date(r.lastAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }), clock(r.seconds), mb(r.bytes), ...(n ? [`${n} note${n > 1 ? 's' : ''}`] : []), ...(live ? ['being played'] : []), ...(no ? ['from an older version, so it can’t be played anymore'] : old ? ['from an older version, so it may go differently'] : [])].join(' · ');
+      if (old) { a.classList.add('old'); a.title = no ? ANOTHER : 'You played this on an older version of the game, so it may go differently.'; }
       a.append(name, line); drop.textContent = '✕'; drop.title = 'Remove it from this browser'; drop.hidden = live;
       drop.onclick = () => { if (confirm(n ? 'This replay has notes on it. Remove it from this browser?' : 'Remove this replay from this browser?')) void keptStore().drop(r.sid).then(fill); };
       one.append(a, drop); list.append(one);
     }
     note.textContent = runs.length ? keptWords({ ...S, rows: runs, visits: runs.length, seconds: runs.reduce((s, r) => s + r.seconds, 0), bytes: runs.reduce((s, r) => s + r.bytes, 0) }) : 'Every run you play is kept here, so play one and come back.';
-    if (focus) ((list.querySelector('.xrow') as HTMLElement | null) ?? out).focus();
+    if (focus) ((list.querySelector('.xrow[href]') as HTMLElement | null) ?? out).focus();
   };
   void fill().catch(e => { reportWarning('replays.list', e); note.textContent = 'This browser won’t keep replays.'; });
 }

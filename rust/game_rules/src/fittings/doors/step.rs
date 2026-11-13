@@ -4,7 +4,7 @@ use super::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m::{self, cos, exp, floor, hyp2 as hypot2, sin, sqrt};
-use crate::v3::{clamp, V3};
+use crate::v3::clamp;
 use alloc::{vec, vec::Vec};
 use ::sim::{collide, world::{asking, js_abs, js_max, js_min, World}};
 use DoorDriveKind::*;

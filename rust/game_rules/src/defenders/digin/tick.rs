@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{format, vec, vec::Vec};
 
 // THE LIVE STATE is g.m.digin.states, reached by state_of. A function with `m: &mut Man` or `r: &mut RoomSt` holds a copy of that row checked out:
 // the top of the stack (dig_in_tick, dig_in_release; row_put for a room) writes it back. `drop` writes a room's bracer to the table: never call it with that row checked out.
@@ -114,21 +114,15 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
     m.stand = stand;
     m.rest = [e.at[0] - e.out[0] * 0.6, 0.0, e.at[2] - e.out[1] * 0.6];
     m.phase = Phase::ToProp;
-    let speed = g.tune.guard_chase;
+    let speed = g.k.tune.guard_chase;
     move_(g, d, goal, speed);
     true
 }
 
-/// how many other men of this room are at it on entry `i`
-fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> usize {
-    let mut n = 0;
-    for x in g.fight.defs.clone() {
-        let xg = g.tab.roomfight_def[x].gd;
-        if x == me || crate::condition::down(g, g.gd[xg].ch) || g.tab.roomfight_def[x].room != Some(room) { continue; }
-        if phase_of(g, xg) == Phase::Idle { continue; }
-        if state_of(g).men.get(xg).unwrap().entry == i { n += 1; }
-    }
-    n
+/// the door he gets ready for: the one they are expected by, or the next likeliest if fewer have that
+fn his_door(g: &Game, d: RoomfightDefId, r: &RoomSt) -> f64 {
+    let on = |way: f64| crate::cover::on_way(g, r.room, way as usize, d);
+    if r.second >= 0.0 && on(r.expected) > on(r.second) { r.second } else { r.expected }
 }
 
 /// he has thought: the room's row, his door, the word, the furniture or the door, or cover
@@ -153,7 +147,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
     if r.expected < 0.0 { m.phase = Phase::Idle; return; }
     if !r.men.contains(&gd) { r.men.push(gd); }
     m.room = Some(room);
-    m.entry = if r.second >= 0.0 && on_entry(g, d, room, r.expected) > on_entry(g, d, room, r.second) { r.second } else { r.expected };
+    m.entry = his_door(g, d, &r);
     m.brace = -1.0;
     m.spot = None;
     fear(g, d, *m);
@@ -240,7 +234,7 @@ fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::di
         if let Some(stand) = stand {
             if crate::roomfight::room_fight_in_room(g, Some(r.room), stand) && dist_xz(g.pos_of(gd), stand) < 12.0 {
                 m.brace = -1.0; m.prop = None;  m.stand = stand; m.phase = Phase::ToDoor;
-                let speed = g.tune.guard_chase;
+                let speed = g.k.tune.guard_chase;
                 move_(g, d, stand, speed);
                 return;
             }
@@ -266,7 +260,7 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
     if let Some(p) = p {
         m.spot = Some(p);
         m.phase = Phase::ToCover;
-        let speed = g.tune.guard_chase;
+        let speed = g.k.tune.guard_chase;
         move_(g, d, p, speed);
     } else {
         settle(g, d, m);
@@ -432,7 +426,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
     if now - last_seen >= 0.25 { m.eyes_t = None; } else if m.eyes_t.is_none() { m.eyes_t = Some(now); }
     let mode = g.tab.roomfight_def[d].mode;
     let my_room = g.tab.roomfight_def[d].room;
-    if mode == DefMode::Free { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
+    if matches!(mode, DefMode::Free | DefMode::Told) { if m.phase != Phase::Idle { drop(g, m, Some(gd)); } return; }
     if mode == DefMode::Move {
         if m.phase == Phase::Haul {
             // HAULHOME: a man bringing the last hand in is planted: a leg another rule gives him then is not a haul
@@ -755,6 +749,13 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
+/// The door of his room he is getting ready for or dug in on, if he is at it.
+pub fn dig_in_way(g: &Game, d: RoomfightDefId) -> Option<f64> {
+    let row = &g.tab.roomfight_def[d];
+    let m = g.m.digin.states.as_ref()?.men.get(row.gd)?;
+    if matches!(m.phase, Phase::Idle | Phase::Think | Phase::ToRoom) || m.room != row.room { None } else { Some(m.entry) }
+}
+
 /// A man set off the door's line rests his gun on the floor they must cross (writes `pt`)
 pub(in crate::defenders) fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };
@@ -847,7 +848,7 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
     #[test]
-    fn leg_dist_has_the_typescripts_bits() {
+    fn leg_dist_keeps_its_bits() {
         assert_eq!(leg_dist([1.3, 0.0, 2.7], [0.1, 0.0, -3.3], [7.7, 0.0, 4.9]).to_bits(), 0x400996784bec9bcf);
         assert_eq!(leg_dist([-5.5, 0.0, 0.33], [2.0, 0.0, 2.0], [2.0, 0.0, 2.0]).to_bits(), 0x401ebc15f4b30045);
         assert_eq!(leg_dist([9.1, 0.0, 9.2], [0.0, 0.0, 0.0], [1.1, 0.0, 0.7]).to_bits(), 0x40275861532b8544);

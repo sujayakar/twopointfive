@@ -7,8 +7,7 @@ use alloc::vec::Vec;
 /// The sponge round's three boxes about `c_2`, its length along `rot`'s z, the nose toward +z.
 pub(in crate::guns) fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
     let s = sponge_item();
-    let flag = crate::scene_boxes::box_flag();
-    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let flags = (crate::scene_boxes::box_flag::DYNAMIC as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32) as f64;
     for (z, h, albedo) in [(s.body.z, s.body.h, s.body.albedo), (s.nose.z, s.nose.h, s.nose.albedo), (s.band.z, s.band.h, s.band.albedo)] {
         out.push(item_box(g, v3::add(c_2, v3::quat::rotate(rot, [0.0, 0.0, z])), h, yaw, rot, albedo, flags).into());
     }

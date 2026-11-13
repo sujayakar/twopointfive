@@ -54,16 +54,19 @@ function readBubbleViewIn(I: In): BubbleView { return { man: I.bool() ? I.float6
 export type KitThing = 'hands' | 'pistol' | 'rifle' | 'smoke' | 'flash' | 'frag';
 const KitThingWords: readonly KitThing[] = ['hands', 'pistol', 'rifle', 'smoke', 'flash', 'frag'];
 function readKitThingIn(I: In): KitThing { return I.word(KitThingWords, 'KitThing'); }
-export interface KitSlot { thing: KitThing; key: string; name: string; count: number; absent: boolean; spent: boolean; up: boolean; taken: boolean }
-function readKitSlotIn(I: In): KitSlot { return { thing: readKitThingIn(I), key: I.str(), name: I.str(), count: I.float64(), absent: I.bool(), spent: I.bool(), up: I.bool(), taken: I.bool() }; }
+export type Key = 'KeyW' | 'KeyA' | 'KeyS' | 'KeyD' | 'KeyQ' | 'KeyE' | 'KeyR' | 'KeyF' | 'KeyC' | 'KeyL' | 'KeyZ' | 'KeyV' | 'KeyN' | 'KeyB' | 'KeyT' | 'Digit0' | 'Digit1' | 'Digit2' | 'Digit3' | 'Digit4' | 'Digit5' | 'Digit6' | 'Digit7' | 'Digit8' | 'Digit9' | 'Space' | 'ShiftLeft' | 'ShiftRight' | 'Enter' | 'NumpadEnter' | 'Tab' | 'ArrowUp' | 'ArrowDown' | 'BracketLeft' | 'BracketRight' | 'F5' | 'Blur' | 'Paused' | 'Thawed';
+const KeyWords: readonly Key[] = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'KeyC', 'KeyL', 'KeyZ', 'KeyV', 'KeyN', 'KeyB', 'KeyT', 'Digit0', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Space', 'ShiftLeft', 'ShiftRight', 'Enter', 'NumpadEnter', 'Tab', 'ArrowUp', 'ArrowDown', 'BracketLeft', 'BracketRight', 'F5', 'Blur', 'Paused', 'Thawed'];
+function readKeyIn(I: In): Key { return I.word(KeyWords, 'Key'); }
+export interface KitSlot { thing: KitThing; key: Key; name: string; count: number; absent: boolean; spent: boolean; up: boolean; taken: boolean }
+function readKitSlotIn(I: In): KitSlot { return { thing: readKitThingIn(I), key: readKeyIn(I), name: I.str(), count: I.float64(), absent: I.bool(), spent: I.bool(), up: I.bool(), taken: I.bool() }; }
 export interface KitWord { text: string; on: boolean; out: boolean }
 function readKitWordIn(I: In): KitWord { return { text: I.str(), on: I.bool(), out: I.bool() }; }
 export interface KitOcp { charge: number; ready: boolean }
 function readKitOcpIn(I: In): KitOcp { return { charge: I.float64(), ready: I.bool() }; }
 export interface KitGun { mag: number; capacity: number; chamber: boolean; ready: number; dry: boolean; reloading: boolean; selector: string | null; load: KitWord | null; light: boolean; ocp: KitOcp | null; spares: number[]; loose: number | null }
 function readKitGunIn(I: In): KitGun { return { mag: I.float64(), capacity: I.float64(), chamber: I.bool(), ready: I.float64(), dry: I.bool(), reloading: I.bool(), selector: I.bool() ? I.str() : null, load: I.bool() ? readKitWordIn(I) : null, light: I.bool(), ocp: I.bool() ? readKitOcpIn(I) : null, spares: I.list(() => I.float64()), loose: I.bool() ? I.float64() : null }; }
-export interface KitSetupRow { key: string; words: KitWord[] }
-function readKitSetupRowIn(I: In): KitSetupRow { return { key: I.str(), words: I.list(() => readKitWordIn(I)) }; }
+export interface KitSetupRow { key: Key; words: KitWord[] }
+function readKitSetupRowIn(I: In): KitSetupRow { return { key: readKeyIn(I), words: I.list(() => readKitWordIn(I)) }; }
 export interface KitSetup { rows: KitSetupRow[]; back: string }
 function readKitSetupIn(I: In): KitSetup { return { rows: I.list(() => readKitSetupRowIn(I)), back: I.str() }; }
 export interface KitBig { name: string; place: string; offered: boolean }

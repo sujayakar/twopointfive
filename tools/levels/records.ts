@@ -48,6 +48,7 @@ import { drawnAs, madeOf, KERB_GREY } from '../../src/scene/stuff';
 import { GWOT_PALETTE } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The records office: the pair room clear\'s own level. Four held rooms; every room is a choice of door and door tool. Kit pieces only. Regenerate: bun run tools/levels/export.ts records';
 
@@ -363,6 +364,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'records';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.2, 0.2, 0.22], drawnAs('wood', [0.47, 0.36, 0.22]));
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = RECORDS_ROOMS;

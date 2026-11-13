@@ -2,10 +2,11 @@
 //! of); where the file reads whole, the rules a file can be held to by itself: ids that are one thing's, names that point at something, numbers in their range, lists that go together.
 //!
 //! It judges the FILE. What the built floor says (a mark on free floor, a way on foot, a light in a wall) is asked of the game: `levels`, and tools/qa/level-lint.ts.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
+use crate::file::{self, BoxData, DoorPaintData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
-use crate::level::{does_word, stuff_word, Said};
+use crate::level::{stuff_word, Said};
+use game::scene_materials::DoesWord;
 use crate::passes::{planes_of, Form, ARC_PLANES};
 use crate::read::Faults;
 use alloc::collections::{BTreeMap, BTreeSet};
@@ -157,6 +158,7 @@ impl<'a> Rules<'a> {
             self.finish(&w, m.rough);
             self.words(&w, m.stuff.as_deref(), m.does.as_deref());
         }
+        if let Some(p) = &f.door_paint { self.door_paint("doorPaint", p); }
         if let Some(s) = &f.surfaces {
             let b = &s.building;
             if !rect(b.x0, b.x1, b.z0, b.z1) { self.say("surfaces.building", "x0 to x1, z0 to z1"); }
@@ -171,11 +173,17 @@ impl<'a> Rules<'a> {
             if let Some(on) = said("floor") { if !self.f.floors.iter().any(|s| s.id == on) { self.say(format!("{w}.floor"), format!("the file has no floor '{on}'")); } }
         }
     }
+    fn door_paint(&self, w: &str, p: &DoorPaintData) {
+        for (side, x) in [("outside", &p.outside), ("inside", &p.inside)] {
+            if !light(&x.albedo) { self.say(format!("{w}.{side}.albedo"), "0 or more"); }
+            self.words(&format!("{w}.{side}"), x.stuff.as_deref(), None);
+        }
+    }
     fn finish(&self, w: &str, rough: Option<f64>) { if rough.is_some_and(|r| !(0.0..=1.0).contains(&r)) { self.say(format!("{w}.rough"), "a number from 0 to 1"); } }
     /// what a record says it is made of and does are words there are
     fn words(&self, w: &str, stuff: Option<&str>, does: Option<&str>) {
         if let Some(s) = stuff { if s != "plain" && stuff_word(s).is_none() { self.say(format!("{w}.stuff"), format!("'{s}' is nothing a box is made of")); } }
-        if let Some(d) = does { if d != "unnamed" && does_word(d).is_none() { self.say(format!("{w}.does"), format!("'{d}' is no row of the table of materials that says what a thing does")); } }
+        if let Some(d) = does { if d != "unnamed" && DoesWord::named(d).is_none() { self.say(format!("{w}.does"), format!("'{d}' is no row of the table of materials that says what a thing does")); } }
     }
     /// one paint: a material of the file, or a colour. `or`: in a Team & kit picture's box a material may be alternatives 'a|b', and the first the file has is it
     fn paint(&self, w: &str, o: &Said, or: bool) {
@@ -429,6 +437,12 @@ impl<'a> Rules<'a> {
             let w = format!("{}.box", named(i, "beacons", &b.id));
             self.a_box(&w, &b.box_);
             if self.boxes.contains(b.box_.as_str()) && !self.switched.contains_key(b.box_.as_str()) { self.say(w, format!("'{}' is no switchable's box (the beam goes with that fixture)", b.box_)); }
+        }
+        let mut lamps = BTreeSet::new();
+        for (i, l) in f.vehicle_lamps.iter().flatten().enumerate() {
+            let w = format!("vehicleLamps[{i}].box");
+            self.a_box(&w, &l.box_);
+            if !lamps.insert(l.box_.as_str()) { self.say(w, format!("'{}' is another lamp already", l.box_)); }
         }
     }
 
@@ -695,6 +709,7 @@ impl<'a> Rules<'a> {
                     self.round(&at, b);
                     if b.shape.is_some() { self.say(format!("{at}.shape"), "a picture's box says no shape"); }
                 }
+                if let Some(p) = &t.door_paint { self.door_paint(&format!("{at}.doorPaint"), p); }
                 for (i, d) in t.doors.iter().flatten().enumerate() { if d.width <= 0.0 { self.say(format!("{}.width", named(i, &format!("{at}.doors"), &d.id)), "over 0"); } }
             }
         }

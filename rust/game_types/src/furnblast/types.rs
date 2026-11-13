@@ -1,7 +1,6 @@
 //! The types of `furnblast`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum BlastSource {
@@ -107,9 +106,9 @@ pub struct BreakRowLand {
     pub sfx: Vec<crate::furnblast::BreakRowLandSfxItem>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct BreakRowLandSfxItem {
-    pub name: String,
+    pub name: crate::audio_iface::Sfx,
     pub rate: f64,
     pub gain: f64,
 }
@@ -138,11 +137,6 @@ pub struct Member {
     pub group: Option<crate::furnblast::Group>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct BreakClassOfB {
-    pub does: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OverPlanA {
     pub x0: f64,
@@ -159,7 +153,7 @@ pub struct OverPlanQ {
     pub z1: f64,
 }
 
-pub fn furn_break() -> Vec<(crate::scene_materials::BreakClass, crate::furnblast::BreakRow)> { alloc::vec![(crate::scene_materials::BreakClass::Wood, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.9, max: 2.0, strips: 3.0 }, apart: crate::furnblast::BreakRowApart { len: 1.2, max: 2.0, strips: 2.0 }, uneven: 0.6, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.25, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.15, gain: 0.5 }] } }), (crate::scene_materials::BreakClass::Board, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.45, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.4, fly: 1.1, spin: 1.2, land: crate::furnblast::BreakRowLand { level: 0.15, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.5, gain: 0.3 }] } }), (crate::scene_materials::BreakClass::Metal, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.7, max: 2.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.5, fly: 0.8, spin: 0.7, land: crate::furnblast::BreakRowLand { level: 0.45, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 0.7, gain: 0.9 }, crate::furnblast::BreakRowLandSfxItem { name: String::from("magDrop"), rate: 0.5, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Hard, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.4, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 0.8, max: 2.0, strips: 1.0 }, uneven: 0.5, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.2, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 1.3, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Soft, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 9.0, max: 1.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.0, fly: 1.2, spin: 1.3, land: crate::furnblast::BreakRowLand { level: 0.1, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: String::from("propThud"), rate: 0.9, gain: 0.3 }] } })] }
+pub fn furn_break() -> Vec<(crate::scene_materials::BreakClass, crate::furnblast::BreakRow)> { alloc::vec![(crate::scene_materials::BreakClass::Wood, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.9, max: 2.0, strips: 3.0 }, apart: crate::furnblast::BreakRowApart { len: 1.2, max: 2.0, strips: 2.0 }, uneven: 0.6, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.25, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.15, gain: 0.5 }] } }), (crate::scene_materials::BreakClass::Board, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.45, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.4, fly: 1.1, spin: 1.2, land: crate::furnblast::BreakRowLand { level: 0.15, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.5, gain: 0.3 }] } }), (crate::scene_materials::BreakClass::Metal, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.7, max: 2.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.5, fly: 0.8, spin: 0.7, land: crate::furnblast::BreakRowLand { level: 0.45, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 0.7, gain: 0.9 }, crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::MagDrop, rate: 0.5, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Hard, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 0.4, max: 3.0, strips: 2.0 }, apart: crate::furnblast::BreakRowApart { len: 0.8, max: 2.0, strips: 1.0 }, uneven: 0.5, fly: 1.0, spin: 1.0, land: crate::furnblast::BreakRowLand { level: 0.2, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 1.3, gain: 0.4 }] } }), (crate::scene_materials::BreakClass::Soft, crate::furnblast::BreakRow { shatter: crate::furnblast::BreakRowShatter { len: 9.0, max: 1.0, strips: 1.0 }, apart: crate::furnblast::BreakRowApart { len: 9.0, max: 1.0, strips: 1.0 }, uneven: 0.0, fly: 1.2, spin: 1.3, land: crate::furnblast::BreakRowLand { level: 0.1, sfx: alloc::vec![crate::furnblast::BreakRowLandSfxItem { name: crate::audio_iface::Sfx::PropThud, rate: 0.9, gain: 0.3 }] } })] }
 
 pub const HIDE: f64 = 3.0;
 

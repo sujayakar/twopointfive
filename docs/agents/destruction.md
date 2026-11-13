@@ -38,14 +38,14 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+Glass and bars: the rules in `rust/sim/src/` (`panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs`), the state `World.panes`.
 A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
 `rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
 
 ## How it works
 
-**Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
+**Chaos.** `chaos_of` is one number from 0 to 1, the knob `chaos.def`. At 0
 most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
@@ -101,7 +101,7 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
 `way_off` slides it the shortest free way clear of all of him.
 
-**Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
+**Glass.** A pane's state is a row of `World.panes`. `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is
 float. The rule lists the pieces that let go; `glass_break_drain` hands each to `glass_shards_release`, the picture's half. Each landing and the glass
 it leaves are kept in `falls.rs`, where `step` makes a footfall louder and grinds the litter. A pane is a wall to feet until what stands below
@@ -122,7 +122,7 @@ density is real, so men's eyes read it as the picture does. `destruction_dust_pu
 time.
 
 **Restart and load.** A restart runs `glass_break_reset`, `destruction_reset` (it calls `wall_break_reset`, `furniture_reset`) and `decals_clear`. A
-load puts back a clone of the whole game and its block (`savestate/`), so nothing has to be told.
+load puts back a clone of the whole game (`savestate/`), so nothing has to be told.
 
 ## Rules that hold
 
@@ -152,7 +152,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 
 - **A number:** `rust/game_types/src/knobs/`: `destruction.rs` (`ChaosK`), `wallbreak.rs` (`WallsK`), `wallcharge.rs` (`WallchargeK`, `WallshotK`,
   `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one.
-- **What a stuff does:** its `MATERIALS` row in `src/scene/materials.ts` with the twin `does_of` reads (`levels.md`); a toll in `WallpenK`, a `tough`
+- **What a stuff does:** its row of `materials!` in `rust/game_types/src/scene_materials/types.rs` (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.
 - **Something that reacts to a hole:** read `wall_break_since`. Something a restart must clear joins `destruction_reset`.

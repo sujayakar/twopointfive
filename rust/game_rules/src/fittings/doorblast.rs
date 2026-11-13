@@ -2,10 +2,10 @@ pub use ::game_types::doorblast::types;
 pub use types::*;
 use crate::game::{Deed, Game};
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, vec, vec::Vec};
 
 mod splinter;
 pub use splinter::splinter;
@@ -41,7 +41,6 @@ fn handle_on(w: f64, h: f64) -> [f64; 2] {
 fn stays(g: &Game, d: DoorId) -> bool {
     g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false)
 }
-
 
 /// Keeps a line of what the doors' blasts did.
 fn note(g: &mut crate::game::Game, s: &str) {
@@ -105,8 +104,6 @@ fn free_spot(g: &crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0
     }
     None
 }
-
-
 
 /// The doors' side of a blast: every leaf within `tear_m` that it reaches comes off.
 pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
@@ -408,7 +405,7 @@ fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let [lx, ly] = handle_on(w, height);
     let lz = t_ / 2.0 + 0.03;
     let handles = g.dr[d].handle_boxes.clone();
-    let seal = crate::scene_boxes::box_flag().sound_seal;
+    let seal = crate::scene_boxes::box_flag::SOUND_SEAL as f64;
     {
         let mut row = g.tab.boxes.edit(b);
         row.flags = (js::to_i32(row.flags) & !js::to_i32(seal)) as f64;

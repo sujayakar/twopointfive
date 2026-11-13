@@ -1,15 +1,15 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }
-/// EDGE's `on`, read live; `look` says only that somebody is there
-fn look_on(g: &Game) -> bool { g.destr.breaks.look.is_some() && g.m.edge_look.edge.on }
+/// `edge_look.on`, read live; `look` says only that somebody is there
+fn look_on(g: &Game) -> bool { g.destr.breaks.look.is_some() && g.k.edge_look.on }
 /// SURF_MAT[surf as Surf]: a word that is no Surf finds nothing
 fn surf_mat_of_word(s: &str) -> Option<Mat> {
     use crate::scene_materials::Surf;
@@ -20,8 +20,7 @@ fn surf_mat_of_word(s: &str) -> Option<Mat> {
 }
 /// matOf(kind, box) for a box of the world
 fn mat_of_box(g: &Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
-    let box_ = MatOfBox { does: g.tab[b].does.map(|w| String::from(w.as_str())) };
-    mat_of(g, kind, &box_)
+    mat_of(kind, g.tab[b].does)
 }
 /// `c.mat ?? { mat: matOf(c.kind, c.box), gen: 0, paint: c.box.albedo }`
 fn meta_of(g: &Game, c: DebrisChunkId) -> BreakMeta {
@@ -208,7 +207,7 @@ fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     }
     if row.dust > 0.0 {
         let count = m::max(1.0, m::round(row.dust * m::max(0.5, m::min(1.5, r / 0.25))));
-        let pfx = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
+        let pfx = (g.k.pfx.dust_speed, g.k.pfx.dust_life, g.k.pfx.dust_size);
         let color = v3::lerp3(breaks_tint(inside, me.paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, bc, [0.0, 1.0, 0.0], count, crate::render_particles::EmitOpts {
             shape: Some(crate::render_particles::EmitShape::Puff), speed: pfx.0 * 0.6, speed_jit: Some(0.5), lift: Some(0.05), life: pfx.1, life_jit: Some(0.3), size: pfx.2, size_jit: Some(0.35), pos_jit: Some(m::max(0.08, m::min(0.3, r * 0.6))), color: Some(color), ..Default::default()
@@ -247,7 +246,7 @@ fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
 /// The row's dust and sparks at `at`.
 fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, inside: crate::break_table::Inside, paint: V3, at: V3, dir: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    let (dust_speed, dust_life, dust_size) = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
+    let (dust_speed, dust_life, dust_size) = (g.k.pfx.dust_speed, g.k.pfx.dust_life, g.k.pfx.dust_size);
     if row.dust > 0.0 {
         let color = v3::lerp3(breaks_tint(inside, paint, 0.6), [0.8, 0.79, 0.76], 0.4);
         crate::particle_fx::emit_dust(g, at, dir, m::round(row.dust * k), crate::render_particles::EmitOpts {
@@ -255,7 +254,7 @@ fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, i
         });
     }
     if row.sparks > 0.0 {
-        let (spread, life, size) = (g.m.particle_fx.pfx.spark_spread, g.m.particle_fx.pfx.spark_life, g.m.particle_fx.pfx.spark_size);
+        let (spread, life, size) = (g.k.pfx.spark_spread, g.k.pfx.spark_life, g.k.pfx.spark_size);
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, dir, m::round(row.sparks * k), crate::render_particles::EmitOpts {
             speed: 4.0, speed_jit: Some(0.6), spread: Some(spread), life, life_jit: Some(0.4), size, ..Default::default()
         });
@@ -595,7 +594,7 @@ fn breaks_kink(g: &mut crate::game::Game, c_2: DebrisChunkId, thin: f64, mid: f6
 pub(in crate::breakage) fn breaks_shed_cell(g: &mut crate::game::Game, surf: crate::scene_materials::Surf, cell: BoxId, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget, as_: Option<crate::break_table::Mat>) -> crate::break_table::BreaksShedCell {
     let mat = match as_ { Some(a) => a, None => mat_of_surf(surf) };
     let row = break_row(mat);
-    let mut res = BreaksShedCell {  };
+    let res = BreaksShedCell {  };
     let (cell_c, cell_h, cell_yaw, paint, cell_rough, cell_metal) = (g.tab.boxes[cell].c, g.tab.boxes[cell].h, g.tab.boxes[cell].yaw, g.tab.boxes[cell].albedo, g.tab.boxes[cell].rough, g.tab.boxes[cell].metal);
     // a wall's cell is thin across the wall; a crate's is a block
     let flat: i32 = if cell_h[0] < cell_h[2] * 0.6 { 0 } else if cell_h[2] < cell_h[0] * 0.6 { 2 } else { -1 };

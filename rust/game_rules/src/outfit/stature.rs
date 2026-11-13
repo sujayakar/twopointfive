@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! STATURE: the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
 //! capsules and every box a ray meets are untouched. What it writes that the tick's own state holds: `Box.dc / dh` of the boxes bolted to a man
 //! (rows of the frame's list, where the picture is to draw them) and the near end of his weapon laser (a box of the frame's list made from the
@@ -9,12 +8,11 @@
 
 pub use ::game_types::stature::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 fn hash01(n: f64) -> f64 {
     // (`(n | 0) * 0x9E3779B1` is a product of doubles, then `x ^= x >>> 15` takes it to an int32)
@@ -29,7 +27,7 @@ fn hash01(n: f64) -> f64 {
 fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
-    let t = stature_tune();
+    let t = g.k.stature;
     let s = variant_stature(&g.art.variant[v].name) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
     m::round(m::min(t.max, m::max(t.min, s)) * 1000.0) / 1000.0
 }
@@ -49,7 +47,7 @@ pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool 
         match g.m.stature.shown.get(c).copied() {
             None => { g.m.stature.shown.set(c, want); }
             Some(had) => if had != want {
-                let step = stature_tune().ease_per_sec * m::max(0.0, dt);
+                let step = g.k.stature.ease_per_sec * m::max(0.0, dt);
                 g.m.stature.shown.set(c, if m::abs(want - had) <= step { want } else { had + m::sign(want - had) * step });
             }
         }

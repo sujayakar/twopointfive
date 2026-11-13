@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::scene_look::types;
 pub use types::*;
 use crate::game::Game;

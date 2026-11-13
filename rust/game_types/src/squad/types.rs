@@ -1,6 +1,5 @@
 //! The types of `squad`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
@@ -28,8 +27,6 @@ pub struct Clearing {
     pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
     #[is(GuardId(0))] pub a: GuardId,
     pub b: Option<GuardId>,
-    /// dealt where a clear is begun
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]

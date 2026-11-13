@@ -17,7 +17,8 @@ import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
-import { inputNumbers, type WireCmd } from '../../src/net/wire';
+import { FIRST, NET, inputNumbers, type WireCmd } from '../../src/net/wire';
+import { SeatLine } from '../../src/net/timeline';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
@@ -28,7 +29,8 @@ const start = freshStart({ search: '?levelFile=compound.json&roomclear&squad4&se
 
 // ---- the server, and the wire: what is sent arrives two of the clock's ticks later
 const S = await standStart(start), WAY = 2 * 1000 / 60, wire: { at: number; go: () => void }[] = [], later = (go: () => void): void => { wire.push({ at: now + WAY, go }); };
-const server = new NetServer({ now: () => now, step: c => S.step(c), word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
+let shifted = 0; const shift = (w: WireCmd): boolean => [...w.k, ...w.u ?? []].includes('ShiftLeft');   // (the server's ticks with Shift held in the first seat)
+const server = new NetServer({ now: () => now, step: c => { if (shift(c[0])) shifted++; S.step(c); }, word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
@@ -89,6 +91,28 @@ line(held > 5 && moved > 0.01 && rewound < 1e-4, 'where nothing was confirmed th
 line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended over both', `${spreads} of them, ${(spread * 1000).toFixed(1)} mm off half way`);
 // a restart by a key: every machine's, and the picture begins anew
 { const s = stood(), ok = c.wordsOk; input.keys.add('ShiftLeft'); input.pressed.add('Enter'); input.keys.add('Enter'); run(3); input.keys.clear(); run(90); line(!c.bad && c.wordsOk > ok && stood() !== s, 'a restart inside the game is every machine\'s, and nothing is drawn through it', `${c.wordsOk - ok} word ticks after it`); }
+// the same two keys down and up again inside a bunch of ticks the page ran at once, and in a record that came to the server too late
+{ const tap = (k: string[], down: boolean): void => { for (const x of k) if (down) { input.keys.add(x); input.pressed.add(x); } else input.keys.delete(x); }, bunch = (n: number, at: number): void => { for (let i = 0; i < n; i++) { if (i === at) tap(['ShiftLeft', 'Enter'], true); net.tick(input, cam, canvas, off, () => { seen++; }); if (i === at) { tap(['ShiftLeft', 'Enter'], false); input.pressed.clear(); } } };
+  const got: boolean[] = []; for (const at of [0, 2, 5, 9]) { const s = stood(); bunch(10, at); run(90); got.push(stood() !== s); }
+  // (and the press is the last thing said: on no tick after it is Shift held, whether it came late, came on time with its Shift already up, or rode a held beat)
+  const hand = (k: string[], p?: string[], u?: string[]): WireCmd => ({ ...FIRST, k, ...(p ? { p } : {}), ...(u ? { u } : {}) }), taken = (w: WireCmd): boolean => shift(w) && (w.p ?? []).join() === 'Enter', up = (w: WireCmd): boolean => !shift(w) && !w.p;
+  const L = new SeatLine(); L.put(5, hand(['ShiftLeft', 'Enter'], ['Enter']), 9); L.put(9, hand([]), 9); const late = taken(L.take(9, true)) && up(L.take(10, true));
+  const Q = new SeatLine(); Q.put(9, hand([], ['Enter'], ['ShiftLeft', 'Enter']), 9); const last = taken(Q.take(9, true)) && up(Q.take(10, true)) && up(Q.take(11, true));
+  const was = stood(); bunch(10, 6); shifted = 0; asleep = true; run(8); asleep = false; run(1); asleep = true; run(60); asleep = false; const rode = shifted; { let n = 0; while (c.behind > 2 && n++ < 100) beat(); } run(60); const again = stood() !== was;
+  line(got.every(Boolean) && late && last && again && rode === 1 && !c.bad, 'two keys pressed together and let go are taken together, however the press travelled', `in a bunch ${got.join(' ')} \u00b7 too late for its tick ${late} \u00b7 nothing said after it ${last}, on a held beat ${again}, Shift held for ${rode} tick${rode === 1 ? '' : 's'}`); }
+// and between two of the page's own frames, by the page's own listeners: Shift and Enter down and up again before a tick took a hand
+{ const win = Object.assign(new EventTarget(), { top: null, self: null }), el = Object.assign(new EventTarget(), { getBoundingClientRect: () => ({ left: 0, top: 0 }) }), G = globalThis as Record<string, unknown>;
+  for (const k of ['HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement']) G[k] ??= class { }; const had = G.window; G.window = win;
+  const { Input } = await import('../../src/host/input'), I = new Input(null); I.listen(el as unknown as HTMLElement);
+  const key = (type: string, code: string, shiftKey: boolean): void => { win.dispatchEvent(Object.assign(new Event(type), { code, key: code.startsWith('Shift') ? 'Shift' : code, shiftKey, ctrlKey: false, altKey: false, metaKey: false, repeat: false })); };
+  key('keydown', 'ShiftLeft', true); I.endFrame(); key('keydown', 'Enter', true); key('keyup', 'ShiftLeft', false); key('keyup', 'Enter', false);
+  const [held, down] = sampleHand(game.numbersOf(), I, cam, canvas).split('\n'); I.endFrame(); const [after] = sampleHand(game.numbersOf(), I, cam, canvas).split('\n');
+  line(held.split(' ').includes('ShiftLeft') && down === 'Enter' && after === '', 'two keys let go before a tick took them are taken together, and then are up', `held ${held || 'nothing'}, down ${down || 'nothing'}, then ${after || 'nothing'}`); if (had === undefined) delete G.window; }
+// a page left open across a change of the wire knocks at a server that speaks the new one
+{ const G = globalThis as Record<string, unknown>, had = G.WebSocket; G.WebSocket = class { readyState = 1; onopen?: () => void; onmessage?: (e: { data: string }) => void; constructor() { setTimeout(() => this.onopen?.(), 0); }
+    send(t: string): void { server.message({ send: x => { this.onmessage?.({ data: x }); return 1; }, close: () => { /* */ } }, JSON.stringify({ ...JSON.parse(t) as object, proto: NET.proto - 1 })); } close(): void { /* */ } };
+  const old = new NetDoor('ws://here', 'g', 'a', 'Ada'); await old.open(); G.WebSocket = had;
+  line(old.client.byeCode === 'proto' && /Reload the page/.test(old.refuse), 'a page of an older wire is told to reload', old.refuse); }
 // asleep for four seconds, and back
 { const ok = c.wordsOk, was = seen, ticks = game.ticks; asleep = true; run(240); asleep = false; let n = 0; while (c.behind > 2 && n++ < 100) beat(); run(30);
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }

@@ -1,6 +1,5 @@
 //! The types of `difficulty`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, js::*};
 use alloc::{string::String, vec::Vec};
 
 /// what `same` compares: the levers as they stand, or one of the two defenders' tables. Two of different arms are not the same.

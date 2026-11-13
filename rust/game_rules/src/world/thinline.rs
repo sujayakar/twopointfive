@@ -1,7 +1,5 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::thinline::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 
 /// `b` is a thin line along its local z: its true half-width, the pixels its half-width must cover, what it emits at that true width. The note stands

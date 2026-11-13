@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! THE FEEL OF A WALL CHARGE GOING OFF: what of it the tick itself decides or writes.
 //!
 //! THE TICK'S HALF: the charges that stand set remembered for the next frame's blast (`seen`); `wall_report`, which combat's stun burst asks before it plays
@@ -16,17 +15,14 @@ pub mod picture;
 pub use picture::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
-
-/// The kick's strength as this machine last left it: the host's storage. Here only "asked".
-fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0 })
 }
 
@@ -41,7 +37,7 @@ fn hash_u(n: f64) -> f64 {
 fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0
-fn live(g: &crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+fn live(g: &crate::game::Game) -> bool { g.k.blast_feel.on && crate::destruction::chaos_of(g) > 0.0 }
 pub(crate) fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands.
 pub(crate) fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
@@ -60,7 +56,7 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
 
 fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
     let set = g.sets[g.seat].wall_charge.set.clone();
     let mut found: Option<usize> = None;
@@ -91,7 +87,7 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
 }
 
 fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_feel.state.get_mut(key) { s.seen.clear();  s.kicks.clear(); }
@@ -100,7 +96,6 @@ fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     }
     let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_feel.state.has(key) && set.is_empty() { if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; } return; }   // (a kick left on the camera by another Game: not this one's to keep)
-    if !g.m.blast_feel.loaded { load_feel(g); }
     let time = g.time;
     {
         let s = state_mut(g);
@@ -115,7 +110,7 @@ fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
 
 /// THE KICK this frame: every live blast's snap away from it, ringing down: metres to add to the look-at for the render (None: none).
 fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
-    let f = g.m.blast_feel.feel.clone(); let time = g.time;
+    let f = g.k.blast_feel.clone(); let time = g.time;
     let (target, forward) = { let c = &g.tab.camera[cam]; (c.target, c.forward) };
     let s = g.m.blast_feel.state.get_mut(pl)?;
     if s.kicks.is_empty() { return None; }
@@ -139,7 +134,7 @@ fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3>
 
 /// THE REPORT: crack, thump and patter from the blast, the crack thinner the further it has come; close to it, a second ring in the ears.
 fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
-    let k = g.m.blast_feel.feel.sound;
+    let k = g.k.blast_feel.sound;
     let c = g.pl[pl].ch;
     let ear = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let d = v3::dist(ear, at);
@@ -148,8 +143,8 @@ fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let carry = 1.0 + k.carry * m::min(1.0, m::max(0.0, (d - k.carry_from) / k.carry_over));
     let (r2, r3) = { let s = state_mut(g); let r2 = 0.96 + 0.06 * dice(s); let r3 = 0.94 + 0.12 * dice(s); (r2, r3) };
     // (the crack passes NO rate: the mixer draws its own)
-    crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
-    crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
-    crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));
-    if !crate::condition::down(g, g.pl[pl].ch) && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::WallCrack, Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::WallThump, Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
+    crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::WallDebris, Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));
+    if !crate::condition::down(g, g.pl[pl].ch) && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::EarRing, None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
 }

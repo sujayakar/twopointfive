@@ -7,7 +7,7 @@
 // unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: rust/game_rules/src/missions/roomclear.rs check_structure,
 // rust/game_rules/src/missions/rescue check_rescue, rescueflow RescueFlow.check — levels stands runs all three on a level file.
 import type { Vec3 } from '../../../src/math/vec';
-import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
+import type { BoxData, DoorData, DoorPaintData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 
@@ -412,7 +412,7 @@ export interface KitViewWay {
  *  wall with a door or a gate, a pane, a lamp, a few things of the level's — in the level format's own records, so its boxes take the level's `materials`
  *  by name and the picture keeps the level's sky, hour and weather. World metres, inside the world's bounds; it brings its own ground. `ref` = a point on
  *  the team's side of its anchor (no team start of the level means anything on a set). */
-export interface KitViewSet { boxes: BoxData[]; doors?: DoorData[]; lights?: LightData[]; ref: [number, number] }
+export interface KitViewSet { boxes: BoxData[]; doors?: DoorData[]; /** what its leaves are painted; absent = as the level's */ doorPaint?: DoorPaintData; lights?: LightData[]; ref: [number, number] }
 export interface KitViewData { ways: KitViewWay[]; /** the bespoke sets a way may name (`set`) */ sets?: { [name: string]: KitViewSet } }
 /** THE RESPONSE TEAM (rust/game_rules/src/pursuit/qrf, behind its switch RESPONSE.on): the men who come from OUTSIDE the level once its own net has called for them. It is part
  *  of a level's design, not a rule of the game: a level carries this block only where somebody would plausibly come (`why` says who, in the level's own

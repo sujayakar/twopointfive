@@ -1,14 +1,14 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the card's highlight, at the door, again and again. Every action is the game's: the squad's orders to a teammate, Sam's own keys and his hand (`sam_hand`) for
 //! Sam, doors crack and pull_to, the door tools' trigger and reset, the wall charge's spot, blow and reset, `fire_weapon` for a round. A pick cuts whatever is running and that thing begins at once, from where he stands.
 //! What a row leaves that has no undo is held as a resting picture, then the room is staged again under the page's dissolve.
-use super::aim::{self, aim_legs, arrived, chan, chan_tick, ch_of, clamp, lim, off, own, quiet_tick, rest_yaw, wrap, Step, R};
+use super::aim::{self, arrived, chan, chan_tick, ch_of, clamp, lim, off, own, quiet_tick, rest_yaw, wrap, Step, R};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK, KIT_VIEW_STAGE as ST};
 use super::plan::KIT_PLAN;
 use super::quiet;
 use super::types::*;
 use super::walk::{self, along, at, away, flat, free, go, home_of, low, low_at, out_of, rotate, sam_goes, sam_goes_low, sam_stand, step_out, v2, v3, walk_of};
 use crate::doors::{door_is_closed, doors_crack, doors_pull_to};
-use crate::game::{Game, GuardState, InteractableKind, SlotKind, Verb};
+use crate::game::{Game, InteractableKind, SlotKind, Verb};
 use crate::ids::*;
 use crate::kit::{BigKit, MemberKit};
 use crate::m;
@@ -107,8 +107,8 @@ pub(super) fn ask_veil(g: &Game, st: &mut KitStage) {
     st.veil_asked = Some(g.time);
     st.veil_laid = false;
 }
-pub(super) fn press(st: &mut KitStage, key: &'static str) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
-fn unpress(st: &mut KitStage, key: &'static str) { st.a.press.retain(|k| *k != key); }
+pub(super) fn press(st: &mut KitStage, key: crate::input::Key) { if !st.a.press.contains(&key) { st.a.press.push(key); } }
+fn unpress(st: &mut KitStage, key: crate::input::Key) { st.a.press.retain(|k| *k != key); }
 pub(super) fn to(g: &Game, b: &mut Beat, phase: &'static str) { b.phase = phase; b.pt = g.time; }
 fn mark(g: &Game, b: &mut Beat, word: &'static str) { b.marks.push(word); if b.mark_t.is_nan() { b.mark_t = g.time; } }
 fn pos(g: &Game, b: &Beat) -> V3 { g.ch[b.ch_id].pos }
@@ -474,7 +474,7 @@ fn frag_aim(g: &Game, st: &KitStage, b: &mut Beat) -> bool {
     b.spot = Some(spot);
     out_of(st, [land[0], land[2]]) <= -st.frag_land
 }
-fn throw_kind(a: Act) -> (th::ItemKind, &'static str) { match a { Act::ThrowSmoke => (th::ItemKind::Smoke, "Digit3"), Act::ThrowFlash => (th::ItemKind::Flash, "Digit4"), _ => (th::ItemKind::Frag, "Digit5") } }
+fn throw_kind(a: Act) -> (th::ItemKind, crate::input::Key) { match a { Act::ThrowSmoke => (th::ItemKind::Smoke, crate::input::Key::Digit3), Act::ThrowFlash => (th::ItemKind::Flash, crate::input::Key::Digit4), _ => (th::ItemKind::Frag, crate::input::Key::Digit5) } }
 fn thrown_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if walled(st) { return Err(String::from("a blank wall: no opening to throw through")); }
     let frag = b.row == Act::ThrowFrag;
@@ -640,7 +640,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "ask" {
         if g.pl[pl].charging().is_some() { b.given = true; to(g, b, "hands"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("charges: the door never offered it")); return Step::Done; }
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Charge)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Charge)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "hands" {
@@ -707,7 +707,7 @@ fn wand_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "ask" {
         if wanding.is_some() { b.marks.push("knee"); to(g, b, "feed"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("wand: the door never offered it")); return Step::Done; }
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Wand)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Wand)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "off" { return if flat(g.seat_pos(&crate::seats::here(g)), b.home) <= K.on_slot || el >= 1.5 { Step::Done } else { Step::On }; }
@@ -769,14 +769,14 @@ fn wand_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 /// what Sam had in his hands as a launcher's row begins: the hand a row cut this very tick still owes him is not let land
 fn hand_was(g: &Game, seat: &crate::seats::SeatRef, st: &mut KitStage) -> Option<SlotKind> {
     match st.a.hand_due.take() {
-        Some(h) => { unpress(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); Some(h) }
+        Some(h) => { unpress(st, if h == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }); Some(h) }
         None => Some(g.pl[seat.player].slot),
     }
 }
 /// the launcher's load stepped to `load`: true once that load is up
 fn tube(g: &mut Game, st: &mut KitStage, load: RifleAttachment) -> bool {
     let pl = g.player;
-    if !crate::game::player_rifle_up(g, pl) { press(st, "Digit2"); return false; }
+    if !crate::game::player_rifle_up(g, pl) { press(st, crate::input::Key::Digit2); return false; }
     if g.pl[pl].equip_t > 0.0 { return false; }
     let rifle = g.pl[pl].rifle;
     if crate::weapons::rifle_attachment(g, rifle) == Some(load) { return true; }
@@ -1139,7 +1139,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         if g.pl[pl].kick().is_some() { b.given = true; to(g, b, "work"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("big: the door never offered it")); return Step::Done; }
         let verb = if big_of(st, 0) == Some(BigKit::Hammer) { Verb::Hammer } else { Verb::Breach };
-        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(verb)) { press(st, "Space"); b.leg_t = now; }
+        if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(verb)) { press(st, crate::input::Key::Space); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "work" {
@@ -1155,7 +1155,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 // ------------------------------------------------------------ a gun changed, suit and trim
 fn sam_draw(st: &mut KitStage) {
     let pistol = st.a.cards.first().map_or(false, |c| c.weapon == crate::kit::KitWeapon::Pistol);
-    press(st, if pistol { "Digit1" } else { "Digit2" });
+    press(st, if pistol { crate::input::Key::Digit1 } else { crate::input::Key::Digit2 });
 }
 fn swap_up(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let rows: &[Act] = if st.quiet && b.man.is_none() { &[Act::QuietGun, Act::Gun] } else { &[Act::Gun] };
@@ -1208,7 +1208,7 @@ pub(super) fn start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
         Act::Turn => turn_start(g, st, b),
         Act::Swap => {
             to(g, b, "stow");
-            if b.man.is_none() { unpress(st, "Digit1"); unpress(st, "Digit2"); if !g.pl[g.player].holstered { press(st, "KeyE"); } }
+            if b.man.is_none() { unpress(st, crate::input::Key::Digit1); unpress(st, crate::input::Key::Digit2); if !g.pl[g.player].holstered { press(st, crate::input::Key::E); } }
             Ok(())
         }
         Act::QuietGun => quiet::gun_start(g, st, b),
@@ -1369,7 +1369,7 @@ fn sam_home(g: &mut Game, st: &mut KitStage, b: &Beat) {
     let pl = g.player;
     if let Some(h) = b.hand.filter(|&h| h != g.pl[pl].slot) {
         if st.quiet { g.pl[pl].slot = h; g.pl[pl].holstered = true; }
-        else { press(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); st.a.hand_due = Some(h); }
+        else { press(st, if h == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }); st.a.hand_due = Some(h); }
     }
     if st.a.led.map_or(true, |l| l.at.is_none()) { let a = st.a.aim; st.a.sam_ch.v = a.v; st.a.sam_ch.want = a.v; st.a.sam_ch.w = a.w; st.a.sam_ch.own = false; }
     st.a.led = None;
@@ -1489,7 +1489,7 @@ fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
         st.a.rest_until = now + 1.0;
         return;
     }
-    if st.quiet && man.is_none() && g.pl[pl].holstered && matches!(b.row, Act::Gun | Act::GunDoor | Act::Light) { let k = if g.pl[pl].slot == SlotKind::Rifle { "Digit2" } else { "Digit1" }; press(st, k); }
+    if st.quiet && man.is_none() && g.pl[pl].holstered && matches!(b.row, Act::Gun | Act::GunDoor | Act::Light) { let k = if g.pl[pl].slot == SlotKind::Rifle { crate::input::Key::Digit2 } else { crate::input::Key::Digit1 }; press(st, k); }
     st.a.beat_n += 1;
     if f != "weapon" || !matches!(b.row, Act::Gun | Act::GunDoor | Act::QuietGun) { st.a.refused = None; }
     st.a.beat = Some(b);
@@ -1515,7 +1515,7 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     // (his gun, left out by a row, goes back once he is home)
     if st.quiet && !b_some && st.a.led.is_none() && !g.pl[pl].holstered && matches!(g.pl[pl].slot, SlotKind::Pistol | SlotKind::Rifle) && now - st.a.stow_t > 1.0 && flat(p, st.sam) <= K.on_slot && !crate::character::anim_kit_busy(g, c) && st.a.asked.is_none() && now - st.a.last_end >= QK.stow {
         st.a.stow_t = now;
-        press(st, "KeyE");
+        press(st, crate::input::Key::E);
     }
     // (at a wall left open what the charge threw down may lie on his place: a half step home that gets no nearer for a second is given up, and where he stands is his place)
     let plain_walk = st.a.led.map_or(false, |l| l.at.is_none());

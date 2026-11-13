@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// a man's `{ ...fields of a lent order }` in another struct of the same shape (Lent.back, Walk.back, the assignment handed to `assign`)
 macro_rules! back_as {
@@ -463,24 +463,7 @@ fn frag_would_catch_ours(g: &mut Game, f: &OnHisWalk, arc: &Arc) -> bool {
 /// The row that opens the page and the page's two: made, not yet on the menu.
 fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
-    let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
-        opens: Some(String::from(THROW_PAGE)),
-        targets: vec![crate::orders::TargetKind::Floor],
-        free: Some(true),
-        ..crate::orders::OrderDef::default()
-    });
-    let open = crate::orders::squad_orders_row(g, open);
-    let mut out = vec![open];
-    for row in [&rows::fragthere::ORDER, &rows::stunthere::ORDER] {
-        let one = rows::def(row, crate::orders::OrderDef {
-            page: Some(String::from(THROW_PAGE)),
-            targets: vec![crate::orders::TargetKind::Floor],
-            free: Some(true),
-            ..crate::orders::OrderDef::default()
-        });
-        out.push(crate::orders::squad_orders_row(g, one));
-    }
-    out
+    [&rows::throwopen::ORDER, &rows::fragthere::ORDER, &rows::stunthere::ORDER].into_iter().map(|r| crate::orders::squad_orders_row(g, rows::def(r))).collect()
 }
 
 /// The squad's HUD block: the throw just made.

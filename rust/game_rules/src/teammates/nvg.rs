@@ -2,10 +2,10 @@ pub use ::game_types::nvg::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ---- the team's state
 
@@ -330,7 +330,7 @@ mod tests {
 
     /// the pinned bits of the tube curve at albedo 0.3: exposure, gain, E, k, sig
     #[test]
-    fn the_tube_curve_gives_the_typescripts_bits() {
+    fn the_tube_curve_keeps_its_bits() {
         let rows: [(f64, f64, f64, u64, u64); 6] = [
             (1.0, 1000.0, 0.03, 0x3fb8723a1d588a36, 0x3fc90c0d2d4ae68b),
             (0.7, 35.0, 0.5, 0x3fb11cc247bdfa59, 0x3fcbab47e33c45a4),

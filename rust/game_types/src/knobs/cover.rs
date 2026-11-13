@@ -39,6 +39,10 @@ pub struct CoverK {
     #[k(35.0)] pub sam_deg: f64,
     #[k(0.2)] pub sam_k: f64,
     #[k(0.1)] pub held_k: f64,
+    /// a way into the room he holds that a man has heard them at weighs this much more to him (by how fresh and loud it was, up to a shot just now)
+    #[k(1.0)] pub heard_k: f64,
+    /// … and a second gun on it is worth this much of the first
+    #[k(0.8)] pub second_k: f64,
     /// the weights: a shut door against an open way · the rear · how fast nearness tells (m)
     #[k(0.7)] pub shut_k: f64,
     #[k(0.8)] pub rear_k: f64,
@@ -58,7 +62,7 @@ pub struct CoverK {
     #[k(0.2)] pub behind_k: f64,
     /// walking: the gun goes over his shoulder to an opening within this of the way he goes (rad); past it he walks backwards / sideways while his pace is under
     ///  backIn (m/s; he turns and runs over backOut): set over a walking Sam's file closing a gap, under a running Sam's — the men cover while Sam walks and run
-    ///  when he runs. (Entering the back-pedal mid-rush, backIn 2.3‥2.6, is what tipped orders-edges' lean-out check: see cover.md)
+    ///  when he runs.
     #[k(1.45)] pub twist: f64,
     #[k(3.0)] pub back_in: f64,
     #[k(3.4)] pub back_out: f64,

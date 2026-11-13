@@ -2,19 +2,17 @@ use super::*;                      // your own module: its types, its other part
 use crate::combat::RoundMet;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::scene_level_data::PropKindName;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ------------------------------------------------------------------ small helpers of this part
 
 /// `BoxFlag.NoPrimary | BoxFlag.NoShadow`
 fn hidden_bits() -> f64 {
-    let f = crate::scene_boxes::box_flag();
-    js::or_bits(f.no_primary, f.no_shadow)
+    (crate::scene_boxes::box_flag::NO_PRIMARY | crate::scene_boxes::box_flag::NO_SHADOW) as f64
 }
 
 /// the place `i` is in a list of `len` boxes, or None for `list[i] ?? null` of a number out of range
@@ -103,7 +101,7 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
     bursts(g, &b);
     if e >= g.k.chaos.t_knock { knocks(g, &b); }
     // the ceiling over a beaten zone
-    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, chaos, Some(false), Some(b.who), None); }
+    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, Some(false), Some(b.who), None); }
     // what already lies about the hit is scooted along
     destruction_impact_impulse(g, hit_p, dir, b.n, chaos, b.who);
     // wall breaking: the round's work on what it stopped in
@@ -127,7 +125,7 @@ fn struck(g: &Game, hit: &RoundMet) -> Struck {
     if index >= 1e6 { return of(Surf::Wood, box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]), None); }
     let box_ = box_at(g.col.boxes.len(), index).map(|k| g.col.boxes[k]);
     let surf = match box_ {
-        Some(b) if crate::scene_materials::does_of(g, g.tab.boxes[b].does).wall == Some(DoesWall::Screen) => Surf::Fabric,
+        Some(b) if crate::scene_materials::does_of_box(g, b).wall == Some(DoesWall::Screen) => Surf::Fabric,
         Some(b) => crate::particle_fx::surf_at(g, b),
         None => Surf::Concrete,
     };
@@ -202,7 +200,7 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
     let radius = opts.radius.unwrap_or(g.k.walls.blast.radius) * power;
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
     let ev = crate::wallbreak::BlastEvent { at, radius, who, glass: opts.glass.unwrap_or([radius, power]) };
-    let mut tell = |g: &mut Game, over: &crate::ask::Over| for l in g.destr.blast_listeners.clone() { tell_listener(g, over, &l, &ev); };
+    let tell = |g: &mut Game, over: &crate::ask::Over| for l in g.destr.blast_listeners.clone() { tell_listener(g, over, &l, &ev); };
     tell(g, &crate::ask::Over::OWN);
     crate::snow_blast::snow_blast_at(g, &at, radius);
     let torn = crate::doors::doors_blast(g, at, radius * g.k.walls.blast.door_k, who);
@@ -295,7 +293,7 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
         if g.tab.fixture[t].boxes.iter().any(|&b| b == i) && !g.tab.fixture[t].broken {
             if destruction_break_target(g, t) {
                 let pos = g.tab.fixture[t].pos;
-                crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.6), None);
+                crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(0.6), None);
             }
         }
     }
@@ -342,12 +340,12 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     }
     let panels = !stun || !loud;
     if e >= g.k.chaos.t_tile {
-        let mut ok = destruction_tile_drop(g, at, chaos, Some(true), Some(who), Some(panels));
+        let mut ok = destruction_tile_drop(g, at, Some(true), Some(who), Some(panels));
         if loud {
             let r0 = g.stats.destruction.destr_tiles_refused;
             let mut k = 0;
             while k < 3 && !ok && g.destr.tile_count < g.k.chaos.tiles_per_encounter {
-                ok = destruction_tile_drop(g, at, chaos, Some(true), Some(who), Some(panels));
+                ok = destruction_tile_drop(g, at, Some(true), Some(who), Some(panels));
                 k += 1;
             }
             g.stats.destruction.destr_tiles_refused = r0;
@@ -441,8 +439,8 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
         Some(crate::scene_materials::Surf::Metal) => mark = lane("dent"),
         Some(crate::scene_materials::Surf::Fabric) | Some(crate::scene_materials::Surf::Carpet) => mark = lane("shred"),
         Some(crate::scene_materials::Surf::Glass) => {
-            let c = crate::particle_fx::solid_glass_crack();
-            mark = LaneMark { look: c.look, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
+            let c = g.k.pfx.solid_glass;
+            mark = LaneMark { look: crate::particle_fx::SOLID_GLASS_LOOK, r: [c.pistol, c.rifle], s: [c.strength, c.strength] };
         }
         Some(_) => {
             crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, p, n, Some(0.013), Some(crate::render_decals::DecalOpts { clamp_to: Some(box_), attach, ..Default::default() }));
@@ -470,7 +468,7 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
         if !g.tab.fixture[t].broken {
             let lit = destruction_break_target(g, t);
             let pos = g.tab.fixture[t].pos;
-            crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::LightBreak, Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
                 crate::render_lights::light_set_flash(g, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
                 let name = g.tab.fixture[t].name.clone();

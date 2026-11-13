@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec;
 
 /// The row of a man the rule has already asked about.
@@ -151,8 +151,7 @@ fn cast(g: &Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bool {
 /// Remember the pose and the segment that found the gun in the wood.
 fn held(g: &mut Game, c: CharId, sh: f64, hot: bool, a: V3, b: V3) -> bool {
     let (p, yaw, pitch) = (g.ch[c].pos, g.ch[c].aim_yaw, g.ch[c].aim_pitch);
-    let serial = g.serial();
-    row(g, c).hold = Some(Hold { x: p[0], z: p[2], yaw, pitch, sh, a, b, hot, serial });
+    row(g, c).hold = Some(Hold { x: p[0], z: p[2], yaw, pitch, sh, a, b, hot });
     true
 }
 

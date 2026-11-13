@@ -31,12 +31,10 @@ fn order_of(g: &Game, gd: GuardId) -> String {
 /// every pane that has been touched, by its box's number in the level: gone or not, how many pieces of it are open, its sites, its damage, how many rounds have gone through it. A round can go through a pane no blow has
 /// touched, so a pane is on the list by its holes too. A pane nothing has touched is whole, and has no figure.
 fn glass(g: &Game) -> BTreeMap<u32, String> {
-    let panes = &sim::state::state(g.sim).panes;
-    let mut holes: BTreeMap<u32, u32> = BTreeMap::new();
-    for h in 0..panes.nh as usize { let row = panes.hole_read(h); *holes.entry(row.bi).or_insert(0) += row.n; }
+    let panes = &g.tab.boxes.world().panes;
+    let holes: BTreeMap<u32, usize> = panes.holes.iter().map(|h| (h.bi, h.at.len())).collect();
     let mut out = BTreeMap::new();
-    for r in 0..panes.n as usize {
-        let row = panes.row_read(r);
+    for row in &panes.rows {
         let (bi, flags) = (row.w[0], row.w[sim::glass::GW_FLAGS]);
         out.insert(bi, format!("{} {} {} {} {}", flags & sim::glass::G_GONE != 0, row.n_open, flags >> 8, bits(row.damage), holes.get(&bi).copied().unwrap_or(0)));
     }
@@ -49,16 +47,10 @@ fn lamp(g: &Game, id: FixtureId) -> String {
 }
 /// the smoke: how many emitters are letting it out, then each brick of the grid that holds any, by its place in plan, with all it holds. Sorted by place, because which slot a brick has is how the grid keeps it.
 fn smoke(g: &Game) -> String {
-    use sim::bricks::{CELLS, MAX_BRICKS, O_KEYS, O_RHO};
-    let (mut said, mut standing) = (format!("{}", sim::bricks::emitting(g.sim)), Vec::new());
-    if !sim::bricks::smoky(g.sim) { return said; }
-    let st = &sim::state::state_read(g.sim).smoke.st;
-    for b in 0..MAX_BRICKS {
-        let (x, z) = (st[O_KEYS + b * 2], st[O_KEYS + b * 2 + 1]);
-        if x < 1.0 || z < 1.0 { continue; }
-        let amount: f64 = st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS].iter().sum();
-        if amount > 0.0 { standing.push((z as u32, x as u32, amount)); }
-    }
+    let s = &g.smoke;
+    let mut said = format!("{}", s.emitters.len());
+    let held = |b: usize| -> f64 { s.rho[b * sim::bricks::CELLS..(b + 1) * sim::bricks::CELLS].iter().sum() };
+    let mut standing: Vec<_> = s.bricks.iter().enumerate().filter_map(|(b, x)| x.at.map(|(x, z)| (z as u32 + 1, x as u32 + 1, held(b)))).filter(|x| x.2 > 0.0).collect();
     standing.sort_by_key(|&(z, x, _)| (z, x));
     for (z, x, amount) in standing { said += &format!(" {} {} {}", x, z, bits(amount)); }
     said

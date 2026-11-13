@@ -174,7 +174,7 @@ impl Owes {
     fn tracers_owe(&mut self, g: &Game, t: f64) {
         let pool = &g.tracers;
         let n = pool.pool.iter().filter(|x| x.alive).count() as f64;
-        if n != pool.live || n > pool.params.max_live { self.fault("tracers", "the pool", t, format!("{} alive, {} said, of {}", n, pool.live, pool.params.max_live)); }
+        if n != pool.live || n > g.k.tracers.max_live { self.fault("tracers", "the pool", t, format!("{} alive, {} said, of {}", n, pool.live, g.k.tracers.max_live)); }
         for x in pool.pool.iter().filter(|x| x.alive) {
             if !(x.s >= 0.0 && x.s <= x.l + 1e-6) || !number(x.from) || !number(x.dir) || !x.v.is_finite() { self.fault("tracers", "a round", t, format!("s {} of {}, from {:?}", x.s, x.l, x.from)); }
         }

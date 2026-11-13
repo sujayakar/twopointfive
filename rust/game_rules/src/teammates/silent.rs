@@ -2,10 +2,10 @@ pub use ::game_types::silent::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsSet;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec::Vec};
 
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
@@ -197,22 +197,8 @@ pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::
 
 /// the posture's two rows on the menu: made anew at each call
 fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
-        ..Default::default()
-    }));
-    let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::silent::ORDER.id) }),
-        ..Default::default()
-    }));
-    [silent, loud]
+    use crate::orders::rows;
+    [&rows::silent::ORDER, &rows::loud::ORDER].map(|r| crate::orders::squad_orders_row(g, rows::def(r)))
 }
 
 /// the word that follows 'loud' on the HUD
@@ -237,7 +223,7 @@ fn seat(g: &mut crate::game::Game) {
     let [silent, loud] = rows(g);
     crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);
-    g.groups[g.group].orders.posture = Some(seam_posture());
+    g.groups[g.group].orders.posture = Some(crate::orders::SquadOrdersPosture {});
 }
 
 /// `posture.word`: what the posture's seam should call
@@ -249,7 +235,6 @@ pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     let w = crate::unseen::unseen_word(g, seat);
     Some(loud_word(w.as_deref()))
 }
-fn seam_posture() -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)
 
 /// once a frame, before the orders pose the men: the rows, a new cast, the one line when loud reaches the squad
 pub fn silent_tick(g: &mut crate::game::Game) {
@@ -296,6 +281,7 @@ pub fn silent_tick(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use super::*;
     #[test]
     fn the_hud_word_after_loud() {

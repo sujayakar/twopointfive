@@ -7,10 +7,10 @@ pub const WAND_ORDER: &str = crate::orders::rows::wand::ORDER.id;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// This view's row for `gd`, a copy: `put_job` after a write, `lens_out` included.
 fn job(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<Job> {
@@ -305,11 +305,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
 
 /// The order's row on the menus.
 fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER, crate::orders::OrderDef {
-        targets: vec![crate::orders::TargetKind::Door],
-        ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        ..Default::default()
-    });
+    let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER);
     crate::orders::squad_orders_row(g, def)
 }
 

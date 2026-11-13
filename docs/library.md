@@ -438,7 +438,7 @@ It is no second way of building the name.
 
 ## Paints
 
-Every colour with a name, by table. *Does* is what a box of the paint is to a round, a charge and a blast unless the box says its own word: a row of the table of materials (`src/scene/materials.ts`); *underfoot* is its footstep surface.
+Every colour with a name, by table. *Does* is what a box of the paint is to a round, a charge and a blast unless the box says its own word: a row of the table of materials (`tools/levels/lib/materials.ts`); *underfoot* is its footstep surface.
 Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid above.
 
 ### GWOT_PALETTE

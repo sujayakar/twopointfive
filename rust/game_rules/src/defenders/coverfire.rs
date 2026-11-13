@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- local helpers
@@ -609,7 +609,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let on = facing_err < 0.25 && !g.gd[gd].muzzle_down;
     let settle_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.settle_k);
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * settle_k;
-    let lay = if !g.tune.aim_model {
+    let lay = if !g.k.tune.aim_model {
         if on { 1.0 } else { 0.0 }
     } else if on {
         m::min(1.0, cw.lay + dt / settle)
@@ -638,7 +638,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         g.arms[g.gd[gd].ch].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * spread_k;
-        let opts = if g.tune.aim_model {
+        let opts = if g.k.tune.aim_model {
             crate::combat::FireOpts { steady: Some(true), spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) + mods.spread), ..Default::default() }
         } else {
             crate::combat::FireOpts { spread: Some(mods.spread), ..Default::default() }
@@ -699,7 +699,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
         && v3::dist(op_aim, to) < 0.3
         && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * sk.settle_k;
-    let lay = if !g.tune.aim_model {
+    let lay = if !g.k.tune.aim_model {
         if on { 1.0 } else { 0.0 }
     } else if on {
         m::min(1.0, cw.lay + dt / settle)
@@ -725,7 +725,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let r = g.weapon(g.fa[fa].def).ai_spread;
     let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * sk.spread_k;
     let sup_v = g.cond[g.gd[gd].ch].sup.v;
-    let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
+    let sup_k = if g.k.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
     let opts = crate::combat::FireOpts {
         steady: Some(true),
         spread: Some(hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(lay, 0.0, 1.0)) * sup_k + speed * p.shooter_move_k * 0.5),

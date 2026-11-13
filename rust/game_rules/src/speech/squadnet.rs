@@ -3,8 +3,8 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// The net as a game starts it; the class's constructor adds nothing to its initialisers.
 pub fn squad_net_new() -> crate::squadnet::SquadNet {
@@ -73,11 +73,11 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     if g.squad_net.down_due {
         if g.k.squadnet.down_gain > 0.0 {
             let (gain, rate) = (g.k.squadnet.down_gain, g.k.squadnet.down_rate);
-            crate::audio_iface::game_audio_like_play(g, "radio", None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+            crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
         }
     } else if g.squad_net.click_due && g.k.squadnet.click > 0.0 {
         let (gain, rate) = (g.k.squadnet.click, g.k.squadnet.click_rate);
-        crate::audio_iface::game_audio_like_play(g, "radio", None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::Radio, None, Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
     g.squad_net.click_due = false;
     g.squad_net.down_due = false;
@@ -88,14 +88,14 @@ pub fn why_words(p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyW
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
     let id = p.id.as_deref();
-    let (row, ack) = if id == Some(crate::orders::rows::bangclear::ORDER.id) && p.why == AutoPickWhy::Contact {
-        ("they see one inside", "banging it. i see one in there.")
+    let ack = if id == Some(crate::orders::rows::bangclear::ORDER.id) && p.why == AutoPickWhy::Contact {
+        "banging it. i see one in there."
     } else if id == Some(crate::orders::rows::bangclear::ORDER.id) && p.why == AutoPickWhy::Unknown {
-        ("nobody's been in there", "banging it. nobody's been in there.")
+        "banging it. nobody's been in there."
     } else if id == Some(crate::orders::rows::charge::ORDER.id) && p.why == AutoPickWhy::Shut {
-        ("they can't open it", "we can't open it. setting a charge.")
+        "we can't open it. setting a charge."
     } else if id == Some(crate::orders::rows::openclear::ORDER.id) && p.kept == Some(true) {
-        ("they're saving the last bang", "going in. i'm saving the last bang.")
+        "going in. i'm saving the last bang."
     } else {
         return None;
     };
@@ -143,6 +143,7 @@ pub fn in_flood(g: &mut crate::game::Game, r: &crate::squadnet::InFloodR, p: V3)
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
     use crate::autopilot::{AutoPick, AutoPickWhy};
     use crate::orders::{OrderTarget, OrderTargetDoor};
@@ -166,7 +167,6 @@ mod tests {
     #[test]
     fn a_lead_calls_clear_only_with_nobody_left_and_quiet_only_of_what_he_did_not_see() {
         on_big_stack(|| {
-            let g = &mut Box::new(Game::blank());
             assert_eq!(room_call("mess", 0.0, false, false).as_deref(), Some("mess clear."));
             assert_eq!(room_call("bunks", 3.0, false, false).as_deref(), Some("bunks are quiet. we didn't see all of it."));
             assert_eq!(room_call("server room", 3.0, true, false).as_deref(), Some("server room's quiet. we didn't see all of it."));
@@ -181,7 +181,6 @@ mod tests {
     #[test]
     fn open_floor_is_clear_so_far_and_a_room_nobody_named_is_called_as_room() {
         on_big_stack(|| {
-            let g = &mut Box::new(Game::blank());
             assert_eq!(plain_call(true, 0.0, true, false).as_deref(), Some("clear so far."));
             assert_eq!(plain_call(true, 0.0, false, true), None);
             assert_eq!(plain_call(false, 0.0, false, false).as_deref(), Some("room clear."));
@@ -194,20 +193,19 @@ mod tests {
     #[test]
     fn why_words_says_only_the_reasons() {
         on_big_stack(|| {
-            let g = &mut Box::new(Game::blank());
-            let ack = |g: &mut Game, p: &AutoPick| why_words(p).map(|w| w.ack);
-            assert_eq!(ack(g, &pick("bangClear", AutoPickWhy::Contact, None)).as_deref(), Some("banging it. i see one in there."));
-            assert_eq!(ack(g, &pick("bangClear", AutoPickWhy::Unknown, None)).as_deref(), Some("banging it. nobody's been in there."));
-            assert_eq!(ack(g, &pick("charge", AutoPickWhy::Shut, None)).as_deref(), Some("we can't open it. setting a charge."));
-            assert_eq!(ack(g, &pick("openClear", AutoPickWhy::Known, Some(true))).as_deref(), Some("going in. i'm saving the last bang."));
-            assert_eq!(ack(g, &pick("openClear", AutoPickWhy::Known, Some(false))), None);
-            assert_eq!(ack(g, &pick("bangClear", AutoPickWhy::Known, None)), None);
+            let ack = |p: &AutoPick| why_words(p).map(|w| w.ack);
+            assert_eq!(ack(&pick("bangClear", AutoPickWhy::Contact, None)).as_deref(), Some("banging it. i see one in there."));
+            assert_eq!(ack(&pick("bangClear", AutoPickWhy::Unknown, None)).as_deref(), Some("banging it. nobody's been in there."));
+            assert_eq!(ack(&pick("charge", AutoPickWhy::Shut, None)).as_deref(), Some("we can't open it. setting a charge."));
+            assert_eq!(ack(&pick("openClear", AutoPickWhy::Known, Some(true))).as_deref(), Some("going in. i'm saving the last bang."));
+            assert_eq!(ack(&pick("openClear", AutoPickWhy::Known, Some(false))), None);
+            assert_eq!(ack(&pick("bangClear", AutoPickWhy::Known, None)), None);
             let mut said = pick("bangClear", AutoPickWhy::Contact, None);
             said.word = true;
-            assert_eq!(ack(g, &said), None);
+            assert_eq!(ack(&said), None);
             let mut floor = pick("bangClear", AutoPickWhy::Contact, None);
             floor.t = OrderTarget::Floor(Default::default());
-            assert_eq!(ack(g, &floor), None);
+            assert_eq!(ack(&floor), None);
         });
     }
 

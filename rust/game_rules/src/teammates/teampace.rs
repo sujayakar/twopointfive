@@ -1,9 +1,8 @@
 pub use ::game_types::teampace::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// this teammate's pace is the rule's this frame
 fn team_slow(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -37,7 +36,7 @@ pub fn walk_lead(g: &mut crate::game::Game, gd: GuardId, aim: V3) -> Option<V3> 
 
 /// a teammate's walk, m/s
 pub fn team_walk(g: &crate::game::Game) -> f64 {
-    g.tune.player_walk * g.k.teampace.k
+    g.k.tune.player_walk * g.k.teampace.k
 }
 
 /// is the player, at `s` and doing (vx, vz) of speed `v`, moving and at that spot
@@ -50,7 +49,7 @@ fn toward(s: V3, vx: f64, vz: f64, v: f64, pace_cos: f64, x: f64, z: f64) -> boo
 fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
     let slow = team_walk(g);
     if !g.k.teampace.pacing { return slow; }
-    let own = g.tune.player_walk;
+    let own = g.k.tune.player_walk;
     let post = match crate::orders::squad_orders_of(seat, gd) { Some(a) => g.tab.task[a].post, None => None };
     let mark = match post { Some(mark) => mark, None => return own };
     let (near, gap, cos, k, top) = (g.k.teampace.pace_near, g.k.teampace.pace_gap, g.k.teampace.pace_cos, g.k.teampace.k, g.k.pace.max);
@@ -131,7 +130,7 @@ fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
 /// the most a teammate's legs may be asked for this frame
 pub fn team_cap(g: &crate::game::Game, gd: GuardId) -> f64 {
     if crate::frag::frag_running(g, gd) {
-        return if blast_run(g, gd) { m::max(g.k.pace.max, g.tune.player_sprint) } else { g.k.pace.max };
+        return if blast_run(g, gd) { m::max(g.k.pace.max, g.k.tune.player_sprint) } else { g.k.pace.max };
     }
     let l = live(g, gd);
     let walk = team_walk_of(g, &crate::seats::here(g), gd);
@@ -206,14 +205,14 @@ pub fn team_follow(g: &mut crate::game::Game, gd: GuardId, sam_v: f64, d: f64, g
     if !team_slow(g, gd) { return None; }
     let walk = team_walk(g);
     let want = sam_v + gain * (d - 0.3);
-    let sprint = g.tune.player_sprint;
+    let sprint = g.k.tune.player_sprint;
     if g.pl[g.player].sprinting && !crate::roomfight::room_fight_busy(g, gd, 0.5) {
         let running = match live(g, gd) { Some(l) => l.why == LeaveWhy::Follow, None => false };
         if (running || d > g.k.teampace.behind_m) && team_leave(g, gd, LeaveWhy::Follow, sprint, None) {
             return Some(m::max(walk, m::min(sprint, want)));
         }
     }
-    let top = m::max(walk, g.tune.player_walk * g.k.teampace.follow_k);
+    let top = m::max(walk, g.k.tune.player_walk * g.k.teampace.follow_k);
     if top > walk { team_leave(g, gd, LeaveWhy::Close, top, None); }
     Some(m::max(walk, m::min(top, want)))
 }
@@ -247,7 +246,7 @@ pub fn team_dash(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, stack: 
     if !team_slow(g, gd) { return None; }
     let brisk = stack && g.k.teampace.door_brisk;
     let t = g.time;
-    let run = if brisk { g.k.pace.max } else { g.tune.player_sprint };
+    let run = if brisk { g.k.pace.max } else { g.k.tune.player_sprint };
     let every = g.k.teampace.dash_every;
     let was = match g.m.teampace.dash.get(gd).copied() {
         Some(old) if t >= old.t && t - old.t < every * 2.0 => Some(old),
@@ -271,7 +270,7 @@ pub fn team_dash(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, stack: 
 /// A RUN THE MISSION TELLS HIM TO MAKE: the pace to run the leg at, or None
 pub fn team_told(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
     if !crate::rails::rails_runs(g, &crate::seats::here(g), gd) || !team_slow(g, gd) || crate::roomfight::room_fight_engaged(g, gd) { return None; }
-    let run = g.tune.player_sprint;
+    let run = g.k.tune.player_sprint;
     if team_leave(g, gd, LeaveWhy::Told, run, None) { Some(run) } else { None }
 }
 
@@ -283,6 +282,7 @@ pub fn team_blast_pace(g: &crate::game::Game, gd: GuardId, run: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// the words a leave can hold: two walk's and the runs

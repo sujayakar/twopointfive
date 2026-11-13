@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a walk's price list ----
@@ -541,6 +541,7 @@ pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd:
         Some(p) => p,
         None => return SquadOrdersRoute { why: Some(String::from("can't get there.")), ..route_none() },
     };
+    if !crate::group::is_seats(g) { return route_none(); }   // (the way he would take by himself, round what his own side knows of: `go_to`. What follows is what the player's own team knows)
     if let Some(thru) = thru {
         if let Some(mm) = squad_orders_by_door(g, from, to, thru, &path) {
             if shut(g, from, &ring, &mm).is_none() { return SquadOrdersRoute { via: mm, how: Some(SquadOrdersRouteHow::Mouth), ..route_none() }; }   // (never at a door locked against him)
@@ -683,7 +684,7 @@ fn sw_take(g: &mut Game, b: TaskId, w: &[V3]) {
 }
 
 /// A pair goes round one way: at the end of a giving, men of one order and door nearly together who would split round a building take one of their two ways.
-pub(super) fn squad_orders_same_ways(g: &mut crate::game::Game, men: &[GuardId]) {
+pub fn squad_orders_same_ways(g: &mut crate::game::Game, men: &[GuardId]) {
     let t = g.time;
     let ring = squad_orders_ring(g, &crate::seats::here(g));
     let mut led: JsSet<TaskId> = JsSet::new();   // (the men whose way somebody has taken, or who took one: theirs stands from then on)

@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 /// `this.run === R && !R.ended`
 fn live(g: &Game, r: DirectorRunId) -> bool {
@@ -15,7 +15,7 @@ fn running(g: &Game) -> Option<DirectorRunId> {
     g.director.run.filter(|&r| !g.tab.director_run[r].ended)
 }
 
-/// A BeatFailure with no try over it: TS 626's filters and tests, 672 and 786 throw straight through Director.tick. The frame dies as it does there.
+/// A beat's failure where nothing above can fail the beat (a filter, a test): the frame dies.
 fn uncaught<T>(r: Result<T, String>) -> T {
     match r {
         Ok(v) => v,
@@ -36,7 +36,7 @@ fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBe
 fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
     if g.team(gd) == crate::teams::Team::Guard { crate::game::GuardState::Search } else { crate::game::GuardState::Alert }
 }
-/// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word (TS 505)
+/// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word
 fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
     let s = match asked {
         Some(x) => x,
@@ -273,17 +273,14 @@ fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[
             continue;
         }
         let t = g.tab.director_run[r].def.triggers[i].clone();
-        let mut ev: Option<EventView> = None;
         let go = match t.kind {
             TriggerDefKind::Start => false,
             TriggerDefKind::After => g.tab.director_run[r].t >= t.secs.unwrap(),
             TriggerDefKind::Event => {
-                ev = trigger_event(&t, fresh);
-                ev.is_some()
+                trigger_event(&t, fresh).is_some()
             }
             TriggerDefKind::Signal => {
-                ev = fresh.iter().find(|e| e.kind == EventViewKind::Signal && e.name == t.name).cloned();
-                ev.is_some()
+                fresh.iter().any(|e| e.kind == EventViewKind::Signal && e.name == t.name)
             }
             TriggerDefKind::Enter => {
                 let who = match &t.who {
@@ -513,22 +510,22 @@ fn director_apply_systems(g: &mut crate::game::Game, r: DirectorRunId) {
         return;
     }
     let mut saved: JsMap<&'static str, bool> = JsMap::new();
-    if qrf.is_some() { saved.set("qrf", g.tune.qrf); }
-    if needs.is_some() { saved.set("needs", g.tune.needs); }
-    if civilians.is_some() { saved.set("civilians", g.tune.civilians); }
+    if qrf.is_some() { saved.set("qrf", g.k.tune.qrf); }
+    if needs.is_some() { saved.set("needs", g.k.tune.needs); }
+    if civilians.is_some() { saved.set("civilians", g.k.tune.civilians); }
     if autosave.is_some() { saved.set("autosave", g.saves.enabled); }
     g.tab.director_run[r].systems_saved = Some(saved);
-    if let Some(x) = qrf { g.tune.qrf = x; }
-    if let Some(x) = needs { g.tune.needs = x; }
-    if let Some(x) = civilians { g.tune.civilians = x; }
+    if let Some(x) = qrf { g.k.tune.qrf = x; }
+    if let Some(x) = needs { g.k.tune.needs = x; }
+    if let Some(x) = civilians { g.k.tune.civilians = x; }
     if let Some(x) = autosave { g.saves.enabled = x; }
 }
 
 fn director_restore_systems(g: &mut crate::game::Game, r: DirectorRunId) {
     let Some(s) = g.tab.director_run[r].systems_saved.take() else { return };
-    if let Some(&x) = s.get("qrf") { g.tune.qrf = x; }
-    if let Some(&x) = s.get("needs") { g.tune.needs = x; }
-    if let Some(&x) = s.get("civilians") { g.tune.civilians = x; }
+    if let Some(&x) = s.get("qrf") { g.k.tune.qrf = x; }
+    if let Some(&x) = s.get("needs") { g.k.tune.needs = x; }
+    if let Some(&x) = s.get("civilians") { g.k.tune.civilians = x; }
     if let Some(&x) = s.get("autosave") { g.saves.enabled = x; }
 }
 

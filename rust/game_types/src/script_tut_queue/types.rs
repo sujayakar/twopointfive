@@ -1,7 +1,6 @@
 //! The frames of the tut-queue level's script (rust/game_rules/src/missions/script_tut_queue.rs): where each beat stands, and the locals that live across a yield.
-#![allow(unused_imports, unused_variables, unused_mut)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::bytes::ToBytes;
+use alloc::vec::Vec;
 
 ///  the beat 'gun': where it stands, and what lives across a yield
 #[derive(Clone, Debug, Default, ToBytes)]

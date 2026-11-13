@@ -1,10 +1,9 @@
 pub use ::game_types::floorseen::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec;
 
 /// A new record: empty maps, frame 0; its one argument was the game.
@@ -93,6 +92,7 @@ pub fn floor_seen_count(seat: &crate::seats::SeatRef, gd: GuardId, cells: &[f64]
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// A store is a single: the rounded value decides `since`.

@@ -2,11 +2,10 @@ pub use ::game_types::weather::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 /// The level's boxes as IDs: `g.col.boxes`, statics appended later included.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
@@ -139,9 +138,8 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
 
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level.
 fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
-    let name = crate::scene_level_load::level_name_of(g);
     let stood = g.stood;
-    if crate::weather_kinds::snow_level(g, name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
+    if g.level.snow && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
 }
 
 /// No weather picked on a floor that is none of the office's: its own night is dry and still, under its own roofs.
@@ -275,14 +273,14 @@ pub fn weather_hear_mask(g: &crate::game::Game, ear: V3) -> f64 {
 pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let (Some(f), Some(_)) = (g.weather.fog_spec, g.weather.kind_now) else { return 1.0 };
     crate::air_dust::air_dust_ready(g);   // (the field stands before it is read: it is built when first asked)
-    let air = &::sim::weather::of_read(g.sim).air;
+    let air = &g.air_dust;
     let mut leak = 0.0;
-    if air.on != 0.0 {
+    if air.on {
         let n = m::min(24.0, m::max(4.0, m::ceil(v3::dist_xz(b, a) / 0.75)));
         let mut i = 0.0;
         while i < n {
             let t = (i + 0.5) / n;
-            leak += air.share_at(a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
+            leak += ::sim::air::share_at(air, a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t);
             i += 1.0;
         }
         return m::exp(-fog_tau(f.sigma, f.h, a, b) * leak / n);
@@ -491,7 +489,7 @@ fn weather_end_flash(g: &mut crate::game::Game) {
 fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, pitch: f64, remark: [f64; 3]) {
     // near: the crack and the clap on top of the roll; far: the roll alone, darker and slower
     let near = th.dist_km < 1.3;
-    let name = if near { "thunderNear" } else { "thunderFar" };
+    let name = if near { crate::audio_iface::Sfx::ThunderNear } else { crate::audio_iface::Sfx::ThunderFar };
     let gain = (if near { 1.0 } else { 0.85 }) * th.loud * (0.6 + 0.4 * g.weather.storm);
     let lowpass = v3::clamp(9000.0 * m::exp(-th.dist_km * 0.75), 500.0, 9000.0);
     let rate = v3::clamp(1.02 - th.dist_km * 0.06, 0.78, 1.02) * (0.96 + 0.08 * pitch);
@@ -557,7 +555,7 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
 fn soak(g: &mut Game, b: BoxId) {
     let (albedo, flags, rough, aniso) = { let x = &g.tab.boxes[b]; (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
-    let gloss = crate::scene_boxes::box_flag().gloss;
+    let gloss = crate::scene_boxes::box_flag::GLOSS as f64;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
 }
 
@@ -583,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    fn the_envelope_is_the_typescripts_bits() {
+    fn the_envelope_keeps_its_bits() {
         let s = stroke();
         for (i, (a, b)) in SPANS.iter().enumerate() {
             assert_eq!(stroke_mean(&s, *a, *b).to_bits(), WANT_MEAN[i], "mean {}", i);
@@ -648,7 +646,7 @@ mod tests_2 {
 
     /// `dir_of`'s pinned doubles.
     #[test]
-    fn dir_of_has_the_typescript_bits() {
+    fn dir_of_keeps_its_bits() {
         let rows: [(u64, u64, [u64; 3]); 5] = [
             (0x3fe6666666666666, 0x3fd999999999999a, [0xbfe2fcd60b856028, 0xbfd8ec3ae92b676b, 0x3fe68afcebc95d21]),
             (0x4002666666666666, 0x3ff199999999999a, [0xbfd5a5df199aaf8d, 0xbfec84c54c2d6338, 0xbfd3579379410117]),
