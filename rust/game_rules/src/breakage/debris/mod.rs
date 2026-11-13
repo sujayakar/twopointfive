@@ -5,4 +5,4 @@ pub use pieces::*;
 mod feet;
 pub(in crate::breakage) use feet::*;
 pub mod lay;
-pub use lay::*;
+use lay::*;

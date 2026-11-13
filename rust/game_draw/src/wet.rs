@@ -109,13 +109,13 @@ impl Wet {
     pub fn is(&self, i: u32) -> bool { !self.list.is_empty() && self.list.binary_search(&i).is_ok() }
     /// the box as the renderer has it while wet: darker where it is not bare metal, and with a water's film where it does not drink. `was` = the box itself as it stands: it is
     /// dressed again only where that moved, so the rows of a wet box are packed again only when it changed
-    pub fn dressed(&mut self, g: &Game, i: u32, b: &Box, was: Was) -> &Box {
+    pub fn dressed(&mut self, i: u32, b: &Box, was: Was) -> &Box {
         let at = self.list.binary_search(&i).unwrap();
         if !matches!(&self.dressed[at], Some((w, _)) if *w == was) {
             let mut o = b.clone();
             if o.wet_k.is_none() {
                 o.wet_k = Some(if b.metal == Some(true) { 1.0 } else { WET_ALBEDO });
-                if !soaks(g, b) { o.flags = (crate::boxes::pack::flags(b) | box_flag::GLOSS) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
+                if !soaks(b) { o.flags = (crate::boxes::pack::flags(b) | box_flag::GLOSS) as f64; o.rough = Some(WET_ROUGH); o.aniso = Some(true); }
             }
             self.dressed[at] = Some((was, o));
         }
@@ -124,4 +124,4 @@ impl Wet {
 }
 
 /// does what this box is made of soak water up: no film on it, no puddle
-fn soaks(g: &Game, b: &Box) -> bool { matches!(game::scene_materials::does_of(g, b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }
+fn soaks(b: &Box) -> bool { matches!(game::scene_materials::does_of(b.does).surf, Surf::Carpet | Surf::Fabric | Surf::Foliage | Surf::Cardboard) }

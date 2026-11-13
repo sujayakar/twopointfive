@@ -1,8 +1,6 @@
-#![allow(unused_variables)]
 pub use ::game_types::out_events::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// (Particles.emit: its body does something of its own, so a part calls this beside it)
 pub fn push_particles_emit(g: &mut crate::game::Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts, ours: bool) { g.out.push(crate::out_events::OutEvent::ParticlesEmit(crate::out_events::OutParticlesEmit { kind: kind, pos: pos, dir: dir, count: count, o: o, ours: ours })); }

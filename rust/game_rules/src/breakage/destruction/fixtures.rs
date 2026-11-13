@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// A broken cell's dust: the puff now if the caps allow, else it waits in the burst queue. No dice.
 pub(in crate::breakage) fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) {
@@ -129,7 +129,7 @@ enum Slot {
 }
 
 /// A tile of the ceiling grid over `p` lets go: a slab under the ceiling, crumbs, dust; or the light panel in that square does.
-pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
+pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let Some(q) = tile_over(g, p, force) else { return false };
     match slot_of(g, &q) {
@@ -336,7 +336,6 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.fixture[t].pos, lens: g.tab.fixture[t].lens };
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
-
 
 #[cfg(test)]
 mod tests {

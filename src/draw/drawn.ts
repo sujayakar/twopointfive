@@ -12,9 +12,9 @@ export function drawRefused(face: Face): string {
 }
 
 export class Drawn {
-  /** the module's whole memory, as floats and as words */
-  f = new Float32Array(0);
-  u = new Uint32Array(0);
+  /** the module's whole memory, as floats and as words: read, and never written */
+  f: ArrayLike<number> = new Float32Array(0);
+  u: ArrayLike<number> = new Uint32Array(0);
   /** each section's first row, in words, and how many rows it has */
   readonly at = new Uint32Array(Section.count);
   readonly n = new Uint32Array(Section.count);

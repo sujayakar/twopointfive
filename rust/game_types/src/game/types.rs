@@ -1,6 +1,5 @@
 //! The types of `game`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, V3};
 use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -1333,7 +1332,6 @@ pub struct Mods {
     #[bytes(skip)]
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
-    pub scene_materials: crate::scene_materials::SceneMaterialsMod,
     pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,

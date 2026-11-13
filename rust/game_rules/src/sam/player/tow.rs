@@ -115,7 +115,7 @@ fn face_body(g: &mut Game, t: Tick, yaw: f64, speed: f64) {
 }
 /// A soft scrape now and then, while the body really slides.
 fn scrape(g: &mut Game, t: Tick, rag: RagdollId, hips: V3, speed: f64) {
-    let Tick { pl, c, dt, .. } = t;
+    let Tick { pl, dt, .. } = t;
     let carried = g.pl[pl].haul().map_or(false, |h| h.carry.is_some());
     if speed <= 0.3 || g.tab.ragdoll[rag].sleeping || carried { return; }
     let Some(tow) = g.pl[pl].tow.as_mut() else { return };

@@ -4,9 +4,9 @@ pub mod hud;
 pub use hud::*;
 use crate::game::{Deed, Game};
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String};
 
 /// every row a door can have, and those of them an open leaf can
@@ -132,9 +132,7 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
-    let mut n = 0.0;
-    for r in seat.nearby { { n += 1.0; } }
-    n < g.k.cmdring.wedges
+    (seat.nearby.len() as f64) < g.k.cmdring.wedges
 }
 
 /// a wedge's digit pressed this frame

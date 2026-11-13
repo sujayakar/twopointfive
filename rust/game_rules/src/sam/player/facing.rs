@@ -3,7 +3,7 @@ use super::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, V3};
+use crate::v3;
 
 pub(super) fn face(g: &mut Game, t: Tick, go: Go, a: Aim) {
     let pl = t.pl;

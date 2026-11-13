@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 fn civ_of(g: &Game, gd: GuardId) -> CivId { g.gd[gd].civ.unwrap() }
 
@@ -326,7 +326,7 @@ fn yield_to(g: &mut Game, c: CharId, p: V3, r: f64) {
 
 /// One civilian's frame: perception, the little state machine, the figure, solidity.
 fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    use crate::game::GuardState;
+    
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
     if g.cv[cv].state == CivState::Gone { return; }

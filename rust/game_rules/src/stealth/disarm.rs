@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
@@ -21,24 +21,24 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
     let yaw = v3::yaw_of(g.ch[g.gd[gd].ch].gun_dir);
     let strip = Strip { t: 0.0, kind, supp, at, item: None, rap: variant == crate::character::HoldVariant::Gun, gone: false, yaw };
     put_strip(g, pl, strip);
-    if leads(g, Some(strip)) { g.sets[g.seat].hand.catch_due = Some(g.time + g.k.hold.first.catch); }
+    if leads(Some(strip)) { g.sets[g.seat].hand.catch_due = Some(g.time + g.k.hold.first.catch); }
 }
 
 /// The grab's first voice: the strip is heard first when the disarm leads. Its rate is pinned.
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
     let s = g.pl[g.player].holding().and_then(|h| h.strip);
-    if leads(g, s) { return; }
+    if leads(s) { return; }
     crate::audio_iface::game_audio_like_play(g, crate::audio_iface::Sfx::GrabCatch, Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
 
 /// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap.
-fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
+fn leads(s: Option<crate::disarm::Strip>) -> bool {
     match s { Some(s) => !s.rap, None => false }
 }
 
 /// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there.
 fn lead(g: &crate::game::Game, s: crate::disarm::Strip) -> f64 {
-    if !leads(g, Some(s)) { return 1.0; }
+    if !leads(Some(s)) { return 1.0; }
     let (k_take, k_drop) = (g.k.hold.strip.take, g.k.hold.strip.drop);
     let (f_take, f_drop) = (g.k.hold.first.take, g.k.hold.first.drop);
     if s.t < k_take { k_take / m::max(0.02, f_take) }
@@ -103,7 +103,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
         } else {
             // the disarm leading lets it go sooner: the fall is longer by that many whole steps, and the knock on the frame it was
             let fall = if k_fall > 0.0 {
-                k_fall + if leads(g, Some(s)) { m::round((k_drop - g.k.hold.first.drop) * 60.0) / 60.0 } else { 0.0 }
+                k_fall + if leads(Some(s)) { m::round((k_drop - g.k.hold.first.drop) * 60.0) / 60.0 } else { 0.0 }
             } else { 0.0 };
             let_go(g, item, pl_ch, Some(fall));
             s.item = None;
@@ -286,9 +286,9 @@ mod tests {
             g.k.hold.strip.take = 0.3; g.k.hold.strip.drop = 0.6;
             g.k.hold.first.take = 0.1; g.k.hold.first.drop = 0.25;
             let s = Strip { t: 0.0, ..Strip::default() };
-            assert!(!leads(&mut g, None));
-            assert!(!leads(&mut g, Some(Strip { rap: true, ..s })));
-            assert!(leads(&mut g, Some(s)));
+            assert!(!leads(None));
+            assert!(!leads(Some(Strip { rap: true, ..s })));
+            assert!(leads(Some(s)));
             assert_eq!(lead(&mut g, Strip { rap: true, ..s }).to_bits(), 1.0f64.to_bits());
             assert_eq!(lead(&mut g, s).to_bits(), (0.3f64 / 0.1).to_bits());
             assert_eq!(lead(&mut g, Strip { t: 0.3, ..s }).to_bits(), ((0.6f64 - 0.3) / (0.25 - 0.1)).to_bits());

@@ -2,9 +2,8 @@ pub use ::game_types::planmode::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::js::{self, JsMap};
+use crate::v3;
 use alloc::{string::String, vec, vec::Vec};
 
 /// Shift + the key adds a goal: on Sam's own squad, and on a lesson only from the step that teaches it.

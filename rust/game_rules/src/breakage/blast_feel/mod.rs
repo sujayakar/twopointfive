@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! THE FEEL OF A WALL CHARGE GOING OFF: what of it the tick itself decides or writes.
 //!
 //! THE TICK'S HALF: the charges that stand set remembered for the next frame's blast (`seen`); `wall_report`, which combat's stun burst asks before it plays
@@ -16,15 +15,14 @@ pub mod picture;
 pub use picture::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
-
 
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0 })
 }
 
@@ -58,7 +56,7 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
 
 fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
     let set = g.sets[g.seat].wall_charge.set.clone();
     let mut found: Option<usize> = None;
@@ -89,7 +87,7 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
 }
 
 fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
+    let key = crate::seats::view_key(&crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_feel.state.get_mut(key) { s.seen.clear();  s.kicks.clear(); }

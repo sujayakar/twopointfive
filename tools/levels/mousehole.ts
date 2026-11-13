@@ -41,6 +41,7 @@ import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { KERB_GREY } from '../../src/scene/stuff';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
 
@@ -354,6 +355,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'mousehole';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.05, 0.2, 0.19]);
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const OWN = MOUSEHOLE_PAINT;

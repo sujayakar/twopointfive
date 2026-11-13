@@ -69,6 +69,7 @@ import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { RUST_LEAVES } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
 
@@ -542,6 +543,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'depot';
+/** what its leaves are painted */
+export const DOOR_PAINT = RUST_LEAVES();
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const OWN = DEPOT_PAINT;

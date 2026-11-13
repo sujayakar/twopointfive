@@ -15,7 +15,8 @@ export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow |
 
 import { SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
-export type DoesWord = import('./materials').DoesWord;
+export type DoesWord = import('../draw/names').DoesWord;
+type SnowKind = import('../draw/names').SnowKind;
 /** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
  *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
  *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
@@ -37,7 +38,7 @@ export interface Box {
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
   /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
-   *  box does is its word, scene/materials.ts, in any weather). weather.ts darkens rained-on ground with it. */
+   *  box does is its word, rust/game_types/src/scene_materials, in any weather). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
@@ -60,11 +61,13 @@ export interface Box {
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
   stuff?: BoxStuff;
-  /** WHAT THIS BOX DOES (scene/materials.ts): the row of the table of materials whose `does` it takes: what it is to a round, a charge and a blast.
-   *  Absent = the default row. GAMEPLAY, where `stuff` is dressing, and never worked out from it or from the colour: written here once by whoever makes
-   *  the box (the loader from the level file, a kit from its paint, the game from the box a piece came off: wordOf below), and read by the rules through
-   *  materials.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is the same thing. */
+  /** WHAT THIS BOX DOES (a generator's box: no page reads it): the row of the table of materials it takes, what it is to a round, a charge and a blast. Absent = the default
+   *  row. GAMEPLAY, where `stuff` is dressing, and never worked out from it or from the colour: written here once by whoever makes the box (the loader from the level
+   *  file, a kit from its paint), and read by tools/levels/lib/does.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is
+   *  the same thing. */
   does?: DoesWord;
+  /** which lying snow it is, as the module told the page (render/snowField.ts snowPaintOf) */
+  snow?: SnowKind;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (rust/game_rules/src/air/weather.rs sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
@@ -135,7 +138,7 @@ export interface Box {
  *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again. */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, snow: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -229,7 +232,7 @@ export class BoxWorld {
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each. */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
   /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
-  addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
+  addCapsuleRows(f: ArrayLike<number>, u: ArrayLike<number>, at: number, owner: number, colours: readonly Vec3[], fb: ArrayLike<number>, b: number): void {
     if (this.charCount >= BoxWorld.castCap) return;
     const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
     for (let i = 0; i < N; i++) { const o = (base + i) * Capsule.row, s = at + i * Cap.row, c = colours[i] ?? colours[0];

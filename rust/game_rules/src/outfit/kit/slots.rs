@@ -3,7 +3,7 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -73,6 +73,7 @@ pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
         hits_left: p.hits_left,
         hits_max: crate::game::PLAYER_MAX_HITS,
         down: g.cond[p.ch].down,
+        again: crate::player::enter_again(g, pl),
         god: g.god_mode,
         night_vision: if crate::rails::rails_locks(g, "nvg") { None } else { Some(p.nv) },
         key_tag: if p.keys.is_empty() { None } else if named.is_empty() { Some(String::from("KEY")) } else { Some(format!("KEY · {}", named.join(" · ")).to_uppercase()) },
@@ -369,7 +370,7 @@ mod tests {
 
     #[test]
     fn your_issue_fills_your_four_pouches_on_the_pages_table() {
-        let mut g = Game::blank();
+        let g = Game::blank();
         let t = g.k.slots.table.clone();
         let c = issued()[0].clone();
         assert_eq!(cost_of(&c, &t), 4.0);

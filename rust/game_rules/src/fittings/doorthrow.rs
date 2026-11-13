@@ -2,10 +2,9 @@ pub use ::game_types::doorthrow::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::vec::Vec;
+use crate::v3::{self, V3};
 
 /// Whose man: Sam and his squad 1, the defenders 2, a civilian 3.
 fn side_of(t: crate::teams::Team) -> f64 {

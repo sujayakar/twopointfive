@@ -74,8 +74,11 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { RUST_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'crossing';
+/** what its leaves are painted */
+export const DOOR_PAINT = RUST_LEAVES();
 export const NOTES = 'The border crossing at night, for two men sneaking. Its one idea: two lane men who watch each other along a seized container on the kerb, each with his back to the dark lot — nobody crosses the lane until both drop on one word. Also: a boom man watching the lit west crossing from his hut, a locked fence door under a battery camera at the east end, a blast screen across the far mouth of the lane, a customs house of three rooms north of the road, a lot and the generator shed south of it. Seven beats authored, five or six manned a deal. Regenerate: bun run tools/levels/export.ts crossing';
 export const MATERIALS = GWOT_MATERIALS;
 

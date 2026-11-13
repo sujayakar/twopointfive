@@ -2,10 +2,10 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::vec::Vec;
 
 /// No state yet, or no lane in it (`!st || !st.lanes.length`).
 fn no_lanes(g: &Game) -> bool { g.m.lanes.states.as_ref().map_or(true, |st| st.lanes.is_empty()) }
@@ -488,6 +488,7 @@ pub fn lanes_reset(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     #[test]

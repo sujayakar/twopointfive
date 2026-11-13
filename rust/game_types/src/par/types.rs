@@ -1,6 +1,5 @@
 //! The types of `par`: a room clear run against a clock (rust/game_rules/src/missions/par.rs).
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (on the wire: its word in small letters)

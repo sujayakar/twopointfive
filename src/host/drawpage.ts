@@ -283,7 +283,7 @@ async function main(): Promise<void> {
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) { events.stands(); return; }
-    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
+    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); runGone(); three(cam.target, o + View.follow);
   };
   anew(); lens(); size.read(); cam.aspect = Math.max(1, size.clientWidth) / Math.max(1, size.clientHeight); cam.rebuild();
 
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
   // a save's picture, by its run and the save as the pause card names it
   const ofRun = (save: string): string => `${D.u[D.at[Section.heard] + Heard.run]}:${save}`, nameOf = (r: { key: string; savedAt: number }): string => `${r.key}@${r.savedAt}`;
   const pictures = new Map<string, string>(), pics = new SavePics<string>(gpu, canvas, () => 256, () => 0.6, (key, url) => { pictures.set(key, url); if (key === ofRun(key.slice(key.indexOf(':') + 1))) pause.pictured(key.slice(key.indexOf(':') + 1), url); }, e => console.warn('save picture:', e)); let saves = 0;
-  let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ };
+  let time = 0, acc = 0, drift = 0, paused = false, settling = false, thaw = false, owed = false, ended = 0, onEnded = (): void => { /* no card is made yet */ }, runGone = onEnded;
   // ---- a tape being played: what a bar over it turns
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
   const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
@@ -407,7 +407,7 @@ async function main(): Promise<void> {
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); if (!kit) rimsFrom(rims, D); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
-    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, size); } told.hud = performance.now() - tH; laneTape?.drawn?.(); } finally { cam.kickOut(); cam.drawOut(); }
+    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; if (net) hud.page.alone = net.alone; hud.told(); hud.draw(cam, size); } told.hud = performance.now() - tH; laneTape?.drawn?.(); } finally { cam.kickOut(); cam.drawOut(); }
     kit?.after(D.u[view() + View.kit], D.u[view() + View.veil]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1 - told.hud; told.frames++;
@@ -465,11 +465,12 @@ async function main(): Promise<void> {
   const kept0 = game.tape && keeps(q) ? new RunKeep({ sid, tape: () => game.tape ?? game.ended, on: () => !!game.tape, head: () => ({ level: { file: name, scenario: desk().brief(location.search).title || '' }, seed, ...(built ? { commit: built } : {}) }),
     over: () => !game.lost && (D.u[view() + View.run] & 2) !== 0, live: () => !title && !stopped() && !game.lost && game.view().live, began: () => (game.tape ?? game.ended)?.began ?? 0, say: words => readout.say(words), ended: () => { void cloud?.cloud.tapes?.round(); } }) : null;
   const inPanel = (): HTMLElement | null => { const a = document.activeElement; return (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && a.closest('#panel') ? a : null; };
-  const pause = new PauseCard({ title: ((b: BriefView) => b.title ? `${b.title}${b.team ? ` · ${b.team}` : ''}` : name.replace(/\.json$/, ''))(desk().brief(location.search)), saves: runSaves, end: () => drawEnd(game, books, net?.door.client.names), lesson: () => nextLessonOf(game.run().mission), pick: () => { const p = nextPickOf(); return p && p.scenario === (game.run().mission !== '') ? p : null; }, may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: () => { if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
+  const pause = new PauseCard({ title: ((b: BriefView) => b.title ? `${b.title}${b.team ? ` · ${b.team}` : ''}` : name.replace(/\.json$/, ''))(desk().brief(location.search)), saves: runSaves, end: () => drawEnd(game, books, net?.door.client.names), lesson: () => nextLessonOf(game.run().mission), pick: () => { const p = nextPickOf(); return p && p.scenario === (game.run().mission !== '') ? p : null; }, may: () => !game.lost && !title && !play && !brief?.up && !measure.bench?.active, restart: over => { if (net && over) input.tap('Enter', 'ShiftLeft'); else if (net) net.door.pass('You can\u2019t restart a co-op game from here.'); else { game.commands.restart('restarted'); owed = true; } }, replay: () => kept0?.whole ? () => kept0.watch() : null, quit: () => { reopenMissionsAfterLoad(); location.assign(location.pathname + desk().leave(net ? netLeave(location.search) : location.search) + location.hash); }, 
     // (Escape: Tab's card goes, or a field of the debugger's is let go, and that is the press's whole job)
     away: () => { const field = inPanel(); if (hud?.tabUp) hud.tabShow(false); else if (field && !pause.up) { field.dataset.esc = '1'; field.blur(); delete field.dataset.esc; } else return false; input.pressed.delete('Escape'); return true; },
     save: () => { if (optionsOpen() || missionsBusy() || !input.saveKey?.()) return false; if (net) { net.door.pass(NO_SAVE); return false; } game.commands.save(); return asked = game.saves().hand; },
     turned: up => { paused = up; if (up) hud?.tabShow(false); else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; if (up && !net) { game.commands.letGo(); game.tell(); } afresh(); } });
+  runGone = () => pause.gone();
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
   if (play && freeCam) { const mine = !!beside, { notes, other } = beside ?? { notes: [], other: false };

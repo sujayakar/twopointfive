@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers
@@ -618,7 +618,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
 
 /// four times a second: who sees a breach he did not know; the news passed on
 pub fn wall_react_notice(g: &mut Game) {
-    use crate::game::GuardState;
+    
     use crate::teams::Team;
     let now = g.time;
     for b in breaches_of(g) {
@@ -1248,6 +1248,6 @@ pub fn wall_react_replan_2(g: &crate::game::Game, team: crate::teams::Team, sinc
 
 #[cfg(test)]
 mod tests_2 {
-    use super::*;
+    
 
 }

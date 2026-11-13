@@ -110,7 +110,7 @@ fn traces(g: &mut Game, r: &Round, f: &Flight, e: &End) {
 
 /// The man it found, and what is kept of it: whose side he was on, whom it went past, how he died.
 fn tells_hit(g: &mut Game, r: &mut Round, e: &End) {
-    if r.ours && e.hit.is_some_and(|c| crate::friendlyfire::on_our_side(g, c)) { crate::friendlyfire::ff_note(g, r.shooter, e.hit); }
+    if r.ours && e.hit.is_some_and(|c| crate::friendlyfire::on_our_side(g, c)) { crate::friendlyfire::ff_note(g, r.shooter); }
     if r.by_player && r.lead { crate::friendlyfire::ff_past(g, r.muzzle, e.at, e.hit); }
     let was_down = e.hit.is_some_and(|c| crate::condition::down(g, c));
     crate::deathrecap::recap_round(g, e.hit, was_down, r.shooter, r.muzzle, e.at, &r.def, r.blind);

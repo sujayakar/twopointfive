@@ -1,5 +1,4 @@
 //! The types of `character`.
-#![allow(unused_imports)]
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 

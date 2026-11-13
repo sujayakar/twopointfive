@@ -1,4 +1,4 @@
-// A PARKED VEHICLE'S LAMPS, FOUND: the level files carry no name for one, so by what the generators write (officeGen.ts and levelKit.ts car, gwotKit.ts pickup and van, the pass's lorry): its
+// A PARKED VEHICLE'S LAMPS, FOUND, as a level is written (its file's `vehicleLamps`): no generator names one, so by what they write (officeGen.ts and levelKit.ts car, gwotKit.ts pickup and van, the pass's lorry): its
 // half size, its paint or its glow, and its twin the same height and yaw across the vehicle's width.
 import type { Vec3 } from '../../../src/math/vec';
 import type { Box } from '../../../src/scene/boxes';
@@ -8,9 +8,9 @@ import { GWOT_PALETTE } from '../../../src/scene/gwotPalette';
 export interface LampFit { fit: number; tone: number; twin: number }
 export const LAMP_FIT: LampFit = { fit: 0.004, tone: 0.004, twin: 0.03 };
 
-interface LampSig { what: 'head lamp' | 'tail lamp'; h: Vec3; albedo?: Vec3; emissive?: Vec3; /** centre to centre across the vehicle */ gap: number; }
+export interface LampSig { what: 'head lamp' | 'tail lamp'; h: Vec3; albedo?: Vec3; emissive?: Vec3; /** centre to centre across the vehicle */ gap: number; }
 /** what each generator writes for a lamp (built on demand: nothing here is read at module load) */
-function sigs(): LampSig[] {
+export function sigs(): LampSig[] {
   const white = GWOT_PALETTE.plasticWhite, red = GWOT_PALETTE.truckRed;
   return [
     { what: 'tail lamp', h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], gap: 1.24 },   // the car (officeGen.ts, levelKit.ts)
@@ -42,4 +42,9 @@ export function carLampsIn(boxes: readonly Box[], K: LampFit = LAMP_FIT): FoundL
     if (twin) out.push({ box: a.i, what: s.what, lit: !!s.emissive });
   }
   return out;
+}
+/** … as the level says them: none said where it has none */
+export function lampsOf(boxes: readonly Box[]): { vehicleLamps?: { box: number; what: LampSig['what'] }[] } {
+  const found = carLampsIn(boxes);
+  return found.length ? { vehicleLamps: found.map(({ box, what }) => ({ box, what })) } : {};
 }

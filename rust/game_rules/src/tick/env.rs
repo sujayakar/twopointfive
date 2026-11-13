@@ -1,4 +1,3 @@
-use crate::game::Game;
 use crate::m;
 
 /// The tube's gain, never under 1: the curve is ln(1 + L·gain) / ln(1 + gain).

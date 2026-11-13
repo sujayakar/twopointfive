@@ -1,7 +1,6 @@
 //! The types of `scene_stuff`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, js::*};
+use alloc::string::String;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum BoxStuff {

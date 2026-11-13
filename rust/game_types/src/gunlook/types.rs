@@ -1,7 +1,5 @@
 //! The types of `gunlook`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, bytes::ToBytes, V3};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum ModelCol {

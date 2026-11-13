@@ -4,10 +4,10 @@ use crate::mission::Facts;
 use crate::scene_scenarios::MissionKind;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---- private helpers
 
@@ -742,6 +742,7 @@ pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBre
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use crate::scene_scenarios::TeamStart;
 

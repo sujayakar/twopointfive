@@ -5,10 +5,13 @@ use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::doortools::ThresholdThen as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire, Is::Loud, Is::Enters],
+    targets: &[TargetKind::Door],
+    ack: &["bang and clear.", "copy, banging it."],
+    page: Some(crate::doortools::TOOLS_PAGE),
     only: Some(crate::doortools::row_held_or_all),
     valid: Some(valid),
     ..Row::new("bangClear", label, issue)
@@ -29,6 +32,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     crate::doortools::row_stackable(g, t, men)
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::doortools::row_entry(g, true, men, t)
 }

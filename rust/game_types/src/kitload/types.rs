@@ -1,7 +1,5 @@
 //! The types of `kitload`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::bytes::ToBytes;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KitLoad {

@@ -2,9 +2,9 @@ pub use ::game_types::doorpath::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// A door blown off its hinges: no leaf to walk round.

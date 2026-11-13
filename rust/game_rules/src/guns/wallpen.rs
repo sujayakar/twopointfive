@@ -2,10 +2,10 @@ pub use ::game_types::wallpen::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers
 
@@ -99,7 +99,7 @@ fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpe
     for &t in &g.targets {
         if g.tab.fixture[t].boxes.contains(&index) { return None; }
     }
-    let does = crate::scene_materials::does_of(g, word);
+    let does = crate::scene_materials::does_of(word);
     match does.surf {
         crate::scene_materials::Surf::Wood => return Some(ThinStuff::Wood),
         crate::scene_materials::Surf::Cardboard => return Some(ThinStuff::Cardboard),
@@ -108,7 +108,7 @@ fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpe
         crate::scene_materials::Surf::Drywall => {}
         _ => return None,
     }
-    if does.board != Some(true) { return None; }
+    if !does.board { return None; }
     let part = does.wall == Some(crate::scene_materials::DoesWall::Screen);
     let (y0, y1) = (c[1] - h[1], c[1] + h[1]);
     let full = y0 <= 0.1 && y1 >= g.k.walls.wall_min_top;

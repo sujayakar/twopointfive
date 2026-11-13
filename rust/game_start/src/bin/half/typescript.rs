@@ -231,7 +231,7 @@ fn asks() -> String {
 const NUMBERS: [(&str, &str, usize); 8] = [("f64", "Float64", 8), ("f32", "Float32", 4), ("u32", "Uint32", 4), ("i32", "Int32", 4), ("u16", "Uint16", 2), ("i16", "Int16", 2), ("u8", "Uint8", 1), ("i8", "Int8", 1)];
 fn number(n: &str) -> &'static (&'static str, &'static str, usize) { let n = if n == "usize" { "u32" } else { n }; NUMBERS.iter().find(|x| x.0 == n).unwrap_or_else(|| panic!("no number is a {n}")) }
 /// a type in TypeScript, and what reads one off `I`
-fn read(t: &Ty) -> (String, String) {
+pub fn read(t: &Ty) -> (String, String) {
     match t {
         Ty::Number(n) => {
 ("number".into(), format!("I.{}()", number(n).1.to_lowercase()))

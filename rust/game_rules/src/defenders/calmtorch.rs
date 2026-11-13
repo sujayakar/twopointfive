@@ -4,9 +4,9 @@ pub use ::game_types::calmtorch::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// The place's steady light at a point of floor, on the meter's scale.
 pub fn place_light(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {

@@ -1,9 +1,8 @@
 pub use ::game_types::teampace::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 
 /// this teammate's pace is the rule's this frame
 fn team_slow(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -283,6 +282,7 @@ pub fn team_blast_pace(g: &crate::game::Game, gd: GuardId, run: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// the words a leave can hold: two walk's and the runs

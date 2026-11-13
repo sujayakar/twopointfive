@@ -1,6 +1,5 @@
 //! The types of `cmdring`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -26,7 +25,7 @@ pub struct RingState {
 pub struct FlatRow {
     pub id: String,
     pub word: bool,
-    pub free: Option<bool>,
+    pub free: bool,
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
 }

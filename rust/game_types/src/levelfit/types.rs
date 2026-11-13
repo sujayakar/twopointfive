@@ -1,6 +1,5 @@
 //! The types of `levelfit`.
-#![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]

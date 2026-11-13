@@ -89,8 +89,8 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
     let dt = st.a.step_dt;
     let mine = st.a.beat.as_ref().map_or(false, |b| b.man.is_none() && (b.quiet || b.spot.is_some()));
     if !mine {
-        let G = st.a.aim;
-        st.a.sam_ch.v = G.v; st.a.sam_ch.want = G.v; st.a.sam_ch.w = G.w; st.a.sam_ch.own = false;
+        let aimed = st.a.aim;
+        st.a.sam_ch.v = aimed.v; st.a.sam_ch.want = aimed.v; st.a.sam_ch.w = aimed.w; st.a.sam_ch.own = false;
         st.a.sam_h += (0.0 - st.a.sam_h) * m::min(1.0, dt * 8.0);
     }
     st.a.beam = None;

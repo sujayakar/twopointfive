@@ -13,6 +13,7 @@
 //   its own man   the page shows its own seat's man, the server ran ticks on its records, and he moved
 //   ahead         on the tick the first record with a walk key down went out, the look ahead had his man moved and the game had not; walking, he is ahead; a drawn frame has him where the look has him
 //   sleeps        a tab asleep with a key down is walked on by the server, with its hands off it is not; each time the page wakes far behind, catches up and still matches
+//   again         the end card's Restart starts the mission over; an end card of a run another player started over comes down
 //   network page  the debugger's rows make the page's connection worse and better, live
 // The page is driven by script, two frames of it drawn: what a PLAYER sees and feels on a GPU is not what this checks.
 // exit 0 = pass · 1 = a line failed · 2 = something could not be started
@@ -147,8 +148,21 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     await tick0(); await level(keys);
   }
   await level([]);
+  const moved = +gone(pos(), start).toFixed(3);
+  // ---- the end card's Restart, pressed as the mouse presses it: the game's own key, with Shift under it, on this seat's record; and an end card of a run that is gone comes down by itself
+  out.again = BREAK || over() ? null : await (async () => {
+    const o = { up: false, down: false, key: false, back: 99, gone: false }, was = C.walk, buttons = () => [...document.querySelectorAll('#menu.ended button')], half = () => new Promise(r => setTimeout(r, 700));
+    C.walk = (host, max) => was.call(C, { step: c => { const r = c[C.seat]; if (r.p && r.p.includes('Enter') && [...r.k, ...(r.u || [])].includes('ShiftLeft')) o.key = true; host.step(c); }, word: () => host.word() }, max);
+    const until = async ok => { const t = performance.now(); while (!ok() && !over() && performance.now() - t < 20000) { turn([]); await tick0(); } return ok(); };
+    D.pause.end(); o.up = D.pause.up; await half(); await level([]); buttons().find(b => /^(Restart|Again)$/.test(b.textContent))?.click(); o.down = !D.pause.up;
+    await until(() => o.key); await rested(); o.back = +gone(pos(), start).toFixed(2);
+    // (started over by a record of the other's: here by this seat's own, sent under the card)
+    D.pause.end(); const up = D.pause.up; await half(); await level([]); o.key = false; const last = C.last; C.beat({ k: [], p: ['Enter'], u: ['ShiftLeft', 'Enter'], n: last.n }, performance.now());
+    await until(() => !D.pause.up); o.gone = up && !D.pause.up; if (D.pause.up) D.pause.close(); await level([]); C.walk = was;
+    return o;
+  })();
   const m = man(), state = S();
-  return Object.assign(out, { key, ahead, state, shown: G.view().me === m.id, moved: +gone(pos(), start).toFixed(3), fatal: getComputedStyle(document.getElementById('fatal')).display !== 'none' ? document.getElementById('fatal').textContent : '', said: (document.getElementById('netline') || {}).textContent || '' });
+  return Object.assign(out, { key, ahead, state, shown: G.view().me === m.id, moved, fatal: getComputedStyle(document.getElementById('fatal')).display !== 'none' ? document.getElementById('fatal').textContent : '', said: (document.getElementById('netline') || {}).textContent || '' });
 }
 
 (async () => {
@@ -184,6 +198,7 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
         `ahead: on the tick the first record with a walk key down went out (${K.code}) the look ahead had his man ${(K.ahead * 1000).toFixed(1)} mm on and the game ${K.game < 1e-6 ? 'had not moved him' : `HAD moved him ${(K.game * 1000).toFixed(1)} mm`} (${K.pending} on their way, ${K.behind} ticks behind); the game moved him ${K.laterMs < 0 ? 'NEVER' : `${K.laterMs} ms later`}; walking, he was ahead in ${A.on} of ${A.samples} looks (${(A.most * 100).toFixed(0)} cm at most); ${A.drawn} drawn frame${A.drawn === 1 ? ' has' : 's have'} him within ${(A.off * 1000).toFixed(1)} mm of the look, as far as ${(A.led * 100).toFixed(0)} cm from where the game has him${g ? `; he could not be got ahead for the next (${g.down ? 'DOWN by then' : g.over ? 'the mission OVER by then' : `legs his own: ${g.free}, on a wall: ${g.wall}, far: ${g.far}, ${g.behind} behind, ${g.pending} on their way`}, tick ${g.tick}, ${g.tries} tries)${rule ? ', so the rest were NOT asked' : ''}` : ''}${a ? `; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm), a look ${a.ms.toFixed(2)} ms` : ''}`); }
     if (out.naps) { const Z = out.naps, up = !Z.held.down && !Z.rest.down;   // (a man shot down walks nowhere: then only the waking is asked)
       line(Z.held.far && Z.rest.far && !S.bad && !S.far && (!up || (Z.held.walked > 0.5 && Z.rest.after >= 0 && Z.rest.after < 0.05)), `sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m (${Z.held.after} of them past the last record he sent and half a second); with the hands taken off first (${Z.rest.key}, his records on their way took him ${Z.rest.walked} m), ${Z.rest.after} m past that` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, ${Z.held.far && Z.rest.far && !S.far ? 'caught up over ticks nobody saw' : 'did NOT catch up unseen'} and still matched every state word (${Z.words} by tick ${Z.heard})`); }
+    if (out.again) { const A = out.again; line(A.up && A.down && A.key && A.back < 0.5 && A.gone, `again: the end card's Restart ${A.down ? 'took the card down and' : 'DID NOT take the card down, and'} the server ${A.key ? 'ran a tick on Shift and Enter from this seat' : 'ran NO tick on Shift and Enter from this seat'}; his man, ${out.moved} m off by then, stands ${A.back} m from where he started; an end card of a run that is gone ${A.gone ? 'comes down' : 'STAYS UP'}`); }
     if (out.netrows) { const W = out.netrows, T = W.tried || {}, B = W.backTried || {};
       line(W.rows && T.lagMs === 80 && T.jitterMs === 15 && T.lossPct === 0 && W.slider === '80' && /"lagMs":80/.test(W.kept) && W.held[0] < 5 && W.held[1] >= 70 && W.held[2] < 5 && (NO_AHEAD || (!W.boxed && W.down) || (W.off === null && (W.on > 0 || W.down))) && W.stalled >= 2500 && B.lagMs === 0 && B.jitterMs === 0 && B.lossPct === 0,
         `network page: ${W.rows ? `the debugger's Network page has its rows (${W.kinds.length} kinds of connection). Picking "${W.kinds[BAD_WAY ? 0 : 3]}" set this page's connection to ${T.lagMs} ms each way, up to ${T.jitterMs} ms more and ${T.lossPct}% resent (the delay's own row then read ${W.slider}; kept for the tab: ${W.kept ? 'yes' : 'NO'}), and the server's messages waited ${W.held.map(x => x.toFixed(0)).join(', ')} ms in the page's queue before, on it and after; ${NO_AHEAD ? 'the look ahead\'s box was left alone on this path' : !W.boxed ? 'his man was down or the mission over by then, so the look ahead\'s box was NOT asked' : `with the look ahead's box off he was drawn ${W.off === null ? 'where the game has him' : 'STILL AHEAD'}, and on again ${W.on} ticks ahead`}; the long stall kept the server unheard for ${W.stalled} ms and the page caught up (his inputs on their way through the three: ${W.inputs.join(', ')})` : 'the debugger has NO Network page with its rows'}`); }

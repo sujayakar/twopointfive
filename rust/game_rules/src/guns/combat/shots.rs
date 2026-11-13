@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 // ------------------------------------------------------------ shooting
 
@@ -177,12 +176,12 @@ fn aims(g: &mut Game, shooter: CharId, sg: Option<GuardId>, target: V3, o: &Fire
 
 /// What is seen and heard of a shot at the muzzle.
 fn shot_shows(g: &mut Game, r: &Round) {
-    let mf = muzzle_row(g, crate::gunlook::flame_of(g, &r.def));
+    let mf = muzzle_row(g, crate::gunlook::flame_of(&r.def));
     flash_card(g, r, &mf);
     gas_and_light(g, r, &mf);
     crate::particle_fx::muzzle_sparks_fx(g, r.muzzle, r.dir, r.shooter);
     crate::particle_fx::casing_fx(g, r.shooter, &r.def);
-    let voice = crate::gunlook::voice_of(g, &r.def);
+    let voice = crate::gunlook::voice_of(&r.def);
     crate::audio_iface::game_audio_like_play(g, voice, Some(r.muzzle), Some(1.0), None);
 }
 

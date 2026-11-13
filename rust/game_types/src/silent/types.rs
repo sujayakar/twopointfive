@@ -1,7 +1,6 @@
 //! The types of `silent`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*};
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
@@ -36,8 +35,4 @@ pub struct SilentMod {
 pub struct SilentStats {
     pub tools: i32,
 }
-
-pub fn targets() -> Vec<crate::orders::TargetKind> { alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None] }
-
-pub fn listed() -> Option<Vec<crate::orders::TargetKind>> { Some(alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::None]) }
 

@@ -2,10 +2,10 @@ pub use ::game_types::weapons::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{vec, vec::Vec};
 
 /// A row's turn weight: its own `handling`, else its class's.
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 {
@@ -137,7 +137,7 @@ pub fn firearm_reload_row(g: &crate::game::Game, id: FirearmId) -> crate::weapon
 /// a row being carried: loaded its way, its spares full, the selector on the first mode. A data-only row throws
 pub fn firearm_new(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> FirearmId {
     if !def.enabled {
-        panic!("weapons: '{}' is a data-only row (docs/internal/sc20k-design.md §10) — nothing may carry it until its lane switches it on", def.id.as_str());
+        panic!("weapons: '{}' is a row of data alone: nothing may carry it", def.id.as_str());
     }
     let cap = def.mag_capacity;
     let mut fa = Firearm::blank();

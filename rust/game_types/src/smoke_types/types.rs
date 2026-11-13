@@ -1,7 +1,5 @@
 //! The types of `smoke_types`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, bytes::ToBytes, V3};
 
 /// what kind of source an emitter is, for the host's solver
 #[derive(Clone, Copy, Debug, Default, Words)]

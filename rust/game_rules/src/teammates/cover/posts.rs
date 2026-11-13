@@ -7,7 +7,7 @@ use crate::ids::*;
 use crate::js::JsMap;
 use crate::m;
 use crate::roomfight::{def_of, Entry};
-use crate::v3::{self, V3};
+use crate::v3::V3;
 use alloc::{vec, vec::Vec};
 
 /// they have been heard at a way: this much of a shot just now

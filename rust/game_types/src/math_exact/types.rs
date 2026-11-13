@@ -1,7 +1,5 @@
 //! The types of `math_exact`.
-#![allow(unused_imports)]
-use crate::{Blank, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::Blank;
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]

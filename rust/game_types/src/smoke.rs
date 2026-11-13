@@ -1,5 +1,5 @@
 //! THE GAME'S OWN SMOKE, and the light that comes round under a roof. The rules are sim's bricks.rs and glow.rs.
-use crate::bytes::{ToBytes, W};
+use crate::bytes::ToBytes;
 use crate::V3;
 use alloc::vec::Vec;
 

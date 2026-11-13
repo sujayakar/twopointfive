@@ -95,7 +95,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     const kept = again.boxes[bi].stuff === 'paint' && again.boxes[wi].stuff === 'plain' && again.props[pi].parts[0].stuff === 'plaster' && again.boxes[ii].stuff === 'enamel' && again.boxes.some((b: any) => b.stuff === undefined && b.material !== undefined && back.materials[b.material].stuff !== 'plain');
     // where it is written: after the finish, before the flags, on a box that has flags; and in the format's own key lists, a material row's too
     const line = text.split('\n').find((l: string) => l.includes(`"id": "${D.boxes[fi].id}"`) || l.includes(`"id":"${D.boxes[fi].id}"`)) ?? '', kb = KEYS.box.indexOf('stuff'), kp = KEYS.part.indexOf('stuff'), km = KEYS.material.indexOf('stuff');
-    const placed = /"stuff":\s*"slab".*"flags"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line) && KEYS.box[kb - 1] === 'metal' && KEYS.box[kb + 1] === 'does' && KEYS.box[kb + 2] === 'flags' && KEYS.part[kp - 1] === 'albedo' && KEYS.material[km - 1] === 'metal' && KEYS.material[km + 1] === 'does' && KEYS.material[km + 2] === 'notes';   // (`does`, what a box is to the rules, is written straight after `stuff`: scene/materials.ts)
+    const placed = /"stuff":\s*"slab".*"flags"/.test(line) && !/"stuff".*"(material|albedo|rough|metal)"/.test(line) && KEYS.box[kb - 1] === 'metal' && KEYS.box[kb + 1] === 'does' && KEYS.box[kb + 2] === 'flags' && KEYS.part[kp - 1] === 'albedo' && KEYS.material[km - 1] === 'metal' && KEYS.material[km + 1] === 'does' && KEYS.material[km + 2] === 'notes';   // (`does`, what a box is to the rules, is written straight after `stuff`: lib/materials.ts)
     const masonry = (LOOK_NAMES as readonly string[]).slice(LOOK_PAINTED).join(', ');
     check(car === lookStuffOf('paint') && desk === 0 && inl === lookStuffOf('enamel') && L.props[pi].parts[0].stuff === 'plaster' && same && kept && placed
       && BOX_STUFFS.length === LOOK_PAINTED + 4 && masonry === 'field stone, mud brick' && lookStuffOf('mud brick') === 0,
@@ -264,7 +264,7 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 // 18. ONE ARRAY IS ONE PAINT. A paint is known by its array (scene/stuff.ts PAINTS), so a second saying on an array that already is a paint would change what
 //     every box painted from it is made of, in every module that holds it, and the last to load would win. It is refused out loud (stuff.ts keep): by
 //     madeOf, drawnAs, sayPaint, namePaint, namePaints, doing and tonedAs, wherever the stuff, the finish or what it DOES differs (no finish is a finish;
-//     the rules read what a paint does, scene/materials.ts, so since 11-05 the slip would move play and not only a picture); the same thing said
+//     the rules read what a paint does, lib/materials.ts, so since 11-05 the slip would move play and not only a picture); the same thing said
 //     again is nothing and the first saying stands, its name with it; and a second thing in the same colour is its own array (saidAs).
 //     OUT LOUD is a throw under bun, where levels are made and checked (ONE_PAINT.refuses: this check, the exporters); in the page it is one
 //     line on the console for that paint and the first saying kept, so the page never stops on it.

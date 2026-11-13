@@ -4,8 +4,6 @@ use crate::ids::*;
 use crate::js;
 use crate::m;
 use crate::v3;
-use alloc::string::String;
-use alloc::vec::Vec;
 
 /// how fast a stance's springs go
 const SW: f64 = 13.0;
@@ -92,7 +90,7 @@ pub(super) fn anim_update_standing(g: &mut Game, c: CharId, dt: f64) {
     stance(g, c, f);
     long_gun(g, c, f);
     crouch(g, c, f);
-    digits(g, c, f);
+    digits(g, c);
     life(g, c, f);
     upper(g, c, f);
     carriage(g, c, f);
@@ -438,7 +436,7 @@ fn crouch(g: &mut Game, c: CharId, f: &mut Frame) {
 }
 
 /// Where the locomotion has left every digit, before any layer shapes a hand.
-fn digits(g: &mut Game, c: CharId, f: &mut Frame) {
+fn digits(g: &mut Game, c: CharId) {
     let p_a = g.ch[c].anim.p_a;
     {
         let n = g.ch[c].poses.rows();
@@ -565,8 +563,8 @@ fn door(g: &mut Game, c: CharId, f: &mut Frame) {
     let y0 = a.aim_yaw_offset * (1.0 - w_st * wl * (1.0 - a.upper_w.aim));
     let pitch = -(a.aim_pitch * (a.upper_w.aim)) * 0.35;
     // ---- a hand on the door he is pushing open
-    let mut yaw;
-    let mut head_keep;
+    let yaw;
+    let head_keep;
     {
         let a = &mut g.ch[c].anim;
         let d = a.door_push.clone();

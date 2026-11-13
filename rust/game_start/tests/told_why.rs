@@ -162,7 +162,7 @@ fn a_code_learnt_is_sams_own_line_and_not_with_a_man_in_his_arm() {
         let me = p.g.player;
         p.g.pl[me].holstered = true;
         p.run(0.05);
-        game::player::start_grab(&mut p.g, m, None);
+        game::player::start_grab(&mut p.g, m);
         p.run(1.4);
         assert!(p.g.pl[me].holding().is_some(), "seed {s}: the staging: she is not in his arm");
         let before = sams_line(&p);

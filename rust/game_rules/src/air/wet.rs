@@ -1,11 +1,10 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::wet::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
 
 /// A man's own bookkeeping, made the first time he is asked for.

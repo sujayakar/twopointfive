@@ -1,7 +1,5 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::scene_level_load::types;
 pub use types::*;
-use crate::game::Game;
 use alloc::string::String;
 
 /// The name of the file the game's level came from, None for a level nobody loaded from data.

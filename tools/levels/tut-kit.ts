@@ -35,9 +35,14 @@ import { BoxFlag } from '../../src/scene/boxes';
 import { carLampsIn } from './lib/carLamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from './tutKitMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-kit';
-export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';
+/** the script it is played by */
+export const SCRIPT = 'tut-kit';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
+export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by the game\'s script of its name. Regenerate: bun run tools/levels/export.ts tut-kit';
 export const MATERIALS = GWOT_MATERIALS;
 
 const HALF = Math.PI / 2;
@@ -218,7 +223,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // across the road, nose to the pumps it was leaving. It is as its driver left it, everything on: two
   // head lamps (beams across the forecourt), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens
   // is a glowing sliver a hair off the van's own and a little wider, so a round at a lamp meets the sliver first and puts it out; the van's own lens behind
-  // it stays the dead glass the lamp check finds (rust/game_rules/src/air/carlamps.rs, whose own search finds the lenses here: the kit's sizes are named in one place)
+  // it stays the dead glass the lamp check finds (lib/carLamps.ts, whose search finds the lenses here too: the kit's sizes are named in one place)
   const VAN_AT = [4.5, 15.0] as const, van0 = K.boxes.length; G.van(VAN_AT[0], VAN_AT[1], HALF + 0.12);
   { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-kit: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);

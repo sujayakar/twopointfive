@@ -1,6 +1,5 @@
 pub use ::game_types::wallsnap::types;
 pub use types::*;
-use crate::game::Game;
 use crate::m;
 
 /// Within 0..1; a NaN stays a NaN.

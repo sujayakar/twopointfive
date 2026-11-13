@@ -7,5 +7,5 @@ pub use manifest::*;
 pub mod run;
 pub use run::*;
 pub mod deeds;
-pub use deeds::*;
+pub(super) use deeds::*;
 pub use manifest::util;

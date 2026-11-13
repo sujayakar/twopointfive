@@ -1,8 +1,6 @@
 pub use ::game_types::floor::types;
 pub use types::*;
-use crate::game::Game;
-use crate::v3::{self, Quat, V3};
-use alloc::vec;
+use crate::v3::V3;
 
 /// FLOOR[mat]: the table's row for a material, walked in the written order.
 fn floor_row(mat: FloorMat) -> FLOORValue {
@@ -62,6 +60,7 @@ pub fn footfall(g: &mut crate::game::Game, pos: V3, base: f64, is_player: bool) 
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use crate::scene_level_data::{Rect, SurfacesData, SurfacesDataZonesItem};
 

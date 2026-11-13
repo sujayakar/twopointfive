@@ -1,11 +1,9 @@
 pub use ::game_types::rescueend::types;
 pub use types::*;
 use crate::v3::dist_xz;
-use crate::game::Game;
 use crate::ids::*;
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// Nobody led, nobody counted.
 pub(super) fn rescue_end_new() -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }

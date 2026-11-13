@@ -102,6 +102,7 @@ import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 
 const PLAIN_NOTES = 'The block: a loading hall, a 3 m hall and four held rooms off it, two men to a room. Every held room turns a corner and its men are round it; the notch of each is a small room nobody holds, with the room\'s other door in it. For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts block';
@@ -626,6 +627,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'block';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.22, 0.4, 0.1]);
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = BLOCK_ROOMS;

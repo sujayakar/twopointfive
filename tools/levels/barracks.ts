@@ -53,6 +53,7 @@ import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat, GWOT_PALETT
 import { drawnAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The barracks: two wings of small rooms, each off a gallery that looks onto the yard through unglazed openings, joined by a link block with the mess hall. Eleven defenders in three squads (a wing each and the link), seven doors and an arch in from outside. For the four man squad. One floor, box geometry only, the office\'s rectangle and kit. Regenerate: bun run map:export barracks';
 
@@ -753,6 +754,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'barracks';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = BARRACKS_ROOMS;

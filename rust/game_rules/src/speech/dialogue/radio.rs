@@ -1,10 +1,8 @@
-use super::*;                      // your own module: its types, its other parts' functions
+                      // your own module: its types, its other parts' functions
 use crate::game::Game;
-use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// The game's radio row, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
 fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {

@@ -1,13 +1,10 @@
 //! WHO IS IN THE LINE of a round: a mate, Sam, anybody it could go to.
-#![allow(unused_imports)]
 use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// Is this body within the clearance it is owed of the line from → to
 pub(super) fn line_hit(g: &Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {

@@ -2,12 +2,11 @@ use super::*;                      // your own module: its types, its other part
 use crate::combat::RoundMet;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::scene_level_data::PropKindName;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ------------------------------------------------------------------ small helpers of this part
 
@@ -102,7 +101,7 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
     bursts(g, &b);
     if e >= g.k.chaos.t_knock { knocks(g, &b); }
     // the ceiling over a beaten zone
-    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, chaos, Some(false), Some(b.who), None); }
+    if e >= g.k.chaos.t_tile { destruction_tile_drop(g, hit_p, Some(false), Some(b.who), None); }
     // what already lies about the hit is scooted along
     destruction_impact_impulse(g, hit_p, dir, b.n, chaos, b.who);
     // wall breaking: the round's work on what it stopped in
@@ -126,7 +125,7 @@ fn struck(g: &Game, hit: &RoundMet) -> Struck {
     if index >= 1e6 { return of(Surf::Wood, box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]), None); }
     let box_ = box_at(g.col.boxes.len(), index).map(|k| g.col.boxes[k]);
     let surf = match box_ {
-        Some(b) if crate::scene_materials::does_of(g, g.tab.boxes[b].does).wall == Some(DoesWall::Screen) => Surf::Fabric,
+        Some(b) if crate::scene_materials::does_of_box(g, b).wall == Some(DoesWall::Screen) => Surf::Fabric,
         Some(b) => crate::particle_fx::surf_at(g, b),
         None => Surf::Concrete,
     };
@@ -201,7 +200,7 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
     let radius = opts.radius.unwrap_or(g.k.walls.blast.radius) * power;
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
     let ev = crate::wallbreak::BlastEvent { at, radius, who, glass: opts.glass.unwrap_or([radius, power]) };
-    let mut tell = |g: &mut Game, over: &crate::ask::Over| for l in g.destr.blast_listeners.clone() { tell_listener(g, over, &l, &ev); };
+    let tell = |g: &mut Game, over: &crate::ask::Over| for l in g.destr.blast_listeners.clone() { tell_listener(g, over, &l, &ev); };
     tell(g, &crate::ask::Over::OWN);
     crate::snow_blast::snow_blast_at(g, &at, radius);
     let torn = crate::doors::doors_blast(g, at, radius * g.k.walls.blast.door_k, who);
@@ -341,12 +340,12 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     }
     let panels = !stun || !loud;
     if e >= g.k.chaos.t_tile {
-        let mut ok = destruction_tile_drop(g, at, chaos, Some(true), Some(who), Some(panels));
+        let mut ok = destruction_tile_drop(g, at, Some(true), Some(who), Some(panels));
         if loud {
             let r0 = g.stats.destruction.destr_tiles_refused;
             let mut k = 0;
             while k < 3 && !ok && g.destr.tile_count < g.k.chaos.tiles_per_encounter {
-                ok = destruction_tile_drop(g, at, chaos, Some(true), Some(who), Some(panels));
+                ok = destruction_tile_drop(g, at, Some(true), Some(who), Some(panels));
                 k += 1;
             }
             g.stats.destruction.destr_tiles_refused = r0;

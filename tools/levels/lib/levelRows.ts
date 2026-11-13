@@ -34,7 +34,7 @@ export interface BoxData {
    *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
    *  look, and what a round's hit looks like: rust/game_rules/src/breakage/particle_fx.rs HITSTUFF): no rule of the game reads it. */
   stuff?: string;
-  /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
+  /** Box.does: what the box does, where its material's row does not say it (lib/materials.ts); absent = what its material's row says, and the default
    *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
   does?: string;
   flags?: FlagName[];
@@ -79,3 +79,7 @@ export interface LightData {
 }
 /** A hinged leaf in a doorway gap (rust/game_rules/src/fittings/doors DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
 export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (rust/game_rules/src/fittings/doors DoorDef.swing); absent = dealt from the level: into the room it serves (rust/game_rules/src/fittings/doorswing.rs) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (rust/game_rules/src/fittings/doors DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
+/** what a side's leaves are painted, and what they are made of (absent: nothing said) */
+export interface LeafPaintData { albedo: Vec3; stuff?: string }
+/** the paint of a level's leaves: those that lead outside (`exterior`), and the rest. Steel ones are left as they are made */
+export interface DoorPaintData { outside: LeafPaintData; inside: LeafPaintData }

@@ -3,9 +3,12 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::Row;
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    targets: &[TargetKind::Door],
+    ack: &["shutting it.", "got the door."],
+    stands_in: Some(rows::charge::ORDER.id),
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::shutdoor::tick),
@@ -29,7 +32,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     rows::plain_valid(crate::shutdoor::why_not_shut(g, x.door, men))
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     crate::shutdoor::order_issue(g, men, t)
 }
 

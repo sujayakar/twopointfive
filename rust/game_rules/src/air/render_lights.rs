@@ -1,11 +1,9 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::render_lights::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::string::String;
 
 /// One light's GPU record (common.wgsl struct Light, 16 words), hung at `pos` with that radius. `inten` scales the colour; `kind_word` is the kind with

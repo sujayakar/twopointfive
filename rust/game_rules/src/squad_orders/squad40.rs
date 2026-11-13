@@ -4,9 +4,9 @@ pub use types::*;
 pub const SHELL_THERE: &str = crate::orders::rows::shell40::ORDER.id;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// a row of this id is on the menu's list (`S.defs.some(d => d.id === id)`)
@@ -176,7 +176,7 @@ fn ready(g: &mut Game, gd: GuardId) -> bool {
 pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate::squad40::ShellPlan {
     let of = |shot: Option<Shot>, no: Option<String>| ShellPlan { at, men: men.to_vec(), shot, no };
     let row = g.group;
-    if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return of(None, Some(String::from(none))); }
+    if g.m.squad40.states.get(row).is_none() || squad40_left(g, &crate::seats::here(g)) <= 0.0 { return of(None, Some(String::from(NO_ROUND))); }
     let bb = bodies(g);
     let (mut any, mut asked, mut close) = (false, false, false);
     let mut dirty: Option<(Shot, String)> = None;
@@ -291,7 +291,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: TaskId) {
     if !on_it(g, gd, at) || now - t0 < g.k.squad40.raise_secs { return; }
     // the order's own sense, asked of the floor as it stands NOW: nothing is spent on a refusal
     let has = g.m.squad40.states.get(key).and_then(|s| s.rounds.get(gd).copied()).map_or(false, |k| k > 0.0);
-    if !has { return end_turn(g, gd, Some(none)); }
+    if !has { return end_turn(g, gd, Some(NO_ROUND)); }
     let shot = match shot_of(g, gd, at, None) {
         None => return end_turn(g, gd, Some("no shot from here.")),
         Some(ShotOf::Close) => return end_turn(g, gd, Some("too close to arm.")),
@@ -341,12 +341,7 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
 
 /// the order's row, put on the throws' page.
 fn list(g: &mut crate::game::Game) {
-    crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER, crate::orders::OrderDef {
-        page: Some(String::from(crate::squadthrow::THROW_PAGE)),
-        targets: vec![crate::orders::TargetKind::Floor],
-        free: Some(true),
-        ..Default::default()
-    });
+    crate::orders::rows::list(g, &crate::orders::rows::shell40::ORDER);
 }
 
 /// the squad's HUD block: what is left while this staging brought any, and the shot just made.

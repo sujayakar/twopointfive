@@ -2,9 +2,8 @@ use super::*;                      // your own module: its types, its other part
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small readers of this file
 
@@ -411,7 +410,7 @@ fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, halted:
     }
     let mut rest = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
     rest.retain(|m| !halted.contains(m));
-    let hold = door_tools_holders(g, &crate::seats::here(g), d, side, &rest);
+    let hold = door_tools_holders(g, d, side, &rest);
     let mut taken: Vec<V3> = match ch { Some(c) => g.tab.doortools_door_op[c].post.values().map(|p| p.pos).collect(), None => Vec::new() };
     for m in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), m);
@@ -757,7 +756,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
     g.tab.doortools_door_op[op].lead = the_lead;
     if oh { door_tools_lead_hand(g, op, &posts, watch); }
     let the_lead = g.tab.doortools_door_op[op].lead;
-    let mut filed: JsSet<GuardId> = JsSet::new();
+    let filed: JsSet<GuardId> = JsSet::new();
     let bang_file = g.k.doortools.bang_file;
     let split = kind == crate::doortools::DoorToolKind::OpenClear || kind == crate::doortools::DoorToolKind::Threshold;
     if !split && men.len() > 2 {

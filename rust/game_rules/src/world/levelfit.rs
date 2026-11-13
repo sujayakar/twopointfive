@@ -1,9 +1,8 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::levelfit::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::boxworld::{MAX_BOXES, MAX_CELLS, MAX_CUTS, MAX_ITEMS, MAX_LEAVES, MAX_SHEETS, MAX_THINGS, MAX_TILTED};
 use alloc::{string::String, vec, vec::Vec};
@@ -69,7 +68,7 @@ fn level_counts(g: &crate::game::Game, level: &crate::levelfit::LevelCountsLevel
     let no_switches = Vec::new();
     let switches = level.switchables.as_ref().unwrap_or(&no_switches);
     let beacons = level.beacons.as_ref().map_or(0.0, |l| l.len() as f64);
-    let cars = crate::carlamps::find_car_lamps(g, &level.boxes);
+    let cars = &g.level.vehicle_lamps;
     let mut flat = 0.0;
     for s in switches.iter() {
         for &bi in s.boxes.iter() {

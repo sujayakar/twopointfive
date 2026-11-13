@@ -4,7 +4,7 @@ pub use ::game_types::sense::types;
 pub use types::*;
 use crate::game::Game;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::vec::Vec;
 
 /// THE GAME'S OWN SMOKE (`g.smoke`): what every eye, every lamp's light and the fog of war see through, and the picture's solver does not answer for. It is a coarse

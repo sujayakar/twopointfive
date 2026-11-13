@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 //! WALL WEAR: what a breakable wall or piece of cover SHOWS while it is being shot, before it gives. Look only: wallbreak counts a round into a cell and opens the cell when the count is
 //! up; here every counted round's mark is sized by how far gone its cell is (a pock, a small hole in a ring of blown plaster, cracks out of it), the marks the cell already carries grow
 //! with it, and on a thin partition the same mark shows on the far face, with a puff and chips thrown out of that side. It adds no mark: the round's own is made into this. A THROUGH mark
@@ -9,12 +7,8 @@ pub use ::game_types::wallwear::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-
-#[allow(unused_imports)]
-use crate::out_events::*;
+use crate::v3::{self, V3};
 use crate::render_decals::{mark_asked, Ask};
 
 pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e, ours)); }

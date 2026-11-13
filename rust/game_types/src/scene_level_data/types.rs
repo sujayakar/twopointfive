@@ -1,6 +1,5 @@
 //! The types of `scene_level_data`.
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]

@@ -42,6 +42,7 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
 
@@ -298,6 +299,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'hall';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.16, 0.36, 0.47]);
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 /** the company's pale sky blue. The palette has no paint this pale (its blues are deep ones), so it is a colour of this file's own and only decals wear it; the outside door's paint is this,

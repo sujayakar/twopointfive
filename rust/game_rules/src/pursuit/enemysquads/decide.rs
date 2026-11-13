@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 /// The net's ask runs on this floor: a floor whose every squad stays in its rooms.

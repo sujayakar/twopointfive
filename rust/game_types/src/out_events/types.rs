@@ -1,6 +1,5 @@
 //! What a step tells its host, and what a rule asks of the marks.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{ids::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a rule did that the host has to show or play: `Game.out`, a step's output (game_draw events.rs and resets.rs; the saves)

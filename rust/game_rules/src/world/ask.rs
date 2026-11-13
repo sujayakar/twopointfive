@@ -11,7 +11,7 @@
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 use alloc::vec::Vec;
 
 /// which door leaves are in a question's way

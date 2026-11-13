@@ -2,13 +2,11 @@ use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- small reads
-fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
 /// `g.audio.play(name, at, vol)`
 fn audio(g: &mut Game, name: crate::audio_iface::Sfx, at: Option<V3>, vol: f64) { crate::audio_iface::game_audio_like_play(g, name, at, Some(vol), None) }

@@ -15,6 +15,7 @@
 //! library (`.sin()`, `.powf()`, `.mul_add()` …), and the SIMD that rounds as the machine likes. The reader: the order of the arithmetic.
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 
 pub mod air;

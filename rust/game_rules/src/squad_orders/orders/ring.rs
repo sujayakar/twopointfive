@@ -1,10 +1,9 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the frame's input: what the order input takes out of it
 
@@ -429,8 +428,8 @@ fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
     let d = &g.tab.orders_order_def[id];
     crate::cmdring::FlatRow {
         id: d.id.clone(),
-        word: d.word,
-        free: d.free,
+        word: d.row.word,
+        free: d.row.free,
         targets: d.targets.iter().map(|k| String::from(k.as_str())).collect(),
         listed: d.listed.as_ref().map(|l| l.iter().map(|k| String::from(k.as_str())).collect()),
     }

@@ -18,8 +18,15 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, STATION_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tunnel-station';
+import { GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-team';
+/** it is built for snow */
+export const SNOW = true;
+/** the script it is played by */
+export const SCRIPT = 'tut-team';
+/** what its leaves are painted */
+export const DOOR_PAINT = GREEN_LEAVES();
 export const MATERIALS = STATION_MATERIALS;
 export const NOTES = 'The squad\'s tutorial mission on the ground: the tunnel station of tut-sky, box for box, with the player on the road behind his own truck and a mission of one order and one word. Regenerate: bun run tools/levels/export.ts tut-team';
 

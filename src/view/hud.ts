@@ -12,8 +12,10 @@ export interface HudPage {
   debug: boolean;
   /** the word of the page's save controller, while it is up ('': none) */
   saved: string;
+  /** a game of more players than one, and nobody is in the other seats */
+  alone: boolean;
 }
-export const NO_PAGE: HudPage = { bared: false, debug: false, saved: '' };
+export const NO_PAGE: HudPage = { bared: false, debug: false, saved: '', alone: false };
 
 export interface HudSource {
   /** what the game tells the seat this page shows */

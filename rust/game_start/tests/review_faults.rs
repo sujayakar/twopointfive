@@ -59,7 +59,7 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
     p.sam_put([18.7, 11.3]);
     p.key_down("KeyC"); p.frame(); p.key_up("KeyC");
     p.frame();
-    game::player::start_grab(&mut p.g, k, None);
+    game::player::start_grab(&mut p.g, k);
     p.until(1.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
     p.g.gd[n].script = Some(game::game::GuardScript::default());
     p.g.gd[r].unit = Some(game::game::UnitInfo { light: true, pair: None, seat: None });

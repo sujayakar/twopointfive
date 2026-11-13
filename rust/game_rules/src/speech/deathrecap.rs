@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 //! EVERY DEATH EXPLAINS ITSELF. For every man of OUR side who goes down (a player, a teammate, a hostage) the tick keeps WHO did it, FROM WHERE and with what, and
 //! the floor's last seconds: every man's place and gun line, every door leaf, every round. The end card shows how it happened.
 //!
@@ -19,7 +18,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 use crate::character::Bone;

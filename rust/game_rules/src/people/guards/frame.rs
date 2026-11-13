@@ -2,12 +2,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use crate::guards::behave::{Acts, Sensed};
 use crate::guards::senses::Saw;
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- small helpers
 
@@ -51,7 +49,7 @@ const LOW_QUIET_SECS: f64 = 4.0;
 ///   behave      his state's behaviour (behave/): where his legs go, what his gun does
 ///   pose        the looks laid over his aim, the muzzle and the wall, the animator, his light, his footfall
 pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
-    use crate::game::GuardState as St;
+    
     let c = g.gd[gd].ch;
     crate::character::character_turn_begin(g, c);
     player_ground_vel(g);

@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::vec::Vec;
 
 /// A new thing in the pool: the dice in the order they were always drawn and before anything is given up for it; `opts` over the rest.
 pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::ItemKind, pos: V3, vel: V3, opts: Option<crate::throwables::ThrowablesSpawnOpts>) -> ItemId {
@@ -344,7 +344,7 @@ fn settles(it: &mut Item) {
 /// One tick of the pool: it walks from the newest down, then what the steps told is done in order.
 pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     if g.items.items.is_empty() { return; }
-    let snow = if crate::snow_bog::snow_bog_may(g) {
+    let snow = if g.level.snow {
         // lying snow: the level's table in the box world, the rule's numbers and the roofs in force
         let roofs = &g.weather.roof_rects;
         debug_assert!(roofs.len() <= ::sim::snow::MAX_ROOFS, "more roofs over the snow than a walk is handed");

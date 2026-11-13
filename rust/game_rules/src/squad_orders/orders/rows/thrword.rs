@@ -3,10 +3,13 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
+    targets: &[TargetKind::Door],
+    page: Some(crate::doortools::HELD_PAGE),
+    word: true,
     only: Some(only),
     valid: Some(valid),
     ..Row::new("thrWord", label, issue)
@@ -30,6 +33,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     Err(Some(String::from("nobody's holding that door.")))
 }
 
-fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -> Option<String> {
     if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) }
 }

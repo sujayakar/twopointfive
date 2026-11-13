@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::guards::*;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, V3};
+use crate::v3;
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 

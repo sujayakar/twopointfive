@@ -3,7 +3,7 @@ pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::V3;
 
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet.
 pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -184,9 +184,6 @@ pub(super) fn on_our_side(g: &crate::game::Game, c: CharId) -> bool {
 }
 
 /// A round of the players' side has gone into a man of it: counted.
-pub(super) fn ff_note(g: &mut crate::game::Game, shooter: CharId, into: Option<CharId>) {
-    let into_player = into.map_or(false, |c| crate::character::is_player(g, c));
-    let by_player = crate::character::is_player(g, shooter);
-    let s = &mut g.stats.friendlyfire;
-    if by_player { s.sam_on_mate += 1; }
+pub(super) fn ff_note(g: &mut crate::game::Game, shooter: CharId) {
+    if crate::character::is_player(g, shooter) { g.stats.friendlyfire.sam_on_mate += 1; }
 }

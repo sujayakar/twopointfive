@@ -1,14 +1,14 @@
 //! THE KIT PICTURE'S ACTS: the man whose card is open uses the thing under the card's highlight, at the door, again and again. Every action is the game's: the squad's orders to a teammate, Sam's own keys and his hand (`sam_hand`) for
 //! Sam, doors crack and pull_to, the door tools' trigger and reset, the wall charge's spot, blow and reset, `fire_weapon` for a round. A pick cuts whatever is running and that thing begins at once, from where he stands.
 //! What a row leaves that has no undo is held as a resting picture, then the room is staged again under the page's dissolve.
-use super::aim::{self, aim_legs, arrived, chan, chan_tick, ch_of, clamp, lim, off, own, quiet_tick, rest_yaw, wrap, Step, R};
+use super::aim::{self, arrived, chan, chan_tick, ch_of, clamp, lim, off, own, quiet_tick, rest_yaw, wrap, Step, R};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK, KIT_VIEW_STAGE as ST};
 use super::plan::KIT_PLAN;
 use super::quiet;
 use super::types::*;
 use super::walk::{self, along, at, away, flat, free, go, home_of, low, low_at, out_of, rotate, sam_goes, sam_goes_low, sam_stand, step_out, v2, v3, walk_of};
 use crate::doors::{door_is_closed, doors_crack, doors_pull_to};
-use crate::game::{Game, GuardState, InteractableKind, SlotKind, Verb};
+use crate::game::{Game, InteractableKind, SlotKind, Verb};
 use crate::ids::*;
 use crate::kit::{BigKit, MemberKit};
 use crate::m;

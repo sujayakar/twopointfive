@@ -450,7 +450,7 @@ impl KitAsk for Play {
         m.script = Some(game::game::GuardScript { goal: Some([goal[0], 0.0, goal[1]]), speed: Some(speed), upper: Some(game::character::UpperMode::Relaxed), ..game::game::GuardScript::default() });
     }
     fn sam_lunges(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }
-    fn sam_grabs(&mut self, gd: GuardId) { game::player::start_grab(&mut self.g, gd, None); }
+    fn sam_grabs(&mut self, gd: GuardId) { game::player::start_grab(&mut self.g, gd); }
     fn step(&mut self, dt: f64) { self.hold_legs(); let _ = game_start::stand::frame(&mut self.g, &self.host, dt); self.frames += 1; }
     fn door_booted(&mut self, d: DoorId, from: [f64; 2]) { game::doors::doors_kick_in(&mut self.g, d, [from[0], 0.0, from[1]], game::consts::PLAYER_ID, None); }
     fn clear_called_at(&mut self, at: [f64; 2], then: [f64; 2]) -> Vec<String> {

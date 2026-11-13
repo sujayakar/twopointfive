@@ -2,10 +2,10 @@ pub use ::game_types::scene_collision::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use crate::ask::{Leaves, Over};
 use crate::v3::quat;
@@ -29,8 +29,6 @@ fn joined(a: &[f64]) -> String {
 fn put_f64(addr: usize, i: usize, v: f64) { unsafe { *(addr as *mut f64).add(i) = v } }
 #[inline]
 fn get_f64(addr: usize, i: usize) -> f64 { unsafe { *(addr as *const f64).add(i) } }
-#[inline]
-fn get_u32(addr: usize, i: usize) -> u32 { unsafe { *(addr as *const u32).add(i) } }
 
 // ---- the line through a box
 
@@ -729,6 +727,7 @@ pub fn wall_between(g: &Game, a: V3, b: V3) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     fn bits(a: &[f64]) -> Vec<u64> {

@@ -30,6 +30,7 @@ import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'A room clear in a low house: two wings off one hall, a workshop in the far room of each. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
 
@@ -276,6 +277,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'defuse';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.3, 0.14, 0.05]);
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = DEFUSE_ROOMS;

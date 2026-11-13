@@ -1,6 +1,7 @@
 //! THE GAME'S OWN START, IN RUST (README.md beside this crate). A level file's text and the character's files in, a `Game` the tick can run out.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
+#![cfg_attr(not(debug_assertions), deny(unused, nonstandard_style))]   // (a warning in a build that is played or gated is an error; an edit's own check only says it)
 extern crate alloc;
 pub mod json;
 pub mod lessons;

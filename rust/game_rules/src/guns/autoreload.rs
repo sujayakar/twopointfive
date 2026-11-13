@@ -1,4 +1,3 @@
-use crate::game::Game;
 use crate::ids::*;
 
 /// Would this player's gun (the one in his hands) start its reload by itself this frame?

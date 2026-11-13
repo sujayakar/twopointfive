@@ -13,8 +13,9 @@ const ROOT = resolve(import.meta.dir, '../..');
 const { OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/tools/levels/lib/officeGen.ts`);
 const { rowWord, rowDoes: nameDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
-const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { DOES_DEFAULT } = await import(`${ROOT}/src/scene/materials.ts`);
+const { lampsOf } = await import(`${ROOT}/tools/levels/lib/carLamps.ts`);
+const { stampDoes, wordWas } = await import('./doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. tools/levels/lib/materials.ts)
+const { DOES_DEFAULT } = await import('./lib/does.ts');
 const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
@@ -65,13 +66,20 @@ if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.lengt
   if (n) console.log(`floor: ${n} flat${n > 1 ? 's' : ''} raised to draw in order`); }
 // HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept (docs/level-format.md).
 if (gen.KEPT !== undefined) level.kept = gen.KEPT;
+// THE SCRIPT IT IS PLAYED BY, a generator's `SCRIPT` export: the file's script.
+if (gen.SCRIPT !== undefined) level.script = gen.SCRIPT;
+// BUILT FOR SNOW, a generator's `SNOW` export: the file's snow.
+if (gen.SNOW) level.snow = true;
+// WHAT ITS LEAVES ARE PAINTED, a generator's `DOOR_PAINT` export (lib/doorPaint.ts): the file's doorPaint. With the skin left out they are as a leaf is made.
+if (gen.DOOR_PAINT && !(gen.finish && FLOOR_TO)) level.doorPaint = gen.DOOR_PAINT;
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
-// WHAT EACH BOX DOES (src/scene/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
+// WHAT EACH BOX DOES (tools/levels/lib/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
 // (tools/levels/doesWas.ts, frozen) HERE, before the skin repaints anything: a box in other clothes does what it did. Once more after the skin, for what the skin added.
 stampDoes(level);
 // THE SKIN (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here
 if (gen.finish && !FLOOR_TO) { const n0 = level.boxes.length; const st = gen.finish(level, groups); if (st) console.log(`look: ${st.repainted} boxes repainted, ${st.kept} kept, ${st.decals} decals, ${st.props} props — ${Object.entries(st.by as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => `${n} ${k}`).join(', ')}${st.relaid === undefined ? '' : ` — ${st.relaid} flat decals raised to draw in order, the highest top at ${((st.flatTop ?? 0) * 1000).toFixed(2)} mm, ${st.surfaced} now over a flat of the level`}`); if (groups.length !== level.boxes.length) throw new Error(`finish: ${groups.length} groups for ${level.boxes.length} boxes (from ${n0})`); }
 stampDoes(level);
+Object.assign(level, lampsOf(level.boxes));   // (its vehicles' lamps, in their last paint: the file's vehicleLamps)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string; does?: string }> = {};
 /** what a paint's row says its boxes do: what the paint's NAME says (scene/stuff.ts PAINT_DOES, as a kit words a box of it), else, for a row of a
  *  generator's own that no table names, the word its colour had. A box that does another thing says so itself (levelLoad.ts levelToData) */

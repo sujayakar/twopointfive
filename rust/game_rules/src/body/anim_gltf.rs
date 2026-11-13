@@ -2,8 +2,8 @@ pub use ::game_types::anim_gltf::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::js;
+use alloc::vec::Vec;
 
 /// `(1 << i) >>> 0`: the shift counts modulo 32, as the language's does.
 fn part_bit(i: usize) -> f64 {
@@ -84,6 +84,9 @@ pub fn cast_side(g: &crate::game::Game, cast: AnimGltfCastInfoId, side: crate::a
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use alloc::string::String;
+    use alloc::vec;
     use super::*;
 
     fn make_cast(g: &mut Game, parts: &[&str]) -> AnimGltfCastInfoId {

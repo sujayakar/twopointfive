@@ -2,9 +2,9 @@ pub use ::game_types::doze::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::vec::Vec;
 
 // ---- the one record: GAMES and REC are one table here (g.m.doze.rec), since a game's guards are that game's

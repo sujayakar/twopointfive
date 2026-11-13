@@ -18,7 +18,6 @@ const GLOBALS: usize = 16;
 /// a global's bounds stand this far outside it, and the height span of a cell is judged this much tighter than it is packed
 const GLOBAL_PAD: f64 = 0.005;
 const ITEM_PAD_KEEP: f64 = 0.005;
-pub const CAST: usize = 16;
 pub const CAPS: usize = 15;
 pub const MAX_PANES: usize = 32;
 

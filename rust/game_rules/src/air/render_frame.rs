@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::render_frame::types;
 pub use types::*;
 

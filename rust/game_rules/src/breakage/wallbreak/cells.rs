@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{vec, vec::Vec};
 
 // ------------------------------------------------------------------ private helpers
 /// the box a breakable stands in for
@@ -22,10 +22,6 @@ fn grid_of(g: &Game, b: WallbreakBreakableId) -> crate::break_table::CellGrid {
 fn word(g: &Game, b: BoxId) -> crate::scene_boxes::WordOf {
     let x = &g.tab.boxes[b];
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff: x.stuff, does: x.does })
-}
-pub(crate) fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
-    let does = g.tab.boxes[b].does;
-    crate::scene_materials::does_of(g, does)
 }
 /// the pieces standing
 fn pieces_up(g: &Game) -> f64 { g.col.boxes.len() as f64 - g.destr.walls.authored }
@@ -124,7 +120,7 @@ fn wall_break_index(g: &mut crate::game::Game) {
         if (flags & any) != 0 { continue; }
         if rot || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(fi)) || crate::destruction::destruction_item_of(g, fi).is_some() { continue; }
         if c[0] < world.min[0] || c[0] > world.max[0] || c[2] < world.min[2] || c[2] > world.max[2] { continue; }
-        let does = does_of_box(g, b);
+        let does = crate::scene_materials::does_of_box(g, b);
         if does.wall.is_none() && does.cover.is_none() { continue; }
         let y0 = c[1] - h[1]; let y1 = c[1] + h[1]; let sx = h[0] * 2.0; let sz = h[2] * 2.0; let thin = m::min(sx, sz); let long = m::max(sx, sz);
         let part = does.wall == Some(crate::scene_materials::DoesWall::Screen);
@@ -203,7 +199,7 @@ pub fn wall_break_adopt(g: &mut crate::game::Game, index: f64) -> bool {
     let (c, h, flags0) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.flags) };
     let sx = h[0] * 2.0; let sz = h[2] * 2.0; let cols = wall_break_hard_cols(g, b);
     let nx = if sx >= sz { cols } else { 1.0 }; let nz = if sx >= sz { 1.0 } else { cols }; let n = (nx * 2.0 * nz) as usize;
-    let surf = does_of_box(g, b).surf;
+    let surf = crate::scene_materials::does_of_box(g, b).surf;
     let row = Breakable { id: index, kind: BKind::Wall, surf, box_: b, flags0, nx, ny: 2.0, nz, yb: vec![-h[1], -h[1] + (g.k.walls.sill - (c[1] - h[1])), h[1]], open: vec![0u8; n], dmg: vec![0f32; n], slots: Vec::new(), live: 0.0, n_open: 0.0, hard: Some(true) };
     let id = g.tab.wallbreak_breakable.push(row);
     g.destr.walls.list.push(id);
@@ -478,10 +474,7 @@ pub(super) fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreak
     }
     let n_fresh = fresh.len() as f64;
     pos[0] /= n_fresh; pos[1] /= n_fresh; pos[2] /= n_fresh;
-    let dead = { let r = &g.tab.wallbreak_breakable[b]; r.n_open == r.open.len() as f64 };
     let kind = if b_kind == BKind::Cover { LevelChangeKind::Cover } else if sill { LevelChangeKind::Hole } else { LevelChangeKind::Port };
-    if b_kind == BKind::Cover {
-    } else if sill {  } else {  }
     // what stood on it, what hung from it
     let mut rects: Vec<[f64; 4]> = vec![[x0, z0, x1, z1]];
     wall_break_settle(g, b, AABB { x0, x1, z0, z1, y0: 0.0, y1: 0.0 }, dir, who, quiet, &mut rects);

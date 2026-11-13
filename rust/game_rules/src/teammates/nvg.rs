@@ -2,10 +2,10 @@ pub use ::game_types::nvg::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsMap;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ---- the team's state
 

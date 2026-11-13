@@ -1,6 +1,5 @@
 //! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
-#![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, crosses::Crosses, V3};
 use alloc::{string::String, vec::Vec};
 
 /// whose words the mission's line is
@@ -268,6 +267,8 @@ pub struct KitView {
     pub hits_left: f64,
     pub hits_max: f64,
     pub down: bool,
+    /// Enter alone has the mission again for him
+    pub again: bool,
     pub god: bool,
     /// whether the goggles are on (None: a lesson has not taught their key)
     pub night_vision: Option<bool>,

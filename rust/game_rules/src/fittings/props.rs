@@ -12,7 +12,7 @@ use crate::m;
 use crate::v3::V3;
 use ::sim::maths::{cos, exp, hypot2, sin};
 use ::sim::world::{asking, js_abs, js_ceil, js_max, js_min, World, REC, R_C, R_COS, R_H, R_SIN};
-use alloc::{string::String, sync::Arc, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use prim::sqrt;
 pub use ::game_types::props::types;
 pub use types::*;

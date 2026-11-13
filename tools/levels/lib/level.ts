@@ -108,7 +108,7 @@ export interface HumDef { name: string; kind: 'hum' | 'servers' | 'buzz' | 'wind
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box rust/game_rules/src/fittings/props.rs makes of it. */
-export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('../../../src/scene/boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('../../../src/scene/boxes').DoesWord; }
+export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('../../../src/scene/boxes').BoxStuff; /** what the part does, as Box.does (lib/materials.ts) */ does?: import('../../../src/scene/boxes').DoesWord; }
 /** Loose furniture handed to the physics layer (rust/game_rules/src/fittings/props.rs) instead of `boxes`: a rigid group of parts standing on the floor at (x, z) with
  *  heading `yaw`, its collision footprint (half extents of the local XZ rectangle about the origin), overall height and mass (kg). */
 export interface PropDef { kind: PropKind; name: string; x: number; z: number; yaw: number; parts: PropPart[]; half: [number, number]; height: number; mass: number; }
@@ -127,6 +127,8 @@ export interface Level {
   /** rooms the lockdown pair knows how to clear (rust/game_rules/src/people/guards plan_clears picks the nearest to the last fix; optional like the posts) */
   clearPlans?: RoomClearPlan[];
   doors: LevelDoorDef[];
+  /** what its leaves are painted (rust/game_rules/src/fittings/doors/paint.rs) — absent = as a leaf is made, in the office's colours */
+  doorPaint?: import('./levelRows').DoorPaintData;
   /** cameras / keypads / laser tripwires (rust/game_rules/src/stealth/devices.rs); optional like the posts — the viewer's stage and older levels have none */
   devices?: DeviceDef[];
   /** HVAC supply vents (rust/game_rules/src/air/wind.rs): the ceiling diffusers whose jets move the particles and the smoke; optional — a level with none has still air indoors */
@@ -148,9 +150,15 @@ export interface Level {
   /** `fumble` (s, absent = 2.2): how long a man sent to the tripped panel works at it before the mains come back */
   breaker: { pos: Vec3; boxes: number[]; fumble?: number };
   beacons: { pos: Vec3; box: number }[];
+  /** the lamps of its parked vehicles, by the box its lens is (carLamps.ts finds them as a level is written) — absent = none */
+  vehicleLamps?: { box: number; what: 'head lamp' | 'tail lamp' }[];
   sky: { zenith: Vec3; horizon: Vec3 };
   /** the breach drill's plan (optional; rust/game_rules/src/missions/breach.rs BreachDrill) */
   breach?: BreachPlan;
+  /** the script it is played by (the file's `script`) — absent = none */
+  script?: string;
+  /** it is built for snow (the file's `snow`) */
+  snow?: boolean;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;
   /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): host/drawpage.ts hands it to the look (scene/look.ts lookKeptOf) */

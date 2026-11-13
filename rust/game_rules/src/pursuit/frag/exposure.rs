@@ -1,11 +1,9 @@
-#![allow(unused_imports, unused_variables)]
-use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{vec, vec::Vec};
 
 /// the flee script frag_flee lent for the frame, as the run left it, put back in the book it came from: the first live grenade's book
@@ -181,6 +179,7 @@ pub fn blast(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -
 
 #[cfg(test)]
 mod tests {
+    use crate::v3::dist_xz;
     use super::*;
     // the pinned bits of hash01
     #[test]

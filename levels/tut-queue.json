@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "tut-queue",
+  "script": "tut-queue",
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-queue.ts build → tools/levels/export.ts", "notes": "The tutorial's fourth mission: a walled post taken on the ground with the squad of four, by Shift with the command key (a part of the squad takes the new order) and the word. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-queue" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
@@ -572,6 +573,7 @@
     { "id": "hall", "hinge": [25.82, 13], "closedDir": 0, "width": 0.86 },
     { "id": "hall_back", "hinge": [30.32, 19], "closedDir": 0, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.06, 0.19, 0.32], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],
@@ -588,6 +590,12 @@
   "breaker": { "pos": [16, 1.35, 22.7], "panel": "breaker_panel", "led": "breaker_led" },
   "beacons": [
     { "id": "beacon0", "pos": [10.3, 2.05, 5.3], "box": "sw_beacon0" }
+  ],
+  "vehicleLamps": [
+    { "box": "box_0077", "what": "head lamp" },
+    { "box": "box_0078", "what": "tail lamp" },
+    { "box": "box_0079", "what": "head lamp" },
+    { "box": "box_0080", "what": "tail lamp" }
   ],
   "sky": { "zenith": [0.015, 0.025, 0.05], "horizon": [0.045, 0.05, 0.07] },
   "plans": {

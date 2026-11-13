@@ -1,13 +1,12 @@
-#![allow(unused_imports, unused_variables)]
 pub use ::game_types::morale::types;
 pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, vec::Vec};
 
 // None back: the run ended the script, nothing to put home.
 pub(super) fn morale_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {

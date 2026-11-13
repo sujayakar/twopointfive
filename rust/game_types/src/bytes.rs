@@ -48,8 +48,10 @@ mod tests {
     struct Man { name: String, /// (nobody's) #[bytes(skip)] is an attribute, and this is a doc
         at: Option<(u8, u8)>, #[bytes(skip)] f: fn(u8) -> u8, pub(crate) r#in: Vec<bool> }
     #[derive(ToBytes)]
+    #[allow(dead_code)]   // (what a skip leaves out is read by nobody)
     enum Word { A, B(u8, #[bytes(skip)] u32), C { x: u16, #[bytes(skip)] y: u32 } }
     #[derive(ToBytes)]
+    #[allow(dead_code)]
     struct Row(pub u8, #[bytes(skip)] u32, u8);
     fn of(x: &dyn ToBytes) -> Vec<u8> { let mut o = W::new(); x.w(&mut o); o.b }
     #[test]

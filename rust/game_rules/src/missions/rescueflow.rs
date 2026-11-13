@@ -5,9 +5,9 @@ pub use types::*;
 use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// The door of an opening, if it names one and the level has it.
@@ -983,7 +983,6 @@ pub(super) fn rescue_flow_line(g: &crate::game::Game) -> String {
     }
     parts.join(" · ")
 }
-
 
 /// The marks against the floor: returns what is wrong.
 pub(super) fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {

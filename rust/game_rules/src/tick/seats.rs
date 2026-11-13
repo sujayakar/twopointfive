@@ -1,13 +1,11 @@
-#![allow(unused_imports, unused_variables)]
-#![allow(unused_variables)]
 pub use ::game_types::seats::types;
 pub use types::*;
 pub use ::game_types::seats::seat_ref::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// the row of a table kept a player for a pass about a group no player commands
@@ -17,7 +15,7 @@ const NOBODYS: PlayerId = PlayerId(u32::MAX);
 fn in_view(g: &crate::game::Game) -> bool { g.view_depth > 0 }
 
 /// Which row of a table kept a player this pass reads: the man of the seat it is about, or nobody's where it is about a group no player commands.
-pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
+pub fn view_key(seat: &crate::seats::SeatRef) -> PlayerId {
     if seat.group.by_a_player() { seat.player } else { NOBODYS }
 }
 
@@ -73,7 +71,6 @@ pub fn budget_with_seats(g: &crate::game::Game, for_one: f64) -> f64 { for_one -
 /// How many more men the floor can be given as it stands: the picture's sixteen less a man a seat and less every guard, teammate and unit.
 /// A staging stands its team first and then as many of its defenders, in the order of their marks, as this leaves (a game of one: all of them).
 pub fn floor_room(g: &crate::game::Game) -> f64 { crate::guards::MAX_SKINNED - seat_count(g) - g.guards.len() as f64 }
-
 
 // ---------------------------------------------------------------- small helpers
 

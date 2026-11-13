@@ -41,8 +41,13 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'tut-queue';
+/** the script it is played by */
+export const SCRIPT = 'tut-queue';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'The tutorial\'s fourth mission: a walled post taken on the ground with the squad of four, by Shift with the command key (a part of the squad takes the new order) and the word. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-queue';
 export const MATERIALS = GWOT_MATERIALS;
 

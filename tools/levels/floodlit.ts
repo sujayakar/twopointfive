@@ -55,6 +55,7 @@ import { drawnAs, madeOf, saidAs } from '../../src/scene/stuff';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { leavesOf } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The floodlit yard: a room clear whose one idea is the mains breaker. A lit yard under the windows; the breaker in a shed outside the wall. Kit pieces only. Regenerate: bun run tools/levels/export.ts floodlit';
 
@@ -296,6 +297,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'floodlit';
+/** what its leaves are painted */
+export const DOOR_PAINT = leavesOf([0.62, 0.17, 0.03]);
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 /** the pad's paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it */

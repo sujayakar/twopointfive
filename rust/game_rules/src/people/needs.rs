@@ -2,9 +2,9 @@ pub use ::game_types::needs::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
+use crate::v3::{self, V3};
 use alloc::{format, string::String, vec::Vec};
 
 use crate::chronicle::{ChronKind, ChronicleDataValue};
@@ -752,7 +752,7 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     /// `path_len` against pinned bits.
     #[test]

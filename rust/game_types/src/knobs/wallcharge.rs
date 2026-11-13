@@ -1,5 +1,5 @@
 //! The numbers of wallcharge.
-use crate::{bytes::ToBytes, Words};
+use crate::bytes::ToBytes;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 

@@ -25,8 +25,11 @@ import { GWOT_MATERIALS } from './lib/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTail } from './livedKit';
+import { BLUE_LEAVES, GREEN_LEAVES } from './lib/doorPaint';
 
 export const NAME = 'lights-out';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const NOTES = 'Lights out: a quiet mission as two. A relay post in a walled yard at night: the strongbox is behind a hall with a grille of four beams, a lens and a lamp, all on the mains; the breaker is in a generator shed on the far side of an inner wall, and the man sent to it has the mains back before one man can walk from it to the door. One waits by the door, the other throws the breaker on the word and hides.';
 export const MATERIALS = TRAIN_MATERIALS;
 
@@ -69,7 +72,7 @@ const PLACES = { areas: [
  *  paint and the drums are this level's own boxes as exported (levels/lights-out.json), moved; the ids are the set's (lo_). */
 const SHELL = yardGateShell('lo');
 const LIGHTS_OUT_KITVIEW: KitViewData = {
-  sets: { shed: { ...SHELL,
+  sets: { shed: { ...SHELL, doorPaint: GREEN_LEAVES(),
     lights: [{ id: 'lo_bulb', kind: 'point', pos: [9.4, 2.25, 11.4], dir: [0, -1, 0], color: [1, 0.68, 0.4], intensity: 26, range: 7, innerDeg: 0, outerDeg: 180, group: 'lo', enabled: true, volumetric: 0.25, radius: 0.06, mains: false, fixture: 'lo_018' }],
     boxes: [...SHELL.boxes,
       { id: 'lo_001', group: 'lo.shed', c: [9.87, 0.006, 12.24], h: [1.75, 0.006, 1.12], material: 'slab', flags: ['NoShadow'] },

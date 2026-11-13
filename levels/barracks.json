@@ -1517,6 +1517,7 @@
     { "id": "sg_w", "hinge": [17.25, 17.82], "closedDir": 1.5707963267948966, "width": 0.86 },
     { "id": "sg_e", "hinge": [25.75, 17.82], "closedDir": 1.5707963267948966, "width": 0.86 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.08, 0.24, 0.16], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],
@@ -1535,6 +1536,12 @@
     { "id": "beacon0", "pos": [8.2, 2.7, 14], "box": "sw_beacon0" },
     { "id": "beacon1", "pos": [22, 2.7, 9.4], "box": "sw_beacon1" },
     { "id": "beacon2", "pos": [24, 2.7, 18.6], "box": "sw_beacon2" }
+  ],
+  "vehicleLamps": [
+    { "box": "box_0390", "what": "head lamp" },
+    { "box": "box_0391", "what": "tail lamp" },
+    { "box": "box_0392", "what": "head lamp" },
+    { "box": "box_0393", "what": "tail lamp" }
   ],
   "sky": { "zenith": [0.015, 0.025, 0.05], "horizon": [0.04, 0.05, 0.08] },
   "plans": {

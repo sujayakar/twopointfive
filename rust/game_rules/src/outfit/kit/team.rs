@@ -24,7 +24,7 @@ pub struct TeamFor {
 
 impl TeamFor {
     /// The mission as the screen reads it: a lesson played as issued reads neither of its level's blocks, and a link with `noissue` wears the kept cards.
-    pub fn new(g: &Game, entry: LoadoutEntry, link: Query, issue: Option<IssueData>, walls: f64) -> TeamFor {
+    pub fn new(entry: LoadoutEntry, link: Query, issue: Option<IssueData>, walls: f64) -> TeamFor {
         let lesson = kit_as_issued(&entry);
         let levelled = entry.level.is_some() && !lesson;
         let issue = issue.filter(|_| levelled && !link.has("noissue")).map(|d| d.members);

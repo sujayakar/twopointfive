@@ -2,11 +2,9 @@ pub use ::game_types::anim_skeleton::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use crate::m;
 use crate::v3::{self, Quat, V3};
 use ::sim::single::S;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 
 /// A layer over his animation: his poses and his rig lent it with his animator.
 pub(super) fn anim_layer(g: &mut crate::game::Game, c: CharId, layer: impl FnOnce(&mut ::sim::skeleton::Body, &mut crate::character::Anim, &crate::knobs::Knobs)) {
@@ -231,6 +229,8 @@ pub(super) fn fk_node(d: &[f32], n: usize, i: usize, up: Option<(Quat, V3)>) -> 
 
 #[cfg(test)]
 mod tests {
+    use crate::m;
+    use alloc::string::String;
     use super::*;
 
     const ROWS: usize = 8;

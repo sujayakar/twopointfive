@@ -3,8 +3,8 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 macro_rules! o { ($g:expr, $op:expr) => { $g.tab.wallcharge_wall_op[$op] } }
 macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.task[$a] } }
@@ -403,7 +403,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
         return;
     }
     if let Some(rows) = g.groups[g.group].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
-        if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
+        if rows.iter().any(|&d| g.tab.orders_order_def[d].row.word) { return; }
     }
     let sam = g.player_pos(g.player);
     let c = match wall_charge_nearest(g, Some(&mut |g: &mut Game, x: WallChargeId| wall_charge_key_is(g, &crate::seats::here(g), x))) { Some(c) => c, None => return };

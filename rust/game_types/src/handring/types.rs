@@ -1,7 +1,5 @@
 //! The types of `handring`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 #[derive(Clone, Debug, Default)]
 pub struct EMPTYWHY {
@@ -12,7 +10,6 @@ pub struct EMPTYWHY {
 }
 
 pub const EMPTY_WORD: &str = "nothing in reach";
-
 
 pub const EMPTY_SHOW_SECS: f64 = 1.6;
 

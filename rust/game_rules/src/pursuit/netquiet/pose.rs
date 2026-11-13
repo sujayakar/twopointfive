@@ -1,10 +1,7 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
 
 /// What he watches from the spot: the arc's middle, moved round until his doors sit in his eyes.
 pub(super) fn watch(g: &mut crate::game::Game, gd: GuardId) {
@@ -54,6 +51,7 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     /// The pinned bits of look_from, with an eye slack of 4.

@@ -1,6 +1,6 @@
 //! THE PANES OF GLASS THAT HAVE BEEN TOUCHED, as the box world holds them (`World.panes`): a line that meets a pane reads its row where it stands. The rules are sim's
 //! panes.rs and glass.rs, and the picture reads the rows.
-use crate::bytes::{ToBytes, W};
+use crate::bytes::ToBytes;
 use crate::V3;
 use alloc::vec::Vec;
 

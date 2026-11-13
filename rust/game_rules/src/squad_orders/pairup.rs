@@ -1,6 +1,5 @@
 pub use ::game_types::pairup::types;
 pub use types::*;
-use crate::game::Game;
 
 /// A rule is in force: the switch, and its own row (settled on, on the page).
 pub fn pair_up(g: &crate::game::Game) -> bool {
@@ -23,6 +22,7 @@ pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
     use super::*;
 
     #[test]

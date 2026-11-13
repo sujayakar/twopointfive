@@ -1,10 +1,10 @@
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small words
 
@@ -75,34 +75,7 @@ pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
 /// The built-in rows of the menu and the night breach's owner.
 pub fn squad_orders_new(g: &mut crate::game::Game) -> crate::orders::SquadOrders {
     let mut s = SquadOrders::blank();
-    let words = |w: &[&str]| -> Option<Vec<String>> { Some(w.iter().map(|x| String::from(*x)).collect()) };
-    let rows = [
-        rows::def(&rows::movethere::ORDER, OrderDef {
-            targets: vec![TargetKind::Floor],
-            ack: words(&["moving.", "on it."]),
-            ..Default::default()
-        }),
-        rows::def(&rows::stack::ORDER, OrderDef {
-            targets: vec![TargetKind::Door],
-            ack: words(&["stacking up.", "on the door."]),
-            ..Default::default()
-        }),
-        rows::def(&rows::cover::ORDER, OrderDef {
-            targets: vec![TargetKind::Floor, TargetKind::Door],
-            ack: words(&["covering.", "i've got it."]),
-            ..Default::default()
-        }),
-        rows::def(&rows::fallin::ORDER, OrderDef {
-            targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
-            ack: words(&["on you.", "with you."]),
-            ..Default::default()
-        }),
-        rows::def(&rows::hold::ORDER, OrderDef {
-            targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
-            ack: words(&["holding."]),
-            ..Default::default()
-        }),
-    ];
+    let rows = [&rows::movethere::ORDER, &rows::stack::ORDER, &rows::cover::ORDER, &rows::fallin::ORDER, &rows::hold::ORDER].map(rows::def);
     for row in rows {   // (rows of its own: a menu newly stood has none yet, whichever seat the pass is about while it is made)
         let (id, d) = (row.id.clone(), new_row(g, row));
         s.made.set(id, d);
@@ -315,7 +288,7 @@ pub fn squad_orders_register(g: &mut crate::game::Game, def: OrdersOrderDefId, b
     let id = g.tab.orders_order_def[def].id.clone();
     squad_orders_unregister(g, &id);
     if let Some(si) = &g.tab.orders_order_def[def].stands_in {   // a stand-in: the other row's page and place, the two never listed together
-        let wants = si.for_.clone();
+        let wants = si.clone();
         let stood = g.groups[g.group].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == wants);
         if let Some(stood) = stood {
             squad_orders_seat(g, def, stood);
@@ -330,7 +303,7 @@ pub fn squad_orders_register(g: &mut crate::game::Game, def: OrdersOrderDefId, b
     let at = i.unwrap_or(g.groups[g.group].orders.defs.len());
     g.groups[g.group].orders.defs.insert(at, def);
     let stand_ins: Vec<OrdersOrderDefId> = g.groups[g.group].orders.defs.iter().copied()
-        .filter(|&d| g.tab.orders_order_def[d].stands_in.as_ref().map_or(false, |x| x.for_ == id))
+        .filter(|&d| g.tab.orders_order_def[d].stands_in.as_ref() == Some(&id))
         .collect();
     for s in stand_ins {   // (registered again: its stand-ins move with it)
         if let Some(j) = g.groups[g.group].orders.defs.iter().position(|&d| d == s) { g.groups[g.group].orders.defs.remove(j); }

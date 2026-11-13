@@ -1,9 +1,8 @@
 pub use ::game_types::doornames::types;
 pub use types::*;
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use alloc::{format, string::String, vec, vec::Vec};
+use crate::js::{JsMap, JsSet};
+use alloc::{format, string::String, vec::Vec};
 
 /// COMPASS: a whole compass word or letter.
 static COMPASS: &[&str] = &["n", "s", "e", "w", "ne", "nw", "se", "sw", "north", "south", "east", "west"];
@@ -182,6 +181,8 @@ pub fn door_said_name(g: &crate::game::Game, d: DoorId) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::Game;
+    use alloc::vec;
     use super::*;
     use alloc::string::ToString;
     use crate::scene_level::Level;

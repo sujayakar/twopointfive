@@ -96,6 +96,7 @@ import { feetOn } from './lib/carShapes';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
+import { BLUE_LEAVES } from './lib/doorPaint';
 
 const PLAIN_NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
 
@@ -914,6 +915,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ─────────────────────────────── the skin ───────────────────────────────
 export const NAME = 'compound';
+/** what its leaves are painted */
+export const DOOR_PAINT = BLUE_LEAVES();
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = COMPOUND_ROOMS;
@@ -923,7 +926,7 @@ const SKIN: Skin = {
   rooms: [{ id: 'pantry', bounds: R.pantry }, { id: 'spare', bounds: R.spare }, { id: 'hall', bounds: R.hall }, { id: 'corridor', bounds: R.corridor }],
   rugs: { sala: 'afghan', office: 'baluch', bunk: 'kilim', back: 'felt', pantry: 'mat', spare: 'kilim' },
   metals: ['paintBlue', 'rust', 'galv', 'woodGrey', 'paintGreen'],   // (a family's house: no army olive on its shelves)
-  // the two cars: a dust-tan pickup and a yellow taxi (a colour nobody names takes its tone's row, and a plain grey is a steel cabinet to a blast: scene/materials.ts 'unnamed grey'; a car's body says its own word)
+  // the two cars: a dust-tan pickup and a yellow taxi (a colour nobody names takes its tone's row, and a plain grey is a steel cabinet to a blast: lib/materials.ts 'unnamed grey'; a car's body says its own word)
   pick: c => { const a = c.b.albedo; if (c.name !== undefined) return undefined; return a[0] === 0.24 && a[1] === 0.27 ? 'truckTan' : a[0] === 0.42 && a[1] === 0.4 && a[2] === 0.36 ? 'genYellow' : undefined; },   // (a car wears PAINT: the can's yellow it wore is a plastic, which the look draws flat)
   dress: (G, _level, T) => {
     const M = lookMarks(T);

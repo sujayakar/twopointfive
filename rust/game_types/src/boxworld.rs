@@ -10,7 +10,6 @@ use crate::bytes::{ToBytes, W};
 use crate::made::next;
 use crate::ids::*;
 use crate::scene_boxes::{box_flag, Box as SBox};
-use crate::V3;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut, Index};
 

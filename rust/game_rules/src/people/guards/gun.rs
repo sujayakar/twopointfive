@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ------------------------------------------------------------ small private helpers
 
@@ -575,7 +575,7 @@ fn weapon_rig_is_pistol(g: &Game, gd: GuardId) -> bool {
 /// The light at its lens, its beam and whether it burns; returns what the lens hangs off.
 fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
     use crate::character::Bone;
-    use crate::game::GuardState;
+    
     let c = g.gd[gd].ch;
     let fl = g.gd[gd].flashlight;
     if g.ch[c].bones.get(Bone::HandR).is_none() { return None; }

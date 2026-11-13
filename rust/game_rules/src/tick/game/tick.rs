@@ -1,18 +1,15 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game.
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
     crate::seats::on_seat(g, Some(s), &mut f)
 }
-
-/// the character of a seat's man
-fn man_char(g: &Game, s: SeatId) -> CharId { let pl = crate::cmd::seat_man(g, s); g.pl[pl].ch }
 
 /// THE TICK, off the players' plain records: every row of `STEPS`, in order.
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) { game_step_watched(g, dt, cmds, &mut |_, _| ()) }
@@ -88,7 +85,7 @@ fn stand_in_muzzle(g: &Game, long: Option<crate::rig_props::LongRig>, cb: bool, 
 /// the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands
 pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     use crate::character::AnimLongGrip;
-    use crate::game::{CarbineDeal, GuardState};
+    use crate::game::CarbineDeal;
     use crate::teams::Team;
     use crate::weapons::{GunModelId, WeaponId};
     let dt = dt.unwrap_or(0.0);
@@ -126,14 +123,14 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let in_hands = g.weapon(def).clone();
             let other = g.gd[gd].second.as_ref().map(|s| g.weapon(g.fa[s.gun].def).clone());
             let third = match g.gd[gd].slung.as_ref() { Some(s) if s.out => Some(g.weapon(g.fa[s.own].def).clone()), _ => None };
-            let look = crate::gunlook::gun_look_of(g, into, Some(&in_hands), other.as_ref(), third.as_ref());
+            let look = crate::gunlook::gun_look_of(into, Some(&in_hands), other.as_ref(), third.as_ref());
             let hand = if cb { look.as_ref().and_then(|l| l.hand) } else { None };
             g.ch[c].gun_look = look;
             if let Some(mo) = hand {
                 let at = match grip_own.iter().position(|r| r.0 == mo) {
                     Some(k) => k,
                     None => {
-                        let gr = crate::rig_props::model_grip(g, mo, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
+                        let gr = crate::rig_props::model_grip(mo, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
                         let a = crate::rig_props::model_muzzle_ahead(mo);
                         grip_own.push((mo, gr, a)); grip_own.len() - 1
                     }

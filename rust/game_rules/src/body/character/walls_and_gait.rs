@@ -1,10 +1,7 @@
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- small helpers
 
@@ -177,7 +174,6 @@ pub(super) fn anim_wall_body(g: &mut crate::game::Game, c: CharId, w: f64) {
 
 /// the wall hold, arms
 pub(super) fn anim_wall_arms(g: &mut crate::game::Game, c: CharId, w: f64) { crate::anim_skeleton::anim_layer(g, c, |s, an, _| ::sim::layers::wall_arms(s, an, w)); }
-
 
 // ---- the kick, signals, a smoke, the goggles, a tell
 

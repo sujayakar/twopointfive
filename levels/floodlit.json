@@ -494,6 +494,7 @@
     { "id": "store", "hinge": [27.5, 7.319999999999999], "closedDir": 1.5707963267948966, "width": 0.86 },
     { "id": "shed", "hinge": [2.82, 19.5], "closedDir": 0, "width": 0.86, "exterior": true }
   ],
+  "doorPaint": { "outside": { "albedo": [0.62, 0.17, 0.03] }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],
@@ -509,6 +510,12 @@
   },
   "breaker": { "pos": [1.5, 1.35, 19.24], "panel": "breaker_panel", "led": "breaker_led" },
   "beacons": [],
+  "vehicleLamps": [
+    { "box": "box_0128", "what": "head lamp" },
+    { "box": "box_0129", "what": "tail lamp" },
+    { "box": "box_0130", "what": "head lamp" },
+    { "box": "box_0131", "what": "tail lamp" }
+  ],
   "sky": { "zenith": [0.007, 0.012, 0.024], "horizon": [0.018, 0.024, 0.039] },
   "plans": {
     "roomClear": []

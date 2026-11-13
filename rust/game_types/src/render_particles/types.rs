@@ -1,7 +1,6 @@
 //! The types of `render_particles`.
-#![allow(unused_imports)]
-use crate::{Words, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Words, V3};
+use alloc::vec::Vec;
 
 /// how an emit's particles are born; absent on a record reads as Cone (:471)
 #[derive(Clone, Copy, Debug, Words)]

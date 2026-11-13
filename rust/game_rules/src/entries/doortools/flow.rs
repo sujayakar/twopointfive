@@ -1,10 +1,10 @@
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::{self, JsMap};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec, vec::Vec};
 
 use super::flow_in::door_tools_flow_in;
 use crate::v3::dist_xz;
@@ -638,7 +638,7 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
             let names: Vec<String> = stay.iter().map(|&m| g.gd[m].callsign.clone()).collect();
             door_tools_beat(g, op, &format!("outside · {}", names.join(", ")));
         }
-        let queue: Vec<DoorToolsDoneItemQueueItem> = in_men.iter().enumerate().map(|(i, &gd)| {
+        let queue: Vec<DoorToolsDoneItemQueueItem> = in_men.iter().map(|&gd| {
             DoorToolsDoneItemQueueItem { gd, pod: deal.get(gd).copied().unwrap_or(pods[0]) }
         }).collect();
         enter_go(g, op, t, queue);
@@ -647,7 +647,7 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     let own: Vec<crate::entrypoints::Pod> = if big { door_tools_pods_apart(g, op, &pods, men.len() as f64) } else { pods };
     let spots: Vec<V3> = own.iter().take(men.len()).map(|p| p.pos).collect();
     let pairs = crate::orders::squad_orders_pair(g, &men, &spots, None, None);
-    let queue: Vec<DoorToolsDoneItemQueueItem> = men.iter().enumerate().map(|(i, &gd)| {
+    let queue: Vec<DoorToolsDoneItemQueueItem> = men.iter().map(|&gd| {
         let to = pairs.iter().find(|x| x.0 == gd).unwrap().1;
         DoorToolsDoneItemQueueItem { gd, pod: own.iter().find(|p| p.pos == to).copied().unwrap_or(own[0]) }
     }).collect();

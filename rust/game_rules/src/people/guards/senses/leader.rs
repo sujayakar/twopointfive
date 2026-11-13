@@ -1,6 +1,5 @@
 //! THE MAN HE TRAILS HAS STARTED AT SOMETHING: he takes it as seriously.
 use crate::game::Game;
-use crate::guards::*;
 use crate::ids::*;
 use crate::game::GuardState as St;
 use crate::m;

@@ -3,10 +3,9 @@ pub use types::*;
 use crate::flight::Met;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{string::String, vec::Vec};
 
 /// The length of a previewed arc in metres.
 pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
@@ -325,6 +324,7 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
     use alloc::boxed::Box;
 

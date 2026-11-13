@@ -1,7 +1,6 @@
 //! The types of `savestate`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, crosses::Crosses, ids::*, js::*, V3};
+use alloc::string::String;
 
 #[derive(Clone, Debug, Default)]
 pub struct SlotInfo {

@@ -2,10 +2,9 @@ pub use ::game_types::camera::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, vec::Vec};
+use crate::v3::{self, V3};
 
 fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
     let p = match p {
@@ -170,6 +169,7 @@ fn planar_basis(c: &FollowCamera) -> FollowCameraPlanarBasis {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
     use super::*;
 
     fn at_near(a: V3, b: V3, what: &str) { assert!(v3::dist(a, b) < 1e-3, "{what}: {a:?} against {b:?}"); }

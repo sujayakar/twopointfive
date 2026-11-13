@@ -1,6 +1,5 @@
 //! The types of `doortools`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the word's own row as the squad's size has it: none, a squad of one or two (it's on no list and waits stacked), a bigger one
@@ -717,7 +716,6 @@ pub const LEAF_FROM: f64 = 1.45;
 pub const LEAF_STEP: f64 = 0.1;
 
 pub const LEAF_COST: f64 = 4.0;
-
 
 pub const SAM_SHIFT: f64 = 0.35;
 

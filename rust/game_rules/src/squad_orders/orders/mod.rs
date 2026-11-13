@@ -19,4 +19,4 @@ pub mod hud;
 pub use hud::*;
 pub mod shown;
 pub mod words;
-pub use words::*;
+use words::*;

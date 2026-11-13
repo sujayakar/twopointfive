@@ -1,11 +1,8 @@
 pub use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
-use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
-use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::{format, string::String, vec::Vec};
 
 /// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.
 pub(super) fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
@@ -18,7 +15,6 @@ pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<c
     crate::director::script_define(script, &mut manifest)?;   // (its verbs are the manifest_* and program_* below)
     Ok(manifest)
 }
-
 
 /// D.mark: a named place; a mark named again keeps its pos unless given one.
 pub(in crate::missions) fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
@@ -254,6 +250,8 @@ fn lint_expects(m: &Manifest, out: &mut Vec<LintProblem>) {
 
 #[cfg(test)]
 mod tests {
+    use crate::m;
+    use alloc::vec;
     use super::*;
 
     // what no script of the six calls and the lint still answers for: how a manifest comes to name these

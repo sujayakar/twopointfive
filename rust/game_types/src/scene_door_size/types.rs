@@ -1,7 +1,4 @@
 //! The types of `scene_door_size`.
-#![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DOORSIZE {

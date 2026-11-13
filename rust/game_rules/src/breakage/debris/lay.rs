@@ -1,10 +1,7 @@
-use super::*;                      // your own module: its types, its other parts' functions
-use crate::game::Game;
+                      // your own module: its types, its other parts' functions
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Turn box `b` by fraction `k` of the way toward lying with its nearest face on a surface of normal `n` (k = 1: exactly flat); keeps yaw as the heading.
 pub(super) fn lay_flat(g: &mut crate::game::Game, b: AnyBoxId, n: V3, k: f64) {
@@ -63,7 +60,6 @@ fn lay_axis_row(row: &mut crate::scene_boxes::Box, bi: usize, n: V3, k: f64) {
     let f = v3::quat::rotate(rot, [0.0, 0.0, 1.0]);
     if m::hyp2(f[0], f[2]) > 1e-3 { row.yaw = m::atan2(f[0], f[2]); }   // heading of local +Z, the level's yaw convention
 }
-
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).
 pub(super) fn pose_key(g: &crate::game::Game, p: PropId) -> f64 {

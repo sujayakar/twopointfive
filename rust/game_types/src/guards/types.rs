@@ -1,6 +1,5 @@
 //! The types of `guards`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to

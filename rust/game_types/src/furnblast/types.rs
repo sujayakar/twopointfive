@@ -1,7 +1,6 @@
 //! The types of `furnblast`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum BlastSource {
@@ -136,11 +135,6 @@ pub struct Member {
     pub nb: Vec<FurnblastMemberId>,
     pub sup: Vec<FurnblastMemberId>,
     pub group: Option<crate::furnblast::Group>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct BreakClassOfB {
-    pub does: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

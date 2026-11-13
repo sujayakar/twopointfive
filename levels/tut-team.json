@@ -1,6 +1,8 @@
 {
   "version": 2,
   "name": "tut-team",
+  "script": "tut-team",
+  "snow": true,
   "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-team.ts build → tools/levels/export.ts", "notes": "The squad's tutorial mission on the ground: the tunnel station of tut-sky, box for box, with the player on the road behind his own truck and a mission of one order and one word. Regenerate: bun run tools/levels/export.ts tut-team" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
@@ -1029,6 +1031,7 @@
     { "id": "store", "hinge": [22, 6.82], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true, "swing": 1 },
     { "id": "bunk", "hinge": [29, 15.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "swing": 1 }
   ],
+  "doorPaint": { "outside": { "albedo": [0.08, 0.24, 0.16], "stuff": "paint" }, "inside": { "albedo": [0.33, 0.29, 0.23], "stuff": "wood" } },
   "routes": [],
   "chokepoints": [],
   "volumes": [],
@@ -1049,6 +1052,22 @@
     { "id": "beacon2", "pos": [12.83, 2.6300000000000003, 20], "box": "sw_beacon2" },
     { "id": "beacon3", "pos": [9, 2.7, 7.8], "box": "sw_beacon3" },
     { "id": "beacon4", "pos": [37.4, 3.19, 21.6], "box": "sw_beacon4" }
+  ],
+  "vehicleLamps": [
+    { "box": "box_0161", "what": "head lamp" },
+    { "box": "box_0162", "what": "head lamp" },
+    { "box": "box_0275", "what": "head lamp" },
+    { "box": "box_0276", "what": "tail lamp" },
+    { "box": "box_0277", "what": "head lamp" },
+    { "box": "box_0278", "what": "tail lamp" },
+    { "box": "box_0298", "what": "head lamp" },
+    { "box": "box_0299", "what": "tail lamp" },
+    { "box": "box_0300", "what": "head lamp" },
+    { "box": "box_0301", "what": "tail lamp" },
+    { "box": "box_0338", "what": "head lamp" },
+    { "box": "box_0339", "what": "tail lamp" },
+    { "box": "box_0340", "what": "head lamp" },
+    { "box": "box_0341", "what": "tail lamp" }
   ],
   "sky": { "zenith": [0.012, 0.02, 0.042], "horizon": [0.04, 0.05, 0.075] },
   "plans": {

@@ -2,10 +2,10 @@ pub use ::game_types::bigkit::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 /// the live tool of the seat's kick; only where nothing since the frame began can have taken the kick away
 macro_rules! tool {

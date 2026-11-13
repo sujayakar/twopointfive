@@ -220,7 +220,7 @@ fn in_the_guns_hold() -> (Play, GuardId, [f64; 2]) {
     let at = p.at(man);
     p.sam_put([at[0] - 0.7, at[1]]);
     p.run(0.1);
-    game::player::start_grab(&mut p.g, man, None);
+    game::player::start_grab(&mut p.g, man);
     p.until(2.5, |p| holding(p)).expect("the grab never settled");
     p.run(0.5);
     (p, man, at)

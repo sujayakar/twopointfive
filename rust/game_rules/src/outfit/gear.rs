@@ -1,7 +1,5 @@
 pub use ::game_types::gear::types;
 pub use types::*;
-use crate::game::Game;
-use crate::ids::*;
 use alloc::string::String;
 
 /// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.

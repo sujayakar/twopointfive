@@ -1,7 +1,5 @@
 //! The types of `scene_scenario_list`.
-#![allow(unused_imports)]
-use crate::{Words, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 #[derive(Clone, Debug, Default)]
 pub struct ScenarioSpec {

@@ -2,10 +2,10 @@ pub use ::game_types::silent::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js::JsSet;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{string::String, vec, vec::Vec};
+use crate::v3::V3;
+use alloc::{string::String, vec::Vec};
 
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
@@ -197,22 +197,8 @@ pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::
 
 /// the posture's two rows on the menu: made anew at each call
 fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
-        ..Default::default()
-    }));
-    let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
-        targets: targets(),
-        listed: listed(),
-        free: Some(true),
-        ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::silent::ORDER.id) }),
-        ..Default::default()
-    }));
-    [silent, loud]
+    use crate::orders::rows;
+    [&rows::silent::ORDER, &rows::loud::ORDER].map(|r| crate::orders::squad_orders_row(g, rows::def(r)))
 }
 
 /// the word that follows 'loud' on the HUD
@@ -295,6 +281,7 @@ pub fn silent_tick(g: &mut crate::game::Game) {
 
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use super::*;
     #[test]
     fn the_hud_word_after_loud() {

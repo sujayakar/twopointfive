@@ -2,14 +2,12 @@ pub use ::game_types::input::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
-use alloc::string::String;
+use crate::js;
 
 /// A new Input with every field initialised and no listeners: a seat's, a host's.
 pub fn input_detached(g: &mut Game) -> InputId {
     g.tab.input.push(Input::blank())
 }
-
 
 /// Is this key held?
 pub fn input_down(g: &Game, id: InputId, key: Key) -> bool {
@@ -54,6 +52,7 @@ fn end_frame(i: &mut Input) {
 
 #[cfg(test)]
 mod tests {
+    use alloc::string::String;
     use super::*;
 
     fn s(x: &str) -> String {

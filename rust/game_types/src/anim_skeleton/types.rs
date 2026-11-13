@@ -1,6 +1,5 @@
 //! The types of `anim_skeleton`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A POSE OF A MAN'S: which of his it is

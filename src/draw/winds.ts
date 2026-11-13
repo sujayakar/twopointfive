@@ -38,7 +38,7 @@ class WindList {
     return R;
   }
 }
-const rect = <T extends ArrayLike<number> | undefined>(f: Float32Array, o: number, to: T): [number, number, number, number] => { const r = (to ?? [0, 0, 0, 0]) as unknown as [number, number, number, number]; for (let k = 0; k < 4; k++) r[k] = f[o + k]; return r; };
+const rect = <T extends ArrayLike<number> | undefined>(f: ArrayLike<number>, o: number, to: T): [number, number, number, number] => { const r = (to ?? [0, 0, 0, 0]) as unknown as [number, number, number, number]; for (let k = 0; k < 4; k++) r[k] = f[o + k]; return r; };
 
 export class DrawWinds {
   readonly active: WindList; readonly gusts: WindList; readonly heat: WindList;

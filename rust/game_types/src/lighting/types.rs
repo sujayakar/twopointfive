@@ -1,7 +1,5 @@
 //! The types of `lighting`.
-#![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, V3};
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]

@@ -2,10 +2,10 @@ pub use ::game_types::particle_fx::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::js::{self, JsMap, JsSet};
+use crate::js;
 use crate::m;
-use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use crate::v3::{self, V3};
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
@@ -45,7 +45,7 @@ fn dust_shipped(k: &crate::knobs::DustK) -> bool {
 
 /// What a round knocks out of a static: its word's surface, in any weather.
 pub fn surf_at(g: &crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
-    crate::scene_materials::does_of(g, g.tab.boxes[b].does).surf
+    crate::scene_materials::does_of_box(g, b).surf
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
@@ -351,7 +351,6 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
 pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
 }
-
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.
 type Emit = crate::render_particles::EmitOpts;

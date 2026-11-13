@@ -1,7 +1,6 @@
 //! The types of `shotgun`.
-#![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use crate::{bytes::ToBytes, ids::*, js::*, V3};
+use alloc::vec::Vec;
 
 /// a round in a man; a shell's are settled once the whole pattern has flown
 #[derive(Clone, Copy, Debug)]
