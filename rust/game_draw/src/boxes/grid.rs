@@ -163,7 +163,6 @@ impl Grid {
         if self.info.is_empty() { self.info.push(Info::ZERO); }
         let (k, info) = (world(), &mut self.info[0]);
         (info.num_boxes, info.num_globals, info.grid_w, info.grid_h) = (all.len() as u32, self.globals.len() as u32, W as u32, H as u32);
-        info.statics[0] = self.statics.len() as u32;
         (info.grid[0], info.grid[1]) = (self.slack as f32, (k.grid_y_pad - ITEM_PAD_KEEP) as f32);
         let pad = GLOBAL_PAD + self.slack;
         for i in 0..GLOBALS {
