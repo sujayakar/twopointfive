@@ -482,3 +482,24 @@ fn a_training_level_wears_its_lessons_kit() {
         assert_eq!((issued.3, issued.4, issued.5), (1.0, 1.0, 1.0), "seed {s}: the control wears the issue card");
     }
 }
+
+/// THE RULE: with no primary in the kit the rifle's key does nothing: the gun in his hand stays there.
+/// A FAILURE MEANS: the key empties his hand.
+#[test]
+fn the_rifles_key_with_no_rifle_leaves_his_hand_as_it_is() {
+    for seed in [1, 2, 3] {
+        let mut p = Play::mission("depot.json", "?levelFile=depot.json&roomclear&squad4", &Opts { seed, ..Default::default() });
+        p.run(0.5);
+        assert!(game::kit::kit_set(&mut p.g, 0.0, KitField::Primary, &KitValue::Text(NO_PRIMARY.into())), "seed {seed}: the staging is wrong: the kit kept its rifle");
+        game::savestate::control::restart(&mut p.g);
+        p.run(1.0);
+        tap(&mut p, "Digit1");
+        p.run(1.0);
+        let pl = p.g.player;
+        let slot = p.g.pl[pl].slot;
+        assert!(!p.g.pl[pl].has_rifle && game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {seed}: the staging is wrong: no pistol in his hand ({slot:?})");
+        tap(&mut p, "Digit2");
+        p.run(1.5);
+        assert!(p.g.pl[pl].slot == slot && game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {seed}: after the rifle's key his hand has {:?}, a gun in it {}", p.g.pl[pl].slot, game::game::player_gun_in_hand(&p.g, pl).is_some());
+    }
+}
