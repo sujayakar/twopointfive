@@ -216,14 +216,11 @@ fn wxAirTEst(pixf: vec2f, z: f32) -> f32 {
   var t0 = 0.0; if (ro.y > top && rd.y < -1e-4) { t0 = (top - ro.y) / rd.y; }
   return clamp(exp(-wxFogTau(wxFog(), ro + rd * t0, rd, max(z - t0, 0.0))), 0.05, 1.0);
 }
-/** a texel's share by how far (in texels, each way) the pixel it marched through stands from this one: 0 at a texel and a half, so no texel of the nine is let in or let go of with a share
- *  left (cut off where the nine end, the share steps as the nearest texel changes, and a bright edge is drawn in squares of a texel) */
-fn volWindow(d: vec2f) -> f32 { let a = abs(d); let w = select(0.5 * (1.5 - a) * (1.5 - a), 0.75 - a * a, a < vec2f(0.5)); return w.x * w.y; }
 fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   let hdims = vec2i(textureDimensions(volTex));
   let vdiv = i32(frame.lossyCfg.y);                             // volumetric divisor: 2, or 4 with the lossy option
-  let at = (select(vec2f(pix) + 0.5, pin, SHARP) - (0.5 * f32(vdiv) + 0.5)) / f32(vdiv);   // in texels, from the middle of one's marched pixel: the middle of the nine is the nearest
-  let base = vec2i(floor(at + 0.5));
+  var ip = pix; if (SHARP) { ip = vec2i(floor(pin)); }
+  let base = ip / vdiv;
   var acc = vec4f(0.0); var wsum = 0.0;
   // EXPERIMENT (settings.smokeUpsampleRelax, volCfg.w bit 20): the depth guide assumes the volumetric term follows the SURFACE — true of haze up to it, false of a plume in
   // front of it: guiding by depth carves the plume's soft edge along every depth edge BEHIND it. Where the centre texel is mostly smoke (T < ½) the depth term lets go.
@@ -232,10 +229,11 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
       let h = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
-      let src = min(h * vdiv + vdiv / 2, inHi());   // the pixel that texel marched through (volumetrics.wgsl)
+      let src = min(h * vdiv + vec2i(h.y & 1, h.x & 1) * (vdiv / 2), inHi());   // the pixel that texel marched through (volumetrics.wgsl)
       let d = textureLoad(gDepth, gpx(src), 0);
       let zs = select(linearDepth(d, ipos(vec2f(src) + 0.5)), 1e4, d >= 1.0);
-      var w = volWindow(vec2f(base + vec2i(dx, dy)) - at);
+      var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
+      var w = exp(-dot(sp, sp) * (0.15 * (4.0 / f32(vdiv * vdiv))));   // spatial falloff in units of the texel spacing (0.15 /px² at vdiv 2)
       w *= mix(1.0, exp(-abs(zs - z) / max(z * 0.05, 0.05)), depthK);
       acc += textureLoad(volTex, h, 0) * w; wsum += w;
     }
@@ -699,7 +697,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
 // (THE PIXEL'S PLACE, lookPlaceLevels and the two walks it makes over the floor plan: place_common.wgsl, pasted in front of this kernel. The particles' splat asks it too.)
-/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
+/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGainsAt) and 1 once it has (0 = no gain by the place
  *  at this pixel: at night, with the shade row at 0, a section cap) */
 var<private> lookNow: vec4f;
 /** `here` = the light the pixel's place holds and `near` = the brightest place a stride away (lookPlaceLevels: the place field's, by the floor plan). Sam's
@@ -722,13 +720,13 @@ fn linearToSrgb(c: vec3f) -> vec3f {
 }
 
 // ---- refraction through the glass boxes (settings.glassRefract; frame.glassCfg.w = the index of refraction n, 0 = off) — over refract_common.wgsl,
-// the pure helpers the particle rain's water streaks share (refractDir / slabExit / beerLambert / refractProbeDist / screenRefractPx / clampRefractOffset) ----
+// the pure helpers the particle rain's water streaks share (refractDir / slabExit / refractProbeDist / screenRefractPx / clampRefractOffset) ----
 // The view ray that meets glass box k at X bends INTO it (Snell, 1 → n: never total going in), crosses the box to the face it leaves by (slabExit, in the box's yawed
 // frame — glassTrace's convention), and bends OUT (n → 1); a face it meets past the critical angle mirrors it instead (total internal reflection) and it crosses
 // once more — three stretches at most, then it is let out as it runs. ONE law for every Glass box: a 12 mm pane lets the ray out parallel, shifted a few millimetres
 // (nothing on screen but at a graze); the bottle's faces at right angles deviate it, and its 30 cm shift it centimetres. → the exit point E, the exit direction d,
 // the length of glass crossed, and the box's reference thickness `unit` (twice its thinnest half-extent: the tint authored on a Glass box is READ AS its transmittance
-// square through that — beerLambert's unit — so a pane square-on keeps exactly the tint it always had, and a slanting path, the bottle's diagonal or a mirrored leg
+// square through that, so a pane square-on keeps exactly the tint it always had, and a slanting path, the bottle's diagonal or a mirrored leg
 // inside it come out deeper by the same law, with no thickness switch anywhere).
 const REFR_MAX_M: f32 = 1.5;      // the bent ray is followed at most this far behind the glass before the picture is read (a bottle against the far wall reads the wall a stride on, not across the room)
 const REFR_MAX_PX: f32 = 0.12;    // … and its read point moves at most this share of the frame's height across the screen (a bound on a graze's worst case; square-on it is never reached)

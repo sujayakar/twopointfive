@@ -131,7 +131,7 @@ fn rainAlong(ro: vec3f, rd: vec3f, t0: f32, t1: f32) -> vec3f {
       if (tc <= t0 || tc >= t1) { continue; }
       let y = ro.y + rd.y * tc;
       if (y < 0.02 || y > top) { continue; }
-      let halfW = max(RAIN_W, 1.1 * tc * texelM);                                           // a texel either side: the pass's texels are a block of pixels apart (main), so anything thinner comes out beaded
+      let halfW = max(RAIN_W, 1.1 * tc * texelM);                                           // a texel either side: the pass's texels march interleaved pixels of their 2×2 block (main), so anything thinner comes out beaded
       let dist = length(o2 + d2 * tc - c);
       if (dist >= halfW) { continue; }
       let sc = (y + RAIN_V * frame.time) / RAIN_PERIOD + hash13(vec3f(cf, fk * 9.07 + 37.3)) * 17.0;
@@ -139,7 +139,7 @@ fn rainAlong(ro: vec3f, rd: vec3f, t0: f32, t1: f32) -> vec3f {
       if (u >= 1.0) { continue; }
       let big = 0.35 + 1.3 * hash13(vec3f(cf.yx, floor(sc) * 1.31 + fk * 4.1));           // this drop's size: they are not all alike (a few fat ones glint, most are fine)
       let xr = dist / halfW;
-      let shape = (1.0 - xr * xr) * (1.0 - 0.7 * u) * big * (1.0 - smoothstep(top - 1.0, top, y));   // across the streak (flat-topped: the texels along one streak sit up to half a texel either side of it, and a peaked core would ladder), along it (the tail thins), per drop, and in over the top metre
+      let shape = (1.0 - xr * xr) * (1.0 - 0.7 * u) * big * (1.0 - smoothstep(top - 1.0, top, y));   // across the streak (flat-topped: the interleaved texels along one streak sit up to half a texel either side of it, and a peaked core would ladder), along it (the tail thins), per drop, and in over the top metre
       var keep = 1.0; if (frame.weatherE.w > 0.0) { keep = rainNearKeep((ro + rd * tc).xz); }   // (particle rain: the near field is the particles' — this streak's share kept; exactly 1 without it)
       acc += rainLight(ro + rd * tc, -rd) * (RAIN_GAIN * 0.5 * shape * RAIN_W / halfW) * keep;  // (0.5: the flat profile carries twice the peaked one's area)
     }
@@ -161,7 +161,7 @@ fn splashAt(P: vec3f) -> f32 {
   let ctr = (q + 0.35 + 0.3 * vec2f(hash13(vec3f(q, 8.1)), hash13(vec3f(q.yx, 5.9)))) * cs;   // (kept 3 cm inside its cell: only the pixel's own cell is asked, so a ring must not run out of it)
   let r = 0.006 + age * 0.3;                                           // the ring runs out at 0.3 m/s to 2.4 cm
   let d = abs(distance(P.xz, ctr) - r);
-  let w = max(SPLASH_W, distance(P, frame.camPos) * 2.0 * frame.post.w * frame.lossyCfg.y / frame.screen.y);   // ring line width: a texel at this distance (thinner aliases between the texels), 6 mm at least
+  let w = max(SPLASH_W, distance(P, frame.camPos) * 2.0 * frame.post.w * frame.lossyCfg.y / frame.screen.y);   // ring line width: a texel at this distance (thinner aliases between the interleaved texels), 6 mm at least
   // RAIN_SCALE: drawn wider than its own line the ring keeps its LIGHT, not its brightness — dimmer by the footprint it gained (the line's two sides, less what
   // of the inner side has no room inside the ring), as a streak is by RAIN_W / halfW. With the camera pulled back a texel is many centimetres at the ground
   // and every ring was a blob that wide at a ring's full brightness. Exactly 1 where the texel is no wider than the line. (SPLASH_FILL: only the pixel's own
@@ -235,8 +235,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
   var wxAirOn = false; if (WX_VOL) { if (lv(WX_KINDS)) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
   if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
-  let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through the pixel in the middle of its vdiv×vdiv block (composite.wgsl upsampleVol reads where)
-  let full = min(gid.xy * vdiv + vdiv / 2u, vec2u(frame.screen) - 1u);
+  let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through one full-res pixel of its vdiv×vdiv block, interleaved by texel parity as before (×1 at vdiv 2)
+  let full = min(gid.xy * vdiv + vec2u(gid.y & 1u, gid.x & 1u) * (vdiv / 2u), vec2u(frame.screen) - 1u);
   let depth = textureLoad(gDepth, full, 0);
   let pix = vec2f(full) + 0.5;
   let Pfar = worldFromDepth(pix, select(depth, 1.0, depth >= 1.0));
@@ -324,7 +324,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           if (dens > 0.002) {
             let sigT = dens * 6.0;
             let sigS = sigT * 0.92;
-            // ambient: diceMeanRadianceWalled with its occlusion ray cached per (dice cell, plan quadrant) along the ray — a dozen steps share a 1 m cell and take the
+            // ambient: the mean radiance with its occlusion ray cached per (dice cell, plan quadrant) along the ray — a dozen steps share a 1 m cell and take the
             // first one's answer (approximate, not exact: a wall standing INSIDE the cell between two of those steps is decided by whichever came first)
             let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
             var side = sign(X - home); side.y = 0.0;
