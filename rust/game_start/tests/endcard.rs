@@ -59,6 +59,64 @@ fn in_a_game_of_two_the_card_waits_for_both() {
     }
 }
 
+/// the seat's player taps Enter; answers whether the mission is asked for again by it
+fn enter(p: &mut Play, seat: usize) -> bool {
+    let i = p.g.tab.cmd_seat[p.g.seats[seat]].input;
+    p.g.tab.input[i].pressed.add(String::from("Enter"));
+    p.net_frame(0);
+    game::input::input_end_frame(&mut p.g, i);
+    core::mem::take(&mut p.g.saves.again)
+}
+/// whether the seat's player is told that Enter has the mission again
+fn told(p: &mut Play, seat: usize) -> bool {
+    let (s, me) = (p.g.seats[seat], p.g.seats[0]);
+    game::seats::show_seat(&mut p.g, s);
+    let k = game::kit::kit_view(&p.g, &game::seats::here(&p.g));
+    game::seats::show_seat(&mut p.g, me);
+    k.again
+}
+
+/// THE RULE: a player who is down has the mission again by Enter once it is over for every player: all of them down, or the mission ended, won or lost. Until then Enter does nothing, and he is told so.
+/// A FAILURE MEANS: one player goes down, presses what his screen says, and the other's fight is thrown away; or a mission that is over waits for a key nobody is told of.
+#[test]
+fn in_a_game_of_two_enter_waits_until_it_is_over_for_both() {
+    for seed in SEEDS {
+        for downed in [0, 1] {
+            let mut p = yard(seed, 2);
+            p.run(0.5);
+            p.seat_goes_down(downed);
+            p.run(1.0);
+            assert!(!told(&mut p, downed) && !enter(&mut p, downed), "seed {seed}: player {downed} is down and the other fights on: Enter does nothing");
+            p.seat_goes_down(1 - downed);
+            p.run(0.2);
+            assert!(told(&mut p, downed) && enter(&mut p, downed), "seed {seed}: both are down: Enter has the mission again");
+            drop(p);
+
+            let mut p = yard(seed, 2);
+            p.run(0.5);
+            p.seat_goes_down(downed);
+            for gd in p.hostiles() { p.falls(gd, game::game::DownBy::Player); }
+            p.run(3.0);
+            assert!(game::verdict::verdict_ended(&p.g).is_some() && !game::seats::all_down(&p.g), "seed {seed}: won with one down");   // (the control)
+            assert!(!enter(&mut p, 1 - downed), "seed {seed}: he who is up plays on: Enter alone is no restart of his");
+            assert!(told(&mut p, downed) && enter(&mut p, downed), "seed {seed}: the mission is over: the man who is down has it again");
+            assert!(game::savestate::control::restart(&mut p.g) && game::verdict::verdict_ended(&p.g).is_none(), "seed {seed}: the mission that stands again has no end yet: whoever asks how it went is told it is on");
+        }
+    }
+}
+/// THE RULE: in a game of one Enter has the mission again from the moment he is down.
+#[test]
+fn alone_enter_is_there_at_once() {
+    for seed in SEEDS {
+        let mut p = yard(seed, 1);
+        p.run(0.5);
+        assert!(!told(&mut p, 0), "seed {seed}: up");
+        p.seat_goes_down(0);
+        p.frame();
+        assert!(told(&mut p, 0), "seed {seed}: down");
+    }
+}
+
 /// A FAILURE MEANS: the mission's end no longer tells the host, or tells it more than once. (`exfil`: the run's last stage, the stage written and not played: the drive is its own test.)
 fn out_past_the_exit(seed: u32) -> Play {
     let mut p = Play::level("office.json", false, &Opts { seed, ..Default::default() });
