@@ -887,9 +887,9 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
     let gd = s.gd;
     let Some(how) = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG) else { return };
     if how == LegEnd::Taken && mode != DefMode::Free {
-        // (somebody stronger has him: he goes on when he is let go, if that is soon)
+        // (somebody stronger has him, or a lane he was stopped short of: he goes on when he is let go, if that is soon)
         if g.time - s.t0 > g.k.squads.hold_secs { g.tab.enemysquads_squad[q].sent.remove(i); return; }
-        if crate::roomfight::on_leg(g, d) || crate::owner::kept(g, gd, crate::owner::by::SQUAD_LEG).is_some() || !fit(g, gd) { return; }
+        if crate::roomfight::on_leg(g, d) || crate::owner::kept(g, gd, crate::owner::by::SQUAD_LEG).is_some() || crate::owner::has(g, gd, crate::owner::by::LANE) || !fit(g, gd) { return; }
         let here = g.pos_of(gd);
         let mut way = s.way.clone();
         if let Some(k) = (0..way.len()).min_by(|&a, &b| dist_xz(way[a], here).total_cmp(&dist_xz(way[b], here))) { way.drain(..k); }
