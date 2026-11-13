@@ -233,8 +233,8 @@ A box with `rot` says no shape. A box with `markings` or the Glass flag may say 
 
 ## Surfaces
 
-`surfaces` is optional: what is underfoot for the mixer, the guards' ears and the sound meter, all through `floor_at`. Every material is a word of `FloorMat`: carpet, lino,
-stone, tile, asphalt or grass. With no block the game uses the office's own map, and a quiet mission's level is plain lino.
+`surfaces` is required: what is underfoot for the mixer, the guards' ears and the sound meter, all through `floor_at`. Every material is a word of `FloorMat`: carpet, lino,
+stone, tile, asphalt or grass.
 
 - `building` Rect. Outside it, a point is `verge` where x or z is under `grassEdge`, else `outside`. Inside it, the first zone that holds the point, else `inside`.
 - `grassEdge` number. `inside`, `outside`, `verge` materials.

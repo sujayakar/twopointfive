@@ -49,6 +49,7 @@
 // from the kitchen's — the level's one decision (a pair on each door) read off the ground. A brass sill lies in every opening, as long as the opening is wide.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -80,7 +81,7 @@ export const CONSULATE_ROOMS: Record<'lobby' | 'corridor' | 'visa' | 'records' |
 /** the wall across the consul's office: its z, and the x its west end stops at (the gap runs from the room's west wall to here) */
 export const CONSULATE_SPLIT = { z: 12.0, x0: 31.4 };
 
-export function build(): { level: Level; scenarios: LevelScenarios; groups: string[] } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE as Record<string, Vec3>, H = WORLD.ceilingY, R = CONSULATE_ROOMS;
   const { TX, mk, grp, add, slab, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, shelf, ceilingPanel, doorFrame, lights, switchables } = K;
@@ -498,7 +499,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   scenarios.kitView = { ways: [{ door: 'front', ref: [1, 18.75] }] };
   // THE FLOOR, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it)
   scenarios.places = { areas: [{ name: "consul's office", bounds: { ...R.suite } }, { name: 'visa office', bounds: { ...R.visa } }, { name: 'records room', bounds: { ...R.records } }, { name: 'waiting room', bounds: { ...R.waiting } }, { name: 'kitchen', bounds: { ...R.kitchen } }, { name: 'back office', bounds: { ...R.back } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'corridor', bounds: { ...R.corridor } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'store', bounds: { ...R.store } }] };
-  return { level, scenarios, groups: trace.groups };
+  // WHAT IS UNDERFOOT: rect for rect the floors above and the rooms' own wall to wall. The lobby is stone, the corridor lino, the reception hall and the
+  // consul's rooms carpet, the tea kitchen sealed tile; the typists' painted boards ring as lino does. The north verge is grass.
+  const surfaces: SurfacesData = {
+    building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
+    zones: [
+      { id: 'lobby', mat: 'stone', x0: 4, z0: 4, x1: 10, z1: 24 }, { id: 'corridor', mat: 'lino', x0: 10, z0: 10, x1: 24, z1: 13.2 }, { id: 'kitchen', mat: 'tile', x0: 17, z0: 13.2, x1: 24, z1: 24 }, { id: 'typists', mat: 'lino', x0: 24, z0: 13.2, x1: 29, z1: 24 },
+      { id: 'rooms', mat: 'carpet', x0: 4, z0: 4, x1: 36, z1: 24 }, { id: 'north_verge', mat: 'grass', x0: 0, z0: 0, x1: 40, z1: 3.2 },
+    ],
+  };
+  return { level, scenarios, groups: trace.groups, surfaces };
 }
 
 // ─────────────────────────────── the skin ───────────────────────────────
