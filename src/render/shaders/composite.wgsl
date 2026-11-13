@@ -697,7 +697,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
 // (THE PIXEL'S PLACE, lookPlaceLevels and the two walks it makes over the floor plan: place_common.wgsl, pasted in front of this kernel. The particles' splat asks it too.)
-/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
+/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGainsAt) and 1 once it has (0 = no gain by the place
  *  at this pixel: at night, with the shade row at 0, a section cap) */
 var<private> lookNow: vec4f;
 /** `here` = the light the pixel's place holds and `near` = the brightest place a stride away (lookPlaceLevels: the place field's, by the floor plan). Sam's
@@ -720,13 +720,13 @@ fn linearToSrgb(c: vec3f) -> vec3f {
 }
 
 // ---- refraction through the glass boxes (settings.glassRefract; frame.glassCfg.w = the index of refraction n, 0 = off) — over refract_common.wgsl,
-// the pure helpers the particle rain's water streaks share (refractDir / slabExit / beerLambert / refractProbeDist / screenRefractPx / clampRefractOffset) ----
+// the pure helpers the particle rain's water streaks share (refractDir / slabExit / refractProbeDist / screenRefractPx / clampRefractOffset) ----
 // The view ray that meets glass box k at X bends INTO it (Snell, 1 → n: never total going in), crosses the box to the face it leaves by (slabExit, in the box's yawed
 // frame — glassTrace's convention), and bends OUT (n → 1); a face it meets past the critical angle mirrors it instead (total internal reflection) and it crosses
 // once more — three stretches at most, then it is let out as it runs. ONE law for every Glass box: a 12 mm pane lets the ray out parallel, shifted a few millimetres
 // (nothing on screen but at a graze); the bottle's faces at right angles deviate it, and its 30 cm shift it centimetres. → the exit point E, the exit direction d,
 // the length of glass crossed, and the box's reference thickness `unit` (twice its thinnest half-extent: the tint authored on a Glass box is READ AS its transmittance
-// square through that — beerLambert's unit — so a pane square-on keeps exactly the tint it always had, and a slanting path, the bottle's diagonal or a mirrored leg
+// square through that, so a pane square-on keeps exactly the tint it always had, and a slanting path, the bottle's diagonal or a mirrored leg
 // inside it come out deeper by the same law, with no thickness switch anywhere).
 const REFR_MAX_M: f32 = 1.5;      // the bent ray is followed at most this far behind the glass before the picture is read (a bottle against the far wall reads the wall a stride on, not across the room)
 const REFR_MAX_PX: f32 = 0.12;    // … and its read point moves at most this share of the frame's height across the screen (a bound on a graze's worst case; square-on it is never reached)
