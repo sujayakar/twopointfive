@@ -216,7 +216,8 @@ fn wxAirTEst(pixf: vec2f, z: f32) -> f32 {
   var t0 = 0.0; if (ro.y > top && rd.y < -1e-4) { t0 = (top - ro.y) / rd.y; }
   return clamp(exp(-wxFogTau(wxFog(), ro + rd * t0, rd, max(z - t0, 0.0))), 0.05, 1.0);
 }
-/** a texel's share by how far (in texels, each way) it stands from the pixel: 0 at a texel and a half, where the next nine begin */
+/** a texel's share by how far (in texels, each way) the pixel it marched through stands from this one: 0 at a texel and a half, so no texel is let in or let go of with a share left
+ *  (with nine texels cut off where they end, the share steps as the nearest texel changes: a bright edge is drawn in squares of a texel) */
 fn volWindow(d: vec2f) -> f32 {
   let a = abs(d); let w = select(0.5 * (1.5 - a) * (1.5 - a), 0.75 - a * a, a < vec2f(0.5)) * vec2f(step(a, vec2f(1.5)));
   return w.x * w.y;
@@ -228,20 +229,20 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   let base = ip / vdiv;
   var acc = vec4f(0.0); var wsum = 0.0;
   var at = vec2f(pix) + 0.5; if (SHARP) { at = pin; }
-  let here = vec2f(base) + 0.5 - at / f32(vdiv);   // the nearest texel's middle, from the pixel, in texels: within half of one each way
+  let first = vec2i(floor(at / f32(vdiv) - 0.5)) - 1;   // of the four each way that a pixel they marched through can stand within a texel and a half of this one
   // EXPERIMENT (settings.smokeUpsampleRelax, volCfg.w bit 20): the depth guide assumes the volumetric term follows the SURFACE — true of haze up to it, false of a plume in
   // front of it: guiding by depth carves the plume's soft edge along every depth edge BEHIND it. Where the centre texel is mostly smoke (T < ½) the depth term lets go.
   var depthK = 1.0;
   if (((frame.volCfg.w >> 20u) & 1u) != 0u) { var Tc = textureLoad(volTex, clamp(base, vec2i(0), hdims - 1), 0).a; if (wxAirT < 1.0) { Tc = min(Tc / wxAirT, 1.0); } depthK = smoothstep(0.35, 0.75, Tc); }   // (÷ the weather's air in the texel's alpha — wxAirT, 1 with none: fog FOLLOWS the surface, only a plume lets go of the guide)
-  for (var dy = -1; dy <= 1; dy++) {
-    for (var dx = -1; dx <= 1; dx++) {
-      let h = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
+  for (var dy = 0; dy < 4; dy++) {
+    for (var dx = 0; dx < 4; dx++) {
+      let h = clamp(first + vec2i(dx, dy), vec2i(0), hdims - 1);
       let src = min(h * vdiv + vec2i(h.y & 1, h.x & 1) * (vdiv / 2), inHi());   // the pixel that texel marched through (volumetrics.wgsl)
+      let sp = vec2f(src) + 0.5 - at;
+      var w = volWindow(sp / f32(vdiv));
+      if (w <= 0.0) { continue; }   // (nine of the sixteen, as before)
       let d = textureLoad(gDepth, gpx(src), 0);
       let zs = select(linearDepth(d, ipos(vec2f(src) + 0.5)), 1e4, d >= 1.0);
-      var sp = vec2f(src - pix); if (SHARP) { sp = vec2f(src) + 0.5 - pin; }
-      var w = exp(-dot(sp, sp) * (0.15 * (4.0 / f32(vdiv * vdiv))));   // spatial falloff in units of the texel spacing (0.15 /px² at vdiv 2)
-      w *= volWindow(here + vec2f(vec2i(dx, dy)));                      // … let go of smoothly where the nine texels end: cut there, the weights step as the nearest texel changes, and a bright edge is drawn in squares of a texel
       w *= mix(1.0, exp(-abs(zs - z) / max(z * 0.05, 0.05)), depthK);
       acc += textureLoad(volTex, h, 0) * w; wsum += w;
     }
