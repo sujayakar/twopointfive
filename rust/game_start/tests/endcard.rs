@@ -141,15 +141,16 @@ fn out_through_the_exit_the_card_comes_once() {
 }
 
 
-/// A FAILURE MEANS: the end card's map is light where nobody is indoors, as it was while every level had the office's outline laid over it.
+/// A FAILURE MEANS: the end card's map is light where nobody is indoors, as it was while every level had the office's outline laid over it, or round a building's walls outside.
 #[test]
 fn the_map_is_light_under_the_levels_own_roofs() {
-    for (level, under, open) in [("crossing", [20.0, 7.0], [20.0, 16.0]), ("records", [15.0, 10.0], [34.0, 10.0]), ("floodlit", [18.0, 9.0], [10.0, 20.0])] {
+    for (level, under, open, foot) in [("crossing", [20.0, 7.0], [20.0, 16.0], [12.25, 8.25]), ("records", [15.0, 10.0], [34.0, 10.0], [9.25, 9.75]), ("floodlit", [18.0, 9.0], [10.0, 20.0], [8.25, 8.75])] {
         let p = Play::level(&format!("{level}.json"), false, &Opts { seed: 1, ..Default::default() });
         let floor = game::view::walked_floor(&p.g);
         let light = |at: [f64; 2]| { let cell = |v: f64| (v / floor.cell) as usize; (floor.rows.as_bytes()[cell(at[1]) * floor.w as usize + cell(at[0])] - b'0') & 1 == 1 };
         assert!((4.0..36.0).contains(&open[0]) && (4.0..24.0).contains(&open[1]), "{level}: {open:?} is no place the office's outline is wrong about");
         assert!(light(under), "{level}: {under:?} is in a room");
         assert!(!light(open), "{level}: {open:?} is in the open");
+        assert!(!light(foot), "{level}: {foot:?} is at the foot of a wall, outside");
     }
 }

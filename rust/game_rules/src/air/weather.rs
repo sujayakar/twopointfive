@@ -23,12 +23,9 @@ fn preset(g: &Game, kind: crate::weather_kinds::WeatherKind) -> &crate::weather_
 
 /// A LEVEL'S ROOFS: the ceiling slabs among these boxes (a centre and a half size each) as footprints, biggest first (equal ones in the order they came), at most four.
 pub fn roofs_among(boxes: impl Iterator<Item = (V3, V3)>) -> Vec<[f64; 4]> {
-    let ceiling = crate::scene_world::world().ceiling_y;
     let mut out: Vec<(f64, [f64; 4])> = Vec::new();
-    for (c, h) in boxes {
-        let (y0, y1) = (c[1] - h[1], c[1] + h[1]);
-        if !(y0 >= ceiling - 0.25 && y1 <= ceiling + 0.45) || h[0] < 0.45 || h[2] < 0.45 { continue; }
-        let r = [c[0] - h[0] - ROOF_PAD, c[2] - h[2] - ROOF_PAD, c[0] + h[0] + ROOF_PAD, c[2] + h[2] + ROOF_PAD];
+    for r in boxes.filter_map(|(c, h)| crate::render_reach::ceiling(c, h)) {
+        let r = [r[0] - ROOF_PAD, r[1] - ROOF_PAD, r[2] + ROOF_PAD, r[3] + ROOF_PAD];
         let area = (r[2] - r[0]) * (r[3] - r[1]);
         let at = out.iter().rposition(|q| !(q.0 < area)).map_or(0, |k| k + 1);
         out.insert(at, (area, r));
