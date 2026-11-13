@@ -1,6 +1,6 @@
 //! WHAT AN END CARD IS DRAWN FROM beside its debrief: how the run ended with every man of it, the course's par, and the floor its map is of. Asked as a card opens.
 use super::Held;
-use game::view::{EndView, OutcomeView, ParLine, RunMark, WalkedFloor};
+use game::view::{EndView, OutcomeView, ParLine, RunMark};
 
 fn latched(x: &Held) -> Option<&game::verdict::RunVerdict> { let v = &x.g.verdict; if v.run == Some(x.g.mission.serial) { v.res.as_ref() } else { None } }
 
@@ -19,16 +19,8 @@ pub fn end_view(x: &Held) -> EndView {
     if errand { mark("\u{25ce}", "rack", m.front[0], m.front[2], &format!("{} \u{2014} {}", m.holder, m.thing)); }
     let centre = |name: &str| game::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre);
     for e in m.exits.iter().filter(|_| errand) { let c = centre(&e.door).unwrap_or([e.x, 0.0, e.z]); mark("\u{21e5}", "exit", c[0], c[2], &e.name); }
-    let nav = &g.col.nav;
-    let (w, h) = (nav.w as usize, nav.h as usize);
-    let mut rows = String::with_capacity(w * h);
-    for z in 0..h { for x in 0..w {
-        let blocked = nav.blocked.get(z * w + x) == Some(&1);
-        let inside = game::chronicle::indoors([(x as f64 + 0.5) * nav.cell, 0.0, (z as f64 + 0.5) * nav.cell]);
-        rows.push(char::from(b'0' + inside as u8 + 2 * blocked as u8));
-    } }
     EndView {
         verdict, par: game::par::par_result_now(g).map(|p| ParLine { medal: p.medal, line: p.line.clone() }), holder: if errand { m.holder.clone() } else { String::new() }, marks,
-        floor: WalkedFloor { w: w as u32, h: h as u32, cell: nav.cell, rows },
+        floor: game::view::walked_floor(g),
     }
 }

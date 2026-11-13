@@ -79,15 +79,6 @@ fn face_n(g: &crate::game::Game, b: BoxId, p: V3) -> V3 {
     face_n_of(bx.c, bx.h, bx.yaw, p)
 }
 
-/// Ceiling over the point; no interior cells built = everywhere.
-fn roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
-    let Some(i) = &g.reach_interior else { return true };
-    let w = crate::scene_world::world();
-    let (cx, cz) = (m::floor(x - w.min[0]), m::floor(z - w.min[2]));
-    if !(cx >= 0.0 && cz >= 0.0 && cx < w.grid_w && cz < w.grid_h) { return false; }
-    i.get((cz * w.grid_w + cx) as usize) == Some(&1)
-}
-
 /// The stuff of static `index` if a round goes through such a thing at all, by its paint and where it stands.
 fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpen::ThinStuff> {
     let mask = crate::scene_boxes::box_flag::GLASS as i32 | crate::scene_boxes::box_flag::NO_PRIMARY as i32 | crate::scene_boxes::box_flag::NO_SHADOW as i32 | crate::scene_boxes::box_flag::DYNAMIC as i32;
@@ -120,7 +111,7 @@ fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpe
     let mut in2 = 0;
     for u in [-0.6, 0.0, 0.6] {
         let (px, pz) = (c[0] + ax[0] * u * l, c[2] + ax[2] * u * l);
-        if roofed(g, px + n[0] * 0.6, pz + n[2] * 0.6) && roofed(g, px - n[0] * 0.6, pz - n[2] * 0.6) { in2 += 1; }
+        if crate::render_reach::roofed(g, px + n[0] * 0.6, pz + n[2] * 0.6) && crate::render_reach::roofed(g, px - n[0] * 0.6, pz - n[2] * 0.6) { in2 += 1; }
     }
     if in2 * 2 > 3 { Some(ThinStuff::Drywall) } else { None }
 }
