@@ -1,4 +1,4 @@
-// Write a level file from its generator: tools/levels/<name>.ts exports build() → { level, scenarios?, groups, surfaces? } (a Level made with lib/officeGen.ts
+// Write a level file from its generator: tools/levels/<name>.ts exports build() → { level, scenarios?, groups, surfaces } (a Level made with lib/officeGen.ts
 // officeKit or lib/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, PALETTE and finish.
 // Here the doors are fitted (doorSize.ts), the loud levels dressed (dress.ts) after the lived-in tail, the floor's flats put in order (flatLayers.ts) and the
 // skin run (finish); then Level → level data → its faults (judge.ts; not with --check or --floor) → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
@@ -56,7 +56,7 @@ const dressBare = (dressLevel: (l: Level, g: string[]) => { added: number; surfa
   return st; };
 const nGen = level.boxes.length;   // (the generator's own boxes + its lived things: what follows is the dressing)
 { const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
-  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — rust/game_rules/src/world/floor.rs; a generator that gives none gets the office's)
+  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — rust/game_rules/src/world/floor.rs)
 if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.length} groups for ${level.boxes.length} boxes`);
 // THE FLOOR IN ORDER (tools/levels/flatLayers.ts layFloor): two ground finishes or floor decals of different paint that overlap never share a plane — the picture
 // cannot order them (each pixel of the overlap went to either). Swept in tiers, so the level with its lived things or its dressing left out is the same level;
@@ -91,7 +91,7 @@ const rowDoes = (name: string, albedo: readonly number[]): { does?: string } => 
   for (const [m, row] of Object.entries({ ...(gen.PALETTE ?? {}), ...(gen.MATERIALS ?? {}) } as Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string; does?: string }>)) { const k = row.albedo.join(','); if (seen.has(k) || materials[m]) continue; seen.add(k);
     materials[m] = { albedo: [row.albedo[0], row.albedo[1], row.albedo[2]], ...(row.rough !== undefined ? { rough: row.rough } : {}), ...(row.metal ? { metal: true } : {}), ...(row.stuff !== undefined ? { stuff: row.stuff } : rowWord(m)), ...(row.does !== undefined ? (row.does !== DOES_DEFAULT ? { does: row.does } : {}) : rowDoes(m, row.albedo)) }; } }   // (what the paint is made of: the generator's own word for its row, else the table's for the name. scene/stuff.ts)
 const data = levelToData(level, {
-  name: gen.NAME ?? name, materials, boxGroups: groups, ...(surfaces ? { surfaces } : {}),
+  name: gen.NAME ?? name, materials, boxGroups: groups, surfaces,
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],
   meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: `tools/levels/${name}.ts build → tools/levels/export.ts`, notes: gen.NOTES ?? '' },
 });

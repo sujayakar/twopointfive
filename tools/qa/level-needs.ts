@@ -389,9 +389,7 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
     if (rows.length && rooms.length) { say('lived', bare.length < rooms.length, bare.length < rooms.length ? `${rooms.length - bare.length} of ${rooms.length} named rooms have things standing in them` : `every one of its ${rooms.length} named rooms is bare: walls, doors and nothing else`);
       if (bare.length && bare.length < rooms.length) say('lived', 'note', `fewer than ${BARE.things} things stand in: ${bare.join(', ')}`); } }
   // ---- the floor underfoot
-  if (rows.length && name !== 'office') { const own = L.surfaces !== undefined, R = roofBand(L), near = (v: number, w: number) => Math.abs(v - w) < 0.3;
-    const shell = R.length > 0 && Math.min(...R.map(b => b.c[0] - b.h[0])) < OFFICE.x0 + 0.3 && near(Math.max(...R.map(b => b.c[0] + b.h[0])), OFFICE.x1) && near(Math.min(...R.map(b => b.c[2] - b.h[2])), OFFICE.z0) && near(Math.max(...R.map(b => b.c[2] + b.h[2])), OFFICE.z1);
-    say('floor', own ? true : 'note', own ? 'its own footstep map' : `no \`surfaces\` block: ${S.quiet ? 'every step is on lino, the yard\'s too' : shell ? 'built in the office\'s shell and walked on the office\'s footstep map: right only where its rooms lie as the office\'s do' : 'walked on the office\'s footstep map, and the building is not where the office\'s is: its carpet, lino and stone fall where they fall'}`); }
+  say('floor', L.surfaces !== undefined, L.surfaces !== undefined ? 'its own footstep map' : 'no `surfaces` block: the game refuses the file');
   // ---- the ground: stretches with nothing on them
   { const F = L;
     const all = bareGround(F, startsOf([F.scenarios, (F as { mission?: unknown }).mission])), within = all.filter(s => !s.margin), big = within.filter(s => s.area >= GROUND.big), rim = all.filter(s => s.margin).reduce((a, s) => a + s.area, 0);
@@ -535,7 +533,7 @@ if (import.meta.main) {
     /** what each planted gap must be found as: the mark, and every phrase its lines must carry */
     const WANT: Record<string, { mark: Mark; says: string[] }> = {
       generator: { mark: 'FAIL', says: ['not in the tree'] }, row: { mark: 'FAIL', says: ['no `place`', '`blurb` is 5 characters', '12 defenders', 'names 3 ways in', 'squads'] }, music: { mark: 'FAIL', says: ['no row'] },
-      picture: { mark: 'FAIL', says: ['planted-row.jpg'] }, 'kit picture': { mark: 'FAIL', says: ['no scenarios.kitView'] }, lived: { mark: 'FAIL', says: ['is bare'] }, floor: { mark: 'NOTE', says: ['no `surfaces`'] },
+      picture: { mark: 'FAIL', says: ['planted-row.jpg'] }, 'kit picture': { mark: 'FAIL', says: ['no scenarios.kitView'] }, lived: { mark: 'FAIL', says: ['is bare'] }, floor: { mark: 'FAIL', says: ['no `surfaces`'] },
       key: { mark: 'NOTE', says: ['planted_flood_a and planted_flood_b'] }, leak: { mark: 'NOTE', says: ['1 thing of mirror metal', '1 in planted by planted_bulb, as planted_shelf'] }, lamps: { mark: 'NOTE', says: ['planted_lamp'] }, moon: { mark: 'FAIL', says: ['2 directional'] }, doorway: { mark: 'FAIL', says: ['planted_dado'] }, roof: { mark: 'FAIL', says: ['drawn slab'] },
       ground: { mark: 'NOTE', says: ['of planted at'] }, response: { mark: 'NOTE', says: ['is not in NOBODY_COMES'] } };
     const missed = Object.entries(WANT).flatMap(([need, w]) => { const text = lines.filter(l => l.need === need && l.mark === w.mark).map(l => l.text).join('\n'); return w.says.filter(s => !text.includes(s)).map(s => `${need} ('${s}')`); });

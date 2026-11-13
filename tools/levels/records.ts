@@ -39,6 +39,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import type { LevelScenarios, StructureData, ResponseData } from './lib/scenarios';
 import * as K from './lib/levelKit';
 import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
@@ -149,7 +150,7 @@ export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE,
   ] } };
 
 /** What tools/levels/export.ts writes levels/records.json from: the Level, the file's scenarios block, the editor group of every box. */
-export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelScenarios; groups: string[] } {
+export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const k = K.newKit(opts); const C = K.KIT_PALETTE;
   const EXT = K.WALL_EXT, INT = K.WALL_INT;
   const win = (a: number, b: number, mullions = 2): K.Opening => ({ a, b, y0: 0.9, y1: 2.4, mullions, glass: 'whole' });
@@ -359,7 +360,17 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // the one mission thread, for whoever plays the level outside a scenario: reach the strong room, pull the drive, leave by the fire exit
     mission: { serverRoom: { ...RECORDS_ROOMS.strong.bounds }, entryDoor: 'strong_room', rack: { index: 2, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 30.5, exfilZ: 15.0 },
   });
-  return { level, scenarios: RECORDS_SCENARIOS, groups: k.groups };
+  // WHAT IS UNDERFOOT: rect for rect the floors above. Carpet in the front office and the records room, lino in the hall and the staff room, the strong
+  // room's anti-static tile; the yards north and west are grass and the lot asphalt.
+  const surfaces: SurfacesData = {
+    building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
+    zones: [
+      { id: 'hall', mat: 'lino', x0: 10, z0: 13, x1: 30, z1: 17 }, { id: 'strong', mat: 'tile', x0: 18, z0: 7, x1: 22.5, z1: 13 }, { id: 'staff', mat: 'lino', x0: 22.5, z0: 7, x1: 30, z1: 13 },
+      { id: 'records', mat: 'carpet', x0: 10, z0: 7, x1: 18, z1: 13 }, { id: 'front', mat: 'carpet', x0: 10, z0: 17, x1: 17, z1: 22.5 },
+      { id: 'north_yard', mat: 'grass', x0: 0, z0: 0, x1: 40, z1: 6.88 }, { id: 'west_yard', mat: 'grass', x0: 0, z0: 6.88, x1: 9.88, z1: 23.1 },
+    ],
+  };
+  return { level, scenarios: RECORDS_SCENARIOS, groups: k.groups, surfaces };
 }
 
 // ─────────────────────────────── the skin ───────────────────────────────

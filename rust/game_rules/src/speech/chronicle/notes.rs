@@ -196,7 +196,7 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
         };
     }
     let (x, z) = (p[0], p[2]);
-    let b = crate::floor::building();
+    let b = &g.level.surfaces.building;
     if x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1 {
         for r in rooms() {
             if x >= r.x0 && x < r.x1 && z >= r.z0 && z < r.z1 { return r.name; }
