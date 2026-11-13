@@ -491,8 +491,12 @@ fn insideBox(p: vec3f, b: BoxGeo) -> bool {
   let cs = boxGeoRot(b);
   let d = p - b.c;
   let l = vec3f(cs.x * d.x - cs.y * d.z, d.y, cs.y * d.x + cs.x * d.z);
+  if ((b.flags & GEO_ROUND) != 0u) { return abs(l.y) <= b.h.y + 0.01 && dot(l.xz, l.xz) <= (b.h.x + 0.01) * (b.h.x + 0.01); }
   return all(abs(l) <= b.h + vec3f(0.01));
 }
+/** does box i stand in the smoke's way: a static that a ray meets. A box that moves stands nowhere (a wall baked where it stood would be left behind): a door's leaf that seals its doorway
+ *  is listed for the purpose, as it stands now (SealS) */
+fn stands(i: u32, b: BoxGeo) -> bool { return i < sscene.statics.x && (b.flags & GEO_NO_SHADOW) == 0u; }
 fn insideSheet(p: vec3f, a: vec4f, b: vec4f, fat: f32) -> bool {
   let l = paneLocal(p, a, b);
   let hh = vec3f(select(b.x, max(b.x, fat), b.x < b.z), b.y, select(max(b.z, fat), b.z, b.x < b.z));
@@ -501,8 +505,8 @@ fn insideSheet(p: vec3f, a: vec4f, b: vec4f, fat: f32) -> bool {
 /** the test at one point: statics off the trace grid, and what of the glass panes has not fallen out (render/shaders/glass_open.wgsl, the picture's own rule) and sealing door leaves, fattened to a closed layer of cells */
 fn solidAt(p: vec3f, voxel: f32) -> bool {
   for (var g = 0u; g < sscene.numGlobals; g++) {
-    let b = sboxGeo[sscene.globals[g >> 2u][g & 3u]];
-    if ((b.flags & 10u) == 0u && insideBox(p, b)) { return true; }
+    let i = sscene.globals[g >> 2u][g & 3u]; let b = sboxGeo[i];
+    if (stands(i, b) && insideBox(p, b)) { return true; }
   }
   let gw = i32(sscene.gridW); let gh = i32(sscene.gridH);
   let cell = vec2i(floor(p.xz / GRID_CELL));
@@ -510,9 +514,8 @@ fn solidAt(p: vec3f, voxel: f32) -> bool {
     let ci = u32(cell.y * gw + cell.x);
     let end = sgridCells[ci + 1u];
     for (var j = sgridCells[ci]; j < end; j++) {
-      let b = sboxGeo[sgridItems[j]];
-      if ((b.flags & 10u) != 0u) { continue; }
-      if (insideBox(p, b)) { return true; }
+      let i = sgridItems[j]; let b = sboxGeo[i];
+      if (stands(i, b) && insideBox(p, b)) { return true; }
     }
   }
   for (var j = 0u; j < min(sscene.glassInfo.x, 32u); j++) {
