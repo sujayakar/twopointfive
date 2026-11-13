@@ -126,6 +126,7 @@ fn boxNear(w: u32, d: vec3i, reach: i32) -> bool {
 }
 
 // ------------------------------------------------------------------ allocation
+const POP_TRIES: u32 = 256u;      // how often a pop is tried against others' (one that fails has lost to another that took a slot)
 const VIEW_RESERVE: f32 = 0.25;   // the share of the pool only smoke in sight may take
 /** how far out of sight brick b of level l is: 0 within viewR of where the camera looks (on the floor plan), 1 from twice that; × viewBias */
 fn farOf(l: u32, b: vec3i) -> f32 {
@@ -171,8 +172,15 @@ fn ensureBrick(l: u32, b: vec3i, st: f32) {
   for (var tries = 0; s == 0u && tries < 4; tries++) {
     let r = atomicCompareExchangeWeak(&A[A_PAGE + pi], 0u, LOCK);
     if (r.exchanged) {
-      let n = atomicSub(&A[C_FREE], 1u);
-      if (n <= keepFree || n > CAP) { atomicAdd(&A[C_FREE], 1u); atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
+      // the pop: a slot is taken off the top only where this request's own bar lets it, so nobody else's refusal moves the top that a taker reads (two requests at the last slots have two bars, and a
+      // slot put back after another had gone below it was on the list and in use)
+      var n = atomicLoad(&A[C_FREE]); var took = false;
+      for (var go = 0u; go < POP_TRIES && n > keepFree && n <= CAP; go++) {
+        let x = atomicCompareExchangeWeak(&A[C_FREE], n, n - 1u);
+        if (x.exchanged) { took = true; break; }
+        n = x.old_value;
+      }
+      if (!took) { atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
       let slot = atomicLoad(&A[A_FREE + n - 1u]);
       let m = metaOf(slot);
       M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u; M[m + K_MEAN] = 0u; M[m + K_PULL] = 0u; M[m + K_PULL + 1u] = 0u;
