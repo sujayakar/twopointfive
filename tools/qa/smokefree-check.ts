@@ -35,5 +35,6 @@ const deal = (seed: number): { wrong: number } => {
 const all = Array.from({ length: SEEDS }, (_, i) => deal(i + 1)), bad = all.filter(x => x.wrong).length;
 check(bad === 0, `${SEEDS} seeds of 200 requests with two bars at the last 12 slots of ${CAP}: ${bad} leave a brick in two places or off the list`);
 check(/atomicCompareExchangeWeak\(&A\[C_FREE\]/.test(WGSL) && !/atomicSub\(&A\[C_FREE\]/.test(WGSL) && /for \(var go = 0u; go < POP_TRIES && n > keepFree && n <= CAP; go\+\+\)/.test(WGSL), 'the shader\'s pop is the exchange the model takes, and nothing takes one off the count and puts it back');
+check(!/flags\s*&\s*\(?\d+u/.test(WGSL) && /GEO_NO_SHADOW/.test(WGSL) && /i < sscene\.statics\.x/.test(WGSL), 'the bake reads a box\'s word by its names, and takes a wall from among the statics');
 console.log(`=== smokefree: ${red ? `${red} FAILED` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);
