@@ -2,7 +2,7 @@
 // and the stood game hands them in (tools/mp/server.ts under bun; a check hands in fakes) — so nothing here knows of bun, of a WebSocket or of where it runs.
 //   STATES: `waiting` until every seat has somebody in it whose client has stood its game and said `ready` (no tick runs: the fight starts when both players
 //   can play it) → `playing` (a tick every 1 / hz of the host's clock, each seat's record decided by its line, timeline.ts) → `ended` when the game's own
-//   verdict says so (the game runs on for a grace, then the server is done). A seat whose player drops holds nothing until he is back. A WATCHER (a hello with
+//   verdict says so (the game runs on for a grace, then the server is done; started over inside it, it is being played again). A seat whose player drops holds nothing until he is back. A WATCHER (a hello with
 //   no key) is sent every tick and sends none; NET.watchers of them at most.
 //   THE RUN SO FAR is kept as the text of its tape messages, NET.tapeChunk ticks each, and every connection has a place in it (`at`): one that is up to date is
 //   sent each tick as it runs; one that is behind — a joiner, a seat come back, a socket that would not take a tick — is sent a stretch of the run on each call
@@ -56,7 +56,7 @@ export class NetServer {
     this.keys = opts.seatKeys.slice();
     this.seats = opts.seatKeys.map(() => ({ line: new SeatLine(), conn: null, ready: false, prev: null, name: '' }));
     this.born = this.emptySince = host.now();
-    this.idleMs = (opts.idleS ?? 60) * 1000; this.maxMs = (opts.maxS ?? 3600) * 1000; this.graceMs = (opts.graceS ?? 15) * 1000;
+    this.idleMs = (opts.idleS ?? 60) * 1000; this.maxMs = (opts.maxS ?? 3600) * 1000; this.graceMs = (opts.graceS ?? 120) * 1000;
   }
 
   private get watching(): number { let n = 0; for (const p of this.peers.values()) if (p.seat < 0) n++; return n; }
@@ -163,7 +163,8 @@ export class NetServer {
     for (const [conn, P] of this.peers) if (P.at === t && this.put(conn, text) !== 0) P.at = t + 1;   // (one that would not take it is behind now: catchUp sends it the stretch)
     if (this.cur.length === NET.tapeChunk) { this.full.push(netText({ k: 'tape', from: this.tick - NET.tapeChunk, ticks: this.cur })); this.cur = []; }
     if (this.tick % NET.paceEvery === 0) for (const S of this.seats) if (S.conn) this.send(S.conn, { k: 'pace', t, l: S.line.depth(t) });
-    if (this.state === 'playing') { const e = this.host.ended(); if (e) { this.state = 'ended'; this.outcome = e; this.endedAt = this.host.now(); this.said(); } }
+    const e = this.host.ended();
+    if (!!e !== (this.state === 'ended')) { this.state = e ? 'ended' : 'playing'; this.outcome = e; this.endedAt = this.host.now(); this.said(); }   // (no end any more: the mission was started over)
   }
   /** the host ends the game from outside (its control plane no longer has it) */
   stop(why: string): void { if (!this.done) this.finish(why); }

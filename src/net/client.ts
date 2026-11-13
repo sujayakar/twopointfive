@@ -67,7 +67,7 @@ export class NetClient {
       if (!this.sent || m.t < this.settle || m.t >= this.sendTick) { /* a note about a tick sent for before the margin last moved or the sending last began, or one nothing was sent past: not about the way up */ }
       else if (m.l < NET.lead && this.margin < NET.marginMax) { this.margin = Math.min(NET.marginMax, this.margin + (m.l <= 0 ? NET.lead : 1)); this.settle = this.sendTick; }
       else if (m.l > NET.leadMax && this.margin > 1) { this.margin--; this.settle = this.sendTick; } }
-    else if (m.k === 'state') { this.state = m.state; this.seats = m.seats; if (m.outcome) this.outcome = m.outcome;
+    else if (m.k === 'state') { this.state = m.state; this.seats = m.seats; this.outcome = m.outcome ?? null;
       if (Array.isArray(m.names)) { const n = m.names.map(cleanName); if (n.join('\n') !== this.names.join('\n')) this.names = n; } }
     else if (m.k === 'bye') { this.bye = m.why || 'bye'; this.byeCode = typeof m.code === 'string' ? m.code : ''; }
   }

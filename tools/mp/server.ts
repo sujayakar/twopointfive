@@ -13,7 +13,7 @@
 //   MP_SEATKEYS  the seat keys, comma separated, where the record carries none
 //   MP_CONTROL   a URL to POST heartbeats to (none: nobody is told) · MP_SECRET what proves a heartbeat is this server's
 //   MP_IDLE_S    seconds with nobody connected before it ends itself (default 60) · MP_MAX_S its longest life (default 3600) · MP_GRACE_S how long it runs
-//                on after the mission's end (default 15)
+//                on after the mission's end, for its players to play it again (default 120)
 //   MP_BUILD     what its game is made of, as one word (default: the record's, else this checkout's, tools/blitz/made.ts; empty: none): a server that has
 //                one lets in no client whose game is made of something else
 // IT ANSWERS: a WebSocket upgrade on any path (the wire: src/net/wire.ts) · GET /health → {game, build, state, tick, seats, watchers, slips, lost, lines}.
@@ -51,7 +51,7 @@ const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
 const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
-  { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
+  { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 120) });
 
 // ---- the heartbeat
 const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
