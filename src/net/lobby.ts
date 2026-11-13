@@ -59,14 +59,21 @@ export function freshSeed(): number { const a = new Uint32Array(1); crypto.getRa
 /** A GAME MADE OF SOMETHING ELSE THAN THIS PAGE'S: `old` = this page is not the newest (host/buildname.ts pageOld), and loading it again mends it. The newest page has no way back into a game begun
  *  before the game itself changed */
 export const anotherVersion = (old: boolean): string => old ? 'That game is on another version. Reload the page and join again.' : 'That game is on an older version. Host a new game.';
-/** WHY NOT, as the player is told it. The control plane's refusals begin with a word (`none:` · `full:` · `build:` · `code:`); anything else did not get there. `old` = this page is not the newest */
+/** the word a refusal of the control plane's begins with, wherever the service puts it: its data, or the function's own error in what a deployment of one's own says. '' = no refusal of its own, and the
+ *  functions do refuse every call they know how to take in their own words */
+const refusalWord = (m: string): string => /(?:^\w+:\w+: |ConvexError: )"?([a-z]+): /.exec(m)?.[1] ?? '';
+/** WHY NOT, as the player is told it. The control plane's refusals begin with a word (`none:` · `full:` · `build:` · `code:`); one with no word of its own is of functions that do not know this page's
+ *  call; anything else did not get there. `old` = this page is not the newest */
 export function lobbyWhy(e: unknown, doing: 'host' | 'join', old = false): string {
-  const m = String((e as { message?: unknown } | null)?.message ?? e), refused = !!(e as { refused?: boolean } | null)?.refused;
-  if (/\bnone:/.test(m)) return 'You can’t host here because there are no game servers.';
-  if (/\bfull:/.test(m)) return doing === 'host' ? 'Every game server is busy right now. Try again in a minute.' : 'That game already has two players.';
-  if (/\bbuild:/.test(m)) return doing === 'join' ? anotherVersion(old) : old ? 'This page is out of date. Reload it and try again.' : 'The game servers aren’t on this version yet. Try again in a few minutes.';
-  if (/\bcode:/.test(m)) return doing === 'host' ? 'The game couldn’t be made. Try again.' : 'There’s no game with that code. Check the code with your friend.';
-  return refused ? (doing === 'host' ? 'The game couldn’t be made. Try again.' : 'You can’t join that game.') : 'This page couldn’t reach the game service. Check your connection and try again.';
+  if (!(e as { refused?: boolean } | null)?.refused) return 'This page couldn’t reach the game service. Check your connection and try again.';
+  switch (refusalWord(String((e as { message?: unknown }).message))) {
+    case 'none': return 'You can’t host here because there are no game servers.';
+    case 'full': return doing === 'host' ? 'Every game server is busy right now. Try again in a minute.' : 'That game already has two players.';
+    case 'build': return doing === 'join' ? anotherVersion(old) : old ? 'This page is out of date. Reload it and try again.' : 'The game servers aren’t on this version yet. Try again in a few minutes.';
+    case 'code': return doing === 'host' ? 'The game couldn’t be made. Try again.' : 'There’s no game with that code. Check the code with your friend.';
+    case '': return old ? 'This page is out of date. Reload it and try again.' : 'The game service is older than this page. Update it with “npx convex dev --once”, or “npx convex deploy”, in cloud.';
+    default: return doing === 'host' ? 'The game couldn’t be made. Try again.' : 'You can’t join that game.';
+  }
 }
 /** …and why a game that was made is not one to play ('' = it is, or may yet be) */
 export function gameWhy(v: GameView | null): string {
