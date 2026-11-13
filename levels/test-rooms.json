@@ -34,6 +34,14 @@
     "glass": { "albedo": [0.8, 0.87, 0.83], "rough": 0.03, "stuff": "plain", "does": "pane" },
     "glassExt": { "albedo": [0.7, 0.75, 0.79], "rough": 0.03, "stuff": "plain", "does": "pane" }
   },
+  "surfaces": {
+    "building": { "x0": 10, "x1": 30, "z0": 8, "z1": 22 },
+    "grassEdge": 0,
+    "inside": "lino",
+    "outside": "asphalt",
+    "verge": "asphalt",
+    "zones": []
+  },
   "boxes": [
     { "id": "box_0000", "floor": "f0", "group": "ground", "c": [20, -0.125, 14], "h": [20, 0.125, 14], "material": "asphalt" },
     { "id": "box_0001", "floor": "f0", "group": "floors", "c": [20, -0.0495, 15], "h": [10, 0.0505, 7], "material": "carpet" },
