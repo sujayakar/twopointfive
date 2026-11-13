@@ -22,6 +22,7 @@ import { SeatLine } from '../../src/net/timeline';
 import { built } from '../../src/host/buildname';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
+import { downWord } from '../../src/ui/handbox';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.NET_BREAK === '1';
 let now = 1000; performance.now = () => now;
@@ -126,5 +127,8 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // what a card calls the players
 { const E = drawEnd(game, {} as never, c.names), own = [1, 2, 3].map(n => E.name(0, `Player ${n}`)), mate = E.name(0, 'Grey'), twin = shownAs('Player 1', ['Ada', 'ada']), posed = shownAs('Player 1', ['player 2', 'Grace']), one = shownAs('Player', ['Ada']);
   line(own.join() === 'Ada,Grace,Player 3' && mate === 'Grey' && twin === 'Player 1' && posed === 'Player 1' && one === 'Ada', 'a card calls a player what he picked, over the game\'s own word for his seat; a name that tells nobody apart is not used', `${own.join(', ')} \u00b7 ${mate} \u00b7 ${twin} \u00b7 ${posed} \u00b7 ${one}`); }
+// the other player leaves: a man who is down is told the key that is left to him
+{ const with2 = net.alone, kit = game.view().kit.again; server.closed(bWire.conn!); run(10); const words = [downWord({ again: false }, with2), downWord({ again: false }, net.alone), downWord({ again: true }, net.alone)];
+  line(!with2 && net.alone && !kit && words.join(' · ') === 'DOWN · DOWN — SHIFT+ENTER · DOWN — ENTER', 'a man who is down is told of Enter once it has the mission again, and of Shift+Enter where nobody is left but him', words.join(' · ')); }
 console.log(fails ? `=== net: ${fails} FAILED ===` : '=== net: ALL PASS ===');
 process.exit(fails ? 1 : 0);

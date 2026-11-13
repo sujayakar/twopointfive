@@ -42,6 +42,9 @@ export class DrawNet {
   }
   state(): ReturnType<NetDoor['state']> { return this.door.state(this.net.word()); }
 
+  /** nobody is in the other seats */
+  get alone(): boolean { const c = this.door.client; return c.seat >= 0 && c.seats.length > 1 && c.seats.every((on, i) => i === c.seat || !on); }
+
   /** ONE TICK OF THE PAGE: the player's record sent (`off`: a card is up, and his hands are off), the confirmed ticks walked, `after` each that is seen. True = the page is level again after ticks nobody saw */
   tick(input: HandInput, cam: HandCamera, canvas: HandCanvas, off: boolean, after: () => void): boolean {
     const { door, game, net } = this, c = door.client, now = performance.now(), N = game.numbersOf(), keys = sampleHand(N, input, cam, canvas), seat = Math.max(0, c.seat);

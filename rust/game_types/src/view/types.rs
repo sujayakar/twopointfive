@@ -267,6 +267,8 @@ pub struct KitView {
     pub hits_left: f64,
     pub hits_max: f64,
     pub down: bool,
+    /// Enter alone has the mission again for him
+    pub again: bool,
     pub god: bool,
     /// whether the goggles are on (None: a lesson has not taught their key)
     pub night_vision: Option<bool>,
