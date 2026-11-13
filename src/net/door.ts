@@ -9,10 +9,11 @@
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN, NET_PREDICT, NET_LAG, NET_JITTER, NET_LOSS } from './address';
 import { NetClient, type ClientHost } from './client';
 import { onWay, wayOff, type Way } from './delay';
+import { anotherVersion } from './lobby';
 import type { AheadView } from '../view/read';
 import { FORESEE, Foresee, type Foreseen } from './foresee';
 import { NET, type WireCmd } from './wire';
-import { buildName } from '../host/buildname';
+import { built, pageOld } from '../host/buildname';
 
 const KEEP = 'tps.net.seat', KEEP_TRY = 'tps.net.try';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
@@ -114,12 +115,12 @@ export class NetDoor {
 
   /** connect, say hello, wait for the welcome (or for why there is none) */
   async open(): Promise<void> {
-    const c = this.client, named = buildName();   // (asked for while the socket opens)
+    const c = this.client, named = built();   // (asked for while the socket opens)
     await new Promise<void>(done => {
       let ws: WebSocket; try { ws = this.ws = new WebSocket(this.url); } catch { this.refuse = 'This page can’t connect to that game’s address.'; done(); return; }
-      let met = false; const settle = (why: string) => { if (met) return; met = true; clearTimeout(t); if (why) this.refuse ||= why; done(); };
+      let met = false; const settle = (why: string | Promise<string>) => { if (met) return; met = true; clearTimeout(t); void Promise.resolve(why).then(w => { if (w) this.refuse ||= w; done(); }); };
       const t = setTimeout(() => settle('The game’s server didn’t answer.'), NETDOOR.helloMs);
-      ws.onopen = () => void named.then(b => { c.who.build = b; c.hello(); });
+      ws.onopen = () => void named.then(b => { c.who.build = b.made; c.hello(); });
       const down = onWay<() => void>(NETWAY, f => f());   // (what comes down the socket, its close too, in the order it came)
       ws.onmessage = ev => { const came = performance.now(); down(() => { const now = performance.now(); this.heldMs += (now - came - this.heldMs) * (this.heldMs ? 0.1 : 1); c.message(String(ev.data), now); if (c.byeCode === 'seat') forget(); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); }); };
       ws.onclose = () => down(() => { if (this.ws !== ws) return; if (!met) settle(c.bye ? refusal(c.byeCode) : 'This page couldn’t reach the game’s server.'); else if (!c.bye) c.broken ||= 'the connection closed'; });
@@ -183,8 +184,8 @@ const forget = (): void => { try { sessionStorage.removeItem(KEEP); } catch { /*
 const TAKEN = 'Another player has your seat.';
 export const CANT_PLAY = 'This page can’t play that game.';
 /** a server's goodbye before any welcome (wire.ts ByeCode), as the player is told it */
-function refusal(code: string): string {
-  return code === 'build' || code === 'proto' ? 'That game is on another version. Reload the page and join again.'
+async function refusal(code: string): Promise<string> {
+  return code === 'build' || code === 'proto' ? anotherVersion(await pageOld())
     : code === 'seat' ? TAKEN
     : code === 'full' ? 'There’s no room left to watch that game.'
     : 'You can’t join that game.';

@@ -113,7 +113,9 @@ export default defineSchema({
   games: defineTable({
     /** what a player types to join: letters only, unique among the games that are live */
     code: v.string(),
+    /** the build its server is of, and what that build's game is made of (src/host/buildname.ts): a page whose game is made of the same may come in (none: a game made before this was kept) */
     build: v.string(),
+    made: v.optional(v.string()),
     /** the runner that carries its server (runners.name) */
     runner: v.string(),
     /** the setup record as the host sent it: `{ scenario, seed, knobs, seats }` (the server is handed it with `game`, `build` and `seatKeys` added) */

@@ -19,6 +19,7 @@ import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
 import { FIRST, NET, inputNumbers, type WireCmd } from '../../src/net/wire';
 import { SeatLine } from '../../src/net/timeline';
+import { built } from '../../src/host/buildname';
 import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
@@ -111,8 +112,9 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // a page left open across a change of the wire knocks at a server that speaks the new one
 { const G = globalThis as Record<string, unknown>, had = G.WebSocket; G.WebSocket = class { readyState = 1; onopen?: () => void; onmessage?: (e: { data: string }) => void; constructor() { setTimeout(() => this.onopen?.(), 0); }
     send(t: string): void { server.message({ send: x => { this.onmessage?.({ data: x }); return 1; }, close: () => { /* */ } }, JSON.stringify({ ...JSON.parse(t) as object, proto: NET.proto - 1 })); } close(): void { /* */ } };
-  const old = new NetDoor('ws://here', 'g', 'a', 'Ada'); await old.open(); G.WebSocket = had;
-  line(old.client.byeCode === 'proto' && /Reload the page/.test(old.refuse), 'a page of an older wire is told to reload', old.refuse); }
+  const fetched = G.fetch; let served = 'abcdef01'; G.fetch = async () => new Response(served);
+  const words: string[] = []; for (const now of ['abcdef01', 'abcdef02']) { const d = new NetDoor('ws://here', 'g', 'a', 'Ada'); await built(); served = now; await d.open(); words.push(d.client.byeCode === 'proto' ? d.refuse : `not refused: ${d.client.byeCode}`); } G.WebSocket = had; G.fetch = fetched;
+  line(/older version/.test(words[0]) && !/Reload/.test(words[0]) && /Reload the page/.test(words[1]), 'a page of another wire is told to reload where that mends it', `the newest page: ${words[0]} · one left open: ${words[1]}`); }
 // asleep for four seconds, and back
 { const ok = c.wordsOk, was = seen, ticks = game.ticks; asleep = true; run(240); asleep = false; let n = 0; while (c.behind > 2 && n++ < 100) beat(); run(30);
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
