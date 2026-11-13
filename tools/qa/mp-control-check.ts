@@ -43,7 +43,7 @@ const check = (ok: boolean, text: string) => { console.log(`- ${ok ? 'PASS' : 'F
 const refused = async (p: Promise<unknown>): Promise<string> => { try { await p; return ''; } catch (e: any) { return e instanceof WireError && e.refused ? e.message : `NOT A REFUSAL: ${String(e)}`; } };
 const until = async (what: () => Promise<boolean> | boolean, ms = 8000): Promise<boolean> => { for (const end = Date.now() + ms; Date.now() < end;) { if (await what()) return true; await Bun.sleep(40); } return false; };
 const pid = (n: number): string => `checkpid${String(n).padStart(4, '0')}a1b2c3d4e5f6`;
-const BUILD = 'c0ffee123456', RKEY = 'runner-key-of-the-check-0123456789';
+const BUILD = 'c0ffee123456', MADE = 'ab12cd34ef56ab12', RKEY = 'runner-key-of-the-check-0123456789';
 const setup = (seats: number) => ({ scenario: 'compound', seed: 7, knobs: { hard: true }, seats: Array.from({ length: seats }, (_, i) => ({ kit: `kit ${i}` })) });
 
 const S = standIn();
@@ -70,7 +70,7 @@ const family = async (name: string, body: () => Promise<void>): Promise<void> =>
   try { await body(); } catch (e) { check(false, `${name} stopped: ${String((e as Error)?.message ?? e)}`); }
 };
 interface View { code: string; state: string; why: string; seats: boolean[]; connected: boolean[]; seat: number; seatKey: string; address: string; game: string }
-const make = (n: number, seats = 2) => page.mutation<View>('games:make', { pid: pid(n), build: BUILD, setup: setup(seats) });
+const make = (n: number, seats = 2) => page.mutation<View>('games:make', { pid: pid(n), build: BUILD, made: MADE, setup: setup(seats) });
 const get = (n: number, code: string) => page.query<View | null>('games:get', { pid: pid(n), code });
 const up = (n: number, code: string) => until(async () => { const g = await get(n, code); return !!g && g.state === 'waiting' && g.address !== ''; });
 const over = (n: number, code: string, state: string, why: string, ms = 12000) => until(async () => { const g = await get(n, code); return !!g && g.state === state && g.why === why; }, ms);
@@ -91,8 +91,8 @@ await family('cap', async () => {
   const hosts = asks.map((a, i) => ({ n: i + 1, g: a.g })).filter(h => h.g);
   check((await Promise.all(hosts.map(h => up(h.n, h.g!.code)))).every(Boolean) && carries() === 2, `both servers were started and heard from: ${carries()} run, and their games wait at an address`);
   check(/full:/.test(await refused(make(7))), 'a seventh page is told it is full while both run');
-  check(/build:/.test(await refused(page.mutation('games:make', { pid: pid(8), build: 'another-build', setup: setup(2) }))), 'a page of a build no runner runs is refused');
-  check(/seats/.test(await refused(page.mutation('games:make', { pid: pid(8), build: BUILD, setup: setup(3) }))) && /pid/.test(await refused(page.mutation('games:make', { pid: 'short', build: BUILD, setup: setup(2) }))), 'three seats and a pid that is not one are refused');
+  check(/build:/.test(await refused(page.mutation('games:make', { pid: pid(8), build: 'another-build', made: MADE, setup: setup(2) }))), 'a page of a build no runner runs is refused');
+  check(/seats/.test(await refused(page.mutation('games:make', { pid: pid(8), build: BUILD, made: MADE, setup: setup(3) }))) && /pid/.test(await refused(page.mutation('games:make', { pid: 'short', build: BUILD, made: MADE, setup: setup(2) }))), 'three seats and a pid that is not one are refused');
   const h = hosts[0]; if (h) {
     const g = (await get(h.n, h.g!.code))!;
     const wrong = await sit(g.address, 0, 'not-the-key'), right = await sit(g.address, 0, g.seatKey);
@@ -116,16 +116,16 @@ await family('idle', async () => {
 
 await family('join', async () => {
   const a = await make(21); await up(21, a.code);
-  const b = await page.mutation<View>('games:join', { pid: pid(22), code: a.code.toLowerCase(), build: BUILD });
+  const b = await page.mutation<View>('games:join', { pid: pid(22), code: a.code.toLowerCase(), made: MADE });
   const host = (await get(21, a.code))!;
   check(b.seat === 1 && b.seatKey.length >= 32 && b.seatKey !== host.seatKey && b.address === host.address && host.address.startsWith('ws://'), 'a second browser joins by the code: the next seat, a key of its own, the same address');
   const named = await fetch(host.address.replace(/^ws/, 'http') + '/health', { signal: AbortSignal.timeout(5000) }).then(r => r.json() as Promise<{ game: string }>).catch(() => ({ game: '?' }));
   check(host.game !== '' && host.game === b.game && named.game === host.game, 'and both are told the name the server knows the game by (a hello to a game server names it)');
-  const again = await page.mutation<View>('games:join', { pid: pid(22), code: a.code, build: BUILD });
+  const again = await page.mutation<View>('games:join', { pid: pid(22), code: a.code, made: MADE });
   check(again.seat === 1 && again.seatKey === b.seatKey, 'the same browser joining again has the same seat and key');
-  check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: a.code, build: BUILD }))), 'a third browser is told every seat is taken');
-  check(/build:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: 'another-build' }))), 'a page of another build than the game is refused');
-  check(/code:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: 'ZZZZZ', build: BUILD }))) && (await get(23, 'ZZZZZ')) === null, 'a code no game has is refused, and reads as no game');
+  check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: a.code, made: MADE }))), 'a third browser is told every seat is taken');
+  check(/build:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, made: 'another-game' }))), 'a page whose game is made of something else is refused (what build the page is is not asked)');
+  check(/code:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: 'ZZZZZ', made: MADE }))) && (await get(23, 'ZZZZZ')) === null, 'a code no game has is refused, and reads as no game');
   const stranger = (await get(23, a.code))!;
   check(stranger.seat === -1 && stranger.seatKey === '' && stranger.address === '' && stranger.game === '' && stranger.seats.every(Boolean), 'a browser that holds no seat is told the game is full, and neither a key nor the address nor the game\'s name');
   const w0 = await sit(host.address, 0, host.seatKey), w1 = await sit(host.address, 1, b.seatKey);
@@ -134,14 +134,14 @@ await family('join', async () => {
   check(await until(async () => { const g = await get(21, a.code); return g!.state === 'waiting' && g!.connected[0] && !g!.connected[1]; }), 'one of them gone, it waits again and says which seat is connected');
   await Bun.sleep(3200);
   check((await get(21, a.code))!.state === 'waiting' && carries() === 1, 'a game somebody is connected to is not idle: it still runs past the idle clock');
-  const c = await page.mutation<View>('games:join', { pid: pid(23), code: a.code, build: BUILD }).catch((e: Error) => e.message);
+  const c = await page.mutation<View>('games:join', { pid: pid(23), code: a.code, made: MADE }).catch((e: Error) => e.message);
   check(typeof c !== 'string' && c.seat === 1 && c.address === host.address && c.seatKey.length >= 32 && c.seatKey !== b.seatKey && (await get(22, a.code))!.seat === -1, 'the seat the second left is the third\'s who asks, with a key of his own, and the second is told he has none');
-  check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: BUILD }))), 'the third has his time to come: the second asking at once is told every seat is taken');
+  check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, made: MADE }))), 'the third has his time to come: the second asking at once is told every seat is taken');
   const back = await sit(host.address, 1, b.seatKey); let let_go = false; if (back) back.onclose = () => { let_go = true; };
   const w2 = typeof c === 'string' ? null : await sit(c.address, c.seat, c.seatKey);
   await until(async () => (await get(21, a.code))!.connected.every(Boolean)); await Bun.sleep(2500);
   check(!!w2 && (!back || let_go) && await sit(host.address, 1, b.seatKey) === null, 'the third sits in it, the second\'s key opens it no more, and the second is let go if he had sat down again meanwhile');
-  check(!!w2 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: BUILD }))), 'a seat somebody is in is nobody else\'s, past that time too');
+  check(!!w2 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, made: MADE }))), 'a seat somebody is in is nobody else\'s, past that time too');
   w0?.close(); w2?.close();
   check(await over(21, a.code, 'ended', 'server') && await quiet(), 'both gone, it idles out and its server is gone');
 });
@@ -166,8 +166,8 @@ await family('reaper', async () => {
   const still = await held(42, {});
   check(await up(42, still.code) && carries() === 2, 'two servers that will not end themselves are up (one of them never says a word)');
   await Bun.sleep(Math.max(0, t0 + 2200 - Date.now()));
-  const late = await page.mutation<View>('games:join', { pid: pid(46), code: dumb.code, build: BUILD }).catch((e: Error) => e.message);
-  check(typeof late !== 'string' && late.seat === 1 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(47), code: dumb.code, build: BUILD }))), 'a server that is still being started: its host waits for it past the time he has to come, and keeps his seat');
+  const late = await page.mutation<View>('games:join', { pid: pid(46), code: dumb.code, made: MADE }).catch((e: Error) => e.message);
+  check(typeof late !== 'string' && late.seat === 1 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(47), code: dumb.code, made: MADE }))), 'a server that is still being started: its host waits for it past the time he has to come, and keeps his seat');
   check(await over(41, dumb.code, 'failed', 'never started') && await over(42, still.code, 'ended', 'idle'), 'the one never heard from is failed as never started; the one that sits with nobody connected is ended as idle');
   check(await until(() => carries() === 0), `the sweep stopped both processes (${((Date.now() - t0) / 1000).toFixed(1)} s after they were asked for)`);
   const hush = await held(43, { STANDIN_MUTE_S: '1' });
@@ -225,13 +225,13 @@ await family('hosted', async () => {
   Object.assign(process.env, { MODAL_TOKEN_ID: 'ak-check', MODAL_TOKEN_SECRET: 'as-check', MODAL_SERVER_URL: 'http://127.0.0.1:9', MP_START_S: '60', MP_CAP: '0' });
   check(/build:/.test(await refused(admin.mutation('runners:hosted', { build: 'not a commit; rm' }))), 'a build that is not a commit is refused');
   const modal = async () => (await fleet()).find(r => r.name === 'modal');
-  check(await admin.mutation('runners:hosted', { build: A }) === 'modal' && (await modal())?.cap === 0 && /full:/.test(await refused(page.mutation('games:make', { pid: pid(60), build: A, setup: setup(2) }))), 'with a token the hosted runner is registered; a cap of none in the environment is none, and no game is made');
+  check(await admin.mutation('runners:hosted', { build: A }) === 'modal' && (await modal())?.cap === 0 && /full:/.test(await refused(page.mutation('games:make', { pid: pid(60), build: A, made: MADE, setup: setup(2) }))), 'with a token the hosted runner is registered; a cap of none in the environment is none, and no game is made');
   delete process.env.MP_CAP;
   await admin.mutation('runners:hosted', { build: B, cap: 3 });
   const m = await modal();
   check(!!m && m.url === 'modal:twopointsix-mp' && m.cap === 3 && JSON.stringify(m.builds) === JSON.stringify([B, A]), 'the next deploy reads back as the Modal app, three servers at most, its build first and the one before it still served');
   await until(async () => { const r = await modal(); return !!r && r.cap - r.live - (r.dirty - r.swept) > 0; }, 1000);   // (its sweeps cannot land here either: the places they hold are counted)
-  const g = await page.mutation<View>('games:make', { pid: pid(61), build: A, setup: setup(2) }).catch((e: Error) => e.message);
+  const g = await page.mutation<View>('games:make', { pid: pid(61), build: A, made: MADE, setup: setup(2) }).catch((e: Error) => e.message);
   const failed = typeof g !== 'string' && await until(async () => (await get(61, g.code))!.state === 'failed', 30000);
   const kept = typeof g === 'string' ? undefined : (await admin.query<{ code: string; why?: string; detail?: string }[]>('games:list', {})).find(x => x.code === g.code);
   check(failed && kept?.why === 'start failed' && /modal\.client/i.test(kept.detail ?? ''), `a game of the older build goes to Modal's client; with Modal out of reach its start fails, and the kept detail is that client's own (${typeof g === 'string' ? g : `${kept?.why}: ${(kept?.detail ?? '').slice(0, 60)}`})`);

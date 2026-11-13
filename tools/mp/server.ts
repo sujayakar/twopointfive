@@ -14,8 +14,8 @@
 //   MP_CONTROL   a URL to POST heartbeats to (none: nobody is told) · MP_SECRET what proves a heartbeat is this server's
 //   MP_IDLE_S    seconds with nobody connected before it ends itself (default 60) · MP_MAX_S its longest life (default 3600) · MP_GRACE_S how long it runs
 //                on after the mission's end (default 15)
-//   MP_BUILD     the build's name (default: the record's, else the checkout's commit, or none with uncommitted changes): a server that has one lets in no
-//                client of another
+//   MP_BUILD     what its game is made of, as one word (default: the record's, else this checkout's, tools/blitz/made.ts; empty: none): a server that has
+//                one lets in no client whose game is made of something else
 // IT ANSWERS: a WebSocket upgrade on any path (the wire: src/net/wire.ts) · GET /health → {game, build, state, tick, seats, watchers, slips, lost, lines}.
 // IT TELLS THE CONTROL PLANE: POST {game, secret, …health} every 10 s and at once on a change of state or of who is sitting; a server that is done says
 // state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops. An answer's
@@ -24,7 +24,8 @@
 import type { NetStart } from '../../src/net/start.ts';
 import { NetServer, type Conn } from '../../src/net/server.ts';
 import { NET } from '../../src/net/wire.ts';
-import { buildName, freshStart, standStart, type Stood } from './stand.ts';
+import { gameMade } from '../blitz/made.ts';
+import { freshStart, standStart, type Stood } from './stand.ts';
 
 const E = process.env;
 const say = (s: string) => console.log(`[mp ${new Date().toISOString().slice(11, 23)}] ${s}`);
@@ -34,7 +35,7 @@ const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1';
 /** the setup record (see the head) */
 let asked: { scenario?: unknown; seed?: unknown; knobs?: unknown; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
 try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]})'); process.exit(2); }
-const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : buildName());
+const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : gameMade());
 
 let stood: Stood, start: NetStart;
 try {

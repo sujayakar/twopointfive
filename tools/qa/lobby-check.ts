@@ -6,10 +6,11 @@
 //   the server    the REAL game server (tools/mp/server.ts), started by that runner for the game the lobby made
 //   words      a typed code (and the control plane's own letters for one), the mission's address as a game's setup, the addresses of the door and of the
 //              game, the refusals as the player is told them — also when a deployed backend keeps a refusal's words in its data
+//              and a page is told to load again only where that mends it; a host whose deployment has no game service is told so
 //   host       one tab makes a game of a squad mission and comes through the door: it holds the first seat and is told its server's address; the server
 //              stood the mission with TWO seats and waits
 //   join       a second tab comes through the same door by the code: the second seat, its own key, the same server; the first tab again is the first seat
-//              again; a third tab is told the game has two players; a code nobody has is told so
+//              again, on another build too where the game is made of the same; a third tab is told the game has two players; a code nobody has is told so
 //   fight      a scripted client in each seat, on the address and key its tab was told: both walk the same ticks and match every state word
 //   left       the seat the second left is another tab's who comes by the code, with its own key, and the second's key is refused from then on; one who is
 //              back on the old key before the new player has come is told another player has his seat
@@ -34,7 +35,7 @@ if (BREAK) COOP.seats = 1;
 let fails = 0;
 const check = (ok: boolean, text: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) fails++; };
 const why = async (p: Promise<unknown>): Promise<string> => { try { await p; return ''; } catch (e) { return String((e as Error)?.message ?? e); } };
-const BUILD = 'c0ffee123456', RKEY = 'runner-key-of-the-check-0123456789';
+const BUILD = 'c0ffee123456', MADE = 'ab12cd34ef56ab12', RKEY = 'runner-key-of-the-check-0123456789';
 
 console.log('words');
 check(codeTyped(' bq-7zk w!x ') === 'BQZKW' && codeWhole('BQZKW') && !codeWhole('BQZK') && !codeWhole('BAZKW') && codeTyped('aeiou12345') === '' && CODE.len === MP.codeLen && CODE.letters === MP.codeLetters, 'a typed code keeps its letters, in capitals, up to a code\'s length; a short one or one with a vowel is no code; the letters and the length are the control plane\'s own');
@@ -45,9 +46,12 @@ check(codeTyped(' bq-7zk w!x ') === 'BQZKW' && codeWhole('BQZKW') && !codeWhole(
   check(n.get('net') === 'ws://localhost:5301' && n.get('netgame') === 'g1' && n.get('netkey') === 'k' && n.get('join') === 'BQZKW' && n.get('quality') === 'low' && joinLink('http://localhost:5173', '/', 'BQZKW') === 'http://localhost:5173/?join=BQZKW',
     'the game\'s address keeps the visit\'s words and carries the server, the game, the seat\'s key and the code; the link is the page and the code'); }
 { const R = (m: string) => ({ message: m, refused: true });
-  check(/two players/.test(lobbyWhy(R('games:join: full: every seat is taken'), 'join')) && /busy/.test(lobbyWhy(R('games:make: full: every game server is taken'), 'host')) && /Reload/.test(lobbyWhy(R('x: build: another'), 'join')) && /no game with that code/.test(lobbyWhy(R('x: code: no game'), 'join')) && /reach/.test(lobbyWhy({ message: 'fetch failed', refused: false }, 'join'))
+  check(/two players/.test(lobbyWhy(R('games:join: full: every seat is taken'), 'join')) && /busy/.test(lobbyWhy(R('games:make: full: every game server is taken'), 'host')) && /Reload/.test(lobbyWhy(R('x: build: another'), 'join', true)) && /no game with that code/.test(lobbyWhy(R('x: code: no game'), 'join')) && /reach/.test(lobbyWhy({ message: 'fetch failed', refused: false }, 'join'))
     && /over/.test(gameWhy({ state: 'ended', seat: 0 } as GameView)) && /didn’t start/.test(gameWhy({ state: 'failed', seat: 0 } as GameView)) && gameWhy({ state: 'waiting', seat: 1 } as GameView) === '' && /two players/.test(gameWhy({ state: 'waiting', seat: -1 } as GameView)),
     'every refusal has its own words for the player'); }
+{ const R = (m: string) => ({ message: m, refused: true }), old = lobbyWhy(R('build: x'), 'join', true), now = lobbyWhy(R('build: x'), 'join', false), host = [lobbyWhy(R('none: x'), 'host'), lobbyWhy(R('none: x'), 'host', true), lobbyWhy(R('build: x'), 'host', true), lobbyWhy(R('build: x'), 'host', false)];
+  check(/Reload/.test(old) && !/Reload/.test(now) && /older version/.test(now) && host[0] === host[1] && /no game servers/.test(host[0]) && /Reload/.test(host[2]) && !/Reload/.test(host[3]) && new Set([...host, old, now]).size === 5,
+    `a page is told to load again only where that mends it: "${now}", "${host[0]}", "${host[3]}"`); }
 { // (a deployed backend's refusal: the message says nothing, the words are the error's data — src/cloud/wire.ts folds them in)
   const W = wire('http://backend.invalid', { fetch: (async () => new Response(JSON.stringify({ status: 'error', errorMessage: 'Server Error', errorData: 'full: every seat is taken' }))) as unknown as typeof fetch });
   const e = await W.mutation('games:join', {}).then(() => null, (x: unknown) => x);
@@ -59,9 +63,11 @@ const S = standIn();
 const admin = wire(S.url, { key: S.key });
 const runner = localRunner({ key: RKEY, build: BUILD });
 const RS = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: async (req: Request) => (await runner.handle(req)) ?? new Response('not found', { status: 404 }) });
+const noService = await wire(S.url).mutation('games:make', { pid: freshId(), build: BUILD, made: MADE, setup: { scenario: '?roomclear&squad4', seed: 7, knobs: {}, seats: [{}, {}] } }).then(() => null, (x: unknown) => x);
+check(/no game servers/.test(lobbyWhy(noService, 'host')), `a host whose deployment has no game service is told so ("${lobbyWhy(noService, 'host')}")`);
 await admin.mutation('runners:register', { name: 'check', url: `http://127.0.0.1:${RS.port}/mp/runner`, key: RKEY, build: BUILD, cap: 2 });
 const cron = setInterval(() => void admin.mutation('games:reap', {}).catch(() => { /* asked again */ }), 500);
-const tab = () => new Lobby(wire(S.url), freshId(), BUILD);
+const tab = (commit = BUILD, made = MADE, old = false) => new Lobby(wire(S.url), freshId(), { commit, made }, async () => old);
 const health = async (address: string): Promise<{ state: string; tick: number; seats: boolean[] } | null> => { try { return await (await fetch(address.replace(/^ws/, 'http') + '/health')).json() as never; } catch { return null; } };
 
 try {
@@ -79,11 +85,13 @@ try {
   check(!!b && b.seat === 1 && b.address === a.address && b.game === a.game && !!b.seatKey && b.seatKey !== a.seatKey, `a second tab comes through by the code (typed small): ${b ? `seat ${b.seat}, its own key, the same server` : bWhy}`);
   const again = await A.join(made.code);
   check(again.seat === 0 && again.seatKey === a.seatKey, 'the first tab, loaded again, is the first seat again');
+  const later = new Lobby(wire(S.url), A.pid, { commit: 'd00d12345678', made: MADE }), back0 = await later.join(made.code).catch((x: unknown) => String(x)), other = await why(tab('d00d12345678', 'ffff0000ffff0000').seat(made.code)), left = await why(tab(BUILD, 'ffff0000ffff0000', true).seat(made.code));
+  check(typeof back0 !== 'string' && back0.seat === 0 && back0.seatKey === a.seatKey && back0.address === a.address && /older version/.test(other) && /Reload/.test(left), `loaded again after a deploy that left the game as it was, it is the first seat again; after one that changed the game it is told "${other}"; a page left open across one, "${left}"`);
   const third = await why(tab().seat(made.code)), none = await why(tab().seat('ZZZZZ'));
   check(/already has two players/.test(third) && /no game with that code/.test(none), `a third tab is told "${third}"; a code nobody has, "${none}"`);
 
   console.log('fight');
-  const bot = (v: GameView) => { const p = Bun.spawn(['bun', 'run', 'tools/mp/bot.ts', '--url', v.address, '--game', v.game, '--key', v.seatKey, '--build', BUILD, '--ticks', '240', '--timeout', '120'], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore', env: process.env });
+  const bot = (v: GameView) => { const p = Bun.spawn(['bun', 'run', 'tools/mp/bot.ts', '--url', v.address, '--game', v.game, '--key', v.seatKey, '--build', MADE, '--ticks', '240', '--timeout', '120'], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore', env: process.env });
     return new Response(p.stdout).text().then(t => { const l = t.split('\n').find(x => x.startsWith('MPBOT ')); return l ? JSON.parse(l.slice(6)) as { seat: number; confirmed: number; wordsOk: number; bad: unknown; word: string } : null; }); };
   const [ba, bb] = b ? await Promise.all([bot(a), bot(b)]) : [null, null];
   check(!!ba && !!bb && ba.seat === 0 && bb.seat === 1 && ba.confirmed >= 240 && bb.confirmed >= 240 && !ba.bad && !bb.bad && ba.wordsOk >= 8 && bb.wordsOk >= 8,
@@ -92,7 +100,7 @@ try {
   console.log('left');
   // (the host stays in: the seat that is open is the second's)
   const knock = (v: GameView): Promise<{ met: string; bye: () => string; ws: WebSocket }> => new Promise(done => { let bye = ''; const ws = new WebSocket(v.address), t = setTimeout(() => done({ met: 'no answer', bye: () => bye, ws }), 8000);
-    ws.onopen = () => ws.send(JSON.stringify({ k: 'hello', proto: NET.proto, game: v.game, build: BUILD, key: v.seatKey }));
+    ws.onopen = () => ws.send(JSON.stringify({ k: 'hello', proto: NET.proto, game: v.game, build: MADE, key: v.seatKey }));
     ws.onmessage = e => { const m = JSON.parse(String(e.data)) as { k: string; code?: string; seat?: number }; if (m.k === 'bye') bye = m.code ?? '?'; if (m.k === 'welcome' || m.k === 'bye') { clearTimeout(t); done({ met: m.k === 'bye' ? `bye ${m.code}` : `seat ${m.seat}`, bye: () => bye, ws }); } }; });
   const took = async (): Promise<GameView | string> => { const T = tab(), w = await why(T.seat(made.code)); return w || await T.join(made.code); }, said = (v: GameView | string) => typeof v === 'string' ? `"${v}"` : `seat ${v.seat}`;
   const host = await knock(a); await Bun.sleep(2500);
