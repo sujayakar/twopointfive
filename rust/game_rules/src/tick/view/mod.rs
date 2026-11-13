@@ -87,10 +87,11 @@ pub fn under(g: &Game, t: &crate::orders::OrderTarget) -> Under {
 pub fn walked_floor(g: &Game) -> WalkedFloor {
     let nav = &g.col.nav;
     let (w, h) = (nav.w as usize, nav.h as usize);
+    let ceilings = crate::render_reach::ceilings(g);
     let mut rows = alloc::string::String::with_capacity(w * h);
     for z in 0..h { for x in 0..w {
         let blocked = nav.blocked.get(z * w + x) == Some(&1);
-        let roofed = crate::render_reach::roofed(g, (x as f64 + 0.5) * nav.cell, (z as f64 + 0.5) * nav.cell);
+        let roofed = ::sim::weather::under_any(&ceilings, (x as f64 + 0.5) * nav.cell, (z as f64 + 0.5) * nav.cell);
         rows.push(char::from(b'0' + roofed as u8 + 2 * blocked as u8));
     } }
     WalkedFloor { w: w as u32, h: h as u32, cell: nav.cell, rows }
