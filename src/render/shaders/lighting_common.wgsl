@@ -197,24 +197,6 @@ fn bounceHitOwner(hit: Hit) -> u32 { if (hit.idx == CAPSULE_HIT || hit.idx < 0) 
  *  leaning 0.3 did), so the snow's fine grain does not ask the box rays of every pixel near a wall. */
 fn bounceLeftNoWall(N0: vec3f, owner: u32, t: f32) -> bool { return owner != 0u || (t < 2.0 && max(abs(N0.x), max(abs(N0.y), abs(N0.z))) < 0.98); }
 
-// The same mean radiance for a point in SMOKE, refusing to interpolate through a wall: the dice cells are ~1 m and a plume 30 cm on the dark side of a 12 cm
-// wall would otherwise blend straight into the lit cell beyond it (the corridor smoke glowing an exit sign's green from the store room — playtest 08-09).
-// One occlusion ray from P toward the neighbouring cell centre the trilinear footprint pulls from (per axis, the side P sits on within its own cell); blocked
-// → sample at P's own cell centre instead (nearest, no cross-wall blend). Exact wherever nothing solid lies between P and that neighbour.
-fn diceMeanRadianceWalled(P: vec3f) -> vec3f {
-  if (WALL_SIDES) { return diceMeanRadiance(P); }   // (ONE RULE, as above: the read at P keeps to P's place by the plan, and no occlusion ray is asked)
-  let sp = c0Spacing();
-  let g = (P - RC_MIN) / sp;                       // continuous cell coords
-  let home = (floor(g) + vec3f(0.5)) * sp + RC_MIN; // P's own cell centre
-  var side = sign(P - home);                       // which neighbour each axis pulls from …
-  side.y = 0.0;                                    // … in PLAN only: the vertical neighbour of a low sample is under the floor slab / over the ceiling, and a ray into the slab reads
-  let nb = vec3f(home.x, P.y, home.z) + side * sp; // 'blocked' for every smoke voxel near the floor (review 08-10 #10) — walls are what leak, so test toward the plan-diagonal neighbour at P's own height
-  let d = nb - P; let dist = length(d);
-  if (dist > 1e-3 && occluded(P, d / dist, dist, 0u)) {
-    return textureSampleLevel(diceTex, linSamp, diceCoord(home, 6.0), 0.0).xyz;   // (home centre: the trilinear weights collapse onto P's own cell)
-  }
-  return diceMeanRadiance(P);
-}
 
 // Outgoing radiance of a diffuse box surface hit at P: emission + albedo/pi * (shadowed direct + last-frame bounce).
 // `ro` = where the ray that found the hit set out from (a cascade interval's start).

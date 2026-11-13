@@ -232,8 +232,6 @@ struct SkinVOut {
 // THE CAST'S MATERIAL SLOTS (anim/gltf.ts SLOT_NAMES — the ids are that table's order): the flat colour of a slot on one man. PLACEHOLDER SHADING, the models part's stand-in: one
 // colour per slot, the man's two instance colours where the game already tells men apart by them (tint = the uniform / the loadout's suit, tint2 = the pair colour / trim). The
 // characters' materials (finish per slot, cloth, skin tones, wear) replace this function and what fsSkin writes for the slot.
-const SLOT_SKIN: u32 = 0u; const SLOT_CLOTH_UNIFORM: u32 = 1u; const SLOT_CLOTH_PLAIN: u32 = 2u; const SLOT_WEBBING: u32 = 3u; const SLOT_BOOT: u32 = 4u;
-const SLOT_HELMET: u32 = 5u; const SLOT_METAL_DARK: u32 = 6u; const SLOT_RUBBER: u32 = 7u; const SLOT_LENS: u32 = 8u;
 fn slotAlbedo(slot: u32, tint: vec3f, tint2: vec3f) -> vec3f {
   switch (slot) {
     case 0u: { return vec3f(0.42, 0.27, 0.19); }                                  // skin
