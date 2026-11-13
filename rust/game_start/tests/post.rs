@@ -117,3 +117,31 @@ fn boots_on_a_leg_are_heard() {
         assert!(steps >= 3, "seed {s}: {steps} steps heard in three seconds of walking");
     }
 }
+
+/// THE RULE: a man sent round whom a covered lane stops waits there, and goes on once it lets him go.
+/// A FAILURE MEANS: his squad sends him on again the next tick and the lane stops him again, five times a second, and he is walked into it.
+#[test]
+fn a_man_a_lane_stops_is_not_sent_on_into_it() {
+    for s in SEEDS {
+        let mut p = Play::mission("warehouse.json", "?levelFile=warehouse.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+        p.sam_unseen();
+        p.run(0.5);
+        let (q, d) = p.g.tab.enemysquads_squad.iter().find_map(|(q, x)| { let m = x.men.iter().copied().find_map(|gd| game::roomfight::def_of(&p.g, gd).filter(|&d| at_post(&p.g, d)))?; Some((q, m)) }).expect("a man of a squad at his post");
+        let (gd, t, from, to) = (p.g.tab.roomfight_def[d].gd, p.time(), game::roomfight::station(&p.g, d), elsewhere(&p, d));
+        p.g.tab.enemysquads_squad[q].sent.push(game::enemysquads::Sent { gd, role: game::enemysquads::SentRole::Flank, phase: game::enemysquads::SentPhase::Run, hold: Some(true), spot: Some(to), t0: t, from, way: vec![to], ..Default::default() });
+        owner::claim(&mut p.g, gd, by::SQUAD_LEG, t, None);
+        send(&mut p.g, d, Leg::errand(to, 3.0), by::SQUAD_LEG);
+        p.run(0.5);
+        assert!(on_leg_of(&p.g, d, by::SQUAD_LEG), "seed {s}: the staging is wrong: he is not on his way ({})", p.why(gd));
+        stand_here(&mut p.g, d);
+        for f in 0..120 {
+            let t = p.time();
+            owner::claim(&mut p.g, gd, by::LANE, t, None);
+            p.frame();
+            assert!(!on_leg_of(&p.g, d, by::SQUAD_LEG), "seed {s}: {f} frames after the lane stopped him he is sent on into it");
+        }
+        let t = p.time();
+        owner::release(&mut p.g, gd, by::LANE, t);
+        p.until(1.0, |p| on_leg_of(&p.g, d, by::SQUAD_LEG)).unwrap_or_else(|| panic!("seed {s}: let go, and he does not go on ({})", p.why(gd)));
+    }
+}
