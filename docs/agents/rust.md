@@ -29,8 +29,9 @@ Each crate is its own cargo workspace and target folder.
 ### What holds determinism
 
 - **The compiler.** A `no_std` crate cannot name a hash map, a thread, a clock or a file.
-- **`tools/qa/rust-rules-check.ts`, over `rust/sim`, `rust/maths` and `rust/prim` only.** No rounded float method, no `mul_add`, nothing relaxed, no cell or atomic,
-  no `std::`, and each `static mut` has a row in `STATICS`. In `rust/game_rules` and `rust/game_types` only the reader holds this.
+- **`tools/qa/rust-rules-check.ts`, over `rust/sim`, `rust/maths`, `rust/game_types` and `rust/game_rules`.** No rounded float method, no `mul_add`, nothing relaxed, no cell or
+  atomic, no `std::`, and each `static mut` of those and of `rust/prim` has a row in `STATICS`.
+- **`tools/draw/native-check.ts`.** The module is handed the hands of a few fights the native gate played (`gate records`), and has the native game's words.
 - **`m::`.** `m::sin`, `m::atan2`, `m::hyp2`, `m::pow` and the rest are the game's own, from + − × ÷ and √ (`rust/maths/`), because a
   library's sine differs by machine. `m::min` and `m::max` fix the answers for NaN and −0. Write these, never a method on `f64`. Do not tidy
   arithmetic that runs: `(a - b) - c` is not `a - (b + c)`.
@@ -161,8 +162,8 @@ and neither side may link the other. Inside the rules:
   `out_events.rs`, an `event!` row filled in `game_draw/src/events.rs`, then `half` and `src/draw/events.ts`.
 - **A thing drawn:** a file in `game_draw/src/` with `section!` and its fill (fields by `game_types::rows`; values, never references),
   a line in `sections!`, `half`, a reader in `src/draw/`.
-- **A call of the face:** `#[no_mangle] pub extern "C" fn` in its file of `game_face/src/` and on that file's head list, using `with` or `with_ref`,
-  answering by `out`. `Face` is untyped, so a wrong name in the page fails only when called.
+- **A call of the face:** a line of `calls!` in `rust/game_start/src/host/calls.rs`, a function of that name in `game_face/src/`, then `half`. A name that
+  is wrong on either side does not compile.
 
 ### Leftovers, and what to do with them
 
@@ -199,5 +200,4 @@ Native tests in `rust/game_start/tests/`, and `#[test]`s in `bytes.rs`, `owned.r
 
 ## Not seen
 
-None of this sees a GPU. No check keeps a float method out of `rust/game_rules`. Six dress rows (`air`, `snow`, `rain`, the wet ground's, `wake`, `men`)
-are read by nothing.
+None of this sees a GPU.
