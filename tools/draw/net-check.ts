@@ -17,7 +17,7 @@ import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
-import { FIRST, NET, inputNumbers, type WireCmd } from '../../src/net/wire';
+import { FIRST, NET, inputNumbers, type Outcome, type WireCmd } from '../../src/net/wire';
 import { SeatLine } from '../../src/net/timeline';
 import { built } from '../../src/host/buildname';
 import { FollowCamera } from '../../src/host/camera';
@@ -31,8 +31,8 @@ const start = freshStart({ search: '?levelFile=compound.json&roomclear&squad4&se
 
 // ---- the server, and the wire: what is sent arrives two of the clock's ticks later
 const S = await standStart(start), WAY = 2 * 1000 / 60, wire: { at: number; go: () => void }[] = [], later = (go: () => void): void => { wire.push({ at: now + WAY, go }); };
-let shifted = 0; const shift = (w: WireCmd): boolean => [...w.k, ...w.u ?? []].includes('ShiftLeft');   // (the server's ticks with Shift held in the first seat)
-const server = new NetServer({ now: () => now, step: c => { if (shift(c[0])) shifted++; S.step(c); }, word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
+let shifted = 0, end: Outcome | null = null; const shift = (w: WireCmd): boolean => [...w.k, ...w.u ?? []].includes('ShiftLeft');   // (the server's ticks with Shift held in the first seat)
+const server = new NetServer({ now: () => now, step: c => { if (shift(c[0])) shifted++; S.step(c); }, word: () => S.word(), ended: () => end ?? S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'], graceS: 2 });
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
@@ -127,8 +127,14 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
 // what a card calls the players
 { const E = drawEnd(game, {} as never, c.names), own = [1, 2, 3].map(n => E.name(0, `Player ${n}`)), mate = E.name(0, 'Grey'), twin = shownAs('Player 1', ['Ada', 'ada']), posed = shownAs('Player 1', ['player 2', 'Grace']), one = shownAs('Player', ['Ada']);
   line(own.join() === 'Ada,Grace,Player 3' && mate === 'Grey' && twin === 'Player 1' && posed === 'Player 1' && one === 'Ada', 'a card calls a player what he picked, over the game\'s own word for his seat; a name that tells nobody apart is not used', `${own.join(', ')} \u00b7 ${mate} \u00b7 ${twin} \u00b7 ${posed} \u00b7 ${one}`); }
+// the mission over, and started over off the end card (`Input.tap`, as the page presses it): the server's grace is forgotten.
+{ const { Input } = await import('../../src/host/input'), I = new Input(null), s = stood(); off = false; input.keys.clear(); end = { won: false, end: 'DOWN', why: '' }; run(60); const told = server.state === 'ended' && !!c.outcome && !!b.outcome;
+  I.tap('Enter', 'ShiftLeft'); net.tick(I, cam, canvas, off, () => { seen++; }); I.endFrame(); for (let i = 0; i < 60 && stood() === s; i++) beat(); const again = stood() !== s; end = null; run(240); const on = !server.done && server.state === 'playing' && !c.outcome && !b.outcome && !c.bye && !c.bad && !b.bad;
+  line(told && again && on, 'a mission that is over can be played again, for longer than the server waits after its end', `told it is over ${told}, started over ${again}, four seconds on ${on ? 'it is being played' : `${server.state}${server.done && `, ${server.done}`}`}`); }
 // the other player leaves: a man who is down is told the key that is left to him
 { const with2 = net.alone, kit = game.view().kit.again; server.closed(bWire.conn!); run(10); const words = [downWord({ again: false }, with2), downWord({ again: false }, net.alone), downWord({ again: true }, net.alone)];
   line(!with2 && net.alone && !kit && words.join(' · ') === 'DOWN · DOWN — SHIFT+ENTER · DOWN — ENTER', 'a man who is down is told of Enter once it has the mission again, and of Shift+Enter where nobody is left but him', words.join(' · ')); }
+// over again, and left: the server is done
+{ end = { won: true, end: 'OUT', why: '' }; run(240); line(String(server.done) === 'the game ended' && !!c.bye, 'a mission that is over and left is done, and its players are told', server.done || 'NEVER DONE'); }
 console.log(fails ? `=== net: ${fails} FAILED ===` : '=== net: ALL PASS ===');
 process.exit(fails ? 1 : 0);
