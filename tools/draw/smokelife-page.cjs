@@ -1,7 +1,7 @@
 // THE RUNNING SMOKE IS THE GAME'S, with no jump in it. What men see through is the game's grid; what the player sees is the solver, bent toward it a little at a time. Read back once a second: the two volumes, and
 // what lines of sight let through in each. As a check (software adapter, the solver stepped by hand): a grenade's dust, taken whole as it hangs and thinning for six seconds. With --life: a can through its pour
 // and its thinning, every tick drawn, a line a second and stills, for a card. Then a can in the open, in the wind: as tall in the game as drawn.
-//   PORT=<a dev server> node tools/draw/smokelife-page.cjs                                   exit 0 = every check passed, 1 = a FAIL, 2 = the script died · LIFE_BREAK=1 = thin smoke is let go of as well, and the wind holds drawn smoke down: it must fail
+//   PORT=<a dev server> node tools/draw/smokelife-page.cjs                                   exit 0 = every check passed, 1 = a FAIL, 2 = the script died · LIFE_BREAK=1 = thin smoke is let go of as well, and the wind holds drawn smoke down with nothing bending it up (either alone stands it up): it must fail
 //   PORT=… OUT=… [AIM=x,y] node tools/draw/smokelife-page.cjs --life [address words] [seconds] [param=value,…]
 const PAGE = require('../qa/page.cjs').page({ name: 'smokelife-page', detail: 'json' }), { check, note } = PAGE, fs = require('node:fs');
 const { hands } = require('./smokeread.cjs');
@@ -33,11 +33,11 @@ const LIFE = process.argv.includes('--life'), args = process.argv.slice(2).filte
     // A CAN IN THE OPEN, IN THE WIND: what hides a standing man in the game is drawn over his head as well. (A wind that carries smoke along and holds it down makes a cloud nobody can stand behind, in either.)
     if (process.env.LIFE_BREAK === '1') await page.addInitScript(() => { const P = GPUDevice.prototype, was = P.createShaderModule; P.createShaderModule = function (d) { return was.call(this, { ...d, code: d.code.replace('v = select(n, vec3f(n.x, v.y, n.z), s.kind == 1u);', 'v = n;') }); }; });
     await go(`paused&quality=verylow&adapt=0&mute&cloud=0&noreplay&seed=7&loadbrief=0&levelFile=pass.json&roomclear&squad4`, { timeout: 600000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 900000 }); await page.evaluate(() => window.__ready); await page.evaluate(hands, false);
-    const open = await page.evaluate(async ([ax, ay]) => {
-      const d = window.__draw, C = d.game.commands, I = d.input, cv = document.getElementById('view'); d.run(1, [], 'last'); C.god(1); C.ai(0); I.mouseX = ax * cv.clientWidth; I.mouseY = ay * cv.clientHeight; J.tick(2); C.act('smoke', 0, ''); J.tick(2);
-      const out = []; for (let s = 1; s <= 6; s++) { let r; for (let i = 0; i < 30; i++) { J.tick(2); r = await (i < 29 ? J.step(1 / 30) : J.frame(1 / 30)); } out.push({ ...r, wind: d.smoke.wind?.count ?? null }); } return out;
-    }, aim);
-    for (const [s, r] of open.entries()) note(`in the open, ${s + 1} s`, JSON.stringify({ game: r.game, drawn: r.drawn, top: r.top, sight: r.sight, blind: r.blind, wind: r.wind }));
+    const open = await page.evaluate(async ([ax, ay, broken]) => {
+      const d = window.__draw, C = d.game.commands, I = d.input, cv = document.getElementById('view'); d.run(1, [], 'last'); C.god(1); C.ai(0); if (broken) d.smoke.params.bend = 0; I.mouseX = ax * cv.clientWidth; I.mouseY = ay * cv.clientHeight; J.tick(2); C.act('smoke', 0, ''); J.tick(2);
+      const out = []; for (let s = 1; s <= 6; s++) { let r; for (let i = 0; i < 30; i++) { J.tick(2); r = await (i < 29 ? J.step(1 / 30) : J.frame(1 / 30)); } out.push(r); } return out;
+    }, [...aim, process.env.LIFE_BREAK === '1']);
+    for (const [s, r] of open.entries()) note(`in the open, ${s + 1} s`, JSON.stringify({ game: r.game, drawn: r.drawn, top: r.top, sight: r.sight, blind: r.blind }));
     const last = open[5];
     check(last.top[0] >= 2 && last.top[1] >= 2, 'a can in the open stands over a man, in the game and as drawn', last.top);
     check(Math.abs(last.top[0] - last.top[1]) <= 0.5, 'and as high in the one as in the other', last.top);
