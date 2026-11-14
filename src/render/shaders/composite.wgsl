@@ -221,8 +221,8 @@ fn wxAirTEst(pixf: vec2f, z: f32) -> f32 {
 fn volWindow(d: vec2f) -> f32 { let a = abs(d); let w = select(0.5 * (1.5 - a) * (1.5 - a), 0.75 - a * a, a < vec2f(0.5)); return w.x * w.y; }
 fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   let hdims = vec2i(textureDimensions(volTex));
-  let vdiv = i32(frame.lossyCfg.y);                             // volumetric divisor: 2, or 4 with the lossy option
-  let at = (select(vec2f(pix) + 0.5, pin, SHARP) - (0.5 * f32(vdiv) + 0.5)) / f32(vdiv);   // in texels, from the middle of one's marched pixel: the middle of the nine is the nearest
+  let vdiv = i32(frame.lossyCfg.y);                             // volumetric divisor: 2 to 4 (settings.ts volDivisor)
+  let at = (select(vec2f(pix) + 0.5, pin, SHARP) - (f32(vdiv / 2) + 0.5)) / f32(vdiv);   // in texels, from the middle of one's marched pixel: the middle of the nine is the nearest
   let base = vec2i(floor(at + 0.5));
   var acc = vec4f(0.0); var wsum = 0.0;
   // EXPERIMENT (settings.smokeUpsampleRelax, volCfg.w bit 20): the depth guide assumes the volumetric term follows the SURFACE — true of haze up to it, false of a plume in
