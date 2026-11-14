@@ -428,7 +428,7 @@ pub fn grid_step(g: &mut crate::game::Game, n: u32, k: crate::scene_collision::G
     let sky = crate::hours::sky_now(g);
     // (a wind that is no number, or whose rise with height is none, is still air: the smoke is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
-    let blows = |w: &&crate::scene_collision::GridWind| (w.x != 0.0 || w.z != 0.0) && [w.x, w.z, w.low, w.gain, w.full_at, k.in_wind].into_iter().all(real) && w.low >= 0.0 && w.gain >= 0.0 && w.full_at > 0.0;
+    let blows = |w: &&crate::scene_collision::GridWind| (w.x != 0.0 || w.z != 0.0) && [w.x, w.z, w.low, w.gain, w.full_at].into_iter().all(real) && w.low >= 0.0 && w.gain >= 0.0 && w.full_at > 0.0;
     let wind = wind.filter(blows);
     let share = wind.map_or(Vec::new(), |wd| {
         let GridWindShare::Under { roofs } = &wd.share;
@@ -440,7 +440,7 @@ pub fn grid_step(g: &mut crate::game::Game, n: u32, k: crate::scene_collision::G
     });
     let w = wind.filter(|_| !share.is_empty());
     let bk = sim::bricks::K {
-        decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, share: &share, wind_keep: k.in_wind,
+        decay: k.decay, spread: k.spread, rise: k.rise, rise_rate: k.rise_rate, gone: k.gone, share: &share,
         wind_x: w.map_or(0.0, |w| w.x), wind_z: w.map_or(0.0, |w| w.z), wind_low: w.map_or(1.0, |w| w.low), wind_gain: w.map_or(0.0, |w| w.gain), wind_full_at: w.map_or(1.0, |w| w.full_at),
     };
     let rows = sim::light::Rows { lamps: &g.light_home.rows, leave: js::to_u32(said.leave), steady: said.steady, exposure: crate::hours::exposure(g) };
