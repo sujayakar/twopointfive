@@ -309,5 +309,5 @@ export const defaultSettings = (): RenderSettings => ({
   charSelfShadow: true,   // the character self-shadow: ON, all tiers (a row on Tab ▸ Renderer — SDF character rig; no preset touches it) — the round cones themselves have no switch
 });
 /** THE SMOKE AND THE BEAMS ARE AS FINE AS THE TIER DRAWS THEM: the volumetrics' divisor of the picture is the tier's own (a quarter or a half), less where the ladder has cut the picture under the
- *  tier's own scale, so that a cut of the picture never makes them coarser than the tier does; never finer than half. */
-export const volDivisor = (S: Pick<RenderSettings, 'volQuarter' | 'volScale' | 'renderScale'>): number => { const own = S.volQuarter ? 4 : 2; return Math.max(2, Math.min(own, Math.floor(own * S.renderScale / S.volScale + 1e-6))); };
+ *  tier's own scale, so that the march stays about the size the tier draws it at (to the nearest whole divisor: a cut neither coarsens it nor pays for a finer one); never finer than half. */
+export const volDivisor = (S: Pick<RenderSettings, 'volQuarter' | 'volScale' | 'renderScale'>): number => { const own = S.volQuarter ? 4 : 2; return Math.max(2, Math.min(own, Math.round(own * S.renderScale / S.volScale))); };
