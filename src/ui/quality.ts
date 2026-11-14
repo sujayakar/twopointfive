@@ -588,7 +588,7 @@ export class Quality {
     if (!(name in PRESETS)) throw new Error(`Quality.apply: no preset is called '${name}' (the presets: ${QUALITY_NAMES.join(', ')})`);   // (an untyped caller: the console, a script written when there was an ultra)
     const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null; this.hopPriced = null; this.appliedAt = this.engine.timer?.resolved ?? 0;   // (a preset put on is nobody's cut to judge)
     const sc = startScale(p, S.taau !== false);   // (a stub engine without the setting counts as TAAU on — the default)
-    S.renderScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
+    S.renderScale = S.volScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
     S.taauPhases = p.taau.phases; S.taauClipGamma = p.taau.clipGamma; S.taauSharpen = p.taau.sharpen;   // the resolve's per-tier knobs (Tab ▸ Frame rows move them by hand until the next preset)
     S.rtReflect = p.rt.on && !rtVeto.on; S.rtReflectDiv = p.rt.div; S.rtRays = p.rt.rays; S.rtMaxRough = p.rt.maxRough; S.rtAtrous = p.rt.atrous;   // RT reflections per tier (RtTier above; ?nortreflect vetoes the switch, the Tab ▸ Materials rows move them by hand until the next preset)
     if (gbaaForce.on) { S.gbaa = true; S.taauPhases = 0; }   // ?gbaa: geometric edge AA + jitter off, over the tier's phases row above
