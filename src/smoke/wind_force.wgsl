@@ -36,7 +36,8 @@ fn windForce(u: vec3f, P: vec3f, mask: u32, dt: f32) -> vec3f {
     let va = windSrcVel(s, P);
     let w = length(va) / max(s.speed, 1e-3);
     if (w < wind.minW) { continue; }
-    v = mix(v, va, clamp(w * wind.relax * dt, 0.0, 1.0));
+    let n = mix(v, va, clamp(w * wind.relax * dt, 0.0, 1.0));
+    v = select(n, vec3f(n.x, v.y, n.z), s.kind == 1u);   // (the weather's wind is level: it carries a plume along and says nothing of its rise; a jet blows on all three axes)
   }
   return v;
 }
