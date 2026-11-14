@@ -163,11 +163,15 @@ fn in_a_room_smoke_goes_up_to_the_ceiling() {
 
 /// Rain over the lot, its wind straight along x so that the grid carries it with no slant, and a unit along it.
 fn wind_over(p: &mut Play) -> ([f64; 2], f64) {
+    let v = 2.5;
+    wind_of(p, v);
+    ([1.0, 0.0], v)
+}
+/// …and as fast as it is asked (0: still air)
+fn wind_of(p: &mut Play, v: f64) {
     game::weather::weather_set_kind_2(&mut p.g, Some(game::weather_kinds::WeatherKind::Rain));
     p.g.weather.next_flash_at = 1e9;
-    let v = 2.5;
     p.g.weather.wind = [v, 0.0];
-    ([1.0, 0.0], v)
 }
 /// A lot under open sky, and a hut out of the way in its corner.
 fn lot() -> Scene {
@@ -200,6 +204,29 @@ fn the_wind_carries_smoke_downwind() {
     assert!(up > 0.99, "the control: six metres upwind {up:.3}");
 }
 
+/// THE RULE: under the open sky a can hides a standing man, a pace downwind of it, from an eye across the wind and from one down it, in still air, in a breeze and in a storm alike; and it hides a kneeling man no worse.
+/// CONTROL: the same two lines before the can is let off, and three metres upwind of it.
+/// A FAILURE MEANS: outdoors the smoke lies along the ground and every eye looks over it: a man who throws a can, stands in it and is shot.
+#[test]
+fn under_the_open_sky_a_can_hides_a_standing_man_in_any_wind() {
+    for v in [0.0, 0.4, 0.85, 1.2, 2.5] {
+        let mut p = stand(&lot());
+        wind_of(&mut p, v);
+        let at = [18.0, 12.0];
+        // (from a standing man's eye, ten metres off, to a man's chest)
+        let eyes = |p: &Play, x: f64, chest: f64| [through(p, [x, 1.6, at[1] + 10.0], [x, chest, at[1]]), through(p, [x + 10.0, 1.6, at[1]], [x, chest, at[1]])];
+        assert_eq!(eyes(&p, at[0] + 1.0, 1.3), [1.0, 1.0], "wind {v}: the control: the air before");
+        can(&mut p, [at[0], 0.1, at[1]], 32.0);
+        p.run(5.0);
+        for k in 0..20 {
+            let (tall, low, up) = (eyes(&p, at[0] + 1.0, 1.3), eyes(&p, at[0] + 1.0, 0.8), eyes(&p, at[0] - 3.0, 1.3)[0]);
+            assert!(tall[0] < 0.3 && tall[1] < 0.3 && low[0] < 0.3 && low[1] < 0.3, "wind {v}, {} s on: standing {tall:.2?}, kneeling {low:.2?} of the light comes through", 5 + k);
+            if v > 0.5 { assert!(up > 0.8, "wind {v}, {} s on: the control: three metres upwind {up:.2}", 5 + k) }
+            p.run(1.0);
+        }
+    }
+}
+
 /// THE RULE: in the wind a plume still widens: some of its own spread sideways stays with it. CONTROL: its middle is thicker than its edge.
 /// A FAILURE MEANS: smoke blown along stays a line one cell wide, and cannot get round what it is blown against.
 #[test]
@@ -225,7 +252,8 @@ fn the_wind_is_slower_at_the_ground() {
     let e = SmokeEmitter { radius: 1.2, ..can_like([at[0], 1.2, at[1]], 30.0) };
     game::smoke_types::smoke_system_like_emit(&mut p.g, &e);
     p.run(4.0);
-    let tau = |y: f64| -across_wind(&p, at, u, 0.8 * v * 4.0, 0.0, y, 1.5).ln();
+    // (where the wind over a man's height has just got to)
+    let tau = |y: f64| -across_wind(&p, at, u, v * 4.0, 0.0, y, 1.5).ln();
     let (low, high) = (tau(0.2), tau(2.2));
     assert!(high > 2.0 * low, "ahead of the plume, the smoke high up {high:.4}, at the ankles {low:.4}");
 }
