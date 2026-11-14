@@ -1,9 +1,11 @@
 // THE SMOKE AND THE BEAMS COME UP TO THE PICTURE'S SIZE WITHOUT A STEP (src/render/shaders/composite.wgsl upsampleVol, volWindow): a bright spot and a ramp on the pass's texels, read at every place between
 // two of them, in one dimension (the shares of the two axes are multiplied). Where the nearest texel changes nothing must jump. A pixel's shares are held to the shader's own lines.
 //   bun run tools/qa/volup-check.ts              exit 0 = passed
-//   VOLUP_BREAK=1 …                              the shares cut off where the nine texels end, as they were: must FAIL
+//   VOLUP_BREAK=1 …                              the shares cut off where the nine texels end, and the divisor the tier's own at every scale, as they were: must FAIL
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { volDivisor } from '../../src/settings';
+import { PRESETS, QUALITY_NAMES, SCALE_FLOOR } from '../../src/ui/quality';
 
 const BREAK = process.env.VOLUP_BREAK === '1', SRC = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/composite.wgsl'), 'utf8'), VOL = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/volumetrics.wgsl'), 'utf8');
 let red = 0; const check = (ok: boolean, what: string): void => { if (!ok) red++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); };
@@ -18,5 +20,9 @@ for (const [name, data] of [['a bright spot', spot], ['a ramp', ramp]] as const)
 }
 check([0, 0.25, 0.5].every(f => Math.abs([-1, 0, 1].reduce((s, d) => s + win(d - f), 0) - 1) < 1e-9), 'the three shares of an axis come to one wherever the pixel stands');
 check(/let w = select\(0\.5 \* \(1\.5 - a\) \* \(1\.5 - a\), 0\.75 - a \* a, a < vec2f\(0\.5\)\)/.test(SRC) && /var w = volWindow\(vec2f\(base \+ vec2i\(dx, dy\)\) - at\);/.test(SRC) && /let full = min\(gid\.xy \* vdiv \+ vdiv \/ 2u/.test(VOL) && /let src = min\(h \* vdiv \+ vdiv \/ 2, inHi\(\)\);/.test(SRC), 'the shader takes these shares, and the pass marches the pixel the upsample reads from');
+{   // THE LADDER'S CUT OF THE PICTURE IS NOT THE SMOKE'S (settings.ts volDivisor): at every scale of the ladder the pass has no fewer rows than in the tier's own picture
+  const bad: string[] = []; for (const n of QUALITY_NAMES) { const p = PRESETS[n], own = p.lossy.volQuarter ? 4 : 2; for (let k = Math.round(SCALE_FLOOR * 100); k <= 100; k++) { const r = k / 100, d = BREAK ? own : volDivisor({ volQuarter: p.lossy.volQuarter, volScale: p.scale, renderScale: r }); if (d < 2 || d > own || (d > 2 && r / d < p.scale / own - 1e-6)) bad.push(`${n} x${r} /${d}`); } }
+  check(!bad.length, `no tier's smoke is coarser under a cut picture than in its own${bad.length ? `: ${bad.length}, ${bad.slice(0, 3).join(', ')}` : ''}`);
+}
 console.log(`=== volup: ${red ? `${red} FAILED` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

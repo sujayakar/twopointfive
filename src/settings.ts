@@ -157,6 +157,7 @@ export interface RenderSettings {
   rcPeriods: readonly number[]; // per cascade level [c0 (ignored: always whole), c1, c2, c3, …]: frames a level takes to refresh all its probes under rcAmortize (quality.ts presets; Tab ▸ Indirect light)
   rcChunks: readonly number[];  // per cascade level [–, c1, c2, c3]: workgroups per upper-cascade probe — occupancy only, the same bits for any value (rc.wgsl rcUpper); Tab ▸ Indirect light for A/B
   volQuarter: boolean;         // volumetrics (haze beams + smoke march) at 1/4 resolution instead of 1/2; the composite's depth-aware upsample follows (frame.lossyCfg.y)
+  volScale: number;            // the tier's own render scale (quality.ts): where the ladder draws the picture smaller than that, the volumetrics' divisor falls with it (volDivisor below)
   volLightCap: number;         // volumetrics worst-case cap (Phase 0, volumetrics.wgsl VOL_KMAX): at most this many lights get shadow rays per smoke-march step (the first K by unshadowed bound on that stretch that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing 1.5 × volSteps by it), the rest dropped — and the smoke march walks per-domain stretches with a bounded shortlist (frame.volCfg.x, 1 or more, and 0 = no preset yet = 4; presets: high 4 · medium, low and verylow 2)
   volShadowEvery: number;      // with the cap on: a traced light's shadow ray + self-shadow march is refreshed every N smoke-march steps and reused between (frame.volCfg.y; 2 on every preset — 1 bought nothing visible and cost ultra a third of its march; 3 combs)
   volStepVoxels: number;       // smoke-march step in voxels of the domain walked (frame.volCfg.z in tenths; 1.5 on high, medium and low; 2 on verylow)
@@ -279,7 +280,7 @@ export const defaultSettings = (): RenderSettings => ({
   directHistory: true, directBlurCap: 10, secMinE: 0.006,
   lightReach: true,
   giFireflyK: 4,
-  gatherThird: false, rcHalfRate: false, volQuarter: false,
+  gatherThird: false, rcHalfRate: false, volQuarter: false, volScale: 1,
   rcAmortize: true, rcPeriods: [1, 1, 1, 1],   // the schedule is on but traces every level whole until a preset (quality.ts) places periods — bit-identical to the original dispatch meanwhile
   rcChunks: [1, 1, 2, 8],                        // c2's items over 2 workgroups per probe, c3's over 8: the cascades 1.77 → 1.05 ms on the M4 Max with the same output bits; [1,1,1,1] = the original one-workgroup-per-probe dispatch
   volLightCap: 0, volShadowEvery: 2, volStepVoxels: 1.5,   // a preset places the cap (quality.ts: every preset does; until one has, the engine reads this 0 as high's 4); Tab ▸ Volume ▸ CAP rows
@@ -307,3 +308,6 @@ export const defaultSettings = (): RenderSettings => ({
   markings: true, markingTexel: 0.025, markingContrast: 1, markingEmissive: 1, markingReflect: true, markingReflPattern: true, markingReflCone: 0.25,   // markings ON (?nomarkings boots without them; Tab ▸ Renderer — markings)
   charSelfShadow: true,   // the character self-shadow: ON, all tiers (a row on Tab ▸ Renderer — SDF character rig; no preset touches it) — the round cones themselves have no switch
 });
+/** THE SMOKE AND THE BEAMS ARE AS FINE AS THE TIER DRAWS THEM: the volumetrics' divisor of the picture is the tier's own (a quarter or a half), less where the ladder has cut the picture under the
+ *  tier's own scale, so that a cut of the picture never makes them coarser than the tier does; never finer than half. */
+export const volDivisor = (S: Pick<RenderSettings, 'volQuarter' | 'volScale' | 'renderScale'>): number => { const own = S.volQuarter ? 4 : 2; return Math.max(2, Math.min(own, Math.floor(own * S.renderScale / S.volScale + 1e-6))); };
