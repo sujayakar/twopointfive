@@ -29,7 +29,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `mission.rs` | what the mission that is up says of itself (`g.staged`: `Facts`, team, foes, captives, rooms, end; a rule asks it and never the kind), the stealth stages, `objective` |
 | `verdict.rs`, `par.rs` | how a run ended, latched; the medal clock |
 | `lesson.rs`, `rails.rs` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
-| `director/`, `script_tut_*/` | level scripts, and the six that exist |
+| `director/`, `script_tut_*.rs` | level scripts, and the six that exist |
 
 The table of missions is `scenarios`, `quiet_missions` and `tutorial_missions` in `rust/game_types/src/scene_scenario_list/rows.rs`, and there is no other: the page asks the desk
 (`missions` every row, `kind` what an address starts, `pick` where a short-list name alone goes, `leave`, `brief`), and a tool asks the same desk through `tools/desk.ts`. A level's
@@ -126,7 +126,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
   a line in `mission_tick`, and its staging in its own start.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
-- **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn` with its word in `file.rs`, of `beat_frame_new` and `beat_next`, and the generator's `SCRIPT`.
+- **A new script:** a `script_tut_*.rs` file, an arm of `LevelScriptFn` with its word in `file.rs`, of `beat_frame_new` and `beat_next`, and the generator's `SCRIPT`.
 
 ## What holds it
 

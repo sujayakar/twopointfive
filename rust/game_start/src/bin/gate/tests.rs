@@ -29,10 +29,21 @@ fn left_out() -> Vec<String> {
     out
 }
 
-/// a crate's tests built, and its binaries read off cargo's `Executable … (path)` lines. Err: the first lines of the build's failure.
-fn build(krate: &str) -> Result<Vec<Binary>, String> {
+/// WHERE A BINARY NAMED IS MADE, so that no other is: its crate, and cargo's own word for it (a file of its tests, a program of its src/bin, the crate itself)
+fn target_of(name: &str) -> Option<(&'static str, Vec<String>)> {
+    let word = |flag: &str| vec![flag.to_string(), name.to_string()];
+    CRATES.into_iter().find_map(|k| {
+        let at = |p: &str| rust().join(k).join(p).exists();
+        if at(&format!("tests/{name}.rs")) { return Some((k, word("--test"))); }
+        if at(&format!("src/bin/{name}.rs")) || at(&format!("src/bin/{name}/main.rs")) { return Some((k, word("--bin"))); }
+        (k == name).then(|| (k, vec![String::from("--lib")]))
+    })
+}
+
+/// a crate's tests built (all, or the ones of cargo's word `of`), and its binaries read off cargo's `Executable … (path)` lines. Err: the first lines of the build's failure.
+fn build(krate: &str, of: &[String]) -> Result<Vec<Binary>, String> {
     // (`CARGO` is what cargo itself calls the cargo to use)
-    let o = Command::new(std::env::var("CARGO").unwrap_or_else(|_| String::from("cargo"))).args(["test", "--no-run"]).current_dir(rust().join(krate)).stdin(Stdio::null()).output().map_err(|e| format!("cargo: {}", e))?;
+    let o = Command::new(std::env::var("CARGO").unwrap_or_else(|_| String::from("cargo"))).args(["test", "--no-run"]).args(of).current_dir(rust().join(krate)).stdin(Stdio::null()).output().map_err(|e| format!("cargo: {}", e))?;
     let err = String::from_utf8_lossy(&o.stderr);
     if !o.status.success() { return Err(err.lines().filter(|l| l.starts_with("error")).take(3).collect::<Vec<_>>().join(" | ")); }
     Ok(err.lines().filter_map(|l| {
@@ -95,16 +106,17 @@ pub fn run(words: &[String]) -> i32 {
     let wall = Instant::now();
     let unlisted = left_out();
     let (mut binaries, mut broken): (Vec<Binary>, Vec<String>) = (Vec::new(), Vec::new());
-    for krate in CRATES {
-        match build(krate) {
+    let wanted: Vec<(&str, Vec<String>)> = match only {
+        None => CRATES.into_iter().map(|k| (k, Vec::new())).collect(),
+        Some(n) => match target_of(n) { Some(t) => vec![t], None => { eprintln!("no test binary is called '{}'", n); return 64; } },
+    };
+    for (krate, of) in wanted {
+        match build(krate, &of) {
             Ok(list) => binaries.extend(list),
             Err(why) => { println!("FAIL  build of {}: {}", krate, why); broken.push(krate.to_string()); }
         }
-        // (a binary named is found in the first crate that has it: the others need not be built)
-        if only.is_some_and(|n| binaries.iter().any(|b| b.name == n)) { break; }
     }
     let built = wall.elapsed().as_secs_f64();
-    if let Some(n) = only { binaries.retain(|b| b.name == n); if binaries.is_empty() { eprintln!("no test binary is called '{}'", n); return if broken.is_empty() { 64 } else { 1 }; } }
     let count = binaries.len();
     let queue = Arc::new(Mutex::new(binaries.into_iter().collect::<VecDeque<Binary>>()));
     let (tx, rx) = mpsc::channel();

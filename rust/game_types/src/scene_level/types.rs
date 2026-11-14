@@ -334,7 +334,7 @@ pub struct Level {
     pub marks: Option<Vec<crate::scene_level::MarkDef>>,
     pub script: Option<crate::scene_level::LevelScriptFn>,
     pub scenarios: Option<crate::scene_scenarios::LevelScenarios>,
-    pub surfaces: Option<crate::scene_level_data::SurfacesData>,
+    pub surfaces: crate::scene_level_data::SurfacesData,
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
     /// in its boxes' order
@@ -381,15 +381,15 @@ fn plan_of_breach(b: &crate::scene_level::BreachPlan) -> crate::scene_level::Roo
 
 /// WHAT A LEVEL'S FILE SAYS OF ITS FLOOR, whichever mission is played on it.
 impl Level {
-    fn floor(&self) -> Option<&crate::scene_scenarios::StructureData> { self.scenarios.as_ref()?.room_clear.as_ref() }
+    fn said(&self) -> Option<&crate::scene_scenarios::StructureData> { self.scenarios.as_ref()?.room_clear.as_ref() }
     fn own(&self) -> Option<&crate::scene_scenarios::QuietData> { self.scenarios.as_ref()?.quiet.as_ref() }
     /// its rooms, each with its name, its bounds and its doors (empty: it names none)
-    pub fn rooms(&self) -> &[crate::scene_scenarios::StructureRoom] { self.floor().map_or(&[], |f| &f.rooms) }
+    pub fn rooms(&self) -> &[crate::scene_scenarios::StructureRoom] { self.said().map_or(&[], |f| &f.rooms) }
     pub fn room_at(&self, p: V3) -> Option<&crate::scene_scenarios::StructureRoom> {
         self.rooms().iter().find(|r| { let b = &r.bounds; p[0] > b.x0 && p[0] < b.x1 && p[2] > b.z0 && p[2] < b.z1 })
     }
     /// its defenders may dig in
-    pub fn digs_in(&self) -> bool { self.floor().map_or(true, |f| f.dig_in != Some(false)) }
+    pub fn digs_in(&self) -> bool { self.said().map_or(true, |f| f.dig_in != Some(false)) }
     /// the room its captives are held in, as its file says it
     pub fn held_room(&self) -> Option<&crate::scene_scenarios::RescueData> { self.scenarios.as_ref()?.rescue.as_ref() }
     /// it says its own places: where its staff's needs are answered, and what there is to take

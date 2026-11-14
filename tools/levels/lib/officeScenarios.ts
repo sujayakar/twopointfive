@@ -87,9 +87,9 @@ const RESCUE: RescueData = {
     ],
     route: [
       { id: 'conference', name: 'conference room', short: 'conf', region: 'conference', kind: 'glass', door: 'conference', at: [9.6, 0, 10.0], mark: [9.0, 0, 11.55], watch: [10.2, 1.1, 7.4], half: 0.55, north: true, call: 'glass left.', side: 'left', look: 0.9 },
-      { id: 'cubicles-w', name: 'cubicles west', short: 'cub W', region: 'cubicles', kind: 'doorway', door: null, at: [15.75, 0, 12.2], mark: [14.9, 0, 10.6], watch: [16.0, 1.1, 13.6], half: 0.7, north: false, call: 'opening right.', side: 'right', look: 0.9 },
+      { id: 'cubicles-w', name: 'near cubicles', short: 'near cubs', region: 'cubicles', kind: 'doorway', door: null, at: [15.75, 0, 12.2], mark: [14.9, 0, 10.6], watch: [16.0, 1.1, 13.6], half: 0.7, north: false, call: 'opening right.', side: 'right', look: 0.9 },
       { id: 'server', name: 'server room', short: 'server', region: 'server', kind: 'door', door: 'server', at: [17.6, 0, 10.0], mark: [16.7, 0, 11.55], watch: [17.6, 1.05, 10.0], half: 0.55, north: true, call: 'door left.', side: 'left', look: 0.4 },
-      { id: 'cubicles-e', name: 'cubicles east', short: 'cub E', region: 'cubicles', kind: 'doorway', door: null, at: [22.75, 0, 12.2], mark: [21.9, 0, 10.6], watch: [23.0, 1.1, 13.6], half: 0.7, north: false, call: 'opening right.', side: 'right', look: 0.9 },
+      { id: 'cubicles-e', name: 'far cubicles', short: 'far cubs', region: 'cubicles', kind: 'doorway', door: null, at: [22.75, 0, 12.2], mark: [21.9, 0, 10.6], watch: [23.0, 1.1, 13.6], half: 0.7, north: false, call: 'opening right.', side: 'right', look: 0.9 },
     ],
     hold: { ahead: 9, xMax: 31, z: 11.1 },
   },

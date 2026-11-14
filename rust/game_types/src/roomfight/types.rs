@@ -271,7 +271,10 @@ pub struct OpTurn {
     pub to: GuardId,
     pub at: f64,
     pub until: f64,
+    /// where he was heard to be, or the doorway he is looked for in (None: he was in sight when the look was dealt)
     pub pt: Option<V3>,
+    /// where he was in sight last
+    pub seen: V3,
     pub t0: Option<f64>,
     pub door: Option<DoorId>,
 }

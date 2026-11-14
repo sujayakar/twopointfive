@@ -285,9 +285,10 @@ fn nobody_in_sight(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, blind: b
     let look = match g.tab.roomfight_op[o].turn { Some(u) if g.time >= u.at && !crate::condition::down(g, g.gd[u.to].ch) => Some(u), _ => None };
     if let Some(u) = look {
         let tc = g.ch[g.gd[u.to].ch].bone_or(crate::character::Bone::Chest, 1.1);
-        let to = match u.pt {
-            Some(pt) => { let e = g.ch[c].bone_or(crate::character::Bone::Head, 1.65); if crate::guards::eye_blocked(g, gd, e, tc) { pt } else { tc } }
-            None => tc,
+        let e = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
+        let to = if crate::guards::eye_blocked(g, gd, e, tc) { u.pt.unwrap_or(u.seen) } else { // out of his sight the man is where he saw him last, or where he was heard to be
+            g.tab.roomfight_op[o].turn = Some(OpTurn { seen: tc, ..u });
+            tc
         };
         room_fight_sam_in_line(g, o, to);
         room_fight_point(g, o, to, dt, speed);
@@ -540,7 +541,8 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
         Some(l) => if w.door.is_some() { l.at } else { m::min(l.at, g.time) },
         None => { let t = g.time; t + pick(g, crate::dice::Who::Op(o), sk.react) + if w.call { 0.25 } else { 0.0 } }
     };
-    g.tab.roomfight_op[o].turn = Some(OpTurn { to: w.who, at, until: g.time + w.secs, pt: w.pt, t0: Some(g.time), door: w.door });
+    let seen = g.ch[g.gd[w.who].ch].bone_or(crate::character::Bone::Chest, 1.1);
+    g.tab.roomfight_op[o].turn = Some(OpTurn { to: w.who, at, until: g.time + w.secs, pt: w.pt, seen, t0: Some(g.time), door: w.door });
 }
 
 /// A look at where steps come from: it follows them and lasts while they keep coming.
@@ -732,7 +734,8 @@ fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
     g.tab.roomfight_op[o].lost_at = g.time;
     g.tab.roomfight_op[o].line_t = 0.0;
     g.tab.roomfight_op[o].track = 0.0;
-    g.tab.roomfight_op[o].turn = Some(OpTurn { to: who, at: g.time, until: g.time + 2.5, pt: None, t0: None, door: None });
+    let seen = g.ch[g.gd[who].ch].bone_or(crate::character::Bone::Chest, 1.1);
+    g.tab.roomfight_op[o].turn = Some(OpTurn { to: who, at: g.time, until: g.time + 2.5, pt: None, seen, t0: None, door: None });
 }
 
 /// On his man with no round at him for a while, and an order's walk still to make: he says so, lets the man go and walks on.

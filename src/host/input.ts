@@ -103,6 +103,8 @@ export class Input {
   down(code: GameKey) { return this.keys.has(code); }
   hit(code: GameKey) { return this.pressed.has(code); }
   rmb() { return (this.buttons & 4) !== 0; }
+  /** a key tapped for him, with others under it: what the tick that takes it sees of keys pressed and let go between two frames */
+  tap(code: GameKey, ...under: GameKey[]): void { this.pressed.add(code); for (const k of [code, ...under]) this.under.add(k); }
   private held() { for (const k of this.keys) this.under.add(k); }
   endFrame() { this.pressed.clear(); this.under.clear(); this.clicked = 0; this.wheel = 0; this.wheelCtrl = 0; this.orbitDX = 0; }
   /** between two game ticks of one drawn frame (src/host/drawpage.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */

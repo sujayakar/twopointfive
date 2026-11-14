@@ -6,6 +6,7 @@
 //!   gate breaks          each row of the breaks' table plays unbroken and must PASS; then each of its breaks must FAIL, in its check's own words. exit 0 = all did
 //!   gate long            the quick kind, then the rows that are too slow for it
 //!   gate list            the rows, then the missions no run and no seats row plays
+//!   gate records         a few fights as their hands and their words (records.rs), for the check that plays them in the module
 //!   gate tests [BINARY [TEST]]   the whole native test set (tests.rs); no part of the quick kind
 //!
 //! A row is a line of a child process of this tool (`gate one ROW… [--break=NAME] [--pin]`), because a game is one a process and because a game that panics takes only its own rows with it.
@@ -13,6 +14,7 @@
 mod draw;
 mod pins;
 mod played;
+mod records;
 mod rows;
 mod tests;
 
@@ -196,6 +198,7 @@ fn main() {
             if h.join().is_ok() { 0 } else { 2 }
         }
         Some("tests") => tests::run(&a[1..]),
+        Some("records") if a.len() == 1 => { let h = std::thread::Builder::new().stack_size(1 << 30).spawn(records::print).unwrap(); if h.join().is_ok() { 0 } else { 2 } }
         Some("list") => { for r in rows::every() { println!("{}", r.name); } println!("{}", rows::unplayed_line()); 0 }
         Some("long") if a.len() == 1 => long(),
         Some("pin") => pin(pick(rows::every(), &a[1..]), a.len() == 1),

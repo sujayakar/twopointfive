@@ -179,7 +179,7 @@ glow.
 - **Tracers** are thin emissive streaks, slower than real ones on purpose, so they can be seen.
 - **Weather and hour are light, not filters.** Night is the home hour: moon, lamps, storm. Dawn and dusk are a low orange sun; midday is hard short
   shadows and dark rooms by contrast; fog and dust are air that the same lights shine into.
-- **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn but dim and nearly gray; men there are not drawn,
+- **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn in its own colors but dim; men there are not drawn,
   and doors and furniture stay as the team last saw them. Its edge is cut by walls and door frames, as on a plan.
 
 Effect numbers are tuned by eye (`rust/game_rules/src/tick/effects.rs`): treat them as authored data.

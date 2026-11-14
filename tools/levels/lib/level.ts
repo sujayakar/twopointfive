@@ -145,7 +145,7 @@ export interface Level {
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
   /** what is underfoot (rust/game_rules/src/world/floor.rs: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is
-   *  an annotation of the file, like its ids: nothing that walks a Level as data sees it). Absent = the office's map, as on every level before this field */
+   *  an annotation of the file, like its ids: nothing that walks a Level as data sees it). Every level of a file has one; a Level a generator has only begun has not */
   surfaces?: SurfacesData;
   /** `fumble` (s, absent = 2.2): how long a man sent to the tripped panel works at it before the mains come back */
   breaker: { pos: Vec3; boxes: number[]; fumble?: number };

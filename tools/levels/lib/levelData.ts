@@ -61,8 +61,7 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
  *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (rust/game_rules/src/world/floor.rs: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
- *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY rust/game_rules/src/world/floor.rs still owns its copy of these
- *  numbers (FINISHES / BUILDING / GRASS_EDGE); wiring rust/game_rules/src/world/floor.rs to read this is a follow-up. */
+ *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. Every level says its own. */
 export interface SurfacesData { building: Rect; grassEdge: number; inside: SurfaceMat; outside: SurfaceMat; verge: SurfaceMat; zones: { id: string; mat: SurfaceMat; x0: number; z0: number; x1: number; z1: number; notes?: string }[]; }
 export type SurfaceMat = 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass';
 
@@ -136,7 +135,7 @@ export interface LevelData {
   meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number; /** HOW KEPT THE PLACE IS, 0‥1 (absent = 0, every level before the key): 0 = left to the weather and the years, 1 = cleaned and painted last night. One word for the whole level, read by the look's surfaces and its painted marks (render/shaders/look.wgsl lookKept) */ kept?: number };
   floors: FloorData[];
   materials: Record<string, MaterialData>;
-  surfaces?: SurfacesData;
+  surfaces: SurfacesData;
   boxes: BoxData[];
   props: PropData[];
   lights: LightData[];
@@ -245,7 +244,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     meta: { ...pick(d.meta, KEYS.meta), ...(d.meta.bounds ? { bounds: pick(d.meta.bounds, KEYS.bounds) } : {}) },
     floors: d.floors.map(f => pick(f, KEYS.floor)),
     materials: mats,
-    ...(d.surfaces ? { surfaces: { ...pick(d.surfaces, KEYS.surfaces), building: rect(d.surfaces.building), zones: d.surfaces.zones.map(z => pick(z, KEYS.zone)) } as SurfacesData } : {}),
+    surfaces: { ...pick(d.surfaces, KEYS.surfaces), building: rect(d.surfaces.building), zones: d.surfaces.zones.map(z => pick(z, KEYS.zone)) } as SurfacesData,
     boxes: d.boxes.map(b => ({ ...pick(b, KEYS.box), ...(b.markings ? { markings: b.markings.map(canonMarking) } : {}), ...(b.shape ? { shape: canonShape(b.shape) } : {}) })),
     props: d.props.map(p => ({ ...pick(p, KEYS.prop), parts: p.parts.map(q => ({ ...pick(q, KEYS.part), ...(q.markings ? { markings: q.markings.map(canonMarking) } : {}) })) })),
     lights: d.lights.map(canonLight),

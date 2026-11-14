@@ -116,3 +116,49 @@ fn a_save_brings_its_own_numbers() {
     assert_eq!(h.backs, 1);
     assert_eq!((h.p.g.k.tune.qrf, h.p.g.k.walls.sill), then, "a number stayed as it was turned after the save");
 }
+
+/// the office's plain night, 12 s in, when a save the game asks for itself is due at once
+fn quiet_night(seed: u32) -> Host {
+    let mut h = Host { p: Play::level("office.json", false, &Opts { seed, ..Default::default() }), saved: Vec::new(), said: Vec::new(), backs: 0 };
+    h.run(12.0);
+    h.saved.clear();
+    h
+}
+
+/// THE RULE: no save is made of itself while a guard is half aware of something; once he is calm it is.
+/// A FAILURE MEANS: the last checkpoint is in front of a man about to turn round.
+#[test]
+fn no_autosave_with_a_guard_about_to_turn() {
+    for seed in [1, 2, 3] {
+        let mut h = quiet_night(seed);
+        let gd = h.p.g.guards[0];
+        control::request(&mut h.p.g, "test", "test");
+        for _ in 0..180 { h.p.g.gd[gd].awareness = 0.7; h.frame(); }
+        assert!(h.saved.is_empty(), "seed {seed}: saved with a guard at 0.7: {:?}", h.saved);
+        for _ in 0..180 { h.p.g.gd[gd].awareness = 0.0; h.frame(); }
+        assert!(!h.saved.is_empty(), "seed {seed}: the staging is wrong: nothing was due");
+    }
+}
+
+/// THE RULE: a save made of itself seconds before a man was roused is regretted: the way back after a death is the one before it.
+/// A FAILURE MEANS: Enter goes back to a moment that is already lost.
+#[test]
+fn an_autosave_a_man_is_roused_after_is_regretted() {
+    for seed in [1, 2, 3] {
+        let mut h = quiet_night(seed);
+        for label in ["one", "two"] {
+            control::request(&mut h.p.g, "test", label);
+            let kept = h.saved.len();
+            for _ in 0..1800 { if h.saved.len() > kept { break; } h.frame(); }
+            assert!(h.saved.len() > kept, "seed {seed}: the staging is wrong: '{label}' was never made");
+            if label == "one" { h.run(11.0); }
+        }
+        h.run(2.0);
+        let way_back = |h: &Host| game::savestate::checkpoints_newest(&h.p.g, Some(true), Some(h.p.g.mission.stats.elapsed)).map(|c| c.label);
+        assert_eq!(way_back(&h).as_deref(), Some("two"), "seed {seed}: the staging is wrong");
+        let gd = h.p.g.guards[0];
+        h.p.g.gd[gd].state = game::game::GuardState::Alert;
+        h.run(0.1);
+        assert_eq!(way_back(&h).as_deref(), Some("one"), "seed {seed}: the way back once a man is roused");
+    }
+}

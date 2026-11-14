@@ -220,3 +220,25 @@ fn the_weathers_fog_hides_whom_no_eye_of_the_team_gets_through_to() {
         assert!(!p.fogged(h), "seed {s}: a teammate at ten metres from his body, and it is hidden");
     }
 }
+
+/// THE RULE: the cone is as wide as its row says: a man 10 degrees inside the edge is seen, one 10 degrees outside it is hidden.
+/// A FAILURE MEANS: Hard's fog hides a man the player is looking at, or shows one he is not.
+#[test]
+fn the_cone_is_as_wide_as_its_row_says() {
+    for s in SEEDS {
+        for side in [1.0, -1.0] {
+            let (mut p, h, post) = shut_in(s);
+            p.sam_takes_his_rifle();
+            let stand = [12.25, 13.25];
+            p.sam_put(stand);
+            p.g.k.fog.cone = true;
+            let (d, half) = ([post[0] - stand[0], post[1] - stand[1]], p.g.k.fog.cone_deg / 2.0);
+            for (off, seen) in [(half - 10.0, true), (half + 10.0, false)] {
+                let a = (side * off).to_radians();
+                p.point_at([stand[0] + d[0] * a.cos() - d[1] * a.sin(), stand[1] + d[0] * a.sin() + d[1] * a.cos()]);
+                pinned(&mut p, h, post, 90, |_| {});
+                assert_eq!(!p.fogged(h), seen, "seed {s}: {off} degrees off where Sam looks, the cone {half} each way");
+            }
+        }
+    }
+}

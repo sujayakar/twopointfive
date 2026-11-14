@@ -514,7 +514,7 @@ pub(super) fn guards_notice(g: &mut crate::game::Game, dt: f64) {
                 while i < g.guards.len() {
                     let o = g.guards[i]; i += 1;
                     if crate::condition::down(g, g.gd[o].ch) || g.team(o) != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
-                    if body_in_view_of(g, o, cv) { found_down(g, cv, o); break; }
+                    if crate::guards::body_seen(g, o, cv, None) { found_down(g, cv, o); break; }
                 }
             }
             continue;
@@ -611,16 +611,6 @@ fn notice_cowering(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         civ_say(g, cv, &t, None);
         later(g, 1.8, &LaterP { kind: PendKind::FoundReport, cv, o: Some(by), ..LaterP::default() });
     }
-}
-
-/// a downed civilian in this man's open view
-fn body_in_view_of(g: &crate::game::Game, o: GuardId, cv: GuardId) -> bool {
-    let oc = g.gd[o].ch; let cc = g.gd[cv].ch;
-    let eye = g.ch[oc].bone_or(Bone::Head, 1.65); let look = crate::guards::look_of(g, oc);
-    let body = g.ch[cc].bone(Bone::Hips).unwrap_or(g.ch[cc].pos);
-    let to = v3::sub(body, eye); if v3::len(to) > 12.0 { return false; }
-    if m::hyp2(to[0], to[2]) > 0.4 && v3::dot([look[0], 0.0, look[2]], v3::normalize([to[0], 0.0, to[2]])) < m::cos(60.0 * v3::DEG) { return false; }
-    !crate::scene_collision::segment_blocked(g, eye, v3::add(body, [0.0, 0.3, 0.0]), None, None, None)
 }
 
 /// she is a body like any body: called in, the floor up

@@ -129,3 +129,20 @@ fn a_man_already_hunting_takes_a_whistle_as_a_fix_on_you() {
         }
     }
 }
+
+/// THE RULE: a whistle has a wait after it: six presses in a second and a half are one whistle, and the next one comes once the wait is over.
+/// A FAILURE MEANS: the key whistles as fast as it is pressed, and a man can be called and called.
+#[test]
+fn six_presses_in_a_second_and_a_half_are_one_whistle() {
+    for s in SEEDS {
+        let mut p = Play::scene(&corridor(&[25.0], s), &seed(s));
+        p.run(0.5);
+        let whistled = |p: &Play| p.g.stats.whistle.blown as i64;
+        let was = whistled(&p);
+        for _ in 0..6 { p.sam_whistles(); p.run(0.25); }
+        assert_eq!(whistled(&p) - was, 1, "seed {s}: six presses");
+        p.run(6.0);
+        p.sam_whistles();
+        assert_eq!(whistled(&p) - was, 2, "seed {s}: and once more after the wait");
+    }
+}

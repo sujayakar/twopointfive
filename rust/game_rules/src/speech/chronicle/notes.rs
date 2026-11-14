@@ -196,7 +196,7 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
         };
     }
     let (x, z) = (p[0], p[2]);
-    let b = crate::floor::building();
+    let b = &g.level.surfaces.building;
     if x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1 {
         for r in rooms() {
             if x >= r.x0 && x < r.x1 && z >= r.z0 && z < r.z1 { return r.name; }
@@ -207,12 +207,6 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     if x >= b.x1 { return String::from("east side"); }
     if z < b.z0 { return String::from("north side"); }
     String::from("west side")
-}
-
-/// Inside the building's footprint.
-pub fn indoors(p: V3) -> bool {
-    let b = crate::floor::building();
-    p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
 }
 
 // ------------------------------------------------------------ the record

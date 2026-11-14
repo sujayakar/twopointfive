@@ -136,8 +136,7 @@ export function loadLevel(data: LevelData): Level {
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
   };
   // data.surfaces → Level.surfaces, what rust/game_rules/src/world/floor.rs reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
-  // (a file with none: rust/game_rules/src/world/floor.rs's own office map).
-  if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
+  Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   return level;
 }
 /** one device record → its runtime def (id → name, floor / notes dropped like a door's, every vector copied, optional fields written iff present) */
@@ -174,7 +173,7 @@ export interface LevelToDataOpts {
   materials?: Record<string, MaterialData>;
   /** per box index: the id to write (absent → a semantic id for referenced boxes, else box_NNNN) and the editor group */
   boxIds?: readonly (string | undefined)[]; boxGroups?: readonly (string | undefined)[];
-  floors?: FloorData[]; surfaces?: SurfacesData;
+  floors?: FloorData[]; surfaces: SurfacesData;
   /** (not `markTexel` or `kept`: those two are the Level's own and are written from it. Either one in an object passed here is dropped) */
   meta?: Omit<LevelData['meta'], 'markTexel' | 'kept'>;
   /** pass-through for what Level has no slot for yet */
@@ -265,7 +264,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     meta: (() => { const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) }; })(),
     floors,
     materials,
-    ...(opts.surfaces ? { surfaces: clone(opts.surfaces) } : {}),
+    surfaces: clone(opts.surfaces),
     boxes, props,
     lights: level.lights.map(lightData),
     switchables: level.switchables.map(s => ({ id: s.name, boxes: s.boxes.map(bi => ids[bi]), group: s.group, on: s.on, baseEmissive: V(s.baseEmissive), ...(s.flicker !== undefined ? { flicker: s.flicker } : {}), ...(s.mains !== undefined ? { mains: s.mains } : {}) })),

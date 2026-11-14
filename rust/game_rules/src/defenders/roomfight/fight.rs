@@ -204,7 +204,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
             if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, g.pos_of(og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
         }
         if e.kind == crate::director::EventKind::GuardShot {
-            if let Some(w) = guard_by_char_id(g, e.who) { if g.team(w) == crate::teams::Team::Hostile {
+            if let Some(w) = guard_by_char_id(g, e.who) { if g.team(w).theirs() {
                 let both = e.from.is_some() && e.to.is_some();
                 g.fight.reports.push(RoomFightReportsItem { by: w, t: e.time, from: if both { e.from } else { None }, to: if both { e.to } else { None } });
             } }
@@ -224,7 +224,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
 /// an enemy's footfall: heard by a teammate as any man hears a step
 pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w).theirs() => w, _ => return };
     let wc = g.gd[w].ch;
     let (mut near, mut nd, mut from): (Option<RoomfightOpId>, f64, V3) = (None, f64::INFINITY, e.pos);
     for i in 0..g.fight.ops.len() {
@@ -243,7 +243,7 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
 /// a door noise under an enemy's hand, kept for cue()
 pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w).theirs() => w, _ => return };
     let (mut dr, mut dm): (Option<DoorId>, f64) = (None, 1.6);
     for x in g.doors.list.clone() { let q = dist_xz(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
     let dr = match dr { Some(x) if !g.dr[x].leaf.off => x, _ => return };

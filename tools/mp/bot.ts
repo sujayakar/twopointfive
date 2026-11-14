@@ -6,7 +6,7 @@
 //   --loss PCT     that share of messages waits for a resend, and holds those behind it (src/net/delay.ts wayMs)
 //   --stall MS     once, after tick 150: nothing passes either way for that long (`stalled` in the result: the longest wait between two messages down, ms)
 //   --after MS     connect that long after starting (a late joiner)       --break       after tick 90, step one record with another walk key (the red path)
-//   --build NAME   the build it says it is (default: this checkout's, as the server names its own)
+//   --build WORD   what it says its game is made of (default: this checkout's, as the server names its own)
 //   --name NAME    what its player calls himself (the hello's `name`; `names` in the result: every seat's as the server last said them)
 //   --predict      look ahead for its own man each beat, as the page does (src/net/foresee.ts), and say how that went: `ahead` in the result —
 //                  `first` the beats from its first record sent to a look ahead that had him moved (and whether the game had moved him by then), `n` looks
@@ -21,7 +21,8 @@ import { inputNumbers, NET, type WireCmd } from '../../src/net/wire.ts';
 import { NetClient } from '../../src/net/client.ts';
 import { Foresee, FORESEE } from '../../src/net/foresee.ts';
 import { onWay, wayOff } from '../../src/net/delay.ts';
-import { buildName, standStart, type Stood } from './stand.ts';
+import { gameMade } from '../blitz/made.ts';
+import { standStart, type Stood } from './stand.ts';
 
 const A = process.argv.slice(2), arg = (k: string, d = ''): string => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] ?? '' : d; };
 const url = arg('--url', 'ws://127.0.0.1:5300'), game = arg('--game', 'local'), key = A.includes('--key') ? arg('--key') : undefined, want = Number(arg('--ticks', '600'));
@@ -34,7 +35,7 @@ const WAY = { ...wayOff(), lagMs: lag, jitterMs: jitter, lossPct: loss };
 
 if (after > 0) await new Promise(r => setTimeout(r, after));
 const ws = new WebSocket(url);
-const client = new NetClient(onWay(WAY, (text: string) => { if (ws.readyState === 1) ws.send(text); }, roll), { game, build: A.includes('--build') ? arg('--build') : buildName(), ...(key !== undefined ? { key } : {}), ...(A.includes('--name') ? { name: arg('--name') } : {}) });
+const client = new NetClient(onWay(WAY, (text: string) => { if (ws.readyState === 1) ws.send(text); }, roll), { game, build: A.includes('--build') ? arg('--build') : gameMade(), ...(key !== undefined ? { key } : {}), ...(A.includes('--name') ? { name: arg('--name') } : {}) });
 let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */

@@ -51,15 +51,15 @@ their code is in `frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.r
 A teammate on a script, or a man of the response team on his, has his senses kept by that system (`kept_elsewhere`).
 
 **The layers, as far as they exist.** Sense and belief are one step: a sense moves his mind through `mind.rs` as it runs. Groups think in their own
-steps in the tick's table (`STEPS`, `game/steps.rs`), before any man's frame: `squads_tick`, `squad_orders_tick`, `room_fight_tick`, `lanes_tick`,
-`frag_tick` and others. They answer by setting his script, his flags and their own rows. Then each man's whole frame runs before the next man's.
+steps in the tick's table (`STEPS`, `game/steps.rs`), before any man's frame: the mission's (which runs `squads_tick`), `squad_orders_tick`,
+`room_fight_tick`, `lanes_tick`, `frag_tick` and others. They answer by setting his script, his flags and their own rows. Then each man's whole frame runs before the next man's.
 Decide and act are together in `lent` and `behave::act`.
 
 **His mind.** `mind::raise` (never lowers him), `cap` (never raises him), `set`, `set_state`, `fix` (news: `fix_stamp` counts it), `fix_keep` (not
 news), `foe`. Each takes the writer's name. Anybody can read the fields, and no rule writes them any other way.
 
 **Who moves him now: the list.** `rules!` in `control/mod.rs` is one line a rule, and the line's place is its rank: `frag`, `runner`, `morale`,
-`startle`, `duck`, `lost`. What a rule asks for decides where it is asked, and the compiler holds it to that:
+`startle`, `duck`, `lost`, `open`. What a rule asks for decides where it is asked, and the compiler holds it to that:
 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
@@ -84,7 +84,7 @@ the last man ask it; other rules ask `has` of those they give way to.
 
 **His duty** is one record for any man. `duty::task` is what he has been given: an order (`duty::order`) or the post the room fight stands him on.
 `holds` (he stays where he is) and `pinned` (he fights from it) go through `duty::hold` and `duty::pin`, noting the writer. `rooms` keeps him in
-his squad's rooms (`duty::bars`), and `duty::round_held` is asked before a round of any man's. (`lane_bars`, `silent_holds_glass`,
+his squad's rooms (`duty::bars`), and `duty::round_held` is asked before a teammate's round. (`lane_bars`, `silent_holds_glass`,
 `room_fight_cover_passes` and `last_holds` are asked of their modules.) A defender leaves his post and comes back by `roomfight/post.rs` alone:
 `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`. No rule writes his `mode`: `leg_ended` tells his sender that he arrived, has no
 way, met somebody or was taken off it. An `errand` tries again; one that `stays` has him stand at its end.

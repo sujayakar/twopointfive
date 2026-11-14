@@ -140,6 +140,7 @@ fn the_boxes_say_what_they_hold() {
     let n = p.g.engine.world.statics.len() as u32;
     assert_eq!((head(&d).statics, head(&d).from, head(&d).to), (n, 0, n), "the first frame tells every static");
     assert_eq!(head(&d).count as usize, d.boxes.geo.len());
+    assert_eq!(d.boxes.grid.info[0].statics[0], n, "a shader tells a wall from a box that moves by the statics' count");
     assert_eq!((head(&d).visible + head(&d).visible_cut) as usize, d.boxes.visible.len());
     assert!(head(&d).grid_moved == 1 && head(&d).items > 0 && d.boxes.grid.items.len() == 2 * head(&d).items as usize);
     assert!(d.boxes.visible.iter().all(|w| (w.w & 0xffff) < head(&d).count), "a drawn box is past the list's end");

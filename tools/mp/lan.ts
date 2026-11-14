@@ -1,7 +1,7 @@
 // A CO-OP GAME ON YOUR OWN NETWORK, by hand, with no backend. It starts ONE game server (tools/mp/server.ts) on this machine,
 // listening on every interface, for a squad mission of two players, and prints the two addresses to open: one for this machine, one for the other.
 //   bun run tools/mp/lan.ts [--mission '?roomclear&squad4'] [--seed 7] [--port 5300] [--dev http://localhost:5173]
-// EACH MACHINE RUNS ITS OWN PAGE (`bun run dev`, the same commit on both: the server turns a page of another build away). A page must come from localhost,
+// EACH MACHINE RUNS ITS OWN PAGE (`bun run dev`, the same game on both: the server turns a page away whose game is made of something else). A page must come from localhost,
 // because a browser gives WebGPU only to a secure address and another machine's plain http address is not one; only the game's socket crosses the network.
 // The server ends itself when the mission is over, a quarter of an hour after the last player left, or four hours after it started. Ctrl+C stops it.
 // To make the connection worse on purpose: the debugger's Network page on either machine (docs/agents/net.md).

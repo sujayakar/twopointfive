@@ -9,10 +9,10 @@
 //                            The title's own two ways in go through the same door with no page load of their own (`enter`): the one load is the game's
 //   the invite               `coopInvite`, on the host's page while the server waits for the second player: the code, the link and a button that copies it
 // Plain DOM. THE SWITCH is lobby.ts COOP.on (`?coop=0`: none of this is on the page). Nothing here is read by a tick.
-import { COOP, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, lobbyWhy, freshId, type GameView } from '../net/lobby';
+import { COOP, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, freshId, type GameView } from '../net/lobby';
 import { SENDING_WORDS, visitWord } from '../tape/address';
 import { NET_JOIN } from '../net/address';
-import { buildName } from '../host/buildname';
+import { built, pageOld } from '../host/buildname';
 import { cloudFind, cloudUrl } from '../cloud/cloud';
 import { wire } from '../cloud/wire';
 import { leversSaid } from '../host/machine';
@@ -32,8 +32,8 @@ function tabId(): string {
 async function lobby(q: URLSearchParams): Promise<Lobby | string> {
   await cloudFind();
   const url = cloudUrl(q); if (!url) return 'You can’t play co-op here because this page isn’t connected to the game service.';
-  const build = await buildName(); if (!build) return 'You can’t play co-op on this copy of the game.';
-  return new Lobby(wire(url), tabId(), build);
+  const page = await built(); if (!page.commit || !page.made) return 'You can’t play co-op on this copy of the game.';
+  return new Lobby(wire(url), tabId(), page, pageOld);
 }
 
 // ---- the one line that says what the page is waiting for, or why not (the look of net/door.ts's line: this one is up before there is a game)
@@ -89,7 +89,7 @@ async function host(search: string, m: Mission): Promise<void> {
   // (the mission's address is the starting page's link, which carries this VISIT's words along — a picture's quality, a muted mixer, where it sends: those
   // are this window's, not the game's, and the second player's page must not take them from the game's address)
   const own = new URLSearchParams([...new URLSearchParams(search.replace(/^[^?]*\?/, ''))].filter(([k]) => !visitWord(k) && !SENDING_WORDS.includes(k) && k !== 'seed' && k !== 'player'));
-  let made: GameView; try { const scenario = coopScenario('?' + own.toString(), kept); made = await L.make(scenario, undefined, HOSTED.setup(scenario)); } catch (e) { return fail(lobbyWhy(e, 'host')); }
+  let made: GameView; try { const scenario = coopScenario('?' + own.toString(), kept); made = await L.make(scenario, undefined, HOSTED.setup(scenario)); } catch (e) { return fail(await L.why(e, 'host')); }
   const why = await enter(L, made.code, say); if (why) fail(why);
 }
 

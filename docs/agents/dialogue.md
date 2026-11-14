@@ -28,7 +28,6 @@ In `rust/game_rules/src/`, with types and tables under the same names in `rust/g
 | `doornames.rs` | the name a door is said by (`name_doors`, `door_said_name`, `shorthand_id`) |
 | `netquiet/` | its speech is `speak`: a man calling a name that does not answer |
 | `civilians/` | `hostage_say`, `civ_say`, `civilian_answer`; `rescue/clock.rs` times the hostages |
-| `words.rs` | `w` and `wg`: each hands back the present line and nothing else |
 | `view/` | `tick_view` hands `radio` and `bubbles` to the page |
 
 The page's half: `src/ui/bubbles.ts` puts each line on the screen and `src/ui/netplace.ts` finds its place at the edge. The strip is drawn by `src/ui/overlay.ts`.

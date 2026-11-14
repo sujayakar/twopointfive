@@ -77,9 +77,7 @@ fn stand_lamps(g: &mut Game, level: &Level, ids: &[BoxId]) {
     for b in level.beacons.iter() { mark_area_lit(g, ids[b.box_ as usize]); }   // dome glow is screen-only; the beam is the spot light
     breaker_and_beacons(g, level);
     // the cells under a roof (the game's own rules read them)
-    let statics: Vec<BoxId> = g.engine.world.statics.clone();
-    let interior = crate::render_reach::build_interior_cells(g, &statics);
-    g.reach_interior = Some(interior);
+    g.reach_interior = Some(crate::render_reach::build_interior_cells(g));
 }
 
 /// a fixture for each light of the level's own that can be switched or shot out

@@ -164,6 +164,11 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
         if (!reachable) add('warn', 'keypad-orphan', `keypad '${v.id}': no patrol route has a point whose nearest pad is this one — no man will ever give ITS code up (nor the pair say it); the player can only kick '${v.door}'${data.routes.length ? '' : ' (the level has no routes at all)'}`, [ref]);
       }
     } }
+  // 8b. a capital letter alone in a line the HUD draws is taken for a key and drawn as the key's cap now (src/host/keymap.ts): 'cub E' was drawn "cub `" (a lesson's line writes the key it means in brackets)
+  { const words = (v: unknown, at: string): void => {
+      if (typeof v === 'string') { const m = /(?<![A-Za-z0-9[])(?<!\broom )[B-HJ-Z](?![A-Za-z0-9'’\]])/.exec(v); if (m) add('error', 'lone-letter', `${at} "${v}": the '${m[0]}' alone is taken for a key`, [at]); }
+      else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (k !== 'notes') words(x, `${at}.${k}`); };
+    words(data.scenarios, 'scenarios'); }
   // 9b. floors: what stands on each (levelData.ts floorUsers); a floor nobody names is worth a line (an orphan of a deleted wing)
   const perFloor = data.floors.map(f => `${f.id} ${floorUsers(data, f.id).length}`).join(' · ');
   data.floors.forEach((f, i) => { if (i > 0 && floorUsers(data, f.id).length === 0) add('info', 'floor-empty', `floor '${f.id}'${f.name ? ` (${f.name})` : ''} at y ${f.y}: nothing is on it — delete it, or it is a wing still to be built`, [`floor:${f.id}`]); });

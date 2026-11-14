@@ -199,3 +199,20 @@ fn a_man_in_sams_arm_is_told_nothing() {
         assert!(p.g.gd[him].held.is_some(), "seed {s}: out of his arm");
     }
 }
+
+/// THE RULE: the last man of the team through the door it came by pulls it to: 25 s after they are in it stands shut and latched.
+/// A FAILURE MEANS: they leave their own way in open behind them.
+#[test]
+fn the_team_shuts_the_door_it_came_by() {
+    for s in SEEDS {
+        let mut p = night(s);
+        p.sam_unseen();
+        p.alarm_raised_to(2.0);
+        assert!(p.response_called_again(), "seed {s}: the staging is wrong: the call was refused");
+        p.until(ETA + 40.0, |p| p.response() == QrfState::Deployed).unwrap_or_else(|| panic!("seed {s}: the team never came"));
+        p.run(25.0);
+        let name = p.g.qrf.marks.as_ref().and_then(|k| k.door.clone()).expect("the office's team comes by a door");
+        let leaf = &p.g.dr[game::doors::doors_by_name(&p.g, name.as_str()).expect("the door")].leaf;
+        assert!(leaf.latched && leaf.angle.abs() < 0.05, "seed {s}: the door it came by stands {:.2} rad open, latched {}", leaf.angle, leaf.latched);
+    }
+}

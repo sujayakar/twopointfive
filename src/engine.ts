@@ -31,7 +31,7 @@ import { WORLD } from './scene/world';
 import { FollowCamera } from './host/camera';
 import { Vec3, m4, v3, smoothstep } from './math/vec';
 
-import { RenderSettings, defaultSettings } from './settings';
+import { RenderSettings, defaultSettings, volDivisor } from './settings';
 import { FogSight, FOG_SIGHT_BYTES, type FogFrame } from './render/fogofwar';
 import { outlineBoxes, type OutlineFrame } from './render/outline';
 export type { RenderSettings } from './settings';
@@ -645,7 +645,7 @@ export class Engine {
     this.gbuffer.keepTargets = this.passes.keepHistories = this.settings.keepHistories;   // (the switch for everything a change of size does — texpool.ts; mirrored before either can happen below)
     if (!this.settings.keepHistories && this.pool.parkedBytes) this.pool.evict(true);    // switched off: nothing stays parked
     else this.pool.tick();                                                                 // parked targets not wanted back within a couple of minutes are let go
-    this.passes.setDivisors(this.settings.gatherThird ? 3 : 2, this.settings.volQuarter ? 4 : 2);   // (lossy options; re-creates the targets on the grid that changed)
+    this.passes.setDivisors(this.settings.gatherThird ? 3 : 2, volDivisor(this.settings));   // (lossy options; re-creates the targets on the grid that changed)
     this.passes.setTaau(this.settings.taau);   // (mirrored before resize: the output-size target set — the resolve's history pair — exists only while it is on)
     { const S = this.settings, refl = S.beamReflect && S.rtReflect, air = S.beamAir && S.debugView === 0;   // (a debug view shows the boxes: the air look is added in the composite only)
       // how much of a beam the AIR shows (0.4 ≈ the old box's brightness under the tube): a little in clear indoor air, more by the haze, most in rain — smoke is read per pixel in the shader

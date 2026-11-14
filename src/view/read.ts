@@ -71,8 +71,8 @@ export interface KitSetup { rows: KitSetupRow[]; back: string }
 function readKitSetupIn(I: In): KitSetup { return { rows: I.list(() => readKitSetupRowIn(I)), back: I.str() }; }
 export interface KitBig { name: string; place: string; offered: boolean }
 function readKitBigIn(I: In): KitBig { return { name: I.str(), place: I.str(), offered: I.bool() }; }
-export interface KitView { slots: KitSlot[]; gun: KitGun | null; setup: KitSetup | null; big: KitBig | null; hitsLeft: number; hitsMax: number; down: boolean; god: boolean; nightVision: boolean | null; keyTag: string | null }
-function readKitViewIn(I: In): KitView { return { slots: I.list(() => readKitSlotIn(I)), gun: I.bool() ? readKitGunIn(I) : null, setup: I.bool() ? readKitSetupIn(I) : null, big: I.bool() ? readKitBigIn(I) : null, hitsLeft: I.float64(), hitsMax: I.float64(), down: I.bool(), god: I.bool(), nightVision: I.bool() ? I.bool() : null, keyTag: I.bool() ? I.str() : null }; }
+export interface KitView { slots: KitSlot[]; gun: KitGun | null; setup: KitSetup | null; big: KitBig | null; hitsLeft: number; hitsMax: number; down: boolean; again: boolean; god: boolean; nightVision: boolean | null; keyTag: string | null }
+function readKitViewIn(I: In): KitView { return { slots: I.list(() => readKitSlotIn(I)), gun: I.bool() ? readKitGunIn(I) : null, setup: I.bool() ? readKitSetupIn(I) : null, big: I.bool() ? readKitBigIn(I) : null, hitsLeft: I.float64(), hitsMax: I.float64(), down: I.bool(), again: I.bool(), god: I.bool(), nightVision: I.bool() ? I.bool() : null, keyTag: I.bool() ? I.str() : null }; }
 export type HeadTone = 'calm' | 'ko' | 'dead' | 'alert' | 'sus';
 const HeadToneWords: readonly HeadTone[] = ['calm', 'ko', 'dead', 'alert', 'sus'];
 function readHeadToneIn(I: In): HeadTone { return I.word(HeadToneWords, 'HeadTone'); }

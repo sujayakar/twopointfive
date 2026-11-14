@@ -60,7 +60,7 @@ start · stop · list · ready), with two runners behind it:
 
 Server and page are the same build by construction: a runner says which builds its servers can be (the dev server: the commit it runs from; hosted:
 the commit the page was built from, and the two deploys before it), and a game is only made on a runner of the page's build. A page older than that is
-told so and has to be loaded again.
+told to load again; a deployment with no runner says it has no game servers. A page of another build comes into a game whose game is made of the same.
 
 The cap is a cap on servers: a game that is over holds its place until a sweep of its runner has seen its server gone.
 

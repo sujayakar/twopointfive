@@ -10,7 +10,8 @@ section is what a hosted build keeps on a server, which is also where co-op's ga
   mission starts once your friend's page has loaded.
 - You each play your own man with two teammates of your own, against one enemy force. You see each other's men, rims and squad plans.
 - Your own man answers a key at once. Everything else is about a round trip late.
-- A co-op game can't be paused, saved or restarted from a card. A card takes your hands off, and the game goes on without you.
+- A co-op game can't be paused or saved. A card takes your hands off, and the game goes on without you. Enter restarts it for both of you once it is over for both, and so does
+  the end card's Restart; Shift+Enter does at any time.
 - If your page falls behind it catches up. If it loses the connection or goes out of step it says so, and a reload joins you again.
 
 ## Where the code is
@@ -41,7 +42,8 @@ it knows with the one-tick edges off (`heldOf`). A late record becomes the newes
 held under a press and let go since (`u`) are an edge like it: held on the tick that takes the press, on none after. An empty seat holds nothing (`idleOf`).
 
 **States.** `waiting` until every seat has a client that has stood its game and said `Ready`; no tick runs. Then `playing`, then `ended` on the game's
-verdict (`face_verdict`), a grace, and done. A connection with no key is a watcher. A joiner or a slow socket is sent the run so far in stretches (`catchUp`).
+verdict (`face_verdict`), a grace, and done; `playing` again where it is started over inside the grace.
+A connection with no key is a watcher. A joiner or a slow socket is sent the run so far in stretches (`catchUp`).
 
 **A client's world is confirmed ticks only.** `walk` steps the game through what the server said ran. The player's records go ahead of it, each aimed at
 a tick worked out from time: the server's tick against this clock, plus `margin`, which `Pace` notes move. A page that hitches skips ticks and never sends into the past.
@@ -92,12 +94,14 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 
 ## Rules that hold
 
-- **Nothing but a record goes up.** No command is sent after the start (`DrawGame.walked` drops them). The cards' Restart and the save key are refused in words. The
-  game's own restart key is a record, so it restarts every machine.
+- **Nothing but a record goes up.** No command is sent after the start (`DrawGame.walked` drops them). The paused card's Restart and the save key are refused in words. The
+  game's own restart key is a record, so it restarts every machine; the end card's Restart presses it (`Input.tap`).
 - **A read between two ticks writes nothing the words cover.** What a machine looks at or shows must part nothing.
 - **What a client sends is checked before it is kept:** length (`NET.maxText`), shape (`wireOk`), then the game's own check. A name is cleaned at both ends
   (`cleanName`) and written as text, never markup. A level file is a name, never a path (`levelName`).
-- **One build.** A game is made only on a runner of the page's build. A server that names one lets in no other; a checkout with uncommitted changes names none (`buildName`).
+- **One game.** A game is made only on a runner of the page's build. Whoever comes after need not be that build: what the two games are made of must be one word
+  (`gameMade`: the module's sources, the levels, the characters, `src/net`), and a server lets in no other. So a page reloaded after a deploy is back in its game unless the
+  deploy changed the game; then it is told to host a new one. It is told to reload only where that mends it (`pageOld`).
 - **Two teams to the eye.** "no outlines for the other player character (maybe we should have yellow + red team and then purple + blue team)". "seeing your teammates
   squad path overlays (but probably fainter than yours) would be great".
 - **A name of your own.** "or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". The browser keeps it (`myName`). One that would

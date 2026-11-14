@@ -1,7 +1,6 @@
 // STANDING A NETWORKED GAME (bun): the game of rust/game_face, as a game server and a scripted client hold it.
 //   freshStart(setup)   the start of a game for an address: its level's file, its seats, its die, its difficulty
 //   standStart(start)   THE game a server or a client plays, stood from the start's bytes as every page stands it. As many as the module has room for.
-//   buildName()         the build this checkout is
 import { StartFlag } from '../../src/draw/bits';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -68,9 +67,4 @@ export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
 function wordsKept(): ((tick: number, A: { names: string[]; words: number[] }) => void) | null {
   const file = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
   return file ? (tick, A) => { if (!named) { named = true; appendFileSync(file, `names ${A.names.join(' ')}\n`); } appendFileSync(file, `${tick} ${A.words.map(x => x.toString(36)).join(' ')}\n`); } : null;
-}
-/** the build this checkout is: its commit, or '' when it has uncommitted changes (those are no commit's build) or is no checkout */
-export function buildName(): string {
-  try { const git = (...a: string[]) => { const r = Bun.spawnSync(['git', ...a], { cwd: ROOT }); if (!r.success) throw new Error('git'); return new TextDecoder().decode(r.stdout).trim(); };
-    return git('status', '--porcelain') ? '' : git('rev-parse', '--short=12', 'HEAD'); } catch { return ''; }
 }

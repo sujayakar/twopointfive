@@ -130,16 +130,19 @@ async function retire(ctx: MutationCtx, g: Game, state: "ended" | "failed", why:
 }
 
 /** MAKE A GAME: the host's page hands over the setup record; a server is asked for; the code and the host's seat come back. Refused with `full: …` when
- *  every runner of this build carries its cap, with `build: …` when no runner runs this build (the page is older or newer than the servers: load it again) */
+ *  every runner of this build carries its cap, with `build: …` when none runs this build (the page is older or newer than the servers), with `none: …` when there is none of any build.
+ *  `made`: what the page's game is made of, as one word; a page of another build is let in where it is the same */
 export const make = mutation({
   args: {
     pid: v.string(),
     build: v.string(),
+    made: v.string(),
     setup: v.object({ scenario: v.string(), seed: v.number(), knobs: v.any(), seats: v.array(v.any()) }),
   },
-  handler: async (ctx, { pid, build, setup }): Promise<GameView> => {
+  handler: async (ctx, { pid, build, made, setup }): Promise<GameView> => {
     pidOk(pid);
     word(build, "build");
+    word(made, "made");
     word(setup.scenario, "scenario", MP.scenarioMax);
     if (!Number.isFinite(setup.seed)) bad("seed: not a number");
     count(setup.seats.length, "seats", MP.seatsMax, 1);
@@ -147,7 +150,8 @@ export const make = mutation({
     plain(setup.seats, "seats");
     if (JSON.stringify(setup).length > MP.setupMax) bad(`setup: longer than ${MP.setupMax}`);
 
-    const runners = (await ctx.db.query("runners").collect()).filter(r => r.builds.includes(build));
+    const all = await ctx.db.query("runners").collect(), runners = all.filter(r => r.builds.includes(build));
+    if (!all.some(r => r.cap > 0)) bad("none: no game servers here");
     if (!runners.length) bad("build: no game server runs this build");
     // (THE CAP: the count and the insert below are one transaction, so what is read here is what stands when the game is written. A place is held by
     // every live game, and by every game over whose server no sweep has yet seen gone: `dirty - swept`)
@@ -167,7 +171,7 @@ export const make = mutation({
     if (!code) bad("code: none free");
     const now = Date.now(), n = setup.seats.length;
     const id = await ctx.db.insert("games", {
-      code, build, runner: runner.name, setup,
+      code, build, made, runner: runner.name, setup,
       seatKeys: Array.from({ length: n }, key), secret: key(),
       state: "starting", address: "", server: "",
       holders: Array.from({ length: n }, (_, i) => (i === 0 ? pid : "")),
@@ -180,15 +184,15 @@ export const make = mutation({
 });
 
 /** JOIN BY CODE: an open seat is this browser's (a browser that holds one already gets that one back: a page loaded again is the same player).
- *  Refused with `code: …` (no live game has it), `build: …` (the page is another build than the game), `full: …` (no seat is open) */
+ *  Refused with `code: …` (no live game has it), `build: …` (the page's game is made of something else), `full: …` (no seat is open) */
 export const join = mutation({
-  args: { pid: v.string(), code: v.string(), build: v.string() },
-  handler: async (ctx, { pid, code, build }): Promise<GameView> => {
+  args: { pid: v.string(), code: v.string(), made: v.string() },
+  handler: async (ctx, { pid, code, made }): Promise<GameView> => {
     pidOk(pid);
-    word(build, "build");
+    word(made, "made");
     const g = await byCode(ctx, word(code, "code").toUpperCase());
     if (!g || !isLive(g)) return bad("code: no game has this code");
-    if (g.build !== build) bad("build: the game is another build than this page");
+    if (g.made !== made) bad("build: the game is not made of what this page's is");
     const mine = g.holders.indexOf(pid), seat = mine >= 0 ? mine : openSeat(g);
     if (seat < 0) bad("full: every seat is taken");
     const holders = g.holders.slice(), held = heldAt(g).slice(), seatKeys = g.seatKeys.slice();
@@ -224,7 +228,7 @@ export const job = internalQuery({
       body: {
         game: g._id as string,
         build: g.build,
-        setup: JSON.stringify({ game: g._id, build: g.build, ...(g.setup as object), seatKeys: g.seatKeys }),
+        setup: JSON.stringify({ game: g._id, build: g.made, ...(g.setup as object), seatKeys: g.seatKeys }),
         secret: g.secret,
         idleS: p.idle,
         maxS: p.max,

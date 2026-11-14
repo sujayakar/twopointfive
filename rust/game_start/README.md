@@ -263,7 +263,7 @@ server stand a game (`dress`, seed 9, the mission's own link). `gate` here is th
 
 ```
 cd rust/game_start && cargo build --profile gate --bin gate     # its own profile, cheap after an edit; a pin is the same under any profile
-gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
+gate                 # every row, as many at once as there are cores. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
 gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
 gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
@@ -325,7 +325,7 @@ snow (`pass-four`) under `bangs`, and the lesson of a partner's orders (`tut-pai
 **`gate tests`** builds the tests of every crate that has any (the list is at the head of `src/bin/gate/tests.rs`, and a crate with tests that is not on
 it fails the run) and runs each binary as a process of its own from its crate's folder, as many at once as there are cores. It prints each binary with its
 counts and seconds, every red test by name with its panic line, what is ignored and why, the slowest and a last line. Exit 1 on a red, a binary that ended
-badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
+badly or a build that failed. `gate tests squad_doors [test]` builds and runs that binary alone, or that test of it. `--break=BINARY` plants a red, to show that one is read.
 
 **What the runs played to their ends do not hold.** The hands-off player is one player on one seed, and Sam cannot go down: a run holds the floor, not
 whether the mission can be survived. `owes` holds what the game may never do and counts what smells; its counts are pinned and not judged, so a count that

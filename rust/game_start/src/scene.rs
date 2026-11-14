@@ -245,8 +245,11 @@ impl Scene {
         let last = &self.doors[self.doors.len() - 1];
         let area = self.rooms.first().map(|r| [r.x0, r.x1, r.z0, r.z1]).unwrap_or([0.0, 1.0, 0.0, 1.0]);
         let rect = |r: [f64; 4]| obj(vec![("x0", n(r[0])), ("x1", n(r[1])), ("z0", n(r[2])), ("z1", n(r[3]))]);
+        let under = self.rooms.iter().fold([whole[0], 0.0, whole[1], 0.0], |u, r| [u[0].min(r.x0), u[1].max(r.x1), u[2].min(r.z0), u[3].max(r.z1)]);
+        let building = if self.rooms.is_empty() { [0.0, whole[0], 0.0, whole[1]] } else { under };
         let mut top = vec![
             ("version", n(2.0)), ("name", s(&self.name)),
+            ("surfaces", obj(vec![("building", rect(building)), ("grassEdge", n(0.0)), ("inside", s("lino")), ("outside", s("asphalt")), ("verge", s("asphalt")), ("zones", arr(vec![]))])),
             ("meta", obj(vec![("bounds", obj(vec![("min", nums(&[0.0, -0.25, 0.0])), ("max", nums(&[whole[0], 8.0, whole[1]]))])), ("generator", s("rust/game_start scene.rs")), ("notes", s("A scene a test wrote: a level file like any other."))])),
             ("floors", arr(vec![obj(vec![("id", s("f0")), ("name", s("ground floor")), ("y", n(0.0)), ("ceiling", n(kit_h))])])),
             ("materials", obj(vec![

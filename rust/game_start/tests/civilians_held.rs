@@ -1,7 +1,7 @@
 //! A CIVILIAN ON THE FLOOR: frightened she runs to a phone, once; in Sam's arm she talks, told to stay down she stays down, and she tells the first man who finds her.
 mod stealth_ask;
 use game::civilians::{CivPanicWhat, CivState};
-use game::game::{GuardState, InteractableKind, Verb};
+use game::game::{DownBy, DownKind, GuardState, InteractableKind, Verb, With};
 use game::ids::GuardId;
 use game_start::play::{Opts, Play};
 use stealth_ask::StealthAsk;
@@ -88,5 +88,39 @@ fn a_held_civilian_talks_stays_down_and_tells_the_first_man_who_finds_her() {
         p.until(9.0, |p| p.civ(m).reported).unwrap_or_else(|| panic!("seed {s}: a calm man beside her and she told him nothing: {:?} {}", p.civ(m).state, p.why(n)));
         p.run(0.2);
         assert!(p.state(n) != GuardState::Patrol, "seed {s}: told, he went on with his round");
+    }
+}
+
+/// THE RULE: a civilian on the floor is found by the eye that finds a man there: in the dark 7 m off nobody makes either out, with the light on both are found.
+/// A FAILURE MEANS: she is found in the dark by a man who walks past a colleague of his there.
+#[test]
+fn a_civilian_on_the_floor_is_found_as_a_man_is() {
+    for civilian in [true, false] {
+        for lit in [false, true] {
+            let (mut p, _) = office(1);
+            let men = p.g.guards.clone();
+            let dark = |p: &mut Play| for &x in &men { let lamp = p.g.gd[x].flashlight; p.g.tab.light[lamp].enabled = false; };
+            dark(&mut p);
+            for (i, &x) in men.iter().enumerate() { p.man_stands(x, [1.5, 4.0 + i as f64]); }
+            p.run(0.1);
+            let lies = |p: &mut Play, at: [f64; 2]| { let e = game::guards::light_estimate_at(&mut p.g, [at[0], 0.35, at[1]], None, None, None); game::game::game_visibility_of(&p.g, e) };
+            let mut spot: Option<(f64, [f64; 2], [f64; 2])> = None;
+            for x in 8..36 { for z in 4..24 {
+                let (at, from) = ([x as f64 + 0.25, z as f64 + 0.25], [x as f64 + 7.25, z as f64 + 0.25]);
+                if from[0] > 36.0 || [at, from].iter().any(|q| game::scene_collision::nav_grid_is_blocked(&p.g, q[0], q[1])) || game::scene_collision::segment_blocked(&p.g, [from[0], 1.65, from[1]], [at[0], 0.4, at[1]], None, None, None) { continue; }
+                let v = lies(&mut p, at);
+                if spot.map_or(true, |s| if lit { v > s.0 } else { v < s.0 }) { spot = Some((v, at, from)); }
+            } }
+            let (light, at, from) = spot.expect("a clear 7 m of the floor");
+            assert!(if lit { light > 0.4 } else { light < 0.02 }, "the staging is wrong: the floor there reads {light:.2}");
+            let (finder, body) = (men[0], if civilian { p.g.civilians[0] } else { men[1] });
+            p.man_stands(body, at);
+            p.frame();
+            p.man_stands(body, at);
+            p.frame();
+            if civilian { game::civilians::civilian_down(&mut p.g, body, [1.0, 0.0, 0.0], true, DownKind::Choked, DownBy::Player, With::Hand); } else { p.falls_as(body, DownKind::Choked, true, DownBy::Player); }
+            let found = p.until(5.0, |p| { dark(p); p.pin_man(finder, from, -std::f64::consts::FRAC_PI_2, GuardState::Patrol, 0.0); p.g.gd[body].found });
+            assert_eq!(found.is_some(), lit, "a {} on the floor, {}: found after {found:?}", if civilian { "civilian" } else { "man" }, if lit { "lit" } else { "in the dark" });
+        }
     }
 }

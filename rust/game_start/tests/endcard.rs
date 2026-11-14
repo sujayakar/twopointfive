@@ -59,6 +59,64 @@ fn in_a_game_of_two_the_card_waits_for_both() {
     }
 }
 
+/// the seat's player taps Enter; answers whether the mission is asked for again by it
+fn enter(p: &mut Play, seat: usize) -> bool {
+    let i = p.g.tab.cmd_seat[p.g.seats[seat]].input;
+    p.g.tab.input[i].pressed.add(String::from("Enter"));
+    p.net_frame(0);
+    game::input::input_end_frame(&mut p.g, i);
+    core::mem::take(&mut p.g.saves.again)
+}
+/// whether the seat's player is told that Enter has the mission again
+fn told(p: &mut Play, seat: usize) -> bool {
+    let (s, me) = (p.g.seats[seat], p.g.seats[0]);
+    game::seats::show_seat(&mut p.g, s);
+    let k = game::kit::kit_view(&p.g, &game::seats::here(&p.g));
+    game::seats::show_seat(&mut p.g, me);
+    k.again
+}
+
+/// THE RULE: a player who is down has the mission again by Enter once it is over for every player: all of them down, or the mission ended, won or lost. Until then Enter does nothing, and he is told so.
+/// A FAILURE MEANS: one player goes down, presses what his screen says, and the other's fight is thrown away; or a mission that is over waits for a key nobody is told of.
+#[test]
+fn in_a_game_of_two_enter_waits_until_it_is_over_for_both() {
+    for seed in SEEDS {
+        for downed in [0, 1] {
+            let mut p = yard(seed, 2);
+            p.run(0.5);
+            p.seat_goes_down(downed);
+            p.run(1.0);
+            assert!(!told(&mut p, downed) && !enter(&mut p, downed), "seed {seed}: player {downed} is down and the other fights on: Enter does nothing");
+            p.seat_goes_down(1 - downed);
+            p.run(0.2);
+            assert!(told(&mut p, downed) && enter(&mut p, downed), "seed {seed}: both are down: Enter has the mission again");
+            drop(p);
+
+            let mut p = yard(seed, 2);
+            p.run(0.5);
+            p.seat_goes_down(downed);
+            for gd in p.hostiles() { p.falls(gd, game::game::DownBy::Player); }
+            p.run(3.0);
+            assert!(game::verdict::verdict_ended(&p.g).is_some() && !game::seats::all_down(&p.g), "seed {seed}: won with one down");   // (the control)
+            assert!(!enter(&mut p, 1 - downed), "seed {seed}: he who is up plays on: Enter alone is no restart of his");
+            assert!(told(&mut p, downed) && enter(&mut p, downed), "seed {seed}: the mission is over: the man who is down has it again");
+            assert!(game::savestate::control::restart(&mut p.g) && game::verdict::verdict_ended(&p.g).is_none(), "seed {seed}: the mission that stands again has no end yet: whoever asks how it went is told it is on");
+        }
+    }
+}
+/// THE RULE: in a game of one Enter has the mission again from the moment he is down.
+#[test]
+fn alone_enter_is_there_at_once() {
+    for seed in SEEDS {
+        let mut p = yard(seed, 1);
+        p.run(0.5);
+        assert!(!told(&mut p, 0), "seed {seed}: up");
+        p.seat_goes_down(0);
+        p.frame();
+        assert!(told(&mut p, 0), "seed {seed}: down");
+    }
+}
+
 /// A FAILURE MEANS: the mission's end no longer tells the host, or tells it more than once. (`exfil`: the run's last stage, the stage written and not played: the drive is its own test.)
 fn out_past_the_exit(seed: u32) -> Play {
     let mut p = Play::level("office.json", false, &Opts { seed, ..Default::default() });
@@ -82,3 +140,17 @@ fn out_through_the_exit_the_card_comes_once() {
     }
 }
 
+
+/// A FAILURE MEANS: the end card's map is light where nobody is indoors, as it was while every level had the office's outline laid over it, or round a building's walls outside.
+#[test]
+fn the_map_is_light_under_the_levels_own_roofs() {
+    for (level, under, open, foot) in [("crossing", [20.0, 7.0], [20.0, 16.0], [12.25, 8.25]), ("records", [15.0, 10.0], [34.0, 10.0], [9.25, 9.75]), ("floodlit", [18.0, 9.0], [10.0, 20.0], [8.25, 8.75])] {
+        let p = Play::level(&format!("{level}.json"), false, &Opts { seed: 1, ..Default::default() });
+        let floor = game::view::walked_floor(&p.g);
+        let light = |at: [f64; 2]| { let cell = |v: f64| (v / floor.cell) as usize; (floor.rows.as_bytes()[cell(at[1]) * floor.w as usize + cell(at[0])] - b'0') & 1 == 1 };
+        assert!((4.0..36.0).contains(&open[0]) && (4.0..24.0).contains(&open[1]), "{level}: {open:?} is no place the office's outline is wrong about");
+        assert!(light(under), "{level}: {under:?} is in a room");
+        assert!(!light(open), "{level}: {open:?} is in the open");
+        assert!(!light(foot), "{level}: {foot:?} is at the foot of a wall, outside");
+    }
+}

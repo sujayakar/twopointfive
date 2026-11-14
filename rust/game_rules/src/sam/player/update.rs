@@ -94,15 +94,20 @@ fn begin(g: &mut Game, t: Tick) -> Option<crate::weapons::RifleAttachment> {
     g.pl[pl].launch_held.take()
 }
 
-/// Enter, once he is down or the mission is lost (with Shift, at any time): the mission again, from this run's newest checkpoint if he is
-/// down and has one, else, and with Shift, from its start. True: the rest of the tick is not played.
+/// Enter, where it has the mission again (with Shift, at any time): from this run's newest checkpoint if he is down and has one, else, and
+/// with Shift, from its start. True: the rest of the tick is not played.
 fn again_key(g: &mut Game, t: Tick) -> bool {
     if !t.hit(g, crate::input::Key::Enter) { return false; }
     let (down, shift) = (crate::condition::down(g, t.c), t.shift(g));
-    if !down && !shift && g.mission.stage != crate::game::MissionStage::Failed { return false; }
+    if !shift && !enter_again(g, t.pl) { return false; }
     if down && !shift && newest_checkpoint_loaded(g) { return true; }
     crate::savestate::control::ask_restart(g);
     true
+}
+/// ENTER ALONE HAS THE MISSION AGAIN FOR THIS MAN: it is lost; or he is down, and it is over for every player (all of them down, or the mission ended).
+pub fn enter_again(g: &Game, pl: PlayerId) -> bool {
+    if g.mission.stage == crate::game::MissionStage::Failed { return true; }
+    crate::condition::down(g, g.pl[pl].ch) && (crate::seats::all_down(g) || crate::verdict::verdict_ended(g).is_some())
 }
 fn newest_checkpoint_loaded(g: &mut Game) -> bool {
     let elapsed = g.mission.stats.elapsed;

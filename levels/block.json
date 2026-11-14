@@ -94,6 +94,21 @@
     "scrub": { "albedo": [0.24, 0.26, 0.13], "rough": 0.95, "stuff": "waits", "does": "plant" },
     "rugMadder": { "albedo": [0.1, 0.03, 0.035], "rough": 0.95, "stuff": "cloth", "does": "dark carpet" }
   },
+  "surfaces": {
+    "building": { "x0": 4, "x1": 36, "z0": 4, "z1": 24 },
+    "grassEdge": 3.2,
+    "inside": "stone",
+    "outside": "asphalt",
+    "verge": "grass",
+    "zones": [
+      { "id": "hall", "mat": "lino", "x0": 11, "z0": 12, "x1": 36, "z1": 15.26 },
+      { "id": "kitchen", "mat": "tile", "x0": 14.44, "z0": 7.38, "x1": 20.4, "z1": 12 },
+      { "id": "mess", "mat": "lino", "x0": 11, "z0": 4, "x1": 20.4, "z1": 12 },
+      { "id": "frames", "mat": "tile", "x0": 26.6, "z0": 4, "x1": 36, "z1": 12 },
+      { "id": "workshop", "mat": "lino", "x0": 11, "z0": 15.26, "x1": 20.4, "z1": 24 },
+      { "id": "switchroom", "mat": "lino", "x0": 20.4, "z0": 15.26, "x1": 27.2, "z1": 24 }
+    ]
+  },
   "boxes": [
     { "id": "box_0000", "floor": "f0", "group": "ground", "c": [20, -0.125, 14], "h": [20, 0.125, 14], "material": "dust" },
     { "id": "box_0001", "floor": "f0", "group": "ground", "c": [20, 0.005, 1.6], "h": [20, 0.005, 1.6], "material": "dirt", "does": "grass", "flags": ["NoShadow"] },

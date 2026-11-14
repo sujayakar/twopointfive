@@ -126,6 +126,7 @@ fn boxNear(w: u32, d: vec3i, reach: i32) -> bool {
 }
 
 // ------------------------------------------------------------------ allocation
+const POP_TRIES: u32 = 256u;      // how often a pop is tried against others' (one that fails has lost to another that took a slot)
 const VIEW_RESERVE: f32 = 0.25;   // the share of the pool only smoke in sight may take
 /** how far out of sight brick b of level l is: 0 within viewR of where the camera looks (on the floor plan), 1 from twice that; × viewBias */
 fn farOf(l: u32, b: vec3i) -> f32 {
@@ -171,8 +172,15 @@ fn ensureBrick(l: u32, b: vec3i, st: f32) {
   for (var tries = 0; s == 0u && tries < 4; tries++) {
     let r = atomicCompareExchangeWeak(&A[A_PAGE + pi], 0u, LOCK);
     if (r.exchanged) {
-      let n = atomicSub(&A[C_FREE], 1u);
-      if (n <= keepFree || n > CAP) { atomicAdd(&A[C_FREE], 1u); atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
+      // the pop: a slot is taken off the top only where this request's own bar lets it, so nobody else's refusal moves the top that a taker reads (two requests at the last slots have two bars, and a
+      // slot put back after another had gone below it was on the list and in use)
+      var n = atomicLoad(&A[C_FREE]); var took = false;
+      for (var go = 0u; go < POP_TRIES && n > keepFree && n <= CAP; go++) {
+        let x = atomicCompareExchangeWeak(&A[C_FREE], n, n - 1u);
+        if (x.exchanged) { took = true; break; }
+        n = x.old_value;
+      }
+      if (!took) { atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
       let slot = atomicLoad(&A[A_FREE + n - 1u]);
       let m = metaOf(slot);
       M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u; M[m + K_MEAN] = 0u; M[m + K_PULL] = 0u; M[m + K_PULL + 1u] = 0u;
@@ -483,8 +491,12 @@ fn insideBox(p: vec3f, b: BoxGeo) -> bool {
   let cs = boxGeoRot(b);
   let d = p - b.c;
   let l = vec3f(cs.x * d.x - cs.y * d.z, d.y, cs.y * d.x + cs.x * d.z);
+  if ((b.flags & GEO_ROUND) != 0u) { return abs(l.y) <= b.h.y + 0.01 && dot(l.xz, l.xz) <= (b.h.x + 0.01) * (b.h.x + 0.01); }
   return all(abs(l) <= b.h + vec3f(0.01));
 }
+/** does box i stand in the smoke's way: a static that a ray meets. A box that moves stands nowhere (a wall baked where it stood would be left behind): a door's leaf that seals its doorway
+ *  is listed for the purpose, as it stands now (SealS) */
+fn stands(i: u32, b: BoxGeo) -> bool { return i < sscene.statics.x && (b.flags & GEO_NO_SHADOW) == 0u; }
 fn insideSheet(p: vec3f, a: vec4f, b: vec4f, fat: f32) -> bool {
   let l = paneLocal(p, a, b);
   let hh = vec3f(select(b.x, max(b.x, fat), b.x < b.z), b.y, select(max(b.z, fat), b.z, b.x < b.z));
@@ -493,8 +505,8 @@ fn insideSheet(p: vec3f, a: vec4f, b: vec4f, fat: f32) -> bool {
 /** the test at one point: statics off the trace grid, and what of the glass panes has not fallen out (render/shaders/glass_open.wgsl, the picture's own rule) and sealing door leaves, fattened to a closed layer of cells */
 fn solidAt(p: vec3f, voxel: f32) -> bool {
   for (var g = 0u; g < sscene.numGlobals; g++) {
-    let b = sboxGeo[sscene.globals[g >> 2u][g & 3u]];
-    if ((b.flags & 10u) == 0u && insideBox(p, b)) { return true; }
+    let i = sscene.globals[g >> 2u][g & 3u]; let b = sboxGeo[i];
+    if (stands(i, b) && insideBox(p, b)) { return true; }
   }
   let gw = i32(sscene.gridW); let gh = i32(sscene.gridH);
   let cell = vec2i(floor(p.xz / GRID_CELL));
@@ -502,9 +514,8 @@ fn solidAt(p: vec3f, voxel: f32) -> bool {
     let ci = u32(cell.y * gw + cell.x);
     let end = sgridCells[ci + 1u];
     for (var j = sgridCells[ci]; j < end; j++) {
-      let b = sboxGeo[sgridItems[j]];
-      if ((b.flags & 10u) != 0u) { continue; }
-      if (insideBox(p, b)) { return true; }
+      let i = sgridItems[j]; let b = sboxGeo[i];
+      if (stands(i, b) && insideBox(p, b)) { return true; }
     }
   }
   for (var j = 0u; j < min(sscene.glassInfo.x, 32u); j++) {

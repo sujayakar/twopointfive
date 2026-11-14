@@ -136,14 +136,16 @@ function canBox(s: KitSlot): HTMLElement {
   return box;
 }
 
+/** what a player who is down is told: the key that has the mission again, where Enter does; with Shift, where nobody is left whose fight it would end */
+export const downWord = (kit: Pick<KitView, 'again'>, alone: boolean): string => kit.again ? 'DOWN — ENTER' : alone ? 'DOWN — SHIFT+ENTER' : 'DOWN';
 /** the kit's column as the box and its strip: `el` is #equip, emptied and drawn again (the caller keys the redraw). A game no host steps has no places, and no column */
-export function drawHandBox(el: HTMLElement, kit: KitView): void {
+export function drawHandBox(el: HTMLElement, kit: KitView, alone = false): void {
   styles(); el.textContent = ''; if (!kit.slots.length) return;
   el.classList?.add('hand'); el.classList?.add('pop');   // (classList: the headless stand-in's elements have none)
   // condition (and the key taken off a questioned man), the goggles
   const cond = mk('div', 'cond' + (kit.down ? ' down' : '') + (kit.god ? ' god' : ''));
   if (kit.god) cond.appendChild(mk('span', 'g on', 'GOD MODE'));
-  else { cond.appendChild(mk('span', 'g', kit.down ? 'DOWN — ENTER' : 'CONDITION')); const hits = mk('span', 'pips'); for (let i = 0; i < kit.hitsMax; i++) hits.appendChild(mk('i', i < kit.hitsLeft ? '' : 'lost')); cond.appendChild(hits); }
+  else { cond.appendChild(mk('span', 'g', kit.down ? downWord(kit, alone) : 'CONDITION')); const hits = mk('span', 'pips'); for (let i = 0; i < kit.hitsMax; i++) hits.appendChild(mk('i', i < kit.hitsLeft ? '' : 'lost')); cond.appendChild(hits); }
   if (kit.nightVision !== null) { const g = mk('span', 'g' + (kit.nightVision ? ' on' : ''), 'N NIGHT VISION'); g.style.marginLeft = '10px'; cond.appendChild(g); }
   if (kit.keyTag) cond.appendChild(mk('span', 'keytag', kit.keyTag));
   el.appendChild(cond);

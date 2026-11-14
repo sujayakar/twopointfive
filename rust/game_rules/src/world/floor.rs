@@ -7,34 +7,18 @@ fn floor_row(mat: FloorMat) -> FLOORValue {
     floor().iter().find(|(m, _)| *m == mat).unwrap().1
 }
 
-/// The material under a point on the floor (y ignored): the level's `surfaces` block, or without one the office's map.
-fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> crate::floor::FloorMat {
+/// The material under a point on the floor (y ignored).
+fn floor_at(p: V3, s: &crate::scene_level_data::SurfacesData) -> FloorMat {
     let (x, z) = (p[0], p[2]);
-    if let Some(s) = s {
-        let b = &s.building;
-        if x < b.x0 || x > b.x1 || z < b.z0 || z > b.z1 {
-            return if x < s.grass_edge || z < s.grass_edge { s.verge } else { s.outside };
-        }
-        for f in s.zones.iter() {
-            if x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1 { return f.mat; }
-        }
-        return s.inside;
-    }
-    let b = building();
+    let b = &s.building;
     if x < b.x0 || x > b.x1 || z < b.z0 || z > b.z1 {
-        return if x < GRASS_EDGE || z < GRASS_EDGE { FloorMat::Grass } else { FloorMat::Asphalt };
+        return if x < s.grass_edge || z < s.grass_edge { s.verge } else { s.outside };
     }
-    for f in finishes().iter() {
-        if x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1 { return f.mat; }
-    }
-    FloorMat::Carpet
+    s.zones.iter().find(|f| x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1).map_or(s.inside, |f| f.mat)
 }
 
-/// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino.
-pub fn floor_of(g: &crate::game::Game, pos: V3) -> crate::floor::FloorMat {
-    let l = &g.level;
-    if l.surfaces.is_none() && l.own_places() { FloorMat::Lino } else { floor_at(pos, l.surfaces.as_ref()) }
-}
+/// The material under a point on this game's level.
+pub fn floor_of(g: &crate::game::Game, pos: V3) -> FloorMat { floor_at(pos, &g.level.surfaces) }
 
 /// What the hearing model has under a point, as a HUD says it (None: the floors are all one).
 pub fn floor_heard(g: &crate::game::Game, pos: V3) -> Option<crate::view::FloorWord> {
@@ -68,17 +52,6 @@ mod tests {
         SurfacesDataZonesItem { mat, x0, z0, x1, z1 }
     }
 
-    #[test]
-    fn the_offices_map() {
-        use FloorMat::*;
-        let cases: &[(f64, f64, FloorMat)] = &[
-            (4.0, 10.0, Lino), (36.0, 12.2, Lino), (12.0, 16.0, Stone), (12.5, 16.0, Carpet), (14.0, 4.0, Tile), (22.0, 10.0, Lino),
-            (28.0, 12.2, Lino), (36.0, 24.0, Lino), (20.0, 15.0, Carpet), (3.9, 3.5, Asphalt), (3.1, 30.0, Grass), (30.0, 3.1, Grass),
-            (3.2, 3.2, Asphalt), (36.5, 24.0, Asphalt), (20.0, 24.5, Asphalt), (4.0, 4.0, Carpet), (f64::NAN, 15.0, Carpet),
-        ];
-        for &(x, z, want) in cases { assert_eq!(floor_at([x, 7.0, z], None), want, "{} {}", x, z); }
-    }
-
     // tread's lookup: every material has its row.
     #[test]
     fn every_material_has_its_row() {
@@ -102,6 +75,6 @@ mod tests {
         let cases: &[(f64, f64, FloorMat)] = &[
             (0.5, 5.0, Lino), (1.0, 1.0, Stone), (11.0, 5.0, Stone), (5.0, 0.5, Lino), (4.5, 4.5, Asphalt), (5.5, 5.5, Grass), (9.0, 9.0, Tile),
         ];
-        for &(x, z, want) in cases { assert_eq!(floor_at([x, 0.0, z], Some(&s)), want, "{} {}", x, z); }
+        for &(x, z, want) in cases { assert_eq!(floor_at([x, 0.0, z], &s), want, "{} {}", x, z); }
     }
 }

@@ -112,7 +112,7 @@ fn ensure_index(g: &mut Game) {
         let f0 = js::to_i32(f0);
         if f0 & (gl | np | dy) != 0 { continue; }
         let a = aabb_of(g, b); let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
-        if c[0] < w.min[0] || c[0] > w.max[0] || c[2] < w.min[2] || c[2] > w.max[2] || !furniture_roofed(g, c[0], c[2]) { others.push(a); continue; }
+        if c[0] < w.min[0] || c[0] > w.max[0] || c[2] < w.min[2] || c[2] > w.max[2] || !crate::render_reach::roofed(g, c[0], c[2]) { others.push(a); continue; }
         let v = vol_of(g, b); let long = m::max(h[0], h[2]) * 2.0; let ghost = (f0 & ns) != 0;
         let br = crate::wallbreak::wall_break_breakable_at(g, i);
         if let Some(r) = &br { if r.kind == BKind::Wall { others.push(a); continue; } }
@@ -565,13 +565,6 @@ fn break_prop_in(g: &mut Game, p: PropId, at: V3, fall: f64, who: f64, budget: &
     crate::props::prop_system_remove(g, p);  
     crate::scene_collision::sound_paths_invalidate(g);
 }
-/// under a roof?
-fn furniture_roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
-    let i = match &g.reach_interior { Some(i) => i, None => return true };
-    let w = crate::scene_world::world();
-    let cx = m::floor(x - w.min[0]); let cz = m::floor(z - w.min[2]);
-    cx >= 0.0 && cz >= 0.0 && cx < w.grid_w && cz < w.grid_h && i[(cz * w.grid_w + cx) as usize] == 1
-}
 /// may the mouth rule take static `i` at all, by what it was AUTHORED as. `saved` was a checkpoint's way past the snow switch; with the switch settled on it changes nothing.
 fn furniture_mouth_ok(g: &crate::game::Game, i: f64) -> bool {
     let b = match box_at(g, i) { Some(b) => b, None => return false };
@@ -615,7 +608,7 @@ fn furniture_mouth_mine(g: &crate::game::Game, i: f64, b: BoxId, a: crate::furnb
     if snow_paint(g, b) { return true; }   // (lying snow banked at the wall's foot, under a roof or not)
     let does = crate::scene_materials::does_of_box(g, b); let (h, c) = (g.tab.boxes[b].h, g.tab.boxes[b].c);
     let post = m::min(h[0], h[2]) < 0.1 && a.y1 > 1.5 && a.y1 - a.y0 > 1.0;   // (tall in itself: a binder on a top shelf is thin and high up, and no post)
-    !post && furniture_roofed(g, c[0], c[2]) && (!does.structure || (does.counter && a.y1 <= 2.0))
+    !post && crate::render_reach::roofed(g, c[0], c[2]) && (!does.structure || (does.counter && a.y1 <= 2.0))
 }
 /// would mouth() take static `i` from `r`, a hole not blown yet? Reading only
 pub fn furniture_mouth_would_take(g: &mut crate::game::Game, i: f64, r: [f64; 4], depth: Option<f64>) -> bool {

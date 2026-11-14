@@ -181,8 +181,7 @@ pub fn set_level(data: &Json, way: usize) -> Cow<'_, Json> {
     boxes.push(stub(K.panel, 0.0));
     boxes.push(stub(K.led, 1.0));
     let mut o: Vec<(&str, Json)> = Vec::new();
-    for k in ["version", "name", "snow", "meta", "floors", "materials"] { if data.has(k) { o.push((k, data.get(k).clone())); } }
-    if truthy(data.get("surfaces")) { o.push(("surfaces", data.get("surfaces").clone())); }
+    for k in ["version", "name", "snow", "meta", "floors", "materials", "surfaces"] { if data.has(k) { o.push((k, data.get(k).clone())); } }
     o.push(("boxes", json::arr(boxes)));
     o.push(("props", json::arr(Vec::new())));
     o.push(("lights", json::arr(lights.clone())));

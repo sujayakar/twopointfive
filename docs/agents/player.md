@@ -27,7 +27,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `noshove.rs` | a teammate falling in goes round Sam |
 | `aim.rs`, `aimweight.rs`, `aimcost.rs` | how settled a shot is, both sides; turn rate and the lagging ring; lamps need a real hit, feet cost the shot |
 | `combat/` | a round (`fire_weapon_raw`), its flight and whom it finds (`round.rs`), where it lands (`lands.rs`), `hit_player`, held things as boxes, cans going off |
-| `weapons.rs` | a gun's state: magazine, chamber, modes, reload, the launcher's loads, the OCP. The rows are `rows` in `game_types/src/weapons/` |
+| `weapons.rs` | a gun's state: magazine, chamber, modes, reload, the launcher's loads, the OCP. The rows are `WeaponDef`s in `game_types/src/weapons/types.rs` |
 | `tracers.rs`, `thinline.rs` | which rounds show a streak; boxes the page draws as thin lines |
 | `gunreload.rs`, `autoreload.rs` | reload beats and cues, shell by shell on a tube gun; the dry gun starting its own |
 | `gunwall.rs` | a raised gun comes down at a wall, for every man |
@@ -142,7 +142,8 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 
 - **A number:** its table in `knobs/`, by the panel or `?knob.aimweight.heft=2`. Paces are `player_walk`, `player_sprint`, `player_crouch` in
   `TuneK`, and `knobs/player.rs`.
-- **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
+- **A gun:** a `WeaponDef` and a `WeaponId`, its word in `game_start/src/file.rs`, a pick in `picks` (`game_types/src/gunslots/`), its case in
+  `knobs/casings.rs`, its drawing in `OWN_GUN` (`src/ui/kitIcons.ts`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.
 - **A thing done by hand:** a kind of `Deed` with what it keeps, begun by `deed::begin`, which puts down the one before, after `hands_free` if it wants

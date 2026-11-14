@@ -23,7 +23,6 @@
 //! What an order's functions call, so that its id is written once, in its `Row`:
 //!   `list(g, &ORDER)`          its row on the menu. Listing again is the same row.
 //!   `unlist(g, &ORDER)`        off the menu
-//!   `listed(g, seat, &ORDER)`  is it on this seat's menu
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
 //!                              lines he says (`squad_orders_assign`, with the order's own id)
 //!
