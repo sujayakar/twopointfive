@@ -22,6 +22,7 @@ const hands = broken => {
       }
       const game = (x, y, z) => { const row = y > 7 || x >> 2 >= wide || z >> 2 >= deep ? 0 : M[at + 16 + (z >> 2) * wide + (x >> 2)]; return row ? F[at + 16 + 512 + (row - 1) * 161 + y * 16 + (z & 3) * 4 + (x & 3)] : 0; };
       for (let z = 0; z < deep * 4; z++) for (let x = 0; x < wide * 4; x++) for (let y = 0; y < 8; y++) if (game(x, y, z) > 0.001) keys.add([x, y, z].join());
+      const top = [0, 0]; for (const key of keys) { const p = key.split(',').map(Number), m = drawn.get(key) ?? 0; if (m < 0) continue; if (game(...p) > 0.1) top[0] = Math.max(top[0], (p[1] + 1) / 2); if (m > 0.1) top[1] = Math.max(top[1], (p[1] + 1) / 2); }   // (how high the body of it stands, in metres: the game's, the drawn)
       let off = 0, n = 0, has = 0, is = 0, bare = 0;
       for (const key of keys) { const g = game(...key.split(',').map(Number)), m = drawn.get(key) ?? 0; if (m < 0) continue; has += g; is += m; if (g > 0.03 && m < 0.2 * g) bare++; if (Math.max(g, m) > 0.01) { off += Math.abs(Math.exp(-18 * g) - Math.exp(-18 * m)); n++; } }
       // (the color of it, by the game's own bricks: where it has one, how far what is drawn is from it)
@@ -34,7 +35,7 @@ const hands = broken => {
         for (let t = -4; t < 4; t += 1 / 16) { const px = cx - uz * aside + ux * t, pz = cz + ux * aside + uz * t; if (px >= 0 && pz >= 0) { tg += game(Math.floor(px * 2), Math.floor(h * 2), Math.floor(pz * 2)); td += fine(px, h, pz); } }
         const G = Math.exp(-6 * tg / 16), T = Math.exp(-6 * td / 16); sight += Math.abs(G - T); lines++; if (G < 0.3 && T > 0.5) blind++; }
       rb.unmap(); rb.destroy(); const r = v => Math.round(v * 1000) / 1000;
-      return { time: r(D.game.time), game: r(has), drawn: r(is), off: r(n ? off / n : 0), sight: r(lines ? sight / lines : 0), blind: r(lines ? blind / lines : 0), bare, shown, dyed, hueOff: r(hueOff), dusty: S.binding.dusty, heard: [...D.audio.going.values()].filter(g => !g.of.reach).map(g => [g.of.name, r(g.of.age)]), cans: S.emitters.filter(e => e.kind === 'canister').map(e => r(e.age)) };
+      return { time: r(D.game.time), game: r(has), drawn: r(is), off: r(n ? off / n : 0), sight: r(lines ? sight / lines : 0), blind: r(lines ? blind / lines : 0), bare, top, shown, dyed, hueOff: r(hueOff), dusty: S.binding.dusty, heard: [...D.audio.going.values()].filter(g => !g.of.reach).map(g => [g.of.name, r(g.of.age)]), cans: S.emitters.filter(e => e.kind === 'canister').map(e => r(e.age)) };
     },
   };
 };

@@ -4,8 +4,8 @@ import { WORLD } from '../scene/world';
 
 /** read when the Engine builds its first pipeline: anything that moves a number here (host/drawpage.ts ?smokepool=N) does it at BOOT, before that */
 export const smokeGridConfig = {
-  /** pool size in bricks of 8³ cells (4096 = 2.1 M cells) */
-  cap: 4096,
+  /** pool size in bricks of 8³ cells (6144 = 3.1 M cells, about 0.2 GB of the GPU's memory with the atlas): three cans in the open stand whole in it */
+  cap: 6144,
   /** voxel size per level: 0 the coarse lattice (canisters, dust: A BRICK OF IT IS ONE CELL OF THE GAME'S OWN SMOKE, half a metre, rust/sim/src/bricks.rs CELL), 1 the fine one (gun gas) */
   voxel: [0.0625, 0.022] as [number, number],
   /** how high each lattice reaches (m) */
